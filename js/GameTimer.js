@@ -90,6 +90,7 @@ export class GameTimer {
         const seconds = Math.floor(timeToDisplay % 60);
         const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
+        // Update desktop timer
         const timerElement = document.getElementById('timer-display');
         if (timerElement) {
             timerElement.textContent = formattedTime;
@@ -103,29 +104,58 @@ export class GameTimer {
                 timerElement.style.color = '';
             }
         }
-    }
-    
-    updateBestTimeDisplay() {
-        const bestTimeElement = document.getElementById('best-time');
-        if (bestTimeElement) {
-            if (this.bestTime !== null) {
-                const minutes = Math.floor(this.bestTime / 60);
-                const seconds = Math.floor(this.bestTime % 60);
-                const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                bestTimeElement.textContent = `Best: ${formattedTime}`;
+        
+        // Update mobile timer
+        const mobileTimerElement = document.getElementById('mobile-timer-display');
+        if (mobileTimerElement) {
+            mobileTimerElement.textContent = formattedTime;
+            
+            // Add visual indication when paused
+            if (this.isPaused && this.timerRunning) {
+                mobileTimerElement.style.opacity = '0.6';
+                mobileTimerElement.style.color = '#ffaa00';
             } else {
-                bestTimeElement.textContent = 'Best: --:--';
+                mobileTimerElement.style.opacity = '1';
+                mobileTimerElement.style.color = '';
             }
         }
     }
     
+    updateBestTimeDisplay() {
+        const bestTimeText = this.bestTime !== null ? 
+            `Best: ${this.formatTime(this.bestTime)}` : 
+            'Best: --:--';
+        
+        // Update desktop best time
+        const bestTimeElement = document.getElementById('best-time');
+        if (bestTimeElement) {
+            bestTimeElement.textContent = bestTimeText;
+        }
+        
+        // Update mobile best time
+        const mobileBestTimeElement = document.getElementById('mobile-best-time');
+        if (mobileBestTimeElement) {
+            mobileBestTimeElement.textContent = bestTimeText;
+        }
+    }
+    
     showNewRecordAnimation() {
+        // Animate desktop element
         const bestTimeElement = document.getElementById('best-time');
         if (bestTimeElement) {
             bestTimeElement.classList.add('new-record');
             setTimeout(() => {
                 bestTimeElement.classList.remove('new-record');
-            }, 3000); // Remove animation after 3 seconds
+            }, 3000);
+        }
+        
+        // Animate mobile element
+        const mobileBestTimeElement = document.getElementById('mobile-best-time');
+        if (mobileBestTimeElement) {
+            mobileBestTimeElement.classList.add('new-record');
+            setTimeout(() => {
+                mobileBestTimeElement.classList.remove('new-record');
+            }, 3000);
         }
     }
     

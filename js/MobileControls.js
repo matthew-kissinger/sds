@@ -237,8 +237,8 @@ export class MobileControls {
         this.sprintButton.textContent = '🏃';
         this.sprintButton.style.cssText = `
             position: fixed;
-            bottom: 160px;
-            left: 20px;
+            bottom: 20px;
+            right: 80px;
             width: 60px;
             height: 60px;
             border-radius: 50%;
@@ -285,13 +285,8 @@ export class MobileControls {
     updateMobileInstructions() {
         const instructions = document.getElementById('instructions');
         if (instructions && this.isTouchDevice) {
-            instructions.innerHTML = `
-                <h3>Touch Controls</h3>
-                <p><strong>Joystick</strong> - Move your sheepdog</p>
-                <p><strong>🏃 Button</strong> - Sprint (uses stamina)</p>
-                <p><strong>Zoom Slider</strong> - Adjust camera distance</p>
-                <p><strong>Tap Screen</strong> - Toggle sound</p>
-            `;
+            // Hide the instructions completely on mobile
+            instructions.style.display = 'none';
         }
     }
     

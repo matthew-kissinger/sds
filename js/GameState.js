@@ -154,10 +154,16 @@ export class GameState {
         // Only update UI if game is active and not paused
         if (!this.gameActive || this.isPaused) return;
         
-        // Update sheep count
+        // Update desktop sheep count
         const sheepCountElement = document.getElementById('sheep-count');
         if (sheepCountElement) {
             sheepCountElement.textContent = this.sheepRetired;
+        }
+        
+        // Update mobile sheep count
+        const mobileSheepCountElement = document.getElementById('mobile-sheep-count');
+        if (mobileSheepCountElement) {
+            mobileSheepCountElement.textContent = `Sheep: ${this.sheepRetired} / ${this.totalSheep}`;
         }
     }
     
