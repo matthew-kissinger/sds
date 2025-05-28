@@ -20,8 +20,11 @@ export class MobileControls {
         this.joystickContainer = null;
         this.zoomContainer = null;
         this.sprintButton = null;
+        this.fullscreenButton = null;
         
         if (this.isTouchDevice) {
+            this.createFullscreenButton();
+            this.setupFullscreenListeners();
             this.loadNippleJS().then(() => {
                 this.createMobileUI();
                 this.setupTouchPrevention();
@@ -30,12 +33,23 @@ export class MobileControls {
     }
     
     /**
-     * Detect if device supports touch
+     * Detect if device supports touch input
+     * @returns {boolean} True if touch device detected
      */
     detectTouchDevice() {
-        return ('ontouchstart' in window) || 
-               (navigator.maxTouchPoints > 0) || 
-               (navigator.msMaxTouchPoints > 0);
+        // Multiple detection methods for better accuracy
+        const hasTouch = 'ontouchstart' in window || 
+                        navigator.maxTouchPoints > 0 || 
+                        navigator.msMaxTouchPoints > 0;
+        
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        const hasCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        
+        const isSmallScreen = window.innerWidth <= 768 || window.innerHeight <= 768;
+        
+        // Device is considered touch-capable if it has touch AND (is mobile OR has coarse pointer OR small screen)
+        return hasTouch && (isMobile || hasCoarsePointer || isSmallScreen);
     }
     
     /**
@@ -413,5 +427,176 @@ export class MobileControls {
         if (this.sprintButton) {
             this.sprintButton.remove();
         }
+    }
+    
+    /**
+     * Check if fullscreen API is supported
+     */
+    isFullscreenSupported() {
+        const element = document.documentElement;
+        return !!(
+            element.requestFullscreen ||
+            element.webkitRequestFullscreen ||
+            element.webkitRequestFullScreen ||
+            element.mozRequestFullScreen ||
+            element.msRequestFullscreen
+        );
+    }
+    
+    /**
+     * Create fullscreen button for mobile devices
+     */
+    createFullscreenButton() {
+        // Only show on mobile devices that support fullscreen
+        if (!this.isTouchDevice || !this.isFullscreenSupported()) return;
+        
+        // Don't create if already exists or if already in fullscreen
+        if (this.fullscreenButton || this.isFullscreen()) return;
+        
+        this.fullscreenButton = document.createElement('button');
+        this.fullscreenButton.id = 'mobile-fullscreen';
+        this.fullscreenButton.innerHTML = '📱<br><span style="font-size: 14px;">Play Fullscreen</span>';
+        this.fullscreenButton.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 160px;
+            height: 80px;
+            border-radius: 12px;
+            background: rgba(0, 191, 255, 0.95);
+            border: 3px solid white;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 2000;
+            display: block;
+            pointer-events: auto;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            line-height: 1.2;
+            cursor: pointer;
+        `;
+        
+        // Add hover/active effects
+        this.fullscreenButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.fullscreenButton.style.transform = 'translate(-50%, -50%) scale(0.95)';
+            this.fullscreenButton.style.background = 'rgba(0, 150, 200, 0.95)';
+        });
+        
+        this.fullscreenButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.fullscreenButton.style.transform = 'translate(-50%, -50%) scale(1)';
+            this.fullscreenButton.style.background = 'rgba(0, 191, 255, 0.95)';
+            
+            // Request fullscreen
+            this.requestFullscreen();
+        });
+        
+        // Fallback click event for devices that might not support touch events properly
+        this.fullscreenButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.requestFullscreen();
+        });
+        
+        // Prevent context menu
+        this.fullscreenButton.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        document.body.appendChild(this.fullscreenButton);
+    }
+    
+    /**
+     * Request fullscreen with cross-browser compatibility
+     */
+    requestFullscreen() {
+        const element = document.documentElement;
+        
+        try {
+            // Check for different fullscreen API methods
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+                // Safari
+                element.webkitRequestFullscreen();
+            } else if (element.webkitRequestFullScreen) {
+                // Older Safari
+                element.webkitRequestFullScreen();
+            } else if (element.mozRequestFullScreen) {
+                // Firefox
+                element.mozRequestFullScreen();
+            } else if (element.msRequestFullscreen) {
+                // IE/Edge
+                element.msRequestFullscreen();
+            } else {
+                console.warn('Fullscreen API not supported on this device');
+                // Hide button anyway since user tried to use it
+                this.hideFullscreenButton();
+                return;
+            }
+            
+            // Hide the fullscreen button after requesting fullscreen
+            this.hideFullscreenButton();
+            
+        } catch (error) {
+            console.warn('Failed to request fullscreen:', error);
+            // Hide button if fullscreen fails
+            this.hideFullscreenButton();
+        }
+    }
+    
+    /**
+     * Hide the fullscreen button
+     */
+    hideFullscreenButton() {
+        if (this.fullscreenButton) {
+            this.fullscreenButton.style.opacity = '0';
+            this.fullscreenButton.style.pointerEvents = 'none';
+            setTimeout(() => {
+                if (this.fullscreenButton) {
+                    this.fullscreenButton.remove();
+                    this.fullscreenButton = null;
+                }
+            }, 300);
+        }
+    }
+    
+    /**
+     * Check if device is in fullscreen mode
+     */
+    isFullscreen() {
+        return !!(
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
+            document.msFullscreenElement
+        );
+    }
+    
+    /**
+     * Setup fullscreen change event listeners
+     */
+    setupFullscreenListeners() {
+        // Handle fullscreen change events across different browsers
+        const handleFullscreenChange = () => {
+            if (!this.isFullscreen() && this.isTouchDevice) {
+                // User exited fullscreen, show button again
+                setTimeout(() => {
+                    this.createFullscreenButton();
+                }, 500); // Small delay to avoid flickering
+            }
+        };
+        
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('msfullscreenchange', handleFullscreenChange);
     }
 } 
