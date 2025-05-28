@@ -1,7 +1,7 @@
 import { Vector2D } from './Vector2D.js';
 
 /**
- * Input handler for keyboard controls
+ * Enhanced input handler for both keyboard and mobile touch controls
  */
 export class InputHandler {
     constructor() {
@@ -16,6 +16,7 @@ export class InputHandler {
         this.performanceMonitor = null;
         this.isPaused = false;
         this.pauseCallbacks = [];
+        this.mobileControls = null;
         this.setupEventListeners();
     }
 
@@ -77,6 +78,11 @@ export class InputHandler {
         });
     }
 
+    // Set mobile controls reference
+    setMobileControls(mobileControls) {
+        this.mobileControls = mobileControls;
+    }
+
     // Toggle pause state
     togglePause() {
         this.isPaused = !this.isPaused;
@@ -108,7 +114,14 @@ export class InputHandler {
             if (!pauseIndicator) {
                 pauseIndicator = document.createElement('div');
                 pauseIndicator.id = 'pause-indicator';
-                pauseIndicator.innerHTML = '⏸️ PAUSED<br><small>Press ESC to resume</small>';
+                
+                // Different pause message for mobile vs desktop
+                const isMobile = this.mobileControls && this.mobileControls.getIsTouchDevice();
+                const pauseMessage = isMobile ? 
+                    '⏸️ PAUSED<br><small>Tap to resume</small>' : 
+                    '⏸️ PAUSED<br><small>Press ESC to resume</small>';
+                
+                pauseIndicator.innerHTML = pauseMessage;
                 pauseIndicator.style.cssText = `
                     position: fixed;
                     top: 50%;
@@ -123,6 +136,15 @@ export class InputHandler {
                     z-index: 1000;
                     font-family: Arial, sans-serif;
                 `;
+                
+                // Add touch event for mobile resume
+                if (isMobile) {
+                    pauseIndicator.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        this.togglePause();
+                    });
+                }
+                
                 document.body.appendChild(pauseIndicator);
             }
             pauseIndicator.style.display = 'block';
@@ -133,13 +155,14 @@ export class InputHandler {
         }
     }
 
-    // Get movement direction based on current key states
+    // Get movement direction based on current input state (keyboard + mobile)
     getMovementDirection() {
         // Return zero movement if paused
         if (this.isPaused) {
             return new Vector2D(0, 0);
         }
         
+        // Start with keyboard input
         const direction = new Vector2D(0, 0);
         
         if (this.keys.w) direction.z += 1;
@@ -147,27 +170,54 @@ export class InputHandler {
         if (this.keys.a) direction.x += 1;
         if (this.keys.d) direction.x -= 1;
         
+        // Add mobile input if available and no keyboard input
+        if (this.mobileControls && this.mobileControls.getIsTouchDevice()) {
+            const mobileDirection = this.mobileControls.getMovementDirection();
+            
+            // If no keyboard input, use mobile input
+            if (direction.magnitude() === 0) {
+                direction.x = mobileDirection.x;
+                direction.z = mobileDirection.z;
+            }
+        }
+        
         return direction;
     }
 
-    // Check if any movement key is pressed
+    // Check if any movement input is active
     isMoving() {
         // Return false if paused
         if (this.isPaused) {
             return false;
         }
         
-        return this.keys.w || this.keys.a || this.keys.s || this.keys.d;
+        // Check keyboard input
+        const keyboardMoving = this.keys.w || this.keys.a || this.keys.s || this.keys.d;
+        
+        // Check mobile input
+        const mobileMoving = this.mobileControls && 
+                            this.mobileControls.getIsTouchDevice() && 
+                            this.mobileControls.getIsMoving();
+        
+        return keyboardMoving || mobileMoving;
     }
     
-    // Check if sprint key (shift) is pressed
+    // Check if sprint input is active (keyboard shift or mobile sprint button)
     isSprinting() {
         // Return false if paused
         if (this.isPaused) {
             return false;
         }
         
-        return this.keys.shift;
+        // Check keyboard sprint
+        const keyboardSprinting = this.keys.shift;
+        
+        // Check mobile sprint
+        const mobileSprinting = this.mobileControls && 
+                               this.mobileControls.getIsTouchDevice() && 
+                               this.mobileControls.getIsSprinting();
+        
+        return keyboardSprinting || mobileSprinting;
     }
     
     // Check if game is paused

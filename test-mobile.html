@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Controls Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: none;
+        }
+        
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .controls-test {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #00BFFF;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        
+        .movement-display {
+            font-family: monospace;
+            background: #333;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎮 Mobile Controls Test</h1>
+        
+        <div id="device-info" class="status info">
+            Detecting device capabilities...
+        </div>
+        
+        <div id="nipple-status" class="status info">
+            Loading nipple.js library...
+        </div>
+        
+        <div class="controls-test">
+            <h3>Virtual Joystick Test</h3>
+            <div id="joystick-container" style="width: 150px; height: 150px; margin: 20px auto; border: 2px dashed #ccc; border-radius: 50%;"></div>
+            <div class="movement-display" id="movement-display">
+                Movement: X=0.00, Z=0.00<br>
+                Moving: false<br>
+                Sprinting: false
+            </div>
+        </div>
+        
+        <div class="controls-test">
+            <h3>Zoom Slider Test</h3>
+            <input type="range" id="zoom-test" min="20" max="150" value="80" style="width: 100%; margin: 10px 0;">
+            <div class="movement-display" id="zoom-display">
+                Zoom Level: 80
+            </div>
+        </div>
+        
+        <div class="controls-test">
+            <h3>Sprint Button Test</h3>
+            <button id="sprint-test" style="width: 80px; height: 80px; border-radius: 50%; background: #00BFFF; color: white; border: none; font-size: 24px; margin: 10px auto; display: block;">🏃</button>
+            <div class="movement-display" id="sprint-display">
+                Sprint Active: false
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Device detection
+        function detectTouchDevice() {
+            return ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0) || 
+                   (navigator.msMaxTouchPoints > 0);
+        }
+        
+        // Update device info
+        const deviceInfo = document.getElementById('device-info');
+        const isTouchDevice = detectTouchDevice();
+        deviceInfo.textContent = `Touch Device: ${isTouchDevice ? 'YES' : 'NO'} | Screen: ${window.innerWidth}x${window.innerHeight} | User Agent: ${navigator.userAgent.substring(0, 50)}...`;
+        deviceInfo.className = `status ${isTouchDevice ? 'success' : 'error'}`;
+        
+        // Load nipple.js and test
+        const nippleStatus = document.getElementById('nipple-status');
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.2/nipplejs.js';
+        
+        script.onload = function() {
+            nippleStatus.textContent = 'nipple.js loaded successfully!';
+            nippleStatus.className = 'status success';
+            
+            // Initialize joystick
+            if (window.nipplejs) {
+                const joystick = window.nipplejs.create({
+                    zone: document.getElementById('joystick-container'),
+                    mode: 'static',
+                    position: { left: '50%', top: '50%' },
+                    color: '#00BFFF',
+                    size: 120,
+                    threshold: 0.1
+                });
+                
+                const movementDisplay = document.getElementById('movement-display');
+                let isMoving = false;
+                let movementVector = { x: 0, z: 0 };
+                
+                joystick.on('start', () => {
+                    isMoving = true;
+                    updateMovementDisplay();
+                });
+                
+                joystick.on('move', (evt, data) => {
+                    if (data.vector) {
+                        movementVector.x = -data.vector.x;
+                        movementVector.z = data.vector.y;
+                        updateMovementDisplay();
+                    }
+                });
+                
+                joystick.on('end', () => {
+                    isMoving = false;
+                    movementVector.x = 0;
+                    movementVector.z = 0;
+                    updateMovementDisplay();
+                });
+                
+                function updateMovementDisplay() {
+                    movementDisplay.innerHTML = `
+                        Movement: X=${movementVector.x.toFixed(2)}, Z=${movementVector.z.toFixed(2)}<br>
+                        Moving: ${isMoving}<br>
+                        Sprinting: ${sprintActive}
+                    `;
+                }
+            }
+        };
+        
+        script.onerror = function() {
+            nippleStatus.textContent = 'Failed to load nipple.js library!';
+            nippleStatus.className = 'status error';
+        };
+        
+        document.head.appendChild(script);
+        
+        // Zoom slider test
+        const zoomSlider = document.getElementById('zoom-test');
+        const zoomDisplay = document.getElementById('zoom-display');
+        
+        zoomSlider.addEventListener('input', (e) => {
+            zoomDisplay.textContent = `Zoom Level: ${e.target.value}`;
+        });
+        
+        // Sprint button test
+        const sprintButton = document.getElementById('sprint-test');
+        const sprintDisplay = document.getElementById('sprint-display');
+        let sprintActive = false;
+        
+        sprintButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            sprintActive = true;
+            sprintButton.style.background = '#FF6B35';
+            sprintDisplay.textContent = 'Sprint Active: true';
+        });
+        
+        sprintButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            sprintActive = false;
+            sprintButton.style.background = '#00BFFF';
+            sprintDisplay.textContent = 'Sprint Active: false';
+        });
+        
+        // Prevent default touch behaviors
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        document.addEventListener('gesturestart', (e) => {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html> 

@@ -471,7 +471,7 @@ export class OptimizedSheepSystem {
             const x = -30 + Math.cos(angle) * distance;
             const z = -30 + Math.sin(angle) * distance;
             
-            // Reset sheep state
+            // Reset sheep state - now using the set method
             sheep.position.set(x, z);
             sheep.velocity.set(0, 0);
             sheep.acceleration.set(0, 0);

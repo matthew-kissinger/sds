@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 /**
  * SceneManager - Handles Three.js scene setup, lighting, and camera management
+ * Enhanced with mobile zoom control support
  */
 export class SceneManager {
     constructor() {
@@ -36,6 +37,7 @@ export class SceneManager {
         this.cameraDistance = 80;
         this.minCameraDistance = 20;
         this.maxCameraDistance = 150;
+        this.mobileControls = null;
         
         this.init();
     }
@@ -97,10 +99,28 @@ export class SceneManager {
         this.camera.lookAt(targetPosition);
     }
     
+    // Set mobile controls reference for zoom integration
+    setMobileControls(mobileControls) {
+        this.mobileControls = mobileControls;
+        
+        // Set up zoom change callback for mobile controls
+        if (mobileControls) {
+            mobileControls.setZoomChangeCallback((zoomLevel) => {
+                this.cameraDistance = zoomLevel;
+            });
+        }
+    }
+    
     setupMouseControls() {
-        // Mouse wheel for zoom
+        // Mouse wheel for zoom (desktop only)
         this.renderer.domElement.addEventListener('wheel', (event) => {
             event.preventDefault();
+            
+            // Only handle mouse wheel if not on mobile device
+            if (this.mobileControls && this.mobileControls.getIsTouchDevice()) {
+                return;
+            }
+            
             const zoomSpeed = 5;
             
             if (event.deltaY > 0) {
@@ -110,7 +130,24 @@ export class SceneManager {
                 // Zoom in
                 this.cameraDistance = Math.max(this.minCameraDistance, this.cameraDistance - zoomSpeed);
             }
+            
+            // Update mobile zoom slider if available
+            if (this.mobileControls && this.mobileControls.zoomSlider) {
+                this.mobileControls.zoomSlider.value = this.cameraDistance;
+                this.mobileControls.zoomLevel = this.cameraDistance;
+            }
         });
+    }
+    
+    // Get current camera distance for mobile controls synchronization
+    getCameraDistance() {
+        return this.cameraDistance;
+    }
+    
+    // Set camera distance (used by mobile controls)
+    setCameraDistance(distance) {
+        this.cameraDistance = Math.max(this.minCameraDistance, 
+                                     Math.min(this.maxCameraDistance, distance));
     }
     
     render() {

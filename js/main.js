@@ -5,6 +5,7 @@ import { GameTimer } from './GameTimer.js';
 import { TerrainBuilder } from './TerrainBuilder.js';
 import { StructureBuilder } from './StructureBuilder.js';
 import { InputHandler } from './InputHandler.js';
+import { MobileControls } from './MobileControls.js';
 import { Sheepdog } from './Sheepdog.js';
 import { PerformanceMonitor } from './PerformanceMonitor.js';
 import { StartScreen } from './StartScreen.js';
@@ -12,7 +13,7 @@ import { StaminaUI } from './StaminaUI.js';
 import { AudioManager } from './AudioManager.js';
 
 /**
- * Main simulation controller - Modular version with start screen
+ * Main simulation controller - Enhanced with mobile controls support
  * Uses separate modules for different responsibilities
  */
 class SheepDogSimulation {
@@ -24,10 +25,15 @@ class SheepDogSimulation {
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene());
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
+        this.mobileControls = new MobileControls();
         this.performanceMonitor = new PerformanceMonitor();
         this.startScreen = new StartScreen(this.sceneManager);
         this.staminaUI = new StaminaUI();
         this.audioManager = new AudioManager(this.sceneManager.getCamera());
+        
+        // Connect mobile controls to input handler and scene manager
+        this.inputHandler.setMobileControls(this.mobileControls);
+        this.sceneManager.setMobileControls(this.mobileControls);
         
         // Connect performance monitor and game state to input handler
         this.inputHandler.setPerformanceMonitor(this.performanceMonitor);
@@ -103,6 +109,11 @@ class SheepDogSimulation {
         // Add sheepdog to scene when game starts
         this.sceneManager.add(this.sheepdogMesh);
         
+        // Enable mobile controls if on touch device
+        if (this.mobileControls.getIsTouchDevice()) {
+            this.mobileControls.enable();
+        }
+        
         // Start the game state
         this.gameState.startGame();
         
@@ -168,6 +179,9 @@ class SheepDogSimulation {
                                finalTime <= this.gameTimer.getBestTime();
             
             this.gameState.showCompletionMessage(finalTime, isNewRecord);
+            
+            // Disable mobile controls when game completes
+            this.mobileControls.disable();
         }
     }
     

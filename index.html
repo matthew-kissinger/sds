@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#00BFFF">
     <title>Sheep Dog Sim</title>
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
     <style>
@@ -10,12 +14,32 @@
             margin: 0;
             overflow: hidden;
             font-family: Arial, sans-serif;
+            /* Prevent text selection on mobile */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            /* Prevent touch callouts */
+            -webkit-touch-callout: none;
+            /* Prevent tap highlight */
+            -webkit-tap-highlight-color: transparent;
         }
         
         #canvas-container {
             position: relative;
             width: 100%;
             height: 100vh;
+            /* Prevent scrolling */
+            touch-action: none;
+            /* Prevent overscroll bounce on iOS */
+            overscroll-behavior: none;
+        }
+        
+        /* Prevent zoom on inputs and buttons */
+        input, button, select, textarea {
+            font-size: 16px;
+            -webkit-appearance: none;
+            border-radius: 0;
         }
         
         /* Start Screen Overlay */
@@ -33,6 +57,8 @@
             z-index: 1000;
             color: white;
             text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
         
         #game-title {
@@ -44,6 +70,31 @@
             text-transform: uppercase;
             letter-spacing: 3px;
             text-shadow: 3px 3px 0px #000;
+        }
+        
+        /* Mobile responsive title */
+        @media (max-width: 768px) {
+            #game-title {
+                font-size: 2.5rem;
+                letter-spacing: 1px;
+            }
+            
+            #game-subtitle {
+                font-size: 1rem;
+            }
+            
+            #start-instructions {
+                max-width: 90%;
+                padding: 1.5rem;
+            }
+            
+            #start-instructions h3 {
+                font-size: 1.2rem;
+            }
+            
+            #start-instructions p {
+                font-size: 0.9rem;
+            }
         }
         
         #game-subtitle {
@@ -94,6 +145,9 @@
             letter-spacing: 2px;
             font-family: 'Arial Black', Arial, sans-serif;
             text-shadow: 2px 2px 0px #000;
+            /* Mobile touch improvements */
+            min-height: 44px;
+            min-width: 44px;
         }
         
         #start-button:hover {
@@ -153,6 +207,31 @@
             border-radius: 8px;
             border: 2px solid #00BFFF;
             font-family: Arial, sans-serif;
+            /* Mobile adjustments */
+            max-width: calc(100vw - 160px);
+            z-index: 999;
+        }
+        
+        /* Mobile responsive instructions */
+        @media (max-width: 768px) {
+            #instructions {
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                padding: 10px;
+                font-size: 12px;
+            }
+            
+            #instructions h3 {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+            
+            #instructions p {
+                margin: 3px 0;
+                font-size: 11px;
+            }
         }
         
         #instructions h3 {
@@ -185,6 +264,17 @@
             line-height: 1.4;
             border: 4px solid #00BFFF;
             font-family: 'Arial Black', Arial, sans-serif;
+            z-index: 1002;
+            max-width: 90vw;
+            box-sizing: border-box;
+        }
+        
+        /* Mobile responsive completion message */
+        @media (max-width: 768px) {
+            #completion-message {
+                padding: 20px 30px;
+                font-size: 18px;
+            }
         }
         
         #restart-button {
@@ -200,6 +290,9 @@
             transition: all 0.2s ease;
             font-family: 'Arial Black', Arial, sans-serif;
             text-transform: uppercase;
+            /* Mobile touch improvements */
+            min-height: 44px;
+            min-width: 44px;
         }
         
         #restart-button:hover {
@@ -219,6 +312,17 @@
             font-family: Arial, sans-serif;
             font-weight: bold;
             color: #333;
+            z-index: 999;
+        }
+        
+        /* Mobile responsive stats */
+        @media (max-width: 768px) {
+            #stats {
+                top: 10px;
+                right: 10px;
+                padding: 10px;
+                font-size: 12px;
+            }
         }
         
         #timer {
@@ -234,6 +338,24 @@
             text-align: center;
             border: 2px solid #00BFFF;
             font-family: 'Arial Black', Arial, sans-serif;
+            z-index: 999;
+        }
+        
+        /* Mobile responsive timer */
+        @media (max-width: 768px) {
+            #timer {
+                top: 10px;
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+            
+            #timer-display {
+                font-size: 16px;
+            }
+            
+            #best-time {
+                font-size: 10px;
+            }
         }
         
         #timer-display {
@@ -270,6 +392,29 @@
             border: 2px solid #00BFFF;
             font-family: Arial, sans-serif;
             min-width: 200px;
+            z-index: 999;
+        }
+        
+        /* Mobile responsive stamina bar */
+        @media (max-width: 768px) {
+            #stamina-bar {
+                bottom: 10px;
+                right: 10px;
+                min-width: 150px;
+                padding: 10px;
+            }
+            
+            #stamina-label {
+                font-size: 12px;
+            }
+            
+            #stamina-container {
+                height: 16px;
+            }
+            
+            #stamina-text {
+                font-size: 10px;
+            }
         }
         
         #stamina-label {
@@ -328,6 +473,34 @@
             from { transform: scaleX(1); }
             to { transform: scaleX(0.98); }
         }
+        
+        /* Mobile Controls Styles */
+        #mobile-joystick {
+            pointer-events: auto !important;
+        }
+        
+        #mobile-zoom {
+            pointer-events: auto !important;
+        }
+        
+        #mobile-sprint {
+            pointer-events: auto !important;
+        }
+        
+        /* Ensure mobile controls are above other UI elements */
+        #mobile-joystick,
+        #mobile-zoom,
+        #mobile-sprint {
+            z-index: 1001 !important;
+        }
+        
+        /* Hide desktop-only UI elements on mobile */
+        @media (max-width: 768px) and (pointer: coarse) {
+            #instructions p:contains("Mouse Wheel"),
+            #instructions p:contains("P") {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -339,8 +512,8 @@
             
             <div id="start-instructions">
                 <h3>How to Play</h3>
-                <p>🐕 Use <strong>WASD</strong> to move your sheepdog around the field</p>
-                <p>🏃 Hold <strong>Shift</strong> to sprint (uses stamina)</p>
+                <p>🐕 Use <strong>WASD</strong> or <strong>touch controls</strong> to move your sheepdog</p>
+                <p>🏃 Hold <strong>Shift</strong> or <strong>sprint button</strong> to run faster</p>
                 <p>🐑 Herd all 200 sheep through the golden gate into the pasture</p>
                 <p>⏱️ Complete the challenge as quickly as possible</p>
                 <p>🎯 Sheep will flee from you and flock together naturally</p>

@@ -7,6 +7,13 @@ export class Vector2D {
         this.z = z;
     }
 
+    // Set the x and z components
+    set(x, z) {
+        this.x = x;
+        this.z = z;
+        return this;
+    }
+
     // Add another vector to this one
     add(vector) {
         this.x += vector.x;
