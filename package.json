@@ -1,0 +1,24 @@
+{
+  "name": "sheep-dog-sim",
+  "version": "1.0.0",
+  "description": "An interactive herding game where players control a sheepdog to guide sheep into a pen using boid flocking algorithms",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "npx http-server -p 8000"
+  },
+  "keywords": [
+    "game",
+    "simulation",
+    "boids",
+    "flocking",
+    "three.js",
+    "herding"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "stats.js": "^0.17.0"
+  }
+} 
