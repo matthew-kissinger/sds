@@ -648,102 +648,34 @@
             }
         }
         
-        /* Fullscreen mobile layout adjustments */
-        @media (max-width: 768px) {
-            /* When in fullscreen, center everything properly */
-            body:fullscreen #stamina-bar,
-            body:-webkit-full-screen #stamina-bar,
-            body:-moz-full-screen #stamina-bar,
-            body:-ms-fullscreen #stamina-bar {
-                bottom: 120px;
-                left: 50%;
-                transform: translateX(-50%);
-                right: auto;
-                min-width: 200px;
-                padding: 10px 15px;
-            }
-            
-            body:fullscreen #mobile-combined-ui,
-            body:-webkit-full-screen #mobile-combined-ui,
-            body:-moz-full-screen #mobile-combined-ui,
-            body:-ms-fullscreen #mobile-combined-ui {
-                top: 15px;
-                left: 50%;
-                transform: translateX(-50%);
-                min-width: 250px;
-                padding: 12px 25px;
-            }
-            
-            /* Fullscreen portrait adjustments */
-            body:fullscreen #mobile-joystick,
-            body:-webkit-full-screen #mobile-joystick,
-            body:-moz-full-screen #mobile-joystick,
-            body:-ms-fullscreen #mobile-joystick {
-                bottom: 30px;
-                left: 30px;
-            }
-            
-            body:fullscreen #mobile-zoom,
-            body:-webkit-full-screen #mobile-zoom,
-            body:-moz-full-screen #mobile-zoom,
-            body:-ms-fullscreen #mobile-zoom {
-                bottom: 30px;
-                right: 30px;
-            }
-            
-            body:fullscreen #mobile-sprint,
-            body:-webkit-full-screen #mobile-sprint,
-            body:-moz-full-screen #mobile-sprint,
-            body:-ms-fullscreen #mobile-sprint {
-                bottom: 30px;
-                right: 100px;
-            }
-        }
-        
-        /* Fullscreen landscape mobile layout */
+        /* Landscape mobile - ensure centered layout */
         @media (max-width: 768px) and (orientation: landscape) {
-            body:fullscreen #stamina-bar,
-            body:-webkit-full-screen #stamina-bar,
-            body:-moz-full-screen #stamina-bar,
-            body:-ms-fullscreen #stamina-bar {
-                bottom: 80px;
-                left: 50%;
-                transform: translateX(-50%);
-                min-width: 220px;
-                padding: 8px 12px;
+            #stamina-bar {
+                bottom: 80px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                right: auto !important;
+                min-width: 200px !important;
+                padding: 8px 12px !important;
             }
             
-            body:fullscreen #mobile-combined-ui,
-            body:-webkit-full-screen #mobile-combined-ui,
-            body:-moz-full-screen #mobile-combined-ui,
-            body:-ms-fullscreen #mobile-combined-ui {
-                top: 10px;
-                left: 50%;
-                transform: translateX(-50%);
-                min-width: 280px;
-                padding: 8px 20px;
-                font-size: 12px;
+            #mobile-combined-ui {
+                display: block !important;
+                top: 10px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                min-width: 280px !important;
+                padding: 8px 20px !important;
+                font-size: 12px !important;
             }
             
-            body:fullscreen #mobile-timer-display,
-            body:-webkit-full-screen #mobile-timer-display,
-            body:-moz-full-screen #mobile-timer-display,
-            body:-ms-fullscreen #mobile-timer-display {
-                font-size: 14px;
+            /* Hide desktop timer and stats in landscape */
+            #timer {
+                display: none !important;
             }
             
-            body:fullscreen #mobile-sheep-count,
-            body:-webkit-full-screen #mobile-sheep-count,
-            body:-moz-full-screen #mobile-sheep-count,
-            body:-ms-fullscreen #mobile-sheep-count {
-                font-size: 11px;
-            }
-            
-            body:fullscreen #mobile-best-time,
-            body:-webkit-full-screen #mobile-best-time,
-            body:-moz-full-screen #mobile-best-time,
-            body:-ms-fullscreen #mobile-best-time {
-                font-size: 9px;
+            #stats {
+                display: none !important;
             }
         }
         
@@ -983,6 +915,88 @@
                 top: 20px !important;
                 min-width: 260px !important;
                 padding: 15px 30px !important;
+            }
+        }
+        
+        /* Fullscreen mobile layout adjustments - both orientations */
+        @media (max-width: 768px) {
+            /* When in fullscreen, center everything properly */
+            body:fullscreen #stamina-bar,
+            body:-webkit-full-screen #stamina-bar,
+            body:-moz-full-screen #stamina-bar,
+            body:-ms-fullscreen #stamina-bar {
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                right: auto !important;
+                min-width: 200px !important;
+                padding: 10px 15px !important;
+            }
+            
+            body:fullscreen #mobile-combined-ui,
+            body:-webkit-full-screen #mobile-combined-ui,
+            body:-moz-full-screen #mobile-combined-ui,
+            body:-ms-fullscreen #mobile-combined-ui {
+                display: block !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                min-width: 250px !important;
+                padding: 12px 25px !important;
+            }
+            
+            /* Hide desktop UI in fullscreen */
+            body:fullscreen #timer,
+            body:-webkit-full-screen #timer,
+            body:-moz-full-screen #timer,
+            body:-ms-fullscreen #timer {
+                display: none !important;
+            }
+            
+            body:fullscreen #stats,
+            body:-webkit-full-screen #stats,
+            body:-moz-full-screen #stats,
+            body:-ms-fullscreen #stats {
+                display: none !important;
+            }
+        }
+        
+        /* Fullscreen portrait specific */
+        @media (max-width: 768px) and (orientation: portrait) {
+            body:fullscreen #stamina-bar,
+            body:-webkit-full-screen #stamina-bar,
+            body:-moz-full-screen #stamina-bar,
+            body:-ms-fullscreen #stamina-bar {
+                bottom: 140px !important;
+                top: auto !important;
+            }
+            
+            body:fullscreen #mobile-combined-ui,
+            body:-webkit-full-screen #mobile-combined-ui,
+            body:-moz-full-screen #mobile-combined-ui,
+            body:-ms-fullscreen #mobile-combined-ui {
+                top: 20px !important;
+                padding: 15px 30px !important;
+                min-width: 260px !important;
+            }
+        }
+        
+        /* Fullscreen landscape specific */
+        @media (max-width: 768px) and (orientation: landscape) {
+            body:fullscreen #stamina-bar,
+            body:-webkit-full-screen #stamina-bar,
+            body:-moz-full-screen #stamina-bar,
+            body:-ms-fullscreen #stamina-bar {
+                bottom: 80px !important;
+                top: auto !important;
+            }
+            
+            body:fullscreen #mobile-combined-ui,
+            body:-webkit-full-screen #mobile-combined-ui,
+            body:-moz-full-screen #mobile-combined-ui,
+            body:-ms-fullscreen #mobile-combined-ui {
+                top: 10px !important;
+                padding: 8px 20px !important;
+                min-width: 280px !important;
+                font-size: 12px !important;
             }
         }
     </style>
