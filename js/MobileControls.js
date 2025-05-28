@@ -592,11 +592,64 @@ export class MobileControls {
                     this.createFullscreenButton();
                 }, 500); // Small delay to avoid flickering
             }
+            
+            // Update mobile UI positioning for fullscreen
+            this.updateFullscreenLayout();
         };
         
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('msfullscreenchange', handleFullscreenChange);
+    }
+    
+    /**
+     * Update mobile UI layout for fullscreen mode
+     */
+    updateFullscreenLayout() {
+        if (!this.isTouchDevice) return;
+        
+        const isFullscreen = this.isFullscreen();
+        const body = document.body;
+        
+        if (isFullscreen) {
+            // Add fullscreen class for CSS targeting
+            body.classList.add('mobile-fullscreen');
+            
+            // Adjust mobile controls positioning for fullscreen
+            if (this.joystickContainer) {
+                this.joystickContainer.style.bottom = '30px';
+                this.joystickContainer.style.left = '30px';
+            }
+            
+            if (this.zoomContainer) {
+                this.zoomContainer.style.bottom = '30px';
+                this.zoomContainer.style.right = '30px';
+            }
+            
+            if (this.sprintButton) {
+                this.sprintButton.style.bottom = '30px';
+                this.sprintButton.style.right = '100px';
+            }
+        } else {
+            // Remove fullscreen class
+            body.classList.remove('mobile-fullscreen');
+            
+            // Reset to normal positioning
+            if (this.joystickContainer) {
+                this.joystickContainer.style.bottom = '20px';
+                this.joystickContainer.style.left = '20px';
+            }
+            
+            if (this.zoomContainer) {
+                this.zoomContainer.style.bottom = '20px';
+                this.zoomContainer.style.right = '20px';
+            }
+            
+            if (this.sprintButton) {
+                this.sprintButton.style.bottom = '20px';
+                this.sprintButton.style.right = '80px';
+            }
+        }
     }
 } 
