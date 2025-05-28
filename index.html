@@ -866,119 +866,6 @@
             }
         }
         
-        /* Alternative fullscreen targeting using class */
-        @media (max-width: 768px) {
-            body.mobile-fullscreen #stamina-bar {
-                bottom: 120px !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                right: auto !important;
-                min-width: 200px !important;
-                padding: 10px 15px !important;
-                z-index: 1002 !important;
-            }
-            
-            body.mobile-fullscreen #mobile-combined-ui {
-                top: 15px !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                min-width: 250px !important;
-                padding: 12px 25px !important;
-                z-index: 1002 !important;
-            }
-        }
-        
-        /* Landscape fullscreen with class */
-        @media (max-width: 768px) and (orientation: landscape) {
-            body.mobile-fullscreen #stamina-bar {
-                bottom: 80px !important;
-                min-width: 220px !important;
-                padding: 8px 12px !important;
-            }
-            
-            body.mobile-fullscreen #mobile-combined-ui {
-                top: 10px !important;
-                min-width: 280px !important;
-                padding: 8px 20px !important;
-                font-size: 12px !important;
-            }
-        }
-        
-        /* Portrait fullscreen with class */
-        @media (max-width: 768px) and (orientation: portrait) {
-            body.mobile-fullscreen #stamina-bar {
-                bottom: 140px !important;
-                min-width: 200px !important;
-            }
-            
-            body.mobile-fullscreen #mobile-combined-ui {
-                top: 20px !important;
-                min-width: 260px !important;
-                padding: 15px 30px !important;
-            }
-        }
-        
-        /* Fullscreen mobile layout adjustments - both orientations */
-        @media (max-width: 768px) {
-            /* When in fullscreen, center everything properly */
-            body:fullscreen #stamina-bar,
-            body:-webkit-full-screen #stamina-bar,
-            body:-moz-full-screen #stamina-bar,
-            body:-ms-fullscreen #stamina-bar {
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                right: auto !important;
-                min-width: 200px !important;
-                padding: 10px 15px !important;
-            }
-            
-            body:fullscreen #mobile-combined-ui,
-            body:-webkit-full-screen #mobile-combined-ui,
-            body:-moz-full-screen #mobile-combined-ui,
-            body:-ms-fullscreen #mobile-combined-ui {
-                display: block !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                min-width: 250px !important;
-                padding: 12px 25px !important;
-            }
-            
-            /* Hide desktop UI in fullscreen */
-            body:fullscreen #timer,
-            body:-webkit-full-screen #timer,
-            body:-moz-full-screen #timer,
-            body:-ms-fullscreen #timer {
-                display: none !important;
-            }
-            
-            body:fullscreen #stats,
-            body:-webkit-full-screen #stats,
-            body:-moz-full-screen #stats,
-            body:-ms-fullscreen #stats {
-                display: none !important;
-            }
-        }
-        
-        /* Fullscreen portrait specific */
-        @media (max-width: 768px) and (orientation: portrait) {
-            body:fullscreen #stamina-bar,
-            body:-webkit-full-screen #stamina-bar,
-            body:-moz-full-screen #stamina-bar,
-            body:-ms-fullscreen #stamina-bar {
-                bottom: 140px !important;
-                top: auto !important;
-            }
-            
-            body:fullscreen #mobile-combined-ui,
-            body:-webkit-full-screen #mobile-combined-ui,
-            body:-moz-full-screen #mobile-combined-ui,
-            body:-ms-fullscreen #mobile-combined-ui {
-                top: 20px !important;
-                padding: 15px 30px !important;
-                min-width: 260px !important;
-            }
-        }
-        
         /* Fullscreen landscape specific */
         @media (max-width: 768px) and (orientation: landscape) {
             body:fullscreen #stamina-bar,
@@ -987,16 +874,92 @@
             body:-ms-fullscreen #stamina-bar {
                 bottom: 80px !important;
                 top: auto !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                right: auto !important;
+                min-width: 200px !important;
+                padding: 8px 12px !important;
             }
             
             body:fullscreen #mobile-combined-ui,
             body:-webkit-full-screen #mobile-combined-ui,
             body:-moz-full-screen #mobile-combined-ui,
             body:-ms-fullscreen #mobile-combined-ui {
+                display: block !important;
                 top: 10px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
                 padding: 8px 20px !important;
                 min-width: 280px !important;
                 font-size: 12px !important;
+            }
+            
+            body:fullscreen #timer,
+            body:-webkit-full-screen #timer,
+            body:-moz-full-screen #timer,
+            body:-ms-fullscreen #timer,
+            body:fullscreen #stats,
+            body:-webkit-full-screen #stats,
+            body:-moz-full-screen #stats,
+            body:-ms-fullscreen #stats {
+                display: none !important;
+            }
+        }
+        
+        /* Alternative fullscreen targeting using class */
+        @media (max-width: 768px) { /* General rules for .mobile-fullscreen */
+            body.mobile-fullscreen #stamina-bar {
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                right: auto !important;
+                /* top/bottom will be set by orientation-specific .mobile-fullscreen rules */
+                min-width: 200px !important; 
+                padding: 10px 15px !important; 
+                z-index: 1002 !important;
+            }
+            
+            body.mobile-fullscreen #mobile-combined-ui {
+                display: block !important; /* Crucial for visibility */
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                /* top will be set by orientation-specific .mobile-fullscreen rules */
+                min-width: 250px !important; 
+                padding: 12px 25px !important; 
+                z-index: 1002 !important;
+            }
+            
+            body.mobile-fullscreen #timer,
+            body.mobile-fullscreen #stats {
+                display: none !important; /* Hide desktop elements */
+            }
+        }
+        
+        /* Landscape fullscreen with class - specific positioning */
+        @media (max-width: 768px) and (orientation: landscape) {
+            body.mobile-fullscreen #stamina-bar {
+                bottom: 80px !important;
+                min-width: 200px !important; 
+                padding: 8px 12px !important; 
+            }
+            
+            body.mobile-fullscreen #mobile-combined-ui {
+                top: 10px !important;
+                min-width: 280px !important; 
+                padding: 8px 20px !important;
+                font-size: 12px !important;
+            }
+        }
+        
+        /* Portrait fullscreen with class - specific positioning */
+        @media (max-width: 768px) and (orientation: portrait) {
+            body.mobile-fullscreen #stamina-bar {
+                bottom: 140px !important;
+            }
+            
+            body.mobile-fullscreen #mobile-combined-ui {
+                top: 20px !important;
+                min-width: 260px !important;
+                padding: 15px 30px !important;
             }
         }
     </style>
