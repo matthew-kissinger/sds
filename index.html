@@ -425,7 +425,7 @@
             }
             
             #stats {
-                display: none; /* Hide desktop stats on mobile */
+                display: none !important; /* Hide desktop stats on mobile */
             }
             
             #mobile-combined-ui {
@@ -487,7 +487,7 @@
         /* Mobile responsive stamina bar */
         @media (max-width: 768px) {
             #stamina-bar {
-                bottom: 10px;
+                bottom: 100px;
                 left: 50%;
                 transform: translateX(-50%);
                 right: auto;
@@ -590,6 +590,13 @@
             #instructions p:contains("Mouse Wheel"),
             #instructions p:contains("P") {
                 display: none;
+            }
+            
+            /* Ensure stats are completely hidden on mobile */
+            #stats,
+            #stats.visible,
+            #stats.game-ui {
+                display: none !important;
             }
         }
     </style>
