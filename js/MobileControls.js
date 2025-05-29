@@ -660,64 +660,31 @@ export class MobileControls {
         const isFullscreen = this.isFullscreen();
         const body = document.body;
         
-        // Get safe area insets
-        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('--sab') || 
-                              'env(safe-area-inset-bottom, 0px)';
-        const safeAreaLeft = 'env(safe-area-inset-left, 0px)';
-        const safeAreaRight = 'env(safe-area-inset-right, 0px)';
-        
         if (isFullscreen) {
             // Add fullscreen class for CSS targeting
             body.classList.add('mobile-fullscreen');
             
-            // Adjust mobile controls positioning for fullscreen
-            if (this.joystickContainer) {
-                this.joystickContainer.style.bottom = `calc(30px + ${safeAreaBottom})`;
-                this.joystickContainer.style.left = `calc(30px + ${safeAreaLeft})`;
-            }
+            // In the new container system, individual positioning is handled by CSS
+            // We only need to ensure elements are not overridden by JS
             
-            if (this.zoomContainer) {
-                this.zoomContainer.style.bottom = `calc(30px + ${safeAreaBottom})`;
-                this.zoomContainer.style.right = `calc(30px + ${safeAreaRight})`;
-            }
-            
-            if (this.sprintButton) {
-                this.sprintButton.style.bottom = `calc(30px + ${safeAreaBottom})`;
-                this.sprintButton.style.left = `calc(170px + ${safeAreaLeft})`;
-            }
-            
-            // Special handling for landscape fullscreen
+            // Clear any JS-forced positioning for stamina bar in landscape fullscreen
+            // Let the CSS container system handle it
             if (window.matchMedia('(orientation: landscape)').matches) {
-                if (this.zoomContainer) {
-                    this.zoomContainer.style.right = `calc(30px + ${safeAreaRight})`;
-                }
-                
-                if (this.sprintButton) {
-                    // Move sprint button to right side in landscape to avoid stamina bar
-                    this.sprintButton.style.left = 'auto';
-                    this.sprintButton.style.right = `calc(100px + ${safeAreaRight})`;
+                const staminaBar = document.getElementById('stamina-bar');
+                if (staminaBar) {
+                    // Clear JS positioning - let CSS containers handle it
+                    staminaBar.style.left = '';
+                    staminaBar.style.transform = '';
+                    staminaBar.style.right = '';
+                    staminaBar.style.bottom = '';
                 }
             }
         } else {
             // Remove fullscreen class
             body.classList.remove('mobile-fullscreen');
             
-            // Reset to normal positioning
-            if (this.joystickContainer) {
-                this.joystickContainer.style.bottom = `calc(20px + ${safeAreaBottom})`;
-                this.joystickContainer.style.left = `calc(20px + ${safeAreaLeft})`;
-            }
-            
-            if (this.zoomContainer) {
-                this.zoomContainer.style.bottom = `calc(20px + ${safeAreaBottom})`;
-                this.zoomContainer.style.right = `calc(20px + ${safeAreaRight})`;
-            }
-            
-            if (this.sprintButton) {
-                this.sprintButton.style.bottom = `calc(20px + ${safeAreaBottom})`;
-                this.sprintButton.style.left = `calc(160px + ${safeAreaLeft})`;
-                this.sprintButton.style.right = 'auto';
-            }
+            // Reset any positioning when exiting fullscreen if needed
+            // But mostly let CSS handle it
         }
     }
 }

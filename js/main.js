@@ -36,6 +36,7 @@ class SheepDogSimulation {
         // Add mobile class to body if touch device detected
         if (this.mobileControls.getIsTouchDevice()) {
             document.body.classList.add('is-mobile');
+            this.organizeMobileUIContainers();
         }
         
         // Connect mobile controls to input handler and scene manager
@@ -216,6 +217,35 @@ class SheepDogSimulation {
         
         // Render the scene (always render to show pause indicator)
         this.sceneManager.render();
+    }
+    
+    organizeMobileUIContainers() {
+        // Wait a moment for mobile controls to be created
+        setTimeout(() => {
+            // Organize left stack (sprint + joystick) for portrait mode
+            const leftStack = document.getElementById('mobile-left-stack');
+            const sprintButton = document.getElementById('mobile-sprint');
+            const joystick = document.getElementById('mobile-joystick');
+            
+            if (leftStack && sprintButton) {
+                leftStack.appendChild(sprintButton);
+            }
+            if (leftStack && joystick) {
+                leftStack.appendChild(joystick);
+            }
+            
+            // Organize right HUD cluster (timer + stamina) for landscape fullscreen
+            const hudRight = document.getElementById('mobile-hud-right');
+            const combinedUI = document.getElementById('mobile-combined-ui');
+            const staminaBar = document.getElementById('stamina-bar');
+            
+            if (hudRight && combinedUI) {
+                hudRight.appendChild(combinedUI);
+            }
+            if (hudRight && staminaBar) {
+                hudRight.appendChild(staminaBar);
+            }
+        }, 100);
     }
 }
 
