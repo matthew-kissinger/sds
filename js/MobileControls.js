@@ -231,24 +231,24 @@ export class MobileControls {
         `;
         document.head.appendChild(style);
         
-        // Add zoom labels
-        const zoomLabel = document.createElement('div');
-        zoomLabel.textContent = 'Zoom';
-        zoomLabel.style.cssText = `
-            position: absolute;
-            top: -25px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 12px;
-            color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: Arial, sans-serif;
-            font-weight: bold;
-        `;
+        // Add zoom labels - REMOVED
+        // const zoomLabel = document.createElement('div');
+        // zoomLabel.textContent = 'Zoom';
+        // zoomLabel.style.cssText = `
+        //     position: absolute;
+        //     top: -25px;
+        //     left: 50%;
+        //     transform: translateX(-50%);
+        //     font-size: 12px;
+        //     color: white;
+        //     background: rgba(0, 0, 0, 0.7);
+        //     padding: 2px 6px;
+        //     border-radius: 4px;
+        //     font-family: Arial, sans-serif;
+        //     font-weight: bold;
+        // `;
         
-        this.zoomContainer.appendChild(zoomLabel);
+        // this.zoomContainer.appendChild(zoomLabel);
         this.zoomContainer.appendChild(this.zoomSlider);
         document.body.appendChild(this.zoomContainer);
         
@@ -571,8 +571,11 @@ export class MobileControls {
             // Handle the fullscreen promise
             if (fullscreenPromise && fullscreenPromise.then) {
                 fullscreenPromise.then(() => {
-                    /* 1. Force a layout pass for the new viewport */
-                    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+                    /* 1. Force a layout pass for the new viewport and update controls layout */
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event('resize'));
+                        this.updateFullscreenLayout(); // Ensure layout is updated after resize
+                    }, 50);
                     
                     /* 2. If start-screen is still active, scroll it back in view */
                     if (document.getElementById('start-screen')) {

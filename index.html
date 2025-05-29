@@ -972,33 +972,93 @@
         
         body.is-mobile #mobile-combined-ui {
             display: block !important;
+            top: calc(env(safe-area-inset-top, 0px) + 5px); /* Closer to top + safe area */
+            min-width: auto; /* Allow to shrink */
+            padding: 6px 12px; /* Smaller padding */
+            border-radius: 6px; /* Smaller border radius */
+        }
+        
+        body.is-mobile #mobile-combined-ui #mobile-timer-display {
+            font-size: 14px; /* Smaller timer */
+            margin-bottom: 1px;
+        }
+        
+        body.is-mobile #mobile-combined-ui #mobile-sheep-count {
+            font-size: 10px; /* Smaller sheep count */
+            margin-bottom: 1px;
+        }
+        
+        body.is-mobile #mobile-combined-ui #mobile-best-time {
+            font-size: 9px; /* Smaller best time */
         }
         
         /* Ensure stamina is centered on mobile devices */
         body.is-mobile #stamina-bar {
-            bottom: 100px;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); /* Closer to bottom + safe area */
             left: 50%;
             transform: translateX(-50%);
             right: auto;
-            min-width: 180px;
-            padding: 8px 12px;
+            min-width: 150px; /* Smaller width */
+            padding: 5px 10px; /* Reduced padding */
+            border-radius: 6px; /* Smaller border radius */
         }
-        
+
+        body.is-mobile #stamina-label {
+            font-size: 10px; /* Smaller label */
+            margin-bottom: 4px;
+        }
+
+        body.is-mobile #stamina-container {
+            height: 12px; /* Smaller height */
+            margin-bottom: 3px;
+        }
+
+        body.is-mobile #stamina-text {
+            font-size: 9px; /* Smaller text */
+        }
+
         /* Landscape orientation adjustments for mobile */
         body.is-mobile #stamina-bar {
-            bottom: 100px;
+             /* bottom is already defined above, this keeps it consistent */
         }
-        
+
         @media (orientation: landscape) {
             body.is-mobile #stamina-bar {
-                bottom: 80px !important;
-                min-width: 200px !important;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 5px) !important; /* Even closer for landscape */
+                min-width: 180px !important; /* Slightly wider in landscape */
+                 padding: 4px 8px !important;
             }
-            
+
             body.is-mobile #mobile-combined-ui {
-                min-width: 280px !important;
-                padding: 8px 20px !important;
-                font-size: 12px !important;
+                min-width: auto !important; /* Allow to shrink more */
+                padding: 5px 10px !important; /* Reduced padding */
+                font-size: 10px !important; /* Smaller font */
+                border-radius: 6px !important;
+            }
+            body.is-mobile #mobile-combined-ui #mobile-timer-display {
+                font-size: 12px !important; /* Smaller timer display */
+            }
+            body.is-mobile #mobile-combined-ui #mobile-sheep-count {
+                font-size: 9px !important; /* Smaller sheep count */
+            }
+             body.is-mobile #mobile-combined-ui #mobile-best-time {
+                font-size: 8px !important; /* Smaller best time */
+            }
+        }
+
+        /* Portrait fullscreen with class - specific positioning */
+        @media (max-width: 768px) and (orientation: portrait) {
+            body.mobile-fullscreen #stamina-bar {
+                 bottom: calc(env(safe-area-inset-bottom, 0px) + 60px) !important; /* Adjust for joystick/sprint buttons */
+            }
+        }
+        
+        /* Landscape fullscreen with class - specific positioning */
+        @media (max-width: 768px) and (orientation: landscape) {
+            body.mobile-fullscreen #stamina-bar {
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 5px) !important; /* Keep close to bottom */
+                min-width: 180px !important;
+                padding: 4px 8px !important;
             }
         }
     </style>
