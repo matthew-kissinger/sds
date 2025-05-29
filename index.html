@@ -837,7 +837,7 @@
         
         /* New Container-Based Mobile Layout */
         
-        /* Mobile Left Stack - Portrait Mode */
+        /* Mobile Left Stack - Portrait Mode (just joystick) */
         @media (max-width: 768px) and (orientation: portrait) {
             #mobile-left-stack {
                 position: fixed;
@@ -858,9 +858,21 @@
                 top: auto !important;
             }
             
-            /* Stamina bar in portrait - more space from bottom controls */
+            /* Sprint button positioned independently on bottom-right in portrait */
+            #mobile-sprint {
+                position: fixed !important;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
+                right: calc(env(safe-area-inset-right, 0px) + 20px) !important;
+                left: auto !important;
+                top: auto !important;
+            }
+            
+            /* Stamina bar in portrait - bottom center with some clearance */
             body.is-mobile #stamina-bar {
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 190px) !important; /* Above joystick+sprint+gaps */
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 30px) !important; /* Less space needed now */
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                right: auto !important;
             }
         }
         
