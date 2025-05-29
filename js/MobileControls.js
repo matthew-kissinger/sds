@@ -5,7 +5,9 @@ import { Vector2D } from './Vector2D.js';
  * Includes virtual joystick for movement and zoom slider for camera control
  */
 export class MobileControls {
-    constructor() {
+    constructor(sceneManager, audioManager) {
+        this.sceneManager = sceneManager;
+        this.audioManager = audioManager;
         this.isTouchDevice = this.detectTouchDevice();
         this.isEnabled = false;
         this.joystick = null;
@@ -25,6 +27,13 @@ export class MobileControls {
         if (this.isTouchDevice) {
             this.createFullscreenButton();
             this.setupFullscreenListeners();
+            
+            // Add fullscreen change listeners that trigger resize
+            if (this.sceneManager) {
+                ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'msfullscreenchange']
+                    .forEach(evt => document.addEventListener(evt, () => this.sceneManager.onWindowResize()));
+            }
+            
             this.loadNippleJS().then(() => {
                 this.createMobileUI();
                 this.setupTouchPrevention();
@@ -84,13 +93,18 @@ export class MobileControls {
      * Create virtual joystick for movement
      */
     createJoystick() {
+        // Get safe area insets
+        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('--sab') || 
+                              'env(safe-area-inset-bottom, 0px)';
+        const safeAreaLeft = 'env(safe-area-inset-left, 0px)';
+        
         // Create joystick container
         this.joystickContainer = document.createElement('div');
         this.joystickContainer.id = 'mobile-joystick';
         this.joystickContainer.style.cssText = `
             position: fixed;
-            bottom: 20px;
-            left: 20px;
+            bottom: calc(20px + ${safeAreaBottom});
+            left: calc(20px + ${safeAreaLeft});
             width: 120px;
             height: 120px;
             z-index: 1001;
@@ -139,12 +153,17 @@ export class MobileControls {
      * Create zoom slider for camera control
      */
     createZoomSlider() {
+        // Get safe area insets
+        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('--sab') || 
+                              'env(safe-area-inset-bottom, 0px)';
+        const safeAreaRight = 'env(safe-area-inset-right, 0px)';
+        
         this.zoomContainer = document.createElement('div');
         this.zoomContainer.id = 'mobile-zoom';
         this.zoomContainer.style.cssText = `
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            bottom: calc(20px + ${safeAreaBottom});
+            right: calc(20px + ${safeAreaRight});
             width: 40px;
             height: 200px;
             z-index: 1001;
@@ -246,13 +265,18 @@ export class MobileControls {
      * Create sprint button
      */
     createSprintButton() {
+        // Get safe area insets
+        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('--sab') || 
+                              'env(safe-area-inset-bottom, 0px)';
+        const safeAreaLeft = 'env(safe-area-inset-left, 0px)';
+        
         this.sprintButton = document.createElement('button');
         this.sprintButton.id = 'mobile-sprint';
         this.sprintButton.textContent = '🏃';
         this.sprintButton.style.cssText = `
             position: fixed;
-            bottom: 20px;
-            right: 80px;
+            bottom: calc(20px + ${safeAreaBottom});
+            left: calc(160px + ${safeAreaLeft});
             width: 60px;
             height: 60px;
             border-radius: 50%;
@@ -520,26 +544,47 @@ export class MobileControls {
         const element = document.documentElement;
         
         try {
+            let fullscreenPromise = null;
+            
             // Check for different fullscreen API methods
             if (element.requestFullscreen) {
-                element.requestFullscreen();
+                fullscreenPromise = element.requestFullscreen();
             } else if (element.webkitRequestFullscreen) {
                 // Safari
-                element.webkitRequestFullscreen();
+                fullscreenPromise = element.webkitRequestFullscreen();
             } else if (element.webkitRequestFullScreen) {
                 // Older Safari
-                element.webkitRequestFullScreen();
+                fullscreenPromise = element.webkitRequestFullScreen();
             } else if (element.mozRequestFullScreen) {
                 // Firefox
-                element.mozRequestFullScreen();
+                fullscreenPromise = element.mozRequestFullScreen();
             } else if (element.msRequestFullscreen) {
                 // IE/Edge
-                element.msRequestFullscreen();
+                fullscreenPromise = element.msRequestFullscreen();
             } else {
                 console.warn('Fullscreen API not supported on this device');
                 // Hide button anyway since user tried to use it
                 this.hideFullscreenButton();
                 return;
+            }
+            
+            // Handle the fullscreen promise
+            if (fullscreenPromise && fullscreenPromise.then) {
+                fullscreenPromise.then(() => {
+                    /* 1. Force a layout pass for the new viewport */
+                    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+                    
+                    /* 2. If start-screen is still active, scroll it back in view */
+                    if (document.getElementById('start-screen')) {
+                        document.getElementById('start-screen').scrollIntoView({block:'center'});
+                    }
+                    
+                    /* 3. Guarantee AudioContext is resumed */
+                    if (this.audioManager && this.audioManager.listener && this.audioManager.listener.context && 
+                        this.audioManager.listener.context.state === 'suspended') {
+                        this.audioManager.listener.context.resume().catch(() => {});
+                    }
+                });
             }
             
             // Hide the fullscreen button after requesting fullscreen
@@ -612,24 +657,43 @@ export class MobileControls {
         const isFullscreen = this.isFullscreen();
         const body = document.body;
         
+        // Get safe area insets
+        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('--sab') || 
+                              'env(safe-area-inset-bottom, 0px)';
+        const safeAreaLeft = 'env(safe-area-inset-left, 0px)';
+        const safeAreaRight = 'env(safe-area-inset-right, 0px)';
+        
         if (isFullscreen) {
             // Add fullscreen class for CSS targeting
             body.classList.add('mobile-fullscreen');
             
             // Adjust mobile controls positioning for fullscreen
             if (this.joystickContainer) {
-                this.joystickContainer.style.bottom = '30px';
-                this.joystickContainer.style.left = '30px';
+                this.joystickContainer.style.bottom = `calc(30px + ${safeAreaBottom})`;
+                this.joystickContainer.style.left = `calc(30px + ${safeAreaLeft})`;
             }
             
             if (this.zoomContainer) {
-                this.zoomContainer.style.bottom = '30px';
-                this.zoomContainer.style.right = '30px';
+                this.zoomContainer.style.bottom = `calc(30px + ${safeAreaBottom})`;
+                this.zoomContainer.style.right = `calc(30px + ${safeAreaRight})`;
             }
             
             if (this.sprintButton) {
-                this.sprintButton.style.bottom = '30px';
-                this.sprintButton.style.right = '100px';
+                this.sprintButton.style.bottom = `calc(30px + ${safeAreaBottom})`;
+                this.sprintButton.style.left = `calc(170px + ${safeAreaLeft})`;
+            }
+            
+            // Special handling for landscape fullscreen
+            if (window.matchMedia('(orientation: landscape)').matches) {
+                if (this.zoomContainer) {
+                    this.zoomContainer.style.right = `calc(30px + ${safeAreaRight})`;
+                }
+                
+                if (this.sprintButton) {
+                    // Move sprint button to right side in landscape to avoid stamina bar
+                    this.sprintButton.style.left = 'auto';
+                    this.sprintButton.style.right = `calc(100px + ${safeAreaRight})`;
+                }
             }
         } else {
             // Remove fullscreen class
@@ -637,19 +701,20 @@ export class MobileControls {
             
             // Reset to normal positioning
             if (this.joystickContainer) {
-                this.joystickContainer.style.bottom = '20px';
-                this.joystickContainer.style.left = '20px';
+                this.joystickContainer.style.bottom = `calc(20px + ${safeAreaBottom})`;
+                this.joystickContainer.style.left = `calc(20px + ${safeAreaLeft})`;
             }
             
             if (this.zoomContainer) {
-                this.zoomContainer.style.bottom = '20px';
-                this.zoomContainer.style.right = '20px';
+                this.zoomContainer.style.bottom = `calc(20px + ${safeAreaBottom})`;
+                this.zoomContainer.style.right = `calc(20px + ${safeAreaRight})`;
             }
             
             if (this.sprintButton) {
-                this.sprintButton.style.bottom = '20px';
-                this.sprintButton.style.right = '80px';
+                this.sprintButton.style.bottom = `calc(20px + ${safeAreaBottom})`;
+                this.sprintButton.style.left = `calc(160px + ${safeAreaLeft})`;
+                this.sprintButton.style.right = 'auto';
             }
         }
     }
-} 
+}

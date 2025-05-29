@@ -962,6 +962,45 @@
                 padding: 15px 30px !important;
             }
         }
+        
+        /* Mobile device detection using is-mobile class */
+        /* ALWAYS hide desktop HUD on a touch device */
+        body.is-mobile #timer,
+        body.is-mobile #stats {
+            display: none !important;
+        }
+        
+        body.is-mobile #mobile-combined-ui {
+            display: block !important;
+        }
+        
+        /* Ensure stamina is centered on mobile devices */
+        body.is-mobile #stamina-bar {
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            right: auto;
+            min-width: 180px;
+            padding: 8px 12px;
+        }
+        
+        /* Landscape orientation adjustments for mobile */
+        body.is-mobile #stamina-bar {
+            bottom: 100px;
+        }
+        
+        @media (orientation: landscape) {
+            body.is-mobile #stamina-bar {
+                bottom: 80px !important;
+                min-width: 200px !important;
+            }
+            
+            body.is-mobile #mobile-combined-ui {
+                min-width: 280px !important;
+                padding: 8px 20px !important;
+                font-size: 12px !important;
+            }
+        }
     </style>
 </head>
 <body>

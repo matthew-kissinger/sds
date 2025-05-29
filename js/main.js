@@ -25,11 +25,18 @@ class SheepDogSimulation {
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene());
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
-        this.mobileControls = new MobileControls();
         this.performanceMonitor = new PerformanceMonitor();
         this.startScreen = new StartScreen(this.sceneManager);
         this.staminaUI = new StaminaUI();
         this.audioManager = new AudioManager(this.sceneManager.getCamera());
+        
+        // Create mobile controls with sceneManager and audioManager
+        this.mobileControls = new MobileControls(this.sceneManager, this.audioManager);
+        
+        // Add mobile class to body if touch device detected
+        if (this.mobileControls.getIsTouchDevice()) {
+            document.body.classList.add('is-mobile');
+        }
         
         // Connect mobile controls to input handler and scene manager
         this.inputHandler.setMobileControls(this.mobileControls);
