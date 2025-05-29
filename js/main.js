@@ -222,14 +222,11 @@ class SheepDogSimulation {
     organizeMobileUIContainers() {
         // Wait a moment for mobile controls to be created
         setTimeout(() => {
-            // Organize left stack (sprint + joystick) for portrait mode
+            // Organize left stack (just joystick) for portrait mode
+            // Sprint button stays independent for bottom-right positioning
             const leftStack = document.getElementById('mobile-left-stack');
-            const sprintButton = document.getElementById('mobile-sprint');
             const joystick = document.getElementById('mobile-joystick');
             
-            if (leftStack && sprintButton) {
-                leftStack.appendChild(sprintButton);
-            }
             if (leftStack && joystick) {
                 leftStack.appendChild(joystick);
             }
