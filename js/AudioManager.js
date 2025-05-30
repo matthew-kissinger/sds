@@ -41,6 +41,14 @@ export class AudioManager {
         this.sfxVolume = 0.8;
         this.musicVolume = 0.5;
         
+        // Specific volume multipliers for different sound types
+        this.soundVolumeMultipliers = {
+            uiClick: 1.0,
+            rewardingChime: 1.0,
+            sheepBleat: 0.5,        // 50% lower than normal
+            sheepdogBark: 0.5       // 50% lower than normal
+        };
+        
         // Mute state
         this.isMuted = false;
         this.currentMusic = null; // Track currently playing music
@@ -82,7 +90,10 @@ export class AudioManager {
                         // Create Audio object
                         this.sounds[soundKey] = new THREE.Audio(this.listener);
                         this.sounds[soundKey].setBuffer(buffer);
-                        this.sounds[soundKey].setVolume(this.masterVolume * this.sfxVolume);
+                        
+                        // Apply specific volume multiplier for this sound type
+                        const volumeMultiplier = this.soundVolumeMultipliers[soundKey] || 1.0;
+                        this.sounds[soundKey].setVolume(this.masterVolume * this.sfxVolume * volumeMultiplier);
                         
                         console.log(`Loaded sound: ${soundKey}`);
                         resolve();
@@ -240,7 +251,13 @@ export class AudioManager {
                     // Create a new audio instance for overlapping sounds
                     const additionalBleat = new THREE.Audio(this.listener);
                     additionalBleat.setBuffer(this.sounds.sheepBleat.buffer);
-                    additionalBleat.setVolume(this.masterVolume * this.sfxVolume * (0.7 + Math.random() * 0.3)); // Slight volume variation
+                    
+                    // Apply the same volume multiplier as the main sheep bleat sound
+                    const baseVolume = this.isMuted ? 0 : this.masterVolume * this.sfxVolume;
+                    const volumeMultiplier = this.soundVolumeMultipliers.sheepBleat || 1.0;
+                    const finalVolume = baseVolume * volumeMultiplier * (0.7 + Math.random() * 0.3); // Slight volume variation
+                    
+                    additionalBleat.setVolume(finalVolume);
                     additionalBleat.play();
                 }
             }, i * (100 + Math.random() * 150)); // 100-250ms staggered delays
@@ -369,6 +386,13 @@ export class AudioManager {
      */
     toggleMute() {
         this.isMuted = !this.isMuted;
+        
+        // Stop all currently playing sounds when muting
+        if (this.isMuted) {
+            this.stopAllSounds();
+            this.stopAllMusic();
+        }
+        
         this.updateAllVolumes();
         this.saveMutePreference();
         return this.isMuted;
@@ -379,6 +403,13 @@ export class AudioManager {
      */
     setMuted(muted) {
         this.isMuted = muted;
+        
+        // Stop all currently playing sounds when muting
+        if (this.isMuted) {
+            this.stopAllSounds();
+            this.stopAllMusic();
+        }
+        
         this.updateAllVolumes();
         this.saveMutePreference();
     }
@@ -421,13 +452,15 @@ export class AudioManager {
      */
     updateAllVolumes() {
         const effectiveVolume = this.isMuted ? 0 : this.masterVolume;
-        const finalSFXVolume = effectiveVolume * this.sfxVolume;
+        const baseSFXVolume = effectiveVolume * this.sfxVolume;
         const finalMusicVolume = effectiveVolume * this.musicVolume;
         
-        // Update sound effects
-        Object.values(this.sounds).forEach(sound => {
+        // Update sound effects with specific volume multipliers
+        Object.keys(this.sounds).forEach(soundKey => {
+            const sound = this.sounds[soundKey];
             if (sound && sound.setVolume) {
-                sound.setVolume(finalSFXVolume);
+                const volumeMultiplier = this.soundVolumeMultipliers[soundKey] || 1.0;
+                sound.setVolume(baseSFXVolume * volumeMultiplier);
             }
         });
         
