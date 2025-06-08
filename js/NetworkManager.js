@@ -17,10 +17,20 @@ export class NetworkManager {
         this.playerName = null;
         this.isHost = false;
         
-        // Server configuration - MULTIPLAYER DISABLED
-        // Fly.io server removed - only local development supported
-        this.serverHost = '127.0.0.1'; // Local development only  
-        this.serverPort = 9208; // Geckos.io default signaling port (same for dev and production)
+        // Server configuration - Environment specific
+        const isLocalDevelopment = window.location.hostname === 'localhost' || 
+                                  window.location.hostname === '127.0.0.1' ||
+                                  window.location.hostname === '';
+        
+        if (isLocalDevelopment) {
+            // Local development configuration
+            this.serverHost = '127.0.0.1';
+            this.serverPort = 9208; // Local development port
+        } else {
+            // Production configuration
+            this.serverHost = 'sds-server-production.up.railway.app';
+            this.serverPort = 9208; // Production port
+        }
         
         // Callbacks
         this.onConnectionStateChange = null;
@@ -58,30 +68,25 @@ export class NetworkManager {
             return Promise.resolve();
         }
         
-        // Check if in production - multiplayer disabled
-        const isProduction = window.location.hostname === 'matthew-kissinger.github.io';
-        if (isProduction) {
-            this.notifyError('Multiplayer is currently disabled. Please play in single-player mode.');
-            throw new Error('Multiplayer disabled in production');
-        }
+        // Environment-specific server configuration already set in constructor
         
         this.connecting = true;
         this.notifyConnectionStateChange('connecting');
         
         try {
-            // Local development only
-            const protocol = 'http';
+            // Determine protocol based on hostname
+            const protocol = this.serverHost === '127.0.0.1' || this.serverHost === 'localhost' ? 'http' : 'https';
             const serverUrl = `${protocol}://${this.serverHost}`;
             
             console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort}`);
-            console.log(`🔗 DEBUG: Local development mode only`);
+            console.log(`🔗 DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
             
-            // Configure Geckos connection for local development
+            // Configure Geckos connection
             const geckosConfig = { 
                 url: serverUrl,
                 port: this.serverPort
             };
-            console.log(`🔗 DEBUG: Using local server port ${this.serverPort}`);
+            console.log(`🔗 DEBUG: Using server port ${this.serverPort}`);
                 
             this.channel = geckos(geckosConfig);
             

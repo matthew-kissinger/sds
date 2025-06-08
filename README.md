@@ -76,6 +76,31 @@ A sophisticated web-based herding simulation where players control a sheepdog to
 3. **Open in browser**
    Navigate to `http://localhost:8000`
 
+## 🌐 Multiplayer Mode
+
+### Online Multiplayer
+The game supports real-time multiplayer with up to 4 players per room:
+
+- **Room-based System**: Create private rooms or use quick match
+- **Real-time Sync**: Low-latency gameplay using WebRTC data channels
+- **Competitive Mode**: Race against other players to herd sheep fastest
+- **Server Hosting**: Multiplayer server deployed on Railway
+
+### Multiplayer Features
+- **Create/Join Rooms**: Share 4-letter room codes with friends
+- **Quick Match**: Automatically join available public games
+- **Multiple Dog Types**: Choose between Jep, Rory, or Pip
+- **Live Player Count**: See other players in real-time
+- **Synchronized Sheep**: All players see the same sheep positions
+
+### Server Status
+- **Production Server**: Check deployment documentation for current server URL
+- **Local Testing**: Run `./start-multiplayer-servers.ps1` for local multiplayer
+- **Fallback Mode**: Single-player works offline if server unavailable
+
+### Setting Up Multiplayer (Developers)
+See [RAILWAY_SETUP.md](RAILWAY_SETUP.md) for deploying your own multiplayer server.
+
 ## 🎯 How to Play
 
 ### Desktop Controls
