@@ -164,6 +164,10 @@ export class SceneManager {
         this.scene.add(object);
     }
     
+    remove(object) {
+        this.scene.remove(object);
+    }
+    
     getScene() {
         return this.scene;
     }

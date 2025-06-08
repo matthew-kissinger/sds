@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#00BFFF">
+    <title>Sheep Dog Sim</title>
+    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            /* Prevent text selection on mobile */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            /* Prevent touch callouts */
+            -webkit-touch-callout: none;
+            /* Prevent tap highlight */
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            /* Prevent scrolling */
+            touch-action: none;
+            /* Prevent overscroll bounce on iOS */
+            overscroll-behavior: none;
+        }
+        
+        /* Prevent zoom on inputs and buttons */
+        input, button, select, textarea {
+            font-size: 16px;
+            -webkit-appearance: none;
+            border-radius: 0;
+        }
+        
+        /* Start Screen Overlay */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+            /* Mobile safe area and scrolling */
+            padding-top: max(20px, env(safe-area-inset-top));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        #game-title {
+            font-size: 4.5rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            color: #00BFFF;
+            font-family: 'Arial Black', Arial, sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 3px 3px 0px #000;
+        }
+        
+        /* Mobile responsive title */
+        @media (max-width: 768px) {
+            #start-screen {
+                padding: 10px;
+                justify-content: flex-start;
+                padding-top: 5vh;
+                padding-bottom: 5vh;
+                min-height: 100vh;
+                box-sizing: border-box;
+                overflow-y: auto;
+            }
+            
+            #game-title {
+                font-size: 2.2rem;
+                letter-spacing: 1px;
+                margin-bottom: 0.5rem;
+            }
+            
+            #game-subtitle {
+                font-size: 0.9rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            #start-instructions {
+                max-width: 95%;
+                padding: 1.2rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            #start-instructions h3 {
+                font-size: 1.1rem;
+                margin-bottom: 0.8rem;
+            }
+            
+            #start-instructions p {
+                font-size: 0.85rem;
+                margin: 0.6rem 0;
+            }
+            
+            #start-button {
+                padding: 15px 30px;
+                font-size: 1.2rem;
+                margin-top: 1rem;
+                margin-bottom: 2rem;
+            }
+        }
+        
+        /* Mobile portrait adjustments */
+        @media (max-width: 480px) and (orientation: portrait) {
+            #start-screen {
+                padding: 5px;
+                justify-content: flex-start;
+                padding-top: 2vh;
+                padding-bottom: 3vh;
+                min-height: 100vh;
+                max-height: 100vh;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            #game-title {
+                font-size: 1.8rem;
+                margin-bottom: 0.3rem;
+            }
+            
+            #game-subtitle {
+                font-size: 0.8rem;
+                margin-bottom: 1rem;
+            }
+            
+            #start-instructions {
+                padding: 1rem;
+                margin-bottom: 1rem;
+                flex-shrink: 0;
+            }
+            
+            #start-instructions h3 {
+                font-size: 1rem;
+            }
+            
+            #start-instructions p {
+                font-size: 0.8rem;
+                margin: 0.4rem 0;
+            }
+            
+            #start-button {
+                padding: 12px 25px;
+                font-size: 1rem;
+                margin-top: 1rem;
+                margin-bottom: 2rem;
+                flex-shrink: 0;
+            }
+        }
+        
+        /* Extra small screens - ensure everything fits */
+        @media (max-width: 360px) and (max-height: 640px) {
+            #start-screen {
+                padding: 3px;
+                padding-top: 1vh;
+                padding-bottom: 2vh;
+            }
+            
+            #game-title {
+                font-size: 1.5rem;
+                margin-bottom: 0.2rem;
+            }
+            
+            #game-subtitle {
+                font-size: 0.7rem;
+                margin-bottom: 0.8rem;
+            }
+            
+            #start-instructions {
+                padding: 0.8rem;
+                margin-bottom: 0.8rem;
+            }
+            
+            #start-instructions h3 {
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            #start-instructions p {
+                font-size: 0.75rem;
+                margin: 0.3rem 0;
+            }
+            
+            #start-button {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+                margin-top: 0.8rem;
+                margin-bottom: 1.5rem;
+            }
+        }
+        
+        /* Very short screens - ultra compact layout */
+        @media (max-height: 600px) {
+            #start-screen {
+                padding: 2px;
+                padding-top: 1vh;
+                padding-bottom: 1vh;
+                justify-content: space-between;
+            }
+            
+            #game-title {
+                font-size: 1.4rem;
+                margin-bottom: 0.1rem;
+            }
+            
+            #game-subtitle {
+                font-size: 0.65rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            #start-instructions {
+                padding: 0.6rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            #start-instructions h3 {
+                font-size: 0.85rem;
+                margin-bottom: 0.3rem;
+            }
+            
+            #start-instructions p {
+                font-size: 0.7rem;
+                margin: 0.2rem 0;
+                line-height: 1.2;
+            }
+            
+            #start-button {
+                padding: 8px 16px;
+                font-size: 0.85rem;
+                margin-top: 0.5rem;
+                margin-bottom: 1rem;
+            }
+        }
+        
+        /* Landscape mobile - horizontal layout adjustments */
+        @media (max-height: 500px) and (orientation: landscape) {
+            #start-screen {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-around;
+                padding: 5px;
+            }
+            
+            #start-screen > div:first-child {
+                flex: 1;
+                text-align: left;
+            }
+            
+            #start-instructions {
+                flex: 1;
+                margin: 0 10px;
+            }
+            
+            #start-button {
+                flex-shrink: 0;
+                margin: 0;
+            }
+        }
+        
+        #game-subtitle {
+            font-size: 1.4rem;
+            margin-bottom: 2rem;
+            color: #FFF;
+            font-family: Arial, sans-serif;
+            font-weight: normal;
+        }
+        
+        #start-instructions {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            color: #333;
+            border: 3px solid #00BFFF;
+            max-width: 500px;
+        }
+        
+        #start-instructions h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.5rem;
+            color: #00BFFF;
+            font-family: 'Arial Black', Arial, sans-serif;
+            font-weight: 900;
+        }
+        
+        #start-instructions p {
+            margin: 0.8rem 0;
+            font-size: 1rem;
+            line-height: 1.4;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        
+        #start-button {
+            background: #00BFFF;
+            border: 3px solid #FFF;
+            color: #FFF;
+            padding: 20px 40px;
+            font-size: 1.5rem;
+            font-weight: 900;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-family: 'Arial Black', Arial, sans-serif;
+            text-shadow: 2px 2px 0px #000;
+            /* Mobile touch improvements */
+            min-height: 44px;
+            min-width: 44px;
+            /* Ensure button is always accessible */
+            margin-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+            flex-shrink: 0;
+        }
+        
+        #start-button:hover {
+            background: #FFF;
+            color: #00BFFF;
+            border: 3px solid #00BFFF;
+            text-shadow: none;
+        }
+        
+        #start-button:active {
+            transform: translateY(2px);
+        }
+        
+        /* Mute Toggle in Controls */
+        #mute-toggle {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s ease;
+        }
+        
+        #mute-toggle:hover {
+            color: #00BFFF;
+        }
+        
+        #mute-toggle.muted {
+            color: #FF6B35;
+        }
+        
+        /* Game UI Elements - Clean style */
+        .game-ui {
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .game-ui.visible {
+            opacity: 1;
+        }
+        
+        /* Stats hidden by default */
+        #stats {
+            display: none;
+        }
+        
+        #stats.visible {
+            display: block;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #00BFFF;
+            font-family: Arial, sans-serif;
+            /* Mobile adjustments */
+            max-width: calc(100vw - 160px);
+            z-index: 999;
+        }
+        
+        /* Mobile responsive instructions */
+        @media (max-width: 768px) {
+            #instructions {
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                padding: 10px;
+                font-size: 12px;
+            }
+            
+            #instructions h3 {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+            
+            #instructions p {
+                margin: 3px 0;
+                font-size: 11px;
+            }
+        }
+        
+        #instructions h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #00BFFF;
+            font-weight: 900;
+        }
+        
+        #instructions p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        #completion-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98);
+            color: #333;
+            padding: 30px 50px;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: 900;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            line-height: 1.4;
+            border: 4px solid #00BFFF;
+            font-family: 'Arial Black', Arial, sans-serif;
+            z-index: 1002;
+            max-width: 90vw;
+            box-sizing: border-box;
+        }
+        
+        /* Mobile responsive completion message */
+        @media (max-width: 768px) {
+            #completion-message {
+                padding: 20px 30px;
+                font-size: 18px;
+            }
+        }
+        
+        #restart-button {
+            background: #00BFFF;
+            border: 2px solid #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.2s ease;
+            font-family: 'Arial Black', Arial, sans-serif;
+            text-transform: uppercase;
+            /* Mobile touch improvements */
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        #restart-button:hover {
+            background: #333;
+            border: 2px solid #00BFFF;
+        }
+        
+        #stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            border: 2px solid #00BFFF;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            color: #333;
+            z-index: 999;
+        }
+        
+        #timer {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 900;
+            text-align: center;
+            border: 2px solid #00BFFF;
+            font-family: 'Arial Black', Arial, sans-serif;
+            z-index: 999;
+        }
+        
+        /* Combined mobile UI for timer and sheep count */
+        #mobile-combined-ui {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 900;
+            text-align: center;
+            border: 2px solid #00BFFF;
+            font-family: 'Arial Black', Arial, sans-serif;
+            z-index: 999;
+            display: none;
+            min-width: 200px;
+        }
+        
+        #mobile-timer-display {
+            color: #00BFFF;
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+        
+        #mobile-sheep-count {
+            font-size: 12px;
+            color: #333;
+            margin-bottom: 2px;
+        }
+        
+        #mobile-best-time {
+            font-size: 10px;
+            color: #666;
+            font-weight: normal;
+            font-family: Arial, sans-serif;
+        }
+        
+        /* Mobile responsive timer */
+        @media (max-width: 768px) {
+            #timer {
+                display: none; /* Hide desktop timer on mobile */
+            }
+            
+            #stats {
+                display: none !important; /* Hide desktop stats on mobile */
+            }
+            
+            #mobile-combined-ui {
+                display: block; /* Show combined UI on mobile */
+            }
+            
+            #timer.desktop-only {
+                top: 10px;
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+            
+            #timer-display {
+                font-size: 16px;
+            }
+            
+            #best-time {
+                font-size: 10px;
+            }
+        }
+        
+        #timer-display {
+            color: #00BFFF;
+            margin-bottom: 5px;
+            font-size: 20px;
+        }
+        
+        #best-time {
+            font-size: 12px;
+            color: #666;
+            font-weight: normal;
+            font-family: Arial, sans-serif;
+        }
+        
+        .new-record {
+            color: #FF6B35 !important;
+            animation: recordFlash 1s ease-in-out infinite alternate;
+        }
+        
+        @keyframes recordFlash {
+            from { opacity: 1; }
+            to { opacity: 0.7; }
+        }
+        
+        /* Stamina Bar */
+        #stamina-bar {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #00BFFF;
+            font-family: Arial, sans-serif;
+            min-width: 200px;
+            z-index: 999;
+        }
+        
+        /* Mobile responsive stamina bar */
+        @media (max-width: 768px) {
+            #stamina-bar {
+                bottom: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                right: auto;
+                min-width: 180px;
+                padding: 8px 12px;
+            }
+            
+            #stamina-label {
+                font-size: 12px;
+            }
+            
+            #stamina-container {
+                height: 16px;
+            }
+            
+            #stamina-text {
+                font-size: 10px;
+            }
+        }
+        
+        /* Landscape mobile - ensure centered layout */
+        @media (max-width: 768px) and (orientation: landscape) {
+            #stamina-bar {
+                bottom: 80px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                right: auto !important;
+                min-width: 200px !important;
+                padding: 8px 12px !important;
+            }
+            
+            #mobile-combined-ui {
+                display: block !important;
+                top: 10px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                min-width: 280px !important;
+                padding: 8px 20px !important;
+                font-size: 12px !important;
+            }
+            
+            /* Hide desktop timer and stats in landscape */
+            #timer {
+                display: none !important;
+            }
+            
+            #stats {
+                display: none !important;
+            }
+        }
+        
+        #stamina-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        
+        #stamina-container {
+            width: 100%;
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #999;
+            margin-bottom: 5px;
+        }
+        
+        #stamina-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            border-radius: 10px;
+            transition: width 0.2s ease, background 0.3s ease;
+            width: 100%;
+        }
+        
+        #stamina-fill.low {
+            background: linear-gradient(90deg, #FF9800, #FFC107);
+        }
+        
+        #stamina-fill.critical {
+            background: linear-gradient(90deg, #F44336, #FF5722);
+            animation: staminaPulse 0.5s ease-in-out infinite alternate;
+        }
+        
+        #stamina-fill.sprinting {
+            background: linear-gradient(90deg, #2196F3, #03A9F4);
+            animation: staminaDrain 0.3s ease-in-out infinite alternate;
+        }
+        
+        #stamina-text {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        @keyframes staminaPulse {
+            from { opacity: 1; }
+            to { opacity: 0.6; }
+        }
+        
+        @keyframes staminaDrain {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0.98); }
+        }
+        
+        /* Mobile Controls Styles */
+        #mobile-joystick {
+            pointer-events: auto !important;
+        }
+        
+        #mobile-zoom {
+            pointer-events: auto !important;
+        }
+        
+        #mobile-sprint {
+            pointer-events: auto !important;
+        }
+        
+        /* Mobile Fullscreen Button */
+        #mobile-fullscreen {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 160px !important;
+            height: 80px !important;
+            border-radius: 12px !important;
+            background: rgba(0, 191, 255, 0.95) !important;
+            border: 3px solid white !important;
+            color: white !important;
+            font-size: 24px !important;
+            font-weight: bold !important;
+            z-index: 2000 !important;
+            display: block !important;
+            pointer-events: auto !important;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4) !important;
+            transition: all 0.3s ease !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            -webkit-touch-callout: none !important;
+            font-family: Arial, sans-serif !important;
+            text-align: center !important;
+            line-height: 1.2 !important;
+            cursor: pointer !important;
+            /* Ensure it's above everything */
+            position: fixed !important;
+        }
+        
+        #mobile-fullscreen:active {
+            transform: translate(-50%, -50%) scale(0.95) !important;
+            background: rgba(0, 150, 200, 0.95) !important;
+        }
+        
+        /* Ensure mobile controls are above other UI elements */
+        #mobile-joystick,
+        #mobile-zoom,
+        #mobile-sprint {
+            z-index: 1001 !important;
+        }
+        
+        /* Hide desktop-only UI elements on mobile */
+        @media (max-width: 768px) and (pointer: coarse) {
+            #instructions p:contains("Mouse Wheel"),
+            #instructions p:contains("P") {
+                display: none;
+            }
+            
+            /* Ensure stats are completely hidden on mobile */
+            #stats,
+            #stats.visible,
+            #stats.game-ui {
+                display: none !important;
+            }
+        }
+        
+        /* Mobile device detection using is-mobile class */
+        /* ALWAYS hide desktop HUD on a touch device */
+        body.is-mobile #timer,
+        body.is-mobile #stats {
+            display: none !important;
+        }
+        
+        body.is-mobile #mobile-combined-ui {
+            display: block !important;
+            top: calc(env(safe-area-inset-top, 0px) + 5px); /* Closer to top + safe area */
+            min-width: auto; /* Allow to shrink */
+            padding: 6px 12px; /* Smaller padding */
+            border-radius: 6px; /* Smaller border radius */
+        }
+         
+        body.is-mobile #mobile-combined-ui #mobile-timer-display {
+            font-size: 14px; /* Smaller timer */
+            margin-bottom: 1px;
+        }
+        
+        body.is-mobile #mobile-combined-ui #mobile-sheep-count {
+            font-size: 10px; /* Smaller sheep count */
+            margin-bottom: 1px;
+        }
+        
+        body.is-mobile #mobile-combined-ui #mobile-best-time {
+            font-size: 9px; /* Smaller best time */
+        }
+        
+        /* New Container-Based Mobile Layout */
+        
+        /* Mobile Left Stack - Portrait Mode (just joystick) */
+        @media (max-width: 768px) and (orientation: portrait) {
+            #mobile-left-stack {
+                position: fixed;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+                left: calc(env(safe-area-inset-left, 0px) + 20px);
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                z-index: 1001;
+            }
+            
+            /* Children use relative positioning within stack */
+            #mobile-left-stack > * {
+                position: relative !important;
+                left: auto !important;
+                bottom: auto !important;
+                right: auto !important;
+                top: auto !important;
+            }
+            
+            /* Sprint button positioned independently on bottom-right in portrait */
+            #mobile-sprint {
+                position: fixed !important;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
+                right: calc(env(safe-area-inset-right, 0px) + 20px) !important;
+                left: auto !important;
+                top: auto !important;
+            }
+            
+            /* Stamina bar in portrait - bottom center with some clearance */
+            body.is-mobile #stamina-bar {
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 30px) !important; /* Less space needed now */
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                right: auto !important;
+            }
+        }
+        
+        /* Mobile HUD Right - Landscape Fullscreen */
+        @media (max-width: 768px) and (orientation: landscape) {
+            body.mobile-fullscreen #mobile-hud-right {
+                position: fixed;
+                top: calc(env(safe-area-inset-top, 0px) + 10px);
+                right: calc(env(safe-area-inset-right, 0px) + 10px);
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 6px;
+                z-index: 1002;
+            }
+            
+            body.mobile-fullscreen #mobile-hud-right #mobile-combined-ui,
+            body.mobile-fullscreen #mobile-hud-right #stamina-bar {
+                position: relative !important;
+                left: auto !important;
+                right: auto !important;
+                top: auto !important;
+                bottom: auto !important;
+                transform: none !important;
+                min-width: 180px;
+            }
+        }
+        
+        /* Default mobile stamina positioning (non-portrait) */
+        body.is-mobile #stamina-bar {
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            right: auto;
+            min-width: 150px;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+
+        body.is-mobile #stamina-label {
+            font-size: 10px;
+            margin-bottom: 4px;
+        }
+
+        body.is-mobile #stamina-container {
+            height: 12px;
+            margin-bottom: 3px;
+        }
+
+        body.is-mobile #stamina-text {
+            font-size: 9px;
+        }
+
+        /* Landscape orientation adjustments for mobile */
+        @media (orientation: landscape) {
+            body.is-mobile #stamina-bar {
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 5px) !important;
+                min-width: 180px !important;
+                padding: 4px 8px !important;
+            }
+
+            body.is-mobile #mobile-combined-ui {
+                min-width: auto !important;
+                padding: 5px 10px !important;
+                font-size: 10px !important;
+                border-radius: 6px !important;
+            }
+            body.is-mobile #mobile-combined-ui #mobile-timer-display {
+                font-size: 12px !important;
+            }
+            body.is-mobile #mobile-combined-ui #mobile-sheep-count {
+                font-size: 9px !important;
+            }
+            body.is-mobile #mobile-combined-ui #mobile-best-time {
+                font-size: 8px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <!-- Start Screen Overlay -->
+        <div id="start-screen">
+            <h1 id="game-title">Sheep Dog Simulator</h1>
+            <p id="game-subtitle">Guide 200 sheep to safety in this immersive 3D herding experience</p>
+            
+            <div id="start-instructions">
+                <h3>How to Play</h3>
+                <p>🐕 Use <strong>WASD</strong> or <strong>touch controls</strong> to move your sheepdog</p>
+                <p>🏃 Hold <strong>Shift</strong> or <strong>sprint button</strong> to run faster</p>
+                <p>🐑 Herd all 200 sheep through the golden gate into the pasture</p>
+                <p>⏱️ Complete the challenge as quickly as possible</p>
+                <p>🎯 Sheep will flee from you and flock together naturally</p>
+                <p id="music-note" style="font-style: italic; color: #666; margin-top: 1rem;">🎵 Click anywhere to enable music</p>
+            </div>
+            
+            <button id="start-button">Start Herding</button>
+        </div>
+        
+        <!-- Mobile UI Containers -->
+        <div id="mobile-left-stack">
+            <!-- Sprint and joystick will be moved here by JS -->
+        </div>
+        
+        <div id="mobile-hud-right">
+            <!-- Combined UI and stamina bar will be grouped here by JS -->
+        </div>
+        
+        <!-- Game UI Elements -->
+        <div id="instructions" class="game-ui">
+            <h3>Controls</h3>
+            <p><strong>W</strong> - Move Forward</p>
+            <p><strong>A</strong> - Move Left</p>
+            <p><strong>S</strong> - Move Backward</p>
+            <p><strong>D</strong> - Move Right</p>
+            <p><strong>Shift</strong> - Sprint (uses stamina)</p>
+            <p><strong>Mouse Wheel</strong> - Zoom In/Out</p>
+            <p><strong>P</strong> - Toggle Performance Stats</p>
+            <p id="mute-toggle">🔊 <strong>Click</strong> - Toggle Sound</p>
+        </div>
+        
+        <div id="timer" class="game-ui">
+            <div id="timer-display">00:00</div>
+            <div id="best-time">Best: --:--</div>
+        </div>
+        
+        <!-- Combined Mobile UI for timer and sheep count -->
+        <div id="mobile-combined-ui" class="game-ui">
+            <div id="mobile-timer-display">00:00</div>
+            <div id="mobile-sheep-count">Sheep: 0 / 200</div>
+            <div id="mobile-best-time">Best: --:--</div>
+        </div>
+        
+        <div id="stats" class="game-ui">
+            <p>Sheep Secured: <span id="sheep-count">0</span> / 200</p>
+        </div>
+        
+        <div id="stamina-bar" class="game-ui">
+            <div id="stamina-label">Stamina</div>
+            <div id="stamina-container">
+                <div id="stamina-fill"></div>
+            </div>
+            <div id="stamina-text">100%</div>
+        </div>
+        
+        <div id="completion-message">
+            All sheep successfully herded!
+        </div>
+    </div>
+    
+    <!-- Import map for Three.js r176 -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/",
+            "stats.js": "https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js"
+        }
+    }
+    </script>
+    
+    <!-- Main application entry point -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html> 

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geckos Debug Client</title>
+</head>
+<body>
+    <h1>Geckos Debug Client</h1>
+    
+    <div id="status">Not connected</div>
+    <button id="connectBtn">Connect to Server</button>
+    <button id="testBtn" disabled>Send Test Message</button>
+    <button id="pingBtn" disabled>Send Ping</button>
+    
+    <div id="log"></div>
+    
+    <script type="importmap">
+    {
+        "imports": {
+            "@geckos.io/client": "https://cdn.jsdelivr.net/npm/@geckos.io/client@3.0.2/+esm"
+        }
+    }
+    </script>
+    
+    <script type="module">
+        import geckos from '@geckos.io/client';
+        
+        let channel = null;
+        let connected = false;
+        
+        const statusDiv = document.getElementById('status');
+        const logDiv = document.getElementById('log');
+        const connectBtn = document.getElementById('connectBtn');
+        const testBtn = document.getElementById('testBtn');
+        const pingBtn = document.getElementById('pingBtn');
+        
+        function log(message) {
+            console.log(message);
+            const div = document.createElement('div');
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            logDiv.appendChild(div);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus(status) {
+            statusDiv.textContent = status;
+            testBtn.disabled = !connected;
+            pingBtn.disabled = !connected;
+        }
+        
+        connectBtn.addEventListener('click', async () => {
+            log('🔗 Starting connection test...');
+            log('🔗 Hostname: ' + window.location.hostname);
+            
+            const serverUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 
+                'http://127.0.0.1' : 
+                'https://your-production-server.fly.dev';
+            const port = 3000; // Test port for debugging
+            
+            log('🔗 Server URL: ' + serverUrl + ':' + port);
+            
+            try {
+                channel = geckos({
+                    url: serverUrl,
+                    port: port
+                });
+                
+                log('🔗 Geckos client created');
+                
+                channel.onConnect(error => {
+                    if (error) {
+                        log('❌ Connection failed: ' + error);
+                        updateStatus('Connection failed');
+                    } else {
+                        log('✅ Connected successfully!');
+                        connected = true;
+                        updateStatus('Connected');
+                    }
+                });
+                
+                channel.onDisconnect(() => {
+                    log('❌ Disconnected from server');
+                    connected = false;
+                    updateStatus('Disconnected');
+                });
+                
+                channel.on('welcome', (data) => {
+                    log('📨 Received welcome: ' + data.message);
+                });
+                
+                channel.on('testResponse', (data) => {
+                    log('📨 Received test response: ' + data.message);
+                });
+                
+                channel.on('pong', (data) => {
+                    log('📨 Received pong: ' + data.timestamp);
+                });
+                
+            } catch (error) {
+                log('❌ Error creating client: ' + error);
+                updateStatus('Error');
+            }
+        });
+        
+        testBtn.addEventListener('click', () => {
+            if (channel && connected) {
+                log('📤 Sending test message...');
+                channel.emit('test', { message: 'Hello from client!' });
+            }
+        });
+        
+        pingBtn.addEventListener('click', () => {
+            if (channel && connected) {
+                log('📤 Sending ping...');
+                channel.emit('ping');
+            }
+        });
+    </script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        #status {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 10px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+        }
+        
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        
+        #log {
+            margin-top: 20px;
+            height: 400px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background: #f5f5f5;
+            font-family: monospace;
+        }
+        
+        #log div {
+            margin: 2px 0;
+        }
+    </style>
+</body>
+</html> 

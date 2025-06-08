@@ -2,6 +2,7 @@
   "name": "sheep-dog-sim",
   "version": "1.0.0",
   "description": "An interactive herding game where players control a sheepdog to guide sheep into a pen using boid flocking algorithms",
+  "type": "module",
   "main": "index.html",
   "scripts": {
     "start": "python -m http.server 8000",
@@ -20,5 +21,8 @@
   "devDependencies": {
     "http-server": "^14.1.1",
     "stats.js": "^0.17.0"
+  },
+  "dependencies": {
+    "@geckos.io/client": "^3.0.1"
   }
 } 

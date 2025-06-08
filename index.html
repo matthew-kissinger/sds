@@ -350,6 +350,504 @@
             transform: translateY(2px);
         }
         
+        /* Mode Selection Styles */
+        #mode-selection {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .mode-button {
+            background: #00BFFF;
+            border: 3px solid #FFF;
+            color: #FFF;
+            padding: 18px 35px;
+            font-size: 1.3rem;
+            font-weight: 900;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'Arial Black', Arial, sans-serif;
+            text-shadow: 2px 2px 0px #000;
+            min-height: 44px;
+            min-width: 200px;
+            flex-shrink: 0;
+        }
+        
+        .mode-button:hover {
+            background: #FFF;
+            color: #00BFFF;
+            border: 3px solid #00BFFF;
+            text-shadow: none;
+            transform: translateY(-2px);
+        }
+        
+        .mode-button:active {
+            transform: translateY(0px);
+        }
+        
+        .mode-button:disabled {
+            background: #666;
+            color: #999;
+            border: 3px solid #999;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .mode-button:disabled:hover {
+            background: #666;
+            color: #999;
+            border: 3px solid #999;
+            transform: none;
+        }
+        
+        /* Connection Status Styles */
+        #connection-status {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 8px;
+            border: 3px solid #00BFFF;
+            color: #333;
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        #connection-message {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        #back-to-menu-button {
+            background: #666;
+            border: 2px solid #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: Arial, sans-serif;
+        }
+        
+        #back-to-menu-button:hover {
+            background: #333;
+            border: 2px solid #666;
+        }
+        
+        /* Mobile responsive mode buttons */
+        @media (max-width: 768px) {
+            #mode-selection {
+                gap: 12px;
+            }
+            
+            .mode-button {
+                padding: 15px 25px;
+                font-size: 1.1rem;
+                min-width: 180px;
+            }
+            
+            #connection-status {
+                padding: 15px;
+                max-width: 90%;
+            }
+            
+            #connection-message {
+                font-size: 1rem;
+                margin-bottom: 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .mode-button {
+                padding: 12px 20px;
+                font-size: 1rem;
+                min-width: 160px;
+            }
+        }
+        
+        /* Back Button Styles */
+        .back-button {
+            background: #666;
+            border: 2px solid #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: Arial, sans-serif;
+            margin-top: 10px;
+        }
+        
+        .back-button:hover {
+            background: #333;
+            border: 2px solid #666;
+        }
+        
+        /* Dog Selection Styles */
+        #dog-selection {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            color: #333;
+            border: 3px solid #00BFFF;
+            max-width: 600px;
+        }
+        
+        #dog-cards {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .dog-card {
+            background: #f8f9fa;
+            border: 3px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 160px;
+            flex: 1;
+            max-width: 180px;
+        }
+        
+        .dog-card:hover {
+            border-color: #00BFFF;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 191, 255, 0.3);
+        }
+        
+        .dog-card.active {
+            border-color: #00BFFF;
+            background: rgba(0, 191, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 191, 255, 0.4);
+        }
+        
+        .dog-avatar {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .dog-card h4 {
+            font-size: 1.3rem;
+            margin: 0.5rem 0;
+            color: #00BFFF;
+            font-family: 'Arial Black', Arial, sans-serif;
+        }
+        
+        .dog-breed {
+            font-size: 0.9rem;
+            color: #666;
+            margin: 0.25rem 0;
+            font-style: italic;
+        }
+        
+        .dog-description {
+            font-size: 0.85rem;
+            color: #333;
+            margin: 0.5rem 0;
+            line-height: 1.3;
+        }
+        
+        .dog-stats {
+            margin-top: 0.75rem;
+            font-size: 0.75rem;
+            text-align: left;
+        }
+        
+        .stat {
+            margin: 0.2rem 0;
+            color: #555;
+        }
+        
+        /* Mobile responsive dog selection */
+        @media (max-width: 768px) {
+            #dog-selection {
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+                max-width: 95%;
+            }
+            
+            #dog-cards {
+                gap: 10px;
+            }
+            
+            .dog-card {
+                min-width: 140px;
+                padding: 0.8rem;
+            }
+            
+            .dog-avatar {
+                font-size: 2rem;
+            }
+            
+            .dog-card h4 {
+                font-size: 1.1rem;
+            }
+            
+            .dog-breed {
+                font-size: 0.8rem;
+            }
+            
+            .dog-description {
+                font-size: 0.8rem;
+            }
+            
+            .dog-stats {
+                font-size: 0.7rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #dog-cards {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .dog-card {
+                max-width: 280px;
+                width: 100%;
+            }
+        }
+        
+        /* Room Form Styles */
+        .room-form {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 8px;
+            border: 3px solid #00BFFF;
+            color: #333;
+            margin-bottom: 20px;
+            max-width: 400px;
+        }
+        
+        .room-form label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .room-form input, .room-form select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        
+        .room-form input:focus, .room-form select:focus {
+            border-color: #00BFFF;
+            outline: none;
+        }
+        
+        .checkbox-label {
+            display: flex !important;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            width: auto !important;
+            margin-right: 8px;
+            margin-bottom: 0 !important;
+        }
+        
+        .room-privacy {
+            margin-top: 10px;
+        }
+        
+        .error-message {
+            color: #F44336;
+            font-size: 0.9rem;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+        
+        /* Lobby Styles */
+        #lobby-screen {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 8px;
+            border: 3px solid #00BFFF;
+            color: #333;
+            max-width: 500px;
+            text-align: left;
+        }
+        
+        #lobby-screen h3, #lobby-screen h4 {
+            color: #00BFFF;
+            margin-top: 0;
+            text-align: center;
+        }
+        
+        #room-info {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        #room-code-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        #current-room-code {
+            color: #00BFFF;
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        
+        .copy-button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s ease;
+        }
+        
+        .copy-button:hover {
+            background: #45a049;
+        }
+        
+        .copy-button:active {
+            background: #3d8b40;
+        }
+        
+        #player-list {
+            margin-bottom: 20px;
+        }
+        
+        #players-container {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            min-height: 60px;
+        }
+        
+        .player-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            margin-bottom: 5px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        
+        .player-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .player-status {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .player-host {
+            background: #e3f2fd;
+            border-color: #00BFFF;
+        }
+        
+        .player-host .player-status::after {
+            content: " (Host)";
+            color: #00BFFF;
+            font-weight: bold;
+        }
+        
+        #lobby-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .host-only {
+            display: none;
+        }
+        
+        .is-host .host-only {
+            display: block;
+        }
+        
+        #lobby-status {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        #lobby-message {
+            color: #666;
+            font-style: italic;
+            margin: 0;
+        }
+        
+        /* Mobile responsive room UI */
+        @media (max-width: 768px) {
+            .room-form {
+                padding: 15px;
+                max-width: 90%;
+            }
+            
+            #lobby-screen {
+                padding: 20px;
+                max-width: 90%;
+            }
+            
+            #room-code-display {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            #current-room-code {
+                font-size: 1.1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .room-form {
+                padding: 12px;
+            }
+            
+            .room-form input, .room-form select {
+                padding: 8px;
+                font-size: 0.9rem;
+            }
+            
+            #lobby-screen {
+                padding: 15px;
+            }
+            
+            .mode-button {
+                min-width: 140px;
+            }
+        }
+        
         /* Mute Toggle in Controls */
         #mute-toggle {
             margin: 5px 0;
@@ -950,6 +1448,134 @@
                 font-size: 8px !important;
             }
         }
+        
+        /* Multiplayer HUD Styles */
+        #multiplayer-hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #4CAF50;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            min-width: 200px;
+            z-index: 998;
+        }
+        
+        #multiplayer-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+            border-bottom: 1px solid #4CAF50;
+            padding-bottom: 4px;
+        }
+        
+        #multiplayer-players {
+            margin-bottom: 8px;
+        }
+        
+        .multiplayer-player {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .multiplayer-player:last-child {
+            border-bottom: none;
+        }
+        
+        .player-name {
+            font-weight: bold;
+        }
+        
+        .player-status {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #4CAF50;
+        }
+        
+        .player-status.host {
+            background: #FF9800;
+        }
+        
+        .player-status.you {
+            background: #2196F3;
+        }
+        
+        #connection-indicator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            padding-top: 4px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        #connection-icon {
+            font-size: 12px;
+        }
+        
+        #connection-icon.connected {
+            color: #4CAF50;
+        }
+        
+        #connection-icon.disconnected {
+            color: #F44336;
+        }
+        
+        #connection-icon.reconnecting {
+            color: #FF9800;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Ping quality color coding */
+        .ping-good {
+            color: #4CAF50 !important;
+        }
+        
+        .ping-ok {
+            color: #FF9800 !important;
+        }
+        
+        .ping-poor {
+            color: #F44336 !important;
+        }
+        
+        /* Mobile responsive multiplayer HUD */
+        @media (max-width: 768px) {
+            #multiplayer-hud {
+                top: 60px;
+                left: 10px;
+                font-size: 10px;
+                padding: 8px;
+                min-width: 150px;
+            }
+            
+            #multiplayer-title {
+                font-size: 10px;
+                margin-bottom: 6px;
+            }
+            
+            .player-status {
+                font-size: 8px;
+                padding: 1px 4px;
+            }
+            
+            #connection-indicator {
+                font-size: 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -969,7 +1595,129 @@
                 <p id="music-note" style="font-style: italic; color: #666; margin-top: 1rem;">🎵 Click anywhere to enable music</p>
             </div>
             
-            <button id="start-button">Start Herding</button>
+            <!-- Dog Selection -->
+            <div id="dog-selection">
+                <h3 style="color: #00BFFF; margin-bottom: 1rem; font-family: 'Arial Black', Arial, sans-serif;">Choose Your Dog</h3>
+                <div id="dog-cards">
+                    <div class="dog-card active" data-dog="jep">
+                        <div class="dog-avatar">🐕‍🦺</div>
+                        <h4>Jep</h4>
+                        <p class="dog-breed">Border Collie</p>
+                        <p class="dog-description">Balanced herding specialist</p>
+                        <div class="dog-stats">
+                            <div class="stat">Speed: ●●●○○</div>
+                            <div class="stat">Stamina: ●●●○○</div>
+                            <div class="stat">Range: ●●●○○</div>
+                        </div>
+                    </div>
+                    <div class="dog-card" data-dog="rory">
+                        <div class="dog-avatar">🐕</div>
+                        <h4>Rory</h4>
+                        <p class="dog-breed">Australian Shepherd</p>
+                        <p class="dog-description">Powerful with extended range</p>
+                        <div class="dog-stats">
+                            <div class="stat">Speed: ●●●○○</div>
+                            <div class="stat">Stamina: ●●○○○</div>
+                            <div class="stat">Range: ●●●●●</div>
+                        </div>
+                    </div>
+                    <div class="dog-card" data-dog="pip">
+                        <div class="dog-avatar">🐶</div>
+                        <h4>Pip</h4>
+                        <p class="dog-breed">Corgi</p>
+                        <p class="dog-description">Fast and agile, short range</p>
+                        <div class="dog-stats">
+                            <div class="stat">Speed: ●●●●○</div>
+                            <div class="stat">Stamina: ●●●●○</div>
+                            <div class="stat">Range: ●●○○○</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main mode selection -->
+            <div id="mode-selection">
+                <button id="solo-button" class="mode-button">🐕 Play Solo</button>
+                <button id="online-button" class="mode-button">👥 Play Online</button>
+            </div>
+            
+            <!-- Online sub-options -->
+            <div id="online-options" style="display: none;">
+                <button id="create-room-button" class="mode-button">🏠 Create Room</button>
+                <button id="join-room-button" class="mode-button">🔗 Join Room</button>
+                <button id="quick-match-button" class="mode-button">⚡ Quick Match</button>
+                <button id="back-to-main-button" class="back-button">← Back</button>
+            </div>
+            
+            <!-- Room creation screen -->
+            <div id="room-creation" style="display: none;">
+                <h3>Create Room</h3>
+                <div class="room-form">
+                    <label for="room-name">Room Name (optional):</label>
+                    <input type="text" id="room-name" placeholder="My Sheep Room" maxlength="20">
+                    
+                    <label for="max-players">Max Players:</label>
+                    <select id="max-players">
+                        <option value="2">2 Players</option>
+                        <option value="3" selected>3 Players</option>
+                        <option value="4">4 Players</option>
+                    </select>
+                    
+                    <div class="room-privacy">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="private-room">
+                            Private Room (friends only)
+                        </label>
+                    </div>
+                </div>
+                <button id="create-room-confirm" class="mode-button">Create Room</button>
+                <button id="back-to-online-button" class="back-button">← Back</button>
+            </div>
+            
+            <!-- Room joining screen -->
+            <div id="room-joining" style="display: none;">
+                <h3>Join Room</h3>
+                <div class="room-form">
+                    <label for="room-code">Enter Room Code:</label>
+                    <input type="text" id="room-code" placeholder="ABC123" maxlength="6" style="text-transform: uppercase;">
+                    <div id="code-error" class="error-message" style="display: none;">Invalid room code</div>
+                </div>
+                <button id="join-room-confirm" class="mode-button">Join Room</button>
+                <button id="back-to-online-button2" class="back-button">← Back</button>
+            </div>
+            
+            <!-- Lobby screen -->
+            <div id="lobby-screen" style="display: none;">
+                <div id="room-info">
+                    <h3 id="lobby-room-name">Room: Sheep Herding</h3>
+                    <div id="room-code-display">
+                        <span>Room Code: <strong id="current-room-code">ABC123</strong></span>
+                        <button id="copy-room-code" class="copy-button">📋 Copy</button>
+                    </div>
+                </div>
+                
+                <div id="player-list">
+                    <h4>Players (<span id="player-count">1</span>/<span id="max-player-count">3</span>):</h4>
+                    <div id="players-container">
+                        <!-- Players will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <div id="lobby-controls">
+                    <button id="start-game-button" class="mode-button host-only" style="display: none;">🎮 Start Game</button>
+                    <button id="leave-room-button" class="back-button">🚪 Leave Room</button>
+                </div>
+                
+                <div id="lobby-status">
+                    <p id="lobby-message">Waiting for players...</p>
+                </div>
+            </div>
+            
+            <!-- Connection status for multiplayer -->
+            <div id="connection-status" style="display: none;">
+                <p id="connection-message">Connecting to server...</p>
+                <button id="back-to-menu-button" class="back-button">← Back to Menu</button>
+            </div>
         </div>
         
         <!-- Mobile UI Containers -->
@@ -1018,6 +1766,18 @@
             <div id="stamina-text">100%</div>
         </div>
         
+        <!-- Multiplayer HUD for in-game player status -->
+        <div id="multiplayer-hud" class="game-ui" style="display: none;">
+            <div id="multiplayer-title">Players Online</div>
+            <div id="multiplayer-players">
+                <!-- Connected players will be shown here during gameplay -->
+            </div>
+            <div id="connection-indicator">
+                <span id="connection-icon">🔗</span>
+                <span id="ping-display">Ping: --ms</span>
+            </div>
+        </div>
+        
         <div id="completion-message">
             All sheep successfully herded!
         </div>
@@ -1029,7 +1789,8 @@
         "imports": {
             "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
             "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/",
-            "stats.js": "https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js"
+            "stats.js": "https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js",
+            "@geckos.io/client": "https://cdn.jsdelivr.net/npm/@geckos.io/client@3.0.2/+esm"
         }
     }
     </script>

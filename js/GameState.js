@@ -89,37 +89,43 @@ export class GameState {
         }
         
         // Always update sheep behaviors for visual effect
+        // In multiplayer mode, server handles state transitions, client handles visual behavior
         this.optimizedSheepSystem.update(
             deltaTime,
             this.gameActive ? this.sheepdog : null, // Only pass sheepdog if game is active
             this.gameActive ? this.gate : null,     // Only enable gate mechanics if game is active
             this.gameActive ? this.pasture : null,  // Only enable pasture mechanics if game is active
             this.bounds,  // Always pass bounds so sheep stay in field
-            this.params   // Always pass params so sheep can flock
+            this.params,  // Always pass params so sheep can flock
+            true, // enableIndividualBleating
+            this.gameMode === 'multiplayer' // isMultiplayer flag
         );
         
         // Only count retired sheep if game is active
         if (this.gameActive) {
-            this.sheepRetired = 0;
-            
-            // Count retired sheep
-            for (let sheep of this.sheep) {
-                // Check if sheep has passed gate
-                if (!sheep.hasPassedGate && !sheep.isRetiring) {
-                    if (sheep.checkGatePassageAndRetire(this.gate.passageZone, this.pasture)) {
-                        // Sheep just passed through the gate
-                        this.sheepRetired++;
-                        
-                        // Play rewarding chime sound
-                        if (this.audioManager) {
-                            this.audioManager.playRewardingChime();
+            // In multiplayer mode, sheep count is managed by server
+            if (this.gameMode !== 'multiplayer') {
+                this.sheepRetired = 0;
+                
+                // Count retired sheep
+                for (let sheep of this.sheep) {
+                    // Check if sheep has passed gate
+                    if (!sheep.hasPassedGate && !sheep.isRetiring) {
+                        if (sheep.checkGatePassageAndRetire(this.gate.passageZone, this.pasture)) {
+                            // Sheep just passed through the gate
+                            this.sheepRetired++;
+                            
+                            // Play rewarding chime sound
+                            if (this.audioManager) {
+                                this.audioManager.playRewardingChime();
+                            }
                         }
                     }
-                }
-                
-                // Count all sheep that have passed or are retiring
-                if (sheep.hasPassedGate || sheep.isRetiring) {
-                    this.sheepRetired++;
+                    
+                    // Count all sheep that have passed or are retiring
+                    if (sheep.hasPassedGate || sheep.isRetiring) {
+                        this.sheepRetired++;
+                    }
                 }
             }
         }
@@ -243,7 +249,8 @@ export class GameState {
         return this.gameCompleted;
     }
     
-    startGame() {
+    startGame(mode = 'solo') {
+        this.gameMode = mode; // Store the game mode
         this.gameActive = true;
         this.gameCompleted = false;
         this.sheepRetired = 0;
@@ -252,6 +259,10 @@ export class GameState {
         // Reset all sheep to their starting positions and states
         if (this.optimizedSheepSystem) {
             this.optimizedSheepSystem.resetAllSheep();
+        }
+        
+        if (mode === 'multiplayer') {
+            console.log('Game started in multiplayer mode with 200 sheep');
         }
     }
     

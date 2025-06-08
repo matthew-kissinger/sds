@@ -1,0 +1,31 @@
+{
+  "name": "sds-multiplayer-server",
+  "version": "1.0.0",
+  "description": "Multiplayer server for Sheepdog Simulation with room-based gameplay",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "@geckos.io/server": "^3.0.1"
+  },
+  "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.10",
+    "nodemon": "^3.0.0"
+  },
+  "keywords": [
+    "multiplayer",
+    "game-server",
+    "sheepdog",
+    "simulation",
+    "websockets"
+  ],
+  "author": "SDS Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

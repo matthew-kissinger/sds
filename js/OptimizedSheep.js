@@ -359,7 +359,7 @@ export class OptimizedSheepSystem {
     /**
      * Update all sheep behaviors and animations
      */
-    update(deltaTime, sheepdog, gate, pasture, bounds, params) {
+    update(deltaTime, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false) {
         const dummy = new THREE.Object3D();
         
         // Update time uniform
@@ -382,7 +382,9 @@ export class OptimizedSheepSystem {
             // Check if this sheep is being chased (before updating behavior)
             if (sheepdog && sheep.position) {
                 const distanceToSheepdog = sheep.position.distanceTo(sheepdog.position);
-                const isBeingChased = distanceToSheepdog < sheep.fleeRadius;
+                // Use sheepdog's fleeRadius for dog-specific interaction distances
+                const fleeRadius = sheepdog.fleeRadius || sheep.fleeRadius || 8;
+                const isBeingChased = distanceToSheepdog < fleeRadius;
                 
                 if (isBeingChased && !sheep.wasBeingChased) {
                     sheepBeingChased++;
@@ -391,7 +393,7 @@ export class OptimizedSheepSystem {
             }
             
             // Update behavior (flocking, movement, etc.)
-            sheep.updateBehavior(this.sheep, sheepdog, gate, pasture, bounds, params, false); // Pass false to disable individual bleating
+            sheep.updateBehavior(this.sheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating, isMultiplayer);
             sheep.updatePosition(deltaTime);
             
             // Update transform matrix using interpolated render position for smooth movement
@@ -432,6 +434,35 @@ export class OptimizedSheepSystem {
             } else {
                 this.audioManager.playGroupSheepBleats(sheepBeingChased); // Layered bleats for multiple sheep
             }
+        }
+        
+        this.instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+    
+    /**
+     * Force update sheep positions for multiplayer mode (no interpolation)
+     */
+    forceUpdateSheepPositions() {
+        const dummy = new THREE.Object3D();
+        
+        for (let i = 0; i < this.sheepCount; i++) {
+            const sheep = this.sheep[i];
+            
+            // Force render position to match physics position immediately
+            sheep.renderPosition.x = sheep.position.x;
+            sheep.renderPosition.z = sheep.position.z;
+            sheep.renderFacingDirection = sheep.facingDirection;
+            
+            // Update transform matrix
+            dummy.position.set(sheep.renderPosition.x, 0, sheep.renderPosition.z);
+            dummy.rotation.y = -sheep.renderFacingDirection + Math.PI / 2;
+            dummy.scale.set(1, 1, 1);
+            dummy.updateMatrix();
+            
+            this.instancedMesh.setMatrixAt(i, dummy.matrix);
+            
+            // Update animation attributes
+            this.updateInstanceAttributes(i, sheep);
         }
         
         this.instancedMesh.instanceMatrix.needsUpdate = true;
@@ -549,7 +580,7 @@ export class OptimizedSheepInstance extends Boid {
         this.wasBeingChased = false;
     }
     
-    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true) {
+    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false) {
         // If retiring, seek retirement target or graze
         if (this.isRetiring) {
             if (this.retirementTarget) {
@@ -631,9 +662,11 @@ export class OptimizedSheepInstance extends Boid {
         // Flee from sheepdog (only if sheepdog exists - game is active)
         if (sheepdog) {
             const distanceToSheepdog = this.position.distanceTo(sheepdog.position);
-            const isBeingChased = distanceToSheepdog < this.fleeRadius;
+            // Use sheepdog's fleeRadius for dog-specific interaction distances
+            const fleeRadius = sheepdog.fleeRadius || this.fleeRadius || 8;
+            const isBeingChased = distanceToSheepdog < fleeRadius;
             
-            const fleeForce = this.flee(sheepdog.position, this.fleeRadius);
+            const fleeForce = this.flee(sheepdog.position, fleeRadius);
             if (fleeForce.magnitude() > 0) {
                 fleeForce.multiply(1.2);
                 this.applyForce(fleeForce);
@@ -653,8 +686,10 @@ export class OptimizedSheepInstance extends Boid {
         if (sheepdog && gate) {
             const distanceToGate = this.position.distanceTo(gate.position);
             const distanceToDog = this.position.distanceTo(sheepdog.position);
+            // Use sheepdog's fleeRadius for dog-specific interaction distances
+            const fleeRadius = sheepdog.fleeRadius || this.fleeRadius || 8;
             
-            if (distanceToDog < this.fleeRadius * 1.5 && distanceToGate < 30) {
+            if (distanceToDog < fleeRadius * 1.5 && distanceToGate < 30) {
                 const toGate = gate.position.clone().subtract(this.position);
                 const toDog = sheepdog.position.clone().subtract(this.position);
                 
