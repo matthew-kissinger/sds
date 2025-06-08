@@ -86,13 +86,13 @@ export class NetworkManager {
                 };
                 console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
             } else {
-                // DigitalOcean Droplet - use HTTPS with nginx proxy
+                // DigitalOcean Droplet - use HTTPS with trusted domain
                 const serverUrl = `https://${this.serverHost}`;
                 geckosConfig = { 
                     url: serverUrl,
                     port: this.serverPort
                 };
-                console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Production HTTPS)`);
+                console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Trusted HTTPS)`);
             }
             
             console.log(`🔗 DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
