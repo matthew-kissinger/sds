@@ -27,9 +27,9 @@ export class NetworkManager {
             this.serverHost = '127.0.0.1';
             this.serverPort = 9208; // Local development port
         } else {
-            // Production configuration - DigitalOcean Droplet
+            // Production configuration - DigitalOcean Droplet with HTTPS
             this.serverHost = '147.182.185.185'; // DigitalOcean Droplet IP
-            this.serverPort = 9208; // Geckos.io default port
+            this.serverPort = 443; // HTTPS port via nginx proxy
         }
         
         // Callbacks
@@ -86,13 +86,13 @@ export class NetworkManager {
                 };
                 console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
             } else {
-                // DigitalOcean Droplet - use HTTP with port
-                const serverUrl = `http://${this.serverHost}`;
+                // DigitalOcean Droplet - use HTTPS with nginx proxy
+                const serverUrl = `https://${this.serverHost}`;
                 geckosConfig = { 
                     url: serverUrl,
                     port: this.serverPort
                 };
-                console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Droplet)`);
+                console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Production HTTPS)`);
             }
             
             console.log(`🔗 DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
