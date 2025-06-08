@@ -9,8 +9,9 @@ import { GameSimulation } from './GameSimulation.js';
 
 class MultiplayerServer {
     constructor(options = {}) {
-        this.port = options.port || 3001;
-        this.host = options.host || 'localhost';
+        // Use environment variables for production, with fallbacks for local development
+        this.port = process.env.PORT || options.port || 9208;
+        this.host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : (options.host || '127.0.0.1');
         
         // Initialize systems
         this.roomManager = new RoomManager();
@@ -37,6 +38,12 @@ class MultiplayerServer {
         try {
             console.log(`🔧 Configuring Geckos.io server with host: ${this.host}, port: ${this.port}`);
             
+            // Get UDP port range from environment or use defaults
+            const udpPortMin = parseInt(process.env.GECKOS_UDP_PORT_MIN) || 10000;
+            const udpPortMax = parseInt(process.env.GECKOS_UDP_PORT_MAX) || 20000;
+            
+            console.log(`🔧 UDP port range: ${udpPortMin}-${udpPortMax}`);
+            
             // Create Geckos.io server with proper configuration for production
             this.io = geckos({
                 authorization: false,
@@ -48,7 +55,11 @@ class MultiplayerServer {
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' }
                 ],
-                // Production settings for Fly.io proxy
+                // Production settings with dynamic UDP port range
+                portRange: {
+                    min: udpPortMin,
+                    max: udpPortMax
+                },
                 maxPayload: 200000,
                 pingTimeout: 60000,
                 pingInterval: 25000
@@ -58,8 +69,7 @@ class MultiplayerServer {
             this.startMaintenanceLoop();
             this.startBroadcastLoop();
             
-            // Add a simple health check endpoint for server wake-up
-            this.setupHealthCheck();
+            // Health check endpoint removed to prevent conflicts with Geckos.io routes
             
             // Listen on the specified port and host
             this.io.listen(this.port, this.host);
@@ -76,30 +86,7 @@ class MultiplayerServer {
         }
     }
 
-    setupHealthCheck() {
-        // Add a delay to ensure Geckos.io server is fully initialized
-        setTimeout(() => {
-            if (this.io && this.io.server) {
-                console.log('🏥 Setting up health check endpoint');
-                this.io.server.on('request', (req, res) => {
-                    if (req.method === 'GET' && (req.url === '/' || req.url === '/health')) {
-                        res.writeHead(200, { 
-                            'Content-Type': 'text/plain',
-                            'Access-Control-Allow-Origin': '*'
-                        });
-                        res.end('OK');
-                        console.log(`🏥 Health check from ${req.headers['x-forwarded-for'] || req.connection.remoteAddress}`);
-                    } else {
-                        res.writeHead(404);
-                        res.end('Not found');
-                    }
-                });
-                console.log('✅ Health check endpoint ready');
-            } else {
-                console.warn('⚠️ Cannot set up health check - Geckos.io server not available');
-            }
-        }, 1000);
-    }
+    // setupHealthCheck() method removed to prevent conflicts with Geckos.io internal routes
 
     setupEventHandlers() {
         this.io.onConnection((channel) => {
@@ -595,9 +582,10 @@ console.log(`   PORT: ${process.env.PORT}`);
 console.log(`   PWD: ${process.env.PWD}`);
 
 // Create and start server
+const isLocalDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 const server = new MultiplayerServer({
     port: parseInt(process.env.PORT) || 9208,
-    host: process.env.HOST || '0.0.0.0'  // Bind to all interfaces for Fly.io
+    host: process.env.HOST || (isLocalDevelopment ? '127.0.0.1' : '0.0.0.0')  // localhost for dev, all interfaces for production
 });
 
 // Handle graceful shutdown
