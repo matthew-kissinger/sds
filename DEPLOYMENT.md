@@ -3,7 +3,7 @@
 ## Overview
 This project uses a hybrid deployment strategy:
 - **Client**: GitHub Pages (static hosting) at `https://matthew-kissinger.github.io/sds/`  
-- **Server**: Fly.io (multiplayer server) at `https://server-empty-night-5383.fly.dev:9208`
+- **Server**: Fly.io (multiplayer server) at `https://server-little-cherry-7613.fly.dev:9208`
 
 **Geckos.io Requirements**:
 - Port **9208/tcp** for peer signaling 
@@ -63,12 +63,12 @@ fly logs
 fly status
 
 # Test endpoint (note: Geckos.io uses port 9208)
-curl https://server-empty-night-5383.fly.dev:9208/
+curl https://server-little-cherry-7613.fly.dev:9208/
 ```
 
 ### Step 3: Update Client (If App Name Different) 🔧
 
-If Fly.io gave you a different app name than "sheepdog-multiplayer":
+If Fly.io gave you a different app name than "server-little-cherry-7613":
 
 1. Update `js/NetworkManager.js`:
 ```javascript
@@ -100,13 +100,13 @@ git push origin main
 ### Server Issues
 ```bash
 # Check server logs
-fly logs --app sheepdog-multiplayer
+fly logs --app server-little-cherry-7613
 
 # Check server status
-fly status --app sheepdog-multiplayer
+fly status --app server-little-cherry-7613
 
 # Restart server
-fly restart --app sheepdog-multiplayer
+fly restart --app server-little-cherry-7613
 ```
 
 ### Client Connection Issues
@@ -126,9 +126,9 @@ fly restart --app sheepdog-multiplayer
 ## Production URLs
 
 - **Client**: `https://matthew-kissinger.github.io/sds/`
-- **Server**: `https://server-empty-night-5383.fly.dev:9208` (Geckos.io signaling)
-- **Server Logs**: `fly logs --app server-empty-night-5383`
-- **Server Dashboard**: `https://fly.io/apps/server-empty-night-5383`
+- **Server**: `https://server-little-cherry-7613.fly.dev:9208` (Geckos.io signaling)
+- **Server Logs**: `fly logs --app server-little-cherry-7613`
+- **Server Dashboard**: `https://fly.io/apps/server-little-cherry-7613`
 
 ## Cost Information 💰
 

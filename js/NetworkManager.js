@@ -22,7 +22,7 @@ export class NetworkManager {
         // In production (GitHub Pages), connect to Fly.io server
         // In development, connect to local server
         this.serverHost = window.location.hostname === 'matthew-kissinger.github.io' ? 
-            'server-empty-night-5383.fly.dev' : // Production Fly.io URL
+            'server-little-cherry-7613.fly.dev' : // Production Fly.io URL
             '127.0.0.1'; // Local development  
         this.serverPort = 9208; // Geckos.io default signaling port (same for dev and production)
         
