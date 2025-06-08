@@ -6,13 +6,12 @@
 import geckos from '@geckos.io/server';
 import { RoomManager } from './RoomManager.js';
 import { GameSimulation } from './GameSimulation.js';
-import http from 'http';
 
 class MultiplayerServer {
     constructor(options = {}) {
-        // Use environment variables for production, with fallbacks for local development
+        // Configuration for Droplet deployment
         this.port = process.env.PORT || options.port || 9208;
-        this.host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : (options.host || '127.0.0.1');
+        this.host = '0.0.0.0'; // Always bind to all interfaces on Droplet
         
         // Initialize systems
         this.roomManager = new RoomManager();
@@ -37,6 +36,15 @@ class MultiplayerServer {
 
     async start() {
         try {
+            // Environment info
+            console.log(`🚀 Starting server in ${process.env.NODE_ENV || 'development'} mode`);
+            console.log(`🌐 Server will bind to ${this.host}:${this.port}`);
+            console.log(`🔧 Environment variables:`);
+            console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
+            console.log(`   HOST: ${process.env.HOST || 'undefined'}`);
+            console.log(`   PORT: ${process.env.PORT || 'undefined'}`);
+            console.log(`   PWD: ${process.env.PWD || 'undefined'}`);
+            
             console.log(`🔧 Configuring Geckos.io server with host: ${this.host}, port: ${this.port}`);
             
             // Get UDP port range from environment or use defaults
@@ -45,7 +53,7 @@ class MultiplayerServer {
             
             console.log(`🔧 UDP port range: ${udpPortMin}-${udpPortMax}`);
             
-            // Create Geckos.io server with proper configuration for production
+            // Create Geckos.io server with proper configuration for Droplet
             this.io = geckos({
                 authorization: false,
                 cors: {
@@ -56,7 +64,7 @@ class MultiplayerServer {
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' }
                 ],
-                // Production settings with dynamic UDP port range
+                // UDP port range for WebRTC
                 portRange: {
                     min: udpPortMin,
                     max: udpPortMax
@@ -70,32 +78,8 @@ class MultiplayerServer {
             this.startMaintenanceLoop();
             this.startBroadcastLoop();
             
-            // Health check endpoint removed to prevent conflicts with Geckos.io routes
-            
             // Listen on the specified port and host
             this.io.listen(this.port, this.host);
-            
-            // Add basic HTTP server for Railway health checks
-            this.httpServer = http.createServer((req, res) => {
-                if (req.url === '/health' || req.url === '/') {
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ 
-                        status: 'ok', 
-                        service: 'geckos-multiplayer-server',
-                        connections: this.stats.connectionsActive,
-                        uptime: Date.now() - this.stats.startTime
-                    }));
-                } else {
-                    res.writeHead(404, { 'Content-Type': 'text/plain' });
-                    res.end('Not Found');
-                }
-            });
-            
-            // Listen on a different port for HTTP health checks
-            const healthPort = parseInt(this.port) + 1;
-            this.httpServer.listen(healthPort, this.host, () => {
-                console.log(`🏥 Health check server running on ${this.host}:${healthPort}`);
-            });
             
             console.log(`🚀 Multiplayer server started on ${this.host}:${this.port}`);
             console.log(`🎮 Ready for connections!`);
@@ -108,8 +92,6 @@ class MultiplayerServer {
             process.exit(1);
         }
     }
-
-    // setupHealthCheck() method removed to prevent conflicts with Geckos.io internal routes
 
     setupEventHandlers() {
         this.io.onConnection((channel) => {
@@ -591,33 +573,14 @@ class MultiplayerServer {
             }
         }
         
-        if (this.httpServer) {
-            // HTTP health check server cleanup
-            try {
-                this.httpServer.close();
-            } catch (error) {
-                console.log('Health check server cleanup completed');
-            }
-        }
-        
         console.log('✅ Server stopped');
     }
 }
 
-// Production environment logging
-console.log(`🚀 Starting server in ${process.env.NODE_ENV || 'development'} mode`);
-console.log(`🌐 Server will bind to ${process.env.HOST || '0.0.0.0'}:${process.env.PORT || 9208}`);
-console.log(`🔧 Environment variables:`);
-console.log(`   NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`   HOST: ${process.env.HOST}`);
-console.log(`   PORT: ${process.env.PORT}`);
-console.log(`   PWD: ${process.env.PWD}`);
-
 // Create and start server
-const isLocalDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 const server = new MultiplayerServer({
     port: parseInt(process.env.PORT) || 9208,
-    host: process.env.HOST || (isLocalDevelopment ? '127.0.0.1' : '0.0.0.0')  // localhost for dev, all interfaces for production
+    host: process.env.HOST || '0.0.0.0'  // Always bind to all interfaces on Droplet
 });
 
 // Handle graceful shutdown

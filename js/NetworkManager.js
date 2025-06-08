@@ -27,9 +27,9 @@ export class NetworkManager {
             this.serverHost = '127.0.0.1';
             this.serverPort = 9208; // Local development port
         } else {
-            // Production configuration - DigitalOcean App Platform
-            this.serverHost = 'sds-multiplayer-server-zlvsa.ondigitalocean.app'; // DigitalOcean App Platform URL
-            this.serverPort = 443; // DigitalOcean uses standard HTTPS port
+            // Production configuration - DigitalOcean Droplet
+            this.serverHost = '147.182.185.185'; // DigitalOcean Droplet IP
+            this.serverPort = 9208; // Geckos.io default port
         }
         
         // Callbacks
@@ -74,23 +74,29 @@ export class NetworkManager {
         this.notifyConnectionStateChange('connecting');
         
         try {
-            // Determine protocol based on hostname
-            const protocol = this.serverHost === '127.0.0.1' || this.serverHost === 'localhost' ? 'http' : 'https';
-            const serverUrl = `${protocol}://${this.serverHost}`;
+            // Configure Geckos connection based on environment
+            let geckosConfig;
             
-            console.log(`🔗 DEBUG: Connecting to ${serverUrl}${this.serverHost === '127.0.0.1' || this.serverHost === 'localhost' ? ':' + this.serverPort : ''}`);
-            console.log(`🔗 DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
-            
-            // Configure Geckos connection
-            const geckosConfig = { 
-                url: serverUrl
-            };
-            
-            // Only add port for local development
             if (this.serverHost === '127.0.0.1' || this.serverHost === 'localhost') {
-                geckosConfig.port = this.serverPort;
-                console.log(`🔗 DEBUG: Using server port ${this.serverPort}`);
+                // Local development - use http with port
+                const serverUrl = `http://${this.serverHost}`;
+                geckosConfig = { 
+                    url: serverUrl,
+                    port: this.serverPort
+                };
+                console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
+            } else {
+                // DigitalOcean Droplet - use HTTP with port
+                const serverUrl = `http://${this.serverHost}`;
+                geckosConfig = { 
+                    url: serverUrl,
+                    port: this.serverPort
+                };
+                console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Droplet)`);
             }
+            
+            console.log(`🔗 DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
+            console.log(`🔗 DEBUG: Geckos config:`, geckosConfig);
                 
             this.channel = geckos(geckosConfig);
             
@@ -101,11 +107,13 @@ export class NetworkManager {
             return new Promise((resolve, reject) => {
                 console.log(`🔗 DEBUG: Setting up connection promise with 30s timeout`);
                 
+                // Use different timeouts for local vs production
+                const timeoutDuration = this.serverHost === '127.0.0.1' || this.serverHost === 'localhost' ? 5000 : 15000;
                 const timeout = setTimeout(() => {
-                    console.log(`🔗 DEBUG: Connection timeout after 5 seconds`);
+                    console.log(`🔗 DEBUG: Connection timeout after ${timeoutDuration/1000} seconds`);
                     this.connecting = false;
-                    reject(new Error('Connection timeout - is local server running?'));
-                }, 5000); // 5 second timeout for local development
+                    reject(new Error(`Connection timeout - ${this.serverHost === '127.0.0.1' ? 'is local server running?' : 'server may not support WebRTC'}`));
+                }, timeoutDuration);
                 
                 this.channel.onConnect(error => {
                     console.log(`🔗 DEBUG: onConnect callback triggered, error:`, error);
