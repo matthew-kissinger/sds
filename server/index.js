@@ -35,6 +35,8 @@ class MultiplayerServer {
 
     async start() {
         try {
+            console.log(`🔧 Configuring Geckos.io server with host: ${this.host}, port: ${this.port}`);
+            
             // Create Geckos.io server with proper configuration for production
             this.io = geckos({
                 authorization: false,
@@ -59,42 +61,44 @@ class MultiplayerServer {
             // Add a simple health check endpoint for server wake-up
             this.setupHealthCheck();
             
-            // Actually start listening on the port and host for Fly.io
+            // Listen on the specified port and host
             this.io.listen(this.port, this.host);
             
             console.log(`🚀 Multiplayer server started on ${this.host}:${this.port}`);
             console.log(`🎮 Ready for connections!`);
             console.log(`🔗 WebRTC signaling available at http://${this.host}:${this.port}/.wrtc/v2/connections`);
+            console.log(`📍 Server process ID: ${process.pid}`);
             
         } catch (error) {
             console.error('❌ Failed to start server:', error);
+            console.error('Stack trace:', error.stack);
             process.exit(1);
         }
     }
 
     setupHealthCheck() {
-        // Geckos.io servers can handle basic HTTP requests on the same port
-        // Add a simple health check endpoint that responds to HTTP GET requests
-        if (this.io && this.io.server) {
-            this.io.server.on('request', (req, res) => {
-                if (req.method === 'GET' && req.url === '/') {
-                    res.writeHead(200, { 
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
-                    });
-                    res.end(JSON.stringify({
-                        status: 'ok',
-                        message: 'Sheepdog Multiplayer Server is running',
-                        timestamp: new Date().toISOString(),
-                        stats: this.getServerStats()
-                    }));
-                    console.log(`🏥 Health check request from ${req.headers['x-forwarded-for'] || req.connection.remoteAddress}`);
-                } else {
-                    res.writeHead(404);
-                    res.end('Not found');
-                }
-            });
-        }
+        // Add a delay to ensure Geckos.io server is fully initialized
+        setTimeout(() => {
+            if (this.io && this.io.server) {
+                console.log('🏥 Setting up health check endpoint');
+                this.io.server.on('request', (req, res) => {
+                    if (req.method === 'GET' && (req.url === '/' || req.url === '/health')) {
+                        res.writeHead(200, { 
+                            'Content-Type': 'text/plain',
+                            'Access-Control-Allow-Origin': '*'
+                        });
+                        res.end('OK');
+                        console.log(`🏥 Health check from ${req.headers['x-forwarded-for'] || req.connection.remoteAddress}`);
+                    } else {
+                        res.writeHead(404);
+                        res.end('Not found');
+                    }
+                });
+                console.log('✅ Health check endpoint ready');
+            } else {
+                console.warn('⚠️ Cannot set up health check - Geckos.io server not available');
+            }
+        }, 1000);
     }
 
     setupEventHandlers() {
@@ -584,10 +588,15 @@ class MultiplayerServer {
 // Production environment logging
 console.log(`🚀 Starting server in ${process.env.NODE_ENV || 'development'} mode`);
 console.log(`🌐 Server will bind to ${process.env.HOST || '0.0.0.0'}:${process.env.PORT || 9208}`);
+console.log(`🔧 Environment variables:`);
+console.log(`   NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`   HOST: ${process.env.HOST}`);
+console.log(`   PORT: ${process.env.PORT}`);
+console.log(`   PWD: ${process.env.PWD}`);
 
 // Create and start server
 const server = new MultiplayerServer({
-    port: process.env.PORT || 9208,
+    port: parseInt(process.env.PORT) || 9208,
     host: process.env.HOST || '0.0.0.0'  // Bind to all interfaces for Fly.io
 });
 

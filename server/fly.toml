@@ -1,70 +1,35 @@
-# fly.toml app configuration file for Geckos.io multiplayer server
-# Optimized for UDP/WebRTC support and production deployment
+# fly.toml app configuration file generated for server-little-cherry-7613 on 2025-06-08T15:07:14-04:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "server-empty-night-5383"
-primary_region = "iad"
-
-[build]
-  [build.args]
-    NODE_VERSION = "18"
+app = 'server-little-cherry-7613'
+primary_region = 'iad'
 
 [env]
-  PORT = "9208" # Your app's internal TCP port
+  PORT = "9208"
   NODE_ENV = "production"
 
-# This service handles the TCP signaling via the standard HTTP/S ports.
-# Clients connect to port 443, and Fly forwards it to internal_port 9208.
-[[services]]
-  protocol = "tcp"
+[build]
+
+[http_service]
   internal_port = 9208
-  auto_stop_machines = true
+  force_https = false
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
+  processes = ['app']
 
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-    force_https = true
-
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
-
-# This service handles the UDP traffic for WebRTC data channels.
-# Opens multiple UDP ports for WebRTC connections
-[[services]]
-  protocol = "udp"
-  internal_port = 9208 # All UDP traffic also goes to your app on this port
-  
-  [[services.ports]]
-    port = 10000
-  [[services.ports]]
-    port = 10001
-  [[services.ports]]
-    port = 10002
-  [[services.ports]]
-    port = 10003
-  [[services.ports]]
-    port = 10004
-  [[services.ports]]
-    port = 10005
-  [[services.ports]]
-    port = 10006
-  [[services.ports]]
-    port = 10007
-  [[services.ports]]
-    port = 10008
-  [[services.ports]]
-    port = 10009
-
-# Machine configuration
-[machine]
-  auto_stop_machines = true
-  auto_start_machines = true
-  min_machines_running = 0
-  max_machines_running = 2
+  # Health check for HTTP service
+  [http_service.http_check]
+    interval = '30s'
+    timeout = '10s'
+    grace_period = '60s'
+    method = 'GET'
+    path = '/health'
+    protocol = 'http'
 
 [[vm]]
-  memory = "1gb"
-  cpu_kind = "shared"
+  memory = '512mb'
+  cpu_kind = 'shared'
   cpus = 1
