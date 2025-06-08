@@ -27,8 +27,8 @@ export class NetworkManager {
             this.serverHost = '127.0.0.1';
             this.serverPort = 9208; // Local development port
         } else {
-            // Production configuration - DigitalOcean Droplet with HTTPS
-            this.serverHost = '147.182.185.185'; // DigitalOcean Droplet IP
+            // Production configuration - DigitalOcean Droplet with trusted domain
+            this.serverHost = 'sheepdogsim.duckdns.org'; // Trusted domain with Let's Encrypt
             this.serverPort = 443; // HTTPS port via nginx proxy
         }
         
