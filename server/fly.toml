@@ -1,22 +1,38 @@
-# fly.toml app configuration file generated for server-empty-night-5383 on 2025-06-07T22:58:33-04:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
+# fly.toml app configuration file for Geckos.io multiplayer server
+# Optimized for UDP/WebRTC support and production deployment
 
-app = 'server-empty-night-5383'
-primary_region = 'iad'
+app = "server-empty-night-5383"
+primary_region = "iad"
 
 [build]
+  # Install Node.js dependencies during build
+  [build.args]
+    NODE_VERSION = "18"
 
-[http_service]
-  internal_port = 3000
-  force_https = true
-  auto_stop_machines = 'stop'
+[env]
+  PORT = "9208"
+  NODE_ENV = "production"
+
+# Geckos.io TCP service for signaling (port 9208)
+[[services]]
+  protocol = "tcp"
+  internal_port = 9208
+  force_https = false
+  auto_stop_machines = true
   auto_start_machines = true
   min_machines_running = 0
-  processes = ['app']
+
+  [[services.ports]]
+    port = 9208
+    handlers = ["http", "tls"]
+
+[machine]
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  max_machines_running = 2
 
 [[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
+  memory = "1gb"
+  cpu_kind = "shared"
   cpus = 1

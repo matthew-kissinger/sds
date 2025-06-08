@@ -21,7 +21,7 @@ import {
     createGameState,
     createBoidConfig,
     createMovementConfig
-} from '../shared/index.js';
+} from './shared/index.js';
 
 export class GameSimulation {
     constructor(room) {
