@@ -17,13 +17,9 @@ export class NetworkManager {
         this.playerName = null;
         this.isHost = false;
         
-        // Server configuration per Geckos.io docs
-        // Geckos.io uses port 9208 for signaling by default
-        // In production (GitHub Pages), connect to Fly.io server
-        // In development, connect to local server
-        this.serverHost = window.location.hostname === 'matthew-kissinger.github.io' ? 
-            'server-little-cherry-7613.fly.dev' : // Production Fly.io URL
-            '127.0.0.1'; // Local development  
+        // Server configuration - MULTIPLAYER DISABLED
+        // Fly.io server removed - only local development supported
+        this.serverHost = '127.0.0.1'; // Local development only  
         this.serverPort = 9208; // Geckos.io default signaling port (same for dev and production)
         
         // Callbacks
@@ -62,52 +58,30 @@ export class NetworkManager {
             return Promise.resolve();
         }
         
+        // Check if in production - multiplayer disabled
+        const isProduction = window.location.hostname === 'matthew-kissinger.github.io';
+        if (isProduction) {
+            this.notifyError('Multiplayer is currently disabled. Please play in single-player mode.');
+            throw new Error('Multiplayer disabled in production');
+        }
+        
         this.connecting = true;
         this.notifyConnectionStateChange('connecting');
         
         try {
-            // Construct full URL for Geckos.io client per official docs
-            // Use HTTPS in production to avoid Mixed Content blocking
-            const isProduction = window.location.hostname === 'matthew-kissinger.github.io';
-            const protocol = isProduction ? 'https' : 'http'; // HTTPS for production, HTTP for dev
+            // Local development only
+            const protocol = 'http';
             const serverUrl = `${protocol}://${this.serverHost}`;
             
-            console.log(`🔗 DEBUG: Connecting to ${serverUrl}${isProduction ? '' : ':' + this.serverPort}`);
-            console.log(`🔗 DEBUG: Current hostname: ${window.location.hostname}`);
-            console.log(`🔗 DEBUG: Production mode: ${isProduction}`);
-            console.log(`🔗 DEBUG: Port config: ${isProduction ? 'standard HTTPS (443)' : this.serverPort}`);
+            console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort}`);
+            console.log(`🔗 DEBUG: Local development mode only`);
             
-            // In production, wake up the Fly.io server first to reduce connection timeout
-            if (isProduction) {
-                console.log(`🔗 DEBUG: Waking up Fly.io server...`);
-                try {
-                    // Use standard HTTPS port for production wake-up (no port specified)
-                    const wakeUpResponse = await fetch(`${serverUrl}/`, {
-                        method: 'GET',
-                        mode: 'no-cors', // Avoid CORS issues since we just want to trigger server wake-up
-                        cache: 'no-cache'
-                    });
-                    console.log(`🔗 DEBUG: Server wake-up request sent`);
-                } catch (wakeUpError) {
-                    console.log(`🔗 DEBUG: Server wake-up request completed (expected to fail due to no-cors)`);
-                }
-                
-                // Give server a moment to fully initialize
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-            
-            // Configure Geckos connection 
-            const geckosConfig = { url: serverUrl };
-            
-            if (!isProduction) {
-                // Local development - use port 9208 directly
-                geckosConfig.port = this.serverPort;
-                console.log(`🔗 DEBUG: Local development - using port ${this.serverPort}`);
-            } else {
-                // Production - force port 443 to go through Fly.io's TLS-terminating proxy
-                geckosConfig.port = 443;
-                console.log(`🔗 DEBUG: Production - forcing port 443 to go through Fly.io proxy`);
-            }
+            // Configure Geckos connection for local development
+            const geckosConfig = { 
+                url: serverUrl,
+                port: this.serverPort
+            };
+            console.log(`🔗 DEBUG: Using local server port ${this.serverPort}`);
                 
             this.channel = geckos(geckosConfig);
             
@@ -119,10 +93,10 @@ export class NetworkManager {
                 console.log(`🔗 DEBUG: Setting up connection promise with 30s timeout`);
                 
                 const timeout = setTimeout(() => {
-                    console.log(`🔗 DEBUG: Connection timeout after 30 seconds`);
+                    console.log(`🔗 DEBUG: Connection timeout after 5 seconds`);
                     this.connecting = false;
-                    reject(new Error('Connection timeout'));
-                }, 30000); // 30 second timeout to allow for Fly.io server wake-up
+                    reject(new Error('Connection timeout - is local server running?'));
+                }, 5000); // 5 second timeout for local development
                 
                 this.channel.onConnect(error => {
                     console.log(`🔗 DEBUG: onConnect callback triggered, error:`, error);

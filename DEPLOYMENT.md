@@ -1,13 +1,20 @@
 # 🚀 Deployment Guide
 
 ## Overview
-This project uses a hybrid deployment strategy:
+This project uses GitHub Pages for static hosting:
 - **Client**: GitHub Pages (static hosting) at `https://matthew-kissinger.github.io/sds/`  
-- **Server**: Fly.io (multiplayer server) at `https://server-little-cherry-7613.fly.dev:9208`
+- **Multiplayer**: Currently disabled (Fly.io server removed)
 
-**Geckos.io Requirements**:
-- Port **9208/tcp** for peer signaling 
-- UDP ports **1025-65535** for WebRTC connections
+## ⚠️ Current Status: Multiplayer Disabled
+
+Multiplayer functionality has been **temporarily disabled** due to Fly.io compatibility issues:
+- **Single-player mode**: ✅ Fully functional on GitHub Pages
+- **Multiplayer mode**: ❌ Disabled (shows error message to users)
+- **Local development**: ✅ Multiplayer still works with local server
+
+**For local multiplayer testing:**
+- Run `npm run start-multiplayer-servers` in the `/server` directory  
+- Use `http://127.0.0.1:PORT/` (not GitHub Pages) to access local multiplayer
 
 ## Pre-Deployment Checklist ✅
 
