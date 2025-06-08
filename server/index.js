@@ -59,8 +59,8 @@ class MultiplayerServer {
             // Add a simple health check endpoint for server wake-up
             this.setupHealthCheck();
             
-            // Actually start listening on the port
-            this.io.listen(this.port);
+            // Actually start listening on the port and host for Fly.io
+            this.io.listen(this.port, this.host);
             
             console.log(`🚀 Multiplayer server started on ${this.host}:${this.port}`);
             console.log(`🎮 Ready for connections!`);

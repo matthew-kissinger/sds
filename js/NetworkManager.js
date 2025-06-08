@@ -72,10 +72,10 @@ export class NetworkManager {
             const protocol = isProduction ? 'https' : 'http'; // HTTPS for production, HTTP for dev
             const serverUrl = `${protocol}://${this.serverHost}`;
             
-            console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort}`);
+            console.log(`🔗 DEBUG: Connecting to ${serverUrl}${isProduction ? '' : ':' + this.serverPort}`);
             console.log(`🔗 DEBUG: Current hostname: ${window.location.hostname}`);
             console.log(`🔗 DEBUG: Production mode: ${isProduction}`);
-            console.log(`🔗 DEBUG: Using Geckos.io signaling port: ${this.serverPort}`);
+            console.log(`🔗 DEBUG: Port config: ${isProduction ? 'standard HTTPS (443)' : this.serverPort}`);
             
             // In production, wake up the Fly.io server first to reduce connection timeout
             if (isProduction) {
