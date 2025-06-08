@@ -67,9 +67,9 @@ export class NetworkManager {
         
         try {
             // Construct full URL for Geckos.io client per official docs
-            // Geckos.io uses HTTP for WebRTC signaling, even from HTTPS clients
+            // Use HTTPS in production to avoid Mixed Content blocking
             const isProduction = window.location.hostname === 'matthew-kissinger.github.io';
-            const protocol = 'http'; // Always use HTTP for Geckos.io WebRTC signaling
+            const protocol = isProduction ? 'https' : 'http'; // HTTPS for production, HTTP for dev
             const serverUrl = `${protocol}://${this.serverHost}`;
             
             console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort}`);
