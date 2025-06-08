@@ -35,21 +35,29 @@ class MultiplayerServer {
 
     async start() {
         try {
-            // Create Geckos.io server with proper configuration
+            // Create Geckos.io server with proper configuration for production
             this.io = geckos({
-                authorization: false, // Disable authorization for development
+                authorization: false,
                 cors: {
-                    origin: '*', // Allow all origins for development
+                    origin: '*',
                     allowAuthorization: false
                 },
                 iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' }
-                ]
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ],
+                // Production settings for Fly.io proxy
+                maxPayload: 200000,
+                pingTimeout: 60000,
+                pingInterval: 25000
             });
 
             this.setupEventHandlers();
             this.startMaintenanceLoop();
             this.startBroadcastLoop();
+            
+            // Add a simple health check endpoint for server wake-up
+            this.setupHealthCheck();
             
             // Actually start listening on the port
             this.io.listen(this.port);
@@ -61,6 +69,31 @@ class MultiplayerServer {
         } catch (error) {
             console.error('❌ Failed to start server:', error);
             process.exit(1);
+        }
+    }
+
+    setupHealthCheck() {
+        // Geckos.io servers can handle basic HTTP requests on the same port
+        // Add a simple health check endpoint that responds to HTTP GET requests
+        if (this.io && this.io.server) {
+            this.io.server.on('request', (req, res) => {
+                if (req.method === 'GET' && req.url === '/') {
+                    res.writeHead(200, { 
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    });
+                    res.end(JSON.stringify({
+                        status: 'ok',
+                        message: 'Sheepdog Multiplayer Server is running',
+                        timestamp: new Date().toISOString(),
+                        stats: this.getServerStats()
+                    }));
+                    console.log(`🏥 Health check request from ${req.headers['x-forwarded-for'] || req.connection.remoteAddress}`);
+                } else {
+                    res.writeHead(404);
+                    res.end('Not found');
+                }
+            });
         }
     }
 

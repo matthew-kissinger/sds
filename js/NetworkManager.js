@@ -76,6 +76,24 @@ export class NetworkManager {
             console.log(`🔗 DEBUG: Current hostname: ${window.location.hostname}`);
             console.log(`🔗 DEBUG: Production mode: ${isProduction}`);
             console.log(`🔗 DEBUG: Using Geckos.io signaling port: ${this.serverPort}`);
+            
+            // In production, wake up the Fly.io server first to reduce connection timeout
+            if (isProduction) {
+                console.log(`🔗 DEBUG: Waking up Fly.io server...`);
+                try {
+                    const wakeUpResponse = await fetch(`${serverUrl}:${this.serverPort}/`, {
+                        method: 'GET',
+                        mode: 'no-cors', // Avoid CORS issues since we just want to trigger server wake-up
+                        cache: 'no-cache'
+                    });
+                    console.log(`🔗 DEBUG: Server wake-up request sent`);
+                } catch (wakeUpError) {
+                    console.log(`🔗 DEBUG: Server wake-up request completed (expected to fail due to no-cors)`);
+                }
+                
+                // Give server a moment to fully initialize
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
                 
             this.channel = geckos({
                 url: serverUrl,
@@ -87,13 +105,13 @@ export class NetworkManager {
             console.log(`🔗 DEBUG: Event handlers set up`);
             
             return new Promise((resolve, reject) => {
-                console.log(`🔗 DEBUG: Setting up connection promise with 10s timeout`);
+                console.log(`🔗 DEBUG: Setting up connection promise with 30s timeout`);
                 
                 const timeout = setTimeout(() => {
-                    console.log(`🔗 DEBUG: Connection timeout after 10 seconds`);
+                    console.log(`🔗 DEBUG: Connection timeout after 30 seconds`);
                     this.connecting = false;
                     reject(new Error('Connection timeout'));
-                }, 10000); // 10 second timeout
+                }, 30000); // 30 second timeout to allow for Fly.io server wake-up
                 
                 this.channel.onConnect(error => {
                     console.log(`🔗 DEBUG: onConnect callback triggered, error:`, error);
