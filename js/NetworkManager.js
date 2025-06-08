@@ -96,15 +96,17 @@ export class NetworkManager {
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
-            // Configure Geckos connection - don't specify port for production (Fly.io proxy)
+            // Configure Geckos connection 
             const geckosConfig = { url: serverUrl };
             
-            // Only specify a port for local development
             if (!isProduction) {
+                // Local development - use port 9208 directly
                 geckosConfig.port = this.serverPort;
                 console.log(`🔗 DEBUG: Local development - using port ${this.serverPort}`);
             } else {
-                console.log(`🔗 DEBUG: Production - using standard HTTPS port via Fly.io proxy`);
+                // Production - force port 443 to go through Fly.io's TLS-terminating proxy
+                geckosConfig.port = 443;
+                console.log(`🔗 DEBUG: Production - forcing port 443 to go through Fly.io proxy`);
             }
                 
             this.channel = geckos(geckosConfig);
