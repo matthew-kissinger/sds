@@ -81,7 +81,8 @@ export class NetworkManager {
             if (isProduction) {
                 console.log(`🔗 DEBUG: Waking up Fly.io server...`);
                 try {
-                    const wakeUpResponse = await fetch(`${serverUrl}:${this.serverPort}/`, {
+                    // Use standard HTTPS port for production wake-up (no port specified)
+                    const wakeUpResponse = await fetch(`${serverUrl}/`, {
                         method: 'GET',
                         mode: 'no-cors', // Avoid CORS issues since we just want to trigger server wake-up
                         cache: 'no-cache'
@@ -94,11 +95,19 @@ export class NetworkManager {
                 // Give server a moment to fully initialize
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
+            
+            // Configure Geckos connection - don't specify port for production (Fly.io proxy)
+            const geckosConfig = { url: serverUrl };
+            
+            // Only specify a port for local development
+            if (!isProduction) {
+                geckosConfig.port = this.serverPort;
+                console.log(`🔗 DEBUG: Local development - using port ${this.serverPort}`);
+            } else {
+                console.log(`🔗 DEBUG: Production - using standard HTTPS port via Fly.io proxy`);
+            }
                 
-            this.channel = geckos({
-                url: serverUrl,
-                port: this.serverPort
-            });
+            this.channel = geckos(geckosConfig);
             
             console.log(`🔗 DEBUG: Geckos client created`);
             this.setupEventHandlers();
