@@ -28,7 +28,7 @@ export class NetworkManager {
             this.serverPort = 9208; // Local development port
         } else {
             // Production configuration - DigitalOcean App Platform
-            this.serverHost = 'YOUR_DIGITALOCEAN_APP_URL'; // Replace with actual DigitalOcean App Platform URL
+            this.serverHost = 'sds-multiplayer-server-zlvsa.ondigitalocean.app'; // DigitalOcean App Platform URL
             this.serverPort = 443; // DigitalOcean uses standard HTTPS port
         }
         
