@@ -5,27 +5,59 @@ app = "server-empty-night-5383"
 primary_region = "iad"
 
 [build]
-  # Install Node.js dependencies during build
   [build.args]
     NODE_VERSION = "18"
 
 [env]
-  PORT = "9208"
+  PORT = "9208" # Your app's internal TCP port
   NODE_ENV = "production"
 
-# Geckos.io TCP service for signaling (port 9208)
+# This service handles the TCP signaling via the standard HTTP/S ports.
+# Clients connect to port 443, and Fly forwards it to internal_port 9208.
 [[services]]
   protocol = "tcp"
   internal_port = 9208
-  force_https = false
   auto_stop_machines = true
   auto_start_machines = true
   min_machines_running = 0
 
   [[services.ports]]
-    port = 9208
-    handlers = ["http", "tls"]
+    port = 80
+    handlers = ["http"]
+    force_https = true
 
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+# This service handles the UDP traffic for WebRTC data channels.
+# Opens multiple UDP ports for WebRTC connections
+[[services]]
+  protocol = "udp"
+  internal_port = 9208 # All UDP traffic also goes to your app on this port
+  
+  [[services.ports]]
+    port = 10000
+  [[services.ports]]
+    port = 10001
+  [[services.ports]]
+    port = 10002
+  [[services.ports]]
+    port = 10003
+  [[services.ports]]
+    port = 10004
+  [[services.ports]]
+    port = 10005
+  [[services.ports]]
+    port = 10006
+  [[services.ports]]
+    port = 10007
+  [[services.ports]]
+    port = 10008
+  [[services.ports]]
+    port = 10009
+
+# Machine configuration
 [machine]
   auto_stop_machines = true
   auto_start_machines = true
