@@ -27,9 +27,9 @@ export class NetworkManager {
             this.serverHost = '127.0.0.1';
             this.serverPort = 9208; // Local development port
         } else {
-            // Production configuration
-            this.serverHost = 'sds-server-production.up.railway.app';
-            this.serverPort = 9208; // Production port
+            // Production configuration - DigitalOcean App Platform
+            this.serverHost = 'YOUR_DIGITALOCEAN_APP_URL'; // Replace with actual DigitalOcean App Platform URL
+            this.serverPort = 443; // DigitalOcean uses standard HTTPS port
         }
         
         // Callbacks
@@ -78,15 +78,19 @@ export class NetworkManager {
             const protocol = this.serverHost === '127.0.0.1' || this.serverHost === 'localhost' ? 'http' : 'https';
             const serverUrl = `${protocol}://${this.serverHost}`;
             
-            console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort}`);
+            console.log(`🔗 DEBUG: Connecting to ${serverUrl}${this.serverHost === '127.0.0.1' || this.serverHost === 'localhost' ? ':' + this.serverPort : ''}`);
             console.log(`🔗 DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
             
             // Configure Geckos connection
             const geckosConfig = { 
-                url: serverUrl,
-                port: this.serverPort
+                url: serverUrl
             };
-            console.log(`🔗 DEBUG: Using server port ${this.serverPort}`);
+            
+            // Only add port for local development
+            if (this.serverHost === '127.0.0.1' || this.serverHost === 'localhost') {
+                geckosConfig.port = this.serverPort;
+                console.log(`🔗 DEBUG: Using server port ${this.serverPort}`);
+            }
                 
             this.channel = geckos(geckosConfig);
             

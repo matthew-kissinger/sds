@@ -6,6 +6,7 @@
 import geckos from '@geckos.io/server';
 import { RoomManager } from './RoomManager.js';
 import { GameSimulation } from './GameSimulation.js';
+import http from 'http';
 
 class MultiplayerServer {
     constructor(options = {}) {
@@ -73,6 +74,28 @@ class MultiplayerServer {
             
             // Listen on the specified port and host
             this.io.listen(this.port, this.host);
+            
+            // Add basic HTTP server for Railway health checks
+            this.httpServer = http.createServer((req, res) => {
+                if (req.url === '/health' || req.url === '/') {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ 
+                        status: 'ok', 
+                        service: 'geckos-multiplayer-server',
+                        connections: this.stats.connectionsActive,
+                        uptime: Date.now() - this.stats.startTime
+                    }));
+                } else {
+                    res.writeHead(404, { 'Content-Type': 'text/plain' });
+                    res.end('Not Found');
+                }
+            });
+            
+            // Listen on a different port for HTTP health checks
+            const healthPort = parseInt(this.port) + 1;
+            this.httpServer.listen(healthPort, this.host, () => {
+                console.log(`🏥 Health check server running on ${this.host}:${healthPort}`);
+            });
             
             console.log(`🚀 Multiplayer server started on ${this.host}:${this.port}`);
             console.log(`🎮 Ready for connections!`);
@@ -565,6 +588,15 @@ class MultiplayerServer {
                 }
             } catch (error) {
                 console.log('Server cleanup completed');
+            }
+        }
+        
+        if (this.httpServer) {
+            // HTTP health check server cleanup
+            try {
+                this.httpServer.close();
+            } catch (error) {
+                console.log('Health check server cleanup completed');
             }
         }
         

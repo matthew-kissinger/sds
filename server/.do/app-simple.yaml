@@ -1,0 +1,23 @@
+name: sds-multiplayer-server
+region: nyc
+services:
+- name: web
+  source_dir: /server
+  run_command: node index.js
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  envs:
+  - key: PORT
+    scope: RUN_TIME
+    value: "8080"
+  - key: GECKOS_UDP_PORT_MIN
+    scope: RUN_TIME
+    value: "10000"
+  - key: GECKOS_UDP_PORT_MAX
+    scope: RUN_TIME
+    value: "20000"
+  - key: NODE_ENV
+    scope: RUN_TIME
+    value: "production"
+  http_port: 8080 
