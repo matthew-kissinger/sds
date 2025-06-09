@@ -55,8 +55,9 @@
             
             const serverUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 
                 'http://127.0.0.1' : 
-                'https://your-production-server.fly.dev';
-            const port = 3000; // Test port for debugging
+                'http://68.183.107.158';
+            const port = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 
+                3000 : 9208; // Local debug port vs production port
             
             log('🔗 Server URL: ' + serverUrl + ':' + port);
             

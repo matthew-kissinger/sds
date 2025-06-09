@@ -1,87 +1,310 @@
+
 # Sheep Dog Simulation - Technical Architecture
 
 ## Overview
-A sophisticated real-time 3D sheep herding simulation built with Three.js, implementing advanced flocking behavior algorithms, immersive environmental rendering, competitive gameplay mechanics, and polished user experience features. The simulation features 200 autonomous sheep agents with emergent flocking behavior rendered using high-performance GPU-based instanced rendering, a player-controlled sheepdog with stamina and sprint mechanics, timer-based scoring, cinematic start screen, and an expansive 3D world with realistic environmental elements.
+A sophisticated real-time 3D sheep herding simulation built with Three.js, featuring both **single-player** and **multiplayer** modes. The system implements advanced flocking behavior algorithms, immersive environmental rendering, competitive gameplay mechanics, comprehensive mobile support, audio system, and WebRTC-based multiplayer networking. The simulation features 200 autonomous sheep agents with emergent flocking behavior rendered using high-performance GPU-based instanced rendering, multiple player-controlled sheepdogs with stamina mechanics, timer-based scoring, cinematic start screen, and an expansive 3D world with realistic environmental elements.
 
-## Modular Architecture
+## Dual-Mode Architecture
 
-The simulation uses a clean, modular architecture optimized for performance and maintainability. Each module has a single responsibility and clear interfaces, with the sheep system utilizing cutting-edge GPU-based rendering for maximum efficiency.
+The simulation uses a **hybrid architecture** that preserves the original single-player experience while adding full multiplayer capabilities:
 
-### Module Overview
+- **Single-Player Mode**: Runs entirely client-side with no network dependencies
+- **Multiplayer Mode**: Connects to authoritative server with real-time synchronization
+- **Graceful Fallback**: Automatically falls back to single-player if server unavailable
+
+## System Architecture Overview
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   SceneManager  │    │ TerrainBuilder  │    │StructureBuilder│
-│                 │    │                 │    │                 │
-│ • 3D Rendering  │    │ • Environment   │    │ • Fences/Gates  │
-│ • Camera System │    │ • Grass/Trees   │    │ • Pastures      │
-│ • Lighting      │    │ • Mountains     │    │ • Structures    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-                    ┌─────────────────┐
-                    │   main.js       │
-                    │                 │
-                    │ • Orchestration │
-                    │ • Game Loop     │
-                    │ • Module Coord  │
-                    └─────────────────┘
-                                 │
-         ┌───────────────────────┼───────────────────────┐
-         │                       │                       │
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   GameState     │    │   GameTimer     │    │  InputHandler   │
-│                 │    │                 │    │                 │
-│ • Game Logic    │    │ • Timing System │    │ • User Input    │
-│ • Sheep Mgmt    │    │ • Best Scores   │    │ • WASD Control  │
-│ • Completion    │    │ • Persistence   │    │ • Sprint/Pause  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-         ┌───────────────────────┼───────────────────────┐
-         │                       │                       │
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   StartScreen   │    │   StaminaUI     │    │PerformanceMonitor│
-│                 │    │                 │    │                 │
-│ • Start Screen  │    │ • Stamina Bar   │    │ • FPS Tracking  │
-│ • Cinematic Cam │    │ • UI Updates    │    │ • Stats Display │
-│ • Game Launch   │    │ • Visual States │    │ • Metrics       │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                          CLIENT SIDE                            │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
+│  │   StartScreen   │    │ MobileControls  │    │ AudioManager │ │
+│  │ • Mode Selection│    │ • Touch Controls│    │ • Sound FX   │ │
+│  │ • Solo/Multi UI │    │ • Virtual Stick │    │ • Music      │ │
+│  └─────────────────┘    └─────────────────┘    └──────────────┘ │
+│           │                       │                      │       │
+│           └───────────────────────┼──────────────────────┘       │
+│                                   │                              │
+│  ┌─────────────────────────────────┼─────────────────────────────┐ │
+│  │              main.js - Game Orchestrator                     │ │
+│  │  • Dual-mode coordination (local vs networked)              │ │
+│  │  • Module initialization and lifecycle management           │ │
+│  │  • Game loop with pause/resume support                      │ │
+│  └─────────────────────────────────┼─────────────────────────────┘ │
+│                                   │                              │
+│  ┌───────────────┐    ┌───────────────┐    ┌──────────────────┐  │
+│  │  SceneManager │    │  GameState    │    │ NetworkManager   │  │
+│  │ • 3D Rendering│    │ • Local Logic │    │ • WebRTC Client  │  │
+│  │ • Camera Sys  │    │ • Sheep Mgmt  │    │ • Room System    │  │
+│  └───────────────┘    └───────────────┘    └──────────────────┘  │
+│           │                       │                      │       │
+│           └───────────────────────┼──────────────────────┘       │
+│                                   │                              │
+│  ┌───────────────┐    ┌───────────────┐    ┌──────────────────┐  │
+│  │ TerrainBuilder│    │OptimizedSheep │    │  MultiplayerUI   │  │
+│  │ • Environment │    │ • GPU Render  │    │ • Room Lobby     │  │
+│  │ • Grass/Trees │    │ • 200 Sheep   │    │ • Player Lists   │  │
+│  └───────────────┘    └───────────────┘    └──────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                                   │
+                         ┌─────────┴─────────┐
+                         │    INTERNET       │
+                         │   (WebRTC/UDP)    │
+                         └─────────┬─────────┘
+                                   │
+┌─────────────────────────────────────────────────────────────────┐
+│                    SERVER SIDE (DigitalOcean)                   │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │              server/index.js - Geckos.io Server             │ │
+│  │  • WebRTC signaling and data channel management            │ │
+│  │  • Player connection/disconnection handling                │ │
+│  │  • Room lifecycle and host delegation                      │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                 │                               │
+│  ┌───────────────┐    ┌─────────────────┐    ┌───────────────┐  │
+│  │  RoomManager  │    │ GameSimulation  │    │ shared/       │  │
+│  │ • Room Codes  │    │ • Authoritative │    │ • Pure Logic │  │
+│  │ • Player Mgmt │    │ • 60 FPS Tick   │    │ • Algorithms │  │
+│  └───────────────┘    └─────────────────┘    └───────────────┘  │
+│                                 │                               │
+│  Deployment: DigitalOcean Droplet (68.183.107.158:9208)        │
+│  • PM2 Process Management • UDP Ports 10000-20000              │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Core Modules
+## Core Client Modules
 
-### 1. SceneManager.js (141 lines)
-**3D Scene and Rendering Management**
+### 1. main.js (731 lines) - Enhanced Game Orchestrator
+**Dual-Mode Coordination and Lifecycle Management**
 
 **Responsibilities:**
-- Three.js scene initialization and configuration
-- Camera system with dynamic following and zoom
-- Lighting setup (ambient + directional with shadows)
-- Window resize handling and viewport management
-- Mouse wheel zoom controls
+- **Mode Detection**: Automatically detects single-player vs multiplayer mode
+- **Module Coordination**: Initializes and coordinates all game systems
+- **State Management**: Handles transitions between start screen, lobby, and gameplay
+- **Pause System**: Universal pause coordination across all systems
+- **Audio Integration**: Background music and sound effect coordination
 
 **Key Features:**
-- **Dynamic Camera**: Smooth interpolation following sheepdog with configurable zoom (20-150 units)
-- **Advanced Lighting**: Multi-light setup with shadow mapping (2048x2048 resolution)
-- **Fog System**: Atmospheric depth with extended range (200-600 units)
-- **Performance Optimized**: Efficient render loop with minimal state changes
+- **Hybrid Architecture**: Seamlessly switches between local and networked modes
+- **Module Lifecycle**: Proper initialization, update, and cleanup of all systems
+- **Error Handling**: Graceful fallback from multiplayer to single-player
+- **Performance Integration**: FPS monitoring and optimization
 
 **API:**
 ```javascript
-class SceneManager {
-    updateCamera(sheepdog)     // Follow sheepdog with smooth interpolation
-    setupMouseControls()       // Enable zoom controls
-    render()                   // Render scene to canvas
-    add(object)               // Add object to scene
-    getScene()                // Access Three.js scene
-    getCamera()               // Access camera for start screen
+class SheepDogSimulation {
+    switchToMultiplayer()        // Enable multiplayer mode
+    switchToSinglePlayer()       // Enable single-player mode
+    startGame()                  // Begin gameplay (either mode)
+    pauseGame()                  // Pause all systems
+    resetGame()                  // Reset to start screen
+    update(deltaTime)            // Main game loop
 }
 ```
 
-### 2. TerrainBuilder.js (397 lines)
+### 2. NetworkManager.js (624 lines) - Multiplayer Communication
+**WebRTC-Based Real-Time Networking**
+
+**Responsibilities:**
+- **Connection Management**: Geckos.io WebRTC client integration
+- **Room System**: Create, join, and manage multiplayer rooms
+- **Real-Time Sync**: Player input transmission and game state reception
+- **Reconnection Logic**: Automatic reconnection with exponential backoff
+- **Environment Detection**: Automatic server URL detection
+
+**Key Features:**
+- **Room-Based Multiplayer**: 4-letter room codes for private rooms
+- **Quick Match**: Automatic public room joining
+- **Low-Latency Communication**: WebRTC data channels for <50ms latency
+- **Ping Monitoring**: Real-time connection quality measurement
+- **Graceful Degradation**: Fallback to single-player on connection issues
+
+**Protocol:**
+```javascript
+// Client → Server Messages:
+playerInput: { direction, sprinting, timestamp }
+createRoom: { playerName, roomSettings }
+joinRoom: { roomCode, playerName }
+startGame: { dogType }
+
+// Server → Client Messages:
+gameStateUpdate: { sheep, players, timestamp }
+roomUpdate: { players, status, hostId }
+playerJoined: { playerId, playerName }
+gameStarted: { gameConfig }
+```
+
+### 3. MultiplayerUI.js (234 lines) - Multiplayer Interface
+**Room Management and Player Interaction UI**
+
+**Responsibilities:**
+- **Room Creation**: UI for creating private and public rooms
+- **Room Joining**: Room code input and validation
+- **Lobby Management**: Player lists, ready states, host controls
+- **In-Game HUD**: Multiplayer-specific UI elements during gameplay
+- **Connection Status**: Visual feedback for connection quality
+
+**Key Features:**
+- **Responsive Design**: Mobile-optimized layouts
+- **Real-Time Updates**: Live player list and status updates
+- **Host Privileges**: Start game, kick players, room settings
+- **Quick Match**: One-click public room joining
+- **Error Handling**: User-friendly error messages and recovery
+
+### 4. MobileControls.js (690 lines) - Touch Interface System
+**Comprehensive Mobile and Touch Support**
+
+**Responsibilities:**
+- **Touch Detection**: Automatic mobile device detection
+- **Virtual Joystick**: nipple.js-based movement control
+- **Sprint Button**: Touch-optimized sprint control
+- **Zoom Slider**: Camera distance adjustment for mobile
+- **Touch Event Management**: Preventing default mobile browser behaviors
+
+**Key Features:**
+- **Cross-Platform**: Works on iOS, Android, and desktop
+- **Visual Feedback**: Touch state indicators and animations
+- **Responsive Layout**: Adaptive positioning for different screen sizes
+- **Performance Optimized**: Lazy loading and efficient event handling
+
+**Configuration:**
+```javascript
+joystick: {
+    size: 120,               // Joystick size in pixels
+    color: '#00BFFF',        // Joystick color
+    threshold: 0.1,          // Movement threshold
+    restOpacity: 0.7         // Opacity when not in use
+}
+
+zoom: {
+    min: 20,                 // Minimum zoom distance
+    max: 150,                // Maximum zoom distance
+    default: 80              // Default zoom level
+}
+```
+
+### 5. AudioManager.js (551 lines) - Sound System
+**Comprehensive Audio Management**
+
+**Responsibilities:**
+- **Background Music**: Ambient music with loop management
+- **Sound Effects**: UI clicks, game events, completion sounds
+- **Audio Loading**: Preloading and caching of audio assets
+- **Volume Control**: User preferences and mute functionality
+- **Cross-Browser Compatibility**: Fallback support for different browsers
+
+**Key Features:**
+- **Audio Preloading**: Efficient asset management
+- **Spatial Audio**: 3D positioning for environmental sounds
+- **Music Transitions**: Smooth crossfading between tracks
+- **Mobile Support**: Touch-to-enable audio for mobile browsers
+
+### 6. StartScreen.js (682 lines) - Enhanced Mode Selection
+**Comprehensive Pre-Game Experience**
+
+**Responsibilities:**
+- **Mode Selection**: Solo vs Multiplayer choice interface
+- **Cinematic Camera**: Orbital camera showcasing the environment
+- **Room Management**: Integration with multiplayer room system
+- **Settings Interface**: Audio, graphics, and control settings
+- **Transitions**: Smooth animations between different screens
+
+**Enhanced Features:**
+- **Dual-Mode Support**: Seamless transitions between single and multiplayer
+- **Room Integration**: Direct access to multiplayer room creation/joining
+- **Quick Match**: One-click multiplayer access
+- **Settings Panel**: Audio controls, graphics options, control preferences
+
+## Server Architecture (DigitalOcean Droplet)
+
+### Server Deployment: `68.183.107.158:9208`
+**Why DigitalOcean Droplet?**
+- **Full UDP Support**: WebRTC requires UDP port ranges (10000-20000)
+- **Network Control**: Direct access to networking configuration
+- **Performance**: Dedicated resources for real-time gameplay
+- **Cost Effective**: More control than managed platforms
+
+### server/index.js (603 lines) - Geckos.io Server
+**WebRTC Signaling and Game Server**
+
+**Responsibilities:**
+- **WebRTC Management**: Geckos.io server for data channel coordination
+- **Player Connections**: Handle join/leave events and connection quality
+- **Room Coordination**: Interface with RoomManager for game sessions
+- **Health Monitoring**: Server status and performance monitoring
+
+**Key Features:**
+- **UDP Port Range**: Configurable ports 10000-20000 for WebRTC
+- **Connection Resilience**: Automatic reconnection handling
+- **Ping Monitoring**: Real-time latency tracking
+- **Process Management**: PM2 integration for production deployment
+
+### server/RoomManager.js (398 lines) - Room Lifecycle Management
+**Multiplayer Room and Player Management**
+
+**Responsibilities:**
+- **Room Creation**: Generate unique 4-letter room codes
+- **Player Management**: Join/leave, host delegation, capacity limits
+- **Quick Match**: Public room matchmaking system
+- **Room Cleanup**: Automatic cleanup of empty rooms
+
+**Features:**
+- **Host Delegation**: Automatic host transfer on disconnection
+- **Room Settings**: Private/public, player limits, game configuration
+- **State Tracking**: Room status (waiting, in-game, finished)
+
+### server/GameSimulation.js (745 lines) - Authoritative Game Logic
+**Server-Side Simulation with Shared Logic**
+
+**Responsibilities:**
+- **Authoritative Simulation**: 60 FPS server-side game tick
+- **Sheep Behavior**: Server-side flocking using shared algorithms
+- **Player Physics**: Movement validation and collision detection
+- **Game Events**: Goal detection, completion tracking, scoring
+
+**Architecture:**
+- **Shared Logic**: Uses same algorithms as client for consistency
+- **Input Processing**: Validates and applies player inputs
+- **State Broadcasting**: Efficient delta compression for updates
+- **Deterministic**: Ensures identical game state across all clients
+
+## Shared Logic Architecture
+
+### shared/ Directory - Pure Algorithms
+**Platform-Agnostic Game Logic**
+
+**Key Modules:**
+- **FlockingAlgorithms.js**: Separation, alignment, cohesion calculations
+- **MovementPhysics.js**: Movement and collision detection
+- **BoundaryCollision.js**: Field boundary and gate detection
+- **GameStateValidation.js**: Game rules and completion logic
+- **Vector2D.js**: Mathematical utilities
+
+**Design Principles:**
+- **Zero Dependencies**: No DOM, Three.js, or Node.js dependencies
+- **Pure Functions**: Stateless, deterministic calculations
+- **Shared Codebase**: Identical logic between client and server
+- **Performance Optimized**: Efficient algorithms for real-time simulation
+
+## Additional Client Modules
+
+### 7. SceneManager.js (182 lines) - Enhanced 3D Rendering
+**Advanced Scene and Rendering Management**
+
+**Responsibilities:**
+- **Multi-Player Rendering**: Support for multiple sheepdog instances
+- **Dynamic Lighting**: Adaptive lighting for different game states
+- **Post-Processing**: Enhanced visual effects and atmosphere
+- **Performance Scaling**: Adaptive quality based on device capabilities
+
+**Multiplayer Enhancements:**
+- **Multiple Cameras**: Support for spectator modes
+- **Player Identification**: Visual differentiation of players
+- **Network Interpolation**: Smooth rendering of remote player positions
+
+### 8. TerrainBuilder.js (397 lines)
 **Environment and Terrain Generation**
 
 **Responsibilities:**
@@ -695,20 +918,146 @@ sheep-dog/
 └── ARCHITECTURE.md         # This document
 ```
 
+## Performance Architecture
+
+### Client-Side Optimizations
+- **GPU Rendering**: All sheep rendered in single draw call
+- **Instanced Grass**: 800,000 grass blades in one draw call
+- **Network Interpolation**: Smooth multiplayer movement
+- **Adaptive Quality**: Performance scaling based on device
+
+### Server-Side Optimizations
+- **Per-Room Simulation**: Isolated game instances
+- **Efficient Broadcasting**: Delta compression for state updates
+- **Connection Pooling**: Efficient player management
+- **Resource Cleanup**: Automatic memory management
+
+### Network Optimizations
+- **WebRTC Data Channels**: Sub-50ms latency
+- **Delta Compression**: Only send changed data
+- **Client Prediction**: Responsive local movement
+- **Lag Compensation**: Server-side rollback for validation
+
+## Deployment Architecture
+
+### Production Environment
+```
+DigitalOcean Droplet (68.183.107.158)
+├── PM2 Process Manager
+│   ├── sds-multiplayer-server (Node.js)
+│   ├── Auto-restart on crash
+│   └── Log management
+├── Firewall Configuration
+│   ├── SSH: 22/tcp
+│   ├── Geckos.io: 9208/tcp
+│   └── WebRTC: 10000-20000/udp
+└── System Resources
+    ├── 1GB RAM
+    ├── 1 vCPU
+    └── Ubuntu 20.04 LTS
+```
+
+### Development Workflow
+- **Local Testing**: `./start-multiplayer-servers.ps1`
+- **Deployment**: `./upload-to-droplet.ps1` + SSH deployment
+- **Monitoring**: PM2 logs and DigitalOcean metrics
+- **Scaling**: Horizontal scaling via multiple droplets
+
+## File Structure
+
+```
+sds/
+├── index.html                   # Main game client (1801 lines)
+├── debug-client.html            # Network debugging tool
+├── js/                          # Client-side modules
+│   ├── main.js                  # Game orchestrator (731 lines)
+│   ├── NetworkManager.js        # WebRTC networking (624 lines)
+│   ├── MultiplayerUI.js         # Multiplayer interface (234 lines)
+│   ├── MobileControls.js        # Touch controls (690 lines)
+│   ├── AudioManager.js          # Sound system (551 lines)
+│   ├── StartScreen.js           # Enhanced start screen (682 lines)
+│   ├── SceneManager.js          # 3D rendering (182 lines)
+│   ├── Sheepdog.js              # Player controller (951 lines)
+│   ├── OptimizedSheep.js        # GPU sheep system (879 lines)
+│   ├── GameState.js             # State management (291 lines)
+│   ├── TerrainBuilder.js        # Environment (397 lines)
+│   ├── StructureBuilder.js      # Game structures (471 lines)
+│   ├── GameTimer.js             # Timer system (211 lines)
+│   ├── StaminaUI.js             # Stamina interface (105 lines)
+│   ├── PerformanceMonitor.js    # Performance tracking (377 lines)
+│   ├── InputHandler.js          # Input management (232 lines)
+│   ├── Boid.js                  # Flocking base class (248 lines)
+│   └── Vector2D.js              # Math utilities (109 lines)
+├── server/                      # Multiplayer server
+│   ├── index.js                 # Geckos.io server (603 lines)
+│   ├── RoomManager.js           # Room management (398 lines)
+│   ├── GameSimulation.js        # Authoritative simulation (745 lines)
+│   ├── package.json             # Server dependencies
+│   ├── deploy-to-droplet.sh     # Deployment script
+│   └── shared/                  # Shared logic (symlink)
+├── shared/                      # Platform-agnostic logic
+│   ├── FlockingAlgorithms.js    # Boid behaviors (193 lines)
+│   ├── MovementPhysics.js       # Movement calculations (210 lines)
+│   ├── BoundaryCollision.js     # Collision detection (253 lines)
+│   ├── GameStateValidation.js   # Game rules (338 lines)
+│   ├── Vector2D.js              # Math utilities (110 lines)
+│   └── index.js                 # Module exports (148 lines)
+├── client/                      # Alternative client build
+├── assets/                      # Game assets (sounds, images)
+├── upload-to-droplet.ps1        # Deployment automation
+├── start-multiplayer-servers.ps1 # Local development
+├── DROPLET_DEPLOYMENT.md        # Deployment guide
+├── MOBILE_CONTROLS.md           # Mobile documentation
+└── README.md                    # User documentation
+```
+
 ## Dependencies
+
+### Client Dependencies
 - **Three.js v0.176.0**: 3D rendering engine
-- **Stats.js v0.17.0**: Performance monitoring (FPS, memory, custom metrics)
-- **HTTP Server**: Development server (Python or Node.js, port 8000)
+- **Geckos.io Client v3.0.2**: WebRTC client library
+- **Stats.js v0.17.0**: Performance monitoring
+- **nipple.js v0.10.2**: Virtual joystick for mobile
+
+### Server Dependencies
+- **Node.js v18+**: Server runtime
+- **Geckos.io Server v3.0.1**: WebRTC server framework
+- **PM2**: Process management
+- **@digitalocean/godo**: Deployment integration
+
+### Browser Support
+- **Chrome 80+**: Full WebRTC and mobile support
+- **Firefox 75+**: Full feature support
+- **Safari 13+**: Full support with mobile optimizations
+- **Mobile browsers**: iOS 13+, Android Chrome 80+
 
 ## Performance Characteristics
-- **Target**: 60 FPS with 200 sheep + 800k grass instances
-- **Bottlenecks**: Grass rendering, shadow calculations
-- **Optimizations**: GPU-based sheep rendering, instanced rendering, shared resources
+
+### Target Performance
+- **Single-Player**: 60 FPS sustained
+- **Multiplayer**: 60 FPS with <50ms latency
+- **Mobile**: 30-60 FPS depending on device
+- **Memory**: ~150MB client, ~100MB per server room
+
+### Scalability
+- **Players per Room**: Up to 4 concurrent players
+- **Rooms per Server**: ~20-50 depending on activity
+- **Horizontal Scaling**: Multiple droplets with load balancing
+- **Network Bandwidth**: ~10KB/s per player in multiplayer
 
 ## Extension Points
-- **New Behaviors**: Extend Boid class for different agent types
-- **Environmental**: Add weather, day/night cycles via shader uniforms
-- **Gameplay**: Multiple levels, different objectives, obstacles, power-ups
-- **Rendering**: Enhanced materials, particle effects, post-processing
-- **Audio**: Sound effects and ambient audio integration
-- **UI**: Additional game modes, settings, achievements 
+
+### Adding New Features
+- **New Game Modes**: Extend GameState and server simulation
+- **Additional Dog Types**: Extend Sheepdog class with new models
+- **Environmental Effects**: Add to TerrainBuilder and shared logic
+- **Audio Enhancements**: Extend AudioManager with new sound systems
+- **Mobile Features**: Enhance MobileControls with new interactions
+
+### Multiplayer Extensions
+- **Spectator Mode**: Add observer connections to RoomManager
+- **Tournaments**: Extend server with bracket management
+- **Leaderboards**: Add persistent scoring system
+- **Voice Chat**: Integrate WebRTC audio channels
+
+This architecture provides a solid foundation for both current gameplay and future enhancements, with clean separation between single-player and multiplayer modes, efficient rendering and networking, and comprehensive mobile support. 

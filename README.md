@@ -58,7 +58,7 @@ A sophisticated web-based herding simulation where players control a sheepdog to
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd sheep-dog
+   cd sds
    ```
 
 2. **Start a local web server**
@@ -84,7 +84,7 @@ The game supports real-time multiplayer with up to 4 players per room:
 - **Room-based System**: Create private rooms or use quick match
 - **Real-time Sync**: Low-latency gameplay using WebRTC data channels
 - **Competitive Mode**: Race against other players to herd sheep fastest
-- **Server Hosting**: Multiplayer server deployed on Railway
+- **Server Hosting**: Multiplayer server deployed on **DigitalOcean Droplet**
 
 ### Multiplayer Features
 - **Create/Join Rooms**: Share 4-letter room codes with friends
@@ -94,12 +94,14 @@ The game supports real-time multiplayer with up to 4 players per room:
 - **Synchronized Sheep**: All players see the same sheep positions
 
 ### Server Status
-- **Production Server**: Check deployment documentation for current server URL
+- **Production Server**: `http://68.183.107.158:9208` (DigitalOcean Droplet)
 - **Local Testing**: Run `./start-multiplayer-servers.ps1` for local multiplayer
 - **Fallback Mode**: Single-player works offline if server unavailable
 
 ### Setting Up Multiplayer (Developers)
-See [RAILWAY_SETUP.md](RAILWAY_SETUP.md) for deploying your own multiplayer server.
+See [DROPLET_DEPLOYMENT.md](DROPLET_DEPLOYMENT.md) for deploying your own multiplayer server.
+
+> **Note**: We deploy on **DigitalOcean Droplet** (VPS) rather than App Platform because WebRTC with Geckos.io requires full UDP port range control (10000-20000) which is only available on VPS/dedicated servers, not managed platforms.
 
 ## 🎯 How to Play
 

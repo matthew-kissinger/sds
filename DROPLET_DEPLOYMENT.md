@@ -1,8 +1,10 @@
 # 🚀 DigitalOcean Droplet Deployment Guide
 
-## ✅ **Migration Complete: App Platform → Droplet**
+## Overview
 
-Successfully migrated from DigitalOcean App Platform (PaaS) to DigitalOcean Droplet (VPS) for **full UDP support** required by Geckos.io WebRTC networking.
+The SDS multiplayer server is deployed on a **DigitalOcean Droplet** (VPS) to provide **full UDP port range control** required by Geckos.io WebRTC networking. This setup enables low-latency real-time multiplayer functionality that would not be possible on managed platforms like App Platform, Railway, or Render.
+
+> **Why Droplet over App Platform?** WebRTC requires UDP port ranges (10000-20000) which are only available on VPS/dedicated servers, not managed platforms.
 
 ## 🎯 **Droplet Details**
 
