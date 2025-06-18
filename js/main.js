@@ -71,12 +71,16 @@ class SheepDogSimulation {
         this.otherPlayers = new Map(); // playerId -> Sheepdog instance
         this.playerWasMoving = false; // Track movement state from previous frame
         this.serverIsInterpolatingToClient = false; // Track when server is interpolating to our position
+        this.competitiveStructuresCreated = false; // Track if we've built competitive structures
         
         // Client-side prediction and interpolation for multiplayer
         this.serverDogPosition = { x: 0, z: 0 };
         this.serverDogRotation = 0;
         this.lastServerUpdate = 0;
         this.interpolationSpeed = 2.5; // Reduced for smoother movement
+        
+        // Competitive mode audio state
+        this.endgameMusicPlaying = false;
         
         // Initialize the simulation
         this.init();
@@ -178,12 +182,36 @@ class SheepDogSimulation {
         this.staminaUI.reset();
         this.staminaUI.show();
         
+        // Reset competitive audio state
+        this.endgameMusicPlaying = false;
+        
+        // Start appropriate gameplay music
+        if (this.audioManager.isMusicReady()) {
+            this.audioManager.playGameplayMusic();
+        }
+        
         // Initialize multiplayer if needed
         if (mode === 'multiplayer' && roomData) {
             console.log(`Multiplayer room: ${roomData.roomCode || roomData.code || 'unknown'} with ${roomData.players?.length || 0} players`);
             // Enable 2x speeds for multiplayer
             this.sheepdog.setMultiplayerSpeeds(true);
             this.setupMultiplayer();
+            
+            // Configure UI for competitive mode if needed
+            if (roomData.gameMode === 'competitive') {
+                console.log('Setting up competitive mode UI');
+                this.multiplayerUI.setGameMode('competitive', roomData.players?.length || 0);
+                this.gameState.setCurrentPlayerId(this.networkManager?.getPlayerId());
+                
+                // Set audio manager to competitive mode
+                this.audioManager.setGameMode('competitive');
+                console.log('🏆 Audio manager set to competitive mode');
+            } else {
+                this.audioManager.setGameMode('multiplayer');
+                
+                // Reset camera to default position for cooperative multiplayer
+                this.sceneManager.resetCameraToDefault();
+            }
             
             // Send dog type to server
             if (this.networkManager) {
@@ -196,6 +224,12 @@ class SheepDogSimulation {
             this.sheepdog.setMultiplayerSpeeds(true);
             this.setupMultiplayer();
             
+            // Set audio to multiplayer mode
+            this.audioManager.setGameMode('multiplayer');
+            
+            // Reset camera to default position (cooperative mode assumption)
+            this.sceneManager.resetCameraToDefault();
+            
             // Send dog type to server
             if (this.networkManager) {
                 console.log(`Sending dog type to server: ${selectedDogType}`);
@@ -204,6 +238,10 @@ class SheepDogSimulation {
         } else {
             // Hide multiplayer UI for solo mode
             this.multiplayerUI.hide();
+            this.audioManager.setGameMode('solo');
+            
+            // Reset camera to default position for solo mode
+            this.sceneManager.resetCameraToDefault();
         }
     }
     
@@ -250,6 +288,13 @@ class SheepDogSimulation {
         this.networkManager.onRoomUpdate = (room) => {
             if (room && room.players) {
                 this.multiplayerUI.updatePlayers(room.players, this.networkManager.getPlayerId());
+                
+                // Configure competitive mode if room has that setting
+                if (room.gameMode === 'competitive' && this.multiplayerUI.gameMode !== 'competitive') {
+                    console.log('Configuring competitive mode from room update');
+                    this.multiplayerUI.setGameMode('competitive', room.players.length);
+                    this.gameState.setCurrentPlayerId(this.networkManager.getPlayerId());
+                }
             }
         };
         
@@ -266,24 +311,64 @@ class SheepDogSimulation {
                 console.log('Current gameState.sheepRetired:', this.gameState.sheepRetired);
                 console.log('Current gameState.gameCompleted:', this.gameState.gameCompleted);
                 
-                // Force final sheep count update
-                if (update.data.sheepRetired !== undefined) {
-                    console.log('Updating sheep count from', this.gameState.sheepRetired, 'to', update.data.sheepRetired);
-                    this.gameState.sheepRetired = update.data.sheepRetired;
-                }
-                
-                // Trigger game completion
-                if (update.data.gameCompleted) {
-                    console.log('Triggering game completion UI...');
+                // Handle competitive vs cooperative completion
+                if (update.data.isCompetitive && update.data.competitive) {
+                    // Competitive mode completion
+                    console.log('Triggering competitive completion UI...');
+                    console.log('Competitive completion data:', update.data.competitive);
+                    
                     this.gameState.gameCompleted = true;
                     const finalTime = this.gameTimer.stop();
-                    const isNewRecord = this.gameTimer.getBestTime() !== null && 
-                                       finalTime <= this.gameTimer.getBestTime();
                     
-                    this.gameState.showCompletionMessage(finalTime, isNewRecord);
+                    // Play appropriate completion sound
+                    const currentPlayerId = this.networkManager?.getPlayerId();
+                    const isWinner = update.data.competitive.winner === currentPlayerId;
+                    if (isWinner) {
+                        this.audioManager.playVictorySound();
+                        console.log('🏆 Victory sound played');
+                    } else {
+                        this.audioManager.playLossSound();
+                        console.log('😔 Loss sound played');
+                    }
+                    
+                    // Show competitive completion UI
+                    this.gameState.showCompletionMessage(finalTime, false, update.data.competitive);
+                    
+                    // Also show the MultiplayerUI competitive completion overlay
+                    if (this.multiplayerUI.gameMode === 'competitive') {
+                        this.multiplayerUI.showCompetitiveCompletion(update.data.competitive);
+                    }
+                    
                     this.mobileControls.disable();
                 } else {
-                    console.log('Game completion data received but gameCompleted flag is', update.data.gameCompleted);
+                    // Cooperative mode completion
+                    // Force final sheep count update
+                    if (update.data.sheepRetired !== undefined) {
+                        console.log('Updating sheep count from', this.gameState.sheepRetired, 'to', update.data.sheepRetired);
+                        this.gameState.sheepRetired = update.data.sheepRetired;
+                    }
+                    
+                    // Trigger game completion
+                    if (update.data.gameCompleted) {
+                        console.log('Triggering game completion UI...');
+                        this.gameState.gameCompleted = true;
+                        const finalTime = this.gameTimer.stop();
+                        const isNewRecord = this.gameTimer.getBestTime() !== null && 
+                                           finalTime <= this.gameTimer.getBestTime();
+                        
+                        this.gameState.showCompletionMessage(finalTime, isNewRecord);
+                        this.mobileControls.disable();
+                    } else {
+                        console.log('Game completion data received but gameCompleted flag is', update.data.gameCompleted);
+                    }
+                }
+            } else if (update.type === 'competitiveStateRestored') {
+                // Handle competitive state restoration after reconnection
+                console.log('🏆 Restoring competitive state after reconnection:', update.data);
+                
+                if (this.multiplayerUI.gameMode === 'competitive') {
+                    // Show the competitive completion overlay again
+                    this.multiplayerUI.showCompetitiveCompletion(update.data);
                 }
             }
             
@@ -403,8 +488,100 @@ class SheepDogSimulation {
             }
         }
         
-        // Update game state
-        if (serverState.sheepRetired !== undefined) {
+        // Update game state based on mode
+        if (serverState.competitive && serverState.competitive.playerScores) {
+            // Competitive mode: update player scores and progress
+            const competitiveData = serverState.competitive;
+            
+            // Check for score changes to play appropriate sounds
+            const previousScores = this.gameState.playerScores || {};
+            const currentPlayerId = this.networkManager?.getPlayerId();
+            
+            // Detect scoring events
+            if (Object.keys(previousScores).length > 0) {
+                for (const [playerId, currentScore] of Object.entries(competitiveData.playerScores)) {
+                    const previousScore = previousScores[playerId] || 0;
+                    if (currentScore > previousScore) {
+                        // Someone scored!
+                        if (playerId === currentPlayerId) {
+                            // Player scored
+                            this.audioManager.playScoreSound();
+                            console.log('🎯 You scored!');
+                        } else {
+                            // Opponent scored
+                            this.audioManager.playOpponentScoreSound();
+                            console.log('🎯 Opponent scored');
+                        }
+                    }
+                }
+            }
+            
+            // Update player scores in game state
+            this.gameState.playerScores = { ...competitiveData.playerScores };
+            
+            // Update total sheep retired for UI
+            this.gameState.sheepRetired = Object.values(competitiveData.playerScores).reduce((sum, score) => sum + score, 0);
+            
+            // Update competitive gates information if available
+            if (competitiveData.gates) {
+                // Transform server gate data format to client format FIRST
+                const transformedGates = competitiveData.gates.map(serverGate => ({
+                    // Transform flattened server format to nested client format
+                    position: {
+                        x: serverGate.x || 0,
+                        z: serverGate.z || 0
+                    },
+                    width: 8, // Default gate width
+                    height: 4, // Default gate height
+                    id: serverGate.id,
+                    playerId: serverGate.playerId,
+                    color: serverGate.color,
+                    direction: serverGate.direction,
+                    pasture: serverGate.pasture,
+                    // Add passage zone for gate detection
+                    passageZone: {
+                        minX: (serverGate.x || 0) - 4,
+                        maxX: (serverGate.x || 0) + 4,
+                        minZ: (serverGate.z || 0) - 2,
+                        maxZ: (serverGate.z || 0) + 2
+                    }
+                }));
+                
+                // Set the transformed gates in GameState
+                this.gameState.competitiveGates = transformedGates;
+                
+                // Build competitive structures if this is the first time receiving competitive data
+                if (!this.competitiveStructuresCreated) {
+                    console.log('🏗️ Building competitive structures for the first time...');
+                    this.createCompetitiveStructures(transformedGates);
+                    this.competitiveStructuresCreated = true;
+                }
+            }
+            
+            // Update win condition progress
+            if (competitiveData.winCondition) {
+                this.gameState.winCondition = competitiveData.winCondition;
+                
+                // Check if we're in endgame phase for tension music
+                this.checkCompetitiveEndgameMusic(competitiveData.winCondition);
+            }
+            
+            // Update multiplayer UI with all competitive data
+            if (this.multiplayerUI.gameMode === 'competitive') {
+                this.multiplayerUI.updatePlayerScores(competitiveData.playerScores);
+                
+                // Update win progress if available
+                if (competitiveData.winCondition) {
+                    this.multiplayerUI.updateWinProgress(competitiveData.winCondition);
+                }
+            }
+            
+            console.log('Updated competitive scores:', competitiveData.playerScores);
+            if (competitiveData.winCondition) {
+                console.log('Win progress:', competitiveData.winCondition);
+            }
+        } else if (serverState.sheepRetired !== undefined) {
+            // Cooperative mode: update total sheep count
             this.gameState.sheepRetired = serverState.sheepRetired;
         }
     }
@@ -418,9 +595,12 @@ class SheepDogSimulation {
             this.startScreen.updateCinematicCamera();
         } else if (!isPaused) {
             // Handle input only when game is active and not paused
-            const movementDirection = this.inputHandler.getMovementDirection();
+            let movementDirection = this.inputHandler.getMovementDirection();
             const wantsSprint = this.inputHandler.isSprinting();
             const sheepdog = this.gameState.getSheepdog();
+            
+            // Transform movement direction for competitive mode camera orientation
+            movementDirection = this.sceneManager.transformMovementForCompetitive(movementDirection);
             
             // Update sheepdog's awareness of nearby sheep for barking
             sheepdog.updateNearSheepStatus(this.gameState.getSheep());
@@ -613,6 +793,15 @@ class SheepDogSimulation {
             const dogMesh = remoteDog.createMesh();
             this.sceneManager.add(dogMesh);
             
+            // Add player icon for competitive mode
+            if (this.gameState.gameMode === 'competitive' && this.gameState.competitiveGates) {
+                const playerGate = this.gameState.competitiveGates.find(gate => gate.playerId === playerId);
+                if (playerGate) {
+                    remoteDog.setPlayerInfo(playerId, playerGate.color);
+                    console.log(`🎯 Added player icon for ${playerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
+                }
+            }
+            
             // Add properties for interpolation
             remoteDog.targetPosition = new Vector2D(dogData.x, dogData.z);
             remoteDog.targetRotation = dogData.rotation;
@@ -714,6 +903,9 @@ class SheepDogSimulation {
     removeOtherPlayer(playerId) {
         const remoteDog = this.otherPlayers.get(playerId);
         if (remoteDog) {
+            // Remove player icon if present
+            remoteDog.removePlayerIcon();
+            
             // Remove the dog's mesh from the scene
             if (remoteDog.mesh) {
                 this.sceneManager.remove(remoteDog.mesh);
@@ -721,6 +913,96 @@ class SheepDogSimulation {
             // Delete the player from our map
             this.otherPlayers.delete(playerId);
             console.log(`🐕 Removed visualization for player ${playerId}`);
+        }
+    }
+    
+    checkCompetitiveEndgameMusic(winCondition) {
+        if (!winCondition || this.gameMode !== 'competitive') return;
+        
+        let shouldPlayEndgameMusic = false;
+        
+        if (winCondition.type === 'race') {
+            // 2-player race: play endgame music when someone is 80% to win threshold
+            const endgameThreshold = winCondition.threshold * 0.8; // 80% of win threshold
+            shouldPlayEndgameMusic = winCondition.maxScore >= endgameThreshold;
+        } else if (winCondition.type === 'highest_score') {
+            // 3-4 player mode: play endgame music when 90% of sheep are collected
+            shouldPlayEndgameMusic = winCondition.progress >= 0.9;
+        }
+        
+        if (shouldPlayEndgameMusic && !this.endgameMusicPlaying) {
+            this.audioManager.playCompetitiveEndgameMusic();
+            this.endgameMusicPlaying = true;
+            console.log('🎵 Competitive endgame music started');
+        }
+    }
+    
+    createCompetitiveStructures(competitiveGates) {
+        console.log('🏗️ Creating competitive structures with gates:', competitiveGates);
+        
+        // 1. CLEAR ALL existing structures (fences, gates, pastures) before building new ones.
+        this.structureBuilder.clearAllStructures();
+        
+        // Update GameState to competitive mode (gates already transformed and set)
+        this.gameState.setGameMode('competitive');
+        
+        // Build competitive boundary fence that avoids all gates
+        // This will automatically clear the existing single-player fence
+        this.structureBuilder.createMultiGateBoundaryFence(
+            this.gameState.getBounds(),
+            competitiveGates
+        );
+        
+        // Create all competitive gates and pastures
+        this.structureBuilder.createMultipleGatesAndPastures(competitiveGates);
+        
+        // Recreate trees to avoid competitive pastures
+        // Extract pasture areas from competitive gates
+        const competitivePastures = competitiveGates.map(gate => gate.pasture);
+        console.log('🌳 Recreating trees to avoid competitive pastures:', competitivePastures);
+        this.terrainBuilder.clearTrees();
+        this.terrainBuilder.createTrees(competitivePastures);
+        
+        // Apply player colors to gates based on current player
+        const currentPlayerId = this.networkManager?.getPlayerId();
+        if (currentPlayerId) {
+            this.sceneManager.initializePlayerColors(competitiveGates, currentPlayerId);
+        }
+        
+        // Add player icons to all sheepdogs (local and remote) for competitive mode
+        this.addCompetitivePlayerIcons(competitiveGates);
+        
+        console.log(`✅ Created ${competitiveGates.length} competitive gates and pastures`);
+    }
+    
+    /**
+     * Add colored player icons to all sheepdogs in competitive mode
+     * @param {Array} competitiveGates - Array of competitive gate configurations
+     */
+    addCompetitivePlayerIcons(competitiveGates) {
+        if (!competitiveGates || competitiveGates.length === 0) return;
+        
+        const currentPlayerId = this.networkManager?.getPlayerId();
+        
+        // Add icon for local player and set competitive camera position
+        if (this.sheepdog && currentPlayerId) {
+            const playerGate = competitiveGates.find(gate => gate.playerId === currentPlayerId);
+            if (playerGate) {
+                this.sheepdog.setPlayerInfo(currentPlayerId, playerGate.color);
+                console.log(`🎯 Added player icon for local player ${currentPlayerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
+                
+                // Set camera position based on player's assigned gate
+                this.sceneManager.setCompetitiveCameraPosition(playerGate);
+            }
+        }
+        
+        // Add icons for all remote players
+        for (const [playerId, remoteDog] of this.otherPlayers.entries()) {
+            const playerGate = competitiveGates.find(gate => gate.playerId === playerId);
+            if (playerGate && remoteDog) {
+                remoteDog.setPlayerInfo(playerId, playerGate.color);
+                console.log(`🎯 Added player icon for remote player ${playerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
+            }
         }
     }
 }

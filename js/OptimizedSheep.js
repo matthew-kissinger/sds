@@ -684,20 +684,42 @@ export class OptimizedSheepInstance extends Boid {
         
         // Gate attraction logic (only if sheepdog and gate exist - game is active)
         if (sheepdog && gate) {
-            const distanceToGate = this.position.distanceTo(gate.position);
-            const distanceToDog = this.position.distanceTo(sheepdog.position);
-            // Use sheepdog's fleeRadius for dog-specific interaction distances
-            const fleeRadius = sheepdog.fleeRadius || this.fleeRadius || 8;
+            // Handle multiple gates (competitive mode) or single gate (cooperative mode)
+            const gates = Array.isArray(gate) ? gate : [gate];
             
-            if (distanceToDog < fleeRadius * 1.5 && distanceToGate < 30) {
-                const toGate = gate.position.clone().subtract(this.position);
-                const toDog = sheepdog.position.clone().subtract(this.position);
+            // Find the closest gate
+            let closestGate = null;
+            let closestDistance = Infinity;
+            
+            for (const currentGate of gates) {
+                // Create Vector2D from gate position for distance calculation
+                const gatePos = new Vector2D(currentGate.position.x, currentGate.position.z);
+                const distanceToGate = this.position.distanceTo(gatePos);
+                if (distanceToGate < closestDistance) {
+                    closestDistance = distanceToGate;
+                    closestGate = currentGate;
+                }
+            }
+            
+            if (closestGate) {
+                const distanceToDog = this.position.distanceTo(sheepdog.position);
+                // Use sheepdog's fleeRadius for dog-specific interaction distances
+                const fleeRadius = sheepdog.fleeRadius || this.fleeRadius || 8;
                 
-                const dotProduct = toGate.x * toDog.x + toGate.z * toDog.z;
-                if (dotProduct < 0) {
-                    const gateForce = this.seek(gate.position);
-                    gateForce.multiply(this.gateAttraction);
-                    this.applyForce(gateForce);
+                if (distanceToDog < fleeRadius * 1.5 && closestDistance < 30) {
+                    // Create Vector2D objects from position data
+                    const gatePos = new Vector2D(closestGate.position.x, closestGate.position.z);
+                    const dogPos = new Vector2D(sheepdog.position.x, sheepdog.position.z);
+                    
+                    const toGate = gatePos.clone().subtract(this.position);
+                    const toDog = dogPos.clone().subtract(this.position);
+                    
+                    const dotProduct = toGate.x * toDog.x + toGate.z * toDog.z;
+                    if (dotProduct < 0) {
+                        const gateForce = this.seek(gatePos);
+                        gateForce.multiply(this.gateAttraction);
+                        this.applyForce(gateForce);
+                    }
                 }
             }
         }
@@ -718,17 +740,49 @@ export class OptimizedSheepInstance extends Boid {
         if (this.bounds && !this.hasPassedGate) {
             const margin = 0.2; // Small margin from edge
             
-            // Check if sheep is in the gate area (allow passage through gate)
-            const inGateArea = Math.abs(this.position.x) <= 4 && this.position.z >= 98 && this.position.z <= 102;
+            // Check if sheep is in any gate area (allow passage through any gate)
+            let inAnyGateArea = false;
+            let currentGateConstraints = null;
+            
+            // For competitive mode, we need to check all possible gate areas
+            // This is a simplified check - in practice, gate areas should be passed from game state
+            const possibleGateAreas = [
+                // Default cooperative gate (North)
+                { minX: -4, maxX: 4, minZ: 98, maxZ: 102 },
+                // Additional competitive gates
+                { minX: -4, maxX: 4, minZ: -102, maxZ: -98 }, // South
+                { minX: 98, maxX: 102, minZ: -4, maxZ: 4 },   // East
+                { minX: -102, maxX: -98, minZ: -4, maxZ: 4 }, // West
+                // Diagonal gates for 3-player mode
+                { minX: 68, maxX: 72, minZ: -72, maxZ: -68 },  // Southeast
+                { minX: -72, maxX: -68, minZ: -72, maxZ: -68 } // Southwest
+            ];
+            
+            for (const gateArea of possibleGateAreas) {
+                if (this.position.x >= gateArea.minX && this.position.x <= gateArea.maxX &&
+                    this.position.z >= gateArea.minZ && this.position.z <= gateArea.maxZ) {
+                    inAnyGateArea = true;
+                    currentGateConstraints = gateArea;
+                    break;
+                }
+            }
             
             // Apply hard constraints unless in gate area
-            if (!inGateArea) {
+            if (!inAnyGateArea) {
                 this.position.x = Math.max(this.bounds.minX + margin, Math.min(this.bounds.maxX - margin, this.position.x));
                 this.position.z = Math.max(this.bounds.minZ + margin, Math.min(this.bounds.maxZ - margin, this.position.z));
-            } else {
-                // In gate area - only constrain X to gate width, allow Z movement
-                this.position.x = Math.max(-4, Math.min(4, this.position.x));
-                // Don't constrain Z in gate area to allow passage
+            } else if (currentGateConstraints) {
+                // In gate area - apply gate-specific constraints
+                const gateWidth = currentGateConstraints.maxX - currentGateConstraints.minX;
+                const gateDepth = currentGateConstraints.maxZ - currentGateConstraints.minZ;
+                
+                if (gateWidth > gateDepth) {
+                    // Horizontal gate - constrain X to gate width, allow Z movement
+                    this.position.x = Math.max(currentGateConstraints.minX, Math.min(currentGateConstraints.maxX, this.position.x));
+                } else {
+                    // Vertical gate - constrain Z to gate depth, allow X movement
+                    this.position.z = Math.max(currentGateConstraints.minZ, Math.min(currentGateConstraints.maxZ, this.position.z));
+                }
             }
         }
         
@@ -812,7 +866,7 @@ export class OptimizedSheepInstance extends Boid {
         }
     }
     
-    // Boundary avoidance that excludes gate area
+    // Boundary avoidance that excludes gate area(s)
     avoidBoundariesWithGate(bounds, gate) {
         const margin = 3;
         const steer = new Vector2D(0, 0);
@@ -835,9 +889,25 @@ export class OptimizedSheepInstance extends Boid {
             const force = (margin - distToMinZ) / margin;
             steer.z = this.maxSpeed * force * 1.2;
         } else if (distToMaxZ < margin) {
-            // Only check for gate if gate exists (game is active)
-            const nearGateX = gate ? Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
-            if (!nearGateX) {
+            // Check for any nearby gates (handles both single gate and multiple gates)
+            let nearAnyGate = false;
+            
+            if (gate) {
+                const gates = Array.isArray(gate) ? gate : [gate];
+                
+                for (const currentGate of gates) {
+                    // Check if sheep is near this gate's X position and at the boundary where the gate is
+                    const nearGateX = Math.abs(position.x - currentGate.position.x) < currentGate.width / 2 + 2;
+                    const atGateBoundary = Math.abs(position.z - currentGate.position.z) < 5; // Near gate's Z boundary
+                    
+                    if (nearGateX && atGateBoundary) {
+                        nearAnyGate = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!nearAnyGate) {
                 const force = (margin - distToMaxZ) / margin;
                 steer.z = -this.maxSpeed * force * 1.2;
             }
@@ -853,17 +923,146 @@ export class OptimizedSheepInstance extends Boid {
         return steer;
     }
     
-    checkGatePassageAndRetire(gatePassageZone, pastureBounds) {
+    checkGatePassageAndRetire(gateOrPassageZone, pastureBounds) {
         if (this.hasPassedGate) return false;
         
-        const inGateX = this.position.x >= gatePassageZone.minX && 
-                       this.position.x <= gatePassageZone.maxX;
-        const inGateZ = this.position.z >= gatePassageZone.minZ && 
-                       this.position.z <= gatePassageZone.maxZ;
+        // Early return if no gate data provided
+        if (!gateOrPassageZone) {
+            return false;
+        }
         
-        if (inGateX && inGateZ && this.velocity.z > 0) {
-            this.hasPassedGate = true;
-            return true;
+        // Handle both single gate passage zone and array of gates
+        let gatesWithZones = [];
+        
+        if (Array.isArray(gateOrPassageZone)) {
+            // Multiple gates (competitive mode)
+            gatesWithZones = gateOrPassageZone
+                .filter(gate => gate && gate.position) // Filter out undefined/null gates
+                .map(gate => {
+                    let passageZone;
+                    if (gate.passageZone) {
+                        passageZone = gate.passageZone;
+                    } else {
+                        // Create passage zone from gate position and width
+                        const width = gate.width || 8;
+                        const depth = gate.depth || 4;
+                        passageZone = {
+                            minX: gate.position.x - width/2,
+                            maxX: gate.position.x + width/2,
+                            minZ: gate.position.z - depth/2,
+                            maxZ: gate.position.z + depth/2
+                        };
+                    }
+                    return {
+                        passageZone,
+                        direction: gate.direction || null, // Include gate direction
+                        gate: gate
+                    };
+                });
+        } else if (gateOrPassageZone && gateOrPassageZone.passageZone) {
+            // Single gate object with passage zone
+            gatesWithZones = [{
+                passageZone: gateOrPassageZone.passageZone,
+                direction: gateOrPassageZone.direction || null,
+                gate: gateOrPassageZone
+            }];
+        } else if (gateOrPassageZone && gateOrPassageZone.position) {
+            // Single gate object without passage zone - create it
+            const width = gateOrPassageZone.width || 8;
+            const depth = gateOrPassageZone.depth || 4;
+            gatesWithZones = [{
+                passageZone: {
+                    minX: gateOrPassageZone.position.x - width/2,
+                    maxX: gateOrPassageZone.position.x + width/2,
+                    minZ: gateOrPassageZone.position.z - depth/2,
+                    maxZ: gateOrPassageZone.position.z + depth/2
+                },
+                direction: gateOrPassageZone.direction || null,
+                gate: gateOrPassageZone
+            }];
+        } else if (gateOrPassageZone) {
+            // Legacy: single passage zone object
+            gatesWithZones = [{
+                passageZone: gateOrPassageZone,
+                direction: 'north', // Default to north for legacy
+                gate: null
+            }];
+        } else {
+            // No valid gate data
+            return false;
+        }
+        
+        // Safety check - if no valid gates, return false
+        if (!gatesWithZones || gatesWithZones.length === 0) {
+            return false;
+        }
+        
+        // Check if sheep passes through any gate
+        for (let i = 0; i < gatesWithZones.length; i++) {
+            const gateData = gatesWithZones[i];
+            const passageZone = gateData.passageZone;
+            
+            // Additional safety check for each passage zone
+            if (!passageZone) continue;
+            
+            const inGateX = this.position.x >= passageZone.minX && 
+                           this.position.x <= passageZone.maxX;
+            const inGateZ = this.position.z >= passageZone.minZ && 
+                           this.position.z <= passageZone.maxZ;
+            
+            // Check if sheep is moving through the gate
+            let movingThroughGate = false;
+            
+            if (gateData.direction) {
+                // Use explicit gate direction if available
+                switch (gateData.direction) {
+                    case 'north':
+                        movingThroughGate = this.velocity.z > 0;
+                        break;
+                    case 'south':
+                        movingThroughGate = this.velocity.z < 0;
+                        break;
+                    case 'east':
+                        movingThroughGate = this.velocity.x > 0;
+                        break;
+                    case 'west':
+                        movingThroughGate = this.velocity.x < 0;
+                        break;
+                    case 'southeast':
+                        movingThroughGate = this.velocity.x > 0 && this.velocity.z < 0;
+                        break;
+                    case 'southwest':
+                        movingThroughGate = this.velocity.x < 0 && this.velocity.z < 0;
+                        break;
+                    default:
+                        // Fallback to velocity magnitude check
+                        movingThroughGate = this.velocity.magnitude() > 0;
+                }
+            } else {
+                // Fallback: determine gate orientation based on passage zone dimensions
+                const gateWidth = passageZone.maxX - passageZone.minX;
+                const gateDepth = passageZone.maxZ - passageZone.minZ;
+                
+                if (gateWidth > gateDepth) {
+                    // Horizontal gate (wider than deep) - check Z velocity
+                    movingThroughGate = Math.abs(this.velocity.z) > 0;
+                } else {
+                    // Vertical gate (deeper than wide) - check X velocity  
+                    movingThroughGate = Math.abs(this.velocity.x) > 0;
+                }
+            }
+            
+            if (inGateX && inGateZ && movingThroughGate) {
+                this.hasPassedGate = true;
+                this.assignedGate = i; // Track which gate was used
+                
+                // If gate has an ID, use that instead
+                if (gateData.gate && gateData.gate.id !== undefined) {
+                    this.assignedGate = gateData.gate.id;
+                }
+                
+                return true;
+            }
         }
         
         return false;

@@ -37,7 +37,9 @@ export {
 export {
     calculateBoundaryAvoidance,
     calculateBoundaryAvoidanceWithGate,
+    calculateBoundaryAvoidanceWithMultipleGates,
     applyHardBoundaryConstraints,
+    applyHardBoundaryConstraintsWithMultipleGates,
     isWithinArea,
     checkGatePassage,
     getDistanceToNearestBoundary,
@@ -51,8 +53,16 @@ export {
     validateGameState,
     calculateGameProgress,
     generateInitialSheepPositions,
+    generateCompetitiveBalancedSpawns,
+    calculateBalancedSpawnClusters,
     resetGameState,
-    calculateHerdingEffectiveness
+    calculateHerdingEffectiveness,
+    generateCompetitiveGateLayout,
+    assignGatesToPlayers,
+    updateCompetitiveSheepRetirements,
+    checkCompetitiveCompletion,
+    validateCompetitiveGameState,
+    createCompetitiveGameState
 } from './GameStateValidation.js';
 
 /**

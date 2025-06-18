@@ -60,6 +60,10 @@ export class NetworkManager {
         this.pingRequestId = 0;
         this.pendingPings = new Map();
         this.lastPing = null;
+        
+        // Competitive mode state
+        this.lastCompetitionResult = null;
+        this.competitiveModeData = null;
     }
     
     // Connection Management
@@ -231,6 +235,17 @@ export class NetworkManager {
         this.channel.on('gameComplete', (data) => {
             console.log('🎉 Game completed:', data);
             console.log('NetworkManager received gameComplete event with data:', JSON.stringify(data, null, 2));
+            
+            // Handle competitive vs cooperative completion
+            if (data.isCompetitive && data.competitive) {
+                console.log('🏆 Competitive game completion detected');
+                console.log('Winner:', data.competitive.winner);
+                console.log('Final scores:', data.competitive.finalScores);
+                
+                // Store competitive completion data for reconnection
+                this.lastCompetitionResult = data.competitive;
+            }
+            
             this.notifyPlayerUpdate({ type: 'gameComplete', data: data });
         });
         
@@ -272,7 +287,8 @@ export class NetworkManager {
             roomSettings: {
                 maxPlayers: roomSettings.maxPlayers || 4,
                 isPublic: roomSettings.isPublic !== false,
-                roomName: roomSettings.roomName || `${playerName}'s Room`
+                roomName: roomSettings.roomName || `${playerName}'s Room`,
+                gameMode: roomSettings.gameMode || 'cooperative'
             }
         };
         
@@ -494,7 +510,25 @@ export class NetworkManager {
                 
                 // If we were in a room, try to rejoin
                 if (this.currentRoom && this.playerName) {
+                    console.log('🔄 Reconnecting to room:', this.currentRoom.code);
+                    
+                    // Check if it was a competitive room for special handling
+                    const wasCompetitive = this.currentRoom.gameMode === 'competitive';
+                    if (wasCompetitive) {
+                        console.log('🏆 Reconnecting to competitive room');
+                    }
+                    
                     await this.joinRoom(this.currentRoom.code, this.playerName, this.dogType);
+                    
+                    // If we had competitive data and it was completed, restore it
+                    if (wasCompetitive && this.lastCompetitionResult) {
+                        console.log('🏆 Restoring competitive completion state');
+                        // Notify the game about the previous competition result
+                        this.notifyPlayerUpdate({ 
+                            type: 'competitiveStateRestored', 
+                            data: this.lastCompetitionResult 
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Reconnection failed:', error);
@@ -620,5 +654,19 @@ export class NetworkManager {
     
     isCurrentHost() {
         return this.isHost;
+    }
+    
+    // Competitive mode helpers
+    isCompetitiveMode() {
+        return this.currentRoom && this.currentRoom.gameMode === 'competitive';
+    }
+    
+    getLastCompetitionResult() {
+        return this.lastCompetitionResult;
+    }
+    
+    clearCompetitiveState() {
+        this.lastCompetitionResult = null;
+        this.competitiveModeData = null;
     }
 } 

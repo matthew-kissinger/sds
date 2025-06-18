@@ -176,6 +176,12 @@ class MultiplayerServer {
 
             console.log(`🔍 DEBUG: createRoom data for ${playerId}:`, JSON.stringify(data, null, 2));
             const { roomSettings, dogType } = data;
+            
+            // Log game mode for debugging
+            if (roomSettings && roomSettings.gameMode) {
+                console.log(`🎮 Creating room with game mode: ${roomSettings.gameMode}`);
+            }
+            
             const room = this.roomManager.createRoom(playerId, roomSettings, dogType || 'jep');
             
             player.roomCode = room.roomCode;
@@ -183,14 +189,14 @@ class MultiplayerServer {
             player.dogType = dogType || 'jep'; // Store dog type in player data
             player.lastActivity = Date.now();
 
-            // Send success response
+            // Send success response with game mode included
             player.channel.emit('roomCreated', {
                 success: true,
                 playerId: playerId,
                 room: room.getSerializableState()
             });
 
-            console.log(`🏠 Room ${room.roomCode} created by ${playerId}`);
+            console.log(`🏠 Room ${room.roomCode} created by ${playerId} in ${room.gameMode} mode`);
             
         } catch (error) {
             console.error(`❌ Error creating room for ${playerId}:`, error.message);
@@ -271,17 +277,23 @@ class MultiplayerServer {
             const player = this.players.get(playerId);
             if (!player) return;
 
-            const { playerName, dogType } = data;
+            const { playerName, dogType, gameMode = 'cooperative' } = data;
             
-            // Try to find an existing public room
+            // Try to find an existing public room with matching game mode
             let room = this.roomManager.findQuickMatchRoom();
             
+            // Check if found room matches preferred game mode
+            if (room && room.gameMode !== gameMode) {
+                room = null; // Don't use room with different game mode
+            }
+            
             if (!room) {
-                // Create a new public room
+                // Create a new public room with specified game mode
                 room = this.roomManager.createRoom(playerId, {
-                    name: 'Quick Match Game',
+                    name: `Quick Match Game (${gameMode})`,
                     maxPlayers: 4,
-                    isPublic: true
+                    isPublic: true,
+                    gameMode: gameMode
                 }, dogType || 'jep');
                 
                 player.roomCode = room.roomCode;
@@ -295,7 +307,7 @@ class MultiplayerServer {
                     isQuickMatch: true
                 });
             } else {
-                // Join existing room
+                // Join existing room with matching game mode
                 this.roomManager.joinRoom(room.roomCode, playerId, playerName || 'Quick Match Player', dogType || 'jep');
                 
                 player.roomCode = room.roomCode;
@@ -318,7 +330,7 @@ class MultiplayerServer {
             }
 
             player.lastActivity = Date.now();
-            console.log(`⚡ Quick match for ${playerId} -> room ${room.roomCode} with dog type: ${dogType || 'jep'}`);
+            console.log(`⚡ Quick match for ${playerId} -> room ${room.roomCode} (${room.gameMode}) with dog type: ${dogType || 'jep'}`);
             
         } catch (error) {
             console.error(`❌ Error with quick match for ${playerId}:`, error.message);
@@ -403,7 +415,7 @@ class MultiplayerServer {
             if (!player || !player.roomCode) return;
 
             const { dogType } = data;
-            if (!dogType || !['jep', 'rory', 'pip'].includes(dogType)) {
+            if (!dogType || !['jep', 'rauri', 'pip'].includes(dogType)) {
                 console.warn(`Invalid dog type received from ${playerId}: ${dogType}`);
                 return;
             }

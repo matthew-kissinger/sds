@@ -12,16 +12,20 @@ export class Sheepdog {
         this.targetVelocity = new Vector2D(0, 0);
         this.dogType = dogType;
         
+        // Player identification for competitive mode
+        this.playerId = null;
+        this.playerIcon = null; // Gate color icon above head
+        
         // Configure dog based on type
-        if (dogType === 'rory') {
-            // Rory: Less stamina but longer interaction distance
+        if (dogType === 'rauri') {
+            // Rauri: Less stamina but longer interaction distance
             this.maxSpeed = 15; // Normal max speed
             this.sprintSpeed = 25; // Sprint max speed
             this.acceleration = 40; // How fast we reach max speed
             this.deceleration = 30; // How fast we stop
             this.turnSpeed = 8; // How fast we rotate
             
-            // Reduced stamina for Rory
+            // Reduced stamina for Rauri
             this.maxStamina = 70; // 30% less stamina
             this.stamina = this.maxStamina;
             this.staminaDrainRate = 35; // Drains slightly faster
@@ -152,7 +156,7 @@ export class Sheepdog {
                 fog: true
             }),
             
-            // Main colors - Rory (Chocolate/Red-Brown)
+            // Main colors - Rauri (Chocolate/Red-Brown)
             brownFur: new THREE.MeshToonMaterial({
                 color: 0x8B4513, // Chocolate brown
                 emissive: 0x5D2E0C,
@@ -166,7 +170,7 @@ export class Sheepdog {
                 fog: true
             }),
             
-            // Merle speckling for Rory's paws
+            // Merle speckling for Rauri's paws
             speckledFur: new THREE.MeshToonMaterial({
                 color: 0xD2B48C, // Tan with darker spots implied
                 emissive: 0x8B7355,
@@ -174,7 +178,7 @@ export class Sheepdog {
                 fog: true
             }),
             
-            // Silvering for Rory's muzzle
+            // Silvering for Rauri's muzzle
             silverFur: new THREE.MeshToonMaterial({
                 color: 0xC0C0C0,
                 emissive: 0xA0A0A0,
@@ -196,7 +200,7 @@ export class Sheepdog {
                 fog: false
             }),
             amberPupil: new THREE.MeshBasicMaterial({
-                color: 0x8B4513, // Warm amber/brown eyes for Rory
+                color: 0x8B4513, // Warm amber/brown eyes for Rauri
                 fog: false
             }),
             tongue: new THREE.MeshToonMaterial({
@@ -234,18 +238,18 @@ export class Sheepdog {
         this.animatedParts.body = bodyGroup;
         
         // Configure materials based on dog type
-        const isRory = this.dogType === 'rory';
+        const isRauri = this.dogType === 'rauri';
         const isPip = this.dogType === 'pip';
-        const mainFurMat = isRory ? mat.redBrownFur : (isPip ? mat.brownFur : mat.blackFur);
+        const mainFurMat = isRauri ? mat.redBrownFur : (isPip ? mat.brownFur : mat.blackFur);
         const chestMat = mat.whiteFur; // All have white chest
-        const pupilMat = isRory ? mat.amberPupil : mat.pupil;
+        const pupilMat = isRauri ? mat.amberPupil : mat.pupil;
         
         // Main body
         const body = new THREE.Mesh(geom.body, mainFurMat);
         body.rotation.x = Math.PI / 2; // Rotate around X axis to make it horizontal
         body.position.set(0, 0, 0);
-        // Rory is slightly stockier, Pip has corgi proportions
-        if (isRory) {
+        // Rauri is slightly stockier, Pip has corgi proportions
+        if (isRauri) {
             body.scale.set(1.1, 1, 1); // Slightly wider
         } else if (isPip) {
             body.scale.set(1.2, 0.8, 1.3); // Wider and longer but shorter height
@@ -267,7 +271,7 @@ export class Sheepdog {
         // Head
         const head = new THREE.Mesh(geom.head, mainFurMat);
         // Different head shapes for each dog
-        if (isRory) {
+        if (isRauri) {
             head.scale.set(1.15, 1, 1.1); // Broader and slightly larger
         } else if (isPip) {
             head.scale.set(1.1, 1, 1.2); // Corgi-like proportions
@@ -283,8 +287,8 @@ export class Sheepdog {
         muzzle.scale.set(0.8, 0.8, 0.9);
         headGroup.add(muzzle);
         
-        // Snout with silvering for Rory
-        const snoutMat = isRory ? mat.silverFur : mainFurMat;
+        // Snout with silvering for Rauri
+        const snoutMat = isRauri ? mat.silverFur : mainFurMat;
         const snout = new THREE.Mesh(geom.snout, snoutMat);
         snout.rotation.x = -Math.PI / 2;
         snout.position.set(0, -0.05, 0.4);
@@ -300,16 +304,16 @@ export class Sheepdog {
         const leftEye = new THREE.Mesh(geom.eye, mat.eye);
         leftEye.position.set(-0.15, 0.12, 0.25);
         // Make Jep's eyes smaller and less prominent
-        if (!isRory) {
+        if (!isRauri) {
             leftEye.scale.set(0.7, 0.7, 0.7);
         }
         headGroup.add(leftEye);
         
         const leftPupil = new THREE.Mesh(geom.pupil, pupilMat);
-        // Jep has closer pupils, Rory needs them more forward
-        leftPupil.position.set(-0.15, 0.12, isRory ? 0.35 : 0.29);
+        // Jep has closer pupils, Rauri needs them more forward
+        leftPupil.position.set(-0.15, 0.12, isRauri ? 0.35 : 0.29);
         leftPupil.renderOrder = 1; // Ensure pupils render on top
-        if (!isRory) {
+        if (!isRauri) {
             leftPupil.scale.set(0.7, 0.7, 0.7);
         }
         headGroup.add(leftPupil);
@@ -317,16 +321,16 @@ export class Sheepdog {
         const rightEye = new THREE.Mesh(geom.eye, mat.eye);
         rightEye.position.set(0.15, 0.12, 0.25);
         // Make Jep's eyes smaller and less prominent
-        if (!isRory) {
+        if (!isRauri) {
             rightEye.scale.set(0.7, 0.7, 0.7);
         }
         headGroup.add(rightEye);
         
         const rightPupil = new THREE.Mesh(geom.pupil, pupilMat);
-        // Jep has closer pupils, Rory needs them more forward
-        rightPupil.position.set(0.15, 0.12, isRory ? 0.35 : 0.29);
+        // Jep has closer pupils, Rauri needs them more forward
+        rightPupil.position.set(0.15, 0.12, isRauri ? 0.35 : 0.29);
         rightPupil.renderOrder = 1; // Ensure pupils render on top
-        if (!isRory) {
+        if (!isRauri) {
             rightPupil.scale.set(0.7, 0.7, 0.7);
         }
         headGroup.add(rightPupil);
@@ -334,7 +338,7 @@ export class Sheepdog {
         // EARS
         const leftEar = new THREE.Mesh(geom.ear, mainFurMat);
         // Different ear styles for each dog
-        if (isRory) {
+        if (isRauri) {
             leftEar.scale.set(1.2, 1.8, 0.6); // Larger ears
             leftEar.position.set(-0.28, 0.15, -0.1);
             leftEar.rotation.set(0, -0.1, 0.6); // More upright, slight outward tip
@@ -351,7 +355,7 @@ export class Sheepdog {
         headGroup.add(leftEar);
         
         const rightEar = new THREE.Mesh(geom.ear, mainFurMat);
-        if (isRory) {
+        if (isRauri) {
             rightEar.scale.set(1.2, 1.8, 0.6); // Larger ears
             rightEar.position.set(0.28, 0.15, -0.1);
             rightEar.rotation.set(0, 0.1, -0.6); // More upright, slight outward tip
@@ -382,7 +386,7 @@ export class Sheepdog {
         const tailGroup = new THREE.Group();
         
         // Different tail styles
-        if (isRory) {
+        if (isRauri) {
             // Just a small nub
             const tailNub = new THREE.Mesh(geom.tailTip, mainFurMat);
             tailNub.position.set(0, 0.05, -0.65);
@@ -435,7 +439,7 @@ export class Sheepdog {
             const leg = new THREE.Mesh(geom.leg, mainFurMat);
             leg.position.y = -0.15;
             // Different leg styles
-            if (isRory) {
+            if (isRauri) {
                 leg.scale.set(1.1, 0.7, 1.1); // Thicker legs
             } else if (isPip) {
                 leg.scale.set(1.3, 0.4, 1.3); // Very short, thick Corgi legs
@@ -446,7 +450,7 @@ export class Sheepdog {
             legGroup.add(leg);
             
             // White socks - Different patterns for each dog
-            if (isRory || (isPip && i < 2) || (!isPip && !isRory && i < 2)) {
+            if (isRauri || (isPip && i < 2) || (!isPip && !isRauri && i < 2)) {
                 const sock = new THREE.Mesh(geom.leg, mat.whiteFur);
                 if (isPip) {
                     sock.position.y = -0.12; // Adjusted for shorter legs
@@ -459,7 +463,7 @@ export class Sheepdog {
             }
             
             // Paw - Different styles for each dog
-            const pawMat = isRory ? mat.speckledFur : mainFurMat;
+            const pawMat = isRauri ? mat.speckledFur : mainFurMat;
             const paw = new THREE.Mesh(geom.paw, pawMat);
             if (isPip) {
                 paw.position.y = -0.18; // Higher due to shorter legs
@@ -495,6 +499,83 @@ export class Sheepdog {
         this.mesh.position.set(this.position.x, 0, this.position.z);
         
         return this.mesh;
+    }
+
+    /**
+     * Create a colored player icon above the sheepdog for competitive mode
+     * @param {number} gateColor - Hex color of the player's gate
+     */
+    createPlayerIcon(gateColor) {
+        if (this.playerIcon) {
+            this.removePlayerIcon();
+        }
+        
+        // Create icon geometry - a simple diamond/rhombus shape
+        const iconGeometry = new THREE.ConeGeometry(0.3, 0.4, 4);
+        iconGeometry.rotateX(Math.PI); // Point upward
+        
+        // Create material with gate color
+        const iconMaterial = new THREE.MeshToonMaterial({
+            color: gateColor,
+            emissive: gateColor,
+            emissiveIntensity: 0.3,
+            fog: true
+        });
+        
+        // Create the icon mesh
+        this.playerIcon = new THREE.Mesh(iconGeometry, iconMaterial);
+        
+        // Position above the dog's head
+        const iconHeight = this.dogType === 'pip' ? 2.2 : 2.5; // Adjust for Pip's shorter height
+        this.playerIcon.position.set(0, iconHeight, 0);
+        
+        // Add gentle floating animation
+        this.playerIcon.userData = {
+            originalY: iconHeight,
+            animationTime: Math.random() * Math.PI * 2 // Random start phase
+        };
+        
+        // Add to the main mesh group
+        if (this.mesh) {
+            this.mesh.add(this.playerIcon);
+        }
+        
+        console.log(`🎯 Created player icon with color: 0x${gateColor.toString(16).toUpperCase()}`);
+    }
+    
+    /**
+     * Update the player icon color
+     * @param {number} gateColor - New hex color
+     */
+    updatePlayerIcon(gateColor) {
+        if (this.playerIcon && this.playerIcon.material) {
+            this.playerIcon.material.color.setHex(gateColor);
+            this.playerIcon.material.emissive.setHex(gateColor);
+        }
+    }
+    
+    /**
+     * Remove the player icon
+     */
+    removePlayerIcon() {
+        if (this.playerIcon && this.mesh) {
+            this.mesh.remove(this.playerIcon);
+            this.playerIcon.geometry.dispose();
+            this.playerIcon.material.dispose();
+            this.playerIcon = null;
+        }
+    }
+    
+    /**
+     * Set player information for competitive mode
+     * @param {string} playerId - Player ID
+     * @param {number} gateColor - Hex color of player's gate
+     */
+    setPlayerInfo(playerId, gateColor) {
+        this.playerId = playerId;
+        if (gateColor !== undefined) {
+            this.createPlayerIcon(gateColor);
+        }
     }
 
     // Smooth movement with acceleration
@@ -557,7 +638,7 @@ export class Sheepdog {
         if (this.audioManager && this.isMoving && this.nearSheep) {
             const now = Date.now();
             if (now - this.lastBarkTime > this.barkCooldown) {
-                this.audioManager.playSheepdogBark();
+                this.audioManager.playSheepdogBark(this.dogType);
                 this.lastBarkTime = now;
             }
         }
@@ -748,6 +829,13 @@ export class Sheepdog {
             ear.rotation.z = baseRotation + flap;
             ear.rotation.x = -0.2 + Math.cos(this.earFlap * 0.5) * speedNormalized * 0.1;
         });
+        
+        // Animate player icon if present (gentle floating)
+        if (this.playerIcon && this.playerIcon.userData) {
+            this.playerIcon.userData.animationTime += deltaTime;
+            const floatOffset = Math.sin(this.playerIcon.userData.animationTime * 2) * 0.1;
+            this.playerIcon.position.y = this.playerIcon.userData.originalY + floatOffset;
+        }
     }
 
     // Choose next idle action

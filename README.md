@@ -89,7 +89,7 @@ The game supports real-time multiplayer with up to 4 players per room:
 ### Multiplayer Features
 - **Create/Join Rooms**: Share 4-letter room codes with friends
 - **Quick Match**: Automatically join available public games
-- **Multiple Dog Types**: Choose between Jep, Rory, or Pip
+- **Multiple Dog Types**: Choose between Jep, Rauri, or Pip
 - **Live Player Count**: See other players in real-time
 - **Synchronized Sheep**: All players see the same sheep positions
 

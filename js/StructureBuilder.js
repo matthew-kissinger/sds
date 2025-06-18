@@ -6,9 +6,82 @@ import * as THREE from 'three';
 export class StructureBuilder {
     constructor(scene) {
         this.scene = scene;
+        this.boundaryFenceElements = []; // Track boundary fence elements for removal
+        this.gateElements = []; // Track gate elements for removal
+        this.pastureElements = []; // Track pasture elements for removal
+    }
+    
+    /**
+     * Remove all existing boundary fence elements from the scene
+     */
+    clearBoundaryFence() {
+        console.log(`🗑️ Removing ${this.boundaryFenceElements.length} boundary fence elements`);
+        
+        this.boundaryFenceElements.forEach(element => {
+            this.scene.remove(element);
+            // Dispose of geometry and materials to free memory
+            if (element.geometry) element.geometry.dispose();
+            if (element.material) {
+                if (Array.isArray(element.material)) {
+                    element.material.forEach(mat => mat.dispose());
+                } else {
+                    element.material.dispose();
+                }
+            }
+        });
+        
+        this.boundaryFenceElements = []; // Clear the tracking array
+    }
+    
+    clearGates() {
+        console.log(`🗑️ Removing ${this.gateElements.length} gate elements`);
+        
+        this.gateElements.forEach(element => {
+            this.scene.remove(element);
+            // Dispose of geometry and materials to free memory
+            if (element.geometry) element.geometry.dispose();
+            if (element.material) {
+                if (Array.isArray(element.material)) {
+                    element.material.forEach(mat => mat.dispose());
+                } else {
+                    element.material.dispose();
+                }
+            }
+        });
+        
+        this.gateElements = []; // Clear the tracking array
+    }
+    
+    clearPastures() {
+        console.log(`🗑️ Removing ${this.pastureElements.length} pasture elements`);
+        
+        this.pastureElements.forEach(element => {
+            this.scene.remove(element);
+            // Dispose of geometry and materials to free memory
+            if (element.geometry) element.geometry.dispose();
+            if (element.material) {
+                if (Array.isArray(element.material)) {
+                    element.material.forEach(mat => mat.dispose());
+                } else {
+                    element.material.dispose();
+                }
+            }
+        });
+        
+        this.pastureElements = []; // Clear the tracking array
+    }
+    
+    clearAllStructures() {
+        console.log('🗑️ Clearing all structures (fences, gates, pastures)');
+        this.clearBoundaryFence();
+        this.clearGates();
+        this.clearPastures();
     }
     
     createFieldBoundaryFence(bounds, gate) {
+        // Clear any existing boundary fence first
+        this.clearBoundaryFence();
+        
         // Fence post geometry and material
         const postGeometry = new THREE.CylinderGeometry(0.25, 0.25, 3.5, 8);
         const postMaterial = new THREE.MeshPhongMaterial({ 
@@ -40,6 +113,7 @@ export class StructureBuilder {
             post.castShadow = true;
             post.receiveShadow = true;
             this.scene.add(post);
+            this.boundaryFenceElements.push(post); // Track for removal
             fencePosts.push({x: x, z: bounds.minZ, type: 'bottom'});
         }
         
@@ -55,6 +129,7 @@ export class StructureBuilder {
                 post.castShadow = true;
                 post.receiveShadow = true;
                 this.scene.add(post);
+                this.boundaryFenceElements.push(post); // Track for removal
                 fencePosts.push({x: x, z: bounds.maxZ, type: 'top'});
             }
         }
@@ -66,6 +141,7 @@ export class StructureBuilder {
             post.castShadow = true;
             post.receiveShadow = true;
             this.scene.add(post);
+            this.boundaryFenceElements.push(post); // Track for removal
             fencePosts.push({x: bounds.minX, z: z, type: 'left'});
         }
         
@@ -76,14 +152,17 @@ export class StructureBuilder {
             post.castShadow = true;
             post.receiveShadow = true;
             this.scene.add(post);
+            this.boundaryFenceElements.push(post); // Track for removal
             fencePosts.push({x: bounds.maxX, z: z, type: 'right'});
         }
         
         // Add horizontal rails between posts
         // Bottom edge rails
         for (let x = bounds.minX; x < bounds.maxX; x += postSpacing) {
-            this.createFenceRail(x, bounds.minZ, x + postSpacing, bounds.minZ, railHeight1, railMaterial);
-            this.createFenceRail(x, bounds.minZ, x + postSpacing, bounds.minZ, railHeight2, railMaterial);
+            const rail1 = this.createFenceRail(x, bounds.minZ, x + postSpacing, bounds.minZ, railHeight1, railMaterial);
+            const rail2 = this.createFenceRail(x, bounds.minZ, x + postSpacing, bounds.minZ, railHeight2, railMaterial);
+            if (rail1) this.boundaryFenceElements.push(rail1);
+            if (rail2) this.boundaryFenceElements.push(rail2);
         }
         
         // Top edge rails - connect to gate posts properly
@@ -96,28 +175,36 @@ export class StructureBuilder {
             // Left side of gate - connect to left gate post
             if (nextX <= gateLeftPost + 1) {
                 const endX = (nextX > gateLeftPost - 1) ? gateLeftPost : nextX;
-                this.createFenceRail(x, bounds.maxZ, endX, bounds.maxZ, railHeight1, railMaterial);
-                this.createFenceRail(x, bounds.maxZ, endX, bounds.maxZ, railHeight2, railMaterial);
+                const rail1 = this.createFenceRail(x, bounds.maxZ, endX, bounds.maxZ, railHeight1, railMaterial);
+                const rail2 = this.createFenceRail(x, bounds.maxZ, endX, bounds.maxZ, railHeight2, railMaterial);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
             }
             
             // Right side of gate - connect from right gate post
             if (x >= gateRightPost - 1) {
                 const startX = (x < gateRightPost + 1) ? gateRightPost : x;
-                this.createFenceRail(startX, bounds.maxZ, nextX, bounds.maxZ, railHeight1, railMaterial);
-                this.createFenceRail(startX, bounds.maxZ, nextX, bounds.maxZ, railHeight2, railMaterial);
+                const rail1 = this.createFenceRail(startX, bounds.maxZ, nextX, bounds.maxZ, railHeight1, railMaterial);
+                const rail2 = this.createFenceRail(startX, bounds.maxZ, nextX, bounds.maxZ, railHeight2, railMaterial);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
             }
         }
         
         // Left edge rails
         for (let z = bounds.minZ; z < bounds.maxZ; z += postSpacing) {
-            this.createFenceRail(bounds.minX, z, bounds.minX, z + postSpacing, railHeight1, railMaterial);
-            this.createFenceRail(bounds.minX, z, bounds.minX, z + postSpacing, railHeight2, railMaterial);
+            const rail1 = this.createFenceRail(bounds.minX, z, bounds.minX, z + postSpacing, railHeight1, railMaterial);
+            const rail2 = this.createFenceRail(bounds.minX, z, bounds.minX, z + postSpacing, railHeight2, railMaterial);
+            if (rail1) this.boundaryFenceElements.push(rail1);
+            if (rail2) this.boundaryFenceElements.push(rail2);
         }
         
         // Right edge rails
         for (let z = bounds.minZ; z < bounds.maxZ; z += postSpacing) {
-            this.createFenceRail(bounds.maxX, z, bounds.maxX, z + postSpacing, railHeight1, railMaterial);
-            this.createFenceRail(bounds.maxX, z, bounds.maxX, z + postSpacing, railHeight2, railMaterial);
+            const rail1 = this.createFenceRail(bounds.maxX, z, bounds.maxX, z + postSpacing, railHeight1, railMaterial);
+            const rail2 = this.createFenceRail(bounds.maxX, z, bounds.maxX, z + postSpacing, railHeight2, railMaterial);
+            if (rail1) this.boundaryFenceElements.push(rail1);
+            if (rail2) this.boundaryFenceElements.push(rail2);
         }
         
         return fencePosts;
@@ -151,11 +238,16 @@ export class StructureBuilder {
     createGateAndPasture(gate, pasture) {
         const gateElements = [];
         
+        // Determine gate color (use player color if available, otherwise default)
+        const gateColor = gate.color || 0x4a3c28;
+        const archColor = gate.color ? this.lightenColor(gate.color, 0.3) : 0x6a5a4a;
+        const thresholdColor = gate.color ? this.lightenColor(gate.color, 0.5) : 0xFFD700;
+        
         // Create gate posts - taller and more prominent
         const postGeometry = new THREE.CylinderGeometry(0.4, 0.4, gate.height + 1, 8);
         const postMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0x4a3c28,
-            emissive: 0x1a0a00,
+            color: gateColor,
+            emissive: gate.color ? this.darkenColor(gate.color, 0.8) : 0x1a0a00,
             emissiveIntensity: 0.1
         });
         
@@ -166,6 +258,7 @@ export class StructureBuilder {
         leftPost.receiveShadow = true;
         this.scene.add(leftPost);
         gateElements.push(leftPost);
+        this.gateElements.push(leftPost); // Track for removal
         
         // Right post
         const rightPost = new THREE.Mesh(postGeometry, postMaterial);
@@ -174,12 +267,13 @@ export class StructureBuilder {
         rightPost.receiveShadow = true;
         this.scene.add(rightPost);
         gateElements.push(rightPost);
+        this.gateElements.push(rightPost); // Track for removal
         
-        // Decorative gate arch
+        // Decorative gate arch with player color
         const archGeometry = new THREE.CylinderGeometry(0.2, 0.2, gate.width + 1, 8);
         const archMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0x6a5a4a,
-            emissive: 0x2a1a00,
+            color: archColor,
+            emissive: gate.color ? this.darkenColor(gate.color, 0.7) : 0x2a1a00,
             emissiveIntensity: 0.1
         });
         
@@ -189,12 +283,13 @@ export class StructureBuilder {
         arch.castShadow = true;
         this.scene.add(arch);
         gateElements.push(arch);
+        this.gateElements.push(arch); // Track for removal
         
-        // Gate threshold marker (on ground) - more prominent
+        // Gate threshold marker with player color
         const thresholdGeometry = new THREE.BoxGeometry(gate.width + 2, 0.15, 3);
         const thresholdMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0xFFD700, // Gold
-            emissive: 0x806000,
+            color: thresholdColor,
+            emissive: gate.color ? this.darkenColor(gate.color, 0.5) : 0x806000,
             emissiveIntensity: 0.3
         });
         
@@ -202,12 +297,16 @@ export class StructureBuilder {
         threshold.position.set(gate.position.x, 0.075, gate.position.z);
         this.scene.add(threshold);
         gateElements.push(threshold);
+        this.gateElements.push(threshold); // Track for removal
         
-        // Add welcome sign above gate
-        this.createWelcomeSign(gate.position.x, gate.height + 1.5, gate.position.z - 1);
+        // Add player-specific welcome sign above gate
+        this.createPlayerWelcomeSign(gate.position.x, gate.height + 1.5, gate.position.z - 1, gate.playerId, gate.color);
         
-        // Create enhanced pasture area
+        // Create enhanced pasture area with player color
         const pastureElements = this.createEnhancedPasture(pasture, gate);
+        
+        // Track pasture elements for removal
+        pastureElements.forEach(element => this.pastureElements.push(element));
         
         return {
             gate: gateElements,
@@ -237,11 +336,242 @@ export class StructureBuilder {
         this.scene.add(signBoard);
     }
     
+    createPlayerWelcomeSign(x, y, z, playerId, playerColor) {
+        // Sign post with player color
+        const postGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 6);
+        const postMaterial = new THREE.MeshPhongMaterial({ 
+            color: playerColor || 0x4a3c28,
+            emissive: playerColor ? this.darkenColor(playerColor, 0.8) : 0x1a0a00,
+            emissiveIntensity: 0.1
+        });
+        const signPost = new THREE.Mesh(postGeometry, postMaterial);
+        signPost.position.set(x, y - 0.5, z);
+        signPost.castShadow = true;
+        this.scene.add(signPost);
+        
+        // Sign board with player color accent
+        const signGeometry = new THREE.BoxGeometry(3, 0.8, 0.2);
+        const signMaterial = new THREE.MeshPhongMaterial({ 
+            color: playerColor ? this.lightenColor(playerColor, 0.6) : 0x8B4513,
+            emissive: playerColor ? this.darkenColor(playerColor, 0.7) : 0x2a1a00,
+            emissiveIntensity: 0.05
+        });
+        const signBoard = new THREE.Mesh(signGeometry, signMaterial);
+        signBoard.position.set(x, y, z);
+        signBoard.castShadow = true;
+        this.scene.add(signBoard);
+        
+        // Add player indicator if playerId provided
+        if (playerId && playerColor) {
+            const indicatorGeometry = new THREE.SphereGeometry(0.15, 8, 6);
+            const indicator = new THREE.Mesh(indicatorGeometry, new THREE.MeshPhongMaterial({
+                color: playerColor,
+                emissive: playerColor,
+                emissiveIntensity: 0.3
+            }));
+            indicator.position.set(x - 1.2, y, z + 0.15);
+            indicator.castShadow = true;
+            this.scene.add(indicator);
+        }
+    }
+    
+    // Color utility methods
+    lightenColor(color, amount) {
+        const r = (color >> 16) & 0xff;
+        const g = (color >> 8) & 0xff;
+        const b = color & 0xff;
+        
+        const newR = Math.min(255, Math.floor(r + (255 - r) * amount));
+        const newG = Math.min(255, Math.floor(g + (255 - g) * amount));
+        const newB = Math.min(255, Math.floor(b + (255 - b) * amount));
+        
+        return (newR << 16) | (newG << 8) | newB;
+    }
+    
+    darkenColor(color, amount) {
+        const r = (color >> 16) & 0xff;
+        const g = (color >> 8) & 0xff;
+        const b = color & 0xff;
+        
+        const newR = Math.floor(r * amount);
+        const newG = Math.floor(g * amount);
+        const newB = Math.floor(b * amount);
+        
+        return (newR << 16) | (newG << 8) | newB;
+    }
+    
+    /**
+     * Create multiple gates and pastures for competitive mode
+     * @param {Array} competitiveGates - Array of gate configurations with player data
+     * @returns {Object} - Object containing all gate and pasture elements
+     */
+    createMultipleGatesAndPastures(competitiveGates) {
+        if (!Array.isArray(competitiveGates) || competitiveGates.length === 0) {
+            console.warn('No competitive gates provided, falling back to single gate creation');
+            return null;
+        }
+        
+        const allElements = {
+            gates: [],
+            pastures: []
+        };
+        
+        console.log(`🚪 Creating ${competitiveGates.length} competitive gates with player colors`);
+        
+        // Create each gate and pasture pair
+        competitiveGates.forEach((gateConfig, index) => {
+            const gateAndPasture = this.createGateAndPasture(gateConfig, gateConfig.pasture);
+            allElements.gates.push(...gateAndPasture.gate);
+            allElements.pastures.push(...gateAndPasture.pasture);
+            
+            console.log(`Created gate ${index + 1}/${competitiveGates.length} for player ${gateConfig.playerId} with color 0x${gateConfig.color.toString(16).toUpperCase()}`);
+        });
+        
+        return allElements;
+    }
+    
+    /**
+     * Creates a boundary fence that correctly leaves openings for multiple competitive gates.
+     * This is the main refactored function to fix the competitive mode fence.
+     * @param {Object} bounds - The field boundaries.
+     * @param {Array} competitiveGates - An array of gate configuration objects.
+     */
+    createMultiGateBoundaryFence(bounds, competitiveGates) {
+        console.log(`🔧 Building boundary fence with ${competitiveGates.length} gate openings.`);
+        
+        const postGeometry = new THREE.CylinderGeometry(0.25, 0.25, 3.5, 8);
+        const postMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x5a4a3a,
+            emissive: 0x1a0a00,
+            emissiveIntensity: 0.05
+        });
+        const railMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x6a5a4a,
+            emissive: 0x1a0a00,
+            emissiveIntensity: 0.05
+        });
+        const postSpacing = 10;
+        const railHeight1 = 1.2;
+        const railHeight2 = 2.4;
+
+        // An array of the four boundaries to build fences along
+        const boundaries = [
+            { direction: 'north', start: bounds.minX, end: bounds.maxX, fixedCoord: bounds.maxZ, orientation: 'horizontal' },
+            { direction: 'south', start: bounds.minX, end: bounds.maxX, fixedCoord: bounds.minZ, orientation: 'horizontal' },
+            { direction: 'west', start: bounds.minZ, end: bounds.maxZ, fixedCoord: bounds.minX, orientation: 'vertical' },
+            { direction: 'east', start: bounds.minZ, end: bounds.maxZ, fixedCoord: bounds.maxX, orientation: 'vertical' }
+        ];
+
+        boundaries.forEach(boundary => {
+            // Filter gates that lie on the current boundary
+            const gatesOnBoundary = competitiveGates.filter(gate => {
+                const isOnBoundary = (boundary.orientation === 'horizontal')
+                    ? Math.abs(gate.position.z - boundary.fixedCoord) < 1
+                    : Math.abs(gate.position.x - boundary.fixedCoord) < 1;
+                return isOnBoundary;
+            }).sort((a, b) => {
+                // Sort gates along the boundary line
+                return (boundary.orientation === 'horizontal') ? a.position.x - b.position.x : a.position.z - b.position.z;
+            });
+
+            let currentPos = boundary.start;
+
+            // Build fence segments between gates
+            for (const gate of gatesOnBoundary) {
+                const gateCenter = (boundary.orientation === 'horizontal') ? gate.position.x : gate.position.z;
+                const gateStart = gateCenter - gate.width / 2;
+                
+                if (gateStart > currentPos) {
+                    this.buildFenceRun(currentPos, gateStart, boundary.fixedCoord, boundary.orientation, postGeometry, postMaterial, railMaterial, postSpacing, railHeight1, railHeight2);
+                }
+                currentPos = gateCenter + gate.width / 2;
+            }
+
+            // Build the final segment from the last gate to the end of the boundary
+            if (currentPos < boundary.end) {
+                this.buildFenceRun(currentPos, boundary.end, boundary.fixedCoord, boundary.orientation, postGeometry, postMaterial, railMaterial, postSpacing, railHeight1, railHeight2);
+            }
+        });
+    }
+    
+    /**
+     * Builds a continuous run of fence posts and rails between two points on a boundary.
+     * This helper ensures rails connect perfectly to endpoints (corners or gate posts).
+     * @private
+     */
+    buildFenceRun(start, end, fixedCoord, orientation, postGeom, postMat, railMat, spacing, h1, h2) {
+        if (Math.abs(start - end) < 0.1) return; // Skip tiny segments
+
+        // Create the starting post for this run
+        this.createPost(start, fixedCoord, orientation, postGeom, postMat);
+
+        // Create intermediate posts and rails at intervals
+        let currentPos = start;
+        while (currentPos + spacing < end) {
+            const nextPos = currentPos + spacing;
+            
+            // Create the next post
+            this.createPost(nextPos, fixedCoord, orientation, postGeom, postMat);
+            
+            // Create rails between current and next post
+            if (orientation === 'horizontal') {
+                const rail1 = this.createFenceRail(currentPos, fixedCoord, nextPos, fixedCoord, h1, railMat);
+                const rail2 = this.createFenceRail(currentPos, fixedCoord, nextPos, fixedCoord, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            } else { // vertical
+                const rail1 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, nextPos, h1, railMat);
+                const rail2 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, nextPos, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            }
+            
+            currentPos = nextPos;
+        }
+        
+        // Create the final post at the end of the run
+        this.createPost(end, fixedCoord, orientation, postGeom, postMat);
+        
+        // Create final rails from last intermediate post to end post
+        if (currentPos < end) {
+            if (orientation === 'horizontal') {
+                const rail1 = this.createFenceRail(currentPos, fixedCoord, end, fixedCoord, h1, railMat);
+                const rail2 = this.createFenceRail(currentPos, fixedCoord, end, fixedCoord, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            } else { // vertical
+                const rail1 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, end, h1, railMat);
+                const rail2 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, end, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            }
+        }
+    }
+
+    /**
+     * Helper to create and track a single fence post.
+     * @private
+     */
+    createPost(pos, fixedCoord, orientation, postGeom, postMat) {
+        const post = new THREE.Mesh(postGeom, postMat);
+        const postHeight = postGeom.parameters.height;
+
+        if (orientation === 'horizontal') {
+            post.position.set(pos, postHeight / 2, fixedCoord);
+        } else {
+            post.position.set(fixedCoord, postHeight / 2, pos);
+        }
+        
+        post.castShadow = true;
+        this.scene.add(post);
+        this.boundaryFenceElements.push(post);
+    }
+
     createEnhancedPasture(pasture, gate) {
         const pastureElements = [];
         
         // Create a more enclosed pen with proper fencing
-        this.createPenFencing(pasture, pastureElements);
+        this.createPenFencing(pasture, pastureElements, gate);
         
         // Enhanced pasture ground with better texture
         const pastureGeometry = new THREE.PlaneGeometry(
@@ -249,17 +579,30 @@ export class StructureBuilder {
             pasture.maxZ - pasture.minZ + 4
         );
         
-        // Create enhanced pasture texture
+        // Create enhanced pasture texture with player color tint
         const canvas = document.createElement('canvas');
         canvas.width = 1024;
         canvas.height = 1024;
         const context = canvas.getContext('2d');
         
+        // Base grass colors with optional player color tint
+        let baseColor1 = '#6a8a5a';
+        let baseColor2 = '#5a7a4a';
+        let baseColor3 = '#4a6a3a';
+        
+        // Apply subtle player color tint if gate has player color
+        if (gate && gate.color) {
+            const playerColorHex = '#' + gate.color.toString(16).padStart(6, '0');
+            baseColor1 = this.blendColors('#6a8a5a', playerColorHex, 0.15);
+            baseColor2 = this.blendColors('#5a7a4a', playerColorHex, 0.15);
+            baseColor3 = this.blendColors('#4a6a3a', playerColorHex, 0.15);
+        }
+        
         // Rich, comfortable grass for sleeping pasture
         const gradient = context.createRadialGradient(512, 512, 0, 512, 512, 512);
-        gradient.addColorStop(0, '#6a8a5a');
-        gradient.addColorStop(0.5, '#5a7a4a');
-        gradient.addColorStop(1, '#4a6a3a');
+        gradient.addColorStop(0, baseColor1);
+        gradient.addColorStop(0.5, baseColor2);
+        gradient.addColorStop(1, baseColor3);
         context.fillStyle = gradient;
         context.fillRect(0, 0, 1024, 1024);
         
@@ -313,7 +656,7 @@ export class StructureBuilder {
         return pastureElements;
     }
     
-    createPenFencing(pasture, pastureElements) {
+    createPenFencing(pasture, pastureElements, gate) {
         const fencePostGeometry = new THREE.CylinderGeometry(0.25, 0.25, 3.5, 8);
         const fencePostMaterial = new THREE.MeshPhongMaterial({ 
             color: 0x5a4a3a,
@@ -331,23 +674,50 @@ export class StructureBuilder {
         const railHeight1 = 1.2;
         const railHeight2 = 2.4;
         
-        // Back fence (complete enclosure)
+        // Determine which side is the "back" based on gate direction
+        const gateDirection = gate?.direction || 'north';
+        let backZ, frontZ, isNorthFacing;
+        
+        if (gateDirection === 'north') {
+            // North-facing gate: back is maxZ (away from field center)
+            backZ = pasture.maxZ + 2;
+            frontZ = pasture.minZ - 2; // Front connects to boundary fence
+            isNorthFacing = true;
+        } else if (gateDirection === 'south') {
+            // South-facing gate: back is minZ (away from field center)
+            backZ = pasture.minZ - 2;
+            frontZ = pasture.maxZ + 2; // Front connects to boundary fence
+            isNorthFacing = false;
+        } else {
+            // Default to north-facing for other directions
+            backZ = pasture.maxZ + 2;
+            frontZ = pasture.minZ - 2;
+            isNorthFacing = true;
+        }
+        
+        // Back fence (complete enclosure away from gate)
         for (let x = pasture.minX - 2; x <= pasture.maxX + 2; x += postSpacing) {
             const post = new THREE.Mesh(fencePostGeometry, fencePostMaterial);
-            post.position.set(x, 1.75, pasture.maxZ + 2);
+            post.position.set(x, 1.75, backZ);
             post.castShadow = true;
             this.scene.add(post);
             pastureElements.push(post);
             
             // Add rails
             if (x < pasture.maxX + 2) {
-                this.createFenceRail(x, pasture.maxZ + 2, x + postSpacing, pasture.maxZ + 2, railHeight1, railMaterial);
-                this.createFenceRail(x, pasture.maxZ + 2, x + postSpacing, pasture.maxZ + 2, railHeight2, railMaterial);
+                const rail1 = this.createFenceRail(x, backZ, x + postSpacing, backZ, railHeight1, railMaterial);
+                const rail2 = this.createFenceRail(x, backZ, x + postSpacing, backZ, railHeight2, railMaterial);
+                if (rail1) pastureElements.push(rail1);
+                if (rail2) pastureElements.push(rail2);
             }
         }
         
-        // Side fences (left and right) - stop at the boundary fence line
-        for (let z = pasture.maxZ + 2; z > pasture.minZ + 2; z -= postSpacing) {
+        // Side fences - build from back to front
+        const startZ = isNorthFacing ? pasture.maxZ + 2 : pasture.minZ - 2;
+        const endZ = isNorthFacing ? pasture.minZ + 2 : pasture.maxZ - 2;
+        const zStep = isNorthFacing ? -postSpacing : postSpacing;
+        
+        for (let z = startZ; isNorthFacing ? z > endZ : z < endZ; z += zStep) {
             // Left side
             const leftPost = new THREE.Mesh(fencePostGeometry, fencePostMaterial);
             leftPost.position.set(pasture.minX - 2, 1.75, z);
@@ -362,54 +732,41 @@ export class StructureBuilder {
             this.scene.add(rightPost);
             pastureElements.push(rightPost);
             
-            // Add rails
-            if (z > pasture.minZ + 2) {
-                this.createFenceRail(pasture.minX - 2, z, pasture.minX - 2, z - postSpacing, railHeight1, railMaterial);
-                this.createFenceRail(pasture.minX - 2, z, pasture.minX - 2, z - postSpacing, railHeight2, railMaterial);
-                this.createFenceRail(pasture.maxX + 2, z, pasture.maxX + 2, z - postSpacing, railHeight1, railMaterial);
-                this.createFenceRail(pasture.maxX + 2, z, pasture.maxX + 2, z - postSpacing, railHeight2, railMaterial);
+            // Add rails if not at the end
+            const nextZ = z + zStep;
+            const shouldAddRails = isNorthFacing ? nextZ > endZ : nextZ < endZ;
+            
+            if (shouldAddRails) {
+                // Left rails
+                const leftRail1 = this.createFenceRail(pasture.minX - 2, z, pasture.minX - 2, nextZ, railHeight1, railMaterial);
+                const leftRail2 = this.createFenceRail(pasture.minX - 2, z, pasture.minX - 2, nextZ, railHeight2, railMaterial);
+                if (leftRail1) pastureElements.push(leftRail1);
+                if (leftRail2) pastureElements.push(leftRail2);
+                
+                // Right rails
+                const rightRail1 = this.createFenceRail(pasture.maxX + 2, z, pasture.maxX + 2, nextZ, railHeight1, railMaterial);
+                const rightRail2 = this.createFenceRail(pasture.maxX + 2, z, pasture.maxX + 2, nextZ, railHeight2, railMaterial);
+                if (rightRail1) pastureElements.push(rightRail1);
+                if (rightRail2) pastureElements.push(rightRail2);
             }
         }
         
-        // Add corner posts to connect with boundary fence
-        // Left corner post
+        // Add corner posts at the front (gate side) to connect with boundary fence
         const leftCornerPost = new THREE.Mesh(fencePostGeometry, fencePostMaterial);
-        leftCornerPost.position.set(pasture.minX - 2, 1.75, pasture.minZ + 2);
+        leftCornerPost.position.set(pasture.minX - 2, 1.75, endZ);
         leftCornerPost.castShadow = true;
         this.scene.add(leftCornerPost);
         pastureElements.push(leftCornerPost);
         
-        // Right corner post  
         const rightCornerPost = new THREE.Mesh(fencePostGeometry, fencePostMaterial);
-        rightCornerPost.position.set(pasture.maxX + 2, 1.75, pasture.minZ + 2);
+        rightCornerPost.position.set(pasture.maxX + 2, 1.75, endZ);
         rightCornerPost.castShadow = true;
         this.scene.add(rightCornerPost);
         pastureElements.push(rightCornerPost);
         
-        // Connect corner posts to the last side fence posts
-        const lastSideZ = pasture.minZ + 2 + postSpacing;
-        this.createFenceRail(pasture.minX - 2, lastSideZ, pasture.minX - 2, pasture.minZ + 2, railHeight1, railMaterial);
-        this.createFenceRail(pasture.minX - 2, lastSideZ, pasture.minX - 2, pasture.minZ + 2, railHeight2, railMaterial);
-        this.createFenceRail(pasture.maxX + 2, lastSideZ, pasture.maxX + 2, pasture.minZ + 2, railHeight1, railMaterial);
-        this.createFenceRail(pasture.maxX + 2, lastSideZ, pasture.maxX + 2, pasture.minZ + 2, railHeight2, railMaterial);
-        
-        // Connect the nearest boundary fence posts to gate posts to close the gaps
-        const gateLeftPost = -4; // Gate left post position (gate width/2 = 4)
-        const gateRightPost = 4; // Gate right post position (gate width/2 = 4)
-        const gateZ = 100; // Gate is at z = 100
-        
-        // The nearest boundary fence posts to the gate are at x = -10 and x = +10
-        const nearestLeftBoundaryPost = -10;
-        const nearestRightBoundaryPost = 10;
-        const boundaryZ = 100; // Boundary fence is at z = 100
-        
-        // Left side connection from nearest boundary post to gate post
-        this.createFenceRail(nearestLeftBoundaryPost, boundaryZ, gateLeftPost, gateZ, railHeight1, railMaterial);
-        this.createFenceRail(nearestLeftBoundaryPost, boundaryZ, gateLeftPost, gateZ, railHeight2, railMaterial);
-        
-        // Right side connection from nearest boundary post to gate post
-        this.createFenceRail(nearestRightBoundaryPost, boundaryZ, gateRightPost, gateZ, railHeight1, railMaterial);
-        this.createFenceRail(nearestRightBoundaryPost, boundaryZ, gateRightPost, gateZ, railHeight2, railMaterial);
+        // NOTE: In competitive mode, the pasture fences connect to the boundary fence,
+        // not to gate posts. The gate openings are handled by the boundary fence logic.
+        // The old code that connected to hardcoded gate positions has been removed.
     }
     
     addPastureComfortFeatures(pasture, pastureElements) {
@@ -467,5 +824,34 @@ export class StructureBuilder {
         });
         
         // Tree removed from pen area for better gameplay
+    }
+    
+    /**
+     * Blend two hex colors
+     * @param {string} color1 - First color in hex format (#rrggbb)
+     * @param {string} color2 - Second color in hex format (#rrggbb)
+     * @param {number} ratio - Blend ratio (0-1, where 0 = color1, 1 = color2)
+     * @returns {string} - Blended color in hex format
+     */
+    blendColors(color1, color2, ratio) {
+        const hex = (color) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        };
+        
+        const rgb1 = hex(color1);
+        const rgb2 = hex(color2);
+        
+        if (!rgb1 || !rgb2) return color1;
+        
+        const r = Math.round(rgb1.r * (1 - ratio) + rgb2.r * ratio);
+        const g = Math.round(rgb1.g * (1 - ratio) + rgb2.g * ratio);
+        const b = Math.round(rgb1.b * (1 - ratio) + rgb2.b * ratio);
+        
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
 } 

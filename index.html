@@ -670,6 +670,79 @@
             margin-top: 10px;
         }
         
+        /* Game Mode Selection Styles */
+        .game-mode-selection {
+            margin: 15px 0;
+        }
+        
+        .game-mode-selection > label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .radio-label {
+            display: flex !important;
+            align-items: flex-start;
+            cursor: pointer;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            background: #f9f9f9;
+        }
+        
+        .radio-label:hover {
+            border-color: #00BFFF;
+            background: #f0f8ff;
+        }
+        
+        .radio-label input[type="radio"] {
+            width: auto !important;
+            margin-right: 10px;
+            margin-bottom: 0 !important;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        
+        .radio-label input[type="radio"]:checked + .radio-text,
+        .radio-label:has(input[type="radio"]:checked) {
+            border-color: #00BFFF;
+            background: #e3f2fd;
+            font-weight: bold;
+        }
+        
+        .radio-label:has(input[type="radio"]:checked) {
+            border-color: #00BFFF;
+            background: #e3f2fd;
+        }
+        
+        /* Mobile responsive for game mode selection */
+        @media (max-width: 768px) {
+            .radio-label {
+                padding: 8px;
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .radio-group {
+                gap: 8px;
+            }
+            
+            .radio-label {
+                padding: 6px;
+                font-size: 0.85rem;
+            }
+        }
+        
         .error-message {
             color: #F44336;
             font-size: 0.9rem;
@@ -1552,6 +1625,195 @@
             color: #F44336 !important;
         }
         
+        /* Competitive Mode Scoreboard Styles */
+        .competitive-player {
+            flex-direction: column;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .competitive-player .player-name {
+            margin-bottom: 2px;
+            font-size: 11px;
+        }
+        
+        .competitive-player.leader .player-name {
+            color: #FFD700;
+            font-weight: bold;
+        }
+        
+        .competitive-player.you .player-name {
+            color: #2196F3;
+        }
+        
+        .player-score {
+            font-size: 10px;
+            background: rgba(255,255,255,0.2);
+            padding: 1px 4px;
+            border-radius: 3px;
+            align-self: flex-end;
+            margin-top: 2px;
+        }
+        
+        .competitive-player.leader .player-score {
+            background: rgba(255,215,0,0.3);
+            color: #FFD700;
+        }
+        
+        .competitive-player.you .player-score {
+            background: rgba(33,150,243,0.3);
+            color: #2196F3;
+        }
+        
+        .score-progress {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            margin: 2px 0;
+            overflow: hidden;
+        }
+        
+        .score-progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .score-progress-fill.leader {
+            background: linear-gradient(90deg, #FFD700, #FFA000);
+        }
+        
+        .score-progress-fill.you {
+            background: linear-gradient(90deg, #2196F3, #1976D2);
+        }
+        
+        .score-summary {
+            text-align: center;
+            padding: 4px 0;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            margin-top: 4px;
+            font-size: 10px;
+            color: #CCCCCC;
+        }
+        
+        /* Competitive Completion Styles */
+        .competitive-completion {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: white;
+            text-align: center;
+        }
+        
+        .completion-content {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border-radius: 15px;
+            border: 3px solid #4CAF50;
+            max-width: 500px;
+            margin: 20px;
+        }
+        
+        .completion-title.winner {
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        .completion-title.participant {
+            color: #CCCCCC;
+        }
+        
+        .completion-subtitle {
+            font-size: 1.5rem;
+            margin: 15px 0;
+            color: #FFFFFF;
+        }
+        
+        .completion-message {
+            font-size: 1.1rem;
+            margin: 15px 0;
+            color: #CCCCCC;
+        }
+        
+        .final-scores {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        
+        .final-scores h3 {
+            margin: 0 0 10px 0;
+            color: #FFFFFF;
+        }
+        
+        .scores-list {
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            color: #CCCCCC;
+        }
+        
+        .restart-button {
+            background: #00BFFF;
+            border: 2px solid #FFFFFF;
+            color: #FFFFFF;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .restart-button:hover {
+            background: #FFFFFF;
+            color: #00BFFF;
+            border: 2px solid #00BFFF;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #FFD700; }
+            to { text-shadow: 0 0 30px #FFD700, 0 0 40px #FFD700; }
+        }
+        
+        /* Competitive completion styling for existing completion message */
+        #completion-message.competitive-completion {
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #4CAF50;
+            padding: 30px;
+            border-radius: 15px;
+        }
+        
+        #completion-message.competitive-completion.winner {
+            border-color: #FFD700;
+        }
+        
+        .competitive-title {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .competitive-title.winner {
+            color: #FFD700;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        .competitive-title.participant {
+            color: #CCCCCC;
+        }
+        
         /* Mobile responsive multiplayer HUD */
         @media (max-width: 768px) {
             #multiplayer-hud {
@@ -1574,6 +1836,46 @@
             
             #connection-indicator {
                 font-size: 8px;
+            }
+            
+            /* Mobile competitive scoreboard */
+            .competitive-player .player-name {
+                font-size: 9px;
+            }
+            
+            .player-score {
+                font-size: 8px;
+            }
+            
+            .score-progress {
+                height: 6px;
+            }
+            
+            .score-summary {
+                font-size: 8px;
+            }
+            
+            /* Mobile competitive completion */
+            .completion-content {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .completion-title {
+                font-size: 1.8rem;
+            }
+            
+            .completion-subtitle {
+                font-size: 1.2rem;
+            }
+            
+            .completion-message {
+                font-size: 0.9rem;
+            }
+            
+            .restart-button {
+                padding: 12px 24px;
+                font-size: 1rem;
             }
         }
     </style>
@@ -1610,9 +1912,9 @@
                             <div class="stat">Range: ●●●○○</div>
                         </div>
                     </div>
-                    <div class="dog-card" data-dog="rory">
+                    <div class="dog-card" data-dog="rauri">
                         <div class="dog-avatar">🐕</div>
-                        <h4>Rory</h4>
+                        <h4>Rauri</h4>
                         <p class="dog-breed">Australian Shepherd</p>
                         <p class="dog-description">Powerful with extended range</p>
                         <div class="dog-stats">
@@ -1662,6 +1964,20 @@
                         <option value="3" selected>3 Players</option>
                         <option value="4">4 Players</option>
                     </select>
+                    
+                    <div class="game-mode-selection">
+                        <label>Game Mode:</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="game-mode" value="cooperative" checked>
+                                🤝 Cooperative (200 sheep, shared goal)
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="game-mode" value="competitive">
+                                🏆 Competitive (2P: race to 101, 3-4P: highest score)
+                            </label>
+                        </div>
+                    </div>
                     
                     <div class="room-privacy">
                         <label class="checkbox-label">

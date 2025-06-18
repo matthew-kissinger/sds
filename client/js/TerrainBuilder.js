@@ -8,23 +8,49 @@ export class TerrainBuilder {
         this.scene = scene;
         this.grassMaterial = null;
         this.grassInstanceCount = 0;
+        this.grassInstancedMesh = null;
+        this.terrainMesh = null;
+        this.environmentDetails = [];
+        this.trees = []; // Track trees for removal
+    }
+    
+    /**
+     * Remove all existing trees from the scene
+     */
+    clearTrees() {
+        console.log(`🗑️ Removing ${this.trees.length} existing trees`);
+        
+        this.trees.forEach(tree => {
+            this.scene.remove(tree);
+            // Dispose of geometry and materials to free memory
+            if (tree.geometry) tree.geometry.dispose();
+            if (tree.material) {
+                if (Array.isArray(tree.material)) {
+                    tree.material.forEach(mat => mat.dispose());
+                } else {
+                    tree.material.dispose();
+                }
+            }
+        });
+        
+        this.trees = []; // Clear the tracking array
     }
     
     createTerrain() {
-        // Create flat terrain - extended to match grass coverage
-        const terrainGeometry = new THREE.PlaneGeometry(1000, 1000);
+        const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
         const terrainMaterial = new THREE.MeshPhongMaterial({
-            color: 0x4a7c4a,
-            emissive: 0x1a3a1a,
+            color: 0x567d46,
+            emissive: 0x0f1a0f,
             emissiveIntensity: 0.1,
-            shininess: 0
+            flatShading: false
         });
         
         const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
         terrain.rotation.x = -Math.PI / 2;
-        terrain.position.y = 0;
         terrain.receiveShadow = true;
         this.scene.add(terrain);
+        
+        this.terrainMesh = terrain;
         
         return terrain;
     }
@@ -152,10 +178,12 @@ export class TerrainBuilder {
         grassMesh.receiveShadow = true;
         this.scene.add(grassMesh);
         
+        this.grassInstancedMesh = grassMesh;
+        
         return grassMesh;
     }
     
-    createTrees() {
+    createTrees(competitivePastures = null) {
         // Tree trunk material
         const trunkMaterial = new THREE.MeshPhongMaterial({
             color: 0x4a3a2a,
@@ -184,6 +212,28 @@ export class TerrainBuilder {
                 flatShading: true
             })
         ];
+
+        // Helper function to check if a position is in any pasture area
+        const isInPastureArea = (x, z) => {
+            // Standard single-player pasture avoidance
+            if (z > 100 && z < 135 && Math.abs(x) < 35) {
+                return true;
+            }
+            
+            // Check competitive pastures if provided
+            if (competitivePastures && Array.isArray(competitivePastures)) {
+                for (const pasture of competitivePastures) {
+                    // Add buffer around pasture area to avoid trees too close to gates
+                    const buffer = 15; // 15 unit buffer around pastures
+                    if (x >= pasture.minX - buffer && x <= pasture.maxX + buffer &&
+                        z >= pasture.minZ - buffer && z <= pasture.maxZ + buffer) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        };
 
         // Helper to add slight noise to a spherical geometry for a fluffier canopy
         const addCanopyNoise = (geometry, amplitude = 0.4) => {
@@ -219,7 +269,9 @@ export class TerrainBuilder {
 
             // Keep play area clear
             if (Math.abs(x) < 120 && Math.abs(z) < 120) continue;
-            if (z > 100 && z < 135 && Math.abs(x) < 35) continue;
+            
+            // Avoid all pasture areas (single-player and competitive)
+            if (isInPastureArea(x, z)) continue;
 
             // Trunk
             const trunkHeight = 7 + Math.random() * 5;
@@ -265,7 +317,9 @@ export class TerrainBuilder {
             const z = Math.sin(angle) * distance;
 
             if (Math.abs(x) < 120 && Math.abs(z) < 120) continue;
-            if (z > 100 && z < 135 && Math.abs(x) < 35) continue;
+            
+            // Avoid all pasture areas (single-player and competitive)
+            if (isInPastureArea(x, z)) continue;
 
             // Trunk
             const trunkHeight = 5 + Math.random() * 3;
@@ -307,6 +361,8 @@ export class TerrainBuilder {
             }
         }
 
+        console.log(`🌳 Created ${trees.length} trees, avoiding ${competitivePastures ? competitivePastures.length + ' competitive + 1 standard' : '1 standard'} pasture areas`);
+        this.trees = trees; // Track trees for removal
         return trees;
     }
     
@@ -377,6 +433,8 @@ export class TerrainBuilder {
             this.scene.add(rock);
             rocks.push(rock);
         }
+        
+        this.environmentDetails = rocks;
         
         return rocks;
     }

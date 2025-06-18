@@ -14,7 +14,10 @@ export class GameState {
             maxZ: 100
         };
         
-        // Gate and pasture configuration
+        // Game mode ('solo', 'multiplayer', 'competitive')
+        this.gameMode = 'solo';
+        
+        // Gate and pasture configuration (cooperative mode)
         this.gate = {
             position: new Vector2D(0, 100), // At the fence border
             width: 8,
@@ -36,6 +39,10 @@ export class GameState {
             minZ: 102,
             maxZ: 130
         };
+        
+        // Competitive mode support
+        this.competitiveGates = []; // Array of gate configurations for competitive mode
+        this.playerScores = {}; // playerId -> sheep count for competitive mode
         
         // Simulation parameters
         this.params = {
@@ -93,8 +100,8 @@ export class GameState {
         this.optimizedSheepSystem.update(
             deltaTime,
             this.gameActive ? this.sheepdog : null, // Only pass sheepdog if game is active
-            this.gameActive ? this.gate : null,     // Only enable gate mechanics if game is active
-            this.gameActive ? this.pasture : null,  // Only enable pasture mechanics if game is active
+            this.gameActive ? this.getGateForSheepBehavior() : null,     // Use appropriate gate for current mode
+            this.gameActive ? this.getPastureForSheepBehavior() : null,  // Use appropriate pasture for current mode
             this.bounds,  // Always pass bounds so sheep stay in field
             this.params,  // Always pass params so sheep can flock
             true, // enableIndividualBleating
@@ -111,7 +118,7 @@ export class GameState {
                 for (let sheep of this.sheep) {
                     // Check if sheep has passed gate
                     if (!sheep.hasPassedGate && !sheep.isRetiring) {
-                        if (sheep.checkGatePassageAndRetire(this.gate.passageZone, this.pasture)) {
+                        if (sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior().passageZone, this.getPastureForSheepBehavior())) {
                             // Sheep just passed through the gate
                             this.sheepRetired++;
                             
@@ -160,6 +167,14 @@ export class GameState {
         // Only update UI if game is active and not paused
         if (!this.gameActive || this.isPaused) return;
         
+        if (this.gameMode === 'competitive') {
+            this.updateCompetitiveUI();
+        } else {
+            this.updateCooperativeUI();
+        }
+    }
+    
+    updateCooperativeUI() {
         // Update desktop sheep count
         const sheepCountElement = document.getElementById('sheep-count');
         if (sheepCountElement) {
@@ -173,7 +188,53 @@ export class GameState {
         }
     }
     
-    showCompletionMessage(finalTime, isNewRecord) {
+    updateCompetitiveUI() {
+        // In competitive mode, show "your sheep" count vs total
+        const myPlayerId = this.getCurrentPlayerId();
+        const myScore = this.getPlayerScore(myPlayerId) || 0;
+        const totalRetired = Object.values(this.playerScores).reduce((sum, score) => sum + score, 0);
+        
+        // Update desktop sheep count to show personal score
+        const sheepCountElement = document.getElementById('sheep-count');
+        if (sheepCountElement) {
+            sheepCountElement.textContent = `${myScore} (yours)`;
+        }
+        
+        // Update mobile sheep count with competitive info
+        const mobileSheepCountElement = document.getElementById('mobile-sheep-count');
+        if (mobileSheepCountElement) {
+            const playerCount = Object.keys(this.playerScores).length;
+            
+            if (playerCount === 2) {
+                // 2-player mode: show race progress
+                const winThreshold = Math.ceil(this.totalSheep / 2); // 101 for 200 sheep
+                mobileSheepCountElement.textContent = `Your sheep: ${myScore}/${winThreshold}`;
+            } else {
+                // 3-4 player mode: show total progress
+                mobileSheepCountElement.textContent = `Yours: ${myScore} | Total: ${totalRetired}/${this.totalSheep}`;
+            }
+        }
+    }
+    
+    // Helper method to get current player ID (used by multiplayer UI)
+    getCurrentPlayerId() {
+        // This should be set by the multiplayer system
+        return this.currentPlayerId || null;
+    }
+    
+    setCurrentPlayerId(playerId) {
+        this.currentPlayerId = playerId;
+    }
+    
+    showCompletionMessage(finalTime, isNewRecord, competitiveData = null) {
+        if (this.gameMode === 'competitive' && competitiveData) {
+            this.showCompetitiveCompletionMessage(competitiveData, finalTime);
+        } else {
+            this.showCooperativeCompletionMessage(finalTime, isNewRecord);
+        }
+    }
+    
+    showCooperativeCompletionMessage(finalTime, isNewRecord) {
         let message = 'All sheep have been guided to the pasture!';
         
         if (finalTime !== null) {
@@ -202,6 +263,77 @@ export class GameState {
         }
     }
     
+    showCompetitiveCompletionMessage(competitiveData, finalTime = null) {
+        const { winner, winType, finalScores, isComplete } = competitiveData;
+        
+        if (!isComplete) {
+            console.warn('showCompetitiveCompletionMessage called but game not complete');
+            return;
+        }
+        
+        const myPlayerId = this.getCurrentPlayerId();
+        const isWinner = winner === myPlayerId;
+        
+        // Build completion message
+        let message = '';
+        let title = '';
+        
+        if (isWinner) {
+            title = '🏆 VICTORY! 🏆';
+            message = 'You won the competition!';
+        } else {
+            title = '🥈 Game Complete';
+            message = `Player ${winner} won the competition!`;
+        }
+        
+        // Add win condition explanation
+        if (winType === 'race') {
+            const winThreshold = Math.ceil(this.totalSheep / 2);
+            message += `\nFirst to ${winThreshold} sheep wins!`;
+        } else {
+            message += '\nHighest score when all sheep collected!';
+        }
+        
+        // Add time information if available
+        if (finalTime !== null) {
+            const timeStr = this.formatTime(finalTime);
+            message += `\nTime: ${timeStr}`;
+        }
+        
+        // Build final scores display
+        const scoresArray = Object.entries(finalScores).sort(([,a], [,b]) => b - a);
+        message += '\n\nFinal Scores:';
+        scoresArray.forEach(([playerId, score], index) => {
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
+            const isYou = playerId === myPlayerId;
+            message += `\n${medal} Player ${playerId}${isYou ? ' (You)' : ''}: ${score} sheep`;
+        });
+        
+        const completionElement = document.getElementById('completion-message');
+        if (completionElement) {
+            completionElement.innerHTML = 
+                `<h2 class="competitive-title ${isWinner ? 'winner' : 'participant'}">${title}</h2>` +
+                message.replace(/\n/g, '<br>') + 
+                '<br><br><button id="competitive-restart-button">Play Again</button>';
+            completionElement.style.display = 'block';
+            
+            // Add competitive completion styling
+            completionElement.classList.add('competitive-completion');
+            if (isWinner) {
+                completionElement.classList.add('winner');
+            }
+            
+            // Add event listener for restart button
+            const restartButton = document.getElementById('competitive-restart-button');
+            if (restartButton) {
+                restartButton.addEventListener('click', () => {
+                    // Trigger a full restart to start screen
+                    location.reload();
+                });
+            }
+        }
+    }
+    
     formatTime(timeInSeconds) {
         const minutes = Math.floor(timeInSeconds / 60);
         const seconds = Math.floor(timeInSeconds % 60);
@@ -214,10 +346,46 @@ export class GameState {
     }
     
     getGate() {
+        // For competitive mode, return all gates; for cooperative, return single gate
+        if (this.gameMode === 'competitive' && this.competitiveGates.length > 0) {
+            return this.competitiveGates;
+        }
         return this.gate;
     }
     
     getPasture() {
+        // For competitive mode, return all pastures; for cooperative, return single pasture
+        if (this.gameMode === 'competitive' && this.competitiveGates.length > 0) {
+            return this.competitiveGates.map(gate => gate.pasture);
+        }
+        return this.pasture;
+    }
+    
+    // New getters for competitive mode
+    getCompetitiveGates() {
+        return this.competitiveGates;
+    }
+    
+    getPlayerScores() {
+        return this.playerScores;
+    }
+    
+    // Support both single gate (cooperative) and multiple gates (competitive)
+    getGateForSheepBehavior() {
+        // For sheep behavior, we need to determine the closest gate
+        if (this.gameMode === 'competitive' && this.competitiveGates.length > 0) {
+            // Return all competitive gates - sheep will use closest gate logic
+            return this.competitiveGates;
+        }
+        return this.gate;
+    }
+    
+    getPastureForSheepBehavior() {
+        // For sheep behavior, we need to determine appropriate pasture
+        if (this.gameMode === 'competitive' && this.competitiveGates.length > 0) {
+            // Return all competitive pastures - sheep will use appropriate pasture based on gate
+            return this.competitiveGates.map(gate => gate.pasture);
+        }
         return this.pasture;
     }
     
@@ -249,12 +417,17 @@ export class GameState {
         return this.gameCompleted;
     }
     
-    startGame(mode = 'solo') {
+    startGame(mode = 'solo', competitiveData = null) {
         this.gameMode = mode; // Store the game mode
         this.gameActive = true;
         this.gameCompleted = false;
         this.sheepRetired = 0;
         this.isPaused = false; // Ensure game starts unpaused
+        
+        // Initialize competitive mode data if provided
+        if (mode === 'competitive' && competitiveData) {
+            this.initializeCompetitiveMode(competitiveData);
+        }
         
         // Reset all sheep to their starting positions and states
         if (this.optimizedSheepSystem) {
@@ -263,7 +436,99 @@ export class GameState {
         
         if (mode === 'multiplayer') {
             console.log('Game started in multiplayer mode with 200 sheep');
+        } else if (mode === 'competitive') {
+            console.log(`Game started in competitive mode with ${Object.keys(this.playerScores).length} players`);
         }
+    }
+    
+    // Initialize competitive mode with gates and player scores
+    initializeCompetitiveMode(competitiveData) {
+        const { competitiveGates, playerScores } = competitiveData;
+        
+        if (!competitiveGates || !Array.isArray(competitiveGates)) {
+            throw new Error('Competitive mode requires valid gates array');
+        }
+        
+        if (!playerScores || typeof playerScores !== 'object') {
+            throw new Error('Competitive mode requires valid player scores object');
+        }
+        
+        this.competitiveGates = competitiveGates;
+        this.playerScores = { ...playerScores }; // Create a copy
+        
+        console.log(`Competitive mode initialized with ${competitiveGates.length} gates and ${Object.keys(playerScores).length} players`);
+    }
+    
+    // Update player score in competitive mode
+    updatePlayerScore(playerId, increment = 1) {
+        if (this.gameMode !== 'competitive') {
+            console.warn('updatePlayerScore called in non-competitive mode');
+            return;
+        }
+        
+        if (!this.playerScores.hasOwnProperty(playerId)) {
+            console.warn(`Player ${playerId} not found in player scores`);
+            return;
+        }
+        
+        this.playerScores[playerId] += increment;
+        
+        // Update total retired count
+        this.sheepRetired = Object.values(this.playerScores).reduce((sum, score) => sum + score, 0);
+    }
+    
+    // Get player's score in competitive mode
+    getPlayerScore(playerId) {
+        if (this.gameMode !== 'competitive') {
+            return 0;
+        }
+        
+        return this.playerScores[playerId] || 0;
+    }
+    
+    // Check if competitive mode win conditions are met
+    checkCompetitiveCompletion() {
+        if (this.gameMode !== 'competitive') {
+            return { isComplete: false };
+        }
+        
+        const playerCount = Object.keys(this.playerScores).length;
+        const scores = Object.values(this.playerScores);
+        const maxScore = Math.max(...scores);
+        const totalRetired = scores.reduce((sum, score) => sum + score, 0);
+        
+        // 2 players: First to 101 sheep wins (or 50.5% of total)
+        if (playerCount === 2) {
+            const winThreshold = Math.ceil(this.totalSheep / 2); // 101 for 200 sheep
+            if (maxScore >= winThreshold) {
+                const winner = Object.keys(this.playerScores).find(playerId => this.playerScores[playerId] === maxScore);
+                return {
+                    isComplete: true,
+                    winner,
+                    winType: 'race',
+                    finalScores: { ...this.playerScores }
+                };
+            }
+        }
+        
+        // 3-4 players: Highest score when all sheep collected
+        if (playerCount >= 3) {
+            if (totalRetired >= this.totalSheep) {
+                const winner = Object.keys(this.playerScores).find(playerId => this.playerScores[playerId] === maxScore);
+                return {
+                    isComplete: true,
+                    winner,
+                    winType: 'highest_score',
+                    finalScores: { ...this.playerScores }
+                };
+            }
+        }
+        
+        return {
+            isComplete: false,
+            winner: null,
+            winType: null
+        };
     }
     
     isGameActive() {
@@ -279,6 +544,11 @@ export class GameState {
         }
     }
     
+    setGameMode(mode) {
+        this.gameMode = mode;
+        console.log(`GameState mode set to: ${mode}`);
+    }
+    
     reset() {
         this.sheep = [];
         this.sheepdog = null;
@@ -287,5 +557,11 @@ export class GameState {
         this.gameActive = false;
         this.isPaused = false;
         this.optimizedSheepSystem = null;
+        
+        // Reset competitive mode data
+        this.gameMode = 'solo';
+        this.competitiveGates = [];
+        this.playerScores = {};
+        this.currentPlayerId = null;
     }
 } 

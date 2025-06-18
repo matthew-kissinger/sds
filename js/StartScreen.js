@@ -282,6 +282,7 @@ export class StartScreen {
         const roomName = this.roomNameInput.value.trim() || 'Sheep Herding Room';
         const maxPlayers = parseInt(this.maxPlayersSelect.value);
         const isPrivate = this.privateRoomCheckbox.checked;
+        const gameMode = document.querySelector('input[name="game-mode"]:checked')?.value || 'cooperative';
         const playerName = 'Player'; // TODO: Get from input or localStorage
         
         this.playUIClick();
@@ -297,7 +298,8 @@ export class StartScreen {
             await this.networkManager.createRoom(playerName, {
                 roomName: roomName,
                 maxPlayers: maxPlayers,
-                isPublic: !isPrivate
+                isPublic: !isPrivate,
+                gameMode: gameMode
             }, this.selectedDog);
             
             // Room creation success - lobby transition handled by onRoomUpdate callback
@@ -494,7 +496,7 @@ export class StartScreen {
     // Load dog selection from localStorage if available
     loadDogSelection() {
         const savedDog = localStorage.getItem('selectedDog');
-        if (savedDog && ['jep', 'rory', 'pip'].includes(savedDog)) {
+        if (savedDog && ['jep', 'rauri', 'pip'].includes(savedDog)) {
             this.selectDog(savedDog);
         }
     }

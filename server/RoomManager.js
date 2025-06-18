@@ -55,18 +55,32 @@ export class RoomManager {
     }
 
     /**
+     * Validate game mode
+     */
+    validateGameMode(gameMode) {
+        const validModes = ['cooperative', 'competitive'];
+        return validModes.includes(gameMode);
+    }
+
+    /**
      * Create a new room
      */
     createRoom(hostPlayerId, roomSettings = {}, hostDogType = 'jep') {
         const {
             name = 'Sheepdog Game',
             maxPlayers = 4,
-            isPublic = false
+            isPublic = false,
+            gameMode = 'cooperative'
         } = roomSettings;
 
         // Validate maxPlayers
         if (maxPlayers < 2 || maxPlayers > 4) {
             throw new Error('Room must allow 2-4 players');
+        }
+
+        // Validate game mode
+        if (!this.validateGameMode(gameMode)) {
+            throw new Error('Invalid game mode. Must be "cooperative" or "competitive"');
         }
 
         // Check if player is already in a room
@@ -75,7 +89,7 @@ export class RoomManager {
         }
 
         const roomCode = this.generateRoomCode();
-        const room = new Room(roomCode, hostPlayerId, { name, maxPlayers, isPublic }, hostDogType);
+        const room = new Room(roomCode, hostPlayerId, { name, maxPlayers, isPublic, gameMode }, hostDogType);
         
         this.rooms.set(roomCode, room);
         this.playerRooms.set(hostPlayerId, roomCode);
@@ -84,7 +98,7 @@ export class RoomManager {
             this.publicRooms.add(roomCode);
         }
 
-        console.log(`✅ Room ${roomCode} created by ${hostPlayerId} (${isPublic ? 'public' : 'private'})`);
+        console.log(`✅ Room ${roomCode} created by ${hostPlayerId} (${isPublic ? 'public' : 'private'}, ${gameMode} mode)`);
         return room;
     }
 
@@ -289,6 +303,7 @@ export class Room {
         this.name = settings.name || 'Sheepdog Game';
         this.maxPlayers = settings.maxPlayers || 4;
         this.isPublic = settings.isPublic || false;
+        this.gameMode = settings.gameMode || 'cooperative';
         
         this.players = new Map(); // playerId -> PlayerInfo
         this.state = 'waiting'; // 'waiting', 'in-game', 'finished'
@@ -300,6 +315,8 @@ export class Room {
         
         // Add the host as the first player
         this.addPlayer(hostId, 'Host', hostDogType);
+        
+        console.log(`🏠 Room ${roomCode} initialized with game mode: ${this.gameMode}`);
     }
 
     addPlayer(playerId, playerName = 'Anonymous', dogType = 'jep') {
@@ -382,6 +399,7 @@ export class Room {
             hostId: this.hostId,
             maxPlayers: this.maxPlayers,
             isPublic: this.isPublic,
+            gameMode: this.gameMode,
             state: this.state,
             playerCount: this.players.size,
             players: Array.from(this.players.values()).map(p => ({

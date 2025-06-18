@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Vector2D } from './Vector2D.js';
 
 /**
  * SceneManager - Handles Three.js scene setup, lighting, and camera management
@@ -38,6 +39,17 @@ export class SceneManager {
         this.minCameraDistance = 20;
         this.maxCameraDistance = 150;
         this.mobileControls = null;
+        this.competitiveCameraDirection = null; // Store competitive gate direction for camera positioning
+        
+        // Player color system
+        this.playerColors = new Map(); // playerId -> color
+        this.competitivePlayerColors = [
+            0xFF0000, // Red
+            0x0000FF, // Blue  
+            0x00FF00, // Green
+            0xFFFF00  // Yellow
+        ];
+        this.coloredMeshes = new Map(); // playerId -> array of meshes with applied colors
         
         this.init();
     }
@@ -47,7 +59,7 @@ export class SceneManager {
         this.scene.background = new THREE.Color(0x87CEEB); // Sky blue
         this.scene.fog = new THREE.Fog(0x87CEEB, 200, 600); // Extended fog for larger world
         
-        // Setup camera - adjusted for larger field
+        // Setup camera - adjusted for larger field (default position for solo/cooperative mode)
         this.camera.position.set(0, 60, -60);
         this.camera.lookAt(0, 0, 0);
         
@@ -88,7 +100,16 @@ export class SceneManager {
     
     updateCamera(sheepdog) {
         // Update camera to follow sheepdog - adjusted for dynamic zoom
-        const cameraOffset = new THREE.Vector3(0, this.cameraDistance, -this.cameraDistance);
+        let cameraOffset;
+        
+        // Use competitive camera offset if we have a stored competitive direction
+        if (this.competitiveCameraDirection) {
+            cameraOffset = this.getCompetitiveCameraOffset();
+        } else {
+            // Default camera offset for solo/cooperative mode
+            cameraOffset = new THREE.Vector3(0, this.cameraDistance, -this.cameraDistance);
+        }
+        
         const targetPosition = new THREE.Vector3(
             sheepdog.position.x,
             0,
@@ -97,6 +118,38 @@ export class SceneManager {
         
         this.camera.position.lerp(targetPosition.clone().add(cameraOffset), 0.05);
         this.camera.lookAt(targetPosition);
+    }
+    
+    /**
+     * Get camera offset for competitive mode based on gate direction
+     */
+    getCompetitiveCameraOffset() {
+        const distance = this.cameraDistance;
+        const height = this.cameraDistance; // Use dynamic height for proper zoom behavior
+        
+        switch (this.competitiveCameraDirection) {
+            case 'north':
+                // Gate at north, camera offset to south
+                return new THREE.Vector3(0, height, -distance);
+            case 'south':
+                // Gate at south, camera offset to north
+                return new THREE.Vector3(0, height, distance);
+            case 'east':
+                // Gate at east, camera offset to west
+                return new THREE.Vector3(-distance, height, 0);
+            case 'west':
+                // Gate at west, camera offset to east
+                return new THREE.Vector3(distance, height, 0);
+            case 'southeast':
+                // Gate at southeast, camera offset to northwest
+                return new THREE.Vector3(-distance * 0.7, height, distance * 0.7);
+            case 'southwest':
+                // Gate at southwest, camera offset to northeast
+                return new THREE.Vector3(distance * 0.7, height, distance * 0.7);
+            default:
+                // Fallback to default
+                return new THREE.Vector3(0, height, -distance);
+        }
     }
     
     // Set mobile controls reference for zoom integration
@@ -178,5 +231,285 @@ export class SceneManager {
     
     getRenderer() {
         return this.renderer;
+    }
+    
+    /**
+     * Initialize player colors for competitive mode
+     * @param {Array} playerIds - Array of player IDs
+     * @param {Array} gateColors - Optional array of colors from gate configuration
+     */
+    initializePlayerColors(playerIds, gateColors = null) {
+        console.log(`🎨 Initializing player colors for ${playerIds.length} players`);
+        
+        this.playerColors.clear();
+        
+        playerIds.forEach((playerId, index) => {
+            let playerColor;
+            
+            if (gateColors && gateColors[index] !== undefined) {
+                // Use colors from gate configuration if provided
+                playerColor = gateColors[index];
+            } else {
+                // Use default competitive colors
+                playerColor = this.competitivePlayerColors[index % this.competitivePlayerColors.length];
+            }
+            
+            this.playerColors.set(playerId, playerColor);
+            console.log(`Player ${playerId} assigned color: 0x${playerColor.toString(16).toUpperCase()}`);
+        });
+    }
+    
+    /**
+     * Get player color
+     * @param {string} playerId - Player ID
+     * @returns {number} - Color as hex number
+     */
+    getPlayerColor(playerId) {
+        return this.playerColors.get(playerId) || 0x888888; // Default gray
+    }
+    
+    /**
+     * Apply player color to sheepdog mesh
+     * @param {string} playerId - Player ID  
+     * @param {THREE.Mesh} sheepdog - Sheepdog mesh or object with mesh property
+     */
+    applyPlayerColorToSheepdog(playerId, sheepdog) {
+        const playerColor = this.getPlayerColor(playerId);
+        
+        if (!playerColor) {
+            console.warn(`No color found for player ${playerId}`);
+            return;
+        }
+        
+        // Get the actual mesh object
+        const mesh = sheepdog.mesh || sheepdog;
+        
+        if (!mesh || !mesh.material) {
+            console.warn(`Invalid mesh for player ${playerId}`);
+            return;
+        }
+        
+        // Store original materials if not already stored
+        if (!mesh.userData.originalMaterials) {
+            if (Array.isArray(mesh.material)) {
+                mesh.userData.originalMaterials = mesh.material.map(mat => mat.clone());
+            } else {
+                mesh.userData.originalMaterials = mesh.material.clone();
+            }
+        }
+        
+        // Apply player color as tint to materials
+        if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((material, index) => {
+                if (material.color) {
+                    // Blend original color with player color (20% player color, 80% original)
+                    const originalColor = mesh.userData.originalMaterials[index].color;
+                    material.color.setHex(this.blendColors(originalColor.getHex(), playerColor, 0.2));
+                    
+                    // Add slight emissive glow in player color
+                    if (material.emissive) {
+                        material.emissive.setHex(playerColor);
+                        material.emissiveIntensity = 0.05;
+                    }
+                }
+            });
+        } else {
+            if (mesh.material.color) {
+                // Blend original color with player color
+                const originalColor = mesh.userData.originalMaterials.color;
+                mesh.material.color.setHex(this.blendColors(originalColor.getHex(), playerColor, 0.2));
+                
+                // Add slight emissive glow in player color
+                if (mesh.material.emissive) {
+                    mesh.material.emissive.setHex(playerColor);
+                    mesh.material.emissiveIntensity = 0.05;
+                }
+            }
+        }
+        
+        // Track this mesh for cleanup
+        if (!this.coloredMeshes.has(playerId)) {
+            this.coloredMeshes.set(playerId, []);
+        }
+        this.coloredMeshes.get(playerId).push(mesh);
+        
+        console.log(`Applied color 0x${playerColor.toString(16).toUpperCase()} to player ${playerId}'s sheepdog`);
+    }
+    
+    /**
+     * Remove player color from sheepdog (restore original materials)
+     * @param {string} playerId - Player ID
+     */
+    removePlayerColor(playerId) {
+        const meshes = this.coloredMeshes.get(playerId);
+        
+        if (!meshes) return;
+        
+        meshes.forEach(mesh => {
+            if (mesh.userData.originalMaterials) {
+                mesh.material = mesh.userData.originalMaterials;
+                delete mesh.userData.originalMaterials;
+            }
+        });
+        
+        this.coloredMeshes.delete(playerId);
+        console.log(`Removed color for player ${playerId}`);
+    }
+    
+    /**
+     * Clear all player colors
+     */
+    clearAllPlayerColors() {
+        for (const playerId of this.coloredMeshes.keys()) {
+            this.removePlayerColor(playerId);
+        }
+        this.playerColors.clear();
+        console.log('🧹 Cleared all player colors');
+    }
+    
+    /**
+     * Blend two colors
+     * @param {number} color1 - First color as hex number
+     * @param {number} color2 - Second color as hex number  
+     * @param {number} ratio - Blend ratio (0-1, where 0 = color1, 1 = color2)
+     * @returns {number} - Blended color as hex number
+     */
+    blendColors(color1, color2, ratio) {
+        const r1 = (color1 >> 16) & 0xff;
+        const g1 = (color1 >> 8) & 0xff;
+        const b1 = color1 & 0xff;
+        
+        const r2 = (color2 >> 16) & 0xff;
+        const g2 = (color2 >> 8) & 0xff;
+        const b2 = color2 & 0xff;
+        
+        const r = Math.round(r1 * (1 - ratio) + r2 * ratio);
+        const g = Math.round(g1 * (1 - ratio) + g2 * ratio);
+        const b = Math.round(b1 * (1 - ratio) + b2 * ratio);
+        
+        return (r << 16) | (g << 8) | b;
+    }
+    
+    /**
+     * Get all assigned player colors
+     * @returns {Map} - Map of playerId to color
+     */
+    getPlayerColors() {
+        return new Map(this.playerColors);
+    }
+    
+    /**
+     * Set camera position based on player's assigned gate in competitive mode
+     * @param {Object} playerGate - The gate assigned to the current player
+     */
+    setCompetitiveCameraPosition(playerGate) {
+        if (!playerGate || !playerGate.direction) {
+            console.warn('Invalid player gate for competitive camera setup');
+            return;
+        }
+
+        // Store the competitive camera direction for use in updateCamera
+        this.competitiveCameraDirection = playerGate.direction;
+        
+        // Set initial camera position and look at center
+        const cameraHeight = this.cameraDistance;
+        const cameraDistance = this.cameraDistance;
+        
+        // Position camera on opposite side of the gate, looking towards center
+        switch (playerGate.direction) {
+            case 'north':
+                // Gate at north (0, 100), camera looks from south
+                this.camera.position.set(0, cameraHeight, -cameraDistance);
+                break;
+            case 'south':
+                // Gate at south (0, -100), camera looks from north  
+                this.camera.position.set(0, cameraHeight, cameraDistance);
+                break;
+            case 'east':
+                // Gate at east (100, 0), camera looks from west
+                this.camera.position.set(-cameraDistance, cameraHeight, 0);
+                break;
+            case 'west':
+                // Gate at west (-100, 0), camera looks from east
+                this.camera.position.set(cameraDistance, cameraHeight, 0);
+                break;
+            case 'southeast':
+                // Gate at southeast (70, -70), camera looks from northwest
+                this.camera.position.set(-cameraDistance * 0.7, cameraHeight, cameraDistance * 0.7);
+                break;
+            case 'southwest':
+                // Gate at southwest (-70, -70), camera looks from northeast
+                this.camera.position.set(cameraDistance * 0.7, cameraHeight, cameraDistance * 0.7);
+                break;
+            default:
+                console.warn(`Unknown gate direction: ${playerGate.direction}, using default camera position`);
+                this.camera.position.set(0, cameraHeight, -cameraDistance);
+                break;
+        }
+        
+        // Always look towards the center of the field
+        this.camera.lookAt(0, 0, 0);
+        
+        console.log(`🎥 Set competitive camera for ${playerGate.direction} gate: position(${this.camera.position.x}, ${this.camera.position.y}, ${this.camera.position.z}), direction stored: ${this.competitiveCameraDirection}`);
+    }
+
+    /**
+     * Reset camera to default position for solo/cooperative modes
+     */
+    resetCameraToDefault() {
+        // Clear competitive camera direction
+        this.competitiveCameraDirection = null;
+        
+        this.camera.position.set(0, 60, -60);
+        this.camera.lookAt(0, 0, 0);
+        console.log('🎥 Reset camera to default position for solo/cooperative mode');
+    }
+
+    /**
+     * Transform movement direction based on competitive camera orientation
+     * @param {Vector2D} movementDirection - Original movement direction from input
+     * @returns {Vector2D} - Transformed movement direction
+     */
+    transformMovementForCompetitive(movementDirection) {
+        if (!this.competitiveCameraDirection || !movementDirection) {
+            return movementDirection; // No transformation needed
+        }
+
+        // Use the imported Vector2D class for creating new instances
+        const x = movementDirection.x;
+        const z = movementDirection.z;
+
+        switch (this.competitiveCameraDirection) {
+            case 'north':
+                // Default orientation - no transformation needed
+                return movementDirection;
+                
+            case 'south':
+                // Facing south - flip forward/backward, left/right
+                return new Vector2D(-x, -z);
+                
+            case 'east':
+                // Facing east - rotate 90° clockwise (forward becomes right)
+                return new Vector2D(-z, x);
+                
+            case 'west':
+                // Facing west - rotate 90° counter-clockwise (forward becomes left)
+                return new Vector2D(z, -x);
+                
+            case 'southeast':
+                // Facing southeast - rotate 135° clockwise
+                const seX = (-x - z) * 0.7071; // cos(135°) ≈ -0.7071
+                const seZ = (x - z) * 0.7071;  // sin(135°) ≈ 0.7071
+                return new Vector2D(seX, seZ);
+                
+            case 'southwest':
+                // Facing southwest - rotate 45° clockwise  
+                const swX = (-x + z) * 0.7071; // cos(45°) ≈ 0.7071
+                const swZ = (-x - z) * 0.7071; // sin(45°) ≈ 0.7071
+                return new Vector2D(swX, swZ);
+                
+            default:
+                return movementDirection;
+        }
     }
 } 

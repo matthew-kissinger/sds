@@ -17,8 +17,19 @@ export class AudioManager {
         this.sounds = {
             uiClick: null,
             rewardingChime: null,
-            sheepBleat: null,
-            sheepdogBark: null
+            // Multiple sheep bleats for variety
+            sheepBleats: [],
+            // Dog-specific barking sounds
+            dogBarks: {
+                jep: null,
+                pip: null,
+                rauri: null
+            },
+            // Competitive mode sounds
+            scoreSound: null,
+            opponentScoreSound: null,
+            winSound: null,
+            loseSound: null
         };
         
         // Music tracks
@@ -27,7 +38,11 @@ export class AudioManager {
             gameplay1: null,
             gameplay2: null,
             gameplay3: null,
-            winMusic: null
+            winMusic: null,
+            // Competitive mode music
+            competitive1: null,
+            competitive2: null,
+            competitiveEndgame: null
         };
         
         // Track loading state
@@ -45,22 +60,31 @@ export class AudioManager {
         this.soundVolumeMultipliers = {
             uiClick: 1.0,
             rewardingChime: 1.0,
-            sheepBleat: 0.5,        // 50% lower than normal
-            sheepdogBark: 0.5       // 50% lower than normal
+            sheepBleats: 0.5,        // 50% lower than normal
+            dogBarks: 0.5,           // 50% lower than normal
+            scoreSound: 0.8,        // Scoring sound
+            opponentScoreSound: 0.6, // Opponent scoring (quieter)
+            winSound: 1.0,          // Victory sound
+            loseSound: 0.8          // Loss sound
         };
         
         // Mute state
         this.isMuted = false;
         this.currentMusic = null; // Track currently playing music
+        this.gameMode = 'solo'; // Track current game mode for music selection
         
         // Cooldown tracking to prevent sound spam
         this.lastPlayTimes = {
-            sheepBleat: 0,
-            sheepdogBark: 0
+            sheepBleats: 0,
+            dogBarks: 0,
+            scoreSound: 0,
+            opponentScoreSound: 0
         };
         this.cooldowns = {
-            sheepBleat: 500, // 500ms cooldown
-            sheepdogBark: 300 // 300ms cooldown
+            sheepBleats: 500, // 500ms cooldown
+            dogBarks: 300, // 300ms cooldown
+            scoreSound: 200, // 200ms cooldown for scoring sounds
+            opponentScoreSound: 200
         };
         
         // Load mute preference from localStorage
@@ -77,11 +101,29 @@ export class AudioManager {
         const soundFiles = {
             uiClick: 'assets/sounds/11L-clean_UI_click,_wood-1748393658157.mp3',
             rewardingChime: 'assets/sounds/11L-short_rewarding_chim-1748393597911.mp3',
-            sheepBleat: 'assets/sounds/11L-agitated_sheep_bleat-1748393501154.mp3',
-            sheepdogBark: 'assets/sounds/11L-short_sharp_sheep_do-1748393459422.mp3'
+            // Competitive mode sounds
+            scoreSound: 'assets/sounds/score.mp3',
+            opponentScoreSound: 'assets/sounds/opponent_score.mp3',
+            winSound: 'assets/sounds/win.wav',
+            loseSound: 'assets/sounds/lose_comp.mp3'
+        };
+
+        // Multiple sheep bleat sound files for variety
+        const sheepBleatFiles = [
+            'assets/sounds/11L-agitated_sheep_bleat-1748393501154.mp3',
+            'assets/sounds/11L-Short_sheep_bleat,_c-1749516139042.mp3',
+            'assets/sounds/11L-Short_cartoon_sheep_-1749516345212.mp3',
+            'assets/sounds/11L-Short,_cheerful_shee-1749516791666.mp3'
+        ];
+
+        // Dog-specific bark sound files
+        const dogBarkFiles = {
+            jep: 'assets/sounds/11L-short_sharp_sheep_do-1748393459422.mp3',
+            pip: 'assets/sounds/pip_bark.mp3',
+            rauri: 'assets/sounds/rauri_bark.mp3'
         };
         
-        // Load each sound
+        // Load regular sound files
         Object.keys(soundFiles).forEach(soundKey => {
             const promise = new Promise((resolve, reject) => {
                 this.loader.load(
@@ -116,11 +158,85 @@ export class AudioManager {
             
             this.loadingPromises.push(promise);
         });
+
+        // Load sheep bleat sounds
+        sheepBleatFiles.forEach((filePath, index) => {
+            const promise = new Promise((resolve, reject) => {
+                this.loader.load(
+                    filePath,
+                    (buffer) => {
+                        // Create Audio object and add to sheep bleats array
+                        const sheepBleat = new THREE.Audio(this.listener);
+                        sheepBleat.setBuffer(buffer);
+                        
+                        // Apply sheep bleat volume multiplier
+                        const volumeMultiplier = this.soundVolumeMultipliers.sheepBleats || 0.5;
+                        sheepBleat.setVolume(this.masterVolume * this.sfxVolume * volumeMultiplier);
+                        
+                        this.sounds.sheepBleats.push(sheepBleat);
+                        
+                        console.log(`Loaded sheep bleat ${index + 1}: ${filePath.split('/').pop()}`);
+                        resolve();
+                    },
+                    (progress) => {
+                        // Loading progress
+                    },
+                    (error) => {
+                        console.warn(`Failed to load sheep bleat ${filePath}:`, error);
+                        // Create a dummy audio object to prevent errors
+                        this.sounds.sheepBleats.push({ 
+                            play: () => {}, 
+                            stop: () => {}, 
+                            isPlaying: false 
+                        });
+                        resolve(); // Resolve anyway to not block other sounds
+                    }
+                );
+            });
+            
+            this.loadingPromises.push(promise);
+        });
+
+        // Load dog bark sounds
+        Object.keys(dogBarkFiles).forEach(dogType => {
+            const promise = new Promise((resolve, reject) => {
+                this.loader.load(
+                    dogBarkFiles[dogType],
+                    (buffer) => {
+                        // Create Audio object for this dog type
+                        this.sounds.dogBarks[dogType] = new THREE.Audio(this.listener);
+                        this.sounds.dogBarks[dogType].setBuffer(buffer);
+                        
+                        // Apply dog bark volume multiplier
+                        const volumeMultiplier = this.soundVolumeMultipliers.dogBarks || 0.5;
+                        this.sounds.dogBarks[dogType].setVolume(this.masterVolume * this.sfxVolume * volumeMultiplier);
+                        
+                        console.log(`Loaded dog bark for ${dogType}: ${dogBarkFiles[dogType].split('/').pop()}`);
+                        resolve();
+                    },
+                    (progress) => {
+                        // Loading progress
+                    },
+                    (error) => {
+                        console.warn(`Failed to load dog bark for ${dogType}:`, error);
+                        // Create a dummy audio object to prevent errors
+                        this.sounds.dogBarks[dogType] = { 
+                            play: () => {}, 
+                            stop: () => {}, 
+                            isPlaying: false 
+                        };
+                        resolve(); // Resolve anyway to not block other sounds
+                    }
+                );
+            });
+            
+            this.loadingPromises.push(promise);
+        });
         
         // Wait for all sounds to load
         Promise.all(this.loadingPromises).then(() => {
             this.isLoaded = true;
-            console.log('All sounds loaded successfully');
+            console.log(`All sounds loaded successfully: ${this.sounds.sheepBleats.length} sheep bleats, ${Object.keys(this.sounds.dogBarks).length} dog barks`);
         }).catch((error) => {
             console.warn('Some sounds failed to load:', error);
             this.isLoaded = true; // Still mark as loaded to allow game to continue
@@ -136,7 +252,11 @@ export class AudioManager {
             gameplay1: 'assets/sounds/SDS1.wav',
             gameplay2: 'assets/sounds/SDS2.wav',
             gameplay3: 'assets/sounds/SDS3.wav',
-            winMusic: 'assets/sounds/win.wav'
+            winMusic: 'assets/sounds/win.wav',
+            // Competitive mode music
+            competitive1: 'assets/sounds/comp1.wav',
+            competitive2: 'assets/sounds/comp2.wav',
+            competitiveEndgame: 'assets/sounds/comp_endgame.wav'
         };
         
         // Load each music track
@@ -194,6 +314,15 @@ export class AudioManager {
     }
     
     /**
+     * Set the current game mode for appropriate music selection
+     * @param {string} mode - Game mode ('solo', 'multiplayer', 'competitive')
+     */
+    setGameMode(mode) {
+        this.gameMode = mode;
+        console.log(`AudioManager game mode set to: ${mode}`);
+    }
+    
+    /**
      * Play UI click sound
      */
     playUIClick() {
@@ -212,17 +341,70 @@ export class AudioManager {
     }
     
     /**
+     * Play scoring sound for competitive mode
+     */
+    playScoreSound() {
+        const now = Date.now();
+        if (now - this.lastPlayTimes.scoreSound < this.cooldowns.scoreSound) {
+            return; // Still in cooldown
+        }
+        
+        if (this.sounds.scoreSound && !this.sounds.scoreSound.isPlaying) {
+            this.sounds.scoreSound.play();
+            this.lastPlayTimes.scoreSound = now;
+        }
+    }
+    
+    /**
+     * Play opponent scoring sound for competitive mode
+     */
+    playOpponentScoreSound() {
+        const now = Date.now();
+        if (now - this.lastPlayTimes.opponentScoreSound < this.cooldowns.opponentScoreSound) {
+            return; // Still in cooldown
+        }
+        
+        if (this.sounds.opponentScoreSound && !this.sounds.opponentScoreSound.isPlaying) {
+            this.sounds.opponentScoreSound.play();
+            this.lastPlayTimes.opponentScoreSound = now;
+        }
+    }
+    
+    /**
+     * Play victory sound
+     */
+    playVictorySound() {
+        if (this.sounds.winSound && !this.sounds.winSound.isPlaying) {
+            this.sounds.winSound.play();
+        }
+    }
+    
+    /**
+     * Play loss sound
+     */
+    playLossSound() {
+        if (this.sounds.loseSound && !this.sounds.loseSound.isPlaying) {
+            this.sounds.loseSound.play();
+        }
+    }
+    
+    /**
      * Play sheep bleat sound with cooldown to prevent spam
      */
     playSheepBleat() {
         const now = Date.now();
-        if (now - this.lastPlayTimes.sheepBleat < this.cooldowns.sheepBleat) {
+        if (now - this.lastPlayTimes.sheepBleats < this.cooldowns.sheepBleats) {
             return; // Still in cooldown
         }
         
-        if (this.sounds.sheepBleat && !this.sounds.sheepBleat.isPlaying) {
-            this.sounds.sheepBleat.play();
-            this.lastPlayTimes.sheepBleat = now;
+        // Randomly select a sheep bleat sound
+        if (this.sounds.sheepBleats.length > 0) {
+            const randomBleat = this.sounds.sheepBleats[Math.floor(Math.random() * this.sounds.sheepBleats.length)];
+            
+            if (randomBleat && !randomBleat.isPlaying) {
+                randomBleat.play();
+                this.lastPlayTimes.sheepBleats = now;
+            }
         }
     }
     
@@ -232,29 +414,34 @@ export class AudioManager {
      */
     playGroupSheepBleats(sheepCount) {
         const now = Date.now();
-        if (now - this.lastPlayTimes.sheepBleat < this.cooldowns.sheepBleat) {
+        if (now - this.lastPlayTimes.sheepBleats < this.cooldowns.sheepBleats) {
             return; // Still in cooldown
         }
+        
+        if (this.sounds.sheepBleats.length === 0) return;
         
         // Limit to 5 simultaneous bleats for audio clarity
         const maxBleats = Math.min(sheepCount, 5);
         
-        // Play first bleat immediately
-        if (this.sounds.sheepBleat) {
-            this.sounds.sheepBleat.play();
+        // Play first bleat immediately (random selection)
+        const firstBleat = this.sounds.sheepBleats[Math.floor(Math.random() * this.sounds.sheepBleats.length)];
+        if (firstBleat) {
+            firstBleat.play();
         }
         
         // Schedule additional bleats with staggered timing
         for (let i = 1; i < maxBleats; i++) {
             setTimeout(() => {
-                if (this.sounds.sheepBleat) {
+                // Select a random bleat from our array
+                const randomBleat = this.sounds.sheepBleats[Math.floor(Math.random() * this.sounds.sheepBleats.length)];
+                if (randomBleat && randomBleat.buffer) {
                     // Create a new audio instance for overlapping sounds
                     const additionalBleat = new THREE.Audio(this.listener);
-                    additionalBleat.setBuffer(this.sounds.sheepBleat.buffer);
+                    additionalBleat.setBuffer(randomBleat.buffer);
                     
                     // Apply the same volume multiplier as the main sheep bleat sound
                     const baseVolume = this.isMuted ? 0 : this.masterVolume * this.sfxVolume;
-                    const volumeMultiplier = this.soundVolumeMultipliers.sheepBleat || 1.0;
+                    const volumeMultiplier = this.soundVolumeMultipliers.sheepBleats || 0.5;
                     const finalVolume = baseVolume * volumeMultiplier * (0.7 + Math.random() * 0.3); // Slight volume variation
                     
                     additionalBleat.setVolume(finalVolume);
@@ -263,21 +450,26 @@ export class AudioManager {
             }, i * (100 + Math.random() * 150)); // 100-250ms staggered delays
         }
         
-        this.lastPlayTimes.sheepBleat = now;
+        this.lastPlayTimes.sheepBleats = now;
     }
     
     /**
-     * Play sheepdog bark sound with cooldown
+     * Play dog bark sound with cooldown based on dog type
+     * @param {string} dogType - Type of dog ('jep', 'pip', 'rauri')
      */
-    playSheepdogBark() {
+    playSheepdogBark(dogType = 'jep') {
         const now = Date.now();
-        if (now - this.lastPlayTimes.sheepdogBark < this.cooldowns.sheepdogBark) {
+        if (now - this.lastPlayTimes.dogBarks < this.cooldowns.dogBarks) {
             return; // Still in cooldown
         }
         
-        if (this.sounds.sheepdogBark && !this.sounds.sheepdogBark.isPlaying) {
-            this.sounds.sheepdogBark.play();
-            this.lastPlayTimes.sheepdogBark = now;
+        // Use the specific dog's bark sound
+        const dogBark = this.sounds.dogBarks[dogType] || this.sounds.dogBarks.jep; // Fallback to jep
+        
+        if (dogBark && !dogBark.isPlaying) {
+            dogBark.play();
+            this.lastPlayTimes.dogBarks = now;
+            console.log(`🐕 ${dogType} barked!`);
         }
     }
     
@@ -293,16 +485,36 @@ export class AudioManager {
     }
     
     /**
-     * Play random gameplay background music
+     * Play appropriate gameplay background music based on game mode
      */
     playGameplayMusic() {
-        const gameplayTracks = [this.music.gameplay1, this.music.gameplay2, this.music.gameplay3];
+        let gameplayTracks;
+        
+        if (this.gameMode === 'competitive') {
+            // Use competitive music tracks
+            gameplayTracks = [this.music.competitive1, this.music.competitive2];
+        } else {
+            // Use normal gameplay tracks
+            gameplayTracks = [this.music.gameplay1, this.music.gameplay2, this.music.gameplay3];
+        }
+        
         const randomTrack = gameplayTracks[Math.floor(Math.random() * gameplayTracks.length)];
         
         if (randomTrack && !randomTrack.isPlaying) {
             this.stopAllMusic();
             this.currentMusic = randomTrack;
             randomTrack.play();
+        }
+    }
+    
+    /**
+     * Play competitive endgame music for tense final moments
+     */
+    playCompetitiveEndgameMusic() {
+        if (this.music.competitiveEndgame && !this.music.competitiveEndgame.isPlaying) {
+            this.stopAllMusic();
+            this.currentMusic = this.music.competitiveEndgame;
+            this.music.competitiveEndgame.play();
         }
     }
     
@@ -458,7 +670,25 @@ export class AudioManager {
         // Update sound effects with specific volume multipliers
         Object.keys(this.sounds).forEach(soundKey => {
             const sound = this.sounds[soundKey];
-            if (sound && sound.setVolume) {
+            
+            if (Array.isArray(sound)) {
+                // Handle sheep bleats array
+                const volumeMultiplier = this.soundVolumeMultipliers[soundKey] || 1.0;
+                sound.forEach(soundItem => {
+                    if (soundItem && soundItem.setVolume) {
+                        soundItem.setVolume(baseSFXVolume * volumeMultiplier);
+                    }
+                });
+            } else if (sound && typeof sound === 'object' && sound.jep !== undefined) {
+                // Handle dog barks object
+                const volumeMultiplier = this.soundVolumeMultipliers[soundKey] || 1.0;
+                Object.values(sound).forEach(barkSound => {
+                    if (barkSound && barkSound.setVolume) {
+                        barkSound.setVolume(baseSFXVolume * volumeMultiplier);
+                    }
+                });
+            } else if (sound && sound.setVolume) {
+                // Handle regular sounds
                 const volumeMultiplier = this.soundVolumeMultipliers[soundKey] || 1.0;
                 sound.setVolume(baseSFXVolume * volumeMultiplier);
             }
@@ -477,7 +707,22 @@ export class AudioManager {
      */
     stopAllSounds() {
         Object.values(this.sounds).forEach(sound => {
-            if (sound && sound.isPlaying) {
+            if (Array.isArray(sound)) {
+                // Handle sheep bleats array
+                sound.forEach(soundItem => {
+                    if (soundItem && soundItem.isPlaying) {
+                        soundItem.stop();
+                    }
+                });
+            } else if (sound && typeof sound === 'object' && sound.jep !== undefined) {
+                // Handle dog barks object
+                Object.values(sound).forEach(barkSound => {
+                    if (barkSound && barkSound.isPlaying) {
+                        barkSound.stop();
+                    }
+                });
+            } else if (sound && sound.isPlaying) {
+                // Handle regular sounds
                 sound.stop();
             }
         });
