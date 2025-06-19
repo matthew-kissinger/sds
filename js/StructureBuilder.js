@@ -82,132 +82,95 @@ export class StructureBuilder {
         // Clear any existing boundary fence first
         this.clearBoundaryFence();
         
-        // Fence post geometry and material
+        // Store gate info for later connection
+        this.pendingGateConnections = [];
+        
+        // Use the same approach as competitive mode but with a single gate
+        const competitiveGates = [gate]; // Wrap single gate in array
+        
         const postGeometry = new THREE.CylinderGeometry(0.25, 0.25, 3.5, 8);
         const postMaterial = new THREE.MeshPhongMaterial({ 
             color: 0x5a4a3a,
             emissive: 0x1a0a00,
             emissiveIntensity: 0.05
         });
-        
-        // Rail geometry and material
         const railMaterial = new THREE.MeshPhongMaterial({ 
             color: 0x6a5a4a,
             emissive: 0x1a0a00,
             emissiveIntensity: 0.05
         });
-        
-        // Fence parameters
-        const postSpacing = 10; // Distance between posts
-        const postHeight = 3.5;
-        const railHeight1 = 1.2; // Lower rail
-        const railHeight2 = 2.4; // Upper rail
-        
-        const fencePosts = [];
-        
-        // Create fence posts around the perimeter
-        // Bottom edge (z = -100)
-        for (let x = bounds.minX; x <= bounds.maxX; x += postSpacing) {
-            const post = new THREE.Mesh(postGeometry, postMaterial);
-            post.position.set(x, postHeight/2, bounds.minZ);
-            post.castShadow = true;
-            post.receiveShadow = true;
-            this.scene.add(post);
-            this.boundaryFenceElements.push(post); // Track for removal
-            fencePosts.push({x: x, z: bounds.minZ, type: 'bottom'});
-        }
-        
-        // Top edge (z = 100) - connect properly to gate posts
-        for (let x = bounds.minX; x <= bounds.maxX; x += postSpacing) {
-            // Skip posts that would be too close to gate posts
-            const gateLeftPost = gate.position.x - gate.width/2;
-            const gateRightPost = gate.position.x + gate.width/2;
-            
-            if (x < gateLeftPost - 1 || x > gateRightPost + 1) {
-                const post = new THREE.Mesh(postGeometry, postMaterial);
-                post.position.set(x, postHeight/2, bounds.maxZ);
-                post.castShadow = true;
-                post.receiveShadow = true;
-                this.scene.add(post);
-                this.boundaryFenceElements.push(post); // Track for removal
-                fencePosts.push({x: x, z: bounds.maxZ, type: 'top'});
+        const postSpacing = 10;
+        const railHeight1 = 1.2;
+        const railHeight2 = 2.4;
+
+        // Build boundary fence using the same logic as competitive mode
+        const boundaries = [
+            { direction: 'north', start: bounds.minX, end: bounds.maxX, fixedCoord: bounds.maxZ, orientation: 'horizontal' },
+            { direction: 'south', start: bounds.minX, end: bounds.maxX, fixedCoord: bounds.minZ, orientation: 'horizontal' },
+            { direction: 'west', start: bounds.minZ, end: bounds.maxZ, fixedCoord: bounds.minX, orientation: 'vertical' },
+            { direction: 'east', start: bounds.minZ, end: bounds.maxZ, fixedCoord: bounds.maxX, orientation: 'vertical' }
+        ];
+
+        boundaries.forEach(boundary => {
+            // Filter gates that lie on the current boundary
+            const gatesOnBoundary = competitiveGates.filter(gateObj => {
+                const isOnBoundary = (boundary.orientation === 'horizontal')
+                    ? Math.abs(gateObj.position.z - boundary.fixedCoord) < 1
+                    : Math.abs(gateObj.position.x - boundary.fixedCoord) < 1;
+                return isOnBoundary;
+            }).sort((a, b) => {
+                // Sort gates along the boundary line
+                return (boundary.orientation === 'horizontal') ? a.position.x - b.position.x : a.position.z - b.position.z;
+            });
+
+            let currentPos = boundary.start;
+
+            // Build fence segments between gates (same logic as competitive mode)
+            for (const gateObj of gatesOnBoundary) {
+                const gateCenter = (boundary.orientation === 'horizontal') ? gateObj.position.x : gateObj.position.z;
+                const gateStart = gateCenter - gateObj.width / 2;
+                const gateEnd = gateCenter + gateObj.width / 2;
+                
+                if (gateStart > currentPos) {
+                    this.buildFenceRunToGate(currentPos, gateStart, boundary.fixedCoord, boundary.orientation, postGeometry, postMaterial, railMaterial, postSpacing, railHeight1, railHeight2);
+                    
+                    // Store connection info for later
+                    this.pendingGateConnections.push({
+                        boundary: boundary.direction,
+                        orientation: boundary.orientation,
+                        fixedCoord: boundary.fixedCoord,
+                        fenceEndPos: gateStart,
+                        gatePostPos: gateStart,
+                        railMaterial: railMaterial,
+                        railHeight1: railHeight1,
+                        railHeight2: railHeight2,
+                        side: 'left'
+                    });
+                }
+                currentPos = gateEnd;
+                
+                // Store right side connection info
+                this.pendingGateConnections.push({
+                    boundary: boundary.direction,
+                    orientation: boundary.orientation,
+                    fixedCoord: boundary.fixedCoord,
+                    fenceStartPos: gateEnd,
+                    gatePostPos: gateEnd,
+                    railMaterial: railMaterial,
+                    railHeight1: railHeight1,
+                    railHeight2: railHeight2,
+                    side: 'right'
+                });
             }
-        }
-        
-        // Left edge (x = -100)
-        for (let z = bounds.minZ; z <= bounds.maxZ; z += postSpacing) {
-            const post = new THREE.Mesh(postGeometry, postMaterial);
-            post.position.set(bounds.minX, postHeight/2, z);
-            post.castShadow = true;
-            post.receiveShadow = true;
-            this.scene.add(post);
-            this.boundaryFenceElements.push(post); // Track for removal
-            fencePosts.push({x: bounds.minX, z: z, type: 'left'});
-        }
-        
-        // Right edge (x = 100)
-        for (let z = bounds.minZ; z <= bounds.maxZ; z += postSpacing) {
-            const post = new THREE.Mesh(postGeometry, postMaterial);
-            post.position.set(bounds.maxX, postHeight/2, z);
-            post.castShadow = true;
-            post.receiveShadow = true;
-            this.scene.add(post);
-            this.boundaryFenceElements.push(post); // Track for removal
-            fencePosts.push({x: bounds.maxX, z: z, type: 'right'});
-        }
-        
-        // Add horizontal rails between posts
-        // Bottom edge rails
-        for (let x = bounds.minX; x < bounds.maxX; x += postSpacing) {
-            const rail1 = this.createFenceRail(x, bounds.minZ, x + postSpacing, bounds.minZ, railHeight1, railMaterial);
-            const rail2 = this.createFenceRail(x, bounds.minZ, x + postSpacing, bounds.minZ, railHeight2, railMaterial);
-            if (rail1) this.boundaryFenceElements.push(rail1);
-            if (rail2) this.boundaryFenceElements.push(rail2);
-        }
-        
-        // Top edge rails - connect to gate posts properly
-        const gateLeftPost = gate.position.x - gate.width/2;
-        const gateRightPost = gate.position.x + gate.width/2;
-        
-        for (let x = bounds.minX; x < bounds.maxX; x += postSpacing) {
-            const nextX = x + postSpacing;
-            
-            // Left side of gate - connect to left gate post
-            if (nextX <= gateLeftPost + 1) {
-                const endX = (nextX > gateLeftPost - 1) ? gateLeftPost : nextX;
-                const rail1 = this.createFenceRail(x, bounds.maxZ, endX, bounds.maxZ, railHeight1, railMaterial);
-                const rail2 = this.createFenceRail(x, bounds.maxZ, endX, bounds.maxZ, railHeight2, railMaterial);
-                if (rail1) this.boundaryFenceElements.push(rail1);
-                if (rail2) this.boundaryFenceElements.push(rail2);
+
+            // Build the final segment from the last gate to the end of the boundary
+            if (currentPos < boundary.end) {
+                this.buildFenceRunFromGate(currentPos, boundary.end, boundary.fixedCoord, boundary.orientation, postGeometry, postMaterial, railMaterial, postSpacing, railHeight1, railHeight2);
             }
-            
-            // Right side of gate - connect from right gate post
-            if (x >= gateRightPost - 1) {
-                const startX = (x < gateRightPost + 1) ? gateRightPost : x;
-                const rail1 = this.createFenceRail(startX, bounds.maxZ, nextX, bounds.maxZ, railHeight1, railMaterial);
-                const rail2 = this.createFenceRail(startX, bounds.maxZ, nextX, bounds.maxZ, railHeight2, railMaterial);
-                if (rail1) this.boundaryFenceElements.push(rail1);
-                if (rail2) this.boundaryFenceElements.push(rail2);
-            }
-        }
+        });
         
-        // Left edge rails
-        for (let z = bounds.minZ; z < bounds.maxZ; z += postSpacing) {
-            const rail1 = this.createFenceRail(bounds.minX, z, bounds.minX, z + postSpacing, railHeight1, railMaterial);
-            const rail2 = this.createFenceRail(bounds.minX, z, bounds.minX, z + postSpacing, railHeight2, railMaterial);
-            if (rail1) this.boundaryFenceElements.push(rail1);
-            if (rail2) this.boundaryFenceElements.push(rail2);
-        }
-        
-        // Right edge rails
-        for (let z = bounds.minZ; z < bounds.maxZ; z += postSpacing) {
-            const rail1 = this.createFenceRail(bounds.maxX, z, bounds.maxX, z + postSpacing, railHeight1, railMaterial);
-            const rail2 = this.createFenceRail(bounds.maxX, z, bounds.maxX, z + postSpacing, railHeight2, railMaterial);
-            if (rail1) this.boundaryFenceElements.push(rail1);
-            if (rail2) this.boundaryFenceElements.push(rail2);
-        }
-        
-        return fencePosts;
+        // Return empty array for backward compatibility
+        return [];
     }
     
     createFenceRail(x1, z1, x2, z2, height, material) {
@@ -476,50 +439,43 @@ export class StructureBuilder {
 
             let currentPos = boundary.start;
 
-            // Build fence segments between gates
+            // Build fence segments between gates using new methods
             for (const gate of gatesOnBoundary) {
                 const gateCenter = (boundary.orientation === 'horizontal') ? gate.position.x : gate.position.z;
                 const gateStart = gateCenter - gate.width / 2;
                 
                 if (gateStart > currentPos) {
-                    this.buildFenceRun(currentPos, gateStart, boundary.fixedCoord, boundary.orientation, postGeometry, postMaterial, railMaterial, postSpacing, railHeight1, railHeight2);
+                    this.buildFenceRunToGate(currentPos, gateStart, boundary.fixedCoord, boundary.orientation, postGeometry, postMaterial, railMaterial, postSpacing, railHeight1, railHeight2);
                 }
                 currentPos = gateCenter + gate.width / 2;
             }
 
             // Build the final segment from the last gate to the end of the boundary
             if (currentPos < boundary.end) {
-                this.buildFenceRun(currentPos, boundary.end, boundary.fixedCoord, boundary.orientation, postGeometry, postMaterial, railMaterial, postSpacing, railHeight1, railHeight2);
+                this.buildFenceRunFromGate(currentPos, boundary.end, boundary.fixedCoord, boundary.orientation, postGeometry, postMaterial, railMaterial, postSpacing, railHeight1, railHeight2);
             }
         });
     }
     
     /**
-     * Builds a continuous run of fence posts and rails between two points on a boundary.
-     * This helper ensures rails connect perfectly to endpoints (corners or gate posts).
-     * @private
+     * Build fence run that ends at a gate (doesn't create post at gate position)
      */
-    buildFenceRun(start, end, fixedCoord, orientation, postGeom, postMat, railMat, spacing, h1, h2) {
-        if (Math.abs(start - end) < 0.1) return; // Skip tiny segments
+    buildFenceRunToGate(start, end, fixedCoord, orientation, postGeom, postMat, railMat, spacing, h1, h2) {
+        if (Math.abs(start - end) < 0.1) return;
 
-        // Create the starting post for this run
         this.createPost(start, fixedCoord, orientation, postGeom, postMat);
 
-        // Create intermediate posts and rails at intervals
         let currentPos = start;
         while (currentPos + spacing < end) {
             const nextPos = currentPos + spacing;
-            
-            // Create the next post
             this.createPost(nextPos, fixedCoord, orientation, postGeom, postMat);
             
-            // Create rails between current and next post
             if (orientation === 'horizontal') {
                 const rail1 = this.createFenceRail(currentPos, fixedCoord, nextPos, fixedCoord, h1, railMat);
                 const rail2 = this.createFenceRail(currentPos, fixedCoord, nextPos, fixedCoord, h2, railMat);
                 if (rail1) this.boundaryFenceElements.push(rail1);
                 if (rail2) this.boundaryFenceElements.push(rail2);
-            } else { // vertical
+            } else {
                 const rail1 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, nextPos, h1, railMat);
                 const rail2 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, nextPos, h2, railMat);
                 if (rail1) this.boundaryFenceElements.push(rail1);
@@ -529,17 +485,84 @@ export class StructureBuilder {
             currentPos = nextPos;
         }
         
-        // Create the final post at the end of the run
-        this.createPost(end, fixedCoord, orientation, postGeom, postMat);
-        
-        // Create final rails from last intermediate post to end post
+        // DON'T create post at end (gate will create it)
+        // But DO create rails to the gate position if there's a gap
         if (currentPos < end) {
             if (orientation === 'horizontal') {
                 const rail1 = this.createFenceRail(currentPos, fixedCoord, end, fixedCoord, h1, railMat);
                 const rail2 = this.createFenceRail(currentPos, fixedCoord, end, fixedCoord, h2, railMat);
                 if (rail1) this.boundaryFenceElements.push(rail1);
                 if (rail2) this.boundaryFenceElements.push(rail2);
-            } else { // vertical
+            } else {
+                const rail1 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, end, h1, railMat);
+                const rail2 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, end, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            }
+        }
+    }
+    
+    /**
+     * Build fence run that starts from a gate (doesn't create post at gate position)
+     */
+    buildFenceRunFromGate(start, end, fixedCoord, orientation, postGeom, postMat, railMat, spacing, h1, h2) {
+        if (Math.abs(start - end) < 0.1) return;
+
+        // DON'T create post at start (gate created it)
+        
+        let currentPos = start;
+        let firstPost = start + spacing;
+        
+        // Create first post after the gate
+        if (firstPost <= end) {
+            this.createPost(firstPost, fixedCoord, orientation, postGeom, postMat);
+            
+            // Create rails from gate to first post
+            if (orientation === 'horizontal') {
+                const rail1 = this.createFenceRail(start, fixedCoord, firstPost, fixedCoord, h1, railMat);
+                const rail2 = this.createFenceRail(start, fixedCoord, firstPost, fixedCoord, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            } else {
+                const rail1 = this.createFenceRail(fixedCoord, start, fixedCoord, firstPost, h1, railMat);
+                const rail2 = this.createFenceRail(fixedCoord, start, fixedCoord, firstPost, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            }
+            
+            currentPos = firstPost;
+        }
+        
+        // Continue normal fence building
+        while (currentPos + spacing < end) {
+            const nextPos = currentPos + spacing;
+            this.createPost(nextPos, fixedCoord, orientation, postGeom, postMat);
+            
+            if (orientation === 'horizontal') {
+                const rail1 = this.createFenceRail(currentPos, fixedCoord, nextPos, fixedCoord, h1, railMat);
+                const rail2 = this.createFenceRail(currentPos, fixedCoord, nextPos, fixedCoord, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            } else {
+                const rail1 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, nextPos, h1, railMat);
+                const rail2 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, nextPos, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            }
+            
+            currentPos = nextPos;
+        }
+        
+        // Create final post and rails
+        this.createPost(end, fixedCoord, orientation, postGeom, postMat);
+        
+        if (currentPos < end) {
+            if (orientation === 'horizontal') {
+                const rail1 = this.createFenceRail(currentPos, fixedCoord, end, fixedCoord, h1, railMat);
+                const rail2 = this.createFenceRail(currentPos, fixedCoord, end, fixedCoord, h2, railMat);
+                if (rail1) this.boundaryFenceElements.push(rail1);
+                if (rail2) this.boundaryFenceElements.push(rail2);
+            } else {
                 const rail1 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, end, h1, railMat);
                 const rail2 = this.createFenceRail(fixedCoord, currentPos, fixedCoord, end, h2, railMat);
                 if (rail1) this.boundaryFenceElements.push(rail1);
