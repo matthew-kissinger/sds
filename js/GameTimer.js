@@ -11,6 +11,10 @@ export class GameTimer {
         this.pauseStartTime = null;
         this.bestTime = this.loadBestTime();
         
+        // Countdown mode properties
+        this.isCountdown = false;
+        this.countdownDuration = 0;
+        
         this.initializeTimer();
     }
     
@@ -24,6 +28,14 @@ export class GameTimer {
             this.startTime = performance.now();
             this.timerRunning = true;
             this.pausedTime = 0; // Reset paused time when starting
+        }
+    }
+    
+    startCountdown(durationMs) {
+        if (!this.timerRunning) {
+            this.isCountdown = true;
+            this.countdownDuration = durationMs;
+            this.start();
         }
     }
     
@@ -85,10 +97,22 @@ export class GameTimer {
     }
     
     updateTimerDisplay() {
-        const timeToDisplay = this.timerRunning ? this.currentTime : 0;
-        const minutes = Math.floor(timeToDisplay / 60);
-        const seconds = Math.floor(timeToDisplay % 60);
-        const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        let timeToDisplay, formattedTime;
+        
+        if (this.isCountdown && this.timerRunning) {
+            // Countdown mode - show remaining time
+            const remaining = this.getTimeRemaining();
+            timeToDisplay = remaining / 1000; // Convert to seconds
+            const minutes = Math.floor(timeToDisplay / 60);
+            const seconds = Math.floor(timeToDisplay % 60);
+            formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+            // Regular mode - show elapsed time
+            timeToDisplay = this.timerRunning ? this.currentTime : 0;
+            const minutes = Math.floor(timeToDisplay / 60);
+            const seconds = Math.floor(timeToDisplay % 60);
+            formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
         
         // Update desktop timer
         const timerElement = document.getElementById('timer-display');
@@ -206,6 +230,30 @@ export class GameTimer {
         this.isPaused = false;
         this.pausedTime = 0;
         this.pauseStartTime = null;
+        this.isCountdown = false;
+        this.countdownDuration = 0;
         this.updateTimerDisplay();
+    }
+    
+    getTimeRemaining() {
+        if (!this.isCountdown || !this.timerRunning) return 0;
+        
+        const elapsedMs = this.getElapsedTime();
+        const remaining = Math.max(0, this.countdownDuration - elapsedMs);
+        return remaining;
+    }
+    
+    getElapsedTime() {
+        if (!this.timerRunning || !this.startTime) return 0;
+        
+        const currentPausedTime = this.pauseStartTime !== null ? 
+            this.pausedTime + (performance.now() - this.pauseStartTime) : 
+            this.pausedTime;
+            
+        return performance.now() - this.startTime - currentPausedTime;
+    }
+    
+    isTimeExpired() {
+        return this.isCountdown && this.getTimeRemaining() === 0;
     }
 } 

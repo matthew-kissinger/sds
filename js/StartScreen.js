@@ -52,9 +52,8 @@ export class StartScreen {
         
         // Room creation
         this.roomCreation = document.getElementById('room-creation');
-        this.roomNameInput = document.getElementById('room-name');
         this.maxPlayersSelect = document.getElementById('max-players');
-        this.privateRoomCheckbox = document.getElementById('private-room');
+        this.gameModeSelect = document.getElementById('game-mode-select');
         this.createRoomConfirm = document.getElementById('create-room-confirm');
         this.backToOnlineButton = document.getElementById('back-to-online-button');
         
@@ -120,6 +119,12 @@ export class StartScreen {
             if (update.type === 'gameStarted') {
                 // Game started by host
                 this.selectedMode = 'multiplayer';
+                
+                // Store the initial game state if provided
+                if (update.gameState) {
+                    this.initialGameState = update.gameState;
+                }
+                
                 this.startGame();
             } else if (update.type === 'hostChanged') {
                 this.isHost = this.networkManager.isCurrentHost();
@@ -224,7 +229,6 @@ export class StartScreen {
         this.currentScreen = 'create';
         this.hideAllScreens();
         this.roomCreation.style.display = 'block';
-        this.roomNameInput.focus();
     }
     
     showJoinRoom() {
@@ -279,10 +283,10 @@ export class StartScreen {
     
     // Room management methods
     async createRoom() {
-        const roomName = this.roomNameInput.value.trim() || 'Sheep Herding Room';
+        const roomName = this.generateRandomRoomName();
         const maxPlayers = parseInt(this.maxPlayersSelect.value);
-        const isPrivate = this.privateRoomCheckbox.checked;
-        const gameMode = document.querySelector('input[name="game-mode"]:checked')?.value || 'cooperative';
+        const isPrivate = false; // Always public now
+        const gameMode = this.gameModeSelect.value;
         const playerName = 'Player'; // TODO: Get from input or localStorage
         
         this.playUIClick();
@@ -464,6 +468,15 @@ export class StartScreen {
         this.connectionMessage.textContent = message + ' Click back to return to menu.';
     }
     
+    generateRandomRoomName() {
+        const adjectives = ['Happy', 'Fluffy', 'Swift', 'Clever', 'Playful', 'Brave', 'Gentle', 'Mighty', 'Lucky', 'Wise'];
+        const nouns = ['Shepherd', 'Pasture', 'Meadow', 'Hills', 'Valley', 'Field', 'Farm', 'Ranch', 'Prairie', 'Haven'];
+        const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+        const noun = nouns[Math.floor(Math.random() * nouns.length)];
+        const number = Math.floor(Math.random() * 100);
+        return `${adjective} ${noun} ${number}`;
+    }
+    
     playUIClick() {
         if (this.audioManager) {
             this.audioManager.playUIClick();
@@ -565,8 +578,14 @@ export class StartScreen {
             console.log('🎮 Starting game:', {
                 mode: this.selectedMode || 'solo',
                 room: roomData ? roomData.roomCode : 'none',
-                players: roomData ? roomData.players?.length : 0
+                players: roomData ? roomData.players?.length : 0,
+                hasInitialState: !!this.initialGameState
             });
+            
+            // Include initial game state in room data if available
+            if (roomData && this.initialGameState) {
+                roomData.initialGameState = this.initialGameState;
+            }
             
             this.onGameStart(this.selectedMode || 'solo', roomData);
         }

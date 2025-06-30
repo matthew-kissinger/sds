@@ -34,7 +34,7 @@ export class GameState {
             minX: -30,
             maxX: 30,
             minZ: 102,
-            maxZ: 130
+            maxZ: 125  // Reduced from 130 to keep sheep away from back fence
         };
         
         // Simulation parameters

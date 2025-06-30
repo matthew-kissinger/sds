@@ -20,14 +20,15 @@ export function updateSheepRetirements(sheep, gate, pasture) {
     for (let sheepEntity of sheep) {
         // Check if sheep just passed through the gate
         if (!sheepEntity.hasPassedGate && !sheepEntity.isRetiring) {
-            if (checkGatePassage(sheepEntity.position, sheepEntity.velocity, gate.passageZone)) {
+            if (checkGatePassage(sheepEntity.position, sheepEntity.velocity, gate.passageZone, 'north')) {
                 sheepEntity.hasPassedGate = true;
                 sheepEntity.isRetiring = true;
                 
-                // Set retirement target in pasture
+                // Set retirement target in pasture (with margin from edges)
+                const margin = 3; // Keep 3 units away from edges
                 sheepEntity.retirementTarget = new Vector2D(
-                    pasture.minX + Math.random() * (pasture.maxX - pasture.minX),
-                    pasture.centerZ + Math.random() * 20
+                    pasture.minX + margin + Math.random() * (pasture.maxX - pasture.minX - 2 * margin),
+                    pasture.minZ + margin + Math.random() * (pasture.maxZ - pasture.minZ - 2 * margin)
                 );
                 
                 newRetirements++;
@@ -40,6 +41,9 @@ export function updateSheepRetirements(sheep, gate, pasture) {
             if (distanceToTarget < 2) {
                 sheepEntity.retirementTarget = null; // Clear target to enter grazing mode
                 sheepEntity.state = 2; // Set to grazing state
+                // Clear physics for grazing sheep
+                sheepEntity.velocity.set(0, 0);
+                sheepEntity.acceleration.set(0, 0);
             }
         }
         
@@ -201,35 +205,6 @@ export function calculateGameProgress(sheep, totalSheep, pasture) {
         totalRetired: passingGate + inPasture + grazing,
         completionPercentage: ((passingGate + inPasture + grazing) / totalSheep) * 100
     };
-}
-
-/**
- * Reset game state to initial conditions
- * @param {Object} gameState - Current game state
- * @param {Array} initialPositions - Initial sheep positions
- * @returns {Object} - Reset game state
- */
-export function resetGameState(gameState, initialPositions) {
-    // Reset sheep states
-    for (let i = 0; i < gameState.sheep.length; i++) {
-        const sheep = gameState.sheep[i];
-        const initialPos = initialPositions[i] || new Vector2D(-30, -30);
-        
-        sheep.position = initialPos.clone();
-        sheep.velocity = new Vector2D(0, 0);
-        sheep.acceleration = new Vector2D(0, 0);
-        sheep.hasPassedGate = false;
-        sheep.isRetiring = false;
-        sheep.retirementTarget = null;
-        sheep.state = 0; // Active state
-    }
-    
-    // Reset game counters
-    gameState.sheepRetired = 0;
-    gameState.gameCompleted = false;
-    gameState.gameActive = false;
-    
-    return gameState;
 }
 
 /**
@@ -410,11 +385,12 @@ export function calculateBalancedSpawnClusters(competitiveGates, bounds, minDist
             { x: 0, z: -50, description: "South-center neutral zone" }
         );
     } else if (competitiveGates.length === 3) {
-        // 3 players: Central cluster with balanced side clusters
+        // 3 players: Triangular formation with balanced distances from N/E/W gates
         clusters.push(
-            { x: 0, z: -20, description: "Central cluster" },
-            { x: -40, z: 20, description: "West cluster" },
-            { x: 40, z: 20, description: "East cluster" }
+            { x: 0, z: 0, description: "Central cluster" },
+            { x: -40, z: -20, description: "Southwest cluster" },
+            { x: 40, z: -20, description: "Southeast cluster" },
+            { x: 0, z: -50, description: "South cluster" }
         );
     } else if (competitiveGates.length === 4) {
         // 4 players: Diamond formation in center with balanced distances
@@ -478,6 +454,35 @@ export function calculateBalancedSpawnClusters(competitiveGates, bounds, minDist
     }
     
     return validatedClusters;
+}
+
+/**
+ * Reset game state to initial conditions
+ * @param {Object} gameState - Current game state
+ * @param {Array} initialPositions - Initial sheep positions
+ * @returns {Object} - Reset game state
+ */
+export function resetGameState(gameState, initialPositions) {
+    // Reset sheep states
+    for (let i = 0; i < gameState.sheep.length; i++) {
+        const sheep = gameState.sheep[i];
+        const initialPos = initialPositions[i] || new Vector2D(-30, -30);
+        
+        sheep.position = initialPos.clone();
+        sheep.velocity = new Vector2D(0, 0);
+        sheep.acceleration = new Vector2D(0, 0);
+        sheep.hasPassedGate = false;
+        sheep.isRetiring = false;
+        sheep.retirementTarget = null;
+        sheep.state = 0; // Active state
+    }
+    
+    // Reset game counters
+    gameState.sheepRetired = 0;
+    gameState.gameCompleted = false;
+    gameState.gameActive = false;
+    
+    return gameState;
 }
 
 /**
@@ -553,51 +558,51 @@ export function generateCompetitiveGateLayout(playerCount) {
         3: [
             {
                 gate: { x: 0, z: 100 },
-                pasture: { minX: -20, maxX: 20, minZ: 102, maxZ: 125 },
+                pasture: { minX: -30, maxX: 30, minZ: 102, maxZ: 130 },
                 playerId: null,
                 color: 0xFF0000, // Red
                 direction: 'north'
             },
             {
-                gate: { x: 70, z: -70 },
-                pasture: { minX: 50, maxX: 90, minZ: -90, maxZ: -50 },
+                gate: { x: 100, z: 0 },
+                pasture: { minX: 102, maxX: 130, minZ: -30, maxZ: 30 },
                 playerId: null,
                 color: 0x0000FF, // Blue
-                direction: 'southeast'
+                direction: 'east'
             },
             {
-                gate: { x: -70, z: -70 },
-                pasture: { minX: -90, maxX: -50, minZ: -90, maxZ: -50 },
+                gate: { x: -100, z: 0 },
+                pasture: { minX: -130, maxX: -102, minZ: -30, maxZ: 30 },
                 playerId: null,
                 color: 0x00FF00, // Green
-                direction: 'southwest'
+                direction: 'west'
             }
         ],
         4: [
             {
                 gate: { x: 0, z: 100 },
-                pasture: { minX: -15, maxX: 15, minZ: 102, maxZ: 120 },
+                pasture: { minX: -30, maxX: 30, minZ: 102, maxZ: 130 },
                 playerId: null,
                 color: 0xFF0000, // Red
                 direction: 'north'
             },
             {
                 gate: { x: 0, z: -100 },
-                pasture: { minX: -15, maxX: 15, minZ: -120, maxZ: -102 },
+                pasture: { minX: -30, maxX: 30, minZ: -130, maxZ: -102 },
                 playerId: null,
                 color: 0x0000FF, // Blue
                 direction: 'south'
             },
             {
                 gate: { x: 100, z: 0 },
-                pasture: { minX: 102, maxX: 120, minZ: -15, maxZ: 15 },
+                pasture: { minX: 102, maxX: 130, minZ: -30, maxZ: 30 },
                 playerId: null,
                 color: 0x00FF00, // Green
                 direction: 'east'
             },
             {
                 gate: { x: -100, z: 0 },
-                pasture: { minX: -120, maxX: -102, minZ: -15, maxZ: 15 },
+                pasture: { minX: -130, maxX: -102, minZ: -30, maxZ: 30 },
                 playerId: null,
                 color: 0xFFFF00, // Yellow
                 direction: 'west'
@@ -610,18 +615,62 @@ export function generateCompetitiveGateLayout(playerCount) {
     }
     
     // Create full gate objects with passage zones
-    return competitiveLayouts[playerCount].map((layout, index) => ({
-        id: index,
-        position: new Vector2D(layout.gate.x, layout.gate.z),
-        width: 8,
-        height: 4,
-        // Gate passage zone (invisible box for detection)
-        passageZone: {
-            minX: layout.gate.x - 4,
-            maxX: layout.gate.x + 4,
-            minZ: layout.gate.z - 2,
-            maxZ: layout.gate.z + 2
-        },
+    return competitiveLayouts[playerCount].map((layout, index) => {
+        // Calculate passage zone based on gate direction
+        let passageZone;
+        const gateWidth = 8;
+        const gateDepth = 4; // How deep the passage zone extends
+        
+        switch (layout.direction) {
+            case 'north':
+                passageZone = {
+                    minX: layout.gate.x - gateWidth / 2,
+                    maxX: layout.gate.x + gateWidth / 2,
+                    minZ: layout.gate.z - gateDepth,
+                    maxZ: layout.gate.z + gateDepth
+                };
+                break;
+            case 'south':
+                passageZone = {
+                    minX: layout.gate.x - gateWidth / 2,
+                    maxX: layout.gate.x + gateWidth / 2,
+                    minZ: layout.gate.z - gateDepth,
+                    maxZ: layout.gate.z + gateDepth
+                };
+                break;
+            case 'east':
+                passageZone = {
+                    minX: layout.gate.x - gateDepth,
+                    maxX: layout.gate.x + gateDepth,
+                    minZ: layout.gate.z - gateWidth / 2,
+                    maxZ: layout.gate.z + gateWidth / 2
+                };
+                break;
+            case 'west':
+                passageZone = {
+                    minX: layout.gate.x - gateDepth,
+                    maxX: layout.gate.x + gateDepth,
+                    minZ: layout.gate.z - gateWidth / 2,
+                    maxZ: layout.gate.z + gateWidth / 2
+                };
+                break;
+            default:
+                // Default to north/south style
+                passageZone = {
+                    minX: layout.gate.x - gateWidth / 2,
+                    maxX: layout.gate.x + gateWidth / 2,
+                    minZ: layout.gate.z - gateDepth,
+                    maxZ: layout.gate.z + gateDepth
+                };
+        }
+        
+        return {
+            id: index,
+            position: new Vector2D(layout.gate.x, layout.gate.z),
+            width: gateWidth,
+            height: 4,
+            // Gate passage zone (invisible box for detection)
+            passageZone: passageZone,
         pasture: {
             centerZ: (layout.pasture.minZ + layout.pasture.maxZ) / 2,
             minX: layout.pasture.minX,
@@ -632,7 +681,8 @@ export function generateCompetitiveGateLayout(playerCount) {
         playerId: layout.playerId,
         color: layout.color,
         direction: layout.direction
-    }));
+        };
+    });
 }
 
 /**
@@ -681,10 +731,11 @@ export function updateCompetitiveSheepRetirements(sheep, competitiveGates) {
                     sheepEntity.isRetiring = true;
                     sheepEntity.assignedGate = gate.id; // Track which gate sheep went through
                     
-                    // Set retirement target in the appropriate pasture
+                    // Set retirement target in the appropriate pasture (with margin from edges)
+                    const margin = 3; // Keep 3 units away from edges
                     sheepEntity.retirementTarget = new Vector2D(
-                        gate.pasture.minX + Math.random() * (gate.pasture.maxX - gate.pasture.minX),
-                        gate.pasture.centerZ + Math.random() * 10
+                        gate.pasture.minX + margin + Math.random() * (gate.pasture.maxX - gate.pasture.minX - 2 * margin),
+                        gate.pasture.minZ + margin + Math.random() * (gate.pasture.maxZ - gate.pasture.minZ - 2 * margin)
                     );
                     
                     // Award point to the gate's player
@@ -703,6 +754,9 @@ export function updateCompetitiveSheepRetirements(sheep, competitiveGates) {
             if (distanceToTarget < 2) {
                 sheepEntity.retirementTarget = null; // Clear target to enter grazing mode
                 sheepEntity.state = 2; // Set to grazing state
+                // Clear physics for grazing sheep
+                sheepEntity.velocity.set(0, 0);
+                sheepEntity.acceleration.set(0, 0);
             }
         }
         

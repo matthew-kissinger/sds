@@ -27,7 +27,8 @@ import {
     assignGatesToPlayers,
     updateCompetitiveSheepRetirements,
     checkCompetitiveCompletion,
-    createCompetitiveGameState
+    createCompetitiveGameState,
+    checkGatePassage
 } from './shared/index.js';
 
 export class GameSimulation {
@@ -39,13 +40,24 @@ export class GameSimulation {
         this.lastTickTime = 0;
         this.tickInterval = null;
         
-        // Determine if this is competitive mode
+        // Determine game mode
         this.isCompetitive = room.gameMode === 'competitive';
+        this.isTimedMode = room.gameMode === 'timed';
         const playerIds = Array.from(room.players.keys());
         
+        // Timed mode specific properties
+        if (this.isTimedMode) {
+            this.gameStartTime = null;
+            this.gameDuration = 3 * 60 * 1000; // 3 minutes in ms
+            this.sheepRemovalQueue = []; // Track sheep to remove after 5s
+            this.nextSheepId = 200; // For generating new sheep IDs
+        }
+        
         // Initialize game state based on mode
-        if (this.isCompetitive) {
-            console.log(`🏆 Initializing competitive game for ${playerIds.length} players`);
+        if (this.isCompetitive || this.isTimedMode) {
+            const modeEmoji = this.isTimedMode ? '⏱️' : '🏆';
+            const modeName = this.isTimedMode ? 'timed' : 'competitive';
+            console.log(`${modeEmoji} Initializing ${modeName} game for ${playerIds.length} players`);
             this.gameState = createCompetitiveGameState({
                 totalSheep: 200,
                 bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 }
@@ -76,7 +88,8 @@ export class GameSimulation {
         // Initialize simulation state
         this.initializeSimulation();
         
-        console.log(`🎮 Game simulation initialized for room ${room.roomCode} in ${this.isCompetitive ? 'competitive' : 'cooperative'} mode`);
+        const modeName = this.isTimedMode ? 'timed' : (this.isCompetitive ? 'competitive' : 'cooperative');
+        console.log(`🎮 Game simulation initialized for room ${room.roomCode} in ${modeName} mode`);
     }
 
     initializeSimulation() {
@@ -190,6 +203,11 @@ export class GameSimulation {
         this.isRunning = true;
         this.lastTickTime = Date.now();
         
+        // Start game timer for timed mode
+        if (this.isTimedMode) {
+            this.gameStartTime = Date.now();
+        }
+        
         // Start the simulation loop
         this.tickInterval = setInterval(() => {
             this.tick();
@@ -224,6 +242,11 @@ export class GameSimulation {
         
         // Update sheep behavior and movement
         this.updateSheep();
+        
+        // Update timed mode specific logic
+        if (this.isTimedMode) {
+            this.updateTimedMode(currentTime);
+        }
         
         // Check game completion
         this.checkGameCompletion();
@@ -402,42 +425,18 @@ export class GameSimulation {
     updateSheep() {
         // Update each sheep using shared flocking logic
         for (let sheep of this.gameState.sheep) {
-            // Skip sheep that are grazing
-            if (sheep.state === 2) {
-                this.updateGrazingSheep(sheep);
+            // Skip sheep that are retiring or grazing (client handles these)
+            if (sheep.state === 1 || sheep.state === 2) {
+                // Just clear physics to prevent interference
+                sheep.velocity.set(0, 0);
+                sheep.acceleration.set(0, 0);
                 continue;
             }
 
-            // Handle retiring sheep (seeking pasture)
-            if (sheep.isRetiring) {
-                if (sheep.retirementTarget) {
-                    // Seek retirement target in pasture
-                    const desired = sheep.retirementTarget.clone().subtract(sheep.position);
-                    desired.normalize();
-                    desired.multiply(this.sheepConfig.maxSpeed * 0.5); // Slower when retiring
-                    
-                    const steer = desired.subtract(sheep.velocity);
-                    steer.limit(this.sheepConfig.maxForce * 0.5);
-                    sheep.acceleration.add(steer);
-                    
-                    // Check if reached target to transition to grazing
-                    const distanceToTarget = sheep.position.distanceTo(sheep.retirementTarget);
-                    if (distanceToTarget < 2) {
-                        sheep.retirementTarget = null;
-                        sheep.state = 2; // Set to grazing state
-                    }
-                }
-                
-                // Apply pasture containment forces
-                this.applyPastureContainment(sheep);
-                
-                // Skip main flock behavior for retiring sheep
-                this.updateSheepMovementClientStyle(sheep);
-                continue;
-            }
 
-            // Get neighboring sheep for flocking (only for active sheep)
-            const neighbors = getNeighbors(sheep, this.gameState.sheep, this.sheepConfig.perceptionRadius);
+            // Get neighboring sheep for flocking (only consider active sheep)
+            const activeSheep = this.gameState.sheep.filter(s => s.state === 0);
+            const neighbors = getNeighbors(sheep, activeSheep, this.sheepConfig.perceptionRadius);
             
             // Apply flocking behavior
             const flockingForce = calculateFlockingForce(sheep, neighbors, this.sheepConfig);
@@ -465,44 +464,67 @@ export class GameSimulation {
                 sheep.acceleration.add(gateForce);
             }
 
-            // Boundary avoidance (handle competitive vs cooperative mode)
-            let boundaryForce;
-            if (this.isCompetitive && this.gameState.competitiveGates) {
-                // Use multiple gates boundary avoidance for competitive mode
-                boundaryForce = calculateBoundaryAvoidanceWithMultipleGates(
-                    sheep,
-                    this.gameState.bounds,
-                    this.gameState.competitiveGates,
-                    {
-                        margin: 4,
-                        maxSpeed: this.sheepConfig.maxSpeed,
-                        maxForce: this.sheepConfig.maxForce
+            // Boundary avoidance (skip for sheep actively passing through gates)
+            // Check if sheep is in a gate passage zone
+            let inGatePassageZone = false;
+            if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates) {
+                for (const gate of this.gameState.competitiveGates) {
+                    if (sheep.position.x >= gate.passageZone.minX && 
+                        sheep.position.x <= gate.passageZone.maxX &&
+                        sheep.position.z >= gate.passageZone.minZ && 
+                        sheep.position.z <= gate.passageZone.maxZ) {
+                        inGatePassageZone = true;
+                        break;
                     }
-                );
-            } else {
-                // Use single gate boundary avoidance for cooperative mode
-                boundaryForce = calculateBoundaryAvoidanceWithGate(
-                    sheep,
-                    this.gameState.bounds,
-                    this.gameState.gate,
-                    {
-                        margin: 4,
-                        maxSpeed: this.sheepConfig.maxSpeed,
-                        maxForce: this.sheepConfig.maxForce
-                    }
-                );
+                }
+            } else if (this.gameState.gate && this.gameState.gate.passageZone) {
+                const zone = this.gameState.gate.passageZone;
+                inGatePassageZone = sheep.position.x >= zone.minX && 
+                                  sheep.position.x <= zone.maxX &&
+                                  sheep.position.z >= zone.minZ && 
+                                  sheep.position.z <= zone.maxZ;
             }
-            sheep.acceleration.add(boundaryForce);
+            
+            // Only apply boundary forces if not in gate passage zone
+            if (!inGatePassageZone) {
+                let boundaryForce;
+                if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates) {
+                    // Use multiple gates boundary avoidance for competitive/timed mode
+                    boundaryForce = calculateBoundaryAvoidanceWithMultipleGates(
+                        sheep,
+                        this.gameState.bounds,
+                        this.gameState.competitiveGates,
+                        {
+                            margin: 4,
+                            maxSpeed: this.sheepConfig.maxSpeed,
+                            maxForce: this.sheepConfig.maxForce
+                        }
+                    );
+                } else {
+                    // Use single gate boundary avoidance for cooperative mode
+                    boundaryForce = calculateBoundaryAvoidanceWithGate(
+                        sheep,
+                        this.gameState.bounds,
+                        this.gameState.gate,
+                        {
+                            margin: 4,
+                            maxSpeed: this.sheepConfig.maxSpeed,
+                            maxForce: this.sheepConfig.maxForce
+                        }
+                    );
+                }
+                sheep.acceleration.add(boundaryForce);
+            }
 
             // Update movement using client-style frame-based physics (no deltaTime)
             // This matches the memory note about sheep using frame-based physics
             this.updateSheepMovementClientStyle(sheep);
 
-            // Apply hard boundary constraints (except in gate area)
-            if (!sheep.hasPassedGate) {
+            // Apply hard boundary constraints (except for retiring sheep)
+            if (!sheep.hasPassedGate && !sheep.isRetiring) {
                 let constrainedPosition;
-                if (this.isCompetitive && this.gameState.competitiveGates) {
-                    // Use multiple gates boundary constraints for competitive mode
+                if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates) {
+                    // Use multiple gates boundary constraints for competitive/timed mode
                     constrainedPosition = applyHardBoundaryConstraintsWithMultipleGates(
                         sheep,
                         this.gameState.bounds,
@@ -519,6 +541,16 @@ export class GameSimulation {
                     );
                 }
                 sheep.position = constrainedPosition;
+            } else if (sheep.isRetiring && sheep.retirementTarget) {
+                // For retiring sheep, only apply loose constraints to keep them in extended bounds
+                const extendedBounds = {
+                    minX: this.gameState.bounds.minX - 35,
+                    maxX: this.gameState.bounds.maxX + 35,
+                    minZ: this.gameState.bounds.minZ - 35,
+                    maxZ: this.gameState.bounds.maxZ + 35
+                };
+                sheep.position.x = Math.max(extendedBounds.minX, Math.min(extendedBounds.maxX, sheep.position.x));
+                sheep.position.z = Math.max(extendedBounds.minZ, Math.min(extendedBounds.maxZ, sheep.position.z));
             }
 
             // Update facing direction for animation
@@ -531,12 +563,17 @@ export class GameSimulation {
         }
 
         // Check for sheep retirement
-        if (this.isCompetitive) {
-            // Use competitive retirement logic
-            const retirementResult = updateCompetitiveSheepRetirements(
-                this.gameState.sheep,
-                this.gameState.competitiveGates
-            );
+        if (this.isCompetitive || this.isTimedMode) {
+            // Use competitive retirement logic (also for timed mode)
+            const retirementResult = this.isTimedMode ? 
+                this.updateTimedSheepRetirements(
+                    this.gameState.sheep,
+                    this.gameState.competitiveGates
+                ) :
+                updateCompetitiveSheepRetirements(
+                    this.gameState.sheep,
+                    this.gameState.competitiveGates
+                );
             
             // Update player scores
             for (const [playerId, newRetirements] of Object.entries(retirementResult.playerRetirements)) {
@@ -597,25 +634,11 @@ export class GameSimulation {
     }
 
     updateGrazingSheep(sheep) {
-        // Gentle grazing behavior
-        sheep.animationPhase += this.deltaTime;
-        
-        // Occasional gentle movement
-        if (Math.random() < 0.002) {
-            const wanderDirection = Vector2D.random();
-            wanderDirection.multiply(0.3);
-            sheep.acceleration.add(wanderDirection);
-        }
-
-        // Stay within pasture bounds
-        this.applyPastureContainment(sheep);
-
-        // Gentle movement update (still time-based for grazing)
-        updateMovement(sheep, this.deltaTime, {
-            maxSpeed: 0.03,
-            dampingFactor: 0.95,
-            velocitySmoothing: 0.9
-        });
+        // Server doesn't update grazing sheep - client handles it entirely
+        // Just clear physics to prevent any interference
+        sheep.velocity.set(0, 0);
+        sheep.acceleration.set(0, 0);
+        // That's it - no position updates, no movement, nothing
     }
 
     applyPastureContainment(sheep) {
@@ -625,11 +648,11 @@ export class GameSimulation {
         
         let targetPasture;
         
-        if (this.isCompetitive && this.gameState.competitiveGates && sheep.assignedGate !== null) {
-            // Find the pasture for the assigned gate in competitive mode
+        if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates && sheep.assignedGate !== null) {
+            // Find the pasture for the assigned gate in competitive/timed mode
             const assignedGate = this.gameState.competitiveGates.find(gate => gate.id === sheep.assignedGate);
             targetPasture = assignedGate ? assignedGate.pasture : this.gameState.competitiveGates[0].pasture;
-        } else if (this.isCompetitive && this.gameState.competitiveGates) {
+        } else if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates) {
             // If no assigned gate yet, use the closest pasture
             let closestPasture = this.gameState.competitiveGates[0].pasture;
             let closestDistance = Infinity;
@@ -654,16 +677,22 @@ export class GameSimulation {
             targetPasture = this.gameState.pasture;
         }
         
-        if (sheep.position.x < targetPasture.minX + pastureMargin) {
-            steer.x = 0.01;
-        } else if (sheep.position.x > targetPasture.maxX - pastureMargin) {
-            steer.x = -0.01;
+        // Use distance-based forces for smoother boundaries
+        const distToMinX = sheep.position.x - targetPasture.minX;
+        const distToMaxX = targetPasture.maxX - sheep.position.x;
+        const distToMinZ = sheep.position.z - targetPasture.minZ;
+        const distToMaxZ = targetPasture.maxZ - sheep.position.z;
+        
+        if (distToMinX < pastureMargin) {
+            steer.x = 0.02 * (1 - distToMinX / pastureMargin);
+        } else if (distToMaxX < pastureMargin) {
+            steer.x = -0.02 * (1 - distToMaxX / pastureMargin);
         }
         
-        if (sheep.position.z < targetPasture.minZ + pastureMargin) {
-            steer.z = 0.01;
-        } else if (sheep.position.z > targetPasture.maxZ - pastureMargin) {
-            steer.z = -0.01;
+        if (distToMinZ < pastureMargin) {
+            steer.z = 0.02 * (1 - distToMinZ / pastureMargin);
+        } else if (distToMaxZ < pastureMargin) {
+            steer.z = -0.02 * (1 - distToMaxZ / pastureMargin);
         }
         
         if (steer.magnitude() > 0) {
@@ -674,8 +703,8 @@ export class GameSimulation {
     shouldSeekGate(sheep) {
         // Check if any sheepdog is nearby and sheep should be attracted to gate
         for (const sheepdog of this.sheepdogs.values()) {
-            // For competitive mode, find the closest gate
-            if (this.isCompetitive && this.gameState.competitiveGates) {
+            // For competitive/timed mode, find the closest gate
+            if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates) {
                 let closestGate = null;
                 let closestDistance = Infinity;
                 
@@ -722,8 +751,8 @@ export class GameSimulation {
     calculateGateAttraction(sheep) {
         let targetGate;
         
-        if (this.isCompetitive && this.gameState.competitiveGates) {
-            // Find the closest gate for competitive mode
+        if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates) {
+            // Find the closest gate for competitive/timed mode
             let closestGate = null;
             let closestDistance = Infinity;
             
@@ -761,9 +790,16 @@ export class GameSimulation {
         
         let completionResult;
         
-        if (this.isCompetitive) {
-            // Check competitive completion conditions
+        if (this.isCompetitive || this.isTimedMode) {
+            // Check competitive/timed completion conditions
             const playerCount = Object.keys(this.gameState.playerScores).length;
+            
+            // For timed mode, only complete when timer expires
+            if (this.isTimedMode) {
+                // Timed mode only completes via timer in updateTimedMode
+                return;
+            }
+            
             completionResult = checkCompetitiveCompletion(
                 this.gameState.playerScores,
                 playerCount,
@@ -775,19 +811,22 @@ export class GameSimulation {
                 this.completionData = {
                     completedAt: Date.now(),
                     isCompetitive: true,
+                    isTimedMode: this.isTimedMode,
                     competitive: {
                         winner: completionResult.winner,
                         winType: completionResult.winType,
                         finalScores: completionResult.finalScores,
                         playerRankings: this.calculatePlayerRankings(completionResult.finalScores),
                         winCondition: this.calculateWinProgress(),
-                        playerCount: Object.keys(this.gameState.playerScores).length
+                        playerCount: Object.keys(this.gameState.playerScores).length,
+                        isComplete: true
                     },
                     totalSheep: this.gameState.totalSheep,
                     gameCompleted: true
                 };
                 
-                console.log(`🏆 Competitive game completed! Winner: ${completionResult.winner} (${completionResult.winType})`);
+                const modeEmoji = this.isTimedMode ? '⏱️' : '🏆';
+                console.log(`${modeEmoji} ${this.isTimedMode ? 'Timed' : 'Competitive'} game completed! Winner: ${completionResult.winner} (${completionResult.winType})`);
                 
                 // Broadcast completion immediately
                 this.broadcastGameCompletion();
@@ -835,7 +874,7 @@ export class GameSimulation {
         this.completionBroadcast = true;
         
         console.log(`📡 Broadcasting game completion for room ${this.room.roomCode}:`, 
-                    this.isCompetitive ? 
+                    (this.isCompetitive || this.isTimedMode) ? 
                     `Winner: ${this.completionData.competitive.winner} (${this.completionData.competitive.winType})` : 
                     `${this.completionData.sheepRetired}/${this.completionData.totalSheep} sheep retired`);
         
@@ -942,8 +981,8 @@ export class GameSimulation {
             }))
         };
         
-        // Add competitive mode data if applicable
-        if (this.isCompetitive) {
+        // Add competitive/timed mode data if applicable
+        if (this.isCompetitive || this.isTimedMode) {
             snapshot.competitive = {
                 // Player gate assignments and scores
                 playerScores: { ...this.gameState.playerScores },
@@ -966,6 +1005,18 @@ export class GameSimulation {
                 playerCount: Object.keys(this.gameState.playerScores).length,
                 totalSheep: this.gameState.totalSheep
             };
+            
+            // Add timed mode specific data
+            if (this.isTimedMode && this.gameStartTime) {
+                const currentTime = Date.now();
+                const elapsed = currentTime - this.gameStartTime;
+                const remaining = Math.max(0, this.gameDuration - elapsed);
+                
+                snapshot.timedMode = {
+                    timeRemaining: remaining,
+                    gameDuration: this.gameDuration
+                };
+            }
         }
         
         return snapshot;
@@ -1017,5 +1068,162 @@ export class GameSimulation {
                 rank: index + 1,
                 medal: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : ''
             }));
+    }
+    
+    getPlayerRankings() {
+        if (!this.isCompetitive && !this.isTimedMode) return [];
+        
+        return this.calculatePlayerRankings(this.gameState.playerScores);
+    }
+    
+    updateTimedSheepRetirements(sheep, competitiveGates) {
+        let totalRetired = 0;
+        const playerRetirements = new Map();
+        const currentTime = Date.now();
+        
+        // Initialize player retirement counts
+        for (const gate of competitiveGates) {
+            if (gate.playerId && !playerRetirements.has(gate.playerId)) {
+                playerRetirements.set(gate.playerId, 0);
+            }
+        }
+        
+        for (let sheepEntity of sheep) {
+            // Check if sheep just passed through any gate
+            if (!sheepEntity.hasPassedGate && !sheepEntity.scheduledForRemoval) {
+                for (const gate of competitiveGates) {
+                    if (checkGatePassage(sheepEntity.position, sheepEntity.velocity, gate.passageZone, gate.direction)) {
+                        sheepEntity.hasPassedGate = true;
+                        sheepEntity.isRetiring = true;
+                        sheepEntity.state = 1; // Set to retiring state
+                        sheepEntity.assignedGate = gate.id;
+                        
+                        // In timed mode, schedule for removal
+                        if (this.isTimedMode) {
+                            sheepEntity.scheduledForRemoval = true;
+                            sheepEntity.disappearTime = currentTime + 5000; // 5 seconds from now
+                        }
+                        
+                        // Set retirement target in the appropriate pasture
+                        const targetPasture = gate.pasture;
+                        const margin = 3;
+                        sheepEntity.retirementTarget = new Vector2D(
+                            targetPasture.minX + margin + Math.random() * ((targetPasture.maxX - targetPasture.minX) - 2 * margin),
+                            targetPasture.minZ + margin + Math.random() * ((targetPasture.maxZ - targetPasture.minZ) - 2 * margin)
+                        );
+                        
+                        // Award point to the gate's player
+                        if (gate.playerId && playerRetirements.has(gate.playerId)) {
+                            playerRetirements.set(gate.playerId, playerRetirements.get(gate.playerId) + 1);
+                        }
+                        
+                        // Add to removal queue
+                        this.sheepRemovalQueue.push({
+                            sheepId: sheepEntity.id,
+                            removeTime: sheepEntity.disappearTime
+                        });
+                        
+                        console.log(`🐑 Sheep ${sheepEntity.id} scheduled for removal in 5s (gate ${gate.id})`);
+                        break;
+                    }
+                }
+            }
+            
+            // Count all sheep that have passed gates
+            if (sheepEntity.hasPassedGate) {
+                totalRetired++;
+            }
+        }
+        
+        return {
+            playerRetirements: Object.fromEntries(playerRetirements),
+            totalRetired
+        };
+    }
+    
+    updateTimedMode(currentTime) {
+        // Check if 3 minutes have elapsed
+        if (this.gameStartTime && currentTime - this.gameStartTime >= this.gameDuration) {
+            // Force game completion
+            if (!this.gameState.gameCompleted) {
+                this.gameState.gameCompleted = true;
+                this.gameState.completionTime = this.gameDuration / 1000; // Convert to seconds
+                
+                // Find winner based on highest score
+                const rankings = this.getPlayerRankings();
+                if (rankings.length > 0) {
+                    this.gameState.winner = rankings[0].playerId;
+                    this.gameState.winType = 'timeout';
+                    
+                    // Set up completion data for broadcast
+                    this.completionData = {
+                        completedAt: Date.now(),
+                        isCompetitive: true,
+                        isTimedMode: true,
+                        competitive: {
+                            winner: rankings[0].playerId,
+                            winType: 'timeout',
+                            finalScores: { ...this.gameState.playerScores },
+                            playerRankings: rankings,
+                            winCondition: { 
+                                type: 'timeout',
+                                timeLimit: this.gameDuration / 1000,
+                                message: '3 minute timer expired'
+                            },
+                            playerCount: Object.keys(this.gameState.playerScores).length,
+                            isComplete: true
+                        },
+                        totalSheep: this.gameState.totalSheep,
+                        gameCompleted: true
+                    };
+                    
+                    console.log(`⏱️ Timed game completed for room ${this.room.roomCode} - Winner: ${rankings[0].playerName} with ${rankings[0].score} sheep`);
+                    
+                    // Broadcast completion immediately
+                    this.broadcastGameCompletion();
+                }
+            }
+        }
+        
+        // Process sheep removal queue
+        const sheepToRemove = [];
+        for (let i = this.sheepRemovalQueue.length - 1; i >= 0; i--) {
+            const removal = this.sheepRemovalQueue[i];
+            if (currentTime >= removal.removeTime) {
+                sheepToRemove.push(removal.sheepId);
+                this.sheepRemovalQueue.splice(i, 1);
+            }
+        }
+        
+        // Remove sheep and spawn replacements
+        for (const sheepId of sheepToRemove) {
+            const sheepIndex = this.gameState.sheep.findIndex(s => s.id === sheepId);
+            if (sheepIndex !== -1) {
+                // Remove the sheep
+                const removedSheep = this.gameState.sheep[sheepIndex];
+                
+                // Create a new sheep at a random spawn location
+                const spawnLocations = this.gameState.competitiveSpawnClusters || [{ x: -30, z: -30 }];
+                const spawnLocation = spawnLocations[Math.floor(Math.random() * spawnLocations.length)];
+                
+                // Reuse the sheep object but reset its properties
+                removedSheep.id = this.nextSheepId++;
+                removedSheep.position.set(
+                    spawnLocation.x + (Math.random() - 0.5) * 20,
+                    spawnLocation.z + (Math.random() - 0.5) * 20
+                );
+                removedSheep.velocity.set(0, 0);
+                removedSheep.acceleration.set(0, 0);
+                removedSheep.hasPassedGate = false;
+                removedSheep.isRetiring = false;
+                removedSheep.state = 0;
+                removedSheep.assignedGate = null;
+                removedSheep.retirementTarget = null;
+                removedSheep.disappearTime = null;
+                removedSheep.scheduledForRemoval = false;
+                
+                console.log(`🔄 Respawned sheep ${removedSheep.id} at (${removedSheep.position.x.toFixed(1)}, ${removedSheep.position.z.toFixed(1)})`);
+            }
+        }
     }
 } 

@@ -1955,9 +1955,6 @@
             <div id="room-creation" style="display: none;">
                 <h3>Create Room</h3>
                 <div class="room-form">
-                    <label for="room-name">Room Name (optional):</label>
-                    <input type="text" id="room-name" placeholder="My Sheep Room" maxlength="20">
-                    
                     <label for="max-players">Max Players:</label>
                     <select id="max-players">
                         <option value="2">2 Players</option>
@@ -1965,25 +1962,15 @@
                         <option value="4">4 Players</option>
                     </select>
                     
-                    <div class="game-mode-selection">
-                        <label>Game Mode:</label>
-                        <div class="radio-group">
-                            <label class="radio-label">
-                                <input type="radio" name="game-mode" value="cooperative" checked>
-                                🤝 Cooperative (200 sheep, shared goal)
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="game-mode" value="competitive">
-                                🏆 Competitive (2P: race to 101, 3-4P: highest score)
-                            </label>
-                        </div>
-                    </div>
+                    <label for="game-mode-select">Game Mode:</label>
+                    <select id="game-mode-select">
+                        <option value="cooperative">🤝 Cooperative (200 sheep, shared goal)</option>
+                        <option value="competitive">🏆 Competitive (race for sheep)</option>
+                        <option value="timed">⏱️ Timed Collection (3min, respawning sheep)</option>
+                    </select>
                     
-                    <div class="room-privacy">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="private-room">
-                            Private Room (friends only)
-                        </label>
+                    <div class="room-info" style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 14px; color: #666;">
+                        <p style="margin: 0;">💡 A random room code will be generated for easy sharing with friends</p>
                     </div>
                 </div>
                 <button id="create-room-confirm" class="mode-button">Create Room</button>

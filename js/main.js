@@ -3,7 +3,7 @@ import { SceneManager } from './SceneManager.js';
 import { GameState } from './GameState.js';
 import { GameTimer } from './GameTimer.js';
 import { TerrainBuilder } from './TerrainBuilder.js';
-import { StructureBuilder } from './StructureBuilder.js';
+import { StructureBuilderV2 } from './StructureBuilderV2.js';
 import { InputHandler } from './InputHandler.js';
 import { MobileControls } from './MobileControls.js';
 import { Sheepdog } from './Sheepdog.js';
@@ -26,7 +26,7 @@ class SheepDogSimulation {
         this.gameState = new GameState();
         this.gameTimer = new GameTimer();
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene());
-        this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
+        this.structureBuilder = new StructureBuilderV2(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();
         this.startScreen = new StartScreen(this.sceneManager);
@@ -105,13 +105,10 @@ class SheepDogSimulation {
         this.terrainBuilder.createTrees();
         this.terrainBuilder.addEnvironmentDetails();
         
-        // Create structures
-        this.structureBuilder.createFieldBoundaryFence(
-            this.gameState.getBounds(), 
-            this.gameState.getGate()
-        );
-        this.structureBuilder.createGateAndPasture(
-            this.gameState.getGate(), 
+        // Create structures using new modular system
+        this.structureBuilder.buildSinglePlayerStructures(
+            this.gameState.getBounds(),
+            this.gameState.getGate(),
             this.gameState.getPasture()
         );
         
@@ -174,12 +171,59 @@ class SheepDogSimulation {
             this.mobileControls.enable();
         }
         
-        // Start the game state (pass mode for future multiplayer handling)
-        this.gameState.startGame(mode);
+        // Start the game state
+        // For multiplayer games, we'll set the specific game mode (competitive/timed) later when we have the data
+        this.gameState.startGame(mode, null);
+        
+        // Store the intended game mode for later use
+        if (roomData?.gameMode) {
+            this.gameState.setGameMode(roomData.gameMode);
+        }
         
         // Reset timer and stamina
         this.gameTimer.reset();
         this.staminaUI.reset();
+        
+        // Start countdown timer for timed mode
+        if (roomData?.gameMode === 'timed') {
+            this.gameTimer.startCountdown(3 * 60 * 1000); // 3 minutes
+            console.log('⏱️ Started 3-minute countdown for timed mode');
+            
+            // Hide the "/ 200" stats display for timed mode
+            const statsDiv = document.getElementById('stats');
+            if (statsDiv) {
+                statsDiv.style.display = 'none';
+            }
+            
+            // Replace best time with best score for timed mode
+            const bestTimeElement = document.getElementById('best-time');
+            const mobileBestTimeElement = document.getElementById('mobile-best-time');
+            if (bestTimeElement) {
+                bestTimeElement.textContent = this.getBestScoreText();
+            }
+            if (mobileBestTimeElement) {
+                mobileBestTimeElement.textContent = this.getBestScoreText();
+            }
+            
+            // Initialize best score display
+            this.updateBestScoreDisplay();
+        } else {
+            // Show stats for other modes
+            const statsDiv = document.getElementById('stats');
+            if (statsDiv) {
+                statsDiv.style.display = 'block';
+            }
+            
+            // Show best time for non-timed modes
+            const bestTimeElement = document.getElementById('best-time');
+            const mobileBestTimeElement = document.getElementById('mobile-best-time');
+            if (bestTimeElement) {
+                bestTimeElement.style.display = 'block';
+            }
+            if (mobileBestTimeElement) {
+                mobileBestTimeElement.style.display = 'block';
+            }
+        }
         this.staminaUI.show();
         
         // Reset competitive audio state
@@ -197,15 +241,22 @@ class SheepDogSimulation {
             this.sheepdog.setMultiplayerSpeeds(true);
             this.setupMultiplayer();
             
-            // Configure UI for competitive mode if needed
-            if (roomData.gameMode === 'competitive') {
-                console.log('Setting up competitive mode UI');
-                this.multiplayerUI.setGameMode('competitive', roomData.players?.length || 0);
+            // Configure UI for competitive/timed mode if needed
+            if (roomData.gameMode === 'competitive' || roomData.gameMode === 'timed') {
+                console.log(`Setting up ${roomData.gameMode} mode UI`);
+                this.multiplayerUI.setGameMode(roomData.gameMode, roomData.players?.length || 0);
                 this.gameState.setCurrentPlayerId(this.networkManager?.getPlayerId());
                 
-                // Set audio manager to competitive mode
+                // Set audio manager to competitive mode (also for timed)
                 this.audioManager.setGameMode('competitive');
-                console.log('🏆 Audio manager set to competitive mode');
+                const modeEmoji = roomData.gameMode === 'timed' ? '⏱️' : '🏆';
+                console.log(`${modeEmoji} Audio manager set to competitive mode`);
+                
+                // Process initial game state if provided (contains competitive gates, etc.)
+                if (roomData.initialGameState) {
+                    console.log(`${modeEmoji} Processing initial game state for ${roomData.gameMode} mode`);
+                    this.handleMultiplayerGameState(roomData.initialGameState);
+                }
             } else {
                 this.audioManager.setGameMode('multiplayer');
                 
@@ -311,11 +362,12 @@ class SheepDogSimulation {
                 console.log('Current gameState.sheepRetired:', this.gameState.sheepRetired);
                 console.log('Current gameState.gameCompleted:', this.gameState.gameCompleted);
                 
-                // Handle competitive vs cooperative completion
-                if (update.data.isCompetitive && update.data.competitive) {
-                    // Competitive mode completion
-                    console.log('Triggering competitive completion UI...');
-                    console.log('Competitive completion data:', update.data.competitive);
+                // Handle competitive/timed vs cooperative completion
+                if ((update.data.isCompetitive || update.data.isTimedMode) && update.data.competitive) {
+                    // Competitive/timed mode completion
+                    const modeName = update.data.isTimedMode ? 'timed' : 'competitive';
+                    console.log(`Triggering ${modeName} completion UI...`);
+                    console.log(`${modeName} completion data:`, update.data.competitive);
                     
                     this.gameState.gameCompleted = true;
                     const finalTime = this.gameTimer.stop();
@@ -323,6 +375,16 @@ class SheepDogSimulation {
                     // Play appropriate completion sound
                     const currentPlayerId = this.networkManager?.getPlayerId();
                     const isWinner = update.data.competitive.winner === currentPlayerId;
+                    
+                    // Save best score for timed mode
+                    if (update.data.isTimedMode && currentPlayerId) {
+                        const myScore = update.data.competitive.finalScores[currentPlayerId] || 0;
+                        const isNewRecord = this.saveBestScore(myScore);
+                        if (isNewRecord) {
+                            console.log(`🏆 New best score in timed mode: ${myScore} sheep!`);
+                        }
+                    }
+                    
                     if (isWinner) {
                         this.audioManager.playVictorySound();
                         console.log('🏆 Victory sound played');
@@ -332,12 +394,12 @@ class SheepDogSimulation {
                     }
                     
                     // Show competitive completion UI
+                    console.log('Calling showCompletionMessage with gameMode:', this.gameState.gameMode);
+                    console.log('Competitive data exists:', !!update.data.competitive);
                     this.gameState.showCompletionMessage(finalTime, false, update.data.competitive);
                     
-                    // Also show the MultiplayerUI competitive completion overlay
-                    if (this.multiplayerUI.gameMode === 'competitive') {
-                        this.multiplayerUI.showCompetitiveCompletion(update.data.competitive);
-                    }
+                    // Note: We don't need to call multiplayerUI.showCompetitiveCompletion here
+                    // because gameState.showCompletionMessage already handles the UI display
                     
                     this.mobileControls.disable();
                 } else {
@@ -410,18 +472,7 @@ class SheepDogSimulation {
                 const clientSheepEntity = clientSheep[i];
                 
                 if (serverSheepData && clientSheepEntity) {
-                    // Trust server positions directly to avoid conflicts
-                    // Server already applies proper boundary and gate constraints
-                    clientSheepEntity.position.x = serverSheepData.x;
-                    clientSheepEntity.position.z = serverSheepData.z;
-                    
-                    // Update velocity for animation purposes
-                    if (serverSheepData.vx !== undefined && serverSheepData.vz !== undefined) {
-                        clientSheepEntity.velocity.x = serverSheepData.vx;
-                        clientSheepEntity.velocity.z = serverSheepData.vz;
-                    }
-                    
-                    // Update sheep state properties from server
+                    // Update sheep state properties from server first
                     if (serverSheepData.state !== undefined) {
                         clientSheepEntity.state = serverSheepData.state;
                     }
@@ -432,6 +483,19 @@ class SheepDogSimulation {
                     }
                     if (serverSheepData.isRetiring !== undefined) {
                         clientSheepEntity.isRetiring = serverSheepData.isRetiring;
+                    }
+                    
+                    // Only update positions for active sheep (not retiring or grazing)
+                    if (!clientSheepEntity.isRetiring && clientSheepEntity.state !== 2) {
+                        // Trust server positions for active sheep
+                        clientSheepEntity.position.x = serverSheepData.x;
+                        clientSheepEntity.position.z = serverSheepData.z;
+                        
+                        // Update velocity for animation purposes
+                        if (serverSheepData.vx !== undefined && serverSheepData.vz !== undefined) {
+                            clientSheepEntity.velocity.x = serverSheepData.vx;
+                            clientSheepEntity.velocity.z = serverSheepData.vz;
+                        }
                     }
                     
                     // Update retirement target if provided
@@ -550,6 +614,15 @@ class SheepDogSimulation {
                 // Set the transformed gates in GameState
                 this.gameState.competitiveGates = transformedGates;
                 
+                // Initialize competitive mode in game state if not already done
+                if (Object.keys(this.gameState.playerScores).length === 0 && competitiveData.playerScores) {
+                    console.log('🎮 Initializing competitive mode in GameState');
+                    this.gameState.initializeCompetitiveMode({
+                        competitiveGates: transformedGates,
+                        playerScores: competitiveData.playerScores
+                    });
+                }
+                
                 // Build competitive structures if this is the first time receiving competitive data
                 if (!this.competitiveStructuresCreated) {
                     console.log('🏗️ Building competitive structures for the first time...');
@@ -567,7 +640,7 @@ class SheepDogSimulation {
             }
             
             // Update multiplayer UI with all competitive data
-            if (this.multiplayerUI.gameMode === 'competitive') {
+            if (this.multiplayerUI.gameMode === 'competitive' || this.multiplayerUI.gameMode === 'timed') {
                 this.multiplayerUI.updatePlayerScores(competitiveData.playerScores);
                 
                 // Update win progress if available
@@ -584,6 +657,25 @@ class SheepDogSimulation {
             // Cooperative mode: update total sheep count
             this.gameState.sheepRetired = serverState.sheepRetired;
         }
+        
+        // Handle timed mode data
+        if (serverState.timedMode) {
+            const { timeRemaining, gameDuration } = serverState.timedMode;
+            
+            // Update the game timer if it's in countdown mode
+            if (this.gameTimer.isCountdown) {
+                // Force timer update with server's authoritative time
+                const elapsedMs = gameDuration - timeRemaining;
+                this.gameTimer.currentTime = elapsedMs / 1000; // Convert to seconds
+                this.gameTimer.updateTimerDisplay();
+            }
+            
+            // Check if time is running out for audio cue
+            if (timeRemaining < 30000 && !this.endgameMusicPlaying) { // 30 seconds left
+                this.audioManager.playCompetitiveEndgameMusic();
+                this.endgameMusicPlaying = true;
+            }
+        }
     }
     
     update(deltaTime) {
@@ -599,8 +691,16 @@ class SheepDogSimulation {
             const wantsSprint = this.inputHandler.isSprinting();
             const sheepdog = this.gameState.getSheepdog();
             
+            // Store original direction for debugging
+            const originalDirection = { x: movementDirection.x, z: movementDirection.z };
+            
             // Transform movement direction for competitive mode camera orientation
             movementDirection = this.sceneManager.transformMovementForCompetitive(movementDirection);
+            
+            // Debug log transformation in competitive mode
+            if (this.sceneManager.competitiveCameraDirection && movementDirection.magnitude() > 0) {
+                console.log(`🎮 Input transform: original(${originalDirection.x.toFixed(2)}, ${originalDirection.z.toFixed(2)}) → transformed(${movementDirection.x.toFixed(2)}, ${movementDirection.z.toFixed(2)}) for ${this.sceneManager.competitiveCameraDirection} camera`);
+            }
             
             // Update sheepdog's awareness of nearby sheep for barking
             sheepdog.updateNearSheepStatus(this.gameState.getSheep());
@@ -940,21 +1040,14 @@ class SheepDogSimulation {
     createCompetitiveStructures(competitiveGates) {
         console.log('🏗️ Creating competitive structures with gates:', competitiveGates);
         
-        // 1. CLEAR ALL existing structures (fences, gates, pastures) before building new ones.
-        this.structureBuilder.clearAllStructures();
+        // Don't override the game mode - it's already set correctly (could be 'competitive' or 'timed')
+        // this.gameState.setGameMode('competitive');
         
-        // Update GameState to competitive mode (gates already transformed and set)
-        this.gameState.setGameMode('competitive');
-        
-        // Build competitive boundary fence that avoids all gates
-        // This will automatically clear the existing single-player fence
-        this.structureBuilder.createMultiGateBoundaryFence(
+        // Build competitive structures using new modular system
+        this.structureBuilder.buildCompetitiveStructures(
             this.gameState.getBounds(),
             competitiveGates
         );
-        
-        // Create all competitive gates and pastures
-        this.structureBuilder.createMultipleGatesAndPastures(competitiveGates);
         
         // Recreate trees to avoid competitive pastures
         // Extract pasture areas from competitive gates
@@ -1004,6 +1097,68 @@ class SheepDogSimulation {
                 console.log(`🎯 Added player icon for remote player ${playerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
             }
         }
+    }
+    
+    // Best score tracking for timed mode
+    loadBestScore() {
+        try {
+            const savedScore = localStorage.getItem('timedModeBestScore');
+            return savedScore ? parseInt(savedScore) : null;
+        } catch (e) {
+            console.warn('Could not load best score from localStorage:', e);
+            return null;
+        }
+    }
+    
+    saveBestScore(score) {
+        try {
+            const currentBest = this.loadBestScore();
+            if (currentBest === null || score > currentBest) {
+                localStorage.setItem('timedModeBestScore', score.toString());
+                return true; // New record
+            }
+            return false;
+        } catch (e) {
+            console.warn('Could not save best score to localStorage:', e);
+            return false;
+        }
+    }
+    
+    getBestScoreText() {
+        const bestScore = this.loadBestScore();
+        return bestScore !== null ? `Best: ${bestScore} sheep` : 'Best: --';
+    }
+    
+    updateBestScoreDisplay() {
+        if (this.roomData?.gameMode !== 'timed') return;
+        
+        // Update every second to show current score vs best
+        setInterval(() => {
+            const currentScore = this.gameState.getPlayerScore(this.networkManager?.getPlayerId()) || 0;
+            const bestScore = this.loadBestScore();
+            
+            const bestTimeElement = document.getElementById('best-time');
+            const mobileBestTimeElement = document.getElementById('mobile-best-time');
+            
+            if (bestTimeElement) {
+                bestTimeElement.textContent = this.getBestScoreText();
+                // Add visual indicator if beating best score
+                if (bestScore !== null && currentScore > bestScore) {
+                    bestTimeElement.style.color = '#4CAF50'; // Green
+                } else {
+                    bestTimeElement.style.color = ''; // Default
+                }
+            }
+            
+            if (mobileBestTimeElement) {
+                mobileBestTimeElement.textContent = this.getBestScoreText();
+                if (bestScore !== null && currentScore > bestScore) {
+                    mobileBestTimeElement.style.color = '#4CAF50';
+                } else {
+                    mobileBestTimeElement.style.color = '';
+                }
+            }
+        }, 1000);
     }
 }
 

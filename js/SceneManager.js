@@ -489,12 +489,16 @@ export class SceneManager {
                 return new Vector2D(-x, -z);
                 
             case 'east':
-                // Facing east - rotate 90° clockwise (forward becomes right)
-                return new Vector2D(-z, x);
+                // Camera looking from west - rotate 90° counter-clockwise
+                // W (forward) should move right in world space (+X)
+                // D (right) should move forward in world space (+Z)
+                return new Vector2D(z, -x);
                 
             case 'west':
-                // Facing west - rotate 90° counter-clockwise (forward becomes left)
-                return new Vector2D(z, -x);
+                // Camera looking from east - rotate 90° clockwise
+                // W (forward) should move left in world space (-X)
+                // D (right) should move backward in world space (-Z)
+                return new Vector2D(-z, x);
                 
             case 'southeast':
                 // Facing southeast - rotate 135° clockwise

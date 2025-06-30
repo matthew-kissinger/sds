@@ -555,49 +555,59 @@ export class OptimizedSheepInstance extends Boid {
             if (this.retirementTarget) {
                 const distanceToTarget = this.position.distanceTo(this.retirementTarget);
                 
-                if (distanceToTarget < 2) {
+                if (distanceToTarget < 3) { // Slightly larger threshold to avoid getting stuck
                     // Sheep has reached its retirement spot - enter grazing mode
                     this.retirementTarget = null; // Clear target to enter grazing mode
-                    this.maxSpeed = 0.02; // Very slow grazing speed
-                    this.maxForce = 0.005; // Gentle forces
                     this.state = 2; // Set to grazing state
+                    // Reset speeds for grazing
+                    this.maxSpeed = 0.08;
+                    this.maxForce = 0.02;
                 } else {
                     // Still moving to retirement spot
                     const seekForce = this.seek(this.retirementTarget);
                     this.applyForce(seekForce);
                 }
             } else {
-                // Grazing behavior - gentle wandering
+                // Grazing behavior - use normal movement system but gentler
+                this.maxSpeed = 0.08; // Slow grazing speed
+                this.maxForce = 0.02; // Gentle forces
+                
+                // Animation phase continues
                 this.animationPhase += 0.016;
                 
-                // Occasional gentle movement
-                if (Math.random() < 0.002) { // 0.2% chance per frame to start moving
-                    const wanderDirection = Vector2D.random();
-                    wanderDirection.multiply(0.5); // Gentle movement
-                    this.applyForce(wanderDirection);
+                // Occasional random wander force (like pre-game wandering)
+                if (Math.random() < 0.005) { // 0.5% chance per frame
+                    const wanderForce = Vector2D.random();
+                    wanderForce.multiply(0.3); // Gentle wander
+                    this.applyForce(wanderForce);
                 }
                 
-                // Stay within pasture bounds with gentle forces
+                // Stay within pasture bounds using normal boundary avoidance
                 if (pasture) {
-                    const pastureMargin = 2;
+                    const margin = 3;
                     const steer = new Vector2D(0, 0);
                     
-                    if (this.position.x < pasture.minX + pastureMargin) {
-                        steer.x = 0.01;
-                    } else if (this.position.x > pasture.maxX - pastureMargin) {
-                        steer.x = -0.01;
+                    // Simple boundary forces
+                    if (this.position.x < pasture.minX + margin) {
+                        steer.x = this.maxSpeed;
+                    } else if (this.position.x > pasture.maxX - margin) {
+                        steer.x = -this.maxSpeed;
                     }
                     
-                    if (this.position.z < pasture.minZ + pastureMargin) {
-                        steer.z = 0.01;
-                    } else if (this.position.z > pasture.maxZ - pastureMargin) {
-                        steer.z = -0.01;
+                    if (this.position.z < pasture.minZ + margin) {
+                        steer.z = this.maxSpeed;
+                    } else if (this.position.z > pasture.maxZ - margin) {
+                        steer.z = -this.maxSpeed;
                     }
                     
                     if (steer.magnitude() > 0) {
+                        steer.limit(this.maxForce);
                         this.applyForce(steer);
                     }
                 }
+                
+                // Apply some damping to keep movement gentle
+                this.velocity.multiply(0.98);
             }
             return;
         }
@@ -615,8 +625,9 @@ export class OptimizedSheepInstance extends Boid {
             return;
         }
         
-        // Normal flocking behavior (always active)
-        this.flock(allSheep, params.separationDistance);
+        // Normal flocking behavior - only consider active sheep (state 0)
+        const activeSheep = allSheep.filter(sheep => sheep.state === 0);
+        this.flock(activeSheep, params.separationDistance);
         
         // Add gentle wandering during pre-game state (when no sheepdog)
         if (!sheepdog) {
@@ -721,17 +732,18 @@ export class OptimizedSheepInstance extends Boid {
             this.bounceAmount = Math.min(speed * 15, 0.15);
         }
         
-        this.walkCycle += this.currentSpeed * deltaTime * 10; // Use currentSpeed which is now NaN-checked
+        // Walk cycle update - same for all sheep
+        if (this.currentSpeed > 0.05) {
+            this.walkCycle += this.currentSpeed * deltaTime * 10;
+        }
         
+        // Update facing direction based on velocity
         if (this.currentSpeed > 0.001) {
             this.facingDirection = Math.atan2(this.velocity.z, this.velocity.x);
             if (isNaN(this.facingDirection) || !isFinite(this.facingDirection)) {
                 console.warn(`Sheep ${this.id} facingDirection became NaN/Infinity.`);
                 this.facingDirection = 0;
             }
-        } else {
-             // Keep last facing direction if not moving, or default to 0
-            // this.facingDirection = this.facingDirection || 0;
         }
         
         // Update blink timer
@@ -797,12 +809,18 @@ export class OptimizedSheepInstance extends Boid {
         }
         
         if (distToMinZ < margin) {
-            const force = (margin - distToMinZ) / margin;
-            steer.z = this.maxSpeed * force * 1.2;
+            // Check if near a south gate
+            const nearSouthGateX = gate && gate.position.z <= bounds.minZ + 5 ? 
+                Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
+            if (!nearSouthGateX) {
+                const force = (margin - distToMinZ) / margin;
+                steer.z = this.maxSpeed * force * 1.2;
+            }
         } else if (distToMaxZ < margin) {
-            // Only check for gate if gate exists (game is active)
-            const nearGateX = gate ? Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
-            if (!nearGateX) {
+            // Check if near a north gate
+            const nearNorthGateX = gate && gate.position.z >= bounds.maxZ - 5 ? 
+                Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
+            if (!nearNorthGateX) {
                 const force = (margin - distToMaxZ) / margin;
                 steer.z = -this.maxSpeed * force * 1.2;
             }

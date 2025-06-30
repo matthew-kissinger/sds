@@ -646,8 +646,9 @@ export class OptimizedSheepInstance extends Boid {
             return;
         }
         
-        // Normal flocking behavior (always active)
-        this.flock(allSheep, params.separationDistance);
+        // Normal flocking behavior - only consider active sheep (state 0)
+        const activeSheep = allSheep.filter(sheep => sheep.state === 0);
+        this.flock(activeSheep, params.separationDistance);
         
         // Add gentle wandering during pre-game state (when no sheepdog)
         if (!sheepdog) {

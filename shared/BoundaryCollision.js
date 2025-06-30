@@ -88,12 +88,18 @@ export function calculateBoundaryAvoidanceWithGate(entity, bounds, gate, config 
     }
     
     if (distToMinZ < margin) {
-        const force = (margin - distToMinZ) / margin;
-        steer.z = maxSpeed * force * 1.2;
+        // Check if near a south gate
+        const nearSouthGateX = gate && gate.position.z <= bounds.minZ + 5 ? 
+            Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
+        if (!nearSouthGateX) {
+            const force = (margin - distToMinZ) / margin;
+            steer.z = maxSpeed * force * 1.2;
+        }
     } else if (distToMaxZ < margin) {
-        // Only check for gate if gate exists
-        const nearGateX = gate ? Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
-        if (!nearGateX) {
+        // Check if near a north gate
+        const nearNorthGateX = gate && gate.position.z >= bounds.maxZ - 5 ? 
+            Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
+        if (!nearNorthGateX) {
             const force = (margin - distToMaxZ) / margin;
             steer.z = -maxSpeed * force * 1.2;
         }
@@ -139,31 +145,38 @@ export function calculateBoundaryAvoidanceWithMultipleGates(entity, bounds, comp
         }
         
         for (const gate of competitiveGates) {
-            const nearGateX = Math.abs(position.x - gate.position.x) < gate.width / 2 + 2;
-            const nearGateZ = Math.abs(position.z - gate.position.z) < 4; // Gate depth
+            // Check based on gate direction and boundary type
+            let isNearGate = false;
             
-            // Check if gate is on the specified boundary and entity is near it
             switch (boundaryType) {
                 case 'west':
-                    if (gate.direction === 'west' && nearGateX && nearGateZ) {
-                        return true;
+                    if (gate.direction === 'west' && gate.position.x <= bounds.minX + 5) {
+                        // For west gates, check if entity is aligned with gate - exact gate width
+                        isNearGate = Math.abs(position.z - gate.position.z) < gate.width / 2;
                     }
                     break;
                 case 'east':
-                    if (gate.direction === 'east' && nearGateX && nearGateZ) {
-                        return true;
+                    if (gate.direction === 'east' && gate.position.x >= bounds.maxX - 5) {
+                        // For east gates, check if entity is aligned with gate - exact gate width
+                        isNearGate = Math.abs(position.z - gate.position.z) < gate.width / 2;
                     }
                     break;
                 case 'south':
-                    if ((gate.direction === 'south' || gate.direction === 'southeast' || gate.direction === 'southwest') && nearGateX && nearGateZ) {
-                        return true;
+                    if (gate.direction === 'south' && gate.position.z <= bounds.minZ + 5) {
+                        // For south gates, check if entity is aligned with gate - exact gate width
+                        isNearGate = Math.abs(position.x - gate.position.x) < gate.width / 2;
                     }
                     break;
                 case 'north':
-                    if (gate.direction === 'north' && nearGateX && nearGateZ) {
-                        return true;
+                    if (gate.direction === 'north' && gate.position.z >= bounds.maxZ - 5) {
+                        // For north gates, check if entity is aligned with gate - exact gate width
+                        isNearGate = Math.abs(position.x - gate.position.x) < gate.width / 2;
                     }
                     break;
+            }
+            
+            if (isNearGate) {
+                return true;
             }
         }
         
@@ -263,20 +276,30 @@ export function applyHardBoundaryConstraintsWithMultipleGates(entity, bounds, co
         for (const gate of competitiveGates) {
             let inGateArea = false;
             
-            // Check gate area based on gate direction
+            // Check gate area based on gate direction - simple and exact
             switch (gate.direction) {
                 case 'north':
-                case 'south':
-                    // For north/south gates, the opening is along the X-axis
+                    // For north gates at top boundary
                     inGateArea = Math.abs(position.x - gate.position.x) <= gate.width / 2 && 
-                               Math.abs(position.z - gate.position.z) <= 2;
+                               position.z >= bounds.maxZ - 2;
+                    break;
+                    
+                case 'south':
+                    // For south gates at bottom boundary
+                    inGateArea = Math.abs(position.x - gate.position.x) <= gate.width / 2 && 
+                               position.z <= bounds.minZ + 2;
                     break;
                     
                 case 'east':
-                case 'west':
-                    // For east/west gates, the opening is along the Z-axis
+                    // For east gates at right boundary
                     inGateArea = Math.abs(position.z - gate.position.z) <= gate.width / 2 && 
-                               Math.abs(position.x - gate.position.x) <= 2;
+                               position.x >= bounds.maxX - 2;
+                    break;
+                    
+                case 'west':
+                    // For west gates at left boundary
+                    inGateArea = Math.abs(position.z - gate.position.z) <= gate.width / 2 && 
+                               position.x <= bounds.minX + 2;
                     break;
                     
                 case 'southeast':
@@ -286,7 +309,7 @@ export function applyHardBoundaryConstraintsWithMultipleGates(entity, bounds, co
                         Math.pow(position.x - gate.position.x, 2) + 
                         Math.pow(position.z - gate.position.z, 2)
                     );
-                    inGateArea = distanceToGate <= gate.width / 2 + 2;
+                    inGateArea = distanceToGate <= gate.width / 2;
                     break;
                     
                 default:
@@ -299,32 +322,34 @@ export function applyHardBoundaryConstraintsWithMultipleGates(entity, bounds, co
             if (inGateArea) {
                 inAnyGateArea = true;
                 
-                // Store gate constraints based on direction
+                // Store gate constraints based on direction - exact gate width
                 switch (gate.direction) {
                     case 'north':
                     case 'south':
-                        // Constrain X to gate width
+                        // Constrain X to exact gate width
                         gateConstraints = {
                             minX: gate.position.x - gate.width / 2,
-                            maxX: gate.position.x + gate.width / 2
+                            maxX: gate.position.x + gate.width / 2,
+                            skipZConstraint: true // Don't constrain Z in gate area
                         };
                         break;
                         
                     case 'east':
                     case 'west':
-                        // Constrain Z to gate width
+                        // Constrain Z to exact gate width
                         gateConstraints = {
                             minZ: gate.position.z - gate.width / 2,
-                            maxZ: gate.position.z + gate.width / 2
+                            maxZ: gate.position.z + gate.width / 2,
+                            skipXConstraint: true // Don't constrain X in gate area
                         };
                         break;
                         
                     case 'southeast':
                     case 'southwest':
-                        // For diagonal gates, allow more freedom of movement
+                        // For diagonal gates, use exact gate radius
                         gateConstraints = {
                             center: gate.position,
-                            radius: gate.width / 2 + 2
+                            radius: gate.width / 2
                         };
                         break;
                 }
@@ -377,16 +402,40 @@ export function isWithinArea(position, area) {
  * @param {Vector2D} position - Entity position
  * @param {Vector2D} velocity - Entity velocity
  * @param {Object} gatePassageZone - Gate passage zone definition
+ * @param {string} gateDirection - Direction of the gate ('north', 'south', 'east', 'west', etc.)
  * @returns {boolean} - Whether entity has passed through gate
  */
-export function checkGatePassage(position, velocity, gatePassageZone) {
+export function checkGatePassage(position, velocity, gatePassageZone, gateDirection = 'north') {
     const inGateX = position.x >= gatePassageZone.minX && 
                    position.x <= gatePassageZone.maxX;
     const inGateZ = position.z >= gatePassageZone.minZ && 
                    position.z <= gatePassageZone.maxZ;
     
-    // Must be in gate area and moving forward (positive Z direction)
-    return inGateX && inGateZ && velocity.z > 0;
+    // Must be in gate area and moving in the correct direction based on gate orientation
+    if (!inGateX || !inGateZ) {
+        return false;
+    }
+    
+    // Check velocity based on gate direction
+    switch (gateDirection) {
+        case 'north':
+            return velocity.z > 0; // Moving north (positive Z)
+        case 'south':
+            return velocity.z < 0; // Moving south (negative Z)
+        case 'east':
+            return velocity.x > 0; // Moving east (positive X)
+        case 'west':
+            return velocity.x < 0; // Moving west (negative X)
+        case 'southeast':
+            // For diagonal gates, check both X and Z components
+            return velocity.x > 0 && velocity.z < 0;
+        case 'southwest':
+            return velocity.x < 0 && velocity.z < 0;
+        default:
+            // Default to north for backward compatibility
+            console.warn(`Unknown gate direction: ${gateDirection}, defaulting to north`);
+            return velocity.z > 0;
+    }
 }
 
 /**

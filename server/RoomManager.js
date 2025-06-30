@@ -58,7 +58,7 @@ export class RoomManager {
      * Validate game mode
      */
     validateGameMode(gameMode) {
-        const validModes = ['cooperative', 'competitive'];
+        const validModes = ['cooperative', 'competitive', 'timed'];
         return validModes.includes(gameMode);
     }
 
@@ -80,7 +80,7 @@ export class RoomManager {
 
         // Validate game mode
         if (!this.validateGameMode(gameMode)) {
-            throw new Error('Invalid game mode. Must be "cooperative" or "competitive"');
+            throw new Error('Invalid game mode. Must be "cooperative", "competitive", or "timed"');
         }
 
         // Check if player is already in a room

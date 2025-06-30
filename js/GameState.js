@@ -37,7 +37,7 @@ export class GameState {
             minX: -30,
             maxX: 30,
             minZ: 102,
-            maxZ: 130
+            maxZ: 125  // Reduced from 130 to keep sheep away from back fence
         };
         
         // Competitive mode support
@@ -169,6 +169,8 @@ export class GameState {
         
         if (this.gameMode === 'competitive') {
             this.updateCompetitiveUI();
+        } else if (this.gameMode === 'timed') {
+            this.updateTimedUI();
         } else {
             this.updateCooperativeUI();
         }
@@ -216,6 +218,24 @@ export class GameState {
         }
     }
     
+    updateTimedUI() {
+        // In timed mode, show current player's sheep count on the left like normal
+        const myPlayerId = this.getCurrentPlayerId();
+        const myScore = this.getPlayerScore(myPlayerId) || 0;
+        
+        // Update desktop sheep count to show personal score
+        const sheepCountElement = document.getElementById('sheep-count');
+        if (sheepCountElement) {
+            sheepCountElement.textContent = myScore;
+        }
+        
+        // Update mobile sheep count
+        const mobileSheepCountElement = document.getElementById('mobile-sheep-count');
+        if (mobileSheepCountElement) {
+            mobileSheepCountElement.textContent = `Your sheep: ${myScore}`;
+        }
+    }
+    
     // Helper method to get current player ID (used by multiplayer UI)
     getCurrentPlayerId() {
         // This should be set by the multiplayer system
@@ -227,7 +247,13 @@ export class GameState {
     }
     
     showCompletionMessage(finalTime, isNewRecord, competitiveData = null) {
-        if (this.gameMode === 'competitive' && competitiveData) {
+        console.log('showCompletionMessage called with:', {
+            gameMode: this.gameMode,
+            hasCompetitiveData: !!competitiveData,
+            competitiveData: competitiveData
+        });
+        
+        if ((this.gameMode === 'competitive' || this.gameMode === 'timed') && competitiveData) {
             this.showCompetitiveCompletionMessage(competitiveData, finalTime);
         } else {
             this.showCooperativeCompletionMessage(finalTime, isNewRecord);
@@ -273,31 +299,53 @@ export class GameState {
         
         const myPlayerId = this.getCurrentPlayerId();
         const isWinner = winner === myPlayerId;
+        const myScore = finalScores[myPlayerId] || 0;
+        
+        // Check if new best score for timed mode
+        let isNewBestScore = false;
+        if (this.gameMode === 'timed') {
+            try {
+                const previousBest = localStorage.getItem('timedModeBestScore');
+                const prevBestNum = previousBest ? parseInt(previousBest) : 0;
+                isNewBestScore = myScore > prevBestNum;
+            } catch (e) {
+                console.warn('Could not check best score:', e);
+            }
+        }
         
         // Build completion message
         let message = '';
         let title = '';
         
         if (isWinner) {
-            title = '🏆 VICTORY! 🏆';
-            message = 'You won the competition!';
+            title = this.gameMode === 'timed' ? '⏱️ TIME\'S UP - VICTORY! 🏆' : '🏆 VICTORY! 🏆';
+            message = this.gameMode === 'timed' ? 'You collected the most sheep!' : 'You won the competition!';
         } else {
-            title = '🥈 Game Complete';
-            message = `Player ${winner} won the competition!`;
+            title = this.gameMode === 'timed' ? '⏱️ TIME\'S UP' : '🥈 Game Complete';
+            message = `Player ${winner} won ${this.gameMode === 'timed' ? 'with the most sheep!' : 'the competition!'}`;
         }
         
         // Add win condition explanation
         if (winType === 'race') {
             const winThreshold = Math.ceil(this.totalSheep / 2);
             message += `\nFirst to ${winThreshold} sheep wins!`;
+        } else if (winType === 'timeout' || this.gameMode === 'timed') {
+            message += '\nTime\'s up! Highest score wins!';
         } else {
             message += '\nHighest score when all sheep collected!';
         }
         
         // Add time information if available
-        if (finalTime !== null) {
+        if (finalTime !== null && this.gameMode !== 'timed') {
             const timeStr = this.formatTime(finalTime);
             message += `\nTime: ${timeStr}`;
+        } else if (this.gameMode === 'timed') {
+            message += '\nDuration: 3:00';
+        }
+        
+        // Add new best score message for timed mode
+        if (this.gameMode === 'timed' && isNewBestScore) {
+            message += '\n\n🎉 NEW PERSONAL BEST! 🎉';
         }
         
         // Build final scores display
@@ -424,8 +472,8 @@ export class GameState {
         this.sheepRetired = 0;
         this.isPaused = false; // Ensure game starts unpaused
         
-        // Initialize competitive mode data if provided
-        if (mode === 'competitive' && competitiveData) {
+        // Initialize competitive/timed mode data if provided
+        if ((mode === 'competitive' || mode === 'timed') && competitiveData) {
             this.initializeCompetitiveMode(competitiveData);
         }
         
@@ -434,7 +482,10 @@ export class GameState {
             this.optimizedSheepSystem.resetAllSheep();
         }
         
-        if (mode === 'multiplayer') {
+        // Log game start
+        if (mode === 'timed') {
+            console.log('Game started in timed mode - 3 minute countdown!');
+        } else if (mode === 'multiplayer') {
             console.log('Game started in multiplayer mode with 200 sheep');
         } else if (mode === 'competitive') {
             console.log(`Game started in competitive mode with ${Object.keys(this.playerScores).length} players`);
@@ -461,8 +512,8 @@ export class GameState {
     
     // Update player score in competitive mode
     updatePlayerScore(playerId, increment = 1) {
-        if (this.gameMode !== 'competitive') {
-            console.warn('updatePlayerScore called in non-competitive mode');
+        if (this.gameMode !== 'competitive' && this.gameMode !== 'timed') {
+            console.warn('updatePlayerScore called in non-competitive/timed mode');
             return;
         }
         
@@ -479,7 +530,7 @@ export class GameState {
     
     // Get player's score in competitive mode
     getPlayerScore(playerId) {
-        if (this.gameMode !== 'competitive') {
+        if (this.gameMode !== 'competitive' && this.gameMode !== 'timed') {
             return 0;
         }
         

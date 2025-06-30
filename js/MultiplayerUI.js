@@ -63,6 +63,12 @@ export class MultiplayerUI {
                     titleElement.textContent = '🏆 Competitive Mode (Highest Score)';
                 }
             }
+        } else if (gameMode === 'timed') {
+            this.winThreshold = null;
+            const titleElement = document.getElementById('multiplayer-title');
+            if (titleElement) {
+                titleElement.textContent = '⏱️ Timed Collection (3 minutes)';
+            }
         } else {
             this.winThreshold = null;
             const titleElement = document.getElementById('multiplayer-title');
@@ -76,7 +82,7 @@ export class MultiplayerUI {
     
     // Competitive Mode Scoreboard
     updatePlayerScores(playerScores) {
-        if (this.gameMode !== 'competitive') {
+        if (this.gameMode !== 'competitive' && this.gameMode !== 'timed') {
             return;
         }
         
@@ -96,7 +102,7 @@ export class MultiplayerUI {
     }
     
     updateWinProgress(winCondition) {
-        if (this.gameMode !== 'competitive' || !winCondition) {
+        if ((this.gameMode !== 'competitive' && this.gameMode !== 'timed') || !winCondition) {
             return;
         }
         
@@ -124,7 +130,7 @@ export class MultiplayerUI {
     }
     
     renderCompetitiveScoreboard() {
-        if (!this.multiplayerPlayers || this.gameMode !== 'competitive') {
+        if (!this.multiplayerPlayers || (this.gameMode !== 'competitive' && this.gameMode !== 'timed')) {
             return;
         }
         
@@ -168,8 +174,8 @@ export class MultiplayerUI {
             scoreDisplay.className = 'player-score';
             scoreDisplay.textContent = `${score}`;
             
-            // Progress indicator for 2-player mode
-            if (this.winThreshold) {
+            // Progress indicator for 2-player competitive mode (not timed)
+            if (this.winThreshold && this.gameMode === 'competitive') {
                 const progressBar = document.createElement('div');
                 progressBar.className = 'score-progress';
                 
@@ -207,8 +213,8 @@ export class MultiplayerUI {
             this.multiplayerPlayers.appendChild(playerDiv);
         });
         
-        // Add progress summary for 3-4 player mode
-        if (!this.winThreshold && this.currentPlayers.length >= 3) {
+        // Add progress summary for 3-4 player competitive mode (not for timed)
+        if (!this.winThreshold && this.currentPlayers.length >= 3 && this.gameMode === 'competitive') {
             const summaryDiv = document.createElement('div');
             summaryDiv.className = 'score-summary';
             summaryDiv.innerHTML = `<span>Total: ${totalCollected}/${this.totalSheep}</span>`;
@@ -221,7 +227,7 @@ export class MultiplayerUI {
         this.currentPlayers = players || [];
         this.playerId = currentPlayerId;
         
-        if (this.gameMode === 'competitive') {
+        if (this.gameMode === 'competitive' || this.gameMode === 'timed') {
             this.renderCompetitiveScoreboard();
         } else {
             this.renderPlayerList();
@@ -423,7 +429,7 @@ export class MultiplayerUI {
     
     // Win/Loss State Display
     showCompetitiveCompletion(completionData) {
-        if (this.gameMode !== 'competitive') {
+        if (this.gameMode !== 'competitive' && this.gameMode !== 'timed') {
             return;
         }
         
@@ -442,16 +448,18 @@ export class MultiplayerUI {
         let title, subtitle, message;
         
         if (isYouWinner) {
-            title = '🏆 VICTORY! 🏆';
-            subtitle = 'You won the competition!';
+            title = winType === 'timeout' ? '⏱️ TIME\'S UP - VICTORY! 🏆' : '🏆 VICTORY! 🏆';
+            subtitle = winType === 'timeout' ? 'You collected the most sheep!' : 'You won the competition!';
         } else {
-            title = '🥈 Game Complete';
+            title = winType === 'timeout' ? '⏱️ TIME\'S UP' : '🥈 Game Complete';
             const winnerName = this.currentPlayers.find(p => p.id === winner)?.name || winner;
-            subtitle = `${winnerName} won the competition!`;
+            subtitle = winType === 'timeout' ? `${winnerName} collected the most sheep!` : `${winnerName} won the competition!`;
         }
         
         if (winType === 'race') {
             message = `First to ${this.winThreshold} sheep wins!`;
+        } else if (winType === 'timeout') {
+            message = "Time's up! Highest score wins!";
         } else {
             message = 'Highest score when all sheep collected!';
         }
