@@ -29,7 +29,7 @@ import {
     checkCompetitiveCompletion,
     createCompetitiveGameState,
     checkGatePassage
-} from './shared/index.js';
+} from '../shared/index.js';
 
 export class GameSimulation {
     constructor(room) {

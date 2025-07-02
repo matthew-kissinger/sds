@@ -10,8 +10,8 @@ The SDS multiplayer server is deployed on a **DigitalOcean Droplet** (VPS) to pr
 
 - **Public IP**: `147.182.185.185`
 - **Droplet ID**: `501104628`
-- **Server URL**: `https://sheepdogsim.duckdns.org`
-- **WebRTC Signaling**: `https://sheepdogsim.duckdns.org/.wrtc/v2/connections`
+- **Server URL**: `http://147.182.185.185:9208`
+- **WebRTC Signaling**: `http://147.182.185.185:9208/.wrtc/v2/connections`
 
 ## 🔧 **What Was Changed**
 
