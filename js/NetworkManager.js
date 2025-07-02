@@ -27,9 +27,9 @@ export class NetworkManager {
             this.serverHost = '127.0.0.1';
             this.serverPort = 9208;
         } else {
-            // Production configuration - DigitalOcean Droplet
-            this.serverHost = '147.182.185.185';
-            this.serverPort = 9208;
+            // Production configuration - HTTPS Domain (SSL certificate matches domain)
+            this.serverHost = 'sheepdogsim.duckdns.org';
+            this.serverPort = 9208; // Geckos.io server port
         }
         
         // Debug mode - disabled in production
@@ -95,14 +95,14 @@ export class NetworkManager {
                     console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
                 }
             } else {
-                // DigitalOcean Droplet - use HTTP with direct IP
-                const serverUrl = `http://${this.serverHost}`;
+                // Production - use HTTPS domain with Geckos.io port
+                const serverUrl = `https://${this.serverHost}`;
                 geckosConfig = { 
                     url: serverUrl,
                     port: this.serverPort
                 };
                 if (this.debugMode) {
-                    console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Droplet)`);
+                    console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (HTTPS Production)`);
                 }
             }
             
