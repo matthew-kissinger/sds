@@ -95,14 +95,14 @@ export class NetworkManager {
                     console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
                 }
             } else {
-                // DigitalOcean Droplet - use HTTP with direct IP
+                // DigitalOcean Droplet - use HTTP via nginx proxy (port 80)
                 const serverUrl = `http://${this.serverHost}`;
                 geckosConfig = { 
                     url: serverUrl,
-                    port: this.serverPort
+                    port: 80  // Connect through nginx proxy on port 80
                 };
                 if (this.debugMode) {
-                    console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Droplet)`);
+                    console.log(`🔗 DEBUG: Connecting to ${serverUrl}:80 (Droplet via nginx)`);
                 }
             }
             
