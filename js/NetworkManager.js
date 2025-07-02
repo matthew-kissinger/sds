@@ -27,9 +27,9 @@ export class NetworkManager {
             this.serverHost = '127.0.0.1';
             this.serverPort = 9208;
         } else {
-            // Production configuration - DigitalOcean Droplet
+            // Production configuration - DigitalOcean Droplet with IP-based SSL
             this.serverHost = '147.182.185.185';
-            this.serverPort = 9208;
+            this.serverPort = null; // Use full URL instead of separate port
         }
         
         // Debug mode - disabled in production
@@ -95,14 +95,14 @@ export class NetworkManager {
                     console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
                 }
             } else {
-                // DigitalOcean Droplet - use HTTP via nginx proxy (port 80)
-                const serverUrl = `http://${this.serverHost}`;
+                // DigitalOcean Droplet - HTTPS with self-signed certificate
+                const serverUrl = `https://${this.serverHost}`;
                 geckosConfig = { 
                     url: serverUrl,
-                    port: 80  // Connect through nginx proxy on port 80
+                    port: null  // Use full URL as per Geckos.io docs for proxy setup
                 };
                 if (this.debugMode) {
-                    console.log(`🔗 DEBUG: Connecting to ${serverUrl}:80 (Droplet via nginx)`);
+                    console.log(`🔗 DEBUG: Connecting to ${serverUrl} (IP-based HTTPS with self-signed cert)`);
                 }
             }
             
