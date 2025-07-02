@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Game-specific base styles */
+@layer base {
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  #canvas-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+  
+  input, button, select, textarea {
+    font-size: 16px;
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+}
+
+/* Game UI Components */
+@layer components {
+  .game-hud {
+    @apply absolute inset-0 pointer-events-none z-10;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  
+  .ui-panel {
+    @apply bg-black/60 backdrop-blur-md rounded-lg border border-white/20 p-4;
+  }
+  
+  .btn-primary {
+    @apply bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg 
+           transition-all duration-200 transform hover:scale-105 active:scale-95
+           shadow-lg hover:shadow-xl;
+  }
+  
+  .btn-secondary {
+    @apply bg-white/20 hover:bg-white/30 text-white font-semibold py-3 px-6 rounded-lg 
+           transition-all duration-200 backdrop-blur-md border border-white/20;
+  }
+  
+  .mobile-control {
+    @apply bg-white/20 backdrop-blur-md rounded-full border border-white/30 
+           flex items-center justify-center transition-all duration-200
+           shadow-lg active:scale-95;
+  }
+  
+  .stamina-bar {
+    @apply w-full h-2 bg-gray-700 rounded-full overflow-hidden;
+  }
+  
+  .stamina-fill {
+    @apply h-full transition-all duration-300 ease-out;
+  }
+}
+
+/* Animations */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+}
+
+/* Multiplayer HUD Styles */
+.multiplayer-hud {
+  @apply fixed top-20 right-6 z-20 w-72;
+}
+
+.player-item {
+  @apply p-3 rounded-lg bg-white/5 border transition-all duration-300;
+}
+
+.player-item.leader {
+  @apply border-yellow-400/50 bg-gradient-to-r from-yellow-400/10 to-yellow-500/10;
+}
+
+.player-item.you {
+  @apply border-blue-400/50 bg-gradient-to-r from-blue-400/10 to-blue-500/10;
+}
+
+.score-progress {
+  @apply w-full h-2 bg-white/10 rounded-full overflow-hidden;
+}
+
+.score-progress-fill {
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+}
+
+/* Connection status colors */
+.connection-status.connected {
+  @apply text-green-400;
+}
+
+.connection-status.disconnected {
+  @apply text-red-400;
+}
+
+.connection-status.reconnecting {
+  @apply text-yellow-400;
+}
+
+/* Competition complete overlay */
+.competition-complete {
+  @apply fixed inset-0 bg-black/80 flex items-center justify-center z-50;
+}
+
+.competition-complete .completion-content {
+  @apply ui-panel p-8 max-w-lg w-full mx-4;
+}
+
+.completion-title.winner {
+  @apply text-yellow-400;
+}
+
+.completion-title.participant {
+  @apply text-white;
+}

@@ -48,6 +48,11 @@ export class InputHandler {
                 // Toggle performance monitor with 'P' key
                 this.performanceMonitor.toggle();
                 event.preventDefault();
+            } else if (key === 'c' && this.onDebugComplete) {
+                // DEBUG: Instant completion for testing with 'C' key
+                console.log('🚀 DEBUG: Triggering instant completion...');
+                this.onDebugComplete();
+                event.preventDefault();
             }
         });
 
@@ -228,5 +233,10 @@ export class InputHandler {
     // Set performance monitor reference for toggle functionality
     setPerformanceMonitor(performanceMonitor) {
         this.performanceMonitor = performanceMonitor;
+    }
+    
+    // Set debug completion callback for testing
+    setDebugCompleteCallback(callback) {
+        this.onDebugComplete = callback;
     }
 } 

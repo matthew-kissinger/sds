@@ -29,7 +29,7 @@ import {
     checkCompetitiveCompletion,
     createCompetitiveGameState,
     checkGatePassage
-} from './shared/index.js';
+} from '../shared/index.js';
 
 export class GameSimulation {
     constructor(room) {
@@ -41,7 +41,7 @@ export class GameSimulation {
         this.tickInterval = null;
         
         // Determine game mode
-        this.isCompetitive = room.gameMode === 'competitive';
+        this.isCompetitive = room.gameMode === 'racing';
         this.isTimedMode = room.gameMode === 'timed';
         const playerIds = Array.from(room.players.keys());
         
@@ -945,6 +945,7 @@ export class GameSimulation {
             totalSheep: this.gameState.totalSheep,
             gameCompleted: this.gameState.gameCompleted,
             isCompetitive: this.isCompetitive,
+            isTimedMode: this.isTimedMode,
             
             // Sheep positions and states (simplified for network efficiency)
             sheep: this.gameState.sheep.map(sheep => ({
@@ -1158,8 +1159,8 @@ export class GameSimulation {
                     // Set up completion data for broadcast
                     this.completionData = {
                         completedAt: Date.now(),
-                        isCompetitive: true,
-                        isTimedMode: true,
+                        isCompetitive: this.isCompetitive,
+                        isTimedMode: this.isTimedMode,
                         competitive: {
                             winner: rankings[0].playerId,
                             winType: 'timeout',

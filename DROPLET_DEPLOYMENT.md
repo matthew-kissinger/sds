@@ -8,10 +8,10 @@ The SDS multiplayer server is deployed on a **DigitalOcean Droplet** (VPS) to pr
 
 ## 🎯 **Droplet Details**
 
-- **Public IP**: `68.183.107.158`
+- **Public IP**: `147.182.185.185`
 - **Droplet ID**: `501104628`
-- **Server URL**: `http://68.183.107.158:9208`
-- **WebRTC Signaling**: `http://68.183.107.158:9208/.wrtc/v2/connections`
+- **Server URL**: `http://147.182.185.185:9208`
+- **WebRTC Signaling**: `http://147.182.185.185:9208/.wrtc/v2/connections`
 
 ## 🔧 **What Was Changed**
 
@@ -22,7 +22,7 @@ The SDS multiplayer server is deployed on a **DigitalOcean Droplet** (VPS) to pr
 - ✅ Optimized for direct Droplet deployment
 
 ### **Client Updates**
-- ✅ Updated NetworkManager.js to use Droplet IP: `68.183.107.158:9208`
+- ✅ Updated NetworkManager.js to use Droplet IP: `147.182.185.185:9208`
 - ✅ Changed from HTTPS to HTTP for Droplet connection
 - ✅ Fixed Geckos.io client configuration for direct server connection
 
@@ -37,7 +37,7 @@ The SDS multiplayer server is deployed on a **DigitalOcean Droplet** (VPS) to pr
 
 2. **SSH into your droplet:**
    ```bash
-   ssh root@68.183.107.158
+   ssh root@147.182.185.185
    ```
 
 3. **Run the setup script:**
@@ -55,7 +55,7 @@ The SDS multiplayer server is deployed on a **DigitalOcean Droplet** (VPS) to pr
 
 ### **Option B: Manual Upload**
 
-1. **Use FileZilla/WinSCP to upload to `68.183.107.158:/opt/sds-server/`:**
+1. **Use FileZilla/WinSCP to upload to `147.182.185.185:/opt/sds-server/`:**
    - `server/index.js`
    - `server/RoomManager.js` 
    - `server/GameSimulation.js`
@@ -77,13 +77,13 @@ The deployment script automatically configures:
 1. **Start your local client** (index.html)
 2. **Client will automatically detect environment:**
    - `localhost/127.0.0.1` → Local development server
-   - **Any other hostname** → Droplet server (`68.183.107.158:9208`)
+   - **Any other hostname** → Droplet server (`147.182.185.185:9208`)
 
 3. **Expected logs:**
    ```
-   🔗 DEBUG: Connecting to http://68.183.107.158:9208 (Droplet)
+   🔗 DEBUG: Connecting to http://147.182.185.185:9208 (Droplet)
    🔗 DEBUG: Environment: Production  
-   🔗 DEBUG: Geckos config: {url: "http://68.183.107.158", port: 9208}
+   🔗 DEBUG: Geckos config: {url: "http://147.182.185.185", port: 9208}
    ```
 
 ## 📊 **Server Management**
@@ -99,7 +99,7 @@ pm2 monit                     # Real-time monitoring
 
 ### **Check Server Health:**
 ```bash
-curl http://68.183.107.158:9208/.wrtc/v2/connections
+curl http://147.182.185.185:9208/.wrtc/v2/connections
 ```
 
 ## 🚨 **Troubleshooting**
@@ -108,7 +108,7 @@ curl http://68.183.107.158:9208/.wrtc/v2/connections
 
 1. **Check server status:**
    ```bash
-   ssh root@68.183.107.158
+   ssh root@147.182.185.185
    pm2 status
    pm2 logs sds-multiplayer-server
    ```

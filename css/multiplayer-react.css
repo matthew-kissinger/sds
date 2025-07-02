@@ -1,0 +1,169 @@
+/* React Multiplayer HUD Styles */
+
+/* Hide original multiplayer HUD when React is active */
+body.react-multiplayer #multiplayer-hud,
+#multiplayer-hud.game-ui {
+    display: none !important;
+}
+
+/* Ensure React multiplayer HUD is visible */
+.react-multiplayer-hud {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    z-index: 20;
+    width: 288px;
+}
+
+/* Player list styles */
+.multiplayer-player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.multiplayer-player-item {
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.multiplayer-player-item.leader {
+    border-color: rgba(251, 191, 36, 0.5);
+    background: linear-gradient(to right, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1));
+}
+
+.multiplayer-player-item.you {
+    border-color: rgba(96, 165, 250, 0.5);
+    background: linear-gradient(to right, rgba(96, 165, 250, 0.1), rgba(59, 130, 246, 0.1));
+}
+
+/* Progress bar styles */
+.score-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.score-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
+}
+
+.score-progress-fill.leader {
+    background: linear-gradient(to right, #fbbf24, #f59e0b);
+}
+
+.score-progress-fill.you {
+    background: linear-gradient(to right, #60a5fa, #3b82f6);
+}
+
+.score-progress-fill.default {
+    background: linear-gradient(to right, #9ca3af, #6b7280);
+}
+
+/* Connection status */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ping-good {
+    color: #34d399;
+}
+
+.ping-ok {
+    color: #fbbf24;
+}
+
+.ping-poor {
+    color: #f87171;
+}
+
+/* Competition complete overlay */
+.competition-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+
+.competition-panel {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 32px;
+    max-width: 512px;
+    width: 100%;
+    margin: 0 16px;
+}
+
+.competition-title {
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.competition-title.winner {
+    color: #fbbf24;
+}
+
+.competition-subtitle {
+    font-size: 20px;
+    text-align: center;
+    color: #d1d5db;
+    margin-bottom: 24px;
+}
+
+.final-scores {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.score-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.score-item.you {
+    font-weight: bold;
+    color: #60a5fa;
+}
+
+.restart-button {
+    width: 100%;
+    padding: 12px 24px;
+    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+    border-radius: 8px;
+    font-weight: 600;
+    color: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.restart-button:hover {
+    background: linear-gradient(to right, #2563eb, #7c3aed);
+    transform: scale(1.05);
+}

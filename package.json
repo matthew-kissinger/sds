@@ -6,7 +6,11 @@
   "main": "index.html",
   "scripts": {
     "start": "python -m http.server 8000",
-    "serve": "npx http-server -p 8000"
+    "serve": "npx http-server -p 8000",
+    "dev": "vite --port 3000",
+    "dev-react": "vite --port 3000 index-react.html",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "keywords": [
     "game",
@@ -19,10 +23,19 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.6.0",
+    "autoprefixer": "^10.4.21",
     "http-server": "^14.1.1",
-    "stats.js": "^0.17.0"
+    "postcss": "^8.5.6",
+    "stats.js": "^0.17.0",
+    "tailwindcss": "^4.1.11",
+    "vite": "^7.0.0"
   },
   "dependencies": {
-    "@geckos.io/client": "^3.0.1"
+    "@geckos.io/client": "^3.0.1",
+    "@tailwindcss/cli": "^4.1.11",
+    "framer-motion": "^12.19.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   }
-} 
+}

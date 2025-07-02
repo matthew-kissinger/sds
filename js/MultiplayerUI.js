@@ -50,17 +50,17 @@ export class MultiplayerUI {
     setGameMode(gameMode, playerCount = 0) {
         this.gameMode = gameMode;
         
-        if (gameMode === 'competitive') {
-            // Set win threshold for 2-player competitive mode
+        if (gameMode === 'racing') {
+            // Set win threshold for 2-player racing mode
             this.winThreshold = playerCount === 2 ? Math.ceil(this.totalSheep / 2) : null; // 101 for 200 sheep
             
-            // Update HUD title for competitive mode
+            // Update HUD title for racing mode
             const titleElement = document.getElementById('multiplayer-title');
             if (titleElement) {
                 if (playerCount === 2) {
-                    titleElement.textContent = '🏆 Competitive Race (First to 101)';
+                    titleElement.textContent = '🏆 Racing Mode (First to 101)';
                 } else {
-                    titleElement.textContent = '🏆 Competitive Mode (Highest Score)';
+                    titleElement.textContent = '🏆 Racing Mode (Highest Score)';
                 }
             }
         } else if (gameMode === 'timed') {
@@ -80,9 +80,9 @@ export class MultiplayerUI {
         this.renderPlayerList();
     }
     
-    // Competitive Mode Scoreboard
+    // Racing/Timed Mode Scoreboard
     updatePlayerScores(playerScores) {
-        if (this.gameMode !== 'competitive' && this.gameMode !== 'timed') {
+        if (this.gameMode !== 'racing' && this.gameMode !== 'timed') {
             return;
         }
         
@@ -102,7 +102,7 @@ export class MultiplayerUI {
     }
     
     updateWinProgress(winCondition) {
-        if ((this.gameMode !== 'competitive' && this.gameMode !== 'timed') || !winCondition) {
+        if ((this.gameMode !== 'racing' && this.gameMode !== 'timed') || !winCondition) {
             return;
         }
         
@@ -130,7 +130,7 @@ export class MultiplayerUI {
     }
     
     renderCompetitiveScoreboard() {
-        if (!this.multiplayerPlayers || (this.gameMode !== 'competitive' && this.gameMode !== 'timed')) {
+        if (!this.multiplayerPlayers || (this.gameMode !== 'racing' && this.gameMode !== 'timed')) {
             return;
         }
         
@@ -227,7 +227,7 @@ export class MultiplayerUI {
         this.currentPlayers = players || [];
         this.playerId = currentPlayerId;
         
-        if (this.gameMode === 'competitive' || this.gameMode === 'timed') {
+        if (this.gameMode === 'racing' || this.gameMode === 'timed') {
             this.renderCompetitiveScoreboard();
         } else {
             this.renderPlayerList();

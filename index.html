@@ -7,21 +7,24 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00BFFF">
-    <title>Sheep Dog Sim</title>
+    <title>Sheep Dog Simulator</title>
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
+    <!-- Tailwind CSS - Note: In production, this should be replaced with a pre-built CSS file -->
+    <!-- The CDN is used here for simplicity, but will show a console warning -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.1/dist/nipplejs.min.js"></script>
+    <link rel="stylesheet" href="css/multiplayer-react.css">
     <style>
+        /* Base styles */
         body {
             margin: 0;
             overflow: hidden;
-            font-family: Arial, sans-serif;
-            /* Prevent text selection on mobile */
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            /* Prevent touch callouts */
             -webkit-touch-callout: none;
-            /* Prevent tap highlight */
             -webkit-tap-highlight-color: transparent;
         }
         
@@ -29,2038 +32,623 @@
             position: relative;
             width: 100%;
             height: 100vh;
-            /* Prevent scrolling */
             touch-action: none;
-            /* Prevent overscroll bounce on iOS */
             overscroll-behavior: none;
+            /* Ensure canvas can receive mouse events */
+            z-index: 1;
         }
         
-        /* Prevent zoom on inputs and buttons */
+        /* Keep the original UI hidden but in DOM */
+        #start-screen, .game-ui {
+            display: none !important;
+        }
+        
+        /* Force hide the original multiplayer HUD */
+        #multiplayer-hud {
+            display: none !important;
+        }
+        
+        /* Modern UI overlay */
+        #react-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        #react-overlay > * {
+            pointer-events: auto;
+        }
+        
+        /* UI Components */
+        .ui-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 
+                0 4px 20px rgba(0, 0, 0, 0.12),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+        }
+        
+        .btn-primary {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: white;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(0);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            outline: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-primary:hover::before {
+            opacity: 1;
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
+        
+        .btn-primary span {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            color: white;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(0);
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+        }
+        
+        .btn-secondary:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Input styles */
+        .modern-input {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.3s;
+            outline: none;
+            box-shadow: 
+                0 2px 8px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+        }
+        
+        .modern-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 3px 12px rgba(0, 0, 0, 0.12),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+                0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Dropdown styles */
+        .modern-input option {
+            background: #1a1a1a;
+            color: white;
+            padding: 0.5rem;
+        }
+        
+        .modern-input::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .modern-input::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .modern-input::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        /* Mobile controls */
+        .mobile-control {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 
+                0 4px 16px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .mobile-control:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 2px 8px rgba(0, 0, 0, 0.12),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Stamina bar */
+        .stamina-bar {
+            width: 100%;
+            height: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.25rem;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .stamina-fill {
+            height: 100%;
+            transition: width 0.3s ease-out;
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        
+        .stamina-fill.low {
+            background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideInLeft {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes pulseGlow {
+            0%, 100% { 
+                box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
+                transform: translateY(0);
+            }
+            50% { 
+                box-shadow: 0 20px 40px -5px rgba(102, 126, 234, 0.6);
+                transform: translateY(-2px);
+            }
+        }
+        
+        @keyframes floatAnimation {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(2deg); }
+        }
+        
+        @keyframes titleBounce {
+            0%, 100% { 
+                transform: translateY(0) rotate(-0.5deg);
+            }
+            50% { 
+                transform: translateY(-5px) rotate(-0.5deg);
+            }
+        }
+        
+        @keyframes subtitleBounce {
+            0%, 100% { 
+                transform: translateY(0) rotate(0.5deg);
+            }
+            50% { 
+                transform: translateY(-8px) rotate(0.5deg);
+            }
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Shimmer animation for skeleton loader */
+        @keyframes shimmer {
+            0% {
+                background-position: -200px 0;
+            }
+            100% {
+                background-position: calc(200px + 100%) 0;
+            }
+        }
+        
+        /* Skeleton loader fade out */
+        .skeleton-fade-out {
+            animation: fadeOut 0.3s ease-out forwards;
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        /* Hover scale utilities */
+        .hover\:scale-102:hover {
+            transform: scale(1.02);
+        }
+        
+        /* Mobile joystick override */
+        #joystick-zone {
+            position: fixed !important;
+            z-index: 100;
+        }
+        
+        /* Safe area handling */
+        .safe-area-inset {
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        
+        /* Prevent zoom */
         input, button, select, textarea {
             font-size: 16px;
             -webkit-appearance: none;
             border-radius: 0;
         }
         
-        /* Start Screen Overlay */
-        #start-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+        /* React overlay */
+        #react-overlay {
+            position: fixed;
+            inset: 0;
             z-index: 1000;
+            pointer-events: none;
+        }
+        
+        /* Ensure all child elements of react-overlay don't block scroll */
+        #react-overlay * {
+            pointer-events: none;
+        }
+        
+        /* Only allow pointer events on specific interactive elements */
+        #react-overlay button,
+        #react-overlay input,
+        #react-overlay select,
+        #react-overlay .btn-primary,
+        #react-overlay .btn-secondary,
+        #react-overlay .dog-card,
+        #react-overlay .mode-button,
+        #react-overlay .ui-panel,
+        #react-overlay .cursor-pointer {
+            pointer-events: auto;
+        }
+        
+        /* Ensure HUD components are visible but don't block scroll */
+        #react-overlay .game-hud {
+            pointer-events: none;
+        }
+        
+        /* Make sure start screen elements are clickable */
+        #react-overlay .fixed.inset-0 > div {
+            pointer-events: auto;
+        }
+        
+        #react-overlay .ui-panel {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
             color: white;
-            text-align: center;
-            padding: 20px;
-            box-sizing: border-box;
-            /* Mobile safe area and scrolling */
-            padding-top: max(20px, env(safe-area-inset-top));
-            padding-bottom: max(20px, env(safe-area-inset-bottom));
-            padding-left: max(20px, env(safe-area-inset-left));
-            padding-right: max(20px, env(safe-area-inset-right));
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
         }
         
-        #game-title {
-            font-size: 4.5rem;
-            font-weight: 900;
-            margin-bottom: 1rem;
-            color: #00BFFF;
-            font-family: 'Arial Black', Arial, sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            text-shadow: 3px 3px 0px #000;
-        }
-        
-        /* Mobile responsive title */
-        @media (max-width: 768px) {
-            #start-screen {
-                padding: 10px;
-                justify-content: flex-start;
-                padding-top: 5vh;
-                padding-bottom: 5vh;
-                min-height: 100vh;
-                box-sizing: border-box;
-                overflow-y: auto;
-            }
-            
-            #game-title {
-                font-size: 2.2rem;
-                letter-spacing: 1px;
-                margin-bottom: 0.5rem;
-            }
-            
-            #game-subtitle {
-                font-size: 0.9rem;
-                margin-bottom: 1.5rem;
-            }
-            
-            #start-instructions {
-                max-width: 95%;
-                padding: 1.2rem;
-                margin-bottom: 1.5rem;
-            }
-            
-            #start-instructions h3 {
-                font-size: 1.1rem;
-                margin-bottom: 0.8rem;
-            }
-            
-            #start-instructions p {
-                font-size: 0.85rem;
-                margin: 0.6rem 0;
-            }
-            
-            #start-button {
-                padding: 15px 30px;
-                font-size: 1.2rem;
-                margin-top: 1rem;
-                margin-bottom: 2rem;
-            }
-        }
-        
-        /* Mobile portrait adjustments */
-        @media (max-width: 480px) and (orientation: portrait) {
-            #start-screen {
-                padding: 5px;
-                justify-content: flex-start;
-                padding-top: 2vh;
-                padding-bottom: 3vh;
-                min-height: 100vh;
-                max-height: 100vh;
-                overflow-y: auto;
-                display: flex;
-                flex-direction: column;
-            }
-            
-            #game-title {
-                font-size: 1.8rem;
-                margin-bottom: 0.3rem;
-            }
-            
-            #game-subtitle {
-                font-size: 0.8rem;
-                margin-bottom: 1rem;
-            }
-            
-            #start-instructions {
-                padding: 1rem;
-                margin-bottom: 1rem;
-                flex-shrink: 0;
-            }
-            
-            #start-instructions h3 {
-                font-size: 1rem;
-            }
-            
-            #start-instructions p {
-                font-size: 0.8rem;
-                margin: 0.4rem 0;
-            }
-            
-            #start-button {
-                padding: 12px 25px;
-                font-size: 1rem;
-                margin-top: 1rem;
-                margin-bottom: 2rem;
-                flex-shrink: 0;
-            }
-        }
-        
-        /* Extra small screens - ensure everything fits */
-        @media (max-width: 360px) and (max-height: 640px) {
-            #start-screen {
-                padding: 3px;
-                padding-top: 1vh;
-                padding-bottom: 2vh;
-            }
-            
-            #game-title {
-                font-size: 1.5rem;
-                margin-bottom: 0.2rem;
-            }
-            
-            #game-subtitle {
-                font-size: 0.7rem;
-                margin-bottom: 0.8rem;
-            }
-            
-            #start-instructions {
-                padding: 0.8rem;
-                margin-bottom: 0.8rem;
-            }
-            
-            #start-instructions h3 {
-                font-size: 0.9rem;
-                margin-bottom: 0.5rem;
-            }
-            
-            #start-instructions p {
-                font-size: 0.75rem;
-                margin: 0.3rem 0;
-            }
-            
-            #start-button {
-                padding: 10px 20px;
-                font-size: 0.9rem;
-                margin-top: 0.8rem;
-                margin-bottom: 1.5rem;
-            }
-        }
-        
-        /* Very short screens - ultra compact layout */
-        @media (max-height: 600px) {
-            #start-screen {
-                padding: 2px;
-                padding-top: 1vh;
-                padding-bottom: 1vh;
-                justify-content: space-between;
-            }
-            
-            #game-title {
-                font-size: 1.4rem;
-                margin-bottom: 0.1rem;
-            }
-            
-            #game-subtitle {
-                font-size: 0.65rem;
-                margin-bottom: 0.5rem;
-            }
-            
-            #start-instructions {
-                padding: 0.6rem;
-                margin-bottom: 0.5rem;
-            }
-            
-            #start-instructions h3 {
-                font-size: 0.85rem;
-                margin-bottom: 0.3rem;
-            }
-            
-            #start-instructions p {
-                font-size: 0.7rem;
-                margin: 0.2rem 0;
-                line-height: 1.2;
-            }
-            
-            #start-button {
-                padding: 8px 16px;
-                font-size: 0.85rem;
-                margin-top: 0.5rem;
-                margin-bottom: 1rem;
-            }
-        }
-        
-        /* Landscape mobile - horizontal layout adjustments */
-        @media (max-height: 500px) and (orientation: landscape) {
-            #start-screen {
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-around;
-                padding: 5px;
-            }
-            
-            #start-screen > div:first-child {
-                flex: 1;
-                text-align: left;
-            }
-            
-            #start-instructions {
-                flex: 1;
-                margin: 0 10px;
-            }
-            
-            #start-button {
-                flex-shrink: 0;
-                margin: 0;
-            }
-        }
-        
-        #game-subtitle {
-            font-size: 1.4rem;
-            margin-bottom: 2rem;
-            color: #FFF;
-            font-family: Arial, sans-serif;
-            font-weight: normal;
-        }
-        
-        #start-instructions {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 2rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            color: #333;
-            border: 3px solid #00BFFF;
-            max-width: 500px;
-        }
-        
-        #start-instructions h3 {
-            margin: 0 0 1rem 0;
-            font-size: 1.5rem;
-            color: #00BFFF;
-            font-family: 'Arial Black', Arial, sans-serif;
-            font-weight: 900;
-        }
-        
-        #start-instructions p {
-            margin: 0.8rem 0;
-            font-size: 1rem;
-            line-height: 1.4;
-            font-family: Arial, sans-serif;
-            color: #333;
-        }
-        
-        #start-button {
-            background: #00BFFF;
-            border: 3px solid #FFF;
-            color: #FFF;
-            padding: 20px 40px;
-            font-size: 1.5rem;
-            font-weight: 900;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-family: 'Arial Black', Arial, sans-serif;
-            text-shadow: 2px 2px 0px #000;
-            /* Mobile touch improvements */
-            min-height: 44px;
-            min-width: 44px;
-            /* Ensure button is always accessible */
-            margin-bottom: max(20px, env(safe-area-inset-bottom, 20px));
-            flex-shrink: 0;
-        }
-        
-        #start-button:hover {
-            background: #FFF;
-            color: #00BFFF;
-            border: 3px solid #00BFFF;
-            text-shadow: none;
-        }
-        
-        #start-button:active {
-            transform: translateY(2px);
-        }
-        
-        /* Mode Selection Styles */
-        #mode-selection {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: center;
-        }
-        
-        .mode-button {
-            background: #00BFFF;
-            border: 3px solid #FFF;
-            color: #FFF;
-            padding: 18px 35px;
-            font-size: 1.3rem;
-            font-weight: 900;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-family: 'Arial Black', Arial, sans-serif;
-            text-shadow: 2px 2px 0px #000;
-            min-height: 44px;
-            min-width: 200px;
-            flex-shrink: 0;
-        }
-        
-        .mode-button:hover {
-            background: #FFF;
-            color: #00BFFF;
-            border: 3px solid #00BFFF;
-            text-shadow: none;
-            transform: translateY(-2px);
-        }
-        
-        .mode-button:active {
-            transform: translateY(0px);
-        }
-        
-        .mode-button:disabled {
-            background: #666;
-            color: #999;
-            border: 3px solid #999;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .mode-button:disabled:hover {
-            background: #666;
-            color: #999;
-            border: 3px solid #999;
-            transform: none;
-        }
-        
-        /* Connection Status Styles */
-        #connection-status {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            border-radius: 8px;
-            border: 3px solid #00BFFF;
-            color: #333;
-            text-align: center;
-            max-width: 400px;
-        }
-        
-        #connection-message {
-            font-size: 1.1rem;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        
-        #back-to-menu-button {
-            background: #666;
-            border: 2px solid #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: Arial, sans-serif;
-        }
-        
-        #back-to-menu-button:hover {
-            background: #333;
-            border: 2px solid #666;
-        }
-        
-        /* Mobile responsive mode buttons */
-        @media (max-width: 768px) {
-            #mode-selection {
-                gap: 12px;
-            }
-            
-            .mode-button {
-                padding: 15px 25px;
-                font-size: 1.1rem;
-                min-width: 180px;
-            }
-            
-            #connection-status {
-                padding: 15px;
-                max-width: 90%;
-            }
-            
-            #connection-message {
-                font-size: 1rem;
-                margin-bottom: 12px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .mode-button {
-                padding: 12px 20px;
-                font-size: 1rem;
-                min-width: 160px;
-            }
-        }
-        
-        /* Back Button Styles */
-        .back-button {
-            background: #666;
-            border: 2px solid #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: Arial, sans-serif;
-            margin-top: 10px;
-        }
-        
-        .back-button:hover {
-            background: #333;
-            border: 2px solid #666;
-        }
-        
-        /* Dog Selection Styles */
-        #dog-selection {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 2rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            color: #333;
-            border: 3px solid #00BFFF;
-            max-width: 600px;
-        }
-        
-        #dog-cards {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        .dog-card {
-            background: #f8f9fa;
-            border: 3px solid #e9ecef;
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 160px;
-            flex: 1;
-            max-width: 180px;
-        }
-        
-        .dog-card:hover {
-            border-color: #00BFFF;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 191, 255, 0.3);
-        }
-        
-        .dog-card.active {
-            border-color: #00BFFF;
-            background: rgba(0, 191, 255, 0.1);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 191, 255, 0.4);
-        }
-        
-        .dog-avatar {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .dog-card h4 {
-            font-size: 1.3rem;
-            margin: 0.5rem 0;
-            color: #00BFFF;
-            font-family: 'Arial Black', Arial, sans-serif;
-        }
-        
-        .dog-breed {
-            font-size: 0.9rem;
-            color: #666;
-            margin: 0.25rem 0;
-            font-style: italic;
-        }
-        
-        .dog-description {
-            font-size: 0.85rem;
-            color: #333;
-            margin: 0.5rem 0;
-            line-height: 1.3;
-        }
-        
-        .dog-stats {
-            margin-top: 0.75rem;
-            font-size: 0.75rem;
-            text-align: left;
-        }
-        
-        .stat {
-            margin: 0.2rem 0;
-            color: #555;
-        }
-        
-        /* Mobile responsive dog selection */
-        @media (max-width: 768px) {
-            #dog-selection {
-                padding: 1.5rem;
-                margin-bottom: 1.5rem;
-                max-width: 95%;
-            }
-            
-            #dog-cards {
-                gap: 10px;
-            }
-            
-            .dog-card {
-                min-width: 140px;
-                padding: 0.8rem;
-            }
-            
-            .dog-avatar {
-                font-size: 2rem;
-            }
-            
-            .dog-card h4 {
-                font-size: 1.1rem;
-            }
-            
-            .dog-breed {
-                font-size: 0.8rem;
-            }
-            
-            .dog-description {
-                font-size: 0.8rem;
-            }
-            
-            .dog-stats {
-                font-size: 0.7rem;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            #dog-cards {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .dog-card {
-                max-width: 280px;
-                width: 100%;
-            }
-        }
-        
-        /* Room Form Styles */
-        .room-form {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            border-radius: 8px;
-            border: 3px solid #00BFFF;
-            color: #333;
-            margin-bottom: 20px;
-            max-width: 400px;
-        }
-        
-        .room-form label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #333;
-        }
-        
-        .room-form input, .room-form select {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
-            margin-bottom: 15px;
-            box-sizing: border-box;
-        }
-        
-        .room-form input:focus, .room-form select:focus {
-            border-color: #00BFFF;
-            outline: none;
-        }
-        
-        .checkbox-label {
-            display: flex !important;
-            align-items: center;
-            cursor: pointer;
-        }
-        
-        .checkbox-label input[type="checkbox"] {
-            width: auto !important;
-            margin-right: 8px;
-            margin-bottom: 0 !important;
-        }
-        
-        .room-privacy {
-            margin-top: 10px;
-        }
-        
-        /* Game Mode Selection Styles */
-        .game-mode-selection {
-            margin: 15px 0;
-        }
-        
-        .game-mode-selection > label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #333;
-        }
-        
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .radio-label {
-            display: flex !important;
-            align-items: flex-start;
-            cursor: pointer;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-            background: #f9f9f9;
-        }
-        
-        .radio-label:hover {
-            border-color: #00BFFF;
-            background: #f0f8ff;
-        }
-        
-        .radio-label input[type="radio"] {
-            width: auto !important;
-            margin-right: 10px;
-            margin-bottom: 0 !important;
-            margin-top: 2px;
-            flex-shrink: 0;
-        }
-        
-        .radio-label input[type="radio"]:checked + .radio-text,
-        .radio-label:has(input[type="radio"]:checked) {
-            border-color: #00BFFF;
-            background: #e3f2fd;
-            font-weight: bold;
-        }
-        
-        .radio-label:has(input[type="radio"]:checked) {
-            border-color: #00BFFF;
-            background: #e3f2fd;
-        }
-        
-        /* Mobile responsive for game mode selection */
-        @media (max-width: 768px) {
-            .radio-label {
-                padding: 8px;
-                font-size: 0.9rem;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .radio-group {
-                gap: 8px;
-            }
-            
-            .radio-label {
-                padding: 6px;
-                font-size: 0.85rem;
-            }
-        }
-        
-        .error-message {
-            color: #F44336;
-            font-size: 0.9rem;
-            margin-top: -10px;
-            margin-bottom: 15px;
-        }
-        
-        /* Lobby Styles */
-        #lobby-screen {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 25px;
-            border-radius: 8px;
-            border: 3px solid #00BFFF;
-            color: #333;
-            max-width: 500px;
-            text-align: left;
-        }
-        
-        #lobby-screen h3, #lobby-screen h4 {
-            color: #00BFFF;
-            margin-top: 0;
-            text-align: center;
-        }
-        
-        #room-info {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #eee;
-        }
-        
-        #room-code-display {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        #current-room-code {
-            color: #00BFFF;
-            font-size: 1.2rem;
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
-        
-        .copy-button {
-            background: #4CAF50;
-            border: none;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: background 0.2s ease;
-        }
-        
-        .copy-button:hover {
-            background: #45a049;
-        }
-        
-        .copy-button:active {
-            background: #3d8b40;
-        }
-        
-        #player-list {
-            margin-bottom: 20px;
-        }
-        
-        #players-container {
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 10px;
-            min-height: 60px;
-        }
-        
-        .player-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px;
-            margin-bottom: 5px;
-            background: white;
-            border-radius: 4px;
-            border: 1px solid #eee;
-        }
-        
-        .player-name {
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .player-status {
-            font-size: 0.9rem;
-            color: #666;
-        }
-        
-        .player-host {
-            background: #e3f2fd;
-            border-color: #00BFFF;
-        }
-        
-        .player-host .player-status::after {
-            content: " (Host)";
-            color: #00BFFF;
-            font-weight: bold;
-        }
-        
-        #lobby-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .host-only {
-            display: none;
-        }
-        
-        .is-host .host-only {
-            display: block;
-        }
-        
-        #lobby-status {
-            text-align: center;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-        }
-        
-        #lobby-message {
-            color: #666;
-            font-style: italic;
-            margin: 0;
-        }
-        
-        /* Mobile responsive room UI */
-        @media (max-width: 768px) {
-            .room-form {
-                padding: 15px;
-                max-width: 90%;
-            }
-            
-            #lobby-screen {
-                padding: 20px;
-                max-width: 90%;
-            }
-            
-            #room-code-display {
-                flex-direction: column;
-                gap: 8px;
-            }
-            
-            #current-room-code {
-                font-size: 1.1rem;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .room-form {
-                padding: 12px;
-            }
-            
-            .room-form input, .room-form select {
-                padding: 8px;
-                font-size: 0.9rem;
-            }
-            
-            #lobby-screen {
-                padding: 15px;
-            }
-            
-            .mode-button {
-                min-width: 140px;
-            }
-        }
-        
-        /* Mute Toggle in Controls */
-        #mute-toggle {
-            margin: 5px 0;
-            font-size: 14px;
-            color: #333;
-            cursor: pointer;
-            user-select: none;
-            transition: color 0.2s ease;
-        }
-        
-        #mute-toggle:hover {
-            color: #00BFFF;
-        }
-        
-        #mute-toggle.muted {
-            color: #FF6B35;
-        }
-        
-        /* Game UI Elements - Clean style */
-        .game-ui {
-            opacity: 0;
-            transition: opacity 0.5s ease;
-        }
-        
-        .game-ui.visible {
-            opacity: 1;
-        }
-        
-        /* Stats hidden by default */
-        #stats {
-            display: none;
-        }
-        
-        #stats.visible {
-            display: block;
-        }
-        
-        #instructions {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px solid #00BFFF;
-            font-family: Arial, sans-serif;
-            /* Mobile adjustments */
-            max-width: calc(100vw - 160px);
-            z-index: 999;
-        }
-        
-        /* Mobile responsive instructions */
-        @media (max-width: 768px) {
-            #instructions {
-                bottom: 10px;
-                left: 10px;
-                right: 10px;
-                max-width: none;
-                padding: 10px;
-                font-size: 12px;
-            }
-            
-            #instructions h3 {
-                font-size: 14px;
-                margin-bottom: 8px;
-            }
-            
-            #instructions p {
-                margin: 3px 0;
-                font-size: 11px;
-            }
-        }
-        
-        #instructions h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            color: #00BFFF;
-            font-weight: 900;
-        }
-        
-        #instructions p {
-            margin: 5px 0;
-            font-size: 14px;
-            color: #333;
-        }
-        
-        #completion-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.98);
-            color: #333;
-            padding: 30px 50px;
-            border-radius: 8px;
-            font-size: 24px;
-            font-weight: 900;
-            display: none;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            text-align: center;
-            line-height: 1.4;
-            border: 4px solid #00BFFF;
-            font-family: 'Arial Black', Arial, sans-serif;
-            z-index: 1002;
-            max-width: 90vw;
-            box-sizing: border-box;
-        }
-        
-        /* Mobile responsive completion message */
-        @media (max-width: 768px) {
-            #completion-message {
-                padding: 20px 30px;
-                font-size: 18px;
-            }
-        }
-        
-        #restart-button {
-            background: #00BFFF;
-            border: 2px solid #333;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 900;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: all 0.2s ease;
-            font-family: 'Arial Black', Arial, sans-serif;
-            text-transform: uppercase;
-            /* Mobile touch improvements */
-            min-height: 44px;
-            min-width: 44px;
-        }
-        
-        #restart-button:hover {
-            background: #333;
-            border: 2px solid #00BFFF;
-        }
-        
-        #stats {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 14px;
-            border: 2px solid #00BFFF;
-            font-family: Arial, sans-serif;
-            font-weight: bold;
-            color: #333;
-            z-index: 999;
-        }
-        
-        #timer {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 25px;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: 900;
-            text-align: center;
-            border: 2px solid #00BFFF;
-            font-family: 'Arial Black', Arial, sans-serif;
-            z-index: 999;
-        }
-        
-        /* Combined mobile UI for timer and sheep count */
-        #mobile-combined-ui {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 900;
-            text-align: center;
-            border: 2px solid #00BFFF;
-            font-family: 'Arial Black', Arial, sans-serif;
-            z-index: 999;
-            display: none;
-            min-width: 200px;
-        }
-        
-        #mobile-timer-display {
-            color: #00BFFF;
-            font-size: 16px;
-            margin-bottom: 2px;
-        }
-        
-        #mobile-sheep-count {
-            font-size: 12px;
-            color: #333;
-            margin-bottom: 2px;
-        }
-        
-        #mobile-best-time {
-            font-size: 10px;
-            color: #666;
-            font-weight: normal;
-            font-family: Arial, sans-serif;
-        }
-        
-        /* Mobile responsive timer */
-        @media (max-width: 768px) {
-            #timer {
-                display: none; /* Hide desktop timer on mobile */
-            }
-            
-            #stats {
-                display: none !important; /* Hide desktop stats on mobile */
-            }
-            
-            #mobile-combined-ui {
-                display: block; /* Show combined UI on mobile */
-            }
-            
-            #timer.desktop-only {
-                top: 10px;
-                padding: 10px 15px;
-                font-size: 14px;
-            }
-            
-            #timer-display {
-                font-size: 16px;
-            }
-            
-            #best-time {
-                font-size: 10px;
-            }
-        }
-        
-        #timer-display {
-            color: #00BFFF;
-            margin-bottom: 5px;
-            font-size: 20px;
-        }
-        
-        #best-time {
-            font-size: 12px;
-            color: #666;
-            font-weight: normal;
-            font-family: Arial, sans-serif;
-        }
-        
-        .new-record {
-            color: #FF6B35 !important;
-            animation: recordFlash 1s ease-in-out infinite alternate;
-        }
-        
-        @keyframes recordFlash {
-            from { opacity: 1; }
-            to { opacity: 0.7; }
-        }
-        
-        /* Stamina Bar */
-        #stamina-bar {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px solid #00BFFF;
-            font-family: Arial, sans-serif;
-            min-width: 200px;
-            z-index: 999;
-        }
-        
-        /* Mobile responsive stamina bar */
-        @media (max-width: 768px) {
-            #stamina-bar {
-                bottom: 100px;
-                left: 50%;
-                transform: translateX(-50%);
-                right: auto;
-                min-width: 180px;
-                padding: 8px 12px;
-            }
-            
-            #stamina-label {
-                font-size: 12px;
-            }
-            
-            #stamina-container {
-                height: 16px;
-            }
-            
-            #stamina-text {
-                font-size: 10px;
-            }
-        }
-        
-        /* Landscape mobile - ensure centered layout */
-        @media (max-width: 768px) and (orientation: landscape) {
-            #stamina-bar {
-                bottom: 80px !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                right: auto !important;
-                min-width: 200px !important;
-                padding: 8px 12px !important;
-            }
-            
-            #mobile-combined-ui {
-                display: block !important;
-                top: 10px !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                min-width: 280px !important;
-                padding: 8px 20px !important;
-                font-size: 12px !important;
-            }
-            
-            /* Hide desktop timer and stats in landscape */
-            #timer {
-                display: none !important;
-            }
-            
-            #stats {
-                display: none !important;
-            }
-        }
-        
-        #stamina-label {
-            font-size: 14px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-        
-        #stamina-container {
-            width: 100%;
-            height: 20px;
-            background: #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid #999;
-            margin-bottom: 5px;
-        }
-        
-        #stamina-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4CAF50, #8BC34A);
-            border-radius: 10px;
-            transition: width 0.2s ease, background 0.3s ease;
-            width: 100%;
-        }
-        
-        #stamina-fill.low {
-            background: linear-gradient(90deg, #FF9800, #FFC107);
-        }
-        
-        #stamina-fill.critical {
-            background: linear-gradient(90deg, #F44336, #FF5722);
-            animation: staminaPulse 0.5s ease-in-out infinite alternate;
-        }
-        
-        #stamina-fill.sprinting {
-            background: linear-gradient(90deg, #2196F3, #03A9F4);
-            animation: staminaDrain 0.3s ease-in-out infinite alternate;
-        }
-        
-        #stamina-text {
-            font-size: 12px;
-            color: #666;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        @keyframes staminaPulse {
-            from { opacity: 1; }
-            to { opacity: 0.6; }
-        }
-        
-        @keyframes staminaDrain {
-            from { transform: scaleX(1); }
-            to { transform: scaleX(0.98); }
-        }
-        
-        /* Mobile Controls Styles */
-        #mobile-joystick {
-            pointer-events: auto !important;
-        }
-        
-        #mobile-zoom {
-            pointer-events: auto !important;
-        }
-        
-        #mobile-sprint {
-            pointer-events: auto !important;
-        }
-        
-        /* Mobile Fullscreen Button */
-        #mobile-fullscreen {
-            position: fixed !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: 160px !important;
-            height: 80px !important;
-            border-radius: 12px !important;
-            background: rgba(0, 191, 255, 0.95) !important;
-            border: 3px solid white !important;
-            color: white !important;
-            font-size: 24px !important;
-            font-weight: bold !important;
-            z-index: 2000 !important;
-            display: block !important;
-            pointer-events: auto !important;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.4) !important;
-            transition: all 0.3s ease !important;
-            user-select: none !important;
-            -webkit-user-select: none !important;
-            -webkit-touch-callout: none !important;
-            font-family: Arial, sans-serif !important;
-            text-align: center !important;
-            line-height: 1.2 !important;
-            cursor: pointer !important;
-            /* Ensure it's above everything */
-            position: fixed !important;
-        }
-        
-        #mobile-fullscreen:active {
-            transform: translate(-50%, -50%) scale(0.95) !important;
-            background: rgba(0, 150, 200, 0.95) !important;
-        }
-        
-        /* Ensure mobile controls are above other UI elements */
-        #mobile-joystick,
-        #mobile-zoom,
-        #mobile-sprint {
-            z-index: 1001 !important;
-        }
-        
-        /* Hide desktop-only UI elements on mobile */
-        @media (max-width: 768px) and (pointer: coarse) {
-            #instructions p:contains("Mouse Wheel"),
-            #instructions p:contains("P") {
-                display: none;
-            }
-            
-            /* Ensure stats are completely hidden on mobile */
-            #stats,
-            #stats.visible,
-            #stats.game-ui {
-                display: none !important;
-            }
-        }
-        
-        /* Mobile device detection using is-mobile class */
-        /* ALWAYS hide desktop HUD on a touch device */
-        body.is-mobile #timer,
-        body.is-mobile #stats {
-            display: none !important;
-        }
-        
-        body.is-mobile #mobile-combined-ui {
-            display: block !important;
-            top: calc(env(safe-area-inset-top, 0px) + 5px); /* Closer to top + safe area */
-            min-width: auto; /* Allow to shrink */
-            padding: 6px 12px; /* Smaller padding */
-            border-radius: 6px; /* Smaller border radius */
-        }
-         
-        body.is-mobile #mobile-combined-ui #mobile-timer-display {
-            font-size: 14px; /* Smaller timer */
-            margin-bottom: 1px;
-        }
-        
-        body.is-mobile #mobile-combined-ui #mobile-sheep-count {
-            font-size: 10px; /* Smaller sheep count */
-            margin-bottom: 1px;
-        }
-        
-        body.is-mobile #mobile-combined-ui #mobile-best-time {
-            font-size: 9px; /* Smaller best time */
-        }
-        
-        /* New Container-Based Mobile Layout */
-        
-        /* Mobile Left Stack - Portrait Mode (just joystick) */
-        @media (max-width: 768px) and (orientation: portrait) {
-            #mobile-left-stack {
-                position: fixed;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
-                left: calc(env(safe-area-inset-left, 0px) + 20px);
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                z-index: 1001;
-            }
-            
-            /* Children use relative positioning within stack */
-            #mobile-left-stack > * {
-                position: relative !important;
-                left: auto !important;
-                bottom: auto !important;
-                right: auto !important;
-                top: auto !important;
-            }
-            
-            /* Sprint button positioned independently on bottom-right in portrait */
-            #mobile-sprint {
-                position: fixed !important;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
-                right: calc(env(safe-area-inset-right, 0px) + 20px) !important;
-                left: auto !important;
-                top: auto !important;
-            }
-            
-            /* Stamina bar in portrait - bottom center with some clearance */
-            body.is-mobile #stamina-bar {
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 30px) !important; /* Less space needed now */
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                right: auto !important;
-            }
-        }
-        
-        /* Mobile HUD Right - Landscape Fullscreen */
-        @media (max-width: 768px) and (orientation: landscape) {
-            body.mobile-fullscreen #mobile-hud-right {
-                position: fixed;
-                top: calc(env(safe-area-inset-top, 0px) + 10px);
-                right: calc(env(safe-area-inset-right, 0px) + 10px);
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 6px;
-                z-index: 1002;
-            }
-            
-            body.mobile-fullscreen #mobile-hud-right #mobile-combined-ui,
-            body.mobile-fullscreen #mobile-hud-right #stamina-bar {
-                position: relative !important;
-                left: auto !important;
-                right: auto !important;
-                top: auto !important;
-                bottom: auto !important;
-                transform: none !important;
-                min-width: 180px;
-            }
-        }
-        
-        /* Default mobile stamina positioning (non-portrait) */
-        body.is-mobile #stamina-bar {
-            bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
-            left: 50%;
-            transform: translateX(-50%);
-            right: auto;
-            min-width: 150px;
-            padding: 5px 10px;
-            border-radius: 6px;
-        }
-
-        body.is-mobile #stamina-label {
-            font-size: 10px;
-            margin-bottom: 4px;
-        }
-
-        body.is-mobile #stamina-container {
-            height: 12px;
-            margin-bottom: 3px;
-        }
-
-        body.is-mobile #stamina-text {
-            font-size: 9px;
-        }
-
-        /* Landscape orientation adjustments for mobile */
-        @media (orientation: landscape) {
-            body.is-mobile #stamina-bar {
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 5px) !important;
-                min-width: 180px !important;
-                padding: 4px 8px !important;
-            }
-
-            body.is-mobile #mobile-combined-ui {
-                min-width: auto !important;
-                padding: 5px 10px !important;
-                font-size: 10px !important;
-                border-radius: 6px !important;
-            }
-            body.is-mobile #mobile-combined-ui #mobile-timer-display {
-                font-size: 12px !important;
-            }
-            body.is-mobile #mobile-combined-ui #mobile-sheep-count {
-                font-size: 9px !important;
-            }
-            body.is-mobile #mobile-combined-ui #mobile-best-time {
-                font-size: 8px !important;
-            }
-        }
-        
-        /* Multiplayer HUD Styles */
-        #multiplayer-hud {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            border: 2px solid #4CAF50;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            min-width: 200px;
-            z-index: 998;
-        }
-        
-        #multiplayer-title {
-            font-weight: bold;
-            margin-bottom: 8px;
-            text-align: center;
-            border-bottom: 1px solid #4CAF50;
-            padding-bottom: 4px;
-        }
-        
-        #multiplayer-players {
-            margin-bottom: 8px;
-        }
-        
-        .multiplayer-player {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-        }
-        
-        .multiplayer-player:last-child {
-            border-bottom: none;
-        }
-        
-        .player-name {
-            font-weight: bold;
-        }
-        
-        .player-status {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: #4CAF50;
-        }
-        
-        .player-status.host {
-            background: #FF9800;
-        }
-        
-        .player-status.you {
-            background: #2196F3;
-        }
-        
-        #connection-indicator {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 10px;
-            padding-top: 4px;
-            border-top: 1px solid rgba(255,255,255,0.2);
-        }
-        
-        #connection-icon {
-            font-size: 12px;
-        }
-        
-        #connection-icon.connected {
-            color: #4CAF50;
-        }
-        
-        #connection-icon.disconnected {
-            color: #F44336;
-        }
-        
-        #connection-icon.reconnecting {
-            color: #FF9800;
-            animation: pulse 1s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        /* Ping quality color coding */
-        .ping-good {
-            color: #4CAF50 !important;
-        }
-        
-        .ping-ok {
-            color: #FF9800 !important;
-        }
-        
-        .ping-poor {
-            color: #F44336 !important;
-        }
-        
-        /* Competitive Mode Scoreboard Styles */
-        .competitive-player {
-            flex-direction: column;
-            padding: 4px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.3);
-        }
-        
-        .competitive-player .player-name {
-            margin-bottom: 2px;
-            font-size: 11px;
-        }
-        
-        .competitive-player.leader .player-name {
-            color: #FFD700;
-            font-weight: bold;
-        }
-        
-        .competitive-player.you .player-name {
-            color: #2196F3;
-        }
-        
-        .player-score {
-            font-size: 10px;
-            background: rgba(255,255,255,0.2);
-            padding: 1px 4px;
-            border-radius: 3px;
-            align-self: flex-end;
-            margin-top: 2px;
-        }
-        
-        .competitive-player.leader .player-score {
-            background: rgba(255,215,0,0.3);
-            color: #FFD700;
-        }
-        
-        .competitive-player.you .player-score {
-            background: rgba(33,150,243,0.3);
-            color: #2196F3;
-        }
-        
-        .score-progress {
-            width: 100%;
+        #react-overlay .stamina-bar {
+            width: 128px;
             height: 8px;
-            background: rgba(255,255,255,0.2);
+            background: #374151;
             border-radius: 4px;
-            margin: 2px 0;
             overflow: hidden;
         }
         
-        .score-progress-fill {
+        #react-overlay .stamina-fill {
             height: 100%;
-            background: #4CAF50;
-            transition: width 0.3s ease;
-            border-radius: 4px;
-        }
-        
-        .score-progress-fill.leader {
-            background: linear-gradient(90deg, #FFD700, #FFA000);
-        }
-        
-        .score-progress-fill.you {
-            background: linear-gradient(90deg, #2196F3, #1976D2);
-        }
-        
-        .score-summary {
-            text-align: center;
-            padding: 4px 0;
-            border-top: 1px solid rgba(255,255,255,0.3);
-            margin-top: 4px;
-            font-size: 10px;
-            color: #CCCCCC;
-        }
-        
-        /* Competitive Completion Styles */
-        .competitive-completion {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-            color: white;
-            text-align: center;
-        }
-        
-        .completion-content {
-            background: rgba(0, 0, 0, 0.8);
-            padding: 40px;
-            border-radius: 15px;
-            border: 3px solid #4CAF50;
-            max-width: 500px;
-            margin: 20px;
-        }
-        
-        .completion-title.winner {
-            color: #FFD700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-        
-        .completion-title.participant {
-            color: #CCCCCC;
-        }
-        
-        .completion-subtitle {
-            font-size: 1.5rem;
-            margin: 15px 0;
-            color: #FFFFFF;
-        }
-        
-        .completion-message {
-            font-size: 1.1rem;
-            margin: 15px 0;
-            color: #CCCCCC;
-        }
-        
-        .final-scores {
-            margin: 20px 0;
-            padding: 15px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-        }
-        
-        .final-scores h3 {
-            margin: 0 0 10px 0;
-            color: #FFFFFF;
-        }
-        
-        .scores-list {
-            font-family: 'Courier New', monospace;
-            line-height: 1.6;
-            color: #CCCCCC;
-        }
-        
-        .restart-button {
-            background: #00BFFF;
-            border: 2px solid #FFFFFF;
-            color: #FFFFFF;
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 20px;
-        }
-        
-        .restart-button:hover {
-            background: #FFFFFF;
-            color: #00BFFF;
-            border: 2px solid #00BFFF;
-        }
-        
-        @keyframes glow {
-            from { text-shadow: 0 0 20px #FFD700; }
-            to { text-shadow: 0 0 30px #FFD700, 0 0 40px #FFD700; }
-        }
-        
-        /* Competitive completion styling for existing completion message */
-        #completion-message.competitive-completion {
-            background: rgba(0, 0, 0, 0.9);
-            border: 3px solid #4CAF50;
-            padding: 30px;
-            border-radius: 15px;
-        }
-        
-        #completion-message.competitive-completion.winner {
-            border-color: #FFD700;
-        }
-        
-        .competitive-title {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        
-        .competitive-title.winner {
-            color: #FFD700;
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-        
-        .competitive-title.participant {
-            color: #CCCCCC;
-        }
-        
-        /* Mobile responsive multiplayer HUD */
-        @media (max-width: 768px) {
-            #multiplayer-hud {
-                top: 60px;
-                left: 10px;
-                font-size: 10px;
-                padding: 8px;
-                min-width: 150px;
-            }
-            
-            #multiplayer-title {
-                font-size: 10px;
-                margin-bottom: 6px;
-            }
-            
-            .player-status {
-                font-size: 8px;
-                padding: 1px 4px;
-            }
-            
-            #connection-indicator {
-                font-size: 8px;
-            }
-            
-            /* Mobile competitive scoreboard */
-            .competitive-player .player-name {
-                font-size: 9px;
-            }
-            
-            .player-score {
-                font-size: 8px;
-            }
-            
-            .score-progress {
-                height: 6px;
-            }
-            
-            .score-summary {
-                font-size: 8px;
-            }
-            
-            /* Mobile competitive completion */
-            .completion-content {
-                padding: 20px;
-                margin: 10px;
-            }
-            
-            .completion-title {
-                font-size: 1.8rem;
-            }
-            
-            .completion-subtitle {
-                font-size: 1.2rem;
-            }
-            
-            .completion-message {
-                font-size: 0.9rem;
-            }
-            
-            .restart-button {
-                padding: 12px 24px;
-                font-size: 1rem;
-            }
+            transition: all 0.3s ease-out;
         }
     </style>
 </head>
 <body>
     <div id="canvas-container">
-        <!-- Start Screen Overlay -->
+        <!-- Game will create canvas here -->
+    </div>
+    
+    <!-- React overlay for UI components -->
+    <div id="react-overlay">
+        <!-- Skeleton loader - shows immediately while React loads -->
+        <div id="skeleton-loader" class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 safe-area-inset">
+            <div class="max-w-4xl w-full text-center">
+                <!-- Skeleton title -->
+                <div class="skeleton-title mb-4" style="
+                    width: min(600px, 90vw);
+                    height: clamp(80px, 15vw, 120px);
+                    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+                    background-size: 200% 100%;
+                    animation: shimmer 2s infinite;
+                    border-radius: 8px;
+                    margin: 0 auto;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    backdrop-filter: blur(16px);
+                    -webkit-backdrop-filter: blur(16px);
+                    box-shadow: 0 4px 16px rgba(31, 38, 135, 0.2);
+                "></div>
+                
+                <!-- Skeleton subtitle -->
+                <div class="skeleton-subtitle mb-8" style="
+                    width: min(400px, 80vw);
+                    height: clamp(40px, 10vw, 60px);
+                    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+                    background-size: 200% 100%;
+                    animation: shimmer 2s infinite 0.2s;
+                    border-radius: 8px;
+                    margin: 0 auto;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    backdrop-filter: blur(16px);
+                    -webkit-backdrop-filter: blur(16px);
+                    box-shadow: 0 4px 16px rgba(31, 38, 135, 0.2);
+                "></div>
+                
+                <!-- Skeleton dog selection -->
+                <div class="skeleton-dogs mb-8" style="
+                    background: rgba(255,255,255,0.03);
+                    backdrop-filter: blur(16px);
+                    -webkit-backdrop-filter: blur(16px);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 1rem;
+                    padding: 24px;
+                    max-width: 512px;
+                    margin: 0 auto;
+                    box-shadow: 0 4px 16px rgba(31, 38, 135, 0.2);
+                ">
+                    <div style="
+                        width: min(200px, 60vw);
+                        height: clamp(20px, 5vw, 24px);
+                        background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+                        background-size: 200% 100%;
+                        animation: shimmer 2s infinite 0.4s;
+                        border-radius: 4px;
+                        margin: 0 auto 16px auto;
+                        border: 1px solid rgba(255, 255, 255, 0.08);
+                        backdrop-filter: blur(8px);
+                        -webkit-backdrop-filter: blur(8px);
+                        box-shadow: 0 2px 8px rgba(31, 38, 135, 0.15);
+                    "></div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div style="
+                            height: 120px;
+                            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+                            background-size: 200% 100%;
+                            animation: shimmer 2s infinite 0.6s;
+                            border-radius: 8px;
+                            border: 1px solid rgba(255, 255, 255, 0.08);
+                            backdrop-filter: blur(12px);
+                            -webkit-backdrop-filter: blur(12px);
+                            box-shadow: 0 2px 8px rgba(31, 38, 135, 0.15);
+                        "></div>
+                        <div style="
+                            height: 120px;
+                            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+                            background-size: 200% 100%;
+                            animation: shimmer 2s infinite 0.8s;
+                            border-radius: 8px;
+                            border: 1px solid rgba(255, 255, 255, 0.08);
+                            backdrop-filter: blur(12px);
+                            -webkit-backdrop-filter: blur(12px);
+                            box-shadow: 0 2px 8px rgba(31, 38, 135, 0.15);
+                        "></div>
+                        <div style="
+                            height: 120px;
+                            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+                            background-size: 200% 100%;
+                            animation: shimmer 2s infinite 1s;
+                            border-radius: 8px;
+                            border: 1px solid rgba(255, 255, 255, 0.08);
+                            backdrop-filter: blur(12px);
+                            -webkit-backdrop-filter: blur(12px);
+                            box-shadow: 0 2px 8px rgba(31, 38, 135, 0.15);
+                        "></div>
+                    </div>
+                </div>
+                
+                <!-- Skeleton buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <div style="
+                        width: min(180px, 40vw);
+                        height: clamp(50px, 12vw, 72px);
+                        background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+                        background-size: 200% 100%;
+                        animation: shimmer 2s infinite 1.2s;
+                        border-radius: 12px;
+                        border: 1px solid rgba(255, 255, 255, 0.08);
+                        backdrop-filter: blur(12px);
+                        -webkit-backdrop-filter: blur(12px);
+                        box-shadow: 0 4px 16px rgba(31, 38, 135, 0.2);
+                    "></div>
+                    <div style="
+                        width: min(180px, 40vw);
+                        height: clamp(50px, 12vw, 72px);
+                        background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+                        background-size: 200% 100%;
+                        animation: shimmer 2s infinite 1.4s;
+                        border-radius: 12px;
+                        border: 1px solid rgba(255, 255, 255, 0.08);
+                        backdrop-filter: blur(12px);
+                        -webkit-backdrop-filter: blur(12px);
+                        box-shadow: 0 4px 16px rgba(31, 38, 135, 0.2);
+                    "></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Include all the original game HTML structure but hidden -->
+    <div style="display: none;">
+        <!-- Start Screen (hidden but present for game to find) -->
         <div id="start-screen">
-            <h1 id="game-title">Sheep Dog Simulator</h1>
-            <p id="game-subtitle">Guide 200 sheep to safety in this immersive 3D herding experience</p>
-            
+            <h1 id="game-title">SHEEP DOG SIMULATOR</h1>
+            <p id="game-subtitle">A herding simulation game</p>
             <div id="start-instructions">
                 <h3>How to Play</h3>
-                <p>🐕 Use <strong>WASD</strong> or <strong>touch controls</strong> to move your sheepdog</p>
-                <p>🏃 Hold <strong>Shift</strong> or <strong>sprint button</strong> to run faster</p>
-                <p>🐑 Herd all 200 sheep through the golden gate into the pasture</p>
-                <p>⏱️ Complete the challenge as quickly as possible</p>
+                <p>🎯 Guide all sheep into the pen using herding techniques</p>
+                <p>🐕 Position yourself strategically to influence sheep movement</p>
+                <p>⚡ Manage your stamina - hold shift to sprint!</p>
                 <p>🎯 Sheep will flee from you and flock together naturally</p>
-                <p id="music-note" style="font-style: italic; color: #666; margin-top: 1rem;">🎵 Click anywhere to enable music</p>
+                <p id="music-note">🎵 Click anywhere to enable music</p>
             </div>
-            
-            <!-- Dog Selection -->
             <div id="dog-selection">
-                <h3 style="color: #00BFFF; margin-bottom: 1rem; font-family: 'Arial Black', Arial, sans-serif;">Choose Your Dog</h3>
+                <h3>Choose Your Dog</h3>
                 <div id="dog-cards">
                     <div class="dog-card active" data-dog="jep">
                         <div class="dog-avatar">🐕‍🦺</div>
                         <h4>Jep</h4>
                         <p class="dog-breed">Border Collie</p>
-                        <p class="dog-description">Balanced herding specialist</p>
-                        <div class="dog-stats">
-                            <div class="stat">Speed: ●●●○○</div>
-                            <div class="stat">Stamina: ●●●○○</div>
-                            <div class="stat">Range: ●●●○○</div>
-                        </div>
                     </div>
                     <div class="dog-card" data-dog="rauri">
                         <div class="dog-avatar">🐕</div>
                         <h4>Rauri</h4>
                         <p class="dog-breed">Australian Shepherd</p>
-                        <p class="dog-description">Powerful with extended range</p>
-                        <div class="dog-stats">
-                            <div class="stat">Speed: ●●●○○</div>
-                            <div class="stat">Stamina: ●●○○○</div>
-                            <div class="stat">Range: ●●●●●</div>
-                        </div>
                     </div>
                     <div class="dog-card" data-dog="pip">
                         <div class="dog-avatar">🐶</div>
                         <h4>Pip</h4>
                         <p class="dog-breed">Corgi</p>
-                        <p class="dog-description">Fast and agile, short range</p>
-                        <div class="dog-stats">
-                            <div class="stat">Speed: ●●●●○</div>
-                            <div class="stat">Stamina: ●●●●○</div>
-                            <div class="stat">Range: ●●○○○</div>
-                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Main mode selection -->
             <div id="mode-selection">
-                <button id="solo-button" class="mode-button">🐕 Play Solo</button>
-                <button id="online-button" class="mode-button">👥 Play Online</button>
+                <button id="solo-button" class="mode-button">Play Solo</button>
+                <button id="online-button" class="mode-button">Play Online</button>
             </div>
-            
-            <!-- Online sub-options -->
             <div id="online-options" style="display: none;">
-                <button id="create-room-button" class="mode-button">🏠 Create Room</button>
-                <button id="join-room-button" class="mode-button">🔗 Join Room</button>
-                <button id="quick-match-button" class="mode-button">⚡ Quick Match</button>
-                <button id="back-to-main-button" class="back-button">← Back</button>
+                <button id="create-room-button">Create Room</button>
+                <button id="join-room-button">Join Room</button>
+                <button id="quick-match-button">Quick Match</button>
+                <button id="back-to-main-button">Back</button>
             </div>
-            
-            <!-- Room creation screen -->
             <div id="room-creation" style="display: none;">
                 <h3>Create Room</h3>
-                <div class="room-form">
-                    <label for="max-players">Max Players:</label>
-                    <select id="max-players">
-                        <option value="2">2 Players</option>
-                        <option value="3" selected>3 Players</option>
-                        <option value="4">4 Players</option>
-                    </select>
-                    
-                    <label for="game-mode-select">Game Mode:</label>
-                    <select id="game-mode-select">
-                        <option value="cooperative">🤝 Cooperative (200 sheep, shared goal)</option>
-                        <option value="competitive">🏆 Competitive (race for sheep)</option>
-                        <option value="timed">⏱️ Timed Collection (3min, respawning sheep)</option>
-                    </select>
-                    
-                    <div class="room-info" style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 14px; color: #666;">
-                        <p style="margin: 0;">💡 A random room code will be generated for easy sharing with friends</p>
-                    </div>
-                </div>
-                <button id="create-room-confirm" class="mode-button">Create Room</button>
-                <button id="back-to-online-button" class="back-button">← Back</button>
+                <label>Max Players: <select id="max-players"></select></label>
+                <label>Game Mode: <select id="game-mode-select"></select></label>
+                <button id="create-room-confirm">Create</button>
+                <button id="back-to-online-button">Back</button>
             </div>
-            
-            <!-- Room joining screen -->
             <div id="room-joining" style="display: none;">
                 <h3>Join Room</h3>
-                <div class="room-form">
-                    <label for="room-code">Enter Room Code:</label>
-                    <input type="text" id="room-code" placeholder="ABC123" maxlength="6" style="text-transform: uppercase;">
-                    <div id="code-error" class="error-message" style="display: none;">Invalid room code</div>
-                </div>
-                <button id="join-room-confirm" class="mode-button">Join Room</button>
-                <button id="back-to-online-button2" class="back-button">← Back</button>
+                <input type="text" id="room-code" placeholder="Enter room code">
+                <p id="code-error"></p>
+                <button id="join-room-confirm">Join</button>
+                <button id="back-to-online-button2">Back</button>
             </div>
-            
-            <!-- Lobby screen -->
             <div id="lobby-screen" style="display: none;">
-                <div id="room-info">
-                    <h3 id="lobby-room-name">Room: Sheep Herding</h3>
-                    <div id="room-code-display">
-                        <span>Room Code: <strong id="current-room-code">ABC123</strong></span>
-                        <button id="copy-room-code" class="copy-button">📋 Copy</button>
-                    </div>
-                </div>
-                
-                <div id="player-list">
-                    <h4>Players (<span id="player-count">1</span>/<span id="max-player-count">3</span>):</h4>
-                    <div id="players-container">
-                        <!-- Players will be dynamically added here -->
-                    </div>
-                </div>
-                
-                <div id="lobby-controls">
-                    <button id="start-game-button" class="mode-button host-only" style="display: none;">🎮 Start Game</button>
-                    <button id="leave-room-button" class="back-button">🚪 Leave Room</button>
-                </div>
-                
-                <div id="lobby-status">
-                    <p id="lobby-message">Waiting for players...</p>
-                </div>
+                <h2 id="lobby-room-name">Room</h2>
+                <p>Room Code: <span id="current-room-code"></span> <button id="copy-room-code">Copy</button></p>
+                <p>Players: <span id="player-count">1</span>/<span id="max-player-count">4</span></p>
+                <div id="players-container"></div>
+                <button id="start-game-button">Start Game</button>
+                <button id="leave-room-button">Leave Room</button>
+                <div id="lobby-message"></div>
             </div>
-            
-            <!-- Connection status for multiplayer -->
             <div id="connection-status" style="display: none;">
-                <p id="connection-message">Connecting to server...</p>
-                <button id="back-to-menu-button" class="back-button">← Back to Menu</button>
+                <p id="connection-message">Connecting...</p>
+                <button id="back-to-menu-button">Back to Menu</button>
             </div>
         </div>
         
-        <!-- Mobile UI Containers -->
-        <div id="mobile-left-stack">
-            <!-- Sprint and joystick will be moved here by JS -->
-        </div>
-        
-        <div id="mobile-hud-right">
-            <!-- Combined UI and stamina bar will be grouped here by JS -->
-        </div>
-        
-        <!-- Game UI Elements -->
-        <div id="instructions" class="game-ui">
-            <h3>Controls</h3>
-            <p><strong>W</strong> - Move Forward</p>
-            <p><strong>A</strong> - Move Left</p>
-            <p><strong>S</strong> - Move Backward</p>
-            <p><strong>D</strong> - Move Right</p>
-            <p><strong>Shift</strong> - Sprint (uses stamina)</p>
-            <p><strong>Mouse Wheel</strong> - Zoom In/Out</p>
-            <p><strong>P</strong> - Toggle Performance Stats</p>
-            <p id="mute-toggle">🔊 <strong>Click</strong> - Toggle Sound</p>
-        </div>
-        
+        <!-- Timer -->
         <div id="timer" class="game-ui">
-            <div id="timer-display">00:00</div>
-            <div id="best-time">Best: --:--</div>
+            <span id="timer-display">00:00</span>
+            <div id="best-time">Best: <span id="best-time-value">--:--</span></div>
         </div>
         
-        <!-- Combined Mobile UI for timer and sheep count -->
+        <!-- Mobile Combined UI -->
         <div id="mobile-combined-ui" class="game-ui">
             <div id="mobile-timer-display">00:00</div>
             <div id="mobile-sheep-count">Sheep: 0 / 200</div>
             <div id="mobile-best-time">Best: --:--</div>
         </div>
         
+        <!-- Stats -->
         <div id="stats" class="game-ui">
             <p>Sheep Secured: <span id="sheep-count">0</span> / 200</p>
         </div>
         
+        <!-- Stamina Bar -->
         <div id="stamina-bar" class="game-ui">
             <div id="stamina-label">Stamina</div>
             <div id="stamina-container">
@@ -2069,24 +657,24 @@
             <div id="stamina-text">100%</div>
         </div>
         
-        <!-- Multiplayer HUD for in-game player status -->
-        <div id="multiplayer-hud" class="game-ui" style="display: none;">
+        <!-- Multiplayer HUD -->
+        <div id="multiplayer-hud" class="game-ui">
             <div id="multiplayer-title">Players Online</div>
-            <div id="multiplayer-players">
-                <!-- Connected players will be shown here during gameplay -->
-            </div>
+            <div id="multiplayer-players"></div>
             <div id="connection-indicator">
                 <span id="connection-icon">🔗</span>
                 <span id="ping-display">Ping: --ms</span>
             </div>
         </div>
         
-        <div id="completion-message">
-            All sheep successfully herded!
-        </div>
+        <!-- Completion Message -->
+        <div id="completion-message">All sheep successfully herded!</div>
     </div>
     
-    <!-- Import map for Three.js r176 -->
+    <!-- React overlay -->
+    <div id="react-overlay"></div>
+    
+    <!-- Import map -->
     <script type="importmap">
     {
         "imports": {
@@ -2098,7 +686,1736 @@
     }
     </script>
     
-    <!-- Main application entry point -->
+    <!-- Load React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Main game entry -->
     <script type="module" src="js/main.js"></script>
+    
+    <!-- React UI overlay -->
+    <script type="module">
+        // Wait for both game and React to be ready
+        let checkInterval = setInterval(() => {
+            if (window.gameInstance && window.React && window.ReactDOM) {
+                clearInterval(checkInterval);
+                // Game and React ready, initializing modern UI
+                initializeReactUI();
+            }
+        }, 100);
+        
+        function initializeReactUI() {
+            console.log('🎮 Initializing React UI...');
+            
+            // Smoothly transition from skeleton to React UI
+            const skeletonLoader = document.getElementById('skeleton-loader');
+            if (skeletonLoader) {
+                skeletonLoader.classList.add('skeleton-fade-out');
+                setTimeout(() => {
+                    skeletonLoader.remove();
+                }, 300);
+            }
+            
+            const { useState, useEffect, useRef, useCallback } = window.React;
+            const { createRoot } = window.ReactDOM;
+            
+            // ==================== HOOKS ====================
+            function usePlatform() {
+                const [platform, setPlatform] = useState('desktop');
+                
+                useEffect(() => {
+                    const checkPlatform = () => {
+                        const hasTouch = 'ontouchstart' in window;
+                        const width = window.innerWidth;
+                        const ua = navigator.userAgent;
+                        
+                        if (/iPhone|iPad|iPod|Android/i.test(ua) || (hasTouch && width < 1024)) {
+                            setPlatform('mobile');
+                        } else if (hasTouch && width >= 1024) {
+                            setPlatform('tablet');
+                        } else {
+                            setPlatform('desktop');
+                        }
+                    };
+                    
+                    checkPlatform();
+                    window.addEventListener('resize', checkPlatform);
+                    
+                    return () => window.removeEventListener('resize', checkPlatform);
+                }, []);
+                
+                return platform;
+            }
+            
+            // ==================== COMPONENTS ====================
+            
+            // Loading Component
+            function LoadingScreen() {
+                return React.createElement('div', {
+                    className: 'fixed inset-0 bg-black flex items-center justify-center'
+                }, 
+                    React.createElement('div', {
+                        className: 'text-center'
+                    }, [
+                        React.createElement('div', {
+                            key: 'spinner',
+                            className: 'spinner mx-auto mb-4'
+                        }),
+                        React.createElement('p', {
+                            key: 'text',
+                            className: 'text-white text-lg'
+                        }, 'Loading game assets...')
+                    ])
+                );
+            }
+            
+            // Dog Selection Component
+            function DogSelection({ selectedDog, onSelect }) {
+                const dogs = [
+                    { 
+                        id: 'jep', 
+                        name: 'Jep', 
+                        breed: 'Border Collie', 
+                        emoji: '🐕‍🦺',
+                        stats: { speed: 3, stamina: 3, control: 4 },
+                        description: 'Well-balanced and reliable'
+                    },
+                    { 
+                        id: 'rauri', 
+                        name: 'Rauri', 
+                        breed: 'Australian Shepherd', 
+                        emoji: '🐕',
+                        stats: { speed: 4, stamina: 2, control: 5 },
+                        description: 'Excellent control, wider range'
+                    },
+                    { 
+                        id: 'pip', 
+                        name: 'Pip', 
+                        breed: 'Welsh Corgi', 
+                        emoji: '🐶',
+                        stats: { speed: 5, stamina: 4, control: 2 },
+                        description: 'Fast and agile, perfect for speed runs'
+                    }
+                ];
+                
+                const StatBar = ({ value, max = 5 }) => {
+                    return React.createElement('div', {
+                        className: 'flex gap-1.5'
+                    }, Array.from({ length: max }, (_, i) => 
+                        React.createElement('div', {
+                            key: i,
+                            className: `h-2 w-8 rounded-full transition-all duration-300`,
+                            style: {
+                                background: i < value 
+                                    ? 'linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%)'
+                                    : 'rgba(255, 255, 255, 0.15)',
+                                boxShadow: i < value ? '0 1px 3px rgba(0, 0, 0, 0.2)' : 'none'
+                            }
+                        })
+                    ));
+                };
+                
+                return React.createElement('div', {
+                    style: { 
+                        animation: 'slideUp 0.8s ease-out 0.4s both',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        backdropFilter: 'blur(28px)',
+                        WebkitBackdropFilter: 'blur(28px)',
+                        borderRadius: '1.5rem',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
+                        padding: '2.5rem'
+                    }
+                }, [
+                    React.createElement('h3', {
+                        key: 'title',
+                        className: 'text-center text-white text-2xl font-bold mb-8',
+                        style: {
+                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                        }
+                    }, 'Choose Your Dog'),
+                    
+                    React.createElement('div', {
+                        key: 'grid',
+                        className: 'grid grid-cols-1 md:grid-cols-3 gap-6'
+                    }, dogs.map(dog => 
+                        React.createElement('div', {
+                            key: dog.id,
+                            className: `p-6 rounded-xl cursor-pointer transition-all duration-300 transform ${
+                                selectedDog === dog.id 
+                                    ? 'scale-105' 
+                                    : 'hover:scale-102'
+                            }`,
+                            style: selectedDog === dog.id ? {
+                                background: 'rgba(255, 255, 255, 0.15)',
+                                backdropFilter: 'blur(28px)',
+                                WebkitBackdropFilter: 'blur(28px)',
+                                border: '1px solid rgba(255, 255, 255, 0.25)',
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+                            } : {
+                                background: 'rgba(255, 255, 255, 0.08)',
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
+                            },
+                            onMouseEnter: selectedDog !== dog.id ? (e) => {
+                                e.target.style.background = 'rgba(255, 255, 255, 0.12)';
+                                e.target.style.borderColor = 'rgba(255, 255, 255, 0.18)';
+                                e.target.style.boxShadow = '0 3px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)';
+                            } : undefined,
+                            onMouseLeave: selectedDog !== dog.id ? (e) => {
+                                e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+                                e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                                e.target.style.boxShadow = '0 2px 12px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)';
+                            } : undefined,
+                            onClick: () => onSelect(dog.id)
+                        }, [
+                            React.createElement('div', { 
+                                key: 'emoji', 
+                                className: 'text-6xl mb-3 text-center',
+                                style: selectedDog === dog.id ? { animation: 'floatAnimation 3s ease-in-out infinite' } : {}
+                            }, dog.emoji),
+                            React.createElement('h4', { 
+                                key: 'name', 
+                                className: 'text-xl font-bold text-white text-center mb-1' 
+                            }, dog.name),
+                            React.createElement('p', { 
+                                key: 'breed', 
+                                className: 'text-white text-opacity-60 text-sm text-center mb-4 font-medium' 
+                            }, dog.breed),
+                            React.createElement('p', { 
+                                key: 'desc', 
+                                className: 'text-white text-opacity-70 text-sm text-center mb-6 leading-relaxed' 
+                            }, dog.description),
+                            React.createElement('div', {
+                                key: 'stats',
+                                className: 'space-y-3 mt-4 pt-4 border-t border-white border-opacity-10'
+                            }, [
+                                React.createElement('div', { key: 'speed', className: 'flex items-center justify-between' }, [
+                                    React.createElement('span', { key: 'label', className: 'text-sm text-white text-opacity-70 font-medium' }, 'Speed'),
+                                    React.createElement(StatBar, { key: 'bar', value: dog.stats.speed })
+                                ]),
+                                React.createElement('div', { key: 'stamina', className: 'flex items-center justify-between' }, [
+                                    React.createElement('span', { key: 'label', className: 'text-sm text-white text-opacity-70 font-medium' }, 'Stamina'),
+                                    React.createElement(StatBar, { key: 'bar', value: dog.stats.stamina })
+                                ]),
+                                React.createElement('div', { key: 'control', className: 'flex items-center justify-between' }, [
+                                    React.createElement('span', { key: 'label', className: 'text-sm text-white text-opacity-70 font-medium' }, 'Control'),
+                                    React.createElement(StatBar, { key: 'bar', value: dog.stats.control })
+                                ])
+                            ])
+                        ])
+                    ))
+                ]);
+            }
+            
+            // Mode Selection Component
+            function ModeSelection({ onSelectMode }) {
+                const [hoveredMode, setHoveredMode] = useState(null);
+                
+                const modes = [
+                    {
+                        id: 'solo',
+                        title: 'Single Player',
+                        icon: '🎮',
+                        description: 'Practice your herding skills offline',
+                        color: 'from-blue-500 to-purple-500'
+                    },
+                    {
+                        id: 'multiplayer',
+                        title: 'Multiplayer',
+                        icon: '🌐',
+                        description: 'Compete with players worldwide',
+                        color: 'from-green-500 to-teal-500'
+                    }
+                ];
+                
+                return React.createElement('div', {
+                    className: 'flex flex-col md:flex-row gap-6 w-full max-w-2xl',
+                    style: { animation: 'slideUp 0.8s ease-out 0.6s both' }
+                }, modes.map(mode => 
+                    React.createElement('div', {
+                        key: mode.id,
+                        className: `flex-1 cursor-pointer transition-all duration-300 transform ${
+                            hoveredMode === mode.id ? 'scale-105' : ''
+                        }`,
+                        style: {
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            backdropFilter: 'blur(24px)',
+                            WebkitBackdropFilter: 'blur(24px)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: '1.5rem',
+                            padding: '2rem',
+                            boxShadow: hoveredMode === mode.id 
+                                ? '0 8px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+                                : '0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)'
+                        },
+                        onMouseEnter: () => setHoveredMode(mode.id),
+                        onMouseLeave: () => setHoveredMode(null),
+                        onClick: () => onSelectMode(mode.id)
+                    }, [
+                        React.createElement('div', {
+                            key: 'icon',
+                            className: `text-5xl mb-4 text-center`,
+                            style: hoveredMode === mode.id ? { animation: 'floatAnimation 2s ease-in-out infinite' } : {}
+                        }, mode.icon),
+                        React.createElement('h3', {
+                            key: 'title',
+                            className: 'text-xl font-bold text-center mb-3 text-white',
+                            style: {
+                                textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                            }
+                        }, mode.title),
+                        React.createElement('p', {
+                            key: 'desc',
+                            className: 'text-white text-opacity-80 text-sm text-center leading-relaxed'
+                        }, mode.description)
+                    ])
+                ));
+            }
+            
+            // Multiplayer Options Component
+            function MultiplayerOptions({ onBack, onSelectOption }) {
+                const options = [
+                    { id: 'create', title: 'Create Room', icon: '➕', description: 'Host a private game' },
+                    { id: 'join', title: 'Join Room', icon: '🔗', description: 'Enter a room code' },
+                    { id: 'quick', title: 'Quick Match', icon: '⚡', description: 'Find a game instantly' }
+                ];
+                
+                return React.createElement('div', {
+                    className: 'max-w-lg w-full',
+                    style: { 
+                        animation: 'slideUp 0.5s ease-out',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        backdropFilter: 'blur(28px)',
+                        WebkitBackdropFilter: 'blur(28px)',
+                        borderRadius: '1.5rem',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
+                        padding: '2.5rem'
+                    }
+                }, [
+                    React.createElement('h2', {
+                        key: 'title',
+                        className: 'text-2xl font-bold text-center text-white mb-8',
+                        style: {
+                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                        }
+                    }, 'Multiplayer Options'),
+                    
+                    React.createElement('div', {
+                        key: 'options',
+                        className: 'space-y-4'
+                    }, options.map(option => 
+                        React.createElement('button', {
+                            key: option.id,
+                            className: 'w-full flex items-center justify-between cursor-pointer transition-all duration-300 text-white',
+                            style: {
+                                background: 'rgba(255, 255, 255, 0.06)',
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '1rem',
+                                padding: '1.5rem',
+                                boxShadow: '0 3px 12px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
+                                color: 'white'
+                            },
+                            onMouseEnter: (e) => {
+                                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                                e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                                e.target.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)';
+                            },
+                            onMouseLeave: (e) => {
+                                e.target.style.background = 'rgba(255, 255, 255, 0.06)';
+                                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                e.target.style.boxShadow = '0 3px 12px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)';
+                            },
+                            onClick: () => onSelectOption(option.id)
+                        }, [
+                            React.createElement('div', {
+                                key: 'left',
+                                className: 'flex items-center gap-3'
+                            }, [
+                                React.createElement('span', { key: 'icon', className: 'text-2xl' }, option.icon),
+                                React.createElement('div', { key: 'text', className: 'text-left' }, [
+                                    React.createElement('div', { key: 'title', className: 'font-semibold text-white' }, option.title),
+                                    React.createElement('div', { key: 'desc', className: 'text-sm text-white text-opacity-70' }, option.description)
+                                ])
+                            ]),
+                            React.createElement('span', { key: 'arrow', className: 'text-white text-opacity-60' }, '→')
+                        ])
+                    )),
+                    
+                    React.createElement('button', {
+                        key: 'back',
+                        className: 'btn-secondary w-full mt-6',
+                        onClick: onBack
+                    }, React.createElement('span', null, '← Back'))
+                ]);
+            }
+            
+            // Room Creation Component
+            function RoomCreation({ onBack, onCreate }) {
+                const [settings, setSettings] = useState({
+                    maxPlayers: 4,
+                    gameMode: 'cooperative'
+                });
+                
+                const gameModeDescriptions = {
+                    cooperative: 'Work together to herd all 200 sheep',
+                    racing: '2 players: First to 101 wins | 3-4 players: Highest score wins',
+                    timed: '3 minute timer - highest score wins'
+                };
+                
+                return React.createElement('div', {
+                    className: 'max-w-lg w-full',
+                    style: { 
+                        animation: 'slideUp 0.5s ease-out',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        backdropFilter: 'blur(28px)',
+                        WebkitBackdropFilter: 'blur(28px)',
+                        borderRadius: '1.5rem',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
+                        padding: '2.5rem'
+                    }
+                }, [
+                    React.createElement('h2', {
+                        key: 'title',
+                        className: 'text-2xl font-bold text-center text-white mb-8',
+                        style: {
+                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                        }
+                    }, 'Create Room'),
+                    
+                    React.createElement('div', {
+                        key: 'settings',
+                        className: 'space-y-6'
+                    }, [
+                        React.createElement('div', { key: 'players' }, [
+                            React.createElement('label', { className: 'block text-white text-opacity-80 mb-2' }, 'Max Players'),
+                            React.createElement('select', {
+                                className: 'modern-input w-full',
+                                value: settings.maxPlayers,
+                                onChange: (e) => setSettings({...settings, maxPlayers: parseInt(e.target.value)})
+                            }, [2, 3, 4].map(n => 
+                                React.createElement('option', { key: n, value: n }, `${n} Players`)
+                            ))
+                        ]),
+                        
+                        React.createElement('div', { key: 'mode' }, [
+                            React.createElement('label', { className: 'block text-white text-opacity-80 mb-2' }, 'Game Mode'),
+                            React.createElement('select', {
+                                className: 'modern-input w-full',
+                                value: settings.gameMode,
+                                onChange: (e) => setSettings({...settings, gameMode: e.target.value})
+                            }, [
+                                React.createElement('option', { key: 'coop', value: 'cooperative' }, 'Cooperative'),
+                                React.createElement('option', { key: 'racing', value: 'racing' }, 'Racing'),
+                                React.createElement('option', { key: 'timed', value: 'timed' }, 'Timed (3 min)')
+                            ])
+                        ]),
+                        
+                        React.createElement('div', {
+                            key: 'mode-desc',
+                            style: {
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                backdropFilter: 'blur(16px)',
+                                WebkitBackdropFilter: 'blur(16px)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                borderRadius: '0.75rem',
+                                padding: '1rem',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)'
+                            }
+                        }, 
+                            React.createElement('p', {
+                                className: 'text-sm text-white text-opacity-80 text-center'
+                            }, gameModeDescriptions[settings.gameMode])
+                        )
+                    ]),
+                    
+                    React.createElement('div', {
+                        key: 'buttons',
+                        className: 'flex gap-3 mt-6'
+                    }, [
+                        React.createElement('button', {
+                            key: 'back',
+                            className: 'btn-secondary flex-1',
+                            onClick: onBack
+                        }, '← Back'),
+                        React.createElement('button', {
+                            key: 'create',
+                            className: 'btn-primary flex-1',
+                            onClick: () => onCreate(settings)
+                        }, React.createElement('span', null, 'Create Room'))
+                    ])
+                ]);
+            }
+            
+            // Room Joining Component
+            function RoomJoining({ onBack, onJoin }) {
+                const [roomCode, setRoomCode] = useState('');
+                const [error, setError] = useState('');
+                
+                const handleJoin = () => {
+                    if (roomCode.length !== 6) {
+                        setError('Room code must be 6 characters');
+                        return;
+                    }
+                    onJoin(roomCode.toUpperCase());
+                };
+                
+                return React.createElement('div', {
+                    className: 'max-w-lg w-full',
+                    style: { 
+                        animation: 'slideUp 0.5s ease-out',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        backdropFilter: 'blur(28px)',
+                        WebkitBackdropFilter: 'blur(28px)',
+                        borderRadius: '1.5rem',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
+                        padding: '2.5rem'
+                    }
+                }, [
+                    React.createElement('h2', {
+                        key: 'title',
+                        className: 'text-2xl font-bold text-center text-white mb-8',
+                        style: {
+                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                        }
+                    }, 'Join Room'),
+                    
+                    React.createElement('div', {
+                        key: 'input-group',
+                        className: 'space-y-6'
+                    }, [
+                        React.createElement('input', {
+                            key: 'input',
+                            type: 'text',
+                            className: 'modern-input w-full text-center text-2xl tracking-wider uppercase',
+                            placeholder: 'ROOM CODE',
+                            maxLength: 6,
+                            value: roomCode,
+                            onChange: (e) => {
+                                setRoomCode(e.target.value.toUpperCase());
+                                setError('');
+                            },
+                            onKeyPress: (e) => {
+                                if (e.key === 'Enter') handleJoin();
+                            }
+                        }),
+                        
+                        error && React.createElement('p', {
+                            key: 'error',
+                            className: 'text-red-400 text-sm text-center'
+                        }, error)
+                    ]),
+                    
+                    React.createElement('div', {
+                        key: 'buttons',
+                        className: 'flex gap-3 mt-6'
+                    }, [
+                        React.createElement('button', {
+                            key: 'back',
+                            className: 'btn-secondary flex-1',
+                            onClick: onBack
+                        }, '← Back'),
+                        React.createElement('button', {
+                            key: 'join',
+                            className: 'btn-primary flex-1',
+                            onClick: handleJoin,
+                            disabled: roomCode.length === 0
+                        }, React.createElement('span', null, 'Join Room'))
+                    ])
+                ]);
+            }
+            
+            // Lobby Component
+            function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave }) {
+                const [copied, setCopied] = useState(false);
+                
+                const copyRoomCode = () => {
+                    navigator.clipboard.writeText(roomCode);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                };
+                
+                return React.createElement('div', {
+                    className: 'max-w-2xl w-full',
+                    style: { 
+                        animation: 'slideUp 0.5s ease-out',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        backdropFilter: 'blur(28px)',
+                        WebkitBackdropFilter: 'blur(28px)',
+                        borderRadius: '1.5rem',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
+                        padding: '2.5rem'
+                    }
+                }, [
+                    React.createElement('h2', {
+                        key: 'title',
+                        className: 'text-3xl font-bold text-center text-white mb-8',
+                        style: {
+                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                        }
+                    }, 'Game Lobby'),
+                    
+                    React.createElement('div', {
+                        key: 'room-info',
+                        className: 'mb-6 text-center',
+                        style: {
+                            background: 'rgba(255, 255, 255, 0.06)',
+                            backdropFilter: 'blur(20px)',
+                            WebkitBackdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '1rem',
+                            padding: '1.5rem',
+                            boxShadow: '0 3px 12px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
+                        }
+                    }, [
+                        React.createElement('p', {
+                            key: 'label',
+                            className: 'text-white text-opacity-60 mb-2'
+                        }, 'Room Code'),
+                        React.createElement('div', {
+                            key: 'code',
+                            className: 'flex items-center justify-center gap-3'
+                        }, [
+                            React.createElement('span', {
+                                key: 'text',
+                                className: 'text-3xl font-mono font-bold text-blue-400 tracking-wider'
+                            }, roomCode),
+                            React.createElement('button', {
+                                key: 'copy',
+                                className: 'btn-secondary py-2 px-4 text-sm',
+                                onClick: copyRoomCode
+                            }, copied ? '✓ Copied!' : 'Copy')
+                        ])
+                    ]),
+                    
+                    React.createElement('div', {
+                        key: 'players',
+                        className: 'mb-6'
+                    }, [
+                        React.createElement('h3', {
+                            key: 'title',
+                            className: 'text-white text-opacity-80 mb-3'
+                        }, `Players (${players.length}/${maxPlayers})`),
+                        React.createElement('div', {
+                            key: 'list',
+                            className: 'grid grid-cols-2 md:grid-cols-3 gap-4'
+                        }, Array.from({ length: maxPlayers }, (_, i) => {
+                            const player = players[i];
+                            return React.createElement('div', {
+                                key: i,
+                                className: 'text-center',
+                                style: {
+                                    background: player ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.04)',
+                                    backdropFilter: 'blur(16px)',
+                                    WebkitBackdropFilter: 'blur(16px)',
+                                    border: player ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(255, 255, 255, 0.06)',
+                                    borderRadius: '0.75rem',
+                                    padding: '1rem',
+                                    boxShadow: player 
+                                        ? '0 3px 12px rgba(34, 197, 94, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)'
+                                        : '0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
+                                }
+                            }, player ? [
+                                React.createElement('div', { key: 'emoji', className: 'text-3xl mb-1' }, player.dog === 'jep' ? '🐕‍🦺' : player.dog === 'rauri' ? '🐕' : '🐶'),
+                                React.createElement('p', { key: 'name', className: 'text-white font-semibold' }, player.name),
+                                player.isHost && React.createElement('span', { key: 'host', className: 'text-xs text-yellow-400' }, '👑 Host')
+                            ] : React.createElement('p', {
+                                className: 'text-white text-opacity-30'
+                            }, 'Waiting...'))
+                        }))
+                    ]),
+                    
+                    React.createElement('div', {
+                        key: 'buttons',
+                        className: 'flex gap-3'
+                    }, [
+                        React.createElement('button', {
+                            key: 'leave',
+                            className: 'btn-secondary flex-1',
+                            onClick: onLeave
+                        }, 'Leave Room'),
+                        isHost && React.createElement('button', {
+                            key: 'start',
+                            className: 'btn-primary flex-1',
+                            onClick: onStart,
+                            disabled: players.length < 2
+                        }, React.createElement('span', null, players.length < 2 ? 'Waiting for players...' : 'Start Game'))
+                    ])
+                ]);
+            }
+            
+            // Main Start Screen Component
+            function StartScreen() {
+                const [screen, setScreen] = useState('main'); // main, multiplayer, createRoom, joinRoom, lobby
+                const [selectedDog, setSelectedDog] = useState('jep');
+                const [selectedMode, setSelectedMode] = useState(null);
+                const [roomSettings, setRoomSettings] = useState(null);
+                const [lobbyData, setLobbyData] = useState(null);
+                const platform = usePlatform();
+                
+                const handleModeSelect = async (mode) => {
+                    setSelectedMode(mode);
+                    if (mode === 'solo') {
+                        handleStartSolo();
+                    } else {
+                        // Ensure network connection before showing multiplayer
+                        if (window.gameInstance && window.gameInstance.networkManager) {
+                            const nm = window.gameInstance.networkManager;
+                            if (!nm.connected && !nm.connecting) {
+                                try {
+                                    await nm.connect();
+                                } catch (error) {
+                                    console.error('Failed to connect to multiplayer server:', error);
+                                    alert('Unable to connect to multiplayer server. Please check your connection.');
+                                    return;
+                                }
+                            }
+                        }
+                        setScreen('multiplayer');
+                    }
+                };
+                
+                const handleStartSolo = () => {
+                    // Update the game's dog selection
+                    const dogCards = document.querySelectorAll('.dog-card');
+                    dogCards.forEach(card => {
+                        if (card.dataset.dog === selectedDog) {
+                            card.classList.add('active');
+                            // Simulate a click on the selected dog card to ensure game recognizes it
+                            card.click();
+                        } else {
+                            card.classList.remove('active');
+                        }
+                    });
+                    
+                    // Update the start screen's selected dog
+                    if (window.gameInstance && window.gameInstance.startScreen) {
+                        window.gameInstance.startScreen.selectedDog = selectedDog;
+                    }
+                    
+                    // Hide React overlay
+                    document.getElementById('react-overlay').style.display = 'none';
+                    
+                    // Trigger the game's start
+                    setTimeout(() => {
+                        const soloButton = document.getElementById('solo-button');
+                        if (soloButton) {
+                            soloButton.click();
+                        }
+                    }, 100);
+                };
+                
+                const handleCreateRoom = async (settings) => {
+                    setRoomSettings(settings);
+                    
+                    try {
+                        // Get player name (default to "Player" if not set)
+                        const playerName = "Player";
+                        
+                        // Ensure we have NetworkManager
+                        if (!window.gameInstance || !window.gameInstance.networkManager) {
+                            console.error('NetworkManager not available');
+                            alert('Game not fully loaded. Please try again.');
+                            setScreen('main');
+                            return;
+                        }
+                        
+                        const nm = window.gameInstance.networkManager;
+                        
+                        // Connect if not already connected
+                        if (!nm.connected && !nm.connecting) {
+                            console.log('Connecting to multiplayer server...');
+                            await nm.connect();
+                        }
+                        
+                        // Now create the room
+                        const result = await nm.createRoom(
+                            playerName,
+                            {
+                                maxPlayers: settings.maxPlayers,
+                                isPublic: true,
+                                gameMode: settings.gameMode
+                            },
+                            selectedDog
+                        );
+                        
+                        console.log('Room created successfully:', result);
+                        
+                        // Room created successfully, start monitoring
+                        monitorLobbyState();
+                    } catch (error) {
+                        console.error('Failed to create room:', error);
+                        alert('Failed to create room: ' + (error.message || 'Connection error'));
+                        setScreen('multiplayer');
+                    }
+                };
+                
+                const monitorLobbyState = () => {
+                    // Store the interval ID in a ref or state so we can clear it later
+                    window.currentLobbyInterval = setInterval(() => {
+                        if (!window.gameInstance || !window.gameInstance.networkManager) {
+                            return;
+                        }
+                        
+                        const nm = window.gameInstance.networkManager;
+                        const currentRoom = nm.currentRoom;
+                        
+                        if (!currentRoom) {
+                            clearInterval(window.currentLobbyInterval);
+                            setScreen('main');
+                            return;
+                        }
+                        
+                        // Get room data from currentRoom object
+                        console.log('Current room data:', currentRoom);
+                        const roomCode = currentRoom.code || currentRoom.roomCode || '';
+                        const maxPlayers = currentRoom.maxPlayers || 4;
+                        const players = [];
+                        
+                        // Extract player data from currentRoom.players
+                        if (currentRoom.players) {
+                            if (Array.isArray(currentRoom.players)) {
+                                // If players is an array
+                                currentRoom.players.forEach((player, index) => {
+                                    players.push({
+                                        name: player.name || player.playerName || `Player ${index + 1}`,
+                                        dog: player.dog || player.dogType || 'jep',
+                                        isHost: player.isHost || (index === 0),
+                                        id: player.id || player.playerId || index.toString()
+                                    });
+                                });
+                            } else if (typeof currentRoom.players === 'object') {
+                                // If players is an object/map
+                                Object.entries(currentRoom.players).forEach(([playerId, player]) => {
+                                    players.push({
+                                        name: player.name || player.playerName || (playerId === nm.playerId ? 'You' : 'Player'),
+                                        dog: player.dog || player.dogType || 'jep',
+                                        isHost: currentRoom.hostId === playerId || player.isHost,
+                                        id: playerId
+                                    });
+                                });
+                            }
+                        }
+                        
+                        // Update lobby state
+                        const newLobbyData = {
+                            roomCode,
+                            players,
+                            maxPlayers,
+                            isHost: nm.isHost || (currentRoom.hostId === nm.playerId)
+                        };
+                        console.log('Setting lobby data:', newLobbyData);
+                        setLobbyData(newLobbyData);
+                        
+                        // Update the UI to show the lobby
+                        if (screen !== 'lobby') {
+                            console.log('Changing screen to lobby');
+                            setScreen('lobby');
+                        }
+                        
+                        // Check if game started
+                        const canvas = document.querySelector('canvas');
+                        const startScreen = document.getElementById('start-screen');
+                        if (canvas && startScreen && startScreen.style.display === 'none') {
+                            clearInterval(window.currentLobbyInterval);
+                            // Don't hide the React overlay - it contains the HUD!
+                        }
+                    }, 500);
+                };
+                
+                const handleJoinRoom = async (code) => {
+                    try {
+                        // Get player name (default to "Player" if not set)
+                        const playerName = "Player";
+                        
+                        // Ensure we have NetworkManager
+                        if (!window.gameInstance || !window.gameInstance.networkManager) {
+                            console.error('NetworkManager not available');
+                            alert('Game not fully loaded. Please try again.');
+                            setScreen('main');
+                            return;
+                        }
+                        
+                        const nm = window.gameInstance.networkManager;
+                        
+                        // Connect if not already connected
+                        if (!nm.connected && !nm.connecting) {
+                            console.log('Connecting to multiplayer server...');
+                            await nm.connect();
+                        }
+                        
+                        // Now join the room
+                        const result = await nm.joinRoom(
+                            code,
+                            playerName,
+                            selectedDog
+                        );
+                        
+                        console.log('Room joined successfully:', result);
+                        
+                        // Room joined successfully, start monitoring
+                        monitorLobbyState();
+                    } catch (error) {
+                        console.error('Failed to join room:', error);
+                        alert(error.message || 'Failed to join room');
+                        setScreen('joinRoom');
+                    }
+                };
+                
+                const handleQuickMatch = async () => {
+                    try {
+                        // Get player name (default to "Player" if not set)
+                        const playerName = "Player";
+                        
+                        // Ensure we have NetworkManager
+                        if (!window.gameInstance || !window.gameInstance.networkManager) {
+                            console.error('NetworkManager not available');
+                            alert('Game not fully loaded. Please try again.');
+                            setScreen('main');
+                            return;
+                        }
+                        
+                        const nm = window.gameInstance.networkManager;
+                        
+                        // Connect if not already connected
+                        if (!nm.connected && !nm.connecting) {
+                            console.log('Connecting to multiplayer server...');
+                            await nm.connect();
+                        }
+                        
+                        // Now do quick match
+                        const result = await nm.quickMatch(
+                            playerName,
+                            selectedDog
+                        );
+                        
+                        console.log('Quick match successful:', result);
+                        
+                        // Joined a room successfully, start monitoring
+                        monitorLobbyState();
+                    } catch (error) {
+                        console.error('Failed to quick match:', error);
+                        alert(error.message || 'No available rooms for quick match');
+                        setScreen('multiplayer');
+                    }
+                };
+                
+                const renderContent = () => {
+                    switch (screen) {
+                        case 'main':
+                            return React.createElement('div', {
+                                className: 'max-w-4xl w-full text-center'
+                            }, [
+                                React.createElement('h1', {
+                                    key: 'title',
+                                    className: 'text-6xl md:text-8xl font-black mb-4',
+                                    style: {
+                                        fontFamily: '"Comic Sans MS", "Comic Sans", "Arial Black", cursive',
+                                        background: 'linear-gradient(180deg, #4FFFFF 0%, #2196F3 50%, #1976D2 100%)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                        textFillColor: 'transparent',
+                                        WebkitTextStroke: '3px #0A47A1',
+                                        textStroke: '3px #0A47A1',
+                                        letterSpacing: '2px',
+                                        transform: 'rotate(-0.5deg)',
+                                        animation: 'fadeIn 0.4s ease-out, titleBounce 2s ease-in-out infinite 1s',
+                                        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))'
+                                    }
+                                }, 'SHEEP DOG'),
+                                
+                                React.createElement('h2', {
+                                    key: 'subtitle',
+                                    className: 'text-3xl md:text-4xl font-bold mb-8',
+                                    style: {
+                                        fontFamily: '"Comic Sans MS", "Comic Sans", "Arial Black", cursive',
+                                        color: '#FFD700',
+                                        WebkitTextStroke: '2px #FF6B00',
+                                        textStroke: '2px #FF6B00',
+                                        letterSpacing: '3px',
+                                        transform: 'rotate(0.5deg)',
+                                        animation: 'fadeIn 0.4s ease-out 0.1s both, subtitleBounce 2.5s ease-in-out infinite 1.2s',
+                                        filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))'
+                                    }
+                                }, 'SIMULATOR'),
+                                
+                                // Compact dog selection
+                                React.createElement('div', {
+                                    key: 'dog-select',
+                                    className: 'mb-8 mx-auto max-w-2xl',
+                                    style: { 
+                                        animation: 'fadeIn 0.3s ease-out 0.1s both',
+                                        background: 'rgba(255, 255, 255, 0.08)',
+                                        backdropFilter: 'blur(24px)',
+                                        WebkitBackdropFilter: 'blur(24px)',
+                                        borderRadius: '1.5rem',
+                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
+                                        padding: '2rem'
+                                    }
+                                }, [
+                                    React.createElement('h3', {
+                                        key: 'title',
+                                        className: 'text-white text-xl font-bold mb-6 text-center',
+                                        style: {
+                                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                                        }
+                                    }, 'Choose Your Dog'),
+                                    React.createElement('div', {
+                                        key: 'dogs',
+                                        className: 'grid grid-cols-3 gap-6'
+                                    }, [
+                                        { id: 'jep', name: 'Jep', emoji: '🐕‍🦺' },
+                                        { id: 'rauri', name: 'Rauri', emoji: '🐕' },
+                                        { id: 'pip', name: 'Pip', emoji: '🐶' }
+                                    ].map(dog => 
+                                        React.createElement('div', {
+                                            key: dog.id,
+                                            className: `cursor-pointer transition-all duration-300 transform ${
+                                                selectedDog === dog.id 
+                                                    ? 'scale-105' 
+                                                    : 'hover:scale-102'
+                                            }`,
+                                            style: {
+                                                padding: '1.5rem',
+                                                borderRadius: '1rem',
+                                                ...(selectedDog === dog.id ? {
+                                                    background: 'rgba(255, 255, 255, 0.15)',
+                                                    backdropFilter: 'blur(28px)',
+                                                    WebkitBackdropFilter: 'blur(28px)',
+                                                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                                                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+                                                } : {
+                                                    background: 'rgba(255, 255, 255, 0.08)',
+                                                    backdropFilter: 'blur(20px)',
+                                                    WebkitBackdropFilter: 'blur(20px)',
+                                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
+                                                })
+                                            },
+                                            onMouseEnter: selectedDog !== dog.id ? (e) => {
+                                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.18)';
+                                                e.currentTarget.style.boxShadow = '0 3px 15px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)';
+                                            } : undefined,
+                                            onMouseLeave: selectedDog !== dog.id ? (e) => {
+                                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                                                e.currentTarget.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)';
+                                            } : undefined,
+                                            onClick: () => setSelectedDog(dog.id)
+                                        }, [
+                                            React.createElement('div', { 
+                                                key: 'emoji', 
+                                                className: 'text-5xl mb-3 text-center',
+                                                style: selectedDog === dog.id ? { animation: 'floatAnimation 3s ease-in-out infinite' } : {}
+                                            }, dog.emoji),
+                                            React.createElement('p', { 
+                                                key: 'name', 
+                                                className: 'text-white font-bold text-center text-lg' 
+                                            }, dog.name)
+                                        ])
+                                    ))
+                                ]),
+                                
+                                // Mode selection buttons
+                                React.createElement('div', {
+                                    key: 'modes',
+                                    className: 'flex gap-4 justify-center',
+                                    style: { animation: 'fadeIn 0.3s ease-out 0.2s both' }
+                                }, [
+                                    React.createElement('button', {
+                                        key: 'solo',
+                                        className: 'btn-primary px-8 py-4 text-lg flex items-center gap-2',
+                                        onClick: () => handleModeSelect('solo')
+                                    }, [
+                                        React.createElement('span', { key: 'icon' }, '🎮'),
+                                        React.createElement('span', { key: 'text' }, 'Single Player')
+                                    ]),
+                                    React.createElement('button', {
+                                        key: 'multi',
+                                        className: 'btn-primary px-8 py-4 text-lg flex items-center gap-2',
+                                        onClick: () => handleModeSelect('multiplayer')
+                                    }, [
+                                        React.createElement('span', { key: 'icon' }, '🌐'),
+                                        React.createElement('span', { key: 'text' }, 'Multiplayer')
+                                    ])
+                                ])
+                            ]);
+                            
+                        case 'multiplayer':
+                            return React.createElement(MultiplayerOptions, {
+                                onBack: () => setScreen('main'),
+                                onSelectOption: (option) => {
+                                    if (option === 'create') {
+                                        setScreen('createRoom');
+                                    } else if (option === 'join') {
+                                        setScreen('joinRoom');
+                                    } else if (option === 'quick') {
+                                        handleQuickMatch();
+                                    }
+                                }
+                            });
+                            
+                        case 'createRoom':
+                            return React.createElement(RoomCreation, {
+                                onBack: () => setScreen('multiplayer'),
+                                onCreate: handleCreateRoom
+                            });
+                            
+                        case 'joinRoom':
+                            return React.createElement(RoomJoining, {
+                                onBack: () => setScreen('multiplayer'),
+                                onJoin: handleJoinRoom
+                            });
+                            
+                        case 'lobby':
+                            return React.createElement(Lobby, {
+                                ...lobbyData,
+                                onStart: () => {
+                                    // Update the game's dog selection
+                                    const dogCards = document.querySelectorAll('.dog-card');
+                                    dogCards.forEach(card => {
+                                        if (card.dataset.dog === selectedDog) {
+                                            card.classList.add('active');
+                                            card.click();
+                                        } else {
+                                            card.classList.remove('active');
+                                        }
+                                    });
+                                    
+                                    // Update the start screen's selected dog
+                                    if (window.gameInstance && window.gameInstance.startScreen) {
+                                        window.gameInstance.startScreen.selectedDog = selectedDog;
+                                    }
+                                    
+                                    // Start multiplayer game
+                                    // Don't hide the React overlay - let the App component manage it
+                                    const startButton = document.getElementById('start-game-button');
+                                    if (startButton) startButton.click();
+                                },
+                                onLeave: () => setScreen('multiplayer')
+                            });
+                    }
+                };
+                
+                
+                return React.createElement('div', {
+                    className: 'fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 safe-area-inset',
+                    style: { animation: 'fadeIn 0.4s ease-out' }
+                }, renderContent());
+            }
+            
+            // ==================== GAME HUD COMPONENTS ====================
+            
+            // Game State Hook
+            function useGameState() {
+                const [gameData, setGameData] = useState({
+                    stamina: 100,
+                    sheepCount: 0,
+                    totalSheep: 200,
+                    gameTime: 0,
+                    isComplete: false,
+                    isPaused: false,
+                    gameMode: 'solo',
+                    players: [],
+                    myPlayerId: null,
+                    scores: {},
+                    gates: {},
+                    timeLimit: 0
+                });
+                
+                useEffect(() => {
+                    // Poll game state
+                    const pollInterval = setInterval(() => {
+                        if (window.gameInstance) {
+                            const gameState = window.gameInstance.gameState;
+                            const gameTimer = window.gameInstance.gameTimer;
+                            const networkManager = window.gameInstance.networkManager;
+                            const multiplayerUI = window.gameInstance.multiplayerUI;
+                            
+                            if (gameState && gameTimer) {
+                                const sheepdog = window.gameInstance.sheepdog;
+                                
+                                                // Get sheep count based on game mode and multiplayer status
+                let sheepCount = 0;
+                const isInMultiplayer = networkManager?.currentRoom;
+                const actualGameMode = isInMultiplayer ? (multiplayerUI?.gameMode || networkManager?.currentRoom?.gameMode || 'cooperative') : 'solo';
+                
+                if (isInMultiplayer && (actualGameMode === 'racing' || actualGameMode === 'timed')) {
+                    // In multiplayer racing/timed mode, show player's individual score
+                    const playerId = networkManager?.getPlayerId();
+                    sheepCount = gameState.getPlayerScore(playerId) || 0;
+                } else if (isInMultiplayer && actualGameMode === 'cooperative') {
+                    // In cooperative multiplayer mode, show total sheep collected by all players
+                    sheepCount = gameState.sheepRetired || 0;
+                } else {
+                    // In single player mode, show sheep retired
+                    sheepCount = gameState.sheepRetired || 0;
+                }
+                                
+                                // Calculate stamina percentage based on dog's max stamina
+                                const currentStamina = sheepdog?.stamina || 100;
+                                const maxStamina = sheepdog?.maxStamina || 100;
+                                const staminaPercentage = Math.round((currentStamina / maxStamina) * 100);
+                                
+                                const newData = {
+                                    stamina: currentStamina,
+                                    maxStamina: maxStamina,
+                                    staminaPercentage: staminaPercentage,
+                                    sheepCount: sheepCount,
+                                    totalSheep: gameState.totalSheep || 200,
+                                    gameTime: gameTimer.getGameTime ? gameTimer.getGameTime() : 0,
+                                    isComplete: gameState.isComplete || false,
+                                    isPaused: gameState.paused || false,
+                                    gameMode: actualGameMode
+                                };
+                                
+                                                // Add multiplayer data if available
+                if (networkManager?.currentRoom) {
+                    newData.players = multiplayerUI?.currentPlayers || [];
+                    newData.myPlayerId = networkManager.getPlayerId();
+                    newData.scores = gameState.playerScores || {};
+                    newData.gates = gameState.competitiveGates || {};
+                    
+                    // Get gameMode from multiple sources, prioritizing gameState
+                    newData.gameMode = gameState.gameMode || multiplayerUI?.gameMode || networkManager?.currentRoom?.gameMode || 'cooperative';
+                    newData.timeLimit = newData.gameMode === 'timed' ? 180 : 0;
+                    
+                    // Multiplayer data updated
+                }
+                                
+                                setGameData(newData);
+                            }
+                        }
+                    }, 16); // 60fps
+                    
+                    return () => clearInterval(pollInterval);
+                }, []);
+                
+                return gameData;
+            }
+            
+            // Compact Stamina Bar Component (for use within other components)
+            function CompactStaminaBar({ stamina }) {
+                const isLow = stamina < 30;
+                
+                return React.createElement('div', {
+                    className: 'mt-3 pt-3 border-t border-white border-opacity-10'
+                }, [
+                    React.createElement('div', {
+                        key: 'label',
+                        className: 'text-white text-xs text-opacity-70 mb-1'
+                    }, 'Stamina'),
+                    React.createElement('div', {
+                        key: 'bar',
+                        className: 'h-2 bg-gray-700 rounded-full overflow-hidden'
+                    }, 
+                        React.createElement('div', {
+                            className: `h-full transition-all duration-300 ${
+                                isLow ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-green-500 to-green-600'
+                            }`,
+                            style: { width: `${Math.round(stamina)}%` }
+                        })
+                    )
+                ]);
+            }
+            
+            // Timer Component
+            function GameTimer({ gameTime, timeLimit }) {
+                const minutes = Math.floor(gameTime / 60);
+                const seconds = Math.floor(gameTime % 60);
+                const isTimedMode = timeLimit > 0;
+                const timeRemaining = Math.max(0, timeLimit - gameTime);
+                const remainingMinutes = Math.floor(timeRemaining / 60);
+                const remainingSeconds = Math.floor(timeRemaining % 60);
+                const isLowTime = isTimedMode && timeRemaining < 30;
+                
+                return React.createElement('div', {
+                    className: 'fixed top-6 right-6 z-20',
+                    style: { animation: 'slideDown 0.5s ease-out 0.1s both' }
+                }, 
+                    React.createElement('div', {
+                        className: `ui-panel py-2 px-4 ${isLowTime ? 'border-red-500 border-opacity-50' : ''}`
+                    }, 
+                        isTimedMode ? [
+                            React.createElement('div', {
+                                key: 'timed',
+                                className: `text-white font-mono text-2xl ${isLowTime ? 'text-red-400' : ''}`
+                            }, `${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`),
+                            React.createElement('div', {
+                                key: 'label',
+                                className: 'text-white text-opacity-60 text-xs text-center'
+                            }, 'Time Remaining')
+                        ] : React.createElement('div', {
+                            className: 'text-white font-mono text-2xl'
+                        }, `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
+                    )
+                );
+            }
+            
+            // Sheep Counter Component (with integrated stamina)
+            function SheepCounter({ sheepCount, totalSheep, stamina }) {
+                const percentage = Math.round((sheepCount / totalSheep) * 100);
+                
+                return React.createElement('div', {
+                    className: 'fixed top-6 left-6 z-20',
+                    style: { animation: 'slideDown 0.5s ease-out 0.2s both' }
+                }, 
+                    React.createElement('div', {
+                        className: 'ui-panel p-4 min-w-[200px]'
+                    }, [
+                        React.createElement('div', {
+                            key: 'sheep-progress',
+                            className: 'flex items-center gap-3'
+                        }, [
+                            React.createElement('span', {
+                                key: 'icon',
+                                className: 'text-2xl'
+                            }, '🐑'),
+                            React.createElement('div', {
+                                key: 'info'
+                            }, [
+                                React.createElement('div', {
+                                    key: 'count',
+                                    className: 'text-white font-semibold'
+                                }, `${sheepCount} / ${totalSheep}`),
+                                React.createElement('div', {
+                                    key: 'progress',
+                                    className: 'text-blue-300 text-xs'
+                                }, `${percentage}% complete`)
+                            ])
+                        ]),
+                        React.createElement(CompactStaminaBar, {
+                            key: 'stamina',
+                            stamina: stamina
+                        })
+                    ])
+                );
+            }
+            
+            // Multiplayer Scoreboard Component (with integrated stamina)
+            function MultiplayerScoreboard({ players, scores, myPlayerId, gameMode, sheepCount, totalSheep, stamina }) {
+                
+                const isRacing = gameMode === 'racing';
+                const isTimed = gameMode === 'timed';
+                const hasIndividualScores = isRacing || isTimed;
+                const isCooperative = gameMode === 'cooperative';
+                
+                // For modes with individual scores, sort by score. For cooperative, keep original order
+                const displayPlayers = hasIndividualScores ? 
+                    [...(players || [])].sort((a, b) => {
+                        const scoreA = scores[a.id] || 0;
+                        const scoreB = scores[b.id] || 0;
+                        return scoreB - scoreA;
+                    }) : 
+                    [...(players || [])];
+                
+                return React.createElement('div', {
+                    className: 'fixed top-6 left-6 z-20',
+                    style: { animation: 'slideInLeft 0.5s ease-out 0.3s both' }
+                }, 
+                    React.createElement('div', {
+                        className: 'ui-panel p-3 min-w-[220px]'
+                    }, [
+                        React.createElement('h3', {
+                            key: 'title',
+                            className: 'text-blue-400 font-bold mb-3 flex items-center gap-2'
+                        }, [
+                            React.createElement('span', { key: 'icon' }, '🌐'),
+                            React.createElement('span', { key: 'text' }, 
+                                hasIndividualScores ? (gameMode === 'timed' ? 'Timed Race' : 'Racing') : 'Team Progress')
+                        ]),
+                        
+                        // Show collective progress for cooperative mode
+                        isCooperative && React.createElement('div', {
+                            key: 'collective-progress',
+                            className: 'mb-3 p-3 bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 rounded'
+                        }, [
+                            React.createElement('div', {
+                                key: 'sheep-count',
+                                className: 'text-center text-white font-bold text-lg'
+                            }, `${sheepCount || 0} / ${totalSheep || 200}`),
+                            React.createElement('div', {
+                                key: 'label',
+                                className: 'text-center text-green-300 text-sm'
+                            }, 'Sheep Collected Together'),
+                            React.createElement('div', {
+                                key: 'progress-bar',
+                                className: 'mt-2 h-2 bg-gray-700 rounded-full overflow-hidden'
+                            }, 
+                                React.createElement('div', {
+                                    className: 'h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-300',
+                                    style: { width: `${Math.round(((sheepCount || 0) / (totalSheep || 200)) * 100)}%` }
+                                })
+                            )
+                        ]),
+                        
+                        React.createElement('div', {
+                            key: 'players',
+                            className: 'space-y-2'
+                        }, displayPlayers.length === 0 ? 
+                            React.createElement('div', {
+                                className: 'text-center text-white text-opacity-60 py-2'
+                            }, 'No players connected') :
+                            displayPlayers.map((player, index) => {
+                                const isMe = player.id === myPlayerId;
+                                const score = scores && scores[player.id] !== undefined ? scores[player.id] : 0;
+                                const isLeader = index === 0 && hasIndividualScores && score > 0;
+                                const winThreshold = 101; // For racing mode progress bars
+                                
+                                return React.createElement('div', {
+                                    key: player.id || index,
+                                    className: `p-2 rounded ${
+                                        isMe ? 'bg-blue-500 bg-opacity-20 border border-blue-400 border-opacity-30' : 
+                                        'bg-white bg-opacity-5'
+                                    }`
+                                }, [
+                                    // Player name and score row
+                                    React.createElement('div', {
+                                        key: 'player-info',
+                                        className: 'flex items-center justify-between mb-1'
+                                    }, [
+                                        React.createElement('div', {
+                                            key: 'left',
+                                            className: 'flex items-center gap-2'
+                                        }, [
+                                            isLeader && React.createElement('span', { key: 'crown' }, '👑'),
+                                            React.createElement('span', {
+                                                key: 'name',
+                                                className: 'text-white font-medium'
+                                            }, (player.name || player.playerName || 'Unknown Player') + (isMe ? ' (You)' : ''))
+                                        ]),
+                                        hasIndividualScores && React.createElement('span', {
+                                            key: 'score',
+                                            className: 'text-white font-mono font-bold'
+                                        }, isRacing ? `${score}/${winThreshold}` : `${score}`)
+                                    ]),
+                                    
+                                    // Individual progress bar for racing mode only
+                                    isRacing && React.createElement('div', {
+                                        key: 'progress-bar',
+                                        className: 'h-2 bg-gray-700 rounded-full overflow-hidden'
+                                    }, 
+                                        React.createElement('div', {
+                                            className: `h-full transition-all duration-300 ${
+                                                isMe ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 
+                                                isLeader ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                                                'bg-gradient-to-r from-gray-500 to-gray-600'
+                                            }`,
+                                            style: { width: `${Math.min((score / winThreshold) * 100, 100)}%` }
+                                        })
+                                    )
+                                ]);
+                            })
+                        ),
+                        
+                        React.createElement(CompactStaminaBar, {
+                            key: 'stamina',
+                            stamina: stamina
+                        })
+                    ])
+                );
+            }
+            
+
+            
+            // Mobile HUD Component (with stamina)
+            function MobileHUD({ gameData, stamina }) {
+                const minutes = Math.floor(gameData.gameTime / 60);
+                const seconds = gameData.gameTime % 60;
+                const isLow = stamina < 30;
+                
+                return React.createElement('div', {
+                    className: 'fixed bottom-24 left-1/2 transform -translate-x-1/2 z-20',
+                    style: { animation: 'slideUp 0.5s ease-out' }
+                }, 
+                    React.createElement('div', {
+                        className: 'ui-panel p-3 min-w-[250px]'
+                    }, [
+                        // Top row with sheep and timer
+                        React.createElement('div', {
+                            key: 'top-row',
+                            className: 'flex items-center justify-between text-sm mb-3'
+                        }, [
+                            React.createElement('div', {
+                                key: 'sheep',
+                                className: 'flex items-center gap-1'
+                            }, [
+                                React.createElement('span', { key: 'icon' }, '🐑'),
+                                React.createElement('span', { key: 'count', className: 'text-white' }, 
+                                    `${gameData.sheepCount}/${gameData.totalSheep}`)
+                            ]),
+                            React.createElement('div', {
+                                key: 'timer',
+                                className: 'flex items-center gap-1'
+                            }, [
+                                React.createElement('span', { key: 'icon' }, '⏱️'),
+                                React.createElement('span', { key: 'time', className: 'text-white font-mono' }, 
+                                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
+                            ])
+                        ]),
+                        
+                        // Stamina section
+                        React.createElement('div', {
+                            key: 'stamina-section'
+                        }, [
+                            React.createElement('div', {
+                                key: 'label',
+                                className: 'text-white text-xs text-opacity-70 mb-1'
+                            }, 'Stamina'),
+                            React.createElement('div', {
+                                key: 'bar',
+                                className: 'h-2 bg-gray-700 rounded-full overflow-hidden'
+                            }, 
+                                React.createElement('div', {
+                                    className: `h-full transition-all duration-300 ${
+                                        isLow ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-green-500 to-green-600'
+                                    }`,
+                                    style: { width: `${Math.round(stamina)}%` }
+                                })
+                            )
+                        ])
+                    ])
+                );
+            }
+            
+            // Mobile Controls Component
+            function MobileControls() {
+                const [joystickManager, setJoystickManager] = useState(null);
+                const [isSprinting, setIsSprinting] = useState(false);
+                const joystickRef = useRef(null);
+                
+                useEffect(() => {
+                    if (!window.gameInstance || !joystickRef.current || !window.nipplejs) return;
+                    
+                    // Create joystick
+                    const manager = window.nipplejs.create({
+                        zone: joystickRef.current,
+                        mode: 'static',
+                        position: { left: '75px', bottom: '75px' },
+                        color: 'white',
+                        size: 120,
+                        threshold: 0.1
+                    });
+                    
+                    // Handle joystick movement
+                    manager.on('move', (evt, data) => {
+                        if (window.gameInstance && window.gameInstance.inputHandler) {
+                            const angle = data.angle.radian;
+                            const force = Math.min(data.force, 1);
+                            
+                            // Convert to game coordinates
+                            const moveX = Math.cos(angle) * force;
+                            const moveZ = Math.sin(angle) * force;
+                            
+                            // Update input handler
+                            window.gameInstance.inputHandler.keys = {
+                                ...window.gameInstance.inputHandler.keys,
+                                w: moveZ < -0.3,
+                                s: moveZ > 0.3,
+                                a: moveX < -0.3,
+                                d: moveX > 0.3
+                            };
+                        }
+                    });
+                    
+                    manager.on('end', () => {
+                        if (window.gameInstance && window.gameInstance.inputHandler) {
+                            window.gameInstance.inputHandler.keys = {
+                                ...window.gameInstance.inputHandler.keys,
+                                w: false,
+                                s: false,
+                                a: false,
+                                d: false
+                            };
+                        }
+                    });
+                    
+                    setJoystickManager(manager);
+                    
+                    return () => {
+                        manager.destroy();
+                    };
+                }, []);
+                
+                const handleSprintStart = () => {
+                    setIsSprinting(true);
+                    if (window.gameInstance && window.gameInstance.inputHandler) {
+                        window.gameInstance.inputHandler.keys.shift = true;
+                    }
+                };
+                
+                const handleSprintEnd = () => {
+                    setIsSprinting(false);
+                    if (window.gameInstance && window.gameInstance.inputHandler) {
+                        window.gameInstance.inputHandler.keys.shift = false;
+                    }
+                };
+                
+                return React.createElement('div', {
+                    className: 'fixed inset-0 pointer-events-none z-10'
+                }, [
+                    // Joystick container
+                    React.createElement('div', {
+                        key: 'joystick',
+                        id: 'joystick-zone',
+                        ref: joystickRef,
+                        className: 'pointer-events-auto',
+                        style: { position: 'fixed', left: '20px', bottom: '20px', width: '150px', height: '150px' }
+                    }),
+                    
+                    // Sprint button
+                    React.createElement('button', {
+                        key: 'sprint',
+                        className: `mobile-control ${isSprinting ? 'bg-blue-500 bg-opacity-30' : ''} fixed bottom-20 right-20 w-20 h-20 text-2xl pointer-events-auto`,
+                        onTouchStart: handleSprintStart,
+                        onTouchEnd: handleSprintEnd,
+                        onMouseDown: handleSprintStart,
+                        onMouseUp: handleSprintEnd,
+                        onMouseLeave: handleSprintEnd
+                    }, '🏃'),
+                    
+                    // Fullscreen button
+                    React.createElement('button', {
+                        key: 'fullscreen',
+                        className: 'mobile-control fixed top-20 right-6 w-12 h-12 text-xl pointer-events-auto',
+                        onClick: () => {
+                            if (!document.fullscreenElement) {
+                                document.documentElement.requestFullscreen();
+                            } else {
+                                document.exitFullscreen();
+                            }
+                        }
+                    }, '⛶')
+                ]);
+            }
+            
+            // Main Game HUD Component
+            function GameHUD() {
+                const gameData = useGameState();
+                const platform = usePlatform();
+                const isMultiplayer = gameData.gameMode !== 'solo' && gameData.players && gameData.players.length > 0;
+                const isRacing = gameData.gameMode === 'racing';
+                const isTimed = gameData.gameMode === 'timed';
+                const hasIndividualScores = isRacing || isTimed;
+                
+                const staminaPercentage = gameData.staminaPercentage || Math.round((gameData.stamina / (gameData.maxStamina || 100)) * 100);
+                
+                return React.createElement('div', {
+                    className: 'game-hud fixed inset-0 pointer-events-none'
+                }, [
+                    // Desktop UI
+                    platform === 'desktop' && [
+                        React.createElement(GameTimer, {
+                            key: 'timer',
+                            gameTime: gameData.gameTime,
+                            timeLimit: gameData.timeLimit
+                        }),
+                        !isMultiplayer && React.createElement(SheepCounter, {
+                            key: 'counter',
+                            sheepCount: gameData.sheepCount,
+                            totalSheep: gameData.totalSheep,
+                            stamina: staminaPercentage
+                        }),
+                        isMultiplayer && React.createElement(MultiplayerScoreboard, {
+                            key: 'scoreboard',
+                            players: gameData.players,
+                            scores: gameData.scores,
+                            myPlayerId: gameData.myPlayerId,
+                            gameMode: gameData.gameMode,
+                            sheepCount: gameData.sheepCount,
+                            totalSheep: gameData.totalSheep,
+                            stamina: staminaPercentage
+                        })
+                    ],
+                    
+                    // Mobile UI
+                    platform === 'mobile' && [
+                        React.createElement(MobileHUD, {
+                            key: 'mobile-hud',
+                            gameData: gameData,
+                            stamina: staminaPercentage
+                        }),
+                        React.createElement(MobileControls, {
+                            key: 'mobile-controls'
+                        }),
+                        isMultiplayer && React.createElement(MultiplayerScoreboard, {
+                            key: 'scoreboard',
+                            players: gameData.players,
+                            scores: gameData.scores,
+                            myPlayerId: gameData.myPlayerId,
+                            gameMode: gameData.gameMode,
+                            sheepCount: gameData.sheepCount,
+                            totalSheep: gameData.totalSheep,
+                            stamina: staminaPercentage
+                        })
+                    ]
+                ]);
+            }
+            
+            // Main App
+            function App() {
+                const [gameStarted, setGameStarted] = useState(false);
+                
+                // Listen for game start
+                useEffect(() => {
+                    const checkGameStart = setInterval(() => {
+                        const canvas = document.querySelector('canvas');
+                        const startScreen = document.getElementById('start-screen');
+                        const gameActive = window.gameInstance?.gameState?.isGameActive();
+                        
+                        if (canvas && startScreen && startScreen.style.display === 'none') {
+                            console.log('🎯 Game started detected! Canvas found, start screen hidden');
+                            setGameStarted(true);
+                            clearInterval(checkGameStart);
+                            // Ensure react overlay is visible
+                            const overlay = document.getElementById('react-overlay');
+                            if (overlay) overlay.style.display = '';
+                        } else if (gameActive) {
+                            console.log('🎯 Game started detected via gameState.isGameActive()');
+                            setGameStarted(true);
+                            clearInterval(checkGameStart);
+                            // Ensure react overlay is visible
+                            const overlay = document.getElementById('react-overlay');
+                            if (overlay) overlay.style.display = '';
+                        }
+                    }, 100);
+                    
+                    return () => clearInterval(checkGameStart);
+                }, []);
+                
+                return React.createElement(React.Fragment, null, [
+                    !gameStarted && React.createElement(StartScreen, { key: 'start' }),
+                    gameStarted && React.createElement(GameHUD, { key: 'hud' })
+                ]);
+            }
+            
+            // Mount React app
+            const container = document.getElementById('react-overlay');
+            if (!container) {
+                console.error('❌ React overlay container not found!');
+                return;
+            }
+            console.log('📦 Mounting React app to container:', container);
+            
+            // Ensure container is visible
+            container.style.display = '';
+            
+            const root = createRoot(container);
+            root.render(React.createElement(App));
+            
+            console.log('✅ React UI initialized successfully');
+        }
+    </script>
 </body>
-</html> 
+</html>

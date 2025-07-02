@@ -141,23 +141,10 @@ export class GameState {
     }
     
     checkCompletion() {
-        // Only check completion if game is active and not paused
-        if (!this.gameActive || this.isPaused) return false;
-        
-        if (this.sheepRetired === this.sheep.length && !this.gameCompleted) {
+        // Universal completion check for all modes
+        if (this.sheepRetired >= this.sheep.length && !this.gameCompleted) {
             this.gameCompleted = true;
-            
-            // Play completion sound and win music
-            if (this.audioManager) {
-                this.audioManager.playRewardingChime();
-                
-                // Stop gameplay music and start win music
-                setTimeout(() => {
-                    this.audioManager.stopAllMusic();
-                    this.audioManager.playWinMusic();
-                }, 500); // Small delay for the chime to play
-            }
-            
+            console.log('🎉 GAME COMPLETED! Triggering completion flow...');
             return true;
         }
         return false;
@@ -253,7 +240,8 @@ export class GameState {
             competitiveData: competitiveData
         });
         
-        if ((this.gameMode === 'competitive' || this.gameMode === 'timed') && competitiveData) {
+        // Use server data to determine completion type, fallback to client gameMode
+        if (competitiveData && (competitiveData.isComplete || competitiveData.winner)) {
             this.showCompetitiveCompletionMessage(competitiveData, finalTime);
         } else {
             this.showCooperativeCompletionMessage(finalTime, isNewRecord);
@@ -261,6 +249,11 @@ export class GameState {
     }
     
     showCooperativeCompletionMessage(finalTime, isNewRecord) {
+        console.log('📢 showCooperativeCompletionMessage called:', {
+            finalTime: finalTime,
+            isNewRecord: isNewRecord
+        });
+        
         let message = 'All sheep have been guided to the pasture!';
         
         if (finalTime !== null) {
@@ -273,10 +266,13 @@ export class GameState {
         }
         
         const completionElement = document.getElementById('completion-message');
+        console.log('🎯 Found completion element:', !!completionElement);
+        
         if (completionElement) {
             completionElement.innerHTML = 
                 message.replace(/\n/g, '<br>') + '<br><button id="restart-button">Play Again</button>';
             completionElement.style.display = 'block';
+            console.log('✅ Completion message displayed successfully!');
             
             // Add event listener for restart button
             const restartButton = document.getElementById('restart-button');
@@ -286,6 +282,8 @@ export class GameState {
                     location.reload();
                 });
             }
+        } else {
+            console.error('❌ completion-message element not found!');
         }
     }
     
@@ -301,13 +299,21 @@ export class GameState {
         const isWinner = winner === myPlayerId;
         const myScore = finalScores[myPlayerId] || 0;
         
+        // Determine if this is timed mode from server data
+        const isTimedMode = winType === 'timeout' || winType === 'timed';
+        
         // Check if new best score for timed mode
         let isNewBestScore = false;
-        if (this.gameMode === 'timed') {
+        if (isTimedMode) {
             try {
                 const previousBest = localStorage.getItem('timedModeBestScore');
                 const prevBestNum = previousBest ? parseInt(previousBest) : 0;
                 isNewBestScore = myScore > prevBestNum;
+                
+                // Save new best score
+                if (isNewBestScore) {
+                    localStorage.setItem('timedModeBestScore', myScore.toString());
+                }
             } catch (e) {
                 console.warn('Could not check best score:', e);
             }
@@ -318,33 +324,33 @@ export class GameState {
         let title = '';
         
         if (isWinner) {
-            title = this.gameMode === 'timed' ? '⏱️ TIME\'S UP - VICTORY! 🏆' : '🏆 VICTORY! 🏆';
-            message = this.gameMode === 'timed' ? 'You collected the most sheep!' : 'You won the competition!';
+            title = isTimedMode ? '⏱️ TIME\'S UP - VICTORY! 🏆' : '🏆 VICTORY! 🏆';
+            message = isTimedMode ? 'You collected the most sheep!' : 'You won the competition!';
         } else {
-            title = this.gameMode === 'timed' ? '⏱️ TIME\'S UP' : '🥈 Game Complete';
-            message = `Player ${winner} won ${this.gameMode === 'timed' ? 'with the most sheep!' : 'the competition!'}`;
+            title = isTimedMode ? '⏱️ TIME\'S UP' : '🥈 Game Complete';
+            message = `Player ${winner} won ${isTimedMode ? 'with the most sheep!' : 'the competition!'}`;
         }
         
-        // Add win condition explanation
+        // Add win condition explanation based on actual win type
         if (winType === 'race') {
             const winThreshold = Math.ceil(this.totalSheep / 2);
             message += `\nFirst to ${winThreshold} sheep wins!`;
-        } else if (winType === 'timeout' || this.gameMode === 'timed') {
+        } else if (winType === 'timeout' || isTimedMode) {
             message += '\nTime\'s up! Highest score wins!';
-        } else {
+        } else if (winType === 'highest_score') {
             message += '\nHighest score when all sheep collected!';
         }
         
         // Add time information if available
-        if (finalTime !== null && this.gameMode !== 'timed') {
+        if (finalTime !== null && !isTimedMode) {
             const timeStr = this.formatTime(finalTime);
             message += `\nTime: ${timeStr}`;
-        } else if (this.gameMode === 'timed') {
+        } else if (isTimedMode) {
             message += '\nDuration: 3:00';
         }
         
         // Add new best score message for timed mode
-        if (this.gameMode === 'timed' && isNewBestScore) {
+        if (isTimedMode && isNewBestScore) {
             message += '\n\n🎉 NEW PERSONAL BEST! 🎉';
         }
         

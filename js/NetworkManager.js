@@ -25,12 +25,15 @@ export class NetworkManager {
         if (isLocalDevelopment) {
             // Local development configuration
             this.serverHost = '127.0.0.1';
-            this.serverPort = 9208; // Local development port
+            this.serverPort = 9208;
         } else {
-            // Production configuration - DigitalOcean Droplet with trusted domain
-            this.serverHost = 'sheepdogsim.duckdns.org'; // Trusted domain with Let's Encrypt
-            this.serverPort = 443; // HTTPS port via nginx proxy
+            // Production configuration - DigitalOcean Droplet
+            this.serverHost = '147.182.185.185';
+            this.serverPort = 9208;
         }
+        
+        // Debug mode - disabled in production
+        this.debugMode = isLocalDevelopment;
         
         // Callbacks
         this.onConnectionStateChange = null;
@@ -88,51 +91,80 @@ export class NetworkManager {
                     url: serverUrl,
                     port: this.serverPort
                 };
-                console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
+                if (this.debugMode) {
+                    console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
+                }
             } else {
-                // DigitalOcean Droplet - use HTTPS with trusted domain
-                const serverUrl = `https://${this.serverHost}`;
+                // DigitalOcean Droplet - use HTTP with direct IP
+                const serverUrl = `http://${this.serverHost}`;
                 geckosConfig = { 
                     url: serverUrl,
                     port: this.serverPort
                 };
-                console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Trusted HTTPS)`);
+                if (this.debugMode) {
+                    console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Droplet)`);
+                }
             }
             
-            console.log(`🔗 DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
-            console.log(`🔗 DEBUG: Geckos config:`, geckosConfig);
+            if (this.debugMode) {
+                console.log(`🔗 DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
+                console.log(`🔗 DEBUG: Geckos config:`, geckosConfig);
+            }
+            
+            // Check for mixed content issue (HTTPS page trying to connect to HTTP server)
+            if (window.location.protocol === 'https:' && geckosConfig.url.startsWith('http:')) {
+                const errorMsg = 'Cannot connect to HTTP game server from HTTPS GitHub Pages. The game server needs HTTPS configuration.';
+                console.error('⚠️ Mixed Content Error:', errorMsg);
+                this.connecting = false;
+                this.notifyConnectionStateChange('error');
+                this.notifyError(errorMsg);
+                throw new Error(errorMsg);
+            }
                 
             this.channel = geckos(geckosConfig);
             
-            console.log(`🔗 DEBUG: Geckos client created`);
+            if (this.debugMode) {
+                console.log(`🔗 DEBUG: Geckos client created`);
+            }
             this.setupEventHandlers();
-            console.log(`🔗 DEBUG: Event handlers set up`);
+            if (this.debugMode) {
+                console.log(`🔗 DEBUG: Event handlers set up`);
+            }
             
             return new Promise((resolve, reject) => {
-                console.log(`🔗 DEBUG: Setting up connection promise with 30s timeout`);
+                if (this.debugMode) {
+                    console.log(`🔗 DEBUG: Setting up connection promise with 30s timeout`);
+                }
                 
                 // Use different timeouts for local vs production
                 const timeoutDuration = this.serverHost === '127.0.0.1' || this.serverHost === 'localhost' ? 5000 : 15000;
                 const timeout = setTimeout(() => {
-                    console.log(`🔗 DEBUG: Connection timeout after ${timeoutDuration/1000} seconds`);
+                    if (this.debugMode) {
+                        console.log(`🔗 DEBUG: Connection timeout after ${timeoutDuration/1000} seconds`);
+                    }
                     this.connecting = false;
                     reject(new Error(`Connection timeout - ${this.serverHost === '127.0.0.1' ? 'is local server running?' : 'server may not support WebRTC'}`));
                 }, timeoutDuration);
                 
                 this.channel.onConnect(error => {
-                    console.log(`🔗 DEBUG: onConnect callback triggered, error:`, error);
+                    if (this.debugMode) {
+                        console.log(`🔗 DEBUG: onConnect callback triggered, error:`, error);
+                    }
                     clearTimeout(timeout);
                     this.connecting = false;
                     
                     if (error) {
-                        console.error('🔗 DEBUG: Connection failed with error:', error);
+                        if (this.debugMode) {
+                            console.error('🔗 DEBUG: Connection failed with error:', error);
+                        }
                         this.notifyError('Failed to connect to server');
                         reject(error);
                     } else {
-                        console.log('🔗 DEBUG: Connection successful!');
+                        if (this.debugMode) {
+                            console.log('🔗 DEBUG: Connection successful!');
+                        }
                         this.connected = true;
                         this.reconnectAttempts = 0;
-                        console.log('Connected to multiplayer server');
                         this.notifyConnectionStateChange('connected');
                         this.startPingMeasurement();
                         resolve();
@@ -141,7 +173,9 @@ export class NetworkManager {
             });
         } catch (error) {
             this.connecting = false;
-            console.error('Network connection error:', error);
+            if (this.debugMode) {
+                console.error('Network connection error:', error);
+            }
             this.notifyError('Network connection failed');
             throw error;
         }
@@ -165,7 +199,9 @@ export class NetworkManager {
         
         // Connection events
         this.channel.onDisconnect(() => {
-            console.log('Disconnected from server');
+            if (this.debugMode) {
+                console.log('Disconnected from server');
+            }
             this.connected = false;
             this.notifyConnectionStateChange('disconnected');
             this.attemptReconnect();
@@ -173,7 +209,9 @@ export class NetworkManager {
         
         // Room management events
         this.channel.on('roomCreated', (data) => {
-            console.log('Room created:', data);
+            if (this.debugMode) {
+                console.log('Room created:', data);
+            }
             this.currentRoom = data.room;
             this.playerId = data.playerId;
             this.isHost = true;
@@ -181,7 +219,9 @@ export class NetworkManager {
         });
         
         this.channel.on('roomJoined', (data) => {
-            console.log('Room joined:', data);
+            if (this.debugMode) {
+                console.log('Room joined:', data);
+            }
             this.currentRoom = data.room;
             this.playerId = data.playerId;
             this.isHost = data.isHost;
@@ -189,13 +229,17 @@ export class NetworkManager {
         });
         
         this.channel.on('roomUpdated', (data) => {
-            console.log('Room updated:', data);
+            if (this.debugMode) {
+                console.log('Room updated:', data);
+            }
             this.currentRoom = data.room;
             this.notifyRoomUpdate(data.room);
         });
         
         this.channel.on('playerJoined', (data) => {
-            console.log('Player joined:', data);
+            if (this.debugMode) {
+                console.log('Player joined:', data);
+            }
             // Update current room state
             this.currentRoom = data.room;
             this.notifyRoomUpdate(data.room);
@@ -206,7 +250,9 @@ export class NetworkManager {
         });
         
         this.channel.on('playerLeft', (data) => {
-            console.log('Player left:', data);
+            if (this.debugMode) {
+                console.log('Player left:', data);
+            }
             // Update current room state
             this.currentRoom = data.room;
             this.notifyRoomUpdate(data.room);
@@ -217,14 +263,18 @@ export class NetworkManager {
         });
         
         this.channel.on('hostChanged', (data) => {
-            console.log('Host changed:', data);
+            if (this.debugMode) {
+                console.log('Host changed:', data);
+            }
             this.isHost = data.isHost;
             this.notifyPlayerUpdate({ type: 'hostChanged', newHost: data.newHost });
         });
         
         // Game state events
         this.channel.on('gameStarted', (data) => {
-            console.log('Game started:', data);
+            if (this.debugMode) {
+                console.log('Game started:', data);
+            }
             this.notifyPlayerUpdate({ type: 'gameStarted', gameState: data });
         });
         
@@ -512,17 +562,17 @@ export class NetworkManager {
                 if (this.currentRoom && this.playerName) {
                     console.log('🔄 Reconnecting to room:', this.currentRoom.code);
                     
-                    // Check if it was a competitive room for special handling
-                    const wasCompetitive = this.currentRoom.gameMode === 'competitive';
-                    if (wasCompetitive) {
-                        console.log('🏆 Reconnecting to competitive room');
-                    }
+                        // Check if it was a racing room for special handling
+        const wasRacing = this.currentRoom.gameMode === 'racing';
+        if (wasRacing) {
+            console.log('🏆 Reconnecting to racing room');
+        }
                     
                     await this.joinRoom(this.currentRoom.code, this.playerName, this.dogType);
                     
-                    // If we had competitive data and it was completed, restore it
-                    if (wasCompetitive && this.lastCompetitionResult) {
-                        console.log('🏆 Restoring competitive completion state');
+                            // If we had racing data and it was completed, restore it
+        if (wasRacing && this.lastCompetitionResult) {
+            console.log('🏆 Restoring racing completion state');
                         // Notify the game about the previous competition result
                         this.notifyPlayerUpdate({ 
                             type: 'competitiveStateRestored', 
@@ -656,9 +706,9 @@ export class NetworkManager {
         return this.isHost;
     }
     
-    // Competitive mode helpers
-    isCompetitiveMode() {
-        return this.currentRoom && this.currentRoom.gameMode === 'competitive';
+    // Racing mode helpers
+    isRacingMode() {
+        return this.currentRoom && this.currentRoom.gameMode === 'racing';
     }
     
     getLastCompetitionResult() {

@@ -12,7 +12,9 @@ export class StartScreen {
         this.audioManager = null;
         
         // Initialize NetworkManager
+        console.log('StartScreen: Creating NetworkManager...');
         this.networkManager = new NetworkManager();
+        console.log('StartScreen: NetworkManager created:', !!this.networkManager);
         this.setupNetworkHandlers();
         
         // Cinematic camera settings

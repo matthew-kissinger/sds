@@ -7,7 +7,19 @@
       "Bash(npm run start-server:*)",
       "Bash(ls:*)",
       "Bash(diff:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx http-server:*)",
+      "Bash(npm run serve:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(python3:*)",
+      "Bash(kill:*)",
+      "Bash(rm:*)",
+      "Bash(powershell.exe:*)"
     ],
     "deny": []
   }

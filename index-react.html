@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#00BFFF">
+    <title>Sheep Dog Sim - Alpha</title>
+    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+</head>
+<body>
+    <!-- Canvas Container for Three.js -->
+    <div id="canvas-container">
+        <!-- Three.js canvas will be created by SceneManager -->
+    </div>
+    
+    <!-- React Root - UI Layer -->
+    <div id="react-root"></div>
+    
+    <!-- Import map for dependencies -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/",
+            "stats.js": "https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js",
+            "@geckos.io/client": "https://cdn.jsdelivr.net/npm/@geckos.io/client@3.0.2/+esm"
+        }
+    }
+    </script>
+    
+    <!-- Load game first, then React -->
+    <script type="module">
+        import('./js/main.js').then(() => {
+            // Game loaded, now load React UI
+            import('./src/main.jsx');
+        });
+    </script>
+</body>
+</html>

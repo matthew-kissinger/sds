@@ -219,6 +219,15 @@ export class GameTimer {
         return this.timerRunning;
     }
     
+    getGameTime() {
+        if (this.isCountdown) {
+            // In countdown mode, return elapsed time (how long we've been playing)
+            return this.currentTime;
+        }
+        // Regular mode - return current time
+        return this.currentTime;
+    }
+    
     isPausedState() {
         return this.isPaused;
     }

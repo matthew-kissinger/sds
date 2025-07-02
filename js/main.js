@@ -50,6 +50,18 @@ class SheepDogSimulation {
         // Connect performance monitor and game state to input handler
         this.inputHandler.setPerformanceMonitor(this.performanceMonitor);
         
+        // Set up debug completion callback for testing (with error handling)
+        try {
+            this.inputHandler.setDebugCompleteCallback(() => {
+                this.debugInstantComplete();
+            });
+        } catch (e) {
+            console.warn('Could not set debug completion callback:', e);
+        }
+        
+        // Expose debug method to window for console access
+        window.debugComplete = () => this.debugInstantComplete();
+        
         // Set up pause functionality
         this.setupPauseHandling();
         
@@ -66,7 +78,8 @@ class SheepDogSimulation {
         this.lastTime = performance.now();
         
         // Multiplayer state
-        this.networkManager = null;
+        // Get NetworkManager from StartScreen (it creates one in its constructor)
+        this.networkManager = this.startScreen.networkManager;
         this.isMultiplayer = false;
         this.otherPlayers = new Map(); // playerId -> Sheepdog instance
         this.playerWasMoving = false; // Track movement state from previous frame
@@ -241,11 +254,18 @@ class SheepDogSimulation {
             this.sheepdog.setMultiplayerSpeeds(true);
             this.setupMultiplayer();
             
-            // Configure UI for competitive/timed mode if needed
-            if (roomData.gameMode === 'competitive' || roomData.gameMode === 'timed') {
+            // Configure UI for racing/timed mode if needed
+            if (roomData.gameMode === 'racing' || roomData.gameMode === 'timed') {
                 console.log(`Setting up ${roomData.gameMode} mode UI`);
                 this.multiplayerUI.setGameMode(roomData.gameMode, roomData.players?.length || 0);
+                this.gameState.setGameMode(roomData.gameMode);
                 this.gameState.setCurrentPlayerId(this.networkManager?.getPlayerId());
+                
+                // Set timer mode for timed games
+                if (roomData.gameMode === 'timed') {
+                    this.gameTimer.setCountdownMode(true, 180); // 3 minutes = 180 seconds
+                    console.log('⏱️ Timer set to countdown mode (3 minutes)');
+                }
                 
                 // Set audio manager to competitive mode (also for timed)
                 this.audioManager.setGameMode('competitive');
@@ -297,9 +317,7 @@ class SheepDogSimulation {
     }
     
     setupMultiplayer() {
-        // Get NetworkManager from StartScreen
-        this.networkManager = this.startScreen.networkManager;
-        
+        // NetworkManager already available from constructor
         if (!this.networkManager) {
             console.error('NetworkManager not available');
             return;
@@ -340,10 +358,11 @@ class SheepDogSimulation {
             if (room && room.players) {
                 this.multiplayerUI.updatePlayers(room.players, this.networkManager.getPlayerId());
                 
-                // Configure competitive mode if room has that setting
-                if (room.gameMode === 'competitive' && this.multiplayerUI.gameMode !== 'competitive') {
-                    console.log('Configuring competitive mode from room update');
-                    this.multiplayerUI.setGameMode('competitive', room.players.length);
+                // Configure racing/timed mode if room has that setting
+                if ((room.gameMode === 'racing' || room.gameMode === 'timed') && this.multiplayerUI.gameMode !== room.gameMode) {
+                    console.log(`Configuring ${room.gameMode} mode from room update`);
+                    this.multiplayerUI.setGameMode(room.gameMode, room.players.length);
+                    this.gameState.setGameMode(room.gameMode);
                     this.gameState.setCurrentPlayerId(this.networkManager.getPlayerId());
                 }
             }
@@ -362,10 +381,10 @@ class SheepDogSimulation {
                 console.log('Current gameState.sheepRetired:', this.gameState.sheepRetired);
                 console.log('Current gameState.gameCompleted:', this.gameState.gameCompleted);
                 
-                // Handle competitive/timed vs cooperative completion
+                // Handle racing/timed vs cooperative completion
                 if ((update.data.isCompetitive || update.data.isTimedMode) && update.data.competitive) {
-                    // Competitive/timed mode completion
-                    const modeName = update.data.isTimedMode ? 'timed' : 'competitive';
+                    // Racing/timed mode completion
+                    const modeName = update.data.isTimedMode ? 'timed' : 'racing';
                     console.log(`Triggering ${modeName} completion UI...`);
                     console.log(`${modeName} completion data:`, update.data.competitive);
                     
@@ -379,7 +398,7 @@ class SheepDogSimulation {
                     // Save best score for timed mode
                     if (update.data.isTimedMode && currentPlayerId) {
                         const myScore = update.data.competitive.finalScores[currentPlayerId] || 0;
-                        const isNewRecord = this.saveBestScore(myScore);
+                        const isNewRecord = this.saveTimedModeScore(myScore);
                         if (isNewRecord) {
                             console.log(`🏆 New best score in timed mode: ${myScore} sheep!`);
                         }
@@ -393,13 +412,14 @@ class SheepDogSimulation {
                         console.log('😔 Loss sound played');
                     }
                     
-                    // Show competitive completion UI
-                    console.log('Calling showCompletionMessage with gameMode:', this.gameState.gameMode);
-                    console.log('Competitive data exists:', !!update.data.competitive);
-                    this.gameState.showCompletionMessage(finalTime, false, update.data.competitive);
-                    
-                    // Note: We don't need to call multiplayerUI.showCompetitiveCompletion here
-                    // because gameState.showCompletionMessage already handles the UI display
+                    // Show competitive/timed completion overlay
+                    const mode = update.data.isTimedMode ? 'timed' : 'racing';
+                    this.showCompletionOverlay(mode, {
+                        finalTime,
+                        competitive: update.data.competitive,
+                        isWinner,
+                        myScore: update.data.competitive.finalScores[currentPlayerId] || 0
+                    });
                     
                     this.mobileControls.disable();
                 } else {
@@ -412,13 +432,15 @@ class SheepDogSimulation {
                     
                     // Trigger game completion
                     if (update.data.gameCompleted) {
-                        console.log('Triggering game completion UI...');
+                        console.log('Triggering cooperative completion UI...');
                         this.gameState.gameCompleted = true;
                         const finalTime = this.gameTimer.stop();
-                        const isNewRecord = this.gameTimer.getBestTime() !== null && 
-                                           finalTime <= this.gameTimer.getBestTime();
                         
-                        this.gameState.showCompletionMessage(finalTime, isNewRecord);
+                        this.showCompletionOverlay('cooperative', {
+                            finalTime,
+                            sheepCount: this.gameState.sheepRetired,
+                            totalSheep: this.gameState.sheep.length
+                        });
                         this.mobileControls.disable();
                     } else {
                         console.log('Game completion data received but gameCompleted flag is', update.data.gameCompleted);
@@ -428,9 +450,9 @@ class SheepDogSimulation {
                 // Handle competitive state restoration after reconnection
                 console.log('🏆 Restoring competitive state after reconnection:', update.data);
                 
-                if (this.multiplayerUI.gameMode === 'competitive') {
-                    // Show the competitive completion overlay again
-                    this.multiplayerUI.showCompetitiveCompletion(update.data);
+                                    if (this.multiplayerUI.gameMode === 'racing') {
+                        // Show the racing completion overlay again
+                        this.multiplayerUI.showCompetitiveCompletion(update.data);
                 }
             }
             
@@ -636,7 +658,7 @@ class SheepDogSimulation {
                 this.gameState.winCondition = competitiveData.winCondition;
                 
                 // Check if we're in endgame phase for tension music
-                this.checkCompetitiveEndgameMusic(competitiveData.winCondition);
+                this.checkRacingEndgameMusic(competitiveData.winCondition);
             }
             
             // Update multiplayer UI with all competitive data
@@ -809,15 +831,13 @@ class SheepDogSimulation {
         
         // Check for game completion (only when game is active and not paused)
         // In multiplayer mode, rely on server completion events instead of client-side checking
-        if (!isPaused && !this.isMultiplayer && this.gameState.checkCompletion()) {
-            const finalTime = this.gameTimer.stop();
-            const isNewRecord = this.gameTimer.getBestTime() !== null && 
-                               finalTime <= this.gameTimer.getBestTime();
-            
-            this.gameState.showCompletionMessage(finalTime, isNewRecord);
-            
-            // Disable mobile controls when game completes
-            this.mobileControls.disable();
+        if (!isPaused && !this.isMultiplayer && !this.gameState.gameCompleted) {
+            if (this.gameState.checkCompletion()) {
+                console.log('✅ Single player completion confirmed! Showing completion overlay...');
+                const finalTime = this.gameTimer.stop();
+                this.showCompletionOverlay('single', { finalTime });
+                this.mobileControls.disable();
+            }
         }
     }
     
@@ -893,8 +913,8 @@ class SheepDogSimulation {
             const dogMesh = remoteDog.createMesh();
             this.sceneManager.add(dogMesh);
             
-            // Add player icon for competitive mode
-            if (this.gameState.gameMode === 'competitive' && this.gameState.competitiveGates) {
+                            // Add player icon for racing mode
+                if (this.gameState.gameMode === 'racing' && this.gameState.competitiveGates) {
                 const playerGate = this.gameState.competitiveGates.find(gate => gate.playerId === playerId);
                 if (playerGate) {
                     remoteDog.setPlayerInfo(playerId, playerGate.color);
@@ -1016,8 +1036,8 @@ class SheepDogSimulation {
         }
     }
     
-    checkCompetitiveEndgameMusic(winCondition) {
-        if (!winCondition || this.gameMode !== 'competitive') return;
+    checkRacingEndgameMusic(winCondition) {
+        if (!winCondition || this.gameMode !== 'racing') return;
         
         let shouldPlayEndgameMusic = false;
         
@@ -1099,6 +1119,206 @@ class SheepDogSimulation {
         }
     }
     
+    // DEBUG: Instant completion for testing
+    debugInstantComplete() {
+        console.log('\n🚀 === DEBUG COMPLETION STARTING ===');
+        
+        if (!this.gameState) {
+            console.log('🚫 ERROR: Game state not found');
+            return;
+        }
+        
+        if (this.gameState.gameCompleted) {
+            console.log('🚫 ERROR: Game already completed');
+            return;
+        }
+        
+        if (this.isMultiplayer) {
+            console.log('🚫 ERROR: Debug completion not available in multiplayer mode');
+            return;
+        }
+        
+        console.log('✅ All checks passed. Setting sheep to completed...');
+        
+        // Instantly set all sheep to retired status
+        const sheep = this.gameState.getSheep();
+        if (sheep && sheep.length > 0) {
+            console.log(`📊 Before: ${this.gameState.sheepRetired}/${sheep.length} sheep retired`);
+            
+            for (let i = 0; i < sheep.length; i++) {
+                sheep[i].hasPassedGate = true;
+                sheep[i].isRetiring = false; // Set to false so they count as retired
+                sheep[i].state = 2; // Set to grazing state
+            }
+            
+            // Force update sheep retired count
+            this.gameState.sheepRetired = sheep.length;
+            
+            console.log(`📊 After: ${this.gameState.sheepRetired}/${sheep.length} sheep retired`);
+            console.log('✅ Debug completion applied. Win condition should trigger next frame!');
+        } else {
+            console.log('🚫 ERROR: No sheep found');
+        }
+        
+        console.log('🚀 === DEBUG COMPLETION FINISHED ===\n');
+    }
+    
+    // Universal completion overlay that works for all game modes
+    showCompletionOverlay(mode, data = {}) {
+        console.log('🎉 Creating completion overlay for mode:', mode, data);
+        
+        // Remove any existing overlay
+        const existing = document.getElementById('game-completion-overlay');
+        if (existing) existing.remove();
+        
+        // Create bulletproof overlay (always on top, blocks everything)
+        const overlay = document.createElement('div');
+        overlay.id = 'game-completion-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            font-family: Arial, sans-serif;
+            color: white;
+            text-align: center;
+        `;
+        
+        // Create content based on mode
+        let content = '';
+        
+        if (mode === 'single') {
+            // Single Player: Time and completion
+            const timeStr = data.finalTime ? this.formatTime(data.finalTime) : 'Unknown';
+            content = `
+                <div style="padding: 40px; background: rgba(0,100,0,0.3); border-radius: 20px; border: 2px solid #4CAF50;">
+                    <h1 style="font-size: 48px; margin: 0 0 20px 0;">🎉 VICTORY! 🎉</h1>
+                    <p style="font-size: 24px; margin: 0 0 10px 0;">All 200 sheep herded successfully!</p>
+                    <p style="font-size: 18px; margin: 0 0 30px 0;">Time: ${timeStr}</p>
+                    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                        Play Again
+                    </button>
+                </div>
+            `;
+        } else if (mode === 'racing') {
+            // Racing Mode: Winner/loser, scores, race results
+            const competitive = data.competitive || {};
+            const isWinner = data.isWinner;
+            const myScore = data.myScore || 0;
+            const timeStr = data.finalTime ? this.formatTime(data.finalTime) : 'Unknown';
+            
+            const bgColor = isWinner ? 'rgba(0,150,0,0.3)' : 'rgba(150,100,0,0.3)';
+            const borderColor = isWinner ? '#4CAF50' : '#FF9800';
+            const title = isWinner ? '🏆 VICTORY! 🏆' : '🥈 GAME COMPLETE';
+            const subtitle = isWinner ? 'You won the race!' : `Player ${competitive.winner} won!`;
+            
+            // Build scores list
+            let scoresHtml = '';
+            if (competitive.finalScores) {
+                const sortedScores = Object.entries(competitive.finalScores).sort(([,a], [,b]) => b - a);
+                scoresHtml = sortedScores.map(([playerId, score], index) => {
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
+                    const isMe = score === myScore ? ' (You)' : '';
+                    return `<div>${medal} Player ${playerId}${isMe}: ${score} sheep</div>`;
+                }).join('');
+            }
+            
+            content = `
+                <div style="padding: 40px; background: ${bgColor}; border-radius: 20px; border: 2px solid ${borderColor};">
+                    <h1 style="font-size: 48px; margin: 0 0 20px 0;">${title}</h1>
+                    <p style="font-size: 24px; margin: 0 0 10px 0;">${subtitle}</p>
+                    <p style="font-size: 18px; margin: 0 0 20px 0;">Your Score: ${myScore} sheep</p>
+                    <p style="font-size: 16px; margin: 0 0 20px 0;">Race Time: ${timeStr}</p>
+                    <div style="font-size: 14px; margin: 0 0 30px 0; text-align: left;">
+                        <strong>Final Scores:</strong><br>
+                        ${scoresHtml}
+                    </div>
+                    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: ${borderColor}; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                        Play Again
+                    </button>
+                </div>
+            `;
+        } else if (mode === 'timed') {
+            // Timed Mode: Winner/loser, scores, time's up, personal best
+            const competitive = data.competitive || {};
+            const isWinner = data.isWinner;
+            const myScore = data.myScore || 0;
+            
+            // Check for personal best
+            const previousBest = this.loadBestScore();
+            const isNewBest = previousBest === null || myScore > previousBest;
+            
+            const bgColor = isWinner ? 'rgba(0,150,0,0.3)' : 'rgba(150,100,0,0.3)';
+            const borderColor = isWinner ? '#4CAF50' : '#FF9800';
+            const title = isWinner ? '⏱️ TIME\'S UP - VICTORY! 🏆' : '⏱️ TIME\'S UP';
+            const subtitle = isWinner ? 'You collected the most sheep!' : `Player ${competitive.winner} collected the most!`;
+            
+            // Build scores list
+            let scoresHtml = '';
+            if (competitive.finalScores) {
+                const sortedScores = Object.entries(competitive.finalScores).sort(([,a], [,b]) => b - a);
+                scoresHtml = sortedScores.map(([playerId, score], index) => {
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
+                    const isMe = score === myScore ? ' (You)' : '';
+                    return `<div>${medal} Player ${playerId}${isMe}: ${score} sheep</div>`;
+                }).join('');
+            }
+            
+            content = `
+                <div style="padding: 40px; background: ${bgColor}; border-radius: 20px; border: 2px solid ${borderColor};">
+                    <h1 style="font-size: 48px; margin: 0 0 20px 0;">${title}</h1>
+                    <p style="font-size: 24px; margin: 0 0 10px 0;">${subtitle}</p>
+                    <p style="font-size: 18px; margin: 0 0 10px 0;">Your Score: ${myScore} sheep</p>
+                    <p style="font-size: 16px; margin: 0 0 20px 0;">Duration: 3:00</p>
+                    ${isNewBest ? '<p style="font-size: 20px; color: #FFD700; margin: 0 0 20px 0;">🎉 NEW PERSONAL BEST! 🎉</p>' : ''}
+                    <div style="font-size: 14px; margin: 0 0 30px 0; text-align: left;">
+                        <strong>Final Scores:</strong><br>
+                        ${scoresHtml}
+                    </div>
+                    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: ${borderColor}; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                        Play Again
+                    </button>
+                </div>
+            `;
+        } else if (mode === 'cooperative') {
+            // Cooperative Mode: Team success, collective effort
+            const timeStr = data.finalTime ? this.formatTime(data.finalTime) : 'Unknown';
+            const sheepCount = data.sheepCount || 200;
+            const totalSheep = data.totalSheep || 200;
+            
+            content = `
+                <div style="padding: 40px; background: rgba(0,100,150,0.3); border-radius: 20px; border: 2px solid #2196F3;">
+                    <h1 style="font-size: 48px; margin: 0 0 20px 0;">🌐 TEAM VICTORY! 🎉</h1>
+                    <p style="font-size: 24px; margin: 0 0 10px 0;">Working together, you herded all the sheep!</p>
+                    <p style="font-size: 18px; margin: 0 0 10px 0;">Sheep Collected: ${sheepCount} / ${totalSheep}</p>
+                    <p style="font-size: 18px; margin: 0 0 30px 0;">Team Time: ${timeStr}</p>
+                    <p style="font-size: 16px; margin: 0 0 30px 0; font-style: italic;">🤝 Great teamwork!</p>
+                    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: #2196F3; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                        Play Again
+                    </button>
+                </div>
+            `;
+        }
+        
+        overlay.innerHTML = content;
+        document.body.appendChild(overlay);
+        
+        console.log('✅ Completion overlay created and displayed!');
+    }
+    
+    // Format time helper
+    formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+    
     // Best score tracking for timed mode
     loadBestScore() {
         try {
@@ -1115,6 +1335,21 @@ class SheepDogSimulation {
             const currentBest = this.loadBestScore();
             if (currentBest === null || score > currentBest) {
                 localStorage.setItem('timedModeBestScore', score.toString());
+                return true; // New record
+            }
+            return false;
+        } catch (e) {
+            console.warn('Could not save best score to localStorage:', e);
+            return false;
+        }
+    }
+    
+    saveTimedModeScore(score) {
+        try {
+            const currentBest = this.loadBestScore();
+            if (currentBest === null || score > currentBest) {
+                localStorage.setItem('timedModeBestScore', score.toString());
+                console.log(`🏆 New timed mode best score: ${score} sheep!`);
                 return true; // New record
             }
             return false;
@@ -1164,5 +1399,9 @@ class SheepDogSimulation {
 
 // Start simulation when page loads
 window.addEventListener('DOMContentLoaded', () => {
-    new SheepDogSimulation();
+    console.log('DOMContentLoaded - Creating game instance...');
+    const gameInstance = new SheepDogSimulation();
+    // Expose to global scope for React integration
+    window.gameInstance = gameInstance;
+    console.log('Game instance created, NetworkManager available:', !!gameInstance.networkManager);
 }); 

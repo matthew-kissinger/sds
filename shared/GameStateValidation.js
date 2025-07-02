@@ -671,17 +671,18 @@ export function generateCompetitiveGateLayout(playerCount) {
             height: 4,
             // Gate passage zone (invisible box for detection)
             passageZone: passageZone,
-        pasture: {
-            centerZ: (layout.pasture.minZ + layout.pasture.maxZ) / 2,
-            minX: layout.pasture.minX,
-            maxX: layout.pasture.maxX,
-            minZ: layout.pasture.minZ,
-            maxZ: layout.pasture.maxZ
-        },
-        playerId: layout.playerId,
-        color: layout.color,
-        direction: layout.direction
-    }));
+            pasture: {
+                centerZ: (layout.pasture.minZ + layout.pasture.maxZ) / 2,
+                minX: layout.pasture.minX,
+                maxX: layout.pasture.maxX,
+                minZ: layout.pasture.minZ,
+                maxZ: layout.pasture.maxZ
+            },
+            playerId: layout.playerId,
+            color: layout.color,
+            direction: layout.direction
+        };
+    });
 }
 
 /**
@@ -825,9 +826,9 @@ export function checkCompetitiveCompletion(playerScores, playerCount, totalSheep
 export function validateCompetitiveGameState(gameState) {
     const issues = [];
     
-    // Check if competitive mode is enabled
-    if (gameState.gameMode !== 'competitive') {
-        issues.push('not_competitive_mode');
+    // Check if racing mode is enabled
+    if (gameState.gameMode !== 'racing') {
+        issues.push('not_racing_mode');
         return { isValid: false, issues };
     }
     
@@ -907,9 +908,9 @@ export function createCompetitiveGameState(config = {}, playerIds = []) {
         playerScores[playerId] = 0;
     }
     
-    return {
-        gameMode: 'competitive',
-        bounds,
+            return {
+            gameMode: 'racing',
+            bounds,
         competitiveGates: assignedGates,
         playerScores,
         params: {
