@@ -27,8 +27,8 @@ export class NetworkManager {
             this.serverHost = '127.0.0.1';
             this.serverPort = 9208;
         } else {
-            // Production configuration - DigitalOcean Droplet with IP-based SSL
-            this.serverHost = '147.182.185.185';
+            // Production configuration - DigitalOcean Droplet with nip.io SSL
+            this.serverHost = '147-182-185-185.nip.io';
             this.serverPort = null; // Use full URL instead of separate port
         }
         
@@ -95,14 +95,14 @@ export class NetworkManager {
                     console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
                 }
             } else {
-                // DigitalOcean Droplet - HTTPS with self-signed certificate
+                // DigitalOcean Droplet - HTTPS with Let's Encrypt certificate via nip.io
                 const serverUrl = `https://${this.serverHost}`;
                 geckosConfig = { 
                     url: serverUrl,
                     port: null  // Use full URL as per Geckos.io docs for proxy setup
                 };
                 if (this.debugMode) {
-                    console.log(`🔗 DEBUG: Connecting to ${serverUrl} (IP-based HTTPS with self-signed cert)`);
+                    console.log(`🔗 DEBUG: Connecting to ${serverUrl} (nip.io HTTPS with Let's Encrypt)`);
                 }
             }
             
