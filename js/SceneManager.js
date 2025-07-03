@@ -184,11 +184,7 @@ export class SceneManager {
                 this.cameraDistance = Math.max(this.minCameraDistance, this.cameraDistance - zoomSpeed);
             }
             
-            // Update mobile zoom slider if available
-            if (this.mobileControls && this.mobileControls.zoomSlider) {
-                this.mobileControls.zoomSlider.value = this.cameraDistance;
-                this.mobileControls.zoomLevel = this.cameraDistance;
-            }
+            // Note: Mobile zoom slider now handled by React MobileHUD component
         });
     }
     
@@ -201,6 +197,11 @@ export class SceneManager {
     setCameraDistance(distance) {
         this.cameraDistance = Math.max(this.minCameraDistance, 
                                      Math.min(this.maxCameraDistance, distance));
+    }
+    
+    // Set camera zoom (alias for setCameraDistance, used by UI)
+    setCameraZoom(zoomLevel) {
+        this.setCameraDistance(zoomLevel);
     }
     
     render() {

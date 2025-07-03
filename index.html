@@ -290,6 +290,8 @@
             50% { transform: translateY(-8px) rotate(2deg); }
         }
         
+
+        
         @keyframes titleBounce {
             0%, 100% { 
                 transform: translateY(0) rotate(-0.5deg);
@@ -421,6 +423,86 @@
         #react-overlay .stamina-fill {
             height: 100%;
             transition: all 0.3s ease-out;
+        }
+        /* Mobile-optimized title text - thinner stroke for better readability */
+        @media (max-width: 768px) {
+            .mobile-title {
+                -webkit-text-stroke: 1.5px #0A47A1 !important;
+                text-stroke: 1.5px #0A47A1 !important;
+            }
+            
+            .mobile-subtitle {
+                -webkit-text-stroke: 1px #FF6B00 !important;
+                text-stroke: 1px #FF6B00 !important;
+            }
+            
+            /* Hide dog icons on mobile - too small to be useful */
+            .mobile-dog-icon {
+                display: none !important;
+            }
+            
+            /* Ensure dog names are perfectly centered when icons are hidden */
+            .mobile-dog-icon + p {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                width: 100% !important;
+                margin: 0 auto !important;
+            }
+            
+            /* Fix button text centering on mobile */
+            .btn-primary,
+            .btn-secondary {
+                justify-content: center !important;
+                text-align: center !important;
+            }
+        }
+        
+        /* Mobile zoom slider styles */
+        @media (max-width: 768px) {
+            input[type="range"] {
+                -webkit-appearance: none;
+                appearance: none;
+                background: transparent;
+                cursor: pointer;
+                height: 30px;
+            }
+            
+            input[type="range"]::-webkit-slider-track {
+                background: rgba(255, 255, 255, 0.3);
+                height: 8px;
+                border-radius: 4px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                background: white;
+                height: 24px;
+                width: 24px;
+                border-radius: 50%;
+                margin-top: -8px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                border: 2px solid rgba(0, 170, 255, 0.5);
+            }
+            
+            input[type="range"]::-moz-range-track {
+                background: rgba(255, 255, 255, 0.3);
+                height: 8px;
+                border-radius: 4px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            
+            input[type="range"]::-moz-range-thumb {
+                background: white;
+                height: 24px;
+                width: 24px;
+                border-radius: 50%;
+                border: 2px solid rgba(0, 170, 255, 0.5);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            }
         }
     </style>
 </head>
@@ -636,12 +718,7 @@
             <div id="best-time">Best: <span id="best-time-value">--:--</span></div>
         </div>
         
-        <!-- Mobile Combined UI -->
-        <div id="mobile-combined-ui" class="game-ui">
-            <div id="mobile-timer-display">00:00</div>
-            <div id="mobile-sheep-count">Sheep: 0 / 200</div>
-            <div id="mobile-best-time">Best: --:--</div>
-        </div>
+        <!-- Legacy mobile UI removed - now handled by React components -->
         
         <!-- Stats -->
         <div id="stats" class="game-ui">
@@ -685,6 +762,11 @@
         }
     }
     </script>
+    
+    <!-- Mobile HUD Styles -->
+    <link rel="stylesheet" href="src/components/mobile/MobileHUD.css">
+    <link rel="stylesheet" href="src/components/mobile/MobileJoystick.css">
+    <link rel="stylesheet" href="src/components/mobile/MobileZoomControl.css">
     
     <!-- Load React -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -1324,7 +1406,7 @@
                                         : '0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
                                 }
                             }, player ? [
-                                React.createElement('div', { key: 'emoji', className: 'text-3xl mb-1' }, player.dog === 'jep' ? '🐕‍🦺' : player.dog === 'rauri' ? '🐕' : '🐶'),
+                                React.createElement('div', { key: 'emoji', className: 'text-3xl mb-1 text-center mobile-dog-icon' }, player.dog === 'jep' ? '🐕‍🦺' : player.dog === 'rauri' ? '🐕' : '🐶'),
                                 React.createElement('p', { key: 'name', className: 'text-white font-semibold' }, player.name),
                                 player.isHost && React.createElement('span', { key: 'host', className: 'text-xs text-yellow-400' }, '👑 Host')
                             ] : React.createElement('p', {
@@ -1616,7 +1698,7 @@
                             }, [
                                 React.createElement('h1', {
                                     key: 'title',
-                                    className: 'text-6xl md:text-8xl font-black mb-4',
+                                    className: 'text-6xl md:text-8xl font-black mb-4 mobile-title',
                                     style: {
                                         fontFamily: '"Comic Sans MS", "Comic Sans", "Arial Black", cursive',
                                         background: 'linear-gradient(180deg, #4FFFFF 0%, #2196F3 50%, #1976D2 100%)',
@@ -1635,7 +1717,7 @@
                                 
                                 React.createElement('h2', {
                                     key: 'subtitle',
-                                    className: 'text-3xl md:text-4xl font-bold mb-8',
+                                    className: 'text-3xl md:text-4xl font-bold mb-8 mobile-subtitle',
                                     style: {
                                         fontFamily: '"Comic Sans MS", "Comic Sans", "Arial Black", cursive',
                                         color: '#FFD700',
@@ -1716,7 +1798,7 @@
                                         }, [
                                             React.createElement('div', { 
                                                 key: 'emoji', 
-                                                className: 'text-5xl mb-3 text-center',
+                                                className: 'text-5xl mb-3 text-center mobile-dog-icon',
                                                 style: selectedDog === dog.id ? { animation: 'floatAnimation 3s ease-in-out infinite' } : {}
                                             }, dog.emoji),
                                             React.createElement('p', { 
@@ -2129,62 +2211,56 @@
             
 
             
-            // Mobile HUD Component (with stamina)
+            // Mobile HUD Component - Compact status bar with minimal stamina
             function MobileHUD({ gameData, stamina }) {
                 const minutes = Math.floor(gameData.gameTime / 60);
-                const seconds = gameData.gameTime % 60;
-                const isLow = stamina < 30;
+                const seconds = Math.floor(gameData.gameTime % 60); // Math.floor to remove decimals
                 
                 return React.createElement('div', {
-                    className: 'fixed bottom-24 left-1/2 transform -translate-x-1/2 z-20',
-                    style: { animation: 'slideUp 0.5s ease-out' }
+                    className: 'fixed top-2 left-1/2 transform -translate-x-1/2 z-20', // TOP position
+                    style: { animation: 'slideDown 0.5s ease-out' }
                 }, 
                     React.createElement('div', {
-                        className: 'ui-panel p-3 min-w-[250px]'
+                        className: 'ui-panel p-2 min-w-[180px]' // Vertical layout
                     }, [
-                        // Top row with sheep and timer
+                        // Top row: Sheep count and timer
                         React.createElement('div', {
                             key: 'top-row',
-                            className: 'flex items-center justify-between text-sm mb-3'
+                            className: 'flex items-center gap-4'
                         }, [
+                            // Sheep count
                             React.createElement('div', {
                                 key: 'sheep',
                                 className: 'flex items-center gap-1'
                             }, [
                                 React.createElement('span', { key: 'icon' }, '🐑'),
-                                React.createElement('span', { key: 'count', className: 'text-white' }, 
+                                React.createElement('span', { key: 'count', className: 'text-white text-sm' }, 
                                     `${gameData.sheepCount}/${gameData.totalSheep}`)
                             ]),
+                            
+                            // Timer (no decimals)
                             React.createElement('div', {
                                 key: 'timer',
                                 className: 'flex items-center gap-1'
                             }, [
                                 React.createElement('span', { key: 'icon' }, '⏱️'),
-                                React.createElement('span', { key: 'time', className: 'text-white font-mono' }, 
+                                React.createElement('span', { key: 'time', className: 'text-white font-mono text-sm' }, 
                                     `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
                             ])
                         ]),
                         
-                        // Stamina section
+                        // Minimal stamina bar below
                         React.createElement('div', {
-                            key: 'stamina-section'
-                        }, [
+                            key: 'stamina-bar',
+                            className: 'mt-1 h-1 bg-gray-700 bg-opacity-50 rounded-full overflow-hidden'
+                        }, 
                             React.createElement('div', {
-                                key: 'label',
-                                className: 'text-white text-xs text-opacity-70 mb-1'
-                            }, 'Stamina'),
-                            React.createElement('div', {
-                                key: 'bar',
-                                className: 'h-2 bg-gray-700 rounded-full overflow-hidden'
-                            }, 
-                                React.createElement('div', {
-                                    className: `h-full transition-all duration-300 ${
-                                        isLow ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-green-500 to-green-600'
-                                    }`,
-                                    style: { width: `${Math.round(stamina)}%` }
-                                })
-                            )
-                        ])
+                                className: `h-full transition-all duration-300 ${
+                                    stamina < 30 ? 'bg-red-500' : 'bg-green-500'
+                                }`,
+                                style: { width: `${stamina}%` }
+                            })
+                        )
                     ])
                 );
             }
@@ -2193,7 +2269,10 @@
             function MobileControls() {
                 const [joystickManager, setJoystickManager] = useState(null);
                 const [isSprinting, setIsSprinting] = useState(false);
+                const [zoomLevel, setZoomLevel] = useState(80);
+                const [isZooming, setIsZooming] = useState(null);
                 const joystickRef = useRef(null);
+                const zoomIntervalRef = useRef(null);
                 
                 useEffect(() => {
                     if (!window.gameInstance || !joystickRef.current || !window.nipplejs) return;
@@ -2214,9 +2293,9 @@
                             const angle = data.angle.radian;
                             const force = Math.min(data.force, 1);
                             
-                            // Convert to game coordinates
+                            // Convert to game coordinates (negate Z for correct up/down)
                             const moveX = Math.cos(angle) * force;
-                            const moveZ = Math.sin(angle) * force;
+                            const moveZ = -Math.sin(angle) * force; // NEGATED for correct direction
                             
                             // Update input handler
                             window.gameInstance.inputHandler.keys = {
@@ -2248,6 +2327,15 @@
                     };
                 }, []);
                 
+                // Cleanup zoom interval on unmount
+                useEffect(() => {
+                    return () => {
+                        if (zoomIntervalRef.current) {
+                            clearInterval(zoomIntervalRef.current);
+                        }
+                    };
+                }, []);
+                
                 const handleSprintStart = () => {
                     setIsSprinting(true);
                     if (window.gameInstance && window.gameInstance.inputHandler) {
@@ -2262,6 +2350,35 @@
                     }
                 };
                 
+                // Zoom control functions
+                const startZoom = (direction) => {
+                    setIsZooming(direction);
+                    handleZoomChange(direction === 'in' ? -5 : 5);
+                    zoomIntervalRef.current = setInterval(() => {
+                        handleZoomChange(direction === 'in' ? -3 : 3);
+                    }, 50);
+                };
+                
+                const stopZoom = () => {
+                    setIsZooming(null);
+                    if (zoomIntervalRef.current) {
+                        clearInterval(zoomIntervalRef.current);
+                        zoomIntervalRef.current = null;
+                    }
+                };
+                
+                const handleZoomChange = (delta) => {
+                    setZoomLevel(prevZoom => {
+                        const newZoom = Math.max(20, Math.min(150, prevZoom + delta));
+                        if (window.gameInstance?.mobileControls?.onZoomChange) {
+                            window.gameInstance.mobileControls.onZoomChange(newZoom);
+                        }
+                        return newZoom;
+                    });
+                };
+                
+                const zoomPercentage = ((150 - zoomLevel) / (150 - 20)) * 100;
+                
                 return React.createElement('div', {
                     className: 'fixed inset-0 pointer-events-none z-10'
                 }, [
@@ -2274,10 +2391,12 @@
                         style: { position: 'fixed', left: '20px', bottom: '20px', width: '150px', height: '150px' }
                     }),
                     
-                    // Sprint button
+
+                    
+                    // Sprint button (positioned lower-right)
                     React.createElement('button', {
                         key: 'sprint',
-                        className: `mobile-control ${isSprinting ? 'bg-blue-500 bg-opacity-30' : ''} fixed bottom-20 right-20 w-20 h-20 text-2xl pointer-events-auto`,
+                        className: `mobile-control ${isSprinting ? 'bg-blue-500 bg-opacity-30' : ''} fixed bottom-8 right-6 w-16 h-16 text-2xl pointer-events-auto ui-panel`,
                         onTouchStart: handleSprintStart,
                         onTouchEnd: handleSprintEnd,
                         onMouseDown: handleSprintStart,
@@ -2285,18 +2404,198 @@
                         onMouseLeave: handleSprintEnd
                     }, '🏃'),
                     
-                    // Fullscreen button
-                    React.createElement('button', {
-                        key: 'fullscreen',
-                        className: 'mobile-control fixed top-20 right-6 w-12 h-12 text-xl pointer-events-auto',
-                        onClick: () => {
-                            if (!document.fullscreenElement) {
-                                document.documentElement.requestFullscreen();
-                            } else {
-                                document.exitFullscreen();
-                            }
+                    // Zoom Control
+                    React.createElement('div', {
+                        key: 'zoom-control',
+                        className: 'fixed pointer-events-auto',
+                        style: {
+                            right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
+                            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8rem)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            zIndex: 200
                         }
-                    }, '⛶')
+                    }, [
+                        // Zoom indicator bar
+                        React.createElement('div', {
+                            key: 'indicator',
+                            style: {
+                                position: 'relative',
+                                width: '6px',
+                                height: '100px',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                borderRadius: '3px',
+                                overflow: 'hidden',
+                                backdropFilter: 'blur(10px)',
+                                WebkitBackdropFilter: 'blur(10px)',
+                                boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.1)'
+                            }
+                        }, [
+                            React.createElement('div', {
+                                key: 'fill',
+                                style: {
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: `${zoomPercentage}%`,
+                                    background: 'linear-gradient(180deg, rgba(0, 191, 255, 0.8) 0%, rgba(0, 150, 255, 0.6) 100%)',
+                                    transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    borderRadius: '3px'
+                                }
+                            }),
+                            // Notches
+                            [0, 25, 50, 75, 100].map(percent => 
+                                React.createElement('div', {
+                                    key: percent,
+                                    style: {
+                                        position: 'absolute',
+                                        left: '-2px',
+                                        right: '-2px',
+                                        height: '1px',
+                                        bottom: `${percent}%`,
+                                        background: 'rgba(255, 255, 255, 0.3)'
+                                    }
+                                })
+                            )
+                        ]),
+                        
+                        // Zoom in button
+                        React.createElement('button', {
+                            key: 'zoom-in',
+                            className: `${isZooming === 'in' ? 'active' : ''}`,
+                            style: {
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: isZooming === 'in' ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                borderWidth: '1px',
+                                borderStyle: 'solid',
+                                borderColor: isZooming === 'in' ? 'rgba(0, 255, 136, 0.4)' : 'rgba(255, 255, 255, 0.15)',
+                                boxShadow: isZooming === 'in' ? 
+                                    '0 0 20px rgba(0, 255, 136, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)' :
+                                    '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                                color: 'white',
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                transform: isZooming === 'in' ? 'scale(0.92)' : 'scale(1)',
+                                WebkitTapHighlightColor: 'transparent',
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none',
+                                touchAction: 'manipulation'
+                            },
+                            onTouchStart: (e) => {
+                                e.preventDefault();
+                                startZoom('in');
+                            },
+                            onTouchEnd: (e) => {
+                                e.preventDefault();
+                                stopZoom();
+                            },
+                            onMouseDown: () => startZoom('in'),
+                            onMouseUp: stopZoom,
+                            onMouseLeave: stopZoom
+                        }, 
+                            React.createElement('svg', {
+                                width: '20',
+                                height: '20',
+                                viewBox: '0 0 24 24',
+                                fill: 'none',
+                                style: { opacity: '0.9' }
+                            }, [
+                                React.createElement('circle', {
+                                    key: 'circle',
+                                    cx: '12',
+                                    cy: '12',
+                                    r: '10',
+                                    stroke: 'currentColor',
+                                    strokeWidth: '2'
+                                }),
+                                React.createElement('path', {
+                                    key: 'plus',
+                                    d: 'M12 8v8M8 12h8',
+                                    stroke: 'currentColor',
+                                    strokeWidth: '2',
+                                    strokeLinecap: 'round'
+                                })
+                            ])
+                        ),
+                        
+                        // Zoom out button
+                        React.createElement('button', {
+                            key: 'zoom-out',
+                            className: `${isZooming === 'out' ? 'active' : ''}`,
+                            style: {
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: isZooming === 'out' ? 'rgba(255, 107, 107, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                borderWidth: '1px',
+                                borderStyle: 'solid',
+                                borderColor: isZooming === 'out' ? 'rgba(255, 107, 107, 0.4)' : 'rgba(255, 255, 255, 0.15)',
+                                boxShadow: isZooming === 'out' ? 
+                                    '0 0 20px rgba(255, 107, 107, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)' :
+                                    '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                                color: 'white',
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                transform: isZooming === 'out' ? 'scale(0.92)' : 'scale(1)',
+                                WebkitTapHighlightColor: 'transparent',
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none',
+                                touchAction: 'manipulation'
+                            },
+                            onTouchStart: (e) => {
+                                e.preventDefault();
+                                startZoom('out');
+                            },
+                            onTouchEnd: (e) => {
+                                e.preventDefault();
+                                stopZoom();
+                            },
+                            onMouseDown: () => startZoom('out'),
+                            onMouseUp: stopZoom,
+                            onMouseLeave: stopZoom
+                        }, 
+                            React.createElement('svg', {
+                                width: '20',
+                                height: '20',
+                                viewBox: '0 0 24 24',
+                                fill: 'none',
+                                style: { opacity: '0.9' }
+                            }, [
+                                React.createElement('circle', {
+                                    key: 'circle',
+                                    cx: '12',
+                                    cy: '12',
+                                    r: '10',
+                                    stroke: 'currentColor',
+                                    strokeWidth: '2'
+                                }),
+                                React.createElement('path', {
+                                    key: 'minus',
+                                    d: 'M8 12h8',
+                                    stroke: 'currentColor',
+                                    strokeWidth: '2',
+                                    strokeLinecap: 'round'
+                                })
+                            ])
+                        )
+                    ])
                 ]);
             }
             
@@ -2311,56 +2610,56 @@
                 
                 const staminaPercentage = gameData.staminaPercentage || Math.round((gameData.stamina / (gameData.maxStamina || 100)) * 100);
                 
-                return React.createElement('div', {
-                    className: 'game-hud fixed inset-0 pointer-events-none'
-                }, [
-                    // Desktop UI
-                    platform === 'desktop' && [
-                        React.createElement(GameTimer, {
-                            key: 'timer',
-                            gameTime: gameData.gameTime,
-                            timeLimit: gameData.timeLimit
-                        }),
-                        !isMultiplayer && React.createElement(SheepCounter, {
-                            key: 'counter',
-                            sheepCount: gameData.sheepCount,
-                            totalSheep: gameData.totalSheep,
-                            stamina: staminaPercentage
-                        }),
-                        isMultiplayer && React.createElement(MultiplayerScoreboard, {
-                            key: 'scoreboard',
-                            players: gameData.players,
-                            scores: gameData.scores,
-                            myPlayerId: gameData.myPlayerId,
-                            gameMode: gameData.gameMode,
-                            sheepCount: gameData.sheepCount,
-                            totalSheep: gameData.totalSheep,
-                            stamina: staminaPercentage
-                        })
-                    ],
-                    
-                    // Mobile UI
-                    platform === 'mobile' && [
-                        React.createElement(MobileHUD, {
-                            key: 'mobile-hud',
-                            gameData: gameData,
-                            stamina: staminaPercentage
-                        }),
-                        React.createElement(MobileControls, {
-                            key: 'mobile-controls'
-                        }),
-                        isMultiplayer && React.createElement(MultiplayerScoreboard, {
-                            key: 'scoreboard',
-                            players: gameData.players,
-                            scores: gameData.scores,
-                            myPlayerId: gameData.myPlayerId,
-                            gameMode: gameData.gameMode,
-                            sheepCount: gameData.sheepCount,
-                            totalSheep: gameData.totalSheep,
-                            stamina: staminaPercentage
-                        })
-                    ]
-                ]);
+                                    return React.createElement('div', {
+                        className: 'game-hud fixed inset-0 pointer-events-none'
+                    }, [
+                        // Desktop UI
+                        platform === 'desktop' && [
+                            React.createElement(GameTimer, {
+                                key: 'timer',
+                                gameTime: gameData.gameTime,
+                                timeLimit: gameData.timeLimit
+                            }),
+                            !isMultiplayer && React.createElement(SheepCounter, {
+                                key: 'counter',
+                                sheepCount: gameData.sheepCount,
+                                totalSheep: gameData.totalSheep,
+                                stamina: staminaPercentage
+                            }),
+                            isMultiplayer && React.createElement(MultiplayerScoreboard, {
+                                key: 'scoreboard',
+                                players: gameData.players,
+                                scores: gameData.scores,
+                                myPlayerId: gameData.myPlayerId,
+                                gameMode: gameData.gameMode,
+                                sheepCount: gameData.sheepCount,
+                                totalSheep: gameData.totalSheep,
+                                stamina: staminaPercentage
+                            })
+                        ],
+                        
+                        // Mobile UI
+                        platform === 'mobile' && [
+                            React.createElement(MobileHUD, {
+                                key: 'mobile-hud',
+                                gameData: gameData,
+                                stamina: staminaPercentage
+                            }),
+                            React.createElement(MobileControls, {
+                                key: 'mobile-controls'
+                            }),
+                            isMultiplayer && React.createElement(MultiplayerScoreboard, {
+                                key: 'scoreboard',
+                                players: gameData.players,
+                                scores: gameData.scores,
+                                myPlayerId: gameData.myPlayerId,
+                                gameMode: gameData.gameMode,
+                                sheepCount: gameData.sheepCount,
+                                totalSheep: gameData.totalSheep,
+                                stamina: staminaPercentage
+                            })
+                        ]
+                    ]);
             }
             
             // Main App

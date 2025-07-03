@@ -1,0 +1,222 @@
+/* Mobile Zoom Control - Modern glassmorphic design */
+.mobile-zoom-control {
+  position: fixed;
+  right: calc(env(safe-area-inset-right, 0px) + 1.5rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8rem);
+  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  
+  pointer-events: auto;
+  z-index: var(--z-react-mobile-ui, 200);
+}
+
+/* Zoom indicator bar */
+.zoom-indicator {
+  position: relative;
+  width: 6px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  
+  /* Glassmorphism */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.zoom-indicator-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, 
+    rgba(0, 191, 255, 0.8) 0%, 
+    rgba(0, 150, 255, 0.6) 100%);
+  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 3px;
+}
+
+.zoom-indicator-notches {
+  position: absolute;
+  inset: 0;
+}
+
+.zoom-notch {
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Current zoom display */
+.zoom-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  
+  padding: 0.5rem 0.75rem;
+  min-width: 60px;
+  
+  /* Glassmorphism */
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1rem;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  
+  transition: all 0.2s ease;
+}
+
+.zoom-emoji {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  animation: float 3s ease-in-out infinite;
+}
+
+.zoom-text {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
+/* Zoom buttons */
+.zoom-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Glassmorphism */
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  
+  color: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Touch optimization */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.zoom-button svg {
+  width: 20px;
+  height: 20px;
+  opacity: 0.9;
+}
+
+/* Hover/Active states */
+.zoom-button:active,
+.zoom-button.active {
+  transform: scale(0.92);
+  background: rgba(0, 191, 255, 0.2);
+  border-color: rgba(0, 191, 255, 0.4);
+  box-shadow: 
+    0 0 20px rgba(0, 191, 255, 0.3),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+}
+
+.zoom-button.zoom-in:active,
+.zoom-button.zoom-in.active {
+  background: rgba(0, 255, 136, 0.2);
+  border-color: rgba(0, 255, 136, 0.4);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 136, 0.3),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+}
+
+.zoom-button.zoom-out:active,
+.zoom-button.zoom-out.active {
+  background: rgba(255, 107, 107, 0.2);
+  border-color: rgba(255, 107, 107, 0.4);
+  box-shadow: 
+    0 0 20px rgba(255, 107, 107, 0.3),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 375px) {
+  .mobile-zoom-control {
+    right: calc(env(safe-area-inset-right, 0px) + 1rem);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 7rem);
+  }
+  
+  .zoom-button {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .zoom-indicator {
+    height: 80px;
+  }
+}
+
+/* Landscape mode adjustments */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-zoom-control {
+    right: calc(env(safe-area-inset-right, 0px) + 1rem);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 3rem);
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  
+  .zoom-indicator {
+    width: 80px;
+    height: 6px;
+  }
+  
+  .zoom-indicator-fill {
+    bottom: 0;
+    left: 0;
+    right: auto;
+    top: 0;
+    width: auto;
+    height: 100%;
+  }
+  
+  .zoom-indicator-notches {
+    display: none;
+  }
+  
+  .zoom-display {
+    order: -1;
+  }
+}
+
+/* Hide on desktop */
+@media (min-width: 769px) {
+  .mobile-zoom-control {
+    display: none !important;
+  }
+} 

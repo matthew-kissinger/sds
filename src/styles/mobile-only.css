@@ -1,0 +1,121 @@
+/* Mobile-specific styles with glassmorphism */
+@media (max-width: 768px) and (pointer: coarse) {
+  /* Legacy mobile controls completely removed - no need to hide anything */
+
+  /* Vertical zoom slider styling */
+  .zoom-slider-vertical {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    outline: none;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+  }
+
+  .zoom-slider-vertical:hover {
+    opacity: 1;
+  }
+
+  /* Webkit browsers (Chrome, Safari) */
+  .zoom-slider-vertical::-webkit-slider-track {
+    width: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    border: 1px solid rgba(0, 191, 255, 0.3);
+  }
+
+  .zoom-slider-vertical::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 191, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    margin-left: -7px;
+  }
+
+  /* Firefox */
+  .zoom-slider-vertical::-moz-range-track {
+    width: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    border: 1px solid rgba(0, 191, 255, 0.3);
+  }
+
+  .zoom-slider-vertical::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 191, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: none;
+  }
+
+  /* Fix title scaling on mobile */
+  h1 {
+    font-size: clamp(2.5rem, 15vw, 4rem) !important;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8) !important;
+    line-height: 1.1 !important;
+  }
+  
+  h2 {
+    font-size: clamp(1.5rem, 8vw, 2.5rem) !important;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8) !important;
+  }
+
+  /* Ensure proper button text alignment */
+  .btn-start,
+  .btn-primary,
+  .btn-secondary {
+    text-align: center !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Mobile-specific safe area adjustments */
+  .mobile-hud-top {
+    top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  }
+
+  .mobile-hud-bottom-right {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    right: calc(env(safe-area-inset-right, 0px) + 1rem);
+  }
+
+  /* Landscape mode adjustments */
+  @media (orientation: landscape) {
+    .stamina-container.bottom-24 {
+      bottom: 4rem; /* Adjust for landscape */
+    }
+
+    .zoom-slider-vertical {
+      height: 100px !important; /* Shorter in landscape */
+    }
+  }
+
+  /* Fullscreen mode adjustments */
+  .mobile-fullscreen .stamina-container {
+    /* Let CSS handle positioning in fullscreen */
+    left: auto;
+    transform: none;
+  }
+}
+
+/* Z-index hierarchy */
+:root {
+  --z-game-canvas: 1;
+  --z-mobile-controls: 50;
+  --z-legacy-ui: 100;
+  --z-react-mobile-ui: 200;
+  --z-mobile-overlay: 1000;
+}

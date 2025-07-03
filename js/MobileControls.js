@@ -1,8 +1,8 @@
 import { Vector2D } from './Vector2D.js';
 
 /**
- * MobileControls - Handles touch-based input controls for mobile devices
- * Includes virtual joystick for movement and zoom slider for camera control
+ * MobileControls - Bridge for mobile device touch controls and fullscreen management
+ * All mobile UI components now handled by React MobileHUD system
  */
 export class MobileControls {
     constructor(sceneManager, audioManager) {
@@ -10,23 +10,20 @@ export class MobileControls {
         this.audioManager = audioManager;
         this.isTouchDevice = this.detectTouchDevice();
         this.isEnabled = false;
-        this.joystick = null;
-        this.zoomSlider = null;
         this.movementVector = new Vector2D(0, 0);
         this.isMoving = false;
-        this.isSprinting = false;
-        this.zoomLevel = 80; // Default camera distance
-        this.onZoomChange = null;
+        this.isSprinting = false; // Bridge for React MobileHUD
+        this.onZoomChange = null; // Bridge for React MobileHUD zoom callback
         
-        // UI elements
-        this.joystickContainer = null;
-        this.zoomContainer = null;
-        this.sprintButton = null;
+        // UI elements (fullscreen banner only)
         this.fullscreenButton = null;
+        this.persistentFullscreenButton = null;
         
         if (this.isTouchDevice) {
             this.createFullscreenButton();
             this.setupFullscreenListeners();
+            this.createMobileUI();
+            this.setupTouchPrevention();
             
             // Add fullscreen change listeners that trigger resize
             if (this.sceneManager) {
@@ -34,10 +31,13 @@ export class MobileControls {
                     .forEach(evt => document.addEventListener(evt, () => this.sceneManager.onWindowResize()));
             }
             
-            this.loadNippleJS().then(() => {
-                this.createMobileUI();
-                this.setupTouchPrevention();
-            });
+            // For testing - create persistent button after a delay if not in fullscreen
+            setTimeout(() => {
+                if (!this.isFullscreen() && !this.persistentFullscreenButton) {
+                    console.log('🔍 Creating persistent fullscreen button for testing');
+                    this.createPersistentFullscreenButton();
+                }
+            }, 3000);
         }
     }
     
@@ -61,261 +61,23 @@ export class MobileControls {
         return hasTouch && (isMobile || hasCoarsePointer || isSmallScreen);
     }
     
-    /**
-     * Load nipple.js library dynamically
-     */
-    async loadNippleJS() {
-        return new Promise((resolve, reject) => {
-            if (window.nipplejs) {
-                resolve();
-                return;
-            }
-            
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.2/nipplejs.js';
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error('Failed to load nipple.js'));
-            document.head.appendChild(script);
-        });
-    }
+
     
     /**
      * Create mobile UI elements
      */
     createMobileUI() {
-        this.createJoystick();
-        this.createZoomSlider();
-        this.createSprintButton();
+        // All mobile UI now handled by React MobileHUD
         this.updateMobileInstructions();
     }
     
-    /**
-     * Create virtual joystick for movement
-     */
-    createJoystick() {
-        // Get safe area insets
-        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('--sab') || 
-                              'env(safe-area-inset-bottom, 0px)';
-        const safeAreaLeft = 'env(safe-area-inset-left, 0px)';
-        
-        // Create joystick container
-        this.joystickContainer = document.createElement('div');
-        this.joystickContainer.id = 'mobile-joystick';
-        this.joystickContainer.style.cssText = `
-            position: fixed;
-            bottom: calc(20px + ${safeAreaBottom});
-            left: calc(20px + ${safeAreaLeft});
-            width: 120px;
-            height: 120px;
-            z-index: 1001;
-            display: none;
-            pointer-events: auto;
-        `;
-        document.body.appendChild(this.joystickContainer);
-        
-        // Initialize nipple.js joystick
-        if (window.nipplejs) {
-            this.joystick = window.nipplejs.create({
-                zone: this.joystickContainer,
-                mode: 'static',
-                position: { left: '50%', top: '50%' },
-                color: '#00BFFF',
-                size: 120,
-                threshold: 0.1,
-                fadeTime: 250,
-                restOpacity: 0.7
-            });
-            
-            // Handle joystick events
-            this.joystick.on('start', () => {
-                this.isMoving = true;
-            });
-            
-            this.joystick.on('move', (evt, data) => {
-                if (data.vector) {
-                    // Convert joystick vector to movement vector
-                    // Nipple.js uses screen coordinates, we need game coordinates
-                    this.movementVector.x = -data.vector.x; // Invert X for correct direction
-                    this.movementVector.z = data.vector.y;  // Y becomes Z in 3D space
-                    this.isMoving = true;
-                }
-            });
-            
-            this.joystick.on('end', () => {
-                this.movementVector.x = 0;
-                this.movementVector.z = 0;
-                this.isMoving = false;
-            });
-        }
-    }
+
     
-    /**
-     * Create zoom slider for camera control
-     */
-    createZoomSlider() {
-        // Get safe area insets
-        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('--sab') || 
-                              'env(safe-area-inset-bottom, 0px)';
-        const safeAreaRight = 'env(safe-area-inset-right, 0px)';
-        
-        this.zoomContainer = document.createElement('div');
-        this.zoomContainer.id = 'mobile-zoom';
-        this.zoomContainer.style.cssText = `
-            position: fixed;
-            bottom: calc(20px + ${safeAreaBottom});
-            right: calc(20px + ${safeAreaRight});
-            width: 40px;
-            height: 200px;
-            z-index: 1001;
-            display: none;
-            pointer-events: auto;
-        `;
-        
-        // Create slider
-        this.zoomSlider = document.createElement('input');
-        this.zoomSlider.type = 'range';
-        this.zoomSlider.min = '20';
-        this.zoomSlider.max = '150';
-        this.zoomSlider.value = '80';
-        this.zoomSlider.orient = 'vertical';
-        this.zoomSlider.style.cssText = `
-            width: 200px;
-            height: 40px;
-            transform: rotate(-90deg) translateX(-80px);
-            transform-origin: 20px 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 20px;
-            outline: none;
-            -webkit-appearance: none;
-            appearance: none;
-        `;
-        
-        // Style the slider track and thumb
-        const style = document.createElement('style');
-        style.textContent = `
-            #mobile-zoom input[type="range"]::-webkit-slider-track {
-                height: 8px;
-                background: #ddd;
-                border-radius: 4px;
-                border: 1px solid #00BFFF;
-            }
-            
-            #mobile-zoom input[type="range"]::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                appearance: none;
-                height: 20px;
-                width: 20px;
-                border-radius: 50%;
-                background: #00BFFF;
-                cursor: pointer;
-                border: 2px solid white;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            }
-            
-            #mobile-zoom input[type="range"]::-moz-range-track {
-                height: 8px;
-                background: #ddd;
-                border-radius: 4px;
-                border: 1px solid #00BFFF;
-            }
-            
-            #mobile-zoom input[type="range"]::-moz-range-thumb {
-                height: 20px;
-                width: 20px;
-                border-radius: 50%;
-                background: #00BFFF;
-                cursor: pointer;
-                border: 2px solid white;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Add zoom labels - REMOVED
-        // const zoomLabel = document.createElement('div');
-        // zoomLabel.textContent = 'Zoom';
-        // zoomLabel.style.cssText = `
-        //     position: absolute;
-        //     top: -25px;
-        //     left: 50%;
-        //     transform: translateX(-50%);
-        //     font-size: 12px;
-        //     color: white;
-        //     background: rgba(0, 0, 0, 0.7);
-        //     padding: 2px 6px;
-        //     border-radius: 4px;
-        //     font-family: Arial, sans-serif;
-        //     font-weight: bold;
-        // `;
-        
-        // this.zoomContainer.appendChild(zoomLabel);
-        this.zoomContainer.appendChild(this.zoomSlider);
-        document.body.appendChild(this.zoomContainer);
-        
-        // Handle zoom changes
-        this.zoomSlider.addEventListener('input', (e) => {
-            this.zoomLevel = parseInt(e.target.value);
-            if (this.onZoomChange) {
-                this.onZoomChange(this.zoomLevel);
-            }
-        });
-    }
+
     
-    /**
-     * Create sprint button
-     */
-    createSprintButton() {
-        // Get safe area insets
-        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('--sab') || 
-                              'env(safe-area-inset-bottom, 0px)';
-        const safeAreaLeft = 'env(safe-area-inset-left, 0px)';
-        
-        this.sprintButton = document.createElement('button');
-        this.sprintButton.id = 'mobile-sprint';
-        this.sprintButton.textContent = '🏃';
-        this.sprintButton.style.cssText = `
-            position: fixed;
-            bottom: calc(20px + ${safeAreaBottom});
-            left: calc(160px + ${safeAreaLeft});
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: rgba(0, 191, 255, 0.8);
-            border: 3px solid white;
-            color: white;
-            font-size: 24px;
-            z-index: 1001;
-            display: none;
-            pointer-events: auto;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: all 0.2s ease;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-        `;
-        
-        // Handle sprint button events
-        this.sprintButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.isSprinting = true;
-            this.sprintButton.style.background = 'rgba(255, 107, 53, 0.9)';
-            this.sprintButton.style.transform = 'scale(0.95)';
-        });
-        
-        this.sprintButton.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.isSprinting = false;
-            this.sprintButton.style.background = 'rgba(0, 191, 255, 0.8)';
-            this.sprintButton.style.transform = 'scale(1)';
-        });
-        
-        // Prevent context menu
-        this.sprintButton.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-        });
-        
-        document.body.appendChild(this.sprintButton);
-    }
+
+    
+
     
     /**
      * Update instructions for mobile devices
@@ -368,9 +130,7 @@ export class MobileControls {
         if (!this.isTouchDevice) return;
         
         this.isEnabled = true;
-        if (this.joystickContainer) this.joystickContainer.style.display = 'block';
-        if (this.zoomContainer) this.zoomContainer.style.display = 'block';
-        if (this.sprintButton) this.sprintButton.style.display = 'block';
+        // All controls now handled by React MobileHUD
     }
     
     /**
@@ -378,9 +138,7 @@ export class MobileControls {
      */
     disable() {
         this.isEnabled = false;
-        if (this.joystickContainer) this.joystickContainer.style.display = 'none';
-        if (this.zoomContainer) this.zoomContainer.style.display = 'none';
-        if (this.sprintButton) this.sprintButton.style.display = 'none';
+        // All controls now handled by React MobileHUD
         
         // Reset movement state
         this.movementVector.x = 0;
@@ -406,6 +164,7 @@ export class MobileControls {
     
     /**
      * Check if currently sprinting
+     * Note: Sprint state now managed by React MobileHUD
      */
     getIsSprinting() {
         return this.isEnabled && this.isSprinting;
@@ -413,16 +172,18 @@ export class MobileControls {
     
     /**
      * Set zoom change callback
+     * Note: Zoom control now managed by React MobileHUD
      */
     setZoomChangeCallback(callback) {
-        this.onZoomChange = callback;
+        this.onZoomChange = callback; // Store callback for React MobileHUD to use
     }
     
     /**
      * Get current zoom level
+     * Note: Zoom control now managed by React MobileHUD
      */
     getZoomLevel() {
-        return this.zoomLevel;
+        return 80; // Default zoom level
     }
     
     /**
@@ -436,21 +197,8 @@ export class MobileControls {
      * Cleanup mobile controls
      */
     destroy() {
-        if (this.joystick) {
-            this.joystick.destroy();
-        }
-        
-        if (this.joystickContainer) {
-            this.joystickContainer.remove();
-        }
-        
-        if (this.zoomContainer) {
-            this.zoomContainer.remove();
-        }
-        
-        if (this.sprintButton) {
-            this.sprintButton.remove();
-        }
+        // All controls now handled by React MobileHUD - no cleanup needed
+        this.hidePersistentFullscreenButton();
     }
     
     /**
@@ -477,62 +225,98 @@ export class MobileControls {
         // Don't create if already exists or if already in fullscreen
         if (this.fullscreenButton || this.isFullscreen()) return;
         
-        this.fullscreenButton = document.createElement('button');
-        this.fullscreenButton.id = 'mobile-fullscreen';
-        this.fullscreenButton.innerHTML = '📱<br><span style="font-size: 14px;">Play Fullscreen</span>';
-        this.fullscreenButton.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 160px;
-            height: 80px;
-            border-radius: 12px;
-            background: rgba(0, 191, 255, 0.95);
-            border: 3px solid white;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            z-index: 2000;
-            display: block;
-            pointer-events: auto;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
-            transition: all 0.3s ease;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            line-height: 1.2;
-            cursor: pointer;
+        // Create simple, reliable fullscreen banner
+        this.fullscreenButton = document.createElement('div');
+        this.fullscreenButton.id = 'mobile-fullscreen-banner';
+        this.fullscreenButton.innerHTML = `
+            <div class="banner-content">
+                <span class="banner-icon">📱</span>
+                <span class="banner-text">Tap for better experience</span>
+            </div>
         `;
         
-        // Add hover/active effects
-        this.fullscreenButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.fullscreenButton.style.transform = 'translate(-50%, -50%) scale(0.95)';
-            this.fullscreenButton.style.background = 'rgba(0, 150, 200, 0.95)';
-        });
-        
-        this.fullscreenButton.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.fullscreenButton.style.transform = 'translate(-50%, -50%) scale(1)';
-            this.fullscreenButton.style.background = 'rgba(0, 191, 255, 0.95)';
+        // Simple, reliable styling
+        this.fullscreenButton.style.cssText = `
+            position: fixed;
+            top: calc(env(safe-area-inset-top, 0px) + 1rem);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
             
-            // Request fullscreen
-            this.requestFullscreen();
-        });
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            
+            padding: 0.75rem 1rem;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            
+            transition: all 0.3s ease;
+            animation: bannerSlideIn 0.5s ease-out;
+        `;
         
-        // Fallback click event for devices that might not support touch events properly
+        // Add banner animation CSS
+        if (!document.getElementById('banner-animations')) {
+            const style = document.createElement('style');
+            style.id = 'banner-animations';
+            style.textContent = `
+                @keyframes bannerSlideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateX(-50%) translateY(-20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(-50%) translateY(0);
+                    }
+                }
+                
+                #mobile-fullscreen-banner .banner-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                #mobile-fullscreen-banner .banner-icon {
+                    font-size: 1.1rem;
+                }
+                
+                #mobile-fullscreen-banner:active {
+                    transform: translateX(-50%) scale(0.98);
+                    background: rgba(0, 191, 255, 0.2);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Simple click handler - just request fullscreen
         this.fullscreenButton.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             this.requestFullscreen();
+            this.hideFullscreenButton();
         });
         
         // Prevent context menu
         this.fullscreenButton.addEventListener('contextmenu', (e) => {
             e.preventDefault();
         });
+        
+        // Auto-hide after 8 seconds for better user experience
+        this.fullscreenTimeout = setTimeout(() => {
+            this.hideFullscreenButton();
+        }, 8000);
         
         document.body.appendChild(this.fullscreenButton);
     }
@@ -541,6 +325,7 @@ export class MobileControls {
      * Request fullscreen with cross-browser compatibility
      */
     requestFullscreen() {
+        console.log('🔍 requestFullscreen called');
         const element = document.documentElement;
         
         try {
@@ -548,21 +333,22 @@ export class MobileControls {
             
             // Check for different fullscreen API methods
             if (element.requestFullscreen) {
+                console.log('🔍 Using element.requestFullscreen()');
                 fullscreenPromise = element.requestFullscreen();
             } else if (element.webkitRequestFullscreen) {
-                // Safari
+                console.log('🔍 Using element.webkitRequestFullscreen()');
                 fullscreenPromise = element.webkitRequestFullscreen();
             } else if (element.webkitRequestFullScreen) {
-                // Older Safari
+                console.log('🔍 Using element.webkitRequestFullScreen()');
                 fullscreenPromise = element.webkitRequestFullScreen();
             } else if (element.mozRequestFullScreen) {
-                // Firefox
+                console.log('🔍 Using element.mozRequestFullScreen()');
                 fullscreenPromise = element.mozRequestFullScreen();
             } else if (element.msRequestFullscreen) {
-                // IE/Edge
+                console.log('🔍 Using element.msRequestFullscreen()');
                 fullscreenPromise = element.msRequestFullscreen();
             } else {
-                console.warn('Fullscreen API not supported on this device');
+                console.warn('🔍 Fullscreen API not supported on this device');
                 // Hide button anyway since user tried to use it
                 this.hideFullscreenButton();
                 return;
@@ -570,7 +356,9 @@ export class MobileControls {
             
             // Handle the fullscreen promise
             if (fullscreenPromise && fullscreenPromise.then) {
+                console.log('🔍 Fullscreen promise available, handling success/failure');
                 fullscreenPromise.then(() => {
+                    console.log('🔍 Fullscreen request successful!');
                     /* 1. Force a layout pass for the new viewport and update controls layout */
                     setTimeout(() => {
                         window.dispatchEvent(new Event('resize'));
@@ -587,14 +375,18 @@ export class MobileControls {
                         this.audioManager.listener.context.state === 'suspended') {
                         this.audioManager.listener.context.resume().catch(() => {});
                     }
+                }).catch((error) => {
+                    console.error('🔍 Fullscreen request failed:', error);
                 });
+            } else {
+                console.log('🔍 No fullscreen promise (might be older browser)');
             }
             
             // Hide the fullscreen button after requesting fullscreen
             this.hideFullscreenButton();
             
         } catch (error) {
-            console.warn('Failed to request fullscreen:', error);
+            console.error('🔍 Exception during fullscreen request:', error);
             // Hide button if fullscreen fails
             this.hideFullscreenButton();
         }
@@ -604,15 +396,144 @@ export class MobileControls {
      * Hide the fullscreen button
      */
     hideFullscreenButton() {
+        // Clear any pending timeout to prevent random pop-ups
+        if (this.fullscreenTimeout) {
+            clearTimeout(this.fullscreenTimeout);
+            this.fullscreenTimeout = null;
+        }
+        
         if (this.fullscreenButton) {
+            // Smooth fade out animation
             this.fullscreenButton.style.opacity = '0';
+            this.fullscreenButton.style.transform = 'translateX(-50%) translateY(-20px)';
             this.fullscreenButton.style.pointerEvents = 'none';
+            
             setTimeout(() => {
                 if (this.fullscreenButton) {
                     this.fullscreenButton.remove();
                     this.fullscreenButton = null;
                 }
+                
+                // Show persistent fullscreen option after banner disappears
+                if (!this.isFullscreen()) {
+                    this.createPersistentFullscreenButton();
+                }
             }, 300);
+        }
+    }
+    
+    /**
+     * Create a small persistent fullscreen button
+     */
+    createPersistentFullscreenButton() {
+        // Don't create if already exists or if already in fullscreen
+        if (this.persistentFullscreenButton || this.isFullscreen()) {
+            console.log('🔍 Not creating persistent fullscreen button - already exists or in fullscreen');
+            return;
+        }
+        
+        console.log('🔍 Creating persistent fullscreen button');
+        this.persistentFullscreenButton = document.createElement('button');
+        this.persistentFullscreenButton.id = 'persistent-fullscreen-btn';
+        this.persistentFullscreenButton.innerHTML = '⛶';
+        this.persistentFullscreenButton.title = 'Fullscreen';
+        
+        this.persistentFullscreenButton.style.cssText = `
+            position: fixed;
+            top: calc(env(safe-area-inset-top, 0px) + 1rem);
+            right: calc(env(safe-area-inset-right, 0px) + 1rem);
+            width: 44px;
+            height: 44px;
+            border-radius: 0.75rem;
+            z-index: 2000;
+            
+            background: rgba(0, 191, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 191, 255, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 191, 255, 0.2);
+            
+            color: white;
+            font-size: 18px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            
+            transition: all 0.2s ease;
+            opacity: 0.9;
+            pointer-events: auto;
+            
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // Hover/active effects
+        this.persistentFullscreenButton.addEventListener('mouseenter', () => {
+            this.persistentFullscreenButton.style.opacity = '1';
+            this.persistentFullscreenButton.style.background = 'rgba(0, 191, 255, 0.25)';
+            this.persistentFullscreenButton.style.transform = 'scale(1.05)';
+        });
+        
+        this.persistentFullscreenButton.addEventListener('mouseleave', () => {
+            this.persistentFullscreenButton.style.opacity = '0.9';
+            this.persistentFullscreenButton.style.background = 'rgba(0, 191, 255, 0.15)';
+            this.persistentFullscreenButton.style.transform = 'scale(1)';
+        });
+        
+        this.persistentFullscreenButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            console.log('🔍 Persistent fullscreen button touchstart');
+            this.persistentFullscreenButton.style.transform = 'scale(0.9)';
+            this.persistentFullscreenButton.style.opacity = '1';
+            this.persistentFullscreenButton.style.background = 'rgba(0, 191, 255, 0.3)';
+        });
+        
+        this.persistentFullscreenButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            console.log('🔍 Persistent fullscreen button touchend - requesting fullscreen');
+            this.persistentFullscreenButton.style.transform = 'scale(1)';
+            this.requestFullscreen();
+            this.hidePersistentFullscreenButton();
+        });
+        
+        this.persistentFullscreenButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('🔍 Persistent fullscreen button click - requesting fullscreen');
+            this.requestFullscreen();
+            this.hidePersistentFullscreenButton();
+        });
+        
+        // Prevent context menu
+        this.persistentFullscreenButton.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        document.body.appendChild(this.persistentFullscreenButton);
+        console.log('🔍 Persistent fullscreen button added to DOM', this.persistentFullscreenButton);
+        
+        // Button is already visible with 0.9 opacity - no need for fade-in delay
+    }
+    
+    /**
+     * Hide the persistent fullscreen button
+     */
+    hidePersistentFullscreenButton() {
+        if (this.persistentFullscreenButton) {
+            this.persistentFullscreenButton.style.opacity = '0';
+            this.persistentFullscreenButton.style.transform = 'scale(0.8)';
+            this.persistentFullscreenButton.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                if (this.persistentFullscreenButton) {
+                    this.persistentFullscreenButton.remove();
+                    this.persistentFullscreenButton = null;
+                }
+            }, 200);
         }
     }
     
@@ -634,15 +555,26 @@ export class MobileControls {
     setupFullscreenListeners() {
         // Handle fullscreen change events across different browsers
         const handleFullscreenChange = () => {
-            if (!this.isFullscreen() && this.isTouchDevice) {
-                // User exited fullscreen, show button again
-                setTimeout(() => {
-                    this.createFullscreenButton();
-                }, 500); // Small delay to avoid flickering
-            }
-            
             // Update mobile UI positioning for fullscreen
             this.updateFullscreenLayout();
+            
+            // Show persistent button when exiting fullscreen on mobile
+            if (!this.isFullscreen() && this.isTouchDevice) {
+                console.log('🔍 Exited fullscreen on mobile device');
+                setTimeout(() => {
+                    // Double-check user hasn't gone back to fullscreen
+                    if (!this.isFullscreen() && !this.fullscreenButton && !this.persistentFullscreenButton) {
+                        console.log('🔍 Creating persistent fullscreen button after delay');
+                        this.createPersistentFullscreenButton();
+                    } else {
+                        console.log('🔍 Not creating button - conditions not met');
+                    }
+                }, 1000);
+            } else {
+                // Entering fullscreen - hide persistent button
+                console.log('🔍 Entering fullscreen - hiding persistent button');
+                this.hidePersistentFullscreenButton();
+            }
         };
         
         document.addEventListener('fullscreenchange', handleFullscreenChange);

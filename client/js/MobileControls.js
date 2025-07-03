@@ -23,6 +23,7 @@ export class MobileControls {
         this.zoomContainer = null;
         this.sprintButton = null;
         this.fullscreenButton = null;
+        this.persistentFullscreenButton = null;
         
         if (this.isTouchDevice) {
             this.createFullscreenButton();
@@ -38,6 +39,14 @@ export class MobileControls {
                 this.createMobileUI();
                 this.setupTouchPrevention();
             });
+            
+            // For testing - create persistent button after a delay if not in fullscreen
+            setTimeout(() => {
+                if (!this.isFullscreen() && !this.persistentFullscreenButton) {
+                    console.log('🔍 Creating persistent fullscreen button for testing');
+                    this.createPersistentFullscreenButton();
+                }
+            }, 3000);
         }
     }
     
@@ -451,6 +460,8 @@ export class MobileControls {
         if (this.sprintButton) {
             this.sprintButton.remove();
         }
+        
+        this.hidePersistentFullscreenButton();
     }
     
     /**
@@ -612,7 +623,127 @@ export class MobileControls {
                     this.fullscreenButton.remove();
                     this.fullscreenButton = null;
                 }
+                
+                // Show persistent fullscreen option after banner disappears
+                if (!this.isFullscreen()) {
+                    this.createPersistentFullscreenButton();
+                }
             }, 300);
+        }
+    }
+    
+    /**
+     * Create a small persistent fullscreen button
+     */
+    createPersistentFullscreenButton() {
+        // Don't create if already exists or if already in fullscreen
+        if (this.persistentFullscreenButton || this.isFullscreen()) return;
+        
+        this.persistentFullscreenButton = document.createElement('button');
+        this.persistentFullscreenButton.id = 'persistent-fullscreen-btn';
+        this.persistentFullscreenButton.innerHTML = '⛶';
+        this.persistentFullscreenButton.title = 'Fullscreen';
+        
+        this.persistentFullscreenButton.style.cssText = `
+            position: fixed;
+            top: calc(env(safe-area-inset-top, 0px) + 1rem);
+            right: calc(env(safe-area-inset-right, 0px) + 1rem);
+            width: 44px;
+            height: 44px;
+            border-radius: 0.75rem;
+            z-index: 2000;
+            
+            background: rgba(0, 191, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 191, 255, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 191, 255, 0.2);
+            
+            color: white;
+            font-size: 18px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            
+            transition: all 0.2s ease;
+            opacity: 0.9;
+            pointer-events: auto;
+            
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // Hover/active effects
+        this.persistentFullscreenButton.addEventListener('mouseenter', () => {
+            this.persistentFullscreenButton.style.opacity = '1';
+            this.persistentFullscreenButton.style.background = 'rgba(0, 191, 255, 0.25)';
+            this.persistentFullscreenButton.style.transform = 'scale(1.05)';
+        });
+        
+        this.persistentFullscreenButton.addEventListener('mouseleave', () => {
+            this.persistentFullscreenButton.style.opacity = '0.9';
+            this.persistentFullscreenButton.style.background = 'rgba(0, 191, 255, 0.15)';
+            this.persistentFullscreenButton.style.transform = 'scale(1)';
+        });
+        
+        this.persistentFullscreenButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            console.log('🔍 Persistent fullscreen button touchstart');
+            this.persistentFullscreenButton.style.transform = 'scale(0.9)';
+            this.persistentFullscreenButton.style.opacity = '1';
+            this.persistentFullscreenButton.style.background = 'rgba(0, 191, 255, 0.3)';
+        });
+        
+        this.persistentFullscreenButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            console.log('🔍 Persistent fullscreen button touchend - requesting fullscreen');
+            this.persistentFullscreenButton.style.transform = 'scale(1)';
+            this.requestFullscreen();
+            this.hidePersistentFullscreenButton();
+        });
+        
+        this.persistentFullscreenButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('🔍 Persistent fullscreen button click - requesting fullscreen');
+            this.requestFullscreen();
+            this.hidePersistentFullscreenButton();
+        });
+        
+        // Prevent context menu
+        this.persistentFullscreenButton.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        document.body.appendChild(this.persistentFullscreenButton);
+        
+        // Fade in animation
+        setTimeout(() => {
+            if (this.persistentFullscreenButton) {
+                this.persistentFullscreenButton.style.opacity = '0.6';
+            }
+        }, 100);
+    }
+    
+    /**
+     * Hide the persistent fullscreen button
+     */
+    hidePersistentFullscreenButton() {
+        if (this.persistentFullscreenButton) {
+            this.persistentFullscreenButton.style.opacity = '0';
+            this.persistentFullscreenButton.style.transform = 'scale(0.8)';
+            this.persistentFullscreenButton.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                if (this.persistentFullscreenButton) {
+                    this.persistentFullscreenButton.remove();
+                    this.persistentFullscreenButton = null;
+                }
+            }, 200);
         }
     }
     
@@ -635,10 +766,15 @@ export class MobileControls {
         // Handle fullscreen change events across different browsers
         const handleFullscreenChange = () => {
             if (!this.isFullscreen() && this.isTouchDevice) {
-                // User exited fullscreen, show button again
+                // User exited fullscreen, show persistent button
                 setTimeout(() => {
-                    this.createFullscreenButton();
+                    if (!this.persistentFullscreenButton) {
+                        this.createPersistentFullscreenButton();
+                    }
                 }, 500); // Small delay to avoid flickering
+            } else {
+                // Entering fullscreen - hide persistent button
+                this.hidePersistentFullscreenButton();
             }
             
             // Update mobile UI positioning for fullscreen

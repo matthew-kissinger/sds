@@ -40,7 +40,7 @@ class SheepDogSimulation {
         // Add mobile class to body if touch device detected
         if (this.mobileControls.getIsTouchDevice()) {
             document.body.classList.add('is-mobile');
-            this.organizeMobileUIContainers();
+            // Mobile UI now handled by React components
         }
         
         // Connect mobile controls to input handler and scene manager
@@ -867,31 +867,7 @@ class SheepDogSimulation {
         this.sceneManager.render();
     }
     
-    organizeMobileUIContainers() {
-        // Wait a moment for mobile controls to be created
-        setTimeout(() => {
-            // Organize left stack (just joystick) for portrait mode
-            // Sprint button stays independent for bottom-right positioning
-            const leftStack = document.getElementById('mobile-left-stack');
-            const joystick = document.getElementById('mobile-joystick');
-            
-            if (leftStack && joystick) {
-                leftStack.appendChild(joystick);
-            }
-            
-            // Organize right HUD cluster (timer + stamina) for landscape fullscreen
-            const hudRight = document.getElementById('mobile-hud-right');
-            const combinedUI = document.getElementById('mobile-combined-ui');
-            const staminaBar = document.getElementById('stamina-bar');
-            
-            if (hudRight && combinedUI) {
-                hudRight.appendChild(combinedUI);
-            }
-            if (hudRight && staminaBar) {
-                hudRight.appendChild(staminaBar);
-            }
-        }, 100);
-    }
+    // Legacy mobile UI organization removed - all mobile UI now handled by React components
     
     updateOtherPlayer(dogData) {
         const playerId = dogData.playerId;
