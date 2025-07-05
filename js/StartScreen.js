@@ -212,6 +212,9 @@ export class StartScreen {
         
         // Initialize cinematic camera
         this.setupCinematicCamera();
+        
+        // Populate select options
+        this.populateSelectOptions();
     }
     
     // Navigation methods
@@ -513,6 +516,39 @@ export class StartScreen {
         const savedDog = localStorage.getItem('selectedDog');
         if (savedDog && ['jep', 'rauri', 'pip'].includes(savedDog)) {
             this.selectDog(savedDog);
+        }
+    }
+    
+    // Populate select options for room creation
+    populateSelectOptions() {
+        // Populate max players select
+        if (this.maxPlayersSelect) {
+            this.maxPlayersSelect.innerHTML = '';
+            for (let i = 2; i <= 4; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${i} Players`;
+                if (i === 2) option.selected = true; // Default to 2 players
+                this.maxPlayersSelect.appendChild(option);
+            }
+        }
+        
+        // Populate game mode select
+        if (this.gameModeSelect) {
+            this.gameModeSelect.innerHTML = '';
+            const gameModes = [
+                { value: 'cooperative', text: 'Cooperative' },
+                { value: 'competitive', text: 'Competitive (Racing)' },
+                { value: 'timed', text: 'Timed Challenge' }
+            ];
+            
+            gameModes.forEach((mode, index) => {
+                const option = document.createElement('option');
+                option.value = mode.value;
+                option.textContent = mode.text;
+                if (index === 0) option.selected = true; // Default to cooperative
+                this.gameModeSelect.appendChild(option);
+            });
         }
     }
     

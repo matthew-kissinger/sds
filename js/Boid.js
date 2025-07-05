@@ -225,7 +225,8 @@ export class Boid {
         // Only apply movement if above threshold to prevent micro-movements
         if (smoothedVelocity.magnitude() > this.minMovementThreshold) {
             this.velocity = smoothedVelocity;
-            this.position.add(this.velocity);
+            // Time-based physics calibrated to 144 FPS baseline
+            this.position.add(this.velocity.clone().multiply(deltaTime * 144));
         } else {
             // Stop micro-movements
             this.velocity.multiply(0);

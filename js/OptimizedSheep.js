@@ -641,7 +641,7 @@ export class OptimizedSheepInstance extends Boid {
                 pasture.minX + Math.random() * (pasture.maxX - pasture.minX),
                 pasture.centerZ + Math.random() * 20
             );
-            this.maxSpeed *= 0.5;
+            this.maxSpeed *= 0.5;  // Half speed for retiring sheep
             this.maxForce *= 0.5;
             return;
         }

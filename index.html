@@ -1146,7 +1146,7 @@
                 
                 const gameModeDescriptions = {
                     cooperative: 'Work together to herd all 200 sheep',
-                    racing: '2 players: First to 101 wins | 3-4 players: Highest score wins',
+                    competitive: '2 players: First to 101 wins | 3-4 players: Highest score wins',
                     timed: '3 minute timer - highest score wins'
                 };
                 
@@ -1194,7 +1194,7 @@
                                 onChange: (e) => setSettings({...settings, gameMode: e.target.value})
                             }, [
                                 React.createElement('option', { key: 'coop', value: 'cooperative' }, 'Cooperative'),
-                                React.createElement('option', { key: 'racing', value: 'racing' }, 'Racing'),
+                                React.createElement('option', { key: 'racing', value: 'competitive' }, 'Racing'),
                                 React.createElement('option', { key: 'timed', value: 'timed' }, 'Timed (3 min)')
                             ])
                         ]),
@@ -1933,7 +1933,7 @@
                 const isInMultiplayer = networkManager?.currentRoom;
                 const actualGameMode = isInMultiplayer ? (multiplayerUI?.gameMode || networkManager?.currentRoom?.gameMode || 'cooperative') : 'solo';
                 
-                if (isInMultiplayer && (actualGameMode === 'racing' || actualGameMode === 'timed')) {
+                if (isInMultiplayer && (actualGameMode === 'competitive' || actualGameMode === 'timed')) {
                     // In multiplayer racing/timed mode, show player's individual score
                     const playerId = networkManager?.getPlayerId();
                     sheepCount = gameState.getPlayerScore(playerId) || 0;
@@ -2088,7 +2088,7 @@
             // Multiplayer Scoreboard Component (with integrated stamina)
             function MultiplayerScoreboard({ players, scores, myPlayerId, gameMode, sheepCount, totalSheep, stamina }) {
                 
-                const isRacing = gameMode === 'racing';
+                const isRacing = gameMode === 'competitive';
                 const isTimed = gameMode === 'timed';
                 const hasIndividualScores = isRacing || isTimed;
                 const isCooperative = gameMode === 'cooperative';
@@ -2604,7 +2604,7 @@
                 const gameData = useGameState();
                 const platform = usePlatform();
                 const isMultiplayer = gameData.gameMode !== 'solo' && gameData.players && gameData.players.length > 0;
-                const isRacing = gameData.gameMode === 'racing';
+                const isRacing = gameData.gameMode === 'competitive';
                 const isTimed = gameData.gameMode === 'timed';
                 const hasIndividualScores = isRacing || isTimed;
                 

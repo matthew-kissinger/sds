@@ -41,7 +41,7 @@ export class GameSimulation {
         this.tickInterval = null;
         
         // Determine game mode
-        this.isCompetitive = room.gameMode === 'racing';
+        this.isCompetitive = room.gameMode === 'competitive';
         this.isTimedMode = room.gameMode === 'timed';
         const playerIds = Array.from(room.players.keys());
         
@@ -516,8 +516,8 @@ export class GameSimulation {
                 sheep.acceleration.add(boundaryForce);
             }
 
-            // Update movement using client-style frame-based physics (no deltaTime)
-            // This matches the memory note about sheep using frame-based physics
+            // Update movement using time-based physics calibrated to 144 FPS
+            // This ensures consistent movement speed with client at all frame rates
             this.updateSheepMovementClientStyle(sheep);
 
             // Apply hard boundary constraints (except for retiring sheep)
@@ -596,8 +596,8 @@ export class GameSimulation {
     }
 
     updateSheepMovementClientStyle(sheep) {
-        // Frame-based physics like client Boid.js (no deltaTime multiplication)
-        // This ensures consistent movement speed between client and server
+        // Time-based physics calibrated to 144 FPS baseline
+        // This matches client behavior and ensures consistent speed
         
         const maxSpeed = this.sheepConfig.maxSpeed;
         const dampingFactor = 0.98;
@@ -622,8 +622,8 @@ export class GameSimulation {
         // Only apply movement if above threshold to prevent micro-movements
         if (smoothedVelocity.magnitude() > minMovementThreshold) {
             sheep.velocity = smoothedVelocity;
-            // Frame-based position update (no deltaTime)
-            sheep.position.add(sheep.velocity);
+            // Time-based position update calibrated to 60 FPS baseline (server tick rate)
+            sheep.position.add(sheep.velocity.clone().multiply(this.deltaTime * 60));
         } else {
             // Stop micro-movements
             sheep.velocity.multiply(0);
