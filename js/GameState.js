@@ -95,6 +95,11 @@ export class GameState {
             return this.sheepRetired;
         }
         
+        // Check if sheep system is initialized
+        if (!this.optimizedSheepSystem) {
+            return this.sheepRetired;
+        }
+        
         // Always update sheep behaviors for visual effect
         // In multiplayer mode, server handles state transitions, client handles visual behavior
         this.optimizedSheepSystem.update(

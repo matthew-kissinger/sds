@@ -96,7 +96,11 @@ class SheepDogSimulation {
         this.endgameMusicPlaying = false;
         
         // Initialize the simulation
-        this.init();
+        this.isInitialized = false;
+        this.init().then(() => {
+            this.isInitialized = true;
+            console.log('🚀 Game initialization complete, starting animation loop');
+        });
         this.animate();
     }
     
@@ -111,12 +115,16 @@ class SheepDogSimulation {
         });
     }
     
-    init() {
+    async init() {
+        // Load all 3D models first
+        await this.terrainBuilder.loadModels();
+        
         // Create terrain and environment
         this.terrainBuilder.createTerrain();
         this.terrainBuilder.createGrass();
-        this.terrainBuilder.createTrees();
-        this.terrainBuilder.addEnvironmentDetails();
+        await this.terrainBuilder.createTrees();
+        await this.terrainBuilder.addEnvironmentDetails();
+        await this.terrainBuilder.addMountains();
         
         // Create structures using new modular system
         this.structureBuilder.buildSinglePlayerStructures(
@@ -701,6 +709,11 @@ class SheepDogSimulation {
     }
     
     update(deltaTime) {
+        // Skip update if not initialized yet
+        if (!this.isInitialized) {
+            return;
+        }
+        
         // Check if game is paused
         const isPaused = this.inputHandler.isPausedState();
         
@@ -852,8 +865,8 @@ class SheepDogSimulation {
         // Check if game is paused
         const isPaused = this.inputHandler.isPausedState();
         
-        // Update grass animation (only if not paused)
-        if (!isPaused) {
+        // Update grass animation (only if not paused and initialized)
+        if (!isPaused && this.isInitialized) {
             this.terrainBuilder.updateGrassAnimation();
         }
         
@@ -1033,7 +1046,7 @@ class SheepDogSimulation {
         }
     }
     
-    createCompetitiveStructures(competitiveGates) {
+    async createCompetitiveStructures(competitiveGates) {
         console.log('🏗️ Creating competitive structures with gates:', competitiveGates);
         
         // Don't override the game mode - it's already set correctly (could be 'competitive' or 'timed')
@@ -1050,7 +1063,7 @@ class SheepDogSimulation {
         const competitivePastures = competitiveGates.map(gate => gate.pasture);
         console.log('🌳 Recreating trees to avoid competitive pastures:', competitivePastures);
         this.terrainBuilder.clearTrees();
-        this.terrainBuilder.createTrees(competitivePastures);
+        await this.terrainBuilder.createTrees(competitivePastures);
         
         // Apply player colors to gates based on current player
         const currentPlayerId = this.networkManager?.getPlayerId();

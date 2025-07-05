@@ -1,9 +1,85 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 /**
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements
  */
 export class TerrainBuilder {
+    async loadModels() {
+        const modelPaths = {
+            trees: [
+                { name: 'tree1', path: '/assets/models/Resource_Tree1.glb' },
+                { name: 'tree2', path: '/assets/models/Resource_Tree2.glb' },
+                { name: 'pine', path: '/assets/models/Resource_PineTree.glb' }
+            ],
+            rocks: [
+                { name: 'rock1', path: '/assets/models/Resource_Rock_1.glb' },
+                { name: 'rock2', path: '/assets/models/Resource_Rock_2.glb' },
+                { name: 'rock3', path: '/assets/models/Resource_Rock_3.glb' }
+            ],
+            mountains: [
+                { name: 'mountain1', path: '/assets/models/Mountain_Group_1.glb' },
+                { name: 'mountain2', path: '/assets/models/Mountain_Group_2.glb' }
+            ]
+        };
+        
+        const loadPromises = [];
+        
+        // Load tree models
+        for (const model of modelPaths.trees) {
+            loadPromises.push(
+                this.loader.loadAsync(model.path).then(gltf => {
+                    this.models.trees[model.name] = gltf.scene;
+                    console.log(`✅ Loaded tree model: ${model.name}`);
+                }).catch(err => {
+                    console.error(`❌ Failed to load tree model ${model.name}:`, err);
+                })
+            );
+        }
+        
+        // Load rock models
+        for (const model of modelPaths.rocks) {
+            loadPromises.push(
+                this.loader.loadAsync(model.path).then(gltf => {
+                    this.models.rocks[model.name] = gltf.scene;
+                    console.log(`✅ Loaded rock model: ${model.name}`);
+                }).catch(err => {
+                    console.error(`❌ Failed to load rock model ${model.name}:`, err);
+                })
+            );
+        }
+        
+        // Load mountain models
+        for (const model of modelPaths.mountains) {
+            loadPromises.push(
+                this.loader.loadAsync(model.path).then(gltf => {
+                    this.models.mountains[model.name] = gltf.scene;
+                    console.log(`✅ Loaded mountain model: ${model.name}`);
+                }).catch(err => {
+                    console.error(`❌ Failed to load mountain model ${model.name}:`, err);
+                })
+            );
+        }
+        
+        await Promise.all(loadPromises);
+        this.modelsLoaded = true;
+        console.log('🎨 All models loaded successfully!');
+    }
+    
+    isInZone(x, z, zone) {
+        return x >= zone.minX && x <= zone.maxX && z >= zone.minZ && z <= zone.maxZ;
+    }
+    
+    getZoneForPosition(x, z) {
+        const dist = Math.sqrt(x * x + z * z);
+        if (dist < 100) return 'playArea';
+        if (dist < 200) return 'nearField';
+        if (dist < 400) return 'midField';
+        if (dist < 600) return 'farField';
+        return 'horizon';
+    }
+
+
     constructor(scene) {
         this.scene = scene;
         this.grassMaterial = null;
@@ -12,6 +88,26 @@ export class TerrainBuilder {
         this.terrainMesh = null;
         this.environmentDetails = [];
         this.trees = []; // Track trees for removal
+        this.rocks = []; // Track rocks for removal
+        this.mountains = []; // Track mountains
+        
+        // Model loading
+        this.loader = new GLTFLoader();
+        this.models = {
+            trees: {},
+            rocks: {},
+            mountains: {}
+        };
+        this.modelsLoaded = false;
+        
+        // Terrain zones
+        this.zones = {
+            playArea: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
+            nearField: { minX: -200, maxX: 200, minZ: -200, maxZ: 200 },
+            midField: { minX: -400, maxX: 400, minZ: -400, maxZ: 400 },
+            farField: { minX: -600, maxX: 600, minZ: -600, maxZ: 600 },
+            horizon: { minX: -800, maxX: 800, minZ: -800, maxZ: 800 }
+        };
     }
     
     createTerrain() {
@@ -163,36 +259,12 @@ export class TerrainBuilder {
         return grassMesh;
     }
     
-    createTrees(competitivePastures = null) {
-        // Tree trunk material
-        const trunkMaterial = new THREE.MeshPhongMaterial({
-            color: 0x4a3a2a,
-            emissive: 0x1a0a00,
-            emissiveIntensity: 0.05
-        });
+    async createTrees(competitivePastures = null) {
+        if (!this.modelsLoaded) {
+            console.warn('Models not loaded yet. Loading models...');
+            await this.loadModels();
+        }
         
-        // Richer foliage materials for variety & realism
-        const foliageMaterials = [
-            new THREE.MeshPhongMaterial({
-                color: 0x355e29,
-                emissive: 0x0e1a0e,
-                emissiveIntensity: 0.1,
-                flatShading: true
-            }),
-            new THREE.MeshPhongMaterial({
-                color: 0x426b33,
-                emissive: 0x112411,
-                emissiveIntensity: 0.1,
-                flatShading: true
-            }),
-            new THREE.MeshPhongMaterial({
-                color: 0x274b1f,
-                emissive: 0x091609,
-                emissiveIntensity: 0.1,
-                flatShading: true
-            })
-        ];
-
         // Helper function to check if a position is in any pasture area
         const isInPastureArea = (x, z) => {
             // Standard single-player pasture avoidance
@@ -214,208 +286,366 @@ export class TerrainBuilder {
             
             return false;
         };
-
-        // Helper to add slight noise to a spherical geometry for a fluffier canopy
-        const addCanopyNoise = (geometry, amplitude = 0.4) => {
-            const positionAttr = geometry.attributes.position;
-            const normal = new THREE.Vector3();
-            for (let i = 0; i < positionAttr.count; i++) {
-                normal.set(
-                    positionAttr.getX(i),
-                    positionAttr.getY(i),
-                    positionAttr.getZ(i)
-                ).normalize();
-                const offset = (Math.random() - 0.5) * amplitude;
-                positionAttr.setXYZ(
-                    i,
-                    positionAttr.getX(i) + normal.x * offset,
-                    positionAttr.getY(i) + normal.y * offset,
-                    positionAttr.getZ(i) + normal.z * offset
-                );
-            }
-            geometry.computeVertexNormals();
+        
+        const treeInstances = {
+            tree1: [],
+            tree2: [],
+            pine: []
         };
-
-        const trees = [];
-
-        /***********************
-         *  DECIDUOUS TREES   *
-         ***********************/
-        for (let i = 0; i < 200; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 120 + Math.random() * 300; // Spread trees further out
-            const x = Math.cos(angle) * distance;
-            const z = Math.sin(angle) * distance;
-
-            // Keep play area clear
-            if (Math.abs(x) < 120 && Math.abs(z) < 120) continue;
+        
+        // Improved procedural generation using Poisson disk sampling
+        const poissonDisk = (minDistance, maxDistance, zone, avoidAreas = []) => {
+            const points = [];
+            const cellSize = minDistance / Math.sqrt(2);
+            const grid = {};
+            const active = [];
+            const k = 30; // Number of attempts before rejection
             
-            // Avoid all pasture areas (single-player and competitive)
-            if (isInPastureArea(x, z)) continue;
-
-            // Trunk
-            const trunkHeight = 7 + Math.random() * 5;
-            const trunkRadius = 0.6 + Math.random() * 0.5;
-            const trunkGeometry = new THREE.CylinderGeometry(trunkRadius * 0.8, trunkRadius, trunkHeight, 8);
-            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-            trunk.position.set(x, trunkHeight / 2, z);
-            trunk.castShadow = true;
-            this.scene.add(trunk);
-            trees.push(trunk);
-
-            // Canopy – multiple irregular lumps for an organic silhouette
-            const canopyLumps = 3 + Math.floor(Math.random() * 2); // 3-4 lumps
-            const materialIndex = Math.floor(Math.random() * foliageMaterials.length);
-
-            for (let l = 0; l < canopyLumps; l++) {
-                const radius = 4 + Math.random() * 2 - l * 0.5;
-                const icoDetail = 1; // keeps polycount low
-                const canopyGeometry = new THREE.IcosahedronGeometry(radius, icoDetail);
-                addCanopyNoise(canopyGeometry, 0.5);
-
-                const canopy = new THREE.Mesh(canopyGeometry, foliageMaterials[materialIndex]);
-                canopy.position.set(
-                    x + (Math.random() - 0.5) * 1.5,
-                    trunkHeight + radius / 2 + l * 0.8 + Math.random() * 0.5,
-                    z + (Math.random() - 0.5) * 1.5
-                );
-                canopy.rotation.y = Math.random() * Math.PI;
-                canopy.castShadow = true;
-                canopy.receiveShadow = true;
-                this.scene.add(canopy);
-                trees.push(canopy);
+            // Helper to check if point is valid
+            const isValidPoint = (x, z) => {
+                // Check zone bounds
+                if (x < zone.minX || x > zone.maxX || z < zone.minZ || z > zone.maxZ) return false;
+                
+                // Check avoid areas
+                for (const area of avoidAreas) {
+                    if (x >= area.minX && x <= area.maxX && z >= area.minZ && z <= area.maxZ) return false;
+                }
+                
+                // Check pasture areas
+                if (isInPastureArea(x, z)) return false;
+                
+                // Check play area
+                if (Math.abs(x) < 120 && Math.abs(z) < 120) return false;
+                
+                // Check grid neighbors
+                const gridX = Math.floor(x / cellSize);
+                const gridZ = Math.floor(z / cellSize);
+                
+                for (let dx = -2; dx <= 2; dx++) {
+                    for (let dz = -2; dz <= 2; dz++) {
+                        const key = `${gridX + dx},${gridZ + dz}`;
+                        if (grid[key]) {
+                            for (const neighbor of grid[key]) {
+                                const dist = Math.sqrt((neighbor.x - x) ** 2 + (neighbor.z - z) ** 2);
+                                if (dist < minDistance) return false;
+                            }
+                        }
+                    }
+                }
+                
+                return true;
+            };
+            
+            // Start with random point
+            const startX = zone.minX + Math.random() * (zone.maxX - zone.minX);
+            const startZ = zone.minZ + Math.random() * (zone.maxZ - zone.minZ);
+            
+            if (isValidPoint(startX, startZ)) {
+                const point = { x: startX, z: startZ };
+                points.push(point);
+                active.push(point);
+                const key = `${Math.floor(startX / cellSize)},${Math.floor(startZ / cellSize)}`;
+                grid[key] = [point];
             }
-        }
-
-        /***********************
-         *      PINE TREES    *
-         ***********************/
-        for (let i = 0; i < 80; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 140 + Math.random() * 250;
-            const x = Math.cos(angle) * distance;
-            const z = Math.sin(angle) * distance;
-
-            if (Math.abs(x) < 120 && Math.abs(z) < 120) continue;
             
-            // Avoid all pasture areas (single-player and competitive)
-            if (isInPastureArea(x, z)) continue;
-
-            // Trunk
-            const trunkHeight = 5 + Math.random() * 3;
-            const trunkGeometry = new THREE.CylinderGeometry(0.4, 0.6, trunkHeight, 6);
-            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-            trunk.position.set(x, trunkHeight / 2, z);
-            trunk.castShadow = true;
-            this.scene.add(trunk);
-            trees.push(trunk);
-
-            // Layered foliage – stacked cones for a stylised pine
-            const layers = 3 + Math.floor(Math.random() * 2); // 3-4 layers
-            const baseHeight = trunkHeight;
-            const pineMaterial = new THREE.MeshPhongMaterial({
-                color: 0x1e4b1e,
-                emissive: 0x061406,
-                emissiveIntensity: 0.1,
-                flatShading: true
+            // Generate points
+            while (active.length > 0) {
+                const randomIndex = Math.floor(Math.random() * active.length);
+                const currentPoint = active[randomIndex];
+                let found = false;
+                
+                for (let n = 0; n < k; n++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = minDistance + Math.random() * (maxDistance - minDistance);
+                    const newX = currentPoint.x + Math.cos(angle) * distance;
+                    const newZ = currentPoint.z + Math.sin(angle) * distance;
+                    
+                    if (isValidPoint(newX, newZ)) {
+                        const point = { x: newX, z: newZ };
+                        points.push(point);
+                        active.push(point);
+                        const key = `${Math.floor(newX / cellSize)},${Math.floor(newZ / cellSize)}`;
+                        if (!grid[key]) grid[key] = [];
+                        grid[key].push(point);
+                        found = true;
+                    }
+                }
+                
+                if (!found) {
+                    active.splice(randomIndex, 1);
+                }
+            }
+            
+            return points;
+        };
+        
+        // Define biome regions using noise-like patterns
+        const getBiome = (x, z) => {
+            const distFromCenter = Math.sqrt(x * x + z * z);
+            const angle = Math.atan2(z, x);
+            
+            // Create organic biome boundaries using sine waves
+            const wave1 = Math.sin(angle * 3 + distFromCenter * 0.01) * 50;
+            const wave2 = Math.sin(angle * 5 - distFromCenter * 0.02) * 30;
+            const biomeOffset = wave1 + wave2;
+            
+            const adjustedDist = distFromCenter + biomeOffset;
+            
+            if (adjustedDist < 250) return 'mixed';
+            if (adjustedDist < 350) return 'deciduous';
+            if (adjustedDist < 450) return 'pine';
+            return 'mixed';
+        };
+        
+        // Generate trees for each zone with better distribution
+        const zones = [
+            { name: 'nearField', zone: this.zones.nearField, minDist: 25, maxDist: 40, scale: 15.0 },
+            { name: 'midField', zone: this.zones.midField, minDist: 30, maxDist: 50, scale: 20.0 },
+            { name: 'farField', zone: this.zones.farField, minDist: 35, maxDist: 60, scale: 25.0 },
+            { name: 'horizon', zone: this.zones.horizon, minDist: 40, maxDist: 70, scale: 30.0 }
+        ];
+        
+        zones.forEach(({ name, zone, minDist, maxDist, scale }) => {
+            const points = poissonDisk(minDist, maxDist, zone);
+            
+            points.forEach(point => {
+                const biome = getBiome(point.x, point.z);
+                let treeType;
+                
+                if (biome === 'deciduous') {
+                    treeType = Math.random() < 0.6 ? 'tree1' : 'tree2';
+                } else if (biome === 'pine') {
+                    treeType = 'pine';
+                } else {
+                    // Mixed biome
+                    const r = Math.random();
+                    if (r < 0.3) treeType = 'tree1';
+                    else if (r < 0.6) treeType = 'tree2';
+                    else treeType = 'pine';
+                }
+                
+                // Add variation to scale
+                const scaleVariation = 0.7 + Math.random() * 0.6;
+                const finalScale = scale * scaleVariation;
+                
+                treeInstances[treeType].push({
+                    position: new THREE.Vector3(point.x, 0, point.z),
+                    rotation: new THREE.Euler(0, Math.random() * Math.PI * 2, 0),
+                    scale: new THREE.Vector3(finalScale, finalScale, finalScale)
+                });
             });
-
-            for (let l = 0; l < layers; l++) {
-                const layerRadius = 3 - l * 0.6 + Math.random() * 0.4;
-                const layerHeight = 4 + Math.random() * 1.5;
-                const layerGeometry = new THREE.ConeGeometry(layerRadius, layerHeight, 8, 1, true);
-
-                addCanopyNoise(layerGeometry, 0.3);
-
-                const layerMesh = new THREE.Mesh(layerGeometry, pineMaterial);
-                layerMesh.position.set(
-                    x,
-                    baseHeight + l * 2 + layerHeight / 2,
-                    z
-                );
-                layerMesh.rotation.y = Math.random() * Math.PI;
-                layerMesh.castShadow = true;
-                layerMesh.receiveShadow = true;
-                this.scene.add(layerMesh);
-                trees.push(layerMesh);
-            }
-        }
-
-        console.log(`🌳 Created ${trees.length} trees, avoiding ${competitivePastures ? competitivePastures.length + ' competitive + 1 standard' : '1 standard'} pasture areas`);
-        this.trees = trees; // Track trees for removal
-        return trees;
-    }
-    
-    addEnvironmentDetails() {
-        // Add rocks - placed outside the play area
-        const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
-        const rockMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0x666666,
-            emissive: 0x111111,
-            emissiveIntensity: 0.05,
-            flatShading: true
         });
         
-        const rocks = [];
+        // Create instanced meshes for each tree type
+        const instancedMeshes = [];
         
-        // Play area boundaries to avoid: X: -100 to 100, Z: -100 to 130 (including pasture)
-        const playAreaBounds = {
-            minX: -100,
-            maxX: 100,
-            minZ: -100,
-            maxZ: 130
-        };
-        
-        // Increase rock count since we have more area to fill
-        for (let i = 0; i < 40; i++) {
-            const rock = new THREE.Mesh(rockGeometry, rockMaterial);
-            let x, z;
-            let attempts = 0;
+        Object.entries(treeInstances).forEach(([treeType, instances]) => {
+            if (instances.length === 0 || !this.models.trees[treeType]) return;
             
-            // Find a position outside the play area
-            do {
-                // Generate position in larger area (400x400)
-                x = (Math.random() - 0.5) * 400;
-                z = (Math.random() - 0.5) * 400;
-                attempts++;
-                
-                // Prevent infinite loop
-                if (attempts > 100) {
-                    // Force placement in known safe areas
-                    if (Math.random() < 0.5) {
-                        // Place far left or right
-                        x = Math.random() < 0.5 ? -150 - Math.random() * 100 : 150 + Math.random() * 100;
-                        z = (Math.random() - 0.5) * 300;
-                    } else {
-                        // Place far north or south
-                        x = (Math.random() - 0.5) * 300;
-                        z = Math.random() < 0.5 ? -150 - Math.random() * 100 : 180 + Math.random() * 100;
-                    }
-                    break;
+            const model = this.models.trees[treeType];
+            const dummy = new THREE.Object3D();
+            
+            // Get all meshes from the model
+            model.traverse(child => {
+                if (child.isMesh) {
+                    const instancedMesh = new THREE.InstancedMesh(
+                        child.geometry,
+                        child.material,
+                        instances.length
+                    );
+                    
+                    // Set up instances
+                    instances.forEach((instance, i) => {
+                        dummy.position.copy(instance.position);
+                        dummy.rotation.copy(instance.rotation);
+                        dummy.scale.copy(instance.scale);
+                        dummy.updateMatrix();
+                        instancedMesh.setMatrixAt(i, dummy.matrix);
+                    });
+                    
+                    instancedMesh.castShadow = true;
+                    instancedMesh.receiveShadow = true;
+                    instancedMesh.instanceMatrix.needsUpdate = true;
+                    
+                    this.scene.add(instancedMesh);
+                    instancedMeshes.push(instancedMesh);
                 }
-            } while (
-                x >= playAreaBounds.minX && x <= playAreaBounds.maxX &&
-                z >= playAreaBounds.minZ && z <= playAreaBounds.maxZ
-            );
+            });
             
-            rock.position.set(x, 0.5, z);
-            rock.rotation.set(
-                Math.random() * Math.PI,
-                Math.random() * Math.PI,
-                Math.random() * Math.PI
-            );
-            
-            const scale = 0.5 + Math.random() * 1.5;
-            rock.scale.set(scale, scale * 0.7, scale);
-            
-            rock.castShadow = true;
-            rock.receiveShadow = true;
-            this.scene.add(rock);
-            rocks.push(rock);
+            console.log(`🌳 Created ${instances.length} ${treeType} instances`);
+        });
+        
+        this.trees = instancedMeshes;
+        const totalTrees = Object.values(treeInstances).reduce((sum, arr) => sum + arr.length, 0);
+        console.log(`🌲 Total trees created: ${totalTrees} using instanced rendering`);
+        
+        return instancedMeshes;
+    }
+    
+    async addEnvironmentDetails() {
+        if (!this.modelsLoaded) {
+            console.warn('Models not loaded yet. Loading models...');
+            await this.loadModels();
         }
         
-        this.environmentDetails = rocks;
-        return rocks;
+        const rockInstances = {
+            rock1: [], // small rocks
+            rock2: [], // medium rocks
+            rock3: []  // large rocks/formations
+        };
+        
+        // Improved rock generation using geological formations
+        const createRockFormation = (centerX, centerZ, formationType = 'cluster') => {
+            const rocks = [];
+            
+            if (formationType === 'cluster') {
+                // Circular cluster with density falloff
+                const numRocks = 5 + Math.floor(Math.random() * 10);
+                const radius = 30 + Math.random() * 40;
+                
+                for (let i = 0; i < numRocks; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    // Use gaussian distribution for more natural clustering
+                    const dist = Math.abs(randomGaussian()) * radius * 0.5;
+                    const x = centerX + Math.cos(angle) * dist;
+                    const z = centerZ + Math.sin(angle) * dist;
+                    
+                    rocks.push({ x, z, scale: 0.7 + Math.random() * 0.6 });
+                }
+            } else if (formationType === 'line') {
+                // Linear formation (like a ridge)
+                const length = 50 + Math.random() * 100;
+                const angle = Math.random() * Math.PI * 2;
+                const numRocks = 8 + Math.floor(Math.random() * 12);
+                
+                for (let i = 0; i < numRocks; i++) {
+                    const t = (i / (numRocks - 1)) - 0.5;
+                    const offset = (Math.random() - 0.5) * 20;
+                    const x = centerX + Math.cos(angle) * t * length + Math.sin(angle) * offset;
+                    const z = centerZ + Math.sin(angle) * t * length + Math.cos(angle) * offset;
+                    
+                    rocks.push({ x, z, scale: 0.8 + Math.random() * 0.4 });
+                }
+            } else if (formationType === 'field') {
+                // Scattered field with variable density
+                const width = 80 + Math.random() * 80;
+                const height = 80 + Math.random() * 80;
+                const numRocks = 15 + Math.floor(Math.random() * 20);
+                
+                for (let i = 0; i < numRocks; i++) {
+                    const x = centerX + (Math.random() - 0.5) * width;
+                    const z = centerZ + (Math.random() - 0.5) * height;
+                    
+                    rocks.push({ x, z, scale: 0.6 + Math.random() * 0.8 });
+                }
+            }
+            
+            return rocks;
+        };
+        
+        // Helper for gaussian distribution
+        const randomGaussian = () => {
+            let u = 0, v = 0;
+            while (u === 0) u = Math.random();
+            while (v === 0) v = Math.random();
+            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        };
+        
+        // Generate rock formations in different zones
+        const zones = [
+            { zone: this.zones.nearField, formations: 2, types: ['cluster'], scaleRange: { min: 8, max: 15 } },
+            { zone: this.zones.midField, formations: 4, types: ['cluster', 'line'], scaleRange: { min: 10, max: 20 } },
+            { zone: this.zones.farField, formations: 6, types: ['cluster', 'line', 'field'], scaleRange: { min: 15, max: 30 } },
+            { zone: this.zones.horizon, formations: 8, types: ['field', 'line'], scaleRange: { min: 25, max: 50 } }
+        ];
+        
+        zones.forEach(({ zone, formations, types, scaleRange }) => {
+            for (let f = 0; f < formations; f++) {
+                const centerX = zone.minX + Math.random() * (zone.maxX - zone.minX);
+                const centerZ = zone.minZ + Math.random() * (zone.maxZ - zone.minZ);
+                
+                // Skip if in play area
+                if (Math.abs(centerX) < 150 && Math.abs(centerZ) < 150) continue;
+                
+                const formationType = types[Math.floor(Math.random() * types.length)];
+                const formation = createRockFormation(centerX, centerZ, formationType);
+                
+                formation.forEach(rock => {
+                    // Skip if too close to play area
+                    if (Math.abs(rock.x) < 120 && Math.abs(rock.z) < 120) return;
+                    
+                    // Determine rock type based on size
+                    const size = Math.random();
+                    let rockType;
+                    if (size < 0.5) rockType = 'rock1';
+                    else if (size < 0.8) rockType = 'rock2';
+                    else rockType = 'rock3';
+                    
+                    // Calculate final scale
+                    const baseScale = scaleRange.min + Math.random() * (scaleRange.max - scaleRange.min);
+                    const finalScale = baseScale * rock.scale;
+                    
+                    // Some rocks partially buried
+                    const yOffset = Math.random() < 0.3 ? -finalScale * 0.15 : 0;
+                    
+                    rockInstances[rockType].push({
+                        position: new THREE.Vector3(rock.x, yOffset, rock.z),
+                        rotation: new THREE.Euler(
+                            Math.random() * Math.PI * 0.3,
+                            Math.random() * Math.PI * 2,
+                            Math.random() * Math.PI * 0.3
+                        ),
+                        scale: new THREE.Vector3(finalScale, finalScale * 0.7, finalScale * 1.2)
+                    });
+                });
+            }
+        });
+        
+        // Create instanced meshes for each rock type
+        const instancedMeshes = [];
+        
+        Object.entries(rockInstances).forEach(([rockType, instances]) => {
+            if (instances.length === 0 || !this.models.rocks[rockType]) return;
+            
+            const model = this.models.rocks[rockType];
+            const dummy = new THREE.Object3D();
+            
+            // Get all meshes from the model
+            model.traverse(child => {
+                if (child.isMesh) {
+                    const instancedMesh = new THREE.InstancedMesh(
+                        child.geometry,
+                        child.material,
+                        instances.length
+                    );
+                    
+                    // Set up instances
+                    instances.forEach((instance, i) => {
+                        dummy.position.copy(instance.position);
+                        dummy.rotation.copy(instance.rotation);
+                        dummy.scale.copy(instance.scale);
+                        dummy.updateMatrix();
+                        instancedMesh.setMatrixAt(i, dummy.matrix);
+                    });
+                    
+                    instancedMesh.castShadow = true;
+                    instancedMesh.receiveShadow = true;
+                    instancedMesh.instanceMatrix.needsUpdate = true;
+                    
+                    this.scene.add(instancedMesh);
+                    instancedMeshes.push(instancedMesh);
+                }
+            });
+            
+            console.log(`🪨 Created ${instances.length} ${rockType} instances`);
+        });
+        
+        this.rocks = instancedMeshes;
+        this.environmentDetails = instancedMeshes; // Keep compatibility
+        const totalRocks = Object.values(rockInstances).reduce((sum, arr) => sum + arr.length, 0);
+        console.log(`⛰️ Total rocks created: ${totalRocks} using instanced rendering`);
+        
+        return instancedMeshes;
     }
     
     updateGrassAnimation() {
@@ -432,6 +662,149 @@ export class TerrainBuilder {
         return this.grassInstanceCount;
     }
 
+    async addMountains() {
+        if (!this.modelsLoaded) {
+            console.warn('Models not loaded yet. Loading models...');
+            await this.loadModels();
+        }
+        
+        const mountainInstances = [];
+        
+        // Define mountain placement zones - straddling the terrain edge (500 units boundary)
+        const mountainPlacements = [
+            // North edge mountains - positioned to straddle the -500 boundary
+            { x: -300, z: -500, scale: 100.0, rotation: 0, yOffset: -20 },
+            { x: -100, z: -520, scale: 120.0, rotation: Math.PI * 0.25, yOffset: -25 },
+            { x: 100, z: -500, scale: 110.0, rotation: Math.PI * 0.5, yOffset: -20 },
+            { x: 300, z: -510, scale: 130.0, rotation: Math.PI * 0.75, yOffset: -30 },
+            
+            // South edge mountains - straddling the +500 boundary
+            { x: -300, z: 500, scale: 110.0, rotation: Math.PI * 1.25, yOffset: -25 },
+            { x: -100, z: 520, scale: 140.0, rotation: Math.PI * 1.5, yOffset: -35 },
+            { x: 100, z: 500, scale: 120.0, rotation: Math.PI * 1.75, yOffset: -25 },
+            { x: 300, z: 510, scale: 125.0, rotation: 0, yOffset: -30 },
+            
+            // East edge mountains - straddling the +500 boundary
+            { x: 500, z: -300, scale: 105.0, rotation: Math.PI * 0.5, yOffset: -20 },
+            { x: 520, z: -100, scale: 115.0, rotation: Math.PI * 0.75, yOffset: -25 },
+            { x: 500, z: 100, scale: 110.0, rotation: Math.PI, yOffset: -20 },
+            { x: 510, z: 300, scale: 120.0, rotation: Math.PI * 1.25, yOffset: -30 },
+            
+            // West edge mountains - straddling the -500 boundary
+            { x: -500, z: -300, scale: 110.0, rotation: Math.PI * 1.75, yOffset: -25 },
+            { x: -520, z: -100, scale: 125.0, rotation: 0, yOffset: -30 },
+            { x: -500, z: 100, scale: 115.0, rotation: Math.PI * 0.25, yOffset: -25 },
+            { x: -510, z: 300, scale: 135.0, rotation: Math.PI * 0.5, yOffset: -35 },
+            
+            // Corner mountains for dramatic effect
+            { x: -500, z: -500, scale: 150.0, rotation: Math.PI * 0.125, yOffset: -40 },
+            { x: 500, z: -500, scale: 145.0, rotation: Math.PI * 0.375, yOffset: -40 },
+            { x: 500, z: 500, scale: 155.0, rotation: Math.PI * 0.625, yOffset: -45 },
+            { x: -500, z: 500, scale: 140.0, rotation: Math.PI * 0.875, yOffset: -35 }
+        ];
+        
+        // Create mountain instances
+        mountainPlacements.forEach((placement, index) => {
+            const mountainType = index % 2 === 0 ? 'mountain1' : 'mountain2';
+            const model = this.models.mountains[mountainType];
+            
+            if (!model) return;
+            
+            // Clone the model
+            const mountainGroup = model.clone();
+            
+            // Apply transformations with y offset for partial burial
+            mountainGroup.position.set(placement.x, placement.yOffset || 0, placement.z);
+            mountainGroup.rotation.y = placement.rotation;
+            mountainGroup.scale.setScalar(placement.scale);
+            
+            // Apply LOD based on distance from center
+            const distance = Math.sqrt(placement.x * placement.x + placement.z * placement.z);
+            
+            // Simple LOD - reduce detail for far mountains
+            mountainGroup.traverse(child => {
+                if (child.isMesh) {
+                    child.castShadow = false; // Mountains don't cast shadows (too far)
+                    child.receiveShadow = true;
+                    
+                    // Add fog material adjustment
+                    if (child.material) {
+                        child.material = child.material.clone();
+                        child.material.fog = true;
+                        
+                        // Slightly blue tint for atmospheric perspective
+                        if (distance > 600) {
+                            child.material.color.lerp(new THREE.Color(0x87CEEB), 0.2);
+                        }
+                    }
+                }
+            });
+            
+            this.scene.add(mountainGroup);
+            mountainInstances.push(mountainGroup);
+        });
+        
+        // Add rolling hills using improved placement
+        const hillFormations = [
+            // Create hill ranges between mountains
+            { start: { x: -400, z: -400 }, end: { x: -200, z: -450 }, count: 5 },
+            { start: { x: 200, z: -450 }, end: { x: 400, z: -400 }, count: 5 },
+            { start: { x: -400, z: 400 }, end: { x: -200, z: 450 }, count: 5 },
+            { start: { x: 200, z: 450 }, end: { x: 400, z: 400 }, count: 5 },
+            // Side ranges
+            { start: { x: -450, z: -200 }, end: { x: -400, z: 200 }, count: 6 },
+            { start: { x: 450, z: -200 }, end: { x: 400, z: 200 }, count: 6 }
+        ];
+        
+        hillFormations.forEach(formation => {
+            for (let i = 0; i < formation.count; i++) {
+                const t = i / (formation.count - 1);
+                const x = formation.start.x + (formation.end.x - formation.start.x) * t;
+                const z = formation.start.z + (formation.end.z - formation.start.z) * t;
+                
+                // Add some randomness to position
+                const offsetX = (Math.random() - 0.5) * 60;
+                const offsetZ = (Math.random() - 0.5) * 60;
+                
+                const finalX = x + offsetX;
+                const finalZ = z + offsetZ;
+                
+                // Scale hills appropriately
+                const scale = 40.0 + Math.random() * 40.0;
+                const mountainType = Math.random() < 0.5 ? 'mountain1' : 'mountain2';
+            const model = this.models.mountains[mountainType];
+            
+            if (!model) continue;
+            
+                const hill = model.clone();
+                hill.position.set(finalX, -scale * 0.4, finalZ); // Partially bury hills
+                hill.rotation.y = Math.random() * Math.PI * 2;
+                hill.scale.setScalar(scale);
+            
+                hill.traverse(child => {
+                    if (child.isMesh) {
+                        child.castShadow = false;
+                        child.receiveShadow = true;
+                        
+                        if (child.material) {
+                            child.material = child.material.clone();
+                            child.material.fog = true;
+                            child.material.color.lerp(new THREE.Color(0x87CEEB), 0.2);
+                        }
+                    }
+                });
+                
+                this.scene.add(hill);
+                mountainInstances.push(hill);
+            }
+        });
+        
+        this.mountains = mountainInstances;
+        console.log(`🏔️ Created ${mountainInstances.length} mountain instances`);
+        
+        return mountainInstances;
+    }
+    
     /**
      * Remove all existing trees from the scene
      */

@@ -19,7 +19,11 @@
       "Bash(python3:*)",
       "Bash(kill:*)",
       "Bash(rm:*)",
-      "Bash(powershell.exe:*)"
+      "Bash(powershell.exe:*)",
+      "Bash(sudo ln:*)",
+      "Bash(echo $PATH)",
+      "Bash(claude --version)",
+      "Bash(cmd.exe:*)"
     ],
     "deny": []
   }

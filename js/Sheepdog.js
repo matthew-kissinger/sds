@@ -200,7 +200,7 @@ export class Sheepdog {
                 fog: false
             }),
             amberPupil: new THREE.MeshBasicMaterial({
-                color: 0x8B4513, // Warm amber/brown eyes for Rauri
+                color: 0x000000, // Black eyes for Rauri
                 fog: false
             }),
             tongue: new THREE.MeshToonMaterial({
@@ -310,12 +310,17 @@ export class Sheepdog {
         headGroup.add(leftEye);
         
         const leftPupil = new THREE.Mesh(geom.pupil, pupilMat);
-        // Jep has closer pupils, Rauri needs them more forward
-        leftPupil.position.set(-0.15, 0.12, isRauri ? 0.35 : 0.29);
-        leftPupil.renderOrder = 1; // Ensure pupils render on top
-        if (!isRauri) {
+        // Adjust pupil position for each dog type
+        if (isPip) {
+            leftPupil.position.set(-0.15, 0.12, 0.32); // More forward for Pip
+            leftPupil.scale.set(0.5, 0.5, 0.5);
+        } else if (isRauri) {
+            leftPupil.position.set(-0.15, 0.12, 0.35);
+        } else {
+            leftPupil.position.set(-0.15, 0.12, 0.29);
             leftPupil.scale.set(0.7, 0.7, 0.7);
         }
+        leftPupil.renderOrder = 1; // Ensure pupils render on top
         headGroup.add(leftPupil);
         
         const rightEye = new THREE.Mesh(geom.eye, mat.eye);
@@ -327,12 +332,17 @@ export class Sheepdog {
         headGroup.add(rightEye);
         
         const rightPupil = new THREE.Mesh(geom.pupil, pupilMat);
-        // Jep has closer pupils, Rauri needs them more forward
-        rightPupil.position.set(0.15, 0.12, isRauri ? 0.35 : 0.29);
-        rightPupil.renderOrder = 1; // Ensure pupils render on top
-        if (!isRauri) {
+        // Adjust pupil position for each dog type
+        if (isPip) {
+            rightPupil.position.set(0.15, 0.12, 0.32); // More forward for Pip
+            rightPupil.scale.set(0.5, 0.5, 0.5);
+        } else if (isRauri) {
+            rightPupil.position.set(0.15, 0.12, 0.35);
+        } else {
+            rightPupil.position.set(0.15, 0.12, 0.29);
             rightPupil.scale.set(0.7, 0.7, 0.7);
         }
+        rightPupil.renderOrder = 1; // Ensure pupils render on top
         headGroup.add(rightPupil);
         
         // EARS
@@ -442,8 +452,8 @@ export class Sheepdog {
             if (isRauri) {
                 leg.scale.set(1.1, 0.7, 1.1); // Thicker legs
             } else if (isPip) {
-                leg.scale.set(1.3, 0.4, 1.3); // Very short, thick Corgi legs
-                leg.position.y = -0.1; // Higher up due to shorter legs
+                leg.scale.set(1.3, 0.6, 1.3); // Short, thick Corgi legs (slightly longer)
+                leg.position.y = -0.15; // Lower to ground
             } else {
                 leg.scale.set(1, 0.7, 1); // Make legs shorter
             }
@@ -453,8 +463,8 @@ export class Sheepdog {
             if (isRauri || (isPip && i < 2) || (!isPip && !isRauri && i < 2)) {
                 const sock = new THREE.Mesh(geom.leg, mat.whiteFur);
                 if (isPip) {
-                    sock.position.y = -0.12; // Adjusted for shorter legs
-                    sock.scale.set(1.4, 0.3, 1.4);
+                    sock.position.y = -0.2; // Adjusted for longer legs
+                    sock.scale.set(1.4, 0.4, 1.4);
                 } else {
                     sock.position.y = -0.22;
                     sock.scale.set(1.1, 0.4, 1.1);
@@ -466,7 +476,7 @@ export class Sheepdog {
             const pawMat = isRauri ? mat.speckledFur : mainFurMat;
             const paw = new THREE.Mesh(geom.paw, pawMat);
             if (isPip) {
-                paw.position.y = -0.18; // Higher due to shorter legs
+                paw.position.y = -0.3; // Lower to ground
                 paw.scale.set(1, 1, 1); // Bigger paws for Corgi
             } else {
                 paw.position.y = -0.32;
@@ -489,7 +499,7 @@ export class Sheepdog {
         
         // Adjust body height based on dog type
         if (isPip) {
-            bodyGroup.position.y = 0.4; // Lower body for short legs
+            bodyGroup.position.y = 0.5; // Slightly higher body to accommodate longer legs
         } else {
             bodyGroup.position.y = 0.6;
         }
@@ -726,7 +736,7 @@ export class Sheepdog {
             // Body bounce (more intense when sprinting)
             const bounceIntensity = this.isSprinting ? 0.1 : 0.06;
             const bounce = Math.sin(this.runCycle * 2) * speedNormalized * bounceIntensity;
-            const baseHeight = this.dogType === 'pip' ? 0.4 : 0.6;
+            const baseHeight = this.dogType === 'pip' ? 0.5 : 0.6;
             this.animatedParts.body.position.y = baseHeight + bounce;
             
             // Body lean forward when running (more when sprinting)
@@ -929,7 +939,7 @@ export class Sheepdog {
             
             // Slight body breathing
             const breathe = Math.sin(this.animationTime * 2) * 0.02;
-            const baseHeight = this.dogType === 'pip' ? 0.4 : 0.6;
+            const baseHeight = this.dogType === 'pip' ? 0.5 : 0.6;
             this.animatedParts.body.position.y = baseHeight + breathe;
         }
     }
