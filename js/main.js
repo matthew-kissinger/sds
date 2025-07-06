@@ -126,6 +126,9 @@ class SheepDogSimulation {
         await this.terrainBuilder.addEnvironmentDetails();
         await this.terrainBuilder.addMountains();
         
+        // Add farm house
+        await this.terrainBuilder.addFarmHouse();
+        
         // Create structures using new modular system
         this.structureBuilder.buildSinglePlayerStructures(
             this.gameState.getBounds(),

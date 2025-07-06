@@ -1,0 +1,12 @@
+# No external Python packages required
+# Built-in modules used:
+# - os
+# - json
+# - subprocess
+# - shutil
+# - pathlib
+# - re
+
+# External dependency (not Python):
+# - FFmpeg (command-line tool)
+#   Install from: https://ffmpeg.org/download.html

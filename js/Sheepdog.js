@@ -104,7 +104,7 @@ export class Sheepdog {
         
         // Audio tracking
         this.lastBarkTime = 0;
-        this.barkCooldown = 2000; // 2 seconds between barks
+        this.barkCooldown = 3000; // Increased from 2 seconds to 3 seconds between barks
         this.nearSheep = false; // Track if dog is near sheep for barking
         
         // Initialize shared resources
@@ -1046,4 +1046,4 @@ export class Sheepdog {
             }
         }
     }
-} 
+}

@@ -60,8 +60,8 @@ export class AudioManager {
         this.soundVolumeMultipliers = {
             uiClick: 1.0,
             rewardingChime: 1.0,
-            sheepBleats: 0.5,        // 50% lower than normal
-            dogBarks: 0.5,           // 50% lower than normal
+            sheepBleats: 0.25,       // Reduced from 0.5 to 0.25 (75% quieter)
+            dogBarks: 0.25,          // Reduced from 0.5 to 0.25 (75% quieter)
             scoreSound: 0.8,        // Scoring sound
             opponentScoreSound: 0.6, // Opponent scoring (quieter)
             winSound: 1.0,          // Victory sound
@@ -81,9 +81,9 @@ export class AudioManager {
             opponentScoreSound: 0
         };
         this.cooldowns = {
-            sheepBleats: 500, // 500ms cooldown
-            dogBarks: 300, // 300ms cooldown
-            scoreSound: 200, // 200ms cooldown for scoring sounds
+            sheepBleats: 1500, // Increased from 500ms to 1500ms (3x less frequent)
+            dogBarks: 1000,    // Increased from 300ms to 1000ms (3x less frequent)
+            scoreSound: 200,   // 200ms cooldown for scoring sounds
             opponentScoreSound: 200
         };
         
@@ -99,28 +99,28 @@ export class AudioManager {
      */
     loadSounds() {
         const soundFiles = {
-            uiClick: 'assets/sounds/11L-clean_UI_click,_wood-1748393658157.mp3',
-            rewardingChime: 'assets/sounds/11L-short_rewarding_chim-1748393597911.mp3',
+            uiClick: 'assets/sounds_compressed/ui_click.mp3',
+            rewardingChime: 'assets/sounds_compressed/rewarding_chime.mp3',
             // Competitive mode sounds
-            scoreSound: 'assets/sounds/score.mp3',
-            opponentScoreSound: 'assets/sounds/opponent_score.mp3',
-            winSound: 'assets/sounds/win.wav',
-            loseSound: 'assets/sounds/lose_comp.mp3'
+            scoreSound: 'assets/sounds_compressed/effect_score.mp3',
+            opponentScoreSound: 'assets/sounds_compressed/effect_opponent_score.mp3',
+            winSound: 'assets/sounds_compressed/music_victory.mp3',
+            loseSound: 'assets/sounds_compressed/effect_lose.mp3'
         };
 
         // Multiple sheep bleat sound files for variety
         const sheepBleatFiles = [
-            'assets/sounds/11L-agitated_sheep_bleat-1748393501154.mp3',
-            'assets/sounds/11L-Short_sheep_bleat,_c-1749516139042.mp3',
-            'assets/sounds/11L-Short_cartoon_sheep_-1749516345212.mp3',
-            'assets/sounds/11L-Short,_cheerful_shee-1749516791666.mp3'
+            'assets/sounds_compressed/sheep_bleat_agitated.mp3',
+            'assets/sounds_compressed/sheep_bleat_short.mp3',
+            'assets/sounds_compressed/sheep_bleat_cartoon.mp3',
+            'assets/sounds_compressed/sheep_bleat_cheerful.mp3'
         ];
 
         // Dog-specific bark sound files
         const dogBarkFiles = {
-            jep: 'assets/sounds/11L-short_sharp_sheep_do-1748393459422.mp3',
-            pip: 'assets/sounds/pip_bark.mp3',
-            rauri: 'assets/sounds/rauri_bark.mp3'
+            jep: 'assets/sounds_compressed/dog_bark_jep.mp3',
+            pip: 'assets/sounds_compressed/dog_bark_pip.mp3',
+            rauri: 'assets/sounds_compressed/dog_bark_rauri.mp3'
         };
         
         // Load regular sound files
@@ -248,15 +248,15 @@ export class AudioManager {
      */
     loadMusic() {
         const musicFiles = {
-            startMusic: 'assets/sounds/SDS Start Music.wav',
-            gameplay1: 'assets/sounds/SDS1.wav',
-            gameplay2: 'assets/sounds/SDS2.wav',
-            gameplay3: 'assets/sounds/SDS3.wav',
-            winMusic: 'assets/sounds/win.wav',
+            startMusic: 'assets/sounds_compressed/music_start.mp3',
+            gameplay1: 'assets/sounds_compressed/music_gameplay_1.mp3',
+            gameplay2: 'assets/sounds_compressed/music_gameplay_2.mp3',
+            gameplay3: 'assets/sounds_compressed/music_gameplay_3.mp3',
+            winMusic: 'assets/sounds_compressed/music_victory.mp3',
             // Competitive mode music
-            competitive1: 'assets/sounds/comp1.wav',
-            competitive2: 'assets/sounds/comp2.wav',
-            competitiveEndgame: 'assets/sounds/comp_endgame.wav'
+            competitive1: 'assets/sounds_compressed/music_competitive_1.mp3',
+            competitive2: 'assets/sounds_compressed/music_competitive_2.mp3',
+            competitiveEndgame: 'assets/sounds_compressed/music_competitive_endgame.mp3'
         };
         
         // Load each music track
@@ -793,4 +793,4 @@ export class AudioManager {
     getAudioContextState() {
         return this.listener.context.state;
     }
-} 
+}

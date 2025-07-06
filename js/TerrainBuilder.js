@@ -20,6 +20,9 @@ export class TerrainBuilder {
             mountains: [
                 { name: 'mountain1', path: '/assets/models/Mountain_Group_1.glb' },
                 { name: 'mountain2', path: '/assets/models/Mountain_Group_2.glb' }
+            ],
+            buildings: [
+                { name: 'farmhouse', path: '/assets/models/Farm house.glb' }
             ]
         };
         
@@ -61,6 +64,18 @@ export class TerrainBuilder {
             );
         }
         
+        // Load building models
+        for (const model of modelPaths.buildings) {
+            loadPromises.push(
+                this.loader.loadAsync(model.path).then(gltf => {
+                    this.models.buildings[model.name] = gltf.scene;
+                    console.log(`✅ Loaded building model: ${model.name}`);
+                }).catch(err => {
+                    console.error(`❌ Failed to load building model ${model.name}:`, err);
+                })
+            );
+        }
+        
         await Promise.all(loadPromises);
         this.modelsLoaded = true;
         console.log('🎨 All models loaded successfully!');
@@ -90,13 +105,15 @@ export class TerrainBuilder {
         this.trees = []; // Track trees for removal
         this.rocks = []; // Track rocks for removal
         this.mountains = []; // Track mountains
+        this.buildings = []; // Track buildings
         
         // Model loading
         this.loader = new GLTFLoader();
         this.models = {
             trees: {},
             rocks: {},
-            mountains: {}
+            mountains: {},
+            buildings: {}
         };
         this.modelsLoaded = false;
         
@@ -107,6 +124,15 @@ export class TerrainBuilder {
             midField: { minX: -400, maxX: 400, minZ: -400, maxZ: 400 },
             farField: { minX: -600, maxX: 600, minZ: -600, maxZ: 600 },
             horizon: { minX: -800, maxX: 800, minZ: -800, maxZ: 800 }
+        };
+        
+        // Farm house position and exclusion area
+        this.farmHousePosition = { x: 180, z: 160 }; // Northwest corner behind pen, farther back
+        this.farmHouseExclusionArea = {
+            minX: 140,
+            maxX: 220,
+            minZ: 120,
+            maxZ: 200
         };
     }
     
@@ -233,6 +259,11 @@ export class TerrainBuilder {
                 continue;
             }
             
+            // Skip grass in the farm house area
+            if (this.isInFarmHouseArea(x, z)) {
+                continue;
+            }
+            
             dummy.position.set(x, 0, z);
             
             // Random scale and rotation with distance-based scaling
@@ -316,6 +347,9 @@ export class TerrainBuilder {
                 
                 // Check play area
                 if (Math.abs(x) < 120 && Math.abs(z) < 120) return false;
+                
+                // Check farm house area
+                if (this.isInFarmHouseArea(x, z)) return false;
                 
                 // Check grid neighbors
                 const gridX = Math.floor(x / cellSize);
@@ -567,12 +601,18 @@ export class TerrainBuilder {
                 // Skip if in play area
                 if (Math.abs(centerX) < 150 && Math.abs(centerZ) < 150) continue;
                 
+                // Skip if in farm house area
+                if (this.isInFarmHouseArea(centerX, centerZ)) continue;
+                
                 const formationType = types[Math.floor(Math.random() * types.length)];
                 const formation = createRockFormation(centerX, centerZ, formationType);
                 
                 formation.forEach(rock => {
                     // Skip if too close to play area
                     if (Math.abs(rock.x) < 120 && Math.abs(rock.z) < 120) return;
+                    
+                    // Skip if in farm house area
+                    if (this.isInFarmHouseArea(rock.x, rock.z)) return;
                     
                     // Determine rock type based on size
                     const size = Math.random();
@@ -825,5 +865,66 @@ export class TerrainBuilder {
         });
         
         this.trees = []; // Clear the tracking array
+    }
+    
+    /**
+     * Add farm house to the scene in the northwest corner
+     */
+    async addFarmHouse() {
+        if (!this.modelsLoaded) {
+            console.warn('Models not loaded yet. Loading models...');
+            await this.loadModels();
+        }
+        
+        const farmHouseModel = this.models.buildings.farmhouse;
+        if (!farmHouseModel) {
+            console.error('❌ Farm house model not found');
+            return null;
+        }
+        
+        // Clone the farm house model
+        const farmHouse = farmHouseModel.clone();
+        
+        // Position the farm house in the northwest corner
+        // Behind the pen (positive Z relative to gate) and to the left (negative X)
+        farmHouse.position.set(this.farmHousePosition.x, 0, this.farmHousePosition.z);
+        
+        // Scale the farm house appropriately - smaller and more realistic
+        const scale = 1.0; // Further reduced for better proportions (2x smaller)
+        farmHouse.scale.setScalar(scale);
+        
+        // Rotate to face the pen area - facing southeast toward the pen
+        farmHouse.rotation.y = Math.PI * 1.25; // 225-degree rotation to face southeast
+        
+        // Configure shadows and materials
+        farmHouse.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                
+                // Ensure materials work with fog
+                if (child.material) {
+                    child.material.fog = true;
+                }
+            }
+        });
+        
+        // Add to scene
+        this.scene.add(farmHouse);
+        this.buildings.push(farmHouse);
+        
+        console.log(`🏠 Farm house added at position (${this.farmHousePosition.x}, ${this.farmHousePosition.z}) with clearing area`);
+        
+        return farmHouse;
+    }
+    
+    /**
+     * Check if a position is within the farm house exclusion area
+     */
+    isInFarmHouseArea(x, z) {
+        return x >= this.farmHouseExclusionArea.minX && 
+               x <= this.farmHouseExclusionArea.maxX && 
+               z >= this.farmHouseExclusionArea.minZ && 
+               z <= this.farmHouseExclusionArea.maxZ;
     }
 } 
