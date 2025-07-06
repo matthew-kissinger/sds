@@ -589,8 +589,8 @@ export class OptimizedSheepInstance extends Boid {
                 if (distanceToTarget < 2) {
                     // Sheep has reached its retirement spot - enter grazing mode
                     this.retirementTarget = null; // Clear target to enter grazing mode
-                    this.maxSpeed = 0.02; // Very slow grazing speed
-                    this.maxForce = 0.005; // Gentle forces
+                    this.maxSpeed = 0.03; // Slow but visible grazing speed
+                    this.maxForce = 0.008; // Gentle forces
                     this.state = 2; // Set to grazing state
                 } else {
                     // Still moving to retirement spot
@@ -598,23 +598,32 @@ export class OptimizedSheepInstance extends Boid {
                     this.applyForce(seekForce);
                 }
             } else {
-                // Grazing behavior - gentle wandering
-                this.animationPhase += 0.016;
+                // Grazing behavior - slow wandering around the pasture
+                // Slower animation for peaceful grazing
+                this.animationPhase += 0.008; // Slower than normal but not too slow
                 
-                // Occasional gentle movement
-                if (Math.random() < 0.002) { // 0.2% chance per frame to start moving
+                // Create a gentle wandering behavior with more frequent but subtle movement
+                if (Math.random() < 0.005) { // 0.5% chance per frame - more frequent wandering
                     const wanderDirection = Vector2D.random();
-                    wanderDirection.multiply(0.5); // Gentle movement
+                    wanderDirection.multiply(0.3); // Gentle but noticeable movement
                     this.applyForce(wanderDirection);
                 }
                 
-                // Stay within pasture bounds with gentle forces
+                // Add some variation to prevent all sheep moving in sync
+                if (Math.random() < 0.001 * (this.id % 3 + 1)) { // Variable timing based on sheep ID
+                    // Small directional changes to make movement more natural
+                    const changeDirection = Vector2D.random();
+                    changeDirection.multiply(0.15);
+                    this.applyForce(changeDirection);
+                }
+                
+                // Stay within pasture bounds with gentle steering
                 if (pasture) {
-                    const pastureMargin = 2;
+                    const pastureMargin = 3; // Slightly larger margin for more natural movement
                     const steer = new Vector2D(0, 0);
                     
                     if (this.position.x < pasture.minX + pastureMargin) {
-                        steer.x = 0.01;
+                        steer.x = 0.01; // Gentle but effective steering
                     } else if (this.position.x > pasture.maxX - pastureMargin) {
                         steer.x = -0.01;
                     }
@@ -629,6 +638,9 @@ export class OptimizedSheepInstance extends Boid {
                         this.applyForce(steer);
                     }
                 }
+                
+                // Apply drag to keep movement calm and controlled
+                this.velocity.multiply(0.95); // Gradual slowdown for peaceful grazing
             }
             return;
         }
@@ -639,7 +651,7 @@ export class OptimizedSheepInstance extends Boid {
             this.state = 1; // retiring
             this.retirementTarget = new Vector2D(
                 pasture.minX + Math.random() * (pasture.maxX - pasture.minX),
-                pasture.centerZ + Math.random() * 20
+                pasture.minZ + Math.random() * (pasture.maxZ - pasture.minZ) // Spread across entire pasture depth
             );
             this.maxSpeed *= 0.5;  // Half speed for retiring sheep
             this.maxForce *= 0.5;
@@ -737,54 +749,75 @@ export class OptimizedSheepInstance extends Boid {
         // Standard Boid update
         super.update(deltaTime); // This updates this.position and this.velocity
         
-        // HARD BOUNDARY CONSTRAINT - Apply only to sheep that haven't passed the gate
-        if (this.bounds && !this.hasPassedGate) {
+        // HARD BOUNDARY CONSTRAINT - Apply different logic based on sheep state
+        if (this.bounds) {
             const margin = 0.2; // Small margin from edge
             
-            // Check if sheep is in any gate area (allow passage through any gate)
-            let inAnyGateArea = false;
-            let currentGateConstraints = null;
-            
-            // For competitive mode, we need to check all possible gate areas
-            // This is a simplified check - in practice, gate areas should be passed from game state
-            const possibleGateAreas = [
-                // Default cooperative gate (North)
-                { minX: -4, maxX: 4, minZ: 98, maxZ: 102 },
-                // Additional competitive gates
-                { minX: -4, maxX: 4, minZ: -102, maxZ: -98 }, // South
-                { minX: 98, maxX: 102, minZ: -4, maxZ: 4 },   // East
-                { minX: -102, maxX: -98, minZ: -4, maxZ: 4 }, // West
-                // Diagonal gates for 3-player mode
-                { minX: 68, maxX: 72, minZ: -72, maxZ: -68 },  // Southeast
-                { minX: -72, maxX: -68, minZ: -72, maxZ: -68 } // Southwest
-            ];
-            
-            for (const gateArea of possibleGateAreas) {
-                if (this.position.x >= gateArea.minX && this.position.x <= gateArea.maxX &&
-                    this.position.z >= gateArea.minZ && this.position.z <= gateArea.maxZ) {
-                    inAnyGateArea = true;
-                    currentGateConstraints = gateArea;
-                    break;
-                }
-            }
-            
-            // Apply hard constraints unless in gate area
-            if (!inAnyGateArea) {
-                this.position.x = Math.max(this.bounds.minX + margin, Math.min(this.bounds.maxX - margin, this.position.x));
-                this.position.z = Math.max(this.bounds.minZ + margin, Math.min(this.bounds.maxZ - margin, this.position.z));
-            } else if (currentGateConstraints) {
-                // In gate area - apply gate-specific constraints
-                const gateWidth = currentGateConstraints.maxX - currentGateConstraints.minX;
-                const gateDepth = currentGateConstraints.maxZ - currentGateConstraints.minZ;
+            if (!this.hasPassedGate) {
+                // Pre-gate sheep: constrain to main field with gate area exceptions
                 
-                if (gateWidth > gateDepth) {
-                    // Horizontal gate - constrain X to gate width, allow Z movement
-                    this.position.x = Math.max(currentGateConstraints.minX, Math.min(currentGateConstraints.maxX, this.position.x));
-                } else {
-                    // Vertical gate - constrain Z to gate depth, allow X movement
-                    this.position.z = Math.max(currentGateConstraints.minZ, Math.min(currentGateConstraints.maxZ, this.position.z));
+                // Check if sheep is in any gate area (allow passage through any gate)
+                let inAnyGateArea = false;
+                let currentGateConstraints = null;
+                
+                // For competitive mode, we need to check all possible gate areas
+                // This is a simplified check - in practice, gate areas should be passed from game state
+                const possibleGateAreas = [
+                    // Default cooperative gate (North)
+                    { minX: -4, maxX: 4, minZ: 98, maxZ: 102 },
+                    // Additional competitive gates
+                    { minX: -4, maxX: 4, minZ: -102, maxZ: -98 }, // South
+                    { minX: 98, maxX: 102, minZ: -4, maxZ: 4 },   // East
+                    { minX: -102, maxX: -98, minZ: -4, maxZ: 4 }, // West
+                    // Diagonal gates for 3-player mode
+                    { minX: 68, maxX: 72, minZ: -72, maxZ: -68 },  // Southeast
+                    { minX: -72, maxX: -68, minZ: -72, maxZ: -68 } // Southwest
+                ];
+                
+                for (const gateArea of possibleGateAreas) {
+                    if (this.position.x >= gateArea.minX && this.position.x <= gateArea.maxX &&
+                        this.position.z >= gateArea.minZ && this.position.z <= gateArea.maxZ) {
+                        inAnyGateArea = true;
+                        currentGateConstraints = gateArea;
+                        break;
+                    }
                 }
+                
+                // Apply hard constraints unless in gate area
+                if (!inAnyGateArea) {
+                    this.position.x = Math.max(this.bounds.minX + margin, Math.min(this.bounds.maxX - margin, this.position.x));
+                    this.position.z = Math.max(this.bounds.minZ + margin, Math.min(this.bounds.maxZ - margin, this.position.z));
+                } else if (currentGateConstraints) {
+                    // In gate area - apply gate-specific constraints
+                    const gateWidth = currentGateConstraints.maxX - currentGateConstraints.minX;
+                    const gateDepth = currentGateConstraints.maxZ - currentGateConstraints.minZ;
+                    
+                    if (gateWidth > gateDepth) {
+                        // Horizontal gate - constrain X to gate width, allow Z movement
+                        this.position.x = Math.max(currentGateConstraints.minX, Math.min(currentGateConstraints.maxX, this.position.x));
+                    } else {
+                        // Vertical gate - constrain Z to gate depth, allow X movement
+                        this.position.z = Math.max(currentGateConstraints.minZ, Math.min(currentGateConstraints.maxZ, this.position.z));
+                    }
+                }
+            } else if (this.isRetiring || this.state === 2) {
+                // Post-gate retiring and grazing sheep: keep them in the pasture area
+                
+                // Define the standard pasture bounds matching GameState.js values
+                // Use the actual pasture side wall constraints from GameState
+                const pastureBounds = {
+                    minX: -30,  // Matches GameState.js pasture.minX
+                    maxX: 30,   // Matches GameState.js pasture.maxX  
+                    minZ: 102,  // Just beyond the gate
+                    maxZ: 115   // Reduced to match the actual fence depth, not the full GameState pasture
+                };
+                
+                // Constrain retiring and grazing sheep to stay within the pasture area
+                this.position.x = Math.max(pastureBounds.minX + margin, Math.min(pastureBounds.maxX - margin, this.position.x));
+                this.position.z = Math.max(pastureBounds.minZ + margin, Math.min(pastureBounds.maxZ - margin, this.position.z));
             }
+            // Note: sheep that are not retiring and have passed the gate (state 2, grazing) 
+            // are already handled by the gentle boundary forces in their behavior update
         }
         
         // NaN/Infinity checks for velocity and position
@@ -1076,4 +1109,4 @@ export class OptimizedSheepInstance extends Boid {
     setAudioManager(audioManager) {
         this.audioManager = audioManager;
     }
-} 
+}
