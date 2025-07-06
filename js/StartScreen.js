@@ -658,17 +658,11 @@ export class StartScreen {
     }
     
     setupMusicActivation() {
-        const handleStartScreenClick = (event) => {
-            // Don't trigger music if clicking buttons
-            if (event.target.closest('button') || event.target.closest('input') || event.target.closest('select')) {
-                return;
-            }
-            
-            if (this.audioManager && this.isActive) {
-                this.audioManager.triggerStartMusic();
-                if (this.musicNote) {
-                    this.musicNote.style.display = 'none';
-                }
+        // Simplified music activation - the AudioManager handles activation automatically
+        // Just hide the music note on any interaction
+        const handleStartScreenClick = () => {
+            if (this.musicNote && this.isActive) {
+                this.musicNote.style.display = 'none';
             }
         };
         
@@ -738,4 +732,4 @@ export class StartScreen {
         this.cinematicCamera.angle = 0;
         this.setupCinematicCamera();
     }
-} 
+}

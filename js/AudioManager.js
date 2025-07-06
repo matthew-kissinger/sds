@@ -324,10 +324,32 @@ export class AudioManager {
     
     /**
      * Play UI click sound
+     * Ensures audio context is activated and sound is ready to play
      */
     playUIClick() {
-        if (this.sounds.uiClick && !this.sounds.uiClick.isPlaying) {
-            this.sounds.uiClick.play();
+        // Ensure audio context is activated on user interaction
+        if (!this.audioContextActivated && this.listener.context.state === 'suspended') {
+            this.listener.context.resume().then(() => {
+                this.audioContextActivated = true;
+                console.log('Audio context activated via UI click');
+                
+                // Start music if not already playing
+                if (this.musicLoaded && !this.currentMusic) {
+                    this.playStartMusic();
+                }
+                
+                // Play the click sound after activation
+                if (this.sounds.uiClick && !this.sounds.uiClick.isPlaying) {
+                    this.sounds.uiClick.play();
+                }
+            }).catch((error) => {
+                console.warn('Failed to activate audio context on UI click:', error);
+            });
+        } else {
+            // Audio context is ready, play immediately
+            if (this.sounds.uiClick && !this.sounds.uiClick.isPlaying) {
+                this.sounds.uiClick.play();
+            }
         }
     }
     
@@ -744,38 +766,40 @@ export class AudioManager {
     
     /**
      * Set up audio context activation on user interaction
+     * Modern web audio best practice: activate on ANY user interaction
      */
     setupAudioContextActivation() {
         this.audioContextActivated = false;
         
-        const activateAudio = (event) => {
+        const activateAudio = () => {
             if (this.listener.context.state === 'suspended') {
                 this.listener.context.resume().then(() => {
                     console.log('Audio context activated');
                     this.audioContextActivated = true;
                     
-                    // Only start music if this wasn't the start button click
-                    const isStartButton = event.target && (
-                        event.target.id === 'start-button' || 
-                        event.target.closest('#start-button')
-                    );
-                    
-                    if (this.musicLoaded && !this.currentMusic && !isStartButton) {
+                    // Start music if we're on the start screen and music is loaded
+                    if (this.musicLoaded && !this.currentMusic) {
                         this.playStartMusic();
                     }
+                }).catch((error) => {
+                    console.warn('Failed to activate audio context:', error);
                 });
             } else {
                 this.audioContextActivated = true;
+                
+                // Start music if we're on the start screen and music is loaded
+                if (this.musicLoaded && !this.currentMusic) {
+                    this.playStartMusic();
+                }
             }
-            
-            // Remove listeners after first activation
-            document.removeEventListener('click', activateAudio);
-            document.removeEventListener('keydown', activateAudio);
         };
         
-        // Listen for any user interaction
-        document.addEventListener('click', activateAudio);
-        document.addEventListener('keydown', activateAudio);
+        // Listen for any user interaction (modern web audio best practice)
+        // Keep listeners active throughout the session for robustness
+        const interactionEvents = ['click', 'keydown', 'touchstart'];
+        interactionEvents.forEach(eventType => {
+            document.addEventListener(eventType, activateAudio, { once: true });
+        });
     }
     
     /**
