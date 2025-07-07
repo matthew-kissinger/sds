@@ -8,11 +8,17 @@ import { Vector2D } from './Vector2D.js';
 export class SceneManager {
     constructor() {
         this.scene = new THREE.Scene();
+        
+        // Mobile-optimized camera parameters to prevent clipping
+        this.isMobile = this.detectMobileDevice();
+        const near = this.isMobile ? 2.0 : 0.1;    // 20x safer near plane for mobile
+        const far = this.isMobile ? 500 : 1000;    // Better precision ratio for mobile
+        
         this.camera = new THREE.PerspectiveCamera(
             75, 
             window.innerWidth / window.innerHeight, 
-            0.1, 
-            1000
+            near, 
+            far
         );
         
         this.renderer = new THREE.WebGLRenderer({ 
@@ -34,9 +40,9 @@ export class SceneManager {
         
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         
-        // Camera control
+        // Camera control with mobile-optimized distances
         this.cameraDistance = 80;
-        this.minCameraDistance = 20;
+        this.minCameraDistance = this.isMobile ? 35 : 20;  // Safer minimum for mobile
         this.maxCameraDistance = 150;
         this.mobileControls = null;
         this.competitiveCameraDirection = null; // Store competitive gate direction for camera positioning
@@ -52,6 +58,23 @@ export class SceneManager {
         this.coloredMeshes = new Map(); // playerId -> array of meshes with applied colors
         
         this.init();
+        
+        // Log mobile camera optimization status
+        console.log(`🎥 Camera initialized for ${this.isMobile ? 'MOBILE' : 'DESKTOP'} device`);
+        console.log(`🎥 Camera parameters: near=${this.camera.near}, far=${this.camera.far}, minDistance=${this.minCameraDistance}`);
+    }
+    
+    /**
+     * Detect if the current device is mobile for camera optimization
+     * @returns {boolean} True if mobile device detected
+     */
+    detectMobileDevice() {
+        const userAgent = navigator.userAgent;
+        const isMobileUA = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const isSmallScreen = window.innerWidth <= 768 || window.innerHeight <= 768;
+        
+        return isMobileUA || (hasTouch && isSmallScreen);
     }
     
     init() {
@@ -517,4 +540,4 @@ export class SceneManager {
                 return movementDirection;
         }
     }
-} 
+}

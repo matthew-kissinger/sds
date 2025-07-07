@@ -37,7 +37,9 @@ const MobileZoomControl = () => {
   
   const handleZoomChange = (delta) => {
     setZoomLevel(prevZoom => {
-      const newZoom = Math.max(20, Math.min(150, prevZoom + delta));
+      // Use safer minimum zoom distance for mobile devices to prevent clipping
+      const minZoom = 35; // Increased from 20 to prevent camera clipping on mobile
+      const newZoom = Math.max(minZoom, Math.min(150, prevZoom + delta));
       
       // Update game camera
       if (window.gameInstance?.mobileControls?.onZoomChange) {
@@ -131,4 +133,4 @@ const MobileZoomControl = () => {
   );
 };
 
-export default MobileZoomControl; 
+export default MobileZoomControl;
