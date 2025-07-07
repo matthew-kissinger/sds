@@ -118,6 +118,7 @@ function initializeReactUI() {
         };
         
         return React.createElement('div', {
+            className: 'dog-selection-container',
             style: { 
                 animation: 'slideUp 0.8s ease-out 0.4s both',
                 background: 'rgba(255, 255, 255, 0.08)',
@@ -986,7 +987,7 @@ function initializeReactUI() {
                     
                 case 'dogSelection':
                     return React.createElement('div', {
-                        className: 'max-w-4xl w-full'
+                        className: 'max-w-4xl w-full dog-selection-wrapper'
                     }, [
                         React.createElement(DogSelection, {
                             key: 'selection',
@@ -996,7 +997,7 @@ function initializeReactUI() {
                         
                         React.createElement('div', {
                             key: 'buttons',
-                            className: 'flex gap-4 justify-center mt-8',
+                            className: 'flex gap-4 justify-center mt-8 dog-selection-buttons',
                             style: { animation: 'slideUp 0.8s ease-out 0.2s both' }
                         }, [
                             React.createElement('button', {
