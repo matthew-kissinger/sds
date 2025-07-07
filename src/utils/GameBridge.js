@@ -61,8 +61,11 @@ class GameBridge {
   
   // React → Game communication
   emit(event, data) {
+    console.log('🔥 GameBridge.emit called with event:', event, 'data:', data);
+    
     switch (event) {
       case 'start-game':
+        console.log('📢 GameBridge.emit: Handling start-game event');
         this.startGame(data);
         break;
       case 'pause-game':
@@ -70,6 +73,9 @@ class GameBridge {
         break;
       case 'select-dog':
         this.uiState.selectedDog = data.dogId;
+        if (window.gameInstance) {
+          window.gameInstance.selectDog(data.dogId);
+        }
         this.notify('dog-selected', data);
         break;
       case 'set-input-method':
@@ -101,34 +107,33 @@ class GameBridge {
   
   // Start game with selected options
   startGame(options = {}) {
-    if (!this.gameInstance) {
-      console.error('Game instance not set');
+    console.log('🎮 GameBridge.startGame called with options:', options);
+    
+    // Use the window.gameInstance which has the exposed methods
+    if (!window.gameInstance) {
+      console.error('Game instance not available on window');
       return;
     }
+    
+    console.log('✅ window.gameInstance found:', !!window.gameInstance);
+    console.log('✅ window.gameInstance.startSoloGame:', typeof window.gameInstance.startSoloGame);
     
     this.uiState.gameStarted = true;
     this.uiState.currentScreen = 'game';
     
-    // Hide start screen, show game
-    const startScreenEl = document.getElementById('start-screen');
-    if (startScreenEl) {
-      startScreenEl.style.display = 'none';
+    // Update selected dog state
+    if (options.dog) {
+      this.uiState.selectedDog = options.dog;
+      console.log('🐕 Setting selected dog:', options.dog);
+      window.gameInstance.selectDog(options.dog);
     }
     
-    // Show game UI
-    const gameUIs = document.querySelectorAll('.game-ui');
-    gameUIs.forEach(el => el.style.display = 'block');
-    
-    // Hide the original multiplayer HUD if React is handling it
-    const originalMultiplayerHUD = document.getElementById('multiplayer-hud');
-    if (originalMultiplayerHUD && this.gameInstance.multiplayerUI) {
-      originalMultiplayerHUD.style.display = 'none';
-      // Add class to body to indicate React is handling multiplayer
-      document.body.classList.add('react-multiplayer');
+    // Start the appropriate game mode
+    if (options.mode === 'solo') {
+      console.log('🚀 Starting solo game with dog:', this.uiState.selectedDog);
+      window.gameInstance.startSoloGame(this.uiState.selectedDog);
     }
-    
-    // Start the game with selected dog
-    this.gameInstance.startGame?.(this.uiState.selectedDog, options);
+    // Multiplayer handled differently - through room creation/joining
     
     this.notify('game-started', {
       dog: this.uiState.selectedDog,

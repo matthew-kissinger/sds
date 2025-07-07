@@ -9,10 +9,15 @@ const StartScreen = () => {
   const [showMusic, setShowMusic] = useState(true);
   
   const handleStartGame = () => {
+    console.log('🎮 React StartScreen: handleStartGame called');
+    console.log('🐕 Selected dog:', gameState.selectedDog);
+    
     emit('start-game', {
       mode: 'solo',
       dog: gameState.selectedDog
     });
+    
+    console.log('✅ React StartScreen: emit called');
   };
   
   const handleDogSelect = (dogId) => {

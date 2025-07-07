@@ -371,6 +371,9 @@ export class OptimizedSheepSystem {
             return;
         }
         
+        // Store competitive gates reference for sheep to access
+        this.competitiveGates = Array.isArray(gate) ? gate : null;
+        
         // Track sheep being chased for group audio
         let sheepBeingChased = 0;
         let shouldPlayGroupBleat = false;
@@ -378,6 +381,9 @@ export class OptimizedSheepSystem {
         // Update each sheep
         for (let i = 0; i < this.sheepCount; i++) {
             const sheep = this.sheep[i];
+            
+            // Provide competitive gates access to individual sheep
+            sheep.competitiveGates = this.competitiveGates;
             
             // Check if this sheep is being chased (before updating behavior)
             if (sheepdog && sheep.position) {
@@ -618,19 +624,21 @@ export class OptimizedSheepInstance extends Boid {
                 }
                 
                 // Stay within pasture bounds with gentle steering
-                if (pasture) {
+                // Use assigned pasture bounds instead of generic pasture
+                const assignedPastureBounds = this.getAssignedPastureBounds();
+                if (assignedPastureBounds) {
                     const pastureMargin = 3; // Slightly larger margin for more natural movement
                     const steer = new Vector2D(0, 0);
                     
-                    if (this.position.x < pasture.minX + pastureMargin) {
+                    if (this.position.x < assignedPastureBounds.minX + pastureMargin) {
                         steer.x = 0.01; // Gentle but effective steering
-                    } else if (this.position.x > pasture.maxX - pastureMargin) {
+                    } else if (this.position.x > assignedPastureBounds.maxX - pastureMargin) {
                         steer.x = -0.01;
                     }
                     
-                    if (this.position.z < pasture.minZ + pastureMargin) {
+                    if (this.position.z < assignedPastureBounds.minZ + pastureMargin) {
                         steer.z = 0.01;
-                    } else if (this.position.z > pasture.maxZ - pastureMargin) {
+                    } else if (this.position.z > assignedPastureBounds.maxZ - pastureMargin) {
                         steer.z = -0.01;
                     }
                     
@@ -801,18 +809,12 @@ export class OptimizedSheepInstance extends Boid {
                     }
                 }
             } else if (this.isRetiring || this.state === 2) {
-                // Post-gate retiring and grazing sheep: keep them in the pasture area
+                // Post-gate retiring and grazing sheep: keep them in the appropriate pasture area
                 
-                // Define the standard pasture bounds matching GameState.js values
-                // Use the actual pasture side wall constraints from GameState
-                const pastureBounds = {
-                    minX: -30,  // Matches GameState.js pasture.minX
-                    maxX: 30,   // Matches GameState.js pasture.maxX  
-                    minZ: 102,  // Just beyond the gate
-                    maxZ: 115   // Reduced to match the actual fence depth, not the full GameState pasture
-                };
+                // Get the correct pasture bounds based on assigned gate
+                const pastureBounds = this.getAssignedPastureBounds(margin);
                 
-                // Constrain retiring and grazing sheep to stay within the pasture area
+                // Constrain retiring and grazing sheep to stay within their assigned pasture area
                 this.position.x = Math.max(pastureBounds.minX + margin, Math.min(pastureBounds.maxX - margin, this.position.x));
                 this.position.z = Math.max(pastureBounds.minZ + margin, Math.min(pastureBounds.maxZ - margin, this.position.z));
             }
@@ -1104,6 +1106,75 @@ export class OptimizedSheepInstance extends Boid {
     
     setBounds(bounds) {
         this.bounds = bounds;
+    }
+    
+    /**
+     * Get the pasture bounds for the gate this sheep was assigned to
+     * @param {number} margin - Boundary margin
+     * @returns {Object} - Pasture bounds {minX, maxX, minZ, maxZ}
+     */
+    getAssignedPastureBounds(margin = 0.2) {
+        // Try to get competitive gates from global game instance
+        const competitiveGates = this.getCompetitiveGates();
+        
+        // If we have an assigned gate and competitive gates are available, use the specific pasture
+        if (this.assignedGate !== null && this.assignedGate !== undefined && competitiveGates && competitiveGates.length > 0) {
+            // Find the gate this sheep was assigned to
+            const assignedGate = competitiveGates.find(gate => gate.id === this.assignedGate);
+            
+            if (assignedGate && assignedGate.pasture) {
+                return {
+                    minX: assignedGate.pasture.minX,
+                    maxX: assignedGate.pasture.maxX,
+                    minZ: assignedGate.pasture.minZ,
+                    maxZ: assignedGate.pasture.maxZ
+                };
+            }
+        }
+        
+        // Fallback to default north gate pasture bounds (cooperative mode or if assignment failed)
+        return {
+            minX: -30,  // Matches GameState.js pasture.minX
+            maxX: 30,   // Matches GameState.js pasture.maxX  
+            minZ: 102,  // Just beyond the north gate
+            maxZ: 115   // Reduced to match the actual fence depth
+        };
+    }
+    
+    /**
+     * Get competitive gates from the global game instance
+     * @returns {Array|null} - Array of competitive gates or null if not available
+     */
+    getCompetitiveGates() {
+        // First, try local reference set by the OptimizedSheepSystem
+        if (this.competitiveGates && Array.isArray(this.competitiveGates)) {
+            return this.competitiveGates;
+        }
+        
+        // Try to access competitive gates through various possible paths
+        if (typeof window !== 'undefined' && window.gameInstance) {
+            // Try gameState.competitiveGates first
+            if (window.gameInstance.gameState && window.gameInstance.gameState.competitiveGates) {
+                return window.gameInstance.gameState.competitiveGates;
+            }
+            
+            // Try networkManager.currentRoom for multiplayer
+            if (window.gameInstance.networkManager && 
+                window.gameInstance.networkManager.currentRoom && 
+                window.gameInstance.networkManager.currentRoom.competitiveGates) {
+                return window.gameInstance.networkManager.currentRoom.competitiveGates;
+            }
+            
+            // Try getting from the latest game state if in multiplayer
+            if (window.gameInstance.networkManager && 
+                window.gameInstance.networkManager.latestGameState &&
+                window.gameInstance.networkManager.latestGameState.competitive &&
+                window.gameInstance.networkManager.latestGameState.competitive.gates) {
+                return window.gameInstance.networkManager.latestGameState.competitive.gates;
+            }
+        }
+        
+        return null;
     }
     
     setAudioManager(audioManager) {

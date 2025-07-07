@@ -9,7 +9,6 @@ import { MobileControls } from './MobileControls.js';
 import { Sheepdog } from './Sheepdog.js';
 import { PerformanceMonitor } from './PerformanceMonitor.js';
 import { StartScreen } from './StartScreen.js';
-import { StaminaUI } from './StaminaUI.js';
 import { AudioManager } from './AudioManager.js';
 import { NetworkManager } from './NetworkManager.js';
 import { MultiplayerUI } from './MultiplayerUI.js';
@@ -30,7 +29,6 @@ class SheepDogSimulation {
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();
         this.startScreen = new StartScreen(this.sceneManager);
-        this.staminaUI = new StaminaUI();
         this.audioManager = new AudioManager(this.sceneManager.getCamera());
         this.multiplayerUI = new MultiplayerUI();
         
@@ -66,8 +64,8 @@ class SheepDogSimulation {
         this.setupPauseHandling();
         
         // Set up start screen callback
-        this.startScreen.setGameStartCallback((mode, roomData) => {
-            this.startGame(mode, roomData);
+        this.startScreen.setGameStartCallback((mode, roomData, singlePlayerMode) => {
+            this.startGame(mode, roomData, singlePlayerMode);
         });
         
         // Pass audio manager to modules that need it
@@ -157,17 +155,19 @@ class SheepDogSimulation {
         this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
     }
     
-    startGame(mode = 'solo', roomData = null) {
+    startGame(mode = 'solo', roomData = null, singlePlayerMode = 'classic') {
         console.log(`Starting game in ${mode} mode`, {
             roomCode: roomData?.roomCode || 'none',
             playerCount: roomData?.players?.length || 0,
-            roomData: roomData
+            roomData: roomData,
+            singlePlayerMode: singlePlayerMode
         });
         
         // Store mode for future reference
         this.gameMode = mode;
         this.roomData = roomData;
         this.isMultiplayer = mode === 'multiplayer';
+        this.singlePlayerMode = singlePlayerMode;
         
         // Get the selected dog type from the start screen
         const selectedDogType = this.startScreen.getSelectedDog();
@@ -195,60 +195,36 @@ class SheepDogSimulation {
             this.mobileControls.enable();
         }
         
-        // Start the game state
+        // Start the game state (this will set the correct sheep count)
         // For multiplayer games, we'll set the specific game mode (competitive/timed) later when we have the data
-        this.gameState.startGame(mode, null);
+        this.gameState.startGame(mode, null, singlePlayerMode);
+        
+        // Check if we need to recreate the sheep flock due to count change
+        if (this.gameState.needsFlockRecreation) {
+            console.log(`Recreating sheep flock due to count change`);
+            this.gameState.recreateSheepFlock(this.sceneManager.getScene());
+            this.gameState.needsFlockRecreation = false; // Reset flag
+        }
         
         // Store the intended game mode for later use
         if (roomData?.gameMode) {
             this.gameState.setGameMode(roomData.gameMode);
         }
         
-        // Reset timer and stamina
+        // Reset timer
         this.gameTimer.reset();
-        this.staminaUI.reset();
         
         // Start countdown timer for timed mode
         if (roomData?.gameMode === 'timed') {
             this.gameTimer.startCountdown(3 * 60 * 1000); // 3 minutes
             console.log('⏱️ Started 3-minute countdown for timed mode');
             
-            // Hide the "/ 200" stats display for timed mode
-            const statsDiv = document.getElementById('stats');
-            if (statsDiv) {
-                statsDiv.style.display = 'none';
-            }
-            
-            // Replace best time with best score for timed mode
-            const bestTimeElement = document.getElementById('best-time');
-            const mobileBestTimeElement = document.getElementById('mobile-best-time');
-            if (bestTimeElement) {
-                bestTimeElement.textContent = this.getBestScoreText();
-            }
-            if (mobileBestTimeElement) {
-                mobileBestTimeElement.textContent = this.getBestScoreText();
-            }
-            
+            // UI updates for timed mode now handled by React components
             // Initialize best score display
             this.updateBestScoreDisplay();
         } else {
-            // Show stats for other modes
-            const statsDiv = document.getElementById('stats');
-            if (statsDiv) {
-                statsDiv.style.display = 'block';
-            }
-            
-            // Show best time for non-timed modes
-            const bestTimeElement = document.getElementById('best-time');
-            const mobileBestTimeElement = document.getElementById('mobile-best-time');
-            if (bestTimeElement) {
-                bestTimeElement.style.display = 'block';
-            }
-            if (mobileBestTimeElement) {
-                mobileBestTimeElement.style.display = 'block';
-            }
+            // UI updates for other modes now handled by React components
         }
-        this.staminaUI.show();
         
         // Reset competitive audio state
         this.endgameMusicPlaying = false;
@@ -516,6 +492,11 @@ class SheepDogSimulation {
                     }
                     if (serverSheepData.isRetiring !== undefined) {
                         clientSheepEntity.isRetiring = serverSheepData.isRetiring;
+                    }
+                    
+                    // CRITICAL: Update assigned gate information from server
+                    if (serverSheepData.assignedGate !== undefined) {
+                        clientSheepEntity.assignedGate = serverSheepData.assignedGate;
                     }
                     
                     // Only update positions for active sheep (not retiring or grazing)
@@ -836,13 +817,7 @@ class SheepDogSimulation {
         if (!isPaused) {
             this.gameState.updateUI();
             
-            // Update stamina UI if game is active
-            if (!this.startScreen.isStartScreenActive()) {
-                const sheepdog = this.gameState.getSheepdog();
-                if (sheepdog) {
-                    this.staminaUI.update(sheepdog.getStaminaInfo());
-                }
-            }
+            // Stamina UI now handled by React components
         }
         
         // Check for game completion (only when game is active and not paused)
@@ -1357,35 +1332,10 @@ class SheepDogSimulation {
     }
     
     updateBestScoreDisplay() {
+        // Best score display now handled by React components
+        // This method preserved for backward compatibility but functionality moved to React
         if (this.roomData?.gameMode !== 'timed') return;
-        
-        // Update every second to show current score vs best
-        setInterval(() => {
-            const currentScore = this.gameState.getPlayerScore(this.networkManager?.getPlayerId()) || 0;
-            const bestScore = this.loadBestScore();
-            
-            const bestTimeElement = document.getElementById('best-time');
-            const mobileBestTimeElement = document.getElementById('mobile-best-time');
-            
-            if (bestTimeElement) {
-                bestTimeElement.textContent = this.getBestScoreText();
-                // Add visual indicator if beating best score
-                if (bestScore !== null && currentScore > bestScore) {
-                    bestTimeElement.style.color = '#4CAF50'; // Green
-                } else {
-                    bestTimeElement.style.color = ''; // Default
-                }
-            }
-            
-            if (mobileBestTimeElement) {
-                mobileBestTimeElement.textContent = this.getBestScoreText();
-                if (bestScore !== null && currentScore > bestScore) {
-                    mobileBestTimeElement.style.color = '#4CAF50';
-                } else {
-                    mobileBestTimeElement.style.color = '';
-                }
-            }
-        }, 1000);
+        console.log('🎯 Best score tracking active for timed mode - UI handled by React');
     }
 }
 
@@ -1395,5 +1345,52 @@ window.addEventListener('DOMContentLoaded', () => {
     const gameInstance = new SheepDogSimulation();
     // Expose to global scope for React integration
     window.gameInstance = gameInstance;
+    
+    // Expose StartScreen methods for React integration
+    window.gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {
+        gameInstance.startScreen.selectSolo(dogType, singlePlayerMode);
+    };
+    
+    window.gameInstance.createRoom = async (playerName, settings, dogType) => {
+        return await gameInstance.startScreen.createRoom(playerName, settings, dogType);
+    };
+    
+    window.gameInstance.joinRoom = async (roomCode, playerName, dogType) => {
+        return await gameInstance.startScreen.joinRoom(roomCode, playerName, dogType);
+    };
+    
+    window.gameInstance.quickMatch = async (playerName, dogType) => {
+        return await gameInstance.startScreen.quickMatch(playerName, dogType);
+    };
+    
+    window.gameInstance.leaveRoom = () => {
+        gameInstance.startScreen.leaveRoom();
+    };
+    
+    window.gameInstance.startMultiplayerGame = () => {
+        gameInstance.startScreen.startMultiplayerGame();
+    };
+    
+    window.gameInstance.selectDog = (dogType) => {
+        gameInstance.startScreen.selectDog(dogType);
+    };
+    
+    window.gameInstance.getSelectedDog = () => {
+        return gameInstance.startScreen.getSelectedDog();
+    };
+    
+    window.gameInstance.getCurrentRoom = () => {
+        return gameInstance.startScreen.getCurrentRoom();
+    };
+    
+    window.gameInstance.isCurrentHost = () => {
+        return gameInstance.startScreen.isCurrentHost();
+    };
+    
     console.log('Game instance created, NetworkManager available:', !!gameInstance.networkManager);
-}); 
+    console.log('StartScreen methods exposed for React integration');
+    console.log('🔍 Available methods on window.gameInstance:');
+    console.log('- startSoloGame:', typeof window.gameInstance.startSoloGame);
+    console.log('- selectDog:', typeof window.gameInstance.selectDog);
+    console.log('- getSelectedDog:', typeof window.gameInstance.getSelectedDog);
+});

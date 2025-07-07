@@ -159,7 +159,77 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
 
 ## Core Architecture Components
 
-### 1. main.js - Game Orchestrator (731 lines)
+### 1. js/AudioManager.js - Sound and Music (551 lines)
+**Manages all game audio, including sound effects and music tracks, using the Three.js audio system.**
+
+**Key Features:**
+- **3D Spatial Audio**: Utilizes `THREE.AudioListener` attached to the camera for realistic sound positioning.
+- **Sound Variety**: Supports multiple sound files for actions like sheep bleats and dog barks to avoid repetition.
+- **Game Mode-Specific Audio**: Plays different music and sounds for solo, cooperative, and competitive modes.
+- **Volume Controls**: Separate volume settings for master, SFX, and music, with persistence in `localStorage`.
+- **Sound Cooldowns**: Prevents sound spamming by enforcing cooldowns on frequently played sounds.
+- **Audio Context Activation**: Handles modern browser audio context activation on user interaction.
+
+**Technical Implementation:**
+```javascript
+export class AudioManager {
+    constructor(camera) {
+        this.listener = new THREE.AudioListener();
+        camera.add(this.listener);
+        
+        this.loader = new THREE.AudioLoader();
+        
+        this.sounds = { ... };
+        this.music = { ... };
+        
+        this.masterVolume = 0.7;
+        this.sfxVolume = 0.8;
+        this.musicVolume = 0.5;
+        
+        this.cooldowns = {
+            sheepBleats: 1500,
+            dogBarks: 1000,
+        };
+        
+        this.loadSounds();
+        this.loadMusic();
+    }
+    
+    playUIClick() { ... }
+    playRewardingChime() { ... }
+    playSheepBleat() { ... }
+    playSheepdogBark(dogType) { ... }
+    playStartMusic() { ... }
+    playGameplayMusic() { ... }
+    // ... and more
+}
+```
+
+**API:**
+```javascript
+class AudioManager {
+    setGameMode(mode: 'solo' | 'multiplayer' | 'competitive'): void
+    playUIClick(): void
+    playRewardingChime(): void
+    playScoreSound(): void
+    playOpponentScoreSound(): void
+    playVictorySound(): void
+    playLossSound(): void
+    playSheepBleat(): void
+    playGroupSheepBleats(sheepCount: number): void
+    playSheepdogBark(dogType: string): void
+    playStartMusic(): void
+    playGameplayMusic(): void
+    playCompetitiveEndgameMusic(): void
+    playWinMusic(): void
+    stopAllMusic(): void
+    fadeOutCurrentMusic(duration: number): void
+    toggleMute(): boolean
+    setMuted(muted: boolean): void
+}
+```
+
+### 2. main.js - Game Orchestrator (731 lines)
 **Central coordination hub implementing the Mediator pattern for module communication**
 
 **Technical Implementation:**
@@ -204,8 +274,60 @@ START_SCREEN → LOBBY (multiplayer) → IN_GAME → GAME_OVER → START_SCREEN
                 IN_GAME
 ```
 
-### 2. NetworkManager.js - WebRTC Networking (624 lines)
-**Low-latency multiplayer communication via Geckos.io data channels**
+### 2. js/Boid.js - Flocking Behavior (248 lines)
+**Implements the core flocking logic based on Craig Reynolds' Boids algorithm.**
+
+**Key Features:**
+- **Classic Boids Rules**: Implements separation, alignment, and cohesion behaviors.
+- **Configurable**: Allows for adjusting behavior weights, max speed, and perception radius.
+- **Boundary Avoidance**: Includes logic to keep boids within specified boundaries.
+- **Anti-Jittering**: Implements velocity smoothing and a minimum movement threshold to prevent jittery movement.
+
+**Technical Implementation:**
+```javascript
+export class Boid {
+    constructor(x, z, config = {}) {
+        this.position = new Vector2D(x, z);
+        this.velocity = Vector2D.random();
+        this.acceleration = new Vector2D(0, 0);
+        
+        this.maxSpeed = config.maxSpeed || 1.5;
+        this.maxForce = config.maxForce || 0.05;
+        this.perceptionRadius = config.perceptionRadius || 5;
+        
+        this.separationWeight = config.separationWeight || 1.5;
+        this.alignmentWeight = config.alignmentWeight || 1.0;
+        this.cohesionWeight = config.cohesionWeight || 1.0;
+    }
+    
+    flock(boids, separationDistance) { ... }
+    separate(neighbors, desiredSeparation) { ... }
+    align(neighbors) { ... }
+    cohere(neighbors) { ... }
+    seek(target) { ... }
+    flee(target, fleeRadius) { ... }
+    avoidBoundaries(bounds) { ... }
+    update(deltaTime) { ... }
+}
+```
+
+**API:**
+```javascript
+class Boid {
+    applyForce(force: Vector2D): void
+    flock(boids: Boid[], separationDistance: number): void
+    separate(neighbors: Boid[], desiredSeparation: number): Vector2D
+    align(neighbors: Boid[]): Vector2D
+    cohere(neighbors: Boid[]): Vector2D
+    seek(target: Vector2D): Vector2D
+    flee(target: Vector2D, fleeRadius: number): Vector2D
+    avoidBoundaries(bounds: object): Vector2D
+    update(deltaTime: number): void
+}
+```
+
+### 3. js/FencePresets.js - Modular Fence System (471 lines)
+**Provides a modular system for creating and configuring fence structures.**
 
 **Technical Architecture:**
 ```javascript
@@ -269,8 +391,60 @@ DISCONNECTED → CONNECTING → CONNECTED → IN_ROOM → IN_GAME
               (reconnection with backoff)
 ```
 
-### 3. OptimizedSheep.js - GPU-Accelerated Rendering (879 lines)
-**Single-draw-call rendering system for 200 animated sheep**
+### 3. js/FencePresets.js - Modular Fence System (471 lines)
+**Provides a modular system for creating and configuring fence structures.**
+
+**Key Features:**
+- **Modular Design**: Creates reusable fence components like borders, gates, and pens.
+- **Multiplayer Support**: Handles different fence configurations for 2, 3, and 4-player competitive modes.
+- **Optimized Geometry**: Supports instanced rendering for large fence systems.
+- **Configurable**: Allows for customizing materials, colors, and dimensions.
+
+**Technical Implementation:**
+```javascript
+export class FencePresets {
+    constructor() {
+        this.fenceHeight = 2.5;
+        this.postRadius = 0.12;
+        this.railHeight = 0.15;
+        // ... and more
+    }
+    
+    createBorderSegment(length, orientation, options) { ... }
+    createBorderWithGate(length, gateWidth, gatePosition, orientation, gateConfig) { ... }
+    createGateStructure(width, orientation, config) { ... }
+    createPenStructure(dimensions, attachmentSide) { ... }
+    // ... and more
+}
+
+export class FenceConfigBuilder {
+    constructor(fencePresets) {
+        this.presets = fencePresets;
+    }
+    
+    buildSinglePlayerFences(bounds, gate, pasture) { ... }
+    buildCompetitiveFences(bounds, competitiveGates) { ... }
+    // ... and more
+}
+```
+
+**API:**
+```javascript
+class FencePresets {
+    createBorderSegment(length: number, orientation: string, options: object): THREE.Group
+    createBorderWithGate(length: number, gateWidth: number, gatePosition: number, orientation: string, gateConfig: object): THREE.Group
+    createGateStructure(width: number, orientation: string, config: object): THREE.Group
+    createPenStructure(dimensions: object, attachmentSide: string): THREE.Group
+}
+
+class FenceConfigBuilder {
+    buildSinglePlayerFences(bounds: object, gate: object, pasture: object): THREE.Group
+    buildCompetitiveFences(bounds: object, competitiveGates: object[]): THREE.Group
+}
+```
+
+### 4. js/GameState.js - Game Logic and State (242 lines)
+**Manages the game's state, including configuration, boundaries, and completion tracking.**
 
 **GPU Architecture:**
 ```javascript
@@ -338,8 +512,57 @@ void main() {
 - **Instance Culling**: Disabled to prevent boundary popping
 - **Batch Updates**: All matrices updated in single typed array operation
 
-### 4. StructureBuilderV2 - Modular Environment System
-**Enhanced structure builder with reusable fence components and multi-player support**
+### 4. js/GameState.js - Game Logic and State (242 lines)
+**Manages the game's state, including configuration, boundaries, and completion tracking.**
+
+**Key Features:**
+- **Centralized Configuration**: Defines game parameters like field boundaries, gate positions, and simulation settings.
+- **Game Mode Support**: Handles different game modes, including 'solo', 'multiplayer', and 'competitive'.
+- **Optimized Sheep Management**: Coordinates with the `OptimizedSheepSystem` for high-performance rendering.
+- **Completion Tracking**: Tracks the number of retired sheep and detects game completion.
+- **UI Integration**: Updates the UI with the current game state, such as sheep count and scores.
+
+**Technical Implementation:**
+```javascript
+export class GameState {
+    constructor() {
+        this.bounds = { ... };
+        this.gate = { ... };
+        this.pasture = { ... };
+        this.params = { ... };
+        
+        this.sheep = [];
+        this.sheepdog = null;
+        this.sheepRetired = 0;
+        this.gameCompleted = false;
+        this.totalSheep = 200;
+        this.gameActive = false;
+        this.isPaused = false;
+    }
+    
+    createSheepFlock(scene) { ... }
+    updateSheepBehaviors(deltaTime) { ... }
+    checkCompletion() { ... }
+    updateUI() { ... }
+    // ... and more
+}
+```
+
+**API:**
+```javascript
+class GameState {
+    createSheepFlock(scene: THREE.Scene): void
+    setPaused(paused: boolean): void
+    updateSheepBehaviors(deltaTime: number): number
+    checkCompletion(): boolean
+    updateUI(): void
+    startGame(mode: string, competitiveData: object): void
+    reset(): void
+}
+```
+
+### 5. js/GameTimer.js - Timing and Scoring (181 lines)
+**Handles all timing-related functionality, including the game timer and best time tracking.**
 
 **Architecture:**
 ```javascript
@@ -374,8 +597,53 @@ class StructureBuilderV2 {
 - **Resource Management**: Proper cleanup and disposal of Three.js resources
 - **Optimized Geometry**: Instanced rendering for fence posts
 
-### 5. Shared Logic Architecture - Platform-Agnostic Algorithms
-**Deterministic game logic shared between client and server**
+### 5. js/GameTimer.js - Timing and Scoring (181 lines)
+**Handles all timing-related functionality, including the game timer and best time tracking.**
+
+**Key Features:**
+- **High-Precision Timing**: Uses `performance.now()` for accurate timing.
+- **Best Time Persistence**: Saves and retrieves the best time from `localStorage`.
+- **Countdown Mode**: Supports countdown timers for timed game modes.
+- **Pause Handling**: Correctly handles pausing and resuming the timer.
+- **UI Updates**: Formats and updates the timer display in the UI.
+
+**Technical Implementation:**
+```javascript
+export class GameTimer {
+    constructor() {
+        this.startTime = null;
+        this.currentTime = 0;
+        this.timerRunning = false;
+        this.isPaused = false;
+        this.bestTime = this.loadBestTime();
+        this.isCountdown = false;
+        this.countdownDuration = 0;
+    }
+    
+    start() { ... }
+    startCountdown(durationMs) { ... }
+    stop() { ... }
+    pause() { ... }
+    resume() { ... }
+    update() { ... }
+}
+```
+
+**API:**
+```javascript
+class GameTimer {
+    start(): void
+    startCountdown(durationMs: number): void
+    stop(): number
+    pause(): void
+    resume(): void
+    update(): void
+    reset(): void
+}
+```
+
+### 6. js/InputHandler.js - Input Management (182 lines)
+**Manages all user input, including keyboard and mobile touch controls.**
 
 **Module Structure:**
 ```javascript
@@ -439,8 +707,46 @@ export function calculateFlockingForce(boid, neighbors, config) {
 - **Performance Focused**: O(n²) complexity mitigated by spatial partitioning
 - **Testable**: Easy unit testing with predictable outputs
 
-### 5. Server Architecture - Authoritative Multiplayer
-**Node.js server with WebRTC networking and deterministic simulation**
+### 6. js/InputHandler.js - Input Management (182 lines)
+**Manages all user input, including keyboard and mobile touch controls.**
+
+**Key Features:**
+- **Cross-Platform Support**: Handles both keyboard (WASD, Shift) and mobile touch inputs.
+- **Pause System**: Implements a global pause system triggered by the Escape key.
+- **State Management**: Properly handles key states, especially when the window loses focus.
+- **Callback System**: Notifies other modules of pause state changes.
+
+**Technical Implementation:**
+```javascript
+export class InputHandler {
+    constructor() {
+        this.keys = { ... };
+        this.isPaused = false;
+        this.pauseCallbacks = [];
+        this.mobileControls = null;
+        this.setupEventListeners();
+    }
+    
+    getMovementDirection() { ... }
+    isSprinting() { ... }
+    togglePause() { ... }
+    onPauseToggle(callback) { ... }
+}
+```
+
+**API:**
+```javascript
+class InputHandler {
+    getMovementDirection(): Vector2D
+    isSprinting(): boolean
+    isPausedState(): boolean
+    togglePause(): void
+    onPauseToggle(callback: function): void
+}
+```
+
+### 7. js/MobileControls.js - Mobile Touch Interface (690 lines)
+**Provides a bridge for mobile device touch controls and fullscreen management.**
 
 **Server Components:**
 
@@ -541,8 +847,51 @@ class GameSimulation {
 }
 ```
 
-### 6. Performance Architecture
-**Optimization strategies for 60 FPS with 200 entities**
+### 7. js/MobileControls.js - Mobile Touch Interface (690 lines)
+**Provides a bridge for mobile device touch controls and fullscreen management.**
+
+**Key Features:**
+- **Touch Device Detection**: Accurately detects touch-enabled devices.
+- **Fullscreen Management**: Handles cross-browser fullscreen requests and provides a user-friendly fullscreen button.
+- **React Integration**: Acts as a bridge to the React-based mobile UI components.
+- **Touch Event Prevention**: Prevents default touch behaviors like zooming and scrolling on the game canvas.
+
+**Technical Implementation:**
+```javascript
+export class MobileControls {
+    constructor(sceneManager, audioManager) {
+        this.isTouchDevice = this.detectTouchDevice();
+        this.isEnabled = false;
+        this.movementVector = new Vector2D(0, 0);
+        this.isMoving = false;
+        this.isSprinting = false;
+        
+        if (this.isTouchDevice) {
+            this.createFullscreenButton();
+            this.setupFullscreenListeners();
+        }
+    }
+    
+    detectTouchDevice() { ... }
+    requestFullscreen() { ... }
+    // ... and more
+}
+```
+
+**API:**
+```javascript
+class MobileControls {
+    getIsTouchDevice(): boolean
+    getMovementDirection(): Vector2D
+    getIsMoving(): boolean
+    getIsSprinting(): boolean
+    enable(): void
+    disable(): void
+}
+```
+
+### 8. js/MultiplayerUI.js - Multiplayer Interface (234 lines)
+**Manages all multiplayer-specific UI elements, such as the player list, connection status, and scoreboard.**
 
 **GPU Optimizations:**
 ```javascript
@@ -1797,9 +2146,16 @@ DigitalOcean Droplet (68.183.107.158)
 
 ```
 sds/
-├── index.html                   # Main game client (1801 lines)
+├── index.html                   # Main game client (296 lines - now modular!)
 ├── debug-client.html            # Network debugging tool
+├── css/                         # Stylesheets (modular)
+│   ├── components/
+│   │   └── index-styles.css     # Main UI styles (extracted from index.html)
+│   ├── multiplayer-react.css    # Multiplayer-specific styles
+│   └── production.css           # Production optimizations
 ├── js/                          # Client-side modules
+│   ├── components/
+│   │   └── ReactUI.js           # React UI components (1937 lines - extracted)
 │   ├── main.js                  # Game orchestrator (731 lines)
 │   ├── NetworkManager.js        # WebRTC networking (624 lines)
 │   ├── MultiplayerUI.js         # Multiplayer interface (234 lines)
@@ -1928,4 +2284,446 @@ sds/
 - **Mode-Specific Builds**: Different structures for each game mode
 - **Resource Management**: Proper Three.js cleanup and disposal
 
-This architecture provides a solid foundation for both current gameplay and future enhancements, with clean separation between single-player and multiplayer modes, efficient rendering and networking, comprehensive mobile support, and the flexibility to add new game modes like timed collection. 
+This architecture provides a solid foundation for both current gameplay and future enhancements, with clean separation between single-player and multiplayer modes, efficient rendering and networking, comprehensive mobile support, and the flexibility to add new game modes like timed collection.
+
+## Modular Architecture Improvements (v1.2)
+
+### File Structure Refactoring
+**Major improvement to code organization and maintainability**
+
+The main `index.html` file has been significantly refactored to improve modularity and maintainability:
+
+**Before (v1.1):**
+- `index.html`: 1801 lines of mixed HTML, CSS, and JavaScript
+- Inline styles and React components made debugging difficult
+- Monolithic structure hindered code reuse and testing
+
+**After (v1.2):**
+- `index.html`: 296 lines (83% reduction) - clean HTML structure only
+- `css/components/index-styles.css`: Extracted UI styles for better organization
+- `js/components/ReactUI.js`: 1937 lines of React components in dedicated module
+
+### Key Improvements:
+
+1. **Separation of Concerns**: HTML, CSS, and JavaScript are now properly separated
+2. **Maintainability**: Individual components can be modified without affecting others
+3. **Debugging**: Easier to debug styles and components in isolation
+4. **Code Reuse**: React components can be imported and reused across different parts of the application
+5. **Performance**: Better browser caching of separate CSS and JS files
+6. **Developer Experience**: Cleaner file structure and better IDE support
+
+### Implementation Details:
+
+**CSS Extraction:**
+- Used CLI commands to extract inline styles with `sed` and `grep`
+- Maintained exact styling behavior to ensure no visual changes
+- Improved organization with component-based CSS structure
+
+**React Component Extraction:**
+- Created `js/components/ReactUI.js` as a dedicated module
+- Maintained all existing functionality including mobile controls and multiplayer UI
+- Preserved game integration and state management hooks
+
+**Benefits:**
+- Reduced main HTML file size by 83%
+- Improved code organization and maintainability
+- Better browser caching and loading performance
+- Enhanced developer experience with cleaner file structure
+- Easier to add new UI components and features
+
+This modular approach sets the foundation for easier maintenance, testing, and future feature development while maintaining all existing functionality.
+
+## React-First UI Architecture (v1.3)
+
+### UI System Architecture
+**Unified React-based interface with adaptive platform rendering**
+
+The game employs a React-first UI architecture where all interface elements are rendered through a centralized React component system with real-time game state integration.
+
+### Core UI Architecture
+
+#### Component Hierarchy
+```
+ReactUI.js (1937 lines)
+├── Platform Detection System
+│   └── usePlatform() hook - Automatic mobile/desktop detection
+├── Real-time State Management  
+│   └── useGameState() hook - 60fps game state polling
+├── Start Screen Flow
+│   ├── StartScreen - Main menu with dog selection
+│   ├── ModeSelection - Solo vs Multiplayer choice
+│   ├── MultiplayerOptions - Create/Join/Quick match
+│   ├── RoomCreation - Game mode and player configuration
+│   ├── RoomJoining - Room code entry interface
+│   └── Lobby - Pre-game player management
+└── Game HUD System
+    ├── GameTimer - Real-time timer display
+    ├── SheepCounter - Progress tracking with integrated stamina
+    ├── MultiplayerScoreboard - Live player scores and status
+    ├── MobileHUD - Compact status bar for mobile
+    └── MobileControls - Virtual joystick and touch controls
+```
+
+#### Platform-Adaptive Rendering
+```javascript
+function usePlatform() {
+    const [platform, setPlatform] = useState('desktop');
+    
+    useEffect(() => {
+        const checkPlatform = () => {
+            const hasTouch = 'ontouchstart' in window;
+            const width = window.innerWidth;
+            const ua = navigator.userAgent;
+            
+            if (/iPhone|iPad|iPod|Android/i.test(ua) || (hasTouch && width < 1024)) {
+                setPlatform('mobile');
+            } else {
+                setPlatform('desktop');
+            }
+        };
+        
+        checkPlatform();
+        window.addEventListener('resize', checkPlatform);
+        return () => window.removeEventListener('resize', checkPlatform);
+    }, []);
+    
+    return platform;
+}
+
+// Adaptive rendering based on platform
+return platform === 'mobile' ? 
+    <MobileInterface /> : 
+    <DesktopInterface />;
+```
+
+### Real-Time Game State Integration
+
+#### State Polling System
+```javascript
+function useGameState() {
+    const [gameData, setGameData] = useState({
+        stamina: 100,
+        sheepCount: 0,
+        totalSheep: 200,
+        gameTime: 0,
+        gameMode: 'solo',
+        players: [],
+        scores: {}
+    });
+    
+    useEffect(() => {
+        const pollInterval = setInterval(() => {
+            if (window.gameInstance) {
+                const gameState = window.gameInstance.gameState;
+                const sheepdog = window.gameInstance.sheepdog;
+                const gameTimer = window.gameInstance.gameTimer;
+                
+                // Extract real-time data for React components
+                const newData = {
+                    stamina: (sheepdog?.stamina / sheepdog?.maxStamina) * 100,
+                    sheepCount: gameState.sheepRetired || 0,
+                    totalSheep: gameState.totalSheep || 200,
+                    gameTime: gameTimer.getGameTime(),
+                    gameMode: gameState.gameMode,
+                    // ... multiplayer data
+                };
+                
+                setGameData(newData);
+            }
+        }, 16); // 60fps polling rate
+        
+        return () => clearInterval(pollInterval);
+    }, []);
+    
+    return gameData;
+}
+```
+
+#### Game Engine Integration
+```javascript
+// Game engine exposes state via window.gameInstance
+window.gameInstance = {
+    gameState,      // Core game logic and sheep tracking
+    sheepdog,       // Player entity with stamina system
+    gameTimer,      // Timing and scoring system
+    networkManager, // Multiplayer state management
+    multiplayerUI,  // Multiplayer-specific data
+    // React components consume this data in real-time
+};
+```
+
+### Desktop UI Components
+
+#### Timer Display (Top-Right)
+```javascript
+function GameTimer({ gameTime, timeLimit }) {
+    const isTimedMode = timeLimit > 0;
+    const timeRemaining = Math.max(0, timeLimit - gameTime);
+    
+    return React.createElement('div', {
+        className: 'fixed top-6 right-6 z-20 ui-panel'
+    }, [
+        React.createElement('div', {
+            className: 'text-white font-mono text-2xl'
+        }, formatTime(isTimedMode ? timeRemaining : gameTime))
+    ]);
+}
+```
+
+#### Sheep Counter with Integrated Stamina (Top-Left)
+```javascript
+function SheepCounter({ sheepCount, totalSheep, stamina }) {
+    return React.createElement('div', {
+        className: 'fixed top-6 left-6 z-20 ui-panel'
+    }, [
+        // Sheep progress display
+        React.createElement('div', { className: 'flex items-center gap-3' }, [
+            React.createElement('span', { className: 'text-2xl' }, '🐑'),
+            React.createElement('div', {}, [
+                React.createElement('div', { 
+                    className: 'text-white font-semibold' 
+                }, `${sheepCount} / ${totalSheep}`),
+                React.createElement('div', { 
+                    className: 'text-blue-300 text-xs' 
+                }, `${Math.round((sheepCount/totalSheep)*100)}% complete`)
+            ])
+        ]),
+        // Integrated stamina bar
+        React.createElement(CompactStaminaBar, { stamina })
+    ]);
+}
+```
+
+#### Multiplayer Scoreboard
+```javascript
+function MultiplayerScoreboard({ players, scores, myPlayerId, gameMode }) {
+    const isRacing = gameMode === 'competitive';
+    const isTimed = gameMode === 'timed';
+    
+    return React.createElement('div', {
+        className: 'fixed top-6 left-6 z-20 ui-panel'
+    }, [
+        React.createElement('h3', {
+            className: 'text-blue-400 font-bold mb-3'
+        }, isRacing ? 'Racing' : isTimed ? 'Timed Race' : 'Team Progress'),
+        
+        // Player list with scores
+        React.createElement('div', { className: 'space-y-2' },
+            players.map((player, index) => {
+                const isMe = player.id === myPlayerId;
+                const score = scores[player.id] || 0;
+                const isLeader = index === 0 && score > 0;
+                
+                return React.createElement('div', {
+                    key: player.id,
+                    className: `p-2 rounded ${isMe ? 'bg-blue-500 bg-opacity-20' : 'bg-white bg-opacity-5'}`
+                }, [
+                    React.createElement('div', { className: 'flex justify-between' }, [
+                        React.createElement('span', {}, [
+                            isLeader && '👑 ',
+                            player.name,
+                            isMe ? ' (You)' : ''
+                        ]),
+                        React.createElement('span', { className: 'font-mono' }, score)
+                    ])
+                ]);
+            })
+        )
+    ]);
+}
+```
+
+### Mobile UI Components
+
+#### Compact HUD (Top Center)
+```javascript
+function MobileHUD({ gameData, stamina }) {
+    const minutes = Math.floor(gameData.gameTime / 60);
+    const seconds = Math.floor(gameData.gameTime % 60);
+    
+    return React.createElement('div', {
+        className: 'fixed top-2 left-1/2 transform -translate-x-1/2 z-20 ui-panel'
+    }, [
+        // Horizontal layout for sheep count and timer
+        React.createElement('div', { className: 'flex items-center gap-4' }, [
+            React.createElement('div', { className: 'flex items-center gap-1' }, [
+                React.createElement('span', {}, '🐑'),
+                React.createElement('span', { className: 'text-white text-sm' },
+                    `${gameData.sheepCount}/${gameData.totalSheep}`)
+            ]),
+            React.createElement('div', { className: 'flex items-center gap-1' }, [
+                React.createElement('span', {}, '⏱️'),
+                React.createElement('span', { className: 'text-white font-mono text-sm' },
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
+            ])
+        ]),
+        // Minimal stamina bar
+        React.createElement('div', {
+            className: 'mt-1 h-1 bg-gray-700 bg-opacity-50 rounded-full overflow-hidden'
+        }, React.createElement('div', {
+            className: `h-full transition-all duration-300 ${stamina < 30 ? 'bg-red-500' : 'bg-green-500'}`,
+            style: { width: `${stamina}%` }
+        }))
+    ]);
+}
+```
+
+#### Virtual Controls System
+```javascript
+function MobileControls() {
+    const [joystickManager, setJoystickManager] = useState(null);
+    const [isSprinting, setIsSprinting] = useState(false);
+    const joystickRef = useRef(null);
+    
+    useEffect(() => {
+        if (!window.gameInstance || !joystickRef.current || !window.nipplejs) return;
+        
+        // Create nipple.js virtual joystick
+        const manager = window.nipplejs.create({
+            zone: joystickRef.current,
+            mode: 'static',
+            position: { left: '75px', bottom: '75px' },
+            color: 'white',
+            size: 120,
+            threshold: 0.1
+        });
+        
+        // Handle joystick movement
+        manager.on('move', (evt, data) => {
+            if (window.gameInstance?.inputHandler) {
+                const angle = data.angle.radian;
+                const force = Math.min(data.force, 1);
+                
+                // Convert to game coordinates
+                const moveX = Math.cos(angle) * force;
+                const moveZ = -Math.sin(angle) * force;
+                
+                // Update input handler
+                window.gameInstance.inputHandler.keys = {
+                    ...window.gameInstance.inputHandler.keys,
+                    w: moveZ < -0.3,
+                    s: moveZ > 0.3,
+                    a: moveX < -0.3,
+                    d: moveX > 0.3
+                };
+            }
+        });
+        
+        setJoystickManager(manager);
+        
+        return () => manager.destroy();
+    }, []);
+    
+    return React.createElement('div', { className: 'fixed inset-0 pointer-events-none z-10' }, [
+        // Joystick container
+        React.createElement('div', {
+            key: 'joystick',
+            ref: joystickRef,
+            className: 'pointer-events-auto fixed bottom-5 left-5',
+            style: { width: '150px', height: '150px' }
+        }),
+        
+        // Sprint button
+        React.createElement('button', {
+            key: 'sprint',
+            className: `fixed bottom-8 right-6 w-16 h-16 text-2xl pointer-events-auto ui-panel ${
+                isSprinting ? 'bg-blue-500 bg-opacity-30' : ''
+            }`,
+            onTouchStart: () => {
+                setIsSprinting(true);
+                if (window.gameInstance?.inputHandler) {
+                    window.gameInstance.inputHandler.keys.shift = true;
+                }
+            },
+            onTouchEnd: () => {
+                setIsSprinting(false);
+                if (window.gameInstance?.inputHandler) {
+                    window.gameInstance.inputHandler.keys.shift = false;
+                }
+            }
+        }, '🏃'),
+        
+        // Zoom controls (zoom in/out buttons with visual feedback)
+        React.createElement(ZoomControls, { key: 'zoom' })
+    ]);
+}
+```
+
+### UI System Features
+
+#### Automatic State Transitions
+```javascript
+function App() {
+    const [gameStarted, setGameStarted] = useState(false);
+    
+    useEffect(() => {
+        const checkGameStart = setInterval(() => {
+            const gameActive = window.gameInstance?.gameState?.isGameActive();
+            
+            if (gameActive) {
+                setGameStarted(true);
+                clearInterval(checkGameStart);
+            }
+        }, 100);
+        
+        return () => clearInterval(checkGameStart);
+    }, []);
+    
+    return React.createElement(React.Fragment, null, [
+        !gameStarted && React.createElement(StartScreen, { key: 'start' }),
+        gameStarted && React.createElement(GameHUD, { key: 'hud' })
+    ]);
+}
+```
+
+#### Game Engine Compatibility Layer
+```javascript
+// Legacy API preserved for backward compatibility
+class StaminaUI {
+    update() { /* no-op - React handles display */ }
+    show() { /* no-op - React handles visibility */ }  
+    hide() { /* no-op - React handles visibility */ }
+}
+
+class GameState {
+    updateCooperativeUI() { /* data tracking only */ }
+    updateCompetitiveUI() { /* data tracking only */ }
+    showCompletionMessage() { /* delegated to React overlay */ }
+}
+```
+
+### Performance Characteristics
+
+#### Rendering Optimization
+- **Component Lifecycle**: Efficient mount/unmount with proper cleanup
+- **State Updates**: 60fps polling with minimal re-renders via useState hooks
+- **Memory Management**: Automatic garbage collection of React components
+- **Platform Detection**: One-time calculation with resize listener
+
+#### Mobile Optimizations
+- **Touch Event Handling**: Prevented default behaviors (zoom, scroll)
+- **Virtual Joystick**: Hardware-accelerated nipple.js integration
+- **Responsive Design**: CSS-based adaptive layouts
+- **Performance Throttling**: Joystick updates capped at 60fps
+
+### Architecture Benefits
+
+#### Separation of Concerns
+- **Game Logic**: Pure JavaScript classes handle game state and physics
+- **UI Rendering**: React components handle all visual interface
+- **State Bridge**: Real-time polling connects game engine to UI layer
+- **Platform Adaptation**: Single codebase supports desktop and mobile
+
+#### Developer Experience
+- **Component Reusability**: UI elements can be composed and reused
+- **React DevTools**: Full debugging support for component hierarchy
+- **Hot Reloading**: UI changes can be tested independently
+- **Clear Data Flow**: Unidirectional data flow from game engine to UI
+
+#### Maintainability
+- **Modular Architecture**: Components can be modified independently
+- **Testable Components**: UI logic separated from game logic
+- **API Stability**: Game engine APIs remain unchanged
+- **Future-Proof**: Easy to add new UI features as React components
+
+This React-first UI architecture provides a scalable foundation for both current gameplay and future feature development, with clean separation between game logic and presentation layers.

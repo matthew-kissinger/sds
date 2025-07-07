@@ -1,105 +1,54 @@
 /**
- * StaminaUI class - manages the stamina bar display
+ * StaminaUI class - DEPRECATED - Legacy DOM-based stamina UI
+ * 
+ * This class has been replaced by React-based stamina components.
+ * It's kept for backward compatibility but all functionality has been moved to React.
+ * 
+ * Migration: Stamina display is now handled by React components in the src/ directory.
  */
 export class StaminaUI {
     constructor() {
-        this.staminaFill = document.getElementById('stamina-fill');
-        this.staminaText = document.getElementById('stamina-text');
-        this.staminaLabel = document.getElementById('stamina-label');
+        console.log('⚠️ StaminaUI: This class is deprecated. Stamina UI now handled by React components.');
         
-        // Cache DOM elements for performance
-        this.elements = {
-            fill: this.staminaFill,
-            text: this.staminaText,
-            label: this.staminaLabel
-        };
+        // Mark as using React UI to skip all legacy DOM operations
+        this.usingReactUI = true;
         
-        // Track previous state to avoid unnecessary updates
+        // Preserve API for backward compatibility
         this.previousPercentage = 100;
         this.previousState = 'normal';
     }
     
     /**
-     * Update the stamina bar based on sheepdog stamina info
-     * @param {Object} staminaInfo - Object containing stamina data from sheepdog
+     * @deprecated Stamina updates now handled by React components
      */
     update(staminaInfo) {
-        const { percentage, isSprinting, canSprint } = staminaInfo;
-        const roundedPercentage = Math.round(percentage);
-        
-        // Only update if percentage changed to avoid unnecessary DOM manipulation
-        if (roundedPercentage !== this.previousPercentage) {
-            this.elements.fill.style.width = `${percentage}%`;
-            this.elements.text.textContent = `${roundedPercentage}%`;
-            this.previousPercentage = roundedPercentage;
-        }
-        
-        // Determine current state for styling
-        let currentState = 'normal';
-        if (isSprinting) {
-            currentState = 'sprinting';
-        } else if (percentage <= 10) {
-            currentState = 'critical';
-        } else if (percentage <= 30) {
-            currentState = 'low';
-        }
-        
-        // Update styling only if state changed
-        if (currentState !== this.previousState) {
-            // Remove all state classes
-            this.elements.fill.classList.remove('low', 'critical', 'sprinting');
-            
-            // Add current state class
-            if (currentState !== 'normal') {
-                this.elements.fill.classList.add(currentState);
-            }
-            
-            // Update label based on state
-            if (isSprinting) {
-                this.elements.label.textContent = 'Sprinting!';
-                this.elements.label.style.color = '#2196F3';
-            } else if (!canSprint) {
-                this.elements.label.textContent = 'Stamina (Exhausted)';
-                this.elements.label.style.color = '#F44336';
-            } else {
-                this.elements.label.textContent = 'Stamina';
-                this.elements.label.style.color = '#333';
-            }
-            
-            this.previousState = currentState;
-        }
+        // No-op: React components handle stamina display
+        return;
     }
     
     /**
-     * Show the stamina bar (called when game starts)
+     * @deprecated Show/hide functionality now handled by React components
      */
     show() {
-        const staminaBar = document.getElementById('stamina-bar');
-        if (staminaBar) {
-            staminaBar.classList.add('visible');
-        }
+        // No-op: React components handle visibility
+        return;
     }
     
     /**
-     * Hide the stamina bar (called when game ends or on start screen)
+     * @deprecated Show/hide functionality now handled by React components
      */
     hide() {
-        const staminaBar = document.getElementById('stamina-bar');
-        if (staminaBar) {
-            staminaBar.classList.remove('visible');
-        }
+        // No-op: React components handle visibility
+        return;
     }
     
     /**
-     * Reset stamina bar to full
+     * @deprecated Reset functionality now handled by React components
      */
     reset() {
-        this.elements.fill.style.width = '100%';
-        this.elements.text.textContent = '100%';
-        this.elements.label.textContent = 'Stamina';
-        this.elements.label.style.color = '#333';
-        this.elements.fill.classList.remove('low', 'critical', 'sprinting');
+        // Reset state for backward compatibility
         this.previousPercentage = 100;
         this.previousState = 'normal';
+        return;
     }
-} 
+}

@@ -56,17 +56,19 @@ export class GameState {
         this.sheepdog = null;
         this.sheepRetired = 0;
         this.gameCompleted = false;
-        this.totalSheep = 200;
+        this.totalSheep = 200; // Default to classic mode
         this.gameActive = false; // New: tracks if game is actively being played
         this.isPaused = false; // New: tracks if game is paused
         this.audioManager = null;
+        this.singlePlayerMode = 'classic'; // Track single player mode: 'classic' or 'extreme'
         
         // Always use optimized sheep system
         this.optimizedSheepSystem = null;
     }
     
     createSheepFlock(scene) {
-        // Create optimized sheep system
+        // Create optimized sheep system with correct sheep count
+        console.log(`Creating sheep flock with ${this.totalSheep} sheep`);
         this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep);
         this.sheep = this.optimizedSheepSystem.getSheep();
         
@@ -79,6 +81,17 @@ export class GameState {
         }
         
         return null; // No individual meshes to return
+    }
+    
+    // Helper method to recreate sheep flock when count changes
+    recreateSheepFlock(scene) {
+        // Remove old sheep system from scene if it exists
+        if (this.optimizedSheepSystem && this.optimizedSheepSystem.instancedMesh) {
+            scene.remove(this.optimizedSheepSystem.instancedMesh);
+        }
+        
+        // Create new sheep system with updated count
+        this.createSheepFlock(scene);
     }
     
     setPaused(paused) {
@@ -169,63 +182,30 @@ export class GameState {
     }
     
     updateCooperativeUI() {
-        // Update desktop sheep count
-        const sheepCountElement = document.getElementById('sheep-count');
-        if (sheepCountElement) {
-            sheepCountElement.textContent = this.sheepRetired;
-        }
-        
-        // Update mobile sheep count
-        const mobileSheepCountElement = document.getElementById('mobile-sheep-count');
-        if (mobileSheepCountElement) {
-            mobileSheepCountElement.textContent = `Sheep: ${this.sheepRetired} / ${this.totalSheep}`;
-        }
+        // UI updates now handled by React components
+        // This method preserved for backward compatibility
+        return;
     }
     
     updateCompetitiveUI() {
-        // In competitive mode, show "your sheep" count vs total
+        // UI updates now handled by React components
+        // Game state data is still tracked for React to access
         const myPlayerId = this.getCurrentPlayerId();
         const myScore = this.getPlayerScore(myPlayerId) || 0;
         const totalRetired = Object.values(this.playerScores).reduce((sum, score) => sum + score, 0);
         
-        // Update desktop sheep count to show personal score
-        const sheepCountElement = document.getElementById('sheep-count');
-        if (sheepCountElement) {
-            sheepCountElement.textContent = `${myScore} (yours)`;
-        }
-        
-        // Update mobile sheep count with competitive info
-        const mobileSheepCountElement = document.getElementById('mobile-sheep-count');
-        if (mobileSheepCountElement) {
-            const playerCount = Object.keys(this.playerScores).length;
-            
-            if (playerCount === 2) {
-                // 2-player mode: show race progress
-                const winThreshold = Math.ceil(this.totalSheep / 2); // 101 for 200 sheep
-                mobileSheepCountElement.textContent = `Your sheep: ${myScore}/${winThreshold}`;
-            } else {
-                // 3-4 player mode: show total progress
-                mobileSheepCountElement.textContent = `Yours: ${myScore} | Total: ${totalRetired}/${this.totalSheep}`;
-            }
-        }
+        // Data is available for React components to access via game state
+        return;
     }
     
     updateTimedUI() {
-        // In timed mode, show current player's sheep count on the left like normal
+        // UI updates now handled by React components
+        // Game state data is still tracked for React to access
         const myPlayerId = this.getCurrentPlayerId();
         const myScore = this.getPlayerScore(myPlayerId) || 0;
         
-        // Update desktop sheep count to show personal score
-        const sheepCountElement = document.getElementById('sheep-count');
-        if (sheepCountElement) {
-            sheepCountElement.textContent = myScore;
-        }
-        
-        // Update mobile sheep count
-        const mobileSheepCountElement = document.getElementById('mobile-sheep-count');
-        if (mobileSheepCountElement) {
-            mobileSheepCountElement.textContent = `Your sheep: ${myScore}`;
-        }
+        // Data is available for React components to access via game state
+        return;
     }
     
     // Helper method to get current player ID (used by multiplayer UI)
@@ -254,45 +234,26 @@ export class GameState {
     }
     
     showCooperativeCompletionMessage(finalTime, isNewRecord) {
-        console.log('📢 showCooperativeCompletionMessage called:', {
+        // Completion messages now handled by React components and main.js showCompletionOverlay
+        // This method preserved for backward compatibility
+        console.log('📢 showCooperativeCompletionMessage called - delegating to React UI:', {
             finalTime: finalTime,
             isNewRecord: isNewRecord
         });
         
-        let message = 'All sheep have been guided to the pasture!';
-        
-        if (finalTime !== null) {
-            const timeStr = this.formatTime(finalTime);
-            message += `\nTime: ${timeStr}`;
-            
-            if (isNewRecord) {
-                message += '\n🎉 NEW BEST TIME! 🎉';
-            }
-        }
-        
-        const completionElement = document.getElementById('completion-message');
-        console.log('🎯 Found completion element:', !!completionElement);
-        
-        if (completionElement) {
-            completionElement.innerHTML = 
-                message.replace(/\n/g, '<br>') + '<br><button id="restart-button">Play Again</button>';
-            completionElement.style.display = 'block';
-            console.log('✅ Completion message displayed successfully!');
-            
-            // Add event listener for restart button
-            const restartButton = document.getElementById('restart-button');
-            if (restartButton) {
-                restartButton.addEventListener('click', () => {
-                    // Trigger a full restart to start screen
-                    location.reload();
-                });
-            }
-        } else {
-            console.error('❌ completion-message element not found!');
-        }
+        // Data is tracked here for React components to access if needed
+        return;
     }
     
     showCompetitiveCompletionMessage(competitiveData, finalTime = null) {
+        // Completion messages now handled by React components and main.js showCompletionOverlay
+        // This method preserved for backward compatibility
+        console.log('📢 showCompetitiveCompletionMessage called - delegating to React UI:', {
+            competitiveData: competitiveData,
+            finalTime: finalTime
+        });
+        
+        // Best score tracking logic is preserved for data consistency
         const { winner, winType, finalScores, isComplete } = competitiveData;
         
         if (!isComplete) {
@@ -301,96 +262,27 @@ export class GameState {
         }
         
         const myPlayerId = this.getCurrentPlayerId();
-        const isWinner = winner === myPlayerId;
         const myScore = finalScores[myPlayerId] || 0;
-        
-        // Determine if this is timed mode from server data
         const isTimedMode = winType === 'timeout' || winType === 'timed';
         
-        // Check if new best score for timed mode
-        let isNewBestScore = false;
+        // Preserve best score tracking for timed mode
         if (isTimedMode) {
             try {
                 const previousBest = localStorage.getItem('timedModeBestScore');
                 const prevBestNum = previousBest ? parseInt(previousBest) : 0;
-                isNewBestScore = myScore > prevBestNum;
+                const isNewBestScore = myScore > prevBestNum;
                 
-                // Save new best score
                 if (isNewBestScore) {
                     localStorage.setItem('timedModeBestScore', myScore.toString());
+                    console.log('🏆 New best score saved:', myScore);
                 }
             } catch (e) {
                 console.warn('Could not check best score:', e);
             }
         }
         
-        // Build completion message
-        let message = '';
-        let title = '';
-        
-        if (isWinner) {
-            title = isTimedMode ? '⏱️ TIME\'S UP - VICTORY! 🏆' : '🏆 VICTORY! 🏆';
-            message = isTimedMode ? 'You collected the most sheep!' : 'You won the competition!';
-        } else {
-            title = isTimedMode ? '⏱️ TIME\'S UP' : '🥈 Game Complete';
-            message = `Player ${winner} won ${isTimedMode ? 'with the most sheep!' : 'the competition!'}`;
-        }
-        
-        // Add win condition explanation based on actual win type
-        if (winType === 'race') {
-            const winThreshold = Math.ceil(this.totalSheep / 2);
-            message += `\nFirst to ${winThreshold} sheep wins!`;
-        } else if (winType === 'timeout' || isTimedMode) {
-            message += '\nTime\'s up! Highest score wins!';
-        } else if (winType === 'highest_score') {
-            message += '\nHighest score when all sheep collected!';
-        }
-        
-        // Add time information if available
-        if (finalTime !== null && !isTimedMode) {
-            const timeStr = this.formatTime(finalTime);
-            message += `\nTime: ${timeStr}`;
-        } else if (isTimedMode) {
-            message += '\nDuration: 3:00';
-        }
-        
-        // Add new best score message for timed mode
-        if (isTimedMode && isNewBestScore) {
-            message += '\n\n🎉 NEW PERSONAL BEST! 🎉';
-        }
-        
-        // Build final scores display
-        const scoresArray = Object.entries(finalScores).sort(([,a], [,b]) => b - a);
-        message += '\n\nFinal Scores:';
-        scoresArray.forEach(([playerId, score], index) => {
-            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
-            const isYou = playerId === myPlayerId;
-            message += `\n${medal} Player ${playerId}${isYou ? ' (You)' : ''}: ${score} sheep`;
-        });
-        
-        const completionElement = document.getElementById('completion-message');
-        if (completionElement) {
-            completionElement.innerHTML = 
-                `<h2 class="competitive-title ${isWinner ? 'winner' : 'participant'}">${title}</h2>` +
-                message.replace(/\n/g, '<br>') + 
-                '<br><br><button id="competitive-restart-button">Play Again</button>';
-            completionElement.style.display = 'block';
-            
-            // Add competitive completion styling
-            completionElement.classList.add('competitive-completion');
-            if (isWinner) {
-                completionElement.classList.add('winner');
-            }
-            
-            // Add event listener for restart button
-            const restartButton = document.getElementById('competitive-restart-button');
-            if (restartButton) {
-                restartButton.addEventListener('click', () => {
-                    // Trigger a full restart to start screen
-                    location.reload();
-                });
-            }
-        }
+        // Data is tracked here for React components to access if needed
+        return;
     }
     
     formatTime(timeInSeconds) {
@@ -476,12 +368,37 @@ export class GameState {
         return this.gameCompleted;
     }
     
-    startGame(mode = 'solo', competitiveData = null) {
+    startGame(mode = 'solo', competitiveData = null, singlePlayerMode = 'classic') {
         this.gameMode = mode; // Store the game mode
+        this.singlePlayerMode = singlePlayerMode; // Store single player mode
         this.gameActive = true;
         this.gameCompleted = false;
         this.sheepRetired = 0;
         this.isPaused = false; // Ensure game starts unpaused
+        
+        // Store previous sheep count to check if we need to recreate the flock
+        const previousSheepCount = this.totalSheep;
+        
+        // Set sheep count based on single player mode
+        if (mode === 'solo') {
+            if (singlePlayerMode === 'extreme') {
+                this.totalSheep = 1000;
+                console.log('Game started in extreme mode with 1000 sheep!');
+            } else {
+                this.totalSheep = 200;
+                console.log('Game started in classic mode with 200 sheep');
+            }
+        } else {
+            // Multiplayer modes always use 200 sheep
+            this.totalSheep = 200;
+        }
+        
+        // If sheep count changed, we need to recreate the sheep flock
+        if (previousSheepCount !== this.totalSheep && this.optimizedSheepSystem) {
+            console.log(`Sheep count changed from ${previousSheepCount} to ${this.totalSheep} - needs recreation`);
+            // We need the scene reference to recreate - store it for later use
+            this.needsFlockRecreation = true;
+        }
         
         // Initialize competitive/timed mode data if provided
         if ((mode === 'competitive' || mode === 'timed') && competitiveData) {
@@ -626,4 +543,4 @@ export class GameState {
         this.playerScores = {};
         this.currentPlayerId = null;
     }
-} 
+}

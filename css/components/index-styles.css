@@ -1,0 +1,488 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#canvas-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    touch-action: none;
+    overscroll-behavior: none;
+    /* Ensure canvas can receive mouse events */
+    z-index: 1;
+}
+
+/* Keep the original UI hidden but in DOM */
+#start-screen, .game-ui {
+    display: none !important;
+}
+
+/* Force hide the original multiplayer HUD */
+#multiplayer-hud {
+    display: none !important;
+}
+
+/* Modern UI overlay */
+#react-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+#react-overlay > * {
+    pointer-events: auto;
+}
+
+/* UI Components */
+.ui-panel {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+.btn-primary {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: white;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    outline: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary:hover::before {
+    opacity: 1;
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.btn-primary span {
+    position: relative;
+    z-index: 1;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: white;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    outline: none;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Input styles */
+.modern-input {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: all 0.3s;
+    outline: none;
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+.modern-input:focus {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 3px 12px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+        0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+/* Dropdown styles */
+.modern-input option {
+    background: #1a1a1a;
+    color: white;
+    padding: 0.5rem;
+}
+
+.modern-input::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modern-input::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.modern-input::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+/* Mobile controls */
+.mobile-control {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+.mobile-control:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Stamina bar */
+.stamina-bar {
+    width: 100%;
+    height: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.stamina-fill {
+    height: 100%;
+    transition: width 0.3s ease-out;
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.stamina-fill.low {
+    background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes pulseGlow {
+    0%, 100% { 
+        box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
+        transform: translateY(0);
+    }
+    50% { 
+        box-shadow: 0 20px 40px -5px rgba(102, 126, 234, 0.6);
+        transform: translateY(-2px);
+    }
+}
+
+@keyframes floatAnimation {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-8px) rotate(2deg); }
+}
+
+
+
+@keyframes titleBounce {
+    0%, 100% { 
+        transform: translateY(0) rotate(-0.5deg);
+    }
+    50% { 
+        transform: translateY(-5px) rotate(-0.5deg);
+    }
+}
+
+@keyframes subtitleBounce {
+    0%, 100% { 
+        transform: translateY(0) rotate(0.5deg);
+    }
+    50% { 
+        transform: translateY(-8px) rotate(0.5deg);
+    }
+}
+
+/* Loading spinner */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Shimmer animation for skeleton loader */
+@keyframes shimmer {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+/* Skeleton loader fade out */
+.skeleton-fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Hover scale utilities */
+.hover\:scale-102:hover {
+    transform: scale(1.02);
+}
+
+/* Mobile joystick override */
+#joystick-zone {
+    position: fixed !important;
+    z-index: 100;
+}
+
+/* Safe area handling */
+.safe-area-inset {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Prevent zoom */
+input, button, select, textarea {
+    font-size: 16px;
+    -webkit-appearance: none;
+    border-radius: 0;
+}
+
+/* React overlay */
+#react-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Ensure all child elements of react-overlay don't block scroll */
+#react-overlay * {
+    pointer-events: none;
+}
+
+/* Only allow pointer events on specific interactive elements */
+#react-overlay button,
+#react-overlay input,
+#react-overlay select,
+#react-overlay .btn-primary,
+#react-overlay .btn-secondary,
+#react-overlay .dog-card,
+#react-overlay .mode-button,
+#react-overlay .ui-panel,
+#react-overlay .cursor-pointer {
+    pointer-events: auto;
+}
+
+/* Ensure HUD components are visible but don't block scroll */
+#react-overlay .game-hud {
+    pointer-events: none;
+}
+
+/* Make sure start screen elements are clickable */
+#react-overlay .fixed.inset-0 > div {
+    pointer-events: auto;
+}
+
+#react-overlay .ui-panel {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    color: white;
+}
+
+#react-overlay .stamina-bar {
+    width: 128px;
+    height: 8px;
+    background: #374151;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#react-overlay .stamina-fill {
+    height: 100%;
+    transition: all 0.3s ease-out;
+}
+/* Mobile-optimized title text - thinner stroke for better readability */
+@media (max-width: 768px) {
+    .mobile-title {
+        -webkit-text-stroke: 1.5px #0A47A1 !important;
+        text-stroke: 1.5px #0A47A1 !important;
+    }
+    
+    .mobile-subtitle {
+        -webkit-text-stroke: 1px #FF6B00 !important;
+        text-stroke: 1px #FF6B00 !important;
+    }
+    
+    /* Hide dog icons on mobile - too small to be useful */
+    .mobile-dog-icon {
+        display: none !important;
+    }
+    
+    /* Ensure dog names are perfectly centered when icons are hidden */
+    .mobile-dog-icon + p {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Fix button text centering on mobile */
+    .btn-primary,
+    .btn-secondary {
+        justify-content: center !important;
+        text-align: center !important;
+    }
+}
+
+/* Mobile zoom slider styles */
+@media (max-width: 768px) {
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+        cursor: pointer;
+        height: 30px;
+    }
+    
+    input[type="range"]::-webkit-slider-track {
+        background: rgba(255, 255, 255, 0.3);
+        height: 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        background: white;
+        height: 24px;
+        width: 24px;
+        border-radius: 50%;
+        margin-top: -8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        border: 2px solid rgba(0, 170, 255, 0.5);
+    }
+    
+    input[type="range"]::-moz-range-track {
+        background: rgba(255, 255, 255, 0.3);
+        height: 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+        background: white;
+        height: 24px;
+        width: 24px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 170, 255, 0.5);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+}
