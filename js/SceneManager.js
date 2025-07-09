@@ -45,6 +45,7 @@ export class SceneManager {
         this.minCameraDistance = this.isMobile ? 35 : 20;  // Safer minimum for mobile
         this.maxCameraDistance = 150;
         this.mobileControls = null;
+        this.gamepadManager = null;
         this.competitiveCameraDirection = null; // Store competitive gate direction for camera positioning
         
         // Player color system
@@ -187,6 +188,11 @@ export class SceneManager {
         }
     }
     
+    // Set gamepad manager reference for zoom integration
+    setGamepadManager(gamepadManager) {
+        this.gamepadManager = gamepadManager;
+    }
+    
     setupMouseControls() {
         // Mouse wheel for zoom (desktop only)
         this.renderer.domElement.addEventListener('wheel', (event) => {
@@ -209,6 +215,25 @@ export class SceneManager {
             
             // Note: Mobile zoom slider now handled by React MobileHUD component
         });
+    }
+    
+    // Handle gamepad zoom controls - should be called every frame
+    handleGamepadZoom() {
+        if (!this.gamepadManager || !this.gamepadManager.isConnected()) {
+            return;
+        }
+        
+        const zoomSpeed = 1.5; // Reduced sensitivity for more precise control
+        
+        if (this.gamepadManager.isZoomInPressed()) {
+            // Zoom in with A button
+            this.cameraDistance = Math.max(this.minCameraDistance, this.cameraDistance - zoomSpeed);
+        }
+        
+        if (this.gamepadManager.isZoomOutPressed()) {
+            // Zoom out with B button
+            this.cameraDistance = Math.min(this.maxCameraDistance, this.cameraDistance + zoomSpeed);
+        }
     }
     
     // Get current camera distance for mobile controls synchronization

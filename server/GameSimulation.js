@@ -878,6 +878,11 @@ export class GameSimulation {
                     `Winner: ${this.completionData.competitive.winner} (${this.completionData.competitive.winType})` : 
                     `${this.completionData.sheepRetired}/${this.completionData.totalSheep} sheep retired`);
         
+        // Submit scores to leaderboard for multiplayer games
+        if ((this.isCompetitive || this.isTimedMode) && this.room.server) {
+            this.submitScoresToLeaderboard();
+        }
+        
         // Broadcast completion event to all players in the room using server
         if (this.room.server) {
             this.room.server.broadcastToRoom(this.room.roomCode, 'gameComplete', this.completionData);
@@ -1058,17 +1063,102 @@ export class GameSimulation {
     calculatePlayerRankings(finalScores) {
         // Convert scores object to array with rankings
         return Object.entries(finalScores)
-            .map(([playerId, score]) => ({
-                playerId,
-                score,
-                playerName: this.room.getPlayer(playerId)?.name || `Player ${playerId}`
-            }))
+            .map(([playerId, score]) => {
+                // Try to get display name from server's player data
+                let playerName = `Player ${playerId}`;
+                if (this.room.server) {
+                    const serverPlayer = this.room.server.players.get(playerId);
+                    if (serverPlayer && serverPlayer.displayName) {
+                        playerName = serverPlayer.displayName;
+                    } else if (serverPlayer && serverPlayer.name && serverPlayer.name !== 'Anonymous') {
+                        playerName = serverPlayer.name;
+                    }
+                }
+                
+                return {
+                    playerId,
+                    score,
+                    playerName
+                };
+            })
             .sort((a, b) => b.score - a.score) // Sort by score descending
             .map((player, index) => ({
                 ...player,
                 rank: index + 1,
                 medal: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : ''
             }));
+    }
+    
+    submitScoresToLeaderboard() {
+        if (!this.room.server || !this.room.server.leaderboardManager) {
+            console.warn(`⚠️ No leaderboard manager available for room ${this.room.roomCode}`);
+            return;
+        }
+        
+        const gameMode = this.isTimedMode ? 'timed' : 'competitive';
+        console.log(`📊 Submitting ${gameMode} scores to leaderboard for room ${this.room.roomCode}`);
+        
+        let scoresSubmitted = 0;
+        let playersProcessed = 0;
+        
+        // Submit scores for each player
+        for (const [sessionId, score] of Object.entries(this.gameState.playerScores)) {
+            playersProcessed++;
+            
+            // Get server player data to find persistent ID
+            const serverPlayer = this.room.server.players.get(sessionId);
+            if (!serverPlayer) {
+                console.warn(`⚠️ No server player data found for session ${sessionId}`);
+                continue;
+            }
+            
+            if (!serverPlayer.persistentId) {
+                console.warn(`⚠️ No persistent ID found for session ${sessionId} (${serverPlayer.name || 'Unknown'}). Player must register first.`);
+                continue;
+            }
+            
+            try {
+                // Determine score value based on game mode
+                let scoreValue;
+                if (this.isTimedMode) {
+                    // For timed mode, score is the number of sheep collected
+                    scoreValue = score;
+                } else {
+                    // For competitive mode, only the winner gets a win (1), others get 0
+                    // Check if this player is the winner
+                    const isWinner = sessionId === this.completionData.competitive.winner;
+                    scoreValue = isWinner ? 1 : 0;
+                }
+                
+                const scoreDescription = this.isTimedMode ? `${scoreValue} sheep` : (scoreValue === 1 ? 'WIN' : 'LOSS');
+                console.log(`📊 Submitting score for ${serverPlayer.displayName || serverPlayer.name} (${serverPlayer.persistentId}): ${gameMode} = ${scoreDescription}`);
+                
+                const result = this.room.server.leaderboardManager.submitScore(
+                    serverPlayer.persistentId,
+                    gameMode,
+                    scoreValue,
+                    {
+                        gameCompleteTime: Date.now(),
+                        roomCode: this.room.roomCode,
+                        playerCount: Object.keys(this.gameState.playerScores).length,
+                        totalSheep: this.gameState.totalSheep
+                    }
+                );
+                
+                if (result.updated) {
+                    scoresSubmitted++;
+                    const recordMessage = result.isNewRecord ? ' (NEW RECORD!)' : '';
+                    console.log(`✅ Score submitted for ${result.player.fullName}: ${scoreValue}${recordMessage}`);
+                } else {
+                    console.log(`ℹ️ Score not updated for ${result.player.fullName}: ${scoreValue} (not better than existing: ${result.player[this.room.server.leaderboardManager.getScoreColumn(gameMode)]})`);
+                }
+                
+            } catch (error) {
+                console.error(`❌ Error submitting score for session ${sessionId}:`, error.message);
+            }
+        }
+        
+        console.log(`📊 Leaderboard submission complete: ${scoresSubmitted}/${playersProcessed} scores submitted for ${gameMode} mode`);
     }
     
     getPlayerRankings() {
@@ -1227,4 +1317,4 @@ export class GameSimulation {
             }
         }
     }
-} 
+}

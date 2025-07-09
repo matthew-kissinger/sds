@@ -706,6 +706,138 @@ export class NetworkManager {
         return this.isHost;
     }
     
+    // Lightweight connection for leaderboard-only operations
+    async connectForLeaderboard() {
+        if (this.connected) {
+            console.log('🔗 Already connected, reusing existing session for leaderboard');
+            console.log(`🔍 Session ID: ${this.channel?.id || 'unknown'}`);
+            return Promise.resolve();
+        }
+        
+        console.log('🔗 Establishing leaderboard-only connection...');
+        
+        // Use the existing connect method but mark it as leaderboard-only
+        try {
+            await this.connect();
+            console.log('✅ Leaderboard connection established successfully');
+            console.log(`🔍 New session ID: ${this.channel?.id || 'unknown'}`);
+        } catch (error) {
+            console.error('❌ Failed to establish leaderboard connection:', error.message);
+            throw error;
+        }
+    }
+
+    // Leaderboard API Methods
+    async registerPlayer(persistentId, displayName, nameType = 'custom') {
+        if (!this.connected) {
+            throw new Error('Not connected to server');
+        }
+        
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Player registration timeout'));
+            }, 5000);
+            
+            this.channel.emit('registerPlayer', { persistentId, displayName, nameType });
+            
+            const handleRegistered = (data) => {
+                clearTimeout(timeout);
+                resolve(data);
+            };
+            
+            const handleError = (error) => {
+                clearTimeout(timeout);
+                reject(new Error(error.message));
+            };
+            
+            this.channel.on('playerRegistered', handleRegistered);
+            this.channel.on('leaderboardError', handleError);
+        });
+    }
+    
+    async submitScore(gameMode, score, additionalData = {}) {
+        if (!this.connected) {
+            throw new Error('Not connected to server');
+        }
+        
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Score submission timeout'));
+            }, 5000);
+            
+            this.channel.emit('submitScore', { gameMode, score, additionalData });
+            
+            const handleSubmitted = (data) => {
+                clearTimeout(timeout);
+                resolve(data);
+            };
+            
+            const handleError = (error) => {
+                clearTimeout(timeout);
+                reject(new Error(error.message));
+            };
+            
+            this.channel.on('scoreSubmitted', handleSubmitted);
+            this.channel.on('leaderboardError', handleError);
+        });
+    }
+    
+    async getLeaderboard(gameMode, limit = 10) {
+        if (!this.connected) {
+            throw new Error('Not connected to server');
+        }
+        
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Leaderboard fetch timeout'));
+            }, 5000);
+            
+            this.channel.emit('getLeaderboard', { gameMode, limit });
+            
+            const handleLeaderboard = (data) => {
+                clearTimeout(timeout);
+                resolve(data);
+            };
+            
+            const handleError = (error) => {
+                clearTimeout(timeout);
+                reject(new Error(error.message));
+            };
+            
+            this.channel.on('leaderboardData', handleLeaderboard);
+            this.channel.on('leaderboardError', handleError);
+        });
+    }
+    
+    async getAllLeaderboards(limit = 10) {
+        if (!this.connected) {
+            throw new Error('Not connected to server');
+        }
+        
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('All leaderboards fetch timeout'));
+            }, 5000);
+            
+            this.channel.emit('getAllLeaderboards', { limit });
+            
+            const handleAllLeaderboards = (data) => {
+                clearTimeout(timeout);
+                console.log('🔍 NetworkManager received leaderboard data:', data);
+                // Return the leaderboards object directly
+                resolve(data.leaderboards || data);
+            };
+            
+            const handleError = (error) => {
+                clearTimeout(timeout);
+                reject(new Error(error.message));
+            };
+            
+            this.channel.on('allLeaderboardsData', handleAllLeaderboards);
+            this.channel.on('leaderboardError', handleError);
+        });
+    }
+
     // Racing mode helpers
     isRacingMode() {
         return this.currentRoom && this.currentRoom.gameMode === 'racing';
@@ -719,4 +851,4 @@ export class NetworkManager {
         this.lastCompetitionResult = null;
         this.competitiveModeData = null;
     }
-} 
+}

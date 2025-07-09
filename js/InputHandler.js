@@ -1,7 +1,8 @@
 import { Vector2D } from './Vector2D.js';
+import { GamepadManager } from './GamepadManager.js';
 
 /**
- * Enhanced input handler for both keyboard and mobile touch controls
+ * Enhanced input handler for keyboard, mobile touch controls, and gamepad
  */
 export class InputHandler {
     constructor() {
@@ -17,6 +18,7 @@ export class InputHandler {
         this.isPaused = false;
         this.pauseCallbacks = [];
         this.mobileControls = null;
+        this.gamepadManager = new GamepadManager();
         this.setupEventListeners();
     }
 
@@ -30,6 +32,11 @@ export class InputHandler {
                 this.togglePause();
                 event.preventDefault();
                 return;
+            }
+            
+            // Skip game input processing if typing in text field
+            if (window.isTypingInInput && (key in this.keys || event.key === 'Shift')) {
+                return; // Don't preventDefault, let the input field handle it
             }
             
             // Only process other keys if not paused
@@ -120,11 +127,18 @@ export class InputHandler {
                 pauseIndicator = document.createElement('div');
                 pauseIndicator.id = 'pause-indicator';
                 
-                // Different pause message for mobile vs desktop
+                // Different pause message based on input method
                 const isMobile = this.mobileControls && this.mobileControls.getIsTouchDevice();
-                const pauseMessage = isMobile ? 
-                    '⏸️ PAUSED<br><small>Tap to resume</small>' : 
-                    '⏸️ PAUSED<br><small>Press ESC to resume</small>';
+                const hasGamepad = this.gamepadManager && this.gamepadManager.isConnected();
+                
+                let pauseMessage;
+                if (isMobile) {
+                    pauseMessage = '⏸️ PAUSED<br><small>Tap to resume</small>';
+                } else if (hasGamepad) {
+                    pauseMessage = '⏸️ PAUSED<br><small>Press ESC or START to resume</small>';
+                } else {
+                    pauseMessage = '⏸️ PAUSED<br><small>Press ESC to resume</small>';
+                }
                 
                 pauseIndicator.innerHTML = pauseMessage;
                 pauseIndicator.style.cssText = `
@@ -160,14 +174,25 @@ export class InputHandler {
         }
     }
 
-    // Get movement direction based on current input state (keyboard + mobile)
+    // Get movement direction based on current input state (gamepad + keyboard + mobile)
     getMovementDirection() {
         // Return zero movement if paused
         if (this.isPaused) {
             return new Vector2D(0, 0);
         }
         
-        // Start with keyboard input
+        // Update gamepad state
+        this.gamepadManager.update();
+        
+        // Check gamepad input first (highest priority)
+        if (this.gamepadManager.isConnected()) {
+            const gamepadDirection = this.gamepadManager.getMovementDirection();
+            if (gamepadDirection.magnitude() > 0) {
+                return gamepadDirection;
+            }
+        }
+        
+        // Fall back to keyboard input
         const direction = new Vector2D(0, 0);
         
         if (this.keys.w) direction.z += 1;
@@ -196,6 +221,14 @@ export class InputHandler {
             return false;
         }
         
+        // Check gamepad input first
+        if (this.gamepadManager.isConnected()) {
+            const gamepadDirection = this.gamepadManager.getMovementDirection();
+            if (gamepadDirection.magnitude() > 0) {
+                return true;
+            }
+        }
+        
         // Check keyboard input
         const keyboardMoving = this.keys.w || this.keys.a || this.keys.s || this.keys.d;
         
@@ -207,11 +240,16 @@ export class InputHandler {
         return keyboardMoving || mobileMoving;
     }
     
-    // Check if sprint input is active (keyboard shift or mobile sprint button)
+    // Check if sprint input is active (gamepad trigger, keyboard shift, or mobile sprint button)
     isSprinting() {
         // Return false if paused
         if (this.isPaused) {
             return false;
+        }
+        
+        // Check gamepad sprint first (highest priority)
+        if (this.gamepadManager.isConnected() && this.gamepadManager.isSprinting()) {
+            return true;
         }
         
         // Check keyboard sprint
@@ -239,4 +277,9 @@ export class InputHandler {
     setDebugCompleteCallback(callback) {
         this.onDebugComplete = callback;
     }
-} 
+    
+    // Get gamepad manager for debugging
+    getGamepadManager() {
+        return this.gamepadManager;
+    }
+}

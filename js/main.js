@@ -45,6 +45,9 @@ class SheepDogSimulation {
         this.inputHandler.setMobileControls(this.mobileControls);
         this.sceneManager.setMobileControls(this.mobileControls);
         
+        // Connect gamepad manager to scene manager
+        this.sceneManager.setGamepadManager(this.inputHandler.getGamepadManager());
+        
         // Connect performance monitor and game state to input handler
         this.inputHandler.setPerformanceMonitor(this.performanceMonitor);
         
@@ -701,10 +704,18 @@ class SheepDogSimulation {
         // Check if game is paused
         const isPaused = this.inputHandler.isPausedState();
         
+        // Handle gamepad pause input
+        if (this.inputHandler.getGamepadManager().isPausePressed()) {
+            this.inputHandler.togglePause();
+        }
+        
         // Update start screen camera if active
         if (this.startScreen.isStartScreenActive()) {
             this.startScreen.updateCinematicCamera();
         } else if (!isPaused) {
+            // Handle gamepad zoom controls
+            this.sceneManager.handleGamepadZoom();
+            
             // Handle input only when game is active and not paused
             let movementDirection = this.inputHandler.getMovementDirection();
             const wantsSprint = this.inputHandler.isSprinting();
@@ -1163,10 +1174,17 @@ class SheepDogSimulation {
         if (mode === 'single') {
             // Single Player: Time and completion
             const timeStr = data.finalTime ? this.formatTime(data.finalTime) : 'Unknown';
+            
+            // Submit score to leaderboard for single player games
+            if (data.finalTime) {
+                console.log(`📊 Submitting score to leaderboard: ${data.finalTime} seconds for ${this.singlePlayerMode === 'extreme' ? 'soloExtreme' : 'soloClassic'} mode`);
+                this.gameState.submitScoreToLeaderboard(data.finalTime);
+            }
+            
             content = `
                 <div style="padding: 40px; background: rgba(0,100,0,0.3); border-radius: 20px; border: 2px solid #4CAF50;">
                     <h1 style="font-size: 48px; margin: 0 0 20px 0;">🎉 VICTORY! 🎉</h1>
-                    <p style="font-size: 24px; margin: 0 0 10px 0;">All 200 sheep herded successfully!</p>
+                    <p style="font-size: 24px; margin: 0 0 10px 0;">All ${this.gameState.totalSheep} sheep herded successfully!</p>
                     <p style="font-size: 18px; margin: 0 0 30px 0;">Time: ${timeStr}</p>
                     <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer;">
                         Play Again

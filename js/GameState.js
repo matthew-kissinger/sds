@@ -241,6 +241,9 @@ export class GameState {
             isNewRecord: isNewRecord
         });
         
+        // Submit score to leaderboard
+        this.submitScoreToLeaderboard(finalTime);
+        
         // Data is tracked here for React components to access if needed
         return;
     }
@@ -264,6 +267,14 @@ export class GameState {
         const myPlayerId = this.getCurrentPlayerId();
         const myScore = finalScores[myPlayerId] || 0;
         const isTimedMode = winType === 'timeout' || winType === 'timed';
+        
+        // Submit score to leaderboard
+        if (isTimedMode) {
+            this.submitScoreToLeaderboard(myScore, 'timed');
+        } else if (winner === myPlayerId) {
+            // Player won a competitive match
+            this.submitScoreToLeaderboard(1, 'competitive');
+        }
         
         // Preserve best score tracking for timed mode
         if (isTimedMode) {
@@ -526,6 +537,35 @@ export class GameState {
     setGameMode(mode) {
         this.gameMode = mode;
         console.log(`GameState mode set to: ${mode}`);
+    }
+    
+    // Submit score to leaderboard system
+    submitScoreToLeaderboard(score, gameMode = null) {
+        // Determine game mode if not provided
+        let leaderboardMode = gameMode;
+        if (!leaderboardMode) {
+            if (this.gameMode === 'solo') {
+                leaderboardMode = this.singlePlayerMode === 'extreme' ? 'soloExtreme' : 'soloClassic';
+            } else if (this.gameMode === 'multiplayer') {
+                leaderboardMode = 'cooperative';
+            } else {
+                leaderboardMode = this.gameMode; // competitive, timed, etc.
+            }
+        }
+        
+        console.log(`📊 Submitting score to leaderboard: ${score} for mode: ${leaderboardMode}`);
+        
+        // Call the global score submission function
+        if (window.submitGameScore) {
+            window.submitGameScore(leaderboardMode, score, {
+                gameMode: this.gameMode,
+                singlePlayerMode: this.singlePlayerMode,
+                totalSheep: this.totalSheep,
+                timestamp: Date.now()
+            });
+        } else {
+            console.warn('Score submission function not available');
+        }
     }
     
     reset() {

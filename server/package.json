@@ -10,7 +10,8 @@
     "test": "node test.js"
   },
   "dependencies": {
-    "@geckos.io/server": "^3.0.1"
+    "@geckos.io/server": "^3.0.1",
+    "better-sqlite3": "^9.0.0"
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.7.10",

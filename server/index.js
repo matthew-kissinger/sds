@@ -6,6 +6,7 @@
 import geckos from '@geckos.io/server';
 import { RoomManager } from './RoomManager.js';
 import { GameSimulation } from './GameSimulation.js';
+import { LeaderboardManager } from './LeaderboardManager.js';
 
 class MultiplayerServer {
     constructor(options = {}) {
@@ -15,6 +16,7 @@ class MultiplayerServer {
         
         // Initialize systems
         this.roomManager = new RoomManager();
+        this.leaderboardManager = new LeaderboardManager();
         this.io = null;
         this.players = new Map(); // socketId -> playerInfo
         
@@ -157,6 +159,23 @@ class MultiplayerServer {
         // Dog type updates
         channel.on('setDogType', (data) => {
             this.handleSetDogType(playerId, data);
+        });
+
+        // Leaderboard events
+        channel.on('registerPlayer', (data) => {
+            this.handleRegisterPlayer(playerId, data);
+        });
+
+        channel.on('submitScore', (data) => {
+            this.handleSubmitScore(playerId, data);
+        });
+
+        channel.on('getLeaderboard', (data) => {
+            this.handleGetLeaderboard(playerId, data);
+        });
+
+        channel.on('getAllLeaderboards', (data) => {
+            this.handleGetAllLeaderboards(playerId, data);
         });
 
         // Utility events
@@ -446,6 +465,138 @@ class MultiplayerServer {
         }
     }
 
+    handleRegisterPlayer(playerId, data) {
+        try {
+            const player = this.players.get(playerId);
+            if (!player) {
+                console.error(`❌ Player ${playerId} not found in players map for registration`);
+                return;
+            }
+
+            const { persistentId, displayName, nameType } = data;
+            console.log(`🆔 Player registration request: ${displayName} (${nameType})`);
+            console.log(`🔍 Session mapping: ${playerId} -> ${persistentId}`);
+            
+            const playerProfile = this.leaderboardManager.registerPlayer(persistentId, displayName, nameType);
+            
+            // Store the persistent ID in the player object for score submissions
+            player.persistentId = persistentId;
+            player.displayName = playerProfile.displayName;
+            player.fullName = playerProfile.fullName;
+            
+            console.log(`🔍 Stored in session ${playerId}: persistentId=${persistentId}, displayName=${playerProfile.displayName}`);
+            
+            player.channel.emit('playerRegistered', {
+                success: true,
+                playerProfile: playerProfile
+            });
+
+            console.log(`✅ Player registered: ${playerProfile.fullName} (${persistentId})`);
+            
+        } catch (error) {
+            console.error(`❌ Error registering player ${playerId}:`, error.message);
+            this.sendLeaderboardError(playerId, 'registerPlayer', error.message);
+        }
+    }
+
+    handleSubmitScore(playerId, data) {
+        try {
+            const player = this.players.get(playerId);
+            if (!player) {
+                console.error(`❌ Player ${playerId} not found in players map for score submission`);
+                console.error(`❌ Available players: ${Array.from(this.players.keys()).join(', ')}`);
+                return;
+            }
+
+            const { gameMode, score, additionalData } = data;
+            console.log(`📊 Score submission: ${gameMode} = ${score}`);
+            console.log(`🔍 Session lookup: ${playerId} -> ${player.persistentId || 'NOT_FOUND'}`);
+            
+            // Use the stored persistent ID from registration
+            if (!player.persistentId) {
+                console.error(`❌ No persistent ID found for session ${playerId}. Player must register first.`);
+                throw new Error('Player not found. Please register first.');
+            }
+            
+            console.log(`🔍 Using persistent ID: ${player.persistentId} for session: ${playerId}`);
+            
+            const result = this.leaderboardManager.submitScore(player.persistentId, gameMode, score, additionalData);
+            
+            player.channel.emit('scoreSubmitted', {
+                success: true,
+                updated: result.updated,
+                isNewRecord: result.isNewRecord,
+                playerProfile: result.player
+            });
+
+            console.log(`✅ Score submitted for ${result.player.fullName} (${player.persistentId})`);
+            
+        } catch (error) {
+            console.error(`❌ Error submitting score for ${playerId}:`, error.message);
+            this.sendLeaderboardError(playerId, 'submitScore', error.message);
+        }
+    }
+
+    handleGetLeaderboard(playerId, data) {
+        try {
+            const player = this.players.get(playerId);
+            if (!player) return;
+
+            const { gameMode, limit } = data;
+            console.log(`📋 Leaderboard request: ${gameMode} (limit: ${limit})`);
+            
+            const leaderboard = this.leaderboardManager.getLeaderboard(gameMode, limit);
+            
+            player.channel.emit('leaderboardData', {
+                success: true,
+                gameMode: gameMode,
+                leaderboard: leaderboard
+            });
+
+            console.log(`✅ Leaderboard sent: ${gameMode} (${leaderboard.length} entries)`);
+            
+        } catch (error) {
+            console.error(`❌ Error getting leaderboard for ${playerId}:`, error.message);
+            this.sendLeaderboardError(playerId, 'getLeaderboard', error.message);
+        }
+    }
+
+    handleGetAllLeaderboards(playerId, data) {
+        try {
+            const player = this.players.get(playerId);
+            if (!player) return;
+
+            const { limit } = data;
+            console.log(`📋 All leaderboards request (limit: ${limit})`);
+            
+            const allLeaderboards = this.leaderboardManager.getAllLeaderboards(limit);
+            console.log(`🔍 Raw leaderboard data from manager:`, JSON.stringify(allLeaderboards, null, 2));
+            
+            player.channel.emit('allLeaderboardsData', {
+                success: true,
+                leaderboards: allLeaderboards,
+                stats: this.leaderboardManager.getStats()
+            });
+
+            console.log(`✅ All leaderboards sent (${Object.keys(allLeaderboards).length} modes)`);
+            
+        } catch (error) {
+            console.error(`❌ Error getting all leaderboards for ${playerId}:`, error.message);
+            this.sendLeaderboardError(playerId, 'getAllLeaderboards', error.message);
+        }
+    }
+
+    sendLeaderboardError(playerId, context, message) {
+        const player = this.players.get(playerId);
+        if (player) {
+            player.channel.emit('leaderboardError', {
+                context: context,
+                message: message,
+                timestamp: Date.now()
+            });
+        }
+    }
+
     handlePlayerDisconnect(playerId) {
         this.stats.connectionsActive--;
         
@@ -529,6 +680,11 @@ class MultiplayerServer {
             }
         }
         
+        // Perform database maintenance
+        if (this.leaderboardManager) {
+            this.leaderboardManager.performMaintenance();
+        }
+        
         // Log server stats
         const stats = this.getServerStats();
         console.log(`📊 Server Stats:`, stats);
@@ -574,6 +730,11 @@ class MultiplayerServer {
             }
         }
         
+        // Close database connection
+        if (this.leaderboardManager) {
+            this.leaderboardManager.close();
+        }
+        
         if (this.io) {
             // Geckos.io server cleanup
             try {
@@ -612,4 +773,4 @@ process.on('SIGTERM', () => {
 server.start().catch((error) => {
     console.error('💥 Fatal error starting server:', error);
     process.exit(1);
-}); 
+});

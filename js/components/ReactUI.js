@@ -231,11 +231,18 @@ function initializeReactUI() {
                 icon: '🌐',
                 description: 'Compete with players worldwide',
                 color: 'from-green-500 to-teal-500'
+            },
+            {
+                id: 'leaderboard',
+                title: 'Global Leaderboard',
+                icon: '🏆',
+                description: 'View top players and rankings',
+                color: 'from-yellow-500 to-orange-500'
             }
         ];
         
         return React.createElement('div', {
-            className: 'flex flex-col md:flex-row gap-6 w-full max-w-2xl mx-auto justify-center',
+            className: 'grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mx-auto',
             style: { animation: 'slideUp 0.8s ease-out 0.6s both' }
         }, modes.map(mode =>
             React.createElement('div', {
@@ -655,18 +662,567 @@ function initializeReactUI() {
         ]);
     }
     
+    // Player Identity Management
+    function getPlayerIdentity() {
+        try {
+            const identity = localStorage.getItem('playerIdentity');
+            return identity ? JSON.parse(identity) : null;
+        } catch (error) {
+            console.error('Error loading player identity:', error);
+            return null;
+        }
+    }
+    
+    function savePlayerIdentity(identity) {
+        try {
+            localStorage.setItem('playerIdentity', JSON.stringify(identity));
+        } catch (error) {
+            console.error('Error saving player identity:', error);
+        }
+    }
+    
+    function generatePersistentId() {
+        return 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    // Player Identity Setup Component
+    function PlayerIdentitySetup({ onComplete }) {
+        const [displayName, setDisplayName] = useState('');
+        const [nameType, setNameType] = useState('custom');
+        const [isSubmitting, setIsSubmitting] = useState(false);
+        const [error, setError] = useState('');
+        
+        const handleGenerateRandom = () => {
+            setNameType('random');
+            setDisplayName('Random Name'); // Placeholder text for display
+        };
+        
+        const handleStayAnonymous = () => {
+            setNameType('anonymous');
+            setDisplayName('Player');
+        };
+        
+        const handleCustomName = () => {
+            setNameType('custom');
+            setDisplayName('');
+        };
+        
+        const handleSubmit = async () => {
+            if (nameType === 'custom' && (!displayName || displayName.trim().length === 0)) {
+                setError('Please enter a display name or choose another option');
+                return;
+            }
+            
+            if (nameType === 'custom' && displayName.trim().length > 20) {
+                setError('Display name must be 20 characters or less');
+                return;
+            }
+            
+            setIsSubmitting(true);
+            setError('');
+            
+            try {
+                // Generate persistent ID
+                const persistentId = generatePersistentId();
+                // For random names, send empty string so server generates the name
+                const finalDisplayName = nameType === 'custom' ? displayName.trim() : 
+                                       nameType === 'random' ? '' : displayName;
+                
+                // Register with server if connected
+                let serverResponse = null;
+                if (window.gameInstance?.networkManager) {
+                    try {
+                        await window.gameInstance.networkManager.connect();
+                        serverResponse = await window.gameInstance.networkManager.registerPlayer(
+                            persistentId, 
+                            finalDisplayName, 
+                            nameType
+                        );
+                        console.log('✅ Player registered with server:', serverResponse);
+                    } catch (networkError) {
+                        console.warn('⚠️ Server registration failed, proceeding offline:', networkError);
+                        // Continue without server registration for offline play
+                    }
+                }
+                
+                // Create player identity
+                const identity = {
+                    persistentId: persistentId,
+                    displayName: serverResponse?.playerProfile?.displayName || serverResponse?.displayName || finalDisplayName || 'Player',
+                    fullName: serverResponse?.playerProfile?.fullName || serverResponse?.fullName || finalDisplayName || 'Player#0001',
+                    discriminator: serverResponse?.playerProfile?.discriminator || serverResponse?.discriminator || '0001',
+                    nameType: nameType,
+                    createdAt: Date.now(),
+                    isRegistered: !!serverResponse
+                };
+                
+                // Debug logging to see what we're getting from server
+                console.log('🔍 Client identity creation debug:');
+                console.log('  - serverResponse:', serverResponse);
+                console.log('  - finalDisplayName:', finalDisplayName);
+                console.log('  - nameType:', nameType);
+                console.log('  - created identity:', identity);
+                
+                // Save to localStorage
+                savePlayerIdentity(identity);
+                
+                console.log('🆔 Player identity created:', identity);
+                onComplete(identity);
+                
+            } catch (error) {
+                console.error('Error creating player identity:', error);
+                setError('Failed to create player identity. Please try again.');
+            } finally {
+                setIsSubmitting(false);
+            }
+        };
+        
+        return React.createElement('div', {
+            className: 'max-w-lg w-full',
+            style: { 
+                animation: 'slideUp 0.8s ease-out',
+                background: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(28px)',
+                WebkitBackdropFilter: 'blur(28px)',
+                borderRadius: '1.5rem',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
+                padding: '2.5rem'
+            }
+        }, [
+            React.createElement('h2', {
+                key: 'title',
+                className: 'text-2xl font-bold text-center text-white mb-2',
+                style: {
+                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                }
+            }, 'Welcome to Sheep Dog Simulator!'),
+            
+            React.createElement('p', {
+                key: 'subtitle',
+                className: 'text-white text-opacity-70 text-center mb-8 text-sm'
+            }, 'Choose how you\'d like to be known:'),
+            
+            React.createElement('div', {
+                key: 'options',
+                className: 'space-y-4'
+            }, [
+                // Custom name option
+                React.createElement('div', {
+                    key: 'custom',
+                    className: `p-4 rounded-xl cursor-pointer transition-all duration-300 ${
+                        nameType === 'custom' ? 'bg-blue-500 bg-opacity-20 border-blue-400 border' : 'bg-white bg-opacity-5 border-white border border-opacity-10'
+                    }`,
+                    onClick: handleCustomName
+                }, [
+                    React.createElement('div', {
+                        key: 'header',
+                        className: 'flex items-center gap-3 mb-3'
+                    }, [
+                        React.createElement('span', { key: 'icon', className: 'text-xl' }, '✏️'),
+                        React.createElement('span', { key: 'title', className: 'text-white font-semibold' }, 'Custom Name')
+                    ]),
+                    React.createElement('p', {
+                        key: 'desc',
+                        className: 'text-white text-opacity-70 text-sm mb-3'
+                    }, 'Choose your own display name'),
+                    nameType === 'custom' && React.createElement('input', {
+                        key: 'input',
+                        type: 'text',
+                        className: 'modern-input w-full',
+                        placeholder: 'Enter your name...',
+                        value: displayName,
+                        maxLength: 20,
+                        onChange: (e) => setDisplayName(e.target.value),
+                        onKeyPress: (e) => {
+                            if (e.key === 'Enter') handleSubmit();
+                        },
+                        onFocus: () => window.isTypingInInput = true,
+                        onBlur: () => window.isTypingInInput = false
+                    })
+                ]),
+                
+                // Random name option
+                React.createElement('button', {
+                    key: 'random',
+                    className: `w-full p-4 rounded-xl cursor-pointer transition-all duration-300 text-left ${
+                        nameType === 'random' ? 'bg-green-500 bg-opacity-20 border-green-400 border' : 'bg-white bg-opacity-5 border-white border border-opacity-10'
+                    }`,
+                    onClick: handleGenerateRandom
+                }, [
+                    React.createElement('div', {
+                        key: 'header',
+                        className: 'flex items-center gap-3 mb-2'
+                    }, [
+                        React.createElement('span', { key: 'icon', className: 'text-xl' }, '🎲'),
+                        React.createElement('span', { key: 'title', className: 'text-white font-semibold' }, 'Random Name')
+                    ]),
+                    React.createElement('p', {
+                        key: 'desc',
+                        className: 'text-white text-opacity-70 text-sm'
+                    }, 'Get a randomly generated herding-themed name')
+                ]),
+                
+                // Anonymous option
+                React.createElement('button', {
+                    key: 'anonymous',
+                    className: `w-full p-4 rounded-xl cursor-pointer transition-all duration-300 text-left ${
+                        nameType === 'anonymous' ? 'bg-gray-500 bg-opacity-20 border-gray-400 border' : 'bg-white bg-opacity-5 border-white border border-opacity-10'
+                    }`,
+                    onClick: handleStayAnonymous
+                }, [
+                    React.createElement('div', {
+                        key: 'header',
+                        className: 'flex items-center gap-3 mb-2'
+                    }, [
+                        React.createElement('span', { key: 'icon', className: 'text-xl' }, '🕶️'),
+                        React.createElement('span', { key: 'title', className: 'text-white font-semibold' }, 'Stay Anonymous')
+                    ]),
+                    React.createElement('p', {
+                        key: 'desc',
+                        className: 'text-white text-opacity-70 text-sm'
+                    }, 'Play as "Player" without a custom name')
+                ])
+            ]),
+            
+            error && React.createElement('p', {
+                key: 'error',
+                className: 'text-red-400 text-sm text-center mt-4'
+            }, error),
+            
+            React.createElement('button', {
+                key: 'submit',
+                className: 'btn-primary w-full mt-6',
+                onClick: handleSubmit,
+                disabled: isSubmitting
+            }, React.createElement('span', null, isSubmitting ? 'Setting up...' : 'Continue'))
+        ]);
+    }
+
+    // Score submission helper
+    async function submitGameScore(gameMode, score, additionalData = {}) {
+        const identity = getPlayerIdentity();
+        if (!identity) {
+            console.warn('No player identity found for score submission');
+            return;
+        }
+        
+        const networkManager = window.gameInstance?.networkManager;
+        if (!networkManager) {
+            console.warn('❌ NetworkManager not available for score submission');
+            return;
+        }
+        
+        console.log(`🔍 Score submission debug: NetworkManager available, connected: ${networkManager.isConnected()}`);
+        console.log(`🔍 Current session ID: ${networkManager.channel?.id || 'no-session'}`);
+        
+        try {
+            // Always ensure we have a connection for leaderboard operations
+            if (!networkManager.isConnected()) {
+                console.log('📡 Not connected, establishing connection for score submission...');
+                await networkManager.connectForLeaderboard();
+                console.log('✅ Connection established for score submission');
+            } else {
+                console.log('📡 Using existing connection for score submission');
+            }
+            
+            // Always ensure player is registered in the current session
+            console.log('🆔 Ensuring player registration in current session...');
+            try {
+                const registrationResult = await networkManager.registerPlayer(
+                    identity.persistentId,
+                    identity.displayName,
+                    identity.nameType || 'custom'
+                );
+                console.log('✅ Player registered/re-registered for score submission:', registrationResult);
+                
+                // Update identity to mark as registered
+                identity.isRegistered = true;
+                savePlayerIdentity(identity);
+            } catch (regError) {
+                console.warn('⚠️ Player registration failed:', regError);
+                // Don't continue if registration fails - this indicates a session issue
+                throw new Error('Player registration failed: ' + regError.message);
+            }
+            
+            // Now submit the score using the same session
+            console.log('📤 Submitting score in current session...');
+            const result = await networkManager.submitScore(gameMode, score, additionalData);
+            console.log('✅ Score submitted successfully:', result);
+            
+            if (result.isNewRecord) {
+                console.log('🏆 NEW RECORD!');
+                // Could show a special UI notification here
+            }
+            
+        } catch (error) {
+            console.error('❌ Score submission failed:', error);
+            console.log('⚠️ Score will not be submitted - server may be unavailable');
+            
+            // Could implement score queueing here for retry later
+            // For now, just log the failed submission
+            console.log('🗂️ Score would have been submitted:', {
+                gameMode,
+                score,
+                playerName: identity.displayName,
+                additionalData
+            });
+        }
+    }
+    
+    // Expose score submission function globally for GameState integration
+    window.submitGameScore = submitGameScore;
+    
+    // Global Leaderboard Component
+    function GlobalLeaderboard({ onBack, playerIdentity }) {
+        const [activeTab, setActiveTab] = useState('soloClassic');
+        const [leaderboards, setLeaderboards] = useState({});
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState('');
+        const [lastRefresh, setLastRefresh] = useState(null);
+        
+        const tabs = [
+            { id: 'soloClassic', name: 'Solo Classic', icon: '🎮' },
+            { id: 'soloExtreme', name: 'Solo Extreme', icon: '🔥' },
+            { id: 'timed', name: 'Timed (3 min)', icon: '⏱️' },
+            { id: 'competitive', name: 'Competitive', icon: '🏁' },
+            { id: 'cooperative', name: 'Cooperative', icon: '🤝' }
+        ];
+        
+        const loadLeaderboards = async () => {
+            setLoading(true);
+            setError('');
+            
+            try {
+                if (!window.gameInstance?.networkManager) {
+                    throw new Error('Network manager not available');
+                }
+                
+                const nm = window.gameInstance.networkManager;
+                
+                // Connect if not already connected
+                if (!nm.isConnected()) {
+                    console.log('🔗 Attempting to connect to server for leaderboards...');
+                    await nm.connect();
+                }
+                
+                // Fetch all leaderboards
+                const data = await nm.getAllLeaderboards(10);
+                console.log('🔍 Raw leaderboard data received:', data);
+                console.log('🔍 Data structure:', JSON.stringify(data, null, 2));
+                
+                setLeaderboards(data);
+                setLastRefresh(new Date());
+                
+            } catch (error) {
+                console.error('Failed to load leaderboards:', error);
+                
+                // Check if it's a connection error
+                if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_REFUSED')) {
+                    setError('🚫 Server offline - Leaderboards unavailable. The server may be starting up or temporarily down.');
+                } else {
+                    setError('Failed to load leaderboards. Please try again.');
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        useEffect(() => {
+            loadLeaderboards();
+        }, []);
+        
+        const handleRefresh = () => {
+            loadLeaderboards();
+        };
+        
+        const renderLeaderboardTable = (gameMode) => {
+            const data = leaderboards[gameMode] || [];
+            
+            if (data.length === 0) {
+                return React.createElement('div', {
+                    className: 'text-center py-8 text-white text-opacity-60'
+                }, 'No scores recorded yet. Be the first!');
+            }
+            
+            return React.createElement('div', {
+                className: 'space-y-2'
+            }, data.map((entry, index) => {
+                const isPlayer = playerIdentity && entry.fullName === playerIdentity.fullName;
+                
+                return React.createElement('div', {
+                    key: index,
+                    className: `flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
+                        isPlayer ? 'bg-blue-500 bg-opacity-20 border border-blue-400 border-opacity-30' : 'bg-white bg-opacity-5'
+                    }`
+                }, [
+                    React.createElement('div', {
+                        key: 'left',
+                        className: 'flex items-center gap-3'
+                    }, [
+                        React.createElement('div', {
+                            key: 'rank',
+                            className: `w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                entry.rank === 1 ? 'bg-yellow-500 text-black' :
+                                entry.rank === 2 ? 'bg-gray-300 text-black' :
+                                entry.rank === 3 ? 'bg-amber-600 text-white' :
+                                'bg-white bg-opacity-10 text-white'
+                            }`
+                        }, entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank),
+                        React.createElement('div', { key: 'info' }, [
+                            React.createElement('div', {
+                                key: 'name',
+                                className: `font-semibold ${isPlayer ? 'text-blue-300' : 'text-white'}`
+                            }, entry.displayName + (isPlayer ? ' (You)' : '')),
+                            React.createElement('div', {
+                                key: 'full',
+                                className: 'text-xs text-white text-opacity-50'
+                            }, entry.fullName)
+                        ])
+                    ]),
+                    React.createElement('div', {
+                        key: 'score',
+                        className: 'text-white font-mono font-bold'
+                    }, entry.formattedScore)
+                ]);
+            }));
+        };
+        
+        return React.createElement('div', {
+            className: 'max-w-4xl w-full',
+            style: { 
+                animation: 'slideUp 0.5s ease-out',
+                background: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(28px)',
+                WebkitBackdropFilter: 'blur(28px)',
+                borderRadius: '1.5rem',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
+                padding: '2rem'
+            }
+        }, [
+            // Header
+            React.createElement('div', {
+                key: 'header',
+                className: 'flex items-center justify-between mb-6'
+            }, [
+                React.createElement('h2', {
+                    key: 'title',
+                    className: 'text-3xl font-bold text-white',
+                    style: {
+                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                    }
+                }, '🏆 Global Leaderboard'),
+                React.createElement('div', {
+                    key: 'controls',
+                    className: 'flex items-center gap-3'
+                }, [
+                    lastRefresh && React.createElement('span', {
+                        key: 'time',
+                        className: 'text-xs text-white text-opacity-60'
+                    }, `Updated ${lastRefresh.toLocaleTimeString()}`),
+                    React.createElement('button', {
+                        key: 'refresh',
+                        className: 'btn-secondary py-2 px-4 text-sm',
+                        onClick: handleRefresh,
+                        disabled: loading
+                    }, loading ? '⟳' : '🔄')
+                ])
+            ]),
+            
+            // Tab Navigation
+            React.createElement('div', {
+                key: 'tabs',
+                className: 'flex flex-wrap gap-2 mb-6 overflow-x-auto'
+            }, tabs.map(tab => 
+                React.createElement('button', {
+                    key: tab.id,
+                    className: `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                        activeTab === tab.id 
+                            ? 'bg-white bg-opacity-20 text-white border border-white border-opacity-30' 
+                            : 'bg-white bg-opacity-5 text-white text-opacity-70 hover:bg-opacity-10'
+                    }`,
+                    onClick: () => setActiveTab(tab.id)
+                }, `${tab.icon} ${tab.name}`)
+            )),
+            
+            // Content Area
+            React.createElement('div', {
+                key: 'content',
+                className: 'min-h-[400px]'
+            }, [
+                loading && React.createElement('div', {
+                    key: 'loading',
+                    className: 'flex items-center justify-center py-20'
+                }, [
+                    React.createElement('div', {
+                        key: 'spinner',
+                        className: 'spinner mr-3'
+                    }),
+                    React.createElement('span', {
+                        key: 'text',
+                        className: 'text-white text-opacity-80'
+                    }, 'Loading leaderboards...')
+                ]),
+                
+                error && React.createElement('div', {
+                    key: 'error',
+                    className: 'text-center py-20'
+                }, [
+                    React.createElement('p', {
+                        key: 'message',
+                        className: 'text-red-400 mb-4'
+                    }, error),
+                    React.createElement('button', {
+                        key: 'retry',
+                        className: 'btn-primary',
+                        onClick: handleRefresh
+                    }, 'Try Again')
+                ]),
+                
+                !loading && !error && renderLeaderboardTable(activeTab)
+            ]),
+            
+            // Back Button
+            React.createElement('button', {
+                key: 'back',
+                className: 'btn-secondary mt-6',
+                onClick: onBack
+            }, '← Back to Menu')
+        ]);
+    }
+
     // Main Start Screen Component
     function StartScreen() {
-        const [screen, setScreen] = useState('initial'); // initial, dogSelection, singlePlayerModes, multiplayer, createRoom, joinRoom, lobby
+        const [screen, setScreen] = useState('playerSetup'); // playerSetup, main, dogSelection, singlePlayerModes, multiplayer, createRoom, joinRoom, lobby, leaderboard
         const [selectedDog, setSelectedDog] = useState('jep');
         const [selectedMode, setSelectedMode] = useState(null);
         const [roomSettings, setRoomSettings] = useState(null);
         const [lobbyData, setLobbyData] = useState(null);
+        const [playerIdentity, setPlayerIdentity] = useState(null);
         const platform = usePlatform();
         
+        // Check for existing player identity on mount
+        useEffect(() => {
+            const existingIdentity = getPlayerIdentity();
+            if (existingIdentity) {
+                setPlayerIdentity(existingIdentity);
+                setScreen('main');
+            }
+        }, []);
+        
+        const handlePlayerSetupComplete = (identity) => {
+            setPlayerIdentity(identity);
+            setScreen('main');
+        };
+        
         const handleModeSelect = (mode) => {
-            setSelectedMode(mode);
-            setScreen('dogSelection');
+            if (mode === 'leaderboard') {
+                setScreen('leaderboard');
+            } else {
+                setSelectedMode(mode);
+                setScreen('dogSelection');
+            }
         };
         
         const handleDogConfirm = async () => {
@@ -940,6 +1496,63 @@ function initializeReactUI() {
         
         const renderContent = () => {
             switch (screen) {
+                case 'playerSetup':
+                    return React.createElement(PlayerIdentitySetup, {
+                        onComplete: handlePlayerSetupComplete
+                    });
+                    
+                case 'main':
+                    return React.createElement('div', {
+                        className: 'max-w-4xl w-full text-center'
+                    }, [
+                        React.createElement('h1', {
+                            key: 'title',
+                            className: 'text-6xl md:text-8xl font-black mb-4 mobile-title',
+                            style: {
+                                fontFamily: '"Comic Sans MS", "Comic Sans", "Arial Black", cursive',
+                                background: 'linear-gradient(180deg, #4FFFFF 0%, #2196F3 50%, #1976D2 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                textFillColor: 'transparent',
+                                WebkitTextStroke: '3px #0A47A1',
+                                textStroke: '3px #0A47A1',
+                                letterSpacing: '2px',
+                                transform: 'rotate(-0.5deg)',
+                                animation: 'fadeIn 0.4s ease-out, titleBounce 2s ease-in-out infinite 1s',
+                                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))'
+                            }
+                        }, 'SHEEP DOG'),
+                        
+                        React.createElement('h2', {
+                            key: 'subtitle',
+                            className: 'text-3xl md:text-4xl font-bold mb-4 mobile-subtitle',
+                            style: {
+                                fontFamily: '"Comic Sans MS", "Comic Sans", "Arial Black", cursive',
+                                color: '#FFD700',
+                                WebkitTextStroke: '2px #FF6B00',
+                                textStroke: '2px #FF6B00',
+                                letterSpacing: '3px',
+                                transform: 'rotate(0.5deg)',
+                                animation: 'fadeIn 0.4s ease-out 0.1s both, subtitleBounce 2.5s ease-in-out infinite 1.2s',
+                                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))'
+                            }
+                        }, 'SIMULATOR'),
+                        
+                        // Player greeting
+                        playerIdentity && React.createElement('p', {
+                            key: 'greeting',
+                            className: 'text-white text-opacity-80 mb-8 text-lg',
+                            style: { animation: 'fadeIn 0.6s ease-out 0.3s both' }
+                        }, `Welcome back, ${playerIdentity.displayName}!`),
+                        
+                        // Mode selection buttons
+                        React.createElement(ModeSelection, {
+                            key: 'modes',
+                            onSelectMode: handleModeSelect
+                        })
+                    ]);
+                    
                 case 'initial':
                     return React.createElement('div', {
                         className: 'max-w-4xl w-full text-center'
@@ -1003,7 +1616,7 @@ function initializeReactUI() {
                             React.createElement('button', {
                                 key: 'back',
                                 className: 'btn-secondary px-8 py-4 text-lg',
-                                onClick: () => setScreen('initial')
+                                onClick: () => setScreen('main')
                             }, '← Back'),
                             React.createElement('button', {
                                 key: 'confirm',
@@ -1181,6 +1794,12 @@ function initializeReactUI() {
                             }
                         },
                         onLeave: () => setScreen('dogSelection')
+                    });
+                    
+                case 'leaderboard':
+                    return React.createElement(GlobalLeaderboard, {
+                        onBack: () => setScreen('main'),
+                        playerIdentity: playerIdentity
                     });
             }
         };
