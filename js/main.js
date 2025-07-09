@@ -51,17 +51,7 @@ class SheepDogSimulation {
         // Connect performance monitor and game state to input handler
         this.inputHandler.setPerformanceMonitor(this.performanceMonitor);
         
-        // Set up debug completion callback for testing (with error handling)
-        try {
-            this.inputHandler.setDebugCompleteCallback(() => {
-                this.debugInstantComplete();
-            });
-        } catch (e) {
-            console.warn('Could not set debug completion callback:', e);
-        }
-        
-        // Expose debug method to window for console access
-        window.debugComplete = () => this.debugInstantComplete();
+
         
         // Set up pause functionality
         this.setupPauseHandling();
@@ -1097,49 +1087,7 @@ class SheepDogSimulation {
         }
     }
     
-    // DEBUG: Instant completion for testing
-    debugInstantComplete() {
-        console.log('\n🚀 === DEBUG COMPLETION STARTING ===');
-        
-        if (!this.gameState) {
-            console.log('🚫 ERROR: Game state not found');
-            return;
-        }
-        
-        if (this.gameState.gameCompleted) {
-            console.log('🚫 ERROR: Game already completed');
-            return;
-        }
-        
-        if (this.isMultiplayer) {
-            console.log('🚫 ERROR: Debug completion not available in multiplayer mode');
-            return;
-        }
-        
-        console.log('✅ All checks passed. Setting sheep to completed...');
-        
-        // Instantly set all sheep to retired status
-        const sheep = this.gameState.getSheep();
-        if (sheep && sheep.length > 0) {
-            console.log(`📊 Before: ${this.gameState.sheepRetired}/${sheep.length} sheep retired`);
-            
-            for (let i = 0; i < sheep.length; i++) {
-                sheep[i].hasPassedGate = true;
-                sheep[i].isRetiring = false; // Set to false so they count as retired
-                sheep[i].state = 2; // Set to grazing state
-            }
-            
-            // Force update sheep retired count
-            this.gameState.sheepRetired = sheep.length;
-            
-            console.log(`📊 After: ${this.gameState.sheepRetired}/${sheep.length} sheep retired`);
-            console.log('✅ Debug completion applied. Win condition should trigger next frame!');
-        } else {
-            console.log('🚫 ERROR: No sheep found');
-        }
-        
-        console.log('🚀 === DEBUG COMPLETION FINISHED ===\n');
-    }
+
     
     // Universal completion overlay that works for all game modes
     showCompletionOverlay(mode, data = {}) {
