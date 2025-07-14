@@ -23,11 +23,14 @@ const MobileHUD = ({ gameData }) => {
     return '#ef4444'; // Red
   };
 
-  // Debug: Log component data
+  // Debug: Log component data and platform detection
   console.log('MobileHUD render:', { 
     gameTime: gameData.gameTime, 
     sheepCount: gameData.sheepCount, 
-    stamina: staminaPercentage 
+    stamina: staminaPercentage,
+    userAgent: navigator.userAgent,
+    hasTouch: 'ontouchstart' in window,
+    screenWidth: window.innerWidth
   });
 
   return (
@@ -87,4 +90,4 @@ const MobileHUD = ({ gameData }) => {
   );
 };
 
-export default MobileHUD; 
+export default MobileHUD;

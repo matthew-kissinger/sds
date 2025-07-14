@@ -440,7 +440,7 @@ export class MobileControls {
         
         this.persistentFullscreenButton.style.cssText = `
             position: fixed;
-            top: calc(env(safe-area-inset-top, 0px) + 1rem);
+            top: calc(env(safe-area-inset-top, 0px) + 5rem);
             right: calc(env(safe-area-inset-right, 0px) + 1rem);
             width: 44px;
             height: 44px;

@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameBridge, usePlatform } from '../hooks/useGameBridge.js';
 import DogSelector from './DogSelector.jsx';
+import SettingsModal from './SettingsModal.jsx';
 
 const StartScreen = () => {
   const { gameState, emit } = useGameBridge();
   const { platform, inputMethod } = usePlatform();
   const [showMusic, setShowMusic] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   
   const handleStartGame = () => {
     console.log('🎮 React StartScreen: handleStartGame called');
@@ -41,7 +43,6 @@ const StartScreen = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      onClick={showMusic ? enableMusic : undefined}
     >
       {/* Background Animation */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -126,15 +127,16 @@ const StartScreen = () => {
         {/* Music Note */}
         <AnimatePresence>
           {showMusic && (
-            <motion.p
-              className="text-gray-300 text-lg mb-8 italic"
+            <motion.button
+              className="text-gray-300 text-lg mb-8 italic hover:text-white transition-colors cursor-pointer"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5, delay: 0.6 }}
+              onClick={enableMusic}
             >
-              🎵 Click anywhere to enable music
-            </motion.p>
+              🎵 Click here to enable music
+            </motion.button>
           )}
         </AnimatePresence>
         
@@ -180,28 +182,45 @@ const StartScreen = () => {
           />
         </motion.div>
         
-        {/* Start Button */}
-        <motion.button
-          className="btn-primary text-xl py-4 px-8 mt-8 animate-pulse-glow"
-          onClick={handleStartGame}
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8, delay: 1.2 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          {platform === 'desktop' ? (
-            <>
-              <span className="mr-2">🎮</span>
-              Press Enter to Start
-            </>
-          ) : (
-            <>
-              <span className="mr-2">👆</span>
-              Tap to Start
-            </>
-          )}
-        </motion.button>
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-4 mt-8">
+          {/* Start Button */}
+          <motion.button
+            className="btn-primary text-xl py-4 px-8 animate-pulse-glow"
+            onClick={handleStartGame}
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 1.2 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {platform === 'desktop' ? (
+              <>
+                <span className="mr-2">🎮</span>
+                Start Solo Game
+              </>
+            ) : (
+              <>
+                <span className="mr-2">👆</span>
+                Start Solo Game
+              </>
+            )}
+          </motion.button>
+          
+          {/* Settings Button */}
+          <motion.button
+            className="bg-gray-800/80 hover:bg-gray-700/80 text-white py-3 px-6 rounded-xl border border-gray-600/50 transition-all duration-200 hover:scale-105 backdrop-blur-xl"
+            onClick={() => setShowSettings(true)}
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 1.4 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="mr-2">⚙️</span>
+            Settings
+          </motion.button>
+        </div>
         
         {/* Platform Hints */}
         <motion.div
@@ -217,6 +236,9 @@ const StartScreen = () => {
           )}
         </motion.div>
       </div>
+
+      {/* Settings Modal */}
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </motion.div>
   );
 };

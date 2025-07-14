@@ -24,7 +24,7 @@ class SheepDogSimulation {
         this.sceneManager = new SceneManager();
         this.gameState = new GameState();
         this.gameTimer = new GameTimer();
-        this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene());
+        this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile);
         this.structureBuilder = new StructureBuilderV2(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();
@@ -844,9 +844,20 @@ class SheepDogSimulation {
         // Check if game is paused
         const isPaused = this.inputHandler.isPausedState();
         
-        // Update grass animation (only if not paused and initialized)
+        // Update grass animation and LOD (only if not paused and initialized)
         if (!isPaused && this.isInitialized) {
             this.terrainBuilder.updateGrassAnimation();
+            
+            // Simple LOD system - just basic distance-based optimizations
+            if (this.sheepdog && this.sheepdog.mesh) {
+                const playerPosition = this.sheepdog.mesh.position;
+                
+                // Use simple robust LOD on mobile only
+                if (this.sceneManager.isMobile) {
+                    this.terrainBuilder.updateSimpleLOD(playerPosition);
+                }
+                // Desktop: No LOD needed with 200k grass instances
+            }
         }
         
         // Update game logic with deltaTime
@@ -1311,6 +1322,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const gameInstance = new SheepDogSimulation();
     // Expose to global scope for React integration
     window.gameInstance = gameInstance;
+    
+    // Initialize GameBridge with the game instance for React communication
+    if (window.gameBridge) {
+        window.gameBridge.setGameInstance(gameInstance);
+        console.log('🌉 GameBridge initialized with game instance');
+    }
     
     // Expose StartScreen methods for React integration
     window.gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {

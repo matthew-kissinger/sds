@@ -81,6 +81,9 @@ class GameBridge {
       case 'set-input-method':
         this.uiState.inputMethod = data.method;
         break;
+      case 'settings-changed':
+        this.handleSettingsChanged(data);
+        break;
       default:
         console.warn('Unknown event:', event);
     }
@@ -184,13 +187,27 @@ class GameBridge {
         const maxStamina = this.gameInstance.sheepdog?.maxStamina || 100;
         const staminaPercentage = Math.round((stamina / maxStamina) * 100);
         
+        // Get performance stats for mobile
+        let performanceStats = {};
+        if (this.gameInstance.performanceMonitor) {
+          const mobileStats = this.gameInstance.performanceMonitor.getMobileStats();
+          performanceStats = {
+            fps: mobileStats.fps,
+            grassVisible: mobileStats.grassVisible,
+            treesVisible: mobileStats.treesVisible,
+            drawCalls: mobileStats.drawCalls,
+            triangles: mobileStats.triangles
+          };
+        }
+        
         const updateData = {
           stamina: stamina,
           maxStamina: maxStamina,
           staminaPercentage: staminaPercentage,
           sheepCount: sheepCount,
           totalSheep: totalSheep,
-          gameTime: Math.floor(gameTime)
+          gameTime: Math.floor(gameTime),
+          ...performanceStats
         };
         
         // Check for multiplayer data updates
@@ -254,6 +271,91 @@ class GameBridge {
   // Handle competition completion
   showCompetitionComplete(data) {
     this.notify('competition-complete', data);
+  }
+  
+  // Handle settings changes
+  handleSettingsChanged(settings) {
+    console.log('⚙️ Settings changed:', settings);
+    
+    // Apply performance settings to terrain
+    if (window.gameInstance?.terrainBuilder && settings.performanceMode) {
+      const terrain = window.gameInstance.terrainBuilder;
+      
+      switch (settings.performanceMode) {
+        case 'performance':
+          terrain.lodDistances = {
+            near: 30,
+            mid: 80,
+            far: 150,
+            horizon: 200
+          };
+          break;
+        case 'balanced':
+          terrain.lodDistances = {
+            near: 50,
+            mid: 150,
+            far: 300,
+            horizon: 500
+          };
+          break;
+        case 'quality':
+          terrain.lodDistances = {
+            near: 80,
+            mid: 200,
+            far: 400,
+            horizon: 600
+          };
+          break;
+      }
+      
+      // Force LOD update
+      if (terrain.updateSimpleLOD && window.gameInstance.sheepdog) {
+        terrain.updateSimpleLOD(window.gameInstance.sheepdog.getPosition());
+      }
+    }
+
+    // Apply game mode settings
+    if (window.gameInstance?.gameState && settings.gameMode) {
+      const gameState = window.gameInstance.gameState;
+      
+      switch (settings.gameMode) {
+        case 'normal':
+          if (gameState.sheepSpeed !== undefined) gameState.sheepSpeed = 1.0;
+          if (gameState.dogSpeed !== undefined) gameState.dogSpeed = 1.0;
+          break;
+        case 'easy':
+          if (gameState.sheepSpeed !== undefined) gameState.sheepSpeed = 0.8;
+          if (gameState.dogSpeed !== undefined) gameState.dogSpeed = 1.2;
+          break;
+        case 'hard':
+          if (gameState.sheepSpeed !== undefined) gameState.sheepSpeed = 1.3;
+          if (gameState.dogSpeed !== undefined) gameState.dogSpeed = 0.9;
+          break;
+        case 'extreme':
+          if (gameState.sheepSpeed !== undefined) gameState.sheepSpeed = 1.5;
+          if (gameState.dogSpeed !== undefined) gameState.dogSpeed = 0.8;
+          break;
+      }
+    }
+
+    // Apply audio settings
+    if (window.gameInstance?.audioManager) {
+      const audioManager = window.gameInstance.audioManager;
+      
+      if (settings.audioVolume !== undefined) {
+        audioManager.setMasterVolume(settings.audioVolume / 100);
+      }
+      
+      if (settings.audioEnabled !== undefined) {
+        audioManager.setEnabled(settings.audioEnabled);
+      }
+    }
+
+    // Store settings globally for other components to access
+    window.gameSettings = settings;
+    
+    // Notify other components about settings change
+    this.notify('settings-updated', settings);
   }
 }
 

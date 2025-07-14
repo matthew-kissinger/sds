@@ -238,11 +238,18 @@ function initializeReactUI() {
                 icon: '🏆',
                 description: 'View top players and rankings',
                 color: 'from-yellow-500 to-orange-500'
+            },
+            {
+                id: 'settings',
+                title: 'Settings',
+                icon: '⚙️',
+                description: 'Configure game options and performance',
+                color: 'from-gray-500 to-slate-500'
             }
         ];
         
         return React.createElement('div', {
-            className: 'grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mx-auto',
+            className: 'grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto',
             style: { animation: 'slideUp 0.8s ease-out 0.6s both' }
         }, modes.map(mode =>
             React.createElement('div', {
@@ -1192,14 +1199,97 @@ function initializeReactUI() {
         ]);
     }
 
+    // Settings Management Functions
+    function getDefaultSettings() {
+        return {
+            performanceMode: 'balanced',  // performance, balanced, quality
+            audioEnabled: true,           // true/false
+            audioVolume: 70,             // 0-100
+            showStats: false             // true/false
+        };
+    }
+    
+    function loadSettings() {
+        try {
+            const saved = localStorage.getItem('sds-settings');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return { ...getDefaultSettings(), ...parsed };
+            }
+        } catch (error) {
+            console.warn('Failed to load settings:', error);
+        }
+        return getDefaultSettings();
+    }
+    
+    function saveSettings(settings) {
+        try {
+            localStorage.setItem('sds-settings', JSON.stringify(settings));
+            console.log('Settings saved:', settings);
+        } catch (error) {
+            console.warn('Failed to save settings:', error);
+        }
+    }
+    
+    function applySettingsToGame(settings) {
+        console.log('Applying settings to game:', settings);
+        
+        // Only apply settings that differ from defaults to preserve existing behavior
+        const defaults = getDefaultSettings();
+        
+        // Apply performance mode settings only if changed from default
+        if (settings.performanceMode !== defaults.performanceMode && window.gameInstance?.terrainBuilder) {
+            const terrain = window.gameInstance.terrainBuilder;
+            const lodSettings = {
+                performance: { near: 30, mid: 80, far: 150, horizon: 200 },
+                balanced: { near: 50, mid: 150, far: 300, horizon: 500 },
+                quality: { near: 80, mid: 200, far: 400, horizon: 600 }
+            };
+            
+            const lodDistances = lodSettings[settings.performanceMode];
+            if (lodDistances) {
+                terrain.lodDistances = lodDistances;
+                console.log(`Applied ${settings.performanceMode} performance mode`);
+            }
+        }
+        
+        // Apply audio settings only if changed from defaults
+        if (window.gameInstance?.audioManager) {
+            const audioManager = window.gameInstance.audioManager;
+            
+            if (settings.audioVolume !== defaults.audioVolume) {
+                audioManager.setMasterVolume(settings.audioVolume / 100);
+                console.log(`Applied audio volume: ${settings.audioVolume}%`);
+            }
+            
+            if (settings.audioEnabled !== defaults.audioEnabled) {
+                audioManager.setMuted(!settings.audioEnabled);
+                console.log(`Applied audio enabled: ${settings.audioEnabled}`);
+            }
+        }
+        
+        // Apply performance stats toggle only if changed from default
+        if (settings.showStats !== defaults.showStats && window.gameInstance?.performanceMonitor) {
+            const perfMonitor = window.gameInstance.performanceMonitor;
+            if (settings.showStats) {
+                perfMonitor.show();
+                console.log('Performance stats enabled');
+            } else {
+                perfMonitor.hide();
+                console.log('Performance stats disabled');
+            }
+        }
+    }
+
     // Main Start Screen Component
     function StartScreen() {
-        const [screen, setScreen] = useState('playerSetup'); // playerSetup, main, dogSelection, singlePlayerModes, multiplayer, createRoom, joinRoom, lobby, leaderboard
+        const [screen, setScreen] = useState('playerSetup'); // playerSetup, main, dogSelection, singlePlayerModes, multiplayer, createRoom, joinRoom, lobby, leaderboard, settings
         const [selectedDog, setSelectedDog] = useState('jep');
         const [selectedMode, setSelectedMode] = useState(null);
         const [roomSettings, setRoomSettings] = useState(null);
         const [lobbyData, setLobbyData] = useState(null);
         const [playerIdentity, setPlayerIdentity] = useState(null);
+        const [gameSettings, setGameSettings] = useState(loadSettings());
         const platform = usePlatform();
         
         // Check for existing player identity on mount
@@ -1219,6 +1309,8 @@ function initializeReactUI() {
         const handleModeSelect = (mode) => {
             if (mode === 'leaderboard') {
                 setScreen('leaderboard');
+            } else if (mode === 'settings') {
+                setScreen('settings');
             } else {
                 setSelectedMode(mode);
                 setScreen('dogSelection');
@@ -1801,6 +1893,161 @@ function initializeReactUI() {
                         onBack: () => setScreen('main'),
                         playerIdentity: playerIdentity
                     });
+                    
+                case 'settings':
+                    const handleSettingChange = (key, value) => {
+                        const newSettings = { ...gameSettings, [key]: value };
+                        setGameSettings(newSettings);
+                        saveSettings(newSettings);
+                        applySettingsToGame(newSettings);
+                    };
+                    
+                    const resetToDefaults = () => {
+                        const defaults = getDefaultSettings();
+                        setGameSettings(defaults);
+                        saveSettings(defaults);
+                        applySettingsToGame(defaults);
+                    };
+                    
+                    // Toggle component for mobile-friendly switches
+                    const Toggle = ({ value, onChange, disabled = false }) => {
+                        return React.createElement('button', {
+                            onClick: disabled ? undefined : () => onChange(!value),
+                            disabled: disabled,
+                            className: `w-12 h-6 rounded-full transition-colors ${
+                                value ? 'bg-blue-500' : 'bg-gray-600'
+                            } ${disabled ? 'opacity-50' : ''}`
+                        }, 
+                            React.createElement('div', {
+                                className: `w-5 h-5 bg-white rounded-full transition-transform ${
+                                    value ? 'translate-x-6' : 'translate-x-0.5'
+                                }`
+                            })
+                        );
+                    };
+                    
+                    return React.createElement('div', {
+                        className: `max-w-lg w-full ${platform === 'mobile' ? 'max-h-[80vh] overflow-y-auto' : ''}`,
+                        style: { 
+                            animation: 'slideUp 0.5s ease-out',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            backdropFilter: 'blur(28px)',
+                            WebkitBackdropFilter: 'blur(28px)',
+                            borderRadius: '1.5rem',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
+                            padding: platform === 'mobile' ? '2rem' : '2.5rem'
+                        }
+                    }, [
+                        React.createElement('h2', {
+                            key: 'title',
+                            className: 'text-2xl font-bold text-center text-white mb-6',
+                            style: {
+                                textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                            }
+                        }, '⚙️ Settings'),
+                        
+                        React.createElement('div', {
+                            key: 'content',
+                            className: 'space-y-6'
+                        }, [
+                            // Performance Mode
+                            React.createElement('div', { key: 'performance-mode' }, [
+                                React.createElement('label', {
+                                    key: 'label',
+                                    className: 'block text-sm font-medium text-gray-300 mb-2'
+                                }, '⚡ Performance Mode'),
+                                React.createElement('select', {
+                                    key: 'select',
+                                    value: gameSettings.performanceMode,
+                                    onChange: (e) => handleSettingChange('performanceMode', e.target.value),
+                                    className: 'w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500',
+                                    style: {
+                                        background: 'rgba(31, 41, 55, 0.8)',
+                                        backdropFilter: 'blur(20px)',
+                                        WebkitBackdropFilter: 'blur(20px)'
+                                    }
+                                }, [
+                                    React.createElement('option', { key: 'performance', value: 'performance' }, 'Performance - Maximum FPS'),
+                                    React.createElement('option', { key: 'balanced', value: 'balanced' }, 'Balanced - Default settings'),
+                                    React.createElement('option', { key: 'quality', value: 'quality' }, 'Quality - Best visuals')
+                                ])
+                            ]),
+                            
+                            // Audio Enable Toggle
+                            React.createElement('div', { key: 'audio-enable' }, [
+                                React.createElement('div', {
+                                    key: 'toggle-row',
+                                    className: 'flex items-center justify-between'
+                                }, [
+                                    React.createElement('label', {
+                                        key: 'label',
+                                        className: 'text-sm font-medium text-gray-300'
+                                    }, '🔊 Audio Enabled'),
+                                    React.createElement(Toggle, {
+                                        key: 'toggle',
+                                        value: gameSettings.audioEnabled,
+                                        onChange: (value) => handleSettingChange('audioEnabled', value)
+                                    })
+                                ])
+                            ]),
+                            
+                            // Audio Volume (only if audio enabled)
+                            gameSettings.audioEnabled && React.createElement('div', { key: 'audio-volume' }, [
+                                React.createElement('label', {
+                                    key: 'label',
+                                    className: 'block text-sm font-medium text-gray-300 mb-2'
+                                }, `🔉 Audio Volume (${gameSettings.audioVolume}%)`),
+                                React.createElement('input', {
+                                    key: 'slider',
+                                    type: 'range',
+                                    min: '0',
+                                    max: '100',
+                                    value: gameSettings.audioVolume,
+                                    onChange: (e) => handleSettingChange('audioVolume', parseInt(e.target.value)),
+                                    className: 'w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer',
+                                    style: {
+                                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${gameSettings.audioVolume}%, #374151 ${gameSettings.audioVolume}%, #374151 100%)`
+                                    }
+                                })
+                            ]),
+                            
+                            // Performance Stats Toggle
+                            React.createElement('div', { key: 'show-stats' }, [
+                                React.createElement('div', {
+                                    key: 'toggle-row',
+                                    className: 'flex items-center justify-between'
+                                }, [
+                                    React.createElement('label', {
+                                        key: 'label',
+                                        className: 'text-sm font-medium text-gray-300'
+                                    }, '📊 Show Performance Stats'),
+                                    React.createElement(Toggle, {
+                                        key: 'toggle',
+                                        value: gameSettings.showStats,
+                                        onChange: (value) => handleSettingChange('showStats', value)
+                                    })
+                                ])
+                            ])
+                        ]),
+                        
+                        // Footer buttons
+                        React.createElement('div', {
+                            key: 'footer',
+                            className: 'flex gap-3 mt-8'
+                        }, [
+                            React.createElement('button', {
+                                key: 'reset',
+                                className: 'flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors',
+                                onClick: resetToDefaults
+                            }, 'Reset to Defaults'),
+                            React.createElement('button', {
+                                key: 'back',
+                                className: 'flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded-lg transition-colors',
+                                onClick: () => setScreen('main')
+                            }, '← Back to Menu')
+                        ])
+                    ]);
             }
         };
         

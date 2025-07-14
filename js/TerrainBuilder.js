@@ -5,7 +5,120 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements
  */
 export class TerrainBuilder {
+    constructor(scene, isMobile = false) {
+        this.scene = scene;
+        this.isMobile = isMobile;
+        this.grassMaterial = null;
+        this.grassInstanceCount = 0;
+        this.grassInstancedMesh = null;
+        this.terrainMesh = null;
+        this.environmentDetails = [];
+        this.trees = []; // Track trees for removal
+        this.rocks = []; // Track rocks for removal
+        this.mountains = []; // Track mountains
+        this.buildings = []; // Track buildings
+        
+        // Model loading
+        this.loader = new GLTFLoader();
+        this.models = {
+            trees: {},
+            rocks: {},
+            mountains: {},
+            buildings: {}
+        };
+        this.modelsLoaded = false;
+        
+        // Terrain zones
+        this.zones = {
+            playArea: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
+            nearField: { minX: -200, maxX: 200, minZ: -200, maxZ: 200 },
+            midField: { minX: -400, maxX: 400, minZ: -400, maxZ: 400 },
+            farField: { minX: -600, maxX: 600, minZ: -600, maxZ: 600 },
+            horizon: { minX: -800, maxX: 800, minZ: -800, maxZ: 800 }
+        };
+        
+        // Farm house position and exclusion area
+        this.farmHousePosition = { x: 180, z: 160 }; // Northwest corner behind pen, farther back
+        this.farmHouseExclusionArea = {
+            minX: 140,
+            maxX: 220,
+            minZ: 120,
+            maxZ: 200
+        };
+        
+        // LOD settings
+        this.lodDistances = {
+            near: 50,
+            mid: 150,
+            far: 300,
+            horizon: 500
+        };
+        
+        // Frustum culling helper
+        this.frustum = new THREE.Frustum();
+        this.frustumMatrix = new THREE.Matrix4();
+        
+        // Performance tracking for mobile
+        this.cullingStats = {
+            grassVisible: 0,
+            treesVisible: 0,
+            rocksVisible: 0,
+            mountainsVisible: 0,
+            lastUpdate: 0
+        };
+        
+        // Reference to performance monitor for stats reporting
+        this.performanceMonitor = null;
+        
+        // Mobile-optimized materials cache
+        this.mobileMaterials = null;
+        this.desktopMaterials = null;
+    }
+    
+    /**
+     * Create mobile-optimized materials for better performance
+     */
+    createMobileMaterials() {
+        this.mobileMaterials = {
+            grass: this.grassMaterial, // Already optimized with static shader
+            tree: new THREE.MeshLambertMaterial({
+                color: 0x2d4a2b,
+                emissive: 0x1a2a1a,
+                emissiveIntensity: 0.05
+            }),
+            rock: new THREE.MeshLambertMaterial({
+                color: 0x666666,
+                emissive: 0x333333,
+                emissiveIntensity: 0.05
+            }),
+            terrain: new THREE.MeshLambertMaterial({
+                color: 0x4a7c4a,
+                emissive: 0x1a3a1a,
+                emissiveIntensity: 0.1
+            })
+        };
+        
+        // Store original desktop materials for comparison
+        this.desktopMaterials = {
+            tree: new THREE.MeshStandardMaterial({
+                color: 0x2d4a2b,
+                roughness: 0.8,
+                metalness: 0.2
+            }),
+            rock: new THREE.MeshStandardMaterial({
+                color: 0x666666,
+                roughness: 0.9,
+                metalness: 0.1
+            })
+        };
+    }
+    
     async loadModels() {
+        // Create mobile materials if needed
+        if (this.isMobile) {
+            this.createMobileMaterials();
+        }
+        
         const modelPaths = {
             trees: [
                 { name: 'tree1', path: '/assets/models/Resource_Tree1.glb' },
@@ -95,46 +208,6 @@ export class TerrainBuilder {
     }
 
 
-    constructor(scene) {
-        this.scene = scene;
-        this.grassMaterial = null;
-        this.grassInstanceCount = 0;
-        this.grassInstancedMesh = null;
-        this.terrainMesh = null;
-        this.environmentDetails = [];
-        this.trees = []; // Track trees for removal
-        this.rocks = []; // Track rocks for removal
-        this.mountains = []; // Track mountains
-        this.buildings = []; // Track buildings
-        
-        // Model loading
-        this.loader = new GLTFLoader();
-        this.models = {
-            trees: {},
-            rocks: {},
-            mountains: {},
-            buildings: {}
-        };
-        this.modelsLoaded = false;
-        
-        // Terrain zones
-        this.zones = {
-            playArea: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
-            nearField: { minX: -200, maxX: 200, minZ: -200, maxZ: 200 },
-            midField: { minX: -400, maxX: 400, minZ: -400, maxZ: 400 },
-            farField: { minX: -600, maxX: 600, minZ: -600, maxZ: 600 },
-            horizon: { minX: -800, maxX: 800, minZ: -800, maxZ: 800 }
-        };
-        
-        // Farm house position and exclusion area
-        this.farmHousePosition = { x: 180, z: 160 }; // Northwest corner behind pen, farther back
-        this.farmHouseExclusionArea = {
-            minX: 140,
-            maxX: 220,
-            minZ: 120,
-            maxZ: 200
-        };
-    }
     
     createTerrain() {
         // Create flat terrain - extended to match grass coverage
@@ -159,7 +232,31 @@ export class TerrainBuilder {
     
     createGrass() {
         // Create instanced grass using shaders
-        const grassVertexShader = `
+        const grassVertexShader = this.isMobile ? 
+            // Simplified shader for mobile - no animation
+            `
+            varying vec2 vUv;
+            varying vec3 vWorldPos;
+            
+            void main() {
+                vUv = uv;
+                
+                // Get instance position
+                vec3 pos = position;
+                vec4 mvPosition = vec4(pos, 1.0);
+                
+                #ifdef USE_INSTANCING
+                    mvPosition = instanceMatrix * mvPosition;
+                #endif
+                
+                vWorldPos = (modelMatrix * mvPosition).xyz;
+                
+                vec4 modelViewPosition = modelViewMatrix * mvPosition;
+                gl_Position = projectionMatrix * modelViewPosition;
+            }
+            ` :
+            // Full shader with animation for desktop
+            `
             varying vec2 vUv;
             varying vec3 vWorldPos;
             uniform float time;
@@ -221,12 +318,18 @@ export class TerrainBuilder {
             }
         `;
         
-        const grassUniforms = {
-            time: { value: 0 },
-            fogColor: { value: new THREE.Color(0x87CEEB) },
-            fogNear: { value: 200 },
-            fogFar: { value: 600 }
-        };
+        const grassUniforms = this.isMobile ? 
+            {
+                fogColor: { value: new THREE.Color(0x87CEEB) },
+                fogNear: { value: 200 },
+                fogFar: { value: 600 }
+            } :
+            {
+                time: { value: 0 },
+                fogColor: { value: new THREE.Color(0x87CEEB) },
+                fogNear: { value: 200 },
+                fogFar: { value: 600 }
+            };
         
         this.grassMaterial = new THREE.ShaderMaterial({
             vertexShader: grassVertexShader,
@@ -240,19 +343,22 @@ export class TerrainBuilder {
         bladeGeometry.translate(0, 0.4, 0); // Move pivot to base
         
         // Create instanced mesh for grass - optimized for performance
-        // Reduce grass count for better performance on high-end systems
-        const instanceCount = 400000; // Reduced from 800k for better performance
+        // Reduced desktop grass count for better performance
+        const instanceCount = this.isMobile ? 80000 : 200000; // Reduced desktop to 200k for performance
         this.grassInstanceCount = instanceCount;
+        console.log(`🌿 Creating ${instanceCount} grass instances (${this.isMobile ? 'mobile' : 'desktop'} mode)`);
         const grassMesh = new THREE.InstancedMesh(bladeGeometry, this.grassMaterial, instanceCount);
         
         const dummy = new THREE.Object3D();
         
-        // Distribute grass instances - extend much further out
+        // Distribute grass instances - concentrate in center for both platforms
         let placedCount = 0;
+        const distributionBounds = this.isMobile ? 200 : 400; // Mobile: 200x200, Desktop: 400x400 (concentrated)
+        
         for (let i = 0; i < instanceCount && placedCount < instanceCount; i++) {
-            // Random position within much larger bounds - extend to horizon
-            const x = (Math.random() - 0.5) * 800; // Increased from 240 to 800
-            const z = (Math.random() - 0.5) * 800; // Increased from 240 to 800
+            // Random position within bounds
+            const x = (Math.random() - 0.5) * distributionBounds;
+            const z = (Math.random() - 0.5) * distributionBounds;
             
             // Skip grass in the pasture area
             if (z > 100 && z < 130 && Math.abs(x) < 30) {
@@ -482,6 +588,7 @@ export class TerrainBuilder {
             // Get all meshes from the model
             model.traverse(child => {
                 if (child.isMesh) {
+                    // Keep original materials - just use LOD and culling for mobile optimization
                     const instancedMesh = new THREE.InstancedMesh(
                         child.geometry,
                         child.material,
@@ -497,9 +604,13 @@ export class TerrainBuilder {
                         instancedMesh.setMatrixAt(i, dummy.matrix);
                     });
                     
-                    instancedMesh.castShadow = true;
+                    // Disable tree shadows on mobile
+                    instancedMesh.castShadow = !this.isMobile;
                     instancedMesh.receiveShadow = true;
                     instancedMesh.instanceMatrix.needsUpdate = true;
+                    
+                    // Enable frustum culling for trees
+                    instancedMesh.frustumCulled = false; // We handle this manually in LOD
                     
                     this.scene.add(instancedMesh);
                     instancedMeshes.push(instancedMesh);
@@ -653,6 +764,7 @@ export class TerrainBuilder {
             // Get all meshes from the model
             model.traverse(child => {
                 if (child.isMesh) {
+                    // Keep original materials - just use LOD and culling for mobile optimization
                     const instancedMesh = new THREE.InstancedMesh(
                         child.geometry,
                         child.material,
@@ -668,7 +780,8 @@ export class TerrainBuilder {
                         instancedMesh.setMatrixAt(i, dummy.matrix);
                     });
                     
-                    instancedMesh.castShadow = true;
+                    // Disable rock shadows on mobile
+                    instancedMesh.castShadow = !this.isMobile;
                     instancedMesh.receiveShadow = true;
                     instancedMesh.instanceMatrix.needsUpdate = true;
                     
@@ -689,9 +802,166 @@ export class TerrainBuilder {
     }
     
     updateGrassAnimation() {
-        if (this.grassMaterial) {
+        // Only update animation on desktop
+        if (!this.isMobile && this.grassMaterial && this.grassMaterial.uniforms.time) {
             this.grassMaterial.uniforms.time.value = performance.now() * 0.001;
         }
+    }
+    
+    /**
+     * Update LOD and frustum culling based on camera position
+     * @param {THREE.Camera} camera - The active camera
+     * @param {THREE.Vector3} playerPosition - Current player position
+     */
+    updateLOD(camera, playerPosition) {
+        if (!camera || !playerPosition) return;
+        
+        // Update frustum for culling
+        this.frustumMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        this.frustum.setFromProjectionMatrix(this.frustumMatrix);
+        
+        // Update grass LOD
+        this.updateGrassLOD(playerPosition);
+        
+        // Update tree LOD
+        this.updateTreeLOD(playerPosition);
+    }
+    
+    /**
+     * Update grass LOD based on distance from player
+     * @param {THREE.Vector3} playerPosition - Current player position
+     */
+    updateGrassLOD(playerPosition) {
+        if (!this.grassInstancedMesh) return;
+        
+        const grassCount = this.grassInstanceCount;
+        const dummy = new THREE.Object3D();
+        const matrix = new THREE.Matrix4();
+        const position = new THREE.Vector3();
+        
+        // Track visible grass count for performance monitoring
+        let visibleCount = 0;
+        
+        for (let i = 0; i < grassCount; i++) {
+            this.grassInstancedMesh.getMatrixAt(i, matrix);
+            position.setFromMatrixPosition(matrix);
+            
+            // Calculate distance from player
+            const distance = position.distanceTo(playerPosition);
+            
+            // LOD logic
+            if (distance < this.lodDistances.near) {
+                // Near: Full visibility
+                visibleCount++;
+            } else if (distance < this.lodDistances.mid) {
+                // Mid: Reduce density - show only every 4th grass blade
+                if (i % 4 === 0) {
+                    visibleCount++;
+                } else {
+                    // Hide by scaling to zero
+                    dummy.position.setFromMatrixPosition(matrix);
+                    dummy.rotation.setFromRotationMatrix(matrix);
+                    dummy.scale.set(0, 0, 0);
+                    dummy.updateMatrix();
+                    this.grassInstancedMesh.setMatrixAt(i, dummy.matrix);
+                }
+            } else if (distance < this.lodDistances.far) {
+                // Far: Show only every 10th grass blade
+                if (i % 10 === 0) {
+                    visibleCount++;
+                } else {
+                    // Hide by scaling to zero
+                    dummy.position.setFromMatrixPosition(matrix);
+                    dummy.rotation.setFromRotationMatrix(matrix);
+                    dummy.scale.set(0, 0, 0);
+                    dummy.updateMatrix();
+                    this.grassInstancedMesh.setMatrixAt(i, dummy.matrix);
+                }
+            } else {
+                // Beyond far: Hide all grass
+                dummy.position.setFromMatrixPosition(matrix);
+                dummy.rotation.setFromRotationMatrix(matrix);
+                dummy.scale.set(0, 0, 0);
+                dummy.updateMatrix();
+                this.grassInstancedMesh.setMatrixAt(i, dummy.matrix);
+            }
+        }
+        
+        // Update instance matrix
+        this.grassInstancedMesh.instanceMatrix.needsUpdate = true;
+        
+        // Log LOD status periodically
+        if (Math.random() < 0.01) { // 1% chance to log
+            console.log(`🌿 Grass LOD: ${visibleCount}/${grassCount} visible (${Math.round(visibleCount/grassCount*100)}%)`);
+        }
+    }
+    
+    /**
+     * Update tree LOD based on distance from player
+     * @param {THREE.Vector3} playerPosition - Current player position
+     */
+    updateTreeLOD(playerPosition) {
+        if (!this.trees || this.trees.length === 0) return;
+        
+        // For each tree instanced mesh
+        this.trees.forEach(instancedMesh => {
+            if (!instancedMesh || !instancedMesh.isInstancedMesh) return;
+            
+            const count = instancedMesh.count;
+            const dummy = new THREE.Object3D();
+            const matrix = new THREE.Matrix4();
+            const position = new THREE.Vector3();
+            const boundingSphere = new THREE.Sphere();
+            
+            for (let i = 0; i < count; i++) {
+                instancedMesh.getMatrixAt(i, matrix);
+                position.setFromMatrixPosition(matrix);
+                
+                // Simple frustum culling check
+                boundingSphere.center.copy(position);
+                boundingSphere.radius = 10; // Approximate tree radius
+                
+                const inFrustum = this.frustum.intersectsSphere(boundingSphere);
+                
+                if (!inFrustum) {
+                    // Outside frustum - hide
+                    dummy.position.setFromMatrixPosition(matrix);
+                    dummy.rotation.setFromRotationMatrix(matrix);
+                    dummy.scale.set(0, 0, 0);
+                    dummy.updateMatrix();
+                    instancedMesh.setMatrixAt(i, dummy.matrix);
+                    continue;
+                }
+                
+                // Calculate distance from player
+                const distance = position.distanceTo(playerPosition);
+                
+                // LOD logic for trees
+                if (distance < this.lodDistances.mid) {
+                    // Near/Mid: Full visibility (trees stay visible longer than grass)
+                    // Keep original matrix (do nothing)
+                } else if (distance < this.lodDistances.far * 1.5) {
+                    // Far: Reduce scale slightly for distant trees
+                    dummy.position.setFromMatrixPosition(matrix);
+                    dummy.rotation.setFromRotationMatrix(matrix);
+                    const originalScale = Math.pow(matrix.determinant(), 1/3); // Extract uniform scale
+                    const reducedScale = originalScale * 0.7;
+                    dummy.scale.setScalar(reducedScale);
+                    dummy.updateMatrix();
+                    instancedMesh.setMatrixAt(i, dummy.matrix);
+                } else {
+                    // Beyond far: Hide trees
+                    dummy.position.setFromMatrixPosition(matrix);
+                    dummy.rotation.setFromRotationMatrix(matrix);
+                    dummy.scale.set(0, 0, 0);
+                    dummy.updateMatrix();
+                    instancedMesh.setMatrixAt(i, dummy.matrix);
+                }
+            }
+            
+            // Update instance matrix
+            instancedMesh.instanceMatrix.needsUpdate = true;
+        });
     }
     
     getGrassMaterial() {
@@ -700,6 +970,36 @@ export class TerrainBuilder {
     
     getGrassInstanceCount() {
         return this.grassInstanceCount;
+    }
+    
+    /**
+     * Simple robust LOD system - no complex culling, just basic distance scaling
+     * @param {THREE.Vector3} playerPosition - Current player position
+     */
+    updateSimpleLOD(playerPosition) {
+        if (!playerPosition) return;
+        
+        // Simple grass LOD - just reduce density at distance
+        this.updateSimpleGrassLOD(playerPosition);
+        
+        // Update performance stats for monitoring
+        if (this.isMobile && Math.random() < 0.01) { // 1% chance to log on mobile
+            console.log(`📱 Simple LOD Active - Grass visible: ${this.cullingStats.grassVisible || 'all'}`);
+        }
+    }
+    
+    /**
+     * Simple grass LOD - just hide some instances at distance, no complex matrix manipulation
+     * @param {THREE.Vector3} playerPosition - Current player position
+     */
+    updateSimpleGrassLOD(playerPosition) {
+        // On mobile, optionally reduce visible grass at distance
+        // This is much simpler than before - just basic visibility toggling
+        if (this.isMobile && this.grassInstancedMesh) {
+            // For now, keep it simple and let the reduced instance count handle performance
+            // Future: Could add simple distance-based visibility toggle here if needed
+            this.cullingStats.grassVisible = this.grassInstanceCount;
+        }
     }
 
     async addMountains() {
@@ -927,4 +1227,4 @@ export class TerrainBuilder {
                z >= this.farmHouseExclusionArea.minZ && 
                z <= this.farmHouseExclusionArea.maxZ;
     }
-} 
+}

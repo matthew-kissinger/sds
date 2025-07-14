@@ -27,11 +27,24 @@ export class SceneManager {
             stencil: false // Disable stencil buffer if not needed
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Disable shadows on mobile for performance
+        if (this.isMobile) {
+            this.renderer.shadowMap.enabled = false;
+            console.log('💡 Shadows disabled on mobile for performance');
+        } else {
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        }
         
         // Performance optimizations
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
+        // Force devicePixelRatio to 1 on mobile, otherwise limit to 2
+        if (this.isMobile) {
+            this.renderer.setPixelRatio(1);
+            console.log('📱 Mobile detected: forcing devicePixelRatio to 1');
+        } else {
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        }
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         
         // Enable frustum culling and other optimizations
@@ -102,17 +115,21 @@ export class SceneManager {
         // Directional light (sun) - adjusted for new lighting model
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8 * Math.PI);
         directionalLight.position.set(30, 70, 30);
-        directionalLight.castShadow = true;
         
-        // Shadow configuration - adjusted for larger field
-        directionalLight.shadow.camera.left = -120;
-        directionalLight.shadow.camera.right = 120;
-        directionalLight.shadow.camera.top = 120;
-        directionalLight.shadow.camera.bottom = -120;
-        directionalLight.shadow.camera.near = 1;
-        directionalLight.shadow.camera.far = 150;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
+        // Only enable shadows on desktop
+        if (!this.isMobile) {
+            directionalLight.castShadow = true;
+            
+            // Shadow configuration - adjusted for larger field
+            directionalLight.shadow.camera.left = -120;
+            directionalLight.shadow.camera.right = 120;
+            directionalLight.shadow.camera.top = 120;
+            directionalLight.shadow.camera.bottom = -120;
+            directionalLight.shadow.camera.near = 1;
+            directionalLight.shadow.camera.far = 150;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+        }
         
         this.scene.add(directionalLight);
         

@@ -313,6 +313,24 @@ export class PerformanceMonitor {
     }
     
     /**
+     * Get mobile performance stats for UI display
+     * @returns {Object} Mobile-friendly performance stats
+     */
+    getMobileStats() {
+        const fps = this.frameTimeHistory.length > 0 ? 
+            Math.round(1000 / this.metrics.avgFrameTime) : 0;
+        
+        return {
+            fps: fps,
+            grassVisible: this.metrics.grassInstances > 0 ? 
+                Math.round((this.metrics.grassInstances / 80000) * 100) + '%' : '--',
+            treesVisible: this.metrics.activeSheepCount, // Placeholder - need to integrate with culling stats
+            drawCalls: this.metrics.drawCalls,
+            triangles: (this.metrics.triangles / 1000).toFixed(0) + 'k'
+        };
+    }
+    
+    /**
      * Check if performance monitor is enabled
      * @returns {boolean} True if enabled
      */
@@ -374,4 +392,4 @@ export class PerformanceMonitor {
         
         console.groupEnd();
     }
-} 
+}
