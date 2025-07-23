@@ -1,9 +1,82 @@
 import * as THREE from 'three';
+import * as SkeletonUtils from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/utils/SkeletonUtils.js';
 import { Vector2D } from './Vector2D.js';
 
 /**
- * Sheepdog class - player controlled entity
- * Toony design with smooth animations and buttery controls
+ * Animation States - Simplified and robust state machine for Sheep Dog animations
+ */
+const ANIMATION_STATES = {
+    IDLE: {
+        animations: ['Idle_1', 'Idle_2', 'Idle_3', 'Idle_4', 'Idle_6', 'Idle_7'],
+        priority: 0,
+        transitionTime: 0.5
+    },
+    WALKING: {
+        animations: {
+            forward: 'Walk_F_IP',
+            left: 'Walk_L_IP',
+            right: 'Walk_R_IP'
+        },
+        priority: 1,
+        transitionTime: 0.3
+    },
+    TROTTING: {
+        animations: {
+            forward: 'Trot_F_IP',
+            left: 'Trot_L_IP',
+            right: 'Trot_R_IP'
+        },
+        priority: 2,
+        transitionTime: 0.25
+    },
+    RUNNING: {
+        animations: {
+            forward: 'Run_F_IP',
+            left: 'Run_L_IP',
+            right: 'Run_R_IP'
+        },
+        priority: 3,
+        transitionTime: 0.2
+    },
+    SPRINTING: {
+        animations: {
+            forward: 'RunFast_F_IP',
+            left: 'RunFast_L_IP',
+            right: 'RunFast_R_IP'
+        },
+        priority: 4,
+        transitionTime: 0.15
+    },
+    BARKING: {
+        animations: ['Bark'],
+        priority: 5,
+        transitionTime: 0.2,
+        duration: 4.58 // From animation data
+    },
+    SITTING: {
+        animations: {
+            start: 'Sitting_start',
+            loop: ['Sitting_loop_1', 'Sitting_loop_2'],
+            end: 'Sitting_end'
+        },
+        priority: 1,
+        transitionTime: 0.4
+    }
+};
+
+/**
+ * Speed thresholds for animation state transitions
+ */
+const SPEED_THRESHOLDS = {
+    IDLE: 0.1,      // Much lower threshold for immediate idle stop
+    WALKING: 5.0,   // Start walking animation sooner
+    TROTTING: 12.0, // Adjusted for better progression
+    RUNNING: 18.0,  // Adjusted for better progression
+    SPRINTING: 24.0 // Slightly lower sprint threshold
+};
+
+/**
+ * Sheepdog class - Professional player controlled entity with advanced animation system
  */
 export class Sheepdog {
     constructor(x, z, dogType = 'jep') {
@@ -14,589 +87,511 @@ export class Sheepdog {
         
         // Player identification for competitive mode
         this.playerId = null;
-        this.playerIcon = null; // Gate color icon above head
+        this.playerIcon = null;
         
-        // Configure dog based on type
-        if (dogType === 'rauri') {
-            // Rauri: Less stamina but longer interaction distance
-            this.maxSpeed = 15; // Normal max speed
-            this.sprintSpeed = 25; // Sprint max speed
-            this.acceleration = 40; // How fast we reach max speed
-            this.deceleration = 30; // How fast we stop
-            this.turnSpeed = 8; // How fast we rotate
-            
-            // Reduced stamina for Rauri
-            this.maxStamina = 70; // 30% less stamina
-            this.stamina = this.maxStamina;
-            this.staminaDrainRate = 35; // Drains slightly faster
-            this.staminaRegenRate = 15; // Regenerates slower
-            this.minStaminaToSprint = 10; // Minimum stamina needed to start sprinting
-            
-            // Longer interaction distance (set in GameState)
-            this.fleeRadius = 12; // 50% longer range (normal is 8)
-        } else if (dogType === 'pip') {
-            // Pip: Higher stamina, shorter range, faster movement
-            this.maxSpeed = 18; // 20% faster normal speed
-            this.sprintSpeed = 30; // 20% faster sprint speed
-            this.acceleration = 50; // Quicker acceleration
-            this.deceleration = 35; // Quicker stops
-            this.turnSpeed = 10; // More agile turning
-            
-            // Higher stamina for Pip
-            this.maxStamina = 130; // 30% more stamina
-            this.stamina = this.maxStamina;
-            this.staminaDrainRate = 25; // Drains slower
-            this.staminaRegenRate = 25; // Regenerates faster
-            this.minStaminaToSprint = 10; // Minimum stamina needed to start sprinting
-            
-            // Shorter interaction distance (small dog, less intimidating)
-            this.fleeRadius = 6; // 25% shorter range
-        } else {
-            // Jep: Standard configuration
-            this.maxSpeed = 15; // Normal max speed
-            this.sprintSpeed = 25; // Sprint max speed
-            this.acceleration = 40; // How fast we reach max speed
-            this.deceleration = 30; // How fast we stop
-            this.turnSpeed = 8; // How fast we rotate
-            
-            // Standard stamina
-            this.maxStamina = 100;
-            this.stamina = this.maxStamina;
-            this.staminaDrainRate = 30; // Stamina per second when sprinting
-            this.staminaRegenRate = 20; // Stamina per second when not sprinting
-            this.minStaminaToSprint = 10; // Minimum stamina needed to start sprinting
-            
-            // Standard interaction distance
-            this.fleeRadius = 8; // Standard range
-        }
+        // Configure dog stats based on type
+        this.configureDogStats(dogType);
         
-        this.isSprinting = false;
+        // Animation system
+        this.animationSystem = {
+            mixer: null,
+            currentState: 'IDLE',
+            currentAction: null,
+            currentDirection: 'forward',
+            actions: new Map(),
+            stateTimer: 0,
+            idleVariationTimer: 0,
+            idleVariationIndex: 0,
+            barkTimer: 0,
+            sittingPhase: 'none', // 'none', 'starting', 'sitting', 'ending'
+            lastMovementTime: 0,
+            turnDirection: null,
+            turnStartTime: 0
+        };
         
-        // Animation properties
-        this.animationTime = 0;
-        this.runCycle = 0;
-        this.tailWag = 0;
-        this.earFlap = 0;
+        // Movement and rotation
         this.currentRotation = 0;
         this.targetRotation = 0;
-        
-        // Idle animation properties
-        this.idleTime = 0;
-        this.nextIdleAction = 0;
-        this.currentIdleAction = 'breathing';
-        this.idleActionDuration = 0;
-        this.lookDirection = 0;
-        this.targetLookDirection = 0;
-        
-        // Store references to animated parts
-        this.animatedParts = {
-            body: null,
-            head: null,
-            tail: null,
-            ears: [],
-            legs: [],
-            tongue: null
-        };
-        
-        this.mesh = null;
+        this.lastVelocityAngle = 0;
         this.isMoving = false;
+        
+        // Model references
+        this.mesh = null;
+        this.sheepdogModel = null;
+        
+        // Audio and behavior
         this.audioManager = null;
-        
-        // Audio tracking
         this.lastBarkTime = 0;
-        this.barkCooldown = 3000; // Increased from 2 seconds to 3 seconds between barks
-        this.nearSheep = false; // Track if dog is near sheep for barking
+        this.barkCooldown = 3000;
+        this.nearSheep = false;
         
-        // Initialize shared resources
-        this.initializeSharedResources();
+        // Performance tracking
+        this._lastLogTime = 0;
+        
+        this.initializeModel();
     }
     
-    // Static initialization for shared resources
-    initializeSharedResources() {
-        if (Sheepdog.sharedGeometries) return;
-        
-        Sheepdog.sharedGeometries = {
-            // Body parts
-            body: new THREE.CapsuleGeometry(0.35, 1.0, 6, 8),
-            chest: new THREE.SphereGeometry(0.3, 8, 6),
-            head: new THREE.SphereGeometry(0.35, 8, 6),
-            snout: new THREE.ConeGeometry(0.2, 0.4, 6),
-            nose: new THREE.SphereGeometry(0.08, 6, 5),
-            
-            // Features
-            eye: new THREE.SphereGeometry(0.12, 8, 6),
-            pupil: new THREE.SphereGeometry(0.08, 6, 5),
-            ear: new THREE.TetrahedronGeometry(0.25, 0),
-            
-            // Limbs
-            leg: new THREE.CapsuleGeometry(0.08, 0.4, 4, 6),
-            paw: new THREE.SphereGeometry(0.12, 6, 5),
-            
-            // Tail segments
-            tailBase: new THREE.CylinderGeometry(0.12, 0.08, 0.3, 6),
-            tailMid: new THREE.CylinderGeometry(0.08, 0.06, 0.3, 6),
-            tailTip: new THREE.SphereGeometry(0.08, 6, 5),
-            
-            // Tongue
-            tongue: new THREE.BoxGeometry(0.15, 0.02, 0.2)
+    /**
+     * Configure dog statistics based on type - Balanced 9-point system
+     */
+    configureDogStats(dogType) {
+        const configs = {
+            'jep': {
+                // Balanced (Speed: 3, Stamina: 3, Range: 3) = 9 points
+                maxSpeed: 15,
+                sprintSpeed: 25,
+                acceleration: 40,
+                deceleration: 30,
+                turnSpeed: 8,
+                maxStamina: 100,
+                staminaDrainRate: 30,
+                staminaRegenRate: 20,
+                fleeRadius: 8
+            },
+            'rauri': {
+                // Range Specialist (Speed: 2, Stamina: 2, Range: 5) = 9 points
+                maxSpeed: 12,
+                sprintSpeed: 20,
+                acceleration: 35,
+                deceleration: 25,
+                turnSpeed: 7,
+                maxStamina: 70,
+                staminaDrainRate: 35,
+                staminaRegenRate: 15,
+                fleeRadius: 12
+            },
+            'sally': {
+                // Speed Demon (Speed: 5, Stamina: 2, Range: 2) = 9 points
+                maxSpeed: 22,
+                sprintSpeed: 35,
+                acceleration: 60,
+                deceleration: 45,
+                turnSpeed: 12,
+                maxStamina: 70,
+                staminaDrainRate: 40,
+                staminaRegenRate: 15,
+                fleeRadius: 6
+            },
+            'shiloh': {
+                // Endurance Expert (Speed: 2, Stamina: 5, Range: 2) = 9 points
+                maxSpeed: 12,
+                sprintSpeed: 20,
+                acceleration: 35,
+                deceleration: 25,
+                turnSpeed: 7,
+                maxStamina: 150,
+                staminaDrainRate: 20,
+                staminaRegenRate: 30,
+                fleeRadius: 6
+            },
+            'george_washington': {
+                // Tactical (Speed: 3, Stamina: 4, Range: 2) = 9 points
+                maxSpeed: 15,
+                sprintSpeed: 25,
+                acceleration: 40,
+                deceleration: 30,
+                turnSpeed: 8,
+                maxStamina: 120,
+                staminaDrainRate: 25,
+                staminaRegenRate: 25,
+                fleeRadius: 6
+            }
         };
         
-        Sheepdog.sharedMaterials = {
-            // Main colors - Jep (Black and White Border Collie)
-            blackFur: new THREE.MeshToonMaterial({ 
-                color: 0x2a2a2a,
-                emissive: 0x1a1a1a,
-                emissiveIntensity: 0.1,
-                fog: true
-            }),
-            whiteFur: new THREE.MeshToonMaterial({ 
-                color: 0xffffff,
-                emissive: 0xf5f5f5,
-                emissiveIntensity: 0.1,
-                fog: true
-            }),
-            
-            // Main colors - Rauri (Chocolate/Red-Brown)
-            brownFur: new THREE.MeshToonMaterial({
-                color: 0x8B4513, // Chocolate brown
-                emissive: 0x5D2E0C,
-                emissiveIntensity: 0.1,
-                fog: true
-            }),
-            redBrownFur: new THREE.MeshToonMaterial({
-                color: 0xA0522D, // Sienna/red-brown
-                emissive: 0x704020,
-                emissiveIntensity: 0.1,
-                fog: true
-            }),
-            
-            // Merle speckling for Rauri's paws
-            speckledFur: new THREE.MeshToonMaterial({
-                color: 0xD2B48C, // Tan with darker spots implied
-                emissive: 0x8B7355,
-                emissiveIntensity: 0.1,
-                fog: true
-            }),
-            
-            // Silvering for Rauri's muzzle
-            silverFur: new THREE.MeshToonMaterial({
-                color: 0xC0C0C0,
-                emissive: 0xA0A0A0,
-                emissiveIntensity: 0.1,
-                fog: true
-            }),
-            
-            // Features
-            nose: new THREE.MeshToonMaterial({
-                color: 0x222222,
-                fog: true
-            }),
-            eye: new THREE.MeshBasicMaterial({ 
-                color: 0xffffff,
-                fog: false
-            }),
-            pupil: new THREE.MeshBasicMaterial({ 
-                color: 0x000000,
-                fog: false
-            }),
-            amberPupil: new THREE.MeshBasicMaterial({
-                color: 0x000000, // Black eyes for Rauri
-                fog: false
-            }),
-            tongue: new THREE.MeshToonMaterial({
-                color: 0xff6b9d,
-                emissive: 0xff4b7d,
-                emissiveIntensity: 0.2,
-                fog: true
-            })
-        };
+        const config = configs[dogType] || configs['jep'];
+        Object.assign(this, config);
         
-        // Create gradient map for toon shading
-        const gradientTexture = new THREE.DataTexture(
-            new Uint8Array([0, 0, 0, 255, 100, 100, 100, 255, 200, 200, 200, 255, 255, 255, 255, 255]),
-            4, 1, THREE.RGBAFormat
-        );
-        gradientTexture.magFilter = THREE.NearestFilter;
-        gradientTexture.minFilter = THREE.NearestFilter;
-        
-        // Apply gradient map
-        Sheepdog.sharedMaterials.blackFur.gradientMap = gradientTexture;
-        Sheepdog.sharedMaterials.whiteFur.gradientMap = gradientTexture;
-        Sheepdog.sharedMaterials.nose.gradientMap = gradientTexture;
-        Sheepdog.sharedMaterials.tongue.gradientMap = gradientTexture;
+        this.stamina = this.maxStamina;
+        this.minStaminaToSprint = 10;
+        this.isSprinting = false;
     }
-
-    // Create Three.js mesh for the sheepdog
-    createMesh() {
-        const geom = Sheepdog.sharedGeometries;
-        const mat = Sheepdog.sharedMaterials;
-        
+    
+    /**
+     * Initialize the model and set up the mesh group
+     */
+    initializeModel() {
         this.mesh = new THREE.Group();
-        
-        // BODY GROUP (will bounce)
-        const bodyGroup = new THREE.Group();
-        this.animatedParts.body = bodyGroup;
-        
-        // Configure materials based on dog type
-        const isRauri = this.dogType === 'rauri';
-        const isPip = this.dogType === 'pip';
-        const mainFurMat = isRauri ? mat.redBrownFur : (isPip ? mat.brownFur : mat.blackFur);
-        const chestMat = mat.whiteFur; // All have white chest
-        const pupilMat = isRauri ? mat.amberPupil : mat.pupil;
-        
-        // Main body
-        const body = new THREE.Mesh(geom.body, mainFurMat);
-        body.rotation.x = Math.PI / 2; // Rotate around X axis to make it horizontal
-        body.position.set(0, 0, 0);
-        // Rauri is slightly stockier, Pip has corgi proportions
-        if (isRauri) {
-            body.scale.set(1.1, 1, 1); // Slightly wider
-        } else if (isPip) {
-            body.scale.set(1.2, 0.8, 1.3); // Wider and longer but shorter height
-        }
-        body.castShadow = true;
-        body.receiveShadow = true;
-        bodyGroup.add(body);
-        
-        // White chest/belly (white blaze from muzzle down chest)
-        const chest = new THREE.Mesh(geom.chest, chestMat);
-        chest.position.set(0, -0.15, 0.3);
-        chest.scale.set(0.6, 0.5, 0.4);
-        bodyGroup.add(chest);
-        
-        // HEAD GROUP
-        const headGroup = new THREE.Group();
-        this.animatedParts.head = headGroup;
-        
-        // Head
-        const head = new THREE.Mesh(geom.head, mainFurMat);
-        // Different head shapes for each dog
-        if (isRauri) {
-            head.scale.set(1.15, 1, 1.1); // Broader and slightly larger
-        } else if (isPip) {
-            head.scale.set(1.1, 1, 1.2); // Corgi-like proportions
-        } else {
-            head.scale.set(1, 0.9, 1);
-        }
-        headGroup.add(head);
-        
-        // White muzzle marking/blaze
-        const muzzle = new THREE.Mesh(geom.snout, mat.whiteFur);
-        muzzle.rotation.x = -Math.PI / 2;
-        muzzle.position.set(0, -0.05, 0.35);
-        muzzle.scale.set(0.8, 0.8, 0.9);
-        headGroup.add(muzzle);
-        
-        // Snout with silvering for Rauri
-        const snoutMat = isRauri ? mat.silverFur : mainFurMat;
-        const snout = new THREE.Mesh(geom.snout, snoutMat);
-        snout.rotation.x = -Math.PI / 2;
-        snout.position.set(0, -0.05, 0.4);
-        snout.scale.set(0.6, 0.6, 0.7);
-        headGroup.add(snout);
-        
-        // Nose (dark for both)
-        const nose = new THREE.Mesh(geom.nose, mat.nose);
-        nose.position.set(0, -0.05, 0.55);
-        headGroup.add(nose);
-        
-        // EYES
-        const leftEye = new THREE.Mesh(geom.eye, mat.eye);
-        leftEye.position.set(-0.15, 0.12, 0.25);
-        // Make Jep's eyes smaller and less prominent
-        if (!isRauri) {
-            leftEye.scale.set(0.7, 0.7, 0.7);
-        }
-        headGroup.add(leftEye);
-        
-        const leftPupil = new THREE.Mesh(geom.pupil, pupilMat);
-        // Adjust pupil position for each dog type
-        if (isPip) {
-            leftPupil.position.set(-0.15, 0.12, 0.32); // More forward for Pip
-            leftPupil.scale.set(0.5, 0.5, 0.5);
-        } else if (isRauri) {
-            leftPupil.position.set(-0.15, 0.12, 0.35);
-        } else {
-            leftPupil.position.set(-0.15, 0.12, 0.29);
-            leftPupil.scale.set(0.7, 0.7, 0.7);
-        }
-        leftPupil.renderOrder = 1; // Ensure pupils render on top
-        headGroup.add(leftPupil);
-        
-        const rightEye = new THREE.Mesh(geom.eye, mat.eye);
-        rightEye.position.set(0.15, 0.12, 0.25);
-        // Make Jep's eyes smaller and less prominent
-        if (!isRauri) {
-            rightEye.scale.set(0.7, 0.7, 0.7);
-        }
-        headGroup.add(rightEye);
-        
-        const rightPupil = new THREE.Mesh(geom.pupil, pupilMat);
-        // Adjust pupil position for each dog type
-        if (isPip) {
-            rightPupil.position.set(0.15, 0.12, 0.32); // More forward for Pip
-            rightPupil.scale.set(0.5, 0.5, 0.5);
-        } else if (isRauri) {
-            rightPupil.position.set(0.15, 0.12, 0.35);
-        } else {
-            rightPupil.position.set(0.15, 0.12, 0.29);
-            rightPupil.scale.set(0.7, 0.7, 0.7);
-        }
-        rightPupil.renderOrder = 1; // Ensure pupils render on top
-        headGroup.add(rightPupil);
-        
-        // EARS
-        const leftEar = new THREE.Mesh(geom.ear, mainFurMat);
-        // Different ear styles for each dog
-        if (isRauri) {
-            leftEar.scale.set(1.2, 1.8, 0.6); // Larger ears
-            leftEar.position.set(-0.28, 0.15, -0.1);
-            leftEar.rotation.set(0, -0.1, 0.6); // More upright, slight outward tip
-        } else if (isPip) {
-            leftEar.scale.set(1.5, 2.2, 0.8); // Large Corgi ears
-            leftEar.position.set(-0.3, 0.2, -0.05);
-            leftEar.rotation.set(0, -0.2, 0.3); // Very upright
-        } else {
-            leftEar.scale.set(1, 1.5, 0.5);
-            leftEar.position.set(-0.25, 0.1, -0.1);
-            leftEar.rotation.set(0, 0, 0.8);
-        }
-        this.animatedParts.ears.push(leftEar);
-        headGroup.add(leftEar);
-        
-        const rightEar = new THREE.Mesh(geom.ear, mainFurMat);
-        if (isRauri) {
-            rightEar.scale.set(1.2, 1.8, 0.6); // Larger ears
-            rightEar.position.set(0.28, 0.15, -0.1);
-            rightEar.rotation.set(0, 0.1, -0.6); // More upright, slight outward tip
-        } else if (isPip) {
-            rightEar.scale.set(1.5, 2.2, 0.8); // Large Corgi ears
-            rightEar.position.set(0.3, 0.2, -0.05);
-            rightEar.rotation.set(0, 0.2, -0.3); // Very upright
-        } else {
-            rightEar.scale.set(1, 1.5, 0.5);
-            rightEar.position.set(0.25, 0.1, -0.1);
-            rightEar.rotation.set(0, 0, -0.8);
-        }
-        this.animatedParts.ears.push(rightEar);
-        headGroup.add(rightEar);
-        
-        // TONGUE (hanging out when running)
-        const tongue = new THREE.Mesh(geom.tongue, mat.tongue);
-        tongue.position.set(0.1, -0.2, 0.45);
-        tongue.rotation.z = 0.1;
-        tongue.visible = false; // Hidden by default
-        this.animatedParts.tongue = tongue;
-        headGroup.add(tongue);
-        
-        headGroup.position.set(0, 0.45, 0.7);
-        bodyGroup.add(headGroup);
-        
-        // TAIL (segmented for wagging)
-        const tailGroup = new THREE.Group();
-        
-        // Different tail styles
-        if (isRauri) {
-            // Just a small nub
-            const tailNub = new THREE.Mesh(geom.tailTip, mainFurMat);
-            tailNub.position.set(0, 0.05, -0.65);
-            tailNub.scale.set(1.2, 1.2, 0.8); // Stubby tail
-            tailGroup.add(tailNub);
-        } else if (isPip) {
-            // Corgi has a fluffy, medium-length tail
-            const tailBase = new THREE.Mesh(geom.tailBase, mainFurMat);
-            tailBase.rotation.z = -0.9; // More upright
-            tailBase.position.set(0, 0.15, -0.55);
-            tailBase.scale.set(1.3, 1, 1.3); // Fluffier
-            tailGroup.add(tailBase);
-            
-            const tailTip = new THREE.Mesh(geom.tailTip, mat.whiteFur);
-            tailTip.position.set(0, 0.3, -0.7);
-            tailTip.scale.set(1.2, 1.2, 1.2); // Fluffy tip
-            tailGroup.add(tailTip);
-        } else {
-            // Jep has normal tail
-            const tailBase = new THREE.Mesh(geom.tailBase, mat.blackFur);
-            tailBase.rotation.z = -0.7;
-            tailBase.position.set(0, 0.1, -0.6);
-            tailGroup.add(tailBase);
-            
-            const tailMid = new THREE.Mesh(geom.tailMid, mat.blackFur);
-            tailMid.rotation.z = -0.5;
-            tailMid.position.set(0, 0.25, -0.8);
-            tailGroup.add(tailMid);
-            
-            const tailTip = new THREE.Mesh(geom.tailTip, mat.whiteFur);
-            tailTip.position.set(0, 0.35, -0.95);
-            tailGroup.add(tailTip);
-        }
-        
-        this.animatedParts.tail = tailGroup;
-        bodyGroup.add(tailGroup);
-        
-        // LEGS - spread out more for realistic dog proportions
-        const legPositions = [
-            { x: -0.15, z: 0.6, name: 'frontLeft' },
-            { x: 0.15, z: 0.6, name: 'frontRight' },
-            { x: -0.15, z: -0.6, name: 'backLeft' },
-            { x: 0.15, z: -0.6, name: 'backRight' }
-        ];
-        
-        legPositions.forEach((pos, i) => {
-            const legGroup = new THREE.Group();
-            
-            // Upper leg (shorter)
-            const leg = new THREE.Mesh(geom.leg, mainFurMat);
-            leg.position.y = -0.15;
-            // Different leg styles
-            if (isRauri) {
-                leg.scale.set(1.1, 0.7, 1.1); // Thicker legs
-            } else if (isPip) {
-                leg.scale.set(1.3, 0.6, 1.3); // Short, thick Corgi legs (slightly longer)
-                leg.position.y = -0.15; // Lower to ground
-            } else {
-                leg.scale.set(1, 0.7, 1); // Make legs shorter
-            }
-            legGroup.add(leg);
-            
-            // White socks - Different patterns for each dog
-            if (isRauri || (isPip && i < 2) || (!isPip && !isRauri && i < 2)) {
-                const sock = new THREE.Mesh(geom.leg, mat.whiteFur);
-                if (isPip) {
-                    sock.position.y = -0.2; // Adjusted for longer legs
-                    sock.scale.set(1.4, 0.4, 1.4);
-                } else {
-                    sock.position.y = -0.22;
-                    sock.scale.set(1.1, 0.4, 1.1);
-                }
-                legGroup.add(sock);
-            }
-            
-            // Paw - Different styles for each dog
-            const pawMat = isRauri ? mat.speckledFur : mainFurMat;
-            const paw = new THREE.Mesh(geom.paw, pawMat);
-            if (isPip) {
-                paw.position.y = -0.3; // Lower to ground
-                paw.scale.set(1, 1, 1); // Bigger paws for Corgi
-            } else {
-                paw.position.y = -0.32;
-                paw.scale.set(0.8, 0.8, 0.8); // Slightly smaller paws
-            }
-            legGroup.add(paw);
-            
-            legGroup.position.set(pos.x, -0.15, pos.z);
-            legGroup.userData = { 
-                index: i, 
-                baseX: pos.x,
-                baseY: -0.15,
-                baseZ: pos.z,
-                name: pos.name 
-            };
-            
-            this.animatedParts.legs.push(legGroup);
-            bodyGroup.add(legGroup);
-        });
-        
-        // Adjust body height based on dog type
-        if (isPip) {
-            bodyGroup.position.y = 0.5; // Slightly higher body to accommodate longer legs
-        } else {
-            bodyGroup.position.y = 0.6;
-        }
-        this.mesh.add(bodyGroup);
-        
-        // Position mesh
         this.mesh.position.set(this.position.x, 0, this.position.z);
         
-        return this.mesh;
+        // Load the Sheep Dog model
+        this.loadSheepdogModel();
     }
-
+    
     /**
-     * Create a colored player icon above the sheepdog for competitive mode
-     * @param {number} gateColor - Hex color of the player's gate
+     * Load individual dog model based on dogType and set up comprehensive animation system
      */
-    createPlayerIcon(gateColor) {
-        if (this.playerIcon) {
-            this.removePlayerIcon();
+    loadSheepdogModel() {
+        const terrainBuilder = window.gameInstance?.terrainBuilder;
+        
+        if (!terrainBuilder?.models?.animals?.[this.dogType]) {
+            console.error(`❌ ${this.dogType} model not available from TerrainBuilder`);
+            return;
         }
         
-        // Create icon geometry - a simple diamond/rhombus shape
-        const iconGeometry = new THREE.ConeGeometry(0.3, 0.4, 4);
-        iconGeometry.rotateX(Math.PI); // Point upward
+        const originalModel = terrainBuilder.models.animals[this.dogType];
+        const animations = terrainBuilder.models.animals[this.dogType + '_animations'] || [];
         
-        // Create material with gate color
-        const iconMaterial = new THREE.MeshToonMaterial({
-            color: gateColor,
-            emissive: gateColor,
-            emissiveIntensity: 0.3,
-            fog: true
+        console.log(`🐕 Loading ${this.dogType} model with ${animations.length} animations`);
+        
+        // Clone the model using SkeletonUtils for proper animation support
+        this.sheepdogModel = SkeletonUtils.clone(originalModel);
+        
+        // Configure model - Make it bigger and more visible
+        this.sheepdogModel.scale.set(4,4,4)
+        this.sheepdogModel.rotation.y = 0;
+        this.sheepdogModel.position.set(0, 0, 0);
+        
+        // Configure shadows and materials
+        this.sheepdogModel.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                
+                // Ensure materials work with fog
+                if (child.material) {
+                    child.material.fog = true;
+                }
+            }
         });
         
-        // Create the icon mesh
-        this.playerIcon = new THREE.Mesh(iconGeometry, iconMaterial);
+        // Add to mesh group
+        this.mesh.add(this.sheepdogModel);
         
-        // Position above the dog's head
-        const iconHeight = this.dogType === 'pip' ? 2.2 : 2.5; // Adjust for Pip's shorter height
-        this.playerIcon.position.set(0, iconHeight, 0);
+        // Set up animation system
+        this.setupAnimationSystem(animations);
         
-        // Add gentle floating animation
-        this.playerIcon.userData = {
-            originalY: iconHeight,
-            animationTime: Math.random() * Math.PI * 2 // Random start phase
-        };
-        
-        // Add to the main mesh group
-        if (this.mesh) {
-            this.mesh.add(this.playerIcon);
-        }
-        
-        console.log(`🎯 Created player icon with color: 0x${gateColor.toString(16).toUpperCase()}`);
+        console.log(`✅ ${this.dogType} model loaded and animation system initialized`);
     }
     
     /**
-     * Update the player icon color
-     * @param {number} gateColor - New hex color
+     * Set up comprehensive animation system with all 113 animations
      */
-    updatePlayerIcon(gateColor) {
-        if (this.playerIcon && this.playerIcon.material) {
-            this.playerIcon.material.color.setHex(gateColor);
-            this.playerIcon.material.emissive.setHex(gateColor);
+    setupAnimationSystem(animations) {
+        if (animations.length === 0) {
+            console.warn('⚠️ No animations found for Sheep Dog model');
+            return;
+        }
+        
+        // Create animation mixer
+        this.animationSystem.mixer = new THREE.AnimationMixer(this.sheepdogModel);
+        
+        // Create actions for all animations and organize by state
+        animations.forEach(clip => {
+            const action = this.animationSystem.mixer.clipAction(clip);
+            this.animationSystem.actions.set(clip.name, action);
+        });
+        
+        // Start with first idle animation
+        this.transitionToState('IDLE');
+        
+        console.log(`🎬 Animation system ready with ${animations.length} animations`);
+        console.log('📋 Available animations:', animations.map(anim => anim.name).sort());
+    }
+    
+    /**
+     * Get the appropriate animation name based on current state and direction
+     */
+    getAnimationForState(state, direction = 'forward') {
+        const stateConfig = ANIMATION_STATES[state];
+        if (!stateConfig) return null;
+        
+        if (Array.isArray(stateConfig.animations)) {
+            // Simple array of animations (like IDLE, BARKING)
+            if (state === 'IDLE') {
+                // Cycle through idle variations
+                return stateConfig.animations[this.animationSystem.idleVariationIndex];
+            }
+            return stateConfig.animations[0];
+        } else if (typeof stateConfig.animations === 'object') {
+            // Handle special sitting state
+            if (state === 'SITTING') {
+                switch (this.animationSystem.sittingPhase) {
+                    case 'starting':
+                        return stateConfig.animations.start;
+                    case 'sitting':
+                        const loopAnimations = stateConfig.animations.loop;
+                        const loopIndex = Math.floor(Math.random() * loopAnimations.length);
+                        return loopAnimations[loopIndex];
+                    case 'ending':
+                        return stateConfig.animations.end;
+                    default:
+                        return stateConfig.animations.start;
+                }
+            }
+            
+            // Handle turning state
+            if (state === 'TURNING') {
+                const turnDirection = this.animationSystem.turnDirection;
+                if (turnDirection === 'left') {
+                    return stateConfig.animations.left;
+                } else if (turnDirection === 'right') {
+                    return stateConfig.animations.right;
+                }
+                return stateConfig.animations.left; // Default
+            }
+            
+            // Directional animations (WALKING, TROTTING, RUNNING, SPRINTING)
+            return stateConfig.animations[direction] || stateConfig.animations.forward;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Determine movement direction based on velocity - Always use forward unless actively turning
+     */
+    getMovementDirection() {
+        // Always use forward animation - no turning animations
+        // This ensures we never get stuck in turning animations
+        return 'forward';
+    }
+    
+    /**
+     * Normalize angle to [-π, π] range
+     */
+    normalizeAngle(angle) {
+        while (angle > Math.PI) angle -= 2 * Math.PI;
+        while (angle < -Math.PI) angle += 2 * Math.PI;
+        return angle;
+    }
+    
+    /**
+     * Determine appropriate animation state based on speed and context - Improved
+     */
+    determineAnimationState() {
+        const speed = this.velocity.magnitude();
+        const targetSpeed = this.targetVelocity.magnitude();
+        
+        // Check for special states first (removed barking)
+        if (this.animationSystem.sittingPhase !== 'none') {
+            return 'SITTING';
+        }
+        
+        // Use target velocity to immediately stop idle when input is detected
+        // This ensures idle stops as soon as the player starts moving
+        if (speed < SPEED_THRESHOLDS.IDLE && targetSpeed < SPEED_THRESHOLDS.IDLE) {
+            return 'IDLE';
+        }
+        
+        // Speed-based states with smooth progression
+        if (speed < SPEED_THRESHOLDS.WALKING) {
+            return 'WALKING';
+        } else if (speed < SPEED_THRESHOLDS.TROTTING) {
+            return 'TROTTING';
+        } else if (speed < SPEED_THRESHOLDS.RUNNING) {
+            return 'RUNNING';
+        } else {
+            return 'SPRINTING';
         }
     }
     
     /**
-     * Remove the player icon
+     * Transition to a new animation state
      */
-    removePlayerIcon() {
-        if (this.playerIcon && this.mesh) {
-            this.mesh.remove(this.playerIcon);
-            this.playerIcon.geometry.dispose();
-            this.playerIcon.material.dispose();
-            this.playerIcon = null;
+    transitionToState(newState, direction = null) {
+        if (!this.animationSystem.mixer) return;
+        
+        const oldState = this.animationSystem.currentState;
+        
+        // Update direction if provided
+        if (direction) {
+            this.animationSystem.currentDirection = direction;
+        }
+        
+        // Get animation name for new state
+        const animationName = this.getAnimationForState(newState, this.animationSystem.currentDirection);
+        if (!animationName) {
+            console.warn(`⚠️ No animation found for state: ${newState}, direction: ${this.animationSystem.currentDirection}`);
+            return;
+        }
+        
+        const newAction = this.animationSystem.actions.get(animationName);
+        if (!newAction) {
+            console.warn(`⚠️ Animation action not found: ${animationName}`);
+            return;
+        }
+        
+        // Handle state transition
+        if (oldState !== newState || this.animationSystem.currentAction !== newAction) {
+            const stateConfig = ANIMATION_STATES[newState];
+            const transitionTime = stateConfig?.transitionTime || 0.25;
+            
+            // Fade out current action
+            if (this.animationSystem.currentAction) {
+                this.animationSystem.currentAction.fadeOut(transitionTime);
+            }
+            
+            // Fade in new action
+            newAction.reset().fadeIn(transitionTime).play();
+            
+            // Update state
+            this.animationSystem.currentState = newState;
+            this.animationSystem.currentAction = newAction;
+            this.animationSystem.stateTimer = 0;
+            
+            // Handle special state logic
+            this.handleStateTransition(newState, oldState);
+            
+            console.log(`🎭 Animation transition: ${oldState} → ${newState} (${animationName})`);
         }
     }
     
     /**
-     * Set player information for competitive mode
-     * @param {string} playerId - Player ID
-     * @param {number} gateColor - Hex color of player's gate
+     * Handle special logic for state transitions
      */
-    setPlayerInfo(playerId, gateColor) {
-        this.playerId = playerId;
-        if (gateColor !== undefined) {
-            this.createPlayerIcon(gateColor);
+    handleStateTransition(newState, oldState) {
+        switch (newState) {
+            case 'IDLE':
+                if (oldState !== 'IDLE') {
+                    this.animationSystem.idleVariationTimer = 3000 + Math.random() * 4000; // 3-7 seconds
+                    this.animationSystem.lastMovementTime = performance.now();
+                }
+                break;
+                
+            case 'BARKING':
+                this.animationSystem.barkTimer = ANIMATION_STATES.BARKING.duration * 1000;
+                break;
+                
+            case 'SITTING':
+                if (this.animationSystem.sittingPhase === 'none') {
+                    this.animationSystem.sittingPhase = 'starting';
+                }
+                break;
         }
     }
-
-    // Smooth movement with acceleration
+    
+    /**
+     * Update animation system
+     */
+    updateAnimationSystem(deltaTime) {
+        if (!this.animationSystem.mixer) return;
+        
+        // Update mixer
+        this.animationSystem.mixer.update(deltaTime);
+        
+        // Update timers
+        this.animationSystem.stateTimer += deltaTime * 1000;
+        
+        // Handle bark timer
+        if (this.animationSystem.barkTimer > 0) {
+            this.animationSystem.barkTimer -= deltaTime * 1000;
+            if (this.animationSystem.barkTimer <= 0) {
+                this.animationSystem.barkTimer = 0;
+            }
+        }
+        
+        // Handle idle variations
+        if (this.animationSystem.currentState === 'IDLE') {
+            this.animationSystem.idleVariationTimer -= deltaTime * 1000;
+            if (this.animationSystem.idleVariationTimer <= 0) {
+                this.cycleIdleAnimation();
+            }
+            
+            // Check for sitting after long idle
+            const timeSinceMovement = performance.now() - this.animationSystem.lastMovementTime;
+            if (timeSinceMovement > 15000 && this.animationSystem.sittingPhase === 'none' && Math.random() < 0.001) {
+                this.animationSystem.sittingPhase = 'starting';
+            }
+        }
+        
+        // Handle sitting state machine
+        this.updateSittingStateMachine();
+        
+        // Determine and transition to appropriate state
+        const targetState = this.determineAnimationState();
+        const targetDirection = this.getMovementDirection();
+        
+        if (targetState !== this.animationSystem.currentState || 
+            targetDirection !== this.animationSystem.currentDirection) {
+            this.transitionToState(targetState, targetDirection);
+        }
+    }
+    
+    /**
+     * Cycle through idle animation variations
+     */
+    cycleIdleAnimation() {
+        const idleAnimations = ANIMATION_STATES.IDLE.animations;
+        this.animationSystem.idleVariationIndex = (this.animationSystem.idleVariationIndex + 1) % idleAnimations.length;
+        
+        // Reset timer for next variation
+        this.animationSystem.idleVariationTimer = 3000 + Math.random() * 4000;
+        
+        // Transition to new idle animation
+        this.transitionToState('IDLE');
+    }
+    
+    /**
+     * Update sitting state machine
+     */
+    updateSittingStateMachine() {
+        if (this.animationSystem.sittingPhase === 'none') return;
+        
+        const speed = this.velocity.magnitude();
+        
+        // Exit sitting if moving
+        if (speed > SPEED_THRESHOLDS.IDLE) {
+            if (this.animationSystem.sittingPhase === 'sitting') {
+                this.animationSystem.sittingPhase = 'ending';
+                this.transitionToState('SITTING');
+            } else {
+                this.animationSystem.sittingPhase = 'none';
+            }
+            return;
+        }
+        
+        // Handle sitting phases
+        switch (this.animationSystem.sittingPhase) {
+            case 'starting':
+                if (this.animationSystem.stateTimer > 1250) { // Sitting_start duration
+                    this.animationSystem.sittingPhase = 'sitting';
+                    this.transitionToState('SITTING');
+                }
+                break;
+                
+            case 'sitting':
+                // Randomly switch between sitting loop animations
+                if (this.animationSystem.stateTimer > 3000 && Math.random() < 0.01) {
+                    this.transitionToState('SITTING');
+                }
+                break;
+                
+            case 'ending':
+                if (this.animationSystem.stateTimer > 1040) { // Sitting_end duration
+                    this.animationSystem.sittingPhase = 'none';
+                }
+                break;
+        }
+    }
+    
+    /**
+     * Trigger bark animation
+     */
+    triggerBark() {
+        if (this.animationSystem.barkTimer <= 0) {
+            this.animationSystem.barkTimer = ANIMATION_STATES.BARKING.duration * 1000;
+            this.transitionToState('BARKING');
+        }
+    }
+    
+    /**
+     * Create Three.js mesh for the sheepdog
+     */
+    createMesh() {
+        return this.mesh;
+    }
+    
+    /**
+     * Smooth movement with acceleration and advanced animation
+     */
     move(direction, bounds, deltaTime = 0.016, wantsSprint = false) {
-        // Update stamina based on sprint state
+        // Update stamina
         this.updateStamina(wantsSprint, deltaTime);
         
-        // Determine current max speed based on sprint state
+        // Determine current max speed
         const currentMaxSpeed = this.isSprinting ? this.sprintSpeed : this.maxSpeed;
         
-        // Set target velocity based on input
+        // Set target velocity
         this.targetVelocity = direction.clone().normalize().multiply(currentMaxSpeed);
         
         // Smooth acceleration/deceleration
@@ -614,12 +609,42 @@ export class Sheepdog {
         
         // Calculate new position
         const newPosition = this.position.clone().add(this.velocity.clone().multiply(deltaTime));
-        
-        // Apply position update first
         this.position = newPosition;
         
-        // Apply boundary constraints (matching server-side logic)
+        // Apply boundary constraints
+        this.applyBoundaryConstraints(bounds);
+        
+        // Update movement state
+        this.isMoving = this.velocity.magnitude() > 0.5;
+        
+        // Removed barking animation - audio only
+        if (this.audioManager && this.isMoving && this.nearSheep) {
+            const now = Date.now();
+            if (now - this.lastBarkTime > this.barkCooldown) {
+                this.audioManager.playSheepdogBark(this.dogType);
+                this.lastBarkTime = now;
+            }
+        }
+        
+        // Update mesh position and rotation
+        if (this.mesh) {
+            this.mesh.position.x = this.position.x;
+            this.mesh.position.z = this.position.z;
+            
+            // Smooth rotation
+            this.updateRotation(deltaTime);
+            
+            // Update animation system
+            this.updateAnimationSystem(deltaTime);
+        }
+    }
+    
+    /**
+     * Apply boundary constraints with velocity correction
+     */
+    applyBoundaryConstraints(bounds) {
         let hitBoundary = false;
+        
         if (this.position.x < bounds.minX) {
             this.position.x = bounds.minX;
             this.velocity.x = Math.max(0, this.velocity.x);
@@ -640,66 +665,79 @@ export class Sheepdog {
             this.velocity.z = Math.min(0, this.velocity.z);
             hitBoundary = true;
         }
+    }
+    
+    /**
+     * Update rotation with smooth turning - Improved
+     */
+    updateRotation(deltaTime) {
+        const speed = this.velocity.magnitude();
         
-        this.isMoving = this.velocity.magnitude() > 0.5;
-        const speedNormalized = Math.min(this.velocity.magnitude() / this.maxSpeed, 1);
-        
-        // Play bark sound when actively herding sheep (near sheep and moving)
-        if (this.audioManager && this.isMoving && this.nearSheep) {
-            const now = Date.now();
-            if (now - this.lastBarkTime > this.barkCooldown) {
-                this.audioManager.playSheepdogBark(this.dogType);
-                this.lastBarkTime = now;
+        if (speed > 0.1) {
+            // Calculate target rotation from velocity
+            const velocityAngle = this.velocity.angle();
+            this.targetRotation = -velocityAngle + Math.PI / 2;
+            
+            // Calculate rotation difference
+            let rotationDiff = this.normalizeAngle(this.targetRotation - this.currentRotation);
+            
+            // Detect if we're making a sharp turn
+            const isSharpTurn = Math.abs(rotationDiff) > Math.PI / 3; // 60 degrees
+            
+            // Adjust turn speed based on movement speed and turn sharpness
+            let effectiveTurnSpeed = this.turnSpeed;
+            
+            if (isSharpTurn) {
+                // Slower movement allows sharper turns
+                effectiveTurnSpeed *= (1 + (1 - Math.min(speed / this.maxSpeed, 1)) * 0.5);
+            } else {
+                // Gradual turns are smoother at higher speeds
+                effectiveTurnSpeed *= (0.8 + Math.min(speed / this.maxSpeed, 1) * 0.4);
             }
+            
+            // Apply rotation with improved smoothing
+            const rotationStep = rotationDiff * effectiveTurnSpeed * deltaTime;
+            
+            // Prevent overshooting on small adjustments
+            if (Math.abs(rotationDiff) < 0.1 && Math.abs(rotationStep) > Math.abs(rotationDiff)) {
+                this.currentRotation = this.targetRotation;
+            } else {
+                this.currentRotation += rotationStep;
+            }
+            
+            // Normalize rotation
+            this.currentRotation = this.normalizeAngle(this.currentRotation);
         }
         
-        // Update mesh position and rotation
+        // Apply rotation to mesh
         if (this.mesh) {
-            this.mesh.position.x = this.position.x;
-            this.mesh.position.z = this.position.z;
-            
-            // Smooth rotation
-            if (this.velocity.magnitude() > 0.1) {
-                this.targetRotation = -this.velocity.angle() + Math.PI / 2;
-            }
-            
-            // Normalize rotation difference
-            let rotationDiff = this.targetRotation - this.currentRotation;
-            while (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
-            while (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
-            
-            // Apply smooth rotation
-            this.currentRotation += rotationDiff * this.turnSpeed * deltaTime;
             this.mesh.rotation.y = this.currentRotation;
-            
-            // Animate
-            this.animate(deltaTime);
         }
     }
     
-    // Update stamina system
+    /**
+     * Update stamina system
+     */
     updateStamina(wantsSprint, deltaTime) {
         const isMoving = this.velocity.magnitude() > 0.1;
         
-        // Determine if we can/should sprint
         if (wantsSprint && isMoving && this.stamina >= this.minStaminaToSprint) {
             this.isSprinting = true;
-            // Drain stamina when sprinting
             this.stamina = Math.max(0, this.stamina - this.staminaDrainRate * deltaTime);
         } else {
             this.isSprinting = false;
-            // Regenerate stamina - faster when idle (not moving)
             const regenRate = isMoving ? this.staminaRegenRate : this.staminaRegenRate * 2;
             this.stamina = Math.min(this.maxStamina, this.stamina + regenRate * deltaTime);
         }
         
-        // Force stop sprinting if stamina is depleted
         if (this.stamina <= 0) {
             this.isSprinting = false;
         }
     }
     
-    // Get stamina information for UI
+    /**
+     * Get stamina information for UI
+     */
     getStaminaInfo() {
         return {
             current: this.stamina,
@@ -710,7 +748,9 @@ export class Sheepdog {
         };
     }
     
-    // Update speeds for multiplayer mode (2x faster)
+    /**
+     * Update speeds for multiplayer mode
+     */
     setMultiplayerSpeeds(isMultiplayer = true) {
         const speedMultiplier = isMultiplayer ? 2 : 1;
         this.maxSpeed = 15 * speedMultiplier;
@@ -719,311 +759,22 @@ export class Sheepdog {
         this.deceleration = 35 * speedMultiplier;
     }
     
-    // Animate the dog based on movement
-    animate(deltaTime) {
-        if (!this.animatedParts.body) return;
-        
-        this.animationTime += deltaTime;
-        const speed = this.velocity.magnitude();
-        const speedNormalized = Math.min(speed / this.maxSpeed, 1);
-        
-        // Running animation
-        if (this.isMoving) {
-            // Increase animation speed when sprinting
-            const animationMultiplier = this.isSprinting ? 1.5 : 1.0;
-            this.runCycle += deltaTime * speed * 0.5 * animationMultiplier;
-            
-            // Body bounce (more intense when sprinting)
-            const bounceIntensity = this.isSprinting ? 0.1 : 0.06;
-            const bounce = Math.sin(this.runCycle * 2) * speedNormalized * bounceIntensity;
-            const baseHeight = this.dogType === 'pip' ? 0.5 : 0.6;
-            this.animatedParts.body.position.y = baseHeight + bounce;
-            
-            // Body lean forward when running (more when sprinting)
-            const leanIntensity = this.isSprinting ? 0.25 : 0.15;
-            const leanAmount = speedNormalized * leanIntensity;
-            this.animatedParts.body.rotation.x = leanAmount;
-            
-            // Adjust body position to keep back legs grounded when leaning
-            // Move body forward and down slightly when leaning
-            this.animatedParts.body.position.z = leanAmount * 0.3; // Move forward
-            this.animatedParts.body.position.y = baseHeight + bounce - (leanAmount * 0.15); // Lower slightly
-            
-            // Head bob and reset idle rotations
-            const headBob = Math.sin(this.runCycle * 2 + 0.5) * speedNormalized * 0.05;
-            this.animatedParts.head.position.y = 0.35 + headBob;
-            this.animatedParts.head.rotation.x = Math.sin(this.runCycle * 2) * speedNormalized * 0.1;
-            
-            // Reset idle head rotations when moving
-            this.animatedParts.head.rotation.y *= 0.9; // Reset look direction
-            this.animatedParts.head.rotation.z *= 0.9; // Reset head tilt
-            this.lookDirection *= 0.9;
-            
-            // More realistic dog galloping animation
-            this.animatedParts.legs.forEach((leg, i) => {
-                // Front legs move together, back legs move together (dog gait)
-                const isFrontLeg = i < 2;
-                const isLeftLeg = i % 2 === 0;
-                
-                // Different phases for front and back legs
-                const frontPhase = 0;
-                const backPhase = Math.PI * 0.5; // Back legs slightly offset
-                const sideOffset = isLeftLeg ? 0 : Math.PI * 0.1; // Slight left/right offset
-                
-                const phase = isFrontLeg ? frontPhase : backPhase;
-                const cycleSpeed = this.runCycle * 2.5; // Slightly faster cycle
-                
-                // Leg lift (more subtle)
-                const lift = Math.max(0, Math.sin(cycleSpeed + phase + sideOffset)) * speedNormalized;
-                leg.position.y = leg.userData.baseY + lift * 0.12;
-                
-                // Forward/backward leg extension (more realistic)
-                const extension = Math.cos(cycleSpeed + phase + sideOffset) * speedNormalized;
-                leg.position.z = leg.userData.baseZ + extension * 0.15;
-                
-                // Leg rotation (more subtle)
-                leg.rotation.x = Math.sin(cycleSpeed + phase + sideOffset) * speedNormalized * 0.4;
-            });
-            
-            // Show tongue when running fast or sprinting
-            if (this.animatedParts.tongue) {
-                this.animatedParts.tongue.visible = speedNormalized > 0.6 || this.isSprinting;
-                if (this.animatedParts.tongue.visible) {
-                    const tongueIntensity = this.isSprinting ? 0.15 : 0.1;
-                    this.animatedParts.tongue.rotation.z = Math.sin(this.runCycle * 3) * tongueIntensity;
-                }
-            }
-        } else {
-            // Enhanced idle animation system
-            this.runCycle *= 0.9; // Slow down run cycle
-            this.idleTime += deltaTime;
-            
-            // Reset body position when idle
-            this.animatedParts.body.position.z *= 0.9; // Smoothly return to center
-            
-            // Check if it's time for a new idle action
-            if (this.idleTime >= this.nextIdleAction) {
-                this.chooseNextIdleAction();
-            }
-            
-            // Perform current idle action
-            this.performIdleAction(deltaTime);
-            
-            // Reset leg positions smoothly
-            this.animatedParts.legs.forEach((leg) => {
-                leg.position.y += (leg.userData.baseY - leg.position.y) * 0.1;
-                leg.position.z += (leg.userData.baseZ - leg.position.z) * 0.1;
-                leg.rotation.x *= 0.9;
-            });
-            
-            // Hide tongue when idle
-            if (this.animatedParts.tongue) {
-                this.animatedParts.tongue.visible = false;
-            }
-        }
-        
-        // Tail wagging (faster when moving, even faster when sprinting)
-        const tailSpeedMultiplier = this.isSprinting ? 1.5 : 1.0;
-        this.tailWag += deltaTime * (2 + speedNormalized * 4) * tailSpeedMultiplier;
-        if (this.animatedParts.tail) {
-            const wagAmount = 0.3 + speedNormalized * 0.3 + (this.isSprinting ? 0.2 : 0);
-            this.animatedParts.tail.rotation.y = Math.sin(this.tailWag) * wagAmount;
-            this.animatedParts.tail.rotation.x = Math.cos(this.tailWag * 0.5) * wagAmount * 0.3;
-        }
-        
-        // Ear flapping
-        this.earFlap += deltaTime * (1 + speedNormalized * 2);
-        this.animatedParts.ears.forEach((ear, i) => {
-            const baseRotation = i === 0 ? 0.8 : -0.8;
-            const flap = Math.sin(this.earFlap + i * Math.PI * 0.5) * speedNormalized * 0.2;
-            ear.rotation.z = baseRotation + flap;
-            ear.rotation.x = -0.2 + Math.cos(this.earFlap * 0.5) * speedNormalized * 0.1;
-        });
-        
-        // Animate player icon if present (gentle floating)
-        if (this.playerIcon && this.playerIcon.userData) {
-            this.playerIcon.userData.animationTime += deltaTime;
-            const floatOffset = Math.sin(this.playerIcon.userData.animationTime * 2) * 0.1;
-            this.playerIcon.position.y = this.playerIcon.userData.originalY + floatOffset;
-        }
-    }
-
-    // Choose next idle action
-    chooseNextIdleAction() {
-        const actions = ['breathing', 'lookAround', 'headTilt', 'earTwitch', 'stretch', 'sit'];
-        const weights = [30, 25, 20, 15, 8, 2]; // Breathing most common, sitting rare
-        
-        // Weighted random selection
-        const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-        let random = Math.random() * totalWeight;
-        
-        for (let i = 0; i < actions.length; i++) {
-            random -= weights[i];
-            if (random <= 0) {
-                this.currentIdleAction = actions[i];
-                break;
-            }
-        }
-        
-        // Set duration and next action time
-        this.idleActionDuration = 0;
-        switch (this.currentIdleAction) {
-            case 'breathing':
-                this.nextIdleAction = this.idleTime + 2 + Math.random() * 3; // 2-5 seconds
-                break;
-            case 'lookAround':
-                this.nextIdleAction = this.idleTime + 1.5 + Math.random() * 2; // 1.5-3.5 seconds
-                this.targetLookDirection = (Math.random() - 0.5) * Math.PI * 0.8; // Look left/right
-                break;
-            case 'headTilt':
-                this.nextIdleAction = this.idleTime + 1 + Math.random() * 1.5; // 1-2.5 seconds
-                break;
-            case 'earTwitch':
-                this.nextIdleAction = this.idleTime + 0.5 + Math.random() * 1; // 0.5-1.5 seconds
-                break;
-            case 'stretch':
-                this.nextIdleAction = this.idleTime + 3 + Math.random() * 2; // 3-5 seconds
-                break;
-            case 'sit':
-                this.nextIdleAction = this.idleTime + 4 + Math.random() * 3; // 4-7 seconds
-                break;
-        }
-    }
-    
-    // Perform the current idle action
-    performIdleAction(deltaTime) {
-        this.idleActionDuration += deltaTime;
-        
-        switch (this.currentIdleAction) {
-            case 'breathing':
-                this.performBreathing();
-                break;
-            case 'lookAround':
-                this.performLookAround(deltaTime);
-                break;
-            case 'headTilt':
-                this.performHeadTilt();
-                break;
-            case 'earTwitch':
-                this.performEarTwitch();
-                break;
-            case 'stretch':
-                this.performStretch();
-                break;
-            case 'sit':
-                this.performSit();
-                break;
-        }
-    }
-    
-    // Individual idle animations
-    performBreathing() {
-        const breathe = Math.sin(this.animationTime * 2.5) * 0.025;
-        const baseHeight = this.dogType === 'pip' ? 0.4 : 0.6;
-        this.animatedParts.body.position.y = baseHeight + breathe;
-        this.animatedParts.body.rotation.x *= 0.95; // Return to neutral slowly
-        
-        // Gentle head movement
-        if (this.animatedParts.head) {
-            this.animatedParts.head.position.y = 0.45 + breathe * 0.5;
-        }
-    }
-    
-    performLookAround(deltaTime) {
-        // Smooth head turning
-        const lookDiff = this.targetLookDirection - this.lookDirection;
-        this.lookDirection += lookDiff * 2 * deltaTime;
-        
-        if (this.animatedParts.head) {
-            this.animatedParts.head.rotation.y = this.lookDirection;
-            
-            // Slight body breathing
-            const breathe = Math.sin(this.animationTime * 2) * 0.02;
-            const baseHeight = this.dogType === 'pip' ? 0.5 : 0.6;
-            this.animatedParts.body.position.y = baseHeight + breathe;
-        }
-    }
-    
-    performHeadTilt() {
-        const tilt = Math.sin(this.idleActionDuration * 3) * 0.3;
-        if (this.animatedParts.head) {
-            this.animatedParts.head.rotation.z = tilt;
-            
-            // Breathing
-            const breathe = Math.sin(this.animationTime * 2) * 0.02;
-            this.animatedParts.body.position.y = 0.6 + breathe;
-        }
-    }
-    
-    performEarTwitch() {
-        const twitch = Math.sin(this.idleActionDuration * 8) * 0.4;
-        this.animatedParts.ears.forEach((ear, i) => {
-            const baseRotation = i === 0 ? 0.8 : -0.8;
-            ear.rotation.z = baseRotation + (i === 0 ? twitch : -twitch);
-        });
-        
-        // Breathing
-        const breathe = Math.sin(this.animationTime * 2) * 0.02;
-        const baseHeight = this.dogType === 'pip' ? 0.4 : 0.6;
-        this.animatedParts.body.position.y = baseHeight + breathe;
-    }
-    
-    performStretch() {
-        const stretchPhase = this.idleActionDuration / 3; // 3 second stretch
-        const baseHeight = this.dogType === 'pip' ? 0.4 : 0.6;
-        
-        if (stretchPhase < 0.3) {
-            // Stretch forward
-            this.animatedParts.body.rotation.x = -0.2 * (stretchPhase / 0.3);
-            this.animatedParts.body.position.y = baseHeight - 0.1 * (stretchPhase / 0.3);
-        } else if (stretchPhase < 0.7) {
-            // Hold stretch
-            this.animatedParts.body.rotation.x = -0.2;
-            this.animatedParts.body.position.y = baseHeight - 0.1;
-        } else {
-            // Return to normal
-            const returnPhase = (stretchPhase - 0.7) / 0.3;
-            this.animatedParts.body.rotation.x = -0.2 * (1 - returnPhase);
-            this.animatedParts.body.position.y = (baseHeight - 0.1) + 0.1 * returnPhase;
-        }
-    }
-    
-    performSit() {
-        const sitPhase = Math.min(this.idleActionDuration / 1, 1); // 1 second to sit
-        const baseHeight = this.dogType === 'pip' ? 0.4 : 0.6;
-        
-        // Lower body and rotate back legs
-        this.animatedParts.body.position.y = baseHeight - 0.2 * sitPhase;
-        this.animatedParts.body.rotation.x = 0.3 * sitPhase;
-        
-        // Move back legs
-        if (this.animatedParts.legs.length >= 4) {
-            this.animatedParts.legs[2].rotation.x = -0.8 * sitPhase; // Back left
-            this.animatedParts.legs[3].rotation.x = -0.8 * sitPhase; // Back right
-            this.animatedParts.legs[2].position.y = this.animatedParts.legs[2].userData.baseY - 0.1 * sitPhase;
-            this.animatedParts.legs[3].position.y = this.animatedParts.legs[3].userData.baseY - 0.1 * sitPhase;
-        }
-        
-        // Gentle breathing while sitting
-        const breathe = Math.sin(this.animationTime * 2) * 0.015;
-        this.animatedParts.body.position.y += breathe;
-    }
-    
-    // Stop movement
+    /**
+     * Stop movement
+     */
     stop() {
         this.targetVelocity.multiply(0);
-        
-        // Reset look direction when stopping
-        this.targetLookDirection = 0;
     }
     
+    /**
+     * Set audio manager
+     */
     setAudioManager(audioManager) {
         this.audioManager = audioManager;
     }
     
     /**
      * Update whether the dog is near sheep for barking purposes
-     * @param {Array} sheep - Array of sheep to check distance to
      */
     updateNearSheepStatus(sheep) {
         if (!sheep || sheep.length === 0) {
@@ -1031,10 +782,9 @@ export class Sheepdog {
             return;
         }
         
-        const barkRadius = 12; // Slightly larger than sheep flee radius (8)
+        const barkRadius = 12;
         this.nearSheep = false;
         
-        // Check if any sheep are within barking distance
         for (let i = 0; i < sheep.length; i++) {
             const sheepInstance = sheep[i];
             if (sheepInstance && sheepInstance.position) {
@@ -1045,5 +795,94 @@ export class Sheepdog {
                 }
             }
         }
+    }
+    
+    /**
+     * Create colored player icon for competitive mode
+     */
+    createPlayerIcon(gateColor) {
+        if (this.playerIcon) {
+            this.removePlayerIcon();
+        }
+        
+        const iconGeometry = new THREE.ConeGeometry(0.3, 0.4, 4);
+        iconGeometry.rotateX(Math.PI);
+        
+        const iconMaterial = new THREE.MeshToonMaterial({
+            color: gateColor,
+            emissive: gateColor,
+            emissiveIntensity: 0.3,
+            fog: true
+        });
+        
+        this.playerIcon = new THREE.Mesh(iconGeometry, iconMaterial);
+        
+        const iconHeight = this.dogType === 'pip' ? 2.2 : 2.5;
+        this.playerIcon.position.set(0, iconHeight, 0);
+        
+        this.playerIcon.userData = {
+            originalY: iconHeight,
+            animationTime: Math.random() * Math.PI * 2
+        };
+        
+        if (this.mesh) {
+            this.mesh.add(this.playerIcon);
+        }
+        
+        console.log(`🎯 Created player icon with color: 0x${gateColor.toString(16).toUpperCase()}`);
+    }
+    
+    /**
+     * Update player icon color
+     */
+    updatePlayerIcon(gateColor) {
+        if (this.playerIcon && this.playerIcon.material) {
+            this.playerIcon.material.color.setHex(gateColor);
+            this.playerIcon.material.emissive.setHex(gateColor);
+        }
+    }
+    
+    /**
+     * Remove player icon
+     */
+    removePlayerIcon() {
+        if (this.playerIcon && this.mesh) {
+            this.mesh.remove(this.playerIcon);
+            this.playerIcon.geometry.dispose();
+            this.playerIcon.material.dispose();
+            this.playerIcon = null;
+        }
+    }
+    
+    /**
+     * Set player information for competitive mode
+     */
+    setPlayerInfo(playerId, gateColor) {
+        this.playerId = playerId;
+        if (gateColor !== undefined) {
+            this.createPlayerIcon(gateColor);
+        }
+    }
+    
+    /**
+     * Animate player icon floating effect
+     */
+    animatePlayerIcon(deltaTime) {
+        if (this.playerIcon && this.playerIcon.userData) {
+            this.playerIcon.userData.animationTime += deltaTime;
+            const floatOffset = Math.sin(this.playerIcon.userData.animationTime * 2) * 0.1;
+            this.playerIcon.position.y = this.playerIcon.userData.originalY + floatOffset;
+        }
+    }
+    
+    /**
+     * Main animation update - called from move() method
+     */
+    animate(deltaTime) {
+        // Update player icon animation
+        this.animatePlayerIcon(deltaTime);
+        
+        // Animation system is handled in updateAnimationSystem()
+        // This method is kept for compatibility with existing code
     }
 }

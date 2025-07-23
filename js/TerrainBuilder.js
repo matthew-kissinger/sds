@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/loaders/GLTFLoader.js';
 
 /**
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements
@@ -24,7 +24,8 @@ export class TerrainBuilder {
             trees: {},
             rocks: {},
             mountains: {},
-            buildings: {}
+            buildings: {},
+            animals: {}
         };
         this.modelsLoaded = false;
         
@@ -136,6 +137,13 @@ export class TerrainBuilder {
             ],
             buildings: [
                 { name: 'farmhouse', path: '/assets/models/Farm house.glb' }
+            ],
+            animals: [
+                { name: 'jep', path: '/assets/models/Jep.glb' },
+                { name: 'rauri', path: '/assets/models/Rauri.glb' },
+                { name: 'sally', path: '/assets/models/Sally.glb' },
+                { name: 'shiloh', path: '/assets/models/Shiloh.glb' },
+                { name: 'george_washington', path: '/assets/models/George_Washington.glb' }
             ]
         };
         
@@ -177,7 +185,7 @@ export class TerrainBuilder {
             );
         }
         
-        // Load building models
+                // Load building models
         for (const model of modelPaths.buildings) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
@@ -189,6 +197,22 @@ export class TerrainBuilder {
             );
         }
         
+        // Load animal models
+        for (const model of modelPaths.animals) {
+            console.log(`🔍 Attempting to load animal model: ${model.name} from path: ${model.path}`);
+            loadPromises.push(
+                this.loader.loadAsync(model.path).then(gltf => {
+                    this.models.animals[model.name] = gltf.scene;
+                    this.models.animals[model.name + '_animations'] = gltf.animations;
+                    console.log(`✅ Loaded animal model: ${model.name} with ${gltf.animations.length} animations`);
+                    console.log(`🎬 Animation names:`, gltf.animations.map(anim => anim.name));
+                }).catch(err => {
+                    console.error(`❌ Failed to load animal model ${model.name} from ${model.path}:`, err);
+                    console.error(`❌ Full error details:`, err.message, err.stack);
+                })
+            );
+        }
+
         await Promise.all(loadPromises);
         this.modelsLoaded = true;
         console.log('🎨 All models loaded successfully!');

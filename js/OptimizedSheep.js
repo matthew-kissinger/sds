@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+import * as BufferGeometryUtils from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { Vector2D } from './Vector2D.js';
 import { Boid } from './Boid.js';
 
@@ -38,10 +38,10 @@ export class OptimizedSheepSystem {
         const geometries = [];
         const colors = [];
         
-        // Body - simplified ellipsoid
-        const bodyGeometry = new THREE.SphereGeometry(0.8, 12, 8);
+        // Body - simplified ellipsoid (scaled up 1.25x)
+        const bodyGeometry = new THREE.SphereGeometry(1.0, 12, 8);
         bodyGeometry.scale(1, 0.9, 1.1);
-        bodyGeometry.translate(0, 0.7, 0);
+        bodyGeometry.translate(0, 0.875, 0);
         
         // Add white color for body vertices
         const bodyColors = new Float32Array(bodyGeometry.attributes.position.count * 3);
@@ -60,10 +60,10 @@ export class OptimizedSheepSystem {
         bodyGeometry.setAttribute('vertexId', new THREE.BufferAttribute(bodyVertexIds, 1));
         geometries.push(bodyGeometry);
         
-        // Head - smaller sphere merged with body
-        const headGeometry = new THREE.SphereGeometry(0.35, 10, 6);
+        // Head - smaller sphere merged with body (scaled up 1.25x)
+        const headGeometry = new THREE.SphereGeometry(0.4375, 10, 6);
         headGeometry.scale(0.8, 0.9, 1.2);
-        headGeometry.translate(0, 0.65, 0.65);
+        headGeometry.translate(0, 0.8125, 0.8125);
         
         // Add black color for head vertices
         const headColors = new Float32Array(headGeometry.attributes.position.count * 3);
@@ -82,18 +82,18 @@ export class OptimizedSheepSystem {
         headGeometry.setAttribute('vertexId', new THREE.BufferAttribute(headVertexIds, 1));
         geometries.push(headGeometry);
         
-        // Create 4 legs as simple cylinders
-        const legGeometry = new THREE.CylinderGeometry(0.08, 0.1, 0.5, 6);
+        // Create 4 legs as simple cylinders (scaled up 1.25x)
+        const legGeometry = new THREE.CylinderGeometry(0.1, 0.125, 0.625, 6);
         const legPositions = [
-            { x: -0.25, z: 0.3 },  // front left
-            { x: 0.25, z: 0.3 },   // front right
-            { x: -0.25, z: -0.3 }, // back left
-            { x: 0.25, z: -0.3 }   // back right
+            { x: -0.3125, z: 0.375 },  // front left (scaled 1.25x)
+            { x: 0.3125, z: 0.375 },   // front right (scaled 1.25x)
+            { x: -0.3125, z: -0.375 }, // back left (scaled 1.25x)
+            { x: 0.3125, z: -0.375 }   // back right (scaled 1.25x)
         ];
         
         legPositions.forEach((pos, index) => {
             const leg = legGeometry.clone();
-            leg.translate(pos.x, 0.25, pos.z);
+            leg.translate(pos.x, 0.3125, pos.z); // Y position scaled 1.25x
             
             // Add vertex IDs for animation in shader
             const vertexIds = new Float32Array(leg.attributes.position.count);

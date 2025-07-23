@@ -118,9 +118,11 @@ export class AudioManager {
 
         // Dog-specific bark sound files
         const dogBarkFiles = {
-            jep: 'assets/sounds_compressed/dog_bark_jep.mp3',
-            pip: 'assets/sounds_compressed/dog_bark_pip.mp3',
-            rauri: 'assets/sounds_compressed/dog_bark_rauri.mp3'
+            'jep': '/assets/sounds_compressed/dog_bark_jep.mp3',
+            'rauri': '/assets/sounds_compressed/dog_bark_rauri.mp3',
+            'sally': '/assets/sounds_compressed/dog_bark_pip.mp3', // Use pip sound as fallback
+            'shiloh': '/assets/sounds_compressed/dog_bark_jep.mp3', // Use jep sound as fallback
+            'george_washington': '/assets/sounds_compressed/dog_bark_rauri.mp3' // Use rauri sound as fallback
         };
         
         // Load regular sound files

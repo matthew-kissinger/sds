@@ -71,50 +71,81 @@ function initializeReactUI() {
         );
     }
     
-    // Dog Selection Component
+    // Enhanced Dog Selection Component
     function DogSelection({ selectedDog, onSelect }) {
         const dogs = [
             { 
                 id: 'jep', 
                 name: 'Jep', 
-                breed: 'Border Collie', 
-                emoji: '🐕‍🦺',
-                stats: { speed: 3, stamina: 3, control: 4 },
-                description: 'Well-balanced and reliable'
+                stats: { speed: 3, stamina: 3, control: 3 },
+                tagline: 'Balanced all-arounder with versatile skills'
             },
             { 
                 id: 'rauri', 
                 name: 'Rauri', 
-                breed: 'Australian Shepherd', 
-                emoji: '🐕',
-                stats: { speed: 4, stamina: 2, control: 5 },
-                description: 'Excellent control, wider range'
+                stats: { speed: 2, stamina: 2, control: 5 },
+                tagline: 'Expert herder with exceptional range'
             },
             { 
-                id: 'pip', 
-                name: 'Pip', 
-                breed: 'Welsh Corgi', 
-                emoji: '🐶',
-                stats: { speed: 5, stamina: 4, control: 2 },
-                description: 'Fast and agile, perfect for speed runs'
+                id: 'sally', 
+                name: 'Sally', 
+                stats: { speed: 5, stamina: 2, control: 2 },
+                tagline: 'Lightning-fast sprinter for quick maneuvers'
+            },
+            { 
+                id: 'shiloh', 
+                name: 'Shiloh', 
+                stats: { speed: 2, stamina: 5, control: 2 },
+                tagline: 'Marathon runner with incredible endurance'
+            },
+            { 
+                id: 'george_washington', 
+                name: 'George Washington', 
+                stats: { speed: 3, stamina: 4, control: 2 },
+                tagline: 'Well-rounded leader with tactical prowess'
             }
         ];
         
-        const StatBar = ({ value, max = 5 }) => {
+        // Enhanced StatBar Component - Better visual design and responsive
+        const StatBar = ({ label, value, max = 5 }) => {
+            const percentage = (value / max) * 100;
+            const getBarColor = (val) => {
+                if (val <= 2) return 'from-red-400 to-red-500';
+                if (val === 3) return 'from-yellow-400 to-yellow-500';
+                if (val === 4) return 'from-blue-400 to-blue-500';
+                return 'from-green-400 to-green-500';
+            };
+            
             return React.createElement('div', {
-                className: 'flex gap-1'
-            }, Array.from({ length: max }, (_, i) => 
+                className: 'stat-row'
+            }, [
                 React.createElement('div', {
-                    key: i,
-                    className: `h-1.5 w-4 rounded-full transition-all duration-300`,
-                    style: {
-                        background: i < value 
-                            ? 'linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%)'
-                            : 'rgba(255, 255, 255, 0.15)',
-                        boxShadow: i < value ? '0 1px 3px rgba(0, 0, 0, 0.2)' : 'none'
-                    }
-                })
-            ));
+                    key: 'label-container',
+                    className: 'flex items-center justify-between mb-1'
+                }, [
+                    React.createElement('span', {
+                        key: 'label',
+                        className: 'text-xs font-medium text-white text-opacity-80'
+                    }, label),
+                    React.createElement('span', {
+                        key: 'value',
+                        className: 'text-xs font-bold text-white'
+                    }, `${value}/${max}`)
+                ]),
+                React.createElement('div', {
+                    key: 'bar-container',
+                    className: 'h-2 bg-white bg-opacity-10 rounded-full overflow-hidden border border-white border-opacity-20'
+                }, [
+                    React.createElement('div', {
+                        key: 'fill',
+                        className: `h-full bg-gradient-to-r ${getBarColor(value)} transition-all duration-500 ease-out`,
+                        style: { 
+                            width: `${percentage}%`,
+                            boxShadow: value > 0 ? '0 0 8px rgba(255, 255, 255, 0.3)' : 'none'
+                        }
+                    })
+                ])
+            ]);
         };
         
         return React.createElement('div', {
@@ -140,11 +171,11 @@ function initializeReactUI() {
             
             React.createElement('div', {
                 key: 'grid',
-                className: 'grid grid-cols-1 md:grid-cols-3 gap-6'
-            }, dogs.map(dog => 
+                className: 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4'
+            }, dogs.map(dog =>
                 React.createElement('div', {
                     key: dog.id,
-                    className: `p-6 rounded-xl cursor-pointer transition-all duration-300 transform ${
+                    className: `p-3 sm:p-5 rounded-lg sm:rounded-xl cursor-pointer transition-all duration-300 transform relative ${
                         selectedDog === dog.id 
                             ? 'scale-105' 
                             : 'hover:scale-102'
@@ -153,8 +184,8 @@ function initializeReactUI() {
                         background: 'rgba(255, 255, 255, 0.15)',
                         backdropFilter: 'blur(28px)',
                         WebkitBackdropFilter: 'blur(28px)',
-                        border: '1px solid rgba(255, 255, 255, 0.25)',
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+                        border: '2px solid rgba(59, 130, 246, 0.5)',
+                        boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
                     } : {
                         background: 'rgba(255, 255, 255, 0.08)',
                         backdropFilter: 'blur(20px)',
@@ -174,39 +205,62 @@ function initializeReactUI() {
                     } : undefined,
                     onClick: () => onSelect(dog.id)
                 }, [
-                    React.createElement('div', { 
-                        key: 'emoji', 
-                        className: 'text-6xl mb-3 text-center',
-                        style: selectedDog === dog.id ? { animation: 'floatAnimation 3s ease-in-out infinite' } : {}
-                    }, dog.emoji),
-                    React.createElement('h4', { 
-                        key: 'name', 
-                        className: 'text-xl font-bold text-white text-center mb-1' 
-                    }, dog.name),
-                    React.createElement('p', { 
-                        key: 'breed', 
-                        className: 'text-white text-opacity-60 text-sm text-center mb-4 font-medium' 
-                    }, dog.breed),
-                    React.createElement('p', { 
-                        key: 'desc', 
-                        className: 'text-white text-opacity-70 text-sm text-center mb-6 leading-relaxed' 
-                    }, dog.description),
+                    // Selection indicator
+                    selectedDog === dog.id && React.createElement('div', {
+                        key: 'indicator',
+                        className: 'absolute -top-2 -right-2 w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center',
+                        style: {
+                            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)'
+                        }
+                    }, React.createElement('span', {
+                        className: 'text-xs text-white font-bold'
+                    }, '✓')),
+                    
+                    // Dog name - responsive sizing with fixed height
+                    React.createElement('div', {
+                        key: 'header',
+                        className: 'text-center mb-2 sm:mb-4',
+                        style: { minHeight: window.innerWidth < 640 ? '50px' : '80px' } // Smaller on mobile
+                    }, [
+                        React.createElement('h4', { 
+                            key: 'name', 
+                            className: 'text-sm sm:text-2xl font-bold text-white mb-1 sm:mb-2',
+                            style: {
+                                textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+                                minHeight: window.innerWidth < 640 ? '28px' : '48px', // Smaller on mobile
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: window.innerWidth < 640 ? '0.875rem' : undefined,
+                                lineHeight: window.innerWidth < 640 ? '1.2' : undefined
+                            }
+                        }, dog.name),
+                        React.createElement('p', { 
+                            key: 'tagline', 
+                            className: 'text-white text-opacity-80 text-xs sm:text-sm leading-relaxed px-1 sm:px-2' 
+                        }, dog.tagline)
+                    ]),
+                    
+                    // Enhanced stats section - responsive spacing
                     React.createElement('div', {
                         key: 'stats',
-                        className: 'space-y-2 mt-4 pt-4 border-t border-white border-opacity-10'
+                        className: 'space-y-2 sm:space-y-3 mt-2 sm:mt-4 pt-2 sm:pt-4 border-t border-white border-opacity-20'
                     }, [
-                        React.createElement('div', { key: 'speed', className: 'flex items-center justify-between gap-2' }, [
-                            React.createElement('span', { key: 'label', className: 'text-xs text-white text-opacity-70 font-medium flex-shrink-0' }, 'Speed'),
-                            React.createElement(StatBar, { key: 'bar', value: dog.stats.speed })
-                        ]),
-                        React.createElement('div', { key: 'stamina', className: 'flex items-center justify-between gap-2' }, [
-                            React.createElement('span', { key: 'label', className: 'text-xs text-white text-opacity-70 font-medium flex-shrink-0' }, 'Stamina'),
-                            React.createElement(StatBar, { key: 'bar', value: dog.stats.stamina })
-                        ]),
-                        React.createElement('div', { key: 'control', className: 'flex items-center justify-between gap-2' }, [
-                            React.createElement('span', { key: 'label', className: 'text-xs text-white text-opacity-70 font-medium flex-shrink-0' }, 'Control'),
-                            React.createElement(StatBar, { key: 'bar', value: dog.stats.control })
-                        ])
+                        React.createElement(StatBar, { 
+                            key: 'speed', 
+                            label: 'Speed',
+                            value: dog.stats.speed 
+                        }),
+                        React.createElement(StatBar, { 
+                            key: 'stamina',
+                            label: 'Stamina', 
+                            value: dog.stats.stamina 
+                        }),
+                        React.createElement(StatBar, { 
+                            key: 'control',
+                            label: 'Control',
+                            value: dog.stats.control 
+                        })
                     ])
                 ])
             ))
@@ -641,7 +695,12 @@ function initializeReactUI() {
                                 : '0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
                         }
                     }, player ? [
-                        React.createElement('div', { key: 'emoji', className: 'text-3xl mb-1 text-center mobile-dog-icon' }, player.dogType === 'jep' ? '🐕‍🦺' : player.dogType === 'rauri' ? '🐕' : '🐶'),
+                        React.createElement('div', { key: 'emoji', className: 'text-3xl mb-1 text-center mobile-dog-icon' }, 
+                            player.dogType === 'jep' ? '🐕‍🦺' : 
+                            player.dogType === 'rauri' ? '🐕' : 
+                            player.dogType === 'sally' ? '🐶' : 
+                            player.dogType === 'shiloh' ? '🦮' : 
+                            player.dogType === 'george_washington' ? '🐺' : '🐕‍🦺'),
                         React.createElement('p', { key: 'name', className: 'text-white font-semibold' }, player.name),
                         player.isHost && React.createElement('span', { key: 'host', className: 'text-xs text-yellow-400' }, '👑 Host')
                     ] : React.createElement('p', {

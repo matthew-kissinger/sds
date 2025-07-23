@@ -6,8 +6,117 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- SEO Meta Tags -->
+    <title>SheepDog Simulator - Realistic Browser Herding Game | Free WebGL Simulation</title>
+    <meta name="description" content="Experience authentic sheep herding with realistic dog training mechanics in this free browser-based WebGL simulation. Master sheepdog commands, herd flocks, and compete in multiplayer herding challenges.">
+    <meta name="keywords" content="sheepdog simulator, sheep herding game, webgl simulation, realistic browser herding game, dog training game, multiplayer herding, sheep dog sim, browser game, free simulation">
+    <meta name="author" content="SheepDog Simulator">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://sheepdogsim.com/">
+    
+    <!-- Theme and App Configuration -->
     <meta name="theme-color" content="#00BFFF">
-    <title>Sheep Dog Simulator</title>
+    <meta name="msapplication-TileColor" content="#00BFFF">
+    <meta name="application-name" content="SheepDog Simulator">
+    
+    <!-- Open Graph Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SheepDog Simulator">
+    <meta property="og:title" content="SheepDog Simulator - Realistic Browser Herding Game">
+    <meta property="og:description" content="Master the art of sheep herding in this realistic WebGL simulation. Guide your sheepdog to herd flocks and compete with players worldwide in this free browser game.">
+    <meta property="og:url" content="https://sheepdogsim.com/">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/images/sheepdog-herding-social.webp">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SheepDog Simulator gameplay showing a border collie herding sheep in a realistic 3D environment">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@sheepdogsim">
+    <meta name="twitter:creator" content="@sheepdogsim">
+    <meta name="twitter:title" content="SheepDog Simulator - Realistic Browser Herding Game">
+    <meta name="twitter:description" content="Experience authentic sheep herding with realistic sheepdog mechanics. Free WebGL simulation with multiplayer support.">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/images/sheepdog-herding-social.webp">
+    <meta name="twitter:image:alt" content="Realistic sheepdog herding simulation gameplay">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "SheepDog Simulator",
+        "alternateName": "Sheep Dog Simulator",
+        "description": "Realistic browser-based sheep herding simulation with authentic dog training mechanics, featuring single-player and multiplayer modes with competitive herding challenges.",
+        "genre": ["Simulation", "Strategy", "Casual", "Educational"],
+        "gamePlatform": "Web Browser",
+        "operatingSystem": "Any",
+        "applicationCategory": "Game",
+        "url": "https://sheepdogsim.com/",
+        "image": "https://sheepdogsim.com/assets/images/sheepdog-herding-social.webp",
+        "screenshot": [
+            "https://sheepdogsim.com/assets/images/sheepdog-herding-screenshot.webp",
+            "https://sheepdogsim.com/assets/images/multiplayer-racing-screenshot.webp",
+            "https://sheepdogsim.com/assets/images/dog-selection-screenshot.webp"
+        ],
+        "datePublished": "2024-01-01",
+        "inLanguage": "en-US",
+        "isAccessibleForFree": true,
+        "interactionType": "Player",
+        "numberOfPlayers": "1-4",
+        "gameItem": [
+            {
+                "@type": "Thing",
+                "name": "Border Collie Dogs",
+                "description": "Multiple authentic dog breeds with unique characteristics"
+            },
+            {
+                "@type": "Thing", 
+                "name": "Sheep Flocks",
+                "description": "Realistic sheep behavior and herding mechanics"
+            }
+        ],
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "SheepDog Simulator",
+            "url": "https://sheepdogsim.com/"
+        },
+        "creator": {
+            "@type": "Organization",
+            "name": "SheepDog Simulator Team"
+        },
+        "gameLocation": {
+            "@type": "Place",
+            "name": "Virtual Pastoral Environment"
+        },
+        "playMode": ["SinglePlayer", "MultiPlayer", "CoOp", "CompetitiveMultiPlayer"],
+        "characterAttribute": [
+            {
+                "@type": "Thing",
+                "name": "Speed",
+                "description": "Dog movement speed and agility"
+            },
+            {
+                "@type": "Thing",
+                "name": "Stamina", 
+                "description": "Dog endurance for extended herding"
+            },
+            {
+                "@type": "Thing",
+                "name": "Control",
+                "description": "Precision in sheep herding commands"
+            }
+        ]
+    }
+    </script>
+    
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
     <!-- Tailwind CSS - Note: In production, this should be replaced with a pre-built CSS file -->
     <!-- The CDN is used here for simplicity, but will show a console warning -->
@@ -38,10 +147,6 @@
     }
     </script>
     
-    <!-- Mobile HUD Styles -->
-    <link rel="stylesheet" href="src/components/mobile/MobileHUD.css">
-    <link rel="stylesheet" href="src/components/mobile/MobileJoystick.css">
-    <link rel="stylesheet" href="src/components/mobile/MobileZoomControl.css">
     
     <!-- Load React -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -55,7 +160,5 @@
     <script type="module" src="js/components/ReactUI.js"></script>
     
     <!-- React UI overlay initialization handled by ReactUI.js -->
-    <!-- Disable modern JSX React to avoid conflicts -->
-    <!-- <script type="module" src="src/main.jsx"></script> -->
 </body>
 </html>

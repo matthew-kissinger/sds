@@ -10,10 +10,144 @@ import { Sheepdog } from './Sheepdog.js';
 import { PerformanceMonitor } from './PerformanceMonitor.js';
 import { StartScreen } from './StartScreen.js';
 import { AudioManager } from './AudioManager.js';
+import { GameAssetLoader } from './GameAssetLoader.js';
 import { NetworkManager } from './NetworkManager.js';
 import { MultiplayerUI } from './MultiplayerUI.js';
 import { Vector2D } from './Vector2D.js';
 
+/**
+ * Core Web Vitals monitoring for SEO performance tracking
+ */
+class WebVitalsMonitor {
+    constructor() {
+        this.vitals = {
+            LCP: null,
+            FID: null,
+            CLS: null,
+            INP: null
+        };
+        this.observers = [];
+        this.initializeWebVitals();
+    }
+
+    initializeWebVitals() {
+        // Largest Contentful Paint (LCP)
+        this.observeLCP();
+        
+        // First Input Delay (FID) 
+        this.observeFID();
+        
+        // Cumulative Layout Shift (CLS)
+        this.observeCLS();
+        
+        // Interaction to Next Paint (INP)
+        this.observeINP();
+        
+        // Report vitals when page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                this.reportVitals();
+            }
+        });
+    }
+
+    observeLCP() {
+        if ('PerformanceObserver' in window) {
+            const observer = new PerformanceObserver((list) => {
+                const entries = list.getEntries();
+                const lastEntry = entries[entries.length - 1];
+                this.vitals.LCP = Math.round(lastEntry.startTime);
+                console.log('🎯 LCP (Largest Contentful Paint):', this.vitals.LCP + 'ms');
+            });
+            observer.observe({ entryTypes: ['largest-contentful-paint'] });
+            this.observers.push(observer);
+        }
+    }
+
+    observeFID() {
+        if ('PerformanceObserver' in window) {
+            const observer = new PerformanceObserver((list) => {
+                const entries = list.getEntries();
+                entries.forEach(entry => {
+                    this.vitals.FID = Math.round(entry.processingStart - entry.startTime);
+                    console.log('⚡ FID (First Input Delay):', this.vitals.FID + 'ms');
+                });
+            });
+            observer.observe({ entryTypes: ['first-input'] });
+            this.observers.push(observer);
+        }
+    }
+
+    observeCLS() {
+        let clsValue = 0;
+        if ('PerformanceObserver' in window) {
+            const observer = new PerformanceObserver((list) => {
+                const entries = list.getEntries();
+                entries.forEach(entry => {
+                    if (!entry.hadRecentInput) {
+                        clsValue += entry.value;
+                        this.vitals.CLS = Math.round(clsValue * 10000) / 10000;
+                        console.log('📐 CLS (Cumulative Layout Shift):', this.vitals.CLS);
+                    }
+                });
+            });
+            observer.observe({ entryTypes: ['layout-shift'] });
+            this.observers.push(observer);
+        }
+    }
+
+    observeINP() {
+        let interactions = [];
+        if ('PerformanceObserver' in window) {
+            const observer = new PerformanceObserver((list) => {
+                const entries = list.getEntries();
+                entries.forEach(entry => {
+                    const duration = entry.processingEnd - entry.startTime;
+                    interactions.push(duration);
+                    
+                    // Keep only the worst 10 interactions for INP calculation
+                    interactions.sort((a, b) => b - a);
+                    if (interactions.length > 10) {
+                        interactions = interactions.slice(0, 10);
+                    }
+                    
+                    // INP is the 98th percentile (or worst interaction if < 50 interactions)
+                    const inp = interactions.length >= 50 
+                        ? interactions[Math.floor(interactions.length * 0.02)]
+                        : interactions[0];
+                    
+                    this.vitals.INP = Math.round(inp);
+                    console.log('🎮 INP (Interaction to Next Paint):', this.vitals.INP + 'ms');
+                });
+            });
+            observer.observe({ entryTypes: ['event'] });
+            this.observers.push(observer);
+        }
+    }
+
+    reportVitals() {
+        console.log('📊 Core Web Vitals Summary:', {
+            LCP: this.vitals.LCP ? `${this.vitals.LCP}ms ${this.vitals.LCP <= 2500 ? '✅' : '❌'}` : 'Not measured',
+            FID: this.vitals.FID ? `${this.vitals.FID}ms ${this.vitals.FID <= 100 ? '✅' : '❌'}` : 'Not measured', 
+            CLS: this.vitals.CLS ? `${this.vitals.CLS} ${this.vitals.CLS <= 0.1 ? '✅' : '❌'}` : 'Not measured',
+            INP: this.vitals.INP ? `${this.vitals.INP}ms ${this.vitals.INP <= 200 ? '✅' : '❌'}` : 'Not measured'
+        });
+        
+        // Future: Send to analytics service
+        // this.sendToAnalytics(this.vitals);
+    }
+
+    sendToAnalytics(vitals) {
+        // Placeholder for future analytics integration
+        // Could send to Google Analytics, custom endpoint, etc.
+        console.log('📤 Would send to analytics:', vitals);
+    }
+
+    disconnect() {
+        this.observers.forEach(observer => observer.disconnect());
+        this.observers = [];
+    }
+}
 /**
  * Main simulation controller - Enhanced with mobile controls support
  * Uses separate modules for different responsibilities
@@ -28,6 +162,8 @@ class SheepDogSimulation {
         this.structureBuilder = new StructureBuilderV2(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();
+        this.webVitalsMonitor = new WebVitalsMonitor();
+        this.gameAssetLoader = new GameAssetLoader();
         this.startScreen = new StartScreen(this.sceneManager);
         this.audioManager = new AudioManager(this.sceneManager.getCamera());
         this.multiplayerUI = new MultiplayerUI();
@@ -107,6 +243,9 @@ class SheepDogSimulation {
     }
     
     async init() {
+        // Start progressive asset loading for SEO performance
+        await this.gameAssetLoader.loadCriticalAssets();
+        
         // Load all 3D models first
         await this.terrainBuilder.loadModels();
         

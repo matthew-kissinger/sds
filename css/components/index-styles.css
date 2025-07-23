@@ -352,6 +352,62 @@ html, body {
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+/* Mobile safe area improvements - ensure proper top spacing */
+@media (max-width: 768px) {
+    .safe-area-inset {
+        /* Use max() to ensure minimum spacing even on devices without safe areas */
+        padding-top: max(env(safe-area-inset-top, 0px), 8rem) !important;
+        /* Add extra top padding for mobile browsers and status bars */
+        padding-top: calc(max(env(safe-area-inset-top, 0px), 8rem) + 3rem) !important;
+    }
+    
+    /* Ensure modal containers have proper spacing from viewport edges - very aggressive for Android */
+    .fixed.inset-0 {
+        padding-top: max(env(safe-area-inset-top, 0px), 10rem) !important;
+        padding-bottom: max(env(safe-area-inset-bottom, 0px), 3rem) !important;
+        /* Force minimum top spacing regardless of safe area */
+        padding-top: 10rem !important;
+    }
+    
+    /* Additional spacing for modal content to prevent overlap with browser UI */
+    .fixed.inset-0 > div:first-child {
+        margin-top: 3rem !important;
+        margin-bottom: 3rem !important;
+    }
+    
+    /* Force top spacing on the modal containers */
+    .fixed.inset-0.bg-black {
+        padding-top: 12rem !important;
+    }
+    
+    /* Target the specific modal container structure */
+    .fixed.inset-0.bg-black.bg-opacity-60 {
+        padding-top: 14rem !important;
+    }
+    
+    /* Extra protection for very small screens */
+    @media (max-height: 700px) {
+        .fixed.inset-0 {
+            padding-top: 12rem !important;
+        }
+        
+        .fixed.inset-0 > div:first-child {
+            margin-top: 4rem !important;
+        }
+    }
+    
+    /* Android-specific fixes */
+    @media (max-width: 768px) and (orientation: portrait) {
+        .fixed.inset-0 {
+            padding-top: 15rem !important;
+        }
+        
+        .safe-area-inset {
+            padding-top: 15rem !important;
+        }
+    }
+}
+
 /* Prevent zoom */
 input, button, select, textarea {
     font-size: 16px;

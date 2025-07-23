@@ -193,7 +193,7 @@ export class StartScreen {
     // Load dog selection from localStorage if available
     loadDogSelection() {
         const savedDog = localStorage.getItem('selectedDog');
-        if (savedDog && ['jep', 'rauri', 'pip'].includes(savedDog)) {
+        if (savedDog && ['jep', 'rauri', 'sally', 'shiloh', 'george_washington'].includes(savedDog)) {
             this.selectedDog = savedDog;
         }
     }
