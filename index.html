@@ -118,9 +118,15 @@
     </script>
     
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
-    <!-- Tailwind CSS - Note: In production, this should be replaced with a pre-built CSS file -->
-    <!-- The CDN is used here for simplicity, but will show a console warning -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS via Play CDN for dynamic class generation -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.1/dist/nipplejs.min.js"></script>
     <link rel="stylesheet" href="css/multiplayer-react.css">
     <link rel="stylesheet" href="css/components/index-styles.css">
