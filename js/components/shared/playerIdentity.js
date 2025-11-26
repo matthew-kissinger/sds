@@ -1,0 +1,98 @@
+/**
+ * Player Identity Management
+ * Handles localStorage persistence and server registration of player identity
+ */
+
+// Get stored player identity from localStorage
+export function getPlayerIdentity() {
+    try {
+        const identity = localStorage.getItem('playerIdentity');
+        return identity ? JSON.parse(identity) : null;
+    } catch (error) {
+        console.error('[PLAYER] Error loading player identity:', error);
+        return null;
+    }
+}
+
+// Save player identity to localStorage
+export function savePlayerIdentity(identity) {
+    try {
+        localStorage.setItem('playerIdentity', JSON.stringify(identity));
+    } catch (error) {
+        console.error('[PLAYER] Error saving player identity:', error);
+    }
+}
+
+// Generate a persistent player ID
+export function generatePersistentId() {
+    return 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Submit game score to server
+export async function submitGameScore(gameMode, score, additionalData = {}) {
+    const identity = getPlayerIdentity();
+    if (!identity) {
+        console.warn('[SCORE] No player identity found for score submission');
+        return;
+    }
+
+    const networkManager = window.gameInstance?.networkManager;
+    if (!networkManager) {
+        console.warn('[SCORE] NetworkManager not available for score submission');
+        return;
+    }
+
+    console.log(`[SCORE] Submission debug: NetworkManager available, connected: ${networkManager.isConnected()}`);
+    console.log(`[SCORE] Current session ID: ${networkManager.channel?.id || 'no-session'}`);
+
+    try {
+        // Always ensure we have a connection for leaderboard operations
+        if (!networkManager.isConnected()) {
+            console.log('[SCORE] Not connected, establishing connection for score submission...');
+            await networkManager.connectForLeaderboard();
+            console.log('[SCORE] Connection established for score submission');
+        } else {
+            console.log('[SCORE] Using existing connection for score submission');
+        }
+
+        // Always ensure player is registered in the current session
+        console.log('[SCORE] Ensuring player registration in current session...');
+        try {
+            const registrationResult = await networkManager.registerPlayer(
+                identity.persistentId,
+                identity.displayName,
+                identity.nameType || 'custom'
+            );
+            console.log('[SCORE] Player registered/re-registered for score submission:', registrationResult);
+
+            // Update identity to mark as registered
+            identity.isRegistered = true;
+            savePlayerIdentity(identity);
+        } catch (regError) {
+            console.warn('[SCORE] Player registration failed:', regError);
+            throw new Error('Player registration failed: ' + regError.message);
+        }
+
+        // Now submit the score using the same session
+        console.log('[SCORE] Submitting score in current session...');
+        const result = await networkManager.submitScore(gameMode, score, additionalData);
+        console.log('[SCORE] Score submitted successfully:', result);
+
+        if (result.isNewRecord) {
+            console.log('[SCORE] NEW RECORD!');
+        }
+
+    } catch (error) {
+        console.error('[SCORE] Score submission failed:', error);
+        console.log('[SCORE] Score will not be submitted - server may be unavailable');
+        console.log('[SCORE] Score would have been submitted:', {
+            gameMode,
+            score,
+            playerName: identity.displayName,
+            additionalData
+        });
+    }
+}
+
+// Expose score submission function globally for GameState integration
+window.submitGameScore = submitGameScore;

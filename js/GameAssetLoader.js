@@ -11,7 +11,7 @@ export class GameAssetLoader {
         this.isLoadingCritical = false;
         this.isDeferredLoadingStarted = false;
         
-        console.log('🚀 GameAssetLoader initialized for progressive loading');
+        console.log('[ASSET] GameAssetLoader initialized for progressive loading');
     }
 
     /**
@@ -22,7 +22,7 @@ export class GameAssetLoader {
             // Essential dog textures
             'assets/models/Jep.glb',
             'assets/models/Sally.glb',
-            'assets/models/Rauri.glb',
+            'assets/models/Pip.glb',
             'assets/models/Shiloh.glb',
             
             // Core sheep and terrain (first priority)
@@ -65,7 +65,6 @@ export class GameAssetLoader {
             'assets/sounds_compressed/music_competitive_endgame.mp3',
             'assets/sounds_compressed/music_victory.mp3',
             'assets/sounds_compressed/dog_bark_pip.mp3',
-            'assets/sounds_compressed/dog_bark_rauri.mp3',
             'assets/sounds_compressed/sheep_bleat_agitated.mp3',
             'assets/sounds_compressed/sheep_bleat_cartoon.mp3',
             'assets/sounds_compressed/sheep_bleat_cheerful.mp3',
@@ -84,7 +83,7 @@ export class GameAssetLoader {
         this.isLoadingCritical = true;
         this.criticalAssets = this.defineCriticalAssets();
         
-        console.log('⚡ Loading critical assets for immediate gameplay...', {
+        console.log('[ASSET] Loading critical assets for immediate gameplay...', {
             count: this.criticalAssets.length,
             assets: this.criticalAssets
         });
@@ -97,9 +96,9 @@ export class GameAssetLoader {
                 try {
                     await this.loadSingleAsset(assetPath, true);
                     this.loadedAssets.add(assetPath);
-                    console.log(`✅ Critical asset loaded: ${assetPath}`);
+                    console.log(`[ASSET] Critical asset loaded: ${assetPath}`);
                 } catch (error) {
-                    console.warn(`⚠️ Failed to load critical asset: ${assetPath}`, error);
+                    console.warn(`[WARN] Failed to load critical asset: ${assetPath}`, error);
                     // Don't fail the whole batch for one asset
                 }
             });
@@ -107,13 +106,13 @@ export class GameAssetLoader {
             await Promise.all(loadPromises);
             
             const loadTime = performance.now() - startTime;
-            console.log(`🎯 Critical assets loaded in ${Math.round(loadTime)}ms`);
+            console.log(`[ASSET] Critical assets loaded in ${Math.round(loadTime)}ms`);
             
             // Start deferred loading after critical assets are done
             this.startDeferredLoading();
             
         } catch (error) {
-            console.error('❌ Critical asset loading failed:', error);
+            console.error('[ERROR] Critical asset loading failed:', error);
         } finally {
             this.isLoadingCritical = false;
         }
@@ -128,7 +127,7 @@ export class GameAssetLoader {
         this.isDeferredLoadingStarted = true;
         this.deferredAssets = this.defineDeferredAssets();
         
-        console.log('🏃‍♂️ Starting deferred asset loading during idle time...', {
+        console.log('[ASSET] Starting deferred asset loading during idle time...', {
             count: this.deferredAssets.length
         });
 
@@ -146,7 +145,7 @@ export class GameAssetLoader {
      */
     loadDeferredBatch(batchSize = 3) {
         if (this.deferredAssets.length === 0) {
-            console.log('✅ All deferred assets loaded');
+            console.log('[ASSET] All deferred assets loaded');
             return;
         }
 
@@ -164,10 +163,10 @@ export class GameAssetLoader {
                 this.loadSingleAsset(assetPath, false)
                     .then(() => {
                         this.loadedAssets.add(assetPath);
-                        console.log(`🎨 Deferred asset loaded: ${assetPath}`);
+                        console.log(`[ASSET] Deferred asset loaded: ${assetPath}`);
                     })
                     .catch((error) => {
-                        console.warn(`⚠️ Failed to load deferred asset: ${assetPath}`, error);
+                        console.warn(`[WARN] Failed to load deferred asset: ${assetPath}`, error);
                     });
                 
                 processed++;
@@ -181,7 +180,7 @@ export class GameAssetLoader {
                     setTimeout(() => idleCallback({ timeRemaining: () => 16 }), 100);
                 }
             } else {
-                console.log('🎉 All assets loaded progressively');
+                console.log('[ASSET] All assets loaded progressively');
             }
         };
 
@@ -249,7 +248,7 @@ export class GameAssetLoader {
                 
             } catch (error) {
                 const priority = isCritical ? 'CRITICAL' : 'deferred';
-                console.warn(`⚠️ Failed to load ${priority} asset: ${assetPath}`, error);
+                console.warn(`[WARN] Failed to load ${priority} asset: ${assetPath}`, error);
                 reject(error);
             }
         });
@@ -271,7 +270,7 @@ export class GameAssetLoader {
         
         if (totalLoaded === this.criticalAssets.length && isCritical) {
             performance.mark('critical-assets-complete');
-            console.log('🎯 All critical assets loaded - game ready to start');
+            console.log('[ASSET] All critical assets loaded - game ready to start');
         }
     }
 
@@ -316,7 +315,7 @@ export class GameAssetLoader {
             return Promise.resolve();
         }
         
-        console.log(`🔄 Preloading on-demand asset: ${assetPath}`);
+        console.log(`[ASSET] Preloading on-demand asset: ${assetPath}`);
         return this.loadSingleAsset(assetPath, false);
     }
 }

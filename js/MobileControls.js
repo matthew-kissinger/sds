@@ -31,13 +31,8 @@ export class MobileControls {
                     .forEach(evt => document.addEventListener(evt, () => this.sceneManager.onWindowResize()));
             }
             
-            // For testing - create persistent button after a delay if not in fullscreen
-            setTimeout(() => {
-                if (!this.isFullscreen() && !this.persistentFullscreenButton) {
-                    console.log('🔍 Creating persistent fullscreen button for testing');
-                    this.createPersistentFullscreenButton();
-                }
-            }, 3000);
+            // Note: Fullscreen button now only shown via pause menu or initial banner
+            // Removed auto-appearing persistent button after 3 seconds per TASKLIST Phase 1.3
         }
     }
     
@@ -230,8 +225,7 @@ export class MobileControls {
         this.fullscreenButton.id = 'mobile-fullscreen-banner';
         this.fullscreenButton.innerHTML = `
             <div class="banner-content">
-                <span class="banner-icon">📱</span>
-                <span class="banner-text">Tap for better experience</span>
+                <span class="banner-text">Tap for fullscreen</span>
             </div>
         `;
         
@@ -287,11 +281,7 @@ export class MobileControls {
                     align-items: center;
                     gap: 0.5rem;
                 }
-                
-                #mobile-fullscreen-banner .banner-icon {
-                    font-size: 1.1rem;
-                }
-                
+
                 #mobile-fullscreen-banner:active {
                     transform: translateX(-50%) scale(0.98);
                     background: rgba(0, 191, 255, 0.2);
@@ -325,7 +315,7 @@ export class MobileControls {
      * Request fullscreen with cross-browser compatibility
      */
     requestFullscreen() {
-        console.log('🔍 requestFullscreen called');
+        console.log('[MOBILE] requestFullscreen called');
         const element = document.documentElement;
         
         try {
@@ -333,22 +323,22 @@ export class MobileControls {
             
             // Check for different fullscreen API methods
             if (element.requestFullscreen) {
-                console.log('🔍 Using element.requestFullscreen()');
+                console.log('[MOBILE] Using element.requestFullscreen()');
                 fullscreenPromise = element.requestFullscreen();
             } else if (element.webkitRequestFullscreen) {
-                console.log('🔍 Using element.webkitRequestFullscreen()');
+                console.log('[MOBILE] Using element.webkitRequestFullscreen()');
                 fullscreenPromise = element.webkitRequestFullscreen();
             } else if (element.webkitRequestFullScreen) {
-                console.log('🔍 Using element.webkitRequestFullScreen()');
+                console.log('[MOBILE] Using element.webkitRequestFullScreen()');
                 fullscreenPromise = element.webkitRequestFullScreen();
             } else if (element.mozRequestFullScreen) {
-                console.log('🔍 Using element.mozRequestFullScreen()');
+                console.log('[MOBILE] Using element.mozRequestFullScreen()');
                 fullscreenPromise = element.mozRequestFullScreen();
             } else if (element.msRequestFullscreen) {
-                console.log('🔍 Using element.msRequestFullscreen()');
+                console.log('[MOBILE] Using element.msRequestFullscreen()');
                 fullscreenPromise = element.msRequestFullscreen();
             } else {
-                console.warn('🔍 Fullscreen API not supported on this device');
+                console.warn('[MOBILE] Fullscreen API not supported on this device');
                 // Hide button anyway since user tried to use it
                 this.hideFullscreenButton();
                 return;
@@ -356,9 +346,9 @@ export class MobileControls {
             
             // Handle the fullscreen promise
             if (fullscreenPromise && fullscreenPromise.then) {
-                console.log('🔍 Fullscreen promise available, handling success/failure');
+                console.log('[MOBILE] Fullscreen promise available, handling success/failure');
                 fullscreenPromise.then(() => {
-                    console.log('🔍 Fullscreen request successful!');
+                    console.log('[MOBILE] Fullscreen request successful!');
                     /* 1. Force a layout pass for the new viewport and update controls layout */
                     setTimeout(() => {
                         window.dispatchEvent(new Event('resize'));
@@ -376,17 +366,17 @@ export class MobileControls {
                         this.audioManager.listener.context.resume().catch(() => {});
                     }
                 }).catch((error) => {
-                    console.error('🔍 Fullscreen request failed:', error);
+                    console.error('[MOBILE] Fullscreen request failed:', error);
                 });
             } else {
-                console.log('🔍 No fullscreen promise (might be older browser)');
+                console.log('[MOBILE] No fullscreen promise (might be older browser)');
             }
             
             // Hide the fullscreen button after requesting fullscreen
             this.hideFullscreenButton();
             
         } catch (error) {
-            console.error('🔍 Exception during fullscreen request:', error);
+            console.error('[MOBILE] Exception during fullscreen request:', error);
             // Hide button if fullscreen fails
             this.hideFullscreenButton();
         }
@@ -413,11 +403,10 @@ export class MobileControls {
                     this.fullscreenButton.remove();
                     this.fullscreenButton = null;
                 }
-                
-                // Show persistent fullscreen option after banner disappears
-                if (!this.isFullscreen()) {
-                    this.createPersistentFullscreenButton();
-                }
+
+                // Removed: No longer showing persistent button after initial banner dismissal
+                // Per TASKLIST Phase 1.3: "Remove auto-appearing persistent button after 3 seconds"
+                // Fullscreen option is available in pause menu and shows when exiting fullscreen
             }, 300);
         }
     }
@@ -428,11 +417,11 @@ export class MobileControls {
     createPersistentFullscreenButton() {
         // Don't create if already exists or if already in fullscreen
         if (this.persistentFullscreenButton || this.isFullscreen()) {
-            console.log('🔍 Not creating persistent fullscreen button - already exists or in fullscreen');
+            console.log('[MOBILE] Not creating persistent fullscreen button - already exists or in fullscreen');
             return;
         }
         
-        console.log('🔍 Creating persistent fullscreen button');
+        console.log('[MOBILE] Creating persistent fullscreen button');
         this.persistentFullscreenButton = document.createElement('button');
         this.persistentFullscreenButton.id = 'persistent-fullscreen-btn';
         this.persistentFullscreenButton.innerHTML = '⛶';
@@ -487,7 +476,7 @@ export class MobileControls {
         
         this.persistentFullscreenButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            console.log('🔍 Persistent fullscreen button touchstart');
+            console.log('[MOBILE] Persistent fullscreen button touchstart');
             this.persistentFullscreenButton.style.transform = 'scale(0.9)';
             this.persistentFullscreenButton.style.opacity = '1';
             this.persistentFullscreenButton.style.background = 'rgba(0, 191, 255, 0.3)';
@@ -495,7 +484,7 @@ export class MobileControls {
         
         this.persistentFullscreenButton.addEventListener('touchend', (e) => {
             e.preventDefault();
-            console.log('🔍 Persistent fullscreen button touchend - requesting fullscreen');
+            console.log('[MOBILE] Persistent fullscreen button touchend - requesting fullscreen');
             this.persistentFullscreenButton.style.transform = 'scale(1)';
             this.requestFullscreen();
             this.hidePersistentFullscreenButton();
@@ -503,7 +492,7 @@ export class MobileControls {
         
         this.persistentFullscreenButton.addEventListener('click', (e) => {
             e.preventDefault();
-            console.log('🔍 Persistent fullscreen button click - requesting fullscreen');
+            console.log('[MOBILE] Persistent fullscreen button click - requesting fullscreen');
             this.requestFullscreen();
             this.hidePersistentFullscreenButton();
         });
@@ -514,7 +503,7 @@ export class MobileControls {
         });
         
         document.body.appendChild(this.persistentFullscreenButton);
-        console.log('🔍 Persistent fullscreen button added to DOM', this.persistentFullscreenButton);
+        console.log('[MOBILE] Persistent fullscreen button added to DOM', this.persistentFullscreenButton);
         
         // Button is already visible with 0.9 opacity - no need for fade-in delay
     }
@@ -560,19 +549,19 @@ export class MobileControls {
             
             // Show persistent button when exiting fullscreen on mobile
             if (!this.isFullscreen() && this.isTouchDevice) {
-                console.log('🔍 Exited fullscreen on mobile device');
+                console.log('[MOBILE] Exited fullscreen on mobile device');
                 setTimeout(() => {
                     // Double-check user hasn't gone back to fullscreen
                     if (!this.isFullscreen() && !this.fullscreenButton && !this.persistentFullscreenButton) {
-                        console.log('🔍 Creating persistent fullscreen button after delay');
+                        console.log('[MOBILE] Creating persistent fullscreen button after delay');
                         this.createPersistentFullscreenButton();
                     } else {
-                        console.log('🔍 Not creating button - conditions not met');
+                        console.log('[MOBILE] Not creating button - conditions not met');
                     }
                 }, 1000);
             } else {
                 // Entering fullscreen - hide persistent button
-                console.log('🔍 Entering fullscreen - hiding persistent button');
+                console.log('[MOBILE] Entering fullscreen - hiding persistent button');
                 this.hidePersistentFullscreenButton();
             }
         };

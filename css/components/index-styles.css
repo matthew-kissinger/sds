@@ -347,64 +347,70 @@ html, body {
     z-index: 100;
 }
 
-/* Safe area handling */
+/* Safe area handling - PROPER approach for mobile browsers */
 .safe-area-inset {
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-/* Mobile safe area improvements - ensure proper top spacing */
+/*
+ * Mobile Start Screen Layout Fix
+ * Problem: Content gets cut off behind browser address bar when not in fullscreen
+ * Solution: Use scrollable container with proper safe-area padding, not fixed centering
+ */
 @media (max-width: 768px) {
-    .safe-area-inset {
-        /* Use max() to ensure minimum spacing even on devices without safe areas */
-        padding-top: max(env(safe-area-inset-top, 0px), 8rem) !important;
-        /* Add extra top padding for mobile browsers and status bars */
-        padding-top: calc(max(env(safe-area-inset-top, 0px), 8rem) + 3rem) !important;
+    /* Start screen container - scrollable, not fixed centered */
+    .start-screen-container {
+        position: fixed !important;
+        inset: 0 !important;
+        /* Allow vertical scrolling */
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        /* Flex column to stack content from top */
+        display: flex !important;
+        flex-direction: column !important;
+        /* Align to start, not center - prevents cutting off top */
+        align-items: center !important;
+        justify-content: flex-start !important;
+        /* Safe area padding - accounts for notch/status bar */
+        padding-top: max(env(safe-area-inset-top, 0px), 20px) !important;
+        padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px) !important;
+        padding-left: env(safe-area-inset-left, 8px) !important;
+        padding-right: env(safe-area-inset-right, 8px) !important;
     }
-    
-    /* Ensure modal containers have proper spacing from viewport edges - very aggressive for Android */
-    .fixed.inset-0 {
-        padding-top: max(env(safe-area-inset-top, 0px), 10rem) !important;
-        padding-bottom: max(env(safe-area-inset-bottom, 0px), 3rem) !important;
-        /* Force minimum top spacing regardless of safe area */
-        padding-top: 10rem !important;
+
+    /* Content wrapper inside start screen */
+    .start-screen-content {
+        /* Add top margin to push content below browser UI */
+        margin-top: 1rem !important;
+        /* Ensure content doesn't stretch full height */
+        flex-shrink: 0 !important;
+        /* Max width constraint */
+        max-width: calc(100vw - 1rem) !important;
+        width: 100% !important;
     }
-    
-    /* Additional spacing for modal content to prevent overlap with browser UI */
-    .fixed.inset-0 > div:first-child {
-        margin-top: 3rem !important;
-        margin-bottom: 3rem !important;
+
+    /* Title section needs less vertical space on mobile */
+    .mobile-title {
+        font-size: 2.5rem !important;
+        margin-bottom: 0.25rem !important;
     }
-    
-    /* Force top spacing on the modal containers */
-    .fixed.inset-0.bg-black {
-        padding-top: 12rem !important;
+
+    .mobile-subtitle {
+        font-size: 1.5rem !important;
+        margin-bottom: 0.5rem !important;
     }
-    
-    /* Target the specific modal container structure */
-    .fixed.inset-0.bg-black.bg-opacity-60 {
-        padding-top: 14rem !important;
-    }
-    
-    /* Extra protection for very small screens */
-    @media (max-height: 700px) {
-        .fixed.inset-0 {
-            padding-top: 12rem !important;
-        }
-        
-        .fixed.inset-0 > div:first-child {
-            margin-top: 4rem !important;
-        }
-    }
-    
-    /* Android-specific fixes */
-    @media (max-width: 768px) and (orientation: portrait) {
-        .fixed.inset-0 {
-            padding-top: 15rem !important;
-        }
-        
-        .safe-area-inset {
-            padding-top: 15rem !important;
-        }
+
+    /* Legacy fallback for .fixed.inset-0 containers */
+    .fixed.inset-0:not(.game-hud) {
+        /* Make it scrollable */
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        /* Flex from top */
+        justify-content: flex-start !important;
+        /* Modest padding */
+        padding-top: max(env(safe-area-inset-top, 0px), 16px) !important;
+        padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px) !important;
     }
 }
 

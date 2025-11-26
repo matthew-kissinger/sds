@@ -9,10 +9,13 @@ export class AudioManager {
         // Create audio listener and attach to camera
         this.listener = new THREE.AudioListener();
         camera.add(this.listener);
-        
+
         // Audio loader
         this.loader = new THREE.AudioLoader();
-        
+
+        // Audio context activation state
+        this.audioContextActivated = false;
+
         // Audio objects for each sound
         this.sounds = {
             uiClick: null,
@@ -32,7 +35,7 @@ export class AudioManager {
             winSound: null,
             loseSound: null
         };
-        
+
         // Music tracks
         this.music = {
             startMusic: null,
@@ -45,18 +48,25 @@ export class AudioManager {
             competitive2: null,
             competitiveEndgame: null
         };
-        
+
         // Track loading state
         this.isLoaded = false;
         this.musicLoaded = false;
         this.loadingPromises = [];
         this.musicLoadingPromises = [];
-        
+
+        // Loading progress tracking
+        this.loadingProgress = {
+            sounds: { loaded: 0, total: 0 },
+            music: { loaded: 0, total: 0 }
+        };
+        this.onLoadingProgress = null; // Callback for progress updates
+
         // Volume settings
         this.masterVolume = 0.7;
         this.sfxVolume = 0.8;
         this.musicVolume = 0.5;
-        
+
         // Specific volume multipliers for different sound types
         this.soundVolumeMultipliers = {
             uiClick: 1.0,
@@ -68,12 +78,12 @@ export class AudioManager {
             winSound: 1.0,          // Victory sound
             loseSound: 0.8          // Loss sound
         };
-        
+
         // Mute state
         this.isMuted = false;
         this.currentMusic = null; // Track currently playing music
         this.gameMode = 'solo'; // Track current game mode for music selection
-        
+
         // Cooldown tracking to prevent sound spam
         this.lastPlayTimes = {
             sheepBleats: 0,
@@ -87,12 +97,51 @@ export class AudioManager {
             scoreSound: 200,   // 200ms cooldown for scoring sounds
             opponentScoreSound: 200
         };
-        
+
+        // Temporary audio objects pool for cleanup
+        this.temporaryAudioObjects = new Set();
+
         // Load mute preference from localStorage
         this.loadMutePreference();
-        
+
+        // Setup audio context activation FIRST (before loading)
+        this.setupAudioContextActivation();
+
         this.loadSounds();
         this.loadMusic();
+    }
+
+    /**
+     * Ensure audio context is running (required for mobile browsers)
+     * Call this before any audio playback
+     * @returns {Promise<boolean>} True if context is running
+     */
+    async ensureAudioContext() {
+        if (!this.listener || !this.listener.context) {
+            console.warn('[AUDIO] No audio context available');
+            return false;
+        }
+
+        const context = this.listener.context;
+
+        if (context.state === 'suspended') {
+            try {
+                await context.resume();
+                this.audioContextActivated = true;
+                console.log('[AUDIO] Audio context resumed successfully');
+                return true;
+            } catch (error) {
+                console.warn('[AUDIO] Failed to resume audio context:', error);
+                return false;
+            }
+        }
+
+        if (context.state === 'running') {
+            this.audioContextActivated = true;
+            return true;
+        }
+
+        return false;
     }
     
     /**
@@ -120,10 +169,10 @@ export class AudioManager {
         // Dog-specific bark sound files
         const dogBarkFiles = {
             'jep': '/assets/sounds_compressed/dog_bark_jep.mp3',
-            'pip': '/assets/sounds_compressed/dog_bark_rauri.mp3',
+            'pip': '/assets/sounds_compressed/dog_bark_pip.mp3',
             'sally': '/assets/sounds_compressed/dog_bark_pip.mp3',
             'shiloh': '/assets/sounds_compressed/dog_bark_jep.mp3',
-            'george_washington': '/assets/sounds_compressed/dog_bark_rauri.mp3'
+            'george_washington': '/assets/sounds_compressed/dog_bark_pip.mp3'
         };
         
         // Load regular sound files
@@ -463,14 +512,21 @@ export class AudioManager {
                     // Create a new audio instance for overlapping sounds
                     const additionalBleat = new THREE.Audio(this.listener);
                     additionalBleat.setBuffer(randomBleat.buffer);
-                    
+
                     // Apply the same volume multiplier as the main sheep bleat sound
                     const baseVolume = this.isMuted ? 0 : this.masterVolume * this.sfxVolume;
                     const volumeMultiplier = this.soundVolumeMultipliers.sheepBleats || 0.5;
                     const finalVolume = baseVolume * volumeMultiplier * (0.7 + Math.random() * 0.3); // Slight volume variation
-                    
+
                     additionalBleat.setVolume(finalVolume);
                     additionalBleat.play();
+
+                    // Track for cleanup and auto-dispose when finished
+                    this.temporaryAudioObjects.add(additionalBleat);
+                    additionalBleat.onEnded = () => {
+                        this.temporaryAudioObjects.delete(additionalBleat);
+                        additionalBleat.disconnect();
+                    };
                 }
             }, i * (100 + Math.random() * 150)); // 100-250ms staggered delays
         }
@@ -480,7 +536,7 @@ export class AudioManager {
     
     /**
      * Play dog bark sound with cooldown based on dog type
-     * @param {string} dogType - Type of dog ('jep', 'pip', 'rauri')
+     * @param {string} dogType - Type of dog ('jep', 'pip', 'shiloh')
      */
     playSheepdogBark(dogType = 'jep') {
         const now = Date.now();
@@ -494,18 +550,33 @@ export class AudioManager {
         if (dogBark && !dogBark.isPlaying) {
             dogBark.play();
             this.lastPlayTimes.dogBarks = now;
-            console.log(`🐕 ${dogType} barked!`);
+            console.log(`[AUDIO] ${dogType} barked`);
         }
     }
     
     /**
      * Play start screen music
+     * Ensures audio context is active and music is loaded before playing
      */
-    playStartMusic() {
+    async playStartMusic() {
+        // Wait for music to be loaded
+        if (!this.musicLoaded) {
+            console.log('[AUDIO] Waiting for music to load before playing start music...');
+            try {
+                await Promise.all(this.musicLoadingPromises);
+            } catch (error) {
+                console.warn('[AUDIO] Some music failed to load, continuing anyway');
+            }
+        }
+
+        // Ensure audio context is active
+        await this.ensureAudioContext();
+
         if (this.music.startMusic && !this.music.startMusic.isPlaying) {
             this.stopAllMusic();
             this.currentMusic = this.music.startMusic;
             this.music.startMusic.play();
+            console.log('[AUDIO] Start music playing');
         }
     }
     
