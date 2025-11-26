@@ -4,6 +4,53 @@
  */
 const { createElement } = window.React;
 
+// Sheep icon (simple cloud-like sheep silhouette)
+const SheepIcon = ({ size = 16, color = 'currentColor' }) => createElement('svg', {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: color,
+    stroke: 'none'
+}, [
+    // Body (fluffy cloud shape)
+    createElement('ellipse', { key: 'body', cx: '12', cy: '14', rx: '8', ry: '5' }),
+    // Head
+    createElement('circle', { key: 'head', cx: '18', cy: '12', r: '3' }),
+    // Legs
+    createElement('rect', { key: 'leg1', x: '7', y: '17', width: '2', height: '4', rx: '1' }),
+    createElement('rect', { key: 'leg2', x: '11', y: '17', width: '2', height: '4', rx: '1' }),
+    createElement('rect', { key: 'leg3', x: '15', y: '17', width: '2', height: '4', rx: '1' })
+]);
+
+// Get stamina color based on percentage (smooth gradient)
+function getStaminaColor(stamina) {
+    if (stamina >= 60) {
+        return 'linear-gradient(90deg, #10b981, #34d399)';
+    } else if (stamina >= 30) {
+        const t = (stamina - 30) / 30;
+        if (t > 0.5) {
+            return 'linear-gradient(90deg, #f59e0b, #fbbf24)';
+        }
+        return 'linear-gradient(90deg, #f97316, #fb923c)';
+    }
+    return 'linear-gradient(90deg, #ef4444, #f87171)';
+}
+
+// Clock icon (Lucide-style)
+const ClockIcon = ({ size = 16, color = 'currentColor' }) => createElement('svg', {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: color,
+    strokeWidth: '2',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round'
+}, [
+    createElement('circle', { key: 'face', cx: '12', cy: '12', r: '10' }),
+    createElement('polyline', { key: 'hands', points: '12 6 12 12 16 14' })
+]);
+
 export function MobileHUD({ gameData, stamina }) {
     const minutes = Math.floor(gameData.gameTime / 60);
     const seconds = Math.floor(gameData.gameTime % 60);
@@ -29,7 +76,7 @@ export function MobileHUD({ gameData, stamina }) {
                     key: 'sheep',
                     className: 'flex items-center gap-1'
                 }, [
-                    createElement('span', { key: 'icon' }, ''),
+                    createElement(SheepIcon, { key: 'icon', size: 16, color: 'rgba(255, 255, 255, 0.8)' }),
                     createElement('span', { key: 'count', className: 'text-white text-sm' },
                         `${gameData.sheepCount}/${gameData.totalSheep}`)
                 ]),
@@ -39,22 +86,27 @@ export function MobileHUD({ gameData, stamina }) {
                     key: 'timer',
                     className: 'flex items-center gap-1'
                 }, [
-                    createElement('span', { key: 'icon' }, ''),
+                    createElement(ClockIcon, { key: 'icon', size: 14, color: 'rgba(255, 255, 255, 0.8)' }),
                     createElement('span', { key: 'time', className: 'text-white font-mono text-sm' },
                         `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
                 ])
             ]),
 
-            // Minimal stamina bar below
+            // Minimal stamina bar below with smooth color gradient
             createElement('div', {
                 key: 'stamina-bar',
-                className: 'mt-1 h-1 bg-gray-700 bg-opacity-50 rounded-full overflow-hidden'
+                className: 'mt-1 h-1 rounded-full overflow-hidden',
+                style: { background: 'rgba(55, 65, 81, 0.5)' }
             },
                 createElement('div', {
-                    className: `h-full transition-all duration-300 ${
-                        stamina < 30 ? 'bg-red-500' : 'bg-green-500'
-                    }`,
-                    style: { width: `${stamina}%` }
+                    style: {
+                        height: '100%',
+                        width: `${stamina}%`,
+                        background: getStaminaColor(stamina),
+                        boxShadow: stamina < 30 ? '0 0 6px rgba(239, 68, 68, 0.5)' : 'none',
+                        transition: 'all 0.3s ease-out',
+                        borderRadius: '9999px'
+                    }
                 })
             )
         ])

@@ -4,6 +4,20 @@
  */
 const { createElement, useState, useEffect, useRef } = window.React;
 
+// Sprint/Zap icon (Lucide-style)
+const SprintIcon = ({ size = 24, color = 'currentColor' }) => createElement('svg', {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: color,
+    strokeWidth: '2.5',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round'
+}, [
+    createElement('polygon', { key: 'bolt', points: '13 2 3 14 12 14 11 22 21 10 12 10 13 2' })
+]);
+
 export function MobileControls() {
     const [joystickManager, setJoystickManager] = useState(null);
     const [isSprinting, setIsSprinting] = useState(false);
@@ -169,17 +183,33 @@ export function MobileControls() {
         // Sprint button
         createElement('button', {
             key: 'sprint',
-            className: `mobile-control ${isSprinting ? 'bg-blue-500 bg-opacity-30' : ''} fixed w-16 h-16 text-2xl pointer-events-auto ui-panel`,
+            className: 'mobile-control fixed pointer-events-auto',
             style: {
+                width: '64px',
+                height: '64px',
                 bottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)',
-                right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)'
+                right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
+                background: isSprinting
+                    ? 'rgba(59, 130, 246, 0.3)'
+                    : 'rgba(255, 255, 255, 0.08)',
+                border: isSprinting
+                    ? '2px solid rgba(59, 130, 246, 0.6)'
+                    : '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: isSprinting
+                    ? '0 0 20px rgba(59, 130, 246, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+                    : '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                transform: isSprinting ? 'scale(0.95)' : 'scale(1)',
+                transition: 'all 0.15s ease-out'
             },
             onTouchStart: handleSprintStart,
             onTouchEnd: handleSprintEnd,
             onMouseDown: handleSprintStart,
             onMouseUp: handleSprintEnd,
             onMouseLeave: handleSprintEnd
-        }, 'RUN'),
+        }, createElement(SprintIcon, {
+            size: 28,
+            color: isSprinting ? '#60a5fa' : 'rgba(255, 255, 255, 0.9)'
+        })),
 
         // Zoom Control
         createElement('div', {

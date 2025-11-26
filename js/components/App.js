@@ -35,6 +35,7 @@ export async function initReactUI() {
             { SheepCounter },
             { MobileHUD },
             { MobileControls },
+            { CompletionScreen },
             { MultiplayerOptions },
             { RoomCreation },
             { RoomJoining },
@@ -55,6 +56,7 @@ export async function initReactUI() {
             import('./GameHUD/SheepCounter.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
+            import('./GameHUD/CompletionScreen.js'),
             import('./Multiplayer/MultiplayerOptions.js'),
             import('./Multiplayer/RoomCreation.js'),
             import('./Multiplayer/RoomJoining.js'),
@@ -62,6 +64,9 @@ export async function initReactUI() {
             import('./Multiplayer/MultiplayerScoreboard.js'),
             import('./Multiplayer/GlobalLeaderboard.js')
         ]);
+
+        // Expose CompletionScreen globally for main.js to use
+        window.CompletionScreen = CompletionScreen;
 
         console.log('[UI] All components loaded successfully');
 

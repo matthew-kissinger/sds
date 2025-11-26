@@ -1313,158 +1313,91 @@ class SheepDogSimulation {
     
     // Universal completion overlay that works for all game modes
     showCompletionOverlay(mode, data = {}) {
-        console.log('🎉 Creating completion overlay for mode:', mode, data);
-        
+        console.log('[GAME] Creating completion overlay for mode:', mode, data);
+
         // Remove any existing overlay
         const existing = document.getElementById('game-completion-overlay');
         if (existing) existing.remove();
-        
-        // Create bulletproof overlay (always on top, blocks everything)
-        const overlay = document.createElement('div');
-        overlay.id = 'game-completion-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 99999;
-            font-family: Arial, sans-serif;
-            color: white;
-            text-align: center;
-        `;
-        
-        // Create content based on mode
-        let content = '';
-        
-        if (mode === 'single') {
-            // Single Player: Time and completion
-            const timeStr = data.finalTime ? this.formatTime(data.finalTime) : 'Unknown';
-            
-            // Submit score to leaderboard for single player games
-            if (data.finalTime) {
-                console.log(`📊 Submitting score to leaderboard: ${data.finalTime} seconds for ${this.singlePlayerMode === 'extreme' ? 'soloExtreme' : 'soloClassic'} mode`);
-                this.gameState.submitScoreToLeaderboard(data.finalTime);
-            }
-            
-            content = `
-                <div style="padding: 40px; background: rgba(0,100,0,0.3); border-radius: 20px; border: 2px solid #4CAF50;">
-                    <h1 style="font-size: 48px; margin: 0 0 20px 0;">🎉 VICTORY! 🎉</h1>
-                    <p style="font-size: 24px; margin: 0 0 10px 0;">All ${this.gameState.totalSheep} sheep herded successfully!</p>
-                    <p style="font-size: 18px; margin: 0 0 30px 0;">Time: ${timeStr}</p>
-                    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer;">
-                        Play Again
-                    </button>
-                </div>
-            `;
-        } else if (mode === 'racing') {
-            // Racing Mode: Winner/loser, scores, race results
-            const competitive = data.competitive || {};
-            const isWinner = data.isWinner;
-            const myScore = data.myScore || 0;
-            const timeStr = data.finalTime ? this.formatTime(data.finalTime) : 'Unknown';
-            
-            const bgColor = isWinner ? 'rgba(0,150,0,0.3)' : 'rgba(150,100,0,0.3)';
-            const borderColor = isWinner ? '#4CAF50' : '#FF9800';
-            const title = isWinner ? '🏆 VICTORY! 🏆' : '🥈 GAME COMPLETE';
-            const subtitle = isWinner ? 'You won the race!' : `Player ${competitive.winner} won!`;
-            
-            // Build scores list
-            let scoresHtml = '';
-            if (competitive.finalScores) {
-                const sortedScores = Object.entries(competitive.finalScores).sort(([,a], [,b]) => b - a);
-                scoresHtml = sortedScores.map(([playerId, score], index) => {
-                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
-                    const isMe = score === myScore ? ' (You)' : '';
-                    return `<div>${medal} Player ${playerId}${isMe}: ${score} sheep</div>`;
-                }).join('');
-            }
-            
-            content = `
-                <div style="padding: 40px; background: ${bgColor}; border-radius: 20px; border: 2px solid ${borderColor};">
-                    <h1 style="font-size: 48px; margin: 0 0 20px 0;">${title}</h1>
-                    <p style="font-size: 24px; margin: 0 0 10px 0;">${subtitle}</p>
-                    <p style="font-size: 18px; margin: 0 0 20px 0;">Your Score: ${myScore} sheep</p>
-                    <p style="font-size: 16px; margin: 0 0 20px 0;">Race Time: ${timeStr}</p>
-                    <div style="font-size: 14px; margin: 0 0 30px 0; text-align: left;">
-                        <strong>Final Scores:</strong><br>
-                        ${scoresHtml}
-                    </div>
-                    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: ${borderColor}; color: white; border: none; border-radius: 10px; cursor: pointer;">
-                        Play Again
-                    </button>
-                </div>
-            `;
-        } else if (mode === 'timed') {
-            // Timed Mode: Winner/loser, scores, time's up, personal best
-            const competitive = data.competitive || {};
-            const isWinner = data.isWinner;
-            const myScore = data.myScore || 0;
-            
-            // Check for personal best
-            const previousBest = this.loadBestScore();
-            const isNewBest = previousBest === null || myScore > previousBest;
-            
-            const bgColor = isWinner ? 'rgba(0,150,0,0.3)' : 'rgba(150,100,0,0.3)';
-            const borderColor = isWinner ? '#4CAF50' : '#FF9800';
-            const title = isWinner ? '⏱️ TIME\'S UP - VICTORY! 🏆' : '⏱️ TIME\'S UP';
-            const subtitle = isWinner ? 'You collected the most sheep!' : `Player ${competitive.winner} collected the most!`;
-            
-            // Build scores list
-            let scoresHtml = '';
-            if (competitive.finalScores) {
-                const sortedScores = Object.entries(competitive.finalScores).sort(([,a], [,b]) => b - a);
-                scoresHtml = sortedScores.map(([playerId, score], index) => {
-                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
-                    const isMe = score === myScore ? ' (You)' : '';
-                    return `<div>${medal} Player ${playerId}${isMe}: ${score} sheep</div>`;
-                }).join('');
-            }
-            
-            content = `
-                <div style="padding: 40px; background: ${bgColor}; border-radius: 20px; border: 2px solid ${borderColor};">
-                    <h1 style="font-size: 48px; margin: 0 0 20px 0;">${title}</h1>
-                    <p style="font-size: 24px; margin: 0 0 10px 0;">${subtitle}</p>
-                    <p style="font-size: 18px; margin: 0 0 10px 0;">Your Score: ${myScore} sheep</p>
-                    <p style="font-size: 16px; margin: 0 0 20px 0;">Duration: 3:00</p>
-                    ${isNewBest ? '<p style="font-size: 20px; color: #FFD700; margin: 0 0 20px 0;">🎉 NEW PERSONAL BEST! 🎉</p>' : ''}
-                    <div style="font-size: 14px; margin: 0 0 30px 0; text-align: left;">
-                        <strong>Final Scores:</strong><br>
-                        ${scoresHtml}
-                    </div>
-                    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: ${borderColor}; color: white; border: none; border-radius: 10px; cursor: pointer;">
-                        Play Again
-                    </button>
-                </div>
-            `;
-        } else if (mode === 'cooperative') {
-            // Cooperative Mode: Team success, collective effort
-            const timeStr = data.finalTime ? this.formatTime(data.finalTime) : 'Unknown';
-            const sheepCount = data.sheepCount || 200;
-            const totalSheep = data.totalSheep || 200;
-            
-            content = `
-                <div style="padding: 40px; background: rgba(0,100,150,0.3); border-radius: 20px; border: 2px solid #2196F3;">
-                    <h1 style="font-size: 48px; margin: 0 0 20px 0;">🌐 TEAM VICTORY! 🎉</h1>
-                    <p style="font-size: 24px; margin: 0 0 10px 0;">Working together, you herded all the sheep!</p>
-                    <p style="font-size: 18px; margin: 0 0 10px 0;">Sheep Collected: ${sheepCount} / ${totalSheep}</p>
-                    <p style="font-size: 18px; margin: 0 0 30px 0;">Team Time: ${timeStr}</p>
-                    <p style="font-size: 16px; margin: 0 0 30px 0; font-style: italic;">🤝 Great teamwork!</p>
-                    <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: #2196F3; color: white; border: none; border-radius: 10px; cursor: pointer;">
-                        Play Again
-                    </button>
-                </div>
-            `;
+
+        // Submit score to leaderboard for single player games
+        if (mode === 'single' && data.finalTime) {
+            console.log(`[GAME] Submitting score to leaderboard: ${data.finalTime} seconds for ${this.singlePlayerMode === 'extreme' ? 'soloExtreme' : 'soloClassic'} mode`);
+            this.gameState.submitScoreToLeaderboard(data.finalTime);
         }
-        
-        overlay.innerHTML = content;
-        document.body.appendChild(overlay);
-        
-        console.log('✅ Completion overlay created and displayed!');
+
+        // Check if React CompletionScreen is available
+        if (window.CompletionScreen && window.React && window.ReactDOM) {
+            const { createElement } = window.React;
+            const { createRoot } = window.ReactDOM;
+
+            // Create container for React component
+            const container = document.createElement('div');
+            container.id = 'game-completion-overlay';
+            document.body.appendChild(container);
+
+            // Prepare data for CompletionScreen
+            const screenData = {
+                finalTime: data.finalTime,
+                totalSheep: this.gameState?.totalSheep || data.totalSheep || 20,
+                myScore: data.myScore || 0,
+                isWinner: data.isWinner,
+                winnerName: data.competitive?.winner ? `Player ${data.competitive.winner}` : null,
+                isNewBest: mode === 'timed' ? (this.loadBestScore() === null || data.myScore > this.loadBestScore()) : false,
+                sheepCount: data.sheepCount || this.gameState?.sheepInPenCount || 0,
+                scores: []
+            };
+
+            // Build scores array for multiplayer modes
+            if (data.competitive?.finalScores) {
+                const sortedScores = Object.entries(data.competitive.finalScores).sort(([,a], [,b]) => b - a);
+                screenData.scores = sortedScores.map(([playerId, score]) => ({
+                    id: playerId,
+                    name: `Player ${playerId}`,
+                    score: score,
+                    isMe: score === data.myScore
+                }));
+            }
+
+            // Render React component
+            const root = createRoot(container);
+            root.render(createElement(window.CompletionScreen, {
+                mode: mode,
+                data: screenData,
+                onPlayAgain: () => location.reload(),
+                onMainMenu: () => location.reload()
+            }));
+
+            console.log('[GAME] React completion overlay rendered!');
+        } else {
+            // Fallback to simple overlay if React not available
+            console.log('[GAME] React not available, using fallback overlay');
+            const overlay = document.createElement('div');
+            overlay.id = 'game-completion-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 99999;
+                font-family: system-ui, sans-serif;
+                color: white;
+                text-align: center;
+            `;
+
+            const timeStr = data.finalTime ? this.formatTime(data.finalTime) : 'Unknown';
+            overlay.innerHTML = `
+                <div style="padding: 40px; background: rgba(16, 185, 129, 0.2); border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.4);">
+                    <h1 style="font-size: 36px; margin: 0 0 20px 0;">Victory!</h1>
+                    <p style="font-size: 18px; margin: 0 0 30px 0;">Time: ${timeStr}</p>
+                    <button onclick="location.reload()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
+                        Play Again
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
     }
     
     // Format time helper
