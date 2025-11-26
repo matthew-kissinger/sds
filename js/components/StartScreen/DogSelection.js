@@ -33,6 +33,13 @@ const DOGS = [
         breed: 'German Shepherd',
         description: 'Strong and steady with excellent endurance',
         stats: { speed: 3, stamina: 5, control: 3 }
+    },
+    {
+        id: 'george_washington',
+        name: 'George Washington',
+        breed: 'American Foxhound',
+        description: 'Tactical herder with balanced abilities',
+        stats: { speed: 3, stamina: 4, control: 3 }
     }
 ];
 
@@ -75,7 +82,7 @@ export function DogSelection({ selectedDog, onSelect }) {
 
         createElement('div', {
             key: 'grid',
-            className: 'grid grid-cols-2 md:grid-cols-4 gap-4'
+            className: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4'
         }, DOGS.map(dog => {
             const isSelected = selectedDog === dog.id;
 
