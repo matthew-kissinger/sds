@@ -19,22 +19,25 @@ export class FencePresets {
         this.railWidth = 0.1;
         this.postSpacing = 5; // Distance between posts
         
-        // Materials
+        // Materials - warm wood tones that contrast with green grass
         this.materials = {
             post: new THREE.MeshPhongMaterial({
-                color: 0x4a3c28,
-                emissive: 0x1a0a00,
-                emissiveIntensity: 0.05
+                color: 0x8B7355,  // Warm tan/beige wood
+                emissive: 0x2a1a08,
+                emissiveIntensity: 0.15,
+                shininess: 5
             }),
             rail: new THREE.MeshPhongMaterial({
-                color: 0x5a4a3a,
-                emissive: 0x1a0a00,
-                emissiveIntensity: 0.03
+                color: 0x9C8465,  // Lighter warm wood
+                emissive: 0x3a2a10,
+                emissiveIntensity: 0.12,
+                shininess: 8
             }),
             gate: new THREE.MeshPhongMaterial({
-                color: 0x6a5a4a,
-                emissive: 0x2a1a00,
-                emissiveIntensity: 0.1
+                color: 0xA89070,  // Even lighter for gates
+                emissive: 0x4a3a18,
+                emissiveIntensity: 0.18,
+                shininess: 10
             })
         };
         

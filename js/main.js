@@ -251,7 +251,7 @@ class SheepDogSimulation {
         
         // Create terrain and environment
         this.terrainBuilder.createTerrain();
-        this.terrainBuilder.createGrass();
+        await this.terrainBuilder.createGrass();
         await this.terrainBuilder.createTrees();
         await this.terrainBuilder.addEnvironmentDetails();
         await this.terrainBuilder.addMountains();
@@ -985,17 +985,69 @@ class SheepDogSimulation {
         
         // Update grass animation and LOD (only if not paused and initialized)
         if (!isPaused && this.isInitialized) {
-            this.terrainBuilder.updateGrassAnimation();
-            
-            // Simple LOD system - just basic distance-based optimizations
+            // Gather entities for grass interaction
+            const interactionEntities = [];
+
+            // Add player sheepdog (type: 'player' for elliptical shape)
             if (this.sheepdog && this.sheepdog.mesh) {
-                const playerPosition = this.sheepdog.mesh.position;
-                
-                // Use simple robust LOD on mobile only
-                if (this.sceneManager.isMobile) {
-                    this.terrainBuilder.updateSimpleLOD(playerPosition);
+                interactionEntities.push({
+                    position: this.sheepdog.mesh.position,
+                    type: 'player'
+                });
+            }
+
+            // Add sheep visible in scene (much larger range)
+            if (this.gameState && this.gameState.sheep) {
+                const camera = this.sceneManager.getCamera();
+                const cameraPos = camera?.position;
+                if (cameraPos) {
+                    // Get all active sheep within camera view range (state 0 = active, 1 = retiring, 2 = retired)
+                    // Sheep use Vector2D with .x and .z properties
+                    const visibleSheep = this.gameState.sheep
+                        .filter(s => s && s.position && s.state !== 2)
+                        .filter(s => {
+                            // Check if sheep is within reasonable view distance from camera
+                            const dx = s.position.x - cameraPos.x;
+                            const dz = s.position.z - cameraPos.z;
+                            return dx * dx + dz * dz < 90000; // Within 300 units of camera
+                        })
+                        .slice(0, 200); // All sheep
+
+                    visibleSheep.forEach(sheep => {
+                        interactionEntities.push({
+                            position: { x: sheep.position.x, y: 0, z: sheep.position.z },
+                            type: 'sheep'
+                        });
+                    });
                 }
-                // Desktop: No LOD needed with 200k grass instances
+            }
+
+            // Add other players' dogs in multiplayer (type: 'dog' for elliptical shape)
+            if (this.otherPlayers) {
+                for (const [playerId, remoteDog] of this.otherPlayers) {
+                    if (remoteDog && remoteDog.mesh) {
+                        interactionEntities.push({
+                            position: remoteDog.mesh.position,
+                            type: 'dog'
+                        });
+                    }
+                }
+            }
+
+            // Update grass with full context
+            const camera = this.sceneManager.getCamera();
+            const playerPosition = this.sheepdog?.mesh?.position;
+
+            this.terrainBuilder.updateGrassAnimation(
+                deltaTime,
+                camera,
+                playerPosition,
+                interactionEntities
+            );
+
+            // Simple LOD system for other objects on mobile only
+            if (this.sceneManager.isMobile && playerPosition) {
+                this.terrainBuilder.updateSimpleLOD(playerPosition);
             }
         }
         

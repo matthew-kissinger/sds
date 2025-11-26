@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/loaders/GLTFLoader.js';
+import { GrassSystem } from './GrassSystem.js';
 
 /**
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements
@@ -11,6 +12,9 @@ export class TerrainBuilder {
         this.grassMaterial = null;
         this.grassInstanceCount = 0;
         this.grassInstancedMesh = null;
+
+        // New advanced grass system
+        this.grassSystem = null;
         this.terrainMesh = null;
         this.environmentDetails = [];
         this.trees = []; // Track trees for removal
@@ -234,47 +238,166 @@ export class TerrainBuilder {
 
     
     createTerrain() {
-        // Create flat terrain - extended to match grass coverage
-        const terrainGeometry = new THREE.PlaneGeometry(1000, 1000);
-        const terrainMaterial = new THREE.MeshPhongMaterial({
-            color: 0x4a7c4a,
-            emissive: 0x1a3a1a,
-            emissiveIntensity: 0.1,
-            shininess: 0
+        // Create flat terrain with procedural ground shader
+        const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 64, 64);
+
+        // Create a custom shader material for varied ground
+        const terrainMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                baseColor1: { value: new THREE.Color(0x3d5c2e) },  // Dark earthy green
+                baseColor2: { value: new THREE.Color(0x5a7a42) },  // Medium green
+                baseColor3: { value: new THREE.Color(0x4a6838) },  // Olive green
+                dirtColor: { value: new THREE.Color(0x6b5d4a) },   // Brown dirt patches
+                fogColor: { value: new THREE.Color(0x87CEEB) },
+                fogNear: { value: 200.0 },
+                fogFar: { value: 600.0 }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                varying vec3 vWorldPos;
+
+                void main() {
+                    vUv = uv;
+                    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+                    vWorldPos = worldPos.xyz;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                precision highp float;
+
+                uniform vec3 baseColor1;
+                uniform vec3 baseColor2;
+                uniform vec3 baseColor3;
+                uniform vec3 dirtColor;
+                uniform vec3 fogColor;
+                uniform float fogNear;
+                uniform float fogFar;
+
+                varying vec2 vUv;
+                varying vec3 vWorldPos;
+
+                // Simple noise function
+                float hash(vec2 p) {
+                    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+                }
+
+                float noise(vec2 p) {
+                    vec2 i = floor(p);
+                    vec2 f = fract(p);
+                    f = f * f * (3.0 - 2.0 * f);
+
+                    float a = hash(i);
+                    float b = hash(i + vec2(1.0, 0.0));
+                    float c = hash(i + vec2(0.0, 1.0));
+                    float d = hash(i + vec2(1.0, 1.0));
+
+                    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+                }
+
+                float fbm(vec2 p) {
+                    float value = 0.0;
+                    float amplitude = 0.5;
+                    for (int i = 0; i < 4; i++) {
+                        value += amplitude * noise(p);
+                        p *= 2.0;
+                        amplitude *= 0.5;
+                    }
+                    return value;
+                }
+
+                void main() {
+                    // Multi-scale noise for natural variation
+                    float n1 = fbm(vWorldPos.xz * 0.02);
+                    float n2 = fbm(vWorldPos.xz * 0.05 + 100.0);
+                    float n3 = noise(vWorldPos.xz * 0.1);
+
+                    // Blend between green tones
+                    vec3 color = mix(baseColor1, baseColor2, n1);
+                    color = mix(color, baseColor3, n2 * 0.5);
+
+                    // Add subtle dirt patches
+                    float dirtMask = smoothstep(0.55, 0.7, n1 * n2);
+                    color = mix(color, dirtColor, dirtMask * 0.4);
+
+                    // Add fine detail variation
+                    color *= 0.9 + n3 * 0.2;
+
+                    // Subtle darkening in "low" areas (faux AO)
+                    float ao = 0.85 + 0.15 * n1;
+                    color *= ao;
+
+                    // Distance fog
+                    float dist = length(vWorldPos - cameraPosition);
+                    float fogFactor = smoothstep(fogNear, fogFar, dist);
+                    color = mix(color, fogColor, fogFactor);
+
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `,
+            side: THREE.FrontSide
         });
-        
+
         const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
         terrain.rotation.x = -Math.PI / 2;
         terrain.position.y = 0;
         terrain.receiveShadow = true;
         this.scene.add(terrain);
-        
+
         this.terrainMesh = terrain;
-        
+
         return terrain;
     }
     
-    createGrass() {
+    async createGrass() {
+        // Use new advanced grass system
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile);
+
+        // Add exclusion zone for farm house
+        this.grassSystem.addExclusionZone(
+            this.farmHouseExclusionArea.minX,
+            this.farmHouseExclusionArea.maxX,
+            this.farmHouseExclusionArea.minZ,
+            this.farmHouseExclusionArea.maxZ
+        );
+
+        // Initialize the grass system
+        await this.grassSystem.init();
+
+        // Store reference for compatibility
+        const stats = this.grassSystem.getStats();
+        this.grassInstanceCount = stats.totalClumps * (this.isMobile ? 3 : 5); // Effective blade count
+        this.grassMaterial = this.grassSystem.grassMaterial;
+
+        console.log(`🌿 Advanced grass system created: ${stats.totalClumps} clumps (~${this.grassInstanceCount} effective blades)`);
+
+        return this.grassSystem;
+    }
+
+    /**
+     * Legacy createGrass method for fallback
+     */
+    createGrassLegacy() {
         // Create instanced grass using shaders
-        const grassVertexShader = this.isMobile ? 
+        const grassVertexShader = this.isMobile ?
             // Simplified shader for mobile - no animation
             `
             varying vec2 vUv;
             varying vec3 vWorldPos;
-            
+
             void main() {
                 vUv = uv;
-                
+
                 // Get instance position
                 vec3 pos = position;
                 vec4 mvPosition = vec4(pos, 1.0);
-                
+
                 #ifdef USE_INSTANCING
                     mvPosition = instanceMatrix * mvPosition;
                 #endif
-                
+
                 vWorldPos = (modelMatrix * mvPosition).xyz;
-                
+
                 vec4 modelViewPosition = modelViewMatrix * mvPosition;
                 gl_Position = projectionMatrix * modelViewPosition;
             }
@@ -284,65 +407,65 @@ export class TerrainBuilder {
             varying vec2 vUv;
             varying vec3 vWorldPos;
             uniform float time;
-            
+
             void main() {
                 vUv = uv;
-                
+
                 // Get instance position
                 vec3 pos = position;
                 vec4 mvPosition = vec4(pos, 1.0);
-                
+
                 #ifdef USE_INSTANCING
                     mvPosition = instanceMatrix * mvPosition;
                 #endif
-                
+
                 vWorldPos = (modelMatrix * mvPosition).xyz;
-                
+
                 // Wind displacement - stronger at blade tips
                 float dispPower = 1.0 - cos(uv.y * 3.14159 / 2.0);
-                
+
                 // Complex wind pattern
                 float windX = sin(vWorldPos.z * 0.1 + time * 2.0) * cos(vWorldPos.x * 0.1 + time * 1.5);
                 float windZ = cos(vWorldPos.x * 0.15 + time * 2.5) * sin(vWorldPos.z * 0.15 + time * 2.0);
-                
+
                 float displacement = windX * (0.15 * dispPower);
                 mvPosition.x += displacement;
                 mvPosition.z += windZ * (0.1 * dispPower);
-                
+
                 vec4 modelViewPosition = modelViewMatrix * mvPosition;
                 gl_Position = projectionMatrix * modelViewPosition;
             }
         `;
-        
+
         const grassFragmentShader = `
             varying vec2 vUv;
             varying vec3 vWorldPos;
             uniform vec3 fogColor;
             uniform float fogNear;
             uniform float fogFar;
-            
+
             void main() {
                 // Gradient from dark at base to light at tips
                 vec3 baseColor = vec3(0.2, 0.5, 0.1);
                 vec3 tipColor = vec3(0.41, 0.8, 0.3);
-                
+
                 // Add some color variation based on world position
                 float colorVariation = sin(vWorldPos.x * 0.5) * cos(vWorldPos.z * 0.5) * 0.1;
-                
+
                 vec3 grassColor = mix(baseColor, tipColor, vUv.y);
                 grassColor += vec3(colorVariation, colorVariation * 0.5, 0.0);
-                
+
                 // Apply fog
                 float depth = gl_FragCoord.z / gl_FragCoord.w;
                 float fogFactor = smoothstep(fogNear, fogFar, depth);
-                
+
                 vec3 finalColor = mix(grassColor, fogColor, fogFactor);
-                
+
                 gl_FragColor = vec4(finalColor, 1.0);
             }
         `;
-        
-        const grassUniforms = this.isMobile ? 
+
+        const grassUniforms = this.isMobile ?
             {
                 fogColor: { value: new THREE.Color(0x87CEEB) },
                 fogNear: { value: 200 },
@@ -354,69 +477,69 @@ export class TerrainBuilder {
                 fogNear: { value: 200 },
                 fogFar: { value: 600 }
             };
-        
+
         this.grassMaterial = new THREE.ShaderMaterial({
             vertexShader: grassVertexShader,
             fragmentShader: grassFragmentShader,
             uniforms: grassUniforms,
             side: THREE.DoubleSide
         });
-        
+
         // Create grass blade geometry - small
         const bladeGeometry = new THREE.PlaneGeometry(0.05, 0.8, 1, 4);
         bladeGeometry.translate(0, 0.4, 0); // Move pivot to base
-        
+
         // Create instanced mesh for grass - optimized for performance
         // Reduced desktop grass count for better performance
         const instanceCount = this.isMobile ? 80000 : 200000; // Reduced desktop to 200k for performance
         this.grassInstanceCount = instanceCount;
         console.log(`🌿 Creating ${instanceCount} grass instances (${this.isMobile ? 'mobile' : 'desktop'} mode)`);
         const grassMesh = new THREE.InstancedMesh(bladeGeometry, this.grassMaterial, instanceCount);
-        
+
         const dummy = new THREE.Object3D();
-        
+
         // Distribute grass instances - concentrate in center for both platforms
         let placedCount = 0;
         const distributionBounds = this.isMobile ? 200 : 400; // Mobile: 200x200, Desktop: 400x400 (concentrated)
-        
+
         for (let i = 0; i < instanceCount && placedCount < instanceCount; i++) {
             // Random position within bounds
             const x = (Math.random() - 0.5) * distributionBounds;
             const z = (Math.random() - 0.5) * distributionBounds;
-            
+
             // Skip grass in the pasture area
             if (z > 100 && z < 130 && Math.abs(x) < 30) {
                 continue;
             }
-            
+
             // Skip grass in the farm house area
             if (this.isInFarmHouseArea(x, z)) {
                 continue;
             }
-            
+
             dummy.position.set(x, 0, z);
-            
+
             // Random scale and rotation with distance-based scaling
             const distanceFromCenter = Math.sqrt(x * x + z * z);
             const distanceScale = Math.max(0.3, 1.0 - distanceFromCenter / 600); // Grass gets smaller with distance
             const scale = (0.8 + Math.random() * 0.4) * distanceScale;
             dummy.scale.setScalar(scale);
             dummy.rotation.y = Math.random() * Math.PI * 2;
-            
+
             // Slight random tilt
             dummy.rotation.z = (Math.random() - 0.5) * 0.1;
-            
+
             dummy.updateMatrix();
             grassMesh.setMatrixAt(placedCount, dummy.matrix);
             placedCount++;
         }
-        
+
         grassMesh.castShadow = true;
         grassMesh.receiveShadow = true;
         this.scene.add(grassMesh);
-        
+
         this.grassInstancedMesh = grassMesh;
-        
+
         return grassMesh;
     }
     
@@ -825,11 +948,36 @@ export class TerrainBuilder {
         return instancedMeshes;
     }
     
-    updateGrassAnimation() {
-        // Only update animation on desktop
-        if (!this.isMobile && this.grassMaterial && this.grassMaterial.uniforms.time) {
-            this.grassMaterial.uniforms.time.value = performance.now() * 0.001;
+    updateGrassAnimation(deltaTime, camera, playerPosition, entities) {
+        // Use new grass system if available
+        if (this.grassSystem) {
+            // Update interactors (player + nearby sheep + other dogs)
+            if (entities) {
+                this.grassSystem.updateInteractors(entities);
+            }
+
+            // Update grass system with time, camera, and player position
+            this.grassSystem.update(deltaTime || 0.016, camera, playerPosition);
+        } else {
+            // Legacy: Only update animation on desktop
+            if (!this.isMobile && this.grassMaterial && this.grassMaterial.uniforms.time) {
+                this.grassMaterial.uniforms.time.value = performance.now() * 0.001;
+            }
         }
+    }
+
+    /**
+     * Get grass system stats for performance monitoring
+     */
+    getGrassStats() {
+        if (this.grassSystem) {
+            return this.grassSystem.getStats();
+        }
+        return {
+            totalClumps: 0,
+            visibleClumps: 0,
+            effectiveBlades: this.grassInstanceCount
+        };
     }
     
     /**
