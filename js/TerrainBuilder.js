@@ -144,7 +144,7 @@ export class TerrainBuilder {
             ],
             animals: [
                 { name: 'jep', path: '/assets/models/Jep.glb' },
-                { name: 'rauri', path: '/assets/models/Rauri.glb' },
+                { name: 'pip', path: '/assets/models/Rauri.glb' },
                 { name: 'sally', path: '/assets/models/Sally.glb' },
                 { name: 'shiloh', path: '/assets/models/Shiloh.glb' },
                 { name: 'george_washington', path: '/assets/models/George_Washington.glb' }

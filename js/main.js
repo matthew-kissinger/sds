@@ -273,9 +273,12 @@ class SheepDogSimulation {
         this.sheepdog = sheepdog;
         this.sheepdogMesh = sheepdog.createMesh();
         this.gameState.setSheepdog(sheepdog);
-        
+
         // Connect audio manager to sheepdog
         sheepdog.setAudioManager(this.audioManager);
+
+        // Set as local player and create distance indicator (after mesh is created)
+        sheepdog.setAsLocalPlayer();
         
         // Create optimized sheep flock (visible during start screen)
         this.gameState.createSheepFlock(this.sceneManager.getScene());
@@ -305,20 +308,26 @@ class SheepDogSimulation {
         const selectedDogType = this.startScreen.getSelectedDog();
         console.log(`Selected dog type: ${selectedDogType}`);
         
-        // Remove the old sheepdog from scene if it exists
+        // Remove the old sheepdog and its indicator from scene if it exists
+        if (this.sheepdog) {
+            this.sheepdog.removeDistanceIndicator();
+        }
         if (this.sheepdogMesh) {
             this.sceneManager.remove(this.sheepdogMesh);
         }
-        
+
         // Create new sheepdog with selected type
         const sheepdog = new Sheepdog(0, -30, selectedDogType);
         this.sheepdog = sheepdog;
         this.sheepdogMesh = sheepdog.createMesh();
         this.gameState.setSheepdog(sheepdog);
-        
+
         // Connect audio manager to new sheepdog
         sheepdog.setAudioManager(this.audioManager);
-        
+
+        // Set as local player and create distance indicator
+        sheepdog.setAsLocalPlayer();
+
         // Add new sheepdog to scene when game starts
         this.sceneManager.add(this.sheepdogMesh);
         
@@ -1049,14 +1058,25 @@ class SheepDogSimulation {
             if (this.sceneManager.isMobile && playerPosition) {
                 this.terrainBuilder.updateSimpleLOD(playerPosition);
             }
+
         }
-        
-        // Update game logic with deltaTime
+
+        // Update game logic with deltaTime (this updates sheepdog position)
         this.update(deltaTime);
-        
+
+        // Update distance indicator for local player AFTER update so position is current
+        if (this.sheepdog && this.sheepdog.isLocalPlayer) {
+            const camera = this.sceneManager.getCamera();
+            const playerPosition = this.sheepdog.mesh?.position;
+            if (camera && playerPosition) {
+                const cameraDistance = camera.position.distanceTo(playerPosition);
+                this.sheepdog.updateDistanceIndicator(cameraDistance, deltaTime);
+            }
+        }
+
         // Update performance monitoring (always update for monitoring purposes)
         this.performanceMonitor.updateMetrics(this.gameState, this.sceneManager.getRenderer());
-        
+
         // Render the scene (always render to show pause indicator)
         this.sceneManager.render();
     }

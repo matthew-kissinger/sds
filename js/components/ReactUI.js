@@ -80,9 +80,9 @@ function initializeReactUI() {
                 stats: { speed: 3, stamina: 3, control: 3 },
                 tagline: 'Balanced all-arounder with versatile skills'
             },
-            { 
-                id: 'rauri', 
-                name: 'Rauri', 
+            {
+                id: 'pip',
+                name: 'Pip',
                 stats: { speed: 2, stamina: 2, control: 5 },
                 tagline: 'Expert herder with exceptional range'
             },
@@ -695,11 +695,11 @@ function initializeReactUI() {
                                 : '0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
                         }
                     }, player ? [
-                        React.createElement('div', { key: 'emoji', className: 'text-3xl mb-1 text-center mobile-dog-icon' }, 
-                            player.dogType === 'jep' ? '🐕‍🦺' : 
-                            player.dogType === 'rauri' ? '🐕' : 
-                            player.dogType === 'sally' ? '🐶' : 
-                            player.dogType === 'shiloh' ? '🦮' : 
+                        React.createElement('div', { key: 'emoji', className: 'text-3xl mb-1 text-center mobile-dog-icon' },
+                            player.dogType === 'jep' ? '🐕‍🦺' :
+                            player.dogType === 'pip' ? '🐕' :
+                            player.dogType === 'sally' ? '🐶' :
+                            player.dogType === 'shiloh' ? '🦮' :
                             player.dogType === 'george_washington' ? '🐺' : '🐕‍🦺'),
                         React.createElement('p', { key: 'name', className: 'text-white font-semibold' }, player.name),
                         player.isHost && React.createElement('span', { key: 'host', className: 'text-xs text-yellow-400' }, '👑 Host')
