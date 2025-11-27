@@ -126,28 +126,28 @@ export class TerrainBuilder {
         
         const modelPaths = {
             trees: [
-                { name: 'tree1', path: '/assets/models/Resource_Tree1.glb' },
-                { name: 'tree2', path: '/assets/models/Resource_Tree2.glb' },
-                { name: 'pine', path: '/assets/models/Resource_PineTree.glb' }
+                { name: 'tree1', path: 'assets/models/Resource_Tree1.glb' },
+                { name: 'tree2', path: 'assets/models/Resource_Tree2.glb' },
+                { name: 'pine', path: 'assets/models/Resource_PineTree.glb' }
             ],
             rocks: [
-                { name: 'rock1', path: '/assets/models/Resource_Rock_1.glb' },
-                { name: 'rock2', path: '/assets/models/Resource_Rock_2.glb' },
-                { name: 'rock3', path: '/assets/models/Resource_Rock_3.glb' }
+                { name: 'rock1', path: 'assets/models/Resource_Rock_1.glb' },
+                { name: 'rock2', path: 'assets/models/Resource_Rock_2.glb' },
+                { name: 'rock3', path: 'assets/models/Resource_Rock_3.glb' }
             ],
             mountains: [
-                { name: 'mountain1', path: '/assets/models/Mountain_Group_1.glb' },
-                { name: 'mountain2', path: '/assets/models/Mountain_Group_2.glb' }
+                { name: 'mountain1', path: 'assets/models/Mountain_Group_1.glb' },
+                { name: 'mountain2', path: 'assets/models/Mountain_Group_2.glb' }
             ],
             buildings: [
-                { name: 'farmhouse', path: '/assets/models/Farm house.glb' }
+                { name: 'farmhouse', path: 'assets/models/Farm house.glb' }
             ],
             animals: [
-                { name: 'jep', path: '/assets/models/Jep.glb' },
-                { name: 'pip', path: '/assets/models/Pip.glb' },
-                { name: 'sally', path: '/assets/models/Sally.glb' },
-                { name: 'shiloh', path: '/assets/models/Shiloh.glb' },
-                { name: 'george_washington', path: '/assets/models/George_Washington.glb' }
+                { name: 'jep', path: 'assets/models/Jep.glb' },
+                { name: 'pip', path: 'assets/models/Pip.glb' },
+                { name: 'sally', path: 'assets/models/Sally.glb' },
+                { name: 'shiloh', path: 'assets/models/Shiloh.glb' },
+                { name: 'george_washington', path: 'assets/models/George_Washington.glb' }
             ]
         };
         

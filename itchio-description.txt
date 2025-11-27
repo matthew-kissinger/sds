@@ -1,0 +1,37 @@
+A relaxing browser game where you guide your faithful sheepdog through peaceful meadows, herding flocks of fluffy sheep.
+
+🐕 MULTIPLE DOG BREEDS
+Choose from 5 sheepdog breeds, each with unique Speed, Stamina, and Control stats.
+
+🌿 RELAXING GAMEPLAY
+No timers, no pressure in Classic mode. Just you, your dog, and the sheep.
+
+⏱️ TIMED CHALLENGES
+Ready for more? Try Timed mode and see how fast you can herd 200 sheep.
+
+🌐 MULTIPLAYER
+Compete or cooperate with other players in real-time multiplayer modes.
+
+🏆 GLOBAL LEADERBOARDS
+Track your best times and compete for top rankings.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONTROLS
+
+Desktop: WASD/Arrows to move • Shift to sprint • Scroll to zoom
+Mobile: Virtual joystick • Sprint button • Pinch to zoom
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TIPS
+• Sheep flee from the dog - use this to guide them
+• Don't get too close or the flock will scatter
+• Circle around the flock to keep them together
+• Sprint uses stamina - use it wisely!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Also playable at: https://sheepdogsim.com
+
+Made with Three.js. Free to play, forever.

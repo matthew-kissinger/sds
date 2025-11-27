@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- SEO Meta Tags -->
+    <title>Sheep Dog Sim - Relaxing Free Herding Game | Play in Browser</title>
+    <meta name="description" content="Guide your sheepdog through peaceful meadows in this free, relaxing browser game. Herd flocks, explore zen gameplay, and unwind with satisfying sheep herding.">
+    <meta name="keywords" content="sheep dog sim, sheepdog simulator, sheep herding game, relaxing browser game, free herding game, zen game, casual simulation, peaceful game, sheep dog game">
+    <meta name="author" content="Sheep Dog Sim">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://sheepdogsim.com/">
+
+    <!-- Theme and App Configuration -->
+    <meta name="theme-color" content="#00BFFF">
+    <meta name="msapplication-TileColor" content="#00BFFF">
+    <meta name="application-name" content="Sheep Dog Sim">
+    
+    <!-- Open Graph Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Sheep Dog Sim">
+    <meta property="og:title" content="Sheep Dog Sim - Relaxing Free Herding Game">
+    <meta property="og:description" content="Guide your sheepdog through peaceful meadows in this free, relaxing browser game. Herd flocks, explore zen gameplay, and unwind with satisfying sheep herding.">
+    <meta property="og:url" content="https://sheepdogsim.com/">
+    <meta property="og:logo" content="https://sheepdogsim.com/assets/images/favicon.png">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/images/sds-zoomedin-play.png">
+    <meta property="og:image:width" content="1920">
+    <meta property="og:image:height" content="1080">
+    <meta property="og:image:alt" content="Sheep Dog Sim gameplay - sheepdog herding flock through lush green meadow">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@sheepdogsim">
+    <meta name="twitter:creator" content="@sheepdogsim">
+    <meta name="twitter:title" content="Sheep Dog Sim - Relaxing Free Herding Game">
+    <meta name="twitter:description" content="Guide your sheepdog through peaceful meadows. Free, relaxing browser game with zen gameplay and satisfying herding.">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/images/sds-zoomedin-play.png">
+    <meta name="twitter:image:alt" content="Sheep Dog Sim gameplay - sheepdog herding flock through lush green meadow">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Sheep Dog Sim",
+        "alternateName": ["Sheep Dog Simulator", "SheepDog Simulator", "SheepDogSim", "Sheepdog Sim"],
+        "description": "A free, relaxing browser game where you guide your sheepdog through peaceful meadows. Enjoy zen gameplay, satisfying sheep herding, and unwind with single-player or multiplayer modes.",
+        "genre": ["Simulation", "Casual", "Relaxing", "Zen"],
+        "gamePlatform": "Web Browser",
+        "operatingSystem": "Any",
+        "applicationCategory": "Game",
+        "url": "https://sheepdogsim.com/",
+        "image": "https://sheepdogsim.com/assets/images/sds-zoomedin-play.png",
+        "screenshot": [
+            "https://sheepdogsim.com/assets/images/sds-zoomedin-play.png",
+            "https://sheepdogsim.com/assets/images/sds-zoomedout.png",
+            "https://sheepdogsim.com/assets/images/sds-dog-selection.png",
+            "https://sheepdogsim.com/assets/images/sds-menu.png"
+        ],
+        "datePublished": "2024-01-01",
+        "inLanguage": "en-US",
+        "isAccessibleForFree": true,
+        "interactionType": "Player",
+        "numberOfPlayers": "1-4",
+        "gameItem": [
+            {
+                "@type": "Thing",
+                "name": "Sheepdog Breeds",
+                "description": "Multiple dog breeds with unique speed, stamina, and control"
+            },
+            {
+                "@type": "Thing",
+                "name": "Sheep Flocks",
+                "description": "Peaceful sheep with satisfying herding behavior"
+            }
+        ],
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "Sheep Dog Sim",
+            "url": "https://sheepdogsim.com/"
+        },
+        "creator": {
+            "@type": "Organization",
+            "name": "Sheep Dog Sim Team"
+        },
+        "gameLocation": {
+            "@type": "Place",
+            "name": "Peaceful Pastoral Meadows"
+        },
+        "playMode": ["SinglePlayer", "MultiPlayer", "CoOp", "CompetitiveMultiPlayer"],
+        "characterAttribute": [
+            {
+                "@type": "Thing",
+                "name": "Speed",
+                "description": "Dog movement speed and agility"
+            },
+            {
+                "@type": "Thing",
+                "name": "Stamina",
+                "description": "Dog endurance for extended herding"
+            },
+            {
+                "@type": "Thing",
+                "name": "Control",
+                "description": "Precision in sheep herding commands"
+            }
+        ]
+    }
+    </script>
+    
+    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+    <!-- Tailwind CSS via Play CDN for dynamic class generation -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.1/dist/nipplejs.min.js"></script>
+    <link rel="stylesheet" href="css/multiplayer-react.css">
+    <link rel="stylesheet" href="css/components/index-styles.css">
+</head>
+<body>
+    <div id="canvas-container">
+        <!-- Game will create canvas here -->
+    </div>
+    
+    <!-- React overlay for UI components -->
+    <div id="react-overlay">
+        <!-- Skeleton loader will be dynamically loaded here -->
+    </div>
+    
+    <!-- Import map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/",
+            "stats.js": "https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js",
+            "@geckos.io/client": "https://cdn.jsdelivr.net/npm/@geckos.io/client@3.0.2/+esm"
+        }
+    }
+    </script>
+    
+    
+    <!-- Load React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    
+    <!-- Register Service Worker for asset caching -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('[SW] Service Worker registered:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.warn('[SW] Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+
+    <!-- Main game entry -->
+    <script type="module" src="js/main.js"></script>
+
+    <!-- React UI Components -->
+    <script type="module" src="js/components/index.js"></script>
+
+    <!-- React UI overlay initialization handled by components/index.js -->
+    <!-- Cloudflare Web Analytics is auto-injected via Cloudflare proxy - no manual script needed -->
+</body>
+</html>
