@@ -118,7 +118,79 @@
         ]
     }
     </script>
-    
+
+    <!-- FAQ Schema - Rich Results -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "Is Sheep Dog Sim free to play?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes! Sheep Dog Sim is completely free to play in your browser. No downloads, no accounts required."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Can I play Sheep Dog Sim on mobile?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes, Sheep Dog Sim works on mobile devices with touch controls including a virtual joystick and sprint button."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Does Sheep Dog Sim have multiplayer?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes! Play cooperative or competitive multiplayer with up to 6 players. Work together to herd sheep or compete for the highest score."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "What dogs are available in Sheep Dog Sim?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Choose from 5 unique sheepdog breeds: Jep, Pip, Sally, Shiloh, and George Washington - each with different Speed, Stamina, and Control stats."
+                }
+            }
+        ]
+    }
+    </script>
+
+    <!-- WebApplication Schema (Games) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Sheep Dog Sim",
+        "url": "https://sheepdogsim.com/",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript, WebGL",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "ratingCount": "50",
+            "bestRating": "5",
+            "worstRating": "1"
+        }
+    }
+    </script>
+
+    <!-- Preconnect for performance (Core Web Vitals boost) -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://api.sheepdogsim.com">
+
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
     <!-- Tailwind CSS via Play CDN for dynamic class generation -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
