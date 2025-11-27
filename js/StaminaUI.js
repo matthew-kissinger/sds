@@ -8,7 +8,7 @@
  */
 export class StaminaUI {
     constructor() {
-        console.log('⚠️ StaminaUI: This class is deprecated. Stamina UI now handled by React components.');
+        console.log('[WARN] StaminaUI: This class is deprecated. Stamina UI now handled by React components.');
         
         // Mark as using React UI to skip all legacy DOM operations
         this.usingReactUI = true;

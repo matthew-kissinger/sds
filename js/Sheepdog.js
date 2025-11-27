@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as SkeletonUtils from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/utils/SkeletonUtils.js';
 import { Vector2D } from './Vector2D.js';
+import { getTerrainBuilder, getSceneManager } from './GameBridge.js';
 
 /**
  * Animation States - Simplified and robust state machine for Sheep Dog animations
@@ -225,17 +226,17 @@ export class Sheepdog {
      * Load individual dog model based on dogType and set up comprehensive animation system
      */
     loadSheepdogModel() {
-        const terrainBuilder = window.gameInstance?.terrainBuilder;
+        const terrainBuilder = getTerrainBuilder();
         
         if (!terrainBuilder?.models?.animals?.[this.dogType]) {
-            console.error(`❌ ${this.dogType} model not available from TerrainBuilder`);
+            console.error(`[ERROR] ${this.dogType} model not available from TerrainBuilder`);
             return;
         }
         
         const originalModel = terrainBuilder.models.animals[this.dogType];
         const animations = terrainBuilder.models.animals[this.dogType + '_animations'] || [];
         
-        console.log(`🐕 Loading ${this.dogType} model with ${animations.length} animations`);
+        console.log(`[DOG] Loading ${this.dogType} model with ${animations.length} animations`);
         
         // Clone the model using SkeletonUtils for proper animation support
         this.sheepdogModel = SkeletonUtils.clone(originalModel);
@@ -264,7 +265,7 @@ export class Sheepdog {
         // Set up animation system
         this.setupAnimationSystem(animations);
         
-        console.log(`✅ ${this.dogType} model loaded and animation system initialized`);
+        console.log(`[OK] ${this.dogType} model loaded and animation system initialized`);
     }
     
     /**
@@ -272,7 +273,7 @@ export class Sheepdog {
      */
     setupAnimationSystem(animations) {
         if (animations.length === 0) {
-            console.warn('⚠️ No animations found for Sheep Dog model');
+            console.warn('[WARN] No animations found for Sheep Dog model');
             return;
         }
         
@@ -288,8 +289,8 @@ export class Sheepdog {
         // Start with first idle animation
         this.transitionToState('IDLE');
         
-        console.log(`🎬 Animation system ready with ${animations.length} animations`);
-        console.log('📋 Available animations:', animations.map(anim => anim.name).sort());
+        console.log(`[DOG] Animation system ready with ${animations.length} animations`);
+        console.log('[DOG] Available animations:', animations.map(anim => anim.name).sort());
     }
     
     /**
@@ -405,13 +406,13 @@ export class Sheepdog {
         // Get animation name for new state
         const animationName = this.getAnimationForState(newState, this.animationSystem.currentDirection);
         if (!animationName) {
-            console.warn(`⚠️ No animation found for state: ${newState}, direction: ${this.animationSystem.currentDirection}`);
+            console.warn(`[WARN] No animation found for state: ${newState}, direction: ${this.animationSystem.currentDirection}`);
             return;
         }
         
         const newAction = this.animationSystem.actions.get(animationName);
         if (!newAction) {
-            console.warn(`⚠️ Animation action not found: ${animationName}`);
+            console.warn(`[WARN] Animation action not found: ${animationName}`);
             return;
         }
         
@@ -436,7 +437,7 @@ export class Sheepdog {
             // Handle special state logic
             this.handleStateTransition(newState, oldState);
             
-            console.log(`🎭 Animation transition: ${oldState} → ${newState} (${animationName})`);
+            console.log(`[DOG] Animation transition: ${oldState} -> ${newState} (${animationName})`);
         }
     }
     
@@ -833,7 +834,7 @@ export class Sheepdog {
             this.mesh.add(this.playerIcon);
         }
         
-        console.log(`🎯 Created player icon with color: 0x${gateColor.toString(16).toUpperCase()}`);
+        console.log(`[GAME] Created player icon with color: 0x${gateColor.toString(16).toUpperCase()}`);
     }
     
     /**
@@ -950,7 +951,7 @@ export class Sheepdog {
         };
 
         // Add to scene directly (not as child of mesh) to avoid occlusion
-        const scene = window.gameInstance?.sceneManager?.getScene();
+        const scene = getSceneManager()?.getScene();
         if (scene) {
             scene.add(this.distanceIndicator);
         }
@@ -963,7 +964,7 @@ export class Sheepdog {
      */
     ensureIndicatorAttached() {
         if (this.isLocalPlayer && this.distanceIndicator && !this.distanceIndicator.parent) {
-            const scene = window.gameInstance?.sceneManager?.getScene();
+            const scene = getSceneManager()?.getScene();
             if (scene) {
                 scene.add(this.distanceIndicator);
                 console.log('Distance indicator attached to scene (deferred)');

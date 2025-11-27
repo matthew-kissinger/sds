@@ -162,7 +162,7 @@ export class GameState {
         // Universal completion check for all modes
         if (this.sheepRetired >= this.sheep.length && !this.gameCompleted) {
             this.gameCompleted = true;
-            console.log('🎉 GAME COMPLETED! Triggering completion flow...');
+            console.log('[GAME] GAME COMPLETED! Triggering completion flow...');
             return true;
         }
         return false;
@@ -236,7 +236,7 @@ export class GameState {
     showCooperativeCompletionMessage(finalTime, isNewRecord) {
         // Completion messages now handled by React components and main.js showCompletionOverlay
         // This method preserved for backward compatibility
-        console.log('📢 showCooperativeCompletionMessage called - delegating to React UI:', {
+        console.log('[UI] showCooperativeCompletionMessage called - delegating to React UI:', {
             finalTime: finalTime,
             isNewRecord: isNewRecord
         });
@@ -251,7 +251,7 @@ export class GameState {
     showCompetitiveCompletionMessage(competitiveData, finalTime = null) {
         // Completion messages now handled by React components and main.js showCompletionOverlay
         // This method preserved for backward compatibility
-        console.log('📢 showCompetitiveCompletionMessage called - delegating to React UI:', {
+        console.log('[UI] showCompetitiveCompletionMessage called - delegating to React UI:', {
             competitiveData: competitiveData,
             finalTime: finalTime
         });
@@ -285,7 +285,7 @@ export class GameState {
                 
                 if (isNewBestScore) {
                     localStorage.setItem('timedModeBestScore', myScore.toString());
-                    console.log('🏆 New best score saved:', myScore);
+                    console.log('[GAME] New best score saved:', myScore);
                 }
             } catch (e) {
                 console.warn('Could not check best score:', e);
@@ -553,7 +553,7 @@ export class GameState {
             }
         }
         
-        console.log(`📊 Submitting score to leaderboard: ${score} for mode: ${leaderboardMode}`);
+        console.log(`[GAME] Submitting score to leaderboard: ${score} for mode: ${leaderboardMode}`);
         
         // Call the global score submission function
         if (window.submitGameScore) {

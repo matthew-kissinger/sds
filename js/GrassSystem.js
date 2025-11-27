@@ -1,4 +1,39 @@
 import * as THREE from 'three';
+import { loadShaderWithReplacements } from './shaders/ShaderLoader.js';
+
+// Shader cache for sync access after async load
+let grassDesktopVertexShader = null;
+let grassMobileVertexShader = null;
+let grassFragmentShader = null;
+let grassShadersLoaded = false;
+
+/**
+ * Preload grass shaders - call this early in app initialization
+ * @param {Object} config - Grass config with placeholder values
+ */
+export async function preloadGrassShaders(config = {}) {
+    if (grassShadersLoaded) return;
+
+    const replacements = {
+        MAX_INTERACTORS: config.maxInteractors || 50,
+        INTERACTION_RADIUS: (config.interactionRadius || 3.5).toFixed(1),
+        SHEEP_INTERACTION_RADIUS: (config.sheepInteractionRadius || 1.5).toFixed(1),
+        INTERACTION_STRENGTH: (config.interactionStrength || 0.8).toFixed(1),
+        SHEEP_INTERACTION_STRENGTH: (config.sheepInteractionStrength || 0.3).toFixed(1)
+    };
+
+    try {
+        [grassDesktopVertexShader, grassMobileVertexShader, grassFragmentShader] = await Promise.all([
+            loadShaderWithReplacements('./js/shaders/grass/desktop-vertex.glsl', replacements),
+            loadShaderWithReplacements('./js/shaders/grass/mobile-vertex.glsl', replacements),
+            loadShaderWithReplacements('./js/shaders/grass/fragment.glsl', replacements)
+        ]);
+        grassShadersLoaded = true;
+        console.log('[SHADER] Grass shaders loaded');
+    } catch (error) {
+        console.warn('[SHADER] Failed to load grass shaders, using inline fallback:', error);
+    }
+}
 
 /**
  * GrassSystem - Advanced grass rendering with:
@@ -101,7 +136,7 @@ export class GrassSystem {
         // Generate chunks
         this.generateChunks();
 
-        console.log(`🌿 GrassSystem initialized: ${this.stats.totalClumps} clumps in ${this.chunks.size} chunks (${this.isMobile ? 'mobile' : 'desktop'})`);
+        console.log(`[GRASS] GrassSystem initialized: ${this.stats.totalClumps} clumps in ${this.chunks.size} chunks (${this.isMobile ? 'mobile' : 'desktop'})`);
     }
 
     /**
@@ -262,10 +297,18 @@ export class GrassSystem {
 
     /**
      * Create advanced grass shader material
+     * Uses externally loaded shaders if available, falls back to inline
      */
     createGrassMaterial() {
-        const vertexShader = this.isMobile ? this.getMobileVertexShader() : this.getDesktopVertexShader();
-        const fragmentShader = this.getFragmentShader();
+        // Use loaded shaders or fallback to inline
+        let vertexShader, fragmentShader;
+
+        if (this.isMobile) {
+            vertexShader = grassMobileVertexShader || this.getMobileVertexShader();
+        } else {
+            vertexShader = grassDesktopVertexShader || this.getDesktopVertexShader();
+        }
+        fragmentShader = grassFragmentShader || this.getFragmentShader();
 
         const uniforms = {
             time: { value: 0 },

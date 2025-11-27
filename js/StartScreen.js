@@ -166,12 +166,12 @@ export class StartScreen {
     }
     
     selectSolo(dogType, singlePlayerMode = 'classic') {
-        console.log('🎮 StartScreen.selectSolo called with dogType:', dogType, 'singlePlayerMode:', singlePlayerMode);
+        console.log('[GAME] StartScreen.selectSolo called with dogType:', dogType, 'singlePlayerMode:', singlePlayerMode);
         this.selectedDog = dogType;
         this.selectedMode = 'solo';
         this.singlePlayerMode = singlePlayerMode;
         this.playUIClick();
-        console.log('🚀 StartScreen.selectSolo calling startGame()');
+        console.log('[GAME] StartScreen.selectSolo calling startGame()');
         this.startGame();
     }
     
@@ -265,7 +265,7 @@ export class StartScreen {
                 roomData = this.networkManager.getCurrentRoom();
             }
             
-            console.log('🎮 Starting game:', {
+            console.log('[GAME] Starting game:', {
                 mode: this.selectedMode || 'solo',
                 room: roomData ? roomData.roomCode : 'none',
                 players: roomData ? roomData.players?.length : 0,

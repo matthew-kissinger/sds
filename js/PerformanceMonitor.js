@@ -375,17 +375,17 @@ export class PerformanceMonitor {
         const avgFps = this.frameTimeHistory.length > 0 ? 
             (1000 / this.metrics.avgFrameTime).toFixed(1) : '0';
         
-        console.group('🔍 Performance Summary');
-        console.log(`📊 Average FPS: ${avgFps}`);
-        console.log(`🐑 Active Sheep: ${this.metrics.activeSheepCount}/${this.metrics.sheepCount}`);
-        console.log(`🌱 Grass Instances: ${this.metrics.grassInstances.toLocaleString()}`);
-        console.log(`🎨 Draw Calls: ${this.metrics.drawCalls}`);
-        console.log(`📐 Triangles: ${this.metrics.triangles.toLocaleString()}`);
-        console.log(`⏱️ Frame Time: ${this.metrics.avgFrameTime.toFixed(2)}ms`);
+        console.group('[PERF] Performance Summary');
+        console.log(`Average FPS: ${avgFps}`);
+        console.log(`Active Sheep: ${this.metrics.activeSheepCount}/${this.metrics.sheepCount}`);
+        console.log(`Grass Instances: ${this.metrics.grassInstances.toLocaleString()}`);
+        console.log(`Draw Calls: ${this.metrics.drawCalls}`);
+        console.log(`Triangles: ${this.metrics.triangles.toLocaleString()}`);
+        console.log(`Frame Time: ${this.metrics.avgFrameTime.toFixed(2)}ms`);
         
         const recommendations = this.getPerformanceRecommendations();
         if (recommendations.length > 0) {
-            console.group('💡 Recommendations');
+            console.group('Recommendations');
             recommendations.forEach(rec => console.log(`• ${rec}`));
             console.groupEnd();
         }

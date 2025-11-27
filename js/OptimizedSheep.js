@@ -2,6 +2,31 @@ import * as THREE from 'three';
 import * as BufferGeometryUtils from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { Vector2D } from './Vector2D.js';
 import { Boid } from './Boid.js';
+import { loadShader } from './shaders/ShaderLoader.js';
+import { getGameState, getNetworkManager } from './GameBridge.js';
+
+// Shader cache for sync access after async load
+let sheepVertexShader = null;
+let sheepFragmentShader = null;
+let shadersLoaded = false;
+
+/**
+ * Preload sheep shaders - call this early in app initialization
+ */
+export async function preloadSheepShaders() {
+    if (shadersLoaded) return;
+
+    try {
+        [sheepVertexShader, sheepFragmentShader] = await Promise.all([
+            loadShader('./js/shaders/sheep/vertex.glsl'),
+            loadShader('./js/shaders/sheep/fragment.glsl')
+        ]);
+        shadersLoaded = true;
+        console.log('[SHADER] Sheep shaders loaded');
+    } catch (error) {
+        console.warn('[SHADER] Failed to load sheep shaders, using inline fallback:', error);
+    }
+}
 
 /**
  * OptimizedSheep - High-performance sheep system using modern GPU techniques
@@ -19,14 +44,14 @@ export class OptimizedSheepSystem {
         this.sheepCount = sheepCount;
         this.sheep = [];
         this.audioManager = null;
-        
+
         // Create geometry and materials
         this.createMergedGeometry();
         this.createOptimizedMaterial();
-        
+
         // Create instanced mesh
         this.createInstancedMesh();
-        
+
         // Initialize sheep data
         this.initializeSheepData();
     }
@@ -124,129 +149,13 @@ export class OptimizedSheepSystem {
     
     /**
      * Create optimized material with custom shaders
+     * Uses externally loaded shaders if available, falls back to inline
      */
     createOptimizedMaterial() {
-        // Vertex shader with GPU animation
-        const vertexShader = `
-            // Use built-in color attribute from Three.js
-            attribute float vertexId;
-            
-            // Per-instance attributes
-            attribute vec4 instanceData; // x: animPhase, y: speed, z: state, w: uniqueId
-            attribute vec4 instanceAnimation; // x: walkCycle, y: bounce, z: direction, w: blinkTimer
-            
-            uniform float time;
-            uniform float globalAnimSpeed;
-            
-            varying vec3 vColor;
-            varying vec3 vNormal;
-            varying vec3 vViewPosition;
-            
-            // Animation functions
-            vec3 animateVertex(vec3 position, float vId) {
-                vec3 animated = position;
-                
-                float animPhase = instanceData.x;
-                float speed = instanceData.y;
-                float walkCycle = instanceAnimation.x;
-                float bounce = instanceAnimation.y;
-                
-                // Leg animation (vertexId 100-139)
-                if (vId >= 100.0 && vId < 140.0) {
-                    float legIndex = floor((vId - 100.0) / 10.0); // 0-3
-                    float legPhase = legIndex < 2.0 ? 0.0 : 3.14159; // Front/back offset
-                    float sidePhase = mod(legIndex, 2.0) * 1.57; // Left/right offset
-                    
-                    float legTime = time * globalAnimSpeed + animPhase + walkCycle;
-                    float legLift = max(0.0, sin(legTime * 3.0 + legPhase + sidePhase)) * bounce * 2.0;
-                    
-                    animated.y += legLift * speed;
-                    
-                    // Slight forward/back motion
-                    animated.z += sin(legTime * 3.0 + legPhase + sidePhase) * bounce * 0.3 * speed;
-                }
-                
-                // Body bounce (vertexId 0-49)
-                if (vId < 50.0) {
-                    float bodyTime = time * globalAnimSpeed + animPhase;
-                    animated.y += sin(bodyTime * 2.0) * bounce * 0.5 * speed;
-                    
-                    // Slight wobble
-                    animated.x += sin(bodyTime * 2.5) * bounce * 0.1 * speed;
-                }
-                
-                // Head bob (vertexId 50-99)
-                if (vId >= 50.0 && vId < 100.0) {
-                    float headTime = time * globalAnimSpeed + animPhase + 0.5;
-                    animated.y += sin(headTime * 2.0) * bounce * 0.3 * speed;
-                    
-                    // Look direction
-                    float lookAngle = instanceAnimation.z;
-                    animated.x += sin(lookAngle) * 0.1;
-                    animated.z += cos(lookAngle) * 0.1;
-                }
-                
-                return animated;
-            }
-            
-            void main() {
-                // Access vertex color using built-in Three.js attribute
-                #ifdef USE_COLOR
-                    vColor = color;
-                #else
-                    vColor = vec3(1.0); // Default to white if no vertex colors
-                #endif
-                
-                vNormal = normalMatrix * normal;
-                
-                // Animate vertex position
-                vec3 animatedPosition = animateVertex(position, vertexId);
-                
-                // Apply instance transformation with proper matrix multiplication
-                vec4 instancePosition = instanceMatrix * vec4(animatedPosition, 1.0);
-                
-                vec4 mvPosition = modelViewMatrix * instancePosition;
-                vViewPosition = -mvPosition.xyz;
-                
-                gl_Position = projectionMatrix * mvPosition;
-            }
-        `;
-        
-        // Fragment shader with simple toon shading
-        const fragmentShader = `
-            varying vec3 vColor;
-            varying vec3 vNormal;
-            varying vec3 vViewPosition;
-            
-            uniform vec3 fogColor;
-            uniform float fogNear;
-            uniform float fogFar;
-            
-            void main() {
-                // Simple toon shading
-                vec3 normal = normalize(vNormal);
-                vec3 viewDir = normalize(vViewPosition);
-                
-                // Basic lighting
-                vec3 lightDir = normalize(vec3(0.3, 1.0, 0.5));
-                float NdotL = dot(normal, lightDir);
-                
-                // Toon shading steps
-                float toon = smoothstep(0.0, 0.01, NdotL) * 0.5 + 0.5;
-                toon = floor(toon * 3.0) / 3.0;
-                
-                // Apply vertex color with toon shading
-                vec3 finalColor = vColor * toon;
-                
-                // Apply fog
-                float depth = length(vViewPosition);
-                float fogFactor = smoothstep(fogNear, fogFar, depth);
-                finalColor = mix(finalColor, fogColor, fogFactor);
-                
-                gl_FragColor = vec4(finalColor, 1.0);
-            }
-        `;
-        
+        // Use loaded shaders or fallback to inline
+        const vertexShader = sheepVertexShader || this.getInlineVertexShader();
+        const fragmentShader = sheepFragmentShader || this.getInlineFragmentShader();
+
         this.material = new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
@@ -543,6 +452,97 @@ export class OptimizedSheepSystem {
         }
         
         this.instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    /**
+     * Inline vertex shader fallback (used if external shader fails to load)
+     */
+    getInlineVertexShader() {
+        return `
+            attribute float vertexId;
+            attribute vec4 instanceData;
+            attribute vec4 instanceAnimation;
+
+            uniform float time;
+            uniform float globalAnimSpeed;
+
+            varying vec3 vColor;
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+
+            vec3 animateVertex(vec3 position, float vId) {
+                vec3 animated = position;
+                float animPhase = instanceData.x;
+                float speed = instanceData.y;
+                float walkCycle = instanceAnimation.x;
+                float bounce = instanceAnimation.y;
+
+                if (vId >= 100.0 && vId < 140.0) {
+                    float legIndex = floor((vId - 100.0) / 10.0);
+                    float legPhase = legIndex < 2.0 ? 0.0 : 3.14159;
+                    float sidePhase = mod(legIndex, 2.0) * 1.57;
+                    float legTime = time * globalAnimSpeed + animPhase + walkCycle;
+                    float legLift = max(0.0, sin(legTime * 3.0 + legPhase + sidePhase)) * bounce * 2.0;
+                    animated.y += legLift * speed;
+                    animated.z += sin(legTime * 3.0 + legPhase + sidePhase) * bounce * 0.3 * speed;
+                }
+                if (vId < 50.0) {
+                    float bodyTime = time * globalAnimSpeed + animPhase;
+                    animated.y += sin(bodyTime * 2.0) * bounce * 0.5 * speed;
+                    animated.x += sin(bodyTime * 2.5) * bounce * 0.1 * speed;
+                }
+                if (vId >= 50.0 && vId < 100.0) {
+                    float headTime = time * globalAnimSpeed + animPhase + 0.5;
+                    animated.y += sin(headTime * 2.0) * bounce * 0.3 * speed;
+                    float lookAngle = instanceAnimation.z;
+                    animated.x += sin(lookAngle) * 0.1;
+                    animated.z += cos(lookAngle) * 0.1;
+                }
+                return animated;
+            }
+
+            void main() {
+                #ifdef USE_COLOR
+                    vColor = color;
+                #else
+                    vColor = vec3(1.0);
+                #endif
+                vNormal = normalMatrix * normal;
+                vec3 animatedPosition = animateVertex(position, vertexId);
+                vec4 instancePosition = instanceMatrix * vec4(animatedPosition, 1.0);
+                vec4 mvPosition = modelViewMatrix * instancePosition;
+                vViewPosition = -mvPosition.xyz;
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+    }
+
+    /**
+     * Inline fragment shader fallback (used if external shader fails to load)
+     */
+    getInlineFragmentShader() {
+        return `
+            varying vec3 vColor;
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+
+            uniform vec3 fogColor;
+            uniform float fogNear;
+            uniform float fogFar;
+
+            void main() {
+                vec3 normal = normalize(vNormal);
+                vec3 lightDir = normalize(vec3(0.3, 1.0, 0.5));
+                float NdotL = dot(normal, lightDir);
+                float toon = smoothstep(0.0, 0.01, NdotL) * 0.5 + 0.5;
+                toon = floor(toon * 3.0) / 3.0;
+                vec3 finalColor = vColor * toon;
+                float depth = length(vViewPosition);
+                float fogFactor = smoothstep(fogNear, fogFar, depth);
+                finalColor = mix(finalColor, fogColor, fogFactor);
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+        `;
     }
 }
 
@@ -1152,26 +1152,22 @@ export class OptimizedSheepInstance extends Boid {
         }
         
         // Try to access competitive gates through various possible paths
-        if (typeof window !== 'undefined' && window.gameInstance) {
-            // Try gameState.competitiveGates first
-            if (window.gameInstance.gameState && window.gameInstance.gameState.competitiveGates) {
-                return window.gameInstance.gameState.competitiveGates;
-            }
-            
-            // Try networkManager.currentRoom for multiplayer
-            if (window.gameInstance.networkManager && 
-                window.gameInstance.networkManager.currentRoom && 
-                window.gameInstance.networkManager.currentRoom.competitiveGates) {
-                return window.gameInstance.networkManager.currentRoom.competitiveGates;
-            }
-            
-            // Try getting from the latest game state if in multiplayer
-            if (window.gameInstance.networkManager && 
-                window.gameInstance.networkManager.latestGameState &&
-                window.gameInstance.networkManager.latestGameState.competitive &&
-                window.gameInstance.networkManager.latestGameState.competitive.gates) {
-                return window.gameInstance.networkManager.latestGameState.competitive.gates;
-            }
+        const gameState = getGameState();
+        const networkManager = getNetworkManager();
+
+        // Try gameState.competitiveGates first
+        if (gameState?.competitiveGates) {
+            return gameState.competitiveGates;
+        }
+
+        // Try networkManager.currentRoom for multiplayer
+        if (networkManager?.currentRoom?.competitiveGates) {
+            return networkManager.currentRoom.competitiveGates;
+        }
+
+        // Try getting from the latest game state if in multiplayer
+        if (networkManager?.latestGameState?.competitive?.gates) {
+            return networkManager.latestGameState.competitive.gates;
         }
         
         return null;

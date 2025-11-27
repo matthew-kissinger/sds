@@ -2,6 +2,7 @@
  * Game Settings Management
  * Handles loading, saving, and applying game settings
  */
+import { getTerrainBuilder, getAudioManager, getPerformanceMonitor } from '../../GameBridge.js';
 
 // Default settings
 export function getDefaultSettings() {
@@ -44,8 +45,8 @@ export function applySettingsToGame(settings) {
     const defaults = getDefaultSettings();
 
     // Apply performance mode settings only if changed from default
-    if (settings.performanceMode !== defaults.performanceMode && window.gameInstance?.terrainBuilder) {
-        const terrain = window.gameInstance.terrainBuilder;
+    const terrain = getTerrainBuilder();
+    if (settings.performanceMode !== defaults.performanceMode && terrain) {
         const lodSettings = {
             performance: { near: 30, mid: 80, far: 150, horizon: 200 },
             balanced: { near: 50, mid: 150, far: 300, horizon: 500 },
@@ -60,8 +61,8 @@ export function applySettingsToGame(settings) {
     }
 
     // Apply audio settings only if changed from defaults
-    if (window.gameInstance?.audioManager) {
-        const audioManager = window.gameInstance.audioManager;
+    const audioManager = getAudioManager();
+    if (audioManager) {
 
         if (settings.audioVolume !== defaults.audioVolume) {
             audioManager.setMasterVolume(settings.audioVolume / 100);
@@ -75,8 +76,8 @@ export function applySettingsToGame(settings) {
     }
 
     // Apply performance stats toggle only if changed from default
-    if (settings.showStats !== defaults.showStats && window.gameInstance?.performanceMonitor) {
-        const perfMonitor = window.gameInstance.performanceMonitor;
+    const perfMonitor = getPerformanceMonitor();
+    if (settings.showStats !== defaults.showStats && perfMonitor) {
         if (settings.showStats) {
             perfMonitor.show();
             console.log('[SETTINGS] Performance stats enabled');

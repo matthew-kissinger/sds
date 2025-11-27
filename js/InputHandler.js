@@ -57,7 +57,7 @@ export class InputHandler {
                 event.preventDefault();
             } else if (key === 'c' && this.onDebugComplete) {
                 // DEBUG: Instant completion for testing with 'C' key
-                console.log('🚀 DEBUG: Triggering instant completion...');
+                console.log('[DEBUG] Triggering instant completion...');
                 this.onDebugComplete();
                 event.preventDefault();
             }
@@ -133,11 +133,11 @@ export class InputHandler {
                 
                 let pauseMessage;
                 if (isMobile) {
-                    pauseMessage = '⏸️ PAUSED<br><small>Tap to resume</small>';
+                    pauseMessage = 'PAUSED<br><small>Tap to resume</small>';
                 } else if (hasGamepad) {
-                    pauseMessage = '⏸️ PAUSED<br><small>Press ESC or START to resume</small>';
+                    pauseMessage = 'PAUSED<br><small>Press ESC or START to resume</small>';
                 } else {
-                    pauseMessage = '⏸️ PAUSED<br><small>Press ESC to resume</small>';
+                    pauseMessage = 'PAUSED<br><small>Press ESC to resume</small>';
                 }
                 
                 pauseIndicator.innerHTML = pauseMessage;

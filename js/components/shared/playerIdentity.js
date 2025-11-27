@@ -2,6 +2,7 @@
  * Player Identity Management
  * Handles localStorage persistence and server registration of player identity
  */
+import { getNetworkManager } from '../../GameBridge.js';
 
 // Get stored player identity from localStorage
 export function getPlayerIdentity() {
@@ -36,7 +37,7 @@ export async function submitGameScore(gameMode, score, additionalData = {}) {
         return;
     }
 
-    const networkManager = window.gameInstance?.networkManager;
+    const networkManager = getNetworkManager();
     if (!networkManager) {
         console.warn('[SCORE] NetworkManager not available for score submission');
         return;

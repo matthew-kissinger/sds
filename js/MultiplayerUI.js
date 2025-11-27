@@ -58,16 +58,16 @@ export class MultiplayerUI {
             const titleElement = document.getElementById('multiplayer-title');
             if (titleElement) {
                 if (playerCount === 2) {
-                    titleElement.textContent = '🏆 Racing Mode (First to 101)';
+                    titleElement.textContent = 'Racing Mode (First to 101)';
                 } else {
-                    titleElement.textContent = '🏆 Racing Mode (Highest Score)';
+                    titleElement.textContent = 'Racing Mode (Highest Score)';
                 }
             }
         } else if (gameMode === 'timed') {
             this.winThreshold = null;
             const titleElement = document.getElementById('multiplayer-title');
             if (titleElement) {
-                titleElement.textContent = '⏱️ Timed Collection (3 minutes)';
+                titleElement.textContent = 'Timed Collection (3 minutes)';
             }
         } else {
             this.winThreshold = null;
@@ -119,9 +119,9 @@ export class MultiplayerUI {
         if (titleElement) {
             if (winCondition.type === 'race') {
                 const progressPercent = Math.round(winCondition.progress * 100);
-                titleElement.textContent = `🏆 Competitive Race (${progressPercent}% to win)`;
+                titleElement.textContent = `Competitive Race (${progressPercent}% to win)`;
             } else if (winCondition.type === 'highest_score') {
-                titleElement.textContent = `🏆 Competitive Mode (${winCondition.totalCollected}/${winCondition.totalSheep})`;
+                titleElement.textContent = `Competitive Mode (${winCondition.totalCollected}/${winCondition.totalSheep})`;
             }
         }
         
@@ -204,7 +204,7 @@ export class MultiplayerUI {
             // Add special styling for leader and current player
             if (isLeader) {
                 playerDiv.classList.add('leader');
-                playerName.textContent = `👑 ${nameText}`;
+                playerName.textContent = nameText;
             }
             if (isYou) {
                 playerDiv.classList.add('you');
@@ -295,20 +295,20 @@ export class MultiplayerUI {
         
         switch (this.connectionState) {
             case 'connected':
-                this.connectionIcon.textContent = '🔗';
+                this.connectionIcon.textContent = '[OK]';
                 this.connectionIcon.classList.add('connected');
                 break;
             case 'disconnected':
-                this.connectionIcon.textContent = '❌';
+                this.connectionIcon.textContent = '[ERROR]';
                 this.connectionIcon.classList.add('disconnected');
                 break;
             case 'connecting':
             case 'reconnecting':
-                this.connectionIcon.textContent = '⏳';
+                this.connectionIcon.textContent = '[...]';
                 this.connectionIcon.classList.add('reconnecting');
                 break;
             default:
-                this.connectionIcon.textContent = '❓';
+                this.connectionIcon.textContent = '[?]';
                 this.connectionIcon.classList.add('disconnected');
         }
     }
@@ -448,10 +448,10 @@ export class MultiplayerUI {
         let title, subtitle, message;
         
         if (isYouWinner) {
-            title = winType === 'timeout' ? '⏱️ TIME\'S UP - VICTORY! 🏆' : '🏆 VICTORY! 🏆';
+            title = winType === 'timeout' ? "TIME'S UP - VICTORY!" : 'VICTORY!';
             subtitle = winType === 'timeout' ? 'You collected the most sheep!' : 'You won the competition!';
         } else {
-            title = winType === 'timeout' ? '⏱️ TIME\'S UP' : '🥈 Game Complete';
+            title = winType === 'timeout' ? "TIME'S UP" : 'Game Complete';
             const winnerName = this.currentPlayers.find(p => p.id === winner)?.name || winner;
             subtitle = winType === 'timeout' ? `${winnerName} collected the most sheep!` : `${winnerName} won the competition!`;
         }
@@ -471,7 +471,7 @@ export class MultiplayerUI {
                 const player = this.currentPlayers.find(p => p.id === playerId);
                 const playerName = player?.name || playerId;
                 const isYou = playerId === this.playerId;
-                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                const medal = index === 0 ? '1st' : index === 1 ? '2nd' : index === 2 ? '3rd' : `${index + 1}th`;
                 return `${medal} ${playerName}${isYou ? ' (You)' : ''}: ${score} sheep`;
             })
             .join('<br>');

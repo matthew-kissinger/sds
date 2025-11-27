@@ -92,7 +92,7 @@ export class NetworkManager {
                     port: this.serverPort
                 };
                 if (this.debugMode) {
-                    console.log(`🔗 DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
+                    console.log(`[NET] DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
                 }
             } else {
                 // DigitalOcean Droplet - HTTPS with Let's Encrypt certificate via nip.io
@@ -102,19 +102,19 @@ export class NetworkManager {
                     port: null  // Use full URL as per Geckos.io docs for proxy setup
                 };
                 if (this.debugMode) {
-                    console.log(`🔗 DEBUG: Connecting to ${serverUrl} (Cloudflare HTTPS)`);
+                    console.log(`[NET] DEBUG: Connecting to ${serverUrl} (Cloudflare HTTPS)`);
                 }
             }
             
             if (this.debugMode) {
-                console.log(`🔗 DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
-                console.log(`🔗 DEBUG: Geckos config:`, geckosConfig);
+                console.log(`[NET] DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
+                console.log(`[NET] DEBUG: Geckos config:`, geckosConfig);
             }
             
             // Check for mixed content issue (HTTPS page trying to connect to HTTP server)
             if (window.location.protocol === 'https:' && geckosConfig.url.startsWith('http:')) {
                 const errorMsg = 'Cannot connect to HTTP game server from HTTPS GitHub Pages. The game server needs HTTPS configuration.';
-                console.error('⚠️ Mixed Content Error:', errorMsg);
+                console.error('[WARN] Mixed Content Error:', errorMsg);
                 this.connecting = false;
                 this.notifyConnectionStateChange('error');
                 this.notifyError(errorMsg);
@@ -124,23 +124,23 @@ export class NetworkManager {
             this.channel = geckos(geckosConfig);
             
             if (this.debugMode) {
-                console.log(`🔗 DEBUG: Geckos client created`);
+                console.log(`[NET] DEBUG: Geckos client created`);
             }
             this.setupEventHandlers();
             if (this.debugMode) {
-                console.log(`🔗 DEBUG: Event handlers set up`);
+                console.log(`[NETWORK] DEBUG: Event handlers set up`);
             }
             
             return new Promise((resolve, reject) => {
                 if (this.debugMode) {
-                    console.log(`🔗 DEBUG: Setting up connection promise with 30s timeout`);
+                    console.log(`[NETWORK] DEBUG: Setting up connection promise with 30s timeout`);
                 }
                 
                 // Use different timeouts for local vs production
                 const timeoutDuration = this.serverHost === '127.0.0.1' || this.serverHost === 'localhost' ? 5000 : 15000;
                 const timeout = setTimeout(() => {
                     if (this.debugMode) {
-                        console.log(`🔗 DEBUG: Connection timeout after ${timeoutDuration/1000} seconds`);
+                        console.log(`[NETWORK] DEBUG: Connection timeout after ${timeoutDuration/1000} seconds`);
                     }
                     this.connecting = false;
                     reject(new Error(`Connection timeout - ${this.serverHost === '127.0.0.1' ? 'is local server running?' : 'server may not support WebRTC'}`));
@@ -148,20 +148,20 @@ export class NetworkManager {
                 
                 this.channel.onConnect(error => {
                     if (this.debugMode) {
-                        console.log(`🔗 DEBUG: onConnect callback triggered, error:`, error);
+                        console.log(`[NETWORK] DEBUG: onConnect callback triggered, error:`, error);
                     }
                     clearTimeout(timeout);
                     this.connecting = false;
                     
                     if (error) {
                         if (this.debugMode) {
-                            console.error('🔗 DEBUG: Connection failed with error:', error);
+                            console.error('[NETWORK] DEBUG: Connection failed with error:', error);
                         }
                         this.notifyError('Failed to connect to server');
                         reject(error);
                     } else {
                         if (this.debugMode) {
-                            console.log('🔗 DEBUG: Connection successful!');
+                            console.log('[NETWORK] DEBUG: Connection successful!');
                         }
                         this.connected = true;
                         this.reconnectAttempts = 0;
@@ -283,12 +283,12 @@ export class NetworkManager {
         });
         
         this.channel.on('gameComplete', (data) => {
-            console.log('🎉 Game completed:', data);
+            console.log('[GAME] Game completed:', data);
             console.log('NetworkManager received gameComplete event with data:', JSON.stringify(data, null, 2));
             
             // Handle competitive vs cooperative completion
             if (data.isCompetitive && data.competitive) {
-                console.log('🏆 Competitive game completion detected');
+                console.log('[RACING] Competitive game completion detected');
                 console.log('Winner:', data.competitive.winner);
                 console.log('Final scores:', data.competitive.finalScores);
                 
@@ -377,7 +377,7 @@ export class NetworkManager {
                 reject(new Error('Room join timeout'));
             }, 5000);
             
-            console.log(`🔍 DEBUG: Sending joinRoom with roomCode: "${roomCode}", playerName: "${playerName}", dogType: "${dogType}"`);
+            console.log(`[NETWORK] DEBUG: Sending joinRoom with roomCode: "${roomCode}", playerName: "${playerName}", dogType: "${dogType}"`);
             this.channel.emit('joinRoom', { roomCode, playerName, dogType });
             
             const handleRoomJoined = (data) => {
@@ -560,19 +560,19 @@ export class NetworkManager {
                 
                 // If we were in a room, try to rejoin
                 if (this.currentRoom && this.playerName) {
-                    console.log('🔄 Reconnecting to room:', this.currentRoom.code);
+                    console.log('[NETWORK] Reconnecting to room:', this.currentRoom.code);
                     
                         // Check if it was a racing room for special handling
         const wasRacing = this.currentRoom.gameMode === 'racing';
         if (wasRacing) {
-            console.log('🏆 Reconnecting to racing room');
+            console.log('[RACING] Reconnecting to racing room');
         }
                     
                     await this.joinRoom(this.currentRoom.code, this.playerName, this.dogType);
                     
                             // If we had racing data and it was completed, restore it
         if (wasRacing && this.lastCompetitionResult) {
-            console.log('🏆 Restoring racing completion state');
+            console.log('[RACING] Restoring racing completion state');
                         // Notify the game about the previous competition result
                         this.notifyPlayerUpdate({ 
                             type: 'competitiveStateRestored', 
@@ -709,20 +709,20 @@ export class NetworkManager {
     // Lightweight connection for leaderboard-only operations
     async connectForLeaderboard() {
         if (this.connected) {
-            console.log('🔗 Already connected, reusing existing session for leaderboard');
-            console.log(`🔍 Session ID: ${this.channel?.id || 'unknown'}`);
+            console.log('[NETWORK] Already connected, reusing existing session for leaderboard');
+            console.log(`[NETWORK] Session ID: ${this.channel?.id || 'unknown'}`);
             return Promise.resolve();
         }
         
-        console.log('🔗 Establishing leaderboard-only connection...');
+        console.log('[NETWORK] Establishing leaderboard-only connection...');
         
         // Use the existing connect method but mark it as leaderboard-only
         try {
             await this.connect();
-            console.log('✅ Leaderboard connection established successfully');
-            console.log(`🔍 New session ID: ${this.channel?.id || 'unknown'}`);
+            console.log('[OK] Leaderboard connection established successfully');
+            console.log(`[NETWORK] New session ID: ${this.channel?.id || 'unknown'}`);
         } catch (error) {
-            console.error('❌ Failed to establish leaderboard connection:', error.message);
+            console.error('[ERROR] Failed to establish leaderboard connection:', error.message);
             throw error;
         }
     }
@@ -823,7 +823,7 @@ export class NetworkManager {
             
             const handleAllLeaderboards = (data) => {
                 clearTimeout(timeout);
-                console.log('🔍 NetworkManager received leaderboard data:', data);
+                console.log('[LEADERBOARD] NetworkManager received leaderboard data:', data);
                 // Return the leaderboards object directly
                 resolve(data.leaderboards || data);
             };

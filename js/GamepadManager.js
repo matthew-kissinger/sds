@@ -47,7 +47,7 @@ export class GamepadManager {
         this.connectionCheckInterval = 100; // Check every 100ms
         
         this.setupGamepadEvents();
-        console.log('🎮 GamepadManager initialized');
+        console.log('[GAMEPAD] GamepadManager initialized');
     }
     
     /**
@@ -72,7 +72,7 @@ export class GamepadManager {
         this.connectionState = 'connected';
         this.previousButtons = new Array(this.gamepad.buttons.length).fill(false);
         
-        console.log('🎮 Gamepad connected:', {
+        console.log('[GAMEPAD] Gamepad connected:', {
             id: event.gamepad.id,
             buttons: event.gamepad.buttons.length,
             axes: event.gamepad.axes.length
@@ -90,7 +90,7 @@ export class GamepadManager {
         this.connectionState = 'disconnected';
         this.gamepad = null;
         
-        console.log('🎮 Gamepad disconnected:', event.gamepad.id);
+        console.log('[GAMEPAD] Gamepad disconnected:', event.gamepad.id);
         
         // Show disconnection notification
         this.showConnectionNotification(false);
@@ -141,7 +141,7 @@ export class GamepadManager {
                     this.connected = true;
                     this.connectionState = 'connected';
                     this.previousButtons = new Array(this.gamepad.buttons.length).fill(false);
-                    console.log('🎮 Gamepad detected:', this.gamepad.id);
+                    console.log('[GAMEPAD] Gamepad detected:', this.gamepad.id);
                     this.showConnectionNotification(true);
                 }
                 foundGamepad = true;
@@ -154,7 +154,7 @@ export class GamepadManager {
             this.connected = false;
             this.connectionState = 'disconnected';
             this.gamepad = null;
-            console.log('🎮 Gamepad connection lost');
+            console.log('[GAMEPAD] Gamepad connection lost');
             this.showConnectionNotification(false);
         }
     }
@@ -290,7 +290,7 @@ export class GamepadManager {
      */
     setDeadzone(deadzone) {
         this.deadzone = Math.max(0, Math.min(1, deadzone));
-        console.log('🎮 Gamepad deadzone set to:', this.deadzone);
+        console.log('[GAMEPAD] Gamepad deadzone set to:', this.deadzone);
     }
     
     /**
@@ -323,7 +323,7 @@ export class GamepadManager {
         `;
         
         notification.innerHTML = `
-            🎮 Gamepad ${connected ? 'Connected' : 'Disconnected'}
+            Gamepad ${connected ? 'Connected' : 'Disconnected'}
             ${connected ? '<br><small>Use left stick to move, right trigger to sprint</small>' : ''}
         `;
         

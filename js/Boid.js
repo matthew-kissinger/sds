@@ -25,6 +25,11 @@ export class Boid {
         this.minMovementThreshold = 0.001; // Minimum velocity to prevent micro-movements
         this.forceAccumulator = new Vector2D(0, 0);
         this.dampingFactor = 0.98; // Velocity damping to reduce oscillations
+
+        // Physics timing - velocity scale factor for frame-rate independent movement
+        // This is a unitless multiplier that was tuned when velocities were set
+        // Changing this will make everything move faster/slower proportionally
+        this.velocityScale = 144;
         
         // Visual representation
         this.mesh = null;
@@ -225,8 +230,8 @@ export class Boid {
         // Only apply movement if above threshold to prevent micro-movements
         if (smoothedVelocity.magnitude() > this.minMovementThreshold) {
             this.velocity = smoothedVelocity;
-            // Time-based physics calibrated to 144 FPS baseline
-            this.position.add(this.velocity.clone().multiply(deltaTime * 144));
+            // Frame-rate independent movement: deltaTime ensures consistent speed regardless of FPS
+            this.position.add(this.velocity.clone().multiply(deltaTime * this.velocityScale));
         } else {
             // Stop micro-movements
             this.velocity.multiply(0);

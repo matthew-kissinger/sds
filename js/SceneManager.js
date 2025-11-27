@@ -31,7 +31,7 @@ export class SceneManager {
         // Disable shadows on mobile for performance
         if (this.isMobile) {
             this.renderer.shadowMap.enabled = false;
-            console.log('💡 Shadows disabled on mobile for performance');
+            console.log('[PERF] Shadows disabled on mobile for performance');
         } else {
             this.renderer.shadowMap.enabled = true;
             this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -41,7 +41,7 @@ export class SceneManager {
         // Force devicePixelRatio to 1 on mobile, otherwise limit to 2
         if (this.isMobile) {
             this.renderer.setPixelRatio(1);
-            console.log('📱 Mobile detected: forcing devicePixelRatio to 1');
+            console.log('[PERF] Mobile detected: forcing devicePixelRatio to 1');
         } else {
             this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         }
@@ -74,8 +74,8 @@ export class SceneManager {
         this.init();
         
         // Log mobile camera optimization status
-        console.log(`🎥 Camera initialized for ${this.isMobile ? 'MOBILE' : 'DESKTOP'} device`);
-        console.log(`🎥 Camera parameters: near=${this.camera.near}, far=${this.camera.far}, minDistance=${this.minCameraDistance}`);
+        console.log(`[CAMERA] Initialized for ${this.isMobile ? 'MOBILE' : 'DESKTOP'} device`);
+        console.log(`[CAMERA] Parameters: near=${this.camera.near}, far=${this.camera.far}, minDistance=${this.minCameraDistance}`);
     }
     
     /**
@@ -305,7 +305,7 @@ export class SceneManager {
      * @param {Array} gateColors - Optional array of colors from gate configuration
      */
     initializePlayerColors(playerIds, gateColors = null) {
-        console.log(`🎨 Initializing player colors for ${playerIds.length} players`);
+        console.log(`[SCENE] Initializing player colors for ${playerIds.length} players`);
         
         this.playerColors.clear();
         
@@ -430,7 +430,7 @@ export class SceneManager {
             this.removePlayerColor(playerId);
         }
         this.playerColors.clear();
-        console.log('🧹 Cleared all player colors');
+        console.log('[SCENE] Cleared all player colors');
     }
     
     /**
@@ -516,7 +516,7 @@ export class SceneManager {
         // Always look towards the center of the field
         this.camera.lookAt(0, 0, 0);
         
-        console.log(`🎥 Set competitive camera for ${playerGate.direction} gate: position(${this.camera.position.x}, ${this.camera.position.y}, ${this.camera.position.z}), direction stored: ${this.competitiveCameraDirection}`);
+        console.log(`[CAMERA] Set competitive camera for ${playerGate.direction} gate: position(${this.camera.position.x}, ${this.camera.position.y}, ${this.camera.position.z}), direction stored: ${this.competitiveCameraDirection}`);
     }
 
     /**
@@ -528,7 +528,7 @@ export class SceneManager {
         
         this.camera.position.set(0, 60, -60);
         this.camera.lookAt(0, 0, 0);
-        console.log('🎥 Reset camera to default position for solo/cooperative mode');
+        console.log('[CAMERA] Reset to default position for solo/cooperative mode');
     }
 
     /**

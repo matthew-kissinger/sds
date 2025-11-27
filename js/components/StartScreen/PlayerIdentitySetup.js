@@ -2,8 +2,10 @@
  * PlayerIdentitySetup Component
  * Initial player name setup flow
  */
-const { createElement, useState } = window.React;
+import { getNetworkManager } from '../../GameBridge.js';
 import { generatePersistentId, savePlayerIdentity } from '../shared/playerIdentity.js';
+
+const { createElement, useState } = window.React;
 
 export function PlayerIdentitySetup({ onComplete }) {
     const [displayName, setDisplayName] = useState('');
@@ -47,10 +49,11 @@ export function PlayerIdentitySetup({ onComplete }) {
 
             // Register with server if connected
             let serverResponse = null;
-            if (window.gameInstance?.networkManager) {
+            const nm = getNetworkManager();
+            if (nm) {
                 try {
-                    await window.gameInstance.networkManager.connect();
-                    serverResponse = await window.gameInstance.networkManager.registerPlayer(
+                    await nm.connect();
+                    serverResponse = await nm.registerPlayer(
                         persistentId,
                         finalDisplayName,
                         nameType
@@ -112,7 +115,7 @@ export function PlayerIdentitySetup({ onComplete }) {
             key: 'title',
             className: 'text-2xl font-bold text-center text-white mb-2',
             style: { textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)' }
-        }, 'Welcome to Sheep Dog Simulator!'),
+        }, 'Welcome to Sheep Dog Sim!'),
 
         createElement('p', {
             key: 'subtitle',

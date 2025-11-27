@@ -144,7 +144,7 @@ export class TerrainBuilder {
             ],
             animals: [
                 { name: 'jep', path: '/assets/models/Jep.glb' },
-                { name: 'pip', path: '/assets/models/Rauri.glb' },
+                { name: 'pip', path: '/assets/models/Pip.glb' },
                 { name: 'sally', path: '/assets/models/Sally.glb' },
                 { name: 'shiloh', path: '/assets/models/Shiloh.glb' },
                 { name: 'george_washington', path: '/assets/models/George_Washington.glb' }
@@ -158,9 +158,9 @@ export class TerrainBuilder {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     this.models.trees[model.name] = gltf.scene;
-                    console.log(`✅ Loaded tree model: ${model.name}`);
+                    console.log(`[OK] Loaded tree model: ${model.name}`);
                 }).catch(err => {
-                    console.error(`❌ Failed to load tree model ${model.name}:`, err);
+                    console.error(`[ERROR] Failed to load tree model ${model.name}:`, err);
                 })
             );
         }
@@ -170,9 +170,9 @@ export class TerrainBuilder {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     this.models.rocks[model.name] = gltf.scene;
-                    console.log(`✅ Loaded rock model: ${model.name}`);
+                    console.log(`[OK] Loaded rock model: ${model.name}`);
                 }).catch(err => {
-                    console.error(`❌ Failed to load rock model ${model.name}:`, err);
+                    console.error(`[ERROR] Failed to load rock model ${model.name}:`, err);
                 })
             );
         }
@@ -182,9 +182,9 @@ export class TerrainBuilder {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     this.models.mountains[model.name] = gltf.scene;
-                    console.log(`✅ Loaded mountain model: ${model.name}`);
+                    console.log(`[OK] Loaded mountain model: ${model.name}`);
                 }).catch(err => {
-                    console.error(`❌ Failed to load mountain model ${model.name}:`, err);
+                    console.error(`[ERROR] Failed to load mountain model ${model.name}:`, err);
                 })
             );
         }
@@ -194,32 +194,32 @@ export class TerrainBuilder {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     this.models.buildings[model.name] = gltf.scene;
-                    console.log(`✅ Loaded building model: ${model.name}`);
+                    console.log(`[OK] Loaded building model: ${model.name}`);
                 }).catch(err => {
-                    console.error(`❌ Failed to load building model ${model.name}:`, err);
+                    console.error(`[ERROR] Failed to load building model ${model.name}:`, err);
                 })
             );
         }
         
         // Load animal models
         for (const model of modelPaths.animals) {
-            console.log(`🔍 Attempting to load animal model: ${model.name} from path: ${model.path}`);
+            console.log(`[LOAD] Attempting to load animal model: ${model.name} from path: ${model.path}`);
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     this.models.animals[model.name] = gltf.scene;
                     this.models.animals[model.name + '_animations'] = gltf.animations;
-                    console.log(`✅ Loaded animal model: ${model.name} with ${gltf.animations.length} animations`);
-                    console.log(`🎬 Animation names:`, gltf.animations.map(anim => anim.name));
+                    console.log(`[OK] Loaded animal model: ${model.name} with ${gltf.animations.length} animations`);
+                    console.log(`[ANIM] Animation names:`, gltf.animations.map(anim => anim.name));
                 }).catch(err => {
-                    console.error(`❌ Failed to load animal model ${model.name} from ${model.path}:`, err);
-                    console.error(`❌ Full error details:`, err.message, err.stack);
+                    console.error(`[ERROR] Failed to load animal model ${model.name} from ${model.path}:`, err);
+                    console.error(`[ERROR] Full error details:`, err.message, err.stack);
                 })
             );
         }
 
         await Promise.all(loadPromises);
         this.modelsLoaded = true;
-        console.log('🎨 All models loaded successfully!');
+        console.log('[ASSET] All models loaded successfully!');
     }
     
     isInZone(x, z, zone) {
@@ -369,7 +369,7 @@ export class TerrainBuilder {
         this.grassInstanceCount = stats.totalClumps * (this.isMobile ? 3 : 5); // Effective blade count
         this.grassMaterial = this.grassSystem.grassMaterial;
 
-        console.log(`🌿 Advanced grass system created: ${stats.totalClumps} clumps (~${this.grassInstanceCount} effective blades)`);
+        console.log(`[GRASS] Advanced grass system created: ${stats.totalClumps} clumps (~${this.grassInstanceCount} effective blades)`);
 
         return this.grassSystem;
     }
@@ -493,7 +493,7 @@ export class TerrainBuilder {
         // Reduced desktop grass count for better performance
         const instanceCount = this.isMobile ? 80000 : 200000; // Reduced desktop to 200k for performance
         this.grassInstanceCount = instanceCount;
-        console.log(`🌿 Creating ${instanceCount} grass instances (${this.isMobile ? 'mobile' : 'desktop'} mode)`);
+        console.log(`[GRASS] Creating ${instanceCount} grass instances (${this.isMobile ? 'mobile' : 'desktop'} mode)`);
         const grassMesh = new THREE.InstancedMesh(bladeGeometry, this.grassMaterial, instanceCount);
 
         const dummy = new THREE.Object3D();
@@ -764,12 +764,12 @@ export class TerrainBuilder {
                 }
             });
             
-            console.log(`🌳 Created ${instances.length} ${treeType} instances`);
+            console.log(`[TERRAIN] Created ${instances.length} ${treeType} instances`);
         });
         
         this.trees = instancedMeshes;
         const totalTrees = Object.values(treeInstances).reduce((sum, arr) => sum + arr.length, 0);
-        console.log(`🌲 Total trees created: ${totalTrees} using instanced rendering`);
+        console.log(`[TERRAIN] Total trees created: ${totalTrees} using instanced rendering`);
         
         return instancedMeshes;
     }
@@ -937,13 +937,13 @@ export class TerrainBuilder {
                 }
             });
             
-            console.log(`🪨 Created ${instances.length} ${rockType} instances`);
+            console.log(`[BUILD] Created ${instances.length} ${rockType} instances`);
         });
         
         this.rocks = instancedMeshes;
         this.environmentDetails = instancedMeshes; // Keep compatibility
         const totalRocks = Object.values(rockInstances).reduce((sum, arr) => sum + arr.length, 0);
-        console.log(`⛰️ Total rocks created: ${totalRocks} using instanced rendering`);
+        console.log(`[BUILD] Total rocks created: ${totalRocks} using instanced rendering`);
         
         return instancedMeshes;
     }
@@ -1064,7 +1064,7 @@ export class TerrainBuilder {
         
         // Log LOD status periodically
         if (Math.random() < 0.01) { // 1% chance to log
-            console.log(`🌿 Grass LOD: ${visibleCount}/${grassCount} visible (${Math.round(visibleCount/grassCount*100)}%)`);
+            console.log(`[GRASS] LOD: ${visibleCount}/${grassCount} visible (${Math.round(visibleCount/grassCount*100)}%)`);
         }
     }
     
@@ -1156,7 +1156,7 @@ export class TerrainBuilder {
         
         // Update performance stats for monitoring
         if (this.isMobile && Math.random() < 0.01) { // 1% chance to log on mobile
-            console.log(`📱 Simple LOD Active - Grass visible: ${this.cullingStats.grassVisible || 'all'}`);
+            console.log(`[PERF] Simple LOD Active - Grass visible: ${this.cullingStats.grassVisible || 'all'}`);
         }
     }
     
@@ -1312,7 +1312,7 @@ export class TerrainBuilder {
         });
         
         this.mountains = mountainInstances;
-        console.log(`🏔️ Created ${mountainInstances.length} mountain instances`);
+        console.log(`[BUILD] Created ${mountainInstances.length} mountain instances`);
         
         return mountainInstances;
     }
@@ -1321,7 +1321,7 @@ export class TerrainBuilder {
      * Remove all existing trees from the scene
      */
     clearTrees() {
-        console.log(`🗑️ Removing ${this.trees.length} existing trees`);
+        console.log(`[BUILD] Removing ${this.trees.length} existing trees`);
         
         this.trees.forEach(tree => {
             this.scene.remove(tree);
@@ -1350,7 +1350,7 @@ export class TerrainBuilder {
         
         const farmHouseModel = this.models.buildings.farmhouse;
         if (!farmHouseModel) {
-            console.error('❌ Farm house model not found');
+            console.error('[ERROR] Farm house model not found');
             return null;
         }
         
@@ -1385,7 +1385,7 @@ export class TerrainBuilder {
         this.scene.add(farmHouse);
         this.buildings.push(farmHouse);
         
-        console.log(`🏠 Farm house added at position (${this.farmHousePosition.x}, ${this.farmHousePosition.z}) with clearing area`);
+        console.log(`[TERRAIN] Farm house added at position (${this.farmHousePosition.x}, ${this.farmHousePosition.z}) with clearing area`);
         
         return farmHouse;
     }

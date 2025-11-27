@@ -11,6 +11,16 @@
  * - GameHUD/     - In-game HUD components (GameTimer, SheepCounter, MobileHUD)
  * - Multiplayer/ - Multiplayer UI (Lobby, Leaderboard, Scoreboard)
  */
+import {
+    getGameInstance,
+    getNetworkManager,
+    getStartScreen,
+    getGameState,
+    selectDog,
+    getSelectedDog,
+    startSoloGame,
+    startMultiplayerGame
+} from '../GameBridge.js';
 
 // Initialize React UI with dynamic imports
 export async function initReactUI() {
@@ -70,6 +80,81 @@ export async function initReactUI() {
 
         console.log('[UI] All components loaded successfully');
 
+        // ==================== ERROR BOUNDARY ====================
+        class ErrorBoundary extends window.React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+
+            componentDidCatch(error, errorInfo) {
+                console.error('[UI] React error boundary caught error:', error);
+                console.error('[UI] Error info:', errorInfo);
+            }
+
+            render() {
+                if (this.state.hasError) {
+                    return createElement('div', {
+                        style: {
+                            position: 'fixed',
+                            inset: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'rgba(0, 0, 0, 0.9)',
+                            color: 'white',
+                            fontFamily: 'system-ui, sans-serif',
+                            padding: '2rem',
+                            textAlign: 'center',
+                            zIndex: 9999
+                        }
+                    }, [
+                        createElement('h1', {
+                            key: 'title',
+                            style: { fontSize: '1.5rem', marginBottom: '1rem', color: '#ff6b6b' }
+                        }, 'Something went wrong'),
+                        createElement('p', {
+                            key: 'message',
+                            style: { fontSize: '1rem', marginBottom: '1.5rem', opacity: 0.8 }
+                        }, 'The game UI encountered an error. Try refreshing the page.'),
+                        createElement('button', {
+                            key: 'reload',
+                            onClick: () => window.location.reload(),
+                            style: {
+                                padding: '0.75rem 2rem',
+                                fontSize: '1rem',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.3)',
+                                borderRadius: '0.5rem',
+                                color: 'white',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            },
+                            onMouseOver: (e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)',
+                            onMouseOut: (e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'
+                        }, 'Reload Page'),
+                        createElement('details', {
+                            key: 'details',
+                            style: { marginTop: '2rem', fontSize: '0.75rem', opacity: 0.5 }
+                        }, [
+                            createElement('summary', { key: 'summary', style: { cursor: 'pointer' } }, 'Error details'),
+                            createElement('pre', {
+                                key: 'error',
+                                style: { marginTop: '0.5rem', textAlign: 'left', whiteSpace: 'pre-wrap' }
+                            }, this.state.error?.toString() || 'Unknown error')
+                        ])
+                    ]);
+                }
+
+                return this.props.children;
+            }
+        }
+
         // ==================== START SCREEN ====================
         function StartScreen() {
             const [screen, setScreen] = useState('playerSetup');
@@ -107,16 +192,14 @@ export async function initReactUI() {
                 if (selectedMode === 'solo') {
                     setScreen('singlePlayerModes');
                 } else {
-                    if (window.gameInstance?.networkManager) {
-                        const nm = window.gameInstance.networkManager;
-                        if (!nm.connected && !nm.connecting) {
-                            try {
-                                await nm.connect();
-                            } catch (error) {
-                                console.error('[UI] Failed to connect:', error);
-                                alert('Unable to connect to multiplayer server.');
-                                return;
-                            }
+                    const nm = getNetworkManager();
+                    if (nm && !nm.connected && !nm.connecting) {
+                        try {
+                            await nm.connect();
+                        } catch (error) {
+                            console.error('[UI] Failed to connect:', error);
+                            alert('Unable to connect to multiplayer server.');
+                            return;
                         }
                     }
                     setScreen('multiplayer');
@@ -125,25 +208,22 @@ export async function initReactUI() {
 
             const handleStartSolo = (mode = 'classic') => {
                 console.log('[UI] Starting solo game:', selectedDog, mode);
-                if (!window.gameInstance) return;
+                if (!getGameInstance()) return;
 
-                if (window.gameInstance.selectDog) {
-                    window.gameInstance.selectDog(selectedDog);
-                }
-
-                const dog = window.gameInstance.getSelectedDog?.() || selectedDog;
-                window.gameInstance.startSoloGame?.(dog, mode);
+                selectDog(selectedDog);
+                const dog = getSelectedDog() || selectedDog;
+                startSoloGame(dog, mode);
             };
 
             const handleCreateRoom = async (settings) => {
                 setRoomSettings(settings);
                 try {
-                    if (!window.gameInstance?.networkManager) {
+                    const nm = getNetworkManager();
+                    if (!nm) {
                         alert('Game not fully loaded.');
                         setScreen('main');
                         return;
                     }
-                    const nm = window.gameInstance.networkManager;
                     if (!nm.connected && !nm.connecting) await nm.connect();
 
                     await nm.createRoom("Player", {
@@ -162,7 +242,7 @@ export async function initReactUI() {
 
             const monitorLobbyState = () => {
                 window.currentLobbyInterval = setInterval(() => {
-                    const nm = window.gameInstance?.networkManager;
+                    const nm = getNetworkManager();
                     if (!nm?.currentRoom) {
                         clearInterval(window.currentLobbyInterval);
                         setScreen('main');
@@ -203,7 +283,7 @@ export async function initReactUI() {
 
             const handleJoinRoom = async (code) => {
                 try {
-                    const nm = window.gameInstance?.networkManager;
+                    const nm = getNetworkManager();
                     if (!nm) {
                         alert('Game not fully loaded.');
                         setScreen('main');
@@ -221,7 +301,7 @@ export async function initReactUI() {
 
             const handleQuickMatch = async () => {
                 try {
-                    const nm = window.gameInstance?.networkManager;
+                    const nm = getNetworkManager();
                     if (!nm) {
                         alert('Game not fully loaded.');
                         setScreen('main');
@@ -331,10 +411,11 @@ export async function initReactUI() {
                         return createElement(Lobby, {
                             ...lobbyData,
                             onStart: () => {
-                                if (window.gameInstance?.startScreen) {
-                                    window.gameInstance.startScreen.selectedDog = selectedDog;
+                                const startScreen = getStartScreen();
+                                if (startScreen) {
+                                    startScreen.selectedDog = selectedDog;
                                 }
-                                window.gameInstance?.startMultiplayerGame?.();
+                                startMultiplayerGame();
                             },
                             onLeave: () => setScreen('dogSelection')
                         });
@@ -416,10 +497,11 @@ export async function initReactUI() {
             useEffect(() => {
                 const check = setInterval(() => {
                     const canvas = document.querySelector('canvas');
-                    const startScreen = document.getElementById('start-screen');
-                    const active = window.gameInstance?.gameState?.isGameActive();
+                    const startScreenEl = document.getElementById('start-screen');
+                    const gameState = getGameState();
+                    const active = gameState?.isGameActive?.();
 
-                    if ((canvas && startScreen?.style.display === 'none') || active) {
+                    if ((canvas && startScreenEl?.style.display === 'none') || active) {
                         console.log('[UI] Game started');
                         setGameStarted(true);
                         clearInterval(check);
@@ -446,7 +528,7 @@ export async function initReactUI() {
         container.style.display = '';
 
         const root = createRoot(container);
-        root.render(createElement(App));
+        root.render(createElement(ErrorBoundary, null, createElement(App)));
 
         console.log('[UI] React UI initialized successfully');
 

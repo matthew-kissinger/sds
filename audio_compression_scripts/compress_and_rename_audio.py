@@ -45,7 +45,7 @@ class AudioCompressor:
             # Dog Sounds
             '11L-short_sharp_sheep_do-1748393459422.mp3': 'dog_bark_jep.mp3',
             'pip_bark.mp3': 'dog_bark_pip.mp3',
-            'rauri_bark.mp3': 'dog_bark_rauri.mp3',
+            # 'rauri_bark.mp3': 'dog_bark_rauri.mp3',  # Deprecated - renamed to pip
             
             # Music
             'SDS Start Music.wav': 'music_start.mp3',
@@ -223,8 +223,7 @@ class AudioCompressor:
                 full_mapping['audiomanager_updates']['dog_bark_files']['jep'] = compressed_path
             elif 'pip' in clean_name:
                 full_mapping['audiomanager_updates']['dog_bark_files']['pip'] = compressed_path
-            elif 'rauri' in clean_name:
-                full_mapping['audiomanager_updates']['dog_bark_files']['rauri'] = compressed_path
+            # rauri deprecated - renamed to pip
             
             # Music
             elif original_name == 'SDS Start Music.wav':

@@ -67,7 +67,7 @@ All optimized files are stored in `../assets/sounds_compressed/`:
 
 **UI Sounds**: `ui_click.mp3`, `rewarding_chime.mp3`
 **Sheep Sounds**: `sheep_bleat_agitated.mp3`, `sheep_bleat_cartoon.mp3`, `sheep_bleat_cheerful.mp3`, `sheep_bleat_short.mp3`
-**Dog Sounds**: `dog_bark_jep.mp3`, `dog_bark_pip.mp3`, `dog_bark_rauri.mp3`
+**Dog Sounds**: `dog_bark_jep.mp3`, `dog_bark_pip.mp3`
 **Music**: `music_start.mp3`, `music_gameplay_1.mp3`, `music_gameplay_2.mp3`, `music_gameplay_3.mp3`, `music_victory.mp3`
 **Competitive**: `music_competitive_1.mp3`, `music_competitive_2.mp3`, `music_competitive_endgame.mp3`
 **Effects**: `effect_score.mp3`, `effect_opponent_score.mp3`, `effect_lose.mp3`

@@ -2,6 +2,8 @@
  * MobileControls Component
  * Touch controls for mobile devices (joystick, sprint, zoom)
  */
+import { getGameInstance, getInputHandler, getMobileControls } from '../../GameBridge.js';
+
 const { createElement, useState, useEffect, useRef } = window.React;
 
 // Sprint/Zap icon (Lucide-style)
@@ -27,7 +29,7 @@ export function MobileControls() {
     const zoomIntervalRef = useRef(null);
 
     useEffect(() => {
-        if (!window.gameInstance || !joystickRef.current || !window.nipplejs) return;
+        if (!getGameInstance() || !joystickRef.current || !window.nipplejs) return;
 
         // Create joystick
         const manager = window.nipplejs.create({
@@ -41,7 +43,8 @@ export function MobileControls() {
 
         // Handle joystick movement
         manager.on('move', (evt, data) => {
-            if (window.gameInstance && window.gameInstance.inputHandler) {
+            const inputHandler = getInputHandler();
+            if (inputHandler) {
                 const angle = data.angle.radian;
                 const force = Math.min(data.force, 1);
 
@@ -50,8 +53,8 @@ export function MobileControls() {
                 const moveZ = -Math.sin(angle) * force;
 
                 // Update input handler
-                window.gameInstance.inputHandler.keys = {
-                    ...window.gameInstance.inputHandler.keys,
+                inputHandler.keys = {
+                    ...inputHandler.keys,
                     w: moveZ < -0.3,
                     s: moveZ > 0.3,
                     a: moveX < -0.3,
@@ -61,9 +64,10 @@ export function MobileControls() {
         });
 
         manager.on('end', () => {
-            if (window.gameInstance && window.gameInstance.inputHandler) {
-                window.gameInstance.inputHandler.keys = {
-                    ...window.gameInstance.inputHandler.keys,
+            const inputHandler = getInputHandler();
+            if (inputHandler) {
+                inputHandler.keys = {
+                    ...inputHandler.keys,
                     w: false,
                     s: false,
                     a: false,
@@ -90,15 +94,17 @@ export function MobileControls() {
 
     const handleSprintStart = () => {
         setIsSprinting(true);
-        if (window.gameInstance && window.gameInstance.inputHandler) {
-            window.gameInstance.inputHandler.keys.shift = true;
+        const inputHandler = getInputHandler();
+        if (inputHandler) {
+            inputHandler.keys.shift = true;
         }
     };
 
     const handleSprintEnd = () => {
         setIsSprinting(false);
-        if (window.gameInstance && window.gameInstance.inputHandler) {
-            window.gameInstance.inputHandler.keys.shift = false;
+        const inputHandler = getInputHandler();
+        if (inputHandler) {
+            inputHandler.keys.shift = false;
         }
     };
 
@@ -122,8 +128,9 @@ export function MobileControls() {
     const handleZoomChange = (delta) => {
         setZoomLevel(prevZoom => {
             const newZoom = Math.max(20, Math.min(150, prevZoom + delta));
-            if (window.gameInstance?.mobileControls?.onZoomChange) {
-                window.gameInstance.mobileControls.onZoomChange(newZoom);
+            const mobileControls = getMobileControls();
+            if (mobileControls?.onZoomChange) {
+                mobileControls.onZoomChange(newZoom);
             }
             return newZoom;
         });

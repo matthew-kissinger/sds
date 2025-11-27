@@ -17,12 +17,12 @@ export async function loadSkeletonLoader() {
         if (reactOverlay) {
             // Insert the skeleton loader at the beginning of react-overlay
             reactOverlay.insertAdjacentHTML('afterbegin', skeletonHTML);
-            console.log('✅ Skeleton loader injected successfully');
+            console.log('[OK] Skeleton loader injected successfully');
         } else {
-            console.error('❌ React overlay container not found');
+            console.error('[ERROR] React overlay container not found');
         }
     } catch (error) {
-        console.error('❌ Failed to load skeleton loader:', error);
+        console.error('[ERROR] Failed to load skeleton loader:', error);
         // Fallback: show a simple loading message
         const reactOverlay = document.getElementById('react-overlay');
         if (reactOverlay) {

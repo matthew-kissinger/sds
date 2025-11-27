@@ -29,7 +29,7 @@ export class StructureBuilderV2 {
      * Clear all structures from scene
      */
     clearAllStructures() {
-        console.log('🗑️ Clearing all structures');
+        console.log('[BUILD] Clearing all structures');
         
         Object.values(this.structures).forEach(structureArray => {
             structureArray.forEach(element => {
@@ -69,7 +69,7 @@ export class StructureBuilderV2 {
      * Build structures for single player mode
      */
     buildSinglePlayerStructures(bounds, gate, pasture) {
-        console.log('🏗️ Building single player structures');
+        console.log('[BUILD] Building single player structures');
         
         this.clearAllStructures();
         
@@ -81,14 +81,14 @@ export class StructureBuilderV2 {
         // Add decorative elements
         this.addFieldDecorations(bounds);
         
-        console.log('✅ Single player structures built');
+        console.log('[OK] Single player structures built');
     }
     
     /**
      * Build structures for competitive multiplayer mode
      */
     buildCompetitiveStructures(bounds, competitiveGates) {
-        console.log(`🏗️ Building competitive structures for ${competitiveGates.length} players`);
+        console.log(`[BUILD] Building competitive structures for ${competitiveGates.length} players`);
         
         this.clearAllStructures();
         
@@ -105,7 +105,7 @@ export class StructureBuilderV2 {
         // Add field decorations
         this.addFieldDecorations(bounds);
         
-        console.log('✅ Competitive structures built');
+        console.log('[OK] Competitive structures built');
     }
     
     

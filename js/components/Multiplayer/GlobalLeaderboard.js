@@ -2,6 +2,8 @@
  * GlobalLeaderboard Component
  * View global rankings across all game modes
  */
+import { getNetworkManager } from '../../GameBridge.js';
+
 const { createElement, useState, useEffect } = window.React;
 
 export function GlobalLeaderboard({ onBack, playerIdentity }) {
@@ -24,11 +26,10 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
         setError('');
 
         try {
-            if (!window.gameInstance?.networkManager) {
+            const nm = getNetworkManager();
+            if (!nm) {
                 throw new Error('Network manager not available');
             }
-
-            const nm = window.gameInstance.networkManager;
 
             if (!nm.isConnected()) {
                 console.log('[LEADERBOARD] Attempting to connect to server...');

@@ -14,6 +14,8 @@ import { GameAssetLoader } from './GameAssetLoader.js';
 import { NetworkManager } from './NetworkManager.js';
 import { MultiplayerUI } from './MultiplayerUI.js';
 import { Vector2D } from './Vector2D.js';
+import { setGameInstance } from './GameBridge.js';
+import { screenshotCapture } from './utils/ScreenshotCapture.js';
 
 /**
  * Core Web Vitals monitoring for SEO performance tracking
@@ -57,7 +59,7 @@ class WebVitalsMonitor {
                 const entries = list.getEntries();
                 const lastEntry = entries[entries.length - 1];
                 this.vitals.LCP = Math.round(lastEntry.startTime);
-                console.log('🎯 LCP (Largest Contentful Paint):', this.vitals.LCP + 'ms');
+                console.log('[PERF] LCP (Largest Contentful Paint):', this.vitals.LCP + 'ms');
             });
             observer.observe({ entryTypes: ['largest-contentful-paint'] });
             this.observers.push(observer);
@@ -70,7 +72,7 @@ class WebVitalsMonitor {
                 const entries = list.getEntries();
                 entries.forEach(entry => {
                     this.vitals.FID = Math.round(entry.processingStart - entry.startTime);
-                    console.log('⚡ FID (First Input Delay):', this.vitals.FID + 'ms');
+                    console.log('[PERF] FID (First Input Delay):', this.vitals.FID + 'ms');
                 });
             });
             observer.observe({ entryTypes: ['first-input'] });
@@ -87,7 +89,7 @@ class WebVitalsMonitor {
                     if (!entry.hadRecentInput) {
                         clsValue += entry.value;
                         this.vitals.CLS = Math.round(clsValue * 10000) / 10000;
-                        console.log('📐 CLS (Cumulative Layout Shift):', this.vitals.CLS);
+                        console.log('[PERF] CLS (Cumulative Layout Shift):', this.vitals.CLS);
                     }
                 });
             });
@@ -117,7 +119,7 @@ class WebVitalsMonitor {
                         : interactions[0];
                     
                     this.vitals.INP = Math.round(inp);
-                    console.log('🎮 INP (Interaction to Next Paint):', this.vitals.INP + 'ms');
+                    console.log('[PERF] INP (Interaction to Next Paint):', this.vitals.INP + 'ms');
                 });
             });
             observer.observe({ entryTypes: ['event'] });
@@ -126,11 +128,11 @@ class WebVitalsMonitor {
     }
 
     reportVitals() {
-        console.log('📊 Core Web Vitals Summary:', {
-            LCP: this.vitals.LCP ? `${this.vitals.LCP}ms ${this.vitals.LCP <= 2500 ? '✅' : '❌'}` : 'Not measured',
-            FID: this.vitals.FID ? `${this.vitals.FID}ms ${this.vitals.FID <= 100 ? '✅' : '❌'}` : 'Not measured', 
-            CLS: this.vitals.CLS ? `${this.vitals.CLS} ${this.vitals.CLS <= 0.1 ? '✅' : '❌'}` : 'Not measured',
-            INP: this.vitals.INP ? `${this.vitals.INP}ms ${this.vitals.INP <= 200 ? '✅' : '❌'}` : 'Not measured'
+        console.log('[PERF] Core Web Vitals Summary:', {
+            LCP: this.vitals.LCP ? `${this.vitals.LCP}ms ${this.vitals.LCP <= 2500 ? '[OK]' : '[ERROR]'}` : 'Not measured',
+            FID: this.vitals.FID ? `${this.vitals.FID}ms ${this.vitals.FID <= 100 ? '[OK]' : '[ERROR]'}` : 'Not measured', 
+            CLS: this.vitals.CLS ? `${this.vitals.CLS} ${this.vitals.CLS <= 0.1 ? '[OK]' : '[ERROR]'}` : 'Not measured',
+            INP: this.vitals.INP ? `${this.vitals.INP}ms ${this.vitals.INP <= 200 ? '[OK]' : '[ERROR]'}` : 'Not measured'
         });
         
         // Future: Send to analytics service
@@ -140,7 +142,7 @@ class WebVitalsMonitor {
     sendToAnalytics(vitals) {
         // Placeholder for future analytics integration
         // Could send to Google Analytics, custom endpoint, etc.
-        console.log('📤 Would send to analytics:', vitals);
+        console.log('[ANALYTICS] Would send to analytics:', vitals);
     }
 
     disconnect() {
@@ -226,7 +228,7 @@ class SheepDogSimulation {
         this.isInitialized = false;
         this.init().then(() => {
             this.isInitialized = true;
-            console.log('🚀 Game initialization complete, starting animation loop');
+            console.log('[GAME] Game initialization complete, starting animation loop');
         });
         this.animate();
     }
@@ -358,7 +360,7 @@ class SheepDogSimulation {
         // Start countdown timer for timed mode
         if (roomData?.gameMode === 'timed') {
             this.gameTimer.startCountdown(3 * 60 * 1000); // 3 minutes
-            console.log('⏱️ Started 3-minute countdown for timed mode');
+            console.log('[TIMER] Started 3-minute countdown for timed mode');
             
             // UI updates for timed mode now handled by React components
             // Initialize best score display
@@ -392,17 +394,17 @@ class SheepDogSimulation {
                 // Set timer mode for timed games
                 if (roomData.gameMode === 'timed') {
                     this.gameTimer.setCountdownMode(true, 180); // 3 minutes = 180 seconds
-                    console.log('⏱️ Timer set to countdown mode (3 minutes)');
+                    console.log('[TIMER] Timer set to countdown mode (3 minutes)');
                 }
                 
                 // Set audio manager to competitive mode (also for timed)
                 this.audioManager.setGameMode('competitive');
-                const modeEmoji = roomData.gameMode === 'timed' ? '⏱️' : '🏆';
-                console.log(`${modeEmoji} Audio manager set to competitive mode`);
-                
+                const modeLabel = roomData.gameMode === 'timed' ? '[TIMED]' : '[RACING]';
+                console.log(`${modeLabel} Audio manager set to competitive mode`);
+
                 // Process initial game state if provided (contains competitive gates, etc.)
                 if (roomData.initialGameState) {
-                    console.log(`${modeEmoji} Processing initial game state for ${roomData.gameMode} mode`);
+                    console.log(`${modeLabel} Processing initial game state for ${roomData.gameMode} mode`);
                     this.handleMultiplayerGameState(roomData.initialGameState);
                 }
             } else {
@@ -505,7 +507,7 @@ class SheepDogSimulation {
                 this.removeOtherPlayer(update.player.id);
             } else if (update.type === 'gameComplete' && update.data) {
                 // Handle game completion in multiplayer
-                console.log('🎉 Game completed! Final state:', update.data);
+                console.log('[GAME] Game completed! Final state:', update.data);
                 console.log('Current gameState.sheepRetired:', this.gameState.sheepRetired);
                 console.log('Current gameState.gameCompleted:', this.gameState.gameCompleted);
                 
@@ -528,16 +530,16 @@ class SheepDogSimulation {
                         const myScore = update.data.competitive.finalScores[currentPlayerId] || 0;
                         const isNewRecord = this.saveTimedModeScore(myScore);
                         if (isNewRecord) {
-                            console.log(`🏆 New best score in timed mode: ${myScore} sheep!`);
+                            console.log(`[GAME] New best score in timed mode: ${myScore} sheep!`);
                         }
                     }
                     
                     if (isWinner) {
                         this.audioManager.playVictorySound();
-                        console.log('🏆 Victory sound played');
+                        console.log('[GAME] Victory sound played');
                     } else {
                         this.audioManager.playLossSound();
-                        console.log('😔 Loss sound played');
+                        console.log('[GAME] Loss sound played');
                     }
                     
                     // Show competitive/timed completion overlay
@@ -576,11 +578,20 @@ class SheepDogSimulation {
                 }
             } else if (update.type === 'competitiveStateRestored') {
                 // Handle competitive state restoration after reconnection
-                console.log('🏆 Restoring competitive state after reconnection:', update.data);
-                
-                                    if (this.multiplayerUI.gameMode === 'racing') {
-                        // Show the racing completion overlay again
-                        this.multiplayerUI.showCompetitiveCompletion(update.data);
+                console.log('[GAME] Restoring competitive state after reconnection:', update.data);
+
+                if (this.multiplayerUI.gameMode === 'racing' || this.multiplayerUI.gameMode === 'timed') {
+                    // Show the completion overlay using the React CompletionScreen
+                    const currentPlayerId = this.networkManager.getPlayerId();
+                    const isWinner = update.data.winner === currentPlayerId;
+                    const mode = update.data.isTimedMode ? 'timed' : 'racing';
+
+                    this.showCompletionOverlay(mode, {
+                        finalTime: update.data.finalTime || 0,
+                        competitive: update.data,
+                        isWinner,
+                        myScore: update.data.finalScores?.[currentPlayerId] || 0
+                    });
                 }
             }
             
@@ -725,11 +736,11 @@ class SheepDogSimulation {
                         if (playerId === currentPlayerId) {
                             // Player scored
                             this.audioManager.playScoreSound();
-                            console.log('🎯 You scored!');
+                            console.log('[GAME] You scored!');
                         } else {
                             // Opponent scored
                             this.audioManager.playOpponentScoreSound();
-                            console.log('🎯 Opponent scored');
+                            console.log('[GAME] Opponent scored');
                         }
                     }
                 }
@@ -771,7 +782,7 @@ class SheepDogSimulation {
                 
                 // Initialize competitive mode in game state if not already done
                 if (Object.keys(this.gameState.playerScores).length === 0 && competitiveData.playerScores) {
-                    console.log('🎮 Initializing competitive mode in GameState');
+                    console.log('[GAME] Initializing competitive mode in GameState');
                     this.gameState.initializeCompetitiveMode({
                         competitiveGates: transformedGates,
                         playerScores: competitiveData.playerScores
@@ -780,7 +791,7 @@ class SheepDogSimulation {
                 
                 // Build competitive structures if this is the first time receiving competitive data
                 if (!this.competitiveStructuresCreated) {
-                    console.log('🏗️ Building competitive structures for the first time...');
+                    console.log('[BUILD] Building competitive structures for the first time...');
                     this.createCompetitiveStructures(transformedGates);
                     this.competitiveStructuresCreated = true;
                 }
@@ -867,7 +878,7 @@ class SheepDogSimulation {
             
             // Debug log transformation in competitive mode
             if (this.sceneManager.competitiveCameraDirection && movementDirection.magnitude() > 0) {
-                console.log(`🎮 Input transform: original(${originalDirection.x.toFixed(2)}, ${originalDirection.z.toFixed(2)}) → transformed(${movementDirection.x.toFixed(2)}, ${movementDirection.z.toFixed(2)}) for ${this.sceneManager.competitiveCameraDirection} camera`);
+                console.log(`[INPUT] Input transform: original(${originalDirection.x.toFixed(2)}, ${originalDirection.z.toFixed(2)}) -> transformed(${movementDirection.x.toFixed(2)}, ${movementDirection.z.toFixed(2)}) for ${this.sceneManager.competitiveCameraDirection} camera`);
             }
             
             // Update sheepdog's awareness of nearby sheep for barking
@@ -973,7 +984,7 @@ class SheepDogSimulation {
         // In multiplayer mode, rely on server completion events instead of client-side checking
         if (!isPaused && !this.isMultiplayer && !this.gameState.gameCompleted) {
             if (this.gameState.checkCompletion()) {
-                console.log('✅ Single player completion confirmed! Showing completion overlay...');
+                console.log('[OK] Single player completion confirmed! Showing completion overlay...');
                 const finalTime = this.gameTimer.stop();
                 this.showCompletionOverlay('single', { finalTime });
                 this.mobileControls.disable();
@@ -1089,7 +1100,7 @@ class SheepDogSimulation {
 
         // 1. Create the Sheepdog instance if it's a new player
         if (!remoteDog) {
-            console.log(`🐕 Creating visualization for new player ${playerId}`);
+            console.log(`[DOG] Creating visualization for new player ${playerId}`);
             // Create a new Sheepdog instance at the initial position
             // Use dog type from server data, or fall back to 'jep'
             const dogType = dogData.dogType || 'jep';
@@ -1108,7 +1119,7 @@ class SheepDogSimulation {
                 const playerGate = this.gameState.competitiveGates.find(gate => gate.playerId === playerId);
                 if (playerGate) {
                     remoteDog.setPlayerInfo(playerId, playerGate.color);
-                    console.log(`🎯 Added player icon for ${playerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
+                    console.log(`[GAME] Added player icon for ${playerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
                 }
             }
             
@@ -1170,7 +1181,7 @@ class SheepDogSimulation {
             if (distance > 8.0) { // Higher snap threshold to account for sprint speed differences
                 clientPos.x = serverPos.x;
                 clientPos.z = serverPos.z;
-                console.log('🔧 Large correction applied - snapping to server position', { distance, sprintMismatch });
+                console.log('[SYNC] Large correction applied - snapping to server position', { distance, sprintMismatch });
             } else {
                 // Use adaptive interpolation speed based on distance and movement state
                 const isMoving = this.sheepdog.velocity.magnitude() > 0.1;
@@ -1222,7 +1233,7 @@ class SheepDogSimulation {
             }
             // Delete the player from our map
             this.otherPlayers.delete(playerId);
-            console.log(`🐕 Removed visualization for player ${playerId}`);
+            console.log(`[DOG] Removed visualization for player ${playerId}`);
         }
     }
     
@@ -1243,12 +1254,12 @@ class SheepDogSimulation {
         if (shouldPlayEndgameMusic && !this.endgameMusicPlaying) {
             this.audioManager.playCompetitiveEndgameMusic();
             this.endgameMusicPlaying = true;
-            console.log('🎵 Competitive endgame music started');
+            console.log('[AUDIO] Competitive endgame music started');
         }
     }
     
     async createCompetitiveStructures(competitiveGates) {
-        console.log('🏗️ Creating competitive structures with gates:', competitiveGates);
+        console.log('[BUILD] Creating competitive structures with gates:', competitiveGates);
         
         // Don't override the game mode - it's already set correctly (could be 'competitive' or 'timed')
         // this.gameState.setGameMode('competitive');
@@ -1262,7 +1273,7 @@ class SheepDogSimulation {
         // Recreate trees to avoid competitive pastures
         // Extract pasture areas from competitive gates
         const competitivePastures = competitiveGates.map(gate => gate.pasture);
-        console.log('🌳 Recreating trees to avoid competitive pastures:', competitivePastures);
+        console.log('[TERRAIN] Recreating trees to avoid competitive pastures:', competitivePastures);
         this.terrainBuilder.clearTrees();
         await this.terrainBuilder.createTrees(competitivePastures);
         
@@ -1275,7 +1286,7 @@ class SheepDogSimulation {
         // Add player icons to all sheepdogs (local and remote) for competitive mode
         this.addCompetitivePlayerIcons(competitiveGates);
         
-        console.log(`✅ Created ${competitiveGates.length} competitive gates and pastures`);
+        console.log(`[OK] Created ${competitiveGates.length} competitive gates and pastures`);
     }
     
     /**
@@ -1292,7 +1303,7 @@ class SheepDogSimulation {
             const playerGate = competitiveGates.find(gate => gate.playerId === currentPlayerId);
             if (playerGate) {
                 this.sheepdog.setPlayerInfo(currentPlayerId, playerGate.color);
-                console.log(`🎯 Added player icon for local player ${currentPlayerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
+                console.log(`[GAME] Added player icon for local player ${currentPlayerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
                 
                 // Set camera position based on player's assigned gate
                 this.sceneManager.setCompetitiveCameraPosition(playerGate);
@@ -1304,7 +1315,7 @@ class SheepDogSimulation {
             const playerGate = competitiveGates.find(gate => gate.playerId === playerId);
             if (playerGate && remoteDog) {
                 remoteDog.setPlayerInfo(playerId, playerGate.color);
-                console.log(`🎯 Added player icon for remote player ${playerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
+                console.log(`[GAME] Added player icon for remote player ${playerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
             }
         }
     }
@@ -1437,7 +1448,7 @@ class SheepDogSimulation {
             const currentBest = this.loadBestScore();
             if (currentBest === null || score > currentBest) {
                 localStorage.setItem('timedModeBestScore', score.toString());
-                console.log(`🏆 New timed mode best score: ${score} sheep!`);
+                console.log(`[GAME] New timed mode best score: ${score} sheep!`);
                 return true; // New record
             }
             return false;
@@ -1456,7 +1467,7 @@ class SheepDogSimulation {
         // Best score display now handled by React components
         // This method preserved for backward compatibility but functionality moved to React
         if (this.roomData?.gameMode !== 'timed') return;
-        console.log('🎯 Best score tracking active for timed mode - UI handled by React');
+        console.log('[GAME] Best score tracking active for timed mode - UI handled by React');
     }
 }
 
@@ -1464,60 +1475,51 @@ class SheepDogSimulation {
 window.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded - Creating game instance...');
     const gameInstance = new SheepDogSimulation();
-    // Expose to global scope for React integration
-    window.gameInstance = gameInstance;
-    
-    // Initialize GameBridge with the game instance for React communication
-    if (window.gameBridge) {
-        window.gameBridge.setGameInstance(gameInstance);
-        console.log('🌉 GameBridge initialized with game instance');
-    }
-    
-    // Expose StartScreen methods for React integration
-    window.gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {
+
+    // Add StartScreen methods to the game instance for GameBridge access
+    gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {
         gameInstance.startScreen.selectSolo(dogType, singlePlayerMode);
     };
-    
-    window.gameInstance.createRoom = async (playerName, settings, dogType) => {
+
+    gameInstance.createRoom = async (playerName, settings, dogType) => {
         return await gameInstance.startScreen.createRoom(playerName, settings, dogType);
     };
-    
-    window.gameInstance.joinRoom = async (roomCode, playerName, dogType) => {
+
+    gameInstance.joinRoom = async (roomCode, playerName, dogType) => {
         return await gameInstance.startScreen.joinRoom(roomCode, playerName, dogType);
     };
-    
-    window.gameInstance.quickMatch = async (playerName, dogType) => {
+
+    gameInstance.quickMatch = async (playerName, dogType) => {
         return await gameInstance.startScreen.quickMatch(playerName, dogType);
     };
-    
-    window.gameInstance.leaveRoom = () => {
+
+    gameInstance.leaveRoom = () => {
         gameInstance.startScreen.leaveRoom();
     };
-    
-    window.gameInstance.startMultiplayerGame = () => {
+
+    gameInstance.startMultiplayerGame = () => {
         gameInstance.startScreen.startMultiplayerGame();
     };
-    
-    window.gameInstance.selectDog = (dogType) => {
+
+    gameInstance.selectDog = (dogType) => {
         gameInstance.startScreen.selectDog(dogType);
     };
-    
-    window.gameInstance.getSelectedDog = () => {
+
+    gameInstance.getSelectedDog = () => {
         return gameInstance.startScreen.getSelectedDog();
     };
-    
-    window.gameInstance.getCurrentRoom = () => {
+
+    gameInstance.getCurrentRoom = () => {
         return gameInstance.startScreen.getCurrentRoom();
     };
-    
-    window.gameInstance.isCurrentHost = () => {
+
+    gameInstance.isCurrentHost = () => {
         return gameInstance.startScreen.isCurrentHost();
     };
-    
-    console.log('Game instance created, NetworkManager available:', !!gameInstance.networkManager);
-    console.log('StartScreen methods exposed for React integration');
-    console.log('🔍 Available methods on window.gameInstance:');
-    console.log('- startSoloGame:', typeof window.gameInstance.startSoloGame);
-    console.log('- selectDog:', typeof window.gameInstance.selectDog);
-    console.log('- getSelectedDog:', typeof window.gameInstance.getSelectedDog);
+
+    // Initialize GameBridge with the game instance (also sets window.gameInstance for backwards compatibility)
+    setGameInstance(gameInstance);
+    console.log('[GAME] GameBridge initialized with game instance');
+
+    console.log('[GAME] Game instance created, NetworkManager available:', !!gameInstance.networkManager);
 });
