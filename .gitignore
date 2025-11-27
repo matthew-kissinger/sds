@@ -60,3 +60,7 @@ Thumbs.db
 *.temp 
 # Claude Code local settings
 .claude/
+
+# itch.io build artifacts
+dist-itchio/
+sheep-dog-sim-itchio.zip
