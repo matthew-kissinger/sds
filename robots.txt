@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Disallow: /dev/
+Disallow: /test/
+Disallow: /server/
+
+Sitemap: https://sheepdogsim.com/sitemap.xml
