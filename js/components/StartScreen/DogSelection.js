@@ -1,12 +1,16 @@
 /**
  * DogSelection Component
  * Dog selection grid with stats display and visual avatars
+ * Responsive: adapts to mobile portrait and landscape
  *
  * Dog icon: "Sitting Dog" by Delapouite from game-icons.net (CC BY 3.0)
  */
+import { useResponsive } from '../hooks/usePlatform.js';
+import { PanelTitle } from '../ui/Panel.js';
+
 const { createElement } = window.React;
 
-// Dog avatar using game-icons.net sitting dog icon (inline SVG for color control)
+// Dog avatar using game-icons.net sitting dog icon
 const DogAvatar = ({ color = '#3b82f6', size = 48 }) => createElement('div', {
     style: {
         width: size,
@@ -35,7 +39,7 @@ const DOGS = [
         breed: 'Border Collie',
         description: 'Well-balanced herder with good stamina',
         stats: { speed: 3, stamina: 4, control: 4 },
-        color: '#3b82f6' // Blue
+        color: '#3b82f6'
     },
     {
         id: 'pip',
@@ -43,7 +47,7 @@ const DOGS = [
         breed: 'Australian Shepherd',
         description: 'Fast and agile, perfect for quick herding',
         stats: { speed: 5, stamina: 3, control: 3 },
-        color: '#f59e0b' // Amber
+        color: '#f59e0b'
     },
     {
         id: 'sally',
@@ -51,7 +55,7 @@ const DOGS = [
         breed: 'Welsh Corgi',
         description: 'Great control but slower movement',
         stats: { speed: 2, stamina: 4, control: 5 },
-        color: '#ec4899' // Pink
+        color: '#ec4899'
     },
     {
         id: 'shiloh',
@@ -59,7 +63,7 @@ const DOGS = [
         breed: 'German Shepherd',
         description: 'Strong and steady with excellent endurance',
         stats: { speed: 3, stamina: 5, control: 3 },
-        color: '#10b981' // Emerald
+        color: '#10b981'
     },
     {
         id: 'george_washington',
@@ -67,100 +71,109 @@ const DOGS = [
         breed: 'American Foxhound',
         description: 'Tactical herder with balanced abilities',
         stats: { speed: 3, stamina: 4, control: 3 },
-        color: '#8b5cf6' // Purple
+        color: '#8b5cf6'
     }
 ];
 
-function StatBar({ label, value, maxValue = 5, color = '#3b82f6' }) {
+/**
+ * StatBar - Dog stat visualization
+ * Type scale: text-xs (10px) for labels/values, consistent with type system
+ */
+function StatBar({ label, value, maxValue = 5, color = '#3b82f6', isCompact = false }) {
     const percentage = (value / maxValue) * 100;
 
+    // Use type scale: text-xs for compact, text-sm for normal
+    const textClass = isCompact ? 'text-xs' : 'text-sm';
+    const labelWidth = isCompact ? 'w-10' : 'w-16';
+    const barHeight = isCompact ? 'h-1' : 'h-2';
+    const marginClass = isCompact ? 'mb-0.5' : 'mb-1';
+
     return createElement('div', {
-        className: 'flex items-center gap-2 mb-1'
+        className: `flex items-center gap-2 ${marginClass}`
     }, [
         createElement('span', {
             key: 'label',
-            className: 'text-white text-opacity-70 text-xs w-16'
+            className: `${textClass} text-white/70 ${labelWidth}`
         }, label),
         createElement('div', {
             key: 'bar',
-            className: 'flex-1 h-2 rounded-full overflow-hidden',
-            style: { background: 'rgba(55, 65, 81, 0.5)' }
+            className: `flex-1 ${barHeight} rounded-full overflow-hidden bg-gray-700/50`
         },
             createElement('div', {
+                className: 'h-full rounded-full transition-all duration-300',
                 style: {
-                    height: '100%',
                     width: `${percentage}%`,
-                    background: `linear-gradient(90deg, ${color}, ${color}dd)`,
-                    transition: 'all 0.3s ease-out',
-                    borderRadius: '9999px'
+                    background: `linear-gradient(90deg, ${color}, ${color}dd)`
                 }
             })
         ),
         createElement('span', {
             key: 'value',
-            className: 'text-white text-opacity-80 text-xs w-4 text-right'
+            className: `${textClass} text-white/80 w-4 text-right`
         }, value)
     ]);
 }
 
 export function DogSelection({ selectedDog, onSelect }) {
+    const { isCompact, isLandscapeMobile, isVeryCompact } = useResponsive();
+
+    // Responsive grid: 5 cols desktop, 2 cols mobile portrait, 5 cols landscape
+    const gridColsClass = isLandscapeMobile ? 'grid-cols-5' : isCompact ? 'grid-cols-2' : 'grid-cols-5';
+    const gapClass = isCompact ? 'gap-1.5' : 'gap-4';
+    const maxWidthClass = isCompact ? 'max-w-[calc(100vw-2rem)]' : 'max-w-4xl';
+
+    const avatarSize = isCompact ? 40 : 56;
+    const paddingClass = isCompact ? 'p-2' : 'p-4';
+    const radiusClass = isCompact ? 'rounded-xl' : 'rounded-2xl';
+
     return createElement('div', {
-        className: 'w-full',
-        style: { animation: 'slideUp 0.6s ease-out' }
+        className: `w-full mx-auto ${maxWidthClass} animate-slide-up`
     }, [
-        createElement('h2', {
-            key: 'title',
-            className: 'text-2xl font-bold text-center text-white mb-6',
-            style: { textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)' }
-        }, 'Choose Your Dog'),
+        createElement(PanelTitle, { key: 'title' }, 'Choose Your Dog'),
 
         createElement('div', {
             key: 'grid',
-            className: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4'
+            className: `grid ${gridColsClass} ${gapClass}`
         }, DOGS.map(dog => {
             const isSelected = selectedDog === dog.id;
+
+            // Card classes - mostly Tailwind, dynamic colors via style
+            const cardClasses = `
+                ${paddingClass} ${radiusClass}
+                text-left cursor-pointer
+                backdrop-blur-xl
+                transition-all duration-300
+                ${isSelected ? 'scale-[1.02]' : 'scale-100'}
+            `.trim().replace(/\s+/g, ' ');
 
             return createElement('button', {
                 key: dog.id,
                 onClick: () => onSelect(dog.id),
-                className: 'text-left transition-all duration-300 relative',
+                className: cardClasses,
                 style: {
                     background: isSelected
                         ? `linear-gradient(135deg, ${dog.color}22, ${dog.color}11)`
                         : 'rgba(255, 255, 255, 0.08)',
-                    backdropFilter: 'blur(28px)',
-                    WebkitBackdropFilter: 'blur(28px)',
-                    borderRadius: '1rem',
                     border: isSelected
                         ? `2px solid ${dog.color}88`
                         : '1px solid rgba(255, 255, 255, 0.12)',
                     boxShadow: isSelected
-                        ? `0 4px 20px ${dog.color}33, inset 0 1px 0 0 rgba(255, 255, 255, 0.1)`
-                        : '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
-                    padding: '1rem',
-                    transform: isSelected ? 'scale(1.02)' : 'scale(1)'
+                        ? `0 4px 20px ${dog.color}33`
+                        : '0 4px 16px rgba(0, 0, 0, 0.1)'
                 }
             }, [
                 // Selection indicator
                 isSelected && createElement('div', {
                     key: 'check',
+                    className: `absolute ${isCompact ? 'top-1 right-1 w-[18px] h-[18px]' : 'top-2 right-2 w-6 h-6'} rounded-full flex items-center justify-center`,
                     style: {
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        width: '24px',
-                        height: '24px',
                         background: dog.color,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
                         boxShadow: `0 2px 8px ${dog.color}66`
                     }
                 },
                     createElement('svg', {
-                        width: '14',
-                        height: '14',
+                        width: isCompact ? '10' : '14',
+                        height: isCompact ? '10' : '14',
                         viewBox: '0 0 24 24',
                         fill: 'none',
                         stroke: 'white',
@@ -172,48 +185,43 @@ export function DogSelection({ selectedDog, onSelect }) {
                     )
                 ),
 
-                // Dog avatar
-                createElement('div', {
+                // Dog avatar - hide on very compact
+                !isVeryCompact && createElement('div', {
                     key: 'avatar',
-                    style: {
-                        display: 'flex',
-                        justifyContent: 'center',
-                        marginBottom: '12px',
-                        opacity: isSelected ? 1 : 0.8,
-                        transition: 'opacity 0.3s ease'
-                    }
-                }, createElement(DogAvatar, { color: dog.color, size: 56 })),
+                    className: `flex justify-center ${isCompact ? 'mb-1.5' : 'mb-3'} ${isSelected ? 'opacity-100' : 'opacity-80'} transition-opacity duration-300`
+                }, createElement(DogAvatar, { color: dog.color, size: avatarSize })),
 
-                // Dog name and breed
+                // Dog name and breed - using type scale
                 createElement('div', {
                     key: 'header',
-                    className: 'relative mb-3 text-center'
+                    className: `relative ${isCompact ? 'mb-1' : 'mb-3'} text-center`
                 }, [
+                    // Name: text-base (14px) compact, text-lg (20px) normal
                     createElement('h3', {
                         key: 'name',
-                        className: 'text-white font-bold text-lg',
+                        className: `font-bold truncate ${isCompact ? 'text-base' : 'text-lg'}`,
                         style: { color: isSelected ? dog.color : '#fff' }
                     }, dog.name),
-                    createElement('p', {
+                    // Breed: text-xs (10px) compact, text-sm (12px) normal
+                    !isVeryCompact && createElement('p', {
                         key: 'breed',
-                        className: 'text-white text-opacity-60 text-xs'
+                        className: `text-white/60 ${isCompact ? 'text-xs' : 'text-sm'}`
                     }, dog.breed)
                 ]),
 
-                // Stats
-                createElement('div', {
-                    key: 'stats',
-                    className: 'space-y-1'
+                // Stats - hide on very compact
+                !isVeryCompact && createElement('div', {
+                    key: 'stats'
                 }, [
-                    createElement(StatBar, { key: 'speed', label: 'Speed', value: dog.stats.speed, color: dog.color }),
-                    createElement(StatBar, { key: 'stamina', label: 'Stamina', value: dog.stats.stamina, color: dog.color }),
-                    createElement(StatBar, { key: 'control', label: 'Control', value: dog.stats.control, color: dog.color })
+                    createElement(StatBar, { key: 'speed', label: 'Speed', value: dog.stats.speed, color: dog.color, isCompact }),
+                    createElement(StatBar, { key: 'stamina', label: 'Stamina', value: dog.stats.stamina, color: dog.color, isCompact }),
+                    createElement(StatBar, { key: 'control', label: 'Control', value: dog.stats.control, color: dog.color, isCompact })
                 ]),
 
-                // Description
-                createElement('p', {
+                // Description - hide on compact. Type scale: text-sm (12px)
+                !isCompact && createElement('p', {
                     key: 'desc',
-                    className: 'text-white text-opacity-50 text-xs mt-2 text-center'
+                    className: 'text-white/50 text-sm mt-2 text-center'
                 }, dog.description)
             ]);
         }))

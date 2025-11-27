@@ -197,15 +197,56 @@
     <link rel="dns-prefetch" href="https://api.sheepdogsim.com">
 
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
-    <!-- Tailwind CSS via Play CDN for dynamic class generation -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
-                extend: {}
+                extend: {
+                    // Systematic type scale (1.25 ratio - "Major Third")
+                    // Base: 16px, Scale: 10, 12, 14, 16, 20, 24, 30, 36, 48, 60
+                    fontSize: {
+                        'xs': ['0.625rem', { lineHeight: '1rem' }],      // 10px - micro labels
+                        'sm': ['0.75rem', { lineHeight: '1rem' }],       // 12px - captions, meta
+                        'base': ['0.875rem', { lineHeight: '1.25rem' }], // 14px - body small
+                        'md': ['1rem', { lineHeight: '1.5rem' }],        // 16px - body default
+                        'lg': ['1.25rem', { lineHeight: '1.75rem' }],    // 20px - body large
+                        'xl': ['1.5rem', { lineHeight: '2rem' }],        // 24px - h4
+                        '2xl': ['1.875rem', { lineHeight: '2.25rem' }],  // 30px - h3
+                        '3xl': ['2.25rem', { lineHeight: '2.5rem' }],    // 36px - h2
+                        '4xl': ['3rem', { lineHeight: '1' }],            // 48px - h1
+                        '5xl': ['3.75rem', { lineHeight: '1' }],         // 60px - display
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.4s ease-out',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'slide-down': 'slideDown 0.5s ease-out',
+                        'title-bounce': 'titleBounce 2s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(30px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        slideDown: {
+                            '0%': { transform: 'translateY(-30px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        titleBounce: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        },
+                    },
+                }
             }
         }
     </script>
+
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.1/dist/nipplejs.min.js"></script>
     <link rel="stylesheet" href="css/multiplayer-react.css">
     <link rel="stylesheet" href="css/components/index-styles.css">

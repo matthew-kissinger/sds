@@ -1,3 +1,12 @@
+/**
+ * Sheep Dog Simulator - Core Styles
+ *
+ * Note: Most responsive behavior is now handled in JS components via useResponsive hook.
+ * This CSS provides base styles, animations, and a few necessary overrides.
+ */
+
+/* ==================== BASE STYLES ==================== */
+
 body {
     margin: 0;
     overflow: hidden;
@@ -10,7 +19,6 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Prevent horizontal scrolling on mobile */
 html, body {
     overflow-x: hidden;
     max-width: 100vw;
@@ -20,27 +28,23 @@ html, body {
     box-sizing: border-box;
 }
 
+/* ==================== CANVAS & OVERLAY ==================== */
+
 #canvas-container {
     position: relative;
     width: 100%;
     height: 100vh;
     touch-action: none;
     overscroll-behavior: none;
-    /* Ensure canvas can receive mouse events */
     z-index: 1;
 }
 
-/* Keep the original UI hidden but in DOM */
-#start-screen, .game-ui {
+/* Hide legacy UI */
+#start-screen, .game-ui, #multiplayer-hud {
     display: none !important;
 }
 
-/* Force hide the original multiplayer HUD */
-#multiplayer-hud {
-    display: none !important;
-}
-
-/* Modern UI overlay */
+/* React overlay container */
 #react-overlay {
     position: fixed;
     inset: 0;
@@ -52,198 +56,30 @@ html, body {
     pointer-events: auto;
 }
 
-/* UI Components */
-.ui-panel {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-radius: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 
-        0 4px 20px rgba(0, 0, 0, 0.12),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+/* Allow pointer events on interactive elements */
+#react-overlay button,
+#react-overlay input,
+#react-overlay select,
+#react-overlay .ui-panel,
+#react-overlay .cursor-pointer {
+    pointer-events: auto;
 }
 
-.btn-primary {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    color: white;
-    font-weight: 600;
-    padding: 1rem 2rem;
-    border-radius: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    transform: translateY(0);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    outline: none;
-    position: relative;
-    overflow: hidden;
+/* Game HUD should not block scroll */
+#react-overlay .game-hud {
+    pointer-events: none;
 }
 
-.btn-primary::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    opacity: 0;
-    transition: opacity 0.3s;
-}
+/* ==================== ANIMATIONS ==================== */
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.25);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
-}
-
-.btn-primary:hover::before {
-    opacity: 1;
-}
-
-.btn-primary:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-}
-
-.btn-primary span {
-    position: relative;
-    z-index: 1;
-}
-
-.btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    color: white;
-    font-weight: 600;
-    padding: 1rem 2rem;
-    border-radius: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    transform: translateY(0);
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
-    cursor: pointer;
-    outline: none;
-}
-
-.btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
-}
-
-.btn-secondary:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}
-
-/* Input styles */
-.modern-input {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    transition: all 0.3s;
-    outline: none;
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-}
-
-.modern-input:focus {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 
-        0 3px 12px rgba(0, 0, 0, 0.12),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-        0 0 0 3px rgba(255, 255, 255, 0.1);
-}
-
-/* Dropdown styles */
-.modern-input option {
-    background: #1a1a1a;
-    color: white;
-    padding: 0.5rem;
-}
-
-.modern-input::-webkit-scrollbar {
-    width: 8px;
-}
-
-.modern-input::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.modern-input::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-}
-
-/* Mobile controls */
-.mobile-control {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
-    box-shadow: 
-        0 4px 16px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
-}
-
-.mobile-control:active {
-    transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.12),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
-}
-
-/* Stamina bar */
-.stamina-bar {
-    width: 100%;
-    height: 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 0.25rem;
-    overflow: hidden;
-    position: relative;
-}
-
-.stamina-fill {
-    height: 100%;
-    transition: width 0.3s ease-out;
-    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-}
-
-.stamina-fill.low {
-    background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-}
-
-/* Animations */
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 
 @keyframes slideUp {
@@ -266,43 +102,46 @@ html, body {
     to { transform: translateX(0); opacity: 1; }
 }
 
-@keyframes pulseGlow {
-    0%, 100% { 
-        box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
-        transform: translateY(0);
-    }
-    50% { 
-        box-shadow: 0 20px 40px -5px rgba(102, 126, 234, 0.6);
-        transform: translateY(-2px);
-    }
-}
-
-@keyframes floatAnimation {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-8px) rotate(2deg); }
-}
-
-
-
 @keyframes titleBounce {
-    0%, 100% { 
-        transform: translateY(0) rotate(-0.5deg);
-    }
-    50% { 
-        transform: translateY(-5px) rotate(-0.5deg);
-    }
+    0%, 100% { transform: translateY(0) rotate(-0.5deg); }
+    50% { transform: translateY(-5px) rotate(-0.5deg); }
 }
 
 @keyframes subtitleBounce {
-    0%, 100% { 
-        transform: translateY(0) rotate(0.5deg);
-    }
-    50% { 
-        transform: translateY(-8px) rotate(0.5deg);
-    }
+    0%, 100% { transform: translateY(0) rotate(0.5deg); }
+    50% { transform: translateY(-8px) rotate(0.5deg); }
 }
 
-/* Loading spinner */
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4); }
+    50% { box-shadow: 0 20px 40px -5px rgba(102, 126, 234, 0.6); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+}
+
+/* ==================== UTILITY CLASSES ==================== */
+
+/* Glassmorphism panel - used by HUD elements */
+.ui-panel {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1rem;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+.skeleton-fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
 .spinner {
     width: 40px;
     height: 40px;
@@ -312,116 +151,116 @@ html, body {
     animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+/* ==================== MOBILE CONTROLS ==================== */
+
+.mobile-control {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
-/* Shimmer animation for skeleton loader */
-@keyframes shimmer {
-    0% {
-        background-position: -200px 0;
-    }
-    100% {
-        background-position: calc(200px + 100%) 0;
-    }
+.mobile-control:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.15);
 }
 
-/* Skeleton loader fade out */
-.skeleton-fade-out {
-    animation: fadeOut 0.3s ease-out forwards;
-}
-
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-}
-
-/* Hover scale utilities */
-.hover\:scale-102:hover {
-    transform: scale(1.02);
-}
-
-/* Mobile joystick override */
 #joystick-zone {
     position: fixed !important;
     z-index: 100;
 }
 
-/* Safe area handling - PROPER approach for mobile browsers */
+/* ==================== SAFE AREA HANDLING ==================== */
+
 .safe-area-inset {
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+/* ==================== START SCREEN CONTAINER ==================== */
+
 /*
- * Mobile Start Screen Layout Fix
- * Problem: Content gets cut off behind browser address bar when not in fullscreen
- * Solution: Use scrollable container with proper safe-area padding, not fixed centering
+ * LAYOUT OWNERSHIP:
+ * - .start-screen-container: full-screen overlay, centers content
+ * - .start-screen-content: constrains width, centers children
+ * - Components: just render, don't worry about centering
  */
-@media (max-width: 768px) {
-    /* Start screen container - scrollable, not fixed centered */
-    .start-screen-container {
-        position: fixed !important;
-        inset: 0 !important;
-        /* Allow vertical scrolling */
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        /* Flex column to stack content from top */
-        display: flex !important;
-        flex-direction: column !important;
-        /* Align to start, not center - prevents cutting off top */
-        align-items: center !important;
-        justify-content: flex-start !important;
-        /* Safe area padding - accounts for notch/status bar */
-        padding-top: max(env(safe-area-inset-top, 0px), 20px) !important;
-        padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px) !important;
-        padding-left: env(safe-area-inset-left, 8px) !important;
-        padding-right: env(safe-area-inset-right, 8px) !important;
-    }
 
-    /* Content wrapper inside start screen */
-    .start-screen-content {
-        /* Add top margin to push content below browser UI */
-        margin-top: 1rem !important;
-        /* Ensure content doesn't stretch full height */
-        flex-shrink: 0 !important;
-        /* Max width constraint */
-        max-width: calc(100vw - 1rem) !important;
-        width: 100% !important;
-    }
+.start-screen-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden; /* Prevent scrollbar from causing offset */
+    -webkit-overflow-scrolling: touch;
 
-    /* Title section needs less vertical space on mobile */
-    .mobile-title {
-        font-size: 2.5rem !important;
-        margin-bottom: 0.25rem !important;
-    }
+    /* Flexbox centering */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    .mobile-subtitle {
-        font-size: 1.5rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    /* Legacy fallback for .fixed.inset-0 containers */
-    .fixed.inset-0:not(.game-hud) {
-        /* Make it scrollable */
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        /* Flex from top */
-        justify-content: flex-start !important;
-        /* Modest padding */
-        padding-top: max(env(safe-area-inset-top, 0px), 16px) !important;
-        padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px) !important;
-    }
+    /* Safe area padding for mobile notches */
+    padding: max(env(safe-area-inset-top, 0px), 1rem)
+             max(env(safe-area-inset-right, 0px), 1rem)
+             max(env(safe-area-inset-bottom, 0px), 1rem)
+             max(env(safe-area-inset-left, 0px), 1rem);
 }
 
-/* Prevent zoom */
+.start-screen-content {
+    /* Constrain width */
+    width: 100%;
+    max-width: calc(100vw - 2rem);
+
+    /* Center children horizontally */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    /* Text alignment for inline children */
+    text-align: center;
+}
+
+/* ==================== INPUTS ==================== */
+
+/* Prevent zoom on input focus on iOS */
 input, button, select, textarea {
     font-size: 16px;
     -webkit-appearance: none;
     border-radius: 0;
 }
 
-/* Leaderboard specific styles */
+.modern-input {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: all 0.3s;
+    outline: none;
+}
+
+.modern-input:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.modern-input option {
+    background: #1a1a1a;
+    color: white;
+}
+
+/* ==================== LEADERBOARD ==================== */
+
 .leaderboard-table {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -432,7 +271,7 @@ input, button, select, textarea {
 }
 
 .leaderboard-entry:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
+    background: rgba(255, 255, 255, 0.08);
     transform: translateY(-1px);
 }
 
@@ -456,13 +295,11 @@ input, button, select, textarea {
 .rank-2 {
     background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
     color: #000;
-    box-shadow: 0 2px 8px rgba(192, 192, 192, 0.3);
 }
 
 .rank-3 {
     background: linear-gradient(135deg, #CD7F32, #B8860B);
     color: #fff;
-    box-shadow: 0 2px 8px rgba(205, 127, 50, 0.3);
 }
 
 .rank-other {
@@ -471,7 +308,8 @@ input, button, select, textarea {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Player identity setup styles */
+/* ==================== PLAYER IDENTITY ==================== */
+
 .name-option {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -498,317 +336,92 @@ input, button, select, textarea {
     opacity: 0.3;
 }
 
-/* React overlay */
-#react-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    pointer-events: none;
-}
+/* ==================== MOBILE PORTRAIT STYLES ==================== */
 
-/* Ensure all child elements of react-overlay don't block scroll */
-#react-overlay * {
-    pointer-events: none;
-}
-
-/* Only allow pointer events on specific interactive elements */
-#react-overlay button,
-#react-overlay input,
-#react-overlay select,
-#react-overlay .btn-primary,
-#react-overlay .btn-secondary,
-#react-overlay .dog-card,
-#react-overlay .mode-button,
-#react-overlay .ui-panel,
-#react-overlay .cursor-pointer {
-    pointer-events: auto;
-}
-
-/* Ensure HUD components are visible but don't block scroll */
-#react-overlay .game-hud {
-    pointer-events: none;
-}
-
-/* Make sure start screen elements are clickable */
-#react-overlay .fixed.inset-0 > div {
-    pointer-events: auto;
-}
-
-#react-overlay .ui-panel {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 8px 16px;
-    color: white;
-}
-
-#react-overlay .stamina-bar {
-    width: 128px;
-    height: 8px;
-    background: #374151;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-#react-overlay .stamina-fill {
-    height: 100%;
-    transition: all 0.3s ease-out;
-}
-/* Mobile-optimized title text - thinner stroke for better readability */
 @media (max-width: 768px) {
+    /* Title text stroke adjustments */
     .mobile-title {
-        -webkit-text-stroke: 1.5px #0A47A1 !important;
-        text-stroke: 1.5px #0A47A1 !important;
+        -webkit-text-stroke: 1.5px #0A47A1;
+        font-size: 2.5rem;
     }
-    
+
     .mobile-subtitle {
-        -webkit-text-stroke: 1px #FF6B00 !important;
-        text-stroke: 1px #FF6B00 !important;
+        -webkit-text-stroke: 1px #FF6B00;
+        font-size: 1.5rem;
     }
-    
-    /* Hide dog icons on mobile - too small to be useful */
-    .mobile-dog-icon {
-        display: none !important;
-    }
-    
-    /* Ensure dog names are perfectly centered when icons are hidden */
-    .mobile-dog-icon + p {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        width: 100% !important;
-        margin: 0 auto !important;
-    }
-    
-    /* Fix button text centering on mobile */
-    .btn-primary,
-    .btn-secondary {
-        justify-content: center !important;
-        text-align: center !important;
-    }
-    
-    /* Dog selection component mobile fixes */
+
+    /* Dog selection mobile layout */
     .dog-selection-container {
-        max-width: calc(100vw - 1rem) !important;
-        padding: 0.5rem !important;
-        margin: 0 0.5rem !important;
-        box-sizing: border-box !important;
+        max-width: calc(100vw - 1rem);
     }
-    
-    /* Ensure the dog selection title doesn't overflow */
-    .dog-selection-container h3 {
-        font-size: 1rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-    
-    /* Make dog cards stack properly on mobile */
+
     .dog-selection-container .grid {
-        grid-template-columns: 1fr !important;
-        gap: 0.375rem !important;
+        grid-template-columns: 1fr;
+        gap: 0.375rem;
     }
-    
-    /* Ensure dog cards fit within viewport and are more compact */
-    .dog-selection-container .grid > div {
-        max-width: 100% !important;
-        padding: 0.375rem !important;
-    }
-    
-    /* Hide dog emojis on mobile to save space */
-    .dog-selection-container .grid > div > div:first-child {
-        display: none !important;
-    }
-    
-    /* Make dog names more prominent when emojis are hidden */
-    .dog-selection-container .grid > div h4 {
-        font-size: 0.925rem !important;
-        margin-bottom: 0.125rem !important;
-    }
-    
-    /* Compact breed text */
-    .dog-selection-container .grid > div p:nth-child(3) {
-        font-size: 0.65rem !important;
-        margin-bottom: 0.375rem !important;
-    }
-    
-    /* Compact description */
-    .dog-selection-container .grid > div p:nth-child(4) {
-        font-size: 0.65rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-    
-    /* Make stats section more compact */
-    .dog-selection-container .grid > div > div:last-child {
-        padding-top: 0.375rem !important;
-        margin-top: 0.375rem !important;
-    }
-    
-    /* Compact stats spacing */
-    .dog-selection-container .grid > div > div:last-child > div {
-        margin-bottom: 0.125rem !important;
-    }
-    
-    .dog-selection-container .grid > div > div:last-child > div:last-child {
-        margin-bottom: 0 !important;
-    }
-    
-    /* Ensure buttons don't overflow viewport */
-    .dog-selection-container + div {
-        max-width: calc(100vw - 2rem) !important;
-        margin: 0 1rem !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* Make sure the button container doesn't cause horizontal scroll */
-    .dog-selection-container + div .flex {
-        flex-wrap: wrap !important;
-        gap: 0.75rem !important;
-    }
-    
-    /* Ensure buttons are fully visible and accessible */
-    .dog-selection-container + div .btn-primary,
-    .dog-selection-container + div .btn-secondary {
-        min-width: 0 !important;
-        flex: 1 !important;
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        text-align: center !important;
-        padding: 0.75rem 0.5rem !important;
-        font-size: 0.875rem !important;
-        line-height: 1.2 !important;
-    }
-    
-    /* Dog selection wrapper mobile constraints */
-    .dog-selection-wrapper {
-        max-width: calc(100vw - 2rem) !important;
-        width: calc(100vw - 2rem) !important;
-        margin: 0 auto !important;
-        padding: 0 !important;
-    }
-    
-    /* Dog selection buttons wrapper */
-    .dog-selection-buttons {
-        max-width: calc(100vw - 1rem) !important;
-        margin: 0.375rem auto 0 auto !important;
-        padding: 0 0.5rem !important;
-        box-sizing: border-box !important;
-        gap: 0.375rem !important;
-    }
-    
-    /* Stack buttons vertically on very small screens */
-    @media (max-width: 480px) {
-        .dog-selection-buttons {
-            flex-direction: column !important;
-        }
-        
-        .dog-selection-container + div .btn-primary,
-        .dog-selection-container + div .btn-secondary {
-            width: 100% !important;
-            flex: none !important;
-        }
-    }
-    
-    /* Prevent horizontal overflow on the entire screen */
-    .fixed.inset-0 {
-        padding: 0.5rem !important;
-        box-sizing: border-box !important;
-        overflow-x: hidden !important;
-    }
-    
-    /* Ensure the start screen content doesn't exceed viewport */
-    .max-w-4xl {
-        max-width: calc(100vw - 1rem) !important;
-        width: calc(100vw - 1rem) !important;
-    }
-    
-    /* Leaderboard mobile styles */
+
+    /* Leaderboard compact */
     .leaderboard-table {
-        font-size: 0.875rem !important;
+        font-size: 0.875rem;
     }
-    
-    .leaderboard-entry {
-        padding: 0.75rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-    
+
     .rank-badge {
-        min-width: 1.5rem !important;
-        min-height: 1.5rem !important;
-        font-size: 0.75rem !important;
+        min-width: 1.5rem;
+        min-height: 1.5rem;
+        font-size: 0.75rem;
     }
-    
-    /* Hide discriminator on mobile for space */
-    .leaderboard-entry .text-xs.text-opacity-50 {
-        display: none !important;
-    }
-    
-    /* Make leaderboard tabs scrollable on mobile */
+
+    /* Scrollable tabs */
     .leaderboard-tabs {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        scrollbar-width: none !important;
-        -ms-overflow-style: none !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
     }
-    
+
     .leaderboard-tabs::-webkit-scrollbar {
-        display: none !important;
-    }
-    
-    /* Player identity setup mobile adjustments */
-    .name-option {
-        padding: 1rem !important;
-        margin-bottom: 0.75rem !important;
-    }
-    
-    .name-option input {
-        font-size: 1rem !important;
-        padding: 0.75rem !important;
+        display: none;
     }
 }
 
-/* Mobile zoom slider styles */
-@media (max-width: 768px) {
-    input[type="range"] {
-        -webkit-appearance: none;
-        appearance: none;
-        background: transparent;
-        cursor: pointer;
-        height: 30px;
+/* ==================== MOBILE LANDSCAPE STYLES ==================== */
+
+@media (max-height: 500px) and (orientation: landscape) {
+    .start-screen-container {
+        padding: max(env(safe-area-inset-top, 0px), 8px)
+                 max(env(safe-area-inset-right, 0px), 16px)
+                 max(env(safe-area-inset-bottom, 0px), 8px)
+                 max(env(safe-area-inset-left, 0px), 16px);
     }
-    
-    input[type="range"]::-webkit-slider-track {
-        background: rgba(255, 255, 255, 0.3);
-        height: 8px;
-        border-radius: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+
+    .mobile-title {
+        font-size: 1.75rem;
+        margin-bottom: 0.125rem;
+        line-height: 1.1;
     }
-    
-    input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        background: white;
-        height: 24px;
-        width: 24px;
-        border-radius: 50%;
-        margin-top: -8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-        border: 2px solid rgba(0, 170, 255, 0.5);
+
+    .mobile-subtitle {
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
     }
-    
-    input[type="range"]::-moz-range-track {
-        background: rgba(255, 255, 255, 0.3);
-        height: 8px;
-        border-radius: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+
+    /* Dog selection in landscape - wider grid */
+    .dog-selection-container .grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.25rem;
     }
-    
-    input[type="range"]::-moz-range-thumb {
-        background: white;
-        height: 24px;
-        width: 24px;
-        border-radius: 50%;
-        border: 2px solid rgba(0, 170, 255, 0.5);
-        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+/* Very short landscape (iPhone SE, etc) */
+@media (max-height: 380px) and (orientation: landscape) {
+    .mobile-title {
+        font-size: 1.5rem;
+    }
+
+    .mobile-subtitle {
+        font-size: 0.875rem;
+    }
+
+    .dog-selection-container .grid {
+        grid-template-columns: repeat(5, 1fr);
     }
 }

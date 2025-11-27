@@ -35,39 +35,28 @@ export function CompactStaminaBar({ stamina }) {
     const staminaValue = Math.round(stamina);
 
     return createElement('div', {
-        className: 'mt-3 pt-3 border-t border-white border-opacity-10'
+        className: 'mt-3 pt-3 border-t border-white/10'
     }, [
         createElement('div', {
             key: 'label',
-            className: 'text-white text-xs text-opacity-70 mb-1',
-            style: {
-                display: 'flex',
-                justifyContent: 'space-between'
-            }
+            className: 'text-white/70 text-xs mb-1 flex justify-between'
         }, [
             createElement('span', { key: 'text' }, 'Stamina'),
             createElement('span', {
                 key: 'percent',
-                style: {
-                    color: staminaValue < 30 ? '#f87171' : 'rgba(255, 255, 255, 0.5)'
-                }
+                className: staminaValue < 30 ? 'text-red-400' : 'text-white/50'
             }, `${staminaValue}%`)
         ]),
         createElement('div', {
             key: 'bar',
-            className: 'h-2 bg-gray-700 rounded-full overflow-hidden',
-            style: {
-                background: 'rgba(55, 65, 81, 0.5)'
-            }
+            className: 'h-2 bg-gray-700/50 rounded-full overflow-hidden'
         },
             createElement('div', {
+                className: 'h-full rounded-full transition-all duration-300',
                 style: {
-                    height: '100%',
                     width: `${staminaValue}%`,
                     background: getStaminaColor(stamina),
-                    boxShadow: getGlowStyle(stamina),
-                    transition: 'all 0.3s ease-out',
-                    borderRadius: '9999px'
+                    boxShadow: getGlowStyle(stamina)
                 }
             })
         )

@@ -1,12 +1,14 @@
 /**
  * MobileControls Component
- * Touch controls for mobile devices (joystick, sprint, zoom)
+ * Touch controls for mobile - joystick, sprint button, zoom controls
+ * Landscape-aware positioning
  */
 import { getGameInstance, getInputHandler, getMobileControls } from '../../GameBridge.js';
+import { useResponsive } from '../hooks/usePlatform.js';
 
 const { createElement, useState, useEffect, useRef } = window.React;
 
-// Sprint/Zap icon (Lucide-style)
+// Sprint icon
 const SprintIcon = ({ size = 24, color = 'currentColor' }) => createElement('svg', {
     width: size,
     height: size,
@@ -16,9 +18,7 @@ const SprintIcon = ({ size = 24, color = 'currentColor' }) => createElement('svg
     strokeWidth: '2.5',
     strokeLinecap: 'round',
     strokeLinejoin: 'round'
-}, [
-    createElement('polygon', { key: 'bolt', points: '13 2 3 14 12 14 11 22 21 10 12 10 13 2' })
-]);
+}, createElement('polygon', { points: '13 2 3 14 12 14 11 22 21 10 12 10 13 2' }));
 
 export function MobileControls() {
     const [joystickManager, setJoystickManager] = useState(null);
@@ -28,31 +28,36 @@ export function MobileControls() {
     const joystickRef = useRef(null);
     const zoomIntervalRef = useRef(null);
 
+    const { isLandscapeMobile } = useResponsive();
+
+    // Responsive sizing
+    const joystickSize = isLandscapeMobile ? 100 : 150;
+    const sprintSize = isLandscapeMobile ? 48 : 64;
+    const zoomBarSize = isLandscapeMobile ? 60 : 100;
+    const zoomButtonSize = isLandscapeMobile ? 36 : 48;
+    const iconSize = isLandscapeMobile ? 20 : 28;
+
+    // Initialize joystick
     useEffect(() => {
         if (!getGameInstance() || !joystickRef.current || !window.nipplejs) return;
 
-        // Create joystick
         const manager = window.nipplejs.create({
             zone: joystickRef.current,
             mode: 'static',
             position: { left: '75px', bottom: '75px' },
             color: 'white',
-            size: 120,
+            size: joystickSize,
             threshold: 0.1
         });
 
-        // Handle joystick movement
         manager.on('move', (evt, data) => {
             const inputHandler = getInputHandler();
             if (inputHandler) {
                 const angle = data.angle.radian;
                 const force = Math.min(data.force, 1);
-
-                // Convert to game coordinates (negate Z for correct up/down)
                 const moveX = Math.cos(angle) * force;
                 const moveZ = -Math.sin(angle) * force;
 
-                // Update input handler
                 inputHandler.keys = {
                     ...inputHandler.keys,
                     w: moveZ < -0.3,
@@ -66,49 +71,42 @@ export function MobileControls() {
         manager.on('end', () => {
             const inputHandler = getInputHandler();
             if (inputHandler) {
-                inputHandler.keys = {
-                    ...inputHandler.keys,
-                    w: false,
-                    s: false,
-                    a: false,
-                    d: false
-                };
+                inputHandler.keys = { ...inputHandler.keys, w: false, s: false, a: false, d: false };
             }
         });
 
         setJoystickManager(manager);
+        return () => manager.destroy();
+    }, [joystickSize]);
 
-        return () => {
-            manager.destroy();
-        };
-    }, []);
-
-    // Cleanup zoom interval on unmount
+    // Cleanup zoom interval
     useEffect(() => {
         return () => {
-            if (zoomIntervalRef.current) {
-                clearInterval(zoomIntervalRef.current);
-            }
+            if (zoomIntervalRef.current) clearInterval(zoomIntervalRef.current);
         };
     }, []);
 
     const handleSprintStart = () => {
         setIsSprinting(true);
         const inputHandler = getInputHandler();
-        if (inputHandler) {
-            inputHandler.keys.shift = true;
-        }
+        if (inputHandler) inputHandler.keys.shift = true;
     };
 
     const handleSprintEnd = () => {
         setIsSprinting(false);
         const inputHandler = getInputHandler();
-        if (inputHandler) {
-            inputHandler.keys.shift = false;
-        }
+        if (inputHandler) inputHandler.keys.shift = false;
     };
 
-    // Zoom control functions
+    const handleZoomChange = (delta) => {
+        setZoomLevel(prev => {
+            const newZoom = Math.max(20, Math.min(150, prev + delta));
+            const mobileControls = getMobileControls();
+            if (mobileControls?.onZoomChange) mobileControls.onZoomChange(newZoom);
+            return newZoom;
+        });
+    };
+
     const startZoom = (direction) => {
         setIsZooming(direction);
         handleZoomChange(direction === 'in' ? -5 : 5);
@@ -125,22 +123,12 @@ export function MobileControls() {
         }
     };
 
-    const handleZoomChange = (delta) => {
-        setZoomLevel(prevZoom => {
-            const newZoom = Math.max(20, Math.min(150, prevZoom + delta));
-            const mobileControls = getMobileControls();
-            if (mobileControls?.onZoomChange) {
-                mobileControls.onZoomChange(newZoom);
-            }
-            return newZoom;
-        });
-    };
-
     const zoomPercentage = ((150 - zoomLevel) / (150 - 20)) * 100;
 
+    // Zoom button style generator
     const zoomButtonStyle = (isActive, isIn) => ({
-        width: '48px',
-        height: '48px',
+        width: `${zoomButtonSize}px`,
+        height: `${zoomButtonSize}px`,
         borderRadius: '50%',
         border: 'none',
         cursor: 'pointer',
@@ -158,21 +146,20 @@ export function MobileControls() {
             ? (isIn ? 'rgba(0, 255, 136, 0.4)' : 'rgba(255, 107, 107, 0.4)')
             : 'rgba(255, 255, 255, 0.15)',
         boxShadow: isActive
-            ? `0 0 20px ${isIn ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 107, 107, 0.3)'}, inset 0 1px 0 0 rgba(255, 255, 255, 0.2)`
-            : '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+            ? `0 0 20px ${isIn ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 107, 107, 0.3)'}`
+            : '0 4px 16px rgba(0, 0, 0, 0.1)',
         color: 'white',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'all 0.2s ease',
         transform: isActive ? 'scale(0.92)' : 'scale(1)',
         WebkitTapHighlightColor: 'transparent',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
         touchAction: 'manipulation'
     });
 
-    return createElement('div', {
-        className: 'fixed inset-0 pointer-events-none z-10'
-    }, [
-        // Joystick container
+    // Zoom icon size
+    const zoomIconSize = isLandscapeMobile ? 16 : 20;
+
+    return createElement('div', { className: 'fixed inset-0 pointer-events-none z-10' }, [
+        // Joystick zone
         createElement('div', {
             key: 'joystick',
             id: 'joystick-zone',
@@ -180,10 +167,10 @@ export function MobileControls() {
             className: 'pointer-events-auto',
             style: {
                 position: 'fixed',
-                left: 'calc(env(safe-area-inset-left, 0px) + 20px)',
-                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
-                width: '150px',
-                height: '150px'
+                left: `calc(env(safe-area-inset-left, 0px) + ${isLandscapeMobile ? '12px' : '20px'})`,
+                bottom: `calc(env(safe-area-inset-bottom, 0px) + ${isLandscapeMobile ? '8px' : '20px'})`,
+                width: `${joystickSize}px`,
+                height: `${joystickSize}px`
             }
         }),
 
@@ -192,19 +179,13 @@ export function MobileControls() {
             key: 'sprint',
             className: 'mobile-control fixed pointer-events-auto',
             style: {
-                width: '64px',
-                height: '64px',
-                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)',
-                right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
-                background: isSprinting
-                    ? 'rgba(59, 130, 246, 0.3)'
-                    : 'rgba(255, 255, 255, 0.08)',
-                border: isSprinting
-                    ? '2px solid rgba(59, 130, 246, 0.6)'
-                    : '1px solid rgba(255, 255, 255, 0.15)',
-                boxShadow: isSprinting
-                    ? '0 0 20px rgba(59, 130, 246, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
-                    : '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                width: `${sprintSize}px`,
+                height: `${sprintSize}px`,
+                bottom: `calc(env(safe-area-inset-bottom, 0px) + ${isLandscapeMobile ? '8px' : '2rem'})`,
+                right: `calc(env(safe-area-inset-right, 0px) + ${isLandscapeMobile ? '1rem' : '1.5rem'})`,
+                background: isSprinting ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.08)',
+                border: isSprinting ? '2px solid rgba(59, 130, 246, 0.6)' : '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: isSprinting ? '0 0 20px rgba(59, 130, 246, 0.4)' : '0 4px 16px rgba(0, 0, 0, 0.1)',
                 transform: isSprinting ? 'scale(0.95)' : 'scale(1)',
                 transition: 'all 0.15s ease-out'
             },
@@ -213,16 +194,21 @@ export function MobileControls() {
             onMouseDown: handleSprintStart,
             onMouseUp: handleSprintEnd,
             onMouseLeave: handleSprintEnd
-        }, createElement(SprintIcon, {
-            size: 28,
-            color: isSprinting ? '#60a5fa' : 'rgba(255, 255, 255, 0.9)'
-        })),
+        }, createElement(SprintIcon, { size: iconSize, color: isSprinting ? '#60a5fa' : 'rgba(255, 255, 255, 0.9)' })),
 
-        // Zoom Control
+        // Zoom controls - horizontal in landscape, vertical in portrait
         createElement('div', {
-            key: 'zoom-control',
+            key: 'zoom',
             className: 'fixed pointer-events-auto',
-            style: {
+            style: isLandscapeMobile ? {
+                right: 'calc(env(safe-area-inset-right, 0px) + 1rem)',
+                top: 'calc(env(safe-area-inset-top, 0px) + 50px)',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: '0.5rem',
+                zIndex: 200
+            } : {
                 right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
                 bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8rem)',
                 display: 'flex',
@@ -232,119 +218,87 @@ export function MobileControls() {
                 zIndex: 200
             }
         }, [
-            // Zoom indicator bar
-            createElement('div', {
-                key: 'indicator',
-                style: {
-                    position: 'relative',
-                    width: '6px',
-                    height: '100px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '3px',
-                    overflow: 'hidden',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)',
-                    boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.1)'
-                }
-            }, [
-                createElement('div', {
-                    key: 'fill',
-                    style: {
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: `${zoomPercentage}%`,
-                        background: 'linear-gradient(180deg, rgba(0, 191, 255, 0.8) 0%, rgba(0, 150, 255, 0.6) 100%)',
-                        transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        borderRadius: '3px'
-                    }
-                }),
-                // Notches
-                [0, 25, 50, 75, 100].map(percent =>
-                    createElement('div', {
-                        key: percent,
-                        style: {
-                            position: 'absolute',
-                            left: '-2px',
-                            right: '-2px',
-                            height: '1px',
-                            bottom: `${percent}%`,
-                            background: 'rgba(255, 255, 255, 0.3)'
-                        }
-                    })
-                )
-            ]),
-
-            // Zoom in button
-            createElement('button', {
-                key: 'zoom-in',
-                style: zoomButtonStyle(isZooming === 'in', true),
-                onTouchStart: (e) => { e.preventDefault(); startZoom('in'); },
-                onTouchEnd: (e) => { e.preventDefault(); stopZoom(); },
-                onMouseDown: () => startZoom('in'),
-                onMouseUp: stopZoom,
-                onMouseLeave: stopZoom
-            },
-                createElement('svg', {
-                    width: '20',
-                    height: '20',
-                    viewBox: '0 0 24 24',
-                    fill: 'none',
-                    style: { opacity: '0.9' }
-                }, [
-                    createElement('circle', {
-                        key: 'circle',
-                        cx: '12',
-                        cy: '12',
-                        r: '10',
-                        stroke: 'currentColor',
-                        strokeWidth: '2'
-                    }),
-                    createElement('path', {
-                        key: 'plus',
-                        d: 'M12 8v8M8 12h8',
-                        stroke: 'currentColor',
-                        strokeWidth: '2',
-                        strokeLinecap: 'round'
-                    })
-                ])
-            ),
-
-            // Zoom out button
-            createElement('button', {
-                key: 'zoom-out',
+            // Zoom out (first in landscape)
+            isLandscapeMobile && createElement('button', {
+                key: 'out',
                 style: zoomButtonStyle(isZooming === 'out', false),
                 onTouchStart: (e) => { e.preventDefault(); startZoom('out'); },
                 onTouchEnd: (e) => { e.preventDefault(); stopZoom(); },
                 onMouseDown: () => startZoom('out'),
                 onMouseUp: stopZoom,
                 onMouseLeave: stopZoom
-            },
-                createElement('svg', {
-                    width: '20',
-                    height: '20',
-                    viewBox: '0 0 24 24',
-                    fill: 'none',
-                    style: { opacity: '0.9' }
-                }, [
-                    createElement('circle', {
-                        key: 'circle',
-                        cx: '12',
-                        cy: '12',
-                        r: '10',
-                        stroke: 'currentColor',
-                        strokeWidth: '2'
-                    }),
-                    createElement('path', {
-                        key: 'minus',
-                        d: 'M8 12h8',
-                        stroke: 'currentColor',
-                        strokeWidth: '2',
-                        strokeLinecap: 'round'
-                    })
-                ])
-            )
+            }, createElement('svg', { width: zoomIconSize, height: zoomIconSize, viewBox: '0 0 24 24', fill: 'none' }, [
+                createElement('circle', { key: 'c', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '2' }),
+                createElement('path', { key: 'p', d: 'M8 12h8', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round' })
+            ])),
+
+            // Zoom bar
+            createElement('div', {
+                key: 'bar',
+                style: isLandscapeMobile ? {
+                    position: 'relative',
+                    width: `${zoomBarSize}px`,
+                    height: '6px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '3px',
+                    overflow: 'hidden'
+                } : {
+                    position: 'relative',
+                    width: '6px',
+                    height: `${zoomBarSize}px`,
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '3px',
+                    overflow: 'hidden'
+                }
+            }, createElement('div', {
+                style: isLandscapeMobile ? {
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: `${zoomPercentage}%`,
+                    background: 'linear-gradient(90deg, rgba(0, 150, 255, 0.6), rgba(0, 191, 255, 0.8))',
+                    transition: 'width 0.3s ease',
+                    borderRadius: '3px'
+                } : {
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: `${zoomPercentage}%`,
+                    background: 'linear-gradient(180deg, rgba(0, 191, 255, 0.8), rgba(0, 150, 255, 0.6))',
+                    transition: 'height 0.3s ease',
+                    borderRadius: '3px'
+                }
+            })),
+
+            // Zoom in
+            createElement('button', {
+                key: 'in',
+                style: zoomButtonStyle(isZooming === 'in', true),
+                onTouchStart: (e) => { e.preventDefault(); startZoom('in'); },
+                onTouchEnd: (e) => { e.preventDefault(); stopZoom(); },
+                onMouseDown: () => startZoom('in'),
+                onMouseUp: stopZoom,
+                onMouseLeave: stopZoom
+            }, createElement('svg', { width: zoomIconSize, height: zoomIconSize, viewBox: '0 0 24 24', fill: 'none' }, [
+                createElement('circle', { key: 'c', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '2' }),
+                createElement('path', { key: 'p', d: 'M12 8v8M8 12h8', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round' })
+            ])),
+
+            // Zoom out (in portrait only)
+            !isLandscapeMobile && createElement('button', {
+                key: 'out',
+                style: zoomButtonStyle(isZooming === 'out', false),
+                onTouchStart: (e) => { e.preventDefault(); startZoom('out'); },
+                onTouchEnd: (e) => { e.preventDefault(); stopZoom(); },
+                onMouseDown: () => startZoom('out'),
+                onMouseUp: stopZoom,
+                onMouseLeave: stopZoom
+            }, createElement('svg', { width: zoomIconSize, height: zoomIconSize, viewBox: '0 0 24 24', fill: 'none' }, [
+                createElement('circle', { key: 'c', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '2' }),
+                createElement('path', { key: 'p', d: 'M8 12h8', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round' })
+            ]))
         ])
     ]);
 }

@@ -14,23 +14,20 @@ export function GameTimer({ gameTime, timeLimit }) {
     const isLowTime = isTimedMode && timeRemaining < 30;
 
     return createElement('div', {
-        className: 'fixed top-6 right-6 z-20',
-        style: {
-            animation: 'slideDown 0.5s ease-out 0.1s both',
-            paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)'
-        }
+        className: 'fixed top-6 right-6 z-20 animate-slide-down',
+        style: { paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)' }
     },
         createElement('div', {
-            className: `ui-panel py-2 px-4 ${isLowTime ? 'border-red-500 border-opacity-50' : ''}`
+            className: `ui-panel py-2 px-4 ${isLowTime ? 'border-red-500/50' : ''}`
         },
             isTimedMode ? [
                 createElement('div', {
                     key: 'timed',
-                    className: `text-white font-mono text-2xl ${isLowTime ? 'text-red-400' : ''}`
+                    className: `font-mono text-2xl ${isLowTime ? 'text-red-400' : 'text-white'}`
                 }, `${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`),
                 createElement('div', {
                     key: 'label',
-                    className: 'text-white text-opacity-60 text-xs text-center'
+                    className: 'text-white/60 text-xs text-center'
                 }, 'Time Remaining')
             ] : createElement('div', {
                 className: 'text-white font-mono text-2xl'

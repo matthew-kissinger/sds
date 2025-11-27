@@ -1,6 +1,13 @@
 /**
  * MultiplayerScoreboard Component
  * In-game scoreboard for multiplayer modes
+ *
+ * Type scale:
+ * - Title: text-base (14px)
+ * - Player names: text-base (14px)
+ * - Scores: text-base (14px) mono
+ * - Labels: text-sm (12px)
+ * - Sheep count: text-lg (20px)
  */
 const { createElement } = window.React;
 import { CompactStaminaBar } from '../GameHUD/CompactStaminaBar.js';
@@ -30,9 +37,10 @@ export function MultiplayerScoreboard({ players, scores, myPlayerId, gameMode, s
         createElement('div', {
             className: 'ui-panel p-3 min-w-[220px]'
         }, [
+            // Title: text-base from type scale
             createElement('h3', {
                 key: 'title',
-                className: 'text-blue-400 font-bold mb-3 flex items-center gap-2'
+                className: 'text-base text-blue-400 font-bold mb-3 flex items-center gap-2'
             }, [
                 createElement('span', { key: 'icon' }, ''),
                 createElement('span', { key: 'text' },
@@ -42,12 +50,14 @@ export function MultiplayerScoreboard({ players, scores, myPlayerId, gameMode, s
             // Show collective progress for cooperative mode
             isCooperative && createElement('div', {
                 key: 'collective-progress',
-                className: 'mb-3 p-3 bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 rounded'
+                className: 'mb-3 p-3 bg-green-500/10 border border-green-500/30 rounded'
             }, [
+                // Sheep count: text-lg from type scale
                 createElement('div', {
                     key: 'sheep-count',
                     className: 'text-center text-white font-bold text-lg'
                 }, `${sheepCount || 0} / ${totalSheep || 200}`),
+                // Label: text-sm from type scale
                 createElement('div', {
                     key: 'label',
                     className: 'text-center text-green-300 text-sm'
@@ -65,10 +75,10 @@ export function MultiplayerScoreboard({ players, scores, myPlayerId, gameMode, s
 
             createElement('div', {
                 key: 'players',
-                className: 'space-y-2'
+                className: 'flex flex-col gap-2'
             }, displayPlayers.length === 0 ?
                 createElement('div', {
-                    className: 'text-center text-white text-opacity-60 py-2'
+                    className: 'text-center text-white/60 text-sm py-2'
                 }, 'No players connected') :
                 displayPlayers.map((player, index) => {
                     const isMe = player.id === myPlayerId;
@@ -78,10 +88,7 @@ export function MultiplayerScoreboard({ players, scores, myPlayerId, gameMode, s
 
                     return createElement('div', {
                         key: player.id || index,
-                        className: `p-2 rounded ${
-                            isMe ? 'bg-blue-500 bg-opacity-20 border border-blue-400 border-opacity-30' :
-                            'bg-white bg-opacity-5'
-                        }`
+                        className: `p-2 rounded ${isMe ? 'bg-blue-500/20 border border-blue-400/30' : 'bg-white/5'}`
                     }, [
                         // Player name and score row
                         createElement('div', {
@@ -93,14 +100,16 @@ export function MultiplayerScoreboard({ players, scores, myPlayerId, gameMode, s
                                 className: 'flex items-center gap-2'
                             }, [
                                 isLeader && createElement('span', { key: 'crown' }, ''),
+                                // Player name: text-base from type scale
                                 createElement('span', {
                                     key: 'name',
-                                    className: 'text-white font-medium'
+                                    className: 'text-base text-white font-medium'
                                 }, (player.name || player.playerName || 'Unknown Player') + (isMe ? ' (You)' : ''))
                             ]),
+                            // Score: text-base mono from type scale
                             hasIndividualScores && createElement('span', {
                                 key: 'score',
-                                className: 'text-white font-mono font-bold'
+                                className: 'text-base text-white font-mono font-bold'
                             }, isRacing ? `${score}/${winThreshold}` : `${score}`)
                         ]),
 

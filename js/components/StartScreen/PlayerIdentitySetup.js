@@ -4,6 +4,9 @@
  */
 import { getNetworkManager } from '../../GameBridge.js';
 import { generatePersistentId, savePlayerIdentity } from '../shared/playerIdentity.js';
+import { useResponsive } from '../hooks/usePlatform.js';
+import { Panel, PanelTitle } from '../ui/Panel.js';
+import { Button } from '../ui/Button.js';
 
 const { createElement, useState } = window.React;
 
@@ -12,6 +15,7 @@ export function PlayerIdentitySetup({ onComplete }) {
     const [nameType, setNameType] = useState('custom');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const { isCompact } = useResponsive();
 
     const handleGenerateRandom = () => {
         setNameType('random');
@@ -87,127 +91,211 @@ export function PlayerIdentitySetup({ onComplete }) {
         }
     };
 
-    const panelStyle = {
-        animation: 'slideUp 0.8s ease-out',
-        background: 'rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(28px)',
-        WebkitBackdropFilter: 'blur(28px)',
-        borderRadius: '1.5rem',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
-        padding: '2.5rem'
+    const getOptionStyle = (isSelected, color = 'blue') => {
+        const colors = {
+            blue: { r: 59, g: 130, b: 246 },
+            green: { r: 34, g: 197, b: 94 },
+            gray: { r: 107, g: 114, b: 128 }
+        };
+        const c = colors[color] || colors.blue;
+
+        return {
+            padding: isCompact ? '0.75rem' : '1rem',
+            borderRadius: '0.75rem',
+            cursor: 'pointer',
+            transition: 'all 0.3s',
+            background: isSelected
+                ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.2)`
+                : 'rgba(255, 255, 255, 0.05)',
+            border: isSelected
+                ? `1px solid rgba(${c.r}, ${c.g}, ${c.b}, 0.5)`
+                : '1px solid rgba(255, 255, 255, 0.1)',
+            width: '100%',
+            textAlign: 'left'
+        };
     };
 
-    const optionStyle = (isSelected, color = 'blue') => ({
-        padding: '1rem',
-        borderRadius: '0.75rem',
-        cursor: 'pointer',
+    const inputStyle = {
+        background: 'rgba(255, 255, 255, 0.03)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        color: 'white',
+        padding: '0.75rem 1rem',
+        borderRadius: '0.5rem',
+        fontSize: '1rem',
         transition: 'all 0.3s',
-        background: isSelected ? `rgba(${color === 'blue' ? '59, 130, 246' : color === 'green' ? '34, 197, 94' : '107, 114, 128'}, 0.2)` : 'rgba(255, 255, 255, 0.05)',
-        border: isSelected ? `1px solid rgba(${color === 'blue' ? '59, 130, 246' : color === 'green' ? '34, 197, 94' : '107, 114, 128'}, 0.5)` : '1px solid rgba(255, 255, 255, 0.1)'
-    });
+        outline: 'none',
+        width: '100%'
+    };
 
     return createElement('div', {
-        className: 'max-w-lg w-full',
-        style: panelStyle
-    }, [
-        createElement('h2', {
-            key: 'title',
-            className: 'text-2xl font-bold text-center text-white mb-2',
-            style: { textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)' }
-        }, 'Welcome to Sheep Dog Sim!'),
-
-        createElement('p', {
-            key: 'subtitle',
-            className: 'text-white text-opacity-70 text-center mb-8 text-sm'
-        }, 'Choose how you\'d like to be known:'),
-
-        createElement('div', {
-            key: 'options',
-            className: 'space-y-4'
+        style: {
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%'
+        }
+    },
+        createElement(Panel, {
+            size: 'lg',
+            maxWidth: '28rem',
+            style: { animation: 'slideUp 0.8s ease-out' }
         }, [
-            // Custom name option
+            createElement(PanelTitle, { key: 'title' }, 'Welcome to Sheep Dog Sim!'),
+
+            createElement('p', {
+                key: 'subtitle',
+                style: {
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textAlign: 'center',
+                    marginBottom: isCompact ? '1rem' : '2rem',
+                    fontSize: isCompact ? '0.8rem' : '0.875rem'
+                }
+            }, 'Choose how you\'d like to be known:'),
+
             createElement('div', {
-                key: 'custom',
-                style: optionStyle(nameType === 'custom', 'blue'),
-                onClick: handleCustomName
+                key: 'options',
+                style: {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: isCompact ? '0.5rem' : '1rem'
+                }
             }, [
+                // Custom name option
                 createElement('div', {
-                    key: 'header',
-                    className: 'flex items-center gap-3 mb-3'
+                    key: 'custom',
+                    style: getOptionStyle(nameType === 'custom', 'blue'),
+                    onClick: handleCustomName
                 }, [
-                    createElement('span', { key: 'icon', className: 'text-xl' }, ''),
-                    createElement('span', { key: 'title', className: 'text-white font-semibold' }, 'Custom Name')
+                    createElement('div', {
+                        key: 'header',
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            marginBottom: '0.5rem'
+                        }
+                    }, [
+                        createElement('span', {
+                            key: 'icon',
+                            style: { fontSize: isCompact ? '1rem' : '1.25rem' }
+                        }, '✏️'),
+                        createElement('span', {
+                            key: 'title',
+                            style: { color: 'white', fontWeight: 600 }
+                        }, 'Custom Name')
+                    ]),
+                    createElement('p', {
+                        key: 'desc',
+                        style: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            fontSize: isCompact ? '0.75rem' : '0.875rem',
+                            marginBottom: nameType === 'custom' ? '0.75rem' : 0
+                        }
+                    }, 'Choose your own display name'),
+                    nameType === 'custom' && createElement('input', {
+                        key: 'input',
+                        type: 'text',
+                        style: inputStyle,
+                        placeholder: 'Enter your name...',
+                        value: displayName,
+                        maxLength: 20,
+                        onChange: (e) => setDisplayName(e.target.value),
+                        onKeyPress: (e) => { if (e.key === 'Enter') handleSubmit(); },
+                        onFocus: () => window.isTypingInInput = true,
+                        onBlur: () => window.isTypingInInput = false
+                    })
                 ]),
-                createElement('p', {
-                    key: 'desc',
-                    className: 'text-white text-opacity-70 text-sm mb-3'
-                }, 'Choose your own display name'),
-                nameType === 'custom' && createElement('input', {
-                    key: 'input',
-                    type: 'text',
-                    className: 'modern-input w-full',
-                    placeholder: 'Enter your name...',
-                    value: displayName,
-                    maxLength: 20,
-                    onChange: (e) => setDisplayName(e.target.value),
-                    onKeyPress: (e) => { if (e.key === 'Enter') handleSubmit(); },
-                    onFocus: () => window.isTypingInInput = true,
-                    onBlur: () => window.isTypingInInput = false
-                })
+
+                // Random name option
+                createElement('button', {
+                    key: 'random',
+                    style: getOptionStyle(nameType === 'random', 'green'),
+                    onClick: handleGenerateRandom
+                }, [
+                    createElement('div', {
+                        key: 'header',
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            marginBottom: '0.25rem'
+                        }
+                    }, [
+                        createElement('span', {
+                            key: 'icon',
+                            style: { fontSize: isCompact ? '1rem' : '1.25rem' }
+                        }, '🎲'),
+                        createElement('span', {
+                            key: 'title',
+                            style: { color: 'white', fontWeight: 600 }
+                        }, 'Random Name')
+                    ]),
+                    createElement('p', {
+                        key: 'desc',
+                        style: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            fontSize: isCompact ? '0.75rem' : '0.875rem'
+                        }
+                    }, 'Get a randomly generated herding-themed name')
+                ]),
+
+                // Anonymous option
+                createElement('button', {
+                    key: 'anonymous',
+                    style: getOptionStyle(nameType === 'anonymous', 'gray'),
+                    onClick: handleStayAnonymous
+                }, [
+                    createElement('div', {
+                        key: 'header',
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            marginBottom: '0.25rem'
+                        }
+                    }, [
+                        createElement('span', {
+                            key: 'icon',
+                            style: { fontSize: isCompact ? '1rem' : '1.25rem' }
+                        }, '👤'),
+                        createElement('span', {
+                            key: 'title',
+                            style: { color: 'white', fontWeight: 600 }
+                        }, 'Stay Anonymous')
+                    ]),
+                    createElement('p', {
+                        key: 'desc',
+                        style: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            fontSize: isCompact ? '0.75rem' : '0.875rem'
+                        }
+                    }, 'Play as "Player" without a custom name')
+                ])
             ]),
 
-            // Random name option
-            createElement('button', {
-                key: 'random',
-                className: 'w-full text-left',
-                style: optionStyle(nameType === 'random', 'green'),
-                onClick: handleGenerateRandom
-            }, [
-                createElement('div', {
-                    key: 'header',
-                    className: 'flex items-center gap-3 mb-2'
-                }, [
-                    createElement('span', { key: 'icon', className: 'text-xl' }, ''),
-                    createElement('span', { key: 'title', className: 'text-white font-semibold' }, 'Random Name')
-                ]),
-                createElement('p', {
-                    key: 'desc',
-                    className: 'text-white text-opacity-70 text-sm'
-                }, 'Get a randomly generated herding-themed name')
-            ]),
+            error && createElement('p', {
+                key: 'error',
+                style: {
+                    color: '#f87171',
+                    fontSize: '0.875rem',
+                    textAlign: 'center',
+                    marginTop: '1rem'
+                }
+            }, error),
 
-            // Anonymous option
-            createElement('button', {
-                key: 'anonymous',
-                className: 'w-full text-left',
-                style: optionStyle(nameType === 'anonymous', 'gray'),
-                onClick: handleStayAnonymous
-            }, [
-                createElement('div', {
-                    key: 'header',
-                    className: 'flex items-center gap-3 mb-2'
-                }, [
-                    createElement('span', { key: 'icon', className: 'text-xl' }, ''),
-                    createElement('span', { key: 'title', className: 'text-white font-semibold' }, 'Stay Anonymous')
-                ]),
-                createElement('p', {
-                    key: 'desc',
-                    className: 'text-white text-opacity-70 text-sm'
-                }, 'Play as "Player" without a custom name')
-            ])
-        ]),
-
-        error && createElement('p', {
-            key: 'error',
-            className: 'text-red-400 text-sm text-center mt-4'
-        }, error),
-
-        createElement('button', {
-            key: 'submit',
-            className: 'btn-primary w-full mt-6',
-            onClick: handleSubmit,
-            disabled: isSubmitting
-        }, createElement('span', null, isSubmitting ? 'Setting up...' : 'Continue'))
-    ]);
+            createElement('div', {
+                key: 'submit',
+                style: { marginTop: isCompact ? '1rem' : '1.5rem' }
+            },
+                createElement(Button, {
+                    variant: 'primary',
+                    fullWidth: true,
+                    onClick: handleSubmit,
+                    disabled: isSubmitting
+                }, isSubmitting ? 'Setting up...' : 'Continue →')
+            )
+        ])
+    );
 }

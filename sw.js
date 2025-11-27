@@ -92,6 +92,11 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Skip non-http(s) requests (chrome-extension, etc.)
+    if (!url.protocol.startsWith('http')) {
+        return;
+    }
+
     // Skip requests that should never be cached
     if (NEVER_CACHE.some(pattern => pattern.test(url.pathname))) {
         return;

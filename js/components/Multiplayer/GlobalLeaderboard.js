@@ -3,6 +3,9 @@
  * View global rankings across all game modes
  */
 import { getNetworkManager } from '../../GameBridge.js';
+import { useResponsive } from '../hooks/usePlatform.js';
+import { Panel, PanelTitle } from '../ui/Panel.js';
+import { Button } from '../ui/Button.js';
 
 const { createElement, useState, useEffect } = window.React;
 
@@ -12,6 +15,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [lastRefresh, setLastRefresh] = useState(null);
+    const { isCompact, isMobile } = useResponsive();
 
     const tabs = [
         { id: 'soloClassic', name: 'Solo Classic', icon: 'Solo' },
@@ -64,153 +68,214 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
 
         if (data.length === 0) {
             return createElement('div', {
-                className: 'text-center py-8 text-white text-opacity-60'
+                style: {
+                    textAlign: 'center',
+                    padding: '2rem',
+                    color: 'rgba(255, 255, 255, 0.6)'
+                }
             }, 'No scores recorded yet. Be the first!');
         }
 
         return createElement('div', {
-            className: 'space-y-2'
+            style: { display: 'flex', flexDirection: 'column', gap: '0.5rem' }
         }, data.map((entry, index) => {
             const isPlayer = playerIdentity && entry.fullName === playerIdentity.fullName;
 
+            const getRankStyle = (rank) => {
+                const base = {
+                    width: isCompact ? '28px' : '32px',
+                    height: isCompact ? '28px' : '32px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: isCompact ? '0.7rem' : '0.875rem',
+                    fontWeight: 'bold'
+                };
+                if (rank === 1) return { ...base, background: '#eab308', color: 'black' };
+                if (rank === 2) return { ...base, background: '#d1d5db', color: 'black' };
+                if (rank === 3) return { ...base, background: '#d97706', color: 'white' };
+                return { ...base, background: 'rgba(255, 255, 255, 0.1)', color: 'white' };
+            };
+
             return createElement('div', {
                 key: index,
-                className: `flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
-                    isPlayer ? 'bg-blue-500 bg-opacity-20 border border-blue-400 border-opacity-30' : 'bg-white bg-opacity-5'
-                }`
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: isCompact ? '0.5rem 0.75rem' : '0.75rem 1rem',
+                    borderRadius: '0.5rem',
+                    transition: 'all 0.2s',
+                    background: isPlayer ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: isPlayer ? '1px solid rgba(96, 165, 250, 0.3)' : '1px solid transparent'
+                }
             }, [
                 createElement('div', {
                     key: 'left',
-                    className: 'flex items-center gap-3'
+                    style: { display: 'flex', alignItems: 'center', gap: isCompact ? '0.5rem' : '0.75rem' }
                 }, [
                     createElement('div', {
                         key: 'rank',
-                        className: `w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            entry.rank === 1 ? 'bg-yellow-500 text-black' :
-                            entry.rank === 2 ? 'bg-gray-300 text-black' :
-                            entry.rank === 3 ? 'bg-amber-600 text-white' :
-                            'bg-white bg-opacity-10 text-white'
-                        }`
+                        style: getRankStyle(entry.rank)
                     }, entry.rank <= 3 ? ['1st', '2nd', '3rd'][entry.rank - 1] : entry.rank),
                     createElement('div', { key: 'info' }, [
                         createElement('div', {
                             key: 'name',
-                            className: `font-semibold ${isPlayer ? 'text-blue-300' : 'text-white'}`
+                            style: {
+                                fontWeight: 600,
+                                color: isPlayer ? '#93c5fd' : 'white',
+                                fontSize: isCompact ? '0.8rem' : '1rem'
+                            }
                         }, entry.displayName + (isPlayer ? ' (You)' : '')),
-                        createElement('div', {
+                        !isCompact && createElement('div', {
                             key: 'full',
-                            className: 'text-xs text-white text-opacity-50'
+                            style: {
+                                fontSize: '0.75rem',
+                                color: 'rgba(255, 255, 255, 0.5)'
+                            }
                         }, entry.fullName)
                     ])
                 ]),
                 createElement('div', {
                     key: 'score',
-                    className: 'text-white font-mono font-bold'
+                    style: {
+                        color: 'white',
+                        fontFamily: 'monospace',
+                        fontWeight: 'bold',
+                        fontSize: isCompact ? '0.8rem' : '1rem'
+                    }
                 }, entry.formattedScore)
             ]);
         }));
     };
 
-    const panelStyle = {
-        animation: 'slideUp 0.5s ease-out',
-        background: 'rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(28px)',
-        WebkitBackdropFilter: 'blur(28px)',
-        borderRadius: '1.5rem',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
-        padding: '2rem'
-    };
+    const tabButtonStyle = (isActive) => ({
+        padding: isCompact ? '0.5rem 0.75rem' : '0.5rem 1rem',
+        borderRadius: '0.5rem',
+        fontSize: isCompact ? '0.75rem' : '0.875rem',
+        fontWeight: 500,
+        transition: 'all 0.2s',
+        whiteSpace: 'nowrap',
+        cursor: 'pointer',
+        border: isActive ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid transparent',
+        background: isActive ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+        color: isActive ? 'white' : 'rgba(255, 255, 255, 0.7)'
+    });
 
     return createElement('div', {
-        className: 'max-w-4xl w-full',
-        style: panelStyle
-    }, [
-        // Header
-        createElement('div', {
-            key: 'header',
-            className: 'flex items-center justify-between mb-6'
+        style: {
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%'
+        }
+    },
+        createElement(Panel, {
+            size: 'lg',
+            maxWidth: '56rem',
+            style: { animation: 'slideUp 0.5s ease-out' }
         }, [
-            createElement('h2', {
-                key: 'title',
-                className: 'text-3xl font-bold text-white',
-                style: { textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)' }
-            }, 'Global Leaderboard'),
+            // Header
             createElement('div', {
-                key: 'controls',
-                className: 'flex items-center gap-3'
+                key: 'header',
+                style: {
+                    display: 'flex',
+                    alignItems: isMobile ? 'flex-start' : 'center',
+                    justifyContent: 'space-between',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '0.75rem' : '0',
+                    marginBottom: isCompact ? '1rem' : '1.5rem'
+                }
             }, [
-                lastRefresh && createElement('span', {
-                    key: 'time',
-                    className: 'text-xs text-white text-opacity-60'
-                }, `Updated ${lastRefresh.toLocaleTimeString()}`),
-                createElement('button', {
-                    key: 'refresh',
-                    className: 'btn-secondary py-2 px-4 text-sm',
-                    onClick: loadLeaderboards,
-                    disabled: loading
-                }, loading ? '...' : 'Refresh')
-            ])
-        ]),
-
-        // Tab Navigation
-        createElement('div', {
-            key: 'tabs',
-            className: 'flex flex-wrap gap-2 mb-6 overflow-x-auto'
-        }, tabs.map(tab =>
-            createElement('button', {
-                key: tab.id,
-                className: `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                    activeTab === tab.id
-                        ? 'bg-white bg-opacity-20 text-white border border-white border-opacity-30'
-                        : 'bg-white bg-opacity-5 text-white text-opacity-70 hover:bg-opacity-10'
-                }`,
-                onClick: () => setActiveTab(tab.id)
-            }, `${tab.icon}`)
-        )),
-
-        // Content Area
-        createElement('div', {
-            key: 'content',
-            className: 'min-h-[400px]'
-        }, [
-            loading && createElement('div', {
-                key: 'loading',
-                className: 'flex items-center justify-center py-20'
-            }, [
+                createElement(PanelTitle, {
+                    key: 'title',
+                    style: { marginBottom: 0 }
+                }, 'Global Leaderboard'),
                 createElement('div', {
-                    key: 'spinner',
-                    className: 'spinner mr-3'
-                }),
-                createElement('span', {
-                    key: 'text',
-                    className: 'text-white text-opacity-80'
-                }, 'Loading leaderboards...')
+                    key: 'controls',
+                    style: { display: 'flex', alignItems: 'center', gap: '0.75rem' }
+                }, [
+                    lastRefresh && createElement('span', {
+                        key: 'time',
+                        style: {
+                            fontSize: '0.75rem',
+                            color: 'rgba(255, 255, 255, 0.6)'
+                        }
+                    }, `Updated ${lastRefresh.toLocaleTimeString()}`),
+                    createElement(Button, {
+                        key: 'refresh',
+                        variant: 'secondary',
+                        onClick: loadLeaderboards,
+                        disabled: loading,
+                        style: { padding: '0.5rem 1rem', fontSize: '0.875rem' }
+                    }, loading ? '...' : 'Refresh')
+                ])
             ]),
 
-            error && createElement('div', {
-                key: 'error',
-                className: 'text-center py-20'
-            }, [
-                createElement('p', {
-                    key: 'message',
-                    className: 'text-red-400 mb-4'
-                }, error),
+            // Tab Navigation
+            createElement('div', {
+                key: 'tabs',
+                style: {
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    marginBottom: isCompact ? '1rem' : '1.5rem',
+                    overflowX: 'auto'
+                }
+            }, tabs.map(tab =>
                 createElement('button', {
-                    key: 'retry',
-                    className: 'btn-primary',
-                    onClick: loadLeaderboards
-                }, 'Try Again')
+                    key: tab.id,
+                    style: tabButtonStyle(activeTab === tab.id),
+                    onClick: () => setActiveTab(tab.id)
+                }, tab.icon)
+            )),
+
+            // Content Area
+            createElement('div', {
+                key: 'content',
+                style: { minHeight: isCompact ? '200px' : '300px' }
+            }, [
+                loading && createElement('div', {
+                    key: 'loading',
+                    style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '3rem 0'
+                    }
+                }, [
+                    createElement('span', {
+                        key: 'text',
+                        style: { color: 'rgba(255, 255, 255, 0.8)' }
+                    }, 'Loading leaderboards...')
+                ]),
+
+                error && createElement('div', {
+                    key: 'error',
+                    style: { textAlign: 'center', padding: '3rem 0' }
+                }, [
+                    createElement('p', {
+                        key: 'message',
+                        style: { color: '#f87171', marginBottom: '1rem' }
+                    }, error),
+                    createElement(Button, {
+                        key: 'retry',
+                        variant: 'primary',
+                        onClick: loadLeaderboards
+                    }, 'Try Again')
+                ]),
+
+                !loading && !error && renderLeaderboardTable(activeTab)
             ]),
 
-            !loading && !error && renderLeaderboardTable(activeTab)
-        ]),
-
-        // Back Button
-        createElement('button', {
-            key: 'back',
-            className: 'btn-secondary mt-6',
-            onClick: onBack
-        }, String.fromCharCode(8592) + ' Back to Menu')
-    ]);
+            // Back Button
+            createElement(Button, {
+                key: 'back',
+                variant: 'secondary',
+                onClick: onBack,
+                style: { marginTop: isCompact ? '1rem' : '1.5rem' }
+            }, '\u2190 Back to Menu')
+        ])
+    );
 }

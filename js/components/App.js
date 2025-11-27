@@ -51,7 +51,8 @@ export async function initReactUI() {
             { RoomJoining },
             { Lobby },
             { MultiplayerScoreboard },
-            { GlobalLeaderboard }
+            { GlobalLeaderboard },
+            { Button }
         ] = await Promise.all([
             import('./hooks/usePlatform.js'),
             import('./hooks/useGameState.js'),
@@ -72,7 +73,8 @@ export async function initReactUI() {
             import('./Multiplayer/RoomJoining.js'),
             import('./Multiplayer/Lobby.js'),
             import('./Multiplayer/MultiplayerScoreboard.js'),
-            import('./Multiplayer/GlobalLeaderboard.js')
+            import('./Multiplayer/GlobalLeaderboard.js'),
+            import('./ui/Button.js')
         ]);
 
         // Expose CompletionScreen globally for main.js to use
@@ -323,11 +325,14 @@ export async function initReactUI() {
                         return createElement(PlayerIdentitySetup, { onComplete: handlePlayerSetupComplete });
 
                     case 'main':
-                        return createElement('div', { className: 'max-w-4xl w-full text-center' }, [
+                        // Return array directly - .start-screen-content handles centering
+                        return [
                             createElement('h1', {
                                 key: 'title',
-                                className: 'text-6xl md:text-8xl font-black mb-4 mobile-title',
                                 style: {
+                                    fontSize: 'clamp(2.5rem, 8vw, 6rem)',
+                                    fontWeight: 900,
+                                    marginBottom: '0.5rem',
                                     fontFamily: '"Comic Sans MS", cursive',
                                     background: 'linear-gradient(180deg, #4FFFFF 0%, #2196F3 50%, #1976D2 100%)',
                                     WebkitBackgroundClip: 'text',
@@ -340,8 +345,10 @@ export async function initReactUI() {
                             }, 'SHEEP DOG'),
                             createElement('h2', {
                                 key: 'subtitle',
-                                className: 'text-3xl md:text-4xl font-bold mb-4 mobile-subtitle',
                                 style: {
+                                    fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                                    fontWeight: 700,
+                                    marginBottom: '1rem',
                                     fontFamily: '"Comic Sans MS", cursive',
                                     color: '#FFD700',
                                     WebkitTextStroke: '2px #FF6B00',
@@ -352,29 +359,47 @@ export async function initReactUI() {
                             }, 'SIMULATOR'),
                             playerIdentity && createElement('p', {
                                 key: 'greeting',
-                                className: 'text-white text-opacity-80 mb-8 text-lg',
-                                style: { animation: 'fadeIn 0.6s ease-out 0.3s both' }
+                                style: {
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    marginBottom: '2rem',
+                                    fontSize: '1.125rem',
+                                    animation: 'fadeIn 0.6s ease-out 0.3s both'
+                                }
                             }, `Welcome back, ${playerIdentity.displayName}!`),
                             createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect })
-                        ]);
+                        ];
 
                     case 'dogSelection':
-                        return createElement('div', { className: 'max-w-4xl w-full' }, [
+                        return createElement('div', {
+                            style: {
+                                width: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center'
+                            }
+                        }, [
                             createElement(DogSelection, { key: 'selection', selectedDog, onSelect: setSelectedDog }),
                             createElement('div', {
                                 key: 'buttons',
-                                className: 'flex gap-4 justify-center mt-8',
-                                style: { animation: 'slideUp 0.8s ease-out 0.2s both' }
+                                style: {
+                                    display: 'flex',
+                                    gap: '1rem',
+                                    justifyContent: 'center',
+                                    marginTop: '2rem',
+                                    animation: 'slideUp 0.8s ease-out 0.2s both'
+                                }
                             }, [
-                                createElement('button', {
+                                createElement(Button, {
                                     key: 'back',
-                                    className: 'btn-secondary px-8 py-4 text-lg',
-                                    onClick: () => setScreen('main')
+                                    variant: 'secondary',
+                                    onClick: () => setScreen('main'),
+                                    style: { padding: '1rem 2rem', fontSize: '1.125rem' }
                                 }, '\u2190 Back'),
-                                createElement('button', {
+                                createElement(Button, {
                                     key: 'confirm',
-                                    className: 'btn-primary px-8 py-4 text-lg',
-                                    onClick: handleDogConfirm
+                                    variant: 'primary',
+                                    onClick: handleDogConfirm,
+                                    style: { padding: '1rem 2rem', fontSize: '1.125rem' }
                                 }, 'Confirm Selection')
                             ])
                         ]);
@@ -438,12 +463,19 @@ export async function initReactUI() {
                 }
             };
 
-            // Use start-screen-container class for proper mobile layout
-            // This class makes it scrollable on mobile to prevent title cutoff
+            // Container handles: positioning, centering, overlay background, padding
+            // Content handles: max-width
             return createElement('div', {
-                className: 'start-screen-container fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4',
-                style: { animation: 'fadeIn 0.4s ease-out' }
-            }, createElement('div', { className: 'start-screen-content' }, renderContent()));
+                className: 'start-screen-container',
+                style: {
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    animation: 'fadeIn 0.4s ease-out'
+                }
+            }, createElement('div', {
+                className: 'start-screen-content'
+            }, renderContent()));
         }
 
         // ==================== GAME HUD ====================
