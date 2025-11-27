@@ -434,7 +434,7 @@ class MultiplayerServer {
             if (!player || !player.roomCode) return;
 
             const { dogType } = data;
-            if (!dogType || !['jep', 'pip', 'shiloh'].includes(dogType)) {
+            if (!dogType || !['jep', 'pip', 'sally', 'shiloh', 'george_washington'].includes(dogType)) {
                 console.warn(`Invalid dog type received from ${playerId}: ${dogType}`);
                 return;
             }

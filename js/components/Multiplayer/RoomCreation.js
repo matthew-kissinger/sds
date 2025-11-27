@@ -28,13 +28,14 @@ export function RoomCreation({ onBack, onCreate }) {
     };
 
     const selectStyle = {
-        background: 'rgba(255, 255, 255, 0.06)',
+        background: 'rgba(0, 0, 0, 0.4)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
         borderRadius: '0.75rem',
         padding: '0.75rem 1rem',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)'
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)',
+        color: 'white'
     };
 
     return createElement('div', {
