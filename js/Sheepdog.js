@@ -203,6 +203,7 @@ export class Sheepdog {
         this.stamina = this.maxStamina;
         this.minStaminaToSprint = 10;
         this.isSprinting = false;
+        this.sprintExhausted = false; // Lock that requires releasing sprint key after exhaustion
     }
     
     /**
@@ -659,21 +660,30 @@ export class Sheepdog {
     
     /**
      * Update stamina system
+     * Sprint lock: when stamina is exhausted, player must release sprint key before sprinting again
      */
     updateStamina(wantsSprint, deltaTime) {
         const isMoving = this.velocity.magnitude() > 0.1;
-        
-        if (wantsSprint && isMoving && this.stamina >= this.minStaminaToSprint) {
+
+        // Clear exhaustion lock when sprint key is released
+        if (!wantsSprint) {
+            this.sprintExhausted = false;
+        }
+
+        // Can only sprint if: wants to sprint, is moving, has stamina, and not exhausted
+        if (wantsSprint && isMoving && this.stamina >= this.minStaminaToSprint && !this.sprintExhausted) {
             this.isSprinting = true;
             this.stamina = Math.max(0, this.stamina - this.staminaDrainRate * deltaTime);
+
+            // Set exhaustion lock when stamina runs out
+            if (this.stamina <= 0) {
+                this.sprintExhausted = true;
+                this.isSprinting = false;
+            }
         } else {
             this.isSprinting = false;
             const regenRate = isMoving ? this.staminaRegenRate : this.staminaRegenRate * 2;
             this.stamina = Math.min(this.maxStamina, this.stamina + regenRate * deltaTime);
-        }
-        
-        if (this.stamina <= 0) {
-            this.isSprinting = false;
         }
     }
     
@@ -686,7 +696,8 @@ export class Sheepdog {
             max: this.maxStamina,
             percentage: (this.stamina / this.maxStamina) * 100,
             isSprinting: this.isSprinting,
-            canSprint: this.stamina >= this.minStaminaToSprint
+            canSprint: this.stamina >= this.minStaminaToSprint && !this.sprintExhausted,
+            isExhausted: this.sprintExhausted
         };
     }
     
