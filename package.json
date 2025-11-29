@@ -37,7 +37,8 @@
     "http-server": "^14.1.1",
     "stats.js": "^0.17.0",
     "tailwindcss": "^4.1.17",
-    "vite": "^7.2.2"
+    "vite": "^7.2.2",
+    "vite-plugin-static-copy": "^3.1.4"
   },
   "dependencies": {
     "@geckos.io/client": "^3.0.1",
