@@ -225,45 +225,23 @@ export class MobileControls {
         // Don't create if already exists or if already in fullscreen
         if (this.fullscreenButton || this.isFullscreen()) return;
 
-        // Check platform
-        const isIOS = this.isIOS();
-        const supportsFullscreen = this.isFullscreenSupported();
+        // Only show on mobile devices that support fullscreen (skip iOS entirely)
+        if (!this.isTouchDevice || !this.isFullscreenSupported()) return;
 
-        // Only show on mobile devices - show appropriate message based on platform
-        if (!this.isTouchDevice) return;
-
-        // Skip entirely if not iOS and no fullscreen support (rare edge case)
-        if (!isIOS && !supportsFullscreen) return;
-
-        // Create simple, reliable banner with appropriate message
+        // Create simple, reliable fullscreen banner
         this.fullscreenButton = document.createElement('div');
         this.fullscreenButton.id = 'mobile-fullscreen-banner';
-
-        if (isIOS) {
-            // iOS: Show rotate/add-to-home message since fullscreen isn't supported
-            this.fullscreenButton.innerHTML = `
-                <div class="banner-content">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.9;">
-                        <path d="M21 12a9 9 0 1 1-9-9"></path>
-                        <polyline points="21 3 21 9 15 9"></polyline>
-                    </svg>
-                    <span class="banner-text">Rotate for best experience</span>
-                </div>
-            `;
-        } else {
-            // Android/other: Show fullscreen message
-            this.fullscreenButton.innerHTML = `
-                <div class="banner-content">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.9;">
-                        <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
-                        <path d="M21 8V5a2 2 0 0 0-2-2h-3"></path>
-                        <path d="M3 16v3a2 2 0 0 0 2 2h3"></path>
-                        <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
-                    </svg>
-                    <span class="banner-text">Tap for fullscreen</span>
-                </div>
-            `;
-        }
+        this.fullscreenButton.innerHTML = `
+            <div class="banner-content">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.9;">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+                    <path d="M21 8V5a2 2 0 0 0-2-2h-3"></path>
+                    <path d="M3 16v3a2 2 0 0 0 2 2h3"></path>
+                    <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+                </svg>
+                <span class="banner-text">Tap for fullscreen</span>
+            </div>
+        `;
         
         // Simple, reliable styling
         this.fullscreenButton.style.cssText = `
@@ -326,13 +304,11 @@ export class MobileControls {
             document.head.appendChild(style);
         }
         
-        // Click handler - request fullscreen on Android, just dismiss on iOS
+        // Click handler - request fullscreen
         this.fullscreenButton.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (!isIOS && supportsFullscreen) {
-                this.requestFullscreen();
-            }
+            this.requestFullscreen();
             this.hideFullscreenButton();
         });
 
