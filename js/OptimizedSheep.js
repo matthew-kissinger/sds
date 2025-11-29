@@ -217,32 +217,139 @@ export class OptimizedSheepSystem {
      */
     initializeSheepData() {
         const dummy = new THREE.Object3D();
-        const { centerX, centerZ, spreadRadius } = this.spawnConfig;
+        const { centerX, centerZ, spreadRadius, borderPoints } = this.spawnConfig;
+        const edgeMargin = 5; // Minimum distance from fence edges
 
         for (let i = 0; i < this.sheepCount; i++) {
-            // Random position in a cluster around spawn center
-            const angle = Math.random() * Math.PI * 2;
-            const distance = Math.random() * spreadRadius;
-            const x = centerX + Math.cos(angle) * distance;
-            const z = centerZ + Math.sin(angle) * distance;
-            
+            let x, z;
+            let attempts = 0;
+            const maxAttempts = 100; // Increased attempts for safer spawning
+
+            // Try to find a valid spawn position inside the polygon with margin from edges
+            do {
+                // Random position in a cluster around spawn center
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * spreadRadius;
+                x = centerX + Math.cos(angle) * distance;
+                z = centerZ + Math.sin(angle) * distance;
+                attempts++;
+            } while (borderPoints && !this.isPointSafelyInside(x, z, borderPoints, edgeMargin) && attempts < maxAttempts);
+
+            // If we couldn't find a safe point, try random positions across the field
+            if (attempts >= maxAttempts && borderPoints) {
+                // Grid search fallback - find ANY valid point
+                let found = false;
+                const centroid = this.getPolygonCentroid(borderPoints);
+
+                // Try progressively larger areas around centroid
+                for (let searchRadius = 10; searchRadius <= spreadRadius * 2 && !found; searchRadius += 10) {
+                    for (let attempt = 0; attempt < 20 && !found; attempt++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = Math.random() * searchRadius;
+                        const testX = centroid.x + Math.cos(angle) * distance;
+                        const testZ = centroid.z + Math.sin(angle) * distance;
+
+                        if (this.isPointSafelyInside(testX, testZ, borderPoints, edgeMargin)) {
+                            x = testX;
+                            z = testZ;
+                            found = true;
+                        }
+                    }
+                }
+
+                // Last resort - use centroid even if too close to edge
+                if (!found) {
+                    x = centroid.x + (Math.random() - 0.5) * 5;
+                    z = centroid.z + (Math.random() - 0.5) * 5;
+                }
+            }
+
             // Create sheep instance data
             const sheep = new OptimizedSheepInstance(i, x, z);
             this.sheep.push(sheep);
-            
+
             // Set initial transform
             dummy.position.set(x, 0, z);
             dummy.rotation.y = Math.random() * Math.PI * 2;
             dummy.updateMatrix();
             this.instancedMesh.setMatrixAt(i, dummy.matrix);
-            
+
             // Set initial animation data
             this.updateInstanceAttributes(i, sheep);
         }
-        
+
         this.instancedMesh.instanceMatrix.needsUpdate = true;
     }
-    
+
+    /**
+     * Check if a point is inside a polygon using ray casting algorithm
+     */
+    isPointInPolygon(x, z, points) {
+        if (!points || points.length < 3) return true;
+
+        let inside = false;
+        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+            const xi = points[i].x, zi = points[i].z;
+            const xj = points[j].x, zj = points[j].z;
+
+            if (((zi > z) !== (zj > z)) &&
+                (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    /**
+     * Get the centroid of a polygon
+     */
+    getPolygonCentroid(points) {
+        let cx = 0, cz = 0;
+        for (const p of points) {
+            cx += p.x;
+            cz += p.z;
+        }
+        return { x: cx / points.length, z: cz / points.length };
+    }
+
+    /**
+     * Calculate distance from a point to a line segment
+     */
+    pointToSegmentDistance(px, pz, start, end) {
+        const dx = end.x - start.x;
+        const dz = end.z - start.z;
+        const length = Math.sqrt(dx * dx + dz * dz);
+
+        if (length === 0) {
+            return Math.sqrt(Math.pow(px - start.x, 2) + Math.pow(pz - start.z, 2));
+        }
+
+        const t = Math.max(0, Math.min(1,
+            ((px - start.x) * dx + (pz - start.z) * dz) / (length * length)
+        ));
+
+        const closestX = start.x + t * dx;
+        const closestZ = start.z + t * dz;
+
+        return Math.sqrt(Math.pow(px - closestX, 2) + Math.pow(pz - closestZ, 2));
+    }
+
+    /**
+     * Check if a point is safely inside the polygon with margin from edges
+     */
+    isPointSafelyInside(x, z, points, margin = 3) {
+        if (!this.isPointInPolygon(x, z, points)) return false;
+
+        // Check distance from all edges
+        for (let i = 0; i < points.length; i++) {
+            const start = points[i];
+            const end = points[(i + 1) % points.length];
+            const dist = this.pointToSegmentDistance(x, z, start, end);
+            if (dist < margin) return false;
+        }
+        return true;
+    }
+
     /**
      * Update instance attributes for a specific sheep
      */
@@ -409,23 +516,74 @@ export class OptimizedSheepSystem {
             sheep.setAudioManager(audioManager);
         });
     }
-    
+
+    /**
+     * Update spawn configuration for polygon-aware spawning
+     * Call this before resetAllSheep() when field shape changes
+     */
+    setSpawnConfig(spawnConfig) {
+        this.spawnConfig = spawnConfig || {
+            centerX: -30,
+            centerZ: -30,
+            spreadRadius: 30
+        };
+        console.log(`[SHEEP] Updated spawn config: center(${this.spawnConfig.centerX?.toFixed(1)}, ${this.spawnConfig.centerZ?.toFixed(1)}), radius=${this.spawnConfig.spreadRadius?.toFixed(1)}, borderPoints=${this.spawnConfig.borderPoints?.length || 0}`);
+    }
+
     /**
      * Reset all sheep to their starting positions and states
+     * Uses the spawnConfig passed during construction for polygon-aware spawning
      */
     resetAllSheep() {
         const dummy = new THREE.Object3D();
-        const spreadRadius = 30;
-        
+        const { centerX, centerZ, spreadRadius, borderPoints } = this.spawnConfig;
+        const edgeMargin = 5; // Minimum distance from fence edges
+
         for (let i = 0; i < this.sheepCount; i++) {
             const sheep = this.sheep[i];
-            
-            // Reset position to starting area
-            const angle = Math.random() * Math.PI * 2;
-            const distance = Math.random() * spreadRadius;
-            const x = -30 + Math.cos(angle) * distance;
-            const z = -30 + Math.sin(angle) * distance;
-            
+
+            // Reset position to starting area - use polygon-aware spawning with edge margin
+            let x, z;
+            let attempts = 0;
+            const maxAttempts = 100; // Increased attempts for safer spawning
+
+            // Try to find a valid spawn position inside the polygon with margin from edges
+            do {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * spreadRadius;
+                x = centerX + Math.cos(angle) * distance;
+                z = centerZ + Math.sin(angle) * distance;
+                attempts++;
+            } while (borderPoints && !this.isPointSafelyInside(x, z, borderPoints, edgeMargin) && attempts < maxAttempts);
+
+            // If we couldn't find a safe point, try expanded search
+            if (attempts >= maxAttempts && borderPoints) {
+                let found = false;
+                const centroid = this.getPolygonCentroid(borderPoints);
+
+                // Try progressively larger areas around centroid
+                for (let searchRadius = 10; searchRadius <= spreadRadius * 2 && !found; searchRadius += 10) {
+                    for (let attempt = 0; attempt < 20 && !found; attempt++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = Math.random() * searchRadius;
+                        const testX = centroid.x + Math.cos(angle) * distance;
+                        const testZ = centroid.z + Math.sin(angle) * distance;
+
+                        if (this.isPointSafelyInside(testX, testZ, borderPoints, edgeMargin)) {
+                            x = testX;
+                            z = testZ;
+                            found = true;
+                        }
+                    }
+                }
+
+                // Last resort - use centroid
+                if (!found) {
+                    x = centroid.x + (Math.random() - 0.5) * 5;
+                    z = centroid.z + (Math.random() - 0.5) * 5;
+                }
+            }
+
             // Reset sheep state - now using the set method
             sheep.position.set(x, z);
             sheep.velocity.set(0, 0);
@@ -666,10 +824,31 @@ export class OptimizedSheepInstance extends Boid {
         if (gate && pasture && this.hasPassedGate && !this.isRetiring) {
             this.isRetiring = true;
             this.state = 1; // retiring
-            this.retirementTarget = new Vector2D(
-                pasture.minX + Math.random() * (pasture.maxX - pasture.minX),
-                pasture.minZ + Math.random() * (pasture.maxZ - pasture.minZ) // Spread across entire pasture depth
-            );
+
+            // Calculate retirement target - account for rotated pastures
+            const centerX = (pasture.minX + pasture.maxX) / 2;
+            const centerZ = (pasture.minZ + pasture.maxZ) / 2;
+            const width = pasture.maxX - pasture.minX;
+            const depth = pasture.maxZ - pasture.minZ;
+
+            // Random point in local coordinates (centered at origin)
+            const localX = (Math.random() - 0.5) * width * 0.8;  // 80% to stay away from edges
+            const localZ = (Math.random() - 0.5) * depth * 0.8;
+
+            // If pasture is rotated, transform local coords to world coords
+            let targetX, targetZ;
+            if (pasture.edgeAngle && pasture.edgeAngle !== 0) {
+                const cos = Math.cos(pasture.edgeAngle);
+                const sin = Math.sin(pasture.edgeAngle);
+                // Rotate local point by edgeAngle
+                targetX = centerX + localX * cos - localZ * sin;
+                targetZ = centerZ + localX * sin + localZ * cos;
+            } else {
+                targetX = centerX + localX;
+                targetZ = centerZ + localZ;
+            }
+
+            this.retirementTarget = new Vector2D(targetX, targetZ);
             this.maxSpeed *= 0.5;  // Half speed for retiring sheep
             this.maxForce *= 0.5;
             return;
@@ -767,19 +946,23 @@ export class OptimizedSheepInstance extends Boid {
         super.update(deltaTime); // This updates this.position and this.velocity
         
         // HARD BOUNDARY CONSTRAINT - Apply different logic based on sheep state
-        if (this.bounds) {
+        // For sandbox mode with polygon shapes, skip rectangular bounds - fence collision handles it
+        const fenceSystem = getFenceCollisionSystem();
+        const usePolygonBoundary = fenceSystem && fenceSystem.fenceSegments.length > 0 && this.borderPoints;
+
+        if (this.bounds && !usePolygonBoundary) {
             const margin = 0.2; // Small margin from edge
-            
+
             if (!this.hasPassedGate) {
                 // Pre-gate sheep: constrain to main field with gate area exceptions
-                
+
                 // Check if sheep is in any gate area (allow passage through any gate)
                 let inAnyGateArea = false;
                 let currentGateConstraints = null;
-                
+
                 // Get gate areas dynamically from FieldConfig based on current bounds
                 const possibleGateAreas = FieldConfig.getPossibleGateAreas();
-                
+
                 for (const gateArea of possibleGateAreas) {
                     if (this.position.x >= gateArea.minX && this.position.x <= gateArea.maxX &&
                         this.position.z >= gateArea.minZ && this.position.z <= gateArea.maxZ) {
@@ -788,7 +971,7 @@ export class OptimizedSheepInstance extends Boid {
                         break;
                     }
                 }
-                
+
                 // Apply hard constraints unless in gate area
                 if (!inAnyGateArea) {
                     this.position.x = Math.max(this.bounds.minX + margin, Math.min(this.bounds.maxX - margin, this.position.x));
@@ -797,7 +980,7 @@ export class OptimizedSheepInstance extends Boid {
                     // In gate area - apply gate-specific constraints
                     const gateWidth = currentGateConstraints.maxX - currentGateConstraints.minX;
                     const gateDepth = currentGateConstraints.maxZ - currentGateConstraints.minZ;
-                    
+
                     if (gateWidth > gateDepth) {
                         // Horizontal gate - constrain X to gate width, allow Z movement
                         this.position.x = Math.max(currentGateConstraints.minX, Math.min(currentGateConstraints.maxX, this.position.x));
@@ -806,7 +989,12 @@ export class OptimizedSheepInstance extends Boid {
                         this.position.z = Math.max(currentGateConstraints.minZ, Math.min(currentGateConstraints.maxZ, this.position.z));
                     }
                 }
-            } else if (this.isRetiring || this.state === 2) {
+            }
+        }
+
+        if (this.bounds) {
+            const margin = 0.2;
+            if ((this.isRetiring || this.state === 2) && this.hasPassedGate) {
                 // Post-gate retiring and grazing sheep: keep them in the appropriate pasture area
                 
                 // Get the correct pasture bounds based on assigned gate
@@ -820,8 +1008,7 @@ export class OptimizedSheepInstance extends Boid {
             // are already handled by the gentle boundary forces in their behavior update
         }
 
-        // Check collision with internal fences (sandbox mode custom fences)
-        const fenceSystem = getFenceCollisionSystem();
+        // Check collision with internal fences (sandbox mode custom fences and polygon borders)
         if (fenceSystem && fenceSystem.fenceSegments.length > 0) {
             const collision = fenceSystem.resolveCollision(this.position.x, this.position.z, 1.0);
             if (collision.collided) {
@@ -1053,69 +1240,60 @@ export class OptimizedSheepInstance extends Boid {
         }
         
         // Check if sheep passes through any gate
+        // Like classic mode: detect when sheep enters the pasture bounds area
         for (let i = 0; i < gatesWithZones.length; i++) {
             const gateData = gatesWithZones[i];
             const passageZone = gateData.passageZone;
-            
+            const gate = gateData.gate;
+
             // Additional safety check for each passage zone
             if (!passageZone) continue;
-            
-            const inGateX = this.position.x >= passageZone.minX && 
-                           this.position.x <= passageZone.maxX;
-            const inGateZ = this.position.z >= passageZone.minZ && 
-                           this.position.z <= passageZone.maxZ;
-            
-            // Check if sheep is moving through the gate
-            let movingThroughGate = false;
-            
-            if (gateData.direction) {
-                // Use explicit gate direction if available
-                switch (gateData.direction) {
-                    case 'north':
-                        movingThroughGate = this.velocity.z > 0;
-                        break;
-                    case 'south':
-                        movingThroughGate = this.velocity.z < 0;
-                        break;
-                    case 'east':
-                        movingThroughGate = this.velocity.x > 0;
-                        break;
-                    case 'west':
-                        movingThroughGate = this.velocity.x < 0;
-                        break;
-                    case 'southeast':
-                        movingThroughGate = this.velocity.x > 0 && this.velocity.z < 0;
-                        break;
-                    case 'southwest':
-                        movingThroughGate = this.velocity.x < 0 && this.velocity.z < 0;
-                        break;
-                    default:
-                        // Fallback to velocity magnitude check
-                        movingThroughGate = this.velocity.magnitude() > 0;
-                }
-            } else {
-                // Fallback: determine gate orientation based on passage zone dimensions
-                const gateWidth = passageZone.maxX - passageZone.minX;
-                const gateDepth = passageZone.maxZ - passageZone.minZ;
-                
-                if (gateWidth > gateDepth) {
-                    // Horizontal gate (wider than deep) - check Z velocity
-                    movingThroughGate = Math.abs(this.velocity.z) > 0;
+
+            // Check if sheep is in the pasture area (like classic mode's bounds check)
+            // For rotated pastures, check if sheep is in the rotated pasture bounds
+            let inPastureArea = false;
+
+            if (pastureBounds) {
+                const edgeAngle = pastureBounds.edgeAngle;
+
+                if (edgeAngle !== undefined && edgeAngle !== 0) {
+                    // Rotated pasture - transform sheep position to pasture's local coordinates
+                    const centerX = (pastureBounds.minX + pastureBounds.maxX) / 2;
+                    const centerZ = (pastureBounds.minZ + pastureBounds.maxZ) / 2;
+                    const width = pastureBounds.maxX - pastureBounds.minX;
+                    const depth = pastureBounds.maxZ - pastureBounds.minZ;
+
+                    // Offset from pasture center
+                    const dx = this.position.x - centerX;
+                    const dz = this.position.z - centerZ;
+
+                    // Rotate point by -edgeAngle to align with pasture's local frame
+                    const cosAngle = Math.cos(-edgeAngle);
+                    const sinAngle = Math.sin(-edgeAngle);
+                    const localX = dx * cosAngle - dz * sinAngle;
+                    const localZ = dx * sinAngle + dz * cosAngle;
+
+                    // Check if in rotated pasture bounds
+                    inPastureArea = Math.abs(localX) <= width / 2 && Math.abs(localZ) <= depth / 2;
                 } else {
-                    // Vertical gate (deeper than wide) - check X velocity  
-                    movingThroughGate = Math.abs(this.velocity.x) > 0;
+                    // Axis-aligned pasture - simple bounds check (like classic mode)
+                    inPastureArea = this.position.x >= pastureBounds.minX &&
+                                   this.position.x <= pastureBounds.maxX &&
+                                   this.position.z >= pastureBounds.minZ &&
+                                   this.position.z <= pastureBounds.maxZ;
                 }
             }
-            
-            if (inGateX && inGateZ && movingThroughGate) {
+
+            // If sheep is in pasture area, they've passed through the gate
+            if (inPastureArea) {
                 this.hasPassedGate = true;
                 this.assignedGate = i; // Track which gate was used
-                
+
                 // If gate has an ID, use that instead
                 if (gateData.gate && gateData.gate.id !== undefined) {
                     this.assignedGate = gateData.gate.id;
                 }
-                
+
                 return true;
             }
         }
@@ -1125,6 +1303,10 @@ export class OptimizedSheepInstance extends Boid {
     
     setBounds(bounds) {
         this.bounds = bounds;
+    }
+
+    setBorderPoints(borderPoints) {
+        this.borderPoints = borderPoints;
     }
     
     /**

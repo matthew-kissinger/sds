@@ -729,6 +729,7 @@ export function ShapeEditor({ config, onConfigChange, onDone, onBack }) {
         if (!validation.valid || !gatePosition) return;
 
         // Save the custom border points and gate position to config
+        // Clear dog.startPosition so it gets recalculated for the new shape/gate
         const newConfig = {
             ...config,
             field: {
@@ -742,7 +743,11 @@ export function ShapeEditor({ config, onConfigChange, onDone, onBack }) {
                 width: gateWidth,
                 direction: 'north', // Direction will be calculated from edge angle
                 edgeAngle: gatePosition.edgeAngle
-            }]
+            }],
+            dog: {
+                ...config.dog,
+                startPosition: null  // Force recalculation based on new shape/gate
+            }
         };
         onConfigChange(newConfig);
         onDone();

@@ -56,31 +56,48 @@ export class GameState {
         // Create optimized sheep system with correct sheep count
         console.log(`Creating sheep flock with ${this.totalSheep} sheep`);
 
-        // Calculate spawn position based on bounds - spawn in center of field
-        // Away from the gate (which is at maxZ) for better gameplay
-        const fieldCenterX = (this.bounds.minX + this.bounds.maxX) / 2;
-        const fieldCenterZ = (this.bounds.minZ + this.bounds.maxZ) / 2;
-        // Spawn slightly south of center (away from gate)
-        const spawnCenterZ = fieldCenterZ - (this.bounds.maxZ - this.bounds.minZ) * 0.15;
+        // Calculate spawn position - use polygon-aware spawning for non-rectangular shapes
+        let spawnConfig;
 
-        // Calculate appropriate spread radius based on field size
-        const fieldWidth = this.bounds.maxX - this.bounds.minX;
-        const fieldHeight = this.bounds.maxZ - this.bounds.minZ;
-        const spreadRadius = Math.min(fieldWidth, fieldHeight) * 0.2;
+        if (this.borderPoints && this.borderPoints.length >= 3 && this.gameMode === 'sandbox') {
+            // Polygon shape - calculate centroid and use polygon-aware spawning
+            spawnConfig = this.calculatePolygonSpawnConfig();
+            console.log(`[SHEEP] Polygon spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}`);
+        } else {
+            // Rectangular bounds - use standard spawning
+            const fieldCenterX = (this.bounds.minX + this.bounds.maxX) / 2;
+            const fieldCenterZ = (this.bounds.minZ + this.bounds.maxZ) / 2;
+            // Spawn slightly south of center (away from gate)
+            const spawnCenterZ = fieldCenterZ - (this.bounds.maxZ - this.bounds.minZ) * 0.15;
 
-        const spawnConfig = {
-            centerX: fieldCenterX,
-            centerZ: spawnCenterZ,
-            spreadRadius: spreadRadius
-        };
+            // Calculate appropriate spread radius based on field size
+            const fieldWidth = this.bounds.maxX - this.bounds.minX;
+            const fieldHeight = this.bounds.maxZ - this.bounds.minZ;
+            const spreadRadius = Math.min(fieldWidth, fieldHeight) * 0.2;
 
-        console.log(`[SHEEP] Spawn config: center(${fieldCenterX.toFixed(1)}, ${spawnCenterZ.toFixed(1)}), radius=${spreadRadius.toFixed(1)}`);
+            spawnConfig = {
+                centerX: fieldCenterX,
+                centerZ: spawnCenterZ,
+                spreadRadius: spreadRadius
+            };
+            console.log(`[SHEEP] Rect spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}`);
+        }
+
+        // Pass borderPoints for polygon-aware spawning
+        if (this.borderPoints && this.borderPoints.length >= 3) {
+            spawnConfig.borderPoints = this.borderPoints;
+        }
 
         this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig);
         this.sheep = this.optimizedSheepSystem.getSheep();
 
-        // Set bounds for each sheep instance
-        this.sheep.forEach(sheep => sheep.setBounds(this.bounds));
+        // Set bounds and borderPoints for each sheep instance
+        this.sheep.forEach(sheep => {
+            sheep.setBounds(this.bounds);
+            if (this.borderPoints && this.borderPoints.length >= 3) {
+                sheep.setBorderPoints(this.borderPoints);
+            }
+        });
 
         // Set audio manager if available
         if (this.audioManager) {
@@ -88,6 +105,140 @@ export class GameState {
         }
 
         return null; // No individual meshes to return
+    }
+
+    /**
+     * Calculate spawn configuration for polygon-shaped fields
+     * Uses the polygon centroid and calculates safe spawn radius
+     * Handles concave polygons (like L-shape) by validating spawn center is inside
+     */
+    calculatePolygonSpawnConfig() {
+        const points = this.borderPoints;
+
+        // Calculate centroid of polygon
+        let centroidX = 0;
+        let centroidZ = 0;
+        for (const point of points) {
+            centroidX += point.x;
+            centroidZ += point.z;
+        }
+        centroidX /= points.length;
+        centroidZ /= points.length;
+
+        // Move spawn center slightly away from gate (toward south)
+        const gateZ = this.gate?.position?.z || this.bounds.maxZ;
+        let spawnCenterX = centroidX;
+        let spawnCenterZ = centroidZ - (gateZ - centroidZ) * 0.3; // Move 30% away from gate
+
+        // For concave polygons, the centroid or adjusted position might be outside
+        // Validate and find a valid spawn center if needed
+        if (!this.isPointInPolygon(spawnCenterX, spawnCenterZ, points)) {
+            console.log(`[SPAWN] Initial spawn center (${spawnCenterX.toFixed(1)}, ${spawnCenterZ.toFixed(1)}) is outside polygon, searching for valid point...`);
+
+            // Try the raw centroid first
+            if (this.isPointInPolygon(centroidX, centroidZ, points)) {
+                spawnCenterX = centroidX;
+                spawnCenterZ = centroidZ;
+            } else {
+                // Search for a valid point using a grid search within bounds
+                const gridSize = 10;
+                const stepX = (this.bounds.maxX - this.bounds.minX) / gridSize;
+                const stepZ = (this.bounds.maxZ - this.bounds.minZ) / gridSize;
+                let bestPoint = null;
+                let bestDistFromEdges = 0;
+
+                for (let gx = 1; gx < gridSize; gx++) {
+                    for (let gz = 1; gz < gridSize; gz++) {
+                        const testX = this.bounds.minX + gx * stepX;
+                        const testZ = this.bounds.minZ + gz * stepZ;
+
+                        if (this.isPointInPolygon(testX, testZ, points)) {
+                            // Calculate minimum distance to any edge
+                            let minDist = Infinity;
+                            for (let i = 0; i < points.length; i++) {
+                                const start = points[i];
+                                const end = points[(i + 1) % points.length];
+                                const dist = this.pointToSegmentDistance(testX, testZ, start, end);
+                                minDist = Math.min(minDist, dist);
+                            }
+
+                            // Prefer points further from edges (more "inside")
+                            if (minDist > bestDistFromEdges) {
+                                bestDistFromEdges = minDist;
+                                bestPoint = { x: testX, z: testZ };
+                            }
+                        }
+                    }
+                }
+
+                if (bestPoint) {
+                    spawnCenterX = bestPoint.x;
+                    spawnCenterZ = bestPoint.z;
+                    console.log(`[SPAWN] Found valid spawn center at (${spawnCenterX.toFixed(1)}, ${spawnCenterZ.toFixed(1)}), dist from edge: ${bestDistFromEdges.toFixed(1)}`);
+                }
+            }
+        }
+
+        // Calculate safe spawn radius (distance to nearest edge from spawn center)
+        let minDistToEdge = Infinity;
+        for (let i = 0; i < points.length; i++) {
+            const start = points[i];
+            const end = points[(i + 1) % points.length];
+            const dist = this.pointToSegmentDistance(spawnCenterX, spawnCenterZ, start, end);
+            minDistToEdge = Math.min(minDistToEdge, dist);
+        }
+
+        // Use 60% of the distance to edge as spawn radius for safety margin
+        const spreadRadius = minDistToEdge * 0.6;
+
+        return {
+            centerX: spawnCenterX,
+            centerZ: spawnCenterZ,
+            spreadRadius: Math.max(spreadRadius, 10) // Minimum 10 units
+        };
+    }
+
+    /**
+     * Calculate distance from a point to a line segment
+     */
+    pointToSegmentDistance(px, pz, start, end) {
+        const dx = end.x - start.x;
+        const dz = end.z - start.z;
+        const length = Math.sqrt(dx * dx + dz * dz);
+
+        if (length === 0) {
+            return Math.sqrt(Math.pow(px - start.x, 2) + Math.pow(pz - start.z, 2));
+        }
+
+        const t = Math.max(0, Math.min(1,
+            ((px - start.x) * dx + (pz - start.z) * dz) / (length * length)
+        ));
+
+        const closestX = start.x + t * dx;
+        const closestZ = start.z + t * dz;
+
+        return Math.sqrt(Math.pow(px - closestX, 2) + Math.pow(pz - closestZ, 2));
+    }
+
+    /**
+     * Check if a point is inside the polygon defined by borderPoints
+     * Uses ray casting algorithm
+     */
+    isPointInPolygon(x, z, points = null) {
+        const polygon = points || this.borderPoints;
+        if (!polygon || polygon.length < 3) return true; // No polygon, assume inside
+
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i].x, zi = polygon[i].z;
+            const xj = polygon[j].x, zj = polygon[j].z;
+
+            if (((zi > z) !== (zj > z)) &&
+                (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
     }
     
     // Helper method to recreate sheep flock when count changes
@@ -143,7 +294,7 @@ export class GameState {
                 for (let sheep of this.sheep) {
                     // Check if sheep has passed gate
                     if (!sheep.hasPassedGate && !sheep.isRetiring) {
-                        if (sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior().passageZone, this.getPastureForSheepBehavior())) {
+                        if (sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior(), this.getPastureForSheepBehavior())) {
                             // Sheep just passed through the gate
                             this.sheepRetired++;
                             
@@ -423,8 +574,18 @@ export class GameState {
             this.initializeCompetitiveMode(competitiveData);
         }
 
+        // Clear sandbox-specific settings for non-sandbox modes
+        this.borderPoints = null;
+
         // Reset all sheep to their starting positions and states
         if (this.optimizedSheepSystem) {
+            // Reset spawn config to default for classic/extreme (in case user previously played sandbox)
+            this.optimizedSheepSystem.setSpawnConfig({
+                centerX: -30,
+                centerZ: -30,
+                spreadRadius: 30,
+                borderPoints: null
+            });
             this.optimizedSheepSystem.resetAllSheep();
         }
 
@@ -489,11 +650,42 @@ export class GameState {
             this.needsFlockRecreation = true;
         }
 
-        // Reset all sheep and update their bounds
+        // Calculate spawn config for the new field shape BEFORE resetting sheep
+        let spawnConfig;
+        if (this.borderPoints && this.borderPoints.length >= 3) {
+            // Polygon shape - calculate centroid and use polygon-aware spawning
+            spawnConfig = this.calculatePolygonSpawnConfig();
+            spawnConfig.borderPoints = this.borderPoints;
+            console.log(`[SANDBOX] Polygon spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}, points=${this.borderPoints.length}`);
+        } else {
+            // Rectangular bounds - use standard spawning
+            const fieldCenterX = (this.bounds.minX + this.bounds.maxX) / 2;
+            const fieldCenterZ = (this.bounds.minZ + this.bounds.maxZ) / 2;
+            const spawnCenterZ = fieldCenterZ - (this.bounds.maxZ - this.bounds.minZ) * 0.15;
+            const fieldWidth = this.bounds.maxX - this.bounds.minX;
+            const fieldHeight = this.bounds.maxZ - this.bounds.minZ;
+            const spreadRadius = Math.min(fieldWidth, fieldHeight) * 0.2;
+
+            spawnConfig = {
+                centerX: fieldCenterX,
+                centerZ: spawnCenterZ,
+                spreadRadius: spreadRadius
+            };
+            console.log(`[SANDBOX] Rect spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}`);
+        }
+
+        // Reset all sheep with the updated spawn config
         if (this.optimizedSheepSystem) {
+            // Update spawn config BEFORE resetting sheep positions
+            this.optimizedSheepSystem.setSpawnConfig(spawnConfig);
             this.optimizedSheepSystem.resetAllSheep();
-            // Update bounds for all sheep to match new field size
-            this.sheep.forEach(sheep => sheep.setBounds(this.bounds));
+            // Update bounds and borderPoints for all sheep to match new field
+            this.sheep.forEach(sheep => {
+                sheep.setBounds(this.bounds);
+                if (this.borderPoints && this.borderPoints.length >= 3) {
+                    sheep.setBorderPoints(this.borderPoints);
+                }
+            });
         }
 
         // Initialize fence collision system for sandbox mode
@@ -663,6 +855,12 @@ export class GameState {
     
     // Submit score to leaderboard system
     submitScoreToLeaderboard(score, gameMode = null) {
+        // IMPORTANT: Never submit sandbox scores to leaderboard
+        if (this.gameMode === 'sandbox') {
+            console.log('[GAME] Sandbox mode - score submission blocked');
+            return;
+        }
+
         // Determine game mode if not provided
         let leaderboardMode = gameMode;
         if (!leaderboardMode) {
@@ -674,7 +872,13 @@ export class GameState {
                 leaderboardMode = this.gameMode; // competitive, timed, etc.
             }
         }
-        
+
+        // Additional safety check - block any sandbox-related modes
+        if (leaderboardMode === 'sandbox' || leaderboardMode?.includes?.('sandbox')) {
+            console.log('[GAME] Sandbox mode detected in leaderboardMode - score submission blocked');
+            return;
+        }
+
         console.log(`[GAME] Submitting score to leaderboard: ${score} for mode: ${leaderboardMode}`);
         
         // Call the global score submission function

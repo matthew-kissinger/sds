@@ -363,18 +363,21 @@ export class StructureBuilder {
             const gateEdgeLength = Math.sqrt(gateEdgeDx * gateEdgeDx + gateEdgeDz * gateEdgeDz);
 
             // Perpendicular direction (outward from field)
-            // Rotate 90 degrees: (dx, dz) -> (dz, -dx) or (-dz, dx)
-            // We need to determine which way is "outward" from the polygon
-            // For shapes with gate at top (maxZ), outward is +Z direction
+            // Rotate 90 degrees: (dx, dz) -> (dz, -dx)
             let perpDx = gateEdgeDz / gateEdgeLength;
             let perpDz = -gateEdgeDx / gateEdgeLength;
 
-            // Check if this perpendicular points outward (toward positive Z for north gates)
-            // If the gate is at the top of the shape, perpendicular should point +Z
-            if (perpDz < 0) {
-                // Flip direction
+            // Determine which direction is "outward" by testing if a point in that direction
+            // is inside or outside the polygon
+            const testDist = 5;
+            const testX = gapCenter.x + perpDx * testDist;
+            const testZ = gapCenter.z + perpDz * testDist;
+
+            // If test point is INSIDE the polygon, we're pointing inward - flip it
+            if (this.isPointInPolygon(testX, testZ, points)) {
                 perpDx = -perpDx;
                 perpDz = -perpDz;
+                console.log(`[BUILD] Flipped pasture direction - was pointing into polygon`);
             }
 
             // Calculate the gate edge direction (normalized)
@@ -476,6 +479,25 @@ export class StructureBuilder {
     }
 
     /**
+     * Check if a point is inside a polygon using ray casting
+     */
+    isPointInPolygon(x, z, points) {
+        if (!points || points.length < 3) return false;
+
+        let inside = false;
+        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+            const xi = points[i].x, zi = points[i].z;
+            const xj = points[j].x, zj = points[j].z;
+
+            if (((zi > z) !== (zj > z)) &&
+                (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    /**
      * Build custom fence segments from sandbox configuration
      * @param {Array} fenceSegments - Array of fence segment definitions
      * @returns {THREE.Group} - Group containing all custom fences
@@ -494,26 +516,24 @@ export class StructureBuilder {
 
             if (length < 1) return; // Skip very short fences
 
-            // Determine orientation based on angle
+            // Calculate angle from start to end
             const angle = Math.atan2(dz, dx);
-            const isHorizontal = Math.abs(Math.cos(angle)) > Math.abs(Math.sin(angle));
 
             // Create fence segment using presets
+            // Always create as horizontal segment, then rotate to match the actual angle
+            // This matches how buildFenceSegment works for border fences
             let fenceSegmentGroup;
 
             if (type === 'gate') {
                 // Create a gate structure
                 fenceSegmentGroup = this.fencePresets.createGateStructure(
                     Math.min(length, 10), // Gates are smaller
-                    isHorizontal ? 'horizontal' : 'vertical',
+                    'horizontal',
                     { color: 0xfbbf24 }
                 );
             } else {
                 // Create a regular fence segment
-                fenceSegmentGroup = this.fencePresets.createBorderSegment(
-                    length,
-                    isHorizontal ? 'horizontal' : 'vertical'
-                );
+                fenceSegmentGroup = this.fencePresets.createBorderSegment(length, 'horizontal');
             }
 
             // Position at midpoint
@@ -521,13 +541,8 @@ export class StructureBuilder {
             const midZ = (start.z + end.z) / 2;
             fenceSegmentGroup.position.set(midX, 0, midZ);
 
-            // Rotate to match angle if not axis-aligned
-            if (!isHorizontal && Math.abs(Math.sin(angle)) < 0.99) {
-                // Diagonal fence - need rotation
-                fenceSegmentGroup.rotation.y = angle;
-            } else if (isHorizontal && Math.abs(Math.cos(angle)) < 0.99) {
-                fenceSegmentGroup.rotation.y = angle;
-            }
+            // Rotate to match the actual angle (consistent with buildFenceSegment)
+            fenceSegmentGroup.rotation.y = -angle;
 
             group.add(fenceSegmentGroup);
         });

@@ -94,11 +94,52 @@ export class SandboxConfig {
             const mainGate = this.gates[0];
             const edgeAngle = mainGate.edgeAngle || 0;
 
-            // Direction perpendicular to gate edge, pointing outward
-            const outwardX = Math.sin(edgeAngle);
-            const outwardZ = Math.cos(edgeAngle);
+            // Edge direction (the direction the gate edge runs along)
+            const edgeDirX = Math.cos(edgeAngle);
+            const edgeDirZ = Math.sin(edgeAngle);
+
+            // Perpendicular direction (rotate edge 90° clockwise in XZ plane)
+            // (cos, sin) rotated 90° CW -> (sin, -cos)
+            let outwardX = edgeDirZ;
+            let outwardZ = -edgeDirX;
+
+            // Ensure perpendicular points OUTWARD from the polygon
+            // Test by checking if a point slightly in that direction is inside or outside the polygon
+            if (borderPoints && borderPoints.length >= 3) {
+                // Take a small test step in the perpendicular direction
+                const testDist = 5; // Small distance to test
+                const testX = mainGate.position.x + outwardX * testDist;
+                const testZ = mainGate.position.z + outwardZ * testDist;
+
+                // If test point is INSIDE the polygon, we're pointing inward - flip it
+                if (this.isPointInPolygon(testX, testZ, borderPoints)) {
+                    outwardX = -outwardX;
+                    outwardZ = -outwardZ;
+                    console.log(`[SANDBOX] Flipped outward direction - was pointing into polygon`);
+                }
+            } else {
+                // Fallback for non-polygon shapes: use centroid-based check
+                const bounds = this.field.bounds;
+                const fieldCenterX = (bounds.minX + bounds.maxX) / 2;
+                const fieldCenterZ = (bounds.minZ + bounds.maxZ) / 2;
+
+                // Direction from gate to field center
+                const toCenterX = fieldCenterX - mainGate.position.x;
+                const toCenterZ = fieldCenterZ - mainGate.position.z;
+
+                // If perpendicular points toward center (inside field), flip it
+                const dot = outwardX * toCenterX + outwardZ * toCenterZ;
+                if (dot > 0) {
+                    outwardX = -outwardX;
+                    outwardZ = -outwardZ;
+                }
+            }
+
             const pastureCenterX = mainGate.position.x + outwardX * (pastureDepth / 2 + pastureOffset);
             const pastureCenterZ = mainGate.position.z + outwardZ * (pastureDepth / 2 + pastureOffset);
+
+            console.log(`[SANDBOX] Custom shape pasture: gate at (${mainGate.position.x.toFixed(1)}, ${mainGate.position.z.toFixed(1)}), edgeAngle=${(edgeAngle * 180 / Math.PI).toFixed(1)}°`);
+            console.log(`[SANDBOX] Outward direction: (${outwardX.toFixed(3)}, ${outwardZ.toFixed(3)}), pasture center: (${pastureCenterX.toFixed(1)}, ${pastureCenterZ.toFixed(1)})`);
 
             this.pastures = [{
                 minX: pastureCenterX - pastureWidth / 2,
@@ -147,9 +188,12 @@ export class SandboxConfig {
             trackBestTime: config.rules?.trackBestTime ?? true
         };
 
-        // Dog configuration
+        // Dog configuration - calculate valid position inside polygon
+        // Pass gate position so dog spawns away from the gate
+        const mainGatePos = this.gates?.[0]?.position || null;
+        const dogStartPosition = config.dog?.startPosition || this.calculateDogStartPosition(borderPoints, baseBounds, mainGatePos);
         this.dog = {
-            startPosition: config.dog?.startPosition || { x: 0, z: -30 },
+            startPosition: dogStartPosition,
             type: config.dog?.type || null // null = use selected dog
         };
 
@@ -187,6 +231,190 @@ export class SandboxConfig {
      */
     getDefaultBounds(size) {
         return FIELD_SIZES[size] ? { ...FIELD_SIZES[size] } : { ...FIELD_SIZES.medium };
+    }
+
+    /**
+     * Calculate a valid dog start position inside the polygon
+     * Places the dog away from the gate (opposite side of field)
+     * Uses grid search for concave polygons like L-shape
+     */
+    calculateDogStartPosition(borderPoints, bounds, gatePosition = null) {
+        // Default fallback position
+        const defaultPos = { x: 0, z: bounds.minZ + (bounds.maxZ - bounds.minZ) * 0.25 };
+
+        if (!borderPoints || borderPoints.length < 3) {
+            return defaultPos;
+        }
+
+        // Calculate polygon centroid
+        let cx = 0, cz = 0;
+        for (const p of borderPoints) {
+            cx += p.x;
+            cz += p.z;
+        }
+        cx /= borderPoints.length;
+        cz /= borderPoints.length;
+
+        // Position dog away from the gate
+        let dogX = cx;
+        let dogZ = cz;
+
+        console.log(`[DOG SPAWN] Centroid: (${cx.toFixed(1)}, ${cz.toFixed(1)}), gatePosition:`, gatePosition);
+
+        if (gatePosition && gatePosition.x !== undefined && gatePosition.z !== undefined) {
+            // Calculate direction from gate to centroid (away from gate)
+            const dirX = cx - gatePosition.x;
+            const dirZ = cz - gatePosition.z;
+            const dist = Math.sqrt(dirX * dirX + dirZ * dirZ);
+
+            console.log(`[DOG SPAWN] Direction from gate to centroid: (${dirX.toFixed(1)}, ${dirZ.toFixed(1)}), dist: ${dist.toFixed(1)}`);
+
+            if (dist > 0.1) {
+                // Normalize direction
+                const normX = dirX / dist;
+                const normZ = dirZ / dist;
+
+                // Try progressively smaller distances until we find one inside the polygon
+                const maxDist = dist * 0.8; // Don't go further than 80% past centroid
+                let foundPosition = false;
+
+                for (let tryDist = maxDist; tryDist >= 0; tryDist -= 10) {
+                    const testX = cx + normX * tryDist;
+                    const testZ = cz + normZ * tryDist;
+                    const isInside = this.isPointInPolygon(testX, testZ, borderPoints);
+
+                    if (isInside) {
+                        dogX = testX;
+                        dogZ = testZ;
+                        foundPosition = true;
+                        console.log(`[DOG SPAWN] Found valid position at distance ${tryDist.toFixed(1)}: (${dogX.toFixed(1)}, ${dogZ.toFixed(1)})`);
+                        break;
+                    }
+                }
+
+                if (!foundPosition) {
+                    console.log(`[DOG SPAWN] No valid position found in direction, using centroid`);
+                }
+            }
+        } else {
+            console.log(`[DOG SPAWN] No gate position provided, using centroid`);
+        }
+
+        // Check if the position is inside the polygon with margin from edges
+        const isValidPosition = (x, z, margin = 5) => {
+            if (!this.isPointInPolygon(x, z, borderPoints)) return false;
+            // Check distance from all edges
+            for (let i = 0; i < borderPoints.length; i++) {
+                const start = borderPoints[i];
+                const end = borderPoints[(i + 1) % borderPoints.length];
+                const dist = this.pointToSegmentDistance(x, z, start, end);
+                if (dist < margin) return false;
+            }
+            return true;
+        };
+
+        // Try the calculated position first
+        if (isValidPosition(dogX, dogZ)) {
+            return { x: dogX, z: dogZ };
+        }
+
+        // Try centroid
+        if (isValidPosition(cx, cz)) {
+            return { x: cx, z: cz };
+        }
+
+        // Grid search to find the best position (furthest from all edges, prefer away from gate)
+        const gridSize = 10;
+        const stepX = (bounds.maxX - bounds.minX) / gridSize;
+        const stepZ = (bounds.maxZ - bounds.minZ) / gridSize;
+        let bestPoint = null;
+        let bestScore = -Infinity;
+
+        for (let gx = 1; gx < gridSize; gx++) {
+            for (let gz = 1; gz < gridSize; gz++) {
+                const testX = bounds.minX + gx * stepX;
+                const testZ = bounds.minZ + gz * stepZ;
+
+                if (this.isPointInPolygon(testX, testZ, borderPoints)) {
+                    // Calculate minimum distance to any edge
+                    let minDist = Infinity;
+                    for (let i = 0; i < borderPoints.length; i++) {
+                        const start = borderPoints[i];
+                        const end = borderPoints[(i + 1) % borderPoints.length];
+                        const dist = this.pointToSegmentDistance(testX, testZ, start, end);
+                        minDist = Math.min(minDist, dist);
+                    }
+
+                    // Score: prefer points far from edges AND away from gate
+                    let awayFromGateBonus = 0;
+                    if (gatePosition) {
+                        // Bonus for being far from gate
+                        const distToGate = Math.sqrt(
+                            Math.pow(testX - gatePosition.x, 2) + Math.pow(testZ - gatePosition.z, 2)
+                        );
+                        awayFromGateBonus = distToGate * 0.1;
+                    } else {
+                        // Fallback: prefer southern half (away from north gate)
+                        awayFromGateBonus = (bounds.maxZ - testZ) / (bounds.maxZ - bounds.minZ) * 10;
+                    }
+                    const score = minDist + awayFromGateBonus;
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestPoint = { x: testX, z: testZ };
+                    }
+                }
+            }
+        }
+
+        if (bestPoint) {
+            console.log(`[DOG] Found valid position via grid search at (${bestPoint.x.toFixed(1)}, ${bestPoint.z.toFixed(1)})`);
+            return bestPoint;
+        }
+
+        // Final fallback - just use centroid even if on edge
+        return { x: cx, z: cz };
+    }
+
+    /**
+     * Calculate distance from a point to a line segment
+     */
+    pointToSegmentDistance(px, pz, start, end) {
+        const dx = end.x - start.x;
+        const dz = end.z - start.z;
+        const length = Math.sqrt(dx * dx + dz * dz);
+
+        if (length === 0) {
+            return Math.sqrt(Math.pow(px - start.x, 2) + Math.pow(pz - start.z, 2));
+        }
+
+        const t = Math.max(0, Math.min(1,
+            ((px - start.x) * dx + (pz - start.z) * dz) / (length * length)
+        ));
+
+        const closestX = start.x + t * dx;
+        const closestZ = start.z + t * dz;
+
+        return Math.sqrt(Math.pow(px - closestX, 2) + Math.pow(pz - closestZ, 2));
+    }
+
+    /**
+     * Check if a point is inside a polygon using ray casting
+     */
+    isPointInPolygon(x, z, points) {
+        if (!points || points.length < 3) return true;
+
+        let inside = false;
+        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+            const xi = points[i].x, zi = points[i].z;
+            const xj = points[j].x, zj = points[j].z;
+
+            if (((zi > z) !== (zj > z)) &&
+                (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
     }
 
     /**
@@ -454,7 +682,8 @@ export class SandboxConfig {
                 minX: mainPasture.minX,
                 maxX: mainPasture.maxX,
                 minZ: mainPasture.minZ,
-                maxZ: mainPasture.maxZ
+                maxZ: mainPasture.maxZ,
+                edgeAngle: mainPasture.edgeAngle || 0 // Include edge angle for rotated pastures
             },
             totalSheep: this.sheep.count,
             params: this.sheep.behavior,
