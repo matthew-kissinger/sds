@@ -196,7 +196,7 @@ export function MobileControls() {
             onMouseLeave: handleSprintEnd
         }, createElement(SprintIcon, { size: iconSize, color: isSprinting ? '#60a5fa' : 'rgba(255, 255, 255, 0.9)' })),
 
-        // Zoom controls - horizontal in landscape, vertical in portrait
+        // Zoom controls - always vertical
         createElement('div', {
             key: 'zoom',
             className: 'fixed pointer-events-auto',
@@ -204,7 +204,7 @@ export function MobileControls() {
                 right: 'calc(env(safe-area-inset-right, 0px) + 1rem)',
                 top: 'calc(env(safe-area-inset-top, 0px) + 50px)',
                 display: 'flex',
-                flexDirection: 'row',
+                flexDirection: 'column',
                 alignItems: 'center',
                 gap: '0.5rem',
                 zIndex: 200
@@ -218,61 +218,7 @@ export function MobileControls() {
                 zIndex: 200
             }
         }, [
-            // Zoom out (first in landscape)
-            isLandscapeMobile && createElement('button', {
-                key: 'out',
-                style: zoomButtonStyle(isZooming === 'out', false),
-                onTouchStart: (e) => { e.preventDefault(); startZoom('out'); },
-                onTouchEnd: (e) => { e.preventDefault(); stopZoom(); },
-                onMouseDown: () => startZoom('out'),
-                onMouseUp: stopZoom,
-                onMouseLeave: stopZoom
-            }, createElement('svg', { width: zoomIconSize, height: zoomIconSize, viewBox: '0 0 24 24', fill: 'none' }, [
-                createElement('circle', { key: 'c', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '2' }),
-                createElement('path', { key: 'p', d: 'M8 12h8', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round' })
-            ])),
-
-            // Zoom bar
-            createElement('div', {
-                key: 'bar',
-                style: isLandscapeMobile ? {
-                    position: 'relative',
-                    width: `${zoomBarSize}px`,
-                    height: '6px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '3px',
-                    overflow: 'hidden'
-                } : {
-                    position: 'relative',
-                    width: '6px',
-                    height: `${zoomBarSize}px`,
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '3px',
-                    overflow: 'hidden'
-                }
-            }, createElement('div', {
-                style: isLandscapeMobile ? {
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: `${zoomPercentage}%`,
-                    background: 'linear-gradient(90deg, rgba(0, 150, 255, 0.6), rgba(0, 191, 255, 0.8))',
-                    transition: 'width 0.3s ease',
-                    borderRadius: '3px'
-                } : {
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: `${zoomPercentage}%`,
-                    background: 'linear-gradient(180deg, rgba(0, 191, 255, 0.8), rgba(0, 150, 255, 0.6))',
-                    transition: 'height 0.3s ease',
-                    borderRadius: '3px'
-                }
-            })),
-
-            // Zoom in
+            // Zoom in (top - brings camera closer)
             createElement('button', {
                 key: 'in',
                 style: zoomButtonStyle(isZooming === 'in', true),
@@ -286,8 +232,32 @@ export function MobileControls() {
                 createElement('path', { key: 'p', d: 'M12 8v8M8 12h8', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round' })
             ])),
 
-            // Zoom out (in portrait only)
-            !isLandscapeMobile && createElement('button', {
+            // Zoom bar (always vertical)
+            createElement('div', {
+                key: 'bar',
+                style: {
+                    position: 'relative',
+                    width: '6px',
+                    height: `${zoomBarSize}px`,
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '3px',
+                    overflow: 'hidden'
+                }
+            }, createElement('div', {
+                style: {
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: `${zoomPercentage}%`,
+                    background: 'linear-gradient(180deg, rgba(0, 191, 255, 0.8), rgba(0, 150, 255, 0.6))',
+                    transition: 'height 0.3s ease',
+                    borderRadius: '3px'
+                }
+            })),
+
+            // Zoom out (bottom - moves camera away)
+            createElement('button', {
                 key: 'out',
                 style: zoomButtonStyle(isZooming === 'out', false),
                 onTouchStart: (e) => { e.preventDefault(); startZoom('out'); },

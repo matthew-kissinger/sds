@@ -353,37 +353,64 @@ export async function initReactUI() {
 
                     case 'main':
                         // Return array directly - .start-screen-content handles centering
+                        // Whimsical zen-inspired title styling
+                        const titleStyle = platform.isMobile ? {
+                            // Mobile: cleaner, more compact
+                            fontSize: 'clamp(1.8rem, 10vw, 3rem)',
+                            fontWeight: 700,
+                            marginBottom: '0.25rem',
+                            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+                            background: 'linear-gradient(135deg, #7dd3a8 0%, #4ade80 50%, #22c55e 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            letterSpacing: '1px',
+                            animation: 'fadeIn 0.5s ease-out',
+                            textShadow: '0 2px 10px rgba(74, 222, 128, 0.3)'
+                        } : {
+                            // Desktop: larger with subtle animation
+                            fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+                            fontWeight: 800,
+                            marginBottom: '0.5rem',
+                            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+                            background: 'linear-gradient(135deg, #7dd3a8 0%, #4ade80 50%, #22c55e 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            letterSpacing: '2px',
+                            animation: 'fadeIn 0.5s ease-out, titleFloat 4s ease-in-out infinite 1s',
+                            textShadow: '0 4px 20px rgba(74, 222, 128, 0.4)'
+                        };
+                        const subtitleStyle = platform.isMobile ? {
+                            // Mobile: subtle and clean
+                            fontSize: 'clamp(0.9rem, 4vw, 1.2rem)',
+                            fontWeight: 500,
+                            marginBottom: '1.5rem',
+                            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            letterSpacing: '3px',
+                            textTransform: 'uppercase',
+                            animation: 'fadeIn 0.5s ease-out 0.1s both'
+                        } : {
+                            // Desktop: elegant spacing
+                            fontSize: 'clamp(1rem, 2vw, 1.5rem)',
+                            fontWeight: 500,
+                            marginBottom: '2rem',
+                            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            letterSpacing: '6px',
+                            textTransform: 'uppercase',
+                            animation: 'fadeIn 0.5s ease-out 0.2s both'
+                        };
                         return [
                             createElement('h1', {
                                 key: 'title',
-                                style: {
-                                    fontSize: 'clamp(2.5rem, 8vw, 6rem)',
-                                    fontWeight: 900,
-                                    marginBottom: '0.5rem',
-                                    fontFamily: '"Comic Sans MS", cursive',
-                                    background: 'linear-gradient(180deg, #4FFFFF 0%, #2196F3 50%, #1976D2 100%)',
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    WebkitTextStroke: '3px #0A47A1',
-                                    letterSpacing: '2px',
-                                    animation: 'fadeIn 0.4s ease-out, titleBounce 2s ease-in-out infinite 1s',
-                                    filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))'
-                                }
-                            }, 'SHEEP DOG'),
+                                style: titleStyle
+                            }, 'Sheepdog'),
                             createElement('h2', {
                                 key: 'subtitle',
-                                style: {
-                                    fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
-                                    fontWeight: 700,
-                                    marginBottom: '1rem',
-                                    fontFamily: '"Comic Sans MS", cursive',
-                                    color: '#FFD700',
-                                    WebkitTextStroke: '2px #FF6B00',
-                                    letterSpacing: '3px',
-                                    animation: 'fadeIn 0.4s ease-out 0.1s both',
-                                    filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))'
-                                }
-                            }, 'SIMULATOR'),
+                                style: subtitleStyle
+                            }, 'Simulator'),
                             playerIdentity && createElement('p', {
                                 key: 'greeting',
                                 style: {
