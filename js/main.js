@@ -1,9 +1,11 @@
 import * as THREE from 'three';
+import React, { createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { SceneManager } from './SceneManager.js';
 import { GameState } from './GameState.js';
 import { GameTimer } from './GameTimer.js';
 import { TerrainBuilder } from './TerrainBuilder.js';
-import { StructureBuilderV2 } from './StructureBuilderV2.js';
+import { StructureBuilder } from './StructureBuilder.js';
 import { InputHandler } from './InputHandler.js';
 import { MobileControls } from './MobileControls.js';
 import { Sheepdog } from './Sheepdog.js';
@@ -161,7 +163,7 @@ class SheepDogSimulation {
         this.gameState = new GameState();
         this.gameTimer = new GameTimer();
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile);
-        this.structureBuilder = new StructureBuilderV2(this.sceneManager.getScene());
+        this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();
         this.webVitalsMonitor = new WebVitalsMonitor();
@@ -224,6 +226,11 @@ class SheepDogSimulation {
         // Competitive mode audio state
         this.endgameMusicPlaying = false;
         
+        // Set game instance BEFORE init() so GameBridge works during initialization
+        // This is critical - Sheepdog needs getTerrainBuilder() during init()
+        setGameInstance(this);
+        console.log('[GAME] GameBridge initialized early in constructor');
+
         // Initialize the simulation
         this.isInitialized = false;
         this.init().then(() => {
@@ -238,68 +245,142 @@ class SheepDogSimulation {
         this.inputHandler.onPauseToggle((isPaused) => {
             // Propagate pause state to timer
             this.gameTimer.setPaused(isPaused);
-            
+
             // Propagate pause state to game state
             this.gameState.setPaused(isPaused);
         });
     }
-    
+
+    /**
+     * Wait for game initialization to complete (models loaded, terrain built)
+     * Critical for iOS Safari where asset loading is slower
+     */
+    waitForInitialization() {
+        return new Promise((resolve) => {
+            if (this.isInitialized) {
+                resolve();
+                return;
+            }
+
+            // Poll every 100ms until initialized
+            const checkInterval = setInterval(() => {
+                if (this.isInitialized) {
+                    clearInterval(checkInterval);
+                    console.log('[GAME] Initialization complete, proceeding with game start');
+                    resolve();
+                }
+            }, 100);
+        });
+    }
+
     async init() {
-        // Start progressive asset loading for SEO performance
-        await this.gameAssetLoader.loadCriticalAssets();
-        
-        // Load all 3D models first
-        await this.terrainBuilder.loadModels();
-        
-        // Create terrain and environment
-        this.terrainBuilder.createTerrain();
-        await this.terrainBuilder.createGrass();
-        await this.terrainBuilder.createTrees();
-        await this.terrainBuilder.addEnvironmentDetails();
-        await this.terrainBuilder.addMountains();
-        
-        // Add farm house
-        await this.terrainBuilder.addFarmHouse();
-        
-        // Create structures using new modular system
-        this.structureBuilder.buildSinglePlayerStructures(
-            this.gameState.getBounds(),
-            this.gameState.getGate(),
-            this.gameState.getPasture()
-        );
-        
-        // Create sheepdog (but don't add to scene yet in pre-game state)
-        // Note: We'll update speeds when entering multiplayer mode
-        // Default to 'jep' for now, will be updated when game starts
-        const sheepdog = new Sheepdog(0, -30, 'jep');
-        this.sheepdog = sheepdog;
-        this.sheepdogMesh = sheepdog.createMesh();
-        this.gameState.setSheepdog(sheepdog);
+        const logStep = (step, details = '') => {
+            console.log(`[INIT] ${step}${details ? ': ' + details : ''}`);
+        };
 
-        // Connect audio manager to sheepdog
-        sheepdog.setAudioManager(this.audioManager);
+        try {
+            logStep('Starting initialization', `mobile=${this.sceneManager.isMobile}`);
 
-        // Set as local player and create distance indicator (after mesh is created)
-        sheepdog.setAsLocalPlayer();
-        
-        // Create optimized sheep flock (visible during start screen)
-        this.gameState.createSheepFlock(this.sceneManager.getScene());
-        
-        // Setup controls
-        this.sceneManager.setupMouseControls();
-        
-        // Set grass instance count for performance monitoring
-        this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
+            // Start progressive asset loading for SEO performance
+            logStep('Loading critical assets');
+            await this.gameAssetLoader.loadCriticalAssets();
+
+            // Load all 3D models first
+            logStep('Loading 3D models');
+            await this.terrainBuilder.loadModels();
+
+            // Verify critical models loaded (especially on iOS)
+            const animalModels = Object.keys(this.terrainBuilder.models.animals || {})
+                .filter(k => !k.endsWith('_animations'));
+            logStep('Models loaded', `animals: ${animalModels.join(', ') || 'NONE'}`);
+
+            if (animalModels.length === 0) {
+                throw new Error('No animal models loaded! Check model paths and network.');
+            }
+
+            // Create terrain and environment
+            logStep('Creating terrain');
+            this.terrainBuilder.createTerrain();
+
+            logStep('Creating grass');
+            await this.terrainBuilder.createGrass();
+
+            logStep('Creating trees');
+            await this.terrainBuilder.createTrees();
+
+            logStep('Adding environment details');
+            await this.terrainBuilder.addEnvironmentDetails();
+
+            logStep('Adding mountains');
+            await this.terrainBuilder.addMountains();
+
+            // Add farm house
+            logStep('Adding farm house');
+            await this.terrainBuilder.addFarmHouse();
+
+            // Load fence GLB models before building structures
+            logStep('Loading fence models');
+            await this.structureBuilder.loadModels();
+
+            // Create structures using new modular system
+            logStep('Building structures');
+            this.structureBuilder.buildSinglePlayerStructures(
+                this.gameState.getBounds(),
+                this.gameState.getGate(),
+                this.gameState.getPasture()
+            );
+
+            // Verify jep model before creating sheepdog
+            if (!this.terrainBuilder.models.animals['jep']) {
+                throw new Error('Jep model not available - cannot create sheepdog');
+            }
+
+            // Create sheepdog (but don't add to scene yet in pre-game state)
+            logStep('Creating sheepdog');
+            const sheepdog = new Sheepdog(0, -30, 'jep');
+            this.sheepdog = sheepdog;
+            this.sheepdogMesh = sheepdog.createMesh();
+            this.gameState.setSheepdog(sheepdog);
+
+            // Connect audio manager to sheepdog
+            sheepdog.setAudioManager(this.audioManager);
+
+            // Set as local player and create distance indicator (after mesh is created)
+            sheepdog.setAsLocalPlayer();
+
+            // Create optimized sheep flock (visible during start screen)
+            logStep('Creating sheep flock');
+            this.gameState.createSheepFlock(this.sceneManager.getScene());
+
+            // Setup controls
+            logStep('Setting up controls');
+            this.sceneManager.setupMouseControls();
+
+            // Set grass instance count for performance monitoring
+            this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
+
+            logStep('Initialization complete!');
+
+        } catch (error) {
+            console.error('[INIT] Fatal error during initialization:', error);
+            throw error;
+        }
     }
     
-    startGame(mode = 'solo', roomData = null, singlePlayerMode = 'classic') {
+    async startGame(mode = 'solo', roomData = null, singlePlayerMode = 'classic') {
+        // Wait for initialization to complete (critical for iOS Safari)
+        if (!this.isInitialized) {
+            console.log('[GAME] Waiting for initialization to complete...');
+            await this.waitForInitialization();
+        }
+
         console.log(`Starting game in ${mode} mode`, {
             roomCode: roomData?.roomCode || 'none',
             playerCount: roomData?.players?.length || 0,
             roomData: roomData,
             singlePlayerMode: singlePlayerMode
         });
-        
+
         // Store mode for future reference
         this.gameMode = mode;
         this.roomData = roomData;
@@ -341,7 +422,15 @@ class SheepDogSimulation {
         // Start the game state (this will set the correct sheep count)
         // For multiplayer games, we'll set the specific game mode (competitive/timed) later when we have the data
         this.gameState.startGame(mode, null, singlePlayerMode);
-        
+
+        // Reset terrain builder to default bounds (in case switching from sandbox)
+        if (this.terrainBuilder) {
+            this.terrainBuilder.setDynamicBounds(
+                this.gameState.bounds,
+                this.gameState.pasture
+            );
+        }
+
         // Check if we need to recreate the sheep flock due to count change
         if (this.gameState.needsFlockRecreation) {
             console.log(`Recreating sheep flock due to count change`);
@@ -440,12 +529,149 @@ class SheepDogSimulation {
             // Hide multiplayer UI for solo mode
             this.multiplayerUI.hide();
             this.audioManager.setGameMode('solo');
-            
+
             // Reset camera to default position for solo mode
             this.sceneManager.resetCameraToDefault();
         }
     }
-    
+
+    /**
+     * Start a sandbox game with custom configuration
+     * @param {string} dogType - Selected dog type
+     * @param {Object} sandboxConfig - SandboxConfig instance
+     */
+    async startSandboxGame(dogType, sandboxConfig) {
+        // Wait for initialization to complete (critical for iOS Safari)
+        if (!this.isInitialized) {
+            console.log('[SANDBOX] Waiting for initialization to complete...');
+            await this.waitForInitialization();
+        }
+
+        console.log('[SANDBOX] Starting sandbox game', {
+            dogType,
+            sheepCount: sandboxConfig.sheep?.count,
+            fieldSize: sandboxConfig.field?.size,
+            preset: sandboxConfig.preset,
+            customFences: sandboxConfig.fences?.length || 0
+        });
+
+        // Store mode for future reference
+        this.gameMode = 'sandbox';
+        this.isMultiplayer = false;
+        this.singlePlayerMode = 'sandbox';
+
+        // Store sandbox config
+        this.sandboxConfig = sandboxConfig;
+
+        // Remove the old sheepdog and its indicator from scene if it exists
+        if (this.sheepdog) {
+            this.sheepdog.removeDistanceIndicator();
+        }
+        if (this.sheepdogMesh) {
+            this.sceneManager.remove(this.sheepdogMesh);
+        }
+
+        // Get dog start position from config
+        const dogStart = sandboxConfig.dog?.startPosition || { x: 0, z: -30 };
+
+        // Create new sheepdog with selected type at configured position
+        const sheepdog = new Sheepdog(dogStart.x, dogStart.z, dogType);
+        this.sheepdog = sheepdog;
+        this.sheepdogMesh = sheepdog.createMesh();
+        this.gameState.setSheepdog(sheepdog);
+
+        // Connect audio manager to new sheepdog
+        sheepdog.setAudioManager(this.audioManager);
+
+        // Set as local player and create distance indicator
+        sheepdog.setAsLocalPlayer();
+
+        // Add new sheepdog to scene when game starts
+        this.sceneManager.add(this.sheepdogMesh);
+
+        // Enable mobile controls if on touch device
+        if (this.mobileControls.getIsTouchDevice()) {
+            this.mobileControls.enable();
+        }
+
+        // Start sandbox game state (this applies all the config)
+        this.gameState.startSandboxGame(sandboxConfig);
+
+        // Rebuild structures with sandbox configuration
+        const bounds = this.gameState.bounds;
+        const gate = this.gameState.gate;
+        const pasture = this.gameState.pasture;
+        const customFences = this.gameState.getCustomFences();
+        const borderPoints = this.gameState.borderPoints;
+        const fieldShape = this.gameState.fieldShape;
+
+        console.log('[SANDBOX] Building structures with:', {
+            bounds,
+            fieldShape,
+            borderPoints: borderPoints?.length || 0,
+            gatePosition: gate.position,
+            gateWidth: gate.width,
+            pasture
+        });
+
+        // Clear and rebuild structures for sandbox
+        this.structureBuilder.buildSandboxStructures(bounds, gate, pasture, customFences, borderPoints, fieldShape);
+
+        // Update terrain builder with dynamic bounds AND rebuild trees/rocks
+        // This ensures they respect the new field boundaries
+        if (this.terrainBuilder) {
+            await this.terrainBuilder.rebuildEnvironment(bounds, pasture);
+        }
+
+        // Check if we need to recreate the sheep flock due to count change
+        if (this.gameState.needsFlockRecreation) {
+            console.log('[SANDBOX] Recreating sheep flock due to count change');
+            this.gameState.recreateSheepFlock(this.sceneManager.getScene());
+            this.gameState.needsFlockRecreation = false;
+        }
+
+        // Reset timer based on sandbox rules
+        this.gameTimer.reset();
+        const rules = sandboxConfig.rules;
+
+        if (rules?.timerEnabled) {
+            if (rules.timerMode === 'countdown') {
+                this.gameTimer.startCountdown(rules.timeLimit * 1000);
+                console.log(`[SANDBOX] Started ${rules.timeLimit}s countdown timer`);
+            } else {
+                this.gameTimer.start();
+                console.log('[SANDBOX] Started count-up timer');
+            }
+        } else {
+            // No timer - still track time but don't display prominently
+            this.gameTimer.start();
+            console.log('[SANDBOX] Timer running (hidden)');
+        }
+
+        // Hide multiplayer UI
+        this.multiplayerUI.hide();
+        this.audioManager.setGameMode('solo');
+
+        // Reset camera to default position
+        this.sceneManager.resetCameraToDefault();
+
+        // Mark start screen as inactive (same pattern as normal game start)
+        this.startScreen.isActive = false;
+        this.startScreen.gameStarted = true;
+
+        // Fade out menu music and start gameplay music
+        if (this.audioManager) {
+            this.audioManager.fadeOutCurrentMusic(800);
+            setTimeout(() => {
+                if (this.audioManager.isMusicReady()) {
+                    this.audioManager.playGameplayMusic();
+                }
+            }, 900);
+        }
+
+        console.log('[SANDBOX] Game started successfully');
+    }
+
     setupMultiplayer() {
         // NetworkManager already available from constructor
         if (!this.networkManager) {
@@ -1337,9 +1563,7 @@ class SheepDogSimulation {
         }
 
         // Check if React CompletionScreen is available
-        if (window.CompletionScreen && window.React && window.ReactDOM) {
-            const { createElement } = window.React;
-            const { createRoot } = window.ReactDOM;
+        if (window.CompletionScreen) {
 
             // Create container for React component
             const container = document.createElement('div');
@@ -1481,6 +1705,8 @@ window.addEventListener('DOMContentLoaded', () => {
         gameInstance.startScreen.selectSolo(dogType, singlePlayerMode);
     };
 
+    // Note: startSandboxGame is already defined on the class, no need to override
+
     gameInstance.createRoom = async (playerName, settings, dogType) => {
         return await gameInstance.startScreen.createRoom(playerName, settings, dogType);
     };
@@ -1517,9 +1743,9 @@ window.addEventListener('DOMContentLoaded', () => {
         return gameInstance.startScreen.isCurrentHost();
     };
 
-    // Initialize GameBridge with the game instance (also sets window.gameInstance for backwards compatibility)
-    setGameInstance(gameInstance);
-    console.log('[GAME] GameBridge initialized with game instance');
+    // GameBridge already initialized in constructor (setGameInstance called there)
+    // This ensures Sheepdog can access terrainBuilder during init()
+    console.log('[GAME] GameBridge was initialized in constructor');
 
     console.log('[GAME] Game instance created, NetworkManager available:', !!gameInstance.networkManager);
 });

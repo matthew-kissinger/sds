@@ -2,11 +2,10 @@
  * RoomJoining Component
  * Join an existing room with a code
  */
+import React, { createElement, useState } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
-
-const { createElement, useState } = window.React;
 
 export function RoomJoining({ onBack, onJoin }) {
     const [roomCode, setRoomCode] = useState('');

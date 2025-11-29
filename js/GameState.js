@@ -1,44 +1,30 @@
 import { Vector2D } from './Vector2D.js';
 import { OptimizedSheepSystem } from './OptimizedSheep.js';
+import { FieldConfig, FIELD_SIZES, GATE_DEFAULTS, PASTURE_DEFAULTS } from './FieldConfig.js';
+import { getFenceCollisionSystem, resetFenceCollisionSystem } from './FenceCollisionSystem.js';
 
 /**
  * GameState - Handles game configuration, boundaries, and state management
+ *
+ * Uses FieldConfig as the source of truth for field dimensions.
+ * Can be overridden by:
+ * - SandboxConfig (for sandbox mode)
+ * - Server (for multiplayer mode)
  */
 export class GameState {
     constructor() {
-        // Field boundaries
-        this.bounds = {
-            minX: -100,
-            maxX: 100,
-            minZ: -100,
-            maxZ: 100
-        };
-        
-        // Game mode ('solo', 'multiplayer', 'competitive')
+        // Get initial config from FieldConfig
+        const fieldConfig = FieldConfig.getFullConfig();
+
+        // Field boundaries - from FieldConfig
+        this.bounds = fieldConfig.bounds;
+
+        // Game mode ('solo', 'multiplayer', 'competitive', 'sandbox')
         this.gameMode = 'solo';
-        
-        // Gate and pasture configuration (cooperative mode)
-        this.gate = {
-            position: new Vector2D(0, 100), // At the fence border
-            width: 8,
-            height: 4,
-            // Gate passage zone (invisible box for detection)
-            passageZone: {
-                minX: -4,
-                maxX: 4,
-                minZ: 98,
-                maxZ: 102
-            }
-        };
-        
-        // Sleeping pasture area (beyond the gate)
-        this.pasture = {
-            centerZ: 115, // Beyond the gate
-            minX: -30,
-            maxX: 30,
-            minZ: 102,
-            maxZ: 125  // Reduced from 130 to keep sheep away from back fence
-        };
+
+        // Gate and pasture configuration - from FieldConfig
+        this.gate = fieldConfig.gate;
+        this.pasture = fieldConfig.pasture;
         
         // Competitive mode support
         this.competitiveGates = []; // Array of gate configurations for competitive mode
@@ -69,17 +55,38 @@ export class GameState {
     createSheepFlock(scene) {
         // Create optimized sheep system with correct sheep count
         console.log(`Creating sheep flock with ${this.totalSheep} sheep`);
-        this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep);
+
+        // Calculate spawn position based on bounds - spawn in center of field
+        // Away from the gate (which is at maxZ) for better gameplay
+        const fieldCenterX = (this.bounds.minX + this.bounds.maxX) / 2;
+        const fieldCenterZ = (this.bounds.minZ + this.bounds.maxZ) / 2;
+        // Spawn slightly south of center (away from gate)
+        const spawnCenterZ = fieldCenterZ - (this.bounds.maxZ - this.bounds.minZ) * 0.15;
+
+        // Calculate appropriate spread radius based on field size
+        const fieldWidth = this.bounds.maxX - this.bounds.minX;
+        const fieldHeight = this.bounds.maxZ - this.bounds.minZ;
+        const spreadRadius = Math.min(fieldWidth, fieldHeight) * 0.2;
+
+        const spawnConfig = {
+            centerX: fieldCenterX,
+            centerZ: spawnCenterZ,
+            spreadRadius: spreadRadius
+        };
+
+        console.log(`[SHEEP] Spawn config: center(${fieldCenterX.toFixed(1)}, ${spawnCenterZ.toFixed(1)}), radius=${spreadRadius.toFixed(1)}`);
+
+        this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig);
         this.sheep = this.optimizedSheepSystem.getSheep();
-        
+
         // Set bounds for each sheep instance
         this.sheep.forEach(sheep => sheep.setBounds(this.bounds));
-        
+
         // Set audio manager if available
         if (this.audioManager) {
             this.optimizedSheepSystem.setAudioManager(this.audioManager);
         }
-        
+
         return null; // No individual meshes to return
     }
     
@@ -386,10 +393,10 @@ export class GameState {
         this.gameCompleted = false;
         this.sheepRetired = 0;
         this.isPaused = false; // Ensure game starts unpaused
-        
+
         // Store previous sheep count to check if we need to recreate the flock
         const previousSheepCount = this.totalSheep;
-        
+
         // Set sheep count based on single player mode
         if (mode === 'solo') {
             if (singlePlayerMode === 'extreme') {
@@ -403,24 +410,24 @@ export class GameState {
             // Multiplayer modes always use 200 sheep
             this.totalSheep = 200;
         }
-        
+
         // If sheep count changed, we need to recreate the sheep flock
         if (previousSheepCount !== this.totalSheep && this.optimizedSheepSystem) {
             console.log(`Sheep count changed from ${previousSheepCount} to ${this.totalSheep} - needs recreation`);
             // We need the scene reference to recreate - store it for later use
             this.needsFlockRecreation = true;
         }
-        
+
         // Initialize competitive/timed mode data if provided
         if ((mode === 'competitive' || mode === 'timed') && competitiveData) {
             this.initializeCompetitiveMode(competitiveData);
         }
-        
+
         // Reset all sheep to their starting positions and states
         if (this.optimizedSheepSystem) {
             this.optimizedSheepSystem.resetAllSheep();
         }
-        
+
         // Log game start
         if (mode === 'timed') {
             console.log('Game started in timed mode - 3 minute countdown!');
@@ -429,6 +436,121 @@ export class GameState {
         } else if (mode === 'competitive') {
             console.log(`Game started in competitive mode with ${Object.keys(this.playerScores).length} players`);
         }
+    }
+
+    /**
+     * Start a sandbox game with custom configuration
+     * @param {Object} sandboxConfig - The sandbox configuration object
+     */
+    startSandboxGame(sandboxConfig) {
+        this.gameMode = 'sandbox';
+        this.singlePlayerMode = 'sandbox';
+        this.gameActive = true;
+        this.gameCompleted = false;
+        this.sheepRetired = 0;
+        this.isPaused = false;
+
+        // Store sandbox config for reference
+        this.sandboxConfig = sandboxConfig;
+
+        // Apply sandbox configuration
+        const gameStateConfig = sandboxConfig.toGameStateFormat();
+
+        // Update bounds from sandbox config
+        this.bounds = gameStateConfig.bounds;
+        this.fieldShape = gameStateConfig.fieldShape || 'square';
+        this.borderPoints = gameStateConfig.borderPoints || null;
+
+        // Update gate configuration
+        this.gate = gameStateConfig.gate;
+
+        // Update pasture configuration
+        this.pasture = gameStateConfig.pasture;
+
+        // Sync FieldConfig so other components get notified
+        FieldConfig.setBounds(this.bounds, this.gate, this.pasture);
+
+        // Update sheep count
+        const previousSheepCount = this.totalSheep;
+        this.totalSheep = gameStateConfig.totalSheep;
+
+        // Update behavior params
+        this.params = gameStateConfig.params;
+
+        // Store custom fences for structure builder
+        this.customFences = gameStateConfig.customFences || [];
+
+        // Store rules
+        this.sandboxRules = gameStateConfig.rules;
+
+        // Check if we need to recreate sheep flock
+        if (previousSheepCount !== this.totalSheep && this.optimizedSheepSystem) {
+            console.log(`[SANDBOX] Sheep count changed from ${previousSheepCount} to ${this.totalSheep} - needs recreation`);
+            this.needsFlockRecreation = true;
+        }
+
+        // Reset all sheep and update their bounds
+        if (this.optimizedSheepSystem) {
+            this.optimizedSheepSystem.resetAllSheep();
+            // Update bounds for all sheep to match new field size
+            this.sheep.forEach(sheep => sheep.setBounds(this.bounds));
+        }
+
+        // Initialize fence collision system for sandbox mode
+        const fenceSystem = resetFenceCollisionSystem();
+        // Add border fences - use polygon if available, otherwise rectangular
+        if (this.borderPoints && this.borderPoints.length >= 3) {
+            fenceSystem.addPolygonBorder(this.borderPoints, this.gate);
+        } else {
+            fenceSystem.addBorderFences(this.bounds, this.gate);
+        }
+        // Add custom internal fences
+        if (this.customFences && this.customFences.length > 0) {
+            fenceSystem.addCustomFences(this.customFences);
+        }
+        console.log(`[SANDBOX] Fence collision system (shape: ${this.fieldShape}):`, fenceSystem.getStats());
+
+        console.log(`[SANDBOX] Game started with ${this.totalSheep} sheep`);
+        console.log(`[SANDBOX] Bounds:`, this.bounds);
+        console.log(`[SANDBOX] Gate:`, { position: this.gate.position, width: this.gate.width, passageZone: this.gate.passageZone });
+        console.log(`[SANDBOX] Pasture:`, this.pasture);
+        console.log(`[SANDBOX] Custom fences: ${this.customFences.length}, Rules:`, this.sandboxRules);
+    }
+
+    /**
+     * Get custom fences for sandbox mode
+     */
+    getCustomFences() {
+        return this.customFences || [];
+    }
+
+    /**
+     * Check if sandbox win condition is met
+     */
+    checkSandboxCompletion() {
+        if (!this.sandboxRules || this.gameMode !== 'sandbox') {
+            return this.checkCompletion();
+        }
+
+        const rules = this.sandboxRules;
+
+        // Free play mode - no win condition
+        if (rules.winCondition === 'none') {
+            return false;
+        }
+
+        // All sheep mode
+        if (rules.winCondition === 'all') {
+            return this.sheepRetired >= this.totalSheep;
+        }
+
+        // Percentage mode
+        if (rules.winCondition === 'percentage') {
+            const targetCount = Math.ceil(this.totalSheep * (rules.winPercentage / 100));
+            return this.sheepRetired >= targetCount;
+        }
+
+        return false;
     }
     
     // Initialize competitive mode with gates and player scores

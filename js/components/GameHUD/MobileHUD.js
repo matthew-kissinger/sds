@@ -3,9 +3,8 @@
  * Compact status bar for mobile devices
  * Shows sheep count, timer, and stamina bar
  */
+import React, { createElement } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
-
-const { createElement } = window.React;
 
 // Sheep icon
 const SheepIcon = ({ size = 16, color = 'currentColor' }) => createElement('svg', {

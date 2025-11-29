@@ -21,13 +21,46 @@ export class SceneManager {
             far
         );
         
-        this.renderer = new THREE.WebGLRenderer({ 
-            antialias: true,
-            powerPreference: "high-performance", // Use discrete GPU if available
-            stencil: false // Disable stencil buffer if not needed
+        // iOS-safe WebGL renderer settings
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: !isIOS, // Disable antialiasing on iOS (known issues)
+            powerPreference: "high-performance",
+            stencil: false,
+            alpha: false, // Opaque canvas for better performance
+            preserveDrawingBuffer: false,
+            failIfMajorPerformanceCaveat: false // Don't fail on software rendering
         });
+
+        // Enable shader error checking for debugging
+        this.renderer.debug.checkShaderErrors = true;
+
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        
+
+        // Log WebGL info for debugging
+        const gl = this.renderer.getContext();
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        if (debugInfo) {
+            console.log('[WEBGL] Vendor:', gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
+            console.log('[WEBGL] Renderer:', gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+        }
+        console.log('[WEBGL] Version:', gl.getParameter(gl.VERSION));
+        console.log('[WEBGL] Max Vertex Uniforms:', gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS));
+        console.log('[WEBGL] Max Fragment Uniforms:', gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
+        console.log('[WEBGL] Max Texture Size:', gl.getParameter(gl.MAX_TEXTURE_SIZE));
+        console.log('[WEBGL] isIOS:', isIOS);
+
+        // Handle WebGL context loss
+        this.renderer.domElement.addEventListener('webglcontextlost', (event) => {
+            console.error('[WEBGL] Context lost!', event);
+            event.preventDefault();
+        });
+
+        this.renderer.domElement.addEventListener('webglcontextrestored', () => {
+            console.log('[WEBGL] Context restored');
+        });
+
         // Disable shadows on mobile for performance
         if (this.isMobile) {
             this.renderer.shadowMap.enabled = false;
@@ -582,4 +615,5 @@ export class SceneManager {
                 return movementDirection;
         }
     }
+
 }

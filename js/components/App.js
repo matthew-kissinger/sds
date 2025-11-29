@@ -11,6 +11,8 @@
  * - GameHUD/     - In-game HUD components (GameTimer, SheepCounter, MobileHUD)
  * - Multiplayer/ - Multiplayer UI (Lobby, Leaderboard, Scoreboard)
  */
+import React, { createElement, useState, useEffect, Fragment, Component } from 'react';
+import { createRoot } from 'react-dom/client';
 import {
     getGameInstance,
     getNetworkManager,
@@ -19,13 +21,12 @@ import {
     selectDog,
     getSelectedDog,
     startSoloGame,
+    startSandboxGame,
     startMultiplayerGame
 } from '../GameBridge.js';
 
 // Initialize React UI with dynamic imports
 export async function initReactUI() {
-    const { createElement, useState, useEffect } = window.React;
-    const { createRoot } = window.ReactDOM;
 
     console.log('[UI] Loading React components...');
 
@@ -41,6 +42,9 @@ export async function initReactUI() {
             { PlayerIdentitySetup },
             { SinglePlayerModes },
             { SettingsPanel },
+            { SandboxSetup },
+            { FenceEditor },
+            { ShapeEditor },
             { GameTimer },
             { SheepCounter },
             { MobileHUD },
@@ -52,7 +56,8 @@ export async function initReactUI() {
             { Lobby },
             { MultiplayerScoreboard },
             { GlobalLeaderboard },
-            { Button }
+            { Button },
+            { SandboxConfig }
         ] = await Promise.all([
             import('./hooks/usePlatform.js'),
             import('./hooks/useGameState.js'),
@@ -63,6 +68,9 @@ export async function initReactUI() {
             import('./StartScreen/PlayerIdentitySetup.js'),
             import('./StartScreen/SinglePlayerModes.js'),
             import('./StartScreen/SettingsPanel.js'),
+            import('./StartScreen/SandboxSetup.js'),
+            import('./StartScreen/FenceEditor.js'),
+            import('./StartScreen/ShapeEditor.js'),
             import('./GameHUD/GameTimer.js'),
             import('./GameHUD/SheepCounter.js'),
             import('./GameHUD/MobileHUD.js'),
@@ -74,7 +82,8 @@ export async function initReactUI() {
             import('./Multiplayer/Lobby.js'),
             import('./Multiplayer/MultiplayerScoreboard.js'),
             import('./Multiplayer/GlobalLeaderboard.js'),
-            import('./ui/Button.js')
+            import('./ui/Button.js'),
+            import('../SandboxConfig.js')
         ]);
 
         // Expose CompletionScreen globally for main.js to use
@@ -83,7 +92,7 @@ export async function initReactUI() {
         console.log('[UI] All components loaded successfully');
 
         // ==================== ERROR BOUNDARY ====================
-        class ErrorBoundary extends window.React.Component {
+        class ErrorBoundary extends Component {
             constructor(props) {
                 super(props);
                 this.state = { hasError: false, error: null };
@@ -166,6 +175,7 @@ export async function initReactUI() {
             const [lobbyData, setLobbyData] = useState(null);
             const [playerIdentity, setPlayerIdentity] = useState(null);
             const [gameSettings, setGameSettings] = useState(loadSettings());
+            const [sandboxConfig, setSandboxConfig] = useState(() => SandboxConfig.createDefault());
             const platform = usePlatform();
 
             useEffect(() => {
@@ -193,6 +203,8 @@ export async function initReactUI() {
             const handleDogConfirm = async () => {
                 if (selectedMode === 'solo') {
                     setScreen('singlePlayerModes');
+                } else if (selectedMode === 'sandbox') {
+                    setScreen('sandboxSetup');
                 } else {
                     const nm = getNetworkManager();
                     if (nm && !nm.connected && !nm.connecting) {
@@ -215,6 +227,21 @@ export async function initReactUI() {
                 selectDog(selectedDog);
                 const dog = getSelectedDog() || selectedDog;
                 startSoloGame(dog, mode);
+            };
+
+            const handleStartSandbox = () => {
+                console.log('[UI] Starting sandbox game:', selectedDog, sandboxConfig);
+                if (!getGameInstance()) return;
+
+                selectDog(selectedDog);
+                const dog = getSelectedDog() || selectedDog;
+                startSandboxGame(dog, sandboxConfig);
+            };
+
+            const handleSandboxConfigChange = (newConfig) => {
+                // Create a new SandboxConfig instance with updated values
+                const updated = new SandboxConfig(newConfig);
+                setSandboxConfig(updated);
             };
 
             const handleCreateRoom = async (settings) => {
@@ -410,6 +437,37 @@ export async function initReactUI() {
                             onBack: () => setScreen('dogSelection')
                         });
 
+                    case 'sandboxSetup':
+                        return createElement(SandboxSetup, {
+                            config: sandboxConfig,
+                            onConfigChange: handleSandboxConfigChange,
+                            onStartGame: handleStartSandbox,
+                            onEditFences: (options) => {
+                                if (options?.mode === 'shape') {
+                                    setScreen('shapeEditor');
+                                } else {
+                                    setScreen('fenceEditor');
+                                }
+                            },
+                            onBack: () => setScreen('dogSelection')
+                        });
+
+                    case 'fenceEditor':
+                        return createElement(FenceEditor, {
+                            config: sandboxConfig,
+                            onConfigChange: handleSandboxConfigChange,
+                            onDone: () => setScreen('sandboxSetup'),
+                            onBack: () => setScreen('sandboxSetup')
+                        });
+
+                    case 'shapeEditor':
+                        return createElement(ShapeEditor, {
+                            config: sandboxConfig,
+                            onConfigChange: handleSandboxConfigChange,
+                            onDone: () => setScreen('sandboxSetup'),
+                            onBack: () => setScreen('sandboxSetup')
+                        });
+
                     case 'multiplayer':
                         return createElement(MultiplayerOptions, {
                             onBack: () => setScreen('dogSelection'),
@@ -543,7 +601,7 @@ export async function initReactUI() {
                 return () => clearInterval(check);
             }, []);
 
-            return createElement(window.React.Fragment, null, [
+            return createElement(Fragment, null, [
                 !gameStarted && createElement(StartScreen, { key: 'start' }),
                 gameStarted && createElement(GameHUD, { key: 'hud' })
             ]);

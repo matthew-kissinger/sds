@@ -2,12 +2,11 @@
  * GlobalLeaderboard Component
  * View global rankings across all game modes
  */
+import React, { createElement, useState, useEffect } from 'react';
 import { getNetworkManager } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
-
-const { createElement, useState, useEffect } = window.React;
 
 export function GlobalLeaderboard({ onBack, playerIdentity }) {
     const [activeTab, setActiveTab] = useState('soloClassic');

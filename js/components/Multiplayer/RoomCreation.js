@@ -2,11 +2,10 @@
  * RoomCreation Component
  * Create a new multiplayer room with settings
  */
+import React, { createElement, useState } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
-
-const { createElement, useState } = window.React;
 
 const gameModeDescriptions = {
     cooperative: 'Work together to herd all sheep into the pen',

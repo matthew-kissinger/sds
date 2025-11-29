@@ -229,10 +229,17 @@ html, body {
 /* ==================== INPUTS ==================== */
 
 /* Prevent zoom on input focus on iOS */
-input, button, select, textarea {
+input, select, textarea {
     font-size: 16px;
     -webkit-appearance: none;
     border-radius: 0;
+}
+
+/* Buttons - allow custom border-radius from inline styles */
+button {
+    font-size: 16px;
+    -webkit-appearance: none;
+    /* Don't reset border-radius here - let inline styles control it */
 }
 
 .modern-input {

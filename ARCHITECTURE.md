@@ -15,13 +15,13 @@ A real-time 3D herding simulation with GPU-accelerated rendering, WebRTC multipl
 ### Client
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Three.js | 0.176.0 | WebGL rendering |
-| React | 18/19 | UI components |
-| Vite | 7.0 | Build tooling |
-| Tailwind CSS | 4.1 | Styling |
-| nipple.js | 0.10.1 | Mobile joystick |
+| Three.js | 0.181.0 | WebGL rendering |
+| React | 19.2.0 | UI components |
+| Vite | 7.2.2 | Build tooling |
+| Tailwind CSS | 4.1.17 | Styling (CSS-first, no config) |
+| nipple.js | 0.10.2 | Mobile joystick |
 | Geckos.io Client | 3.0.1 | WebRTC client |
-| Framer Motion | 12.19 | Animations |
+| Framer Motion | 12.19.2 | Animations |
 
 ### Server
 | Technology | Version | Purpose |
@@ -134,10 +134,22 @@ Authoritative game simulation.
 
 | Mode | Description | Players |
 |------|-------------|---------|
-| Solo | Client-side simulation, instant start | 1 |
+| Classic | Client-side simulation, herd all sheep into pen | 1 |
+| Time Trial | Beat target times for bronze/silver/gold medals | 1 |
+| Sandbox | Custom field configuration with fence editor | 1 |
 | Cooperative | Work together to herd 200 sheep | 2-4 |
 | Competitive | Race to collect sheep (first to 101 in 2P) | 2-4 |
 | Timed | 3-minute countdown, highest score wins | 2-4 |
+
+## Playable Dogs
+
+| Dog | Breed | Speed | Stamina | Control | Style |
+|-----|-------|-------|---------|---------|-------|
+| Jep | Border Collie | ★★★ | ★★★★ | ★★★★ | Well-balanced herder |
+| Pip | Australian Shepherd | ★★★★★ | ★★★ | ★★★ | Fast and agile |
+| Sally | Welsh Corgi | ★★ | ★★★★ | ★★★★★ | Precision control |
+| Shiloh | German Shepherd | ★★★ | ★★★★★ | ★★★ | High endurance |
+| George Washington | American Foxhound | ★★★ | ★★★★ | ★★★ | Tactical all-rounder |
 
 ## Network Protocol
 
@@ -192,7 +204,7 @@ DISCONNECTED → CONNECTING → CONNECTED → IN_ROOM → IN_GAME
 │   ├── main.js              # Game orchestrator
 │   ├── SceneManager.js      # Three.js scene/camera
 │   ├── TerrainBuilder.js    # Environment generation
-│   ├── StructureBuilderV2.js # Gates, fences, pastures
+│   ├── StructureBuilder.js  # Gates, fences, pastures
 │   ├── OptimizedSheep.js    # GPU sheep system
 │   ├── Sheepdog.js          # Player controller
 │   ├── GrassSystem.js       # Chunk-based grass
@@ -204,15 +216,27 @@ DISCONNECTED → CONNECTING → CONNECTED → IN_ROOM → IN_GAME
 │   ├── InputHandler.js      # Input management
 │   ├── GamepadManager.js    # Controller support
 │   ├── AudioManager.js      # Sound system
-│   ├── StartScreen.js       # Start screen
+│   ├── StartScreen.js       # Start screen logic
 │   ├── PerformanceMonitor.js # FPS stats
-│   ├── GameAssetLoader.js   # Asset loading
+│   ├── GameAssetLoader.js   # Progressive asset loading
+│   ├── GameBridge.js        # React-to-game communication
 │   ├── Boid.js              # Base AI behavior
 │   ├── ExtremeBoid.js       # Aggressive variant
 │   ├── FencePresets.js      # Fence configurations
+│   ├── FenceCollisionSystem.js # Fence collision detection
+│   ├── FieldConfig.js       # Field configuration
+│   ├── SandboxConfig.js     # Sandbox mode configuration
 │   ├── Vector2D.js          # 2D math
-│   └── components/
-│       └── ReactUI.js       # React overlay
+│   ├── components/          # React UI components
+│   │   ├── App.js           # Main React app
+│   │   ├── StartScreen/     # Menu screens
+│   │   ├── GameHUD/         # In-game UI
+│   │   ├── Multiplayer/     # Multiplayer UI
+│   │   ├── hooks/           # React hooks
+│   │   ├── ui/              # Reusable UI components
+│   │   └── shared/          # Shared utilities
+│   ├── shaders/             # GLSL shaders
+│   └── utils/               # Utility functions
 │
 ├── server/
 │   ├── index.js             # Geckos.io server
@@ -229,18 +253,17 @@ DISCONNECTED → CONNECTING → CONNECTED → IN_ROOM → IN_GAME
 │   └── Vector2D.js
 │
 ├── assets/
-│   ├── models/              # GLB models
-│   ├── sounds_compressed/   # Audio
-│   └── images/              # UI/SEO
+│   ├── models/              # GLB models (dogs, environment)
+│   ├── sounds_compressed/   # Audio files
+│   └── images/              # UI/SEO assets
 │
 ├── css/
-│   ├── production.css
-│   └── multiplayer-react.css
+│   ├── main.css             # Tailwind CSS entry
+│   └── components/          # Component styles
 │
 ├── index.html               # Entry point
 ├── package.json
-├── vite.config.js
-└── tailwind.config.js
+└── vite.config.js           # Vite + Tailwind config
 ```
 
 ## Development

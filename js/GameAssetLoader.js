@@ -10,8 +10,11 @@ export class GameAssetLoader {
         this.loadingPromises = new Map();
         this.isLoadingCritical = false;
         this.isDeferredLoadingStarted = false;
-        
-        console.log('[ASSET] GameAssetLoader initialized for progressive loading');
+
+        // Detect iOS - audio preloading doesn't work without user interaction
+        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+        console.log(`[ASSET] GameAssetLoader initialized (iOS=${this.isIOS})`);
     }
 
     /**
@@ -19,19 +22,19 @@ export class GameAssetLoader {
      */
     defineCriticalAssets() {
         return [
-            // Essential dog textures
+            // Essential dog models (optimized)
             'assets/models/Jep.glb',
             'assets/models/Sally.glb',
             'assets/models/Pip.glb',
             'assets/models/Shiloh.glb',
-            
+
             // Core sheep and terrain (first priority)
             'assets/LP_BorderCollie_Blend_v01/texture/PolyArt_Dogs_color.png',
-            
+
             // Essential UI sounds
             'assets/sounds_compressed/ui_click.mp3',
             'assets/sounds_compressed/dog_bark_jep.mp3',
-            
+
             // Critical terrain models
             'assets/models/Resource_Tree1.glb',
             'assets/models/Resource_Rock_1.glb'
@@ -43,9 +46,18 @@ export class GameAssetLoader {
      */
     defineDeferredAssets() {
         return [
-            // Additional dog models
+            // Additional dog model
             'assets/models/George_Washington.glb',
-            
+
+            // Fence and gate models
+            'assets/models/Fence_Post-v1.0.0.glb',
+            'assets/models/Fence_Rail-v1.0.0.glb',
+            'assets/models/Fence_Segment-v1.0.0.glb',
+            'assets/models/Gate_Post-v1.0.0.glb',
+            'assets/models/Gate_Complete-v1.0.0.glb',
+            'assets/models/Gate_Arch-v1.0.0.glb',
+            'assets/models/Corner_Post-v1.0.0.glb',
+
             // Environment details
             'assets/models/Farm house.glb',
             'assets/models/Mountain_Group_1.glb',
@@ -217,16 +229,34 @@ export class GameAssetLoader {
                     await response.blob();
                     
                 } else if (['mp3', 'wav', 'ogg'].includes(extension)) {
-                    // For audio files, preload them
-                    const audio = new Audio();
-                    audio.preload = 'metadata';
-                    
-                    await new Promise((audioResolve, audioReject) => {
-                        audio.oncanplaythrough = audioResolve;
-                        audio.onerror = audioReject;
-                        audio.src = assetPath;
-                    });
-                    
+                    // iOS Safari blocks audio loading until user interaction
+                    // Skip audio preloading on iOS - AudioManager handles lazy loading
+                    if (this.isIOS) {
+                        console.log(`[ASSET] Skipping audio preload on iOS: ${assetPath}`);
+                        // Just resolve immediately - audio will be loaded on first user interaction
+                    } else {
+                        // For non-iOS, preload audio with a timeout to prevent hanging
+                        const audio = new Audio();
+                        audio.preload = 'metadata';
+
+                        await new Promise((audioResolve, audioReject) => {
+                            const timeout = setTimeout(() => {
+                                console.log(`[ASSET] Audio preload timeout: ${assetPath}`);
+                                audioResolve(); // Resolve anyway, don't block
+                            }, 5000); // 5 second timeout
+
+                            audio.oncanplaythrough = () => {
+                                clearTimeout(timeout);
+                                audioResolve();
+                            };
+                            audio.onerror = (err) => {
+                                clearTimeout(timeout);
+                                audioReject(err);
+                            };
+                            audio.src = assetPath;
+                        });
+                    }
+
                 } else if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
                     // For images, preload them
                     const img = new Image();

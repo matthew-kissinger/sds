@@ -2,10 +2,9 @@
  * ModeSelection Component
  * Main menu mode selection - Solo, Multiplayer, Leaderboard, Settings
  */
+import React, { createElement, useState } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { MenuOption } from '../ui/MenuOption.js';
-
-const { createElement, useState } = window.React;
 
 // Mode configuration
 const MODES = [
@@ -15,6 +14,13 @@ const MODES = [
         description: 'Practice herding at your own pace',
         color: '#10b981', // Emerald
         icon: 'play'
+    },
+    {
+        id: 'sandbox',
+        label: 'Sandbox',
+        description: 'Customize sheep, fences & rules',
+        color: '#f97316', // Orange
+        icon: 'sandbox'
     },
     {
         id: 'multiplayer',
@@ -56,6 +62,11 @@ function ModeIcon({ type, color, size = 24 }) {
         play: createElement('svg', { ...iconProps, fill: color, stroke: 'none' },
             createElement('path', { d: 'M8 5v14l11-7z' })
         ),
+        sandbox: createElement('svg', iconProps, [
+            createElement('rect', { key: '1', x: '3', y: '11', width: '18', height: '11', rx: '2' }),
+            createElement('path', { key: '2', d: 'M7 11V7a5 5 0 0 1 10 0v4' }),
+            createElement('circle', { key: '3', cx: '12', cy: '16', r: '1' })
+        ]),
         users: createElement('svg', iconProps, [
             createElement('path', { key: '1', d: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2' }),
             createElement('circle', { key: '2', cx: '9', cy: '7', r: '4' }),

@@ -3,7 +3,7 @@
  * Small stamina bar for use within other HUD components
  * Smooth gradient transition: green -> yellow -> orange -> red
  */
-const { createElement } = window.React;
+import React, { createElement } from 'react';
 
 // Get stamina color based on percentage (smooth gradient)
 function getStaminaColor(stamina) {

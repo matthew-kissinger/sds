@@ -4,9 +4,8 @@
  *
  * Architecture: Uses Tailwind for layout, CSS class for glassmorphism
  */
+import React, { createElement } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
-
-const { createElement } = window.React;
 
 /**
  * Panel - Glassmorphism container

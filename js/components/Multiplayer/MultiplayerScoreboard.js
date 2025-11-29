@@ -9,7 +9,7 @@
  * - Labels: text-sm (12px)
  * - Sheep count: text-lg (20px)
  */
-const { createElement } = window.React;
+import React, { createElement } from 'react';
 import { CompactStaminaBar } from '../GameHUD/CompactStaminaBar.js';
 
 export function MultiplayerScoreboard({ players, scores, myPlayerId, gameMode, sheepCount, totalSheep, stamina }) {

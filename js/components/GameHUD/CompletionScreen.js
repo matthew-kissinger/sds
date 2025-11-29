@@ -2,7 +2,7 @@
  * CompletionScreen Component
  * Polished victory/completion overlay for all game modes
  */
-const { createElement, useState, useEffect } = window.React;
+import React, { createElement, useState, useEffect } from 'react';
 
 // Lucide-style SVG Icons
 const Icons = {

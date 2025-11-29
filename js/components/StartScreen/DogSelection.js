@@ -5,10 +5,9 @@
  *
  * Dog icon: "Sitting Dog" by Delapouite from game-icons.net (CC BY 3.0)
  */
+import React, { createElement } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { PanelTitle } from '../ui/Panel.js';
-
-const { createElement } = window.React;
 
 // Dog avatar using game-icons.net sitting dog icon
 const DogAvatar = ({ color = '#3b82f6', size = 48 }) => createElement('div', {

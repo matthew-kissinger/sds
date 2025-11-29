@@ -2,12 +2,11 @@
  * SinglePlayerModes Component
  * Mode selection for single player - Classic vs Extreme
  */
+import React, { createElement } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { MenuOption, MenuOptionGrid } from '../ui/MenuOption.js';
 import { BackButton } from '../ui/Button.js';
-
-const { createElement } = window.React;
 
 const MODES = [
     {

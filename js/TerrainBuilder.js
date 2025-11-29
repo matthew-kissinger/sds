@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GrassSystem } from './GrassSystem.js';
 
 /**
@@ -22,7 +22,7 @@ export class TerrainBuilder {
         this.mountains = []; // Track mountains
         this.buildings = []; // Track buildings
         
-        // Model loading
+        // Model loading - standard GLTFLoader (mobile models are animation-stripped, not Draco compressed)
         this.loader = new GLTFLoader();
         this.models = {
             trees: {},
@@ -123,7 +123,13 @@ export class TerrainBuilder {
         if (this.isMobile) {
             this.createMobileMaterials();
         }
-        
+
+        console.log(`[ASSET] Loading models (mobile=${this.isMobile})`);
+
+        // Track loading errors
+        const loadErrors = [];
+        const criticalErrors = [];
+
         const modelPaths = {
             trees: [
                 { name: 'tree1', path: 'assets/models/Resource_Tree1.glb' },
@@ -142,84 +148,113 @@ export class TerrainBuilder {
             buildings: [
                 { name: 'farmhouse', path: 'assets/models/Farm house.glb' }
             ],
+            // Optimized dog models (19 animations, fast load)
             animals: [
-                { name: 'jep', path: 'assets/models/Jep.glb' },
-                { name: 'pip', path: 'assets/models/Pip.glb' },
-                { name: 'sally', path: 'assets/models/Sally.glb' },
-                { name: 'shiloh', path: 'assets/models/Shiloh.glb' },
-                { name: 'george_washington', path: 'assets/models/George_Washington.glb' }
+                { name: 'jep', path: 'assets/models/Jep.glb', critical: true },
+                { name: 'pip', path: 'assets/models/Pip.glb', critical: true },
+                { name: 'sally', path: 'assets/models/Sally.glb', critical: true },
+                { name: 'shiloh', path: 'assets/models/Shiloh.glb', critical: true },
+                { name: 'george_washington', path: 'assets/models/George_Washington.glb', critical: true }
             ]
         };
-        
+
         const loadPromises = [];
-        
-        // Load tree models
+
+        // Load tree models (non-critical)
         for (const model of modelPaths.trees) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     this.models.trees[model.name] = gltf.scene;
                     console.log(`[OK] Loaded tree model: ${model.name}`);
                 }).catch(err => {
-                    console.error(`[ERROR] Failed to load tree model ${model.name}:`, err);
+                    const errMsg = `tree/${model.name}: ${err.message || err}`;
+                    console.error(`[ERROR] Failed to load ${errMsg}`);
+                    loadErrors.push(errMsg);
                 })
             );
         }
-        
-        // Load rock models
+
+        // Load rock models (non-critical)
         for (const model of modelPaths.rocks) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     this.models.rocks[model.name] = gltf.scene;
                     console.log(`[OK] Loaded rock model: ${model.name}`);
                 }).catch(err => {
-                    console.error(`[ERROR] Failed to load rock model ${model.name}:`, err);
+                    const errMsg = `rock/${model.name}: ${err.message || err}`;
+                    console.error(`[ERROR] Failed to load ${errMsg}`);
+                    loadErrors.push(errMsg);
                 })
             );
         }
-        
-        // Load mountain models
+
+        // Load mountain models (non-critical)
         for (const model of modelPaths.mountains) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     this.models.mountains[model.name] = gltf.scene;
                     console.log(`[OK] Loaded mountain model: ${model.name}`);
                 }).catch(err => {
-                    console.error(`[ERROR] Failed to load mountain model ${model.name}:`, err);
+                    const errMsg = `mountain/${model.name}: ${err.message || err}`;
+                    console.error(`[ERROR] Failed to load ${errMsg}`);
+                    loadErrors.push(errMsg);
                 })
             );
         }
-        
-                // Load building models
+
+        // Load building models (non-critical)
         for (const model of modelPaths.buildings) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     this.models.buildings[model.name] = gltf.scene;
                     console.log(`[OK] Loaded building model: ${model.name}`);
                 }).catch(err => {
-                    console.error(`[ERROR] Failed to load building model ${model.name}:`, err);
+                    const errMsg = `building/${model.name}: ${err.message || err}`;
+                    console.error(`[ERROR] Failed to load ${errMsg}`);
+                    loadErrors.push(errMsg);
                 })
             );
         }
-        
-        // Load animal models
+
+        // Load animal models - CRITICAL for gameplay
         for (const model of modelPaths.animals) {
-            console.log(`[LOAD] Attempting to load animal model: ${model.name} from path: ${model.path}`);
             loadPromises.push(
-                this.loader.loadAsync(model.path).then(gltf => {
-                    this.models.animals[model.name] = gltf.scene;
-                    this.models.animals[model.name + '_animations'] = gltf.animations;
-                    console.log(`[OK] Loaded animal model: ${model.name} with ${gltf.animations.length} animations`);
-                    console.log(`[ANIM] Animation names:`, gltf.animations.map(anim => anim.name));
-                }).catch(err => {
-                    console.error(`[ERROR] Failed to load animal model ${model.name} from ${model.path}:`, err);
-                    console.error(`[ERROR] Full error details:`, err.message, err.stack);
-                })
+                this.loader.loadAsync(model.path)
+                    .then(gltf => {
+                        this.models.animals[model.name] = gltf.scene;
+                        this.models.animals[model.name + '_animations'] = gltf.animations;
+                        console.log(`[OK] Loaded ${model.name} with ${gltf.animations.length} animations from ${model.path}`);
+                    })
+                    .catch(err => {
+                        const errMsg = `animal/${model.name} (${model.path}): ${err.message || err}`;
+                        console.error(`[CRITICAL ERROR] Failed to load ${errMsg}`);
+                        loadErrors.push(errMsg);
+                        if (model.critical) {
+                            criticalErrors.push(errMsg);
+                        }
+                    })
             );
         }
 
         await Promise.all(loadPromises);
         this.modelsLoaded = true;
-        console.log('[ASSET] All models loaded successfully!');
+
+        // Report loading results
+        const loadedAnimals = Object.keys(this.models.animals).filter(k => !k.endsWith('_animations'));
+        console.log(`[ASSET] Loaded ${loadedAnimals.length}/5 animal models:`, loadedAnimals);
+
+        if (loadErrors.length > 0) {
+            console.error(`[ASSET] ${loadErrors.length} models failed to load:`, loadErrors);
+        }
+
+        // Throw error if critical models failed (like jep dog)
+        if (criticalErrors.length > 0) {
+            const errorMsg = `Critical models failed to load: ${criticalErrors.join(', ')}`;
+            console.error(`[ASSET] ${errorMsg}`);
+            throw new Error(errorMsg);
+        }
+
+        console.log('[ASSET] All critical models loaded successfully!');
     }
     
     isInZone(x, z, zone) {
@@ -360,6 +395,10 @@ export class TerrainBuilder {
             this.farmHouseExclusionArea.minZ,
             this.farmHouseExclusionArea.maxZ
         );
+
+        // Add exclusion zone for default pasture (pen area)
+        // Default pasture is at z: 100-133, x: -30 to 30
+        this.grassSystem.addExclusionZone(-35, 35, 98, 138);
 
         // Initialize the grass system
         await this.grassSystem.init();
@@ -597,10 +636,15 @@ export class TerrainBuilder {
                 
                 // Check pasture areas
                 if (isInPastureArea(x, z)) return false;
-                
-                // Check play area
-                if (Math.abs(x) < 120 && Math.abs(z) < 120) return false;
-                
+
+                // Check play area (use dynamic bounds with buffer)
+                const playArea = this.zones.playArea;
+                const buffer = 20; // Buffer around play area
+                if (x >= playArea.minX - buffer && x <= playArea.maxX + buffer &&
+                    z >= playArea.minZ - buffer && z <= playArea.maxZ + buffer) {
+                    return false;
+                }
+
                 // Check farm house area
                 if (this.isInFarmHouseArea(x, z)) return false;
                 
@@ -851,24 +895,31 @@ export class TerrainBuilder {
             { zone: this.zones.horizon, formations: 8, types: ['field', 'line'], scaleRange: { min: 25, max: 50 } }
         ];
         
+        // Get current play area for rock exclusion
+        const playArea = this.zones.playArea;
+
         zones.forEach(({ zone, formations, types, scaleRange }) => {
             for (let f = 0; f < formations; f++) {
                 const centerX = zone.minX + Math.random() * (zone.maxX - zone.minX);
                 const centerZ = zone.minZ + Math.random() * (zone.maxZ - zone.minZ);
-                
-                // Skip if in play area
-                if (Math.abs(centerX) < 150 && Math.abs(centerZ) < 150) continue;
-                
+
+                // Skip if in play area (with buffer)
+                const buffer = 50;
+                if (centerX >= playArea.minX - buffer && centerX <= playArea.maxX + buffer &&
+                    centerZ >= playArea.minZ - buffer && centerZ <= playArea.maxZ + buffer) continue;
+
                 // Skip if in farm house area
                 if (this.isInFarmHouseArea(centerX, centerZ)) continue;
-                
+
                 const formationType = types[Math.floor(Math.random() * types.length)];
                 const formation = createRockFormation(centerX, centerZ, formationType);
-                
+
                 formation.forEach(rock => {
                     // Skip if too close to play area
-                    if (Math.abs(rock.x) < 120 && Math.abs(rock.z) < 120) return;
-                    
+                    const rockBuffer = 20;
+                    if (rock.x >= playArea.minX - rockBuffer && rock.x <= playArea.maxX + rockBuffer &&
+                        rock.z >= playArea.minZ - rockBuffer && rock.z <= playArea.maxZ + rockBuffer) return;
+
                     // Skip if in farm house area
                     if (this.isInFarmHouseArea(rock.x, rock.z)) return;
                     
@@ -1394,9 +1445,213 @@ export class TerrainBuilder {
      * Check if a position is within the farm house exclusion area
      */
     isInFarmHouseArea(x, z) {
-        return x >= this.farmHouseExclusionArea.minX && 
-               x <= this.farmHouseExclusionArea.maxX && 
-               z >= this.farmHouseExclusionArea.minZ && 
+        return x >= this.farmHouseExclusionArea.minX &&
+               x <= this.farmHouseExclusionArea.maxX &&
+               z >= this.farmHouseExclusionArea.minZ &&
                z <= this.farmHouseExclusionArea.maxZ;
+    }
+
+    /**
+     * Set dynamic bounds for the terrain (used for sandbox/different game modes)
+     * @param {Object} bounds - The new bounds { minX, maxX, minZ, maxZ }
+     * @param {Object} pasture - The new pasture area { minX, maxX, minZ, maxZ }
+     */
+    setDynamicBounds(bounds, pasture) {
+        if (bounds) {
+            // Update the play area zone based on new bounds
+            this.zones.playArea = {
+                minX: bounds.minX,
+                maxX: bounds.maxX,
+                minZ: bounds.minZ,
+                maxZ: bounds.maxZ
+            };
+            console.log('[TERRAIN] Updated play area bounds:', this.zones.playArea);
+
+            // Update farmhouse position based on new bounds
+            // Position it beyond the northeast corner of the field
+            this.farmHousePosition = {
+                x: bounds.maxX + 80,
+                z: bounds.maxZ + 60
+            };
+
+            // Update farmhouse exclusion area
+            this.farmHouseExclusionArea = {
+                minX: this.farmHousePosition.x - 40,
+                maxX: this.farmHousePosition.x + 40,
+                minZ: this.farmHousePosition.z - 40,
+                maxZ: this.farmHousePosition.z + 40
+            };
+            console.log('[TERRAIN] Updated farmhouse position:', this.farmHousePosition);
+
+            // Actually MOVE the existing farmhouse to the new position
+            this.updateFarmhousePosition();
+        }
+
+        if (pasture) {
+            // Store pasture for exclusion in grass/tree placement
+            this.currentPasture = pasture;
+            console.log('[TERRAIN] Updated pasture area:', pasture);
+        }
+
+        // Update grass system exclusion zones if available
+        if (this.grassSystem) {
+            // Clear existing exclusion zones and add updated ones
+            this.grassSystem.exclusionZones = [];
+
+            // Add farmhouse exclusion
+            this.grassSystem.addExclusionZone(
+                this.farmHouseExclusionArea.minX,
+                this.farmHouseExclusionArea.maxX,
+                this.farmHouseExclusionArea.minZ,
+                this.farmHouseExclusionArea.maxZ
+            );
+
+            // Add pasture exclusion if available (no grass in pen)
+            if (pasture) {
+                this.grassSystem.addExclusionZone(
+                    pasture.minX,
+                    pasture.maxX,
+                    pasture.minZ,
+                    pasture.maxZ
+                );
+            }
+
+            // NOTE: We want grass INSIDE the field, so no bounds exclusion
+            console.log('[TERRAIN] Updated grass exclusion zones');
+        }
+    }
+
+    /**
+     * Update the position of the existing farmhouse
+     */
+    updateFarmhousePosition() {
+        if (this.buildings && this.buildings.length > 0) {
+            // Find the farmhouse (first building)
+            const farmhouse = this.buildings[0];
+            if (farmhouse) {
+                farmhouse.position.set(this.farmHousePosition.x, 0, this.farmHousePosition.z);
+                console.log(`[TERRAIN] Moved farmhouse to (${this.farmHousePosition.x}, ${this.farmHousePosition.z})`);
+            }
+        }
+    }
+
+    /**
+     * Clear and rebuild environment for new bounds
+     * Call this when switching between game modes with different field sizes
+     */
+    async rebuildEnvironment(bounds, pasture) {
+        console.log('[TERRAIN] Rebuilding environment for new bounds');
+
+        // Update bounds first (this updates exclusion zones but doesn't regenerate)
+        if (bounds) {
+            this.zones.playArea = {
+                minX: bounds.minX,
+                maxX: bounds.maxX,
+                minZ: bounds.minZ,
+                maxZ: bounds.maxZ
+            };
+
+            this.farmHousePosition = {
+                x: bounds.maxX + 80,
+                z: bounds.maxZ + 60
+            };
+
+            this.farmHouseExclusionArea = {
+                minX: this.farmHousePosition.x - 40,
+                maxX: this.farmHousePosition.x + 40,
+                minZ: this.farmHousePosition.z - 40,
+                maxZ: this.farmHousePosition.z + 40
+            };
+
+            // Move existing farmhouse
+            this.updateFarmhousePosition();
+        }
+
+        if (pasture) {
+            this.currentPasture = pasture;
+        }
+
+        // Clear existing trees and rocks
+        this.clearTrees();
+        this.clearRocks();
+
+        // Regenerate grass with new exclusion zones
+        await this.regenerateGrass(bounds, pasture);
+
+        // Rebuild trees and rocks with new exclusion zones
+        await this.createTrees();
+        await this.addEnvironmentDetails();
+
+        console.log('[TERRAIN] Environment rebuild complete');
+    }
+
+    /**
+     * Regenerate the grass system with new exclusion zones
+     */
+    async regenerateGrass(bounds, pasture) {
+        console.log('[TERRAIN] Regenerating grass with new exclusion zones');
+
+        // Dispose old grass system
+        if (this.grassSystem) {
+            this.grassSystem.dispose();
+            this.grassSystem = null;
+        }
+
+        // Create new grass system
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile);
+
+        // Add farmhouse exclusion zone
+        this.grassSystem.addExclusionZone(
+            this.farmHouseExclusionArea.minX,
+            this.farmHouseExclusionArea.maxX,
+            this.farmHouseExclusionArea.minZ,
+            this.farmHouseExclusionArea.maxZ
+        );
+
+        // Add pasture exclusion zone (no grass in the pen area)
+        if (pasture) {
+            this.grassSystem.addExclusionZone(
+                pasture.minX,
+                pasture.maxX,
+                pasture.minZ,
+                pasture.maxZ
+            );
+        }
+
+        // NOTE: We DO want grass inside the play area/field!
+        // Only exclude farmhouse and pasture
+
+        // Initialize the new grass system
+        await this.grassSystem.init();
+
+        // Update reference
+        this.grassMaterial = this.grassSystem.grassMaterial;
+        const stats = this.grassSystem.getStats();
+        this.grassInstanceCount = stats.totalClumps * (this.isMobile ? 3 : 5);
+
+        console.log(`[TERRAIN] Grass regenerated: ${stats.totalClumps} clumps`);
+    }
+
+    /**
+     * Remove all existing rocks from the scene
+     */
+    clearRocks() {
+        console.log(`[TERRAIN] Removing ${this.rocks.length} existing rocks`);
+
+        this.rocks.forEach(rock => {
+            this.scene.remove(rock);
+            // Dispose of geometry and materials to free memory
+            if (rock.geometry) rock.geometry.dispose();
+            if (rock.material) {
+                if (Array.isArray(rock.material)) {
+                    rock.material.forEach(mat => mat.dispose());
+                } else {
+                    rock.material.dispose();
+                }
+            }
+        });
+
+        this.rocks = [];
+        this.environmentDetails = [];
     }
 }

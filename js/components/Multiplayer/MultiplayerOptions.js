@@ -2,12 +2,11 @@
  * MultiplayerOptions Component
  * Multiplayer menu - Create, Join, Quick Match
  */
+import React, { createElement } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { MenuOption, MenuOptionGrid } from '../ui/MenuOption.js';
 import { BackButton } from '../ui/Button.js';
-
-const { createElement } = window.React;
 
 const OPTIONS = [
     {

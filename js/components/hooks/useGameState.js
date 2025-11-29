@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { getGameState, getGameTimer, getNetworkManager, getMultiplayerUI, getSheepdog } from '../../GameBridge.js';
 
 /**
@@ -5,7 +6,6 @@ import { getGameState, getGameTimer, getNetworkManager, getMultiplayerUI, getShe
  * Provides reactive access to game state for HUD components
  */
 export function useGameState() {
-    const { useState, useEffect } = window.React;
     const [gameData, setGameData] = useState({
         stamina: 100,
         sheepCount: 0,

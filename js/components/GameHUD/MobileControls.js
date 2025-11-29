@@ -3,10 +3,10 @@
  * Touch controls for mobile - joystick, sprint button, zoom controls
  * Landscape-aware positioning
  */
+import React, { createElement, useState, useEffect, useRef } from 'react';
+import nipplejs from 'nipplejs';
 import { getGameInstance, getInputHandler, getMobileControls } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
-
-const { createElement, useState, useEffect, useRef } = window.React;
 
 // Sprint icon
 const SprintIcon = ({ size = 24, color = 'currentColor' }) => createElement('svg', {
@@ -39,9 +39,9 @@ export function MobileControls() {
 
     // Initialize joystick
     useEffect(() => {
-        if (!getGameInstance() || !joystickRef.current || !window.nipplejs) return;
+        if (!getGameInstance() || !joystickRef.current) return;
 
-        const manager = window.nipplejs.create({
+        const manager = nipplejs.create({
             zone: joystickRef.current,
             mode: 'static',
             position: { left: '75px', bottom: '75px' },

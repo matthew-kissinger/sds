@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import * as SkeletonUtils from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/utils/SkeletonUtils.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { Vector2D } from './Vector2D.js';
 import { getTerrainBuilder, getSceneManager } from './GameBridge.js';
+import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 
 /**
  * Animation States - Simplified and robust state machine for Sheep Dog animations
@@ -53,16 +54,9 @@ const ANIMATION_STATES = {
         priority: 5,
         transitionTime: 0.2,
         duration: 4.58 // From animation data
-    },
-    SITTING: {
-        animations: {
-            start: 'Sitting_start',
-            loop: ['Sitting_loop_1', 'Sitting_loop_2'],
-            end: 'Sitting_end'
-        },
-        priority: 1,
-        transitionTime: 0.4
     }
+    // NOTE: No sitting animation available in the dog models
+    // Available animations: Bark, Idle_1-7, Walk_F/L/R_IP, Trot_F/L/R_IP, Run_F/L/R_IP, RunFast_F/L/R_IP
 };
 
 /**
@@ -108,7 +102,7 @@ export class Sheepdog {
             idleVariationTimer: 0,
             idleVariationIndex: 0,
             barkTimer: 0,
-            sittingPhase: 'none', // 'none', 'starting', 'sitting', 'ending'
+            // Note: No sitting animation available in model
             lastMovementTime: 0,
             turnDirection: null,
             turnStartTime: 0
@@ -227,44 +221,44 @@ export class Sheepdog {
      */
     loadSheepdogModel() {
         const terrainBuilder = getTerrainBuilder();
-        
+
         if (!terrainBuilder?.models?.animals?.[this.dogType]) {
             console.error(`[ERROR] ${this.dogType} model not available from TerrainBuilder`);
             return;
         }
-        
+
         const originalModel = terrainBuilder.models.animals[this.dogType];
         const animations = terrainBuilder.models.animals[this.dogType + '_animations'] || [];
-        
+
         console.log(`[DOG] Loading ${this.dogType} model with ${animations.length} animations`);
-        
+
         // Clone the model using SkeletonUtils for proper animation support
         this.sheepdogModel = SkeletonUtils.clone(originalModel);
-        
+
         // Configure model - Make it bigger and more visible
         this.sheepdogModel.scale.set(4,4,4)
         this.sheepdogModel.rotation.y = 0;
         this.sheepdogModel.position.set(0, 0, 0);
-        
+
         // Configure shadows and materials
         this.sheepdogModel.traverse(child => {
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
-                
+
                 // Ensure materials work with fog
                 if (child.material) {
                     child.material.fog = true;
                 }
             }
         });
-        
+
         // Add to mesh group
         this.mesh.add(this.sheepdogModel);
-        
+
         // Set up animation system
         this.setupAnimationSystem(animations);
-        
+
         console.log(`[OK] ${this.dogType} model loaded and animation system initialized`);
     }
     
@@ -276,23 +270,25 @@ export class Sheepdog {
             console.warn('[WARN] No animations found for Sheep Dog model');
             return;
         }
-        
+
         // Create animation mixer
         this.animationSystem.mixer = new THREE.AnimationMixer(this.sheepdogModel);
-        
+
         // Create actions for all animations and organize by state
+        const animNames = [];
         animations.forEach(clip => {
             const action = this.animationSystem.mixer.clipAction(clip);
             this.animationSystem.actions.set(clip.name, action);
+            animNames.push(clip.name);
         });
-        
+
         // Start with first idle animation
         this.transitionToState('IDLE');
-        
+
         console.log(`[DOG] Animation system ready with ${animations.length} animations`);
-        console.log('[DOG] Available animations:', animations.map(anim => anim.name).sort());
+        console.log('[DOG] Available animations:', animNames.sort());
     }
-    
+
     /**
      * Get the appropriate animation name based on current state and direction
      */
@@ -308,22 +304,6 @@ export class Sheepdog {
             }
             return stateConfig.animations[0];
         } else if (typeof stateConfig.animations === 'object') {
-            // Handle special sitting state
-            if (state === 'SITTING') {
-                switch (this.animationSystem.sittingPhase) {
-                    case 'starting':
-                        return stateConfig.animations.start;
-                    case 'sitting':
-                        const loopAnimations = stateConfig.animations.loop;
-                        const loopIndex = Math.floor(Math.random() * loopAnimations.length);
-                        return loopAnimations[loopIndex];
-                    case 'ending':
-                        return stateConfig.animations.end;
-                    default:
-                        return stateConfig.animations.start;
-                }
-            }
-            
             // Handle turning state
             if (state === 'TURNING') {
                 const turnDirection = this.animationSystem.turnDirection;
@@ -366,11 +346,6 @@ export class Sheepdog {
     determineAnimationState() {
         const speed = this.velocity.magnitude();
         const targetSpeed = this.targetVelocity.magnitude();
-        
-        // Check for special states first (removed barking)
-        if (this.animationSystem.sittingPhase !== 'none') {
-            return 'SITTING';
-        }
         
         // Use target velocity to immediately stop idle when input is detected
         // This ensures idle stops as soon as the player starts moving
@@ -456,12 +431,6 @@ export class Sheepdog {
             case 'BARKING':
                 this.animationSystem.barkTimer = ANIMATION_STATES.BARKING.duration * 1000;
                 break;
-                
-            case 'SITTING':
-                if (this.animationSystem.sittingPhase === 'none') {
-                    this.animationSystem.sittingPhase = 'starting';
-                }
-                break;
         }
     }
     
@@ -491,17 +460,8 @@ export class Sheepdog {
             if (this.animationSystem.idleVariationTimer <= 0) {
                 this.cycleIdleAnimation();
             }
-            
-            // Check for sitting after long idle
-            const timeSinceMovement = performance.now() - this.animationSystem.lastMovementTime;
-            if (timeSinceMovement > 15000 && this.animationSystem.sittingPhase === 'none' && Math.random() < 0.001) {
-                this.animationSystem.sittingPhase = 'starting';
-            }
         }
-        
-        // Handle sitting state machine
-        this.updateSittingStateMachine();
-        
+
         // Determine and transition to appropriate state
         const targetState = this.determineAnimationState();
         const targetDirection = this.getMovementDirection();
@@ -524,49 +484,6 @@ export class Sheepdog {
         
         // Transition to new idle animation
         this.transitionToState('IDLE');
-    }
-    
-    /**
-     * Update sitting state machine
-     */
-    updateSittingStateMachine() {
-        if (this.animationSystem.sittingPhase === 'none') return;
-        
-        const speed = this.velocity.magnitude();
-        
-        // Exit sitting if moving
-        if (speed > SPEED_THRESHOLDS.IDLE) {
-            if (this.animationSystem.sittingPhase === 'sitting') {
-                this.animationSystem.sittingPhase = 'ending';
-                this.transitionToState('SITTING');
-            } else {
-                this.animationSystem.sittingPhase = 'none';
-            }
-            return;
-        }
-        
-        // Handle sitting phases
-        switch (this.animationSystem.sittingPhase) {
-            case 'starting':
-                if (this.animationSystem.stateTimer > 1250) { // Sitting_start duration
-                    this.animationSystem.sittingPhase = 'sitting';
-                    this.transitionToState('SITTING');
-                }
-                break;
-                
-            case 'sitting':
-                // Randomly switch between sitting loop animations
-                if (this.animationSystem.stateTimer > 3000 && Math.random() < 0.01) {
-                    this.transitionToState('SITTING');
-                }
-                break;
-                
-            case 'ending':
-                if (this.animationSystem.stateTimer > 1040) { // Sitting_end duration
-                    this.animationSystem.sittingPhase = 'none';
-                }
-                break;
-        }
     }
     
     /**
@@ -618,7 +535,27 @@ export class Sheepdog {
         
         // Apply boundary constraints
         this.applyBoundaryConstraints(bounds);
-        
+
+        // Apply fence collision - check both border and internal fences
+        const fenceSystem = getFenceCollisionSystem();
+        if (fenceSystem && fenceSystem.fenceSegments.length > 0) {
+            const collision = fenceSystem.resolveCollision(this.position.x, this.position.z, 1.2);
+            if (collision.collided) {
+                this.position.x = collision.x;
+                this.position.z = collision.z;
+
+                // Reflect velocity off the fence
+                const dot = this.velocity.x * collision.normalX + this.velocity.z * collision.normalZ;
+                if (dot < 0) {
+                    this.velocity.x -= 1.5 * dot * collision.normalX;
+                    this.velocity.z -= 1.5 * dot * collision.normalZ;
+                    // Slight dampening on collision
+                    this.velocity.x *= 0.8;
+                    this.velocity.z *= 0.8;
+                }
+            }
+        }
+
         // Update movement state
         this.isMoving = this.velocity.magnitude() > 0.5;
         
@@ -954,6 +891,9 @@ export class Sheepdog {
         const scene = getSceneManager()?.getScene();
         if (scene) {
             scene.add(this.distanceIndicator);
+            console.log(`[INDICATOR] Created and added to scene for ${this.dogType}`);
+        } else {
+            console.warn(`[INDICATOR] Scene not available, indicator will be added later`);
         }
 
         this.isLocalPlayer = true;
@@ -976,15 +916,19 @@ export class Sheepdog {
      * Remove distance indicator
      */
     removeDistanceIndicator() {
+        console.log(`[INDICATOR] removeDistanceIndicator called, indicator exists: ${!!this.distanceIndicator}`);
         if (this.distanceIndicator) {
+            console.log(`[INDICATOR] Indicator parent: ${this.distanceIndicator.parent?.type || 'none'}`);
             if (this.distanceIndicator.parent) {
                 this.distanceIndicator.parent.remove(this.distanceIndicator);
+                console.log('[INDICATOR] Removed from parent');
             }
             this.distanceIndicator.traverse((child) => {
                 if (child.geometry) child.geometry.dispose();
                 if (child.material) child.material.dispose();
             });
             this.distanceIndicator = null;
+            console.log('[INDICATOR] Disposed and nulled');
         }
     }
 

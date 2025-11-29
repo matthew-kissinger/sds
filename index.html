@@ -192,64 +192,13 @@
     </script>
 
     <!-- Preconnect for performance (Core Web Vitals boost) -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="dns-prefetch" href="https://api.sheepdogsim.com">
+    <link rel="preconnect" href="https://unpkg.com">
 
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    // Systematic type scale (1.25 ratio - "Major Third")
-                    // Base: 16px, Scale: 10, 12, 14, 16, 20, 24, 30, 36, 48, 60
-                    fontSize: {
-                        'xs': ['0.625rem', { lineHeight: '1rem' }],      // 10px - micro labels
-                        'sm': ['0.75rem', { lineHeight: '1rem' }],       // 12px - captions, meta
-                        'base': ['0.875rem', { lineHeight: '1.25rem' }], // 14px - body small
-                        'md': ['1rem', { lineHeight: '1.5rem' }],        // 16px - body default
-                        'lg': ['1.25rem', { lineHeight: '1.75rem' }],    // 20px - body large
-                        'xl': ['1.5rem', { lineHeight: '2rem' }],        // 24px - h4
-                        '2xl': ['1.875rem', { lineHeight: '2.25rem' }],  // 30px - h3
-                        '3xl': ['2.25rem', { lineHeight: '2.5rem' }],    // 36px - h2
-                        '4xl': ['3rem', { lineHeight: '1' }],            // 48px - h1
-                        '5xl': ['3.75rem', { lineHeight: '1' }],         // 60px - display
-                    },
-                    animation: {
-                        'fade-in': 'fadeIn 0.4s ease-out',
-                        'slide-up': 'slideUp 0.6s ease-out',
-                        'slide-down': 'slideDown 0.5s ease-out',
-                        'title-bounce': 'titleBounce 2s ease-in-out infinite',
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        },
-                        slideUp: {
-                            '0%': { transform: 'translateY(30px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' },
-                        },
-                        slideDown: {
-                            '0%': { transform: 'translateY(-30px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' },
-                        },
-                        titleBounce: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-5px)' },
-                        },
-                    },
-                }
-            }
-        }
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.1/dist/nipplejs.min.js"></script>
-    <link rel="stylesheet" href="css/multiplayer-react.css">
-    <link rel="stylesheet" href="css/components/index-styles.css">
+    <!-- Unified CSS - Tailwind v4 with all custom styles in @layer -->
+    <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
     <div id="canvas-container">
@@ -261,27 +210,11 @@
         <!-- Skeleton loader will be dynamically loaded here -->
     </div>
     
-    <!-- Import map -->
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/",
-            "stats.js": "https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js",
-            "@geckos.io/client": "https://cdn.jsdelivr.net/npm/@geckos.io/client@3.0.2/+esm"
-        }
-    }
-    </script>
-    
-    
-    <!-- Load React -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    
-    <!-- Register Service Worker for asset caching -->
+    <!-- React is bundled by Vite from node_modules -->
+
+    <!-- Register Service Worker for asset caching (production only) -->
     <script>
-        if ('serviceWorker' in navigator) {
+        if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then((registration) => {
@@ -294,11 +227,11 @@
         }
     </script>
 
-    <!-- Main game entry -->
-    <script type="module" src="js/main.js"></script>
+    <!-- Main game entry - Vite handles Three.js bundling -->
+    <script type="module" src="/js/main.js"></script>
 
     <!-- React UI Components -->
-    <script type="module" src="js/components/index.js"></script>
+    <script type="module" src="/js/components/index.js"></script>
 
     <!-- React UI overlay initialization handled by components/index.js -->
     <!-- Cloudflare Web Analytics is auto-injected via Cloudflare proxy - no manual script needed -->

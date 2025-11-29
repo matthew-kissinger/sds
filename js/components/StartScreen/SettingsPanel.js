@@ -2,12 +2,11 @@
  * SettingsPanel Component
  * Game settings configuration UI
  */
+import React, { createElement } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button, BackButton } from '../ui/Button.js';
 import { getDefaultSettings, saveSettings, applySettingsToGame } from '../shared/settings.js';
-
-const { createElement } = window.React;
 
 // Toggle switch component
 function Toggle({ value, onChange, disabled = false }) {

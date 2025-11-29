@@ -8,9 +8,8 @@
  * - Label: text-md (16px) desktop, text-base (14px) compact
  * - Description: text-sm (12px) desktop, text-xs (10px) compact
  */
+import React, { createElement, useState } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
-
-const { createElement, useState } = window.React;
 
 const DEFAULT_ACCENT = '#3b82f6';
 
@@ -91,8 +90,10 @@ export function MenuOption({
                 key: 'left',
                 className: `flex items-center ${gapClass} min-w-0 flex-1`
             }, [
-                // Show icon on desktop, dot on mobile
-                isCompact ? indicatorDot : (icon || indicatorDot),
+                // Show icon on desktop, dot on mobile - wrap icon with key
+                isCompact
+                    ? indicatorDot
+                    : createElement('span', { key: 'icon' }, icon || indicatorDot),
                 createElement('div', {
                     key: 'text',
                     className: 'min-w-0 flex-1'

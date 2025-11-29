@@ -144,6 +144,17 @@ export function startSoloGame(dogType, mode = 'classic') {
 }
 
 /**
+ * Start a sandbox game with custom configuration
+ * @param {string} dogType - The selected dog type
+ * @param {Object} sandboxConfig - The sandbox configuration object
+ */
+export function startSandboxGame(dogType, sandboxConfig) {
+    if (gameInstance?.startSandboxGame) {
+        gameInstance.startSandboxGame(dogType, sandboxConfig);
+    }
+}
+
+/**
  * Select a dog type
  * @param {string} dogType - The dog type to select
  */
@@ -262,6 +273,7 @@ if (typeof window !== 'undefined') {
         getStartScreen,
         getMultiplayerUI,
         startSoloGame,
+        startSandboxGame,
         selectDog,
         getSelectedDog,
         startMultiplayerGame,

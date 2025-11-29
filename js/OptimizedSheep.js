@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import * as BufferGeometryUtils from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/utils/BufferGeometryUtils.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { Vector2D } from './Vector2D.js';
 import { Boid } from './Boid.js';
 import { loadShader } from './shaders/ShaderLoader.js';
 import { getGameState, getNetworkManager } from './GameBridge.js';
+import { FieldConfig, GATE_DEFAULTS } from './FieldConfig.js';
+import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 
 // Shader cache for sync access after async load
 let sheepVertexShader = null;
@@ -39,11 +41,18 @@ export async function preloadSheepShaders() {
  */
 
 export class OptimizedSheepSystem {
-    constructor(scene, sheepCount = 200) {
+    constructor(scene, sheepCount = 200, spawnConfig = null) {
         this.scene = scene;
         this.sheepCount = sheepCount;
         this.sheep = [];
         this.audioManager = null;
+
+        // Spawn configuration - defaults to center of field with some spread
+        this.spawnConfig = spawnConfig || {
+            centerX: -30,
+            centerZ: -30,
+            spreadRadius: 30
+        };
 
         // Create geometry and materials
         this.createMergedGeometry();
@@ -208,14 +217,14 @@ export class OptimizedSheepSystem {
      */
     initializeSheepData() {
         const dummy = new THREE.Object3D();
-        const spreadRadius = 30;
-        
+        const { centerX, centerZ, spreadRadius } = this.spawnConfig;
+
         for (let i = 0; i < this.sheepCount; i++) {
-            // Random position in a cluster
+            // Random position in a cluster around spawn center
             const angle = Math.random() * Math.PI * 2;
             const distance = Math.random() * spreadRadius;
-            const x = -30 + Math.cos(angle) * distance;
-            const z = -30 + Math.sin(angle) * distance;
+            const x = centerX + Math.cos(angle) * distance;
+            const z = centerZ + Math.sin(angle) * distance;
             
             // Create sheep instance data
             const sheep = new OptimizedSheepInstance(i, x, z);
@@ -768,19 +777,8 @@ export class OptimizedSheepInstance extends Boid {
                 let inAnyGateArea = false;
                 let currentGateConstraints = null;
                 
-                // For competitive mode, we need to check all possible gate areas
-                // This is a simplified check - in practice, gate areas should be passed from game state
-                const possibleGateAreas = [
-                    // Default cooperative gate (North)
-                    { minX: -4, maxX: 4, minZ: 98, maxZ: 102 },
-                    // Additional competitive gates
-                    { minX: -4, maxX: 4, minZ: -102, maxZ: -98 }, // South
-                    { minX: 98, maxX: 102, minZ: -4, maxZ: 4 },   // East
-                    { minX: -102, maxX: -98, minZ: -4, maxZ: 4 }, // West
-                    // Diagonal gates for 3-player mode
-                    { minX: 68, maxX: 72, minZ: -72, maxZ: -68 },  // Southeast
-                    { minX: -72, maxX: -68, minZ: -72, maxZ: -68 } // Southwest
-                ];
+                // Get gate areas dynamically from FieldConfig based on current bounds
+                const possibleGateAreas = FieldConfig.getPossibleGateAreas();
                 
                 for (const gateArea of possibleGateAreas) {
                     if (this.position.x >= gateArea.minX && this.position.x <= gateArea.maxX &&
@@ -818,10 +816,31 @@ export class OptimizedSheepInstance extends Boid {
                 this.position.x = Math.max(pastureBounds.minX + margin, Math.min(pastureBounds.maxX - margin, this.position.x));
                 this.position.z = Math.max(pastureBounds.minZ + margin, Math.min(pastureBounds.maxZ - margin, this.position.z));
             }
-            // Note: sheep that are not retiring and have passed the gate (state 2, grazing) 
+            // Note: sheep that are not retiring and have passed the gate (state 2, grazing)
             // are already handled by the gentle boundary forces in their behavior update
         }
-        
+
+        // Check collision with internal fences (sandbox mode custom fences)
+        const fenceSystem = getFenceCollisionSystem();
+        if (fenceSystem && fenceSystem.fenceSegments.length > 0) {
+            const collision = fenceSystem.resolveCollision(this.position.x, this.position.z, 1.0);
+            if (collision.collided) {
+                this.position.x = collision.x;
+                this.position.z = collision.z;
+
+                // Reflect velocity off the fence
+                const dot = this.velocity.x * collision.normalX + this.velocity.z * collision.normalZ;
+                if (dot < 0) {
+                    // Only reflect if moving toward the fence
+                    this.velocity.x -= 1.8 * dot * collision.normalX;
+                    this.velocity.z -= 1.8 * dot * collision.normalZ;
+                    // Dampen velocity on collision
+                    this.velocity.x *= 0.7;
+                    this.velocity.z *= 0.7;
+                }
+            }
+        }
+
         // NaN/Infinity checks for velocity and position
         if (isNaN(this.velocity.x) || isNaN(this.velocity.z) || !isFinite(this.velocity.x) || !isFinite(this.velocity.z)) {
             console.warn(`Sheep ${this.id} velocity became NaN/Infinity:`, this.velocity.x, this.velocity.z);
@@ -1132,12 +1151,34 @@ export class OptimizedSheepInstance extends Boid {
             }
         }
         
-        // Fallback to default north gate pasture bounds (cooperative mode or if assignment failed)
+        // Fallback: use gameState pasture for cooperative/sandbox modes
+        const gameState = getGameState();
+        if (gameState?.pasture) {
+            return {
+                minX: gameState.pasture.minX,
+                maxX: gameState.pasture.maxX,
+                minZ: gameState.pasture.minZ,
+                maxZ: gameState.pasture.maxZ
+            };
+        }
+
+        // Ultimate fallback: use FieldConfig pasture (should rarely hit this)
+        const pasture = FieldConfig.getPasture();
+        if (pasture) {
+            return {
+                minX: pasture.minX,
+                maxX: pasture.maxX,
+                minZ: pasture.minZ,
+                maxZ: pasture.maxZ
+            };
+        }
+
+        // Absolute last resort with generic values
         return {
-            minX: -30,  // Matches GameState.js pasture.minX
-            maxX: 30,   // Matches GameState.js pasture.maxX  
-            minZ: 102,  // Just beyond the north gate
-            maxZ: 115   // Reduced to match the actual fence depth
+            minX: -30,
+            maxX: 30,
+            minZ: 102,
+            maxZ: 125
         };
     }
     

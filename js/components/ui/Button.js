@@ -2,10 +2,9 @@
  * Button Components
  * Primary and Secondary button styles with responsive sizing
  */
+import React, { createElement, useState } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { buttonStyle } from '../../styles/styles.js';
-
-const { createElement, useState } = window.React;
 
 /**
  * Button - Primary or secondary style button

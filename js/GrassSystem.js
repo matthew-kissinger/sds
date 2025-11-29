@@ -82,7 +82,8 @@ export class GrassSystem {
             sheepInteractionRadius: 2.5,
             sheepInteractionStrength: 0.4,
             recoverySpeed: 3.0,
-            maxInteractors: 220,  // Player + 200 sheep + dogs
+            // iOS Safari has ~128 vec4 uniform limit - use small array for mobile
+            maxInteractors: isMobile ? 10 : 220,
 
             // LOD distances
             lodNear: 100,
@@ -124,19 +125,45 @@ export class GrassSystem {
      * Initialize the grass system
      */
     async init() {
-        // Generate procedural noise texture for wind
-        this.noiseTexture = this.createNoiseTexture();
+        // Detect iOS Safari for special handling
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        this.isIOSSafari = isIOS || isSafari;
 
-        // Create shared grass material
-        this.grassMaterial = this.createGrassMaterial();
+        console.log(`[GRASS] Initializing (mobile=${this.isMobile}, iOS=${isIOS}, Safari=${isSafari})`);
 
-        // Create grass geometry (clump with multiple blades)
-        this.clumpGeometry = this.createClumpGeometry();
+        try {
+            // Generate procedural noise texture for wind
+            console.log('[GRASS] Creating noise texture...');
+            this.noiseTexture = this.createNoiseTexture();
 
-        // Generate chunks
-        this.generateChunks();
+            // Create shared grass material
+            console.log('[GRASS] Creating grass material...');
+            this.grassMaterial = this.createGrassMaterial();
 
-        console.log(`[GRASS] GrassSystem initialized: ${this.stats.totalClumps} clumps in ${this.chunks.size} chunks (${this.isMobile ? 'mobile' : 'desktop'})`);
+            // Verify shader compiled (Three.js doesn't throw on shader errors immediately)
+            if (this.grassMaterial && this.grassMaterial.program === undefined) {
+                console.log('[GRASS] Material created, shader will compile on first render');
+            }
+
+            // Create grass geometry (clump with multiple blades)
+            console.log('[GRASS] Creating grass geometry...');
+            this.clumpGeometry = this.createClumpGeometry();
+
+            // Generate chunks
+            console.log('[GRASS] Generating chunks...');
+            this.generateChunks();
+
+            this.initializationSucceeded = true;
+            console.log(`[GRASS] GrassSystem initialized: ${this.stats.totalClumps} clumps in ${this.chunks.size} chunks (${this.isMobile ? 'mobile' : 'desktop'}, maxInteractors=${this.config.maxInteractors})`);
+        } catch (error) {
+            console.error('[GRASS] Failed to initialize:', error);
+            this.initializationSucceeded = false;
+            // On iOS/Safari, don't let grass failure break the game
+            if (this.isIOSSafari) {
+                console.warn('[GRASS] iOS Safari grass error - game will continue without grass');
+            }
+        }
     }
 
     /**
@@ -698,14 +725,8 @@ export class GrassSystem {
      * Check if position is in an exclusion zone
      */
     isExcluded(x, z) {
-        // Built-in exclusions
-        // Pasture area
-        if (z > 100 && z < 135 && Math.abs(x) < 35) return true;
-
-        // Farm house area
-        if (x >= 140 && x <= 220 && z >= 120 && z <= 200) return true;
-
-        // Check custom exclusion zones
+        // Check dynamic exclusion zones (farmhouse, pasture, etc.)
+        // No more hardcoded zones - all exclusions are added via addExclusionZone()
         for (const zone of this.exclusionZones) {
             if (x >= zone.minX && x <= zone.maxX && z >= zone.minZ && z <= zone.maxZ) {
                 return true;
@@ -727,6 +748,11 @@ export class GrassSystem {
      * Each entity should have: { position: {x, y, z}, type: 'player'|'dog'|'sheep' }
      */
     updateInteractors(entities) {
+        // Skip if initialization failed
+        if (!this.initializationSucceeded) {
+            return;
+        }
+
         this.interactorCount = 0;
 
         for (let i = 0; i < Math.min(entities.length, this.config.maxInteractors); i++) {
@@ -756,6 +782,11 @@ export class GrassSystem {
      * Update grass system each frame
      */
     update(deltaTime, camera, playerPosition) {
+        // Skip if initialization failed (iOS Safari shader issues, etc.)
+        if (!this.initializationSucceeded) {
+            return;
+        }
+
         this.time += deltaTime;
 
         // Update time uniform

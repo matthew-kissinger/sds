@@ -4,7 +4,7 @@
  *
  * Sheep icon: "Sheep" by Delapouite from game-icons.net (CC BY 3.0)
  */
-const { createElement } = window.React;
+import React, { createElement } from 'react';
 import { CompactStaminaBar } from './CompactStaminaBar.js';
 
 // Sheep icon from game-icons.net (Delapouite, CC BY 3.0)

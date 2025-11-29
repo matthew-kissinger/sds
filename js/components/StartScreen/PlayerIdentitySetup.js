@@ -2,13 +2,12 @@
  * PlayerIdentitySetup Component
  * Initial player name setup flow
  */
+import React, { createElement, useState } from 'react';
 import { getNetworkManager } from '../../GameBridge.js';
 import { generatePersistentId, savePlayerIdentity } from '../shared/playerIdentity.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
-
-const { createElement, useState } = window.React;
 
 export function PlayerIdentitySetup({ onComplete }) {
     const [displayName, setDisplayName] = useState('');
@@ -17,14 +16,94 @@ export function PlayerIdentitySetup({ onComplete }) {
     const [error, setError] = useState('');
     const { isCompact } = useResponsive();
 
-    const handleGenerateRandom = () => {
+    const handleGenerateRandom = async () => {
+        // Auto-proceed when Random Name is selected
         setNameType('random');
         setDisplayName('Random Name');
+        setIsSubmitting(true);
+        setError('');
+
+        try {
+            const persistentId = generatePersistentId();
+
+            // Register with server if connected (server will generate random name)
+            let serverResponse = null;
+            const nm = getNetworkManager();
+            if (nm) {
+                try {
+                    await nm.connect();
+                    serverResponse = await nm.registerPlayer(persistentId, '', 'random');
+                    console.log('[PLAYER] Random name player registered with server:', serverResponse);
+                } catch (networkError) {
+                    console.warn('[PLAYER] Server registration failed, proceeding offline:', networkError);
+                }
+            }
+
+            // Create player identity
+            const identity = {
+                persistentId: persistentId,
+                displayName: serverResponse?.playerProfile?.displayName || serverResponse?.displayName || 'Player',
+                fullName: serverResponse?.playerProfile?.fullName || serverResponse?.fullName || 'Player#0001',
+                discriminator: serverResponse?.playerProfile?.discriminator || serverResponse?.discriminator || '0001',
+                nameType: 'random',
+                createdAt: Date.now(),
+                isRegistered: !!serverResponse
+            };
+
+            savePlayerIdentity(identity);
+            console.log('[PLAYER] Random name identity created:', identity);
+            onComplete(identity);
+
+        } catch (error) {
+            console.error('[PLAYER] Error creating random name identity:', error);
+            setError('Failed to create player identity. Please try again.');
+            setIsSubmitting(false);
+        }
     };
 
-    const handleStayAnonymous = () => {
+    const handleStayAnonymous = async () => {
+        // Auto-proceed when Anonymous is selected
         setNameType('anonymous');
         setDisplayName('Player');
+        setIsSubmitting(true);
+        setError('');
+
+        try {
+            const persistentId = generatePersistentId();
+
+            // Register with server if connected
+            let serverResponse = null;
+            const nm = getNetworkManager();
+            if (nm) {
+                try {
+                    await nm.connect();
+                    serverResponse = await nm.registerPlayer(persistentId, 'Player', 'anonymous');
+                    console.log('[PLAYER] Anonymous player registered with server:', serverResponse);
+                } catch (networkError) {
+                    console.warn('[PLAYER] Server registration failed, proceeding offline:', networkError);
+                }
+            }
+
+            // Create player identity
+            const identity = {
+                persistentId: persistentId,
+                displayName: serverResponse?.playerProfile?.displayName || serverResponse?.displayName || 'Player',
+                fullName: serverResponse?.playerProfile?.fullName || serverResponse?.fullName || 'Player#0001',
+                discriminator: serverResponse?.playerProfile?.discriminator || serverResponse?.discriminator || '0001',
+                nameType: 'anonymous',
+                createdAt: Date.now(),
+                isRegistered: !!serverResponse
+            };
+
+            savePlayerIdentity(identity);
+            console.log('[PLAYER] Anonymous identity created:', identity);
+            onComplete(identity);
+
+        } catch (error) {
+            console.error('[PLAYER] Error creating anonymous identity:', error);
+            setError('Failed to create player identity. Please try again.');
+            setIsSubmitting(false);
+        }
     };
 
     const handleCustomName = () => {

@@ -2,11 +2,10 @@
  * Lobby Component
  * Waiting room before game starts
  */
+import React, { createElement, useState } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
-
-const { createElement, useState } = window.React;
 
 // Dog type to display icon mapping
 const DOG_ICONS = {

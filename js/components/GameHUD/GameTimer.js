@@ -2,7 +2,7 @@
  * GameTimer Component
  * Displays elapsed time or countdown timer
  */
-const { createElement } = window.React;
+import React, { createElement } from 'react';
 
 export function GameTimer({ gameTime, timeLimit }) {
     const minutes = Math.floor(gameTime / 60);

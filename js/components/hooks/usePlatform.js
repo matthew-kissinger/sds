@@ -4,8 +4,7 @@
  * SINGLE SOURCE OF TRUTH for all responsive behavior.
  * Import these hooks instead of creating local detection logic.
  */
-
-const { useState, useEffect, useMemo } = window.React;
+import { useState, useEffect, useMemo } from 'react';
 
 // Breakpoints - adjust these to tune responsive behavior globally
 const BREAKPOINTS = {

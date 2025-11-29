@@ -1,13 +1,15 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 /**
  * FencePresets - Modular fence asset system for reusable fence components
- * 
+ *
  * Features:
  * - Standalone fence segments (borders, gates, pens)
  * - Proper handling of multiplayer configurations
  * - Optimized geometry with instancing support
  * - Configurable materials and colors
+ * - GLB model support for fence components
  */
 
 export class FencePresets {
@@ -18,7 +20,21 @@ export class FencePresets {
         this.railHeight = 0.15;
         this.railWidth = 0.1;
         this.postSpacing = 5; // Distance between posts
-        
+
+        // GLB Model loader
+        this.loader = new GLTFLoader();
+        this.models = {
+            fencePost: null,
+            fenceRail: null,
+            fenceSegment: null,
+            gatePost: null,
+            gateComplete: null,
+            gateArch: null,
+            cornerPost: null
+        };
+        this.modelsLoaded = false;
+        this.useGLBModels = true; // Toggle to use GLB vs procedural
+
         // Materials - warm wood tones that contrast with green grass
         this.materials = {
             post: new THREE.MeshPhongMaterial({
@@ -40,12 +56,61 @@ export class FencePresets {
                 shininess: 10
             })
         };
-        
-        // Cached geometries
+
+        // Cached geometries (fallback for when GLB not loaded)
         this.geometries = {
             post: new THREE.CylinderGeometry(this.postRadius, this.postRadius, this.fenceHeight, 8),
             rail: new THREE.BoxGeometry(this.postSpacing, this.railHeight, this.railWidth)
         };
+    }
+
+    /**
+     * Load GLB fence models
+     * @returns {Promise} Promise that resolves when all models are loaded
+     */
+    async loadModels() {
+        if (this.modelsLoaded) return;
+
+        const modelPaths = {
+            fencePost: 'assets/models/Fence_Post-v1.0.0.glb',
+            fenceRail: 'assets/models/Fence_Rail-v1.0.0.glb',
+            fenceSegment: 'assets/models/Fence_Segment-v1.0.0.glb',
+            gatePost: 'assets/models/Gate_Post-v1.0.0.glb',
+            gateComplete: 'assets/models/Gate_Complete-v1.0.0.glb',
+            gateArch: 'assets/models/Gate_Arch-v1.0.0.glb',
+            cornerPost: 'assets/models/Corner_Post-v1.0.0.glb'
+        };
+
+        const loadPromises = Object.entries(modelPaths).map(async ([name, path]) => {
+            try {
+                const gltf = await this.loader.loadAsync(path);
+                this.models[name] = gltf.scene;
+                // Enable shadows on all meshes in the model
+                gltf.scene.traverse(child => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                console.log(`[OK] Loaded fence model: ${name}`);
+            } catch (err) {
+                console.warn(`[WARN] Failed to load fence model ${name}:`, err);
+            }
+        });
+
+        await Promise.all(loadPromises);
+        this.modelsLoaded = true;
+        console.log('[OK] Fence models loaded');
+    }
+
+    /**
+     * Clone a GLB model for use
+     * @param {string} modelName - Name of the model to clone
+     * @returns {THREE.Group|null} Cloned model or null if not available
+     */
+    cloneModel(modelName) {
+        if (!this.models[modelName]) return null;
+        return this.models[modelName].clone();
     }
     
     /**
@@ -57,24 +122,83 @@ export class FencePresets {
      */
     createBorderSegment(length, orientation = 'horizontal', options = {}) {
         const group = new THREE.Group();
+
+        // Use GLB posts and rails if available (builds fence from components)
+        if (this.useGLBModels && this.models.fencePost && this.models.fenceRail) {
+            // Post spacing - 5 units between posts
+            const postSpacing = 5.0;
+            const postCount = Math.ceil(length / postSpacing) + 1;
+            const actualSpacing = length / (postCount - 1);
+
+            // The rail model is 1 unit long, centered at origin (for easy scaling)
+            const railModelLength = 1.0;
+
+            // Create posts
+            for (let i = 0; i < postCount; i++) {
+                const post = this.cloneModel('fencePost');
+                if (post) {
+                    if (orientation === 'horizontal') {
+                        post.position.x = i * actualSpacing - length / 2;
+                    } else {
+                        post.rotation.y = Math.PI / 2;
+                        post.position.z = i * actualSpacing - length / 2;
+                    }
+                    group.add(post);
+                }
+            }
+
+            // Create rails between posts (3 levels based on fence segment model)
+            const railHeights = [0.5, 1.2, 1.9];
+            for (const height of railHeights) {
+                for (let i = 0; i < postCount - 1; i++) {
+                    const rail = this.cloneModel('fenceRail');
+                    if (rail) {
+                        // Scale rail to match actual spacing between posts
+                        const scaleX = actualSpacing / railModelLength;
+                        rail.scale.set(scaleX, 1, 1);
+
+                        if (orientation === 'horizontal') {
+                            rail.position.set(
+                                i * actualSpacing + actualSpacing / 2 - length / 2,
+                                height,
+                                0
+                            );
+                        } else {
+                            rail.rotation.y = Math.PI / 2;
+                            rail.position.set(
+                                0,
+                                height,
+                                i * actualSpacing + actualSpacing / 2 - length / 2
+                            );
+                        }
+                        group.add(rail);
+                    }
+                }
+            }
+
+            return group;
+        }
+
+        // Fallback to procedural geometry
         const postCount = Math.ceil(length / this.postSpacing) + 1;
         const actualSpacing = length / (postCount - 1);
-        
+
         // Create posts
         for (let i = 0; i < postCount; i++) {
             const post = new THREE.Mesh(this.geometries.post, this.materials.post);
-            
+            post.position.y = this.fenceHeight / 2;
+
             if (orientation === 'horizontal') {
-                post.position.set(i * actualSpacing - length/2, this.fenceHeight/2, 0);
+                post.position.x = i * actualSpacing - length / 2;
             } else {
-                post.position.set(0, this.fenceHeight/2, i * actualSpacing - length/2);
+                post.position.z = i * actualSpacing - length / 2;
             }
-            
+
             post.castShadow = true;
             post.receiveShadow = true;
             group.add(post);
         }
-        
+
         // Create rails (3 levels)
         const railLevels = [0.5, 1.2, 1.9];
         for (let level of railLevels) {
@@ -85,10 +209,10 @@ export class FencePresets {
                     orientation === 'horizontal' ? this.railWidth : actualSpacing
                 );
                 const rail = new THREE.Mesh(railGeo, this.materials.rail);
-                
+
                 if (orientation === 'horizontal') {
                     rail.position.set(
-                        i * actualSpacing + actualSpacing/2 - length/2,
+                        i * actualSpacing + actualSpacing / 2 - length / 2,
                         level,
                         0
                     );
@@ -96,16 +220,16 @@ export class FencePresets {
                     rail.position.set(
                         0,
                         level,
-                        i * actualSpacing + actualSpacing/2 - length/2
+                        i * actualSpacing + actualSpacing / 2 - length / 2
                     );
                 }
-                
+
                 rail.castShadow = true;
                 rail.receiveShadow = true;
                 group.add(rail);
             }
         }
-        
+
         return group;
     }
     
@@ -175,37 +299,94 @@ export class FencePresets {
     createGateStructure(width, orientation = 'horizontal', config = {}) {
         const group = new THREE.Group();
         const gateColor = config.color || 0x4a3c28;
-        const gateHeight = this.fenceHeight + 1;
-        
-        // Create custom material for this gate
+        const gateHeight = 3.5; // Gate post height from GLB
+
+        // Use modular GLB components: gate posts + arch
+        if (this.useGLBModels && this.models.gatePost) {
+            // Gate posts
+            const leftPost = this.cloneModel('gatePost');
+            const rightPost = this.cloneModel('gatePost');
+
+            if (leftPost && rightPost) {
+                if (orientation === 'horizontal') {
+                    leftPost.position.x = -width / 2;
+                    rightPost.position.x = width / 2;
+                } else {
+                    leftPost.position.z = -width / 2;
+                    rightPost.position.z = width / 2;
+                }
+
+                group.add(leftPost);
+                group.add(rightPost);
+            }
+
+            // Gate arch (if available)
+            if (this.models.gateArch) {
+                const arch = this.cloneModel('gateArch');
+                if (arch) {
+                    // Arch model is 1.44 units long, scale to gate width
+                    const archModelLength = 1.44;
+                    const archScale = (width + 0.8) / archModelLength; // Slightly wider to span posts
+                    arch.scale.set(archScale, 1, 1);
+                    arch.position.y = gateHeight;
+
+                    if (orientation === 'vertical') {
+                        arch.rotation.y = Math.PI / 2;
+                    }
+
+                    group.add(arch);
+                }
+            } else {
+                // Fallback arch using procedural geometry
+                const archGeometry = new THREE.CylinderGeometry(0.2, 0.2, width + 1, 8);
+                const archMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x7A6548,
+                    roughness: 0.75
+                });
+                const arch = new THREE.Mesh(archGeometry, archMaterial);
+                arch.position.y = gateHeight;
+                arch.rotation.z = orientation === 'horizontal' ? Math.PI / 2 : 0;
+                if (orientation === 'vertical') arch.rotation.x = Math.PI / 2;
+                arch.castShadow = true;
+                group.add(arch);
+            }
+
+            // Visual threshold effect (glowing ground marker instead of asset)
+            this.addThresholdEffect(group, width, orientation, gateColor);
+
+            return group;
+        }
+
+        // Fallback to fully procedural geometry
         const gateMaterial = new THREE.MeshPhongMaterial({
             color: gateColor,
             emissive: this.darkenColor(gateColor, 0.8),
             emissiveIntensity: 0.1
         });
-        
-        // Gate posts (taller than fence posts)
+
+        // Gate posts
         const postGeometry = new THREE.CylinderGeometry(0.4, 0.4, gateHeight, 8);
-        
         const leftPost = new THREE.Mesh(postGeometry, gateMaterial);
         const rightPost = new THREE.Mesh(postGeometry, gateMaterial);
-        
+        leftPost.position.y = gateHeight / 2;
+        rightPost.position.y = gateHeight / 2;
+
         if (orientation === 'horizontal') {
-            leftPost.position.set(-width/2, gateHeight/2, 0);
-            rightPost.position.set(width/2, gateHeight/2, 0);
+            leftPost.position.x = -width / 2;
+            rightPost.position.x = width / 2;
         } else {
-            leftPost.position.set(0, gateHeight/2, -width/2);
-            rightPost.position.set(0, gateHeight/2, width/2);
+            leftPost.position.z = -width / 2;
+            rightPost.position.z = width / 2;
         }
-        
+
         leftPost.castShadow = true;
         leftPost.receiveShadow = true;
         rightPost.castShadow = true;
         rightPost.receiveShadow = true;
-        
+
         group.add(leftPost);
         group.add(rightPost);
-        
+
         // Decorative arch
         const archGeometry = new THREE.CylinderGeometry(0.2, 0.2, width + 1, 8);
         const archMaterial = new THREE.MeshPhongMaterial({
@@ -213,20 +394,80 @@ export class FencePresets {
             emissive: this.darkenColor(gateColor, 0.7),
             emissiveIntensity: 0.1
         });
-        
+
         const arch = new THREE.Mesh(archGeometry, archMaterial);
         arch.position.y = gateHeight;
-        
+
         if (orientation === 'horizontal') {
             arch.rotation.z = Math.PI / 2;
         } else {
             arch.rotation.x = Math.PI / 2;
         }
-        
+
         arch.castShadow = true;
         group.add(arch);
-        
-        // Gate threshold marker
+
+        // Visual threshold effect
+        this.addThresholdEffect(group, width, orientation, gateColor);
+
+        return group;
+    }
+
+    /**
+     * Add visual threshold effect for gate entrance (glowing ground marker)
+     */
+    addThresholdEffect(group, width, orientation, color) {
+        // Create a subtle glowing ground plane for the gate threshold
+        const thresholdGeometry = new THREE.PlaneGeometry(
+            orientation === 'horizontal' ? width + 2 : 4,
+            orientation === 'horizontal' ? 4 : width + 2
+        );
+        const thresholdMaterial = new THREE.MeshBasicMaterial({
+            color: this.lightenColor(color, 0.4),
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        });
+
+        const threshold = new THREE.Mesh(thresholdGeometry, thresholdMaterial);
+        threshold.rotation.x = -Math.PI / 2;
+        threshold.position.y = 0.05; // Slightly above ground to avoid z-fighting
+        group.add(threshold);
+
+        // Add edge glow lines
+        const edgeMaterial = new THREE.MeshBasicMaterial({
+            color: this.lightenColor(color, 0.6),
+            transparent: true,
+            opacity: 0.5
+        });
+
+        const edgeWidth = 0.15;
+        const edgeGeometry = new THREE.BoxGeometry(
+            orientation === 'horizontal' ? width + 2 : edgeWidth,
+            0.1,
+            orientation === 'horizontal' ? edgeWidth : width + 2
+        );
+
+        // Front edge
+        const frontEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+        frontEdge.position.y = 0.05;
+        frontEdge.position.z = orientation === 'horizontal' ? 1.5 : 0;
+        frontEdge.position.x = orientation === 'horizontal' ? 0 : 1.5;
+        group.add(frontEdge);
+
+        // Back edge
+        const backEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+        backEdge.position.y = 0.05;
+        backEdge.position.z = orientation === 'horizontal' ? -1.5 : 0;
+        backEdge.position.x = orientation === 'horizontal' ? 0 : -1.5;
+        group.add(backEdge);
+    }
+
+    /**
+     * Create a gate structure (legacy - keeping old signature)
+     * Gate threshold marker - now uses visual effect instead of asset
+     */
+    createGateThresholdLegacy(width, orientation, gateColor) {
         const thresholdGeometry = new THREE.BoxGeometry(
             orientation === 'horizontal' ? width + 2 : 3,
             0.15,
@@ -237,11 +478,11 @@ export class FencePresets {
             emissive: this.darkenColor(gateColor, 0.5),
             emissiveIntensity: 0.3
         });
-        
+
         const threshold = new THREE.Mesh(thresholdGeometry, thresholdMaterial);
         threshold.position.y = 0.075;
         group.add(threshold);
-        
+
         return group;
     }
     
