@@ -11,13 +11,14 @@
  * - GameHUD/     - In-game HUD components (GameTimer, SheepCounter, MobileHUD)
  * - Multiplayer/ - Multiplayer UI (Lobby, Leaderboard, Scoreboard)
  */
-import React, { createElement, useState, useEffect, Fragment, Component } from 'react';
+import React, { createElement, useState, useEffect, useCallback, Fragment, Component } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
     getGameInstance,
     getNetworkManager,
     getStartScreen,
     getGameState,
+    getInputHandler,
     selectDog,
     getSelectedDog,
     startSoloGame,
@@ -45,10 +46,12 @@ export async function initReactUI() {
             { SandboxSetup },
             { FenceEditor },
             { ShapeEditor },
+            { LocalModeSetup },
             { GameTimer },
             { SheepCounter },
             { MobileHUD },
             { MobileControls },
+            { PauseMenu },
             { CompletionScreen },
             { MultiplayerOptions },
             { RoomCreation },
@@ -71,10 +74,12 @@ export async function initReactUI() {
             import('./StartScreen/SandboxSetup.js'),
             import('./StartScreen/FenceEditor.js'),
             import('./StartScreen/ShapeEditor.js'),
+            import('./StartScreen/LocalModeSetup.js'),
             import('./GameHUD/GameTimer.js'),
             import('./GameHUD/SheepCounter.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
+            import('./GameHUD/PauseMenu.js'),
             import('./GameHUD/CompletionScreen.js'),
             import('./Multiplayer/MultiplayerOptions.js'),
             import('./Multiplayer/RoomCreation.js'),
@@ -194,6 +199,7 @@ export async function initReactUI() {
             const handleModeSelect = (mode) => {
                 if (mode === 'leaderboard') setScreen('leaderboard');
                 else if (mode === 'settings') setScreen('settings');
+                else if (mode === 'local') setScreen('localModeSetup');
                 else {
                     setSelectedMode(mode);
                     setScreen('dogSelection');
@@ -236,6 +242,16 @@ export async function initReactUI() {
                 selectDog(selectedDog);
                 const dog = getSelectedDog() || selectedDog;
                 startSandboxGame(dog, sandboxConfig);
+            };
+
+            const handleStartLocal = (localConfig) => {
+                console.log('[UI] Starting local 2-player game:', localConfig);
+                if (!getGameInstance()) return;
+
+                const startScreen = getStartScreen();
+                if (startScreen) {
+                    startScreen.selectLocal(localConfig);
+                }
             };
 
             const handleSandboxConfigChange = (newConfig) => {
@@ -495,6 +511,12 @@ export async function initReactUI() {
                             onBack: () => setScreen('sandboxSetup')
                         });
 
+                    case 'localModeSetup':
+                        return createElement(LocalModeSetup, {
+                            onStart: handleStartLocal,
+                            onBack: () => setScreen('main')
+                        });
+
                     case 'multiplayer':
                         return createElement(MultiplayerOptions, {
                             onBack: () => setScreen('dogSelection'),
@@ -564,11 +586,169 @@ export async function initReactUI() {
         }
 
         // ==================== GAME HUD ====================
-        function GameHUD() {
+        function GameHUD({ onReturnToMenu }) {
             const gameData = useGameState();
             const platform = usePlatform();
+            const [isPaused, setIsPaused] = useState(false);
+            const [isFullscreen, setIsFullscreen] = useState(false);
             const isMultiplayer = gameData.gameMode !== 'solo' && gameData.players?.length > 0;
             const staminaPercentage = gameData.staminaPercentage || Math.round((gameData.stamina / (gameData.maxStamina || 100)) * 100);
+
+            // Check fullscreen state
+            useEffect(() => {
+                const checkFullscreen = () => {
+                    setIsFullscreen(!!(
+                        document.fullscreenElement ||
+                        document.webkitFullscreenElement ||
+                        document.mozFullScreenElement ||
+                        document.msFullscreenElement
+                    ));
+                };
+
+                document.addEventListener('fullscreenchange', checkFullscreen);
+                document.addEventListener('webkitfullscreenchange', checkFullscreen);
+                checkFullscreen();
+
+                return () => {
+                    document.removeEventListener('fullscreenchange', checkFullscreen);
+                    document.removeEventListener('webkitfullscreenchange', checkFullscreen);
+                };
+            }, []);
+
+            // Listen for pause state changes from InputHandler
+            useEffect(() => {
+                const handlePauseChange = (event) => {
+                    setIsPaused(event.detail.isPaused);
+
+                    // Remove old DOM pause indicator if it exists (legacy cleanup)
+                    const oldIndicator = document.getElementById('pause-indicator');
+                    if (oldIndicator) {
+                        oldIndicator.remove();
+                    }
+                };
+
+                window.addEventListener('game-pause-change', handlePauseChange);
+                return () => window.removeEventListener('game-pause-change', handlePauseChange);
+            }, []);
+
+            // Toggle pause - supports both regular and local multiplayer input handlers
+            const handlePause = useCallback(() => {
+                const gameInstance = getGameInstance();
+                // Check for local multiplayer input handler first
+                if (gameInstance?.localInputHandler) {
+                    gameInstance.localInputHandler.togglePause();
+                } else {
+                    const inputHandler = getInputHandler();
+                    if (inputHandler) {
+                        inputHandler.togglePause();
+                    }
+                }
+            }, []);
+
+            // Resume game
+            const handleResume = useCallback(() => {
+                console.log('[GameHUD] handleResume called');
+                const gameInstance = getGameInstance();
+                // Check for local multiplayer input handler first
+                if (gameInstance?.localInputHandler && gameInstance.localInputHandler.isPaused) {
+                    console.log('[GameHUD] Resuming via localInputHandler');
+                    gameInstance.localInputHandler.togglePause();
+                } else {
+                    const inputHandler = getInputHandler();
+                    console.log('[GameHUD] inputHandler:', inputHandler, 'isPaused:', inputHandler?.isPaused);
+                    if (inputHandler && inputHandler.isPaused) {
+                        inputHandler.togglePause();
+                    }
+                }
+            }, []);
+
+            // Restart game
+            const handleRestart = useCallback(() => {
+                console.log('[GameHUD] handleRestart called');
+                // First unpause
+                handleResume();
+
+                // Then restart the game
+                const gameInstance = getGameInstance();
+                const gameState = getGameState();
+
+                if (gameInstance && gameState) {
+                    // Get current mode info
+                    const mode = gameState.gameMode;
+                    const singlePlayerMode = gameState.singlePlayerMode;
+
+                    if (mode === 'sandbox') {
+                        // Restart sandbox with current config
+                        gameState.startSandboxGame(gameInstance.currentSandboxConfig || {});
+                    } else {
+                        // Restart solo/classic/extreme
+                        gameState.startGame('solo', null, singlePlayerMode || 'classic');
+                    }
+
+                    // Reset timer
+                    if (gameInstance.gameTimer) {
+                        gameInstance.gameTimer.reset();
+                        gameInstance.gameTimer.start();
+                    }
+                }
+            }, [handleResume]);
+
+            // Return to main menu
+            const handleMainMenu = useCallback(() => {
+                console.log('[GameHUD] handleMainMenu called');
+                // Unpause first
+                handleResume();
+
+                // Reset game state
+                const gameInstance = getGameInstance();
+                const gameState = getGameState();
+
+                if (gameState) {
+                    gameState.gameActive = false;
+                    gameState.gameCompleted = false;
+                }
+
+                // Show start screen
+                const startScreen = getStartScreen();
+                if (startScreen) {
+                    startScreen.reset();
+                }
+
+                // Trigger return to menu
+                if (onReturnToMenu) {
+                    onReturnToMenu();
+                }
+
+                // Show start screen element
+                const startScreenEl = document.getElementById('start-screen');
+                if (startScreenEl) {
+                    startScreenEl.style.display = '';
+                }
+
+                // Reload the page for a clean state (simplest approach)
+                window.location.reload();
+            }, [handleResume, onReturnToMenu]);
+
+            // Toggle fullscreen
+            const handleToggleFullscreen = useCallback(() => {
+                if (isFullscreen) {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    }
+                } else {
+                    const elem = document.documentElement;
+                    if (elem.requestFullscreen) {
+                        elem.requestFullscreen();
+                    } else if (elem.webkitRequestFullscreen) {
+                        elem.webkitRequestFullscreen();
+                    }
+                }
+            }, [isFullscreen]);
+
+            // Show fullscreen option on mobile (except iOS)
+            const showFullscreenOption = platform === 'mobile' && !(/iPad|iPhone|iPod/.test(navigator.userAgent));
 
             return createElement('div', { className: 'game-hud fixed inset-0 pointer-events-none' }, [
                 platform === 'desktop' && [
@@ -577,7 +757,8 @@ export async function initReactUI() {
                         key: 'counter',
                         sheepCount: gameData.sheepCount,
                         totalSheep: gameData.totalSheep,
-                        stamina: staminaPercentage
+                        stamina: staminaPercentage,
+                        onPause: handlePause
                     }),
                     isMultiplayer && createElement(MultiplayerScoreboard, {
                         key: 'scoreboard',
@@ -591,7 +772,12 @@ export async function initReactUI() {
                     })
                 ],
                 platform === 'mobile' && [
-                    createElement(MobileHUD, { key: 'mobile-hud', gameData, stamina: staminaPercentage }),
+                    createElement(MobileHUD, {
+                        key: 'mobile-hud',
+                        gameData,
+                        stamina: staminaPercentage,
+                        onPause: handlePause
+                    }),
                     createElement(MobileControls, { key: 'mobile-controls' }),
                     isMultiplayer && createElement(MultiplayerScoreboard, {
                         key: 'scoreboard',
@@ -603,7 +789,19 @@ export async function initReactUI() {
                         totalSheep: gameData.totalSheep,
                         stamina: staminaPercentage
                     })
-                ]
+                ],
+                // Pause menu (shown on all platforms when paused)
+                createElement(PauseMenu, {
+                    key: 'pause-menu',
+                    isVisible: isPaused,
+                    onResume: handleResume,
+                    onRestart: handleRestart,
+                    onMainMenu: handleMainMenu,
+                    onToggleFullscreen: handleToggleFullscreen,
+                    isFullscreen,
+                    showFullscreenOption,
+                    gameMode: gameData.gameMode
+                })
             ]);
         }
 

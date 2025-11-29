@@ -1,11 +1,23 @@
 /**
  * SheepCounter Component
- * Displays sheep progress with integrated stamina bar
+ * Displays sheep progress with integrated stamina bar and pause button
  *
  * Sheep icon: "Sheep" by Delapouite from game-icons.net (CC BY 3.0)
  */
 import React, { createElement } from 'react';
 import { CompactStaminaBar } from './CompactStaminaBar.js';
+
+// Pause icon
+const PauseIcon = ({ size = 16, color = 'currentColor' }) => createElement('svg', {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: color,
+    stroke: 'none'
+}, [
+    createElement('rect', { key: 'left', x: '6', y: '4', width: '4', height: '16', rx: '1' }),
+    createElement('rect', { key: 'right', x: '14', y: '4', width: '4', height: '16', rx: '1' })
+]);
 
 // Sheep icon from game-icons.net (Delapouite, CC BY 3.0)
 const SheepIcon = ({ size = 24, color = 'currentColor' }) => createElement('svg', {
@@ -19,13 +31,29 @@ const SheepIcon = ({ size = 24, color = 'currentColor' }) => createElement('svg'
 }));
 
 /**
- * SheepCounter - Displays sheep progress
+ * SheepCounter - Displays sheep progress with pause button
  * Type scale:
  * - Count: text-md (16px) - primary info
  * - Progress: text-sm (12px) - secondary info
  */
-export function SheepCounter({ sheepCount, totalSheep, stamina }) {
+export function SheepCounter({ sheepCount, totalSheep, stamina, onPause }) {
     const percentage = Math.round((sheepCount / totalSheep) * 100);
+
+    // Pause button style
+    const pauseButtonStyle = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '32px',
+        height: '32px',
+        background: 'rgba(255, 255, 255, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        pointerEvents: 'auto',
+        marginLeft: 'auto'
+    };
 
     return createElement('div', {
         className: 'fixed top-6 left-6 z-20 animate-slide-down',
@@ -53,7 +81,25 @@ export function SheepCounter({ sheepCount, totalSheep, stamina }) {
                         key: 'progress',
                         className: 'text-sm text-blue-300'
                     }, `${percentage}% complete`)
-                ])
+                ]),
+                // Pause button
+                onPause && createElement('button', {
+                    key: 'pause-btn',
+                    style: pauseButtonStyle,
+                    onClick: (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onPause();
+                    },
+                    onMouseEnter: (e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                    },
+                    onMouseLeave: (e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    },
+                    title: 'Pause (ESC)',
+                    'aria-label': 'Pause game'
+                }, createElement(PauseIcon, { size: 16, color: 'rgba(255, 255, 255, 0.9)' }))
             ]),
             createElement(CompactStaminaBar, {
                 key: 'stamina',

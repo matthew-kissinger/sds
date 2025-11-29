@@ -1,10 +1,22 @@
 /**
  * MobileHUD Component
  * Compact status bar for mobile devices
- * Shows sheep count, timer, and stamina bar
+ * Shows sheep count, timer, stamina bar, and pause button
  */
 import React, { createElement } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
+
+// Pause icon
+const PauseIcon = ({ size = 16, color = 'currentColor' }) => createElement('svg', {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: color,
+    stroke: 'none'
+}, [
+    createElement('rect', { key: 'left', x: '6', y: '4', width: '4', height: '16', rx: '1' }),
+    createElement('rect', { key: 'right', x: '14', y: '4', width: '4', height: '16', rx: '1' })
+]);
 
 // Sheep icon
 const SheepIcon = ({ size = 16, color = 'currentColor' }) => createElement('svg', {
@@ -43,7 +55,7 @@ function getStaminaColor(stamina) {
     return 'linear-gradient(90deg, #ef4444, #f87171)';
 }
 
-export function MobileHUD({ gameData, stamina }) {
+export function MobileHUD({ gameData, stamina, onPause }) {
     const { isLandscapeMobile } = useResponsive();
 
     const minutes = Math.floor(gameData.gameTime / 60);
@@ -74,67 +86,109 @@ export function MobileHUD({ gameData, stamina }) {
     };
 
     const panelStyle = {
+        display: 'flex',
+        alignItems: 'center',
+        gap: isLandscapeMobile ? '0.5rem' : '0.75rem',
         background: 'rgba(0, 0, 0, 0.6)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         borderRadius: '8px',
         border: '1px solid rgba(255, 255, 255, 0.2)',
-        padding,
-        minWidth: isLandscapeMobile ? '120px' : '160px'
+        padding
+    };
+
+    // Pause button style
+    const pauseButtonStyle = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: isLandscapeMobile ? '24px' : '32px',
+        height: isLandscapeMobile ? '24px' : '32px',
+        background: 'rgba(255, 255, 255, 0.15)',
+        border: '1px solid rgba(255, 255, 255, 0.25)',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        WebkitTapHighlightColor: 'transparent',
+        pointerEvents: 'auto'
     };
 
     return createElement('div', { style: containerStyle },
         createElement('div', { style: panelStyle }, [
-            // Stats row
-            createElement('div', {
-                key: 'stats',
-                style: { display: 'flex', alignItems: 'center', gap }
-            }, [
-                // Sheep count
+            // Pause button
+            createElement('button', {
+                key: 'pause',
+                style: pauseButtonStyle,
+                onClick: (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onPause?.();
+                },
+                onTouchStart: (e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+                    e.currentTarget.style.transform = 'scale(0.95)';
+                },
+                onTouchEnd: (e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                },
+                'aria-label': 'Pause game'
+            }, createElement(PauseIcon, { size: isLandscapeMobile ? 12 : 16, color: 'rgba(255, 255, 255, 0.9)' })),
+
+            // Stats section
+            createElement('div', { key: 'stats-section' }, [
+                // Stats row
                 createElement('div', {
-                    key: 'sheep',
-                    style: { display: 'flex', alignItems: 'center', gap: '0.25rem' }
+                    key: 'stats',
+                    style: { display: 'flex', alignItems: 'center', gap }
                 }, [
-                    createElement(SheepIcon, { key: 'icon', size: iconSize, color: 'rgba(255, 255, 255, 0.8)' }),
-                    createElement('span', {
-                        key: 'count',
-                        style: { color: 'white', fontSize }
-                    }, `${gameData.sheepCount}/${gameData.totalSheep}`)
+                    // Sheep count
+                    createElement('div', {
+                        key: 'sheep',
+                        style: { display: 'flex', alignItems: 'center', gap: '0.25rem' }
+                    }, [
+                        createElement(SheepIcon, { key: 'icon', size: iconSize, color: 'rgba(255, 255, 255, 0.8)' }),
+                        createElement('span', {
+                            key: 'count',
+                            style: { color: 'white', fontSize }
+                        }, `${gameData.sheepCount}/${gameData.totalSheep}`)
+                    ]),
+                    // Timer
+                    createElement('div', {
+                        key: 'timer',
+                        style: { display: 'flex', alignItems: 'center', gap: '0.25rem' }
+                    }, [
+                        createElement(ClockIcon, { key: 'icon', size: iconSize - 2, color: 'rgba(255, 255, 255, 0.8)' }),
+                        createElement('span', {
+                            key: 'time',
+                            style: { color: 'white', fontFamily: 'monospace', fontSize }
+                        }, `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
+                    ])
                 ]),
-                // Timer
+                // Stamina bar
                 createElement('div', {
-                    key: 'timer',
-                    style: { display: 'flex', alignItems: 'center', gap: '0.25rem' }
-                }, [
-                    createElement(ClockIcon, { key: 'icon', size: iconSize - 2, color: 'rgba(255, 255, 255, 0.8)' }),
-                    createElement('span', {
-                        key: 'time',
-                        style: { color: 'white', fontFamily: 'monospace', fontSize }
-                    }, `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
-                ])
-            ]),
-            // Stamina bar
-            createElement('div', {
-                key: 'stamina',
-                style: {
-                    marginTop: isLandscapeMobile ? '0.125rem' : '0.25rem',
-                    height: staminaHeight,
-                    borderRadius: '9999px',
-                    overflow: 'hidden',
-                    background: 'rgba(55, 65, 81, 0.5)'
-                }
-            },
-                createElement('div', {
+                    key: 'stamina',
                     style: {
-                        height: '100%',
-                        width: `${stamina}%`,
-                        background: getStaminaColor(stamina),
-                        boxShadow: stamina < 30 ? '0 0 6px rgba(239, 68, 68, 0.5)' : 'none',
-                        transition: 'all 0.3s ease-out',
-                        borderRadius: '9999px'
+                        marginTop: isLandscapeMobile ? '0.125rem' : '0.25rem',
+                        height: staminaHeight,
+                        borderRadius: '9999px',
+                        overflow: 'hidden',
+                        background: 'rgba(55, 65, 81, 0.5)',
+                        minWidth: isLandscapeMobile ? '100px' : '120px'
                     }
-                })
-            )
+                },
+                    createElement('div', {
+                        style: {
+                            height: '100%',
+                            width: `${stamina}%`,
+                            background: getStaminaColor(stamina),
+                            boxShadow: stamina < 30 ? '0 0 6px rgba(239, 68, 68, 0.5)' : 'none',
+                            transition: 'all 0.3s ease-out',
+                            borderRadius: '9999px'
+                        }
+                    })
+                )
+            ])
         ])
     );
 }

@@ -1508,12 +1508,22 @@ export class TerrainBuilder {
 
             // Add pasture exclusion if available (no grass in pen)
             if (pasture) {
-                this.grassSystem.addExclusionZone(
-                    pasture.minX,
-                    pasture.maxX,
-                    pasture.minZ,
-                    pasture.maxZ
-                );
+                if (pasture.edgeAngle !== undefined && pasture.edgeAngle !== 0) {
+                    // Rotated pasture for custom shapes
+                    const centerX = (pasture.minX + pasture.maxX) / 2;
+                    const centerZ = (pasture.minZ + pasture.maxZ) / 2;
+                    const width = pasture.maxX - pasture.minX;
+                    const depth = pasture.maxZ - pasture.minZ;
+                    this.grassSystem.addRotatedExclusionZone(centerX, centerZ, width, depth, pasture.edgeAngle);
+                } else {
+                    // Axis-aligned pasture
+                    this.grassSystem.addExclusionZone(
+                        pasture.minX,
+                        pasture.maxX,
+                        pasture.minZ,
+                        pasture.maxZ
+                    );
+                }
             }
 
             // NOTE: We want grass INSIDE the field, so no bounds exclusion
@@ -1610,12 +1620,23 @@ export class TerrainBuilder {
 
         // Add pasture exclusion zone (no grass in the pen area)
         if (pasture) {
-            this.grassSystem.addExclusionZone(
-                pasture.minX,
-                pasture.maxX,
-                pasture.minZ,
-                pasture.maxZ
-            );
+            if (pasture.edgeAngle !== undefined && pasture.edgeAngle !== 0) {
+                // Rotated pasture for custom shapes
+                const centerX = (pasture.minX + pasture.maxX) / 2;
+                const centerZ = (pasture.minZ + pasture.maxZ) / 2;
+                const width = pasture.maxX - pasture.minX;
+                const depth = pasture.maxZ - pasture.minZ;
+                this.grassSystem.addRotatedExclusionZone(centerX, centerZ, width, depth, pasture.edgeAngle);
+                console.log(`[TERRAIN] Added rotated pasture exclusion: center(${centerX.toFixed(1)}, ${centerZ.toFixed(1)}), size(${width}x${depth}), angle=${pasture.edgeAngle.toFixed(2)}rad`);
+            } else {
+                // Axis-aligned pasture
+                this.grassSystem.addExclusionZone(
+                    pasture.minX,
+                    pasture.maxX,
+                    pasture.minZ,
+                    pasture.maxZ
+                );
+            }
         }
 
         // NOTE: We DO want grass inside the play area/field!

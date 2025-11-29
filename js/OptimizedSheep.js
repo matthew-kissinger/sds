@@ -384,47 +384,67 @@ export class OptimizedSheepSystem {
     /**
      * Update all sheep behaviors and animations
      */
-    update(deltaTime, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false) {
+    update(deltaTime, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null) {
         const dummy = new THREE.Object3D();
-        
+
         // Update time uniform
         this.material.uniforms.time.value += deltaTime;
-        
+
         // Ensure instance matrix is available
         if (!this.instancedMesh.instanceMatrix) {
             console.warn('Instance matrix not available');
             return;
         }
-        
+
         // Store competitive gates reference for sheep to access
         this.competitiveGates = Array.isArray(gate) ? gate : null;
-        
+
         // Track sheep being chased for group audio
         let sheepBeingChased = 0;
         let shouldPlayGroupBleat = false;
-        
+
         // Update each sheep
         for (let i = 0; i < this.sheepCount; i++) {
             const sheep = this.sheep[i];
-            
+
             // Provide competitive gates access to individual sheep
             sheep.competitiveGates = this.competitiveGates;
-            
+
             // Check if this sheep is being chased (before updating behavior)
-            if (sheepdog && sheep.position) {
-                const distanceToSheepdog = sheep.position.distanceTo(sheepdog.position);
-                // Use sheepdog's fleeRadius for dog-specific interaction distances
-                const fleeRadius = sheepdog.fleeRadius || sheep.fleeRadius || 8;
-                const isBeingChased = distanceToSheepdog < fleeRadius;
-                
-                if (isBeingChased && !sheep.wasBeingChased) {
-                    sheepBeingChased++;
-                    shouldPlayGroupBleat = true;
+            // Check both sheepdogs and respond to the closer one
+            if (sheep.position) {
+                let closestSheepdogDistance = Infinity;
+                let closestSheepdog = null;
+
+                if (sheepdog) {
+                    const dist = sheep.position.distanceTo(sheepdog.position);
+                    if (dist < closestSheepdogDistance) {
+                        closestSheepdogDistance = dist;
+                        closestSheepdog = sheepdog;
+                    }
+                }
+
+                if (sheepdog2) {
+                    const dist = sheep.position.distanceTo(sheepdog2.position);
+                    if (dist < closestSheepdogDistance) {
+                        closestSheepdogDistance = dist;
+                        closestSheepdog = sheepdog2;
+                    }
+                }
+
+                if (closestSheepdog) {
+                    const fleeRadius = closestSheepdog.fleeRadius || sheep.fleeRadius || 8;
+                    const isBeingChased = closestSheepdogDistance < fleeRadius;
+
+                    if (isBeingChased && !sheep.wasBeingChased) {
+                        sheepBeingChased++;
+                        shouldPlayGroupBleat = true;
+                    }
                 }
             }
-            
+
             // Update behavior (flocking, movement, etc.)
-            sheep.updateBehavior(this.sheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating, isMultiplayer);
+            sheep.updateBehavior(this.sheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating, isMultiplayer, sheepdog2);
             sheep.updatePosition(deltaTime);
             
             // Update transform matrix using interpolated render position for smooth movement
@@ -753,7 +773,7 @@ export class OptimizedSheepInstance extends Boid {
         this.wasBeingChased = false;
     }
     
-    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false) {
+    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null) {
         // If retiring, seek retirement target or graze
         if (this.isRetiring) {
             if (this.retirementTarget) {
@@ -868,66 +888,112 @@ export class OptimizedSheepInstance extends Boid {
             }
         }
         
-        // Flee from sheepdog (only if sheepdog exists - game is active)
-        if (sheepdog) {
-            const distanceToSheepdog = this.position.distanceTo(sheepdog.position);
-            // Use sheepdog's fleeRadius for dog-specific interaction distances
-            const fleeRadius = sheepdog.fleeRadius || this.fleeRadius || 8;
-            const isBeingChased = distanceToSheepdog < fleeRadius;
-            
-            const fleeForce = this.flee(sheepdog.position, fleeRadius);
-            if (fleeForce.magnitude() > 0) {
-                fleeForce.multiply(1.2);
-                this.applyForce(fleeForce);
-                
-                // Play bleat sound when sheep starts being chased (only if individual bleating is enabled)
-                if (isBeingChased && !this.wasBeingChased && this.audioManager && enableIndividualBleating) {
-                    this.audioManager.playSheepBleat();
+        // Flee from sheepdog(s) (only if sheepdog exists - game is active)
+        // For local 2-player mode, flee from the closer dog
+        if (sheepdog || sheepdog2) {
+            // Find the closer sheepdog
+            let closestSheepdog = null;
+            let closestDistance = Infinity;
+
+            if (sheepdog) {
+                const dist = this.position.distanceTo(sheepdog.position);
+                if (dist < closestDistance) {
+                    closestDistance = dist;
+                    closestSheepdog = sheepdog;
                 }
             }
-            
-            this.wasBeingChased = isBeingChased;
+
+            if (sheepdog2) {
+                const dist = this.position.distanceTo(sheepdog2.position);
+                if (dist < closestDistance) {
+                    closestDistance = dist;
+                    closestSheepdog = sheepdog2;
+                }
+            }
+
+            if (closestSheepdog) {
+                // Use closest sheepdog's fleeRadius for dog-specific interaction distances
+                const fleeRadius = closestSheepdog.fleeRadius || this.fleeRadius || 8;
+                const isBeingChased = closestDistance < fleeRadius;
+
+                const fleeForce = this.flee(closestSheepdog.position, fleeRadius);
+                if (fleeForce.magnitude() > 0) {
+                    fleeForce.multiply(1.2);
+                    this.applyForce(fleeForce);
+
+                    // Play bleat sound when sheep starts being chased (only if individual bleating is enabled)
+                    if (isBeingChased && !this.wasBeingChased && this.audioManager && enableIndividualBleating) {
+                        this.audioManager.playSheepBleat();
+                    }
+                }
+
+                this.wasBeingChased = isBeingChased;
+            } else {
+                this.wasBeingChased = false;
+            }
         } else {
             this.wasBeingChased = false;
         }
         
         // Gate attraction logic (only if sheepdog and gate exist - game is active)
-        if (sheepdog && gate) {
+        // For local 2-player mode, check attraction based on closest dog
+        if ((sheepdog || sheepdog2) && gate) {
             // Handle multiple gates (competitive mode) or single gate (cooperative mode)
             const gates = Array.isArray(gate) ? gate : [gate];
-            
+
             // Find the closest gate
             let closestGate = null;
-            let closestDistance = Infinity;
-            
+            let closestGateDistance = Infinity;
+
             for (const currentGate of gates) {
                 // Create Vector2D from gate position for distance calculation
                 const gatePos = new Vector2D(currentGate.position.x, currentGate.position.z);
                 const distanceToGate = this.position.distanceTo(gatePos);
-                if (distanceToGate < closestDistance) {
-                    closestDistance = distanceToGate;
+                if (distanceToGate < closestGateDistance) {
+                    closestGateDistance = distanceToGate;
                     closestGate = currentGate;
                 }
             }
-            
+
             if (closestGate) {
-                const distanceToDog = this.position.distanceTo(sheepdog.position);
-                // Use sheepdog's fleeRadius for dog-specific interaction distances
-                const fleeRadius = sheepdog.fleeRadius || this.fleeRadius || 8;
-                
-                if (distanceToDog < fleeRadius * 1.5 && closestDistance < 30) {
-                    // Create Vector2D objects from position data
-                    const gatePos = new Vector2D(closestGate.position.x, closestGate.position.z);
-                    const dogPos = new Vector2D(sheepdog.position.x, sheepdog.position.z);
-                    
-                    const toGate = gatePos.clone().subtract(this.position);
-                    const toDog = dogPos.clone().subtract(this.position);
-                    
-                    const dotProduct = toGate.x * toDog.x + toGate.z * toDog.z;
-                    if (dotProduct < 0) {
-                        const gateForce = this.seek(gatePos);
-                        gateForce.multiply(this.gateAttraction);
-                        this.applyForce(gateForce);
+                // Find the closest dog for gate attraction
+                let closestDog = null;
+                let closestDogDistance = Infinity;
+
+                if (sheepdog) {
+                    const dist = this.position.distanceTo(sheepdog.position);
+                    if (dist < closestDogDistance) {
+                        closestDogDistance = dist;
+                        closestDog = sheepdog;
+                    }
+                }
+
+                if (sheepdog2) {
+                    const dist = this.position.distanceTo(sheepdog2.position);
+                    if (dist < closestDogDistance) {
+                        closestDogDistance = dist;
+                        closestDog = sheepdog2;
+                    }
+                }
+
+                if (closestDog) {
+                    // Use closest dog's fleeRadius for dog-specific interaction distances
+                    const fleeRadius = closestDog.fleeRadius || this.fleeRadius || 8;
+
+                    if (closestDogDistance < fleeRadius * 1.5 && closestGateDistance < 30) {
+                        // Create Vector2D objects from position data
+                        const gatePos = new Vector2D(closestGate.position.x, closestGate.position.z);
+                        const dogPos = new Vector2D(closestDog.position.x, closestDog.position.z);
+
+                        const toGate = gatePos.clone().subtract(this.position);
+                        const toDog = dogPos.clone().subtract(this.position);
+
+                        const dotProduct = toGate.x * toDog.x + toGate.z * toDog.z;
+                        if (dotProduct < 0) {
+                            const gateForce = this.seek(gatePos);
+                            gateForce.multiply(this.gateAttraction);
+                            this.applyForce(gateForce);
+                        }
                     }
                 }
             }
@@ -1240,52 +1306,63 @@ export class OptimizedSheepInstance extends Boid {
         }
         
         // Check if sheep passes through any gate
-        // Like classic mode: detect when sheep enters the pasture bounds area
         for (let i = 0; i < gatesWithZones.length; i++) {
             const gateData = gatesWithZones[i];
             const passageZone = gateData.passageZone;
-            const gate = gateData.gate;
 
             // Additional safety check for each passage zone
             if (!passageZone) continue;
 
-            // Check if sheep is in the pasture area (like classic mode's bounds check)
-            // For rotated pastures, check if sheep is in the rotated pasture bounds
-            let inPastureArea = false;
+            // PRIMARY CHECK: Is sheep in the passage zone (gate opening)?
+            const inGateX = this.position.x >= passageZone.minX &&
+                           this.position.x <= passageZone.maxX;
+            const inGateZ = this.position.z >= passageZone.minZ &&
+                           this.position.z <= passageZone.maxZ;
 
-            if (pastureBounds) {
-                const edgeAngle = pastureBounds.edgeAngle;
+            // Check if sheep is moving through the gate
+            let movingThroughGate = false;
 
-                if (edgeAngle !== undefined && edgeAngle !== 0) {
-                    // Rotated pasture - transform sheep position to pasture's local coordinates
-                    const centerX = (pastureBounds.minX + pastureBounds.maxX) / 2;
-                    const centerZ = (pastureBounds.minZ + pastureBounds.maxZ) / 2;
-                    const width = pastureBounds.maxX - pastureBounds.minX;
-                    const depth = pastureBounds.maxZ - pastureBounds.minZ;
+            if (gateData.direction) {
+                // Use explicit gate direction if available
+                switch (gateData.direction) {
+                    case 'north':
+                        movingThroughGate = this.velocity.z > 0;
+                        break;
+                    case 'south':
+                        movingThroughGate = this.velocity.z < 0;
+                        break;
+                    case 'east':
+                        movingThroughGate = this.velocity.x > 0;
+                        break;
+                    case 'west':
+                        movingThroughGate = this.velocity.x < 0;
+                        break;
+                    case 'southeast':
+                        movingThroughGate = this.velocity.x > 0 && this.velocity.z < 0;
+                        break;
+                    case 'southwest':
+                        movingThroughGate = this.velocity.x < 0 && this.velocity.z < 0;
+                        break;
+                    default:
+                        // Fallback to velocity magnitude check
+                        movingThroughGate = this.velocity.magnitude() > 0;
+                }
+            } else {
+                // Fallback: determine gate orientation based on passage zone dimensions
+                const gateWidth = passageZone.maxX - passageZone.minX;
+                const gateDepth = passageZone.maxZ - passageZone.minZ;
 
-                    // Offset from pasture center
-                    const dx = this.position.x - centerX;
-                    const dz = this.position.z - centerZ;
-
-                    // Rotate point by -edgeAngle to align with pasture's local frame
-                    const cosAngle = Math.cos(-edgeAngle);
-                    const sinAngle = Math.sin(-edgeAngle);
-                    const localX = dx * cosAngle - dz * sinAngle;
-                    const localZ = dx * sinAngle + dz * cosAngle;
-
-                    // Check if in rotated pasture bounds
-                    inPastureArea = Math.abs(localX) <= width / 2 && Math.abs(localZ) <= depth / 2;
+                if (gateWidth > gateDepth) {
+                    // Horizontal gate (wider than deep) - check Z velocity
+                    movingThroughGate = Math.abs(this.velocity.z) > 0;
                 } else {
-                    // Axis-aligned pasture - simple bounds check (like classic mode)
-                    inPastureArea = this.position.x >= pastureBounds.minX &&
-                                   this.position.x <= pastureBounds.maxX &&
-                                   this.position.z >= pastureBounds.minZ &&
-                                   this.position.z <= pastureBounds.maxZ;
+                    // Vertical gate (deeper than wide) - check X velocity
+                    movingThroughGate = Math.abs(this.velocity.x) > 0;
                 }
             }
 
-            // If sheep is in pasture area, they've passed through the gate
-            if (inPastureArea) {
+            // If sheep is in passage zone and moving through, they've passed
+            if (inGateX && inGateZ && movingThroughGate) {
                 this.hasPassedGate = true;
                 this.assignedGate = i; // Track which gate was used
 
@@ -1295,6 +1372,37 @@ export class OptimizedSheepInstance extends Boid {
                 }
 
                 return true;
+            }
+
+            // SECONDARY CHECK: For sandbox mode with rotated pastures, also check pasture bounds
+            if (pastureBounds && pastureBounds.edgeAngle !== undefined && pastureBounds.edgeAngle !== 0) {
+                // Rotated pasture - transform sheep position to pasture's local coordinates
+                const centerX = (pastureBounds.minX + pastureBounds.maxX) / 2;
+                const centerZ = (pastureBounds.minZ + pastureBounds.maxZ) / 2;
+                const width = pastureBounds.maxX - pastureBounds.minX;
+                const depth = pastureBounds.maxZ - pastureBounds.minZ;
+
+                // Offset from pasture center
+                const dx = this.position.x - centerX;
+                const dz = this.position.z - centerZ;
+
+                // Rotate point by -edgeAngle to align with pasture's local frame
+                const cosAngle = Math.cos(-pastureBounds.edgeAngle);
+                const sinAngle = Math.sin(-pastureBounds.edgeAngle);
+                const localX = dx * cosAngle - dz * sinAngle;
+                const localZ = dx * sinAngle + dz * cosAngle;
+
+                // Check if in rotated pasture bounds
+                if (Math.abs(localX) <= width / 2 && Math.abs(localZ) <= depth / 2) {
+                    this.hasPassedGate = true;
+                    this.assignedGate = i;
+
+                    if (gateData.gate && gateData.gate.id !== undefined) {
+                        this.assignedGate = gateData.gate.id;
+                    }
+
+                    return true;
+                }
             }
         }
         

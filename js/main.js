@@ -18,6 +18,9 @@ import { MultiplayerUI } from './MultiplayerUI.js';
 import { Vector2D } from './Vector2D.js';
 import { setGameInstance } from './GameBridge.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
+import { LocalInputHandler } from './LocalInputHandler.js';
+import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
+import { TwoPlayerCamera } from './TwoPlayerCamera.js';
 
 /**
  * Core Web Vitals monitoring for SEO performance tracking
@@ -198,7 +201,12 @@ class SheepDogSimulation {
         
         // Set up start screen callback
         this.startScreen.setGameStartCallback((mode, roomData, singlePlayerMode) => {
-            this.startGame(mode, roomData, singlePlayerMode);
+            if (mode === 'local') {
+                // roomData is actually localConfig for local mode
+                this.startLocalGame(roomData);
+            } else {
+                this.startGame(mode, roomData, singlePlayerMode);
+            }
         });
         
         // Pass audio manager to modules that need it
@@ -225,7 +233,15 @@ class SheepDogSimulation {
         
         // Competitive mode audio state
         this.endgameMusicPlaying = false;
-        
+
+        // Local 2-player mode
+        this.isLocalMultiplayer = false;
+        this.localInputHandler = null;
+        this.localMultiplayerManager = null;
+        this.twoPlayerCamera = null;
+        this.sheepdog2 = null;
+        this.sheepdogMesh2 = null;
+
         // Set game instance BEFORE init() so GameBridge works during initialization
         // This is critical - Sheepdog needs getTerrainBuilder() during init()
         setGameInstance(this);
@@ -672,6 +688,223 @@ class SheepDogSimulation {
         console.log('[SANDBOX] Game started successfully');
     }
 
+    /**
+     * Start a local 2-player game
+     * @param {Object} localConfig - Configuration from LocalModeSetup
+     */
+    async startLocalGame(localConfig) {
+        // Wait for initialization to complete
+        if (!this.isInitialized) {
+            console.log('[LOCAL] Waiting for initialization to complete...');
+            await this.waitForInitialization();
+        }
+
+        console.log('[LOCAL] Starting local 2-player game:', localConfig);
+
+        // Store mode
+        this.gameMode = 'local';
+        this.isMultiplayer = false;
+        this.isLocalMultiplayer = true;
+
+        // Initialize local multiplayer manager
+        this.localMultiplayerManager = new LocalMultiplayerManager();
+        this.localMultiplayerManager.initialize(localConfig.mode, {
+            player1Dog: localConfig.player1Dog,
+            player2Dog: localConfig.player2Dog,
+            totalSheep: 200
+        });
+
+        // Create local input handler
+        this.localInputHandler = new LocalInputHandler();
+        this.localInputHandler.onPauseToggle((isPaused) => {
+            this.gameTimer.setPaused(isPaused);
+            this.gameState.setPaused(isPaused);
+        });
+
+        // Remove old sheepdog if exists
+        if (this.sheepdog) {
+            this.sheepdog.removeDistanceIndicator();
+        }
+        if (this.sheepdogMesh) {
+            this.sceneManager.remove(this.sheepdogMesh);
+        }
+        if (this.sheepdog2) {
+            this.sheepdog2.removeDistanceIndicator();
+        }
+        if (this.sheepdogMesh2) {
+            this.sceneManager.remove(this.sheepdogMesh2);
+        }
+
+        // Create Player 1 sheepdog (WASD)
+        const p1StartX = localConfig.mode === 'versus' ? -30 : -15;
+        this.sheepdog = new Sheepdog(p1StartX, -30, localConfig.player1Dog);
+        this.sheepdogMesh = this.sheepdog.createMesh();
+        this.sheepdog.setAudioManager(this.audioManager);
+        this.sheepdog.setPlayerInfo('player1', this.localMultiplayerManager.player1.color);
+        this.sceneManager.add(this.sheepdogMesh);
+        this.gameState.setSheepdog(this.sheepdog);
+        this.gameState.setSheepdog2(null); // Clear any previous second dog
+
+        // Create Player 2 sheepdog (Arrow Keys)
+        const p2StartX = localConfig.mode === 'versus' ? 30 : 15;
+        this.sheepdog2 = new Sheepdog(p2StartX, -30, localConfig.player2Dog);
+        this.sheepdogMesh2 = this.sheepdog2.createMesh();
+        this.sheepdog2.setAudioManager(this.audioManager);
+        this.sheepdog2.setPlayerInfo('player2', this.localMultiplayerManager.player2.color);
+        this.sceneManager.add(this.sheepdogMesh2);
+        this.gameState.setSheepdog2(this.sheepdog2); // Set second dog for sheep behavior
+
+        // Set sheepdogs in manager
+        this.localMultiplayerManager.setSheepdogs(this.sheepdog, this.sheepdog2);
+
+        // Make player icons larger and more visible for local mode
+        if (this.sheepdog.playerIcon) {
+            this.sheepdog.playerIcon.scale.set(2.5, 2.5, 2.5);
+            this.sheepdog.playerIcon.position.y = 3.5; // Higher above dog
+            this.sheepdog.playerIcon.userData.originalY = 3.5;
+        }
+        if (this.sheepdog2.playerIcon) {
+            this.sheepdog2.playerIcon.scale.set(2.5, 2.5, 2.5);
+            this.sheepdog2.playerIcon.position.y = 3.5;
+            this.sheepdog2.playerIcon.userData.originalY = 3.5;
+        }
+
+        // Initialize two-player camera
+        this.twoPlayerCamera = new TwoPlayerCamera(this.sceneManager.getCamera());
+        this.twoPlayerCamera.setImmediate(this.sheepdog.position, this.sheepdog2.position);
+
+        // Start game state
+        this.gameState.startGame('solo', null, 'classic');
+        this.gameState.gameMode = 'local';
+
+        // Build structures based on mode
+        if (localConfig.mode === 'versus') {
+            // Versus mode: two gates on opposite sides
+            const versusGates = this.localMultiplayerManager.setupVersusGates(this.gameState.getBounds());
+            this.structureBuilder.buildCompetitiveStructures(
+                this.gameState.getBounds(),
+                versusGates
+            );
+            console.log('[LOCAL] Built versus structures with 2 gates');
+        } else {
+            // Co-op and Timed: single gate at north
+            this.structureBuilder.buildSinglePlayerStructures(
+                this.gameState.getBounds(),
+                this.gameState.getGate(),
+                this.gameState.getPasture()
+            );
+        }
+
+        // Reset timer
+        this.gameTimer.reset();
+        if (localConfig.mode === 'timed') {
+            this.gameTimer.startCountdown(3 * 60 * 1000); // 3 minutes
+            console.log('[LOCAL] Started 3-minute countdown for timed mode');
+        }
+
+        // Set up score callbacks
+        this.localMultiplayerManager.onScoreUpdate = (p1Score, p2Score) => {
+            console.log(`[LOCAL] Scores - P1: ${p1Score}, P2: ${p2Score}`);
+        };
+
+        this.localMultiplayerManager.onGameComplete = (result) => {
+            console.log('[LOCAL] Game complete!', result);
+            this.showLocalCompletionOverlay(result);
+        };
+
+        // Hide multiplayer UI
+        this.multiplayerUI.hide();
+        this.audioManager.setGameMode('solo');
+
+        // Mark start screen as inactive
+        this.startScreen.isActive = false;
+        this.startScreen.gameStarted = true;
+
+        // Start music
+        if (this.audioManager) {
+            this.audioManager.fadeOutCurrentMusic(800);
+            setTimeout(() => {
+                if (this.audioManager.isMusicReady()) {
+                    this.audioManager.playGameplayMusic();
+                }
+            }, 900);
+        }
+
+        console.log('[LOCAL] Game started successfully');
+    }
+
+    /**
+     * Show completion overlay for local multiplayer
+     */
+    showLocalCompletionOverlay(result) {
+        console.log('[LOCAL] Showing completion overlay:', result);
+
+        // Remove any existing overlay
+        const existing = document.getElementById('game-completion-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'game-completion-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            font-family: system-ui, sans-serif;
+            color: white;
+            text-align: center;
+        `;
+
+        let winnerText = '';
+        let bgColor = 'rgba(16, 185, 129, 0.2)';
+        let borderColor = 'rgba(16, 185, 129, 0.4)';
+
+        if (result.winner === 'coop') {
+            winnerText = 'Victory! You herded all sheep together!';
+        } else if (result.winner === 'tie') {
+            winnerText = "It's a Tie!";
+            bgColor = 'rgba(251, 191, 36, 0.2)';
+            borderColor = 'rgba(251, 191, 36, 0.4)';
+        } else if (result.winner === 'player1') {
+            winnerText = 'Player 1 Wins!';
+            bgColor = 'rgba(255, 68, 68, 0.2)';
+            borderColor = 'rgba(255, 68, 68, 0.4)';
+        } else if (result.winner === 'player2') {
+            winnerText = 'Player 2 Wins!';
+            bgColor = 'rgba(68, 68, 255, 0.2)';
+            borderColor = 'rgba(68, 68, 255, 0.4)';
+        }
+
+        overlay.innerHTML = `
+            <div style="padding: 40px; background: ${bgColor}; border-radius: 20px; border: 1px solid ${borderColor}; min-width: 300px;">
+                <h1 style="font-size: 32px; margin: 0 0 20px 0;">${winnerText}</h1>
+                <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 30px;">
+                    <div>
+                        <div style="font-size: 14px; color: #ff4444; margin-bottom: 5px;">Player 1</div>
+                        <div style="font-size: 36px; font-weight: bold;">${result.player1Score}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; color: #4444ff; margin-bottom: 5px;">Player 2</div>
+                        <div style="font-size: 36px; font-weight: bold;">${result.player2Score}</div>
+                    </div>
+                </div>
+                <p style="color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 20px;">Local mode - scores not submitted to leaderboard</p>
+                <button onclick="location.reload()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
+                    Play Again
+                </button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        // Disable controls
+        if (this.mobileControls) {
+            this.mobileControls.disable();
+        }
+    }
+
     setupMultiplayer() {
         // NetworkManager already available from constructor
         if (!this.networkManager) {
@@ -1087,6 +1320,9 @@ class SheepDogSimulation {
         // Update start screen camera if active
         if (this.startScreen.isStartScreenActive()) {
             this.startScreen.updateCinematicCamera();
+        } else if (this.isLocalMultiplayer && this.localInputHandler && !this.localInputHandler.isPausedState()) {
+            // --- LOCAL 2-PLAYER MODE ---
+            this.updateLocalMultiplayer(deltaTime);
         } else if (!isPaused) {
             // Handle gamepad zoom controls
             this.sceneManager.handleGamepadZoom();
@@ -1191,11 +1427,15 @@ class SheepDogSimulation {
         }
         
         // Update timer (respects pause state internally)
-        this.gameTimer.update();
-        
+        // Skip for local multiplayer - handled in updateLocalMultiplayer
+        if (!this.isLocalMultiplayer) {
+            this.gameTimer.update();
+        }
+
         // Update sheep behaviors (only if not paused)
         // In multiplayer mode, this handles visual behavior based on server state
-        if (!isPaused) {
+        // Skip for local multiplayer - handled in updateLocalMultiplayer
+        if (!isPaused && !this.isLocalMultiplayer) {
             this.gameState.updateSheepBehaviors(deltaTime);
         }
         
@@ -1516,6 +1756,116 @@ class SheepDogSimulation {
     }
     
     /**
+     * Update loop for local 2-player mode
+     */
+    updateLocalMultiplayer(deltaTime) {
+        if (!this.localMultiplayerManager || !this.localInputHandler) return;
+
+        const sheepdog1 = this.sheepdog;
+        const sheepdog2 = this.sheepdog2;
+
+        if (!sheepdog1 || !sheepdog2) return;
+
+        // Get input for both players
+        const p1Direction = this.localInputHandler.getPlayer1Direction();
+        const p1Sprint = this.localInputHandler.isPlayer1Sprinting();
+        const p2Direction = this.localInputHandler.getPlayer2Direction();
+        const p2Sprint = this.localInputHandler.isPlayer2Sprinting();
+
+        const bounds = this.gameState.getBounds();
+
+        // Get camera distance for distance indicators
+        const cameraDistance = this.twoPlayerCamera ? this.twoPlayerCamera.getDistance() : 80;
+
+        // Update Player 1 sheepdog
+        sheepdog1.updateNearSheepStatus(this.gameState.getSheep());
+        sheepdog1.move(p1Direction, bounds, deltaTime, p1Sprint);
+        sheepdog1.animate(deltaTime, cameraDistance); // Animate player icon with camera distance for scaling
+        if (sheepdog1.isLocalPlayer) {
+            sheepdog1.updateDistanceIndicator(cameraDistance, deltaTime, true);
+        }
+
+        // Update Player 2 sheepdog
+        sheepdog2.updateNearSheepStatus(this.gameState.getSheep());
+        sheepdog2.move(p2Direction, bounds, deltaTime, p2Sprint);
+        sheepdog2.animate(deltaTime, cameraDistance); // Animate player icon with camera distance for scaling
+        if (sheepdog2.isLocalPlayer) {
+            sheepdog2.updateDistanceIndicator(cameraDistance, deltaTime, true);
+        }
+
+        // Update two-player camera
+        if (this.twoPlayerCamera) {
+            this.twoPlayerCamera.update(sheepdog1.position, sheepdog2.position, deltaTime);
+        }
+
+        // Update sheep behaviors - pass both dogs for combined scaring
+        const sheepState = this.gameState.updateSheepBehaviors(deltaTime);
+
+        // Make sheep react to both dogs
+        const sheep = this.gameState.getSheep();
+        for (const s of sheep) {
+            // Check distance to both dogs and use the closer one for fleeing
+            const dist1 = Math.sqrt(
+                Math.pow(s.position.x - sheepdog1.position.x, 2) +
+                Math.pow(s.position.z - sheepdog1.position.z, 2)
+            );
+            const dist2 = Math.sqrt(
+                Math.pow(s.position.x - sheepdog2.position.x, 2) +
+                Math.pow(s.position.z - sheepdog2.position.z, 2)
+            );
+
+            // Update the effective dog position for this sheep based on which is closer
+            if (dist2 < dist1) {
+                s.dogPosition = sheepdog2.position;
+            } else {
+                s.dogPosition = sheepdog1.position;
+            }
+        }
+
+        // Handle scoring based on local game mode
+        const localMode = this.localMultiplayerManager.localGameMode;
+
+        if (localMode === 'coop') {
+            // Co-op: shared gate, count sheep retired
+            if (this.gameState.sheepRetired > 0) {
+                const currentRetired = this.localMultiplayerManager.player1.score;
+                const newlyRetired = this.gameState.sheepRetired - currentRetired;
+                for (let i = 0; i < newlyRetired; i++) {
+                    this.localMultiplayerManager.recordCoopSheepScored();
+                }
+            }
+        } else if (localMode === 'versus') {
+            // Versus: check which player's gate sheep passed through
+            // TODO: Implement proper gate assignment tracking
+        } else if (localMode === 'timed') {
+            // Timed: check time remaining and shared scoring
+            this.localMultiplayerManager.checkTimedModeEnd();
+
+            // Update shared score from game state
+            if (this.gameState.sheepRetired > 0) {
+                const currentScore = this.localMultiplayerManager.player1.score + this.localMultiplayerManager.player2.score;
+                const diff = this.gameState.sheepRetired - currentScore;
+                if (diff > 0) {
+                    // Split new sheep evenly between players for display
+                    // (In reality timed mode just shows total)
+                    this.localMultiplayerManager.player1.score = Math.floor(this.gameState.sheepRetired / 2);
+                    this.localMultiplayerManager.player2.score = Math.ceil(this.gameState.sheepRetired / 2);
+                }
+            }
+        }
+
+        // Check for co-op completion
+        if (localMode === 'coop' && this.gameState.sheepRetired >= this.gameState.totalSheep) {
+            if (!this.localMultiplayerManager.gameCompleted) {
+                this.localMultiplayerManager.completeGame('coop');
+            }
+        }
+
+        // Update timer display
+        this.gameTimer.update(deltaTime);
+    }
+
+    /**
      * Add colored player icons to all sheepdogs in competitive mode
      * @param {Array} competitiveGates - Array of competitive gate configurations
      */
@@ -1556,10 +1906,12 @@ class SheepDogSimulation {
         const existing = document.getElementById('game-completion-overlay');
         if (existing) existing.remove();
 
-        // Submit score to leaderboard for single player games
-        if (mode === 'single' && data.finalTime) {
+        // Submit score to leaderboard for single player games (classic/extreme only, NOT sandbox)
+        if (mode === 'single' && data.finalTime && this.gameMode !== 'sandbox' && this.singlePlayerMode !== 'sandbox') {
             console.log(`[GAME] Submitting score to leaderboard: ${data.finalTime} seconds for ${this.singlePlayerMode === 'extreme' ? 'soloExtreme' : 'soloClassic'} mode`);
             this.gameState.submitScoreToLeaderboard(data.finalTime);
+        } else if (mode === 'single' && this.gameMode === 'sandbox') {
+            console.log('[GAME] Sandbox mode - score not submitted to leaderboard');
         }
 
         // Check if React CompletionScreen is available

@@ -651,16 +651,26 @@ export class AudioManager {
         
         let currentStep = 0;
         const fadeInterval = setInterval(() => {
+            // Check if music was stopped externally
+            if (!this.currentMusic) {
+                clearInterval(fadeInterval);
+                return;
+            }
+
             currentStep++;
             const newVolume = startVolume - (volumeStep * currentStep);
-            
+
             if (currentStep >= fadeSteps || newVolume <= 0) {
-                this.currentMusic.stop();
-                this.currentMusic.setVolume(startVolume); // Reset volume for next play
-                this.currentMusic = null;
+                if (this.currentMusic) {
+                    this.currentMusic.stop();
+                    this.currentMusic.setVolume(startVolume); // Reset volume for next play
+                    this.currentMusic = null;
+                }
                 clearInterval(fadeInterval);
             } else {
-                this.currentMusic.setVolume(newVolume);
+                if (this.currentMusic) {
+                    this.currentMusic.setVolume(newVolume);
+                }
             }
         }, stepDuration);
     }

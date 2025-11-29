@@ -98,19 +98,21 @@ export class InputHandler {
     // Toggle pause state
     togglePause() {
         this.isPaused = !this.isPaused;
-        
+
         // Clear all movement keys when pausing
         if (this.isPaused) {
             for (let key in this.keys) {
                 this.keys[key] = false;
             }
         }
-        
+
         // Notify all registered callbacks about pause state change
         this.pauseCallbacks.forEach(callback => callback(this.isPaused));
-        
-        // Show/hide pause indicator
-        this.updatePauseUI();
+
+        // Dispatch custom event for React PauseMenu
+        window.dispatchEvent(new CustomEvent('game-pause-change', {
+            detail: { isPaused: this.isPaused }
+        }));
     }
 
     // Register a callback to be called when pause state changes
@@ -118,60 +120,11 @@ export class InputHandler {
         this.pauseCallbacks.push(callback);
     }
 
-    // Update pause UI indicator
+    // Legacy updatePauseUI - now handled by React PauseMenu component
+    // Kept for backwards compatibility but does nothing
     updatePauseUI() {
-        let pauseIndicator = document.getElementById('pause-indicator');
-        
-        if (this.isPaused) {
-            if (!pauseIndicator) {
-                pauseIndicator = document.createElement('div');
-                pauseIndicator.id = 'pause-indicator';
-                
-                // Different pause message based on input method
-                const isMobile = this.mobileControls && this.mobileControls.getIsTouchDevice();
-                const hasGamepad = this.gamepadManager && this.gamepadManager.isConnected();
-                
-                let pauseMessage;
-                if (isMobile) {
-                    pauseMessage = 'PAUSED<br><small>Tap to resume</small>';
-                } else if (hasGamepad) {
-                    pauseMessage = 'PAUSED<br><small>Press ESC or START to resume</small>';
-                } else {
-                    pauseMessage = 'PAUSED<br><small>Press ESC to resume</small>';
-                }
-                
-                pauseIndicator.innerHTML = pauseMessage;
-                pauseIndicator.style.cssText = `
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: rgba(0, 0, 0, 0.8);
-                    color: white;
-                    padding: 20px;
-                    border-radius: 10px;
-                    font-size: 24px;
-                    text-align: center;
-                    z-index: 1000;
-                    font-family: Arial, sans-serif;
-                `;
-                
-                // Add touch event for mobile resume
-                if (isMobile) {
-                    pauseIndicator.addEventListener('touchstart', (e) => {
-                        e.preventDefault();
-                        this.togglePause();
-                    });
-                }
-                
-                document.body.appendChild(pauseIndicator);
-            }
-            pauseIndicator.style.display = 'block';
-        } else {
-            if (pauseIndicator) {
-                pauseIndicator.style.display = 'none';
-            }
-        }
+        // Pause UI is now handled by React PauseMenu component
+        // This method is kept for backwards compatibility
     }
 
     // Get movement direction based on current input state (gamepad + keyboard + mobile)

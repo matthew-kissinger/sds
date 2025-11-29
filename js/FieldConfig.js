@@ -60,16 +60,13 @@ export const FIELD_SHAPES = {
         description: 'Wider than tall',
         icon: '▬',
         getBorderPoints: (bounds) => {
-            const centerX = (bounds.minX + bounds.maxX) / 2;
-            const centerZ = (bounds.minZ + bounds.maxZ) / 2;
-            const halfWidth = (bounds.maxX - bounds.minX) / 2;
-            const halfHeight = (bounds.maxZ - bounds.minZ) / 2;
-            // Make it 1.5x wider
+            // Bounds are already modified by modifyBounds, so just use them directly
+            const { minX, maxX, minZ, maxZ } = bounds;
             return [
-                { x: centerX - halfWidth * 1.5, z: centerZ - halfHeight * 0.7 },
-                { x: centerX + halfWidth * 1.5, z: centerZ - halfHeight * 0.7 },
-                { x: centerX + halfWidth * 1.5, z: centerZ + halfHeight * 0.7 },
-                { x: centerX - halfWidth * 1.5, z: centerZ + halfHeight * 0.7 }
+                { x: minX, z: minZ },
+                { x: maxX, z: minZ },
+                { x: maxX, z: maxZ },
+                { x: minX, z: maxZ }
             ];
         },
         modifyBounds: (bounds) => {
@@ -86,9 +83,8 @@ export const FIELD_SHAPES = {
         },
         defaultGateEdge: 2,
         getGatePosition: (bounds) => {
-            const centerZ = (bounds.minZ + bounds.maxZ) / 2;
-            const halfHeight = (bounds.maxZ - bounds.minZ) / 2;
-            return { x: 0, z: centerZ + halfHeight * 0.7, edgeAngle: 0 };
+            // Bounds are already modified, so just use maxZ directly
+            return { x: 0, z: bounds.maxZ, edgeAngle: 0 };
         }
     },
     tall: {
@@ -97,15 +93,13 @@ export const FIELD_SHAPES = {
         description: 'Taller than wide',
         icon: '▮',
         getBorderPoints: (bounds) => {
-            const centerX = (bounds.minX + bounds.maxX) / 2;
-            const centerZ = (bounds.minZ + bounds.maxZ) / 2;
-            const halfWidth = (bounds.maxX - bounds.minX) / 2;
-            const halfHeight = (bounds.maxZ - bounds.minZ) / 2;
+            // Bounds are already modified by modifyBounds, so just use them directly
+            const { minX, maxX, minZ, maxZ } = bounds;
             return [
-                { x: centerX - halfWidth * 0.7, z: centerZ - halfHeight * 1.5 },
-                { x: centerX + halfWidth * 0.7, z: centerZ - halfHeight * 1.5 },
-                { x: centerX + halfWidth * 0.7, z: centerZ + halfHeight * 1.5 },
-                { x: centerX - halfWidth * 0.7, z: centerZ + halfHeight * 1.5 }
+                { x: minX, z: minZ },
+                { x: maxX, z: minZ },
+                { x: maxX, z: maxZ },
+                { x: minX, z: maxZ }
             ];
         },
         modifyBounds: (bounds) => {
@@ -122,9 +116,8 @@ export const FIELD_SHAPES = {
         },
         defaultGateEdge: 2,
         getGatePosition: (bounds) => {
-            const centerZ = (bounds.minZ + bounds.maxZ) / 2;
-            const halfHeight = (bounds.maxZ - bounds.minZ) / 2;
-            return { x: 0, z: centerZ + halfHeight * 1.5, edgeAngle: 0 };
+            // Bounds are already modified, so just use maxZ directly
+            return { x: 0, z: bounds.maxZ, edgeAngle: 0 };
         }
     },
     lShape: {
@@ -167,10 +160,11 @@ export const FIELD_SHAPES = {
         label: 'Hexagon',
         description: '6-sided field (flat top)',
         icon: '⬡',
-        getBorderPoints: (bounds) => {
+        getBorderPoints: (bounds, originalBounds = null) => {
             const centerX = (bounds.minX + bounds.maxX) / 2;
             const centerZ = (bounds.minZ + bounds.maxZ) / 2;
-            const radius = Math.min(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ) / 2;
+            // Use half the width as radius (width = 2*radius for hexagon after modifyBounds)
+            const radius = (bounds.maxX - bounds.minX) / 2;
             const points = [];
             // Rotated so a FLAT EDGE is at the top (north) for proper gate placement
             for (let i = 0; i < 6; i++) {

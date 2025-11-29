@@ -174,6 +174,21 @@ export class StartScreen {
         console.log('[GAME] StartScreen.selectSolo calling startGame()');
         this.startGame();
     }
+
+    /**
+     * Start a local 2-player game
+     * @param {Object} config - Local game configuration
+     * @param {string} config.mode - 'coop', 'versus', or 'timed'
+     * @param {string} config.player1Dog - Dog type for player 1
+     * @param {string} config.player2Dog - Dog type for player 2
+     */
+    selectLocal(config) {
+        console.log('[GAME] StartScreen.selectLocal called with config:', config);
+        this.selectedMode = 'local';
+        this.localConfig = config;
+        this.playUIClick();
+        this.startGame();
+    }
     
     // Dog selection methods
     selectDog(dogType) {
@@ -264,19 +279,31 @@ export class StartScreen {
             if (this.selectedMode === 'multiplayer' && !roomData) {
                 roomData = this.networkManager.getCurrentRoom();
             }
-            
+
+            // For local mode, pass localConfig instead of roomData
+            if (this.selectedMode === 'local') {
+                console.log('[GAME] Starting local game:', {
+                    mode: 'local',
+                    localMode: this.localConfig?.mode,
+                    player1Dog: this.localConfig?.player1Dog,
+                    player2Dog: this.localConfig?.player2Dog
+                });
+                this.onGameStart('local', this.localConfig, null);
+                return;
+            }
+
             console.log('[GAME] Starting game:', {
                 mode: this.selectedMode || 'solo',
                 room: roomData ? roomData.roomCode : 'none',
                 players: roomData ? roomData.players?.length : 0,
                 hasInitialState: !!this.initialGameState
             });
-            
+
             // Include initial game state in room data if available
             if (roomData && this.initialGameState) {
                 roomData.initialGameState = this.initialGameState;
             }
-            
+
             this.onGameStart(this.selectedMode || 'solo', roomData, this.singlePlayerMode);
         }
     }
@@ -305,9 +332,17 @@ export class StartScreen {
     isMultiplayerMode() {
         return this.selectedMode === 'multiplayer';
     }
-    
+
     isSoloMode() {
         return this.selectedMode === 'solo';
+    }
+
+    isLocalMode() {
+        return this.selectedMode === 'local';
+    }
+
+    getLocalConfig() {
+        return this.localConfig;
     }
     
     getCurrentRoom() {
@@ -325,7 +360,8 @@ export class StartScreen {
         this.isHost = false;
         this.currentRoom = null;
         this.initialGameState = null;
-        
+        this.localConfig = null;
+
         this.cinematicCamera.angle = 0;
         this.setupCinematicCamera();
     }

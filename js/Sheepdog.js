@@ -819,21 +819,40 @@ export class Sheepdog {
     
     /**
      * Animate player icon floating effect
+     * @param {number} deltaTime - Time since last frame
+     * @param {number} cameraDistance - Optional camera distance for scaling in local multiplayer
      */
-    animatePlayerIcon(deltaTime) {
+    animatePlayerIcon(deltaTime, cameraDistance = null) {
         if (this.playerIcon && this.playerIcon.userData) {
             this.playerIcon.userData.animationTime += deltaTime;
             const floatOffset = Math.sin(this.playerIcon.userData.animationTime * 2) * 0.1;
             this.playerIcon.position.y = this.playerIcon.userData.originalY + floatOffset;
+
+            // Scale icon based on camera distance for local multiplayer
+            if (cameraDistance) {
+                const baseDistance = 80;
+                const baseScale = 2.5; // Base scale for local multiplayer (set in startLocalGame)
+                const maxScale = 6.0;
+                const minScale = baseScale;
+                // Calculate scale proportional to camera distance
+                const scaleFactor = Math.max(minScale, Math.min(maxScale, baseScale * (cameraDistance / baseDistance)));
+                this.playerIcon.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+                // Also raise the icon higher when camera is zoomed out
+                const heightFactor = cameraDistance / baseDistance;
+                this.playerIcon.userData.originalY = 3.5 * Math.max(1, heightFactor * 0.7);
+            }
         }
     }
     
     /**
      * Main animation update - called from move() method
+     * @param {number} deltaTime - Time since last frame
+     * @param {number} cameraDistance - Optional camera distance for scaling icons in local multiplayer
      */
-    animate(deltaTime) {
-        // Update player icon animation
-        this.animatePlayerIcon(deltaTime);
+    animate(deltaTime, cameraDistance = null) {
+        // Update player icon animation with optional camera distance scaling
+        this.animatePlayerIcon(deltaTime, cameraDistance);
 
         // Animation system is handled in updateAnimationSystem()
         // This method is kept for compatibility with existing code
@@ -947,8 +966,9 @@ export class Sheepdog {
      * Update distance indicator - follows the dog position
      * @param {number} cameraDistance - Distance from camera to dog
      * @param {number} deltaTime - Time since last frame
+     * @param {boolean} isLocalMultiplayer - Whether this is local 2-player mode
      */
-    updateDistanceIndicator(cameraDistance, deltaTime) {
+    updateDistanceIndicator(cameraDistance, deltaTime, isLocalMultiplayer = false) {
         // Ensure indicator is attached
         this.ensureIndicatorAttached();
 
@@ -962,16 +982,36 @@ export class Sheepdog {
         const data = this.distanceIndicator.userData;
         data.animationTime += deltaTime;
 
+        // Calculate scale based on camera distance for local multiplayer
+        // When camera zooms out, scale up the indicators so they remain visible
+        let scale = 1.0;
+        if (isLocalMultiplayer && cameraDistance) {
+            // Base scale at distance 80 (default camera distance)
+            // Scale up proportionally as camera zooms out
+            const baseDistance = 80;
+            const maxScale = 3.0; // Maximum scale factor
+            const minScale = 1.0; // Minimum scale factor
+            scale = Math.max(minScale, Math.min(maxScale, cameraDistance / baseDistance));
+        }
+
+        // Apply scale to the indicator group
+        this.distanceIndicator.scale.set(scale, scale, scale);
+
+        // Adjust height based on scale for local multiplayer
+        const baseArrowHeight = 6;
+        const baseDiamondHeight = 8;
+        const heightMultiplier = isLocalMultiplayer ? 1.2 : 1.0; // Raise higher in local multiplayer
+
         // Update arrow - bob up and down
         if (data.arrow) {
             const bob = Math.sin(data.animationTime * 3) * 0.3;
-            data.arrow.position.y = 6 + bob;
+            data.arrow.position.y = (baseArrowHeight * heightMultiplier) + bob;
         }
 
         // Update diamond - rotate and bob
         if (data.diamond) {
             const bob2 = Math.sin(data.animationTime * 2.5 + Math.PI) * 0.3;
-            data.diamond.position.y = 8 + bob2;
+            data.diamond.position.y = (baseDiamondHeight * heightMultiplier) + bob2;
             data.diamond.rotation.y = data.animationTime * 2;
         }
     }

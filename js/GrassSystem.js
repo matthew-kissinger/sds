@@ -728,8 +728,27 @@ export class GrassSystem {
         // Check dynamic exclusion zones (farmhouse, pasture, etc.)
         // No more hardcoded zones - all exclusions are added via addExclusionZone()
         for (const zone of this.exclusionZones) {
-            if (x >= zone.minX && x <= zone.maxX && z >= zone.minZ && z <= zone.maxZ) {
-                return true;
+            if (zone.type === 'rotated') {
+                // Rotated rectangle - transform point to local coordinates
+                const dx = x - zone.centerX;
+                const dz = z - zone.centerZ;
+
+                // Rotate the point by -angle to align with the rectangle's local axes
+                const localX = dx * zone.cosAngle - dz * zone.sinAngle;
+                const localZ = dx * zone.sinAngle + dz * zone.cosAngle;
+
+                // Check if the transformed point is within the rectangle bounds
+                const halfWidth = zone.width / 2;
+                const halfDepth = zone.depth / 2;
+                if (localX >= -halfWidth && localX <= halfWidth &&
+                    localZ >= -halfDepth && localZ <= halfDepth) {
+                    return true;
+                }
+            } else {
+                // Axis-aligned rectangle
+                if (x >= zone.minX && x <= zone.maxX && z >= zone.minZ && z <= zone.maxZ) {
+                    return true;
+                }
             }
         }
 
@@ -737,10 +756,32 @@ export class GrassSystem {
     }
 
     /**
-     * Add an exclusion zone
+     * Add an exclusion zone (axis-aligned rectangle)
      */
     addExclusionZone(minX, maxX, minZ, maxZ) {
-        this.exclusionZones.push({ minX, maxX, minZ, maxZ });
+        this.exclusionZones.push({ minX, maxX, minZ, maxZ, type: 'rect' });
+    }
+
+    /**
+     * Add a rotated rectangular exclusion zone
+     * @param {number} centerX - Center X of the rectangle
+     * @param {number} centerZ - Center Z of the rectangle
+     * @param {number} width - Width of the rectangle (before rotation)
+     * @param {number} depth - Depth of the rectangle (before rotation)
+     * @param {number} angle - Rotation angle in radians
+     */
+    addRotatedExclusionZone(centerX, centerZ, width, depth, angle) {
+        this.exclusionZones.push({
+            type: 'rotated',
+            centerX,
+            centerZ,
+            width,
+            depth,
+            angle,
+            // Pre-calculate cos and sin for efficiency
+            cosAngle: Math.cos(-angle),
+            sinAngle: Math.sin(-angle)
+        });
     }
 
     /**

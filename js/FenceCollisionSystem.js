@@ -506,21 +506,73 @@ export class FenceCollisionSystem {
 
     /**
      * Apply collision response to a position
+     * Iterates multiple times to handle corners and multiple fence intersections
      * @param {number} x - Current X
      * @param {number} z - Current Z
      * @param {number} radius - Entity radius
      * @returns {Object} - Corrected position {x, z, collided}
      */
     resolveCollision(x, z, radius = 1) {
-        const collision = this.checkCollision(x, z, radius);
+        let currentX = x;
+        let currentZ = z;
+        let collided = false;
+        let totalNormalX = 0;
+        let totalNormalZ = 0;
+        let collisionCount = 0;
 
-        if (collision) {
+        // Iterate up to 3 times to resolve multiple overlapping collisions
+        // This handles corners and T-junctions properly
+        for (let iteration = 0; iteration < 3; iteration++) {
+            // Skip collision if in gate passage
+            if (this.isInGatePassage(currentX, currentZ)) {
+                break;
+            }
+
+            const nearbySegments = this.getNearbySegments(currentX, currentZ);
+            const totalRadius = radius + this.fenceThickness / 2 + this.collisionBuffer;
+
+            // Collect ALL collisions, not just the closest
+            let pushX = 0;
+            let pushZ = 0;
+            let foundCollision = false;
+
+            for (const segment of nearbySegments) {
+                const collision = this.checkSegmentCollision(currentX, currentZ, segment, totalRadius);
+                if (collision) {
+                    // Accumulate push from all colliding segments
+                    pushX += collision.pushX;
+                    pushZ += collision.pushZ;
+                    totalNormalX += collision.normalX;
+                    totalNormalZ += collision.normalZ;
+                    collisionCount++;
+                    foundCollision = true;
+                    collided = true;
+                }
+            }
+
+            if (!foundCollision) {
+                break; // No more collisions to resolve
+            }
+
+            // Apply accumulated push
+            currentX += pushX;
+            currentZ += pushZ;
+        }
+
+        if (collided && collisionCount > 0) {
+            // Average the normals for velocity reflection
+            const normalLen = Math.sqrt(totalNormalX * totalNormalX + totalNormalZ * totalNormalZ);
+            if (normalLen > 0.01) {
+                totalNormalX /= normalLen;
+                totalNormalZ /= normalLen;
+            }
+
             return {
-                x: x + collision.pushX,
-                z: z + collision.pushZ,
+                x: currentX,
+                z: currentZ,
                 collided: true,
-                normalX: collision.normalX,
-                normalZ: collision.normalZ
+                normalX: totalNormalX,
+                normalZ: totalNormalZ
             };
         }
 

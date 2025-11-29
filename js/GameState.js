@@ -40,6 +40,7 @@ export class GameState {
         // Game state
         this.sheep = [];
         this.sheepdog = null;
+        this.sheepdog2 = null; // Secondary sheepdog for local 2-player mode
         this.sheepRetired = 0;
         this.gameCompleted = false;
         this.totalSheep = 200; // Default to classic mode
@@ -281,7 +282,8 @@ export class GameState {
             this.bounds,  // Always pass bounds so sheep stay in field
             this.params,  // Always pass params so sheep can flock
             true, // enableIndividualBleating
-            this.gameMode === 'multiplayer' // isMultiplayer flag
+            this.gameMode === 'multiplayer', // isMultiplayer flag
+            this.gameActive ? this.sheepdog2 : null // Second sheepdog for local 2-player
         );
         
         // Only count retired sheep if game is active
@@ -524,6 +526,14 @@ export class GameState {
     setSheepdog(sheepdog) {
         this.sheepdog = sheepdog;
     }
+
+    setSheepdog2(sheepdog2) {
+        this.sheepdog2 = sheepdog2;
+    }
+
+    getSheepdog2() {
+        return this.sheepdog2;
+    }
     
     getSheepRetired() {
         return this.sheepRetired;
@@ -576,6 +586,10 @@ export class GameState {
 
         // Clear sandbox-specific settings for non-sandbox modes
         this.borderPoints = null;
+        this.customFences = [];
+
+        // Clear fence collision system (remove any sandbox fences from previous game)
+        resetFenceCollisionSystem();
 
         // Reset all sheep to their starting positions and states
         if (this.optimizedSheepSystem) {
@@ -587,6 +601,11 @@ export class GameState {
                 borderPoints: null
             });
             this.optimizedSheepSystem.resetAllSheep();
+
+            // Clear borderPoints on each sheep (sandbox mode setting)
+            this.sheep.forEach(sheep => {
+                sheep.setBorderPoints(null);
+            });
         }
 
         // Log game start
