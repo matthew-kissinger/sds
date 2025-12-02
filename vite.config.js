@@ -3,7 +3,12 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
+// Use relative paths for itch.io, absolute for GitHub Pages
+const isItchio = process.env.BUILD_TARGET === 'itchio'
+
 export default defineConfig({
+  // Relative paths for itch.io, absolute for GitHub Pages
+  base: isItchio ? './' : '/',
   plugins: [
     tailwindcss(),
     react(),

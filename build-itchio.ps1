@@ -1,62 +1,44 @@
 # Build script for itch.io distribution
-# Creates a ZIP file ready for upload
+# Creates a ZIP file from Vite build output
 
 $ErrorActionPreference = "Stop"
 
 $projectRoot = $PSScriptRoot
-$distFolder = Join-Path $projectRoot "dist-itchio"
+$distFolder = Join-Path $projectRoot "dist"
 $zipFile = Join-Path $projectRoot "sheep-dog-sim-itchio.zip"
 
-Write-Host "Building itch.io distribution package..." -ForegroundColor Cyan
+Write-Host "Building Sheep Dog Sim for itch.io..." -ForegroundColor Cyan
+Write-Host ""
 
-# Clean up previous build
-if (Test-Path $distFolder) {
-    Remove-Item -Recurse -Force $distFolder
+# Run Vite build with itch.io-specific config (relative paths)
+Write-Host "Running Vite build for itch.io (relative paths)..." -ForegroundColor Yellow
+npm run build:itchio
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Build failed!" -ForegroundColor Red
+    exit 1
 }
+Write-Host "Build complete!" -ForegroundColor Green
+Write-Host ""
+
+# Remove old ZIP if exists
 if (Test-Path $zipFile) {
     Remove-Item -Force $zipFile
+    Write-Host "Removed old ZIP file" -ForegroundColor Gray
 }
 
-# Create dist folder
-New-Item -ItemType Directory -Path $distFolder | Out-Null
-
-# Copy required files and folders
-Write-Host "Copying files..." -ForegroundColor Yellow
-
-# Core files
-Copy-Item (Join-Path $projectRoot "index.html") $distFolder
-Copy-Item (Join-Path $projectRoot "sw.js") $distFolder
-
-# Directories
-$folders = @("js", "css", "assets", "shared")
-foreach ($folder in $folders) {
-    $src = Join-Path $projectRoot $folder
-    $dest = Join-Path $distFolder $folder
-    if (Test-Path $src) {
-        Copy-Item -Recurse $src $dest
-        Write-Host "  Copied $folder/" -ForegroundColor Gray
-    }
-}
-
-# Remove server-specific files from assets if any
-$backupFolder = Join-Path $distFolder "assets\sounds_compressed\backup"
-if (Test-Path $backupFolder) {
-    Remove-Item -Recurse -Force $backupFolder
-    Write-Host "  Removed backup folder" -ForegroundColor Gray
-}
-
-# Create the ZIP
+# Create the ZIP from dist folder
 Write-Host "Creating ZIP archive..." -ForegroundColor Yellow
 Compress-Archive -Path (Join-Path $distFolder "*") -DestinationPath $zipFile -Force
 
 # Get file sizes
 $zipSize = (Get-Item $zipFile).Length / 1MB
 Write-Host ""
-Write-Host "Build complete!" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  Build complete!" -ForegroundColor Green
 Write-Host "  ZIP file: $zipFile" -ForegroundColor White
 Write-Host "  Size: $([math]::Round($zipSize, 2)) MB" -ForegroundColor White
+Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Upload this ZIP to itch.io" -ForegroundColor Cyan
-
-# Cleanup dist folder (keep only ZIP)
-# Remove-Item -Recurse -Force $distFolder
+Write-Host "To upload to itch.io using butler:" -ForegroundColor Yellow
+Write-Host "  butler push sheep-dog-sim-itchio.zip YOUR_USERNAME/sheep-dog-sim:html5" -ForegroundColor White
+Write-Host ""
