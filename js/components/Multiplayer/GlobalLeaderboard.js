@@ -169,15 +169,23 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            width: '100%'
+            width: '100%',
+            maxHeight: '100%',
+            padding: isMobile ? '0.5rem' : '1rem'
         }
     },
         createElement(Panel, {
             size: 'lg',
             maxWidth: '56rem',
-            style: { animation: 'slideUp 0.5s ease-out' }
+            style: {
+                animation: 'slideUp 0.5s ease-out',
+                maxHeight: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+            }
         }, [
-            // Header
+            // Header (fixed)
             createElement('div', {
                 key: 'header',
                 style: {
@@ -186,7 +194,8 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     justifyContent: 'space-between',
                     flexDirection: isMobile ? 'column' : 'row',
                     gap: isMobile ? '0.75rem' : '0',
-                    marginBottom: isCompact ? '1rem' : '1.5rem'
+                    marginBottom: isCompact ? '1rem' : '1.5rem',
+                    flexShrink: 0
                 }
             }, [
                 createElement(PanelTitle, {
@@ -214,7 +223,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 ])
             ]),
 
-            // Tab Navigation
+            // Tab Navigation (fixed)
             createElement('div', {
                 key: 'tabs',
                 style: {
@@ -222,7 +231,8 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     flexWrap: 'wrap',
                     gap: '0.5rem',
                     marginBottom: isCompact ? '1rem' : '1.5rem',
-                    overflowX: 'auto'
+                    overflowX: 'auto',
+                    flexShrink: 0
                 }
             }, tabs.map(tab =>
                 createElement('button', {
@@ -232,10 +242,15 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 }, t(tab.labelKey))
             )),
 
-            // Content Area
+            // Content Area (scrollable)
             createElement('div', {
                 key: 'content',
-                style: { minHeight: isCompact ? '200px' : '300px' }
+                style: {
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: 'auto',
+                    WebkitOverflowScrolling: 'touch'
+                }
             }, [
                 loading && createElement('div', {
                     key: 'loading',
@@ -270,12 +285,15 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 !loading && !error && renderLeaderboardTable(activeTab)
             ]),
 
-            // Back Button
+            // Back Button (always visible)
             createElement(Button, {
                 key: 'back',
                 variant: 'secondary',
                 onClick: onBack,
-                style: { marginTop: isCompact ? '1rem' : '1.5rem' }
+                style: {
+                    marginTop: isCompact ? '1rem' : '1.5rem',
+                    flexShrink: 0
+                }
             }, t('common.backToMenu'))
         ])
     );
