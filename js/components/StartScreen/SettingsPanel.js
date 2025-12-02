@@ -3,9 +3,11 @@
  * Game settings configuration UI
  */
 import React, { createElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button, BackButton } from '../ui/Button.js';
+import { LanguageSelector } from '../ui/LanguageSelector.js';
 import { getDefaultSettings, saveSettings, applySettingsToGame } from '../shared/settings.js';
 
 // Toggle switch component
@@ -41,6 +43,7 @@ function Toggle({ value, onChange, disabled = false }) {
 }
 
 export function SettingsPanel({ settings, onSettingsChange, onBack }) {
+    const { t } = useTranslation();
     const { isCompact } = useResponsive();
 
     const handleSettingChange = (key, value) => {
@@ -97,11 +100,12 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             maxWidth: '28rem',
             style: {
                 animation: 'slideUp 0.5s ease-out',
-                maxHeight: isCompact ? '80vh' : 'none',
-                overflowY: isCompact ? 'auto' : 'visible'
+                maxHeight: isCompact ? 'calc(80vh - env(safe-area-inset-bottom, 0px))' : 'none',
+                overflowY: isCompact ? 'auto' : 'visible',
+                WebkitOverflowScrolling: 'touch'
             }
         }, [
-            createElement(PanelTitle, { key: 'title' }, 'Settings'),
+            createElement(PanelTitle, { key: 'title' }, t('settings.title')),
 
             createElement('div', {
                 key: 'content',
@@ -111,24 +115,30 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                     gap: isCompact ? '1rem' : '1.5rem'
                 }
             }, [
+                // Language Selector
+                createElement('div', { key: 'language' }, [
+                    createElement('label', { key: 'label', style: labelStyle }, t('settings.language')),
+                    createElement(LanguageSelector, { key: 'selector', variant: 'full' })
+                ]),
+
                 // Performance Mode
                 createElement('div', { key: 'performance-mode' }, [
-                    createElement('label', { key: 'label', style: labelStyle }, 'Performance Mode'),
+                    createElement('label', { key: 'label', style: labelStyle }, t('settings.performanceMode')),
                     createElement('select', {
                         key: 'select',
                         value: settings.performanceMode,
                         onChange: (e) => handleSettingChange('performanceMode', e.target.value),
                         style: selectStyle
                     }, [
-                        createElement('option', { key: 'performance', value: 'performance' }, 'Performance - Maximum FPS'),
-                        createElement('option', { key: 'balanced', value: 'balanced' }, 'Balanced - Default settings'),
-                        createElement('option', { key: 'quality', value: 'quality' }, 'Quality - Best visuals')
+                        createElement('option', { key: 'performance', value: 'performance' }, t('settings.performanceOption')),
+                        createElement('option', { key: 'balanced', value: 'balanced' }, t('settings.balancedOption')),
+                        createElement('option', { key: 'quality', value: 'quality' }, t('settings.qualityOption'))
                     ])
                 ]),
 
                 // Audio Enable Toggle
                 createElement('div', { key: 'audio-enable', style: rowStyle }, [
-                    createElement('label', { key: 'label', style: { ...labelStyle, marginBottom: 0 } }, 'Audio Enabled'),
+                    createElement('label', { key: 'label', style: { ...labelStyle, marginBottom: 0 } }, t('settings.audioEnabled')),
                     createElement(Toggle, {
                         key: 'toggle',
                         value: settings.audioEnabled,
@@ -141,7 +151,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                     createElement('label', {
                         key: 'label',
                         style: labelStyle
-                    }, `Audio Volume (${settings.audioVolume}%)`),
+                    }, `${t('settings.audioVolume')} (${settings.audioVolume}%)`),
                     createElement('input', {
                         key: 'slider',
                         type: 'range',
@@ -163,7 +173,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
 
                 // Performance Stats Toggle
                 createElement('div', { key: 'show-stats', style: rowStyle }, [
-                    createElement('label', { key: 'label', style: { ...labelStyle, marginBottom: 0 } }, 'Show Performance Stats'),
+                    createElement('label', { key: 'label', style: { ...labelStyle, marginBottom: 0 } }, t('settings.showStats')),
                     createElement(Toggle, {
                         key: 'toggle',
                         value: settings.showStats,
@@ -186,13 +196,13 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                     variant: 'secondary',
                     onClick: resetToDefaults,
                     style: { flex: 1 }
-                }, 'Reset to Defaults'),
+                }, t('settings.resetDefaults')),
                 createElement(Button, {
                     key: 'back',
                     variant: 'primary',
                     onClick: onBack,
                     style: { flex: 1 }
-                }, '← Back to Menu')
+                }, t('common.backToMenu'))
             ])
         ])
     );

@@ -3,6 +3,7 @@
  * Multiplayer menu - Create, Join, Quick Match
  */
 import React, { createElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { MenuOption, MenuOptionGrid } from '../ui/MenuOption.js';
@@ -11,25 +12,26 @@ import { BackButton } from '../ui/Button.js';
 const OPTIONS = [
     {
         id: 'create',
-        label: 'Create Room',
-        description: 'Host a new game room',
+        labelKey: 'multiplayer.createRoom',
+        descKey: 'multiplayer.createRoomDesc',
         color: '#10b981' // Emerald
     },
     {
         id: 'join',
-        label: 'Join Room',
-        description: 'Enter a room code',
+        labelKey: 'multiplayer.joinRoom',
+        descKey: 'multiplayer.joinRoomDesc',
         color: '#3b82f6' // Blue
     },
     {
         id: 'quick',
-        label: 'Quick Match',
-        description: 'Find an available game',
+        labelKey: 'multiplayer.quickMatch',
+        descKey: 'multiplayer.quickMatchDesc',
         color: '#f59e0b' // Amber
     }
 ];
 
 export function MultiplayerOptions({ onBack, onSelectOption }) {
+    const { t } = useTranslation();
     const { isLandscapeMobile } = useResponsive();
 
     return createElement('div', {
@@ -44,14 +46,14 @@ export function MultiplayerOptions({ onBack, onSelectOption }) {
         maxWidth: '28rem',
         style: { animation: 'slideUp 0.5s ease-out' }
     }, [
-        createElement(PanelTitle, { key: 'title' }, 'Multiplayer'),
+        createElement(PanelTitle, { key: 'title' }, t('multiplayer.title')),
 
         createElement(MenuOptionGrid, { key: 'options' },
             OPTIONS.map(option =>
                 createElement(MenuOption, {
                     key: option.id,
-                    label: option.label,
-                    description: option.description,
+                    label: t(option.labelKey),
+                    description: t(option.descKey),
                     accentColor: option.color,
                     onClick: () => onSelectOption(option.id)
                 })
@@ -62,7 +64,7 @@ export function MultiplayerOptions({ onBack, onSelectOption }) {
             key: 'back',
             style: { marginTop: isLandscapeMobile ? '0.5rem' : '1rem' }
         },
-            createElement(BackButton, { onClick: onBack }, 'Back')
+            createElement(BackButton, { onClick: onBack }, t('common.back'))
         )
     ]));
 }

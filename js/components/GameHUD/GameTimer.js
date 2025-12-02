@@ -3,8 +3,10 @@
  * Displays elapsed time or countdown timer
  */
 import React, { createElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export function GameTimer({ gameTime, timeLimit }) {
+    const { t } = useTranslation();
     const minutes = Math.floor(gameTime / 60);
     const seconds = Math.floor(gameTime % 60);
     const isTimedMode = timeLimit > 0;
@@ -28,7 +30,7 @@ export function GameTimer({ gameTime, timeLimit }) {
                 createElement('div', {
                     key: 'label',
                     className: 'text-white/60 text-xs text-center'
-                }, 'Time Remaining')
+                }, t('hud.timeRemaining'))
             ] : createElement('div', {
                 className: 'text-white font-mono text-2xl'
             }, `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)

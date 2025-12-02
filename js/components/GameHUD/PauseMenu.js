@@ -4,6 +4,7 @@
  * Works on both desktop and mobile with responsive design
  */
 import React, { createElement, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 
 // Icon components
@@ -144,6 +145,7 @@ export function PauseMenu({
     showFullscreenOption = false,
     gameMode = 'solo'
 }) {
+    const { t } = useTranslation();
     const { isMobile, isLandscapeMobile } = useResponsive();
 
     // Handle escape key to resume
@@ -248,11 +250,11 @@ export function PauseMenu({
     },
         createElement('div', { style: panelStyle }, [
             // Title
-            createElement('h2', { key: 'title', style: titleStyle }, 'PAUSED'),
+            createElement('h2', { key: 'title', style: titleStyle }, t('pause.title')),
 
             // Subtitle with control hint
             createElement('p', { key: 'subtitle', style: subtitleStyle },
-                isMobile ? 'Tap outside to resume' : 'Press ESC to resume'
+                isMobile ? t('pause.tapToResume') : t('pause.pressEscToResume')
             ),
 
             // Buttons
@@ -261,7 +263,7 @@ export function PauseMenu({
                 createElement(MenuButton, {
                     key: 'resume',
                     icon: createElement(PlayIcon, { size: iconSize }),
-                    label: 'Resume',
+                    label: t('pause.resume'),
                     variant: 'primary',
                     size: buttonSize,
                     onClick: onResume
@@ -271,7 +273,7 @@ export function PauseMenu({
                 createElement(MenuButton, {
                     key: 'restart',
                     icon: createElement(RestartIcon, { size: iconSize }),
-                    label: 'Restart',
+                    label: t('pause.restart'),
                     size: buttonSize,
                     onClick: onRestart
                 }),
@@ -283,7 +285,7 @@ export function PauseMenu({
                 showFullscreenOption && createElement(MenuButton, {
                     key: 'fullscreen',
                     icon: createElement(FullscreenIcon, { size: iconSize, isFullscreen }),
-                    label: isFullscreen ? 'Exit Fullscreen' : 'Fullscreen',
+                    label: isFullscreen ? t('pause.exitFullscreen') : t('pause.fullscreen'),
                     variant: 'secondary',
                     size: buttonSize,
                     onClick: onToggleFullscreen
@@ -293,7 +295,7 @@ export function PauseMenu({
                 createElement(MenuButton, {
                     key: 'menu',
                     icon: createElement(HomeIcon, { size: iconSize }),
-                    label: 'Main Menu',
+                    label: t('pause.mainMenu'),
                     variant: 'secondary',
                     size: buttonSize,
                     onClick: onMainMenu

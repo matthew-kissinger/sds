@@ -3,12 +3,14 @@
  * View global rankings across all game modes
  */
 import React, { createElement, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getNetworkManager } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 
 export function GlobalLeaderboard({ onBack, playerIdentity }) {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('soloClassic');
     const [leaderboards, setLeaderboards] = useState({});
     const [loading, setLoading] = useState(true);
@@ -17,11 +19,11 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
     const { isCompact, isMobile } = useResponsive();
 
     const tabs = [
-        { id: 'soloClassic', name: 'Solo Classic', icon: 'Solo' },
-        { id: 'soloExtreme', name: 'Solo Extreme', icon: 'Extreme' },
-        { id: 'timed', name: 'Timed (3 min)', icon: 'Timed' },
-        { id: 'competitive', name: 'Competitive', icon: 'Race' },
-        { id: 'cooperative', name: 'Cooperative', icon: 'Co-op' }
+        { id: 'soloClassic', labelKey: 'leaderboard.soloClassic' },
+        { id: 'soloExtreme', labelKey: 'leaderboard.soloExtreme' },
+        { id: 'timed', labelKey: 'leaderboard.timed' },
+        { id: 'competitive', labelKey: 'leaderboard.competitive' },
+        { id: 'cooperative', labelKey: 'leaderboard.cooperative' }
     ];
 
     const loadLeaderboards = async () => {
@@ -45,13 +47,13 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
             setLeaderboards(data);
             setLastRefresh(new Date());
 
-        } catch (error) {
-            console.error('[LEADERBOARD] Failed to load:', error);
+        } catch (err) {
+            console.error('[LEADERBOARD] Failed to load:', err);
 
-            if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_REFUSED')) {
-                setError('Server offline - Leaderboards unavailable. The server may be starting up or temporarily down.');
+            if (err.message.includes('Failed to fetch') || err.message.includes('ERR_CONNECTION_REFUSED')) {
+                setError('serverOffline');
             } else {
-                setError('Failed to load leaderboards. Please try again.');
+                setError('loadFailed');
             }
         } finally {
             setLoading(false);
@@ -72,7 +74,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     padding: '2rem',
                     color: 'rgba(255, 255, 255, 0.6)'
                 }
-            }, 'No scores recorded yet. Be the first!');
+            }, t('leaderboard.noScores'));
         }
 
         return createElement('div', {
@@ -117,7 +119,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     createElement('div', {
                         key: 'rank',
                         style: getRankStyle(entry.rank)
-                    }, entry.rank <= 3 ? ['1st', '2nd', '3rd'][entry.rank - 1] : entry.rank),
+                    }, entry.rank <= 3 ? [t('leaderboard.ranks.first'), t('leaderboard.ranks.second'), t('leaderboard.ranks.third')][entry.rank - 1] : entry.rank),
                     createElement('div', { key: 'info' }, [
                         createElement('div', {
                             key: 'name',
@@ -126,7 +128,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                                 color: isPlayer ? '#93c5fd' : 'white',
                                 fontSize: isCompact ? '0.8rem' : '1rem'
                             }
-                        }, entry.displayName + (isPlayer ? ' (You)' : '')),
+                        }, entry.displayName + (isPlayer ? ` (${t('common.you')})` : '')),
                         !isCompact && createElement('div', {
                             key: 'full',
                             style: {
@@ -190,7 +192,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 createElement(PanelTitle, {
                     key: 'title',
                     style: { marginBottom: 0 }
-                }, 'Global Leaderboard'),
+                }, t('leaderboard.title')),
                 createElement('div', {
                     key: 'controls',
                     style: { display: 'flex', alignItems: 'center', gap: '0.75rem' }
@@ -201,14 +203,14 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                             fontSize: '0.75rem',
                             color: 'rgba(255, 255, 255, 0.6)'
                         }
-                    }, `Updated ${lastRefresh.toLocaleTimeString()}`),
+                    }, t('leaderboard.updated', { time: lastRefresh.toLocaleTimeString() })),
                     createElement(Button, {
                         key: 'refresh',
                         variant: 'secondary',
                         onClick: loadLeaderboards,
                         disabled: loading,
                         style: { padding: '0.5rem 1rem', fontSize: '0.875rem' }
-                    }, loading ? '...' : 'Refresh')
+                    }, loading ? '...' : t('common.refresh'))
                 ])
             ]),
 
@@ -227,7 +229,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     key: tab.id,
                     style: tabButtonStyle(activeTab === tab.id),
                     onClick: () => setActiveTab(tab.id)
-                }, tab.icon)
+                }, t(tab.labelKey))
             )),
 
             // Content Area
@@ -247,7 +249,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     createElement('span', {
                         key: 'text',
                         style: { color: 'rgba(255, 255, 255, 0.8)' }
-                    }, 'Loading leaderboards...')
+                    }, t('leaderboard.loading'))
                 ]),
 
                 error && createElement('div', {
@@ -257,12 +259,12 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     createElement('p', {
                         key: 'message',
                         style: { color: '#f87171', marginBottom: '1rem' }
-                    }, error),
+                    }, t(`leaderboard.${error}`)),
                     createElement(Button, {
                         key: 'retry',
                         variant: 'primary',
                         onClick: loadLeaderboards
-                    }, 'Try Again')
+                    }, t('common.retry'))
                 ]),
 
                 !loading && !error && renderLeaderboardTable(activeTab)
@@ -274,7 +276,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 variant: 'secondary',
                 onClick: onBack,
                 style: { marginTop: isCompact ? '1rem' : '1.5rem' }
-            }, '\u2190 Back to Menu')
+            }, t('common.backToMenu'))
         ])
     );
 }

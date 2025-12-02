@@ -5,6 +5,7 @@
  * Sheep icon: "Sheep" by Delapouite from game-icons.net (CC BY 3.0)
  */
 import React, { createElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CompactStaminaBar } from './CompactStaminaBar.js';
 
 // Pause icon
@@ -37,6 +38,7 @@ const SheepIcon = ({ size = 24, color = 'currentColor' }) => createElement('svg'
  * - Progress: text-sm (12px) - secondary info
  */
 export function SheepCounter({ sheepCount, totalSheep, stamina, onPause }) {
+    const { t } = useTranslation();
     const percentage = Math.round((sheepCount / totalSheep) * 100);
 
     // Pause button style
@@ -80,7 +82,7 @@ export function SheepCounter({ sheepCount, totalSheep, stamina, onPause }) {
                     createElement('div', {
                         key: 'progress',
                         className: 'text-sm text-blue-300'
-                    }, `${percentage}% complete`)
+                    }, `${percentage}% ${t('hud.complete')}`)
                 ]),
                 // Pause button
                 onPause && createElement('button', {

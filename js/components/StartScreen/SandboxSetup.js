@@ -3,6 +3,7 @@
  * Configuration interface for sandbox/creative mode
  */
 import React, { createElement, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button, BackButton } from '../ui/Button.js';
@@ -10,28 +11,28 @@ import { FIELD_SIZES as FIELD_SIZE_BOUNDS, FIELD_SHAPES } from '../../FieldConfi
 
 // Field size presets - derived from FieldConfig
 const FIELD_SIZES = [
-    { id: 'small', label: 'Small', description: '100x100', bounds: { ...FIELD_SIZE_BOUNDS.small } },
-    { id: 'medium', label: 'Medium', description: '200x200', bounds: { ...FIELD_SIZE_BOUNDS.medium } },
-    { id: 'large', label: 'Large', description: '300x300', bounds: { ...FIELD_SIZE_BOUNDS.large } },
-    { id: 'huge', label: 'Huge', description: '400x400', bounds: { ...FIELD_SIZE_BOUNDS.huge } }
+    { id: 'small', labelKey: 'sandbox.sizes.small', description: '100x100', bounds: { ...FIELD_SIZE_BOUNDS.small } },
+    { id: 'medium', labelKey: 'sandbox.sizes.medium', description: '200x200', bounds: { ...FIELD_SIZE_BOUNDS.medium } },
+    { id: 'large', labelKey: 'sandbox.sizes.large', description: '300x300', bounds: { ...FIELD_SIZE_BOUNDS.large } },
+    { id: 'huge', labelKey: 'sandbox.sizes.huge', description: '400x400', bounds: { ...FIELD_SIZE_BOUNDS.huge } }
 ];
 
-// Field shape options - derived from FieldConfig
+// Field shape options - derived from FieldConfig with translation keys
 const FIELD_SHAPE_OPTIONS = Object.values(FIELD_SHAPES).map(shape => ({
     id: shape.id,
-    label: shape.label,
+    labelKey: `sandbox.shapes.${shape.id}`,
     description: shape.description,
     icon: shape.icon
 }));
 
 // Fence layout presets
 const FENCE_PRESETS = [
-    { id: 'open', label: 'Open Field', description: 'No internal fences' },
-    { id: 'corridor', label: 'Corridor', description: 'Fenced path to gate' },
-    { id: 'funnel', label: 'Funnel', description: 'Narrowing path to gate' },
-    { id: 'maze', label: 'Maze', description: 'Obstacles to navigate' },
-    { id: 'obstacles', label: 'Obstacles', description: 'Random fence obstacles' },
-    { id: 'custom', label: 'Custom', description: 'Design your own layout' }
+    { id: 'open', labelKey: 'sandbox.fencePresets.open', descKey: 'sandbox.fencePresets.openDesc' },
+    { id: 'corridor', labelKey: 'sandbox.fencePresets.corridor', descKey: 'sandbox.fencePresets.corridorDesc' },
+    { id: 'funnel', labelKey: 'sandbox.fencePresets.funnel', descKey: 'sandbox.fencePresets.funnelDesc' },
+    { id: 'maze', labelKey: 'sandbox.fencePresets.maze', descKey: 'sandbox.fencePresets.mazeDesc' },
+    { id: 'obstacles', labelKey: 'sandbox.fencePresets.obstacles', descKey: 'sandbox.fencePresets.obstaclesDesc' },
+    { id: 'custom', labelKey: 'sandbox.fencePresets.custom', descKey: 'sandbox.fencePresets.customDesc' }
 ];
 
 // Slider component for number inputs
@@ -97,6 +98,7 @@ function SectionHeader({ children }) {
 }
 
 export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences, onBack }) {
+    const { t } = useTranslation();
     const { isCompact, isLandscapeMobile } = useResponsive();
     const [activeTab, setActiveTab] = useState('sheep');
 
@@ -128,9 +130,9 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
 
     // Tabs for mobile/compact view
     const tabs = [
-        { id: 'sheep', label: 'Sheep' },
-        { id: 'field', label: 'Field' },
-        { id: 'rules', label: 'Rules' }
+        { id: 'sheep', labelKey: 'sandbox.tabs.sheep' },
+        { id: 'field', labelKey: 'sandbox.tabs.field' },
+        { id: 'rules', labelKey: 'sandbox.tabs.rules' }
     ];
 
     // Tab content renderer
@@ -138,10 +140,10 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
         switch (activeTab) {
             case 'sheep':
                 return createElement('div', null, [
-                    createElement(SectionHeader, { key: 'h1' }, 'Sheep Count'),
+                    createElement(SectionHeader, { key: 'h1' }, t('sandbox.sheepCount')),
                     createElement(Slider, {
                         key: 'count',
-                        label: 'Number of Sheep',
+                        label: t('sandbox.numberOfSheep'),
                         value: config.sheep?.count || 200,
                         min: 10,
                         max: 2000,
@@ -165,10 +167,10 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         )
                     ]),
 
-                    createElement(SectionHeader, { key: 'h2' }, 'Behavior'),
+                    createElement(SectionHeader, { key: 'h2' }, t('sandbox.behavior')),
                     createElement(Slider, {
                         key: 'speed',
-                        label: 'Movement Speed',
+                        label: t('sandbox.movementSpeed'),
                         value: config.sheep?.behavior?.speed || 0.1,
                         min: 0.05,
                         max: 0.3,
@@ -178,7 +180,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                     }),
                     createElement(Slider, {
                         key: 'cohesion',
-                        label: 'Flock Cohesion',
+                        label: t('sandbox.flockCohesion'),
                         value: config.sheep?.behavior?.cohesion || 1.0,
                         min: 0.1,
                         max: 2.0,
@@ -188,7 +190,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                     }),
                     createElement(Slider, {
                         key: 'separation',
-                        label: 'Separation Distance',
+                        label: t('sandbox.separationDistance'),
                         value: config.sheep?.behavior?.separationDistance || 2.0,
                         min: 1.0,
                         max: 5.0,
@@ -200,21 +202,21 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
 
             case 'field':
                 return createElement('div', null, [
-                    createElement(SectionHeader, { key: 'h1' }, 'Field Size'),
+                    createElement(SectionHeader, { key: 'h1' }, t('sandbox.fieldSize')),
                     createElement('div', {
                         key: 'sizes',
                         className: 'grid grid-cols-2 gap-2'
                     }, FIELD_SIZES.map(size =>
                         createElement(OptionButton, {
                             key: size.id,
-                            label: size.label,
+                            label: t(size.labelKey),
                             description: size.description,
                             selected: config.field?.size === size.id,
                             onClick: () => updateConfig('field.size', size.id)
                         })
                     )),
 
-                    createElement(SectionHeader, { key: 'h-shape' }, 'Field Shape'),
+                    createElement(SectionHeader, { key: 'h-shape' }, t('sandbox.fieldShape')),
                     createElement('div', {
                         key: 'shapes',
                         className: 'grid grid-cols-4 gap-2'
@@ -237,7 +239,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                             title: shape.description
                         }, [
                             createElement('span', { key: 'icon', className: 'text-2xl mb-1' }, shape.icon),
-                            createElement('span', { key: 'label', className: 'text-[10px] font-medium' }, shape.label)
+                            createElement('span', { key: 'label', className: 'text-[10px] font-medium' }, t(shape.labelKey))
                         ])
                     )),
                     // Show "Edit Shape" button when custom shape is selected
@@ -248,18 +250,18 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         className: 'w-full mt-2 mb-2',
                         style: { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderColor: 'rgba(139, 92, 246, 0.5)' }
                     }, config.field?.customBorderPoints?.length >= 3
-                        ? `Edit Custom Shape (${config.field.customBorderPoints.length} points)`
-                        : 'Draw Custom Shape'),
+                        ? t('sandbox.editCustomShape')
+                        : t('sandbox.drawCustomShape')),
 
-                    createElement(SectionHeader, { key: 'h2' }, 'Fence Layout'),
+                    createElement(SectionHeader, { key: 'h2' }, t('sandbox.fenceLayout')),
                     createElement('div', {
                         key: 'presets',
                         className: 'grid grid-cols-2 gap-2'
                     }, FENCE_PRESETS.map(preset =>
                         createElement(OptionButton, {
                             key: preset.id,
-                            label: preset.label,
-                            description: preset.description,
+                            label: t(preset.labelKey),
+                            description: t(preset.descKey),
                             selected: config.preset === preset.id,
                             onClick: () => {
                                 updateConfig('preset', preset.id);
@@ -276,17 +278,17 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         variant: 'secondary',
                         onClick: onEditFences,
                         className: 'w-full mt-3'
-                    }, 'Edit Fence Layout')
+                    }, t('sandbox.editFenceLayout'))
                 ]);
 
             case 'rules':
                 return createElement('div', null, [
-                    createElement(SectionHeader, { key: 'h1' }, 'Timer'),
+                    createElement(SectionHeader, { key: 'h1' }, t('sandbox.timer')),
                     createElement('div', {
                         key: 'timer-toggle',
                         className: 'flex items-center justify-between p-3 bg-white/5 rounded-xl mb-3'
                     }, [
-                        createElement('span', { key: 'label', className: 'text-white/80' }, 'Enable Timer'),
+                        createElement('span', { key: 'label', className: 'text-white/80' }, t('sandbox.enableTimer')),
                         createElement('button', {
                             key: 'toggle',
                             onClick: () => updateConfig('rules.timerEnabled', !config.rules?.timerEnabled),
@@ -307,15 +309,15 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         }, [
                             createElement(OptionButton, {
                                 key: 'countup',
-                                label: 'Count Up',
-                                description: 'Track your time',
+                                label: t('sandbox.countUp'),
+                                description: t('sandbox.countUpDesc'),
                                 selected: config.rules?.timerMode !== 'countdown',
                                 onClick: () => updateConfig('rules.timerMode', 'countup')
                             }),
                             createElement(OptionButton, {
                                 key: 'countdown',
-                                label: 'Countdown',
-                                description: 'Race against time',
+                                label: t('sandbox.countdown'),
+                                description: t('sandbox.countdownDesc'),
                                 selected: config.rules?.timerMode === 'countdown',
                                 onClick: () => updateConfig('rules.timerMode', 'countdown'),
                                 accentColor: '#ef4444'
@@ -324,7 +326,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
 
                         config.rules?.timerMode === 'countdown' && createElement(Slider, {
                             key: 'time-limit',
-                            label: 'Time Limit',
+                            label: t('sandbox.timeLimit'),
                             value: config.rules?.timeLimit || 180,
                             min: 60,
                             max: 600,
@@ -334,29 +336,29 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         })
                     ],
 
-                    createElement(SectionHeader, { key: 'h2' }, 'Win Condition'),
+                    createElement(SectionHeader, { key: 'h2' }, t('sandbox.winCondition')),
                     createElement('div', {
                         key: 'win-conditions',
                         className: 'space-y-2'
                     }, [
                         createElement(OptionButton, {
                             key: 'all',
-                            label: 'Herd All Sheep',
-                            description: 'Classic completion - all sheep to pasture',
+                            label: t('sandbox.herdAllSheep'),
+                            description: t('sandbox.herdAllSheepDesc'),
                             selected: config.rules?.winCondition === 'all',
                             onClick: () => updateConfig('rules.winCondition', 'all')
                         }),
                         createElement(OptionButton, {
                             key: 'percentage',
-                            label: 'Percentage Goal',
-                            description: 'Complete when reaching target percentage',
+                            label: t('sandbox.percentageGoal'),
+                            description: t('sandbox.percentageGoalDesc'),
                             selected: config.rules?.winCondition === 'percentage',
                             onClick: () => updateConfig('rules.winCondition', 'percentage'),
                             accentColor: '#3b82f6'
                         }),
                         config.rules?.winCondition === 'percentage' && createElement(Slider, {
                             key: 'percentage-slider',
-                            label: 'Target Percentage',
+                            label: t('sandbox.targetPercentage'),
                             value: config.rules?.winPercentage || 75,
                             min: 25,
                             max: 100,
@@ -366,8 +368,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         }),
                         createElement(OptionButton, {
                             key: 'none',
-                            label: 'Free Play',
-                            description: 'No win condition - just play!',
+                            label: t('sandbox.freePlay'),
+                            description: t('sandbox.freePlayDesc'),
                             selected: config.rules?.winCondition === 'none',
                             onClick: () => updateConfig('rules.winCondition', 'none'),
                             accentColor: '#8b5cf6'
@@ -382,8 +384,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
 
     // Calculate sheep count display for summary
     const sheepCount = config.sheep?.count || 200;
-    const fieldSize = FIELD_SIZES.find(s => s.id === config.field?.size)?.label || 'Medium';
-    const fencePreset = FENCE_PRESETS.find(p => p.id === config.preset)?.label || 'Open Field';
+    const fieldSizeConfig = FIELD_SIZES.find(s => s.id === config.field?.size);
+    const fieldSize = fieldSizeConfig ? t(fieldSizeConfig.labelKey) : t('sandbox.sizes.medium');
 
     return createElement(Panel, {
         size: 'lg',
@@ -395,13 +397,13 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
             key: 'header',
             className: 'flex items-center justify-between mb-4'
         }, [
-            createElement(PanelTitle, { key: 'title' }, 'Sandbox Setup'),
+            createElement(PanelTitle, { key: 'title' }, t('sandbox.title')),
             createElement('div', {
                 key: 'summary',
                 className: 'text-xs text-white/60 text-right'
             }, [
-                createElement('div', { key: 's1' }, `${sheepCount} sheep`),
-                createElement('div', { key: 's2' }, `${fieldSize} field`)
+                createElement('div', { key: 's1' }, `${sheepCount} ${t('sandbox.tabs.sheep').toLowerCase()}`),
+                createElement('div', { key: 's2' }, `${fieldSize}`)
             ])
         ]),
 
@@ -418,7 +420,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         ? 'bg-emerald-500 text-white'
                         : 'text-white/60 hover:text-white hover:bg-white/10'
                 }`
-            }, tab.label)
+            }, t(tab.labelKey))
         )),
 
         // Tab content
@@ -427,7 +429,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
             className: 'min-h-[280px] max-h-[350px] overflow-y-auto pr-1',
             style: {
                 scrollbarWidth: 'thin',
-                scrollbarColor: 'rgba(255,255,255,0.2) transparent'
+                scrollbarColor: 'rgba(255,255,255,0.2) transparent',
+                WebkitOverflowScrolling: 'touch'
             }
         }, renderTabContent()),
 
@@ -441,13 +444,13 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                 variant: 'secondary',
                 onClick: onBack,
                 style: { minWidth: 'auto', width: 'auto', flexShrink: 0 }
-            }, '\u2190 Back'),
+            }, `\u2190 ${t('common.back')}`),
             createElement(Button, {
                 key: 'start',
                 variant: 'primary',
                 onClick: onStartGame,
                 className: 'flex-1 py-3'
-            }, `Start Game (${sheepCount} sheep)`)
+            }, t('sandbox.startGameWithCount', { count: sheepCount }))
         ])
     ]);
 }

@@ -4,41 +4,42 @@
  * Allows selecting game mode (Co-op, 1v1, Endless) and dogs for both players
  */
 import React, { createElement, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { PanelTitle } from '../ui/Panel.js';
 
-// Local game modes
+// Local game modes with translation keys
 const LOCAL_MODES = [
     {
         id: 'coop',
-        name: 'Co-op',
-        description: 'Work together to herd 200 sheep',
+        nameKey: 'localMode.coop',
+        descKey: 'localMode.coopDesc',
         color: '#10b981', // Green
         icon: 'handshake'
     },
     {
         id: 'versus',
-        name: '1v1 Race',
-        description: 'First to 100 sheep wins!',
+        nameKey: 'localMode.versus',
+        descKey: 'localMode.versusDesc',
         color: '#ef4444', // Red
         icon: 'trophy'
     },
     {
         id: 'timed',
-        name: 'Timed',
-        description: '3 minutes - sheep respawn!',
+        nameKey: 'localMode.timed',
+        descKey: 'localMode.timedDesc',
         color: '#f59e0b', // Amber
         icon: 'clock'
     }
 ];
 
-// Dog data (simplified from DogSelection)
+// Dog data with translation keys
 const DOGS = [
-    { id: 'jep', name: 'Jep', color: '#3b82f6' },
-    { id: 'pip', name: 'Pip', color: '#f59e0b' },
-    { id: 'sally', name: 'Sally', color: '#ec4899' },
-    { id: 'shiloh', name: 'Shiloh', color: '#10b981' },
-    { id: 'george_washington', name: 'George W.', color: '#8b5cf6' }
+    { id: 'jep', translationKey: 'jep', color: '#3b82f6' },
+    { id: 'pip', translationKey: 'pip', color: '#f59e0b' },
+    { id: 'sally', translationKey: 'sally', color: '#ec4899' },
+    { id: 'shiloh', translationKey: 'shiloh', color: '#10b981' },
+    { id: 'george_washington', translationKey: 'georgeWashington', color: '#8b5cf6' }
 ];
 
 // Dog avatar icon
@@ -101,7 +102,7 @@ function ModeIcon({ type, color, size = 24 }) {
 }
 
 // Player dog selector
-function PlayerDogSelector({ player, playerNumber, selectedDog, onSelect, playerColor }) {
+function PlayerDogSelector({ player, playerNumber, selectedDog, onSelect, playerColor, t }) {
     const { isCompact } = useResponsive();
 
     return createElement('div', {
@@ -124,11 +125,11 @@ function PlayerDogSelector({ player, playerNumber, selectedDog, onSelect, player
             createElement('span', {
                 key: 'label',
                 className: 'text-white font-semibold text-sm'
-            }, `Player ${playerNumber}`),
+            }, `${t('localMode.player')} ${playerNumber}`),
             createElement('span', {
                 key: 'controls',
                 className: 'text-white/50 text-xs ml-auto'
-            }, playerNumber === 1 ? 'WASD + L.Shift' : 'Arrows + R.Shift')
+            }, playerNumber === 1 ? t('localMode.controls1') : t('localMode.controls2'))
         ]),
 
         // Dog grid
@@ -152,13 +153,14 @@ function PlayerDogSelector({ player, playerNumber, selectedDog, onSelect, player
                     key: 'name',
                     className: 'text-xs text-white/80 mt-1 truncate w-full text-center',
                     style: { color: isSelected ? dog.color : undefined }
-                }, dog.name)
+                }, t(`dogs.${dog.translationKey}.name`))
             ]);
         }))
     ]);
 }
 
 export function LocalModeSetup({ onStart, onBack }) {
+    const { t } = useTranslation();
     const { isCompact, isLandscapeMobile } = useResponsive();
 
     const [selectedMode, setSelectedMode] = useState('coop');
@@ -197,7 +199,7 @@ export function LocalModeSetup({ onStart, onBack }) {
                 stroke: 'white',
                 strokeWidth: 2
             }, createElement('path', { d: 'M19 12H5m0 0l7 7m-7-7l7-7' }))),
-            createElement(PanelTitle, { key: 'title' }, 'Local 2-Player')
+            createElement(PanelTitle, { key: 'title' }, t('localMode.title'))
         ]),
 
         // Game mode selection
@@ -230,11 +232,11 @@ export function LocalModeSetup({ onStart, onBack }) {
                     key: 'name',
                     className: `font-bold text-sm mb-1`,
                     style: { color: isSelected ? mode.color : '#fff' }
-                }, mode.name),
+                }, t(mode.nameKey)),
                 !isCompact && createElement('p', {
                     key: 'desc',
                     className: 'text-white/60 text-xs'
-                }, mode.description)
+                }, t(mode.descKey))
             ]);
         })),
 
@@ -249,7 +251,8 @@ export function LocalModeSetup({ onStart, onBack }) {
                 playerNumber: 1,
                 selectedDog: player1Dog,
                 onSelect: setPlayer1Dog,
-                playerColor: '#FF4444'
+                playerColor: '#FF4444',
+                t
             }),
             createElement(PlayerDogSelector, {
                 key: 'p2',
@@ -257,7 +260,8 @@ export function LocalModeSetup({ onStart, onBack }) {
                 playerNumber: 2,
                 selectedDog: player2Dog,
                 onSelect: setPlayer2Dog,
-                playerColor: '#4444FF'
+                playerColor: '#4444FF',
+                t
             })
         ]),
 
@@ -270,12 +274,12 @@ export function LocalModeSetup({ onStart, onBack }) {
                 background: 'linear-gradient(135deg, #10b981, #059669)',
                 boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)'
             }
-        }, 'Start Game'),
+        }, t('localMode.startGame')),
 
         // Info note
         createElement('p', {
             key: 'note',
             className: 'text-center text-white/40 text-xs mt-3'
-        }, 'Scores in local mode are not submitted to leaderboards')
+        }, t('localMode.noLeaderboards'))
     ]);
 }

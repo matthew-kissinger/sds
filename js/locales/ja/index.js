@@ -1,0 +1,343 @@
+/**
+ * Japanese Translations
+ * 日本語翻訳 - Sheep Dog Simulator
+ */
+
+export default {
+    // Common UI elements
+    common: {
+        back: '戻る',
+        backToMenu: '← メニューに戻る',
+        start: '開始',
+        cancel: 'キャンセル',
+        confirm: '確認',
+        save: '保存',
+        close: '閉じる',
+        loading: '読み込み中...',
+        error: 'エラー',
+        retry: '再試行',
+        refresh: '更新',
+        copy: 'コピー',
+        copied: 'コピーしました！',
+        you: 'あなた',
+        host: 'ホスト',
+        waiting: '待機中...',
+        players: 'プレイヤー',
+        player: 'プレイヤー'
+    },
+
+    // Main menu / Mode selection
+    menu: {
+        title: 'Sheep Dog Sim',
+        soloPlay: 'ソロプレイ',
+        soloPlayDesc: '自分のペースで練習',
+        local2Player: 'ローカル2人プレイ',
+        local2PlayerDesc: '1画面で協力または対戦',
+        sandbox: 'サンドボックス',
+        sandboxDesc: '羊、フェンス、ルールをカスタマイズ',
+        multiplayer: 'マルチプレイヤー',
+        multiplayerDesc: 'オンラインで対戦または協力',
+        leaderboard: 'ランキング',
+        leaderboardDesc: 'グローバルランキングを見る',
+        settings: '設定',
+        settingsDesc: 'ゲーム設定を調整'
+    },
+
+    // Dog selection
+    dogs: {
+        title: '犬を選ぶ',
+        stats: {
+            speed: 'スピード',
+            stamina: 'スタミナ',
+            control: 'コントロール'
+        },
+        jep: {
+            name: 'ジェップ',
+            breed: 'ボーダーコリー',
+            description: 'バランスの良い牧羊犬、スタミナ良好'
+        },
+        pip: {
+            name: 'ピップ',
+            breed: 'オーストラリアン・シェパード',
+            description: '素早く敏捷、スピード重視の牧羊に最適'
+        },
+        sally: {
+            name: 'サリー',
+            breed: 'ウェルシュ・コーギー',
+            description: '優れたコントロールだが動きは遅め'
+        },
+        shiloh: {
+            name: 'シャイロ',
+            breed: 'ジャーマン・シェパード',
+            description: '強くて安定、優れた持久力'
+        },
+        georgeWashington: {
+            name: 'ジョージ・ワシントン',
+            breed: 'アメリカン・フォックスハウンド',
+            description: 'バランスの取れた戦術的な牧羊犬'
+        }
+    },
+
+    // Game modes
+    modes: {
+        title: 'ゲームモードを選ぶ',
+        classic: 'クラシックモード',
+        classicDesc: '200匹の羊すべてを牧場へ',
+        extreme: 'エクストリームモード',
+        extremeDesc: '1000匹の羊を牧場へ - パフォーマンスチャレンジ！'
+    },
+
+    // Settings panel
+    settings: {
+        title: '設定',
+        performanceMode: 'パフォーマンスモード',
+        performanceOption: 'パフォーマンス - 最大FPS',
+        balancedOption: 'バランス - デフォルト設定',
+        qualityOption: 'クオリティ - 最高のビジュアル',
+        audioEnabled: 'オーディオ有効',
+        audioVolume: 'オーディオ音量',
+        showStats: 'パフォーマンス統計を表示',
+        resetDefaults: 'デフォルトに戻す',
+        language: '言語'
+    },
+
+    // Sandbox setup
+    sandbox: {
+        title: 'サンドボックス設定',
+        sheepCount: '羊の数',
+        numberOfSheep: '羊の数',
+        behavior: '行動',
+        movementSpeed: '移動速度',
+        flockCohesion: '群れの結束',
+        separationDistance: '分離距離',
+        fieldSize: 'フィールドサイズ',
+        fieldShape: 'フィールド形状',
+        fenceLayout: 'フェンスレイアウト',
+        editFenceLayout: 'フェンスレイアウトを編集',
+        editCustomShape: 'カスタム形状を編集',
+        drawCustomShape: 'カスタム形状を描く',
+        timer: 'タイマー',
+        enableTimer: 'タイマーを有効化',
+        countUp: 'カウントアップ',
+        countUpDesc: 'タイムを記録',
+        countdown: 'カウントダウン',
+        countdownDesc: '時間との勝負',
+        timeLimit: '制限時間',
+        winCondition: '勝利条件',
+        herdAllSheep: 'すべての羊を牧場へ',
+        herdAllSheepDesc: 'クラシック達成 - すべての羊を牧場へ',
+        percentageGoal: 'パーセンテージ目標',
+        percentageGoalDesc: '目標パーセンテージ達成で完了',
+        targetPercentage: '目標パーセンテージ',
+        freePlay: 'フリープレイ',
+        freePlayDesc: '勝利条件なし - 自由に遊ぼう！',
+        startGame: 'ゲーム開始',
+        startGameWithCount: 'ゲーム開始（{{count}}匹）',
+        tabs: {
+            sheep: '羊',
+            field: 'フィールド',
+            rules: 'ルール'
+        },
+        sizes: {
+            small: '小',
+            medium: '中',
+            large: '大',
+            huge: '特大'
+        },
+        shapes: {
+            square: '正方形',
+            wide: '横長',
+            tall: '縦長',
+            lShape: 'L字型',
+            circle: '円形',
+            diamond: 'ダイヤ型',
+            triangle: '三角形',
+            custom: 'カスタム'
+        },
+        fencePresets: {
+            open: 'オープンフィールド',
+            openDesc: '内部フェンスなし',
+            corridor: '回廊',
+            corridorDesc: 'ゲートへの囲まれた道',
+            funnel: '漏斗',
+            funnelDesc: 'ゲートへ狭まる道',
+            maze: '迷路',
+            mazeDesc: 'ナビゲートする障害物',
+            obstacles: '障害物',
+            obstaclesDesc: 'ランダムなフェンス障害物',
+            custom: 'カスタム',
+            customDesc: '独自のレイアウトを設計'
+        }
+    },
+
+    // Local 2-player mode
+    localMode: {
+        title: 'ローカル2人プレイ',
+        coop: '協力',
+        coopDesc: '協力して200匹の羊を牧場へ',
+        versus: '1対1レース',
+        versusDesc: '先に100匹の羊を集めた方が勝ち！',
+        timed: 'タイムアタック',
+        timedDesc: '3分間 - 羊はリスポーン！',
+        player: 'プレイヤー',
+        controls1: 'WASD + 左Shift',
+        controls2: '矢印キー + 右Shift',
+        startGame: 'ゲーム開始',
+        noLeaderboards: 'ローカルモードのスコアはランキングに送信されません'
+    },
+
+    // Fence editor
+    fenceEditor: {
+        title: 'フェンスレイアウト',
+        fenceCount: '{{count}}本のフェンス',
+        fenceCountPlural: '{{count}}本のフェンス',
+        quickLayouts: 'クイックレイアウト',
+        tools: 'ツール',
+        draw: '描く',
+        select: '選択',
+        erase: '消去',
+        pan: 'パン',
+        clearAll: 'すべて消去',
+        done: '完了',
+        dogLabel: '犬',
+        sheepSpawn: '羊の出現地点',
+        helpDraw: 'クリック＆ドラッグでフェンスを描く - 10mグリッドにスナップ',
+        helpErase: 'フェンスをクリックして削除',
+        helpPan: 'ドラッグでパン - スクロールでズーム',
+        helpSelect: 'フェンスをクリックして選択',
+        presets: {
+            open: 'クリアフィールド',
+            corridor: 'ガイド付きパス',
+            funnel: '狭まる道',
+            maze: '障害物をナビゲート',
+            obstacles: 'ランダムブロック'
+        }
+    },
+
+    // Multiplayer
+    multiplayer: {
+        title: 'マルチプレイヤー',
+        createRoom: 'ルーム作成',
+        createRoomDesc: '新しいゲームルームをホスト',
+        joinRoom: 'ルームに参加',
+        joinRoomDesc: 'ルームコードを入力',
+        quickMatch: 'クイックマッチ',
+        quickMatchDesc: '利用可能なゲームを探す',
+        maxPlayers: '最大プレイヤー数',
+        playersCount: '{{count}}人',
+        gameMode: 'ゲームモード',
+        cooperative: '協力',
+        cooperativeDesc: '協力してすべての羊を囲いに入れる',
+        competitive: '対戦',
+        competitiveDesc: '相手より多くの羊を集めて競争',
+        timed: 'タイムアタック（3分）',
+        timedDesc: '3分間でできるだけ多くのポイントを獲得',
+        roomCode: 'ルームコード',
+        enterRoomCode: 'ルームコードを入力',
+        leaveRoom: 'ルームを退出',
+        startGame: 'ゲーム開始',
+        waitingForPlayers: 'プレイヤーを待っています...'
+    },
+
+    // Lobby
+    lobby: {
+        title: 'ゲームロビー',
+        roomCode: 'ルームコード',
+        playersCount: 'プレイヤー（{{current}}/{{max}}）',
+        waitingForMore: 'プレイヤーを待っています...'
+    },
+
+    // Leaderboard
+    leaderboard: {
+        title: 'グローバルランキング',
+        soloClassic: 'ソロクラシック',
+        soloExtreme: 'ソロエクストリーム',
+        timed: 'タイムアタック',
+        competitive: '対戦',
+        cooperative: '協力',
+        updated: '{{time}}に更新',
+        loading: 'ランキングを読み込み中...',
+        noScores: 'まだスコアがありません。最初の1人になろう！',
+        serverOffline: 'サーバーオフライン - ランキングは利用できません。',
+        loadFailed: 'ランキングの読み込みに失敗しました。もう一度お試しください。',
+        ranks: {
+            first: '1位',
+            second: '2位',
+            third: '3位'
+        }
+    },
+
+    // Game HUD
+    hud: {
+        sheepCount: '羊',
+        stamina: 'スタミナ',
+        time: '時間',
+        score: 'スコア',
+        timeRemaining: '残り時間',
+        complete: '完了'
+    },
+
+    // Pause menu
+    pause: {
+        title: '一時停止',
+        tapToResume: '外をタップで再開',
+        pressEscToResume: 'ESCキーで再開',
+        resume: '再開',
+        restart: 'リスタート',
+        mainMenu: 'メインメニュー',
+        fullscreen: 'フルスクリーン',
+        exitFullscreen: 'フルスクリーン終了'
+    },
+
+    // Completion screen
+    completion: {
+        victory: '勝利！',
+        allSheepHerded: '{{count}}匹すべての羊を牧場に入れました！',
+        raceComplete: 'レース完了',
+        youWon: 'レースに勝ちました！',
+        playerWon: '{{name}}が勝ちました！',
+        timesUp: 'タイムアップ',
+        timesUpVictory: 'タイムアップ - 勝利！',
+        youCollectedMost: '最も多くの羊を集めました！',
+        playerCollectedMost: '{{name}}が最も多く集めました！',
+        teamVictory: 'チーム勝利！',
+        teamMessage: '協力してすべての羊を牧場に入れました！',
+        gameComplete: 'ゲーム完了',
+        wellPlayed: 'お疲れ様でした！',
+        newPersonalBest: '新記録！',
+        finalStandings: '最終結果',
+        playAgain: 'もう一度プレイ',
+        nextChallenge: '次のチャレンジ',
+        stats: {
+            time: '時間',
+            yourScore: 'あなたのスコア',
+            raceTime: 'レースタイム',
+            duration: '所要時間',
+            sheepCollected: '集めた羊',
+            teamTime: 'チームタイム'
+        },
+        sheepUnit: '{{count}}匹'
+    },
+
+    // Errors and alerts
+    errors: {
+        somethingWrong: 'エラーが発生しました',
+        uiError: 'ゲームUIでエラーが発生しました。ページを更新してください。',
+        reloadPage: 'ページを再読み込み',
+        errorDetails: 'エラーの詳細',
+        connectionFailed: 'マルチプレイヤーサーバーに接続できません。',
+        gameNotLoaded: 'ゲームが完全に読み込まれていません。',
+        createRoomFailed: 'ルームの作成に失敗しました。',
+        joinRoomFailed: 'ルームへの参加に失敗しました',
+        noAvailableRooms: '利用可能なルームがありません',
+        roomCodeLength: 'ルームコードは6文字である必要があります'
+    },
+
+    // Welcome / Identity
+    identity: {
+        welcome: 'Sheep Dog Simへようこそ！',
+        chooseIdentity: '表示名を選んでください：',
+        welcomeBack: 'おかえりなさい、{{name}}さん！',
+        confirmSelection: '選択を確認'
+    }
+};

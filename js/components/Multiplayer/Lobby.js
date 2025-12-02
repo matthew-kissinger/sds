@@ -3,6 +3,7 @@
  * Waiting room before game starts
  */
 import React, { createElement, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
@@ -17,6 +18,7 @@ const DOG_ICONS = {
 };
 
 export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave }) {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
     const { isCompact } = useResponsive();
 
@@ -39,7 +41,7 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
             maxWidth: '40rem',
             style: { animation: 'slideUp 0.5s ease-out' }
         }, [
-            createElement(PanelTitle, { key: 'title' }, 'Game Lobby'),
+            createElement(PanelTitle, { key: 'title' }, t('lobby.title')),
 
             // Room code display
             createElement('div', {
@@ -60,7 +62,7 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
                         marginBottom: '0.5rem',
                         fontSize: isCompact ? '0.8rem' : '0.875rem'
                     }
-                }, 'Room Code'),
+                }, t('lobby.roomCode')),
                 createElement('div', {
                     key: 'code',
                     style: {
@@ -85,7 +87,7 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
                         variant: 'secondary',
                         onClick: copyRoomCode,
                         style: { padding: '0.5rem 1rem' }
-                    }, copied ? 'Copied!' : 'Copy')
+                    }, copied ? t('common.copied') : t('common.copy'))
                 ])
             ]),
 
@@ -101,7 +103,7 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
                         marginBottom: '0.75rem',
                         fontSize: isCompact ? '0.9rem' : '1rem'
                     }
-                }, `Players (${players.length}/${maxPlayers})`),
+                }, t('lobby.playersCount', { current: players.length, max: maxPlayers })),
                 createElement('div', {
                     key: 'list',
                     style: {
@@ -145,13 +147,13 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
                                 fontSize: '0.7rem',
                                 color: '#fbbf24'
                             }
-                        }, 'Host')
+                        }, t('common.host'))
                     ] : createElement('p', {
                         style: {
                             color: 'rgba(255, 255, 255, 0.3)',
                             fontSize: isCompact ? '0.8rem' : '0.875rem'
                         }
-                    }, 'Waiting...'));
+                    }, t('common.waiting')));
                 }))
             ]),
 
@@ -168,14 +170,14 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
                     variant: 'secondary',
                     onClick: onLeave,
                     style: { flex: 1 }
-                }, 'Leave Room'),
+                }, t('multiplayer.leaveRoom')),
                 isHost && createElement(Button, {
                     key: 'start',
                     variant: 'primary',
                     onClick: onStart,
                     disabled: players.length < 2,
                     style: { flex: 1 }
-                }, players.length < 2 ? 'Waiting for players...' : 'Start Game')
+                }, players.length < 2 ? t('multiplayer.waitingForPlayers') : t('multiplayer.startGame'))
             ])
         ])
     );

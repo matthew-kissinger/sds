@@ -3,17 +3,19 @@
  * Create a new multiplayer room with settings
  */
 import React, { createElement, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 
 const gameModeDescriptions = {
-    cooperative: 'Work together to herd all sheep into the pen',
-    competitive: 'Race to collect the most sheep before opponents',
-    timed: 'Score as many points as possible in 3 minutes'
+    cooperative: 'multiplayer.cooperativeDesc',
+    competitive: 'multiplayer.competitiveDesc',
+    timed: 'multiplayer.timedDesc'
 };
 
 export function RoomCreation({ onBack, onCreate }) {
+    const { t } = useTranslation();
     const [settings, setSettings] = useState({
         maxPlayers: 4,
         gameMode: 'cooperative'
@@ -54,7 +56,7 @@ export function RoomCreation({ onBack, onCreate }) {
             maxWidth: '28rem',
             style: { animation: 'slideUp 0.5s ease-out' }
         }, [
-            createElement(PanelTitle, { key: 'title' }, 'Create Room'),
+            createElement(PanelTitle, { key: 'title' }, t('multiplayer.createRoom')),
 
             createElement('div', {
                 key: 'settings',
@@ -66,29 +68,29 @@ export function RoomCreation({ onBack, onCreate }) {
             }, [
                 // Max Players
                 createElement('div', { key: 'max-players' }, [
-                    createElement('label', { key: 'label', style: labelStyle }, 'Max Players'),
+                    createElement('label', { key: 'label', style: labelStyle }, t('multiplayer.maxPlayers')),
                     createElement('select', {
                         key: 'select',
                         style: selectStyle,
                         value: settings.maxPlayers,
                         onChange: (e) => setSettings({ ...settings, maxPlayers: parseInt(e.target.value) })
                     }, [2, 3, 4, 5, 6].map(n =>
-                        createElement('option', { key: n, value: n }, `${n} Players`)
+                        createElement('option', { key: n, value: n }, t('multiplayer.playersCount', { count: n }))
                     ))
                 ]),
 
                 // Game Mode
                 createElement('div', { key: 'game-mode' }, [
-                    createElement('label', { key: 'label', style: labelStyle }, 'Game Mode'),
+                    createElement('label', { key: 'label', style: labelStyle }, t('multiplayer.gameMode')),
                     createElement('select', {
                         key: 'select',
                         style: selectStyle,
                         value: settings.gameMode,
                         onChange: (e) => setSettings({ ...settings, gameMode: e.target.value })
                     }, [
-                        createElement('option', { key: 'cooperative', value: 'cooperative' }, 'Cooperative'),
-                        createElement('option', { key: 'competitive', value: 'competitive' }, 'Competitive'),
-                        createElement('option', { key: 'timed', value: 'timed' }, 'Timed (3 min)')
+                        createElement('option', { key: 'cooperative', value: 'cooperative' }, t('multiplayer.cooperative')),
+                        createElement('option', { key: 'competitive', value: 'competitive' }, t('multiplayer.competitive')),
+                        createElement('option', { key: 'timed', value: 'timed' }, t('multiplayer.timed'))
                     ])
                 ]),
 
@@ -109,7 +111,7 @@ export function RoomCreation({ onBack, onCreate }) {
                             textAlign: 'center',
                             margin: 0
                         }
-                    }, gameModeDescriptions[settings.gameMode])
+                    }, t(gameModeDescriptions[settings.gameMode]))
                 )
             ]),
 
@@ -126,13 +128,13 @@ export function RoomCreation({ onBack, onCreate }) {
                     variant: 'secondary',
                     onClick: onBack,
                     style: { flex: 1 }
-                }, '← Back'),
+                }, `← ${t('common.back')}`),
                 createElement(Button, {
                     key: 'create',
                     variant: 'primary',
                     onClick: () => onCreate(settings),
                     style: { flex: 1 }
-                }, 'Create Room →')
+                }, `${t('multiplayer.createRoom')} →`)
             ])
         ])
     );

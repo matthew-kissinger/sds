@@ -3,6 +3,7 @@
  * Polished victory/completion overlay for all game modes
  */
 import React, { createElement, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Lucide-style SVG Icons
 const Icons = {
@@ -220,7 +221,7 @@ function RankBadge({ rank, size = 'normal' }) {
 }
 
 // Score row component
-function ScoreRow({ rank, playerName, score, isMe, isWinner }) {
+function ScoreRow({ rank, playerName, score, isMe, isWinner, t }) {
     return createElement('div', {
         style: {
             display: 'flex',
@@ -243,7 +244,7 @@ function ScoreRow({ rank, playerName, score, isMe, isWinner }) {
                     fontWeight: isMe ? '600' : '400',
                     fontSize: '14px'
                 }
-            }, playerName + (isMe ? ' (You)' : '')),
+            }, playerName + (isMe ? ` (${t('common.you')})` : '')),
         ]),
         createElement('div', {
             key: 'score',
@@ -252,12 +253,13 @@ function ScoreRow({ rank, playerName, score, isMe, isWinner }) {
                 fontWeight: '600',
                 fontSize: '16px'
             }
-        }, `${score} sheep`)
+        }, t('completion.sheepUnit', { count: score }))
     ]);
 }
 
 // Main completion screen component
 export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
+    const { t } = useTranslation();
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -276,14 +278,14 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
     const getContent = () => {
         if (mode === 'single') {
             return {
-                title: 'Victory!',
-                subtitle: `All ${data.totalSheep || 20} sheep herded successfully!`,
+                title: t('completion.victory'),
+                subtitle: t('completion.allSheepHerded', { count: data.totalSheep || 20 }),
                 icon: Icons.trophy(64, '#FFD700'),
                 accentColor: '#10b981',
                 bgGradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1))',
                 showConfetti: true,
                 stats: [
-                    { label: 'Time', value: formatTime(data.finalTime || 0), icon: Icons.clock(20, '#fff') }
+                    { label: t('completion.stats.time'), value: formatTime(data.finalTime || 0), icon: Icons.clock(20, '#fff') }
                 ]
             };
         }
@@ -291,8 +293,8 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
         if (mode === 'racing') {
             const isWinner = data.isWinner;
             return {
-                title: isWinner ? 'Victory!' : 'Race Complete',
-                subtitle: isWinner ? 'You won the race!' : `${data.winnerName || 'Another player'} won!`,
+                title: isWinner ? t('completion.victory') : t('completion.raceComplete'),
+                subtitle: isWinner ? t('completion.youWon') : t('completion.playerWon', { name: data.winnerName || 'Another player' }),
                 icon: isWinner ? Icons.trophy(64, '#FFD700') : Icons.medal(64, '#C0C0C0'),
                 accentColor: isWinner ? '#10b981' : '#f59e0b',
                 bgGradient: isWinner
@@ -300,8 +302,8 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
                     : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1))',
                 showConfetti: isWinner,
                 stats: [
-                    { label: 'Your Score', value: `${data.myScore || 0} sheep`, icon: Icons.star(20, '#fff', true) },
-                    { label: 'Race Time', value: formatTime(data.finalTime || 0), icon: Icons.clock(20, '#fff') }
+                    { label: t('completion.stats.yourScore'), value: t('completion.sheepUnit', { count: data.myScore || 0 }), icon: Icons.star(20, '#fff', true) },
+                    { label: t('completion.stats.raceTime'), value: formatTime(data.finalTime || 0), icon: Icons.clock(20, '#fff') }
                 ],
                 scores: data.scores || []
             };
@@ -310,8 +312,8 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
         if (mode === 'timed') {
             const isWinner = data.isWinner;
             return {
-                title: isWinner ? "Time's Up - Victory!" : "Time's Up",
-                subtitle: isWinner ? 'You collected the most sheep!' : `${data.winnerName || 'Another player'} collected the most!`,
+                title: isWinner ? t('completion.timesUpVictory') : t('completion.timesUp'),
+                subtitle: isWinner ? t('completion.youCollectedMost') : t('completion.playerCollectedMost', { name: data.winnerName || 'Another player' }),
                 icon: Icons.clock(64, isWinner ? '#FFD700' : '#C0C0C0'),
                 accentColor: isWinner ? '#10b981' : '#f59e0b',
                 bgGradient: isWinner
@@ -320,8 +322,8 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
                 showConfetti: isWinner,
                 showNewBest: data.isNewBest,
                 stats: [
-                    { label: 'Your Score', value: `${data.myScore || 0} sheep`, icon: Icons.star(20, '#fff', true) },
-                    { label: 'Duration', value: '3:00', icon: Icons.clock(20, '#fff') }
+                    { label: t('completion.stats.yourScore'), value: t('completion.sheepUnit', { count: data.myScore || 0 }), icon: Icons.star(20, '#fff', true) },
+                    { label: t('completion.stats.duration'), value: '3:00', icon: Icons.clock(20, '#fff') }
                 ],
                 scores: data.scores || []
             };
@@ -329,23 +331,23 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
 
         if (mode === 'cooperative') {
             return {
-                title: 'Team Victory!',
-                subtitle: 'Working together, you herded all the sheep!',
+                title: t('completion.teamVictory'),
+                subtitle: t('completion.teamMessage'),
                 icon: Icons.users(64, '#3b82f6'),
                 accentColor: '#3b82f6',
                 bgGradient: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1))',
                 showConfetti: true,
                 stats: [
-                    { label: 'Sheep Collected', value: `${data.sheepCount || 200}/${data.totalSheep || 200}`, icon: Icons.star(20, '#fff', true) },
-                    { label: 'Team Time', value: formatTime(data.finalTime || 0), icon: Icons.clock(20, '#fff') }
+                    { label: t('completion.stats.sheepCollected'), value: `${data.sheepCount || 200}/${data.totalSheep || 200}`, icon: Icons.star(20, '#fff', true) },
+                    { label: t('completion.stats.teamTime'), value: formatTime(data.finalTime || 0), icon: Icons.clock(20, '#fff') }
                 ]
             };
         }
 
         // Fallback
         return {
-            title: 'Game Complete',
-            subtitle: 'Well played!',
+            title: t('completion.gameComplete'),
+            subtitle: t('completion.wellPlayed'),
             icon: Icons.trophy(64, '#FFD700'),
             accentColor: '#10b981',
             bgGradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1))',
@@ -444,7 +446,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
                 }
             }, [
                 Icons.star(16, '#000', true),
-                ' NEW PERSONAL BEST!'
+                ` ${t('completion.newPersonalBest')}`
             ]),
 
             // Stats
@@ -510,15 +512,16 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
                         marginBottom: '12px',
                         textAlign: 'left'
                     }
-                }, 'Final Standings'),
+                }, t('completion.finalStandings')),
                 ...content.scores.map((score, i) =>
                     createElement(ScoreRow, {
                         key: i,
                         rank: i + 1,
-                        playerName: score.name || `Player ${score.id}`,
+                        playerName: score.name || `${t('common.player')} ${score.id}`,
                         score: score.score,
                         isMe: score.isMe,
-                        isWinner: i === 0
+                        isWinner: i === 0,
+                        t
                     })
                 )
             ]),
@@ -561,7 +564,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
                     }
                 }, [
                     Icons.refresh(20, '#fff'),
-                    'Play Again'
+                    t('completion.playAgain')
                 ]),
 
                 onMainMenu && createElement('button', {
@@ -591,7 +594,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
                     }
                 }, [
                     Icons.home(20, '#fff'),
-                    'Main Menu'
+                    t('pause.mainMenu')
                 ])
             ])
         ])

@@ -3,18 +3,20 @@
  * Join an existing room with a code
  */
 import React, { createElement, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 
 export function RoomJoining({ onBack, onJoin }) {
+    const { t } = useTranslation();
     const [roomCode, setRoomCode] = useState('');
     const [error, setError] = useState('');
     const { isCompact } = useResponsive();
 
     const handleJoin = () => {
         if (roomCode.length !== 6) {
-            setError('Room code must be 6 characters');
+            setError(t('errors.roomCodeLength'));
             return;
         }
         onJoin(roomCode.toUpperCase());
@@ -50,7 +52,7 @@ export function RoomJoining({ onBack, onJoin }) {
             maxWidth: '28rem',
             style: { animation: 'slideUp 0.5s ease-out' }
         }, [
-            createElement(PanelTitle, { key: 'title' }, 'Join Room'),
+            createElement(PanelTitle, { key: 'title' }, t('multiplayer.joinRoom')),
 
             createElement('div', {
                 key: 'input-group',
@@ -64,7 +66,7 @@ export function RoomJoining({ onBack, onJoin }) {
                     key: 'input',
                     type: 'text',
                     style: inputStyle,
-                    placeholder: 'ROOM CODE',
+                    placeholder: t('multiplayer.roomCode').toUpperCase(),
                     maxLength: 6,
                     value: roomCode,
                     onChange: (e) => {
@@ -108,14 +110,14 @@ export function RoomJoining({ onBack, onJoin }) {
                     variant: 'secondary',
                     onClick: onBack,
                     style: { flex: 1 }
-                }, '← Back'),
+                }, `← ${t('common.back')}`),
                 createElement(Button, {
                     key: 'join',
                     variant: 'primary',
                     onClick: handleJoin,
                     disabled: roomCode.length === 0,
                     style: { flex: 1 }
-                }, 'Join Room →')
+                }, `${t('multiplayer.joinRoom')} →`)
             ])
         ])
     );

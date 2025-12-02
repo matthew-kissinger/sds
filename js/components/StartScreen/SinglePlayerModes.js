@@ -3,6 +3,7 @@
  * Mode selection for single player - Classic vs Extreme
  */
 import React, { createElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { MenuOption, MenuOptionGrid } from '../ui/MenuOption.js';
@@ -11,19 +12,20 @@ import { BackButton } from '../ui/Button.js';
 const MODES = [
     {
         id: 'classic',
-        label: 'Classic Mode',
-        description: 'Herd all 200 sheep to the pasture',
+        labelKey: 'modes.classic',
+        descKey: 'modes.classicDesc',
         color: '#10b981' // Emerald
     },
     {
         id: 'extreme',
-        label: 'Extreme Mode',
-        description: 'Herd all 1000 sheep - performance challenge!',
+        labelKey: 'modes.extreme',
+        descKey: 'modes.extremeDesc',
         color: '#ef4444' // Red
     }
 ];
 
 export function SinglePlayerModes({ onSelectMode, onBack }) {
+    const { t } = useTranslation();
     const { isLandscapeMobile } = useResponsive();
 
     return createElement('div', {
@@ -38,14 +40,14 @@ export function SinglePlayerModes({ onSelectMode, onBack }) {
         maxWidth: '28rem',
         style: { animation: 'slideUp 0.5s ease-out' }
     }, [
-        createElement(PanelTitle, { key: 'title' }, 'Choose Game Mode'),
+        createElement(PanelTitle, { key: 'title' }, t('modes.title')),
 
         createElement(MenuOptionGrid, { key: 'modes' },
             MODES.map(mode =>
                 createElement(MenuOption, {
                     key: mode.id,
-                    label: mode.label,
-                    description: mode.description,
+                    label: t(mode.labelKey),
+                    description: t(mode.descKey),
                     accentColor: mode.color,
                     onClick: () => onSelectMode(mode.id)
                 })
@@ -56,7 +58,7 @@ export function SinglePlayerModes({ onSelectMode, onBack }) {
             key: 'back',
             style: { marginTop: isLandscapeMobile ? '0.5rem' : '1rem' }
         },
-            createElement(BackButton, { onClick: onBack }, 'Back')
+            createElement(BackButton, { onClick: onBack }, t('common.back'))
         )
     ]));
 }

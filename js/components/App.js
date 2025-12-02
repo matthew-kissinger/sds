@@ -13,6 +13,10 @@
  */
 import React, { createElement, useState, useEffect, useCallback, Fragment, Component } from 'react';
 import { createRoot } from 'react-dom/client';
+
+// Initialize i18n before any components load
+import '../i18n.js';
+
 import {
     getGameInstance,
     getNetworkManager,
@@ -60,6 +64,7 @@ export async function initReactUI() {
             { MultiplayerScoreboard },
             { GlobalLeaderboard },
             { Button },
+            { LanguageSelector },
             { SandboxConfig }
         ] = await Promise.all([
             import('./hooks/usePlatform.js'),
@@ -88,6 +93,7 @@ export async function initReactUI() {
             import('./Multiplayer/MultiplayerScoreboard.js'),
             import('./Multiplayer/GlobalLeaderboard.js'),
             import('./ui/Button.js'),
+            import('./ui/LanguageSelector.js'),
             import('../SandboxConfig.js')
         ]);
 
@@ -369,6 +375,13 @@ export async function initReactUI() {
 
                     case 'main':
                         // Return array directly - .start-screen-content handles centering
+                        // Language selector positioned in top-right corner
+                        const languageSelectorStyle = {
+                            position: 'fixed',
+                            top: platform.isMobile ? 'max(env(safe-area-inset-top, 12px), 12px)' : '20px',
+                            right: platform.isMobile ? 'max(env(safe-area-inset-right, 12px), 12px)' : '20px',
+                            zIndex: 100
+                        };
                         // Whimsical zen-inspired title styling
                         const titleStyle = platform.isMobile ? {
                             // Mobile: cleaner, more compact
@@ -419,6 +432,11 @@ export async function initReactUI() {
                             animation: 'fadeIn 0.5s ease-out 0.2s both'
                         };
                         return [
+                            // Language selector in top-right corner
+                            createElement('div', {
+                                key: 'lang-selector',
+                                style: languageSelectorStyle
+                            }, createElement(LanguageSelector, { variant: 'icon' })),
                             createElement('h1', {
                                 key: 'title',
                                 style: titleStyle

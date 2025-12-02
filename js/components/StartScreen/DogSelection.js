@@ -6,6 +6,7 @@
  * Dog icon: "Sitting Dog" by Delapouite from game-icons.net (CC BY 3.0)
  */
 import React, { createElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { PanelTitle } from '../ui/Panel.js';
 
@@ -30,45 +31,35 @@ const DogAvatar = ({ color = '#3b82f6', size = 48 }) => createElement('div', {
     d: 'm231.6 16.18 16.7 120.02 73.8 20.5c37.3-11.2 78.5-18.2 102.3-43.6 9.7-10.3 17.2-24.78 9.1-37.92l-75.3 2.22-14.6-31.79h-74.7c-7.7-11.71-22.8-20.46-37.3-29.43zm5.7 145.22c-46.9 19.8-110.1 146.3-111.8 276.5-34.02-58.1-24.9-122.6-2.9-202.6C55.31 287 4.732 448.4 133.1 486.9H346s-6.3-21.5-14.1-28.9c-12.7-12-48.2-20.2-48.2-20.2 27.8-39.2 33.5-71.7 38.6-103.9 4.5 59.8 40.7 126.8 57.4 153h76.5s4.6-15.9.2-21.5c-10.9-13.8-51.3-11.9-51.3-11.9-31.1-107.2-46.3-260.2-90-273.2-21.7-6.5-54.3-14.1-77.8-18.9z'
 })));
 
-// Dog data with stats and avatar colors
+// Dog data with stats and avatar colors - using translation keys
 const DOGS = [
     {
         id: 'jep',
-        name: 'Jep',
-        breed: 'Border Collie',
-        description: 'Well-balanced herder with good stamina',
+        translationKey: 'jep',
         stats: { speed: 3, stamina: 4, control: 4 },
         color: '#3b82f6'
     },
     {
         id: 'pip',
-        name: 'Pip',
-        breed: 'Australian Shepherd',
-        description: 'Fast and agile, perfect for quick herding',
+        translationKey: 'pip',
         stats: { speed: 5, stamina: 3, control: 3 },
         color: '#f59e0b'
     },
     {
         id: 'sally',
-        name: 'Sally',
-        breed: 'Welsh Corgi',
-        description: 'Great control but slower movement',
+        translationKey: 'sally',
         stats: { speed: 2, stamina: 4, control: 5 },
         color: '#ec4899'
     },
     {
         id: 'shiloh',
-        name: 'Shiloh',
-        breed: 'German Shepherd',
-        description: 'Strong and steady with excellent endurance',
+        translationKey: 'shiloh',
         stats: { speed: 3, stamina: 5, control: 3 },
         color: '#10b981'
     },
     {
         id: 'george_washington',
-        name: 'George Washington',
-        breed: 'American Foxhound',
-        description: 'Tactical herder with balanced abilities',
+        translationKey: 'georgeWashington',
         stats: { speed: 3, stamina: 4, control: 3 },
         color: '#8b5cf6'
     }
@@ -114,6 +105,7 @@ function StatBar({ label, value, maxValue = 5, color = '#3b82f6', isCompact = fa
 }
 
 export function DogSelection({ selectedDog, onSelect }) {
+    const { t } = useTranslation();
     const { isCompact, isLandscapeMobile, isVeryCompact } = useResponsive();
 
     // Responsive grid: 5 cols desktop, 2 cols mobile portrait, 5 cols landscape
@@ -128,7 +120,7 @@ export function DogSelection({ selectedDog, onSelect }) {
     return createElement('div', {
         className: `w-full mx-auto ${maxWidthClass} animate-slide-up`
     }, [
-        createElement(PanelTitle, { key: 'title' }, 'Choose Your Dog'),
+        createElement(PanelTitle, { key: 'title' }, t('dogs.title')),
 
         createElement('div', {
             key: 'grid',
@@ -200,28 +192,28 @@ export function DogSelection({ selectedDog, onSelect }) {
                         key: 'name',
                         className: `font-bold truncate ${isCompact ? 'text-base' : 'text-lg'}`,
                         style: { color: isSelected ? dog.color : '#fff' }
-                    }, dog.name),
+                    }, t(`dogs.${dog.translationKey}.name`)),
                     // Breed: text-xs (10px) compact, text-sm (12px) normal
                     !isVeryCompact && createElement('p', {
                         key: 'breed',
                         className: `text-white/60 ${isCompact ? 'text-xs' : 'text-sm'}`
-                    }, dog.breed)
+                    }, t(`dogs.${dog.translationKey}.breed`))
                 ]),
 
                 // Stats - hide on very compact
                 !isVeryCompact && createElement('div', {
                     key: 'stats'
                 }, [
-                    createElement(StatBar, { key: 'speed', label: 'Speed', value: dog.stats.speed, color: dog.color, isCompact }),
-                    createElement(StatBar, { key: 'stamina', label: 'Stamina', value: dog.stats.stamina, color: dog.color, isCompact }),
-                    createElement(StatBar, { key: 'control', label: 'Control', value: dog.stats.control, color: dog.color, isCompact })
+                    createElement(StatBar, { key: 'speed', label: t('dogs.stats.speed'), value: dog.stats.speed, color: dog.color, isCompact }),
+                    createElement(StatBar, { key: 'stamina', label: t('dogs.stats.stamina'), value: dog.stats.stamina, color: dog.color, isCompact }),
+                    createElement(StatBar, { key: 'control', label: t('dogs.stats.control'), value: dog.stats.control, color: dog.color, isCompact })
                 ]),
 
                 // Description - hide on compact. Type scale: text-sm (12px)
                 !isCompact && createElement('p', {
                     key: 'desc',
                     className: 'text-white/50 text-sm mt-2 text-center'
-                }, dog.description)
+                }, t(`dogs.${dog.translationKey}.description`))
             ]);
         }))
     ]);

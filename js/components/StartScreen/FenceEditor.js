@@ -3,6 +3,7 @@
  * 2D visual editor for placing fences in sandbox mode
  */
 import React, { createElement, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button, BackButton } from '../ui/Button.js';
@@ -36,7 +37,7 @@ function ToolButton({ tool, currentTool, onClick, icon, label }) {
 }
 
 // Canvas-based fence editor
-function EditorCanvas({ config, onConfigChange, tool, canvasSize }) {
+function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
     const canvasRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState(null);
@@ -291,7 +292,7 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize }) {
         ctx.font = 'bold 8px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('DOG', dogPos.x, dogPos.y);
+        ctx.fillText(t('fenceEditor.dogLabel'), dogPos.x, dogPos.y);
 
         // Draw sheep spawn area indicator
         const spawnCenter = worldToCanvas(0, 0);
@@ -304,7 +305,7 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize }) {
         ctx.setLineDash([]);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.font = '10px sans-serif';
-        ctx.fillText('Sheep Spawn', spawnCenter.x, spawnCenter.y);
+        ctx.fillText(t('fenceEditor.sheepSpawn'), spawnCenter.x, spawnCenter.y);
 
     }, [config, canvasSize, zoom, viewOffset, isDragging, dragStart, dragEnd, tool, selectedFence, worldToCanvas, bounds, borderPoints, fieldWidth, fieldHeight]);
 
@@ -580,16 +581,16 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize }) {
 }
 
 // Preset card with visual mini-preview
-function PresetCard({ preset, isSelected, onClick }) {
+function PresetCard({ preset, isSelected, onClick, t }) {
     const presetInfo = {
-        open: { icon: '🌾', color: '#10b981', desc: 'Clear field' },
-        corridor: { icon: '🚧', color: '#3b82f6', desc: 'Guided path' },
-        funnel: { icon: '📐', color: '#8b5cf6', desc: 'Narrowing' },
-        maze: { icon: '🧩', color: '#f59e0b', desc: 'Navigate obstacles' },
-        obstacles: { icon: '🪨', color: '#ef4444', desc: 'Random blocks' }
+        open: { icon: '🌾', color: '#10b981', descKey: 'fenceEditor.presets.open' },
+        corridor: { icon: '🚧', color: '#3b82f6', descKey: 'fenceEditor.presets.corridor' },
+        funnel: { icon: '📐', color: '#8b5cf6', descKey: 'fenceEditor.presets.funnel' },
+        maze: { icon: '🧩', color: '#f59e0b', descKey: 'fenceEditor.presets.maze' },
+        obstacles: { icon: '🪨', color: '#ef4444', descKey: 'fenceEditor.presets.obstacles' }
     };
 
-    const info = presetInfo[preset] || { icon: '?', color: '#666', desc: '' };
+    const info = presetInfo[preset] || { icon: '?', color: '#666', descKey: '' };
 
     return createElement('button', {
         onClick,
@@ -604,15 +605,16 @@ function PresetCard({ preset, isSelected, onClick }) {
         createElement('span', {
             key: 'name',
             className: 'text-xs font-medium capitalize'
-        }, preset),
+        }, t(`sandbox.fencePresets.${preset}`)),
         createElement('span', {
             key: 'desc',
             className: 'text-[10px] text-white/50'
-        }, info.desc)
+        }, t(info.descKey))
     ]);
 }
 
 export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
+    const { t } = useTranslation();
     const { isCompact } = useResponsive();
     const [tool, setTool] = useState(TOOLS.FENCE);
     const containerRef = useRef(null);
@@ -712,17 +714,17 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
             className: 'flex items-center justify-between mb-4'
         }, [
             createElement('div', { key: 'left', className: 'flex items-center gap-3' }, [
-                createElement(PanelTitle, { key: 'title' }, 'Fence Layout'),
+                createElement(PanelTitle, { key: 'title' }, t('fenceEditor.title')),
                 createElement('span', {
                     key: 'count',
                     className: 'px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-xs rounded-full'
-                }, `${fenceCount} fence${fenceCount !== 1 ? 's' : ''}`),
+                }, fenceCount === 1 ? t('fenceEditor.fenceCount', { count: fenceCount }) : t('fenceEditor.fenceCountPlural', { count: fenceCount })),
                 createElement('span', {
                     key: 'shape',
                     className: 'px-2 py-0.5 bg-purple-500/20 text-purple-300 text-xs rounded-full flex items-center gap-1'
                 }, [
                     createElement('span', { key: 'icon' }, currentShape?.icon || '⬜'),
-                    createElement('span', { key: 'label' }, `${currentShape?.label || 'Square'} (${currentSize})`)
+                    createElement('span', { key: 'label' }, `${t(`sandbox.shapes.${currentShape?.id || 'square'}`)} (${t(`sandbox.sizes.${currentSize}`)})`)
                 ])
             ]),
             // Undo/Redo buttons
@@ -760,7 +762,7 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
             createElement('div', {
                 key: 'label',
                 className: 'text-xs text-white/50 mb-2 uppercase tracking-wide'
-            }, 'Quick Layouts'),
+            }, t('fenceEditor.quickLayouts')),
             createElement('div', {
                 key: 'cards',
                 className: 'grid grid-cols-5 gap-2'
@@ -769,7 +771,8 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                     key: preset,
                     preset,
                     isSelected: config.preset === preset,
-                    onClick: () => handleApplyPreset(preset)
+                    onClick: () => handleApplyPreset(preset),
+                    t
                 })
             ))
         ]),
@@ -792,7 +795,8 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                     config,
                     onConfigChange: handleConfigChangeWithHistory,
                     tool,
-                    canvasSize
+                    canvasSize,
+                    t
                 }))
             ]),
 
@@ -804,22 +808,22 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                 createElement('div', {
                     key: 'tools-label',
                     className: 'text-xs text-white/50 uppercase tracking-wide'
-                }, 'Tools'),
+                }, t('fenceEditor.tools')),
                 createElement('div', {
                     key: 'tools',
                     className: 'flex flex-col gap-1'
                 }, [
-                    createElement(ToolButton, { key: 'fence', tool: TOOLS.FENCE, currentTool: tool, onClick: setTool, icon: '📏', label: 'Draw' }),
-                    createElement(ToolButton, { key: 'select', tool: TOOLS.SELECT, currentTool: tool, onClick: setTool, icon: '👆', label: 'Select' }),
-                    createElement(ToolButton, { key: 'erase', tool: TOOLS.ERASE, currentTool: tool, onClick: setTool, icon: '🗑️', label: 'Erase' }),
-                    createElement(ToolButton, { key: 'pan', tool: TOOLS.PAN, currentTool: tool, onClick: setTool, icon: '✋', label: 'Pan' })
+                    createElement(ToolButton, { key: 'fence', tool: TOOLS.FENCE, currentTool: tool, onClick: setTool, icon: '📏', label: t('fenceEditor.draw') }),
+                    createElement(ToolButton, { key: 'select', tool: TOOLS.SELECT, currentTool: tool, onClick: setTool, icon: '👆', label: t('fenceEditor.select') }),
+                    createElement(ToolButton, { key: 'erase', tool: TOOLS.ERASE, currentTool: tool, onClick: setTool, icon: '🗑️', label: t('fenceEditor.erase') }),
+                    createElement(ToolButton, { key: 'pan', tool: TOOLS.PAN, currentTool: tool, onClick: setTool, icon: '✋', label: t('fenceEditor.pan') })
                 ]),
                 createElement('div', { key: 'spacer', className: 'flex-1' }),
                 createElement('button', {
                     key: 'clear',
                     onClick: handleClearAll,
                     className: 'p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-all text-xs text-center'
-                }, 'Clear All')
+                }, t('fenceEditor.clearAll'))
             ])
         ]),
 
@@ -828,12 +832,12 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
             key: 'help',
             className: 'text-xs text-white/40 text-center mt-3 bg-white/5 rounded-lg p-2'
         }, tool === TOOLS.FENCE
-            ? '🖱️ Click and drag to draw fences • Grid snaps to 10m'
+            ? t('fenceEditor.helpDraw')
             : tool === TOOLS.ERASE
-            ? '🖱️ Click on a fence to delete it'
+            ? t('fenceEditor.helpErase')
             : tool === TOOLS.PAN
-            ? '🖱️ Drag to pan • Scroll to zoom'
-            : '🖱️ Click on a fence to select it'),
+            ? t('fenceEditor.helpPan')
+            : t('fenceEditor.helpSelect')),
 
         // Footer
         createElement('div', {
@@ -843,13 +847,13 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
             createElement(BackButton, {
                 key: 'back',
                 onClick: onBack
-            }, 'Back'),
+            }, t('common.back')),
             createElement(Button, {
                 key: 'done',
                 variant: 'primary',
                 onClick: onDone,
                 className: 'flex-1'
-            }, `Done${fenceCount > 0 ? ` (${fenceCount} fences)` : ''}`)
+            }, fenceCount > 0 ? `${t('fenceEditor.done')} (${fenceCount})` : t('fenceEditor.done'))
         ])
     ]);
 }

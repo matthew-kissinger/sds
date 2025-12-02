@@ -3,50 +3,51 @@
  * Main menu mode selection - Solo, Multiplayer, Leaderboard, Settings
  */
 import React, { createElement, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { MenuOption } from '../ui/MenuOption.js';
 
-// Mode configuration
+// Mode configuration - labels and descriptions are translation keys
 const MODES = [
     {
         id: 'solo',
-        label: 'Solo Play',
-        description: 'Practice herding at your own pace',
+        labelKey: 'menu.soloPlay',
+        descKey: 'menu.soloPlayDesc',
         color: '#10b981', // Emerald
         icon: 'play'
     },
     {
         id: 'local',
-        label: 'Local 2-Player',
-        description: 'Co-op or compete on one screen',
+        labelKey: 'menu.local2Player',
+        descKey: 'menu.local2PlayerDesc',
         color: '#ec4899', // Pink
         icon: 'gamepad'
     },
     {
         id: 'sandbox',
-        label: 'Sandbox',
-        description: 'Customize sheep, fences & rules',
+        labelKey: 'menu.sandbox',
+        descKey: 'menu.sandboxDesc',
         color: '#f97316', // Orange
         icon: 'sandbox'
     },
     {
         id: 'multiplayer',
-        label: 'Multiplayer',
-        description: 'Compete or cooperate online',
+        labelKey: 'menu.multiplayer',
+        descKey: 'menu.multiplayerDesc',
         color: '#3b82f6', // Blue
         icon: 'users'
     },
     {
         id: 'leaderboard',
-        label: 'Leaderboard',
-        description: 'View global rankings',
+        labelKey: 'menu.leaderboard',
+        descKey: 'menu.leaderboardDesc',
         color: '#f59e0b', // Amber
         icon: 'trophy'
     },
     {
         id: 'settings',
-        label: 'Settings',
-        description: 'Adjust game settings',
+        labelKey: 'menu.settings',
+        descKey: 'menu.settingsDesc',
         color: '#8b5cf6', // Purple
         icon: 'cog'
     }
@@ -116,6 +117,7 @@ function ModeIcon({ type, color, size = 24 }) {
 }
 
 export function ModeSelection({ onSelectMode }) {
+    const { t } = useTranslation();
     const { isCompact, isLandscapeMobile } = useResponsive();
 
     // Use Tailwind for layout, minimal inline for responsive values
@@ -129,8 +131,8 @@ export function ModeSelection({ onSelectMode }) {
         MODES.map((mode, index) =>
             createElement(MenuOption, {
                 key: mode.id,
-                label: mode.label,
-                description: mode.description,
+                label: t(mode.labelKey),
+                description: t(mode.descKey),
                 accentColor: mode.color,
                 icon: createElement(ModeIcon, { type: mode.icon, color: mode.color, size: 24 }),
                 showArrow: false,
