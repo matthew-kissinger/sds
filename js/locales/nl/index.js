@@ -338,6 +338,18 @@ export default {
         welcome: 'Welkom bij Herdershond Simulator!',
         chooseIdentity: 'Kies hoe je bekend wilt staan:',
         welcomeBack: 'Welkom terug, {{name}}!',
-        confirmSelection: 'Bevestig Keuze'
+        confirmSelection: 'Bevestig Keuze',
+        continue: 'Doorgaan →',
+        settingUp: 'Instellen...',
+        customName: 'Aangepaste Naam',
+        customNameDesc: 'Kies je eigen weergavenaam',
+        enterName: 'Voer je naam in...',
+        randomName: 'Willekeurige Naam',
+        randomNameDesc: 'Krijg een willekeurig gegenereerde hoedersthema naam',
+        anonymous: 'Anoniem Blijven',
+        anonymousDesc: 'Speel als "Speler" zonder aangepaste naam',
+        errorEmpty: 'Voer een weergavenaam in of kies een andere optie',
+        errorTooLong: 'Weergavenaam moet 20 tekens of minder zijn',
+        errorFailed: 'Kan speleridentiteit niet maken. Probeer opnieuw.'
     }
 };

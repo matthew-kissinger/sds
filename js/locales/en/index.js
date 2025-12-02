@@ -338,6 +338,18 @@ export default {
         welcome: 'Welcome to Sheep Dog Sim!',
         chooseIdentity: 'Choose how you\'d like to be known:',
         welcomeBack: 'Welcome back, {{name}}!',
-        confirmSelection: 'Confirm Selection'
+        confirmSelection: 'Confirm Selection',
+        continue: 'Continue →',
+        settingUp: 'Setting up...',
+        customName: 'Custom Name',
+        customNameDesc: 'Choose your own display name',
+        enterName: 'Enter your name...',
+        randomName: 'Random Name',
+        randomNameDesc: 'Get a randomly generated herding-themed name',
+        anonymous: 'Stay Anonymous',
+        anonymousDesc: 'Play as "Player" without a custom name',
+        errorEmpty: 'Please enter a display name or choose another option',
+        errorTooLong: 'Display name must be 20 characters or less',
+        errorFailed: 'Failed to create player identity. Please try again.'
     }
 };

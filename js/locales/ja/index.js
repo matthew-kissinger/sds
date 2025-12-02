@@ -338,6 +338,18 @@ export default {
         welcome: 'Sheep Dog Simへようこそ！',
         chooseIdentity: '表示名を選んでください：',
         welcomeBack: 'おかえりなさい、{{name}}さん！',
-        confirmSelection: '選択を確認'
+        confirmSelection: '選択を確認',
+        continue: '続ける →',
+        settingUp: '設定中...',
+        customName: 'カスタム名',
+        customNameDesc: '独自の表示名を選択',
+        enterName: '名前を入力...',
+        randomName: 'ランダム名',
+        randomNameDesc: '牧羊をテーマにしたランダムな名前を取得',
+        anonymous: '匿名のまま',
+        anonymousDesc: 'カスタム名なしで「プレイヤー」としてプレイ',
+        errorEmpty: '表示名を入力するか、他のオプションを選択してください',
+        errorTooLong: '表示名は20文字以内にしてください',
+        errorFailed: 'プレイヤーIDの作成に失敗しました。もう一度お試しください。'
     }
 };

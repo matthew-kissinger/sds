@@ -338,6 +338,18 @@ export default {
         welcome: 'Çoban Köpeği Simülatörüne Hoş Geldin!',
         chooseIdentity: 'Nasıl tanınmak istediğini seç:',
         welcomeBack: 'Tekrar hoş geldin, {{name}}!',
-        confirmSelection: 'Seçimi Onayla'
+        confirmSelection: 'Seçimi Onayla',
+        continue: 'Devam Et →',
+        settingUp: 'Ayarlanıyor...',
+        customName: 'Özel İsim',
+        customNameDesc: 'Kendi görünen adını seç',
+        enterName: 'Adını gir...',
+        randomName: 'Rastgele İsim',
+        randomNameDesc: 'Rastgele oluşturulmuş çobanlık temalı isim al',
+        anonymous: 'Anonim Kal',
+        anonymousDesc: 'Özel isim olmadan "Oyuncu" olarak oyna',
+        errorEmpty: 'Lütfen bir görünen ad girin veya başka bir seçenek seçin',
+        errorTooLong: 'Görünen ad 20 karakter veya daha az olmalıdır',
+        errorFailed: 'Oyuncu kimliği oluşturulamadı. Lütfen tekrar deneyin.'
     }
 };

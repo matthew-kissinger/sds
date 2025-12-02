@@ -338,6 +338,18 @@ export default {
         welcome: 'Selamat datang di Simulator Anjing Gembala!',
         chooseIdentity: 'Pilih cara kamu ingin dikenal:',
         welcomeBack: 'Selamat datang kembali, {{name}}!',
-        confirmSelection: 'Konfirmasi Pilihan'
+        confirmSelection: 'Konfirmasi Pilihan',
+        continue: 'Lanjutkan →',
+        settingUp: 'Menyiapkan...',
+        customName: 'Nama Kustom',
+        customNameDesc: 'Pilih nama tampilan sendiri',
+        enterName: 'Masukkan nama kamu...',
+        randomName: 'Nama Acak',
+        randomNameDesc: 'Dapatkan nama acak bertema penggembala',
+        anonymous: 'Tetap Anonim',
+        anonymousDesc: 'Main sebagai "Pemain" tanpa nama kustom',
+        errorEmpty: 'Silakan masukkan nama tampilan atau pilih opsi lain',
+        errorTooLong: 'Nama tampilan harus 20 karakter atau kurang',
+        errorFailed: 'Gagal membuat identitas pemain. Silakan coba lagi.'
     }
 };

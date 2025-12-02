@@ -320,6 +320,18 @@ export default {
         welcome: 'Bienvenue sur Sheep Dog Sim !',
         chooseIdentity: 'Choisissez comment vous souhaitez être connu :',
         welcomeBack: 'Bon retour, {{name}} !',
-        confirmSelection: 'Confirmer la Sélection'
+        confirmSelection: 'Confirmer la Sélection',
+        continue: 'Continuer →',
+        settingUp: 'Configuration...',
+        customName: 'Nom Personnalisé',
+        customNameDesc: 'Choisissez votre propre nom d\'affichage',
+        enterName: 'Entrez votre nom...',
+        randomName: 'Nom Aléatoire',
+        randomNameDesc: 'Obtenir un nom généré aléatoirement sur le thème du berger',
+        anonymous: 'Rester Anonyme',
+        anonymousDesc: 'Jouer en tant que "Joueur" sans nom personnalisé',
+        errorEmpty: 'Veuillez entrer un nom d\'affichage ou choisir une autre option',
+        errorTooLong: 'Le nom d\'affichage doit contenir 20 caractères ou moins',
+        errorFailed: 'Échec de la création de l\'identité du joueur. Veuillez réessayer.'
     }
 };

@@ -338,6 +338,18 @@ export default {
         welcome: '欢迎来到牧羊犬模拟器！',
         chooseIdentity: '选择你想使用的名字：',
         welcomeBack: '欢迎回来，{{name}}！',
-        confirmSelection: '确认选择'
+        confirmSelection: '确认选择',
+        continue: '继续 →',
+        settingUp: '设置中...',
+        customName: '自定义名称',
+        customNameDesc: '选择你自己的显示名称',
+        enterName: '输入你的名字...',
+        randomName: '随机名称',
+        randomNameDesc: '获取一个随机生成的牧羊主题名称',
+        anonymous: '保持匿名',
+        anonymousDesc: '以"玩家"身份游玩，不使用自定义名称',
+        errorEmpty: '请输入显示名称或选择其他选项',
+        errorTooLong: '显示名称必须在20个字符以内',
+        errorFailed: '创建玩家身份失败。请重试。'
     }
 };

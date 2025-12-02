@@ -338,6 +338,18 @@ export default {
         welcome: 'Maligayang pagdating sa Sheepdog Simulator!',
         chooseIdentity: 'Piliin kung paano mo gustong makilala:',
         welcomeBack: 'Maligayang pagbabalik, {{name}}!',
-        confirmSelection: 'Kumpirmahin ang Pagpili'
+        confirmSelection: 'Kumpirmahin ang Pagpili',
+        continue: 'Magpatuloy →',
+        settingUp: 'Nag-aayos...',
+        customName: 'Custom na Pangalan',
+        customNameDesc: 'Pumili ng sariling display name',
+        enterName: 'Ilagay ang iyong pangalan...',
+        randomName: 'Random na Pangalan',
+        randomNameDesc: 'Kumuha ng random na pangalan na may temang pag-aalaga',
+        anonymous: 'Manatiling Anonymous',
+        anonymousDesc: 'Maglaro bilang "Manlalaro" nang walang custom na pangalan',
+        errorEmpty: 'Mangyaring maglagay ng display name o pumili ng ibang opsyon',
+        errorTooLong: 'Ang display name ay dapat 20 character o mas maikli',
+        errorFailed: 'Nabigo ang paglikha ng player identity. Subukan ulit.'
     }
 };

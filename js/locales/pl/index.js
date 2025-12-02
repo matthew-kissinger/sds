@@ -338,6 +338,18 @@ export default {
         welcome: 'Witaj w Symulatorze Psa Pasterskiego!',
         chooseIdentity: 'Wybierz, jak chcesz być znany:',
         welcomeBack: 'Witaj ponownie, {{name}}!',
-        confirmSelection: 'Potwierdź Wybór'
+        confirmSelection: 'Potwierdź Wybór',
+        continue: 'Kontynuuj →',
+        settingUp: 'Konfigurowanie...',
+        customName: 'Własna Nazwa',
+        customNameDesc: 'Wybierz własną wyświetlaną nazwę',
+        enterName: 'Wprowadź swoją nazwę...',
+        randomName: 'Losowa Nazwa',
+        randomNameDesc: 'Otrzymaj losowo wygenerowaną nazwę pasterską',
+        anonymous: 'Pozostań Anonimowy',
+        anonymousDesc: 'Graj jako "Gracz" bez własnej nazwy',
+        errorEmpty: 'Proszę wprowadzić wyświetlaną nazwę lub wybrać inną opcję',
+        errorTooLong: 'Wyświetlana nazwa musi mieć 20 znaków lub mniej',
+        errorFailed: 'Nie udało się utworzyć tożsamości gracza. Spróbuj ponownie.'
     }
 };

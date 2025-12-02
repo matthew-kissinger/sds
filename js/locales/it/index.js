@@ -338,6 +338,18 @@ export default {
         welcome: 'Benvenuto in Simulatore Cane Pastore!',
         chooseIdentity: 'Scegli come vuoi essere conosciuto:',
         welcomeBack: 'Bentornato, {{name}}!',
-        confirmSelection: 'Conferma Selezione'
+        confirmSelection: 'Conferma Selezione',
+        continue: 'Continua →',
+        settingUp: 'Configurazione...',
+        customName: 'Nome Personalizzato',
+        customNameDesc: 'Scegli il tuo nome visualizzato',
+        enterName: 'Inserisci il tuo nome...',
+        randomName: 'Nome Casuale',
+        randomNameDesc: 'Ottieni un nome casuale a tema pastorizia',
+        anonymous: 'Resta Anonimo',
+        anonymousDesc: 'Gioca come "Giocatore" senza nome personalizzato',
+        errorEmpty: 'Per favore inserisci un nome visualizzato o scegli un\'altra opzione',
+        errorTooLong: 'Il nome visualizzato deve essere di 20 caratteri o meno',
+        errorFailed: 'Impossibile creare l\'identità del giocatore. Riprova.'
     }
 };

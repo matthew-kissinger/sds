@@ -3,13 +3,16 @@
  * Initial player name setup flow
  */
 import React, { createElement, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getNetworkManager } from '../../GameBridge.js';
 import { generatePersistentId, savePlayerIdentity } from '../shared/playerIdentity.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
+import { LanguageSelector } from '../ui/LanguageSelector.js';
 
 export function PlayerIdentitySetup({ onComplete }) {
+    const { t } = useTranslation();
     const [displayName, setDisplayName] = useState('');
     const [nameType, setNameType] = useState('custom');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,9 +57,9 @@ export function PlayerIdentitySetup({ onComplete }) {
             console.log('[PLAYER] Random name identity created:', identity);
             onComplete(identity);
 
-        } catch (error) {
-            console.error('[PLAYER] Error creating random name identity:', error);
-            setError('Failed to create player identity. Please try again.');
+        } catch (err) {
+            console.error('[PLAYER] Error creating random name identity:', err);
+            setError(t('identity.errorFailed'));
             setIsSubmitting(false);
         }
     };
@@ -99,9 +102,9 @@ export function PlayerIdentitySetup({ onComplete }) {
             console.log('[PLAYER] Anonymous identity created:', identity);
             onComplete(identity);
 
-        } catch (error) {
-            console.error('[PLAYER] Error creating anonymous identity:', error);
-            setError('Failed to create player identity. Please try again.');
+        } catch (err) {
+            console.error('[PLAYER] Error creating anonymous identity:', err);
+            setError(t('identity.errorFailed'));
             setIsSubmitting(false);
         }
     };
@@ -113,12 +116,12 @@ export function PlayerIdentitySetup({ onComplete }) {
 
     const handleSubmit = async () => {
         if (nameType === 'custom' && (!displayName || displayName.trim().length === 0)) {
-            setError('Please enter a display name or choose another option');
+            setError(t('identity.errorEmpty'));
             return;
         }
 
         if (nameType === 'custom' && displayName.trim().length > 20) {
-            setError('Display name must be 20 characters or less');
+            setError(t('identity.errorTooLong'));
             return;
         }
 
@@ -162,9 +165,9 @@ export function PlayerIdentitySetup({ onComplete }) {
             console.log('[PLAYER] Player identity created:', identity);
             onComplete(identity);
 
-        } catch (error) {
-            console.error('[PLAYER] Error creating player identity:', error);
-            setError('Failed to create player identity. Please try again.');
+        } catch (err) {
+            console.error('[PLAYER] Error creating player identity:', err);
+            setError(t('identity.errorFailed'));
         } finally {
             setIsSubmitting(false);
         }
@@ -213,15 +216,28 @@ export function PlayerIdentitySetup({ onComplete }) {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            width: '100%'
+            width: '100%',
+            position: 'relative'
         }
-    },
+    }, [
+        // Language selector in top-right corner
+        createElement('div', {
+            key: 'lang-selector',
+            style: {
+                position: 'absolute',
+                top: isCompact ? '0.5rem' : '1rem',
+                right: isCompact ? '0.5rem' : '1rem',
+                zIndex: 100
+            }
+        }, createElement(LanguageSelector, { variant: 'icon' })),
+
         createElement(Panel, {
+            key: 'panel',
             size: 'lg',
             maxWidth: '28rem',
             style: { animation: 'slideUp 0.8s ease-out' }
         }, [
-            createElement(PanelTitle, { key: 'title' }, 'Welcome to Sheep Dog Sim!'),
+            createElement(PanelTitle, { key: 'title' }, t('identity.welcome')),
 
             createElement('p', {
                 key: 'subtitle',
@@ -231,7 +247,7 @@ export function PlayerIdentitySetup({ onComplete }) {
                     marginBottom: isCompact ? '1rem' : '2rem',
                     fontSize: isCompact ? '0.8rem' : '0.875rem'
                 }
-            }, 'Choose how you\'d like to be known:'),
+            }, t('identity.chooseIdentity')),
 
             createElement('div', {
                 key: 'options',
@@ -263,7 +279,7 @@ export function PlayerIdentitySetup({ onComplete }) {
                         createElement('span', {
                             key: 'title',
                             style: { color: 'white', fontWeight: 600 }
-                        }, 'Custom Name')
+                        }, t('identity.customName'))
                     ]),
                     createElement('p', {
                         key: 'desc',
@@ -272,12 +288,12 @@ export function PlayerIdentitySetup({ onComplete }) {
                             fontSize: isCompact ? '0.75rem' : '0.875rem',
                             marginBottom: nameType === 'custom' ? '0.75rem' : 0
                         }
-                    }, 'Choose your own display name'),
+                    }, t('identity.customNameDesc')),
                     nameType === 'custom' && createElement('input', {
                         key: 'input',
                         type: 'text',
                         style: inputStyle,
-                        placeholder: 'Enter your name...',
+                        placeholder: t('identity.enterName'),
                         value: displayName,
                         maxLength: 20,
                         onChange: (e) => setDisplayName(e.target.value),
@@ -309,7 +325,7 @@ export function PlayerIdentitySetup({ onComplete }) {
                         createElement('span', {
                             key: 'title',
                             style: { color: 'white', fontWeight: 600 }
-                        }, 'Random Name')
+                        }, t('identity.randomName'))
                     ]),
                     createElement('p', {
                         key: 'desc',
@@ -317,7 +333,7 @@ export function PlayerIdentitySetup({ onComplete }) {
                             color: 'rgba(255, 255, 255, 0.7)',
                             fontSize: isCompact ? '0.75rem' : '0.875rem'
                         }
-                    }, 'Get a randomly generated herding-themed name')
+                    }, t('identity.randomNameDesc'))
                 ]),
 
                 // Anonymous option
@@ -342,7 +358,7 @@ export function PlayerIdentitySetup({ onComplete }) {
                         createElement('span', {
                             key: 'title',
                             style: { color: 'white', fontWeight: 600 }
-                        }, 'Stay Anonymous')
+                        }, t('identity.anonymous'))
                     ]),
                     createElement('p', {
                         key: 'desc',
@@ -350,7 +366,7 @@ export function PlayerIdentitySetup({ onComplete }) {
                             color: 'rgba(255, 255, 255, 0.7)',
                             fontSize: isCompact ? '0.75rem' : '0.875rem'
                         }
-                    }, 'Play as "Player" without a custom name')
+                    }, t('identity.anonymousDesc'))
                 ])
             ]),
 
@@ -373,8 +389,8 @@ export function PlayerIdentitySetup({ onComplete }) {
                     fullWidth: true,
                     onClick: handleSubmit,
                     disabled: isSubmitting
-                }, isSubmitting ? 'Setting up...' : 'Continue →')
+                }, isSubmitting ? t('identity.settingUp') : t('identity.continue'))
             )
         ])
-    );
+    ]);
 }

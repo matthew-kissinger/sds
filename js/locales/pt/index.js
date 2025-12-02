@@ -320,6 +320,18 @@ export default {
         welcome: 'Bem-vindo ao Sheep Dog Sim!',
         chooseIdentity: 'Escolha como você quer ser conhecido:',
         welcomeBack: 'Bem-vindo de volta, {{name}}!',
-        confirmSelection: 'Confirmar Seleção'
+        confirmSelection: 'Confirmar Seleção',
+        continue: 'Continuar →',
+        settingUp: 'Configurando...',
+        customName: 'Nome Personalizado',
+        customNameDesc: 'Escolha seu próprio nome de exibição',
+        enterName: 'Digite seu nome...',
+        randomName: 'Nome Aleatório',
+        randomNameDesc: 'Obter um nome aleatório com tema de pastoreio',
+        anonymous: 'Permanecer Anônimo',
+        anonymousDesc: 'Jogar como "Jogador" sem nome personalizado',
+        errorEmpty: 'Por favor, digite um nome de exibição ou escolha outra opção',
+        errorTooLong: 'O nome de exibição deve ter 20 caracteres ou menos',
+        errorFailed: 'Falha ao criar identidade do jogador. Tente novamente.'
     }
 };

@@ -338,6 +338,18 @@ export default {
         welcome: '양치기 개 시뮬레이터에 오신 것을 환영합니다!',
         chooseIdentity: '사용할 이름을 선택하세요:',
         welcomeBack: '다시 오셨군요, {{name}}님!',
-        confirmSelection: '선택 확인'
+        confirmSelection: '선택 확인',
+        continue: '계속 →',
+        settingUp: '설정 중...',
+        customName: '커스텀 이름',
+        customNameDesc: '원하는 표시 이름 선택',
+        enterName: '이름을 입력하세요...',
+        randomName: '랜덤 이름',
+        randomNameDesc: '무작위로 생성된 목양 테마 이름 받기',
+        anonymous: '익명 유지',
+        anonymousDesc: '커스텀 이름 없이 "플레이어"로 플레이',
+        errorEmpty: '표시 이름을 입력하거나 다른 옵션을 선택하세요',
+        errorTooLong: '표시 이름은 20자 이하여야 합니다',
+        errorFailed: '플레이어 신원 생성에 실패했습니다. 다시 시도하세요.'
     }
 };

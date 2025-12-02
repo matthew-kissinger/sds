@@ -339,6 +339,18 @@ export default {
         welcome: 'مرحباً في محاكي كلب الراعي!',
         chooseIdentity: 'اختر كيف تريد أن تُعرف:',
         welcomeBack: 'مرحباً بعودتك، {{name}}!',
-        confirmSelection: 'تأكيد الاختيار'
+        confirmSelection: 'تأكيد الاختيار',
+        continue: 'متابعة →',
+        settingUp: 'جاري الإعداد...',
+        customName: 'اسم مخصص',
+        customNameDesc: 'اختر اسم العرض الخاص بك',
+        enterName: 'أدخل اسمك...',
+        randomName: 'اسم عشوائي',
+        randomNameDesc: 'احصل على اسم عشوائي بموضوع الرعي',
+        anonymous: 'البقاء مجهولاً',
+        anonymousDesc: 'العب كـ "لاعب" بدون اسم مخصص',
+        errorEmpty: 'الرجاء إدخال اسم عرض أو اختيار خيار آخر',
+        errorTooLong: 'يجب أن يكون اسم العرض 20 حرفاً أو أقل',
+        errorFailed: 'فشل إنشاء هوية اللاعب. حاول مرة أخرى.'
     }
 };
