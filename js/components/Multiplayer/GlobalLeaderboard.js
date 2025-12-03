@@ -167,9 +167,11 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
     return createElement('div', {
         style: {
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             width: '100%',
+            height: '100%',
             maxHeight: '100%',
             padding: isMobile ? '0.5rem' : '1rem'
         }

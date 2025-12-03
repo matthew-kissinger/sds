@@ -387,7 +387,16 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
     const fieldSizeConfig = FIELD_SIZES.find(s => s.id === config.field?.size);
     const fieldSize = fieldSizeConfig ? t(fieldSizeConfig.labelKey) : t('sandbox.sizes.medium');
 
-    return createElement(Panel, {
+    return createElement('div', {
+        style: {
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+            height: '100%'
+        }
+    }, createElement(Panel, {
         size: 'lg',
         maxWidth: isCompact ? '100%' : '36rem',
         className: 'overflow-hidden'
@@ -452,5 +461,5 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                 className: 'flex-1 py-3'
             }, t('sandbox.startGameWithCount', { count: sheepCount }))
         ])
-    ]);
+    ]));
 }

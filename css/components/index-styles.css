@@ -112,6 +112,27 @@ html, body {
     50% { transform: translateY(-8px) rotate(0.5deg); }
 }
 
+/* 3D Stacked Title Animations */
+@keyframes titleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes titleBounce1 {
+    0%, 100% { transform: rotate(-2deg) translateY(0); }
+    50% { transform: rotate(-2deg) translateY(-5px); }
+}
+
+@keyframes titleBounce2 {
+    0%, 100% { transform: rotate(1deg) translateY(0); }
+    50% { transform: rotate(1deg) translateY(-8px); }
+}
+
+@keyframes titleBounce3 {
+    0%, 100% { transform: rotate(-0.5deg) translateY(0); }
+    50% { transform: rotate(-0.5deg) translateY(-3px); }
+}
+
 @keyframes pulseGlow {
     0%, 100% { box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4); }
     50% { box-shadow: 0 20px 40px -5px rgba(102, 126, 234, 0.6); }

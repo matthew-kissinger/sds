@@ -180,6 +180,15 @@ export function LocalModeSetup({ onStart, onBack }) {
     const gapClass = isCompact ? 'gap-3' : 'gap-4';
 
     return createElement('div', {
+        style: {
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+            height: '100%'
+        }
+    }, createElement('div', {
         className: `w-full mx-auto ${maxWidthClass} animate-slide-up`
     }, [
         // Title with back button
@@ -281,5 +290,5 @@ export function LocalModeSetup({ onStart, onBack }) {
             key: 'note',
             className: 'text-center text-white/40 text-xs mt-3'
         }, t('localMode.noLeaderboards'))
-    ]);
+    ]));
 }

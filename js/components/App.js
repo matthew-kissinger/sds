@@ -382,88 +382,103 @@ export async function initReactUI() {
                             right: platform.isMobile ? 'max(env(safe-area-inset-right, 12px), 12px)' : '20px',
                             zIndex: 100
                         };
-                        // Whimsical zen-inspired title styling
-                        const titleStyle = platform.isMobile ? {
-                            // Mobile: cleaner, more compact
-                            fontSize: 'clamp(1.8rem, 10vw, 3rem)',
+
+                        // 3D Extruded Title Styles - Fully responsive
+                        const titleContainerStyle = {
+                            textAlign: 'center',
+                            marginBottom: 'clamp(0.5rem, 2vw, 1rem)',
+                            maxWidth: '100%',
+                            padding: '0 1rem'
+                        };
+
+                        // Main title "Sheepdog" - scales with viewport
+                        const mainTitleStyle = {
+                            display: 'block',
+                            fontFamily: '"Fredoka", system-ui, sans-serif',
                             fontWeight: 700,
-                            marginBottom: '0.25rem',
-                            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-                            background: 'linear-gradient(135deg, #7dd3a8 0%, #4ade80 50%, #22c55e 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                            letterSpacing: '1px',
-                            animation: 'fadeIn 0.5s ease-out',
-                            textShadow: '0 2px 10px rgba(74, 222, 128, 0.3)'
-                        } : {
-                            // Desktop: larger with subtle animation
-                            fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
-                            fontWeight: 800,
-                            marginBottom: '0.5rem',
-                            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-                            background: 'linear-gradient(135deg, #7dd3a8 0%, #4ade80 50%, #22c55e 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                            letterSpacing: '2px',
-                            animation: 'fadeIn 0.5s ease-out, titleFloat 4s ease-in-out infinite 1s',
-                            textShadow: '0 4px 20px rgba(74, 222, 128, 0.4)'
-                        };
-                        const subtitleStyle = platform.isMobile ? {
-                            // Mobile: subtle and clean
-                            fontSize: 'clamp(0.9rem, 4vw, 1.2rem)',
-                            fontWeight: 500,
-                            marginBottom: '1.5rem',
-                            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            letterSpacing: '3px',
+                            // Fluid scaling: min 2rem, preferred 10vw, max 5.5rem
+                            fontSize: 'clamp(2rem, 10vw, 5.5rem)',
                             textTransform: 'uppercase',
-                            animation: 'fadeIn 0.5s ease-out 0.1s both'
-                        } : {
-                            // Desktop: elegant spacing
-                            fontSize: 'clamp(1rem, 2vw, 1.5rem)',
-                            fontWeight: 500,
-                            marginBottom: '2rem',
-                            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            letterSpacing: '6px',
-                            textTransform: 'uppercase',
-                            animation: 'fadeIn 0.5s ease-out 0.2s both'
+                            letterSpacing: '0.02em',
+                            lineHeight: 1,
+                            margin: 0,
+                            padding: 0,
+                            color: '#86efac',
+                            // Responsive shadow - uses em units to scale with font
+                            textShadow: `
+                                0.04em 0.04em 0 #166534,
+                                0.08em 0.08em 0 #14532d,
+                                0.12em 0.12em 0 #0f3d22,
+                                0.16em 0.16em 0.3em rgba(0,0,0,0.4)
+                            `.replace(/\s+/g, ' ').trim(),
+                            animation: 'titleBounce 2.5s ease-in-out infinite'
                         };
-                        return [
-                            // Language selector in top-right corner
+
+                        // Subtitle "Simulator" - scales proportionally
+                        const subtitleStyle = {
+                            display: 'block',
+                            fontFamily: '"Fredoka", system-ui, sans-serif',
+                            fontWeight: 600,
+                            // Fluid scaling: min 0.65rem, preferred 3vw, max 1.6rem
+                            fontSize: 'clamp(0.65rem, 3vw, 1.6rem)',
+                            color: '#fef3c7',
+                            letterSpacing: 'clamp(0.2em, 1vw, 0.4em)',
+                            textTransform: 'uppercase',
+                            textShadow: `
+                                0.05em 0.05em 0 #92400e,
+                                0.1em 0.1em 0.15em rgba(0,0,0,0.3)
+                            `.replace(/\s+/g, ' ').trim(),
+                            marginTop: 'clamp(0.15rem, 1vw, 0.4rem)',
+                            animation: 'subtitleBounce 2.5s ease-in-out infinite 0.15s'
+                        };
+
+                        // Wrap everything in a centering container for the main menu
+                        return createElement('div', {
+                            key: 'main-menu-wrapper',
+                            style: {
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%',
+                                gap: '0.5rem'
+                            }
+                        }, [
+                            // Language selector in top-right corner (positioned fixed, so outside flow)
                             createElement('div', {
                                 key: 'lang-selector',
                                 style: languageSelectorStyle
                             }, createElement(LanguageSelector, { variant: 'icon' })),
-                            createElement('h1', {
-                                key: 'title',
-                                style: titleStyle
-                            }, 'Sheepdog'),
-                            createElement('h2', {
-                                key: 'subtitle',
-                                style: subtitleStyle
-                            }, 'Simulator'),
+                            // 3D Title
+                            createElement('div', {
+                                key: 'title-container',
+                                style: titleContainerStyle
+                            }, [
+                                createElement('span', { key: 'main', style: mainTitleStyle }, 'Sheepdog'),
+                                createElement('span', { key: 'sub', style: subtitleStyle }, 'Simulator')
+                            ]),
                             playerIdentity && createElement('p', {
                                 key: 'greeting',
                                 style: {
                                     color: 'rgba(255, 255, 255, 0.8)',
-                                    marginBottom: '2rem',
-                                    fontSize: '1.125rem',
+                                    marginBottom: '1rem',
+                                    fontSize: platform.isMobile ? '0.9rem' : '1.125rem',
                                     animation: 'fadeIn 0.6s ease-out 0.3s both'
                                 }
                             }, `Welcome back, ${playerIdentity.displayName}!`),
                             createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect })
-                        ];
+                        ]);
 
                     case 'dogSelection':
                         return createElement('div', {
                             style: {
                                 width: '100%',
+                                height: '100%',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                justifyContent: 'center'
                             }
                         }, [
                             createElement(DogSelection, { key: 'selection', selectedDog, onSelect: setSelectedDog }),
