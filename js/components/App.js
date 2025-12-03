@@ -503,7 +503,7 @@ export async function initReactUI() {
                                         color: 'rgba(255, 255, 255, 0.5)',
                                         textDecoration: 'none'
                                     }
-                                }, 'About & Source')
+                                }, 'About / GitHub')
                             ])
                         ]);
 
