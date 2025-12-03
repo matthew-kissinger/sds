@@ -56,8 +56,9 @@ export function MobileControls() {
                 const angle = data.angle.radian;
                 const force = Math.min(data.force, 1);
                 // Update the bridge's movement vector (used by InputHandler.getMovementDirection)
-                mobileControls.movementVector.x = Math.cos(angle) * force;
-                mobileControls.movementVector.z = -Math.sin(angle) * force;
+                // Game coordinates: +X = left, -X = right, +Z = forward, -Z = backward
+                mobileControls.movementVector.x = -Math.cos(angle) * force;
+                mobileControls.movementVector.z = Math.sin(angle) * force;
                 mobileControls.isMoving = true;
             }
         });
