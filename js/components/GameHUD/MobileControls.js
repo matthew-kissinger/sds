@@ -5,7 +5,7 @@
  */
 import React, { createElement, useState, useEffect, useRef } from 'react';
 import nipplejs from 'nipplejs';
-import { getGameInstance, getInputHandler, getMobileControls } from '../../GameBridge.js';
+import { getGameInstance, getMobileControls } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 
 // Sprint icon
@@ -51,27 +51,23 @@ export function MobileControls() {
         });
 
         manager.on('move', (evt, data) => {
-            const inputHandler = getInputHandler();
-            if (inputHandler) {
+            const mobileControls = getMobileControls();
+            if (mobileControls) {
                 const angle = data.angle.radian;
                 const force = Math.min(data.force, 1);
-                const moveX = Math.cos(angle) * force;
-                const moveZ = -Math.sin(angle) * force;
-
-                inputHandler.keys = {
-                    ...inputHandler.keys,
-                    w: moveZ < -0.3,
-                    s: moveZ > 0.3,
-                    a: moveX < -0.3,
-                    d: moveX > 0.3
-                };
+                // Update the bridge's movement vector (used by InputHandler.getMovementDirection)
+                mobileControls.movementVector.x = Math.cos(angle) * force;
+                mobileControls.movementVector.z = -Math.sin(angle) * force;
+                mobileControls.isMoving = true;
             }
         });
 
         manager.on('end', () => {
-            const inputHandler = getInputHandler();
-            if (inputHandler) {
-                inputHandler.keys = { ...inputHandler.keys, w: false, s: false, a: false, d: false };
+            const mobileControls = getMobileControls();
+            if (mobileControls) {
+                mobileControls.movementVector.x = 0;
+                mobileControls.movementVector.z = 0;
+                mobileControls.isMoving = false;
             }
         });
 
@@ -88,14 +84,14 @@ export function MobileControls() {
 
     const handleSprintStart = () => {
         setIsSprinting(true);
-        const inputHandler = getInputHandler();
-        if (inputHandler) inputHandler.keys.shift = true;
+        const mobileControls = getMobileControls();
+        if (mobileControls) mobileControls.isSprinting = true;
     };
 
     const handleSprintEnd = () => {
         setIsSprinting(false);
-        const inputHandler = getInputHandler();
-        if (inputHandler) inputHandler.keys.shift = false;
+        const mobileControls = getMobileControls();
+        if (mobileControls) mobileControls.isSprinting = false;
     };
 
     const handleZoomChange = (delta) => {
