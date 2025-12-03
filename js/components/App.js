@@ -467,7 +467,21 @@ export async function initReactUI() {
                                     animation: 'fadeIn 0.6s ease-out 0.3s both'
                                 }
                             }, `Welcome back, ${playerIdentity.displayName}!`),
-                            createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect })
+                            createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect }),
+                            // Subtle about link
+                            createElement('a', {
+                                key: 'about-link',
+                                href: '/about.html',
+                                target: '_blank',
+                                rel: 'noopener',
+                                style: {
+                                    marginTop: '1.5rem',
+                                    color: 'rgba(255, 255, 255, 0.35)',
+                                    fontSize: '0.75rem',
+                                    textDecoration: 'none',
+                                    animation: 'fadeIn 0.6s ease-out 0.5s both'
+                                }
+                            }, 'About')
                         ]);
 
                     case 'dogSelection':
