@@ -484,7 +484,7 @@ export async function initReactUI() {
                             }, [
                                 'Made by ',
                                 createElement('a', {
-                                    key: 'link',
+                                    key: 'name',
                                     href: '/about.html',
                                     target: '_blank',
                                     rel: 'noopener',
@@ -492,7 +492,18 @@ export async function initReactUI() {
                                         color: 'rgba(255, 255, 255, 0.5)',
                                         textDecoration: 'none'
                                     }
-                                }, 'Matthew Kissinger')
+                                }, 'Matthew Kissinger'),
+                                ' · ',
+                                createElement('a', {
+                                    key: 'about',
+                                    href: '/about.html',
+                                    target: '_blank',
+                                    rel: 'noopener',
+                                    style: {
+                                        color: 'rgba(255, 255, 255, 0.5)',
+                                        textDecoration: 'none'
+                                    }
+                                }, 'About & Source')
                             ])
                         ]);
 
