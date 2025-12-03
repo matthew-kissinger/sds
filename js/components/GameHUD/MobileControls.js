@@ -5,7 +5,7 @@
  */
 import React, { createElement, useState, useEffect, useRef } from 'react';
 import nipplejs from 'nipplejs';
-import { getGameInstance, getMobileControls } from '../../GameBridge.js';
+import { getMobileControls } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 
 // Sprint icon
@@ -39,7 +39,7 @@ export function MobileControls() {
 
     // Initialize joystick
     useEffect(() => {
-        if (!getGameInstance() || !joystickRef.current) return;
+        if (!joystickRef.current) return;
 
         const manager = nipplejs.create({
             zone: joystickRef.current,
