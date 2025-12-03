@@ -1,37 +1,37 @@
-A relaxing browser game where you guide your faithful sheepdog through peaceful meadows, herding flocks of fluffy sheep.
+Guide your sheepdog through rolling meadows and herd 200 fluffy, panicky sheep through the gate. Sounds simple? The sheep have other ideas.
 
-🐕 MULTIPLE DOG BREEDS
-Choose from 5 sheepdog breeds, each with unique Speed, Stamina, and Control stats.
+Sheep flee when you get close. Get too close and the whole flock scatters. The trick is circling wide, nudging them gently, reading the herd. It's surprisingly meditative once you get the rhythm.
 
-🌿 RELAXING GAMEPLAY
-No timers, no pressure in Classic mode. Just you, your dog, and the sheep.
 
-⏱️ TIMED CHALLENGES
-Ready for more? Try Timed mode and see how fast you can herd 200 sheep.
+WHAT'S IN THE BOX
 
-🌐 MULTIPLAYER
-Compete or cooperate with other players in real-time multiplayer modes.
+Five dogs with different playstyles. Jep is balanced, Sally is fast but tires quickly, Pip has long range but moves slower. Pick one that fits how you play.
 
-🏆 GLOBAL LEADERBOARDS
-Track your best times and compete for top rankings.
+Classic mode has no timer. Just vibes. Timed mode is for when you want to actually sweat. Multiplayer lets you herd with (or against) friends.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+There's a leaderboard if you're competitive about sheep.
 
-CONTROLS
 
-Desktop: WASD/Arrows to move • Shift to sprint • Scroll to zoom
-Mobile: Virtual joystick • Sprint button • Pinch to zoom
+HOW IT WORKS
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Desktop: WASD moves, Shift sprints, scroll zooms
+Mobile: Joystick on the left, sprint button above it
+Works in any modern browser
+
+
+THE SHEEP AI
+
+200 sheep running boid flocking algorithms - they stick together, avoid each other, and align their movement. When your dog approaches, they scatter realistically. It's oddly satisfying to watch.
+
 
 TIPS
-• Sheep flee from the dog - use this to guide them
-• Don't get too close or the flock will scatter
-• Circle around the flock to keep them together
-• Sprint uses stamina - use it wisely!
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Sheep flee from the dog - use this to guide them
+Don't get too close or the flock will scatter
+Circle around the flock to keep them together
+Sprint drains stamina - use it wisely
 
-Also playable at: https://sheepdogsim.com
 
-Made with Three.js. Free to play, forever.
+Also at: sheepdogsim.com
+
+Started as a Three.js game jam entry. Made with Three.js. Free forever.

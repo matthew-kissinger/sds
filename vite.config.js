@@ -20,7 +20,13 @@ export default defineConfig({
   ],
   build: {
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        about: 'about.html'
+      }
+    }
   },
   server: {
     port: 3000,

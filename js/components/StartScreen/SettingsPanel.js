@@ -597,13 +597,28 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                     borderTop: '1px solid rgba(255,255,255,0.1)',
                     flexShrink: 0
                 }
-            },
+            }, [
                 createElement(Button, {
+                    key: 'back',
                     variant: 'primary',
                     fullWidth: true,
                     onClick: onBack
-                }, t('common.backToMenu'))
-            )
+                }, t('common.backToMenu')),
+                createElement('a', {
+                    key: 'about',
+                    href: '/about.html',
+                    target: '_blank',
+                    rel: 'noopener',
+                    style: {
+                        display: 'block',
+                        textAlign: 'center',
+                        marginTop: '0.75rem',
+                        color: 'rgba(255,255,255,0.4)',
+                        fontSize: '0.75rem',
+                        textDecoration: 'none'
+                    }
+                }, 'About this game')
+            ])
         ])
     );
 }
