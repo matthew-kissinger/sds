@@ -468,20 +468,32 @@ export async function initReactUI() {
                                 }
                             }, `Welcome back, ${playerIdentity.displayName}!`),
                             createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect }),
-                            // Subtle about link
-                            createElement('a', {
-                                key: 'about-link',
-                                href: '/about.html',
-                                target: '_blank',
-                                rel: 'noopener',
+                            // Credits footer - fixed at bottom
+                            createElement('div', {
+                                key: 'credits',
                                 style: {
-                                    marginTop: '1.5rem',
-                                    color: 'rgba(255, 255, 255, 0.35)',
-                                    fontSize: '0.75rem',
-                                    textDecoration: 'none',
-                                    animation: 'fadeIn 0.6s ease-out 0.5s both'
+                                    position: 'fixed',
+                                    bottom: platform.isMobile ? 'max(env(safe-area-inset-bottom, 8px), 8px)' : '12px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    color: 'rgba(255, 255, 255, 0.4)',
+                                    fontSize: '0.7rem',
+                                    textAlign: 'center',
+                                    pointerEvents: 'auto'
                                 }
-                            }, 'About')
+                            }, [
+                                'Made by ',
+                                createElement('a', {
+                                    key: 'link',
+                                    href: '/about.html',
+                                    target: '_blank',
+                                    rel: 'noopener',
+                                    style: {
+                                        color: 'rgba(255, 255, 255, 0.5)',
+                                        textDecoration: 'none'
+                                    }
+                                }, 'Matthew Kissinger')
+                            ])
                         ]);
 
                     case 'dogSelection':
