@@ -90,14 +90,48 @@ export default {
     // Settings panel
     settings: {
         title: 'Settings',
+        // Tabs
+        tabs: {
+            graphics: 'Graphics',
+            audio: 'Audio',
+            controls: 'Controls'
+        },
+        // Presets
+        presets: 'Performance Preset',
         performanceMode: 'Performance Mode',
-        performanceOption: 'Performance - Maximum FPS',
-        balancedOption: 'Balanced - Default settings',
-        qualityOption: 'Quality - Best visuals',
+        performanceOption: 'Performance',
+        balancedOption: 'Balanced',
+        qualityOption: 'Quality',
+        // Graphics
+        shadows: 'Shadows',
+        shadowsDesc: 'Enable dynamic shadows (desktop only)',
+        shadowQuality: 'Shadow Quality',
+        low: 'Low',
+        medium: 'Medium',
+        high: 'High',
+        // Audio
         audioEnabled: 'Audio Enabled',
         audioVolume: 'Audio Volume',
-        showStats: 'Show Performance Stats',
-        resetDefaults: 'Reset to Defaults',
+        // Debug
+        showStats: 'Performance Stats',
+        showStatsDesc: 'Show FPS and render statistics',
+        // Controls
+        keyBindings: 'Keyboard Controls',
+        resetBindings: 'Reset to Default',
+        pressKey: 'Press a key...',
+        keyConflict: 'Key already used for {{action}}',
+        actions: {
+            moveUp: 'Move Forward',
+            moveDown: 'Move Backward',
+            moveLeft: 'Move Left',
+            moveRight: 'Move Right',
+            sprint: 'Sprint',
+            pause: 'Pause'
+        },
+        gamepadSupport: 'Gamepad Support',
+        gamepadDesc: 'Controllers are automatically detected. Use left stick to move, triggers to sprint.',
+        // General
+        resetDefaults: 'Reset All',
         language: 'Language'
     },
 

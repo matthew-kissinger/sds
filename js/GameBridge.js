@@ -59,6 +59,14 @@ export function getTerrainBuilder() {
 }
 
 /**
+ * Get the grass system (via terrain builder)
+ * @returns {Object|null} - GrassSystem instance or null
+ */
+export function getGrassSystem() {
+    return gameInstance?.terrainBuilder?.grassSystem || null;
+}
+
+/**
  * Get the scene manager
  * @returns {Object|null} - SceneManager instance or null
  */

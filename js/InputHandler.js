@@ -1,62 +1,136 @@
 import { Vector2D } from './Vector2D.js';
 import { GamepadManager } from './GamepadManager.js';
 
+// Default key bindings (matches settings.js)
+const DEFAULT_BINDINGS = {
+    moveUp: 'KeyW',
+    moveDown: 'KeyS',
+    moveLeft: 'KeyA',
+    moveRight: 'KeyD',
+    sprint: 'ShiftLeft',
+    pause: 'Escape'
+};
+
 /**
  * Enhanced input handler for keyboard, mobile touch controls, and gamepad
+ * Supports customizable key bindings
  */
 export class InputHandler {
     constructor() {
-        this.keys = {
-            w: false,
-            a: false,
-            s: false,
-            d: false,
-            shift: false
+        // Action states (instead of specific key states)
+        this.actions = {
+            moveUp: false,
+            moveDown: false,
+            moveLeft: false,
+            moveRight: false,
+            sprint: false
         };
-        
+
+        // Key bindings (code -> action mapping for quick lookup)
+        this.keyBindings = { ...DEFAULT_BINDINGS };
+        this.codeToAction = this.buildCodeToActionMap();
+
         this.performanceMonitor = null;
         this.isPaused = false;
         this.pauseCallbacks = [];
         this.mobileControls = null;
         this.gamepadManager = new GamepadManager();
+
+        // Load saved bindings
+        this.loadKeyBindings();
+
         this.setupEventListeners();
     }
 
+    // Build reverse lookup map: keyCode -> action
+    buildCodeToActionMap() {
+        const map = {};
+        for (const [action, code] of Object.entries(this.keyBindings)) {
+            map[code] = action;
+        }
+        return map;
+    }
+
+    // Load key bindings from localStorage
+    loadKeyBindings() {
+        try {
+            const saved = localStorage.getItem('sds-settings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                if (settings.keyBindings) {
+                    this.keyBindings = { ...DEFAULT_BINDINGS, ...settings.keyBindings };
+                    this.codeToAction = this.buildCodeToActionMap();
+                    console.log('[INPUT] Loaded custom key bindings:', this.keyBindings);
+                }
+            }
+        } catch (error) {
+            console.warn('[INPUT] Failed to load key bindings:', error);
+        }
+    }
+
+    // Update key bindings at runtime
+    updateKeyBindings(newBindings) {
+        this.keyBindings = { ...DEFAULT_BINDINGS, ...newBindings };
+        this.codeToAction = this.buildCodeToActionMap();
+        console.log('[INPUT] Updated key bindings:', this.keyBindings);
+
+        // Reset all actions when bindings change
+        for (const action in this.actions) {
+            this.actions[action] = false;
+        }
+    }
+
     setupEventListeners() {
+        // Listen for key binding changes from settings
+        window.addEventListener('keybindings-changed', (event) => {
+            this.updateKeyBindings(event.detail);
+        });
+
         // Keydown event
         window.addEventListener('keydown', (event) => {
-            const key = event.key.toLowerCase();
-            
-            // Handle pause toggle with Escape key
-            if (event.key === 'Escape') {
+            const code = event.code;
+
+            // Handle pause toggle
+            if (code === this.keyBindings.pause || code === 'Escape') {
                 this.togglePause();
                 event.preventDefault();
                 return;
             }
-            
+
             // Skip game input processing if typing in text field
-            if (window.isTypingInInput && (key in this.keys || event.key === 'Shift')) {
-                return; // Don't preventDefault, let the input field handle it
+            if (window.isTypingInInput) {
+                return;
             }
-            
+
             // Only process other keys if not paused
             if (this.isPaused) {
                 event.preventDefault();
                 return;
             }
-            
-            if (key in this.keys) {
-                this.keys[key] = true;
+
+            // Check if this key is bound to an action
+            const action = this.codeToAction[code];
+            if (action && action in this.actions) {
+                this.actions[action] = true;
                 event.preventDefault();
-            } else if (event.key === 'Shift') {
-                this.keys.shift = true;
-                event.preventDefault();
-            } else if (key === 'p' && this.performanceMonitor) {
-                // Toggle performance monitor with 'P' key
+            }
+
+            // Also handle Shift variants (left/right)
+            if (code === 'ShiftLeft' || code === 'ShiftRight') {
+                if (this.keyBindings.sprint === 'ShiftLeft' || this.keyBindings.sprint === 'ShiftRight') {
+                    this.actions.sprint = true;
+                    event.preventDefault();
+                }
+            }
+
+            // Performance monitor toggle with 'P' key
+            if (code === 'KeyP' && this.performanceMonitor) {
                 this.performanceMonitor.toggle();
                 event.preventDefault();
-            } else if (key === 'c' && this.onDebugComplete) {
-                // DEBUG: Instant completion for testing with 'C' key
+            }
+
+            // DEBUG: Instant completion for testing with 'C' key
+            if (code === 'KeyC' && this.onDebugComplete) {
                 console.log('[DEBUG] Triggering instant completion...');
                 this.onDebugComplete();
                 event.preventDefault();
@@ -65,27 +139,28 @@ export class InputHandler {
 
         // Keyup event
         window.addEventListener('keyup', (event) => {
-            const key = event.key.toLowerCase();
-            
-            // Don't process movement key releases if paused
-            if (this.isPaused && key in this.keys) {
+            const code = event.code;
+
+            // Check if this key is bound to an action
+            const action = this.codeToAction[code];
+            if (action && action in this.actions) {
+                this.actions[action] = false;
                 event.preventDefault();
-                return;
             }
-            
-            if (key in this.keys) {
-                this.keys[key] = false;
-                event.preventDefault();
-            } else if (event.key === 'Shift') {
-                this.keys.shift = false;
-                event.preventDefault();
+
+            // Also handle Shift variants
+            if (code === 'ShiftLeft' || code === 'ShiftRight') {
+                if (this.keyBindings.sprint === 'ShiftLeft' || this.keyBindings.sprint === 'ShiftRight') {
+                    this.actions.sprint = false;
+                    event.preventDefault();
+                }
             }
         });
 
         // Reset keys when window loses focus
         window.addEventListener('blur', () => {
-            for (let key in this.keys) {
-                this.keys[key] = false;
+            for (const action in this.actions) {
+                this.actions[action] = false;
             }
         });
     }
@@ -99,10 +174,10 @@ export class InputHandler {
     togglePause() {
         this.isPaused = !this.isPaused;
 
-        // Clear all movement keys when pausing
+        // Clear all actions when pausing
         if (this.isPaused) {
-            for (let key in this.keys) {
-                this.keys[key] = false;
+            for (const action in this.actions) {
+                this.actions[action] = false;
             }
         }
 
@@ -121,10 +196,8 @@ export class InputHandler {
     }
 
     // Legacy updatePauseUI - now handled by React PauseMenu component
-    // Kept for backwards compatibility but does nothing
     updatePauseUI() {
         // Pause UI is now handled by React PauseMenu component
-        // This method is kept for backwards compatibility
     }
 
     // Get movement direction based on current input state (gamepad + keyboard + mobile)
@@ -133,10 +206,10 @@ export class InputHandler {
         if (this.isPaused) {
             return new Vector2D(0, 0);
         }
-        
+
         // Update gamepad state
         this.gamepadManager.update();
-        
+
         // Check gamepad input first (highest priority)
         if (this.gamepadManager.isConnected()) {
             const gamepadDirection = this.gamepadManager.getMovementDirection();
@@ -144,26 +217,26 @@ export class InputHandler {
                 return gamepadDirection;
             }
         }
-        
-        // Fall back to keyboard input
+
+        // Fall back to keyboard input using actions
         const direction = new Vector2D(0, 0);
-        
-        if (this.keys.w) direction.z += 1;
-        if (this.keys.s) direction.z -= 1;
-        if (this.keys.a) direction.x += 1;
-        if (this.keys.d) direction.x -= 1;
-        
+
+        if (this.actions.moveUp) direction.z += 1;
+        if (this.actions.moveDown) direction.z -= 1;
+        if (this.actions.moveLeft) direction.x += 1;
+        if (this.actions.moveRight) direction.x -= 1;
+
         // Add mobile input if available and no keyboard input
         if (this.mobileControls && this.mobileControls.getIsTouchDevice()) {
             const mobileDirection = this.mobileControls.getMovementDirection();
-            
+
             // If no keyboard input, use mobile input
             if (direction.magnitude() === 0) {
                 direction.x = mobileDirection.x;
                 direction.z = mobileDirection.z;
             }
         }
-        
+
         return direction;
     }
 
@@ -173,7 +246,7 @@ export class InputHandler {
         if (this.isPaused) {
             return false;
         }
-        
+
         // Check gamepad input first
         if (this.gamepadManager.isConnected()) {
             const gamepadDirection = this.gamepadManager.getMovementDirection();
@@ -181,58 +254,70 @@ export class InputHandler {
                 return true;
             }
         }
-        
+
         // Check keyboard input
-        const keyboardMoving = this.keys.w || this.keys.a || this.keys.s || this.keys.d;
-        
+        const keyboardMoving = this.actions.moveUp || this.actions.moveDown ||
+                               this.actions.moveLeft || this.actions.moveRight;
+
         // Check mobile input
-        const mobileMoving = this.mobileControls && 
-                            this.mobileControls.getIsTouchDevice() && 
+        const mobileMoving = this.mobileControls &&
+                            this.mobileControls.getIsTouchDevice() &&
                             this.mobileControls.getIsMoving();
-        
+
         return keyboardMoving || mobileMoving;
     }
-    
+
     // Check if sprint input is active (gamepad trigger, keyboard shift, or mobile sprint button)
     isSprinting() {
         // Return false if paused
         if (this.isPaused) {
             return false;
         }
-        
+
         // Check gamepad sprint first (highest priority)
         if (this.gamepadManager.isConnected() && this.gamepadManager.isSprinting()) {
             return true;
         }
-        
+
         // Check keyboard sprint
-        const keyboardSprinting = this.keys.shift;
-        
+        const keyboardSprinting = this.actions.sprint;
+
         // Check mobile sprint
-        const mobileSprinting = this.mobileControls && 
-                               this.mobileControls.getIsTouchDevice() && 
+        const mobileSprinting = this.mobileControls &&
+                               this.mobileControls.getIsTouchDevice() &&
                                this.mobileControls.getIsSprinting();
-        
+
         return keyboardSprinting || mobileSprinting;
     }
-    
+
     // Check if game is paused
     isPausedState() {
         return this.isPaused;
     }
-    
+
     // Set performance monitor reference for toggle functionality
     setPerformanceMonitor(performanceMonitor) {
         this.performanceMonitor = performanceMonitor;
     }
-    
+
     // Set debug completion callback for testing
     setDebugCompleteCallback(callback) {
         this.onDebugComplete = callback;
     }
-    
+
     // Get gamepad manager for debugging
     getGamepadManager() {
         return this.gamepadManager;
+    }
+
+    // Legacy compatibility - get keys object
+    get keys() {
+        return {
+            w: this.actions.moveUp,
+            a: this.actions.moveLeft,
+            s: this.actions.moveDown,
+            d: this.actions.moveRight,
+            shift: this.actions.sprint
+        };
     }
 }
