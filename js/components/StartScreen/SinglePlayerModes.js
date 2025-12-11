@@ -1,6 +1,7 @@
 /**
  * SinglePlayerModes Component
- * Mode selection for single player - Classic vs Extreme
+ * Mode selection for single player difficulties:
+ * Classic (200 sheep), Extreme (1000), Insane (3000)
  */
 import React, { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +22,18 @@ const MODES = [
         labelKey: 'modes.extreme',
         descKey: 'modes.extremeDesc',
         color: '#ef4444' // Red
+    },
+    {
+        id: 'insane',
+        labelKey: 'modes.insane',
+        descKey: 'modes.insaneDesc',
+        color: '#a855f7' // Purple
+    },
+    {
+        id: 'chaos',
+        labelKey: 'modes.chaos',
+        descKey: 'modes.chaosDesc',
+        color: '#f59e0b' // Amber/Orange
     }
 ];
 

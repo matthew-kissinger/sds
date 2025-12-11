@@ -65,7 +65,8 @@ export function useGameState() {
                     gameTime: gameTimer.getGameTime ? gameTimer.getGameTime() : 0,
                     isComplete: gameState.isComplete || false,
                     isPaused: gameState.paused || false,
-                    gameMode: actualGameMode
+                    gameMode: actualGameMode,
+                    singlePlayerMode: gameState.singlePlayerMode || 'classic'
                 };
 
                 // Add multiplayer data if available

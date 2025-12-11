@@ -84,7 +84,11 @@ export default {
         classic: 'Classic Mode',
         classicDesc: 'Herd all 200 sheep to the pasture',
         extreme: 'Extreme Mode',
-        extremeDesc: 'Herd all 1000 sheep - performance challenge!'
+        extremeDesc: 'Herd all 1000 sheep - performance challenge!',
+        insane: 'Insane Mode',
+        insaneDesc: 'Herd all 3000 sheep - extreme challenge!',
+        chaos: 'Chaos Mode',
+        chaosDesc: 'Herd all 5000 sheep - absolute madness!'
     },
 
     // Settings panel

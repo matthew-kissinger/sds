@@ -55,6 +55,7 @@ export async function initReactUI() {
             { SheepCounter },
             { MobileHUD },
             { MobileControls },
+            { ExtremeTuningPanel },
             { PauseMenu },
             { CompletionScreen },
             { MultiplayerOptions },
@@ -84,6 +85,7 @@ export async function initReactUI() {
             import('./GameHUD/SheepCounter.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
+            import('./GameHUD/ExtremeTuningPanel.js'),
             import('./GameHUD/PauseMenu.js'),
             import('./GameHUD/CompletionScreen.js'),
             import('./Multiplayer/MultiplayerOptions.js'),
@@ -656,13 +658,16 @@ export async function initReactUI() {
         }
 
         // ==================== GAME HUD ====================
-        function GameHUD({ onReturnToMenu }) {
-            const gameData = useGameState();
-            const platform = usePlatform();
-            const [isPaused, setIsPaused] = useState(false);
-            const [isFullscreen, setIsFullscreen] = useState(false);
-            const isMultiplayer = gameData.gameMode !== 'solo' && gameData.players?.length > 0;
-            const staminaPercentage = gameData.staminaPercentage || Math.round((gameData.stamina / (gameData.maxStamina || 100)) * 100);
+	        function GameHUD({ onReturnToMenu }) {
+	            const gameData = useGameState();
+	            const platform = usePlatform();
+	            const [isPaused, setIsPaused] = useState(false);
+	            const [isFullscreen, setIsFullscreen] = useState(false);
+	            const [showTuningPanel, setShowTuningPanel] = useState(false);
+	            const isMultiplayer = gameData.gameMode !== 'solo' && gameData.players?.length > 0;
+	            const staminaPercentage = gameData.staminaPercentage || Math.round((gameData.stamina / (gameData.maxStamina || 100)) * 100);
+	            const isSoloExtremeOrInsane = gameData.gameMode === 'solo' &&
+	                (gameData.singlePlayerMode === 'extreme' || gameData.singlePlayerMode === 'insane');
 
             // Check fullscreen state
             useEffect(() => {
@@ -686,9 +691,9 @@ export async function initReactUI() {
             }, []);
 
             // Listen for pause state changes from InputHandler
-            useEffect(() => {
-                const handlePauseChange = (event) => {
-                    setIsPaused(event.detail.isPaused);
+	            useEffect(() => {
+	                const handlePauseChange = (event) => {
+	                    setIsPaused(event.detail.isPaused);
 
                     // Remove old DOM pause indicator if it exists (legacy cleanup)
                     const oldIndicator = document.getElementById('pause-indicator');
@@ -697,9 +702,14 @@ export async function initReactUI() {
                     }
                 };
 
-                window.addEventListener('game-pause-change', handlePauseChange);
-                return () => window.removeEventListener('game-pause-change', handlePauseChange);
-            }, []);
+	                window.addEventListener('game-pause-change', handlePauseChange);
+	                return () => window.removeEventListener('game-pause-change', handlePauseChange);
+	            }, []);
+
+	            // Hide tuning UI when not in extreme/insane
+	            useEffect(() => {
+	                if (!isSoloExtremeOrInsane) setShowTuningPanel(false);
+	            }, [isSoloExtremeOrInsane]);
 
             // Toggle pause - supports both regular and local multiplayer input handlers
             const handlePause = useCallback(() => {
@@ -751,7 +761,7 @@ export async function initReactUI() {
                         // Restart sandbox with current config
                         gameState.startSandboxGame(gameInstance.currentSandboxConfig || {});
                     } else {
-                        // Restart solo/classic/extreme
+                        // Restart solo difficulties (classic/extreme/insane)
                         gameState.startGame('solo', null, singlePlayerMode || 'classic');
                     }
 
@@ -841,11 +851,11 @@ export async function initReactUI() {
                         stamina: staminaPercentage
                     })
                 ],
-                platform === 'mobile' && [
-                    createElement(MobileHUD, {
-                        key: 'mobile-hud',
-                        gameData,
-                        stamina: staminaPercentage,
+	                platform === 'mobile' && [
+	                    createElement(MobileHUD, {
+	                        key: 'mobile-hud',
+	                        gameData,
+	                        stamina: staminaPercentage,
                         onPause: handlePause
                     }),
                     createElement(MobileControls, { key: 'mobile-controls' }),
@@ -857,13 +867,14 @@ export async function initReactUI() {
                         gameMode: gameData.gameMode,
                         sheepCount: gameData.sheepCount,
                         totalSheep: gameData.totalSheep,
-                        stamina: staminaPercentage
-                    })
-                ],
-                // Pause menu (shown on all platforms when paused)
-                createElement(PauseMenu, {
-                    key: 'pause-menu',
-                    isVisible: isPaused,
+	                        stamina: staminaPercentage
+	                    })
+	                ],
+	                // Tuning toggle removed for release
+	                // Pause menu (shown on all platforms when paused)
+	                createElement(PauseMenu, {
+	                    key: 'pause-menu',
+	                    isVisible: isPaused,
                     onResume: handleResume,
                     onRestart: handleRestart,
                     onMainMenu: handleMainMenu,

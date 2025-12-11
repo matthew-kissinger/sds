@@ -2,6 +2,7 @@ import { Vector2D } from './Vector2D.js';
 import { OptimizedSheepSystem } from './OptimizedSheep.js';
 import { FieldConfig, FIELD_SIZES, GATE_DEFAULTS, PASTURE_DEFAULTS } from './FieldConfig.js';
 import { getFenceCollisionSystem, resetFenceCollisionSystem } from './FenceCollisionSystem.js';
+import { getExtremeBoidSystem, resetExtremeBoidSystem } from './ExtremeBoidSystem.js';
 
 /**
  * GameState - Handles game configuration, boundaries, and state management
@@ -30,11 +31,24 @@ export class GameState {
         this.competitiveGates = []; // Array of gate configurations for competitive mode
         this.playerScores = {}; // playerId -> sheep count for competitive mode
         
-        // Simulation parameters
+        // Simulation parameters (source of truth for flocking/difficulty).
+        // Core keys used everywhere: speed, cohesion, separationDistance.
+        // Optional tuning keys (extreme/insane panel): perception, separationWeight,
+        // alignmentWeight, fleeMultiplier, fleeRadius, gateAttraction, maxForce,
+        // edgeMargin, edgeTurnForce.
         this.params = {
-            speed: 0.1,  // Sheep movement speed
-            cohesion: 1.0,
-            separationDistance: 2.0
+            speed: 0.1,
+            cohesion: 0.1,
+            separationDistance: 2,
+            perception: 5,
+            separationWeight: 1.6,
+            alignmentWeight: 1.6,
+            fleeMultiplier: 4,
+            fleeRadius: 8,
+            gateAttraction: 2,
+            maxForce: 0.02,
+            edgeMargin: 2.5,
+            edgeTurnForce: 0.05
         };
         
         // Game state
@@ -47,7 +61,8 @@ export class GameState {
         this.gameActive = false; // New: tracks if game is actively being played
         this.isPaused = false; // New: tracks if game is paused
         this.audioManager = null;
-        this.singlePlayerMode = 'classic'; // Track single player mode: 'classic' or 'extreme'
+        this.singlePlayerMode = 'classic'; // Single player difficulty: 'classic', 'extreme', or 'insane'
+        this.useExtremeBoids = false; // Flag for sandbox to enable extreme boid optimization
         
         // Always use optimized sheep system
         this.optimizedSheepSystem = null;
@@ -89,8 +104,15 @@ export class GameState {
             spawnConfig.borderPoints = this.borderPoints;
         }
 
-        this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig);
+        // Enable extreme boid optimization for extreme/insane mode or sandbox with useExtremeBoids flag
+        const useExtremeBoids = this.singlePlayerMode === 'extreme' || this.singlePlayerMode === 'insane' || this.useExtremeBoids === true;
+
+        this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig, useExtremeBoids);
         this.sheep = this.optimizedSheepSystem.getSheep();
+
+        if (useExtremeBoids) {
+            console.log('[GameState] Extreme boid optimization enabled');
+        }
 
         // Set bounds and borderPoints for each sheep instance
         this.sheep.forEach(sheep => {
@@ -560,7 +582,13 @@ export class GameState {
 
         // Set sheep count based on single player mode
         if (mode === 'solo') {
-            if (singlePlayerMode === 'extreme') {
+            if (singlePlayerMode === 'chaos') {
+                this.totalSheep = 5000;
+                console.log('Game started in CHAOS mode with 5000 sheep!');
+            } else if (singlePlayerMode === 'insane') {
+                this.totalSheep = 3000;
+                console.log('Game started in INSANE mode with 3000 sheep!');
+            } else if (singlePlayerMode === 'extreme') {
                 this.totalSheep = 1000;
                 console.log('Game started in extreme mode with 1000 sheep!');
             } else {
@@ -588,6 +616,10 @@ export class GameState {
         this.borderPoints = null;
         this.customFences = [];
 
+        // Set extreme boids optimization based on mode
+        // Extreme, insane, and chaos modes use spatial hash optimization, classic mode does not
+        this.useExtremeBoids = (singlePlayerMode === 'extreme' || singlePlayerMode === 'insane' || singlePlayerMode === 'chaos');
+
         // Clear fence collision system (remove any sandbox fences from previous game)
         resetFenceCollisionSystem();
 
@@ -606,6 +638,9 @@ export class GameState {
             this.sheep.forEach(sheep => {
                 sheep.setBorderPoints(null);
             });
+
+            // Enable/disable extreme boid system based on mode
+            this.optimizedSheepSystem.setUseExtremeBoids(this.useExtremeBoids, this.bounds);
         }
 
         // Log game start
@@ -663,6 +698,9 @@ export class GameState {
         // Store rules
         this.sandboxRules = gameStateConfig.rules;
 
+        // Check if sandbox wants to use extreme boid optimization
+        this.useExtremeBoids = sandboxConfig.useExtremeBoids === true;
+
         // Check if we need to recreate sheep flock
         if (previousSheepCount !== this.totalSheep && this.optimizedSheepSystem) {
             console.log(`[SANDBOX] Sheep count changed from ${previousSheepCount} to ${this.totalSheep} - needs recreation`);
@@ -705,6 +743,9 @@ export class GameState {
                     sheep.setBorderPoints(this.borderPoints);
                 }
             });
+
+            // Enable/disable extreme boid system based on sandbox config
+            this.optimizedSheepSystem.setUseExtremeBoids(this.useExtremeBoids, this.bounds);
         }
 
         // Initialize fence collision system for sandbox mode
@@ -726,6 +767,7 @@ export class GameState {
         console.log(`[SANDBOX] Gate:`, { position: this.gate.position, width: this.gate.width, passageZone: this.gate.passageZone });
         console.log(`[SANDBOX] Pasture:`, this.pasture);
         console.log(`[SANDBOX] Custom fences: ${this.customFences.length}, Rules:`, this.sandboxRules);
+        console.log(`[SANDBOX] Extreme boid optimization: ${this.useExtremeBoids ? 'ENABLED' : 'disabled'}`);
     }
 
     /**
@@ -921,7 +963,11 @@ export class GameState {
         this.gameActive = false;
         this.isPaused = false;
         this.optimizedSheepSystem = null;
-        
+
+        // Reset extreme boid system
+        resetExtremeBoidSystem();
+        this.useExtremeBoids = false;
+
         // Reset competitive mode data
         this.gameMode = 'solo';
         this.competitiveGates = [];

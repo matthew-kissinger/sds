@@ -115,7 +115,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
             dog: config.dog,
             preset: config.preset,
             name: config.name,
-            description: config.description
+            description: config.description,
+            useExtremeBoids: config.useExtremeBoids
         }));
 
         const keys = path.split('.');
@@ -146,7 +147,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         label: t('sandbox.numberOfSheep'),
                         value: config.sheep?.count || 200,
                         min: 10,
-                        max: 2000,
+                        max: 5000,
                         step: 10,
                         onChange: (v) => updateConfig('sheep.count', v)
                     }),
@@ -154,7 +155,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         key: 'presets',
                         className: 'flex gap-2 flex-wrap'
                     }, [
-                        [50, 100, 200, 500, 1000].map(count =>
+                        [50, 200, 500, 1000, 3000, 5000].map(count =>
                             createElement('button', {
                                 key: count,
                                 onClick: () => updateConfig('sheep.count', count),
@@ -374,6 +375,31 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                             onClick: () => updateConfig('rules.winCondition', 'none'),
                             accentColor: '#8b5cf6'
                         })
+                    ]),
+
+                    // Performance optimization toggle
+                    createElement(SectionHeader, { key: 'h3' }, t('sandbox.performance', 'Performance')),
+                    createElement('div', {
+                        key: 'extreme-boids-toggle',
+                        className: 'flex items-center justify-between p-3 bg-white/5 rounded-xl mb-3'
+                    }, [
+                        createElement('div', { key: 'label-container' }, [
+                            createElement('span', { key: 'label', className: 'text-white/80 block' },
+                                t('sandbox.optimizedFlocking', 'Optimized Flocking')),
+                            createElement('span', { key: 'desc', className: 'text-white/50 text-xs block mt-0.5' },
+                                t('sandbox.optimizedFlockingDesc', 'Better performance with many sheep'))
+                        ]),
+                        createElement('button', {
+                            key: 'toggle',
+                            onClick: () => updateConfig('useExtremeBoids', !config.useExtremeBoids),
+                            className: `w-12 h-6 rounded-full transition-colors ${
+                                config.useExtremeBoids ? 'bg-emerald-500' : 'bg-white/20'
+                            }`
+                        }, createElement('div', {
+                            className: `w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${
+                                config.useExtremeBoids ? 'translate-x-6' : 'translate-x-0.5'
+                            }`
+                        }))
                     ])
                 ]);
 

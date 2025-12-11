@@ -188,6 +188,10 @@ export class SandboxConfig {
             trackBestTime: config.rules?.trackBestTime ?? true
         };
 
+        // Optimization flags
+        // Enable extreme boid optimization (spatial hash) for better performance with many sheep
+        this.useExtremeBoids = config.useExtremeBoids ?? false;
+
         // Dog configuration - calculate valid position inside polygon
         // Pass gate position so dog spawns away from the gate
         const mainGatePos = this.gates?.[0]?.position || null;
@@ -710,7 +714,8 @@ export class SandboxConfig {
             pastures: this.pastures,
             rules: this.rules,
             dog: this.dog,
-            preset: this.preset
+            preset: this.preset,
+            useExtremeBoids: this.useExtremeBoids
         };
     }
 

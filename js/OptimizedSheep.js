@@ -6,6 +6,7 @@ import { loadShader } from './shaders/ShaderLoader.js';
 import { getGameState, getNetworkManager } from './GameBridge.js';
 import { FieldConfig, GATE_DEFAULTS } from './FieldConfig.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
+import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
 
 // Shader cache for sync access after async load
 let sheepVertexShader = null;
@@ -41,11 +42,15 @@ export async function preloadSheepShaders() {
  */
 
 export class OptimizedSheepSystem {
-    constructor(scene, sheepCount = 200, spawnConfig = null) {
+    constructor(scene, sheepCount = 200, spawnConfig = null, useExtremeBoids = false) {
         this.scene = scene;
         this.sheepCount = sheepCount;
         this.sheep = [];
         this.audioManager = null;
+
+        // Extreme boids optimization flag
+        this.useExtremeBoids = useExtremeBoids;
+        this.extremeBoidSystemInitialized = false;
 
         // Spawn configuration - defaults to center of field with some spread
         this.spawnConfig = spawnConfig || {
@@ -70,87 +75,155 @@ export class OptimizedSheepSystem {
      */
     createMergedGeometry() {
         const geometries = [];
-        const colors = [];
-        
-        // Body - simplified ellipsoid (scaled up 1.25x)
+
+        // ===== BODY ===== (12x8 segments = ~192 tris)
         const bodyGeometry = new THREE.SphereGeometry(1.0, 12, 8);
         bodyGeometry.scale(1, 0.9, 1.1);
         bodyGeometry.translate(0, 0.875, 0);
-        
-        // Add white color for body vertices
+
         const bodyColors = new Float32Array(bodyGeometry.attributes.position.count * 3);
         for (let i = 0; i < bodyColors.length; i += 3) {
-            bodyColors[i] = 1;     // R
-            bodyColors[i + 1] = 1; // G
-            bodyColors[i + 2] = 1; // B
+            bodyColors[i] = 1;
+            bodyColors[i + 1] = 1;
+            bodyColors[i + 2] = 1;
         }
         bodyGeometry.setAttribute('color', new THREE.BufferAttribute(bodyColors, 3));
-        
-        // Add vertex IDs for body
+
         const bodyVertexIds = new Float32Array(bodyGeometry.attributes.position.count);
         for (let i = 0; i < bodyVertexIds.length; i++) {
-            bodyVertexIds[i] = Math.min(i, 49); // Body vertices: 0-49
+            bodyVertexIds[i] = Math.min(i, 49);
         }
         bodyGeometry.setAttribute('vertexId', new THREE.BufferAttribute(bodyVertexIds, 1));
         geometries.push(bodyGeometry);
-        
-        // Head - smaller sphere merged with body (scaled up 1.25x)
-        const headGeometry = new THREE.SphereGeometry(0.4375, 10, 6);
-        headGeometry.scale(0.8, 0.9, 1.2);
-        headGeometry.translate(0, 0.8125, 0.8125);
-        
-        // Add black color for head vertices
+
+        // ===== HEAD ===== (10x6 segments = ~120 tris) - Cute cartoon style
+        const headGeometry = new THREE.SphereGeometry(0.45, 10, 6);
+        headGeometry.scale(0.85, 0.9, 1.0);
+        headGeometry.translate(0, 0.88, 0.85);
+
         const headColors = new Float32Array(headGeometry.attributes.position.count * 3);
         for (let i = 0; i < headColors.length; i += 3) {
-            headColors[i] = 0.16;     // R
-            headColors[i + 1] = 0.16; // G
-            headColors[i + 2] = 0.16; // B
+            headColors[i] = 0.22;
+            headColors[i + 1] = 0.2;
+            headColors[i + 2] = 0.18;
         }
         headGeometry.setAttribute('color', new THREE.BufferAttribute(headColors, 3));
-        
-        // Add vertex IDs for head
+
         const headVertexIds = new Float32Array(headGeometry.attributes.position.count);
         for (let i = 0; i < headVertexIds.length; i++) {
-            headVertexIds[i] = 50 + Math.min(i, 49); // Head vertices: 50-99
+            headVertexIds[i] = 50 + Math.min(i, 49);
         }
         headGeometry.setAttribute('vertexId', new THREE.BufferAttribute(headVertexIds, 1));
         geometries.push(headGeometry);
-        
-        // Create 4 legs as simple cylinders (scaled up 1.25x)
-        const legGeometry = new THREE.CylinderGeometry(0.1, 0.125, 0.625, 6);
+
+        // ===== LEGS ===== (6 segments each = ~24 tris x 4 = ~96 tris) - Stubby cartoon style
+        const legGeometry = new THREE.CylinderGeometry(0.11, 0.13, 0.55, 6);
         const legPositions = [
-            { x: -0.3125, z: 0.375 },  // front left (scaled 1.25x)
-            { x: 0.3125, z: 0.375 },   // front right (scaled 1.25x)
-            { x: -0.3125, z: -0.375 }, // back left (scaled 1.25x)
-            { x: 0.3125, z: -0.375 }   // back right (scaled 1.25x)
+            { x: -0.32, z: 0.42 },
+            { x: 0.32, z: 0.42 },
+            { x: -0.32, z: -0.42 },
+            { x: 0.32, z: -0.42 }
         ];
-        
+
         legPositions.forEach((pos, index) => {
             const leg = legGeometry.clone();
-            leg.translate(pos.x, 0.3125, pos.z); // Y position scaled 1.25x
-            
-            // Add vertex IDs for animation in shader
+            leg.translate(pos.x, 0.275, pos.z);
+
             const vertexIds = new Float32Array(leg.attributes.position.count);
             for (let i = 0; i < vertexIds.length; i++) {
-                vertexIds[i] = 100 + index * 10; // Leg ID encoding
+                vertexIds[i] = 100 + index * 10;
             }
             leg.setAttribute('vertexId', new THREE.BufferAttribute(vertexIds, 1));
-            
-            // Black color for legs
+
             const legColors = new Float32Array(leg.attributes.position.count * 3);
             for (let i = 0; i < legColors.length; i += 3) {
-                legColors[i] = 0.16;     // R
-                legColors[i + 1] = 0.16; // G
-                legColors[i + 2] = 0.16; // B
+                legColors[i] = 0.16;
+                legColors[i + 1] = 0.16;
+                legColors[i + 2] = 0.16;
             }
             leg.setAttribute('color', new THREE.BufferAttribute(legColors, 3));
-            
+
             geometries.push(leg);
         });
-        
+
+        // ===== EYES ===== - White eye with black pupil and glint
+        const eyeY = 0.94;
+        const eyeZ = 1.28;
+        const eyeSpacing = 0.14;
+
+        [-1, 1].forEach(side => {
+            // White part of eye (sclera)
+            const eyeWhite = new THREE.SphereGeometry(0.08, 6, 4);
+            eyeWhite.scale(1.0, 1.1, 0.45);
+            eyeWhite.translate(side * eyeSpacing, eyeY, eyeZ);
+
+            const eyeWhiteColors = new Float32Array(eyeWhite.attributes.position.count * 3);
+            const eyeWhiteVertexIds = new Float32Array(eyeWhite.attributes.position.count);
+            for (let i = 0; i < eyeWhite.attributes.position.count; i++) {
+                eyeWhiteColors[i * 3] = 0.95;
+                eyeWhiteColors[i * 3 + 1] = 0.95;
+                eyeWhiteColors[i * 3 + 2] = 0.95;
+                eyeWhiteVertexIds[i] = 50 + i; // Head vertex range so eyes move with head
+            }
+            eyeWhite.setAttribute('color', new THREE.BufferAttribute(eyeWhiteColors, 3));
+            eyeWhite.setAttribute('vertexId', new THREE.BufferAttribute(eyeWhiteVertexIds, 1));
+            geometries.push(eyeWhite);
+
+            // Black pupil
+            const pupil = new THREE.SphereGeometry(0.04, 5, 3);
+            pupil.scale(1.0, 1.1, 0.5);
+            pupil.translate(side * eyeSpacing, eyeY, eyeZ + 0.025);
+
+            const pupilColors = new Float32Array(pupil.attributes.position.count * 3);
+            const pupilVertexIds = new Float32Array(pupil.attributes.position.count);
+            for (let i = 0; i < pupil.attributes.position.count; i++) {
+                pupilColors[i * 3] = 0.02;
+                pupilColors[i * 3 + 1] = 0.02;
+                pupilColors[i * 3 + 2] = 0.02;
+                pupilVertexIds[i] = 50 + i;
+            }
+            pupil.setAttribute('color', new THREE.BufferAttribute(pupilColors, 3));
+            pupil.setAttribute('vertexId', new THREE.BufferAttribute(pupilVertexIds, 1));
+            geometries.push(pupil);
+
+            // White glint/highlight
+            const shine = new THREE.SphereGeometry(0.018, 4, 3);
+            shine.translate(side * eyeSpacing + side * 0.015, eyeY + 0.025, eyeZ + 0.045);
+
+            const shineColors = new Float32Array(shine.attributes.position.count * 3);
+            const shineVertexIds = new Float32Array(shine.attributes.position.count);
+            for (let i = 0; i < shine.attributes.position.count; i++) {
+                shineColors[i * 3] = 1;
+                shineColors[i * 3 + 1] = 1;
+                shineColors[i * 3 + 2] = 1;
+                shineVertexIds[i] = 50 + i;
+            }
+            shine.setAttribute('color', new THREE.BufferAttribute(shineColors, 3));
+            shine.setAttribute('vertexId', new THREE.BufferAttribute(shineVertexIds, 1));
+            geometries.push(shine);
+        });
+
+        // ===== NOSE ===== (6x4 segments = ~48 tris) - Cute pink nose
+        const nose = new THREE.SphereGeometry(0.05, 6, 4);
+        nose.scale(1.2, 0.75, 0.4);
+        nose.translate(0, 0.8, 1.3);
+
+        const noseColors = new Float32Array(nose.attributes.position.count * 3);
+        const noseVertexIds = new Float32Array(nose.attributes.position.count);
+        for (let i = 0; i < nose.attributes.position.count; i++) {
+            noseColors[i * 3] = 0.85;
+            noseColors[i * 3 + 1] = 0.5;
+            noseColors[i * 3 + 2] = 0.55;
+            noseVertexIds[i] = 50 + i; // Head vertex range so nose moves with head
+        }
+        nose.setAttribute('color', new THREE.BufferAttribute(noseColors, 3));
+        nose.setAttribute('vertexId', new THREE.BufferAttribute(noseVertexIds, 1));
+        geometries.push(nose);
+
         // Merge all geometries
+        // Total: ~192 + 120 + 96 + 96 + 48 = ~552 tris per sheep
         this.mergedGeometry = BufferGeometryUtils.mergeGeometries(geometries);
-        
+
         // Compute bounds for frustum culling
         this.mergedGeometry.computeBoundingBox();
         this.mergedGeometry.computeBoundingSphere();
@@ -382,6 +455,24 @@ export class OptimizedSheepSystem {
     }
     
     /**
+     * Enable or disable the extreme boid optimization system
+     */
+    setUseExtremeBoids(enabled, bounds = null) {
+        this.useExtremeBoids = enabled;
+        if (enabled && bounds) {
+            const extremeSystem = getExtremeBoidSystem();
+            extremeSystem.enable(this.sheep, bounds);
+            this.extremeBoidSystemInitialized = true;
+            console.log('[OptimizedSheepSystem] Extreme boid system enabled');
+        } else if (!enabled) {
+            const extremeSystem = getExtremeBoidSystem();
+            extremeSystem.disable();
+            this.extremeBoidSystemInitialized = false;
+            console.log('[OptimizedSheepSystem] Extreme boid system disabled');
+        }
+    }
+
+    /**
      * Update all sheep behaviors and animations
      */
     update(deltaTime, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null) {
@@ -396,12 +487,34 @@ export class OptimizedSheepSystem {
             return;
         }
 
+        // Initialize extreme boid system if needed (first update with bounds)
+        if (this.useExtremeBoids && !this.extremeBoidSystemInitialized && bounds) {
+            const extremeSystem = getExtremeBoidSystem();
+            extremeSystem.enable(this.sheep, bounds);
+            extremeSystem.setParams(params);
+            this.extremeBoidSystemInitialized = true;
+            console.log('[OptimizedSheepSystem] Extreme boid system auto-initialized');
+        }
+
+        // Use extreme boid system for flocking calculations if enabled
+        if (this.useExtremeBoids && this.extremeBoidSystemInitialized) {
+            const extremeSystem = getExtremeBoidSystem();
+            extremeSystem.setParams(params);
+            extremeSystem.update(this.sheep, deltaTime);
+        }
+
         // Store competitive gates reference for sheep to access
         this.competitiveGates = Array.isArray(gate) ? gate : null;
 
         // Track sheep being chased for group audio
         let sheepBeingChased = 0;
         let shouldPlayGroupBleat = false;
+
+        // Determine if we're in high-difficulty solo modes (extreme/insane).
+        // Sandbox can enable extreme boids for performance, but should not inherit difficulty tweaks.
+        const gameState = getGameState();
+        const isHighDifficultyMode = gameState?.gameMode === 'solo' &&
+            (gameState.singlePlayerMode === 'extreme' || gameState.singlePlayerMode === 'insane');
 
         // Update each sheep
         for (let i = 0; i < this.sheepCount; i++) {
@@ -444,7 +557,20 @@ export class OptimizedSheepSystem {
             }
 
             // Update behavior (flocking, movement, etc.)
-            sheep.updateBehavior(this.sheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating, isMultiplayer, sheepdog2);
+            // Pass skipFlocking=true when extreme boid system handles flocking
+            sheep.updateBehavior(
+                this.sheep,
+                sheepdog,
+                gate,
+                pasture,
+                bounds,
+                params,
+                enableIndividualBleating,
+                isMultiplayer,
+                sheepdog2,
+                this.useExtremeBoids && this.extremeBoidSystemInitialized,
+                isHighDifficultyMode
+            );
             sheep.updatePosition(deltaTime);
             
             // Update transform matrix using interpolated render position for smooth movement
@@ -643,6 +769,7 @@ export class OptimizedSheepSystem {
 
     /**
      * Inline vertex shader fallback (used if external shader fails to load)
+     * Premium Wool Edition with displacement
      */
     getInlineVertexShader() {
         return `
@@ -656,6 +783,27 @@ export class OptimizedSheepSystem {
             varying vec3 vColor;
             varying vec3 vNormal;
             varying vec3 vViewPosition;
+            varying vec3 vWorldPosition;
+            varying float vDisplacement;
+            varying float vIsBody;
+            varying float vVertexId;
+
+            float hash(vec3 p) {
+                p = fract(p * 0.3183099 + 0.1);
+                p *= 17.0;
+                return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+            }
+
+            float noise(vec3 p) {
+                vec3 i = floor(p);
+                vec3 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(
+                    mix(mix(hash(i), hash(i + vec3(1,0,0)), f.x),
+                        mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+                    mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+                        mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+            }
 
             vec3 animateVertex(vec3 position, float vId) {
                 vec3 animated = position;
@@ -694,9 +842,26 @@ export class OptimizedSheepSystem {
                 #else
                     vColor = vec3(1.0);
                 #endif
+                vVertexId = vertexId;
+                vIsBody = vertexId < 50.0 ? 1.0 : 0.0;
                 vNormal = normalMatrix * normal;
                 vec3 animatedPosition = animateVertex(position, vertexId);
+
+                vDisplacement = 0.0;
+                if (vIsBody > 0.5) {
+                    float uniqueId = instanceData.w;
+                    vec3 noisePos1 = position * 5.0 + vec3(time * 0.2) + vec3(uniqueId * 0.1);
+                    vec3 noisePos2 = position * 12.0 + vec3(time * 0.4) + vec3(uniqueId * 0.2);
+                    float displacement = noise(noisePos1) * 0.08 + noise(noisePos2) * 0.03;
+                    animatedPosition += normal * displacement;
+                    vDisplacement = displacement;
+                    float breathe = sin(time * 1.8 + instanceData.x) * 0.012;
+                    animatedPosition.y += breathe;
+                    animatedPosition.x += sin(time * 1.2 + instanceData.x) * 0.004;
+                }
+
                 vec4 instancePosition = instanceMatrix * vec4(animatedPosition, 1.0);
+                vWorldPosition = instancePosition.xyz;
                 vec4 mvPosition = modelViewMatrix * instancePosition;
                 vViewPosition = -mvPosition.xyz;
                 gl_Position = projectionMatrix * mvPosition;
@@ -706,24 +871,93 @@ export class OptimizedSheepSystem {
 
     /**
      * Inline fragment shader fallback (used if external shader fails to load)
+     * Premium Wool Edition with enhanced shading
      */
     getInlineFragmentShader() {
         return `
             varying vec3 vColor;
             varying vec3 vNormal;
             varying vec3 vViewPosition;
+            varying vec3 vWorldPosition;
+            varying float vDisplacement;
+            varying float vIsBody;
+            varying float vVertexId;
 
+            uniform float time;
             uniform vec3 fogColor;
             uniform float fogNear;
             uniform float fogFar;
 
+            float hash(vec3 p) {
+                p = fract(p * 0.3183099 + 0.1);
+                p *= 17.0;
+                return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+            }
+
+            float noise(vec3 p) {
+                vec3 i = floor(p);
+                vec3 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(
+                    mix(mix(hash(i), hash(i + vec3(1,0,0)), f.x),
+                        mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+                    mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+                        mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+            }
+
+            float fbm(vec3 p) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                for (int i = 0; i < 3; i++) {
+                    value += amplitude * noise(p);
+                    p *= 2.2;
+                    amplitude *= 0.5;
+                }
+                return value;
+            }
+
             void main() {
                 vec3 normal = normalize(vNormal);
+                vec3 viewDir = normalize(vViewPosition);
                 vec3 lightDir = normalize(vec3(0.3, 1.0, 0.5));
-                float NdotL = dot(normal, lightDir);
-                float toon = smoothstep(0.0, 0.01, NdotL) * 0.5 + 0.5;
-                toon = floor(toon * 3.0) / 3.0;
-                vec3 finalColor = vColor * toon;
+
+                vec3 perturbedNormal = normal;
+                if (vIsBody > 0.5) {
+                    vec3 noisePos = vWorldPosition * 10.0;
+                    float n = fbm(noisePos);
+                    perturbedNormal = normalize(normal + vec3(n - 0.5) * 0.3);
+                }
+
+                float NdotL = dot(perturbedNormal, lightDir);
+                float toon = smoothstep(-0.15, 0.15, NdotL) * 0.55 + 0.45;
+                toon = floor(toon * 5.0) / 5.0;
+
+                vec3 warmShift = vec3(1.02, 1.02, 1.0);
+                vec3 coolShift = vec3(0.96, 0.97, 1.0);
+                vec3 colorShift = mix(coolShift, warmShift, toon);
+
+                vec3 woolColor = vColor;
+                if (vIsBody > 0.5) {
+                    float woolNoise = fbm(vWorldPosition * 6.0);
+                    woolColor -= vec3(0.03) * (1.0 - woolNoise);
+                    woolColor += vec3(0.02) * woolNoise;
+                }
+
+                vec3 finalColor = woolColor * toon * colorShift;
+
+                float fresnel = pow(1.0 - abs(dot(viewDir, normal)), 2.8);
+                vec3 rimColor = vec3(1.0, 1.0, 1.0);
+                finalColor += rimColor * fresnel * 0.35 * vIsBody;
+
+                float sss = max(0.0, dot(-lightDir, viewDir));
+                sss = pow(sss, 3.0) * 0.12;
+                finalColor += vec3(1.0, 1.0, 0.98) * sss * vIsBody;
+
+                float edge = 1.0 - pow(abs(dot(viewDir, normal)), 0.7);
+                finalColor *= 1.0 - edge * 0.2 * vIsBody;
+
+                finalColor -= vec3(0.03) * vDisplacement * 1.5;
+
                 float depth = length(vViewPosition);
                 float fogFactor = smoothstep(fogNear, fogFar, depth);
                 finalColor = mix(finalColor, fogColor, fogFactor);
@@ -773,7 +1007,7 @@ export class OptimizedSheepInstance extends Boid {
         this.wasBeingChased = false;
     }
     
-    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null) {
+    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null, skipFlocking = false, isHighDifficultyMode = false) {
         // If retiring, seek retirement target or graze
         if (this.isRetiring) {
             if (this.retirementTarget) {
@@ -874,10 +1108,23 @@ export class OptimizedSheepInstance extends Boid {
             return;
         }
         
+        // Optional parameter overrides (primarily used for extreme/insane tuning UI)
+        if (params) {
+            if (params.perception !== undefined) this.perceptionRadius = params.perception;
+            if (params.separationWeight !== undefined) this.separationWeight = params.separationWeight;
+            if (params.alignmentWeight !== undefined) this.alignmentWeight = params.alignmentWeight;
+            if (params.maxForce !== undefined) this.maxForce = params.maxForce;
+            if (params.fleeRadius !== undefined) this.fleeRadius = params.fleeRadius;
+            if (params.gateAttraction !== undefined) this.gateAttraction = params.gateAttraction;
+        }
+
         // Normal flocking behavior - only consider active sheep (state 0)
-        const activeSheep = allSheep.filter(sheep => sheep.state === 0);
-        this.flock(activeSheep, params.separationDistance);
-        
+        // Skip if ExtremeBoidSystem is handling flocking (for performance)
+        if (!skipFlocking) {
+            const activeSheep = allSheep.filter(sheep => sheep.state === 0);
+            this.flock(activeSheep, params.separationDistance);
+        }
+
         // Add gentle wandering during pre-game state (when no sheepdog)
         if (!sheepdog) {
             // Gentle wandering to make the start screen more lively
@@ -918,7 +1165,11 @@ export class OptimizedSheepInstance extends Boid {
 
                 const fleeForce = this.flee(closestSheepdog.position, fleeRadius);
                 if (fleeForce.magnitude() > 0) {
-                    fleeForce.multiply(1.2);
+                    // Stronger flee force only for high-difficulty solo modes (extreme/insane).
+                    // Sandbox may use extreme boids for performance, but should keep normal flee behavior.
+                    const extremeFleeMultiplier = params?.fleeMultiplier !== undefined ? params.fleeMultiplier : 4.0;
+                    const fleeMultiplier = isHighDifficultyMode ? extremeFleeMultiplier : 1.2;
+                    fleeForce.multiply(fleeMultiplier);
                     this.applyForce(fleeForce);
 
                     // Play bleat sound when sheep starts being chased (only if individual bleating is enabled)

@@ -143,7 +143,7 @@ export function getMultiplayerUI() {
 /**
  * Start a solo game
  * @param {string} dogType - The selected dog type
- * @param {string} mode - The game mode ('classic', 'time_attack', 'extreme')
+ * @param {string} mode - Single player difficulty ('classic', 'extreme', 'insane')
  */
 export function startSoloGame(dogType, mode = 'classic') {
     if (gameInstance?.startSoloGame) {
