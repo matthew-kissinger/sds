@@ -25,6 +25,23 @@ Cloudflare Pages project `sds-frontend` created with production branch `main`. G
 
 ---
 
-## Track C4 - Cutover - 2026-04-23
+## Track C4 - Cutover - 2026-04-23 (ROLLED BACK SAME DAY)
 
-Worker live at `sheepdogsim.com/api/*` and `/r/*`, D1 has 207 players migrated, CF Pages serving frontend as custom domain on `sheepdogsim.com`. Droplet remains as fallback through ~2026-05-23. Rollback: remove `sheepdogsim.com` custom domain from Pages, re-point CNAME to `matthew-kissinger.github.io`.
+Worker was deployed to `sheepdogsim.com/api/*` and `/r/*`, D1 had 207 players migrated, CF Pages was serving frontend on `sheepdogsim.com` as a custom domain.
+
+**Rollback executed 2026-04-23:** Opus 4.7 audit found 7+ launch-blocking bugs (see `docs/cycle-1-audit.md` and `POSTMORTEM.md`). The multiplayer happy path was non-functional (missing `/api/rooms` endpoint, no `players` table insert on register, no materialized-best update on score). Production was returned to Geckos/droplet within the hour.
+
+**Artifacts scrubbed:**
+- CNAME reverted to `matthew-kissinger.github.io`
+- CF Pages `sds-frontend` project deleted
+- Worker `sds-worker` deleted (routes removed automatically)
+- D1 database `sds-db` deleted
+- Agent API token revoked
+- GitHub repo secrets `CF_API_TOKEN`, `CF_ACCOUNT_ID` removed
+- `worker/`, `.env.production`, `public/_redirects`, `public/_headers`, both workflows deleted
+- `@msgpack/msgpack` dep removed
+- `NetworkManager.js`, `README.md`, `ARCHITECTURE.md` reverted to pre-cycle state
+
+**Decisions 1-5 above remain intact** as intent for the next attempt. Decision 10 (30-day droplet parallel) was never triggered because cutover was reverted. Track F's 14-day safety window also moot.
+
+**For the next cycle:** read `POSTMORTEM.md` first. Do not start writing code until you can answer "how will I playtest this" concretely.

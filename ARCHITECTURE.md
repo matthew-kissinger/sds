@@ -2,167 +2,267 @@
 
 ## Overview
 
-A realtime 3D herding game served entirely from Cloudflare. Static frontend on Pages, authoritative simulation on a Worker with Durable Objects, leaderboard on D1.
+A real-time 3D herding simulation with GPU-accelerated rendering, WebRTC multiplayer, and cross-platform support.
 
-### Key technical features
-- **GPU-first rendering** - 200-5000 sheep in a single draw call via Three.js InstancedMesh
-- **Authoritative DO simulation** - 20Hz tick in a per-room Durable Object, clients interpolate
-- **MessagePack wire protocol** - Binary frames over native WebSocket, delta-encoded sheep state
-- **Cross-platform** - Desktop, mobile (touch), and gamepad support
+### Key Technical Features
+- **GPU-First Rendering**: 200 sheep in single draw call using Three.js InstancedMesh
+- **WebRTC Networking**: Low-latency multiplayer via Geckos.io
+- **Hybrid Architecture**: Seamless single-player/multiplayer modes
+- **Cross-Platform**: Desktop, mobile, and gamepad support
 
-## Tech stack
+## Tech Stack
 
 ### Client
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Three.js | 0.181 | WebGL rendering |
-| React | 19 | UI components (createElement, no JSX) |
-| Vite | 7 | Build tooling |
-| Tailwind CSS | 4 | Styling |
-| @msgpack/msgpack | 3 | Wire protocol codec |
-| nipplejs | 0.10 | Mobile joystick |
-| i18next | 25 | 18-language localization |
-| lz-string | 1.5 | Sandbox share-URL compression |
+| Three.js | 0.176.0 | WebGL rendering |
+| React | 18/19 | UI components |
+| Vite | 7.0 | Build tooling |
+| Tailwind CSS | 4.1 | Styling |
+| nipple.js | 0.10.1 | Mobile joystick |
+| Geckos.io Client | 3.0.1 | WebRTC client |
+| Framer Motion | 12.19 | Animations |
 
-### Backend (Cloudflare)
-| Component | Purpose |
-|-----------|---------|
-| Workers | HTTP router, WebSocket upgrade, CORS, JWT issuance |
-| Durable Objects | `RoomDO` (per-room sim, 20Hz, hibernation-ready WS), `LobbyDO` (public lobby registry) |
-| D1 | `players`, `discriminators`, `score_submissions` tables |
-| Pages | Static frontend hosted at `sheepdogsim.com` |
+### Server
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Node.js | 16+ | Runtime |
+| Geckos.io Server | 3.0.1 | WebRTC signaling |
+| better-sqlite3 | 9.0.0 | Leaderboard DB |
+| PM2 | - | Process management |
 
-## System diagram
+### Infrastructure
+- **Hosting**: DigitalOcean Droplet
+- **Domain**: api.sheepdogsim.com
+- **SSL**: Cloudflare proxy
+- **UDP Ports**: 10000-20000 (WebRTC)
+
+## System Architecture
 
 ```
-                  Browser (Desktop / Mobile)
- ┌──────────────────────────────────────────────────────┐
- │  React UI  <->  GameBridge  <->  Three.js scene      │
- │                                   OptimizedSheep     │
- │                                   Sheepdog / Grass   │
- │                                                      │
- │                 NetworkManager                       │
- │        (native WebSocket + MessagePack)              │
- └──────────────────────────────────────────────────────┘
-         │                               │
-  HTTPS / fetch                    WSS upgrade
-         │                               │
-         v                               v
- ┌────────────────────────┐   ┌────────────────────────┐
- │  Cloudflare Pages      │   │  Cloudflare Worker     │
- │  (sds-frontend)        │   │  (sds-worker)          │
- │  sheepdogsim.com/*     │   │  /api/*  /r/:code/ws   │
- └────────────────────────┘   └────────────┬───────────┘
-                                           │
-                          ┌────────────────┼──────────────────┐
-                          v                v                  v
-                ┌─────────────────┐ ┌──────────────┐ ┌────────────────┐
-                │     RoomDO      │ │   LobbyDO    │ │       D1       │
-                │  per roomCode   │ │  singleton   │ │    sds-db      │
-                │  20Hz sim tick  │ │  "global"    │ │ players,       │
-                │  WS hibernation │ │  upsert/list │ │ discriminators,│
-                │  delta encoding │ │  /remove     │ │ score_submits  │
-                └─────────────────┘ └──────────────┘ └────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                         CLIENT                               │
+├─────────────────────────────────────────────────────────────┤
+│  StartScreen → GameState → OptimizedSheep → SceneManager    │
+│       ↓              ↓            ↓              ↓          │
+│  MobileControls  InputHandler  Sheepdog    TerrainBuilder   │
+│       ↓              ↓            ↓              ↓          │
+│  AudioManager   GamepadManager  GrassSystem   ReactUI       │
+│                                                             │
+│                    NetworkManager                           │
+│                    (Geckos.io Client)                       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                      WebRTC Data Channel
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                         SERVER                               │
+├─────────────────────────────────────────────────────────────┤
+│  index.js (Geckos.io Server)                                │
+│       ↓                                                     │
+│  RoomManager → GameSimulation → LeaderboardManager          │
+│                                                             │
+│  shared/                                                    │
+│  ├── BoundaryCollision.js                                   │
+│  ├── FlockingAlgorithms.js                                  │
+│  └── GameStateValidation.js                                 │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Request paths
-
-| Path | Handler | Notes |
-|------|---------|-------|
-| `GET  /api/lobbies` | Worker -> LobbyDO.list | Public lobby registry |
-| `POST /api/register` | Worker | Issues 24h HMAC-signed token (JWT_SECRET) |
-| `POST /api/score` | Worker -> D1 | Validates bearer token, writes submission + materialized bests |
-| `GET  /api/leaderboard?mode=X&limit=N` | Worker -> D1 | Reads materialized best-per-mode |
-| `GET  /r/:code/ws` | Worker -> RoomDO upgrade | MessagePack WebSocket for room lifecycle + sim |
-
-## Core modules
+## Core Modules
 
 ### Client
 
-**`js/main.js`** - game orchestrator, mediator between React, Three.js scene, network, and sim.
+#### main.js - Game Orchestrator
+Central coordination hub implementing the Mediator pattern.
+- Module lifecycle management (init → start → update → cleanup)
+- Mode detection (single-player vs multiplayer)
+- Fixed timestep physics with interpolated rendering
+- Pause system with state propagation
 
-**`js/OptimizedSheep.js`** - single InstancedMesh for all sheep, custom vertex shader for leg/head animation, per-instance attributes (phase, speed, state, direction), toon fragment shader with per-fragment FBM wool.
+#### OptimizedSheep.js - GPU-Instanced Sheep
+High-performance sheep rendering system.
+- Single InstancedMesh for 200 sheep (1 draw call)
+- Custom vertex shader for leg/head animation
+- Per-instance attributes: phase, speed, state, direction
+- Toon fragment shader with vertex colors
 
-**`js/ExtremeBoidSystem.js`** - spatial-hash flocking with SoA arrays for 1000-5000 sheep (Chaos mode).
+#### GrassSystem.js - Chunk-Based Grass
+Interactive grass with wind effects.
+- 800,000 grass instances
+- Chunk-based frustum culling
+- Wind shader animation
+- Mobile optimization (reduced density)
 
-**`js/GrassSystem.js`** - 800k grass instances, chunk-based frustum culling, wind shader. Mobile runs at reduced density.
+#### NetworkManager.js - Multiplayer Client
+WebRTC networking via Geckos.io.
+- Automatic environment detection (local/production)
+- State interpolation (100ms delay)
+- Input buffering with sequence numbers
+- Reconnection with exponential backoff
 
-**`js/NetworkManager.js`** - native WebSocket client. Encodes outgoing messages with MessagePack, decodes incoming into the same callback surface that the rest of the client already used. Reconnects with exponential backoff. Host migration handled via `hostChanged`.
+#### Sheepdog.js - Player Controller
+Player-controlled dog with animations.
+- Smooth movement with acceleration/deceleration
+- Stamina system with sprint mechanics
+- 40+ animations from GLB model
+- Gamepad and touch input support
 
-**`js/Sheepdog.js`** - player-controlled dog with 40+ GLB animations, stamina system, smooth acceleration/deceleration, gamepad + touch support.
+### Server
 
-### Backend (`worker/`)
+#### index.js - Geckos.io Server
+WebRTC signaling and game coordination.
+- Connection management (ping timeout 60s)
+- 15+ message type handlers
+- UDP ports 10000-20000
 
-**`worker/src/index.ts`** - Worker router. CORS for `sheepdogsim.com` and localhost. JWT issuance (HMAC-SHA256). D1 reads/writes for register/score/leaderboard. Upgrades `/r/:code/ws` to the matching `RoomDO`.
+#### RoomManager.js - Session Management
+Room and player management.
+- 4-letter room codes
+- Host migration
+- Quick match system
+- 2-4 players per room
 
-**`worker/src/RoomDO.ts`** - per-room Durable Object.
-- Accepts WebSockets via `ctx.acceptWebSocket(server)` (hibernation-ready).
-- `setWebSocketAutoResponse("ping","pong")` keeps keepalives cheap without waking the DO.
-- Authoritative simulation ported from the legacy Node server, using the TS primitives under `worker/src/shared/`.
-- Tick loop driven by `ctx.storage.setAlarm` at 50ms (20Hz), rescheduled at the end of each `alarm()`.
-- Tracks previous broadcast state per player; only sends sheep whose position moved >0.1u or whose state changed. Dogs are always sent in full.
-- Input validation: `clientPos` ignored if more than 5 units from server position (cheat guard).
+#### GameSimulation.js - Server-Side State
+Authoritative game simulation.
+- 60 FPS tick rate
+- State broadcast to all clients
+- Input validation and anti-cheat
+- Deterministic flocking algorithms
 
-**`worker/src/LobbyDO.ts`** - singleton keyed `"global"`. Holds `Map<roomCode, {hostName, playerCount, maxPlayers, gameMode, state}>`. RoomDOs RPC-call `upsert`/`remove` on state changes; `/api/lobbies` reads `list()`.
-
-**`worker/src/protocol.ts`** - TypeScript interfaces for every message shape. Versioned with `v: 1` at the top level.
-
-**`worker/src/shared/`** - TypeScript ports of the sim primitives (`Vector2D`, `FlockingAlgorithms`, `MovementPhysics`, `BoundaryCollision`, `GameStateValidation`), preserving the behavior of the JS `shared/` module used during the droplet era.
-
-## Wire protocol
-
-Transport is MessagePack over WebSocket. All messages are binary (ArrayBuffer) and include `v: 1`. Client -> Server types: `input`, `ready`, `start`, `leave`, `modeLock`, `setDog`. Server -> Client types: `state`, `lobby`, `start`, `complete`, `hostChanged`, `error`.
-
-Full message table, field types, delta-encoding rules, and mode cycling logic: **`worker/docs/protocol.md`**.
-
-## Game modes
+## Game Modes
 
 | Mode | Description | Players |
 |------|-------------|---------|
-| Classic | Herd 200 sheep into the pen | 1 |
-| Extreme | Harder variant, more sheep | 1 |
-| Insane | Hardest solo variant | 1 |
-| Chaos | 5000 sheep via ExtremeBoidSystem | 1 |
-| Timed | 3-minute clock, highest count wins | 1-4 |
-| Sandbox | Custom field, fences, sheep count, win condition | 1 |
-| Cooperative | Multiplayer Classic, all share one gate | 2-4 |
-| Competitive | Each player owns a gate, race to threshold | 2-4 |
+| Solo | Client-side simulation, instant start | 1 |
+| Cooperative | Work together to herd 200 sheep | 2-4 |
+| Competitive | Race to collect sheep (first to 101 in 2P) | 2-4 |
+| Timed | 3-minute countdown, highest score wins | 2-4 |
 
-## Playable dogs
+## Network Protocol
 
-| Dog | Breed | Speed | Stamina | Control | Style |
-|-----|-------|-------|---------|---------|-------|
-| Jep | Border Collie | 3 | 4 | 4 | Well-balanced herder |
-| Pip | Australian Shepherd | 5 | 3 | 3 | Fast and agile |
-| Sally | Welsh Corgi | 2 | 4 | 5 | Precision control |
-| Shiloh | German Shepherd | 3 | 5 | 3 | High endurance |
-| George Washington | American Foxhound | 3 | 4 | 3 | Tactical all-rounder |
+### Message Types
+```typescript
+// Client → Server
+interface PlayerInput {
+    direction: { x: number, z: number };
+    sprinting: boolean;
+    timestamp: number;
+    sequence: number;
+}
+
+// Server → Client
+interface GameStateUpdate {
+    sheep: Array<{id, position, velocity, state}>;
+    players: Map<string, {position, velocity, stamina, dogType}>;
+    timestamp: number;
+    tick: number;
+}
+```
+
+### Connection Flow
+```
+DISCONNECTED → CONNECTING → CONNECTED → IN_ROOM → IN_GAME
+       ↑                                              │
+       └──────── (reconnection with backoff) ────────┘
+```
 
 ## Performance
 
+### Metrics
 | Metric | Desktop | Mobile |
 |--------|---------|--------|
 | Target FPS | 60 | 30-60 |
-| Sheep draw calls | 1 | 1 |
-| Grass instances | 800,000 | 80,000 |
+| Draw Calls (sheep) | 1 | 1 |
+| Grass Instances | 800,000 | 80,000 |
 | Memory | ~150MB | ~100MB |
+| Network Bandwidth | ~10KB/s | ~10KB/s |
 
 ### Optimizations
-- **GPU instancing** - one draw call for all sheep regardless of count
-- **Chunk culling** - grass rendered only in view frustum
-- **Mobile mode** - shadows disabled, reduced pixel ratio, fewer grass blades
-- **Lazy mobile controls** - only loaded on touch devices
-- **Delta encoding** - only moving sheep transmitted (>0.1u threshold or state change)
-- **WebSocket hibernation** - idle DOs suspend; auto-response handles ping without waking
+- **GPU Instancing**: Single draw call for all sheep
+- **Chunk Culling**: Grass rendered only in view frustum
+- **Mobile Mode**: Shadows disabled, reduced pixel ratio
+- **Lazy Loading**: Mobile controls load only on touch devices
+- **State Interpolation**: Smooth remote player movement
 
-## Deployment
+## File Structure
 
-- **Frontend:** `.github/workflows/deploy.yml` builds on every push to `main` and deploys `dist/` to the `sds-frontend` Cloudflare Pages project. `sheepdogsim.com` is bound as a custom domain.
-- **Worker:** `cd worker && wrangler deploy` from a local env that has `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` sourced. Routes `sheepdogsim.com/api/*` and `sheepdogsim.com/r/*/ws` bind to the `sds-worker`.
-- **D1:** migrations under `worker/migrations/`. Applied via `wrangler d1 execute sds-db --file migrations/0001_init.sql --remote`.
-- **Secrets:** `JWT_SECRET` set via `wrangler secret put JWT_SECRET`.
-- **itch.io:** `.github/workflows/build-itchio.yml` produces a `sds-itchio-<tag>.zip` from `npm run build:itchio` on tag push or manual dispatch.
+```
+├── js/
+│   ├── main.js              # Game orchestrator
+│   ├── SceneManager.js      # Three.js scene/camera
+│   ├── TerrainBuilder.js    # Environment generation
+│   ├── StructureBuilderV2.js # Gates, fences, pastures
+│   ├── OptimizedSheep.js    # GPU sheep system
+│   ├── Sheepdog.js          # Player controller
+│   ├── GrassSystem.js       # Chunk-based grass
+│   ├── GameState.js         # Game logic
+│   ├── GameTimer.js         # Timing system
+│   ├── NetworkManager.js    # WebRTC client
+│   ├── MultiplayerUI.js     # Multiplayer UI
+│   ├── MobileControls.js    # Touch controls
+│   ├── InputHandler.js      # Input management
+│   ├── GamepadManager.js    # Controller support
+│   ├── AudioManager.js      # Sound system
+│   ├── StartScreen.js       # Start screen
+│   ├── PerformanceMonitor.js # FPS stats
+│   ├── GameAssetLoader.js   # Asset loading
+│   ├── Boid.js              # Base AI behavior
+│   ├── ExtremeBoid.js       # Aggressive variant
+│   ├── FencePresets.js      # Fence configurations
+│   ├── Vector2D.js          # 2D math
+│   └── components/
+│       └── ReactUI.js       # React overlay
+│
+├── server/
+│   ├── index.js             # Geckos.io server
+│   ├── GameSimulation.js    # Server game state
+│   ├── RoomManager.js       # Room management
+│   ├── LeaderboardManager.js # SQLite persistence
+│   └── package.json
+│
+├── shared/
+│   ├── BoundaryCollision.js
+│   ├── FlockingAlgorithms.js
+│   ├── GameStateValidation.js
+│   ├── MovementPhysics.js
+│   └── Vector2D.js
+│
+├── assets/
+│   ├── models/              # GLB models
+│   ├── sounds_compressed/   # Audio
+│   └── images/              # UI/SEO
+│
+├── css/
+│   ├── production.css
+│   └── multiplayer-react.css
+│
+├── index.html               # Entry point
+├── package.json
+├── vite.config.js
+└── tailwind.config.js
+```
 
-## Legacy fallback (temporary)
+## Development
 
-The previous backend - Geckos.io / WebRTC on a DigitalOcean droplet at `api.sheepdogsim.com`, backed by a local SQLite file - remains online as a rollback target through approximately **2026-05-23**. Its 207 player records were migrated into D1 during the cutover. The legacy Geckos code path was removed from the client default but may still be present behind the `VITE_USE_DO_BACKEND` flag until Track G of the current agent cycle retires it. No active development targets this path.
+### Local Setup
+```bash
+# Client
+npm install
+npm run dev  # http://localhost:3000
+
+# Server
+cd server
+npm install
+npm start    # http://localhost:9208
+```
+
+### Production Build
+```bash
+npm run build  # Output to dist-react/
+```
+
+### Deployment
+- **Frontend**: Static hosting (GitHub Pages, CDN)
+- **Server**: DigitalOcean Droplet with PM2
+- **SSL**: Cloudflare proxy for api.sheepdogsim.com

@@ -256,17 +256,17 @@ Update this section as tracks complete. Format: `[x] Done — <commit-sha> — <
 [x] Track A · Foundations — 83beb3e — bug fixes, dep cleanup, build config, SW cache invalidation, DECISIONS.md
 [x] Track B1 · Lobby UX design doc — done — docs/multiplayer-ux.md created
 [x] Track B2 · Lobby UX implementation — done — PublicLobbyList, invite URLs, mode cycling, host migration events
-[x] Track C1 · Workers scaffold + D1 schema — done — worker/ created with stubs, TS primitives, D1 SQL
-[x] Track C2 · Simulation port to RoomDO — done — full RoomDO with 20Hz alarm ticks, delta encoding, MessagePack, protocol.ts, 29 tests pass
-[x] Track C3 · Client swap to native WebSocket — done — DO path behind VITE_USE_DO_BACKEND=true; both transports coexist; build clean
-[x] Track C4 · Cutover + data migration — done — Worker live at sheepdogsim.com/api/* and /r/*, D1 with 207 players migrated, CF Pages deploying frontend with VITE_USE_DO_BACKEND=true. DNS custom-domain swap of sheepdogsim.com pending human gate
+[!] Track C1 · Workers scaffold + D1 schema — REVERTED 2026-04-23 — see POSTMORTEM.md
+[!] Track C2 · Simulation port to RoomDO — REVERTED 2026-04-23 — see POSTMORTEM.md
+[!] Track C3 · Client swap to native WebSocket — REVERTED 2026-04-23 — see POSTMORTEM.md
+[!] Track C4 · Cutover + data migration — REVERTED 2026-04-23 — production was non-functional on DO path (audit found 7+ critical bugs). Rolled back to droplet within the hour. See POSTMORTEM.md and docs/cycle-1-audit.md
 [x] Track D1 · Sandbox diagnosis — done — docs/sandbox-punchlist.md created
 [x] Track D2 · Sandbox share URLs — done — lz-string, serialize/deserialize on SandboxConfig, share button in SandboxSetup, hash detection in App.js
 [x] Track D3 · Sandbox punch-list fixes — done — 5 items: FenceEditor borderPoints bug, Ctrl+Z shortcuts, user preset library, pasture label, gate validation confirmed present
 [x] Track E1 · 2P local investigation — done — docs/2p-local-report.md created
 [x] Track E2 · 2P local execution — done — Path A: Shift event.code fix, versus gate scoring, camera padding doc
-[x] Track F  · CF Pages + CI — done — sds-frontend project created, deploy.yml and build-itchio.yml workflows added
-[ ] Track G  · Post-migration cleanup
+[!] Track F  · CF Pages + CI — REVERTED 2026-04-23 — was tied to failed C1-C4 cutover; workflows and _redirects/_headers removed. See POSTMORTEM.md
+[ ] Track G  · Post-migration cleanup — N/A (no migration shipped)
 ```
 
 ---
