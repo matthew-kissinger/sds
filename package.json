@@ -4,6 +4,9 @@
   "description": "An interactive herding game where players control a sheepdog to guide sheep into a pen using boid flocking algorithms",
   "type": "module",
   "main": "index.html",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "vite --port 3000",
     "dev:lan": "vite --port 3000 --host",
@@ -16,7 +19,12 @@
     "preview": "vite preview",
     "preview:lan": "vite preview --host",
     "test": "echo \"No tests configured yet\"",
-    "clean": "rm -rf dist node_modules/.vite"
+    "clean": "rm -rf dist node_modules/.vite",
+    "server:status": "ssh sds \"pm2 status\"",
+    "server:logs": "ssh sds \"pm2 logs sds-multiplayer-server --lines 50\"",
+    "server:logs:live": "ssh sds \"pm2 logs sds-multiplayer-server\"",
+    "server:deploy": "rsync -avz --exclude node_modules --exclude leaderboard.db --exclude '*.db-shm' --exclude '*.db-wal' server/ sds:/opt/sds-server/ && ssh sds \"cd /opt/sds-server && npm install --omit=dev && pm2 reload sds-multiplayer-server\"",
+    "server:ssh": "ssh sds"
   },
   "keywords": [
     "game",
@@ -36,15 +44,12 @@
     "@vitejs/plugin-react": "^5.1.1",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
-    "http-server": "^14.1.1",
-    "stats.js": "^0.17.0",
     "tailwindcss": "^4.1.17",
     "vite": "^7.2.2",
     "vite-plugin-static-copy": "^3.1.4"
   },
   "dependencies": {
     "@geckos.io/client": "^3.0.1",
-    "framer-motion": "^12.19.2",
     "i18next": "^25.6.3",
     "i18next-browser-languagedetector": "^8.2.0",
     "nipplejs": "^0.10.2",

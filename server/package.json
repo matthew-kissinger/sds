@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@geckos.io/server": "^3.0.1",
-    "better-sqlite3": "^9.0.0"
+    "better-sqlite3": "^12.9.0"
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.7.10",
@@ -27,6 +27,6 @@
   "author": "SDS Team",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22.0.0"
   }
 }

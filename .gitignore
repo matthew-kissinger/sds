@@ -42,6 +42,13 @@ node_modules/
 
 # dotenv environment variables file
 .env
+.env.local
+.env.*.local
+
+# SQLite database files (live data - never commit)
+*.db
+*.db-shm
+*.db-wal
 
 # VS Code
 .vscode/
@@ -60,6 +67,9 @@ Thumbs.db
 *.temp 
 # Claude Code local settings
 .claude/
+
+# Playwright MCP artifacts
+.playwright-mcp/
 
 # Build output
 dist/

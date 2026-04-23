@@ -296,7 +296,22 @@ export class LeaderboardManager {
         const now = Date.now();
         let updated = false;
         let isNewRecord = false;
-        
+
+        // Score bounds validation
+        switch (gameMode) {
+            case 'soloClassic':
+            case 'soloExtreme':
+            case 'cooperative':
+                if (!(score >= 30 && score <= 3600)) throw new Error('score out of bounds for mode ' + gameMode);
+                break;
+            case 'timed':
+                if (!(Number.isInteger(score) && score >= 0 && score <= 500)) throw new Error('score out of bounds for mode ' + gameMode);
+                break;
+            case 'competitive':
+                if (!(score === 0 || score === 1)) throw new Error('score out of bounds for mode ' + gameMode);
+                break;
+        }
+
         switch (gameMode) {
             case 'soloClassic':
                 if (player.solo_classic_best === null || score < player.solo_classic_best) {
@@ -404,9 +419,6 @@ export class LeaderboardManager {
         return players.map((player, index) => {
             const scoreKey = this.getScoreColumn(gameMode);
             const score = player[scoreKey];
-            
-            // Debug logging to see what score values we're getting
-            console.log(`🔍 Score debug for ${player.display_name}: ${gameMode} -> ${scoreKey} = ${score} (type: ${typeof score})`);
             
             return {
                 rank: index + 1,

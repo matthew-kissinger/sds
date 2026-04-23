@@ -3,7 +3,7 @@
  * Implements cache-first strategy for assets to improve repeat visit load times
  */
 
-const CACHE_NAME = 'sheepdog-sim-v1';
+const CACHE_NAME = `sheepdog-sim-${__BUILD_ID__}`;
 
 // Assets to cache immediately on install
 const PRECACHE_ASSETS = [

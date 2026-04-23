@@ -296,8 +296,10 @@ class MultiplayerServer {
             const player = this.players.get(playerId);
             if (!player) return;
 
+            if (player.roomCode) this.handleLeaveRoom(playerId);
+
             const { playerName, dogType, gameMode = 'cooperative' } = data;
-            
+
             // Try to find an existing public room with matching game mode
             let room = this.roomManager.findQuickMatchRoom();
             
@@ -598,6 +600,7 @@ class MultiplayerServer {
     }
 
     handlePlayerDisconnect(playerId) {
+        if (!this.players.has(playerId)) return;
         this.stats.connectionsActive--;
         
         // Clean up player from room
@@ -768,6 +771,9 @@ process.on('SIGTERM', () => {
     server.stop();
     process.exit(0);
 });
+
+process.on('uncaughtException', (err) => { console.error('[UNCAUGHT]', err.stack || err); });
+process.on('unhandledRejection', (reason) => { console.error('[UNHANDLED]', reason); });
 
 // Start the server
 server.start().catch((error) => {

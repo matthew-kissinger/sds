@@ -291,6 +291,12 @@ export class GameSimulation {
 
         // Handle client-sent stopping position for smooth reconciliation
         if (clientPosition && targetVelocity.magnitude() === 0) {
+            const dx = clientPosition.x - sheepdog.position.x;
+            const dz = clientPosition.z - sheepdog.position.z;
+            if (dx * dx + dz * dz > 25) {
+                console.warn(`[CHEAT] clientPosition ignored for ${playerId}: delta=${Math.sqrt(dx*dx+dz*dz).toFixed(2)}`);
+                return;
+            }
             // Client is stopping and sent their final position
             // Set up interpolation target instead of normal physics
             sheepdog.clientStopTarget = new Vector2D(clientPosition.x, clientPosition.z);
