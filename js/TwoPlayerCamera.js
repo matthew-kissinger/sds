@@ -11,7 +11,7 @@ export class TwoPlayerCamera {
         // Camera settings
         this.minDistance = 40;   // Minimum camera distance when players are close
         this.maxDistance = 180;  // Maximum camera distance when players are far apart
-        this.padding = 25;       // Extra padding around players in view
+        this.padding = 25;       // Extra padding around players in view (world units; ~25 suits a 200x200 field)
         this.heightRatio = 1.0;  // Camera height relative to distance
 
         // Smoothing

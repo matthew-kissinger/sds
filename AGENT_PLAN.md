@@ -262,9 +262,9 @@ Update this section as tracks complete. Format: `[x] Done — <commit-sha> — <
 [ ] Track C4 · Cutover + data migration
 [x] Track D1 · Sandbox diagnosis — done — docs/sandbox-punchlist.md created
 [x] Track D2 · Sandbox share URLs — done — lz-string, serialize/deserialize on SandboxConfig, share button in SandboxSetup, hash detection in App.js
-[ ] Track D3 · Sandbox punch-list fixes
+[x] Track D3 · Sandbox punch-list fixes — done — 5 items: FenceEditor borderPoints bug, Ctrl+Z shortcuts, user preset library, pasture label, gate validation confirmed present
 [x] Track E1 · 2P local investigation — done — docs/2p-local-report.md created
-[ ] Track E2 · 2P local execution
+[x] Track E2 · 2P local execution — done — Path A: Shift event.code fix, versus gate scoring, camera padding doc
 [ ] Track F  · CF Pages + CI
 [ ] Track G  · Post-migration cleanup
 ```

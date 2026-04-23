@@ -68,8 +68,8 @@ export class LocalInputHandler {
                 event.preventDefault();
             }
 
-            // Player 1 sprint (Left Shift)
-            if (event.key === 'Shift' && event.location === 1) {
+            // Player 1 sprint (Left Shift) - use event.code for cross-browser reliability
+            if (event.code === 'ShiftLeft') {
                 this.player1Keys.shift = true;
                 event.preventDefault();
             }
@@ -89,21 +89,9 @@ export class LocalInputHandler {
                 event.preventDefault();
             }
 
-            // Player 2 sprint (Right Shift)
-            if (event.key === 'Shift' && event.location === 2) {
+            // Player 2 sprint (Right Shift) - use event.code for cross-browser reliability
+            if (event.code === 'ShiftRight') {
                 this.player2Keys.shift = true;
-                event.preventDefault();
-            }
-
-            // Handle generic Shift (location 0) - give to both if needed
-            if (event.key === 'Shift' && event.location === 0) {
-                // Standard shift - assign based on which player is moving
-                if (this.isPlayer1Moving()) {
-                    this.player1Keys.shift = true;
-                }
-                if (this.isPlayer2Moving()) {
-                    this.player2Keys.shift = true;
-                }
                 event.preventDefault();
             }
         });
@@ -133,7 +121,7 @@ export class LocalInputHandler {
             }
 
             // Player 1 sprint (Left Shift)
-            if (event.key === 'Shift' && event.location === 1) {
+            if (event.code === 'ShiftLeft') {
                 this.player1Keys.shift = false;
                 event.preventDefault();
             }
@@ -154,14 +142,7 @@ export class LocalInputHandler {
             }
 
             // Player 2 sprint (Right Shift)
-            if (event.key === 'Shift' && event.location === 2) {
-                this.player2Keys.shift = false;
-                event.preventDefault();
-            }
-
-            // Handle generic Shift release
-            if (event.key === 'Shift' && event.location === 0) {
-                this.player1Keys.shift = false;
+            if (event.code === 'ShiftRight') {
                 this.player2Keys.shift = false;
                 event.preventDefault();
             }

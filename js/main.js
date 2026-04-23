@@ -1835,8 +1835,32 @@ class SheepDogSimulation {
                 }
             }
         } else if (localMode === 'versus') {
-            // Versus: check which player's gate sheep passed through
-            // TODO: Implement proper gate assignment tracking
+            // Versus: attribute retired sheep to the player whose gate they passed
+            const sheep = this.gameState.optimizedSheepSystem?.sheep;
+            const mgr = this.localMultiplayerManager;
+            if (sheep && mgr.player1Gate && mgr.player2Gate) {
+                if (!this._versusCountedSheep) this._versusCountedSheep = new Set();
+                for (let i = 0; i < sheep.length; i++) {
+                    const s = sheep[i];
+                    if ((s.hasPassedGate || s.state === 2) && !this._versusCountedSheep.has(i)) {
+                        this._versusCountedSheep.add(i);
+                        // Attribute to player based on which pasture the sheep is in
+                        const sx = s.position?.x ?? 0;
+                        const p1pz = mgr.player1Gate.pasture;
+                        const p2pz = mgr.player2Gate.pasture;
+                        if (sx >= p1pz.minX && sx <= p1pz.maxX) {
+                            mgr.recordSheepScored(mgr.player1.id);
+                        } else if (sx >= p2pz.minX && sx <= p2pz.maxX) {
+                            mgr.recordSheepScored(mgr.player2.id);
+                        } else {
+                            // Nearest gate wins the attribution
+                            const d1 = Math.abs(sx - mgr.player1Gate.position.x);
+                            const d2 = Math.abs(sx - mgr.player2Gate.position.x);
+                            mgr.recordSheepScored(d1 <= d2 ? mgr.player1.id : mgr.player2.id);
+                        }
+                    }
+                }
+            }
         } else if (localMode === 'timed') {
             // Timed: check time remaining and shared scoring
             this.localMultiplayerManager.checkTimedModeEnd();

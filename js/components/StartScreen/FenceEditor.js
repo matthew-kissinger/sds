@@ -55,14 +55,19 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
     // Compute border points from shape if not provided directly
     // This ensures the canvas always shows the correct shape
     const borderPoints = useMemo(() => {
-        // First check if config has borderPoints
+        // First check if config has borderPoints (already resolved by SandboxConfig constructor)
         if (config.field?.borderPoints && config.field.borderPoints.length >= 3) {
             return config.field.borderPoints;
         }
-        // Otherwise compute from shape
+        // For custom shapes, use customBorderPoints directly
+        const customPts = config.field?.customBorderPoints;
+        if (fieldShape === 'custom' && customPts && customPts.length >= 3) {
+            return customPts;
+        }
+        // Otherwise compute from shape config, passing customBorderPoints so custom shape works
         const shapeConfig = FIELD_SHAPES[fieldShape];
         if (shapeConfig?.getBorderPoints) {
-            return shapeConfig.getBorderPoints(bounds);
+            return shapeConfig.getBorderPoints(bounds, customPts);
         }
         // Fallback to square
         return [
@@ -71,7 +76,7 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
             { x: bounds.maxX, z: bounds.maxZ },
             { x: bounds.minX, z: bounds.maxZ }
         ];
-    }, [config.field?.borderPoints, config.field?.shape, bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ, fieldShape]);
+    }, [config.field?.borderPoints, config.field?.customBorderPoints, config.field?.shape, bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ, fieldShape]);
 
     const customBorderPoints = config.field?.customBorderPoints || null;  // User-drawn shape
 
@@ -191,6 +196,14 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
                 pBottomRight.y - pTopLeft.y
             );
             ctx.setLineDash([]);
+            // Label the pasture so users know what it is
+            const labelX = (pTopLeft.x + pBottomRight.x) / 2;
+            const labelY = (pTopLeft.y + pBottomRight.y) / 2;
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.8)';
+            ctx.font = `bold ${Math.max(9, scale * 4)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Pasture', labelX, labelY);
         });
 
         // Draw gates
@@ -621,6 +634,36 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
     const [canvasSize, setCanvasSize] = useState({ width: 400, height: 400 });
     const [history, setHistory] = useState([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
+    const historyRef = useRef({ history: [], historyIndex: -1 });
+
+    // Keep ref in sync for use in keyboard handler (avoids stale closure)
+    useEffect(() => {
+        historyRef.current = { history, historyIndex };
+    });
+
+    // Keyboard shortcuts: Ctrl+Z undo, Ctrl+Y/Ctrl+Shift+Z redo
+    useEffect(() => {
+        const onKey = (e) => {
+            const { history: h, historyIndex: hi } = historyRef.current;
+            if (e.ctrlKey && e.code === 'KeyZ' && !e.shiftKey) {
+                e.preventDefault();
+                if (hi > 0) {
+                    const newIndex = hi - 1;
+                    setHistoryIndex(newIndex);
+                    onConfigChange({ ...config, fences: h[newIndex], preset: 'custom' });
+                }
+            } else if (e.ctrlKey && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {
+                e.preventDefault();
+                if (hi < h.length - 1) {
+                    const newIndex = hi + 1;
+                    setHistoryIndex(newIndex);
+                    onConfigChange({ ...config, fences: h[newIndex], preset: 'custom' });
+                }
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [config, onConfigChange]);
 
     // Calculate canvas size based on container
     useEffect(() => {
@@ -683,6 +726,32 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                 preset: presetName
             });
         });
+    };
+
+    // User preset library (up to 5, stored in localStorage)
+    const [userPresets, setUserPresets] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('sandboxUserPresets') || '[]'); }
+        catch { return []; }
+    });
+
+    const handleSaveUserPreset = () => {
+        const name = window.prompt('Name this layout (max 20 chars):', '');
+        if (!name || !name.trim()) return;
+        const preset = { name: name.trim().slice(0, 20), fences: [...(config.fences || [])] };
+        const updated = [...userPresets.filter(p => p.name !== preset.name), preset].slice(-5);
+        setUserPresets(updated);
+        try { localStorage.setItem('sandboxUserPresets', JSON.stringify(updated)); } catch {}
+    };
+
+    const handleLoadUserPreset = (preset) => {
+        saveToHistory(preset.fences);
+        onConfigChange({ ...config, fences: preset.fences, preset: 'custom' });
+    };
+
+    const handleDeleteUserPreset = (name) => {
+        const updated = userPresets.filter(p => p.name !== name);
+        setUserPresets(updated);
+        try { localStorage.setItem('sandboxUserPresets', JSON.stringify(updated)); } catch {}
     };
 
     // Clear all fences
@@ -777,6 +846,37 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
             ))
         ]),
 
+        // User preset library
+        userPresets.length > 0 && createElement('div', {
+            key: 'user-presets',
+            className: 'mb-3'
+        }, [
+            createElement('div', {
+                key: 'label',
+                className: 'text-xs text-white/50 mb-2 uppercase tracking-wide'
+            }, 'Your saved layouts'),
+            createElement('div', {
+                key: 'list',
+                className: 'flex flex-wrap gap-2'
+            }, userPresets.map(preset =>
+                createElement('div', {
+                    key: preset.name,
+                    className: 'flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1'
+                }, [
+                    createElement('button', {
+                        key: 'load',
+                        onClick: () => handleLoadUserPreset(preset),
+                        className: 'text-xs text-white hover:text-emerald-300 transition-colors'
+                    }, preset.name),
+                    createElement('button', {
+                        key: 'del',
+                        onClick: () => handleDeleteUserPreset(preset.name),
+                        className: 'text-xs text-white/40 hover:text-red-400 transition-colors ml-1'
+                    }, 'x')
+                ])
+            ))
+        ]),
+
         // Main content area
         createElement('div', {
             key: 'main',
@@ -848,6 +948,12 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                 key: 'back',
                 onClick: onBack
             }, t('common.back')),
+            fenceCount > 0 && createElement(Button, {
+                key: 'save-preset',
+                variant: 'secondary',
+                onClick: handleSaveUserPreset,
+                style: { minWidth: 'auto', width: 'auto', flexShrink: 0, fontSize: '0.8em' }
+            }, 'Save layout'),
             createElement(Button, {
                 key: 'done',
                 variant: 'primary',
