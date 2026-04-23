@@ -2,12 +2,13 @@
  * SandboxSetup Component
  * Configuration interface for sandbox/creative mode
  */
-import React, { createElement, useState, useEffect } from 'react';
+import React, { createElement, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button, BackButton } from '../ui/Button.js';
 import { FIELD_SIZES as FIELD_SIZE_BOUNDS, FIELD_SHAPES } from '../../FieldConfig.js';
+import { SandboxConfig } from '../../SandboxConfig.js';
 
 // Field size presets - derived from FieldConfig
 const FIELD_SIZES = [
@@ -101,6 +102,27 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
     const { t } = useTranslation();
     const { isCompact, isLandscapeMobile } = useResponsive();
     const [activeTab, setActiveTab] = useState('sheep');
+    const [shareToast, setShareToast] = useState(null);
+
+    const handleShareLink = useCallback(() => {
+        try {
+            const cfg = new SandboxConfig(config);
+            const encoded = cfg.serialize();
+            const url = `https://sheepdogsim.com/#s/${encoded}`;
+            if (url.length > 1800) {
+                setShareToast('Config too large to share via URL');
+            } else {
+                navigator.clipboard.writeText(url).then(() => {
+                    setShareToast('Link copied!');
+                }).catch(() => {
+                    setShareToast('Copy failed - check browser permissions');
+                });
+            }
+        } catch (err) {
+            setShareToast('Failed to generate share link');
+        }
+        setTimeout(() => setShareToast(null), 2000);
+    }, [config]);
 
     // Handle config updates - deep clone to avoid mutation
     const updateConfig = (path, value) => {
@@ -469,6 +491,24 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
             }
         }, renderTabContent()),
 
+        // Share toast notification
+        shareToast && createElement('div', {
+            key: 'toast',
+            style: {
+                position: 'absolute',
+                bottom: '80px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(0,0,0,0.85)',
+                color: '#fff',
+                padding: '6px 16px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                pointerEvents: 'none',
+                whiteSpace: 'nowrap'
+            }
+        }, shareToast),
+
         // Footer actions
         createElement('div', {
             key: 'footer',
@@ -480,6 +520,12 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                 onClick: onBack,
                 style: { minWidth: 'auto', width: 'auto', flexShrink: 0 }
             }, `\u2190 ${t('common.back')}`),
+            createElement(Button, {
+                key: 'share',
+                variant: 'secondary',
+                onClick: handleShareLink,
+                style: { minWidth: 'auto', width: 'auto', flexShrink: 0 }
+            }, 'Copy share link'),
             createElement(Button, {
                 key: 'start',
                 variant: 'primary',

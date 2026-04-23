@@ -192,10 +192,29 @@ export async function initReactUI() {
             const platform = usePlatform();
 
             useEffect(() => {
+                // Check for sandbox share URL (#s/...)
+                const hash = location.hash;
+                let pendingSandboxConfig = null;
+                if (hash.startsWith('#s/')) {
+                    const encoded = hash.slice(3);
+                    const loaded = SandboxConfig.deserialize(encoded);
+                    if (loaded) {
+                        pendingSandboxConfig = loaded;
+                        setSandboxConfig(loaded);
+                    } else {
+                        console.error('[APP] Failed to load sandbox config from URL hash');
+                    }
+                    history.replaceState(null, '', location.pathname);
+                }
+
                 const existingIdentity = getPlayerIdentity();
                 if (existingIdentity) {
                     setPlayerIdentity(existingIdentity);
-                    setScreen('main');
+                    if (pendingSandboxConfig) {
+                        setScreen('sandboxSetup');
+                    } else {
+                        setScreen('main');
+                    }
                 }
             }, []);
 

@@ -1,5 +1,6 @@
 import { Vector2D } from './Vector2D.js';
 import { FIELD_SIZES, FIELD_SHAPES, GATE_DEFAULTS, PASTURE_DEFAULTS } from './FieldConfig.js';
+import LZString from 'lz-string';
 
 /**
  * SandboxConfig - Configuration class for sandbox/creative mode
@@ -774,6 +775,38 @@ export class SandboxConfig {
         } catch (error) {
             console.error('[SANDBOX] Failed to delete config:', error);
             return false;
+        }
+    }
+
+    /**
+     * Serialize config to a URL-safe compressed string
+     */
+    serialize() {
+        const compact = {
+            sheep: this.sheep,
+            field: this.field,
+            fences: this.fences,
+            gates: this.gates,
+            pastures: this.pastures,
+            rules: this.rules,
+            preset: this.preset,
+            useExtremeBoids: this.useExtremeBoids
+        };
+        return LZString.compressToEncodedURIComponent(JSON.stringify(compact));
+    }
+
+    /**
+     * Deserialize from a URL-safe compressed string produced by serialize()
+     */
+    static deserialize(encoded) {
+        try {
+            const json = LZString.decompressFromEncodedURIComponent(encoded);
+            if (!json) throw new Error('decompression returned null');
+            const data = JSON.parse(json);
+            return new SandboxConfig(data);
+        } catch (err) {
+            console.error('[SANDBOX] deserialize failed:', err);
+            return null;
         }
     }
 

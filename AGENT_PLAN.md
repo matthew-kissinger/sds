@@ -253,17 +253,17 @@ When dispatching sub-agents inside a track, include the relevant Section 1 conte
 Update this section as tracks complete. Format: `[x] Done — <commit-sha> — <1-line note>`.
 
 ```
-[ ] Track A · Foundations
-[ ] Track B1 · Lobby UX design doc
+[x] Track A · Foundations — 83beb3e — bug fixes, dep cleanup, build config, SW cache invalidation, DECISIONS.md
+[x] Track B1 · Lobby UX design doc — done — docs/multiplayer-ux.md created
 [ ] Track B2 · Lobby UX implementation
 [ ] Track C1 · Workers scaffold + D1 schema
 [ ] Track C2 · Simulation port to RoomDO
 [ ] Track C3 · Client swap to native WebSocket
 [ ] Track C4 · Cutover + data migration
-[ ] Track D1 · Sandbox diagnosis
-[ ] Track D2 · Sandbox share URLs
+[x] Track D1 · Sandbox diagnosis — done — docs/sandbox-punchlist.md created
+[x] Track D2 · Sandbox share URLs — done — lz-string, serialize/deserialize on SandboxConfig, share button in SandboxSetup, hash detection in App.js
 [ ] Track D3 · Sandbox punch-list fixes
-[ ] Track E1 · 2P local investigation
+[x] Track E1 · 2P local investigation — done — docs/2p-local-report.md created
 [ ] Track E2 · 2P local execution
 [ ] Track F  · CF Pages + CI
 [ ] Track G  · Post-migration cleanup
