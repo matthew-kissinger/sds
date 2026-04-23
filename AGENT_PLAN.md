@@ -5,7 +5,26 @@
 
 ---
 
-## 0 · How to use this file
+## 0 · CYCLE 1 STATUS — READ THIS FIRST (2026-04-23)
+
+**Cycle 1 shipped Tracks A, B1/B2, D1-D3, E1/E2 and rolled back C1-C4 and F the same day.** The CF Workers/DO/D1/Pages cutover was non-functional in production (missing `POST /api/rooms`, no `players` insert on register, no materialized-best update on score, WS strips identity, adapter routes coop as competitive, competitive gates never render, 20Hz rubber-banding).
+
+**Before executing any C-track or F retry:**
+
+1. Read `POSTMORTEM.md` in full. It documents the process failures and lays out rules (playtesting as gate, sub-agent verification, integration tests, one-command rollback, docs-from-code) that the next cycle must follow.
+2. Read `docs/cycle-1-audit.md` for the specific technical bugs with file:line evidence — do not re-introduce them.
+3. Treat the C1-C4 and F prompts below as **source material, not a recipe**. They produced a plausible-looking migration that was broken on the happy path; re-planning is required, not re-execution. In particular: the client↔server contract (every `fetch` URL and every `ws` message type) must be written as a reviewable artifact before any endpoint is implemented, and two-client integration tests must pass against `wrangler dev` before anything is deployed.
+
+**Still in force** from Cycle 1 (do not re-litigate):
+
+- Section 2 decisions 1-10 remain the target architecture. The implementation was bad; the direction isn't.
+- Tracks A, B1, B2, D1, D2, D3, E1, E2 are landed — do not redo them. Treat them as the current baseline.
+
+**Not in force:** the "7-day Track G gate" — nothing was actually migrated, so Track G has nothing to clean up until a future C-cycle ships and survives a soak.
+
+---
+
+## 0.5 · How to use this file
 
 If you are an agent reading this:
 
@@ -45,7 +64,7 @@ If you are an agent reading this:
 - **Frontend:** Vite 7 + React 19 + Three.js 0.181 + Tailwind v4
 - **UI:** React with `createElement` (no JSX), i18next, nipplejs (mobile joystick)
 - **Networking (today):** @geckos.io/client (WebRTC/UDP) + @geckos.io/server on droplet
-- **Backend (today):** Node 18, PM2, better-sqlite3, ~207 players in leaderboard
+- **Backend (today):** Node 22+ (engines pinned in Track A), PM2, better-sqlite3, ~207 players in leaderboard
 - **Hosting:** GitHub Pages frontend, Cloudflare DNS proxy, DigitalOcean $6/mo droplet for server
 - **Build:** dual target — GitHub Pages (absolute paths) + itch.io (relative paths)
 
@@ -480,6 +499,8 @@ Ship the design. Targets current Geckos backend — migration happens in Track C
 ---
 
 ## TRACK C · Backend migration to Cloudflare Workers + Durable Objects
+
+> **REVERTED 2026-04-23.** Cycle 1 attempted C1-C4 in a single session and shipped a broken cutover. See `POSTMORTEM.md` sections 3-5 and `docs/cycle-1-audit.md` before treating any prompt below as actionable. The prompts are preserved for context; they are **not a recipe the next agent should re-run verbatim** — they produced a migration that was non-functional on the happy path.
 
 Four sub-tracks. Can run in parallel with D/E/F but must run in sequence internally.
 
@@ -996,6 +1017,8 @@ Two sub-tracks: investigate then execute.
 ---
 
 ## TRACK F · Cloudflare Pages + CI
+
+> **REVERTED 2026-04-23** as part of the Cycle 1 rollback. CF Pages project, deploy workflow, itchio workflow, `_redirects`, and `_headers` were all removed. Re-run only after a C-track has shipped successfully; the infra pieces are straightforward, the risk was always downstream of C.
 
 **Dispatch:** general-purpose agent, 1 session.
 **Estimated effort:** 2 hours.
