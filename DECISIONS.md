@@ -14,3 +14,11 @@
 8. **Drop `framer-motion` and `stats.js`** - unused. Node engines pin to `>=22.0.0`.
 9. **SpacetimeDB - not now.** Revisit for a future persistent-world project.
 10. **Keep the droplet running in parallel for 30 days after DO cutover** as rollback. Track G destroys it.
+
+---
+
+## Track F - CF Pages Setup (2026-04-23)
+
+Cloudflare Pages project `sds-frontend` created with production branch `main`. GitHub Actions workflows added: `deploy.yml` (auto-deploy on push to main via `cloudflare/pages-action@v1`) and `build-itchio.yml` (manual or tag-triggered itch.io zip builds). CF Pages `_redirects` (SPA fallback) and `_headers` (security headers) added to `public/`. DNS cutover and CNAME removal deferred to Track G after CF Pages is verified live.
+
+**Revert procedure (14-day safety window):** Re-enable GitHub Pages in repo Settings > Pages, point source back to `gh-pages` branch or `main`/`docs` folder, update Cloudflare DNS to point `sheepdogsim.com` CNAME back to `matthew-kissinger.github.io`. The CNAME file remains in repo root until Track G.

@@ -63,6 +63,14 @@ export class RoomManager {
     }
 
     /**
+     * Advance game mode in the rotation: cooperative -> competitive -> timed -> cooperative
+     */
+    static nextGameMode(currentMode) {
+        const cycle = { cooperative: 'competitive', competitive: 'timed', timed: 'cooperative' };
+        return cycle[currentMode] || 'cooperative';
+    }
+
+    /**
      * Create a new room
      */
     createRoom(hostPlayerId, roomSettings = {}, hostDogType = 'jep') {
@@ -70,7 +78,8 @@ export class RoomManager {
             name = 'Sheepdog Game',
             maxPlayers = 4,
             isPublic = false,
-            gameMode = 'cooperative'
+            gameMode = 'cooperative',
+            modeLocked = false
         } = roomSettings;
 
         // Validate maxPlayers
@@ -89,7 +98,7 @@ export class RoomManager {
         }
 
         const roomCode = this.generateRoomCode();
-        const room = new Room(roomCode, hostPlayerId, { name, maxPlayers, isPublic, gameMode }, hostDogType);
+        const room = new Room(roomCode, hostPlayerId, { name, maxPlayers, isPublic, gameMode, modeLocked }, hostDogType);
         
         this.rooms.set(roomCode, room);
         this.playerRooms.set(hostPlayerId, roomCode);
@@ -162,12 +171,15 @@ export class RoomManager {
                 // Migrate host to another player
                 const newHostId = Array.from(room.players.keys())[0];
                 room.hostId = newHostId;
-                console.log(`🔄 Host migrated to ${newHostId} in room ${roomCode}`);
+                room.newlyElectedHostId = newHostId; // signal to server for hostChanged broadcast
+                console.log(`Host migrated to ${newHostId} in room ${roomCode}`);
             } else {
                 // Room is empty, clean it up
                 this.cleanupRoom(roomCode);
                 return null;
             }
+        } else {
+            room.newlyElectedHostId = null;
         }
 
         console.log(`👋 Player ${playerId} left room ${roomCode}`);
@@ -278,15 +290,22 @@ export class RoomManager {
     }
 
     /**
-     * Periodic cleanup of stale rooms
+     * Periodic cleanup of stale rooms.
+     * - Finished private rooms idle for 30s are cleaned up immediately.
+     * - All other rooms idle for 30 minutes are cleaned up.
      */
     performMaintenance() {
         const now = Date.now();
         const staleRoomThreshold = 30 * 60 * 1000; // 30 minutes
-        
+        const finishedPrivateThreshold = 30 * 1000; // 30 seconds
+
         for (const [roomCode, room] of this.rooms.entries()) {
-            if (now - room.lastActivity > staleRoomThreshold) {
-                console.log(`🧹 Cleaning up stale room ${roomCode}`);
+            const idle = now - room.lastActivity;
+            if (!room.isPublic && room.state === 'finished' && idle > finishedPrivateThreshold) {
+                console.log(`Cleaning up idle finished private room ${roomCode}`);
+                this.cleanupRoom(roomCode);
+            } else if (idle > staleRoomThreshold) {
+                console.log(`Cleaning up stale room ${roomCode}`);
                 this.cleanupRoom(roomCode);
             }
         }
@@ -304,11 +323,13 @@ export class Room {
         this.maxPlayers = settings.maxPlayers || 4;
         this.isPublic = settings.isPublic || false;
         this.gameMode = settings.gameMode || 'cooperative';
-        
+        this.modeLocked = settings.modeLocked || false;
+
         this.players = new Map(); // playerId -> PlayerInfo
         this.state = 'waiting'; // 'waiting', 'in-game', 'finished'
         this.createdAt = Date.now();
         this.lastActivity = Date.now();
+        this.newlyElectedHostId = null; // set by leaveRoom when host migrates
         
         // Game simulation will be initialized when game starts
         this.simulation = null;
@@ -400,12 +421,13 @@ export class Room {
             maxPlayers: this.maxPlayers,
             isPublic: this.isPublic,
             gameMode: this.gameMode,
+            modeLocked: this.modeLocked,
             state: this.state,
             playerCount: this.players.size,
             players: Array.from(this.players.values()).map(p => ({
                 id: p.id,
                 name: p.name,
-                dogType: p.dogType, // Include dog type in serialized state
+                dogType: p.dogType,
                 isHost: p.isHost,
                 isReady: p.isReady
             })),

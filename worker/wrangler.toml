@@ -1,0 +1,21 @@
+name = "sds-worker"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[durable_objects.bindings]]
+name = "ROOM_DO"
+class_name = "RoomDO"
+
+[[durable_objects.bindings]]
+name = "LOBBY_DO"
+class_name = "LobbyDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDO", "LobbyDO"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sds-db"
+database_id = "placeholder-set-after-wrangler-d1-create"

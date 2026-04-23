@@ -17,9 +17,16 @@ const DOG_ICONS = {
     george_washington: 'GW'
 };
 
-export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave }) {
+const MODE_LABELS = {
+    cooperative: 'Cooperative',
+    competitive: 'Competitive',
+    timed: 'Timed'
+};
+
+export function Lobby({ roomCode, players, maxPlayers, isHost, gameMode, modeLocked, onStart, onLeave, onSetModeLock }) {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
     const { isCompact } = useResponsive();
 
     const copyRoomCode = () => {
@@ -27,6 +34,21 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+
+    const copyInviteLink = () => {
+        const url = `https://sheepdogsim.com#/r/${roomCode}`;
+        navigator.clipboard.writeText(url);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+    };
+
+    const handleModeLockChange = (e) => {
+        if (onSetModeLock) {
+            onSetModeLock(e.target.checked);
+        }
+    };
+
+    const isPublicRoom = gameMode !== undefined; // only set for rooms with cycling info
 
     return createElement('div', {
         style: {
@@ -45,7 +67,7 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
         }, [
             createElement(PanelTitle, { key: 'title' }, t('lobby.title')),
 
-            // Room code display
+            // Room code + invite link
             createElement('div', {
                 key: 'room-info',
                 style: {
@@ -71,7 +93,8 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.75rem'
+                        gap: '0.75rem',
+                        flexWrap: 'wrap'
                     }
                 }, [
                     createElement('span', {
@@ -89,7 +112,78 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
                         variant: 'secondary',
                         onClick: copyRoomCode,
                         style: { padding: '0.5rem 1rem' }
-                    }, copied ? t('common.copied') : t('common.copy'))
+                    }, copied ? t('common.copied') : t('common.copy')),
+                    createElement(Button, {
+                        key: 'invite',
+                        variant: 'secondary',
+                        onClick: copyInviteLink,
+                        style: { padding: '0.5rem 1rem' }
+                    }, linkCopied ? 'Link copied!' : 'Copy invite link')
+                ]),
+
+                // Game mode badge
+                gameMode && createElement('div', {
+                    key: 'mode-badge',
+                    style: {
+                        marginTop: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        flexWrap: 'wrap'
+                    }
+                }, [
+                    createElement('span', {
+                        key: 'mode-label',
+                        style: {
+                            fontSize: '0.8rem',
+                            color: 'rgba(255, 255, 255, 0.6)'
+                        }
+                    }, 'Mode:'),
+                    createElement('span', {
+                        key: 'mode-value',
+                        style: {
+                            fontSize: '0.8rem',
+                            color: '#60a5fa',
+                            fontWeight: 600,
+                            background: 'rgba(96, 165, 250, 0.1)',
+                            border: '1px solid rgba(96, 165, 250, 0.3)',
+                            borderRadius: '0.375rem',
+                            padding: '0.125rem 0.5rem'
+                        }
+                    }, MODE_LABELS[gameMode] || gameMode),
+                    !modeLocked && createElement('span', {
+                        key: 'cycling',
+                        style: {
+                            fontSize: '0.7rem',
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            fontStyle: 'italic'
+                        }
+                    }, '(cycling)')
+                ]),
+
+                // Host-only: mode lock checkbox
+                isHost && gameMode && createElement('label', {
+                    key: 'mode-lock',
+                    style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        marginTop: '0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    }
+                }, [
+                    createElement('input', {
+                        key: 'checkbox',
+                        type: 'checkbox',
+                        checked: !!modeLocked,
+                        onChange: handleModeLockChange,
+                        style: { cursor: 'pointer', accentColor: '#60a5fa' }
+                    }),
+                    'Lock mode (stop cycling after game ends)'
                 ])
             ]),
 
@@ -164,22 +258,39 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, onStart, onLeave 
                 key: 'buttons',
                 style: {
                     display: 'flex',
-                    gap: '0.75rem'
+                    flexDirection: 'column',
+                    gap: '0.5rem'
                 }
             }, [
-                createElement(Button, {
-                    key: 'leave',
-                    variant: 'secondary',
-                    onClick: onLeave,
-                    style: { flex: 1 }
-                }, t('multiplayer.leaveRoom')),
-                isHost && createElement(Button, {
-                    key: 'start',
-                    variant: 'primary',
-                    onClick: onStart,
-                    disabled: players.length < 2,
-                    style: { flex: 1 }
-                }, players.length < 2 ? t('multiplayer.waitingForPlayers') : t('multiplayer.startGame'))
+                // Non-host waiting label
+                !isHost && createElement('p', {
+                    key: 'waiting-label',
+                    style: {
+                        textAlign: 'center',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        fontSize: isCompact ? '0.85rem' : '0.9rem',
+                        padding: '0.5rem 0'
+                    }
+                }, 'Waiting for host to start...'),
+
+                createElement('div', {
+                    key: 'action-row',
+                    style: { display: 'flex', gap: '0.75rem' }
+                }, [
+                    createElement(Button, {
+                        key: 'leave',
+                        variant: 'secondary',
+                        onClick: onLeave,
+                        style: { flex: 1 }
+                    }, t('multiplayer.leaveRoom')),
+                    isHost && createElement(Button, {
+                        key: 'start',
+                        variant: 'primary',
+                        onClick: onStart,
+                        disabled: players.length < 2,
+                        style: { flex: 1 }
+                    }, players.length < 2 ? t('multiplayer.waitingForPlayers') : t('multiplayer.startGame'))
+                ])
             ])
         ])
     );

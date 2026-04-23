@@ -255,6 +255,8 @@ export default {
     // Multiplayer
     multiplayer: {
         title: 'Multiplayer',
+        publicLobbies: 'Public Lobbies',
+        publicLobbiesDesc: 'Browse open games',
         createRoom: 'Create Room',
         createRoomDesc: 'Host a new game room',
         joinRoom: 'Join Room',

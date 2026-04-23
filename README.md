@@ -143,8 +143,33 @@ npm start
 
 ## Deployment
 
-### Frontend
-Static hosting on GitHub Pages or any CDN.
+### Frontend - Cloudflare Pages
+
+The frontend deploys automatically via GitHub Actions on every push to `main`.
+
+**Workflow:** `.github/workflows/deploy.yml`
+- Checks out code, installs deps, runs `npm run build`, then deploys `dist/` to Cloudflare Pages using `cloudflare/pages-action@v1`.
+
+**Required GitHub repository secrets:**
+- `CF_API_TOKEN` - Cloudflare API token with Pages write permissions
+- `CF_ACCOUNT_ID` - Cloudflare account ID
+
+To add secrets: repo Settings > Secrets and variables > Actions > New repository secret.
+
+**CF Pages project name:** `sds-frontend`
+**Production branch:** `main`
+
+Preview deployments are created automatically for PRs and commented on the PR with the preview URL.
+
+### itch.io Builds
+
+**Workflow:** `.github/workflows/build-itchio.yml`
+
+Triggered by:
+- Manual: Actions tab > "Build for itch.io" > Run workflow
+- Automatic: pushing a tag like `v1.2.3`
+
+Produces `sds-itchio-<tag>.zip` containing the `dist/` output built with `npm run build:itchio` (relative paths, no base URL). On tagged releases the zip is uploaded as a GitHub release asset. Upload the zip manually to itch.io from the release page.
 
 ### Multiplayer Server
 Deployed on DigitalOcean Droplet with:

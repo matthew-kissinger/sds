@@ -186,6 +186,14 @@ class MultiplayerServer {
         channel.on('getStats', () => {
             channel.emit('serverStats', this.getServerStats());
         });
+
+        channel.on('getPublicLobbies', () => {
+            this.handleGetPublicLobbies(playerId);
+        });
+
+        channel.on('setModeLock', (data) => {
+            this.handleSetModeLock(playerId, data);
+        });
     }
 
     handleCreateRoom(playerId, data) {
@@ -281,9 +289,27 @@ class MultiplayerServer {
                     playerName: player.name,
                     room: room.getSerializableState()
                 });
+
+                // If host was migrated, notify remaining players
+                if (room.newlyElectedHostId) {
+                    const newHostPlayer = this.players.get(room.newlyElectedHostId);
+                    const newHostName = newHostPlayer ? newHostPlayer.name : 'Unknown';
+                    for (const memberId of room.players.keys()) {
+                        const member = this.players.get(memberId);
+                        if (member && member.channel) {
+                            member.channel.emit('hostChanged', {
+                                newHostId: room.newlyElectedHostId,
+                                newHostName: newHostName,
+                                isHost: memberId === room.newlyElectedHostId,
+                                room: room.getSerializableState()
+                            });
+                        }
+                    }
+                    room.newlyElectedHostId = null;
+                }
             }
 
-            console.log(`👋 Player ${playerId} left room ${oldRoomCode}`);
+            console.log(`Player ${playerId} left room ${oldRoomCode}`);
             
         } catch (error) {
             console.error(`❌ Error leaving room for ${playerId}:`, error.message);
@@ -596,6 +622,59 @@ class MultiplayerServer {
                 message: message,
                 timestamp: Date.now()
             });
+        }
+    }
+
+    handleGetPublicLobbies(playerId) {
+        try {
+            const player = this.players.get(playerId);
+            if (!player) return;
+
+            const lobbies = [];
+            for (const roomCode of this.roomManager.publicRooms) {
+                const room = this.roomManager.getRoom(roomCode);
+                if (!room || room.state === 'finished') continue;
+                const hostPlayer = this.players.get(room.hostId);
+                const hostName = hostPlayer ? hostPlayer.name : 'Unknown';
+                lobbies.push({
+                    roomCode: room.roomCode,
+                    hostName,
+                    playerCount: room.players.size,
+                    maxPlayers: room.maxPlayers,
+                    gameMode: room.gameMode,
+                    state: room.state
+                });
+            }
+
+            player.channel.emit('publicLobbies', { lobbies });
+        } catch (error) {
+            console.error(`Error getting public lobbies for ${playerId}:`, error.message);
+        }
+    }
+
+    handleSetModeLock(playerId, data) {
+        try {
+            const player = this.players.get(playerId);
+            if (!player || !player.roomCode) return;
+
+            const room = this.roomManager.getRoom(player.roomCode);
+            if (!room) return;
+
+            // Only host can lock/unlock
+            if (room.hostId !== playerId) return;
+
+            const locked = !!data.locked;
+            room.modeLocked = locked;
+            room.lastActivity = Date.now();
+
+            this.broadcastToRoom(room.roomCode, 'modeLockChanged', {
+                modeLocked: locked,
+                gameMode: room.gameMode
+            });
+
+            console.log(`Room ${room.roomCode} mode lock set to ${locked} by ${playerId}`);
+        } catch (error) {
+            console.error(`Error setting mode lock for ${playerId}:`, error.message);
         }
     }
 

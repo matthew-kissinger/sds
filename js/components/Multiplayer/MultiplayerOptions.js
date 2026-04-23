@@ -11,6 +11,12 @@ import { BackButton } from '../ui/Button.js';
 
 const OPTIONS = [
     {
+        id: 'publicLobbies',
+        labelKey: 'multiplayer.publicLobbies',
+        descKey: 'multiplayer.publicLobbiesDesc',
+        color: '#8b5cf6' // Violet
+    },
+    {
         id: 'create',
         labelKey: 'multiplayer.createRoom',
         descKey: 'multiplayer.createRoomDesc',

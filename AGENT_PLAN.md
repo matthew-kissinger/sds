@@ -255,8 +255,8 @@ Update this section as tracks complete. Format: `[x] Done — <commit-sha> — <
 ```
 [x] Track A · Foundations — 83beb3e — bug fixes, dep cleanup, build config, SW cache invalidation, DECISIONS.md
 [x] Track B1 · Lobby UX design doc — done — docs/multiplayer-ux.md created
-[ ] Track B2 · Lobby UX implementation
-[ ] Track C1 · Workers scaffold + D1 schema
+[x] Track B2 · Lobby UX implementation — done — PublicLobbyList, invite URLs, mode cycling, host migration events
+[x] Track C1 · Workers scaffold + D1 schema — done — worker/ created with stubs, TS primitives, D1 SQL
 [ ] Track C2 · Simulation port to RoomDO
 [ ] Track C3 · Client swap to native WebSocket
 [ ] Track C4 · Cutover + data migration
@@ -265,7 +265,7 @@ Update this section as tracks complete. Format: `[x] Done — <commit-sha> — <
 [x] Track D3 · Sandbox punch-list fixes — done — 5 items: FenceEditor borderPoints bug, Ctrl+Z shortcuts, user preset library, pasture label, gate validation confirmed present
 [x] Track E1 · 2P local investigation — done — docs/2p-local-report.md created
 [x] Track E2 · 2P local execution — done — Path A: Shift event.code fix, versus gate scoring, camera padding doc
-[ ] Track F  · CF Pages + CI
+[x] Track F  · CF Pages + CI — done — sds-frontend project created, deploy.yml and build-itchio.yml workflows added
 [ ] Track G  · Post-migration cleanup
 ```
 

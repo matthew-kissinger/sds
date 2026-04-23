@@ -8,9 +8,9 @@ import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 
-export function RoomJoining({ onBack, onJoin }) {
+export function RoomJoining({ onBack, onJoin, initialCode = '' }) {
     const { t } = useTranslation();
-    const [roomCode, setRoomCode] = useState('');
+    const [roomCode, setRoomCode] = useState(initialCode);
     const [error, setError] = useState('');
     const { isCompact } = useResponsive();
 

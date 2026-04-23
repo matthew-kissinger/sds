@@ -897,9 +897,24 @@ export class GameSimulation {
         // Stop the simulation after a short delay to allow final state broadcast
         setTimeout(() => {
             this.stop();
-            
+
             // Finish the room (changes room state to 'finished')
             this.room.finishGame();
+
+            // Mode cycling for public rooms
+            if (this.room.isPublic && this.room.server) {
+                if (!this.room.modeLocked) {
+                    const modeCycle = { cooperative: 'competitive', competitive: 'timed', timed: 'cooperative' };
+                    this.room.gameMode = modeCycle[this.room.gameMode] || 'cooperative';
+                }
+                this.room.state = 'waiting';
+                this.room.simulation = null;
+                this.room.lastActivity = Date.now();
+                console.log(`Room ${this.room.roomCode} cycled to mode: ${this.room.gameMode}, state: waiting`);
+                this.room.server.broadcastToRoom(this.room.roomCode, 'roomUpdated', {
+                    room: this.room.getSerializableState()
+                });
+            }
         }, 1000);
     }
 

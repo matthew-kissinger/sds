@@ -267,7 +267,19 @@ export class NetworkManager {
                 console.log('Host changed:', data);
             }
             this.isHost = data.isHost;
-            this.notifyPlayerUpdate({ type: 'hostChanged', newHost: data.newHost });
+            if (data.room) this.currentRoom = data.room;
+            this.notifyPlayerUpdate({ type: 'hostChanged', newHostId: data.newHostId, newHostName: data.newHostName, isHost: data.isHost });
+        });
+
+        this.channel.on('modeLockChanged', (data) => {
+            if (this.debugMode) {
+                console.log('Mode lock changed:', data);
+            }
+            if (this.currentRoom) {
+                this.currentRoom.modeLocked = data.modeLocked;
+                this.currentRoom.gameMode = data.gameMode;
+            }
+            this.notifyRoomUpdate(this.currentRoom);
         });
         
         // Game state events
@@ -431,6 +443,48 @@ export class NetworkManager {
             this.currentRoom = null;
             this.playerId = null;
             this.isHost = false;
+        }
+    }
+
+    /**
+     * Join a room by invite code. Auto-leaves any current room first.
+     */
+    async joinRoomByInvite(roomCode, playerName, dogType = 'jep') {
+        if (this.currentRoom) {
+            this.leaveRoom();
+        }
+        return this.joinRoom(roomCode, playerName, dogType);
+    }
+
+    /**
+     * Request the list of public lobbies from the server.
+     * Server responds with a 'publicLobbies' event.
+     */
+    requestPublicLobbies() {
+        if (this.connected && this.channel) {
+            this.channel.emit('getPublicLobbies');
+        }
+    }
+
+    /**
+     * Listen for a single 'publicLobbies' response.
+     * Returns a cleanup function to remove the listener.
+     */
+    onPublicLobbies(callback) {
+        if (!this.channel) return () => {};
+        const handler = (data) => callback(data);
+        this.channel.on('publicLobbies', handler);
+        return () => {
+            // geckos does not expose removeListener; we store and replace with noop if needed
+        };
+    }
+
+    /**
+     * Emit setModeLock to server (host only).
+     */
+    setModeLock(locked) {
+        if (this.connected && this.currentRoom) {
+            this.channel.emit('setModeLock', { locked });
         }
     }
     

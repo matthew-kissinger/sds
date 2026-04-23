@@ -62,6 +62,7 @@ export async function initReactUI() {
             { RoomCreation },
             { RoomJoining },
             { Lobby },
+            { PublicLobbyList },
             { MultiplayerScoreboard },
             { GlobalLeaderboard },
             { Button },
@@ -92,6 +93,7 @@ export async function initReactUI() {
             import('./Multiplayer/RoomCreation.js'),
             import('./Multiplayer/RoomJoining.js'),
             import('./Multiplayer/Lobby.js'),
+            import('./Multiplayer/PublicLobbyList.js'),
             import('./Multiplayer/MultiplayerScoreboard.js'),
             import('./Multiplayer/GlobalLeaderboard.js'),
             import('./ui/Button.js'),
@@ -189,12 +191,15 @@ export async function initReactUI() {
             const [playerIdentity, setPlayerIdentity] = useState(null);
             const [gameSettings, setGameSettings] = useState(loadSettings());
             const [sandboxConfig, setSandboxConfig] = useState(() => SandboxConfig.createDefault());
+            const [pendingInviteCode, setPendingInviteCode] = useState(null);
             const platform = usePlatform();
 
             useEffect(() => {
-                // Check for sandbox share URL (#s/...)
+                // Check for sandbox share URL (#s/...) or invite URL (#/r/ROOMCODE)
                 const hash = location.hash;
                 let pendingSandboxConfig = null;
+                let inviteCode = null;
+
                 if (hash.startsWith('#s/')) {
                     const encoded = hash.slice(3);
                     const loaded = SandboxConfig.deserialize(encoded);
@@ -205,6 +210,13 @@ export async function initReactUI() {
                         console.error('[APP] Failed to load sandbox config from URL hash');
                     }
                     history.replaceState(null, '', location.pathname);
+                } else if (hash.startsWith('#/r/')) {
+                    const code = hash.slice(4).toUpperCase();
+                    if (/^[A-Z0-9]{4,8}$/.test(code)) {
+                        inviteCode = code;
+                        setPendingInviteCode(code);
+                    }
+                    history.replaceState(null, '', location.pathname);
                 }
 
                 const existingIdentity = getPlayerIdentity();
@@ -212,6 +224,9 @@ export async function initReactUI() {
                     setPlayerIdentity(existingIdentity);
                     if (pendingSandboxConfig) {
                         setScreen('sandboxSetup');
+                    } else if (inviteCode) {
+                        // Navigate directly to join room with code pre-filled
+                        setScreen('joinRoom');
                     } else {
                         setScreen('main');
                     }
@@ -615,6 +630,7 @@ export async function initReactUI() {
                                 if (opt === 'create') setScreen('createRoom');
                                 else if (opt === 'join') setScreen('joinRoom');
                                 else if (opt === 'quick') handleQuickMatch();
+                                else if (opt === 'publicLobbies') setScreen('publicLobbyList');
                             }
                         });
 
@@ -626,13 +642,24 @@ export async function initReactUI() {
 
                     case 'joinRoom':
                         return createElement(RoomJoining, {
-                            onBack: () => setScreen('multiplayer'),
-                            onJoin: handleJoinRoom
+                            onBack: () => {
+                                setPendingInviteCode(null);
+                                setScreen('multiplayer');
+                            },
+                            onJoin: (code) => {
+                                setPendingInviteCode(null);
+                                handleJoinRoom(code);
+                            },
+                            initialCode: pendingInviteCode || ''
                         });
 
-                    case 'lobby':
+                    case 'lobby': {
+                        const _nm = getNetworkManager();
+                        const _room = _nm ? _nm.currentRoom : null;
                         return createElement(Lobby, {
                             ...lobbyData,
+                            gameMode: _room ? _room.gameMode : (lobbyData && lobbyData.gameMode),
+                            modeLocked: _room ? !!_room.modeLocked : false,
                             onStart: () => {
                                 const startScreen = getStartScreen();
                                 if (startScreen) {
@@ -640,7 +667,36 @@ export async function initReactUI() {
                                 }
                                 startMultiplayerGame();
                             },
-                            onLeave: () => setScreen('dogSelection')
+                            onLeave: () => {
+                                const leaveNm = getNetworkManager();
+                                if (leaveNm) leaveNm.leaveRoom();
+                                setScreen('dogSelection');
+                            },
+                            onSetModeLock: (locked) => {
+                                const lockNm = getNetworkManager();
+                                if (lockNm) lockNm.setModeLock(locked);
+                            }
+                        });
+                    }
+
+                    case 'publicLobbyList':
+                        return createElement(PublicLobbyList, {
+                            onBack: () => setScreen('multiplayer'),
+                            onJoinRoom: async (roomCode) => {
+                                try {
+                                    const nm = getNetworkManager();
+                                    if (!nm) {
+                                        alert('Game not fully loaded.');
+                                        return;
+                                    }
+                                    if (!nm.connected && !nm.connecting) await nm.connect();
+                                    await nm.joinRoomByInvite(roomCode, 'Player', selectedDog);
+                                    monitorLobbyState();
+                                } catch (error) {
+                                    console.error('[UI] Failed to join room from public lobby:', error);
+                                    alert(error.message || 'Failed to join room');
+                                }
+                            }
                         });
 
                     case 'leaderboard':
