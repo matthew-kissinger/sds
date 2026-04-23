@@ -2,12 +2,30 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
-import { readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readFileSync, writeFileSync, readdirSync, unlinkSync, statSync } from 'node:fs'
+import { resolve, join } from 'node:path'
 
 // Use relative paths for itch.io, absolute for GitHub Pages
 const isItchio = process.env.BUILD_TARGET === 'itchio'
 const buildId = Date.now().toString()
+
+// Cloudflare Pages has a 26MB per-file limit; .blend source files aren't needed at runtime.
+function excludeBlendFilesPlugin() {
+  return {
+    name: 'exclude-blend-files',
+    closeBundle() {
+      const walk = (dir) => {
+        for (const name of readdirSync(dir)) {
+          const p = join(dir, name)
+          if (statSync(p).isDirectory()) walk(p)
+          else if (/\.(blend|blend1)$/i.test(name)) unlinkSync(p)
+        }
+      }
+      const dist = resolve(__dirname, 'dist')
+      try { walk(dist) } catch {}
+    }
+  }
+}
 
 function serviceWorkerPlugin() {
   return {
@@ -34,6 +52,7 @@ export default defineConfig({
         { src: 'assets/*', dest: 'assets' }
       ]
     }),
+    excludeBlendFilesPlugin(),
     serviceWorkerPlugin()
   ],
   build: {
