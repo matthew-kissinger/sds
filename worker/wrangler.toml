@@ -2,6 +2,7 @@ name = "sds-worker"
 main = "src/index.ts"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
 
 [[durable_objects.bindings]]
 name = "ROOM_DO"
@@ -18,4 +19,12 @@ new_sqlite_classes = ["RoomDO", "LobbyDO"]
 [[d1_databases]]
 binding = "DB"
 database_name = "sds-db"
-database_id = "placeholder-set-after-wrangler-d1-create"
+database_id = "1d8962f0-e9ef-4187-b14d-a01d204123ff"
+
+[[routes]]
+pattern = "sheepdogsim.com/api/*"
+zone_id = "08f6aca2579390fc14be2cfa39bd99ce"
+
+[[routes]]
+pattern = "sheepdogsim.com/r/*"
+zone_id = "08f6aca2579390fc14be2cfa39bd99ce"
