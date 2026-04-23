@@ -259,7 +259,7 @@ Update this section as tracks complete. Format: `[x] Done — <commit-sha> — <
 [x] Track C1 · Workers scaffold + D1 schema — done — worker/ created with stubs, TS primitives, D1 SQL
 [x] Track C2 · Simulation port to RoomDO — done — full RoomDO with 20Hz alarm ticks, delta encoding, MessagePack, protocol.ts, 29 tests pass
 [x] Track C3 · Client swap to native WebSocket — done — DO path behind VITE_USE_DO_BACKEND=true; both transports coexist; build clean
-[ ] Track C4 · Cutover + data migration
+[x] Track C4 · Cutover + data migration — done — Worker live at sheepdogsim.com/api/* and /r/*, D1 with 207 players migrated, CF Pages deploying frontend with VITE_USE_DO_BACKEND=true. DNS custom-domain swap of sheepdogsim.com pending human gate
 [x] Track D1 · Sandbox diagnosis — done — docs/sandbox-punchlist.md created
 [x] Track D2 · Sandbox share URLs — done — lz-string, serialize/deserialize on SandboxConfig, share button in SandboxSetup, hash detection in App.js
 [x] Track D3 · Sandbox punch-list fixes — done — 5 items: FenceEditor borderPoints bug, Ctrl+Z shortcuts, user preset library, pasture label, gate validation confirmed present
