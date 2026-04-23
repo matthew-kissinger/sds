@@ -258,7 +258,7 @@ Update this section as tracks complete. Format: `[x] Done — <commit-sha> — <
 [x] Track B2 · Lobby UX implementation — done — PublicLobbyList, invite URLs, mode cycling, host migration events
 [x] Track C1 · Workers scaffold + D1 schema — done — worker/ created with stubs, TS primitives, D1 SQL
 [x] Track C2 · Simulation port to RoomDO — done — full RoomDO with 20Hz alarm ticks, delta encoding, MessagePack, protocol.ts, 29 tests pass
-[ ] Track C3 · Client swap to native WebSocket
+[x] Track C3 · Client swap to native WebSocket — done — DO path behind VITE_USE_DO_BACKEND=true; both transports coexist; build clean
 [ ] Track C4 · Cutover + data migration
 [x] Track D1 · Sandbox diagnosis — done — docs/sandbox-punchlist.md created
 [x] Track D2 · Sandbox share URLs — done — lz-string, serialize/deserialize on SandboxConfig, share button in SandboxSetup, hash detection in App.js

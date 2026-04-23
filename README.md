@@ -51,13 +51,41 @@ npm run dev
 npm run build
 ```
 
-### Multiplayer Server
+### Multiplayer Server (legacy Geckos/DigitalOcean path)
 ```bash
 cd server
 npm install
 npm start
 # Server runs at http://localhost:9208
 ```
+
+### Cloudflare DO backend (new path - Track C3+)
+
+The frontend supports two networking backends controlled by a feature flag:
+
+| Flag value | Backend |
+|------------|---------|
+| `VITE_USE_DO_BACKEND=false` (default) | Geckos.io/WebRTC to DigitalOcean droplet |
+| `VITE_USE_DO_BACKEND=true` | Native WebSocket + MessagePack to Cloudflare DO |
+
+To develop against the DO backend locally:
+
+1. Create `.env.local` in the repo root:
+   ```
+   VITE_USE_DO_BACKEND=true
+   ```
+2. Start the worker dev server:
+   ```bash
+   cd worker && wrangler dev
+   # Listens on http://localhost:8787
+   ```
+3. Start the frontend:
+   ```bash
+   npm run dev
+   # Opens at http://localhost:3000
+   ```
+
+The client auto-detects `localhost` and uses `ws://localhost:8787` instead of `wss://sheepdogsim.com`.
 
 ## Controls
 
