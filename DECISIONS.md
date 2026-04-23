@@ -22,3 +22,9 @@
 Cloudflare Pages project `sds-frontend` created with production branch `main`. GitHub Actions workflows added: `deploy.yml` (auto-deploy on push to main via `cloudflare/pages-action@v1`) and `build-itchio.yml` (manual or tag-triggered itch.io zip builds). CF Pages `_redirects` (SPA fallback) and `_headers` (security headers) added to `public/`. DNS cutover and CNAME removal deferred to Track G after CF Pages is verified live.
 
 **Revert procedure (14-day safety window):** Re-enable GitHub Pages in repo Settings > Pages, point source back to `gh-pages` branch or `main`/`docs` folder, update Cloudflare DNS to point `sheepdogsim.com` CNAME back to `matthew-kissinger.github.io`. The CNAME file remains in repo root until Track G.
+
+---
+
+## Track C4 - Cutover - 2026-04-23
+
+Worker live at `sheepdogsim.com/api/*` and `/r/*`, D1 has 207 players migrated, CF Pages serving frontend as custom domain on `sheepdogsim.com`. Droplet remains as fallback through ~2026-05-23. Rollback: remove `sheepdogsim.com` custom domain from Pages, re-point CNAME to `matthew-kissinger.github.io`.
