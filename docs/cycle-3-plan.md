@@ -107,3 +107,22 @@ What shipped: `shared/scenes/{types,field,index}.js` — JSDoc-typed scene defin
 What was decided: scene files use `.js` + JSDoc (not `.ts`) — shared/ is consumed by three contexts (Vite, wrangler/esbuild, Node tests) and all handle `.js` with zero build config; JSDoc gives IDE types without adding tooling. Scene id is `field` / "Home Field" (not "valley") — matches existing `FIELD_SIZES` / `FIELD_SHAPES` vocabulary in [`js/FieldConfig.js`](../js/FieldConfig.js).
 
 What's next: **Track 3 Step 1b** — client renderer wire-up (`BiomeBuilder`, `TerrainBuilder` + `GrassSystem` parameterization). Not strictly needed until Step 2 (Rolling Hills), but easiest to land in the same Track 3 pass. See [`cycle-3-scene-arch.md`](cycle-3-scene-arch.md) § "Migration plan".
+
+**2026-04-24 — End-of-cycle push: Track 3 complete, Track 1 polish landed, Track 2 stepping stone.**
+
+Shipped in sequence (commits):
+- `7bfa30f` — Track 1 cleanup (delete StaminaUI/ExtremeBoid/styles/13 locales, rename StartScreen→MenuController, rewrite MultiplayerUI→MultiplayerState 501→95 lines, HUD polling→event bus, local-dev DX). Net -5336 lines.
+- `8d528f1` — Track 3 Step 1: scene schema + sim wire-up. `shared/scenes/{types,field,index}.js`; `createGameState` + Worker `GameSim` read from scene.
+- `40ce61c` — Track 3 Step 1b: client renderer is scene-aware. `TerrainBuilder(scene, isMobile, sceneDef?)`, `GrassSystem(scene, isMobile, sceneGrass?)`. Main.js loads `DEFAULT_SCENE_ID = 'field'` and threads through.
+- `6189822` — Track 3 Step 2+3: `shared/scenes/rolling-hills.js` sim-differentiated variant, `?scene=<id>` URL param, `docs/adding-a-biome.md`.
+- `16d8228` — Track 1 polish: dead-DOM cleanup (orphan CSS rule + dead JS checks for nonexistent `#start-screen`/`#game-ui`/`#multiplayer-hud`).
+- `5337b8a` — Track 1 polish: GameBridge 310→86 lines (collapsed to arrow accessors, dropped dead window.gameBridge backcompat).
+- `a08681b` — Track 2 (minimal): ScenePicker tile strip on main menu. Exposes the scene registry to players via URL-param reload. Stepping stone to the full scene-first restructure.
+
+**Still open** (deferred, not blockers for next content cycle):
+- Track 2 full restructure: scene-first state machine (scene → dog → mode), corner settings/leaderboard icons, mode-shaped HUD (`hudProfile` for Classic/Timed/Racing/Coop), 3-step onboarding, compass locator, real dog PNG thumbnails (needs `tools/render-dog-thumbs.mjs` authored + run).
+- Track 2 MP integration: pass `sceneId` through room creation so MP rooms respect the picker.
+- Track 1 optional: JSX flip (mechanical codemod), boid consolidation (architectural decision — user unsure).
+- Track 3 follow-through: when the renderer consumes `terrain.heightScale`, `grass.colors`, and `props[]`, Rolling Hills gains visual differentiation from Home Field. Today it's a sim-variant only.
+
+**Cycle 3 verdict.** Structural goals met. The foundation for "new biome = new file" is shipped end-to-end (schema → registry → sim consumption → client consumption → discovery UI). Content/UX polish defers to a focused follow-up, but nothing in the remaining work blocks shipping new biomes.

@@ -118,17 +118,27 @@ No component needs to be deleted; many need the `onBack` flow re-pointed.
 
 [`PauseMenu.js`](../js/components/GameHUD/PauseMenu.js) is solid. Add a "Change scene" action (only visible in non-MP contexts) that returns to the scene picker.
 
+## Status (end of 2026-04-24 session)
+
+Shipped as stepping stones alongside Track 3:
+
+- **Vision decided.** Mode-shaped. See § Vision above.
+- **ScenePicker strip** on the main menu (`js/components/StartScreen/ScenePicker.js`). Reads the scene registry and lets the player switch scenes via `?scene=<id>` reload. Hidden when only one scene is registered. Not the full scene-first restructure; it's a discovery affordance that exposes the new Track 3 scene registry to players today.
+
+Everything else below is deferred to a dedicated Track 2 session with fresh focus. Attempting the full UI restructure at the end of a long cleanup+scene-arch session was judged too risky to land responsibly without playtest coverage.
+
 ## Success criteria
 
-- [ ] Main menu top-level choices are scenes, not modes. Settings/Leaderboard are corner icons.
-- [ ] HUD is visibly different between Classic, Timed, Racing, Cooperative.
-- [ ] First-time visit triggers a dismissable 3-step tutorial. Second visit does not.
-- [ ] An in-game locator exists and helps a blind-test player find the flock within 15 s of spawn.
-- [ ] `DogSelection` shows rendered dog PNGs, not SVG placeholders.
+- [x] ScenePicker surfaces registered scenes to the player. 2026-04-24.
+- [ ] Main menu top-level choices are scenes, not modes. Settings/Leaderboard are corner icons. (full restructure — deferred)
+- [ ] HUD is visibly different between Classic, Timed, Racing, Cooperative. (HUD profiles — deferred)
+- [ ] First-time visit triggers a dismissable 3-step tutorial. Second visit does not. (onboarding — deferred)
+- [ ] An in-game locator exists and helps a blind-test player find the flock within 15 s of spawn. (compass/minimap — deferred)
+- [ ] `DogSelection` shows rendered dog PNGs, not SVG placeholders. (needs `tools/render-dog-thumbs.mjs` — deferred)
 - [ ] User playtests the shell on live, confirms it "feels right" for the chosen vision.
 
 ## Open questions for user
 
-1. **Vision pick.** Zen / arcade / mode-shaped. Decides HUD and copy everywhere.
-2. **Menu copy register.** Default scene is named "Home Field" (decided 2026-04-24 — the current scene is flat, not a valley). "Sandbox" as a tile vs a separate mode?
-3. **Compass vs minimap.** If user disagrees with the compass recommendation, change it here before work starts.
+1. **Menu copy register.** Default scene is named "Home Field" (decided 2026-04-24 — the current scene is flat, not a valley). "Sandbox" as a tile vs a separate mode?
+2. **Compass vs minimap.** If user disagrees with the compass recommendation, change it here before work starts.
+3. **MP scene selection.** Today ScenePicker sets a URL param that only affects the client-rendered scene. For MP, the Worker still defaults to `field`. The room-creation flow needs a `sceneId` field and the UI needs to pass it through. Scope question: should "pick scene" happen before "create room" (scene-first), or should "create room" offer a scene dropdown (mode-first with scene as an option)?

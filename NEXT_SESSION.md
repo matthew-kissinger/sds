@@ -22,30 +22,33 @@ Granular alternatives: `npm run dev:client` (just Vite), `npm run dev:worker` (j
 
 Open `http://localhost:3000` (or `:3001` if :3000 is taken — Vite auto-increments). Invite links built from the lobby now use `location.origin`, so host and join can both be on localhost without collision with production.
 
-## Where the project stands
+## Where the project stands (end of 2026-04-24 session)
 
 - `sheepdogsim.com` is live on Cloudflare Pages + Worker + DO + D1 (see [`docs/cycle-2-report.md`](docs/cycle-2-report.md)).
-- Gameplay loop (solo, sandbox, local 2P, online 2-4P, three modes) is stable. Playtest completed 2026-04-24.
+- Gameplay loop (solo, sandbox, local 2P, online 2-4P, three modes) is stable. Playtested 2026-04-24.
 - Droplet still online as rollback safety; scheduled destroy ~2026-05-01 (see [`docs/cycle-2-todo.md`](docs/cycle-2-todo.md)).
-- **Cycle 3 Track 1 is substantially done (2026-04-24).** Legacy cleanup, rename to `MenuController` / `MultiplayerState`, polling→events HUD, i18n trim, design-token retirement, and local-dev DX all landed. Solo + MP playtested through local dev. Remaining Track 1 items are polish, not blockers. Detail: [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md) § Progress log.
-- **Game identity: mode-shaped.** Classic = zen register, Timed/Racing = arcade, Sandbox = playground. Menu shell stays tonally neutral. Detail: [`docs/cycle-3-ui-ux.md`](docs/cycle-3-ui-ux.md) § Vision.
-
-## What Cycle 3 is about
-
-Cycle 2 got the *platform* right. Cycle 3 gets the *shell* right so the roadmap in [`docs/cycle-2-todo.md`](docs/cycle-2-todo.md) § "Roadmap beyond Cycle 2" (biomes, weather, NPCs, mod scenes, seasons) ships in days, not weeks. It's three tracks:
-
-1. **Cleanup** — delete what's dead, consolidate what's duplicated, replace polling with events. [`docs/cycle-3-cleanup.md`](docs/cycle-3-cleanup.md)
-2. **UI/UX vision pass** — commit to a game identity, restructure the menu around scenes (not modes), add onboarding + a locator, demote settings/leaderboard. [`docs/cycle-3-ui-ux.md`](docs/cycle-3-ui-ux.md)
-3. **Scene/biome architecture** — make adding a new biome a data change, not a code fork. [`docs/cycle-3-scene-arch.md`](docs/cycle-3-scene-arch.md)
+- **Cycle 3 Track 1 done.** Legacy cleanup committed (`7bfa30f`, -5336 lines). Polish items committed (`16d8228` dead-DOM, `5337b8a` GameBridge 310→86).
+- **Cycle 3 Track 3 done.** Scene-as-data schema shipped end-to-end: `shared/scenes/{types,field,index,rolling-hills}.js`, `createGameState` + Worker `GameSim` + client `TerrainBuilder` + `GrassSystem` all scene-aware. Commits `8d528f1` (Step 1), `40ce61c` (Step 1b renderer), `6189822` (Step 2+3 Rolling Hills + URL picker + `docs/adding-a-biome.md`).
+- **Cycle 3 Track 2: stepping stone landed (`a08681b`).** `ScenePicker` strip on the main menu exposes the registry to players via `?scene=<id>` reload. Full scene-first menu restructure, mode-shaped HUD, onboarding, compass locator, and dog PNG thumbnails are deferred to a dedicated UI session.
+- **Game identity: mode-shaped.** Classic = zen, Timed/Racing = arcade, Sandbox = playground. Detail: [`docs/cycle-3-ui-ux.md`](docs/cycle-3-ui-ux.md) § Vision.
 
 ## What to pick up next
 
-Tracks 2 and 3 can start in parallel. Neither blocks the other; they converge on "Rolling Hills ships as a scene-definition file with its own picker tile."
+Two directions, independent:
 
-- **Track 2** — scene-first menu shell, mode-shaped HUD, onboarding, locator, real dog thumbnails. [`docs/cycle-3-ui-ux.md`](docs/cycle-3-ui-ux.md).
-- **Track 3** — `shared/scenes/` schema, `BiomeBuilder` refactor, Rolling Hills biome. [`docs/cycle-3-scene-arch.md`](docs/cycle-3-scene-arch.md).
+**A. Track 2 follow-through** (UI/UX polish, user-facing). Detail: [`docs/cycle-3-ui-ux.md`](docs/cycle-3-ui-ux.md).
+- Scene-first state machine in `App.js`: scene → mode → dog → play, instead of today's mode-first.
+- Mode-shaped HUD: `hudProfile` derived in `useGameState` gates Classic/Timed/Racing HUD variants.
+- First-run onboarding overlay (3-step), compass locator, real dog PNG thumbnails.
+- Pass `sceneId` through room creation so MP rooms respect the picker (today the Worker defaults to `field`).
 
-If the next session is short or interstitial, pick off a Track 1 polish item instead: dead-DOM audit in `index.html`, `GameBridge` accessor consolidation, or the JSX flip. See [`docs/cycle-3-cleanup.md`](docs/cycle-3-cleanup.md) § Remaining.
+**B. Renderer biome variance** (Track 3 follow-through). Once Rolling Hills needs to actually *look* different, parameterize `TerrainBuilder` further: `terrain.heightScale` drives mesh displacement, `grass.colors` drive the grass shader, `props[]` drive mountain/tree/rock placement. Everything else (`field.js` / `rolling-hills.js` data, registry, sim wire-up) is already done.
+
+**C. Track 1 polish (optional, non-blocking).** JSX flip (mechanical codemod), boid consolidation (needs architectural decision). See [`docs/cycle-3-cleanup.md`](docs/cycle-3-cleanup.md) § Remaining.
+
+## What Cycle 3 shipped
+
+Cycle 2 got the *platform* right. Cycle 3 made biomes a data change, not a code fork. New biomes now ship as one file in `shared/scenes/` + one registry entry; the sim, renderer, and URL-scene switcher all pick them up. See [`docs/adding-a-biome.md`](docs/adding-a-biome.md).
 
 ## How to read the rest of the repo
 
