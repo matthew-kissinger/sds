@@ -17,7 +17,7 @@ A real-time 3D herding game with GPU-accelerated rendering, edge-hosted multipla
 ### Client
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Three.js | 0.181 | WebGL rendering |
+| Three.js | 0.184 | WebGL rendering |
 | React | 19.2 | UI (uses `React.createElement`, no JSX) |
 | Vite | 7.3 | Build tooling |
 | Tailwind CSS | 4.1 | Styling |
@@ -105,11 +105,38 @@ Central coordination hub (Mediator pattern).
 - Pause system with state propagation
 - Remote dog update: drives `updateAnimationSystem(deltaTime)` for every `otherPlayer` so skeletal animations play
 
-#### SceneManager.js — Scene, camera, renderer
-- Three.js scene + camera + WebGL renderer
-- **Frame-rate-independent camera follow**: `k = 1 - Math.pow(1 - 0.05, dt * 60)` — identical feel at any refresh rate
+#### SceneManager.js — Scene + renderer (camera delegated)
+- Three.js scene + WebGL renderer + lighting setup
 - Mobile detection with separate near/far plane, pixel ratio forced to 1, shadows disabled
-- Competitive-mode camera offset based on gate direction
+- **Camera state moved out** (Cycle 4 Unit M) — all camera positioning, follow smoothing, and competitive-mode offset now live in `CameraController`. SceneManager keeps `getCamera()` (still used widely) plus thin pass-throughs for legacy methods (`setCompetitiveCameraPosition`, `transformMovementForCompetitive`, etc.) so `main.js` call sites did not need rewriting.
+- Hardcoded `scene.background` and `scene.fog` will be removed in Cycle 4 Phase B once `Atmosphere` is wired into the render path.
+
+#### CameraController.js — Three-mode camera system (Cycle 4)
+Owns camera position, target, smoothing, and yaw state. Three modes selectable at runtime via `setMode()`, the settings panel, or the `C` hotkey.
+- **Classic** (default) — preserves the original isometric exactly: distance 80, height 60, no rotation. Backwards-compatible UX for returning players.
+- **Follow** — close-up cinematic: distance=22, height=11, lookAtHeight=1.5, lookAhead=`4 * speedNorm` along dog facing, yawLagTau=0.35s, posLagTau=0.15s. Frame-rate-independent smoothing using the same `1 - Math.pow(1 - alpha, dt * 60)` pattern that previously lived in SceneManager.
+- **Free** — yaw + zoom orbit: right-mouse-drag on desktop, two-finger drag on mobile, right-stick on gamepad. Pitch fixed at Follow's pitch; existing zoom retained. Snap freeYaw to Follow yaw on mode switch so there's no jump-cut.
+
+Public API: `setMode(CameraMode.X)`, `applyYawDelta(rad)`, `setZoom(d)`, `update(dogPos, dogFacing, dt)`, `transformMovement(dir)`, `setCompetitiveDirection(dir)`, `reset()`. `main.js` instantiates one `CameraController` and routes per-frame updates through it.
+
+#### atmosphere/Atmosphere.js — Hosek-Wilkie sky + presets (Cycle 4)
+Analytic atmospheric scattering ported from sibling repo Terror in the Jungle (`src/systems/environment/atmosphere/`). The GLSL shader is verbatim (already vanilla GLSL); the JS wrapper is JSDoc-typed.
+- **Sky** — Hosek-Wilkie skydome (`HosekWilkieSky.js` + `skyShader.glsl.js`) wraps the scene as a large inside-out sphere, evaluated in the fragment shader. Sun direction drives turbidity, ground albedo, and zenith luminance.
+- **Presets** (`skyPresets.js`) — five named configurations matching the `SkyDef.preset` enum: `pastoral-noon`, `dusk`, `overcast`, `dawn`, `golden-hour`. Each preset carries sun elevation/azimuth, turbidity, ground albedo, and a fog multiplier table.
+- **Top-level class** — `Atmosphere.constructor(scene)`, `applyPreset(presetName)`, `updateSun(elevation, azimuth)`. Created once in `main.js`; `applyPreset(sceneDef.sky.preset)` is called on every scene-load.
+
+Phase B note: not yet wired to `main.js` or `SceneManager` — the module ships standalone in Phase A and integrates in Phase B (single sequential PR).
+
+#### shared/terrain/Heightfield.js — Bilinear height-sampled module (Cycle 4)
+Pure ES module + JSDoc, importable from both client (`js/`) and worker (`worker/src/`) since it lives in `shared/`. Loads a baked R32F heightmap and exposes O(1) sampling.
+
+Public API:
+- `static async load(url, manifest) → Heightfield` — fetches `public/terrain/<scene>.r32f` (1024×1024 floats) and the matching `.json` manifest (bounds, version).
+- `sample(x, z) → number` — bilinear interpolation; returns terrain height in metres.
+- `normal(x, z) → {x, y, z}` — finite-difference normal (ε=1m) for slope queries.
+- `getRawArray()` — exposes the underlying Float32Array for advanced consumers.
+
+Pattern ported from `terror-in-the-jungle/src/systems/terrain/BakedHeightProvider.ts`. Used by the client (`TerrainBuilder` displacement, `GrassSystem` y-sample, `OptimizedSheep` + `Sheepdog` y-clamp, `CameraController` y-clamp) and by the shared sim (`MovementPhysics` slope-modulated sheep speed) — all wired in Phase B.
 
 #### OptimizedSheep.js — GPU-instanced sheep
 - Single `InstancedMesh` for all 200 sheep (1 draw call)
@@ -311,7 +338,9 @@ The server-to-client state snapshot is the same shape the legacy Geckos server u
 │   ├── FlockingAlgorithms.js
 │   ├── GameStateValidation.js
 │   ├── MovementPhysics.js
-│   └── Vector2D.js
+│   ├── Vector2D.js
+│   ├── scenes/             Scene-as-data registry (field, rolling-hills, open-country)
+│   └── terrain/            Heightfield runtime module (bilinear-sampled R32F maps)
 │
 ├── tests/
 │   ├── integration/        Vitest + ws + MessagePack two-client harness
