@@ -1,168 +1,95 @@
 /**
  * Service Worker for Sheep Dog Sim
- * Implements cache-first strategy for assets to improve repeat visit load times
+ *
+ * - Navigations/HTML: network-first, cache fallback (so deploys propagate immediately).
+ * - Hashed /assets/: cache-first (filenames are content-addressed, so they're immutable).
+ * - Other GETs: stale-while-revalidate.
+ *
+ * BUILD_ID is substituted at build time by vite.config.js serviceWorkerPlugin; a new
+ * build gets a new CACHE_NAME and the activate handler purges older caches.
  */
 
-const CACHE_NAME = `sheepdog-sim-${__BUILD_ID__}`;
+const BUILD_ID = '__BUILD_ID__';
+const CACHE_NAME = `sheepdog-sim-${BUILD_ID}`;
 
-// Assets to cache immediately on install
-const PRECACHE_ASSETS = [
-    '/',
-    '/index.html',
-    '/css/components/index-styles.css',
-    '/js/main.js'
-];
+// Vite writes hashed bundles under /assets/foo-ABC123.ext. Content hash in the
+// filename means the URL changes when content changes, so cache-first is safe.
+const IMMUTABLE_HASHED = /\/assets\/[^/]+-[A-Za-z0-9_-]{6,}\.(js|css|woff2?|png|jpg|jpeg|svg|glb|mp3|webp)$/;
 
-// Asset patterns to cache on fetch (cache-first strategy)
-const CACHEABLE_PATTERNS = [
-    /\.glb$/,           // 3D models
-    /\.mp3$/,           // Audio files
-    /\.js$/,            // JavaScript
-    /\.css$/,           // Stylesheets
-    /\.png$/,           // Images
-    /\.jpg$/,           // Images
-    /\.svg$/,           // Icons
-    /\.woff2?$/,        // Fonts
-    /\/assets\//        // Anything in assets folder
-];
-
-// Never cache these
 const NEVER_CACHE = [
-    /\/server\//,       // Server endpoints
-    /socket\.io/,       // WebSocket connections
-    /\/api\//,          // API calls
-    /\.db$/             // Database files
+    /\/api\//,
+    /\/\.wrtc\//,
+    /socket\.io/,
+    /\.db$/
 ];
 
-/**
- * Install event - precache essential assets
- */
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing service worker...');
-
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('[SW] Precaching essential assets');
-                return cache.addAll(PRECACHE_ASSETS);
-            })
-            .then(() => {
-                console.log('[SW] Install complete');
-                return self.skipWaiting();
-            })
-            .catch((error) => {
-                console.error('[SW] Precache failed:', error);
-            })
-    );
+    event.waitUntil(self.skipWaiting());
 });
 
-/**
- * Activate event - clean up old caches
- */
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating service worker...');
-
-    event.waitUntil(
-        caches.keys()
-            .then((cacheNames) => {
-                return Promise.all(
-                    cacheNames
-                        .filter((name) => name !== CACHE_NAME)
-                        .map((name) => {
-                            console.log('[SW] Deleting old cache:', name);
-                            return caches.delete(name);
-                        })
-                );
-            })
-            .then(() => {
-                console.log('[SW] Activate complete');
-                return self.clients.claim();
-            })
-    );
+    event.waitUntil((async () => {
+        const names = await caches.keys();
+        await Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)));
+        await self.clients.claim();
+    })());
 });
 
-/**
- * Fetch event - cache-first strategy for assets
- */
 self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
+    const req = event.request;
+    if (req.method !== 'GET') return;
 
-    // Skip non-GET requests
-    if (event.request.method !== 'GET') {
+    const url = new URL(req.url);
+    if (!url.protocol.startsWith('http')) return;
+    if (NEVER_CACHE.some((re) => re.test(url.pathname))) return;
+
+    if (req.mode === 'navigate' || req.destination === 'document') {
+        event.respondWith(networkFirst(req));
         return;
     }
 
-    // Skip non-http(s) requests (chrome-extension, etc.)
-    if (!url.protocol.startsWith('http')) {
+    if (IMMUTABLE_HASHED.test(url.pathname)) {
+        event.respondWith(cacheFirst(req));
         return;
     }
 
-    // Skip requests that should never be cached
-    if (NEVER_CACHE.some(pattern => pattern.test(url.pathname))) {
-        return;
-    }
-
-    // Check if this is a cacheable asset
-    const isCacheable = CACHEABLE_PATTERNS.some(pattern => pattern.test(url.pathname));
-
-    if (isCacheable) {
-        // Cache-first strategy for assets
-        event.respondWith(
-            caches.match(event.request)
-                .then((cachedResponse) => {
-                    if (cachedResponse) {
-                        // Return cached version
-                        return cachedResponse;
-                    }
-
-                    // Fetch from network and cache
-                    return fetch(event.request)
-                        .then((networkResponse) => {
-                            // Only cache successful responses
-                            if (networkResponse && networkResponse.status === 200) {
-                                const responseToCache = networkResponse.clone();
-
-                                caches.open(CACHE_NAME)
-                                    .then((cache) => {
-                                        cache.put(event.request, responseToCache);
-                                    });
-                            }
-
-                            return networkResponse;
-                        })
-                        .catch((error) => {
-                            console.error('[SW] Fetch failed:', error);
-                            // Could return a fallback here if needed
-                        });
-                })
-        );
-    } else {
-        // Network-first for non-cacheable resources (HTML, API calls, etc.)
-        event.respondWith(
-            fetch(event.request)
-                .catch(() => caches.match(event.request))
-        );
-    }
+    event.respondWith(staleWhileRevalidate(req));
 });
 
-/**
- * Message handler for cache management
- */
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'CLEAR_CACHE') {
-        console.log('[SW] Clearing cache...');
-        caches.delete(CACHE_NAME)
-            .then(() => {
-                console.log('[SW] Cache cleared');
-                event.ports[0].postMessage({ success: true });
-            });
-    }
+async function cacheFirst(req) {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(req);
+    if (cached) return cached;
+    const fresh = await fetch(req);
+    if (fresh && fresh.status === 200) cache.put(req, fresh.clone());
+    return fresh;
+}
 
-    if (event.data && event.data.type === 'GET_CACHE_SIZE') {
-        caches.open(CACHE_NAME)
-            .then((cache) => cache.keys())
-            .then((keys) => {
-                event.ports[0].postMessage({ count: keys.length });
-            });
+async function networkFirst(req) {
+    try {
+        const fresh = await fetch(req);
+        if (fresh && fresh.status === 200) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(req, fresh.clone());
+        }
+        return fresh;
+    } catch (err) {
+        const cached = await caches.match(req);
+        if (cached) return cached;
+        throw err;
     }
+}
+
+async function staleWhileRevalidate(req) {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(req);
+    const network = fetch(req).then((res) => {
+        if (res && res.status === 200) cache.put(req, res.clone());
+        return res;
+    }).catch(() => null);
+    return cached || (await network);
+}
+
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });

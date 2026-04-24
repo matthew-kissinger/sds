@@ -273,18 +273,40 @@
     
     <!-- React is bundled by Vite from node_modules -->
 
-    <!-- Register Service Worker for asset caching (production only) -->
+    <!-- Service Worker: register in prod, purge in dev -->
     <script>
-        if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then((registration) => {
-                        console.log('[SW] Service Worker registered:', registration.scope);
-                    })
-                    .catch((error) => {
-                        console.warn('[SW] Service Worker registration failed:', error);
+        if ('serviceWorker' in navigator) {
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            if (isDev) {
+                (async () => {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (const r of regs) await r.unregister();
+                    if ('caches' in window) {
+                        const names = await caches.keys();
+                        for (const n of names) await caches.delete(n);
+                    }
+                    if (regs.length > 0 && !sessionStorage.getItem('sw-dev-cleaned')) {
+                        sessionStorage.setItem('sw-dev-cleaned', '1');
+                        window.location.reload();
+                    }
+                })();
+            } else {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then((registration) => { console.log('[SW] registered:', registration.scope); })
+                        .catch((error) => { console.warn('[SW] registration failed:', error); });
+                });
+                // When a new SW takes control of an already-controlled page
+                // (i.e., a new deploy landed), reload once to pick up the fresh shell.
+                if (navigator.serviceWorker.controller) {
+                    let reloading = false;
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        if (reloading) return;
+                        reloading = true;
+                        window.location.reload();
                     });
-            });
+                }
+            }
         }
     </script>
 
