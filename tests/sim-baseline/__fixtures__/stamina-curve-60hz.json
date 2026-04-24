@@ -1,0 +1,1807 @@
+[
+  {
+    "tick": 0,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 1,
+    "stamina": 99.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 2,
+    "stamina": 98.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 3,
+    "stamina": 98.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 4,
+    "stamina": 97.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 5,
+    "stamina": 97.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 6,
+    "stamina": 96.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 7,
+    "stamina": 95.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 8,
+    "stamina": 95.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 9,
+    "stamina": 94.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 10,
+    "stamina": 94.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 11,
+    "stamina": 93.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 12,
+    "stamina": 93,
+    "isSprinting": true
+  },
+  {
+    "tick": 13,
+    "stamina": 92.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 14,
+    "stamina": 91.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 15,
+    "stamina": 91.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 16,
+    "stamina": 90.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 17,
+    "stamina": 90.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 18,
+    "stamina": 89.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 19,
+    "stamina": 88.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 20,
+    "stamina": 88.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 21,
+    "stamina": 87.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 22,
+    "stamina": 87.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 23,
+    "stamina": 86.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 24,
+    "stamina": 86,
+    "isSprinting": true
+  },
+  {
+    "tick": 25,
+    "stamina": 85.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 26,
+    "stamina": 84.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 27,
+    "stamina": 84.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 28,
+    "stamina": 83.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 29,
+    "stamina": 83.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 30,
+    "stamina": 82.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 31,
+    "stamina": 81.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 32,
+    "stamina": 81.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 33,
+    "stamina": 80.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 34,
+    "stamina": 80.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 35,
+    "stamina": 79.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 36,
+    "stamina": 79,
+    "isSprinting": true
+  },
+  {
+    "tick": 37,
+    "stamina": 78.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 38,
+    "stamina": 77.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 39,
+    "stamina": 77.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 40,
+    "stamina": 76.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 41,
+    "stamina": 76.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 42,
+    "stamina": 75.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 43,
+    "stamina": 74.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 44,
+    "stamina": 74.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 45,
+    "stamina": 73.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 46,
+    "stamina": 73.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 47,
+    "stamina": 72.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 48,
+    "stamina": 72,
+    "isSprinting": true
+  },
+  {
+    "tick": 49,
+    "stamina": 71.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 50,
+    "stamina": 70.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 51,
+    "stamina": 70.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 52,
+    "stamina": 69.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 53,
+    "stamina": 69.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 54,
+    "stamina": 68.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 55,
+    "stamina": 67.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 56,
+    "stamina": 67.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 57,
+    "stamina": 66.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 58,
+    "stamina": 66.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 59,
+    "stamina": 65.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 60,
+    "stamina": 65,
+    "isSprinting": true
+  },
+  {
+    "tick": 61,
+    "stamina": 64.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 62,
+    "stamina": 63.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 63,
+    "stamina": 63.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 64,
+    "stamina": 62.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 65,
+    "stamina": 62.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 66,
+    "stamina": 61.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 67,
+    "stamina": 60.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 68,
+    "stamina": 60.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 69,
+    "stamina": 59.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 70,
+    "stamina": 59.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 71,
+    "stamina": 58.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 72,
+    "stamina": 58,
+    "isSprinting": true
+  },
+  {
+    "tick": 73,
+    "stamina": 57.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 74,
+    "stamina": 56.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 75,
+    "stamina": 56.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 76,
+    "stamina": 55.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 77,
+    "stamina": 55.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 78,
+    "stamina": 54.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 79,
+    "stamina": 53.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 80,
+    "stamina": 53.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 81,
+    "stamina": 52.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 82,
+    "stamina": 52.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 83,
+    "stamina": 51.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 84,
+    "stamina": 51,
+    "isSprinting": true
+  },
+  {
+    "tick": 85,
+    "stamina": 50.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 86,
+    "stamina": 49.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 87,
+    "stamina": 49.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 88,
+    "stamina": 48.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 89,
+    "stamina": 48.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 90,
+    "stamina": 47.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 91,
+    "stamina": 46.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 92,
+    "stamina": 46.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 93,
+    "stamina": 45.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 94,
+    "stamina": 45.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 95,
+    "stamina": 44.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 96,
+    "stamina": 44,
+    "isSprinting": true
+  },
+  {
+    "tick": 97,
+    "stamina": 43.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 98,
+    "stamina": 42.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 99,
+    "stamina": 42.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 100,
+    "stamina": 41.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 101,
+    "stamina": 41.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 102,
+    "stamina": 40.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 103,
+    "stamina": 39.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 104,
+    "stamina": 39.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 105,
+    "stamina": 38.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 106,
+    "stamina": 38.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 107,
+    "stamina": 37.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 108,
+    "stamina": 37,
+    "isSprinting": true
+  },
+  {
+    "tick": 109,
+    "stamina": 36.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 110,
+    "stamina": 35.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 111,
+    "stamina": 35.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 112,
+    "stamina": 34.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 113,
+    "stamina": 34.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 114,
+    "stamina": 33.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 115,
+    "stamina": 32.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 116,
+    "stamina": 32.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 117,
+    "stamina": 31.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 118,
+    "stamina": 31.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 119,
+    "stamina": 30.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 120,
+    "stamina": 30,
+    "isSprinting": true
+  },
+  {
+    "tick": 121,
+    "stamina": 29.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 122,
+    "stamina": 28.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 123,
+    "stamina": 28.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 124,
+    "stamina": 27.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 125,
+    "stamina": 27.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 126,
+    "stamina": 26.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 127,
+    "stamina": 25.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 128,
+    "stamina": 25.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 129,
+    "stamina": 24.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 130,
+    "stamina": 24.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 131,
+    "stamina": 23.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 132,
+    "stamina": 23,
+    "isSprinting": true
+  },
+  {
+    "tick": 133,
+    "stamina": 22.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 134,
+    "stamina": 21.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 135,
+    "stamina": 21.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 136,
+    "stamina": 20.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 137,
+    "stamina": 20.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 138,
+    "stamina": 19.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 139,
+    "stamina": 18.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 140,
+    "stamina": 18.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 141,
+    "stamina": 17.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 142,
+    "stamina": 17.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 143,
+    "stamina": 16.5833,
+    "isSprinting": true
+  },
+  {
+    "tick": 144,
+    "stamina": 16,
+    "isSprinting": true
+  },
+  {
+    "tick": 145,
+    "stamina": 15.4167,
+    "isSprinting": true
+  },
+  {
+    "tick": 146,
+    "stamina": 14.8333,
+    "isSprinting": true
+  },
+  {
+    "tick": 147,
+    "stamina": 14.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 148,
+    "stamina": 13.6667,
+    "isSprinting": true
+  },
+  {
+    "tick": 149,
+    "stamina": 13.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 150,
+    "stamina": 12.5,
+    "isSprinting": true
+  },
+  {
+    "tick": 151,
+    "stamina": 11.9167,
+    "isSprinting": true
+  },
+  {
+    "tick": 152,
+    "stamina": 11.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 153,
+    "stamina": 10.75,
+    "isSprinting": true
+  },
+  {
+    "tick": 154,
+    "stamina": 10.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 155,
+    "stamina": 9.5833,
+    "isSprinting": false
+  },
+  {
+    "tick": 156,
+    "stamina": 10,
+    "isSprinting": true
+  },
+  {
+    "tick": 157,
+    "stamina": 9.4167,
+    "isSprinting": false
+  },
+  {
+    "tick": 158,
+    "stamina": 9.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 159,
+    "stamina": 10.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 160,
+    "stamina": 9.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 161,
+    "stamina": 10.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 162,
+    "stamina": 9.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 163,
+    "stamina": 9.9167,
+    "isSprinting": false
+  },
+  {
+    "tick": 164,
+    "stamina": 10.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 165,
+    "stamina": 9.75,
+    "isSprinting": false
+  },
+  {
+    "tick": 166,
+    "stamina": 10.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 167,
+    "stamina": 9.5833,
+    "isSprinting": false
+  },
+  {
+    "tick": 168,
+    "stamina": 10,
+    "isSprinting": true
+  },
+  {
+    "tick": 169,
+    "stamina": 9.4167,
+    "isSprinting": false
+  },
+  {
+    "tick": 170,
+    "stamina": 9.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 171,
+    "stamina": 10.25,
+    "isSprinting": true
+  },
+  {
+    "tick": 172,
+    "stamina": 9.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 173,
+    "stamina": 10.0833,
+    "isSprinting": true
+  },
+  {
+    "tick": 174,
+    "stamina": 9.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 175,
+    "stamina": 9.9167,
+    "isSprinting": false
+  },
+  {
+    "tick": 176,
+    "stamina": 10.3333,
+    "isSprinting": true
+  },
+  {
+    "tick": 177,
+    "stamina": 9.75,
+    "isSprinting": false
+  },
+  {
+    "tick": 178,
+    "stamina": 10.1667,
+    "isSprinting": true
+  },
+  {
+    "tick": 179,
+    "stamina": 9.5833,
+    "isSprinting": false
+  },
+  {
+    "tick": 180,
+    "stamina": 10,
+    "isSprinting": true
+  },
+  {
+    "tick": 181,
+    "stamina": 10.4167,
+    "isSprinting": false
+  },
+  {
+    "tick": 182,
+    "stamina": 10.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 183,
+    "stamina": 11.25,
+    "isSprinting": false
+  },
+  {
+    "tick": 184,
+    "stamina": 11.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 185,
+    "stamina": 12.0833,
+    "isSprinting": false
+  },
+  {
+    "tick": 186,
+    "stamina": 12.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 187,
+    "stamina": 12.9167,
+    "isSprinting": false
+  },
+  {
+    "tick": 188,
+    "stamina": 13.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 189,
+    "stamina": 13.75,
+    "isSprinting": false
+  },
+  {
+    "tick": 190,
+    "stamina": 14.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 191,
+    "stamina": 14.5833,
+    "isSprinting": false
+  },
+  {
+    "tick": 192,
+    "stamina": 15,
+    "isSprinting": false
+  },
+  {
+    "tick": 193,
+    "stamina": 15.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 194,
+    "stamina": 16.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 195,
+    "stamina": 17.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 196,
+    "stamina": 18.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 197,
+    "stamina": 19.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 198,
+    "stamina": 20,
+    "isSprinting": false
+  },
+  {
+    "tick": 199,
+    "stamina": 20.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 200,
+    "stamina": 21.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 201,
+    "stamina": 22.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 202,
+    "stamina": 23.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 203,
+    "stamina": 24.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 204,
+    "stamina": 25,
+    "isSprinting": false
+  },
+  {
+    "tick": 205,
+    "stamina": 25.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 206,
+    "stamina": 26.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 207,
+    "stamina": 27.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 208,
+    "stamina": 28.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 209,
+    "stamina": 29.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 210,
+    "stamina": 30,
+    "isSprinting": false
+  },
+  {
+    "tick": 211,
+    "stamina": 30.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 212,
+    "stamina": 31.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 213,
+    "stamina": 32.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 214,
+    "stamina": 33.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 215,
+    "stamina": 34.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 216,
+    "stamina": 35,
+    "isSprinting": false
+  },
+  {
+    "tick": 217,
+    "stamina": 35.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 218,
+    "stamina": 36.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 219,
+    "stamina": 37.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 220,
+    "stamina": 38.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 221,
+    "stamina": 39.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 222,
+    "stamina": 40,
+    "isSprinting": false
+  },
+  {
+    "tick": 223,
+    "stamina": 40.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 224,
+    "stamina": 41.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 225,
+    "stamina": 42.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 226,
+    "stamina": 43.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 227,
+    "stamina": 44.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 228,
+    "stamina": 45,
+    "isSprinting": false
+  },
+  {
+    "tick": 229,
+    "stamina": 45.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 230,
+    "stamina": 46.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 231,
+    "stamina": 47.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 232,
+    "stamina": 48.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 233,
+    "stamina": 49.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 234,
+    "stamina": 50,
+    "isSprinting": false
+  },
+  {
+    "tick": 235,
+    "stamina": 50.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 236,
+    "stamina": 51.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 237,
+    "stamina": 52.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 238,
+    "stamina": 53.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 239,
+    "stamina": 54.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 240,
+    "stamina": 55,
+    "isSprinting": false
+  },
+  {
+    "tick": 241,
+    "stamina": 55.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 242,
+    "stamina": 56.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 243,
+    "stamina": 57.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 244,
+    "stamina": 58.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 245,
+    "stamina": 59.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 246,
+    "stamina": 60,
+    "isSprinting": false
+  },
+  {
+    "tick": 247,
+    "stamina": 60.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 248,
+    "stamina": 61.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 249,
+    "stamina": 62.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 250,
+    "stamina": 63.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 251,
+    "stamina": 64.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 252,
+    "stamina": 65,
+    "isSprinting": false
+  },
+  {
+    "tick": 253,
+    "stamina": 65.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 254,
+    "stamina": 66.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 255,
+    "stamina": 67.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 256,
+    "stamina": 68.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 257,
+    "stamina": 69.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 258,
+    "stamina": 70,
+    "isSprinting": false
+  },
+  {
+    "tick": 259,
+    "stamina": 70.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 260,
+    "stamina": 71.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 261,
+    "stamina": 72.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 262,
+    "stamina": 73.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 263,
+    "stamina": 74.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 264,
+    "stamina": 75,
+    "isSprinting": false
+  },
+  {
+    "tick": 265,
+    "stamina": 75.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 266,
+    "stamina": 76.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 267,
+    "stamina": 77.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 268,
+    "stamina": 78.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 269,
+    "stamina": 79.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 270,
+    "stamina": 80,
+    "isSprinting": false
+  },
+  {
+    "tick": 271,
+    "stamina": 80.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 272,
+    "stamina": 81.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 273,
+    "stamina": 82.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 274,
+    "stamina": 83.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 275,
+    "stamina": 84.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 276,
+    "stamina": 85,
+    "isSprinting": false
+  },
+  {
+    "tick": 277,
+    "stamina": 85.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 278,
+    "stamina": 86.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 279,
+    "stamina": 87.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 280,
+    "stamina": 88.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 281,
+    "stamina": 89.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 282,
+    "stamina": 90,
+    "isSprinting": false
+  },
+  {
+    "tick": 283,
+    "stamina": 90.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 284,
+    "stamina": 91.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 285,
+    "stamina": 92.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 286,
+    "stamina": 93.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 287,
+    "stamina": 94.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 288,
+    "stamina": 95,
+    "isSprinting": false
+  },
+  {
+    "tick": 289,
+    "stamina": 95.8333,
+    "isSprinting": false
+  },
+  {
+    "tick": 290,
+    "stamina": 96.6667,
+    "isSprinting": false
+  },
+  {
+    "tick": 291,
+    "stamina": 97.5,
+    "isSprinting": false
+  },
+  {
+    "tick": 292,
+    "stamina": 98.3333,
+    "isSprinting": false
+  },
+  {
+    "tick": 293,
+    "stamina": 99.1667,
+    "isSprinting": false
+  },
+  {
+    "tick": 294,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 295,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 296,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 297,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 298,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 299,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 300,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 301,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 302,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 303,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 304,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 305,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 306,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 307,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 308,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 309,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 310,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 311,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 312,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 313,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 314,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 315,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 316,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 317,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 318,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 319,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 320,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 321,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 322,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 323,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 324,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 325,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 326,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 327,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 328,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 329,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 330,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 331,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 332,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 333,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 334,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 335,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 336,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 337,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 338,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 339,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 340,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 341,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 342,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 343,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 344,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 345,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 346,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 347,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 348,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 349,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 350,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 351,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 352,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 353,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 354,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 355,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 356,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 357,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 358,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 359,
+    "stamina": 100,
+    "isSprinting": false
+  },
+  {
+    "tick": 360,
+    "stamina": 100,
+    "isSprinting": false
+  }
+]
