@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.spec.ts", "tests/**/*.spec.js"],
+    exclude: ["tests/e2e/**", "node_modules/**"],
     testTimeout: 15_000,
     hookTimeout: 15_000,
     reporters: process.env.CI ? ["default"] : ["default"],

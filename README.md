@@ -1,163 +1,131 @@
 # Sheep Dog Simulator
 
-A browser-based 3D herding simulation where players control a sheepdog to guide 200 sheep through a gate into a pasture. Features GPU-accelerated boid flocking, WebRTC multiplayer, and cross-platform support.
+A browser-based 3D herding game where you play a border collie guiding 200 boid-simulated sheep into the pasture. Runs on desktop, mobile, and gamepad; plays with friends over WebRTC; renders hundreds of thousands of wind-animated grass blades at 60 fps.
 
-**Live:** [sheepdogsim.com](https://sheepdogsim.com)
+**Play now at [sheepdogsim.com](https://sheepdogsim.com)**
 
-## Features
+![MIT License](https://img.shields.io/badge/license-MIT-green) ![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen) ![Three.js](https://img.shields.io/badge/three.js-0.181-black) ![React](https://img.shields.io/badge/react-19-61DAFB) ![Vite](https://img.shields.io/badge/vite-7.3-646CFF)
 
-### Gameplay
-- **Interactive Herding**: Control a sheepdog using WASD/gamepad or touch controls
-- **Stamina System**: Sprint while managing stamina for strategic gameplay
-- **Realistic AI**: 200 sheep with boid flocking behavior (cohesion, separation, alignment)
-- **Multiple Game Modes**: Solo, Cooperative, Competitive racing, and Timed collection
-- **Leaderboard**: Track best times with persistent scoring
+## Highlights
 
-### Multiplayer
-- **Room System**: Create private rooms with 4-letter codes or quick match
-- **Real-time Sync**: Low-latency WebRTC networking via Geckos.io
-- **2-4 Players**: Cooperative or competitive modes
-- **Dog Selection**: Choose from Jep, Pip, or Shiloh
-- **Server**: DigitalOcean Droplet with Cloudflare SSL (api.sheepdogsim.com)
+- **Real flocks.** 200 sheep run a cohesion / separation / alignment boid sim. All of them render in a single GPU draw call via `InstancedMesh` with a custom vertex shader that animates legs and heads per-instance.
+- **Real multiplayer.** 2-4 player cooperative or competitive rooms over Geckos.io WebRTC, 60 Hz authoritative server tick, 100-150 ms adaptive jitter buffer, client-side velocity extrapolation for smooth sync on lossy links.
+- **Big, alive world.** 800x800 m terrain, wind-driven grass with per-blade interaction shader, multi-layered mountains with distance-based LOD via `SimplifyModifier`, 40+ dog animations loaded from GLB.
+- **Plays everywhere.** WASD, full-analog gamepad, or a touch joystick with sprint button and zoom slider. Mobile drops shadows, caps pixel ratio at 1, and halves grass density so it still hits 30-60 fps on phones.
+- **Localized in 18 languages** via i18next with browser-language detection.
+- **Sandbox mode.** Design your own field layout (fences, gates, spawn zones) and share it with a single lz-string-encoded URL.
+- **Open source, MIT licensed.** Fork it, mod it, use it as a reference for 3D browser games. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full map.
 
-### Visual
-- **800x800 World**: Expansive terrain with fog and atmospheric effects
-- **Dynamic Grass**: 800,000 animated instances with chunk-based culling
-- **Procedural Terrain**: Multi-layered mountains and realistic forests
-- **3D Models**: Detailed Border Collies (40+ animations) and GPU-instanced sheep
+## Quick start
 
-### Mobile
-- **Virtual Joystick**: Touch-based 360-degree movement via nipple.js
-- **Zoom Slider**: Camera distance adjustment
-- **Sprint Button**: Touch-optimized with stamina feedback
-- **Responsive UI**: Adaptive layouts for all screen sizes
+Requires Node 22+ and a modern browser (Chrome 80+, Firefox 75+, Safari 13+, Edge 80+).
 
-## Quick Start
-
-### Prerequisites
-- Node.js 22+ (root + server both pin `engines.node >=22.0.0`)
-- Modern browser (Chrome 80+, Firefox 75+, Safari 13+, Edge 80+)
-
-### Development
 ```bash
-# Install dependencies
 npm install
 
-# Start development server
-npm run dev
-# Opens at http://localhost:3000
+# Client + multiplayer server together
+npm run dev:full          # Vite on :3000, Geckos on :9208
+
+# Or client only (connects to the live API for multiplayer)
+npm run dev               # Vite on :3000
 
 # Production build
-npm run build
-```
-
-### Multiplayer Server
-```bash
-cd server
-npm install
-npm start
-# Server runs at http://localhost:9208
+npm run build             # Output to dist/
 ```
 
 ## Controls
 
 ### Desktop
-| Key | Action |
-|-----|--------|
-| W/A/S/D | Move |
-| Shift | Sprint |
+| Input | Action |
+|-------|--------|
+| W A S D | Move |
+| Shift | Sprint (burns stamina) |
+| Mouse wheel | Zoom |
 | Escape | Pause |
-| Mouse Wheel | Zoom |
-| P | Performance stats |
-| Gamepad | Full controller support |
+| P | Show performance panel (FPS, triangles, per-system breakdown) |
+| Gamepad | Full analog support |
 
 ### Mobile
-- **Joystick** (bottom-left): Movement
-- **Sprint Button** (above joystick): Hold to sprint
-- **Zoom Slider** (bottom-right): Camera distance
+- Joystick (bottom-left): 360-degree movement
+- Sprint button (above joystick): hold to sprint with stamina feedback
+- Zoom slider (bottom-right): camera distance
 
-## Architecture
+## Game modes
 
-```
-├── js/                      # Client game logic
-│   ├── main.js              # Game orchestrator
-│   ├── SceneManager.js      # Three.js rendering
-│   ├── TerrainBuilder.js    # Environment generation
-│   ├── OptimizedSheep.js    # GPU-instanced sheep system
-│   ├── Sheepdog.js          # Player controller
-│   ├── GrassSystem.js       # Chunk-based grass rendering
-│   ├── NetworkManager.js    # WebRTC multiplayer client
-│   ├── GameState.js         # Game logic and state
-│   ├── MobileControls.js    # Touch interface
-│   ├── GamepadManager.js    # Controller support
-│   ├── AudioManager.js      # Sound system
-│   └── components/          # React 19 overlay (App.js, GameHUD, Multiplayer, StartScreen)
-│
-├── server/                  # Multiplayer server
-│   ├── index.js             # Geckos.io WebRTC server
-│   ├── GameSimulation.js    # Server-side game state
-│   ├── RoomManager.js       # Room/session management
-│   └── LeaderboardManager.js # SQLite persistence
-│
-├── shared/                  # Shared client/server code
-│   ├── BoundaryCollision.js
-│   ├── FlockingAlgorithms.js
-│   └── GameStateValidation.js
-│
-├── assets/
-│   ├── models/              # 3D models (.glb)
-│   │   ├── Jep.glb          # Border Collie
-│   │   ├── Pip.glb          # Border Collie
-│   │   ├── Shiloh.glb       # Border Collie
-│   │   └── Sheep.glb        # Sheep model
-│   ├── sounds_compressed/   # Audio files
-│   └── images/              # UI and SEO assets
-│
-└── css/                     # Stylesheets
+| Mode | Players | Goal |
+|------|---------|------|
+| Solo | 1 | Guide 200 sheep through the gate |
+| Cooperative | 2-4 | Team-herd 200 sheep |
+| Competitive | 2-4 | First player to fill their own gate wins |
+| Timed | 2-4 | Most sheep retired in 3 minutes |
+
+## Tech stack
+
+**Client:** Three.js 0.181, React 19, Vite 7.3, Tailwind 4.1, Geckos.io 3 client, i18next, lz-string, nipple.js  
+**Server:** Node 22, Geckos.io 3 server, better-sqlite3, PM2  
+**Testing:** Vitest 4 (unit + WebSocket integration harness), Playwright (browser smoke)  
+**Infra:** GitHub Pages + Cloudflare DNS for the frontend, DigitalOcean droplet for the API
+
+## Development
+
+```bash
+npm run dev:full             # client + server for local multiplayer
+npm test                     # run all vitest suites
+npm run test:integration     # WebSocket two-client harness (POSTMORTEM 5.3 gate)
+npm run test:e2e             # Playwright browser smoke tests
+npm run build                # production bundle
 ```
 
-## Tech Stack
+Current state: 30/37 vitest tests pass. 7 are intentionally skipped as scaffolding for the Cycle 2 backend migration (see `tests/integration/flow.spec.ts`). Browser smoke tests require `npx playwright install chromium` once.
 
-### Client
-- **Three.js** v0.181 - WebGL rendering
-- **React 19** - UI components (createElement, no JSX)
-- **Vite** v7.2 - Build tooling
-- **Tailwind CSS** v4.1 - Styling
-- **i18next** v25 - 18 localized languages
-- **lz-string** v1.5 - Sandbox share-URL compression
-- **nipple.js** - Mobile joystick
-- **Geckos.io Client** - WebRTC networking
+## Architecture at a glance
 
-### Server
-- **Node.js** 22+ - Runtime
-- **Geckos.io Server** - WebRTC signaling
-- **better-sqlite3** v12 - Leaderboard persistence
-- **PM2** - Process management
+```
+js/
+  main.js              Game orchestrator (Mediator pattern over all subsystems)
+  SceneManager.js      Three.js scene, camera, frame-rate-independent follow cam
+  TerrainBuilder.js    Procedural terrain, trees, rocks, mountains (LOD)
+  OptimizedSheep.js    200-sheep InstancedMesh + custom vertex shader
+  GrassSystem.js       Chunk-based wind grass with player/sheep interaction
+  Sheepdog.js          Player dog: movement, stamina, animation state machine
+  NetworkManager.js    Geckos.io client, adaptive jitter buffer, extrapolation
+  GameState.js         Game logic, score, gate completion
+  PerformanceMonitor.js FPS, draw calls, per-system triangle breakdown
+  components/          React 19 UI (no JSX; uses React.createElement)
 
-## Performance
+server/                Geckos.io authoritative sim + SQLite leaderboard
+shared/                Deterministic flocking + physics (client + server)
+tests/                 Vitest integration + sim baseline + Playwright e2e
+docs/                  Design docs, POSTMORTEM, cycle-1-audit, c-retry/
+```
 
-- **GPU Rendering**: Single draw call for 200 sheep via InstancedMesh
-- **Chunk Culling**: Grass rendered in frustum-culled chunks
-- **Mobile Optimization**: Reduced grass density, disabled shadows
-- **Target FPS**: 60 (desktop), 30-60 (mobile)
+See [ARCHITECTURE.md](ARCHITECTURE.md) for module-level diagrams, the network protocol, performance metrics, and the full file tree.
 
 ## Deployment
 
-### Frontend
-GitHub Pages, CNAME'd to sheepdogsim.com via Cloudflare DNS proxy. Build with `npm run build`; push `main`.
+**Frontend:** static site on GitHub Pages. `main` branch builds and deploys; the custom domain is configured via CNAME to Cloudflare.
 
-### Multiplayer Server
-DigitalOcean droplet running PM2 (api.sheepdogsim.com):
-- Cloudflare SSL proxy
-- UDP ports 10000-20000 for WebRTC
-- SQLite leaderboard
+**Multiplayer server:** DigitalOcean droplet running PM2, fronted by Cloudflare SSL on `api.sheepdogsim.com`, UDP ports 10000-20000 open for WebRTC data channels, SQLite file for leaderboard persistence. See [DROPLET_DEPLOYMENT.md](DROPLET_DEPLOYMENT.md).
 
-See [DROPLET_DEPLOYMENT.md](DROPLET_DEPLOYMENT.md) for server setup.
+## Current project status
 
-## Current cycle
+A Cloudflare Workers + Durable Objects + D1 + Pages migration was attempted and rolled back on 2026-04-23 after surfacing launch-blocking gaps between the client's expectations and the worker's behavior. Production still runs the Geckos droplet path. See [POSTMORTEM.md](POSTMORTEM.md), [docs/cycle-1-audit.md](docs/cycle-1-audit.md), and [AGENT_PLAN.md](AGENT_PLAN.md) Section 10 for the retry roadmap. Preparation artifacts for the retry (protocol spec, staging plan, rollback runbook, integration harness) live in [docs/c-retry/](docs/c-retry/).
 
-Backend migration to Cloudflare Workers + DO + D1 + Pages was attempted in Cycle 1 and rolled back 2026-04-23 (see [POSTMORTEM.md](POSTMORTEM.md) and [docs/cycle-1-audit.md](docs/cycle-1-audit.md)). A Cycle 2 prep batch has landed artifacts under [docs/c-retry/](docs/c-retry/) and [AGENT_PLAN.md](AGENT_PLAN.md) Section 10 that gate the retry on contracts, integration tests, staging soak, and one-command rollback. Production still runs the Geckos droplet until the retry ships.
+## Contributing
+
+Issues and PRs welcome. High-value areas right now:
+
+- MP server-side delta encoding (the client already extrapolates from `vx`/`vz`; adding a `SHEEP_DELTA_THRESHOLD` on the server would roughly halve bandwidth)
+- Dog GLB compression with gltf-transform + Draco (25-40k triangle saving per dog)
+- Tree LOD at >150 m (the biggest remaining triangle contributor on desktop)
+- More languages (i18n keys live in `js/i18n/`)
+
+Reading order for new contributors:
+1. [ARCHITECTURE.md](ARCHITECTURE.md)
+2. [DECISIONS.md](DECISIONS.md)
+3. [POSTMORTEM.md](POSTMORTEM.md) (for context on past migration attempts)
+4. [AGENT_PLAN.md](AGENT_PLAN.md) (the living roadmap)
 
 ## License
 
-MIT License - feel free to modify and use for educational purposes.
+MIT. Fork, mod, learn, ship.
