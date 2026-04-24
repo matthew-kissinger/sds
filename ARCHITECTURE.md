@@ -15,20 +15,21 @@ A real-time 3D herding simulation with GPU-accelerated rendering, WebRTC multipl
 ### Client
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Three.js | 0.176.0 | WebGL rendering |
-| React | 18/19 | UI components |
-| Vite | 7.0 | Build tooling |
+| Three.js | 0.181 | WebGL rendering |
+| React | 19.2 | UI components (createElement, no JSX) |
+| Vite | 7.2 | Build tooling |
 | Tailwind CSS | 4.1 | Styling |
-| nipple.js | 0.10.1 | Mobile joystick |
+| i18next | 25 | 18 localized languages |
+| lz-string | 1.5 | Sandbox share-URL compression |
+| nipple.js | 0.10.2 | Mobile joystick |
 | Geckos.io Client | 3.0.1 | WebRTC client |
-| Framer Motion | 12.19 | Animations |
 
 ### Server
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Node.js | 16+ | Runtime |
+| Node.js | 22+ | Runtime |
 | Geckos.io Server | 3.0.1 | WebRTC signaling |
-| better-sqlite3 | 9.0.0 | Leaderboard DB |
+| better-sqlite3 | 12.9 | Leaderboard DB |
 | PM2 | - | Process management |
 
 ### Infrastructure
@@ -192,7 +193,7 @@ DISCONNECTED → CONNECTING → CONNECTED → IN_ROOM → IN_GAME
 │   ├── main.js              # Game orchestrator
 │   ├── SceneManager.js      # Three.js scene/camera
 │   ├── TerrainBuilder.js    # Environment generation
-│   ├── StructureBuilderV2.js # Gates, fences, pastures
+│   ├── StructureBuilder.js  # Gates, fences, pastures
 │   ├── OptimizedSheep.js    # GPU sheep system
 │   ├── Sheepdog.js          # Player controller
 │   ├── GrassSystem.js       # Chunk-based grass
@@ -212,7 +213,13 @@ DISCONNECTED → CONNECTING → CONNECTED → IN_ROOM → IN_GAME
 │   ├── FencePresets.js      # Fence configurations
 │   ├── Vector2D.js          # 2D math
 │   └── components/
-│       └── ReactUI.js       # React overlay
+│       ├── App.js           # React root (createElement, no JSX)
+│       ├── GameHUD/
+│       ├── Multiplayer/     # Lobby, RoomCreation, PublicLobbyList, etc.
+│       ├── StartScreen/
+│       ├── hooks/
+│       ├── shared/
+│       └── ui/              # Button, Panel, LanguageSelector
 │
 ├── server/
 │   ├── index.js             # Geckos.io server

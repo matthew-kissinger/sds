@@ -35,7 +35,7 @@ A browser-based 3D herding simulation where players control a sheepdog to guide 
 ## Quick Start
 
 ### Prerequisites
-- Node.js 16+
+- Node.js 22+ (root + server both pin `engines.node >=22.0.0`)
 - Modern browser (Chrome 80+, Firefox 75+, Safari 13+, Edge 80+)
 
 ### Development
@@ -91,8 +91,7 @@ npm start
 │   ├── MobileControls.js    # Touch interface
 │   ├── GamepadManager.js    # Controller support
 │   ├── AudioManager.js      # Sound system
-│   └── components/
-│       └── ReactUI.js       # React overlay components
+│   └── components/          # React 19 overlay (App.js, GameHUD, Multiplayer, StartScreen)
 │
 ├── server/                  # Multiplayer server
 │   ├── index.js             # Geckos.io WebRTC server
@@ -120,18 +119,19 @@ npm start
 ## Tech Stack
 
 ### Client
-- **Three.js** v0.176.0 - WebGL rendering
-- **React 18** - UI components
-- **Vite** v7.0 - Build tooling
+- **Three.js** v0.181 - WebGL rendering
+- **React 19** - UI components (createElement, no JSX)
+- **Vite** v7.2 - Build tooling
 - **Tailwind CSS** v4.1 - Styling
+- **i18next** v25 - 18 localized languages
+- **lz-string** v1.5 - Sandbox share-URL compression
 - **nipple.js** - Mobile joystick
 - **Geckos.io Client** - WebRTC networking
-- **Framer Motion** - Animations
 
 ### Server
-- **Node.js** 16+ - Runtime
+- **Node.js** 22+ - Runtime
 - **Geckos.io Server** - WebRTC signaling
-- **better-sqlite3** - Leaderboard persistence
+- **better-sqlite3** v12 - Leaderboard persistence
 - **PM2** - Process management
 
 ## Performance
@@ -144,15 +144,19 @@ npm start
 ## Deployment
 
 ### Frontend
-Static hosting on GitHub Pages or any CDN.
+GitHub Pages, CNAME'd to sheepdogsim.com via Cloudflare DNS proxy. Build with `npm run build`; push `main`.
 
 ### Multiplayer Server
-Deployed on DigitalOcean Droplet with:
-- Cloudflare SSL proxy (api.sheepdogsim.com)
-- PM2 process management
+DigitalOcean droplet running PM2 (api.sheepdogsim.com):
+- Cloudflare SSL proxy
 - UDP ports 10000-20000 for WebRTC
+- SQLite leaderboard
 
 See [DROPLET_DEPLOYMENT.md](DROPLET_DEPLOYMENT.md) for server setup.
+
+## Current cycle
+
+Backend migration to Cloudflare Workers + DO + D1 + Pages was attempted in Cycle 1 and rolled back 2026-04-23 (see [POSTMORTEM.md](POSTMORTEM.md) and [docs/cycle-1-audit.md](docs/cycle-1-audit.md)). A Cycle 2 prep batch has landed artifacts under [docs/c-retry/](docs/c-retry/) and [AGENT_PLAN.md](AGENT_PLAN.md) Section 10 that gate the retry on contracts, integration tests, staging soak, and one-command rollback. Production still runs the Geckos droplet until the retry ships.
 
 ## License
 
