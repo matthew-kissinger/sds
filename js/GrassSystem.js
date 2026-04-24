@@ -59,7 +59,7 @@ export class GrassSystem {
             chunkSize: 40,
 
             // Grass density per chunk - MUCH denser
-            clumpsPerChunk: isMobile ? 800 : 2500,
+            clumpsPerChunk: isMobile ? 800 : 1800,
             bladesPerClump: isMobile ? 5 : 7,
 
             // Blade geometry - varied heights for lush look
