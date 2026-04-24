@@ -29,7 +29,7 @@ Open `http://localhost:3000` (or `:3001` if :3000 is taken — Vite auto-increme
 - Droplet still online as rollback safety; scheduled destroy ~2026-05-01 (see [`docs/cycle-2-todo.md`](docs/cycle-2-todo.md)).
 - **Cycle 3 Track 1 done.** Legacy cleanup committed (`7bfa30f`, -5336 lines). Polish items committed (`16d8228` dead-DOM, `5337b8a` GameBridge 310→86).
 - **Cycle 3 Track 3 done.** Scene-as-data schema shipped end-to-end: `shared/scenes/{types,field,index,rolling-hills}.js`, `createGameState` + Worker `GameSim` + client `TerrainBuilder` + `GrassSystem` all scene-aware. Commits `8d528f1` (Step 1), `40ce61c` (Step 1b renderer), `6189822` (Step 2+3 Rolling Hills + URL picker + `docs/adding-a-biome.md`).
-- **Cycle 3 Track 2: stepping stone landed (`a08681b`).** `ScenePicker` strip on the main menu exposes the registry to players via `?scene=<id>` reload. Full scene-first menu restructure, mode-shaped HUD, onboarding, compass locator, and dog PNG thumbnails are deferred to a dedicated UI session.
+- **Cycle 3 Track 2: stepping stones landed.** `ScenePicker` strip on the main menu (`a08681b`) exposes the registry to players via `?scene=<id>` reload. MP `sceneId` flows end-to-end on the sim side — host's URL-param scene is sent in `createRoom`, validated by the Worker, stored on the room, and read by `GameSim` (all players run the host's picked scene's bounds/spawn). Full scene-first menu restructure, mode-shaped HUD, onboarding, compass locator, dog PNG thumbnails, and client-renderer-scene-reactivity (for joiners) are deferred to a dedicated UI session.
 - **Game identity: mode-shaped.** Classic = zen, Timed/Racing = arcade, Sandbox = playground. Detail: [`docs/cycle-3-ui-ux.md`](docs/cycle-3-ui-ux.md) § Vision.
 
 ## What to pick up next
@@ -40,7 +40,7 @@ Two directions, independent:
 - Scene-first state machine in `App.js`: scene → mode → dog → play, instead of today's mode-first.
 - Mode-shaped HUD: `hudProfile` derived in `useGameState` gates Classic/Timed/Racing HUD variants.
 - First-run onboarding overlay (3-step), compass locator, real dog PNG thumbnails.
-- Pass `sceneId` through room creation so MP rooms respect the picker (today the Worker defaults to `field`).
+- Client renderer reactivity on MP join: joiners whose URL-param scene differs from the room's should either redirect to the room's scene or hot-swap the renderer. Today sim is correct but visuals mismatch.
 
 **B. Renderer biome variance** (Track 3 follow-through). Once Rolling Hills needs to actually *look* different, parameterize `TerrainBuilder` further: `terrain.heightScale` drives mesh displacement, `grass.colors` drive the grass shader, `props[]` drive mountain/tree/rock placement. Everything else (`field.js` / `rolling-hills.js` data, registry, sim wire-up) is already done.
 

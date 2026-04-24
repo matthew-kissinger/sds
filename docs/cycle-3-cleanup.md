@@ -114,9 +114,7 @@ Not in the original plan but surfaced during playtest. Kept here so the next age
 
 ## Remaining
 
-Small polish, none blocking Tracks 2/3:
-
-- [ ] Audit `#start-screen`, `.game-ui`, `#multiplayer-hud` DOM elements in [`index.html`](../index.html). `#start-screen` is still referenced by an overlay-dismissal in [`App.js`](../js/components/App.js) (search `startScreenEl`) — verify it's truly orphan (or decide to keep as React mount point) before deleting. Then remove the matching `display: none !important` rules in [`css/main.css:95`](../css/main.css).
-- [ ] `GameBridge.js` accessor consolidation (cleanup § 2). Currently 296 lines; target < 150 lines by inlining single-caller accessors.
-- [ ] Boid consolidation (cleanup § 6). Open architectural question: is client `ExtremeBoidSystem` batching for rendering (keep) or drift from the authoritative `shared/FlockingAlgorithms.js` (erase)? Needs a decision.
-- [ ] Optional: JSX flip (cleanup § 7). Worth doing as a standalone PR *before* Track 2 menu work to reduce UI-iteration friction.
+- [x] Dead-DOM cleanup — shipped in commit `16d8228` (2026-04-24). Verified `#start-screen`, `#game-ui`, `#multiplayer-hud` have no HTML declarations; dropped the CSS `display:none !important` rule targeting them; rewrote three dead JS checks in `App.js` and `MobileControls.js` to use `isGameActive()` / no-op. The `.start-screen-container` / `.start-screen-content` classes are kept — those are live React styling hooks.
+- [x] `GameBridge.js` accessor consolidation — shipped in commit `5337b8a` (2026-04-24). 310 → 86 lines. Collapsed simple accessors to arrow functions, dropped dead `window.gameBridge` backwards-compat block, dropped unused `window.gameInstance` assignment. Same public API; no caller changes required.
+- [ ] **Boid consolidation** (cleanup § 6). Still open. Architectural question unchanged: is client `ExtremeBoidSystem` a rendering-side batcher (keep, it's a client-only concern) or drift from `shared/FlockingAlgorithms.js` (erase)? Needs a side-by-side behavioral comparison; no work until user picks a direction.
+- [ ] **JSX flip** (cleanup § 7). Optional. Mechanical codemod — Vite plugin add + auto-converted files. Defer until someone is about to do sustained UI work; diff noise isn't worth it otherwise.

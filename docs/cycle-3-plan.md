@@ -125,4 +125,9 @@ Shipped in sequence (commits):
 - Track 1 optional: JSX flip (mechanical codemod), boid consolidation (architectural decision — user unsure).
 - Track 3 follow-through: when the renderer consumes `terrain.heightScale`, `grass.colors`, and `props[]`, Rolling Hills gains visual differentiation from Home Field. Today it's a sim-variant only.
 
-**Cycle 3 verdict.** Structural goals met. The foundation for "new biome = new file" is shipped end-to-end (schema → registry → sim consumption → client consumption → discovery UI). Content/UX polish defers to a focused follow-up, but nothing in the remaining work blocks shipping new biomes.
+**Cycle 3 verdict.** Structural goals met. The foundation for "new biome = new file" is shipped end-to-end (schema → registry → sim consumption → client consumption → MP room creation → discovery UI). Content/UX polish defers to a focused follow-up, but nothing in the remaining work blocks shipping new biomes.
+
+**Post-push addendum.** MP `sceneId` end-to-end wiring landed after the initial push:
+- `worker/src/RoomDO.ts` `RoomMeta` gains `sceneId`; `initRoom` validates against `listScenes()` and defaults to `DEFAULT_SCENE_ID`. Rehydrated pre-Cycle-3 rooms get a `sceneId` backfill. Adapter exposes `sceneId` so `GameSim` reads it without shape change.
+- `js/NetworkManager.js createRoom` sends the client's current scene (URL param) in `roomSettings.sceneId`. Worker validates; unknown ids fall back to default.
+- **Known visual mismatch.** Worker sim respects the host's picked scene for all players; each client still renders with its own local scene (from URL param). Host on Rolling Hills creates a room → joiner on Home Field URL plays Rolling Hills sim but sees Home Field terrain. Harmonizing renderer-side scene-switch on join is Track 2 work.

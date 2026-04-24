@@ -5,6 +5,7 @@
 import { GameSimulation } from './GameSim.js';
 import { encode, decode } from '@msgpack/msgpack';
 import { submitScore as d1SubmitScore } from './d1.js';
+import { listScenes, DEFAULT_SCENE_ID } from '../../shared/scenes/index.js';
 
 interface PlayerInfo {
   id: string;
@@ -24,6 +25,7 @@ interface RoomMeta {
   maxPlayers: number;
   isPublic: boolean;
   gameMode: string;
+  sceneId: string;
   modeLocked: boolean;
   state: 'waiting' | 'in-game' | 'finished';
   createdAt: number;
@@ -73,6 +75,8 @@ export class RoomDO {
       }>('room');
       if (stored?.meta) {
         this.meta = stored.meta;
+        // Backfill sceneId for rooms persisted before Cycle 3 Track 3 shipped.
+        if (!this.meta.sceneId) this.meta.sceneId = DEFAULT_SCENE_ID;
         this.players = new Map(stored.players);
         // If a sim was running, it's lost; snap back to 'waiting'.
         if (this.meta.state === 'in-game') this.meta.state = 'waiting';
@@ -129,6 +133,7 @@ export class RoomDO {
       maxPlayers?: number;
       isPublic?: boolean;
       gameMode?: string;
+      sceneId?: string;
       modeLocked?: boolean;
     };
   }): Response {
@@ -144,6 +149,8 @@ export class RoomDO {
     if (!['cooperative', 'competitive', 'timed'].includes(gameMode)) {
       return new Response(JSON.stringify({ error: 'invalid gameMode' }), { status: 400 });
     }
+    const validSceneIds = listScenes().map((sc: any) => sc.id);
+    const sceneId = s.sceneId && validSceneIds.includes(s.sceneId) ? s.sceneId : DEFAULT_SCENE_ID;
     const maxPlayers = Math.min(4, Math.max(2, s.maxPlayers || 4));
 
     this.meta = {
@@ -153,6 +160,7 @@ export class RoomDO {
       maxPlayers,
       isPublic: !!s.isPublic,
       gameMode,
+      sceneId,
       modeLocked: !!s.modeLocked,
       state: 'waiting',
       createdAt: Date.now(),
@@ -396,6 +404,7 @@ export class RoomDO {
       isPublic: this.meta.isPublic,
       modeLocked: this.meta.modeLocked,
       gameMode: this.meta.gameMode,
+      sceneId: this.meta.sceneId,
       state: this.meta.state,
       lastActivity: this.meta.lastActivity,
       simulation: null,

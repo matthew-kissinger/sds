@@ -338,6 +338,12 @@ export class NetworkManager {
         this.playerName = playerName;
         this.dogType = dogType;
 
+        // Carry the client's current scene (URL param) into the room. Worker
+        // validates against its registry and falls back to default on unknown.
+        const sceneId = roomSettings.sceneId
+            || new URLSearchParams(location.search).get('scene')
+            || undefined;
+
         const body = {
             token: this.token,
             playerName,
@@ -347,6 +353,7 @@ export class NetworkManager {
                 isPublic: roomSettings.isPublic !== false,
                 name: roomSettings.roomName || `${playerName}'s Room`,
                 gameMode: roomSettings.gameMode || 'cooperative',
+                ...(sceneId ? { sceneId } : {}),
             },
         };
         const data = await this._postJson('/api/rooms', body);
