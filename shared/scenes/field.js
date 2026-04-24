@@ -57,7 +57,8 @@ export const field = {
     },
 
     grass: {
-        clumpsPerChunk: { desktop: 1800, mobile: 800 }
+        clumpsPerChunk: { desktop: 1800, mobile: 800 },
+        colors: { base: '#5a7a3e', mid: '#8aa860', tip: '#c4d68c' }
     },
 
     farmHouse: {
@@ -65,8 +66,8 @@ export const field = {
         exclusionArea: { minX: 140, maxX: 220, minZ: 120, maxZ: 200 }
     },
 
-    sky: { preset: 'noon' },
-    fog: null,
+    sky: { preset: 'pastoral-noon' },
+    fog: { color: '#cfd9e8', near: 220, far: 700 },
 
     // --- Gameplay ---
     allowedModes: ['cooperative', 'competitive', 'timed'],

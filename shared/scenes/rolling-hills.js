@@ -1,12 +1,8 @@
 /**
- * Rolling Hills — a harder variant of Home Field.
- *
- * Same play area and fences today (so the renderer's hardcoded mountain/
- * fence placement still fits), but sim-differentiated: larger flock,
- * scattered deeper into the field, dusk sky reserved for when the
- * renderer learns about `scene.sky`. When renderer parameterization is
- * complete (Track 3 Step 3+), this file gains hill displacement, a
- * natural-saddle pen, and scattered trees in place of the fence.
+ * Rolling Hills — a harder variant of Home Field, now with real
+ * displaced terrain. Sim bounds match Home Field (so the existing
+ * fenced perimeter still fits), but the ground rolls beneath via a
+ * heightmap reference, and the sky burns dusk-orange.
  *
  * @type {import('./types.js').SceneDef}
  */
@@ -42,7 +38,9 @@ export const rollingHills = {
 
     terrain: {
         seed: 1,
-        heightScale: 0, // Rendered flat until BiomeBuilder gets height displacement
+        heightScale: 6,
+        heightmapUrl: '/terrain/rolling-hills.r32f',
+        version: 1,
         zones: {
             playArea: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
             nearField: { minX: -200, maxX: 200, minZ: -200, maxZ: 200 },
@@ -53,7 +51,8 @@ export const rollingHills = {
     },
 
     grass: {
-        clumpsPerChunk: { desktop: 2200, mobile: 900 }
+        clumpsPerChunk: { desktop: 2200, mobile: 900 },
+        colors: { base: '#6a7038', mid: '#9a9858', tip: '#e8c878' }
     },
 
     farmHouse: {
@@ -62,7 +61,7 @@ export const rollingHills = {
     },
 
     sky: { preset: 'dusk' },
-    fog: null,
+    fog: { color: '#d8b888', near: 180, far: 600 },
 
     allowedModes: ['cooperative', 'competitive', 'timed'],
     defaultMode: 'cooperative',
