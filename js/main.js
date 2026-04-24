@@ -198,9 +198,21 @@ class SheepDogSimulation {
         // Connect mobile controls to input handler and scene manager
         this.inputHandler.setMobileControls(this.mobileControls);
         this.sceneManager.setMobileControls(this.mobileControls);
-        
+
         // Connect gamepad manager to scene manager
         this.sceneManager.setGamepadManager(this.inputHandler.getGamepadManager());
+
+        // Wire camera controller to all input sources + restore persisted mode.
+        this.cameraController = this.sceneManager.getCameraController();
+        this.inputHandler.setCameraController(this.cameraController);
+        this.mobileControls.setCameraController(this.cameraController);
+        try {
+            const savedMode = localStorage.getItem('camera-mode');
+            if (savedMode) this.cameraController.setMode(savedMode);
+        } catch (_) { /* localStorage may be unavailable */ }
+        window.addEventListener('camera-mode-set', (e) => {
+            if (e?.detail) this.cameraController.setMode(e.detail);
+        });
         
         // Connect performance monitor and game state to input handler
         this.inputHandler.setPerformanceMonitor(this.performanceMonitor);
@@ -1389,7 +1401,16 @@ class SheepDogSimulation {
         } else if (!isPaused) {
             // Handle gamepad zoom controls
             this.sceneManager.handleGamepadZoom();
-            
+
+            // Right-stick X drives Free-mode camera yaw at gamepadYawScale rad/s.
+            const gp = this.inputHandler.getGamepadManager();
+            if (gp && gp.isConnected()) {
+                const rx = gp.getRightStickX();
+                if (rx !== 0) {
+                    this.cameraController.applyYawDelta(rx * this.cameraController.gamepadYawScale * deltaTime);
+                }
+            }
+
             // Handle input only when game is active and not paused
             let movementDirection = this.inputHandler.getMovementDirection();
             const wantsSprint = this.inputHandler.isSprinting();
