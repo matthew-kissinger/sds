@@ -7,10 +7,12 @@
  */
 
 import { field } from './field.js';
+import { rollingHills } from './rolling-hills.js';
 
 /** @type {Record<string, import('./types.js').SceneDef>} */
 const SCENES = {
-    field
+    field,
+    'rolling-hills': rollingHills
 };
 
 export const DEFAULT_SCENE_ID = 'field';

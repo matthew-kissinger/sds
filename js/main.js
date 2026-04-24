@@ -17,7 +17,7 @@ import { NetworkManager } from './NetworkManager.js';
 import { MultiplayerState } from './MultiplayerState.js';
 import { Vector2D } from './Vector2D.js';
 import { setGameInstance, emitGameEvent } from './GameBridge.js';
-import { loadScene, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
+import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
@@ -166,7 +166,16 @@ class SheepDogSimulation {
         this.sceneManager = new SceneManager();
         this.gameState = new GameState();
         this.gameTimer = new GameTimer();
-        this.currentScene = loadScene(DEFAULT_SCENE_ID);
+        // Scene selection: ?scene=<id> URL param (pre-UI). Invalid ids fall back to default.
+        const requestedSceneId = new URLSearchParams(location.search).get('scene');
+        const validSceneIds = listScenes().map(s => s.id);
+        const activeSceneId = requestedSceneId && validSceneIds.includes(requestedSceneId)
+            ? requestedSceneId
+            : DEFAULT_SCENE_ID;
+        this.currentScene = loadScene(activeSceneId);
+        if (activeSceneId !== DEFAULT_SCENE_ID) {
+            console.log(`[SCENE] Loaded "${this.currentScene.name}" (${activeSceneId}) from URL param`);
+        }
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile, this.currentScene);
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
