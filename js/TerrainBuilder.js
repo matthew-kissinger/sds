@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GrassSystem } from './GrassSystem.js';
+import {
+    countMeshTriangles,
+    sumInstancedMeshTriangles,
+    sumObjectTreeTriangles
+} from './utils/TriangleCount.js';
 
 /**
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements
@@ -32,7 +37,7 @@ export class TerrainBuilder {
             animals: {}
         };
         this.modelsLoaded = false;
-        
+
         // Terrain zones
         this.zones = {
             playArea: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
@@ -1194,7 +1199,23 @@ export class TerrainBuilder {
     getGrassInstanceCount() {
         return this.grassInstanceCount;
     }
-    
+
+    /**
+     * Estimate triangle counts for the terrain-owned meshes, broken down
+     * by category for the PERF overlay. Called once post-init; not per-frame.
+     * Returns { Terrain, Trees, Rocks, Mountains } with zeros for any
+     * category that hasn't been built yet.
+     * @returns {{Terrain: number, Trees: number, Rocks: number, Mountains: number}}
+     */
+    getTriangleBreakdown() {
+        return {
+            Terrain: countMeshTriangles(this.terrainMesh),
+            Trees: sumInstancedMeshTriangles(this.trees),
+            Rocks: sumInstancedMeshTriangles(this.rocks),
+            Mountains: sumObjectTreeTriangles(this.mountains)
+        };
+    }
+
     /**
      * Simple robust LOD system - no complex culling, just basic distance scaling
      * @param {THREE.Vector3} playerPosition - Current player position
@@ -1230,7 +1251,7 @@ export class TerrainBuilder {
             console.warn('Models not loaded yet. Loading models...');
             await this.loadModels();
         }
-        
+
         const mountainInstances = [];
         
         // Define mountain placement zones - straddling the terrain edge (500 units boundary)
@@ -1270,20 +1291,20 @@ export class TerrainBuilder {
         mountainPlacements.forEach((placement, index) => {
             const mountainType = index % 2 === 0 ? 'mountain1' : 'mountain2';
             const model = this.models.mountains[mountainType];
-            
+
             if (!model) return;
-            
+
             // Clone the model
             const mountainGroup = model.clone();
-            
+
             // Apply transformations with y offset for partial burial
             mountainGroup.position.set(placement.x, placement.yOffset || 0, placement.z);
             mountainGroup.rotation.y = placement.rotation;
             mountainGroup.scale.setScalar(placement.scale);
-            
+
             // Apply LOD based on distance from center
             const distance = Math.sqrt(placement.x * placement.x + placement.z * placement.z);
-            
+
             // Simple LOD - reduce detail for far mountains
             mountainGroup.traverse(child => {
                 if (child.isMesh) {
@@ -1336,9 +1357,9 @@ export class TerrainBuilder {
                 const scale = 40.0 + Math.random() * 40.0;
                 const mountainType = Math.random() < 0.5 ? 'mountain1' : 'mountain2';
             const model = this.models.mountains[mountainType];
-            
+
             if (!model) continue;
-            
+
                 const hill = model.clone();
                 hill.position.set(finalX, -scale * 0.4, finalZ); // Partially bury hills
                 hill.rotation.y = Math.random() * Math.PI * 2;

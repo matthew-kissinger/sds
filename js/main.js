@@ -375,11 +375,47 @@ class SheepDogSimulation {
             // Set grass instance count for performance monitoring
             this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
 
+            // Register per-system triangle estimates for the PERF overlay.
+            // Static totals (instance count x per-instance tris) computed once
+            // post-init; drives the "PER-SYSTEM TRIANGLES" section, no behavior.
+            this.registerSystemTriangleCounts();
+
             logStep('Initialization complete!');
 
         } catch (error) {
             console.error('[INIT] Fatal error during initialization:', error);
             throw error;
+        }
+    }
+
+    /**
+     * One-shot: ask each system for its triangle estimate and push it
+     * into PerformanceMonitor. Called at the end of init; safe to call
+     * again after a terrain/grass rebuild (values overwrite by name).
+     * Display-only, so failures are swallowed.
+     */
+    registerSystemTriangleCounts() {
+        try {
+            const perf = this.performanceMonitor;
+            const { Terrain, Trees, Rocks, Mountains } = this.terrainBuilder.getTriangleBreakdown();
+            perf.addSystemTriangles('Terrain', Terrain);
+            perf.addSystemTriangles('Trees', Trees);
+            perf.addSystemTriangles('Rocks', Rocks);
+            perf.addSystemTriangles('Mountains', Mountains);
+
+            const grassSystem = this.terrainBuilder.grassSystem;
+            if (grassSystem) {
+                perf.addSystemTriangles('Grass', grassSystem.getTotalTriangleEstimate());
+            }
+
+            perf.addSystemTriangles('Structures', this.structureBuilder.getTotalTriangleEstimate());
+
+            const sheepSystem = this.gameState.optimizedSheepSystem;
+            if (sheepSystem) {
+                perf.addSystemTriangles('Sheep', sheepSystem.getTotalTriangleEstimate());
+            }
+        } catch (error) {
+            console.warn('[PERF] Failed to register system triangle counts:', error);
         }
     }
     
@@ -452,8 +488,10 @@ class SheepDogSimulation {
             console.log(`Recreating sheep flock due to count change`);
             this.gameState.recreateSheepFlock(this.sceneManager.getScene());
             this.gameState.needsFlockRecreation = false; // Reset flag
+            // Refresh sheep triangle estimate for the PERF overlay.
+            this.registerSystemTriangleCounts();
         }
-        
+
         // Store the intended game mode for later use
         if (roomData?.gameMode) {
             this.gameState.setGameMode(roomData.gameMode);
@@ -645,6 +683,8 @@ class SheepDogSimulation {
             this.gameState.recreateSheepFlock(this.sceneManager.getScene());
             this.gameState.needsFlockRecreation = false;
         }
+        // Terrain, structures and sheep may have been rebuilt - refresh PERF overlay.
+        this.registerSystemTriangleCounts();
 
         // Reset timer based on sandbox rules
         this.gameTimer.reset();
@@ -1115,7 +1155,7 @@ class SheepDogSimulation {
                         // Trust server positions for active sheep
                         clientSheepEntity.position.x = serverSheepData.x;
                         clientSheepEntity.position.z = serverSheepData.z;
-                        
+
                         // Update velocity for animation purposes
                         if (serverSheepData.vx !== undefined && serverSheepData.vz !== undefined) {
                             clientSheepEntity.velocity.x = serverSheepData.vx;
@@ -1409,7 +1449,7 @@ class SheepDogSimulation {
                 // Interpolate position
                 remoteDog.position.x += (remoteDog.targetPosition.x - remoteDog.position.x) * interpolationFactor;
                 remoteDog.position.z += (remoteDog.targetPosition.z - remoteDog.position.z) * interpolationFactor;
-                
+
                 // Interpolate rotation
                 let rotationDiff = remoteDog.targetRotation - remoteDog.currentRotation;
                 while (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;

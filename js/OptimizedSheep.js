@@ -7,6 +7,7 @@ import { getGameState, getNetworkManager } from './GameBridge.js';
 import { FieldConfig, GATE_DEFAULTS } from './FieldConfig.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
+import { geometryTriangleCount } from './utils/TriangleCount.js';
 
 // Shader cache for sync access after async load
 let sheepVertexShader = null;
@@ -650,6 +651,16 @@ export class OptimizedSheepSystem {
      */
     getSheep() {
         return this.sheep;
+    }
+
+    /**
+     * Estimate total triangle count for the sheep instanced mesh:
+     * triangles in the merged per-sheep geometry * instance count.
+     * Called once post-init for the PERF overlay.
+     * @returns {number}
+     */
+    getTotalTriangleEstimate() {
+        return Math.round(geometryTriangleCount(this.mergedGeometry) * this.sheepCount);
     }
     
     /**

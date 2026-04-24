@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FencePresets, FenceConfigBuilder } from './FencePresets.js';
+import { sumObjectTreeTriangles } from './utils/TriangleCount.js';
 
 /**
  * StructureBuilder - Structure builder with modular fence system
@@ -683,5 +684,17 @@ export class StructureBuilder {
                 }
             });
         });
+    }
+
+    /**
+     * Estimate total triangle count across all built structures
+     * (fences + gates + pastures + decorations). Called once post-build;
+     * includes all mesh children inside fence/gate/flag groups.
+     * InstancedMesh instances are multiplied by instance count.
+     * @returns {number}
+     */
+    getTotalTriangleEstimate() {
+        const allStructures = Object.values(this.structures).flat();
+        return Math.round(sumObjectTreeTriangles(allStructures));
     }
 }
