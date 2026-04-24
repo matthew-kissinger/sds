@@ -1,5 +1,9 @@
 # C-retry rollback runbook
 
+> **SUPERSEDED 2026-04-24.** The pragmatic rollback for this side project is `git revert <cutover-commit> && git push` (which triggers a fresh Pages deploy) and optionally a DNS record swap back to the droplet. The DigitalOcean droplet stays up as a parallel fallback for 3-7 days after cutover. See `NEXT_SESSION.md` and `AGENT_PLAN.md` Section 10. The detailed runbook below is retained as historical context.
+>
+> Original prep brief follows:
+>
 > Per-stage rollback for the Cycle 2 Cloudflare backend cutover. Every step is a single command, or has a note why it cannot be. Gate on prod deploy per POSTMORTEM 5.5. POSTMORTEM 4.5: Cycle 1's "one DNS flip" rollback was false - actual teardown took ~15 min / ~10 CF API calls. cycle-1-audit.md ("`VITE_USE_DO_BACKEND` is not a one-line flip") identified the build-baked flag as root cause; Stage 6 fixes it.
 
 ## How to use

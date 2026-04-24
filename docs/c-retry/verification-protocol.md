@@ -1,5 +1,9 @@
 # C-Retry Verification Protocol
 
+> **SCALED BACK 2026-04-24.** The full protocol below was written for a multi-track soak window. The pragmatic equivalent for this side project is: after CF deploy, (1) load sheepdogsim.com in a fresh incognito window and play a solo game to completion, (2) open a second window, create a coop room, complete a 60-second game, (3) confirm the leaderboard entry appears, (4) `curl` the `/api/leaderboard` endpoint and check it responds. If all four pass, ship is good. If not, fix and redeploy. See `NEXT_SESSION.md` Phase 5. The full protocol below is retained as reference for anyone who wants a deeper checklist.
+>
+> Original prep brief follows:
+>
 > The gate Cycle 1 did not have. Every sub-agent executing a C-retry or F-retry track must run this checklist before declaring the track done. The parent session must re-run it before accepting the sub-agent's report. If any item is `No`, the track is not done.
 
 Source-of-truth references (other Unit artifacts in this batch):

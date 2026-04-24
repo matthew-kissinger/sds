@@ -1,5 +1,9 @@
 # Staging environment plan for C-retry
 
+> **SUPERSEDED 2026-04-24.** Staging was dropped from the Cycle 2 plan for this side project. See `NEXT_SESSION.md` and `AGENT_PLAN.md` Section 10 for the current pragmatic plan (ship direct to prod, droplet runs in parallel as fallback). The content below is retained as historical context only.
+>
+> Original prep brief follows:
+>
 > Written 2026-04-23 as prep for the Cycle 2 retry of the Cloudflare Workers + DO + D1 + Pages migration. Direct response to POSTMORTEM 5.8: "keep the droplet running, keep the Geckos path in NetworkManager.js, and keep VITE_USE_DO_BACKEND=false as the production default until the migration has run for >=7 days in a staging environment that real users (or the user + a second browser) have exercised." Cycle 1 shipped on curl smoke tests against production because no staging existed. This doc specs one.
 
 ## 1. Topology

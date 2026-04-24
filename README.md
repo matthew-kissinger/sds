@@ -109,7 +109,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for module-level diagrams, the network pr
 
 ## Current project status
 
-A Cloudflare Workers + Durable Objects + D1 + Pages migration was attempted and rolled back on 2026-04-23 after surfacing launch-blocking gaps between the client's expectations and the worker's behavior. Production still runs the Geckos droplet path. See [POSTMORTEM.md](POSTMORTEM.md), [docs/cycle-1-audit.md](docs/cycle-1-audit.md), and [AGENT_PLAN.md](AGENT_PLAN.md) Section 10 for the retry roadmap. Preparation artifacts for the retry (protocol spec, staging plan, rollback runbook, integration harness) live in [docs/c-retry/](docs/c-retry/).
+A Cloudflare Workers + Durable Objects + D1 + Pages migration was attempted in Cycle 1 and rolled back on 2026-04-23 after surfacing seven launch-blocking gaps between the client's expectations and the worker's behavior. Production still runs the Geckos + DigitalOcean droplet path.
+
+Cycle 2 is queued. Prep artifacts (client-server contract, protocol v2 spec, CF resources runbook, integration + sim-baseline test harnesses, cycle-1 audit) all landed and live in [docs/c-retry/](docs/c-retry/). The overnight execution brief is at [NEXT_SESSION.md](NEXT_SESSION.md). See also [POSTMORTEM.md](POSTMORTEM.md) and [docs/cycle-1-audit.md](docs/cycle-1-audit.md) for context on what not to repeat.
 
 ## Contributing
 
