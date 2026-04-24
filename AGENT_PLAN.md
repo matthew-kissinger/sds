@@ -14,6 +14,7 @@
 1. Read `POSTMORTEM.md` in full. It documents the process failures and lays out rules (playtesting as gate, sub-agent verification, integration tests, one-command rollback, docs-from-code) that the next cycle must follow.
 2. Read `docs/cycle-1-audit.md` for the specific technical bugs with file:line evidence — do not re-introduce them.
 3. Treat the C1-C4 and F prompts below as **source material, not a recipe**. They produced a plausible-looking migration that was broken on the happy path; re-planning is required, not re-execution. In particular: the client↔server contract (every `fetch` URL and every `ws` message type) must be written as a reviewable artifact before any endpoint is implemented, and two-client integration tests must pass against `wrangler dev` before anything is deployed.
+4. **Section 10 "Cycle 2 retry roadmap" is the authoritative next-step plan.** It supersedes the old C1-C4 and F prompts, bakes the POSTMORTEM rules in as mandatory gates, and lists 11 prep artifacts that must land before a C0 verification sweep unlocks the retry. The old prompts stay in place as historical source material only.
 
 **Still in force** from Cycle 1 (do not re-litigate):
 
@@ -286,6 +287,18 @@ Update this section as tracks complete. Format: `[x] Done — <commit-sha> — <
 [x] Track E2 · 2P local execution — done — Path A: Shift event.code fix, versus gate scoring, camera padding doc
 [!] Track F  · CF Pages + CI — REVERTED 2026-04-23 — was tied to failed C1-C4 cutover; workflows and _redirects/_headers removed. See POSTMORTEM.md
 [ ] Track G  · Post-migration cleanup — N/A (no migration shipped)
+
+-- Cycle 2 retry roadmap (Section 10). Prep artifacts land first, then C0 verifies, then C1'-C5' execute in order. --
+
+[ ] Prep Units 1-11 · Cycle 2 preconditions — 11 parallel PRs (contract, protocol-v2, rollback, staging, cf-recreate, verification-protocol, preflight, playwright harness, vitest two-client harness, B2 audit, sim baseline traces). See Section 10.0.
+[ ] Track C0  · Prep verification — gate on all 11 prep PRs merged; dry-run preflight + verification-protocol against live Geckos site.
+[ ] Track C1' · Worker scaffold (revised) — scaffolding only, contract + protocol-v2 docs updated from code, flow.spec.ts step 1 passing against `wrangler dev`.
+[ ] Track C2' · Simulation port to RoomDO (revised) — 20Hz sim vs 60Hz baseline within tolerance, flow.spec.ts steps 2-6 passing, interpolatingToClient/sheepRetired/competitiveGates on wire.
+[ ] Track C3' · Client swap behind flag (revised) — runtime-switchable flag via /config.json (preferred) or documented rebuild-rollback; flow.spec.ts all 7 steps + Playwright two-context smoke passing.
+[ ] Track C4' · Staging soak (renamed from cutover) — 7-day soak on staging subdomain; rollback rehearsal completed before day 1; pass criteria from staging.md Section 8.
+[ ] Track C5' · Production cutover — dispatched only after C4' signs off; three gates, flip runtime flag, 1-hour monitor, rollback on >1% error.
+[ ] Track F'  · CF Pages + CI (revised) — only after C5' stable in prod >=24h; Pages preview URLs added to CORS allowlist.
+[ ] Track G   · Post-migration cleanup — gated on Track C5' stable for 7 days (unchanged scope).
 ```
 
 ---
@@ -1194,6 +1207,162 @@ After all tracks complete, run one final session:
 - **D1** — Cloudflare's SQLite-compatible serverless database.
 - **Persistent ID** — client-generated UUID stored in localStorage. Ties a player to their leaderboard entry across sessions.
 - **Discriminator** — a 4-digit suffix on display names so two "Swift" players can coexist as Swift#0001 and Swift#0002.
+
+---
+
+## 10 · Cycle 2 retry roadmap
+
+> This section is the authoritative roadmap for the Cloudflare Workers/DO/D1/Pages migration retry. It supersedes the C1-C4 and F prompts earlier in this file; those remain as historical source material (per Section 0 note) and must not be executed verbatim. The POSTMORTEM rules are baked in here as mandatory gates, not suggestions.
+
+### 10.0 · Status and preconditions
+
+**Cycle 1 final status.** Landed and preserved: Track A, B1, B2, D1, D2, D3, E1, E2. Reverted same-day: Track C1, C2, C3, C4, F. See Section 7 and `POSTMORTEM.md` for the full picture.
+
+**Prep artifacts (Units 1-11).** Before any agent is dispatched to execute C0, every one of these PRs must be merged into `main`. They are scoped to land in parallel, with no two units touching the same file. The human verifies all 11 are green before unblocking C0.
+
+- [ ] **Unit 1 - client-server contract spec.** Adds `docs/c-retry/contract.md`. Every `fetch()` call in `js/NetworkManager.js` paired with a server endpoint signature (method, path, request shape, response shape). Every server endpoint paired with the client call site (file:line). This is the artifact that gets kept in sync with code in C1' / C2'.
+- [ ] **Unit 2 - WS protocol spec.** Adds `docs/c-retry/protocol-v2.md`. Every client WS message type and every server WS broadcast type, with field lists, required vs optional, units, and the client consumer (file:line). Must name `interpolatingToClient`, `sheepRetired`, and `competitiveGates` explicitly - the three fields the cycle-1 audit caught missing.
+- [ ] **Unit 3 - rollback runbook.** Adds `docs/c-retry/rollback.md`. Documents the one-command rollback path (preferred: flip runtime flag via `/config.json` edit + CF cache purge). Includes the full command sequence, expected duration, and a rehearsal checklist. This is the artifact Track C4' rehearses against staging before soak day 1.
+- [ ] **Unit 4 - staging plan.** Adds `docs/c-retry/staging.md`. Names the staging subdomain, DNS records, which CF Pages project it binds to, how the droplet stays reachable during soak, and Section 8 ("Soak pass criteria") enumerating measurable pass/fail thresholds (error rate, p95 latency, two-client game completion rate, leaderboard write verification).
+- [ ] **Unit 5 - CF resources recreation runbook.** Adds `docs/c-retry/cf-recreate.md`. Step-by-step to recreate the Worker, DOs, D1 database, and Pages project that were deleted in the rollback. Includes token scoping, secret rotation, and the exact `wrangler` commands. Idempotent where possible.
+- [ ] **Unit 6 - verification protocol.** Adds `docs/c-retry/verification-protocol.md`. The checklist any agent runs before declaring a C' track "done". Includes: grep contract.md endpoints vs worker handlers, run integration tests, run Playwright smoke, confirm screenshots archived. Dry-run against Geckos live site in C0 to catch any stale bits.
+- [ ] **Unit 7 - preflight.** Adds `docs/c-retry/preflight.md`. The session-start tool check (POSTMORTEM 5.9): is Playwright MCP or Claude_Preview available, is `wrangler` authenticated, are `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` present, is the repo on a clean branch. Printable, fits on one screen.
+- [ ] **Unit 8 - Playwright harness.** Adds `playwright.config.ts` + `tests/e2e/smoke.spec.ts`. Minimal: one test that loads the production site, asserts the start screen renders, confirms leaderboard fetches complete. Must pass against current Geckos-backed prod in CI. C3' extends this file with the two-context test.
+- [ ] **Unit 9 - Vitest two-client harness.** Adds `tests/integration/` with `flow.spec.ts` skeleton: the 7-step two-client flow from POSTMORTEM 5.3 (register, create, join, start, input, complete, leaderboard read). All 7 steps start `test.skip` with TODO markers. C1' / C2' / C3' unskip them as features land. Harness wires up to `wrangler dev` via env var; no CF deploy touched.
+- [ ] **Unit 10 - B2 audit.** Adds `docs/c-retry/b2-audit.md`. Cycle-1 audit noted some of B2's lobby UX depends on DO-backend-only events. This unit reads `PublicLobbyList.js`, `Lobby.js`, and the Geckos server to confirm which events still fire today, flags any broken paths, and either fixes them against Geckos or documents them as "fix in C2' during port". Lands either as a code fix + doc, or as doc-only with a fix list.
+- [ ] **Unit 11 - sim baseline traces.** Adds `tests/sim-baseline/` with captured 60Hz reference traces (sheep positions, dog positions, score evolution) from the current `server/GameSimulation.js` over deterministic seeded runs. The comparison harness in C2' runs the 20Hz port through the same seed and asserts divergence stays within tolerance documented in the sim baseline README.
+
+Agents executing prep units do not touch the CF account, DNS, droplet, or production. All 11 ship as reviewable artifacts. Every one must be merged before Track C0 dispatches.
+
+### 10.1 · Track C0 · Prep verification
+
+**Dispatch:** one agent session, general-purpose. Takes ~60 minutes.
+**Depends on:** Units 1-11 all merged.
+
+**Goal:** confirm the 11 prep artifacts are present, cross-consistent, and the preflight + verification protocols actually run clean against a real environment. No code changes except tiny fixups (a typo, a missing import in a test file). If C0 finds anything bigger, it stops and reports; the offending Unit gets re-opened rather than patched in C0.
+
+**Tasks:**
+
+1. Run `docs/c-retry/preflight.md` top-to-bottom. Every item green, or report what's missing.
+2. Dry-run `docs/c-retry/verification-protocol.md` against the current Geckos-backed production site (not a CF deploy). Record any protocol step that doesn't make sense against Geckos - those are the steps to sharpen before C1'.
+3. Cross-read: every endpoint/message named in `contract.md` and `protocol-v2.md` must correspond to a real caller in the current codebase (Geckos path) or be explicitly marked "new in C1' / C2'". No ghost entries.
+4. Run the Playwright smoke from Unit 8 against prod. Must pass.
+5. Run the Vitest flow skeleton from Unit 9. All 7 steps should be `test.skip`ped; suite should exit green.
+
+**Gate for C0 done:** green preflight + verification-protocol dry-run + Playwright smoke + Vitest suite (all skips). Commit SHA logged in Section 7.
+
+### 10.2 · Track C1' · Worker scaffold (revised)
+
+**Dispatch:** one agent session, general-purpose.
+**Depends on:** C0 done.
+**Scope:** scaffolding only. **Do not port `GameSimulation.js` in this track.**
+
+**What lands:** `worker/` directory with wrangler config, TypeScript entry, D1 migration, RoomDO stub, LobbyDO stub, MessagePack protocol types mirroring `docs/c-retry/protocol-v2.md`, and handlers for REST endpoints (`/api/register`, `/api/score`, `/api/leaderboard`, `/api/lobbies`, `/api/rooms`, `/api/rooms/:code/join`). The worker is deployable to `wrangler dev` only; no production route binding.
+
+**Mandatory gates for "done":**
+
+- `docs/c-retry/contract.md` has been updated from code - every endpoint in the worker appears in contract.md with the actual request/response shapes the code emits, not the pre-planned ones. Diff logged in the commit message if contract changed vs Unit 1.
+- `docs/c-retry/protocol-v2.md` has been updated the same way.
+- Grep check: for every endpoint listed in `contract.md`, there is a handler case in `worker/src/index.ts` (or equivalent). Grep output in the PR body.
+- `tests/integration/flow.spec.ts` step 1 (register two players) is **unskipped** and passes against `wrangler dev`.
+- C0's verification protocol re-run on the scaffold; any protocol step that fails is either fixed in this track or flagged and deferred to C2' with rationale.
+
+**Reminder:** cycle-1's C1 shipped a worker without `POST /api/rooms` at all. That is the specific regression this gate is designed to catch. No endpoint gap tolerated.
+
+### 10.3 · Track C2' · Simulation port to RoomDO (revised)
+
+**Dispatch:** one agent session, may split into two if the sim port is large.
+**Depends on:** C1' done.
+
+**What lands:** `server/GameSimulation.js` + `server/RoomManager.js` logic ported into `worker/src/RoomDO.ts` at 20Hz with delta encoding and MessagePack. LobbyDO wired to RoomDO state transitions. Protocol v2 fields on the wire.
+
+**Mandatory gates for "done":**
+
+- `tests/sim-baseline/` comparison tests pass: 20Hz sim output stays within the tolerance documented in Unit 11's README when seeded identically to the 60Hz reference. If tolerance fails, fix the port - don't relax the tolerance without human sign-off.
+- `tests/integration/flow.spec.ts` steps 2-6 (create room, join, start, input sync, completion) are unskipped and pass against `wrangler dev`.
+- `DogState` includes `interpolatingToClient` on the wire, and the client reconciliation path reads it. Verified by an integration assertion, not by grep alone.
+- `StateMsg` includes `sheepRetired` in cooperative mode. Adapter routes coop as coop, not competitive. Verified by integration assertion on a coop flow test.
+- `competitiveGates` is sent on each state message (not only on `GameStartMsg`) and the client renders gates in competitive/timed mode. Verified by Playwright screenshot in C3'.
+- `contract.md` and `protocol-v2.md` re-synced from the shipped code (docs-from-code rule, POSTMORTEM 5.7).
+
+**Reminder:** cycle-1's C2 ignored the three fields above and the 20Hz change was never compared against a baseline. Both gates exist specifically to prevent that failure mode.
+
+### 10.4 · Track C3' · Client swap behind flag (revised)
+
+**Dispatch:** one agent session, general-purpose.
+**Depends on:** C2' done.
+
+**Rollback decision (POSTMORTEM 5.5) - pick exactly one, document the pick in the PR:**
+
+- **Option A (preferred): runtime-switchable flag.** The client fetches `/config.json` on app start. `config.json` contains `{"useDOBackend": false}` or `{"useDOBackend": true}`. Flipping production is a one-file edit + CF cache purge. Rollback is the same edit in reverse. The flag is **not** read from `import.meta.env` and **not** baked into the JS bundle.
+- **Option B (fallback): build-baked flag with documented rollback path.** Only acceptable if the agent documents in `rollback.md` that rollback requires a rebuild + redeploy of Pages (~3 minutes), writes the exact command sequence, and the human signs off on the increased blast radius.
+
+**Mandatory gates for "done":**
+
+- `tests/integration/flow.spec.ts` all 7 steps unskipped and passing against `wrangler dev`.
+- Playwright test in `tests/e2e/` extended with a **two-context** test (two browser contexts in one test, simulating two players) that hits a staging URL and completes a two-player game end-to-end. Passes in real Chromium. Screenshots archived.
+- Findings from `docs/c-retry/b2-audit.md` (Unit 10) applied where relevant - any B2 event that depended on DO-only server behavior is now correctly wired on the DO path.
+- Flag choice (A or B) recorded in the PR body. If A, `config.json` is in the Pages deploy output. If B, `rollback.md` has the rebuild sequence reviewed.
+- `contract.md` and `protocol-v2.md` re-synced from code.
+
+### 10.5 · Track C4' · Staging soak (renamed from "cutover")
+
+**Dispatch:** set up in one session; then a 7-day observation window. Lightweight check-ins daily.
+**Depends on:** C3' done.
+
+**What happens:** the CF Worker, DOs, D1, and Pages project deployed in C3' are bound to a staging subdomain (per `docs/c-retry/staging.md`). The droplet stays authoritative for production. The staging subdomain runs the DO backend exclusively.
+
+**Mandatory preconditions before soak day 1:**
+
+- Rollback rehearsal completed against staging (per `docs/c-retry/rollback.md`). The agent executes the one-command rollback against staging, confirms the site flips back to Geckos behavior, then re-enables the DO backend. Timing and outcome logged in the PR.
+- Staging Pages deploy includes the preview URL in the Worker CORS allowlist (specifically to avoid the cycle-1 audit finding that preview URLs 4xx'd silently).
+
+**Soak pass criteria:** whatever `docs/c-retry/staging.md` Section 8 defines. At minimum it must include: daily two-browser playtest succeeds, leaderboard writes verified end-to-end, Worker error rate under the threshold, p95 latency under the threshold, no DO crashes in alarms, no memory leaks visible across 7 days. **Soak does not auto-pass;** the human signs off at day 7.
+
+**What does not happen in C4':** no prod DNS change, no prod flag flip, no droplet tear-down. Track C4' is observation only.
+
+### 10.6 · Track C5' · Production cutover
+
+**Dispatch:** one agent session, general-purpose. Requires human confirmation at each gate.
+**Depends on:** C4' signed off by human.
+
+**Pre-cutover gates (in order, each must pass before the next):**
+
+1. `contract.md` and `protocol-v2.md` are byte-current with the shipped worker code. Agent re-runs the grep cross-check from C1'.
+2. `docs/c-retry/verification-protocol.md` full run against the staging deploy. Every step green.
+3. Two-browser playtest on staging, completing a full game, leaderboard updates, and screenshots archived **in the PR body** (not just uploaded somewhere else). This is the "done in user-observable terms" gate from POSTMORTEM 5.1.
+
+**Cutover:** flip the runtime flag (Option A from C3') or deploy with the new flag value (Option B). The agent then stays resident and monitors the production site for a full hour before declaring the track done - that window is not delegable.
+
+**Rollback trigger:** error rate above 1% of requests, OR any verification protocol step that passed on staging now failing on prod, OR any user report of broken room creation / score submission / leaderboard freeze within the hour. Rollback is the one command from `rollback.md`.
+
+**Post-cutover:** update `DECISIONS.md` with cutover date and observations. Update `README.md` deploy docs from code (POSTMORTEM 5.7), not from plan.
+
+### 10.7 · Track F' · CF Pages + CI (revised)
+
+**Dispatch:** one agent session.
+**Depends on:** C5' stable in prod for >= 24 hours.
+
+Same scope as the original Track F prompt (create Pages project, CI workflow, itch.io workflow, domain migration) with one required change:
+
+- CF Pages preview URLs must be added to the Worker's `CORS_ORIGIN` allowlist before the first preview deploy. Cycle-1 audit flagged the omission; this track closes the gap. Confirm by opening a preview deploy in the browser and watching network requests succeed.
+
+All other safeguards from the original Track F (14-day GH Pages retention, revert procedure in `DECISIONS.md`) remain in force.
+
+### 10.8 · Track G · Post-migration cleanup
+
+Scope unchanged from the original Track G prompt (delete `server/`, remove Geckos deps, destroy the droplet with human approval, clean DNS, rewrite `ARCHITECTURE.md` from code). Gate unchanged: Track C5' stable for >= 7 days in production, with explicit human confirmation on the droplet destroy.
+
+### 10.9 · Cross-cutting rules (non-negotiable)
+
+These rules override anything in the original C1-C4 prompts, any sub-agent's default behavior, and any temptation to move faster. They are enforced at PR review time for every C-retry PR.
+
+- **Docs written from code, not plan (POSTMORTEM 5.7).** After a change lands, `contract.md`, `protocol-v2.md`, `README.md`, `ARCHITECTURE.md` are updated by reading the shipped code. If code diverged from plan, the doc follows code and the divergence is called out in the commit message.
+- **Sub-agent reports are proposals, not truth (POSTMORTEM 5.4).** When a dispatched sub-agent reports "track X complete", the parent session re-reads the test files, runs the tests itself, spot-checks one or two critical files, and (for user-visible changes) opens a real browser before marking the track done.
+- **Integration tests before any prod API call (POSTMORTEM 5.3).** The two-client `flow.spec.ts` must pass locally against `wrangler dev` before any CF deploy happens. No deploy-then-test.
+- **One-command rollback required (POSTMORTEM 5.5).** Every production-affecting change includes the exact rollback command sequence in the PR body. If rollback needs more than one command, the deploy is not ready.
+- **Pacing is an input, not a constraint (POSTMORTEM 5.6).** "Finish it tonight" means "ship what's actually finishable tonight", not "declare things finished". Agents scope the session to what's shippable with verification headroom and defer the rest explicitly.
+- **Preflight at session start (POSTMORTEM 5.9).** First action in any C-retry session is running `docs/c-retry/preflight.md`. If a required tool (Playwright MCP, Claude_Preview, wrangler auth, CF env vars) is missing, stop and report. Do not start the track flying blind.
 
 ---
 
