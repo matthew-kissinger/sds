@@ -1,21 +1,19 @@
 # Cycle 2 Report — Cloudflare Backend Migration (Ship)
 
-> Written 2026-04-23, end of the overnight Cycle 2 execution. Cycle 1's same-day rollback is documented in [POSTMORTEM.md](../POSTMORTEM.md); the specific bugs it shipped are in [cycle-1-audit.md](cycle-1-audit.md). This report is the authoritative "what we actually shipped" document for Cycle 2.
+> Written 2026-04-23, end of the overnight Cycle 2 execution. Cycle 1's same-day rollback is documented in [archive/POSTMORTEM.md](archive/POSTMORTEM.md); the specific bugs it shipped are in [archive/cycle-1-audit.md](archive/cycle-1-audit.md). This report is the authoritative "what we actually shipped" document for Cycle 2.
 
 ## TL;DR
 
-The frontend now runs on Cloudflare Pages, the multiplayer server is a Cloudflare Worker backed by Durable Objects and D1, and Geckos.io/WebRTC/DigitalOcean are no longer in the critical path for the Pages deployment. `sheepdogsim.com` is still pointed at the old GitHub Pages build — that DNS flip is the last remaining step of the full migration and is tracked in [cycle-2-todo.md](cycle-2-todo.md).
+The frontend runs on Cloudflare Pages, the multiplayer server is a Cloudflare Worker backed by Durable Objects and D1, and Geckos.io/WebRTC/DigitalOcean are no longer in the critical path. `sheepdogsim.com` now CNAMEs at `sds-frontend.pages.dev`; the legacy `api.sheepdogsim.com` A record was removed in the same cutover (2026-04-24). Remaining cleanup — GitHub Actions auto-deploy, leaderboard backfill, droplet destroy — is tracked in [cycle-2-todo.md](cycle-2-todo.md).
 
 ## URLs
 
 | Surface | URL | Notes |
 |---------|-----|-------|
-| Frontend (new) | https://sds-frontend.pages.dev | Cloudflare Pages, auto-build per deploy |
-| Multiplayer API (new) | https://sds-worker.matt-m-kissinger.workers.dev | Cloudflare Worker + RoomDO/LobbyDO + D1 |
-| Frontend (legacy) | https://sheepdogsim.com | Still GitHub Pages build, unchanged |
-| API (legacy fallback) | https://api.sheepdogsim.com | DigitalOcean droplet, unchanged, used by the legacy frontend only |
-
-The new stack is production-ready at `sds-frontend.pages.dev` today. The domain cutover is deferred until the new stack has accumulated a few days of real play.
+| Frontend | https://sheepdogsim.com | Cloudflare Pages (`sds-frontend`), CNAME → `sds-frontend.pages.dev`, proxied |
+| Frontend (preview) | https://sds-frontend.pages.dev | Pages project default hostname; also functional |
+| Multiplayer API | https://sds-worker.matt-m-kissinger.workers.dev | Cloudflare Worker + RoomDO/LobbyDO + D1 |
+| Legacy droplet | (no DNS) | DO droplet `147.182.185.185` still online as rollback safety; `api.sheepdogsim.com` record removed 2026-04-24 |
 
 ## Cloudflare resources
 
@@ -58,7 +56,7 @@ Rewritten from Geckos.io to native `WebSocket` + `@msgpack/msgpack` + `fetch`. T
 
 ## Contract invariants — what we guaranteed this cycle
 
-Each corresponds to a Cycle 1 bug in `cycle-1-audit.md`. All are now enforced by the shipped worker:
+Each corresponds to a Cycle 1 bug in [archive/cycle-1-audit.md](archive/cycle-1-audit.md). All are now enforced by the shipped worker:
 
 | # | Cycle 1 bug | Cycle 2 fix |
 |---|-------------|-------------|
@@ -84,9 +82,9 @@ Each corresponds to a Cycle 1 bug in `cycle-1-audit.md`. All are now enforced by
 
 See [cycle-2-todo.md](cycle-2-todo.md) for the full punch list. Highlights:
 
-- DNS cutover: bind `sheepdogsim.com` as a custom domain on the `sds-frontend` Pages project, then remove the `matthew-kissinger.github.io` CNAME. Needs the CF dashboard (OAuth token in use lacks DNS/Pages-domain API scope).
-- GitHub Actions auto-deploy (`.github/workflows/deploy.yml`) — not re-added yet; for now deploys are manual (`npm run build && npx wrangler pages deploy dist`).
-- Droplet destroy date — pick ~7 days post-DNS-cutover if nothing surfaces.
+- GitHub Actions auto-deploy (`.github/workflows/deploy.yml`) — not re-added yet; deploys today are manual (`npm run build && npx wrangler pages deploy dist` + `cd worker && npx wrangler deploy`).
+- Droplet destroy — soak in progress, target ~1 week post-cutover (2026-05-01).
+- 207-row leaderboard backfill from the droplet's SQLite dump into D1 (optional — the leaderboard is rebuilding organically).
 - Observability — currently `wrangler tail` only. Worth wiring a basic Logpush or Sentry when volume warrants.
 - Hibernation WebSocket API migration — the worker currently uses `server.accept()` which keeps the DO warm (fine for active rooms but billable). Switch to `state.acceptWebSocket(ws)` when we care about idle-room cost.
 
@@ -98,15 +96,15 @@ See [cycle-2-todo.md](cycle-2-todo.md) for the full punch list. Highlights:
 
 ## Rollback
 
-If the new stack needs to be taken out of production:
+If the new stack needs to be taken out of production during the soak window:
 
-1. `sheepdogsim.com` CNAME isn't switched yet, so most users still see the old GitHub Pages build. Nothing to roll back on the DNS side.
-2. If Pages itself misbehaves: `npx wrangler pages deployment list --project-name sds-frontend` lists recent deploys; `npx wrangler pages deployment tail` shows logs. The previous deploy can be promoted via the Pages dashboard.
-3. The droplet is still running and authoritative for the legacy frontend, so there is no user-visible regression until DNS is flipped.
+1. **Pages-only issue:** `npx wrangler pages deployment list --project-name sds-frontend` lists recent deploys; promote a prior deployment from the CF dashboard.
+2. **Full rollback to legacy stack:** restore the `sheepdogsim.com` CNAME to `matthew-kissinger.github.io` and re-create the `api.sheepdogsim.com` A record pointing at the droplet IP (`147.182.185.185`, proxied). The droplet and its SQLite leaderboard are still online; a DNS-only revert puts the old stack back in minutes.
+3. **Worker-only issue:** `cd worker && npx wrangler rollback` reverts the worker to the previous deployment. Pages bundle still points at the workers.dev hostname, so that one-liner is enough.
 
 ## Final state of the postmortem rules
 
-From POSTMORTEM.md §5, status per rule:
+From [archive/POSTMORTEM.md](archive/POSTMORTEM.md) §5, status per rule:
 
 - **Playtesting as gate:** met. Solo and MP happy paths were exercised before this report was written.
 - **Integration tests before deploy:** partial. The synthetic `sds-test.mjs` exercised the contract end-to-end but the vitest `tests/integration/flow.spec.ts` suite is still `test.skip`. Deferred to a follow-up.

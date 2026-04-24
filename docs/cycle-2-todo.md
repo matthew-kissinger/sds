@@ -1,14 +1,13 @@
 # Cycle 2 — What's Left
 
-> Punch list of work required to complete the DigitalOcean → Cloudflare migration. The new stack works at `sds-frontend.pages.dev`; the items here carry it the last mile and tear down the droplet. See [cycle-2-report.md](cycle-2-report.md) for what already shipped.
+> Punch list of remaining cleanup for the DigitalOcean → Cloudflare migration. `sheepdogsim.com` is live on Cloudflare Pages + Workers as of 2026-04-24. What's left here is automation, backfill, and droplet teardown. See [cycle-2-report.md](cycle-2-report.md) for the full shipped state.
 
-## P0 — Finish the cutover
+## P0 — Cutover (done 2026-04-24)
 
-- [ ] **Bind `sheepdogsim.com` to the `sds-frontend` Pages project.**
-  Dashboard → Pages → `sds-frontend` → Custom domains → Set up → `sheepdogsim.com`. Cloudflare auto-creates the CNAME in the zone.
-  *Requires dashboard access — the current project-scoped CLI token does not carry DNS/Pages-domain API scope.*
-- [ ] **Remove the legacy CNAME** pointing `sheepdogsim.com` at `matthew-kissinger.github.io` after the Pages custom domain propagates (propagation takes up to ~10 min).
-- [ ] **Verify the cutover in a clean browser:** fresh profile, no cache, visit `https://sheepdogsim.com/`, confirm the network requests go to `sds-worker.matt-m-kissinger.workers.dev` (or to a bound `api.sheepdogsim.com` route if we add one — see below).
+- [x] **Bind `sheepdogsim.com` to the `sds-frontend` Pages project.** Attached via API with a scoped token; status `active/active/active`.
+- [x] **Remove the legacy CNAME** pointing `sheepdogsim.com` at `matthew-kissinger.github.io`. Replaced by `CNAME → sds-frontend.pages.dev` (proxied).
+- [x] **Remove the legacy `api.sheepdogsim.com` A record** (droplet). Gone.
+- [x] **Verify end-to-end:** `https://sheepdogsim.com/` serves from Pages (no more `x-github-request-id`), bundle references the workers.dev URL, `/api/lobbies` returns `{"lobbies":[]}`, CORS OK.
 
 ## P1 — Deploy automation
 
@@ -18,9 +17,9 @@
 
 ## P2 — Tear down the droplet
 
-- [ ] **Soak period:** pick a date 5-7 days after the DNS cutover. No action until then.
-- [ ] **Final data pull:** on the droplet, `sqlite3 /opt/sds-server/leaderboard.db '.dump players' > /tmp/droplet-dump-YYYYMMDD.sql` just in case. Copy off-box to a personal backup.
-- [ ] **Destroy the droplet** via the DigitalOcean dashboard (it is a one-off, not Terraform-managed). Remove `api.sheepdogsim.com` DNS record in the same step. Record the destroy date in `DECISIONS.md`.
+- [ ] **Soak period:** target destroy ~2026-05-01 (1 week post-cutover). No action until then unless a regression surfaces.
+- [ ] **Final data pull:** on the droplet, `sqlite3 /opt/sds-server/leaderboard.db '.dump players' > /tmp/droplet-dump-YYYYMMDD.sql`. Copy off-box to a personal backup.
+- [ ] **Destroy the droplet** via the DigitalOcean dashboard (one-off, not Terraform-managed). Record the destroy date in `DECISIONS.md`.
 - [ ] Archive or delete `server/` from the repo, or leave it as historical reference. User preference — currently keeping it.
 
 ## P3 — Optional but good

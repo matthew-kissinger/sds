@@ -4,7 +4,7 @@
 # Runs from repo root. Creates the Worker, D1 database, and Pages project if
 # they do not already exist. Applies the D1 schema. Does NOT attach the custom
 # domain, issue the API token, or touch DNS - those remain manual per the
-# runbook at docs/c-retry/cf-recreate.md.
+# runbook at docs/archive/c-retry/cf-recreate.md.
 #
 # Destructive actions (deletes) are gated behind --force and require --yes.
 #

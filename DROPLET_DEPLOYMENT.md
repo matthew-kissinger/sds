@@ -1,6 +1,6 @@
 # DigitalOcean Droplet Deployment Guide
 
-> **DEPRECATED as of 2026-04-23.** The multiplayer server has migrated to Cloudflare Workers + Durable Objects + D1 — see [docs/cycle-2-report.md](docs/cycle-2-report.md). The droplet remains running as a soak-period fallback for the legacy `sheepdogsim.com` frontend until the DNS cutover described in [docs/cycle-2-todo.md](docs/cycle-2-todo.md) completes. This document is kept for historical reference and in case the droplet needs to be touched before it is destroyed.
+> **HISTORICAL — post-Cycle 2.** The multiplayer server migrated to Cloudflare Workers + Durable Objects + D1 on 2026-04-23, and `sheepdogsim.com` cut over to Cloudflare Pages on 2026-04-24. The droplet is now in soak mode only (target destroy: ~2026-05-01) and is kept as a rollback safety net; no DNS records point at it. This document is retained for historical reference and in case the droplet needs to be touched during soak. See [docs/cycle-2-report.md](docs/cycle-2-report.md) for the current stack.
 
 ## Overview (historical)
 

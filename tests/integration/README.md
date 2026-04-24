@@ -7,9 +7,10 @@ suite is split in two:
   local mock WebSocket server and must always pass. If these fail, the
   `TestClient`, fixtures, or MessagePack wiring is broken; fix before doing
   anything else.
-- `flow.spec.ts` - the seven-step two-client flow from POSTMORTEM section
-  5.3. All tests are `test.skip` on the current codebase because the worker
-  endpoints do not exist yet. The retry agent unskips one at a time.
+- `flow.spec.ts` - the seven-step two-client flow from `docs/archive/POSTMORTEM.md`
+  section 5.3. All tests are `test.skip` on the current codebase; the worker
+  endpoints exist now (Cycle 2 shipped), so unskipping one at a time is a cheap
+  insurance follow-up tracked in `docs/cycle-2-todo.md`.
 
 ## Running
 

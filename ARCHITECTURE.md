@@ -42,12 +42,12 @@ A real-time 3D herding game with GPU-accelerated rendering, edge-hosted multipla
 | Playwright | latest | Browser smoke tests |
 
 ### Infrastructure
-- **Frontend hosting:** Cloudflare Pages (`sds-frontend`, production branch `main`)
+- **Frontend hosting:** Cloudflare Pages (`sds-frontend`, production branch `main`), served at [sheepdogsim.com](https://sheepdogsim.com) via a proxied CNAME
 - **API:** Cloudflare Worker (`sds-worker`) at `sds-worker.matt-m-kissinger.workers.dev`
-- **Database:** Cloudflare D1 (`sds-db`)
-- **Legacy fallback (being retired):** DigitalOcean droplet at `api.sheepdogsim.com` running the old Geckos.io server
+- **State:** Durable Objects (`RoomDO` per room, `LobbyDO` as a singleton)
+- **Database:** Cloudflare D1 (`sds-db`) — materialized leaderboards + append-only submission log
 
-See [docs/cycle-2-report.md](docs/cycle-2-report.md) for the full cutover status.
+See [docs/cycle-2-report.md](docs/cycle-2-report.md) for the full cutover record.
 
 ## System architecture
 
@@ -204,7 +204,7 @@ Sign / verify using `crypto.subtle`. Used only to bind a Worker response to a pe
 
 ### HTTP endpoints
 
-See `worker/src/index.ts` for the authoritative implementation. Request/response shapes match [docs/c-retry/contract.md](docs/c-retry/contract.md) (kept as a reference for contributors wanting a single-sheet view).
+See `worker/src/index.ts` for the authoritative implementation. Request/response shapes match [docs/archive/c-retry/contract.md](docs/archive/c-retry/contract.md) (kept as a reference for contributors wanting a single-sheet view).
 
 ### WebSocket
 
@@ -322,10 +322,10 @@ The server-to-client state snapshot is the same shape the legacy Geckos server u
 ├── css/                    Production + multiplayer styles
 ├── public/                 Pages static assets (favicon, _headers)
 ├── docs/                   Design docs, cycle reports
-│   ├── cycle-1-audit.md
 │   ├── cycle-2-report.md   ← CURRENT STATE
 │   ├── cycle-2-todo.md     ← WHAT'S LEFT
-│   └── c-retry/            Pre-ship contract + runbooks (reference)
+│   ├── multiplayer-ux.md   MP design doc
+│   └── archive/            Historical: cycle-1-audit, POSTMORTEM, c-retry, AGENT_PLAN…
 │
 ├── index.html
 ├── package.json
@@ -390,7 +390,7 @@ See the "Roadmap — where the game is going" section in [README.md](README.md) 
 - [docs/cycle-2-report.md](docs/cycle-2-report.md) — what the current backend does and how we got here
 - [docs/cycle-2-todo.md](docs/cycle-2-todo.md) — the punch list to finish the migration
 - [DECISIONS.md](DECISIONS.md) — architectural decision log (cycle-by-cycle)
-- [POSTMORTEM.md](POSTMORTEM.md) — Cycle 1 rollback retrospective (for process lessons)
-- [docs/cycle-1-audit.md](docs/cycle-1-audit.md) — the seven launch-blocking bugs Cycle 1 shipped
-- [docs/c-retry/](docs/c-retry/) — pre-Cycle-2 contract + runbook artifacts; useful as a spec reference for contributors
-- [AGENT_PLAN.md](AGENT_PLAN.md) — historical roadmap
+- [docs/archive/POSTMORTEM.md](docs/archive/POSTMORTEM.md) — Cycle 1 rollback retrospective (process lessons)
+- [docs/archive/cycle-1-audit.md](docs/archive/cycle-1-audit.md) — the seven launch-blocking bugs Cycle 1 shipped
+- [docs/archive/c-retry/](docs/archive/c-retry/) — pre-Cycle-2 contract + runbook artifacts; useful as a spec reference for contributors
+- [docs/archive/AGENT_PLAN.md](docs/archive/AGENT_PLAN.md) — historical roadmap

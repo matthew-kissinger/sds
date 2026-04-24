@@ -111,7 +111,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for module-level diagrams, the network pr
 
 ## Current status
 
-The Cloudflare backend is deployed and the new frontend is live at `sds-frontend.pages.dev`. The last step — pointing the `sheepdogsim.com` apex at the Pages project instead of the legacy GitHub Pages build — is deferred until the new stack has soaked. See [docs/cycle-2-report.md](docs/cycle-2-report.md) for what shipped and [docs/cycle-2-todo.md](docs/cycle-2-todo.md) for what's left.
+Everything is on Cloudflare. [sheepdogsim.com](https://sheepdogsim.com) serves from Cloudflare Pages (`sds-frontend`), and the multiplayer API runs on a Cloudflare Worker at `sds-worker.matt-m-kissinger.workers.dev` with Durable Objects for room state and D1 for leaderboards. The old DigitalOcean droplet is in short-term soak mode as a rollback safety net; it's scheduled for teardown a week post-cutover. Closeout in [docs/cycle-2-report.md](docs/cycle-2-report.md); remaining cleanup in [docs/cycle-2-todo.md](docs/cycle-2-todo.md).
 
 ## Roadmap — where the game is going
 

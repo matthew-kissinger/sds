@@ -1,5 +1,5 @@
 // Main worker router: HTTP API + WS upgrade routing to RoomDO.
-// Contracts come from docs/c-retry/contract.md and docs/c-retry/authority.md.
+// Contracts come from docs/archive/c-retry/contract.md and docs/archive/c-retry/authority.md.
 
 import { RoomDO } from './RoomDO';
 import { LobbyDO } from './LobbyDO';

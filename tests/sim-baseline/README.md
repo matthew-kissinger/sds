@@ -6,7 +6,7 @@ port reproduces the same continuous behavior.
 
 ## Why this exists
 
-`docs/cycle-1-audit.md` "Significant" #1 documents that Cycle 1 dropped the
+`docs/archive/cycle-1-audit.md` "Significant" #1 documents that Cycle 1 dropped the
 server tick rate from 60Hz to 20Hz with **no playtest**. At 20Hz per-tick
 deltas are 3x larger than at 60Hz. In particular:
 

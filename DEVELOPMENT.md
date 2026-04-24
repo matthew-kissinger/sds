@@ -116,7 +116,7 @@ npx wrangler d1 execute sds-db --file migrations/0001_init.sql --local   # wipe+
 | Wrangler dev (worker) | 8787 | — |
 | Legacy Geckos server | 9208 | `PORT` |
 
-The legacy Geckos server (`server/`) is no longer the primary multiplayer server. It is kept as a rollback path while `sheepdogsim.com` still routes to GitHub Pages; once DNS cuts over to Pages it will be retired. See [docs/cycle-2-todo.md](docs/cycle-2-todo.md).
+The Geckos server (`server/`) is no longer in the critical path — `sheepdogsim.com` serves from Cloudflare Pages and the multiplayer API lives on a Cloudflare Worker. The directory is kept on disk as a short-term rollback archive until the DigitalOcean droplet is destroyed (~1 week post-cutover). See [docs/cycle-2-todo.md](docs/cycle-2-todo.md).
 
 ---
 
