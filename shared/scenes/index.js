@@ -8,11 +8,13 @@
 
 import { field } from './field.js';
 import { rollingHills } from './rolling-hills.js';
+import { openCountry } from './open-country.js';
 
 /** @type {Record<string, import('./types.js').SceneDef>} */
 const SCENES = {
     field,
-    'rolling-hills': rollingHills
+    'rolling-hills': rollingHills,
+    'open-country': openCountry
 };
 
 export const DEFAULT_SCENE_ID = 'field';
