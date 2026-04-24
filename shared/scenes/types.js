@@ -53,12 +53,21 @@
  * @property {number} seed
  * @property {number} heightScale
  * @property {Record<string, TerrainZone>} zones
+ * @property {string} [heightmapUrl]
+ * @property {number} [version]
+ */
+
+/**
+ * @typedef {Object} GrassColors
+ * @property {string} base
+ * @property {string} mid
+ * @property {string} tip
  */
 
 /**
  * @typedef {Object} GrassDef
  * @property {{desktop: number, mobile: number}} clumpsPerChunk
- * @property {string[]} [colors]
+ * @property {GrassColors} [colors]
  * @property {{strength: number, frequency: number}} [wind]
  * @property {number} [cutoffDistance]
  */
@@ -71,7 +80,7 @@
 
 /**
  * @typedef {Object} SkyDef
- * @property {"noon"|"dusk"|"overcast"|"dawn"} preset
+ * @property {"pastoral-noon"|"dusk"|"overcast"|"dawn"|"golden-hour"} preset
  */
 
 /**
