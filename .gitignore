@@ -84,3 +84,6 @@ dist-react/
 # itch.io build artifacts
 dist-itchio/
 sheep-dog-sim-itchio.zip
+
+# Playtest screenshots (ephemeral)
+cycle2-*.png
