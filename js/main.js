@@ -1161,6 +1161,18 @@ class SheepDogSimulation {
                             clientSheepEntity.velocity.x = serverSheepData.vx;
                             clientSheepEntity.velocity.z = serverSheepData.vz;
                         }
+
+                        // Record snapshot for velocity-based extrapolation between packets.
+                        // When a packet is late, we predict forward from this base using vx/vz
+                        // so sheep keep moving smoothly instead of freezing.
+                        clientSheepEntity._netBaseX = serverSheepData.x;
+                        clientSheepEntity._netBaseZ = serverSheepData.z;
+                        clientSheepEntity._netVx = serverSheepData.vx || 0;
+                        clientSheepEntity._netVz = serverSheepData.vz || 0;
+                        clientSheepEntity._netBaseTs = performance.now();
+                    } else {
+                        // Retiring/grazing sheep: disable extrapolation (server drives target).
+                        clientSheepEntity._netBaseTs = 0;
                     }
                     
                     // Update retirement target if provided
@@ -1444,11 +1456,24 @@ class SheepDogSimulation {
         // Update other players with interpolation for smooth movement
         if (this.isMultiplayer && !isPaused) {
             for (const remoteDog of this.otherPlayers.values()) {
-                const interpolationFactor = Math.min(this.interpolationSpeed * 2 * deltaTime, 1.0);
+                // When the server is interpolating toward this client's stop position,
+                // blend over a fixed number of frames instead of reusing the normal
+                // distance-proportional lerp (which can visually pop on a sudden stop).
+                if (remoteDog._blendFramesRemaining && remoteDog._blendFramesRemaining > 0) {
+                    const total = remoteDog._blendTotalFrames || 8;
+                    const t = 1 - (remoteDog._blendFramesRemaining / total);
+                    remoteDog.position.x = remoteDog._blendStartPos.x
+                        + (remoteDog.targetPosition.x - remoteDog._blendStartPos.x) * t;
+                    remoteDog.position.z = remoteDog._blendStartPos.z
+                        + (remoteDog.targetPosition.z - remoteDog._blendStartPos.z) * t;
+                    remoteDog._blendFramesRemaining--;
+                } else {
+                    const interpolationFactor = Math.min(this.interpolationSpeed * 2 * deltaTime, 1.0);
 
-                // Interpolate position
-                remoteDog.position.x += (remoteDog.targetPosition.x - remoteDog.position.x) * interpolationFactor;
-                remoteDog.position.z += (remoteDog.targetPosition.z - remoteDog.position.z) * interpolationFactor;
+                    // Interpolate position
+                    remoteDog.position.x += (remoteDog.targetPosition.x - remoteDog.position.x) * interpolationFactor;
+                    remoteDog.position.z += (remoteDog.targetPosition.z - remoteDog.position.z) * interpolationFactor;
+                }
 
                 // Interpolate rotation
                 let rotationDiff = remoteDog.targetRotation - remoteDog.currentRotation;
@@ -1466,7 +1491,7 @@ class SheepDogSimulation {
                 remoteDog.animate(deltaTime);
             }
         }
-        
+
         // Update timer (respects pause state internally)
         // Skip for local multiplayer - handled in updateLocalMultiplayer
         if (!this.isLocalMultiplayer) {
@@ -1478,6 +1503,34 @@ class SheepDogSimulation {
         // Skip for local multiplayer - handled in updateLocalMultiplayer
         if (!isPaused && !this.isLocalMultiplayer) {
             this.gameState.updateSheepBehaviors(deltaTime);
+        }
+
+        // Sheep velocity-based extrapolation (multiplayer only). After behaviors
+        // have run, override active sheep positions with server_base + vx*elapsed
+        // so late/dropped packets don't cause a backward snap or freeze. Runs
+        // after updateSheepBehaviors so client-side flocking drift doesn't win.
+        if (this.isMultiplayer && !isPaused) {
+            const sheepList = this.gameState.getSheep();
+            const sheepSystem = this.gameState.optimizedSheepSystem;
+            if (sheepList && sheepSystem && typeof sheepSystem.forceUpdateSheepPositions === 'function') {
+                const now = performance.now();
+                const MAX_EXTRAP = 0.5; // seconds - cap to prevent runaway drift
+                const THRESHOLD = 0.033; // seconds - ~1.5 frames at 20Hz server rate
+                let anyExtrapolated = false;
+                for (const sheep of sheepList) {
+                    if (!sheep || sheep.isRetiring || sheep.state === 2) continue;
+                    if (!sheep._netBaseTs) continue;
+                    const elapsed = Math.min((now - sheep._netBaseTs) / 1000, MAX_EXTRAP);
+                    if (elapsed > THRESHOLD) {
+                        sheep.position.x = sheep._netBaseX + sheep._netVx * elapsed;
+                        sheep.position.z = sheep._netBaseZ + sheep._netVz * elapsed;
+                        anyExtrapolated = true;
+                    }
+                }
+                if (anyExtrapolated) {
+                    sheepSystem.forceUpdateSheepPositions();
+                }
+            }
         }
         
         // Update UI (only when game is active and not paused)
@@ -1641,6 +1694,27 @@ class SheepDogSimulation {
         // 2. Update the target state for interpolation from server data
         remoteDog.targetPosition.set(dogData.x, dogData.z);
         remoteDog.targetRotation = dogData.rotation;
+
+        // When the server flags that it is catching up to the remote player's
+        // stopped position, run a fixed 8-frame blend from where this client
+        // currently shows the dog toward the authoritative stop point. If a
+        // blend is already active, keep blending toward the latest target.
+        if (dogData.interpolatingToClient) {
+            const BLEND_FRAMES = 8;
+            if (!remoteDog._blendFramesRemaining || remoteDog._blendFramesRemaining <= 0) {
+                remoteDog._blendStartPos = {
+                    x: remoteDog.position.x,
+                    z: remoteDog.position.z
+                };
+                remoteDog._blendTotalFrames = BLEND_FRAMES;
+                remoteDog._blendFramesRemaining = BLEND_FRAMES;
+            }
+            // Always keep targetPosition current (already updated above); the
+            // per-frame blend pass will lerp toward it.
+        } else if (remoteDog._blendFramesRemaining) {
+            // Server resumed normal updates; drop any lingering blend state.
+            remoteDog._blendFramesRemaining = 0;
+        }
 
         // 3. Update animation-driving properties directly
         // This data will be used by remoteDog.animate() in the main loop

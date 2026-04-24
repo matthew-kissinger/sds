@@ -47,8 +47,16 @@ export class NetworkManager {
         this.lastServerState = null;
         this.previousServerState = null;
         this.serverUpdateTimestamp = 0;
-        this.interpolationDelay = 100; // ms
-        
+        this.interpolationDelay = 100; // ms - adapts based on measured jitter
+        this.baseInterpolationDelay = 100; // ms - low-jitter default
+        this.expandedInterpolationDelay = 150; // ms - high-jitter fallback
+
+        // Adaptive jitter buffer: ring of recent packet arrival timestamps
+        this.packetArrivalTimes = [];
+        this.maxArrivalSamples = 20;
+        this.jitterExpandThreshold = 30; // ms stddev -> expand delay
+        this.jitterShrinkThreshold = 15; // ms stddev -> shrink delay
+
         // Input buffering
         this.inputBuffer = [];
         this.lastInputSequence = 0;
@@ -530,26 +538,59 @@ export class NetworkManager {
         // Store previous state for interpolation
         this.previousServerState = this.lastServerState;
         this.lastServerState = data;
-        this.serverUpdateTimestamp = performance.now();
-        
+        const now = performance.now();
+        this.serverUpdateTimestamp = now;
+
+        // Adaptive jitter buffer: track inter-packet stddev over recent arrivals
+        this.recordPacketArrival(now);
+
         // Notify game of new state
         this.notifyGameStateUpdate(data);
     }
-    
+
+    // Record packet arrival time and adapt interpolationDelay based on jitter.
+    recordPacketArrival(now) {
+        this.packetArrivalTimes.push(now);
+        if (this.packetArrivalTimes.length > this.maxArrivalSamples) {
+            this.packetArrivalTimes.shift();
+        }
+
+        // Need enough samples to compute a meaningful stddev of intervals.
+        if (this.packetArrivalTimes.length < 5) return;
+
+        const intervals = [];
+        for (let i = 1; i < this.packetArrivalTimes.length; i++) {
+            intervals.push(this.packetArrivalTimes[i] - this.packetArrivalTimes[i - 1]);
+        }
+        const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+        let variance = 0;
+        for (const v of intervals) variance += (v - mean) * (v - mean);
+        variance /= intervals.length;
+        const stddev = Math.sqrt(variance);
+
+        if (stddev > this.jitterExpandThreshold) {
+            this.interpolationDelay = this.expandedInterpolationDelay;
+        } else if (stddev < this.jitterShrinkThreshold) {
+            this.interpolationDelay = this.baseInterpolationDelay;
+        }
+    }
+
     // Get interpolated game state for smooth rendering
     getInterpolatedGameState() {
         if (!this.lastServerState || !this.previousServerState) {
             return this.lastServerState;
         }
-        
+
         const now = performance.now();
         const timeSinceUpdate = now - this.serverUpdateTimestamp;
-        const serverTickRate = 1000 / 60; // 60 FPS server
-        
+        // Use adaptive interpolation delay so high-jitter connections get a
+        // wider buffer to absorb late packets.
+        const delayWindow = Math.max(1, this.interpolationDelay);
+
         // Calculate interpolation factor
-        let alpha = timeSinceUpdate / serverTickRate;
+        let alpha = timeSinceUpdate / delayWindow;
         alpha = Math.max(0, Math.min(1, alpha)); // Clamp between 0 and 1
-        
+
         // Interpolate between previous and current state
         return this.interpolateGameState(this.previousServerState, this.lastServerState, alpha);
     }
