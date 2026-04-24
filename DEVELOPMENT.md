@@ -1,171 +1,191 @@
 # Development Guide
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
-- Node.js 20.19+ or 22.12+
-- npm
+- Node.js 22+ (check with `node --version`)
+- npm 10+
+- A Cloudflare account (free plan is fine) if you want to run the multiplayer worker locally against real D1
+- A modern browser: Chrome 80+, Firefox 75+, Safari 13+, Edge 80+
 
-### Installation
+## Installation
+
 ```bash
-# Install frontend dependencies
+# Client deps
 npm install
 
-# Install server dependencies
-cd server && npm install && cd ..
+# Worker deps
+cd worker && npm install && cd ..
 ```
 
 ---
 
-## Development Scripts
+## Running locally
 
-### Frontend Only (Single Player)
+### Single-player only
 
-```bash
-# Local development (localhost:3000)
-npm run dev
-
-# LAN accessible (for mobile testing)
-npm run dev:lan
-```
-
-### Backend Server Only
+No worker needed.
 
 ```bash
-# Production mode
-npm run server
-
-# Development mode (auto-restart on changes)
-npm run server:dev
+npm run dev                 # Vite on :3000
 ```
 
-### Full Stack (Frontend + Backend)
+The client auto-detects `localhost` and skips any multiplayer network calls unless you open the multiplayer UI.
+
+### Full stack (multiplayer-capable)
+
+Two terminals:
 
 ```bash
-# Local development
-npm run dev:full
+# Terminal 1 — client
+npm run dev                 # Vite on :3000
 
-# LAN accessible (for mobile testing on same WiFi)
-npm run dev:lan:full
+# Terminal 2 — worker (Cloudflare Workers local runtime via wrangler)
+cd worker
+npx wrangler dev            # Worker on :8787, talks to remote D1 in preview mode
 ```
 
-### Production Build
+The client detects `localhost` in `js/NetworkManager.js` and points at:
+- `http://localhost:8787` (HTTP API)
+- `ws://localhost:8787`   (WebSocket)
+
+So the two dev servers wire up automatically.
+
+### LAN testing (mobile on same WiFi)
 
 ```bash
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Preview on LAN (mobile testing)
-npm run preview:lan
+npm run dev:lan             # Vite bound to 0.0.0.0
 ```
+
+Vite prints the LAN URL (e.g. `http://192.168.1.100:3000/`). The worker's `wrangler dev` also listens on `0.0.0.0`, so a phone on the same network can hit both. If the client is on LAN but the worker is on `localhost` only, update the `NetworkManager` constructor's URL detection or run `wrangler dev --ip 0.0.0.0`.
 
 ---
 
-## Mobile Testing on Local Network
+## Common tasks
 
-### Step 1: Start LAN Development Server
+### Build for production
+
 ```bash
-npm run dev:lan:full
+npm run build               # client → dist/
+cd worker && npx wrangler deploy
+npx wrangler pages deploy dist --project-name=sds-frontend --branch=main
 ```
 
-This will output something like:
+### Run the test suites
+
+```bash
+npm test                    # all vitest suites
+npm run test:integration    # WebSocket two-client harness
+npm run test:e2e            # Playwright browser smoke (requires `npx playwright install chromium` once)
 ```
-  VITE v7.2.2  ready in 500 ms
 
-  ➜  Local:   http://localhost:3000/
-  ➜  Network: http://192.168.1.100:3000/
+### Inspect worker behavior
+
+```bash
+cd worker
+npx wrangler tail           # live logs from the deployed worker
+npx wrangler tail --format=json > /tmp/w.log   # for grepping structured fields
 ```
 
-### Step 2: Connect from Mobile Device
-1. Ensure your phone is on the same WiFi network as your computer
-2. Open the **Network** URL on your phone's browser (e.g., `http://192.168.1.100:3000/`)
+The synthetic end-to-end client at `sds-test.mjs` (repo root) exercises register → create-room → WS upgrade → startGame → state-frame count against the live worker:
 
-### Step 3: For Multiplayer Testing
-The backend server runs on port **9208** by default. The frontend is configured to connect to:
-- Production: `api.sheepdogsim.com`
-- Local: `localhost:9208`
+```bash
+node sds-test.mjs
+```
 
-For local multiplayer testing, you may need to update the server URL in the frontend code or use environment variables.
+### Inspect D1
+
+```bash
+cd worker
+npx wrangler d1 execute sds-db --command "SELECT COUNT(*) FROM players" --remote
+npx wrangler d1 execute sds-db --file migrations/0001_init.sql --local   # wipe+reapply schema locally
+```
+
+### Apply schema changes
+
+1. Add a new migration file: `worker/migrations/0002_<change>.sql` (use `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` patterns).
+2. Apply locally: `npx wrangler d1 execute sds-db --file migrations/0002_<change>.sql --local`
+3. When ready: `npx wrangler d1 execute sds-db --file migrations/0002_<change>.sql --remote`
 
 ---
 
-## Port Configuration
+## Port reference
 
-| Service | Default Port | Environment Variable |
-|---------|-------------|---------------------|
-| Frontend (Vite) | 3000 | - |
-| Backend (Geckos.io) | 9208 | `PORT` |
+| Service | Port | Env var |
+|---------|------|---------|
+| Vite (client) | 3000 | — |
+| Wrangler dev (worker) | 8787 | — |
+| Legacy Geckos server | 9208 | `PORT` |
+
+The legacy Geckos server (`server/`) is no longer the primary multiplayer server. It is kept as a rollback path while `sheepdogsim.com` still routes to GitHub Pages; once DNS cuts over to Pages it will be retired. See [docs/cycle-2-todo.md](docs/cycle-2-todo.md).
 
 ---
 
 ## Troubleshooting
 
-### Port Already in Use
+### Port already in use
+
 ```bash
-# Kill process on port 3000 (Windows)
+# Windows
 netstat -ano | findstr :3000
 taskkill /PID <PID> /F
 
-# Kill process on port 3000 (Mac/Linux)
+# macOS / Linux
 lsof -i :3000
 kill -9 <PID>
 ```
 
-### Clean Vite Cache
+### Vite cache is stale
+
 ```bash
 npm run clean
 ```
 
-### Mobile Can't Connect
-1. Check firewall settings - allow Node.js through Windows Firewall
-2. Ensure both devices are on same network
-3. Try disabling VPN if active
-4. On Windows: Run `ipconfig` to verify your local IP
+### Worker can't reach D1
+
+`npx wrangler whoami` should show the same account the D1 database lives in. If `npx wrangler d1 list` doesn't show `sds-db`, reauthenticate with `npx wrangler login` or set `CLOUDFLARE_API_TOKEN` in the environment.
+
+### Mobile can't connect on LAN
+
+1. Allow Node through the firewall (Windows Security → Allow an app through firewall).
+2. Both devices must be on the same WiFi network (not guest SSID).
+3. Disable VPN if active.
+4. Run `ipconfig` / `ifconfig` to verify your IP matches what Vite printed.
+
+### `npm run build` fails on `shared/BoundaryCollision.js`
+
+The file uses `let position` (not `const`) in `applyHardBoundaryConstraintsWithMultipleGates` because that function reassigns it when sheep pass through competitive gates. If you see `Cannot assign to "position" because it is a constant`, you have an old checkout; `git pull`.
 
 ---
 
-## Environment Variables
+## Environment variables
 
-Create a `.env` file for local overrides:
+Client (optional, create `.env.local`):
 
 ```env
-# Backend
-PORT=9208
-
-# Frontend (create .env.local)
-VITE_API_URL=http://localhost:9208
+# Override the worker URL (defaults: localhost:8787 for dev, workers.dev for prod)
+# Not currently wired — NetworkManager detects localhost vs hostname directly.
 ```
+
+Worker secrets (set via `npx wrangler secret put <NAME>`):
+
+- `JWT_SECRET` — 32-byte hex string. Used to sign short-lived session tokens. Generate with `openssl rand -hex 32`.
+
+Repo secrets (GitHub Actions, when CI is wired up):
+
+- `CF_API_TOKEN` — Cloudflare API token with Workers Edit + Pages Edit + D1 Edit
+- `CF_ACCOUNT_ID` — `56adffd40534f7fe110fc661a40bbf53` (not secret, shown here for convenience)
 
 ---
 
-## VS Code Tasks (Optional)
+## Project layout
 
-Add to `.vscode/tasks.json`:
-```json
-{
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Dev: Frontend",
-      "type": "npm",
-      "script": "dev",
-      "problemMatcher": []
-    },
-    {
-      "label": "Dev: Full Stack",
-      "type": "npm",
-      "script": "dev:full",
-      "problemMatcher": []
-    },
-    {
-      "label": "Dev: LAN (Mobile Testing)",
-      "type": "npm",
-      "script": "dev:lan:full",
-      "problemMatcher": []
-    }
-  ]
-}
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full module map. Short version:
+
+```
+js/               client (Three.js + React + NetworkManager)
+worker/           Cloudflare Worker (RoomDO + LobbyDO + D1)
+shared/           deterministic sim (imported by both)
+server/           legacy Geckos server (being retired)
+tests/            vitest + Playwright
+docs/             design + cycle reports
 ```

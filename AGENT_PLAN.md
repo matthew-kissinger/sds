@@ -1,5 +1,7 @@
 # SDS · Agent-Driven Development Cycle
 
+> **Cycle 2 has shipped (2026-04-23).** The multiplayer migration described in Sections 0 and 10 is complete. See [docs/cycle-2-report.md](docs/cycle-2-report.md) for what actually landed and [docs/cycle-2-todo.md](docs/cycle-2-todo.md) for the remaining punch list (DNS cutover, droplet teardown, CI auto-deploy). The rest of this file is retained as historical roadmap context; do not re-execute the C-retry tracks.
+
 > **Single source of truth for the current development cycle.**
 > An agent spawned in this repo with only this file for context should be able to execute any track below without prior conversation history.
 

@@ -1,6 +1,8 @@
 # DigitalOcean Droplet Deployment Guide
 
-## Overview
+> **DEPRECATED as of 2026-04-23.** The multiplayer server has migrated to Cloudflare Workers + Durable Objects + D1 — see [docs/cycle-2-report.md](docs/cycle-2-report.md). The droplet remains running as a soak-period fallback for the legacy `sheepdogsim.com` frontend until the DNS cutover described in [docs/cycle-2-todo.md](docs/cycle-2-todo.md) completes. This document is kept for historical reference and in case the droplet needs to be touched before it is destroyed.
+
+## Overview (historical)
 
 The multiplayer server runs on a DigitalOcean Droplet (VPS) with Cloudflare SSL proxy. WebRTC requires UDP port control (10000-20000) which is only available on VPS/dedicated servers, not managed platforms.
 

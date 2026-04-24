@@ -45,3 +45,28 @@ Worker was deployed to `sheepdogsim.com/api/*` and `/r/*`, D1 had 207 players mi
 **Decisions 1-5 above remain intact** as intent for the next attempt. Decision 10 (30-day droplet parallel) was never triggered because cutover was reverted. Track F's 14-day safety window also moot.
 
 **For the next cycle:** read `POSTMORTEM.md` first. Do not start writing code until you can answer "how will I playtest this" concretely.
+
+---
+
+## Cycle 2 — CF backend shipped (2026-04-23, overnight)
+
+The migration from Geckos.io + DigitalOcean to Cloudflare Workers + Durable Objects + D1 + Pages shipped and is live at `sds-frontend.pages.dev`. The DigitalOcean droplet remains running for a soak period (target destroy: 2026-04-30 through 2026-05-04 depending on how bugs shake out). `sheepdogsim.com` still points at the legacy GitHub Pages build; the DNS cutover to CF Pages is a separate dashboard step tracked in [docs/cycle-2-todo.md](docs/cycle-2-todo.md).
+
+Full closeout: [docs/cycle-2-report.md](docs/cycle-2-report.md).
+
+**Deviations from the Cycle 2 plan documented in `docs/c-retry/`:**
+
+- **Tick rate:** Decision 4 in the original list called for 20 Hz on DO. We kept 60 Hz at the user's instruction — the 20 Hz rubber-banding was one of the Cycle 1 regressions the 7-day soak was meant to catch, and running 60 Hz inside an active DO is a known-good pattern. Reopen the 20 Hz question only if DO CPU cost becomes a real constraint.
+- **Identity handshake:** `protocol-v2.md` Section 5 proposed a post-upgrade `hello` message. We kept identity on the WS URL (`?playerId=<sessionId>`) because the REST join has already stored the session in the DO, so the WS upgrade is a lookup, not a credential handshake. Simpler and one round-trip faster. `authority.md` §1 called this out as the contract-doc-vs-protocol-doc tension; this is the resolution.
+- **Staging subdomain:** dropped. The Cycle 1 postmortem's 7-day-soak, mandatory-gate process ceremony was retired for this cycle per the `NEXT_SESSION.md` directive. Ship to prod, find bugs there, fix them.
+- **`sheepRetired` is always emitted.** We kept the droplet's behavior: `sheepRetired` is a top-level field on every state broadcast in every mode (not just coop). The client reads it in the HUD regardless.
+- **Route bindings deferred:** `wrangler.toml` does not currently declare routes for `sheepdogsim.com/api/*` or `/r/*` — the frontend hits the `workers.dev` hostname directly. The route binding is part of the DNS cutover, not a prereq for the new stack working.
+
+**Follow-ups that stayed on the list:**
+
+- DNS cutover (`sheepdogsim.com` → Pages) — dashboard-only step, pending a verification window on the current deployment.
+- GitHub Actions workflow for auto-deploy — not re-added this cycle.
+- 207-row leaderboard migration from droplet SQLite to D1 — pending.
+- Switching the worker to the Hibernation WebSocket API — deferred until idle-room cost matters.
+
+**Decisions 1-5 from the top of this file remain in force** as the direction. Decision 10 (30-day parallel droplet) is relaxed: plan is 5-7 day soak then destroy.

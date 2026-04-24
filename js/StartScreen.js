@@ -158,11 +158,13 @@ export class StartScreen {
     }
     
     startMultiplayerGame() {
-        if (!this.isHost) return;
-        
+        console.log('[START] StartScreen.startMultiplayerGame isHost=', this.isHost, 'room=', this.currentRoom?.roomCode);
+        if (!this.isHost) {
+            console.warn('[START] aborting: this.isHost is false');
+            return;
+        }
         this.playUIClick();
         this.networkManager.startGame();
-        // Game start will be handled by network events
     }
     
     selectSolo(dogType, singlePlayerMode = 'classic') {

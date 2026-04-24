@@ -1,5 +1,7 @@
 # docs/c-retry/
 
+> **Cycle 2 shipped 2026-04-23.** See [../cycle-2-report.md](../cycle-2-report.md) for what actually landed (and where the shipped implementation deviates from the plans in this directory). The files here remain useful as a grep-anchored reference for client/server contract shapes and as the runbook if CF resources ever need to be recreated from scratch. Treat any specific process or timeline references as historical.
+
 Prep artifacts for Cycle 2 of the Cloudflare Workers + Durable Objects + D1 + Pages migration. Cycle 1 attempted this on 2026-04-23 and was rolled back the same day. This directory exists so Cycle 2 does not reinvent the reference material.
 
 ## Status key

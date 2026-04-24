@@ -1487,7 +1487,11 @@ class SheepDogSimulation {
                     remoteDog.mesh.rotation.y = remoteDog.currentRotation;
                 }
 
-                // Run the dog's internal animation logic
+                // Tick the skeletal animation mixer and state machine so the
+                // remote dog cycles idle/walk/run clips based on its velocity.
+                // `animate()` alone only handles the player-icon overlay.
+                if (remoteDog.targetVelocity) remoteDog.targetVelocity.set(0, 0);
+                remoteDog.updateAnimationSystem(deltaTime);
                 remoteDog.animate(deltaTime);
             }
         }

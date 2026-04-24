@@ -266,8 +266,8 @@ export function applyHardBoundaryConstraintsWithMultipleGates(entity, bounds, co
         allowGatePassage = false
     } = config;
     
-    const position = entity.position.clone();
-    
+    let position = entity.position.clone();
+
     // Check if entity is in any gate area
     let inAnyGateArea = false;
     let gateConstraints = null;

@@ -1,19 +1,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { GrassSystem } from './GrassSystem.js';
 import {
     countMeshTriangles,
     sumInstancedMeshTriangles,
     sumObjectTreeTriangles
 } from './utils/TriangleCount.js';
-
-// Distance (world units) beyond which mountains use a coarse simplified mesh.
-// Fog ends around 500-600 and the camera never renders much beyond that, so
-// distant mountains are hazy/blue-tinted anyway - the tri reduction is invisible.
-const MOUNTAIN_COARSE_LOD_DISTANCE = 400;
-// Fraction of original vertices to remove during simplification (~30% kept).
-const MOUNTAIN_COARSE_LOD_REDUCTION = 0.7;
 
 /**
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements
@@ -45,12 +37,6 @@ export class TerrainBuilder {
             animals: {}
         };
         this.modelsLoaded = false;
-
-        // Lazily-built simplified mountain source models keyed by mountain type
-        // (e.g. 'mountain1', 'mountain2'). Used for mountains placed beyond
-        // MOUNTAIN_COARSE_LOD_DISTANCE - the simplification work runs once per
-        // source, not per placement.
-        this.simplifiedMountainCache = {};
 
         // Terrain zones
         this.zones = {
@@ -1260,67 +1246,6 @@ export class TerrainBuilder {
         }
     }
 
-    /**
-     * Return a simplified source model for the given mountain type, building
-     * and caching one on first request. Simplification runs once per source
-     * (not per placement) and targets ~30% of the original vertex count. If
-     * simplification fails for any mesh, that mesh keeps its original geometry.
-     *
-     * @param {string} mountainType - Key into this.models.mountains (e.g. 'mountain1').
-     * @returns {THREE.Object3D|null} A simplified source scene, or null if the source is missing.
-     */
-    getSimplifiedMountainSource(mountainType) {
-        if (this.simplifiedMountainCache[mountainType]) {
-            return this.simplifiedMountainCache[mountainType];
-        }
-
-        const source = this.models.mountains[mountainType];
-        if (!source) return null;
-
-        const simplifiedRoot = source.clone();
-        const modifier = new SimplifyModifier();
-        let originalTris = 0;
-        let simplifiedTris = 0;
-
-        simplifiedRoot.traverse(child => {
-            if (!child.isMesh || !child.geometry) return;
-
-            const geometry = child.geometry;
-            const posAttr = geometry.attributes && geometry.attributes.position;
-            if (!posAttr) return;
-
-            const vertexCount = posAttr.count;
-            // Skip tiny meshes - the simplifier can collapse them to nothing.
-            if (vertexCount < 60) return;
-
-            const removeCount = Math.floor(vertexCount * MOUNTAIN_COARSE_LOD_REDUCTION);
-            if (removeCount <= 0) return;
-
-            const triBefore = (geometry.index ? geometry.index.count : posAttr.count) / 3;
-            originalTris += triBefore;
-
-            try {
-                const simplified = modifier.modify(geometry, removeCount);
-                // Sanity: if the simplifier produced nothing usable, fall back.
-                if (simplified && simplified.attributes && simplified.attributes.position && simplified.attributes.position.count > 3) {
-                    child.geometry = simplified;
-                    const triAfter = (simplified.index ? simplified.index.count : simplified.attributes.position.count) / 3;
-                    simplifiedTris += triAfter;
-                } else {
-                    simplifiedTris += triBefore;
-                }
-            } catch (err) {
-                console.warn(`[BUILD] SimplifyModifier failed for ${mountainType}, keeping original geometry:`, err.message || err);
-                simplifiedTris += triBefore;
-            }
-        });
-
-        console.log(`[BUILD] Simplified ${mountainType} source: ${Math.round(originalTris)} -> ${Math.round(simplifiedTris)} tris per placement (used for distance > ${MOUNTAIN_COARSE_LOD_DISTANCE})`);
-
-        this.simplifiedMountainCache[mountainType] = simplifiedRoot;
-        return simplifiedRoot;
-    }
-
     async addMountains() {
         if (!this.modelsLoaded) {
             console.warn('Models not loaded yet. Loading models...');
@@ -1365,27 +1290,18 @@ export class TerrainBuilder {
         // Create mountain instances
         mountainPlacements.forEach((placement, index) => {
             const mountainType = index % 2 === 0 ? 'mountain1' : 'mountain2';
+            const model = this.models.mountains[mountainType];
+            if (!model) return;
 
-            // Distance from origin - drives both the coarse-LOD swap and the
-            // atmospheric tint below.
-            const distance = Math.sqrt(placement.x * placement.x + placement.z * placement.z);
-
-            // Beyond MOUNTAIN_COARSE_LOD_DISTANCE, use a pre-simplified source.
-            // Built lazily and cached per mountain type so the simplify work
-            // runs at most once per source model.
-            const useCoarseLod = distance > MOUNTAIN_COARSE_LOD_DISTANCE;
-            const source = useCoarseLod
-                ? this.getSimplifiedMountainSource(mountainType)
-                : this.models.mountains[mountainType];
-
-            if (!source) return;
-
-            const mountainGroup = source.clone();
+            const mountainGroup = model.clone();
 
             // Apply transformations with y offset for partial burial
             mountainGroup.position.set(placement.x, placement.yOffset || 0, placement.z);
             mountainGroup.rotation.y = placement.rotation;
             mountainGroup.scale.setScalar(placement.scale);
+
+            // Distance from origin (used by the atmospheric tint below).
+            const distance = Math.sqrt(placement.x * placement.x + placement.z * placement.z);
 
             // Simple LOD - reduce detail for far mountains
             mountainGroup.traverse(child => {
@@ -1439,15 +1355,7 @@ export class TerrainBuilder {
                 const scale = 40.0 + Math.random() * 40.0;
                 const mountainType = Math.random() < 0.5 ? 'mountain1' : 'mountain2';
 
-                // Hills sit in the 400-500 m ring - distance from origin
-                // almost always exceeds the coarse-LOD threshold, but we
-                // still gate on the actual distance to stay consistent.
-                const hillDistance = Math.sqrt(finalX * finalX + finalZ * finalZ);
-                const useCoarseLod = hillDistance > MOUNTAIN_COARSE_LOD_DISTANCE;
-                const model = useCoarseLod
-                    ? this.getSimplifiedMountainSource(mountainType)
-                    : this.models.mountains[mountainType];
-
+                const model = this.models.mountains[mountainType];
                 if (!model) continue;
 
                 const hill = model.clone();

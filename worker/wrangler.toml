@@ -1,0 +1,36 @@
+name = "sds-worker"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Observability
+[observability]
+enabled = true
+
+# Durable Objects
+[[durable_objects.bindings]]
+name = "ROOM_DO"
+class_name = "RoomDO"
+
+[[durable_objects.bindings]]
+name = "LOBBY_DO"
+class_name = "LobbyDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDO", "LobbyDO"]
+
+# D1 database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "sds-db"
+database_id = "513aa937-e60a-4fb6-b499-9f3814149e88"
+
+# Route bindings for custom domain (added after DNS is configured)
+# [[routes]]
+# pattern = "sheepdogsim.com/api/*"
+# zone_name = "sheepdogsim.com"
+#
+# [[routes]]
+# pattern = "sheepdogsim.com/r/*"
+# zone_name = "sheepdogsim.com"

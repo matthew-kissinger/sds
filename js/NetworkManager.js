@@ -1,40 +1,40 @@
-import geckos from '@geckos.io/client';
+// Native WebSocket + MessagePack + fetch client for the Cloudflare Workers backend.
+// Preserves the external API that js/main.js and the UI components rely on —
+// `on*` callback surface, room/join/leave methods, leaderboard methods, and
+// client-side prediction/jitter-buffer helpers are all unchanged.
 
-/**
- * NetworkManager - Handles all multiplayer networking functionality
- * - Room management (create, join, leave)
- * - Input synchronization (send player inputs to server)
- * - State synchronization (receive game state from server)
- * - Connection handling (connect, disconnect, reconnect)
- */
+import { encode as msgpackEncode, decode as msgpackDecode } from '@msgpack/msgpack';
+
 export class NetworkManager {
     constructor() {
-        this.channel = null;
+        this.ws = null;
         this.connected = false;
         this.connecting = false;
         this.currentRoom = null;
         this.playerId = null;
         this.playerName = null;
+        this.dogType = 'jep';
         this.isHost = false;
-        
-        // Server configuration - Environment specific
-        const isLocalDevelopment = window.location.hostname === 'localhost' || 
-                                  window.location.hostname === '127.0.0.1' ||
-                                  window.location.hostname === '';
-        
-        if (isLocalDevelopment) {
-            // Local development configuration
-            this.serverHost = '127.0.0.1';
-            this.serverPort = 9208;
+        this.token = null;
+
+        const isLocal = typeof window !== 'undefined' && (
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1' ||
+            window.location.hostname === ''
+        );
+
+        // Worker URLs. Pages Functions proxy `/api` to the worker when deployed,
+        // but we call the worker directly so the same code works from any origin.
+        if (isLocal) {
+            this.apiBase = 'http://localhost:8787';
+            this.wsBase = 'ws://localhost:8787';
         } else {
-            // Production configuration - DigitalOcean Droplet with Cloudflare SSL
-            this.serverHost = 'api.sheepdogsim.com';
-            this.serverPort = null; // Use full URL instead of separate port
+            this.apiBase = 'https://sds-worker.matt-m-kissinger.workers.dev';
+            this.wsBase = 'wss://sds-worker.matt-m-kissinger.workers.dev';
         }
-        
-        // Debug mode - disabled in production
-        this.debugMode = isLocalDevelopment;
-        
+
+        this.debugMode = isLocal;
+
         // Callbacks
         this.onConnectionStateChange = null;
         this.onRoomUpdate = null;
@@ -42,156 +42,84 @@ export class NetworkManager {
         this.onPlayerUpdate = null;
         this.onError = null;
         this.onPingUpdate = null;
-        
-        // Client-side prediction and interpolation
+
+        // Client-side prediction / interpolation (kept for main.js compatibility)
         this.lastServerState = null;
         this.previousServerState = null;
         this.serverUpdateTimestamp = 0;
-        this.interpolationDelay = 100; // ms - adapts based on measured jitter
-        this.baseInterpolationDelay = 100; // ms - low-jitter default
-        this.expandedInterpolationDelay = 150; // ms - high-jitter fallback
+        this.interpolationDelay = 100;
+        this.baseInterpolationDelay = 100;
+        this.expandedInterpolationDelay = 150;
 
-        // Adaptive jitter buffer: ring of recent packet arrival timestamps
         this.packetArrivalTimes = [];
         this.maxArrivalSamples = 20;
-        this.jitterExpandThreshold = 30; // ms stddev -> expand delay
-        this.jitterShrinkThreshold = 15; // ms stddev -> shrink delay
+        this.jitterExpandThreshold = 30;
+        this.jitterShrinkThreshold = 15;
 
         // Input buffering
         this.inputBuffer = [];
         this.lastInputSequence = 0;
-        
-        // Connection retry
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
-        this.reconnectDelay = 2000; // ms
-        
+
         // Ping measurement
         this.pingInterval = null;
         this.pingRequestId = 0;
         this.pendingPings = new Map();
         this.lastPing = null;
-        
+
+        // One-shot listeners for events delivered over WS (internal event bus).
+        this._oneShot = new Map(); // event -> [cb, cb...]
+
+        // Public-lobby WS listener (optional — server may not push lobbies over WS)
+        this._publicLobbyCallback = null;
+
         // Competitive mode state
         this.lastCompetitionResult = null;
         this.competitiveModeData = null;
+
+        // Pending room session (set after REST create/join, used to open WS)
+        this.pendingSession = null;
     }
-    
-    // Connection Management
+
+    // ---------- REST helpers ----------
+    async _postJson(path, body) {
+        const res = await fetch(`${this.apiBase}${path}`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body || {}),
+        });
+        const text = await res.text();
+        let parsed;
+        try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { raw: text }; }
+        if (!res.ok) {
+            throw new Error(parsed?.error || parsed?.message || `HTTP ${res.status}`);
+        }
+        return parsed;
+    }
+
+    async _getJson(path) {
+        const res = await fetch(`${this.apiBase}${path}`, { method: 'GET' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    }
+
+    // ---------- Connection Management ----------
+    // Backward-compat stub: no persistent "connection" exists outside a room now.
+    // Called by legacy startup code before room operations.
     async connect() {
-        if (this.connected || this.connecting) {
-            return Promise.resolve();
-        }
-        
-        // Environment-specific server configuration already set in constructor
-        
-        this.connecting = true;
-        this.notifyConnectionStateChange('connecting');
-        
-        try {
-            // Configure Geckos connection based on environment
-            let geckosConfig;
-            
-            if (this.serverHost === '127.0.0.1' || this.serverHost === 'localhost') {
-                // Local development - use http with port
-                const serverUrl = `http://${this.serverHost}`;
-                geckosConfig = { 
-                    url: serverUrl,
-                    port: this.serverPort
-                };
-                if (this.debugMode) {
-                    console.log(`[NET] DEBUG: Connecting to ${serverUrl}:${this.serverPort} (Local)`);
-                }
-            } else {
-                // DigitalOcean Droplet - HTTPS with Let's Encrypt certificate via nip.io
-                const serverUrl = `https://${this.serverHost}`;
-                geckosConfig = { 
-                    url: serverUrl,
-                    port: null  // Use full URL as per Geckos.io docs for proxy setup
-                };
-                if (this.debugMode) {
-                    console.log(`[NET] DEBUG: Connecting to ${serverUrl} (Cloudflare HTTPS)`);
-                }
-            }
-            
-            if (this.debugMode) {
-                console.log(`[NET] DEBUG: Environment: ${this.serverHost === '127.0.0.1' ? 'Local Development' : 'Production'}`);
-                console.log(`[NET] DEBUG: Geckos config:`, geckosConfig);
-            }
-            
-            // Check for mixed content issue (HTTPS page trying to connect to HTTP server)
-            if (window.location.protocol === 'https:' && geckosConfig.url.startsWith('http:')) {
-                const errorMsg = 'Cannot connect to HTTP game server from HTTPS GitHub Pages. The game server needs HTTPS configuration.';
-                console.error('[WARN] Mixed Content Error:', errorMsg);
-                this.connecting = false;
-                this.notifyConnectionStateChange('error');
-                this.notifyError(errorMsg);
-                throw new Error(errorMsg);
-            }
-                
-            this.channel = geckos(geckosConfig);
-            
-            if (this.debugMode) {
-                console.log(`[NET] DEBUG: Geckos client created`);
-            }
-            this.setupEventHandlers();
-            if (this.debugMode) {
-                console.log(`[NETWORK] DEBUG: Event handlers set up`);
-            }
-            
-            return new Promise((resolve, reject) => {
-                if (this.debugMode) {
-                    console.log(`[NETWORK] DEBUG: Setting up connection promise with 30s timeout`);
-                }
-                
-                // Use different timeouts for local vs production
-                const timeoutDuration = this.serverHost === '127.0.0.1' || this.serverHost === 'localhost' ? 5000 : 15000;
-                const timeout = setTimeout(() => {
-                    if (this.debugMode) {
-                        console.log(`[NETWORK] DEBUG: Connection timeout after ${timeoutDuration/1000} seconds`);
-                    }
-                    this.connecting = false;
-                    reject(new Error(`Connection timeout - ${this.serverHost === '127.0.0.1' ? 'is local server running?' : 'server may not support WebRTC'}`));
-                }, timeoutDuration);
-                
-                this.channel.onConnect(error => {
-                    if (this.debugMode) {
-                        console.log(`[NETWORK] DEBUG: onConnect callback triggered, error:`, error);
-                    }
-                    clearTimeout(timeout);
-                    this.connecting = false;
-                    
-                    if (error) {
-                        if (this.debugMode) {
-                            console.error('[NETWORK] DEBUG: Connection failed with error:', error);
-                        }
-                        this.notifyError('Failed to connect to server');
-                        reject(error);
-                    } else {
-                        if (this.debugMode) {
-                            console.log('[NETWORK] DEBUG: Connection successful!');
-                        }
-                        this.connected = true;
-                        this.reconnectAttempts = 0;
-                        this.notifyConnectionStateChange('connected');
-                        this.startPingMeasurement();
-                        resolve();
-                    }
-                });
-            });
-        } catch (error) {
-            this.connecting = false;
-            if (this.debugMode) {
-                console.error('Network connection error:', error);
-            }
-            this.notifyError('Network connection failed');
-            throw error;
-        }
+        this.connected = true;
+        this.notifyConnectionStateChange('connected');
+        return Promise.resolve();
     }
-    
+
+    // Leaderboard path uses fetch directly, so no connection needed.
+    async connectForLeaderboard() {
+        return this.connect();
+    }
+
     disconnect() {
-        if (this.channel) {
-            this.channel.close();
+        if (this.ws) {
+            try { this.ws.close(1000, 'client disconnect'); } catch {}
+            this.ws = null;
         }
         this.connected = false;
         this.connecting = false;
@@ -201,363 +129,381 @@ export class NetworkManager {
         this.stopPingMeasurement();
         this.notifyConnectionStateChange('disconnected');
     }
-    
-    setupEventHandlers() {
-        if (!this.channel) return;
-        
-        // Connection events
-        this.channel.onDisconnect(() => {
-            if (this.debugMode) {
-                console.log('Disconnected from server');
-            }
-            this.connected = false;
-            this.notifyConnectionStateChange('disconnected');
-            this.attemptReconnect();
-        });
-        
-        // Room management events
-        this.channel.on('roomCreated', (data) => {
-            if (this.debugMode) {
-                console.log('Room created:', data);
-            }
-            this.currentRoom = data.room;
-            this.playerId = data.playerId;
-            this.isHost = true;
-            this.notifyRoomUpdate(data.room);
-        });
-        
-        this.channel.on('roomJoined', (data) => {
-            if (this.debugMode) {
-                console.log('Room joined:', data);
-            }
-            this.currentRoom = data.room;
-            this.playerId = data.playerId;
-            this.isHost = data.isHost;
-            this.notifyRoomUpdate(data.room);
-        });
-        
-        this.channel.on('roomUpdated', (data) => {
-            if (this.debugMode) {
-                console.log('Room updated:', data);
-            }
-            this.currentRoom = data.room;
-            this.notifyRoomUpdate(data.room);
-        });
-        
-        this.channel.on('playerJoined', (data) => {
-            if (this.debugMode) {
-                console.log('Player joined:', data);
-            }
-            // Update current room state
-            this.currentRoom = data.room;
-            this.notifyRoomUpdate(data.room);
-            this.notifyPlayerUpdate({ 
-                type: 'joined', 
-                player: { id: data.playerId, name: data.playerName }
-            });
-        });
-        
-        this.channel.on('playerLeft', (data) => {
-            if (this.debugMode) {
-                console.log('Player left:', data);
-            }
-            // Update current room state
-            this.currentRoom = data.room;
-            this.notifyRoomUpdate(data.room);
-            this.notifyPlayerUpdate({ 
-                type: 'left', 
-                player: { id: data.playerId, name: data.playerName }
-            });
-        });
-        
-        this.channel.on('hostChanged', (data) => {
-            if (this.debugMode) {
-                console.log('Host changed:', data);
-            }
-            this.isHost = data.isHost;
-            if (data.room) this.currentRoom = data.room;
-            this.notifyPlayerUpdate({ type: 'hostChanged', newHostId: data.newHostId, newHostName: data.newHostName, isHost: data.isHost });
-        });
 
-        this.channel.on('modeLockChanged', (data) => {
-            if (this.debugMode) {
-                console.log('Mode lock changed:', data);
-            }
-            if (this.currentRoom) {
-                this.currentRoom.modeLocked = data.modeLocked;
-                this.currentRoom.gameMode = data.gameMode;
-            }
-            this.notifyRoomUpdate(this.currentRoom);
-        });
-        
-        // Game state events
-        this.channel.on('gameStarted', (data) => {
-            if (this.debugMode) {
-                console.log('Game started:', data);
-            }
-            this.notifyPlayerUpdate({ type: 'gameStarted', gameState: data });
-        });
-        
-        this.channel.on('gameStateUpdate', (data) => {
-            this.handleGameStateUpdate(data);
-        });
-        
-        this.channel.on('gameComplete', (data) => {
-            console.log('[GAME] Game completed:', data);
-            console.log('NetworkManager received gameComplete event with data:', JSON.stringify(data, null, 2));
-            
-            // Handle competitive vs cooperative completion
-            if (data.isCompetitive && data.competitive) {
-                console.log('[RACING] Competitive game completion detected');
-                console.log('Winner:', data.competitive.winner);
-                console.log('Final scores:', data.competitive.finalScores);
-                
-                // Store competitive completion data for reconnection
-                this.lastCompetitionResult = data.competitive;
-            }
-            
-            this.notifyPlayerUpdate({ type: 'gameComplete', data: data });
-        });
-        
-        // Error handling
-        this.channel.on('error', (error) => {
-            console.error('Server error:', error);
-            this.notifyError(error.message || 'Server error occurred');
-        });
-        
-        this.channel.on('roomError', (error) => {
-            console.error('Room error:', error);
-            this.notifyError(error.message || 'Room error occurred');
-        });
-        
-        // Ping measurement
-        this.channel.on('ping', (data) => {
-            // Respond to server ping
-            this.channel.emit('pong', data);
-        });
-        
-        this.channel.on('pong', (data) => {
-            // Handle ping response
-            this.handlePingResponse(data);
+    _openRoomSocket(roomCode, playerId) {
+        return new Promise((resolve, reject) => {
+            const url = `${this.wsBase}/r/${encodeURIComponent(roomCode)}/ws?playerId=${encodeURIComponent(playerId)}`;
+            const ws = new WebSocket(url);
+            ws.binaryType = 'arraybuffer';
+
+            const timeout = setTimeout(() => {
+                try { ws.close(); } catch {}
+                reject(new Error('WebSocket connection timeout'));
+            }, 10000);
+
+            ws.addEventListener('open', () => {
+                clearTimeout(timeout);
+                this.ws = ws;
+                this.connected = true;
+                this.notifyConnectionStateChange('connected');
+                this.startPingMeasurement();
+                resolve();
+            });
+
+            ws.addEventListener('message', (evt) => this._onWsMessage(evt));
+            ws.addEventListener('close', (evt) => {
+                clearTimeout(timeout);
+                if (this.ws === ws) this.ws = null;
+                this.connected = false;
+                this.stopPingMeasurement();
+                this.notifyConnectionStateChange('disconnected');
+                if (evt && evt.code !== 1000) {
+                    // Non-clean close — fire error for UI but keep currentRoom so
+                    // reconnect logic in the app can try again if desired.
+                    this.notifyError(`Connection lost (code ${evt.code})`);
+                }
+            });
+            ws.addEventListener('error', (_e) => {
+                clearTimeout(timeout);
+                reject(new Error('WebSocket error'));
+            });
         });
     }
-    
-    // Room Management
-    async createRoom(playerName, roomSettings = {}, dogType = 'jep') {
-        if (!this.connected) {
-            throw new Error('Not connected to server');
+
+    _onWsMessage(evt) {
+        let msg;
+        try {
+            const buf = evt.data instanceof ArrayBuffer ? new Uint8Array(evt.data) : null;
+            if (!buf) return;
+            msg = msgpackDecode(buf);
+        } catch (e) {
+            console.error('[NET] msgpack decode error:', e);
+            return;
         }
-        
+        if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
+
+        const t = msg.t;
+        switch (t) {
+            case 'roomCreated':
+                this.currentRoom = msg.room;
+                this.playerId = msg.playerId || this.playerId;
+                this.isHost = true;
+                this.notifyRoomUpdate(msg.room);
+                break;
+            case 'roomJoined':
+                this.currentRoom = msg.room;
+                this.playerId = msg.playerId || this.playerId;
+                this.isHost = !!msg.isHost;
+                this.notifyRoomUpdate(msg.room);
+                break;
+            case 'roomUpdated':
+                this.currentRoom = msg.room || this.currentRoom;
+                this.notifyRoomUpdate(this.currentRoom);
+                break;
+            case 'playerJoined':
+                this.currentRoom = msg.room || this.currentRoom;
+                this.notifyRoomUpdate(this.currentRoom);
+                this.notifyPlayerUpdate({ type: 'joined', player: { id: msg.playerId, name: msg.playerName } });
+                break;
+            case 'playerLeft':
+                this.currentRoom = msg.room || this.currentRoom;
+                this.notifyRoomUpdate(this.currentRoom);
+                this.notifyPlayerUpdate({ type: 'left', player: { id: msg.playerId, name: msg.playerName } });
+                break;
+            case 'hostChanged':
+                this.isHost = !!msg.isHost;
+                if (msg.room) this.currentRoom = msg.room;
+                this.notifyPlayerUpdate({
+                    type: 'hostChanged',
+                    newHostId: msg.newHostId,
+                    newHostName: msg.newHostName,
+                    isHost: this.isHost,
+                });
+                break;
+            case 'modeLockChanged':
+                if (this.currentRoom) {
+                    this.currentRoom.modeLocked = msg.modeLocked;
+                    this.currentRoom.gameMode = msg.gameMode;
+                }
+                this.notifyRoomUpdate(this.currentRoom);
+                break;
+            case 'gameStarted':
+                this.notifyPlayerUpdate({ type: 'gameStarted', gameState: msg });
+                break;
+            case 'gameStateUpdate':
+                this._handleGameStateUpdate(msg);
+                break;
+            case 'gameComplete':
+                if (msg.isCompetitive && msg.competitive) {
+                    this.lastCompetitionResult = msg.competitive;
+                }
+                this.notifyPlayerUpdate({ type: 'gameComplete', data: msg });
+                break;
+            case 'publicLobbies':
+                if (this._publicLobbyCallback) this._publicLobbyCallback({ lobbies: msg.lobbies || [] });
+                break;
+            case 'pong':
+                this._handlePingResponse(msg);
+                break;
+            case 'error':
+                this.notifyError(msg.message || 'Server error');
+                break;
+            case 'roomError':
+                console.warn('[NET] roomError:', msg.message);
+                this.notifyError(msg.message || 'Room error');
+                break;
+            default:
+                if (this.debugMode) console.warn('[NET] unknown t:', t, msg);
+                break;
+        }
+    }
+
+    _send(t, data = {}) {
+        if (!this.ws || this.ws.readyState !== 1) return false;
+        try {
+            const buf = msgpackEncode({ t, ...data });
+            this.ws.send(buf);
+            return true;
+        } catch (e) {
+            console.error(`[NET] send(${t}) failed:`, e);
+            return false;
+        }
+    }
+
+    // ---------- Leaderboard / registration (REST) ----------
+    async registerPlayer(persistentId, displayName, nameType = 'custom') {
+        const data = await this._postJson('/api/register', {
+            persistent_id: persistentId,
+            display_name: displayName,
+            name_type: nameType,
+        });
+        this.token = data.token || this.token;
+        // Surface the same shape the old client stored.
+        return {
+            success: true,
+            playerProfile: data.playerProfile,
+        };
+    }
+
+    async submitScore(gameMode, score, additionalData = {}) {
+        if (!this.token) throw new Error('Not registered; call registerPlayer first.');
+        const data = await this._postJson('/api/score', {
+            token: this.token,
+            gameMode,
+            score,
+            additionalData,
+        });
+        return {
+            success: !!data.success,
+            updated: !!data.updated,
+            isNewRecord: !!data.isNewRecord,
+            playerProfile: data.playerProfile || null,
+        };
+    }
+
+    async getLeaderboard(gameMode, limit = 10) {
+        const params = new URLSearchParams({ mode: gameMode, limit: String(limit) });
+        const data = await this._getJson(`/api/leaderboard?${params}`);
+        return { success: true, gameMode, leaderboard: data.entries || [] };
+    }
+
+    async getAllLeaderboards(limit = 10) {
+        const data = await this._getJson(`/api/leaderboards?limit=${limit}`);
+        return data.leaderboards || {};
+    }
+
+    // If we don't have a JWT yet, try to register from the identity stored in
+    // localStorage so that returning users can create/join rooms without
+    // re-entering a display name.
+    async _ensureToken() {
+        if (this.token) return;
+        let identity = null;
+        try {
+            const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('playerIdentity') : null;
+            identity = raw ? JSON.parse(raw) : null;
+        } catch {}
+        if (!identity || !identity.persistentId) {
+            throw new Error('Register the player before creating a room.');
+        }
+        await this.registerPlayer(
+            identity.persistentId,
+            identity.displayName || 'Player',
+            identity.nameType || 'custom',
+        );
+    }
+
+    // ---------- Room Management ----------
+    async createRoom(playerName, roomSettings = {}, dogType = 'jep') {
+        await this._ensureToken();
         this.playerName = playerName;
         this.dogType = dogType;
-        
-        const roomData = {
+
+        const body = {
+            token: this.token,
             playerName,
             dogType,
             roomSettings: {
                 maxPlayers: roomSettings.maxPlayers || 4,
                 isPublic: roomSettings.isPublic !== false,
-                roomName: roomSettings.roomName || `${playerName}'s Room`,
-                gameMode: roomSettings.gameMode || 'cooperative'
-            }
+                name: roomSettings.roomName || `${playerName}'s Room`,
+                gameMode: roomSettings.gameMode || 'cooperative',
+            },
         };
-        
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Room creation timeout'));
-            }, 5000);
-            
-            this.channel.emit('createRoom', roomData);
-            
-            const handleRoomCreated = (data) => {
-                clearTimeout(timeout);
-                resolve(data);
-            };
-            
-            const handleRoomError = (error) => {
-                clearTimeout(timeout);
-                reject(new Error(error.message));
-            };
-            
-            this.channel.on('roomCreated', handleRoomCreated);
-            this.channel.on('roomError', handleRoomError);
-        });
-    }
-    
-    async joinRoom(roomCode, playerName, dogType = 'jep') {
-        if (!this.connected) {
-            throw new Error('Not connected to server');
-        }
-        
-        this.playerName = playerName;
-        this.dogType = dogType;
-        
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Room join timeout'));
-            }, 5000);
-            
-            console.log(`[NETWORK] DEBUG: Sending joinRoom with roomCode: "${roomCode}", playerName: "${playerName}", dogType: "${dogType}"`);
-            this.channel.emit('joinRoom', { roomCode, playerName, dogType });
-            
-            const handleRoomJoined = (data) => {
-                clearTimeout(timeout);
-                resolve(data);
-            };
-            
-            const handleRoomError = (error) => {
-                clearTimeout(timeout);
-                reject(new Error(error.message));
-            };
-            
-            this.channel.on('roomJoined', handleRoomJoined);
-            this.channel.on('roomError', handleRoomError);
-        });
-    }
-    
-    async quickMatch(playerName, dogType = 'jep') {
-        if (!this.connected) {
-            throw new Error('Not connected to server');
-        }
-        
-        this.playerName = playerName;
-        this.dogType = dogType;
-        
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Quick match timeout'));
-            }, 10000);
-            
-            this.channel.emit('quickMatch', { playerName, dogType });
-            
-            const handleRoomJoined = (data) => {
-                clearTimeout(timeout);
-                resolve(data);
-            };
-            
-            const handleRoomError = (error) => {
-                clearTimeout(timeout);
-                reject(new Error(error.message));
-            };
-            
-            this.channel.on('roomJoined', handleRoomJoined);
-            this.channel.on('roomError', handleRoomError);
-        });
-    }
-    
-    leaveRoom() {
-        if (this.connected && this.currentRoom) {
-            this.channel.emit('leaveRoom');
-            this.currentRoom = null;
-            this.playerId = null;
-            this.isHost = false;
-        }
+        const data = await this._postJson('/api/rooms', body);
+        this.currentRoom = data.room;
+        this.playerId = data.playerId;
+        this.isHost = true;
+        this.pendingSession = { roomCode: data.roomCode, playerId: data.playerId };
+
+        await this._openRoomSocket(data.roomCode, data.playerId);
+        this.notifyRoomUpdate(this.currentRoom);
+
+        return {
+            success: true,
+            playerId: data.playerId,
+            room: data.room,
+        };
     }
 
-    /**
-     * Join a room by invite code. Auto-leaves any current room first.
-     */
+    async joinRoom(roomCode, playerName, dogType = 'jep') {
+        await this._ensureToken();
+        this.playerName = playerName;
+        this.dogType = dogType;
+
+        const data = await this._postJson(`/api/rooms/${encodeURIComponent(roomCode)}/join`, {
+            token: this.token,
+            playerName,
+            dogType,
+        });
+        this.currentRoom = data.room;
+        this.playerId = data.playerId;
+        this.isHost = !!data.isHost;
+        this.pendingSession = { roomCode: data.roomCode, playerId: data.playerId };
+
+        await this._openRoomSocket(data.roomCode, data.playerId);
+        this.notifyRoomUpdate(this.currentRoom);
+
+        return {
+            success: true,
+            playerId: data.playerId,
+            room: data.room,
+        };
+    }
+
     async joinRoomByInvite(roomCode, playerName, dogType = 'jep') {
-        if (this.currentRoom) {
-            this.leaveRoom();
-        }
+        if (this.currentRoom) this.leaveRoom();
         return this.joinRoom(roomCode, playerName, dogType);
     }
 
-    /**
-     * Request the list of public lobbies from the server.
-     * Server responds with a 'publicLobbies' event.
-     */
-    requestPublicLobbies() {
-        if (this.connected && this.channel) {
-            this.channel.emit('getPublicLobbies');
-        }
-    }
+    async quickMatch(playerName, dogType = 'jep', gameMode = 'cooperative') {
+        await this._ensureToken();
+        this.playerName = playerName;
+        this.dogType = dogType;
 
-    /**
-     * Listen for a single 'publicLobbies' response.
-     * Returns a cleanup function to remove the listener.
-     */
-    onPublicLobbies(callback) {
-        if (!this.channel) return () => {};
-        const handler = (data) => callback(data);
-        this.channel.on('publicLobbies', handler);
-        return () => {
-            // geckos does not expose removeListener; we store and replace with noop if needed
+        const data = await this._postJson('/api/rooms/quick-match', {
+            token: this.token,
+            playerName,
+            dogType,
+            gameMode,
+        });
+        this.currentRoom = data.room;
+        this.playerId = data.playerId;
+        this.isHost = !!data.isHost;
+        this.pendingSession = { roomCode: data.roomCode, playerId: data.playerId };
+        await this._openRoomSocket(data.roomCode, data.playerId);
+        this.notifyRoomUpdate(this.currentRoom);
+        return {
+            success: true,
+            playerId: data.playerId,
+            room: data.room,
+            isQuickMatch: !!data.isQuickMatch,
         };
     }
 
-    /**
-     * Emit setModeLock to server (host only).
-     */
-    setModeLock(locked) {
-        if (this.connected && this.currentRoom) {
-            this.channel.emit('setModeLock', { locked });
-        }
+    leaveRoom() {
+        this._send('leaveRoom', {});
+        if (this.ws) { try { this.ws.close(1000, 'leave'); } catch {} }
+        this.currentRoom = null;
+        this.playerId = null;
+        this.isHost = false;
+        this.pendingSession = null;
     }
-    
+
     startGame() {
-        if (this.connected && this.isHost && this.currentRoom) {
-            this.channel.emit('startGame');
+        console.log('[START] NetworkManager.startGame isHost=', this.isHost, 'room=', this.currentRoom?.roomCode, 'wsState=', this.ws?.readyState);
+        if (!this.isHost || !this.currentRoom) {
+            console.warn('[START] NetworkManager.startGame bailed');
+            return;
         }
+        const sent = this._send('startGame', {});
+        console.log('[START] startGame _send returned', sent);
     }
-    
-    // Send dog type information to server
+
     sendDogType(dogType) {
-        if (this.connected && this.currentRoom) {
-            this.dogType = dogType;
-            this.channel.emit('setDogType', { dogType });
+        if (!this.currentRoom) return;
+        this.dogType = dogType;
+        this._send('setDogType', { dogType });
+    }
+
+    setModeLock(locked) {
+        if (!this.currentRoom) return;
+        this._send('setModeLock', { locked: !!locked });
+    }
+
+    // Public-lobby listing. Over REST rather than over WS — simpler and stateless.
+    async requestPublicLobbies() {
+        try {
+            const data = await this._getJson('/api/lobbies');
+            if (this._publicLobbyCallback) this._publicLobbyCallback(data);
+            return data;
+        } catch (e) {
+            if (this.debugMode) console.warn('[NET] requestPublicLobbies failed:', e);
+            if (this._publicLobbyCallback) this._publicLobbyCallback({ lobbies: [] });
+            return { lobbies: [] };
         }
     }
-    
-    // Input Handling
+
+    onPublicLobbies(callback) {
+        this._publicLobbyCallback = callback;
+        return () => { if (this._publicLobbyCallback === callback) this._publicLobbyCallback = null; };
+    }
+
+    // ---------- Input ----------
     sendPlayerInput(input) {
         if (!this.connected || !this.currentRoom) return;
-        
-        // Add sequence number for client-side prediction
-        const inputWithSequence = {
-            ...input,
-            sequence: ++this.lastInputSequence,
-            timestamp: performance.now()
+        const seq = ++this.lastInputSequence;
+        const payload = {
+            direction: input.direction,
+            sprint: !!input.sprint,
+            sequence: seq,
+            inputSequence: seq, // server GameSim reads inputSequence
+            timestamp: performance.now(),
+            clientPosition: input.clientPosition ?? null,
         };
-        
-        // Store in buffer for prediction
-        this.inputBuffer.push(inputWithSequence);
-        
-        // Keep buffer size manageable
-        if (this.inputBuffer.length > 60) { // ~1 second at 60fps
-            this.inputBuffer.shift();
-        }
-        
-        // Send to server
-        this.channel.emit('playerInput', inputWithSequence);
+        this.inputBuffer.push(payload);
+        if (this.inputBuffer.length > 60) this.inputBuffer.shift();
+        this._send('playerInput', payload);
     }
-    
-    // Game State Handling
-    handleGameStateUpdate(data) {
-        // Store previous state for interpolation
+
+    // ---------- Game State ----------
+    _handleGameStateUpdate(data) {
+        // Strip the `t` tag so the rest of the client sees the same shape the
+        // Geckos backend sent before (a raw snapshot object).
+        const { t: _t, ...state } = data;
         this.previousServerState = this.lastServerState;
-        this.lastServerState = data;
+        this.lastServerState = state;
         const now = performance.now();
         this.serverUpdateTimestamp = now;
-
-        // Adaptive jitter buffer: track inter-packet stddev over recent arrivals
         this.recordPacketArrival(now);
-
-        // Notify game of new state
-        this.notifyGameStateUpdate(data);
+        this.notifyGameStateUpdate(state);
     }
 
-    // Record packet arrival time and adapt interpolationDelay based on jitter.
     recordPacketArrival(now) {
         this.packetArrivalTimes.push(now);
         if (this.packetArrivalTimes.length > this.maxArrivalSamples) {
             this.packetArrivalTimes.shift();
         }
-
-        // Need enough samples to compute a meaningful stddev of intervals.
         if (this.packetArrivalTimes.length < 5) return;
-
         const intervals = [];
         for (let i = 1; i < this.packetArrivalTimes.length; i++) {
             intervals.push(this.packetArrivalTimes[i] - this.packetArrivalTimes[i - 1]);
@@ -567,134 +513,44 @@ export class NetworkManager {
         for (const v of intervals) variance += (v - mean) * (v - mean);
         variance /= intervals.length;
         const stddev = Math.sqrt(variance);
-
-        if (stddev > this.jitterExpandThreshold) {
-            this.interpolationDelay = this.expandedInterpolationDelay;
-        } else if (stddev < this.jitterShrinkThreshold) {
-            this.interpolationDelay = this.baseInterpolationDelay;
-        }
+        if (stddev > this.jitterExpandThreshold) this.interpolationDelay = this.expandedInterpolationDelay;
+        else if (stddev < this.jitterShrinkThreshold) this.interpolationDelay = this.baseInterpolationDelay;
     }
 
-    // Get interpolated game state for smooth rendering
     getInterpolatedGameState() {
-        if (!this.lastServerState || !this.previousServerState) {
-            return this.lastServerState;
-        }
-
+        if (!this.lastServerState || !this.previousServerState) return this.lastServerState;
         const now = performance.now();
-        const timeSinceUpdate = now - this.serverUpdateTimestamp;
-        // Use adaptive interpolation delay so high-jitter connections get a
-        // wider buffer to absorb late packets.
         const delayWindow = Math.max(1, this.interpolationDelay);
+        let alpha = (now - this.serverUpdateTimestamp) / delayWindow;
+        alpha = Math.max(0, Math.min(1, alpha));
+        return this._interpolateGameState(this.previousServerState, this.lastServerState, alpha);
+    }
 
-        // Calculate interpolation factor
-        let alpha = timeSinceUpdate / delayWindow;
-        alpha = Math.max(0, Math.min(1, alpha)); // Clamp between 0 and 1
+    _interpolateGameState(prev, curr, alpha) {
+        if (!prev || !curr) return curr;
+        const out = JSON.parse(JSON.stringify(curr));
+        if (prev.sheep && curr.sheep) {
+            for (let i = 0; i < Math.min(prev.sheep.length, curr.sheep.length); i++) {
+                const a = prev.sheep[i];
+                const b = curr.sheep[i];
+                if (a && b && out.sheep[i]) {
+                    out.sheep[i].x = this._lerp(a.x, b.x, alpha);
+                    out.sheep[i].z = this._lerp(a.z, b.z, alpha);
+                }
+            }
+        }
+        return out;
+    }
 
-        // Interpolate between previous and current state
-        return this.interpolateGameState(this.previousServerState, this.lastServerState, alpha);
-    }
-    
-    interpolateGameState(prevState, currState, alpha) {
-        if (!prevState || !currState) return currState;
-        
-        const interpolated = JSON.parse(JSON.stringify(currState));
-        
-        // Interpolate sheep positions
-        if (prevState.sheep && currState.sheep) {
-            for (let i = 0; i < Math.min(prevState.sheep.length, currState.sheep.length); i++) {
-                const prevSheep = prevState.sheep[i];
-                const currSheep = currState.sheep[i];
-                
-                if (prevSheep && currSheep) {
-                    interpolated.sheep[i].position.x = this.lerp(prevSheep.position.x, currSheep.position.x, alpha);
-                    interpolated.sheep[i].position.z = this.lerp(prevSheep.position.z, currSheep.position.z, alpha);
-                }
-            }
-        }
-        
-        // Interpolate dog positions
-        if (prevState.dogs && currState.dogs) {
-            for (const dogId in currState.dogs) {
-                if (prevState.dogs[dogId] && currState.dogs[dogId]) {
-                    interpolated.dogs[dogId].position.x = this.lerp(
-                        prevState.dogs[dogId].position.x, 
-                        currState.dogs[dogId].position.x, 
-                        alpha
-                    );
-                    interpolated.dogs[dogId].position.z = this.lerp(
-                        prevState.dogs[dogId].position.z, 
-                        currState.dogs[dogId].position.z, 
-                        alpha
-                    );
-                }
-            }
-        }
-        
-        return interpolated;
-    }
-    
-    lerp(a, b, t) {
-        return a + (b - a) * t;
-    }
-    
-    // Connection Recovery
-    async attemptReconnect() {
-        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.log('Max reconnect attempts reached');
-            this.notifyError('Connection lost. Please refresh the page.');
-            return;
-        }
-        
-        this.reconnectAttempts++;
-        console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-        
-        setTimeout(async () => {
-            try {
-                await this.connect();
-                
-                // If we were in a room, try to rejoin
-                if (this.currentRoom && this.playerName) {
-                    console.log('[NETWORK] Reconnecting to room:', this.currentRoom.code);
-                    
-                        // Check if it was a racing room for special handling
-        const wasRacing = this.currentRoom.gameMode === 'racing';
-        if (wasRacing) {
-            console.log('[RACING] Reconnecting to racing room');
-        }
-                    
-                    await this.joinRoom(this.currentRoom.code, this.playerName, this.dogType);
-                    
-                            // If we had racing data and it was completed, restore it
-        if (wasRacing && this.lastCompetitionResult) {
-            console.log('[RACING] Restoring racing completion state');
-                        // Notify the game about the previous competition result
-                        this.notifyPlayerUpdate({ 
-                            type: 'competitiveStateRestored', 
-                            data: this.lastCompetitionResult 
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Reconnection failed:', error);
-                this.attemptReconnect();
-            }
-        }, this.reconnectDelay * this.reconnectAttempts); // Exponential backoff
-    }
-    
-    // Ping Measurement
+    _lerp(a, b, t) { return a + (b - a) * t; }
+
+    // ---------- Ping ----------
     startPingMeasurement() {
-        this.stopPingMeasurement(); // Clear any existing interval
-        
-        // Send ping every 5 seconds
-        this.pingInterval = setInterval(() => {
-            this.sendPing();
-        }, 5000);
-        
-        // Send initial ping
-        this.sendPing();
+        this.stopPingMeasurement();
+        this.pingInterval = setInterval(() => this._sendPing(), 5000);
+        this._sendPing();
     }
-    
+
     stopPingMeasurement() {
         if (this.pingInterval) {
             clearInterval(this.pingInterval);
@@ -702,246 +558,48 @@ export class NetworkManager {
         }
         this.pendingPings.clear();
     }
-    
-    sendPing() {
-        if (!this.connected || !this.channel) return;
-        
-        const pingId = ++this.pingRequestId;
-        const timestamp = performance.now();
-        
-        this.pendingPings.set(pingId, timestamp);
-        this.channel.emit('ping', { id: pingId, timestamp });
-        
-        // Clean up old pending pings (older than 10 seconds)
-        const cutoff = timestamp - 10000;
-        for (const [id, time] of this.pendingPings.entries()) {
-            if (time < cutoff) {
-                this.pendingPings.delete(id);
-            }
-        }
+
+    _sendPing() {
+        if (!this.connected) return;
+        const id = ++this.pingRequestId;
+        const ts = performance.now();
+        this.pendingPings.set(id, ts);
+        this._send('ping', { id, timestamp: ts });
+        // Clean stale pings
+        const cutoff = ts - 10000;
+        for (const [pid, pts] of this.pendingPings) if (pts < cutoff) this.pendingPings.delete(pid);
     }
-    
-    handlePingResponse(data) {
-        if (!data || !data.id) return;
-        
-        const sendTime = this.pendingPings.get(data.id);
-        if (sendTime) {
-            const roundTripTime = performance.now() - sendTime;
-            this.lastPing = roundTripTime;
-            this.pendingPings.delete(data.id);
-            
-            // Notify about ping update (for UI)
-            this.notifyPingUpdate(roundTripTime);
-        }
-    }
-    
-    // Event Notification Helpers
-    notifyConnectionStateChange(state) {
-        if (this.onConnectionStateChange) {
-            this.onConnectionStateChange(state);
-        }
-    }
-    
-    notifyRoomUpdate(room) {
-        if (this.onRoomUpdate) {
-            this.onRoomUpdate(room);
-        }
-    }
-    
-    notifyGameStateUpdate(gameState) {
-        if (this.onGameStateUpdate) {
-            this.onGameStateUpdate(gameState);
-        }
-    }
-    
-    notifyPlayerUpdate(update) {
-        if (this.onPlayerUpdate) {
-            this.onPlayerUpdate(update);
-        }
-    }
-    
-    notifyError(message) {
-        if (this.onError) {
-            this.onError(message);
-        }
-    }
-    
-    notifyPingUpdate(pingMs) {
-        if (this.onPingUpdate) {
-            this.onPingUpdate(pingMs);
-        }
-    }
-    
-    // Getters
-    isConnected() {
-        return this.connected;
-    }
-    
-    isInRoom() {
-        return this.currentRoom !== null;
-    }
-    
-    getCurrentRoom() {
-        return this.currentRoom;
-    }
-    
-    getPlayerId() {
-        return this.playerId;
-    }
-    
-    getPlayerName() {
-        return this.playerName;
-    }
-    
-    getDogType() {
-        return this.dogType;
-    }
-    
-    isCurrentHost() {
-        return this.isHost;
-    }
-    
-    // Lightweight connection for leaderboard-only operations
-    async connectForLeaderboard() {
-        if (this.connected) {
-            console.log('[NETWORK] Already connected, reusing existing session for leaderboard');
-            console.log(`[NETWORK] Session ID: ${this.channel?.id || 'unknown'}`);
-            return Promise.resolve();
-        }
-        
-        console.log('[NETWORK] Establishing leaderboard-only connection...');
-        
-        // Use the existing connect method but mark it as leaderboard-only
-        try {
-            await this.connect();
-            console.log('[OK] Leaderboard connection established successfully');
-            console.log(`[NETWORK] New session ID: ${this.channel?.id || 'unknown'}`);
-        } catch (error) {
-            console.error('[ERROR] Failed to establish leaderboard connection:', error.message);
-            throw error;
+
+    _handlePingResponse(msg) {
+        if (!msg || msg.id === undefined) return;
+        const sent = this.pendingPings.get(msg.id);
+        if (sent !== undefined) {
+            const rtt = performance.now() - sent;
+            this.lastPing = rtt;
+            this.pendingPings.delete(msg.id);
+            this.notifyPingUpdate(rtt);
         }
     }
 
-    // Leaderboard API Methods
-    async registerPlayer(persistentId, displayName, nameType = 'custom') {
-        if (!this.connected) {
-            throw new Error('Not connected to server');
-        }
-        
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Player registration timeout'));
-            }, 5000);
-            
-            this.channel.emit('registerPlayer', { persistentId, displayName, nameType });
-            
-            const handleRegistered = (data) => {
-                clearTimeout(timeout);
-                resolve(data);
-            };
-            
-            const handleError = (error) => {
-                clearTimeout(timeout);
-                reject(new Error(error.message));
-            };
-            
-            this.channel.on('playerRegistered', handleRegistered);
-            this.channel.on('leaderboardError', handleError);
-        });
-    }
-    
-    async submitScore(gameMode, score, additionalData = {}) {
-        if (!this.connected) {
-            throw new Error('Not connected to server');
-        }
-        
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Score submission timeout'));
-            }, 5000);
-            
-            this.channel.emit('submitScore', { gameMode, score, additionalData });
-            
-            const handleSubmitted = (data) => {
-                clearTimeout(timeout);
-                resolve(data);
-            };
-            
-            const handleError = (error) => {
-                clearTimeout(timeout);
-                reject(new Error(error.message));
-            };
-            
-            this.channel.on('scoreSubmitted', handleSubmitted);
-            this.channel.on('leaderboardError', handleError);
-        });
-    }
-    
-    async getLeaderboard(gameMode, limit = 10) {
-        if (!this.connected) {
-            throw new Error('Not connected to server');
-        }
-        
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Leaderboard fetch timeout'));
-            }, 5000);
-            
-            this.channel.emit('getLeaderboard', { gameMode, limit });
-            
-            const handleLeaderboard = (data) => {
-                clearTimeout(timeout);
-                resolve(data);
-            };
-            
-            const handleError = (error) => {
-                clearTimeout(timeout);
-                reject(new Error(error.message));
-            };
-            
-            this.channel.on('leaderboardData', handleLeaderboard);
-            this.channel.on('leaderboardError', handleError);
-        });
-    }
-    
-    async getAllLeaderboards(limit = 10) {
-        if (!this.connected) {
-            throw new Error('Not connected to server');
-        }
-        
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('All leaderboards fetch timeout'));
-            }, 5000);
-            
-            this.channel.emit('getAllLeaderboards', { limit });
-            
-            const handleAllLeaderboards = (data) => {
-                clearTimeout(timeout);
-                console.log('[LEADERBOARD] NetworkManager received leaderboard data:', data);
-                // Return the leaderboards object directly
-                resolve(data.leaderboards || data);
-            };
-            
-            const handleError = (error) => {
-                clearTimeout(timeout);
-                reject(new Error(error.message));
-            };
-            
-            this.channel.on('allLeaderboardsData', handleAllLeaderboards);
-            this.channel.on('leaderboardError', handleError);
-        });
-    }
+    // ---------- Event Notifications ----------
+    notifyConnectionStateChange(state) { if (this.onConnectionStateChange) this.onConnectionStateChange(state); }
+    notifyRoomUpdate(room) { if (this.onRoomUpdate) this.onRoomUpdate(room); }
+    notifyGameStateUpdate(state) { if (this.onGameStateUpdate) this.onGameStateUpdate(state); }
+    notifyPlayerUpdate(update) { if (this.onPlayerUpdate) this.onPlayerUpdate(update); }
+    notifyError(message) { if (this.onError) this.onError(message); }
+    notifyPingUpdate(ms) { if (this.onPingUpdate) this.onPingUpdate(ms); }
 
-    // Racing mode helpers
-    isRacingMode() {
-        return this.currentRoom && this.currentRoom.gameMode === 'racing';
-    }
-    
-    getLastCompetitionResult() {
-        return this.lastCompetitionResult;
-    }
-    
+    // ---------- Getters / Misc ----------
+    isConnected() { return this.connected; }
+    isInRoom() { return this.currentRoom !== null; }
+    getCurrentRoom() { return this.currentRoom; }
+    getPlayerId() { return this.playerId; }
+    getPlayerName() { return this.playerName; }
+    getDogType() { return this.dogType; }
+    isCurrentHost() { return this.isHost; }
+
+    isRacingMode() { return this.currentRoom && this.currentRoom.gameMode === 'racing'; }
+    getLastCompetitionResult() { return this.lastCompetitionResult; }
     clearCompetitiveState() {
         this.lastCompetitionResult = null;
         this.competitiveModeData = null;
