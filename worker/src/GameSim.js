@@ -28,7 +28,9 @@ import {
     updateCompetitiveSheepRetirements,
     checkCompetitiveCompletion,
     createCompetitiveGameState,
-    checkGatePassage
+    checkGatePassage,
+    loadScene,
+    DEFAULT_SCENE_ID
 } from '../../shared/index.js';
 
 export class GameSimulation {
@@ -44,6 +46,9 @@ export class GameSimulation {
         this.isCompetitive = room.gameMode === 'competitive';
         this.isTimedMode = room.gameMode === 'timed';
         const playerIds = Array.from(room.players.keys());
+
+        // Load scene (biome data). Room can override via `room.sceneId`; falls back to default.
+        this.scene = loadScene(room.sceneId || DEFAULT_SCENE_ID);
         
         // Timed mode specific properties
         if (this.isTimedMode) {
@@ -59,14 +64,15 @@ export class GameSimulation {
             const modeName = this.isTimedMode ? 'timed' : 'competitive';
             console.log(`${modeEmoji} Initializing ${modeName} game for ${playerIds.length} players`);
             this.gameState = createCompetitiveGameState({
-                totalSheep: 200,
-                bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 }
+                totalSheep: this.scene.sheepSpawn.count,
+                bounds: this.scene.bounds
             }, playerIds);
         } else {
             // Use cooperative mode (existing logic)
             this.gameState = createGameState({
-                totalSheep: 200, // Full sheep count for multiplayer
-                bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 } // Match client field size
+                sceneId: this.scene.id,
+                totalSheep: this.scene.sheepSpawn.count,
+                bounds: this.scene.bounds
             });
         }
         
@@ -95,9 +101,9 @@ export class GameSimulation {
     initializeSimulation() {
         // Create initial sheep positions with competitive balance if needed
         const sheepSpawnConfig = {
-            spreadRadius: 25,
-            centerX: -20,
-            centerZ: -20
+            spreadRadius: this.scene.sheepSpawn.spreadRadius,
+            centerX: this.scene.sheepSpawn.centerX,
+            centerZ: this.scene.sheepSpawn.centerZ
         };
         
         // For competitive mode, use balanced spawning

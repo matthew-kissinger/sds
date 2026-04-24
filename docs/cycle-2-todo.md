@@ -48,7 +48,7 @@
 
 With the backend fully on Cloudflare's edge, the product direction pivots from "ship the migration" to "expand the game." Tracked separately from the migration punch list above:
 
-- **New scenes beyond the fenced valley.** Rolling hills, river crossings, moorland, canyon runs, forest clearings — each with its own terrain generator, grass density, prop set, and boundary rules. The `TerrainBuilder` module is already zone-based; swappable biomes slot in at that seam.
+- **New scenes beyond the Home Field.** Rolling hills, river crossings, moorland, canyon runs, forest clearings — each with its own terrain generator, grass density, prop set, and boundary rules. The `TerrainBuilder` module is already zone-based; swappable biomes slot in at that seam (scene-data schema shipped in Cycle 3 Track 3 Step 1).
 - **Scene-specific game modes.** Drive (A → B across rough terrain), chase (wandering flock into natural enclosures), endless (procedural, rising count). Mode-specific sim branches already live in `GameSim.js`.
 - **Dynamic weather + time of day.** Grass already wind-ripples; rain, fog banks, and dusk/dawn lighting build on the existing atmospheric shader.
 - **Richer NPC behavior.** Predators, rival herders, sheep personalities.

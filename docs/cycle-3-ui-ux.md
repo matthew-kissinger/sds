@@ -25,7 +25,7 @@ New layout:
 
 ```
 ┌─────────────── Scenes ──────────────────────┐
-│  [ Fenced Valley ]   [ Rolling Hills ]      │
+│  [ Home Field ]      [ Rolling Hills ]      │
 │  [ + more coming ]   [ Sandbox (custom) ]   │
 └─────────────────────────────────────────────┘
 
@@ -130,5 +130,5 @@ No component needs to be deleted; many need the `onBack` flow re-pointed.
 ## Open questions for user
 
 1. **Vision pick.** Zen / arcade / mode-shaped. Decides HUD and copy everywhere.
-2. **Menu copy register.** "Fenced Valley" as the default scene name — keep or rename? "Sandbox" as a tile vs a separate mode?
+2. **Menu copy register.** Default scene is named "Home Field" (decided 2026-04-24 — the current scene is flat, not a valley). "Sandbox" as a tile vs a separate mode?
 3. **Compass vs minimap.** If user disagrees with the compass recommendation, change it here before work starts.

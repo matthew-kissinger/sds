@@ -82,7 +82,7 @@ Cycle 3 closes when all of:
 | Risk | Mitigation |
 |---|---|
 | Identity decision drifts — Track 2 stalls waiting for it | Land Track 1 first. By the time Track 2 is ready to start, the decision is forced. |
-| Refactoring `TerrainBuilder` (1,697 lines) breaks the valley | New `BiomeBuilder` consumes a scene def; first def is "valley" with existing behavior preserved. Valley parity is the first test, not the second biome. |
+| Refactoring `TerrainBuilder` (1,697 lines) breaks the Home Field | New `BiomeBuilder` consumes a scene def; first def is `field` with existing behavior preserved. Home-Field parity is the first test, not the second biome. |
 | Legacy deletion breaks an obscure code path | Each deletion is its own PR. `grep -r` before delete, `npm run build` after. |
 | Scope creep into weather / predators / seasons | Explicitly out per § Scope. If the content tracks are tempting, remember: they ride on Cycle 3 infrastructure and will be cheap in Cycle 4. |
 
@@ -99,3 +99,11 @@ What shipped: StaminaUI/ExtremeBoid deletes; StartScreen→MenuController rename
 What was discovered mid-cycle and factored in: the cleanup doc's original assumption that `StartScreen.js` / `MultiplayerUI.js` were "dead DOM" was wrong — they were misnamed controllers / state stores. Docs corrected. Also discovered: local dev needed several hidden setup steps (wrangler, D1 migration, JWT secret, invite URL origin) — all addressed as explicit scripts + one-time setup docs.
 
 What's next: **Track 2 + Track 3 can start in parallel.** Remaining Track 1 polish (dead-DOM audit in index.html, GameBridge accessor consolidation, optional JSX flip, boid consolidation decision) can slot in opportunistically but don't block the content tracks. See [`cycle-3-cleanup.md`](cycle-3-cleanup.md) § "Remaining".
+
+**2026-04-24 — Track 3 Step 1 (scene data schema + sim wire-up) landed.**
+
+What shipped: `shared/scenes/{types,field,index}.js` — JSDoc-typed scene definition schema, Home Field (renamed from "valley" — it's a flat fenced play area ringed by mountain props, not a true valley) captured as data, registry with `loadScene` / `listScenes` / `DEFAULT_SCENE_ID`. `shared/index.js createGameState` now sources defaults from the scene; explicit config fields still override. `worker/src/GameSim.js` loads the scene via `room.sceneId || DEFAULT_SCENE_ID` in the constructor and uses it for bounds + sheep spawn in both `createGameState` and `createCompetitiveGameState` paths. `npm run build` green. `npm test` 30/30 pass. Player-visible parity pending playtest confirmation.
+
+What was decided: scene files use `.js` + JSDoc (not `.ts`) — shared/ is consumed by three contexts (Vite, wrangler/esbuild, Node tests) and all handle `.js` with zero build config; JSDoc gives IDE types without adding tooling. Scene id is `field` / "Home Field" (not "valley") — matches existing `FIELD_SIZES` / `FIELD_SHAPES` vocabulary in [`js/FieldConfig.js`](../js/FieldConfig.js).
+
+What's next: **Track 3 Step 1b** — client renderer wire-up (`BiomeBuilder`, `TerrainBuilder` + `GrassSystem` parameterization). Not strictly needed until Step 2 (Rolling Hills), but easiest to land in the same Track 3 pass. See [`cycle-3-scene-arch.md`](cycle-3-scene-arch.md) § "Migration plan".

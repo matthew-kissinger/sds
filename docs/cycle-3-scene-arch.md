@@ -4,7 +4,7 @@
 
 ## Problem
 
-[`cycle-2-todo.md`](cycle-2-todo.md) § "Roadmap beyond Cycle 2" lists: rolling hills, river crossings, moorland, canyon runs, forest clearings, plus weather and time-of-day layered on top. Today, the "fenced valley" is built imperatively in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) (1,697 lines). Gameplay bounds, gate position, and pasture are hardcoded constants in [`shared/index.js` `createGameState`](../shared/index.js). Grass density and color are hardcoded in [`GrassSystem.js`](../js/GrassSystem.js).
+[`cycle-2-todo.md`](cycle-2-todo.md) § "Roadmap beyond Cycle 2" lists: rolling hills, river crossings, moorland, canyon runs, forest clearings, plus weather and time-of-day layered on top. Today, the "Home Field" (a flat fenced play area ringed by mountain props — not a true valley, despite early docs calling it that) is built imperatively in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) (1,697 lines). Gameplay bounds, gate position, and pasture were hardcoded in [`shared/index.js createGameState`](../shared/index.js) and [`worker/src/GameSim.js`](../worker/src/GameSim.js); as of Track 3 Step 1 they are captured as data in [`shared/scenes/field.js`](../shared/scenes/field.js) and consumed from there. Grass density, terrain zones, and farm-house placement are still hardcoded in [`GrassSystem.js`](../js/GrassSystem.js) and [`TerrainBuilder.js`](../js/TerrainBuilder.js) — renderer wire-up lands in Step 1b alongside `BiomeBuilder`.
 
 Adding a second biome by forking any of those files is a trap. Every biome after that forks the fork.
 
@@ -14,12 +14,12 @@ One biome = one file. The file is a declarative scene definition, consumed by bo
 
 ### Scene definition
 
-`shared/scenes/valley.json` (or `.ts` for typing):
+`shared/scenes/field.js` (JSDoc-typed; `.js` everywhere for zero-build-config parity across client, Worker, and tests):
 
 ```ts
 interface SceneDef {
-  id: string;                    // "valley"
-  name: string;                  // "Fenced Valley" (i18n key OK)
+  id: string;                    // "field"
+  name: string;                  // "Home Field" (i18n key OK)
   description: string;           // i18n key
 
   // Rendering
@@ -63,10 +63,10 @@ interface SceneDef {
 ```
 shared/
 ├── scenes/
-│   ├── index.ts              # registry: loadScene(id), listScenes()
-│   ├── valley.ts             # current fenced valley, parity with today
-│   ├── rolling-hills.ts      # Track 3 ships this
-│   └── types.ts              # SceneDef + related types
+│   ├── index.js              # registry: loadScene(id), listScenes() — shipped Step 1
+│   ├── field.js              # "Home Field" — current flat-with-mountains scene, shipped Step 1
+│   ├── rolling-hills.js      # Step 2 ships this
+│   └── types.js              # SceneDef JSDoc typedefs — shipped Step 1
 ├── FlockingAlgorithms.js     # unchanged
 ├── MovementPhysics.js        # unchanged
 ├── BoundaryCollision.js      # reads bounds from scene, not hardcoded
@@ -89,41 +89,44 @@ BiomeBuilder(sceneDef)
 └── buildFog(sceneDef.fog)
 ```
 
-`TerrainBuilder.js` becomes the "terrain implementation," not the "valley implementation." It reads zones, seed, and height from its argument. No behavior change for the valley — `valley.ts` captures the current constants.
+`TerrainBuilder.js` becomes the "terrain implementation," not the "field implementation." It reads zones, seed, and height from its argument. No behavior change for the Home Field — `field.js` captures the current constants.
 
 ### Worker side — authoritative bounds
 
 [`worker/src/GameSim.js`](../worker/src/GameSim.js) today hardcodes boundary logic and pasture geometry. Change it to import the scene def:
 
-```ts
-import { loadScene } from '@sds/shared/scenes';
+```js
+import { loadScene, DEFAULT_SCENE_ID } from '../../shared/index.js';
 
-class GameSim {
-  constructor(room, sceneId = 'valley') {
-    this.scene = loadScene(sceneId);
-    // bounds, gate, pasture all come from this.scene
+class GameSimulation {
+  constructor(room) {
+    this.scene = loadScene(room.sceneId || DEFAULT_SCENE_ID);
+    // bounds, gate, pasture, sheepSpawn all come from this.scene
   }
 }
 ```
 
-Room creation payload gains a `sceneId` field. Legacy rooms default to `"valley"`.
+Room creation payload gains a `sceneId` field. Legacy rooms default to `"field"`.
 
 ## Migration plan
 
-### Step 1 — Capture the valley as data (no behavior change)
+### Step 1 — Capture the field as data (sim wire-up, no behavior change) — shipped 2026-04-24
 
-1. Create `shared/scenes/types.ts` with `SceneDef`.
-2. Create `shared/scenes/valley.ts` by extracting every hardcoded valley constant from `TerrainBuilder.js`, `GrassSystem.js`, `shared/index.js`, `GameSim.js` into a single literal.
-3. Create `shared/scenes/index.ts` with a tiny registry (`{ valley }` for now).
-4. Wire `BiomeBuilder` to build from `valley.ts`.
-5. Wire `GameSim` to read bounds from `valley.ts`.
-6. `TerrainBuilder.js` unchanged in behavior; it now receives its constants from the scene def instead of defining them.
+1. ✅ `shared/scenes/types.js` — `SceneDef` JSDoc typedef.
+2. ✅ `shared/scenes/field.js` — every hardcoded sim constant from `shared/index.js` and `worker/src/GameSim.js` captured as data. Renderer constants (zones, farm house, grass density) captured too, for Step 1b consumption.
+3. ✅ `shared/scenes/index.js` — `{ field }` registry with `loadScene(id)` and `listScenes()`; re-exported from `shared/index.js`.
+4. ✅ `shared/index.js createGameState` now sources defaults from the scene; explicit config fields still override.
+5. ✅ `worker/src/GameSim.js` loads the scene (`room.sceneId || DEFAULT_SCENE_ID`) once in the constructor; both `createGameState` and `createCompetitiveGameState` paths read bounds + spawn config from it.
 
-**Exit criterion:** Solo Classic looks and plays identically. No player-visible change. Tests green.
+**Result:** zero player-visible change. `npm run build` green, `npm test` 30/30 pass (7 skipped are flow E2E).
+
+### Step 1b — Renderer wire-up (pending)
+
+Not strictly required until Step 2 introduces a second biome, but worth doing alongside it to prove the renderer-side path. `js/scene/BiomeBuilder.js` consumes `SceneDef` and delegates to `TerrainBuilder` / `GrassSystem` / `StructureBuilder` with the scene's `terrain`, `grass`, and `farmHouse` fields. `field.js` already captures these constants; no further data work needed, only code.
 
 ### Step 2 — Ship Rolling Hills
 
-1. New file `shared/scenes/rolling-hills.ts`. Larger bounds, higher terrain variance, no fence perimeter (natural hill-bowls form the enclosures), different grass palette, scattered trees instead of edge-dense, dusk sky.
+1. New file `shared/scenes/rolling-hills.js`. Larger bounds, higher terrain variance, no fence perimeter (natural hill-bowls form the enclosures), different grass palette, scattered trees instead of edge-dense, dusk sky.
 2. New mode: sheep spawn as two separated herds; pen is a natural saddle between hills.
 3. Scene picker in Track 2 learns about it from the registry.
 
@@ -145,17 +148,22 @@ Room creation payload gains a `sceneId` field. Legacy rooms default to `"valley"
 
 ## Success criteria
 
-- [ ] `shared/scenes/valley.ts` exists and captures every hardcoded valley constant.
-- [ ] `shared/scenes/types.ts` defines `SceneDef`.
-- [ ] `shared/scenes/index.ts` exposes a registry with at least `valley` and `rolling-hills`.
-- [ ] `js/scene/BiomeBuilder.js` builds a scene from a `SceneDef`.
-- [ ] `worker/src/GameSim.js` reads bounds/gate/pasture from the scene def (via `sceneId` in room settings).
-- [ ] Rolling Hills is playable end-to-end and shipped live.
+- [x] `shared/scenes/field.js` exists and captures every hardcoded Home Field constant. 2026-04-24.
+- [x] `shared/scenes/types.js` defines `SceneDef` (JSDoc). 2026-04-24.
+- [x] `shared/scenes/index.js` exposes a registry with `loadScene` / `listScenes` / `DEFAULT_SCENE_ID`. 2026-04-24.
+- [x] `worker/src/GameSim.js` reads bounds/gate/pasture/spawn from the scene def (via `room.sceneId`). 2026-04-24.
+- [ ] `js/scene/BiomeBuilder.js` builds a scene from a `SceneDef`. (Step 1b)
+- [ ] Rolling Hills is playable end-to-end and shipped live. (Step 2)
 - [ ] `TerrainBuilder.js`, `GameSim.js`, `NetworkManager.js` did not gain biome-specific branches.
-- [ ] `docs/adding-a-biome.md` explains how to ship biome #3.
+- [ ] `docs/adding-a-biome.md` explains how to ship biome #3. (Step 3)
+
+## Decisions recorded
+
+1. **Scene format — JS + JSDoc.** Chose over `.ts` to avoid a new build step. `shared/` is consumed by client (Vite), Worker (wrangler/esbuild), and Node tests; all three handle `.js` with zero config. JSDoc `@typedef` gives IDE types. If strict type-checking becomes valuable later, the annotations transliterate to `.ts` trivially; the other direction is worse.
+2. **Naming — `field` / "Home Field", not "valley".** The current scene is a flat fenced play area with mountain props ringing the perimeter — not a true valley. "Field" matches the existing `FIELD_SIZES` / `FIELD_SHAPES` vocabulary in [`js/FieldConfig.js`](../js/FieldConfig.js).
 
 ## Open questions for user
 
-1. **Scene format — JSON or TS?** TS lets types catch errors at build time and allows inline helpers (e.g. `generateZones(seed)`). JSON is mod-friendly. Recommendation: **TS for shipped scenes, JSON-shape for sandbox sharing.**
-2. **Rolling Hills fencing — natural or placed?** Recommendation: **natural** — validates that the scene schema supports unfenced biomes, which unlocks moorland / open ranges later.
-3. **Scene picker thumbnails.** Render a static 1024×576 screenshot of each biome (tool in Track 2 already lines up: `tools/render-dog-thumbs.mjs` extended to `tools/render-scene-thumbs.mjs`).
+1. **Rolling Hills fencing — natural or placed?** Recommendation: **natural** — validates that the scene schema supports unfenced biomes, which unlocks moorland / open ranges later.
+2. **Scene picker thumbnails.** Render a static 1024×576 screenshot of each biome (tool in Track 2 already lines up: `tools/render-dog-thumbs.mjs` extended to `tools/render-scene-thumbs.mjs`).
+3. **Client FieldConfig + SandboxConfig harmonization.** Today the client has its own `FIELD_SIZES` / `FIELD_SHAPES` for sandbox mode, orthogonal to `SceneDef`. When do we collapse the two? Step 2 may force the issue if the scene picker needs to distinguish "scene" (biome) from "field shape" (square/wide/circle overlay on a scene).

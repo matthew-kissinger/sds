@@ -375,15 +375,15 @@ npx wrangler pages deploy dist --project-name=sds-frontend --branch=main
 
 ## Designed for expansion
 
-The single valley + fenced pasture is the shipped starting point. The modules are designed to be extended into new biomes and modes, not rebuilt.
+The single Home Field — a flat fenced play area with mountain props ringing the perimeter — plus a fenced pasture, is the shipped starting point. The modules are designed to be extended into new biomes and modes, not rebuilt.
 
 - **`TerrainBuilder.js`** is zone-keyed (`playArea`, `nearField`, `midField`, `farField`) so a new biome registers itself by writing zone-specific displacement + prop tables rather than replacing the whole builder.
 - **`StructureBuilder.js`** owns fence / gate geometry and is independent of gameplay rules, so a canyon-pass or river-crossing scene can reuse the collision/rendering without competing-gate assumptions.
 - **`GameState.js`** `startGame(mode, competitiveData, singlePlayerMode)` already takes a mode discriminator; new modes (drive, chase, endless) slot in here without forking the orchestrator.
 - **`worker/src/RoomDO.ts`** is mode-agnostic — the `gameMode` field is passed through to `GameSim.js`; mode-specific sim logic already branches there (`isCompetitive`, `isTimedMode`). Adding new modes is an additive change.
-- **`shared/`** is deterministic and parameterized on a `bounds` object + per-mode spawn/gate config; new scenes parameterize, they don't fork.
+- **`shared/`** is deterministic. As of Cycle 3 Track 3 Step 1, sim-critical constants (bounds, gate, pasture, sheep spawn) are captured as data in `shared/scenes/<id>.js`; `createGameState` and `worker/src/GameSim.js` read from `loadScene(sceneId)` with `field` as the default. New scenes add a file, not a fork.
 
-See the "Roadmap — where the game is going" section in [README.md](README.md) for the content direction beyond the current valley.
+See the "Roadmap — where the game is going" section in [README.md](README.md) for the content direction beyond the Home Field.
 
 ## Project docs
 

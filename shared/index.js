@@ -8,9 +8,13 @@
 
 // Import Vector2D for use in utility functions
 import { Vector2D } from './Vector2D.js';
+import { loadScene, DEFAULT_SCENE_ID } from './scenes/index.js';
 
 // Core data structures
 export { Vector2D } from './Vector2D.js';
+
+// Scene registry (data-driven biomes)
+export { loadScene, listScenes, DEFAULT_SCENE_ID } from './scenes/index.js';
 
 // Flocking behavior algorithms
 export {
@@ -121,28 +125,29 @@ export function createBoundaryConfig(overrides = {}) {
  * @returns {Object} - Initial game state
  */
 export function createGameState(config = {}) {
-    const {
-        totalSheep = 200,
-        bounds = { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
-        gatePosition = { x: 0, z: 100 },
-        gateWidth = 8,
-        pastureConfig = { centerZ: 115, minX: -30, maxX: 30, minZ: 102, maxZ: 130 }
-    } = config;
+    const { sceneId = DEFAULT_SCENE_ID, totalSheep, bounds, gatePosition, gateWidth, pastureConfig } = config;
+    const scene = loadScene(sceneId);
+
+    const effectiveBounds = bounds ?? scene.bounds;
+    const effectiveGatePos = gatePosition ?? scene.gate.position;
+    const effectiveGateWidth = gateWidth ?? scene.gate.width;
+    const effectivePasture = pastureConfig ?? scene.pasture;
+    const effectiveTotalSheep = totalSheep ?? scene.sheepSpawn.count;
 
     return {
-        bounds,
+        bounds: effectiveBounds,
         gate: {
-            position: new Vector2D(gatePosition.x, gatePosition.z),
-            width: gateWidth,
+            position: new Vector2D(effectiveGatePos.x, effectiveGatePos.z),
+            width: effectiveGateWidth,
             height: 4,
             passageZone: {
-                minX: -gateWidth / 2,
-                maxX: gateWidth / 2,
-                minZ: gatePosition.z - 2,
-                maxZ: gatePosition.z + 2
+                minX: -effectiveGateWidth / 2,
+                maxX: effectiveGateWidth / 2,
+                minZ: effectiveGatePos.z - 2,
+                maxZ: effectiveGatePos.z + 2
             }
         },
-        pasture: pastureConfig,
+        pasture: effectivePasture,
         params: {
             speed: 0.1,
             cohesion: 1.0,
@@ -151,8 +156,8 @@ export function createGameState(config = {}) {
         sheep: [],
         sheepdog: null,
         sheepRetired: 0,
-        totalSheep,
+        totalSheep: effectiveTotalSheep,
         gameCompleted: false,
         gameActive: false
     };
-} 
+}

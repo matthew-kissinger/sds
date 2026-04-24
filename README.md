@@ -115,10 +115,10 @@ Everything is on Cloudflare. [sheepdogsim.com](https://sheepdogsim.com) serves f
 
 ## Roadmap — where the game is going
 
-The single fenced-in valley is the starting point, not the destination. With the backend fully on Cloudflare's edge, what comes next is content expansion:
+The Home Field — a flat fenced play area ringed by mountain props — is the starting point, not the destination. With the backend fully on Cloudflare's edge, what comes next is content expansion:
 
-- **New scenes beyond the valley.** Rolling hills, river crossings, moorland, canyon runs, forest clearings — each with its own terrain generator, grass density, prop set, and boundary rules. The `TerrainBuilder` module is already zone-based; the scaffolding for swappable biomes is there.
-- **Scene-specific game modes.** A herding drive across a valley floor plays differently from a mountain-pass funnel or a marshland with gaps. Modes like *drive* (point-A-to-point-B across rough terrain), *chase* (chase a wandering flock into natural enclosures), and *endless* (procedural terrain, rising sheep count) are on the docket.
+- **New scenes beyond the Home Field.** Rolling hills, river crossings, moorland, canyon runs, forest clearings — each with its own terrain generator, grass density, prop set, and boundary rules. The `TerrainBuilder` module is already zone-based, and the scene-definition seam (`shared/scenes/`) ships in Cycle 3 so each new biome is a data file, not a fork.
+- **Scene-specific game modes.** A herding drive across an open plain plays differently from a mountain-pass funnel or a marshland with gaps. Modes like *drive* (point-A-to-point-B across rough terrain), *chase* (chase a wandering flock into natural enclosures), and *endless* (procedural terrain, rising sheep count) are on the docket.
 - **Dynamic weather + time of day.** Wind already ripples the grass — rain, fog banks, dusk/dawn lighting are plausible next steps now that the grass and atmospheric shaders exist.
 - **Richer NPC behavior.** Predators (wolves, strays), other herders with their own flocks, and sheep personalities (lead, stubborn, skittish).
 - **Mod-friendly asset pipeline.** The sandbox format is lz-string-encoded today; it can grow to full scene descriptions that live in `public/scenes/*.json` or URL hashes, so a custom biome ships as a link.
