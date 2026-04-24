@@ -47,7 +47,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=sds-frontend --branch=main --commit-hash=${{ github.sha }} --commit-message="${{ github.event.head_commit.message }}"
+          command: pages deploy dist --project-name=sds-frontend --branch=main --commit-hash=${{ github.sha }}
 
   worker:
     name: Deploy Worker
