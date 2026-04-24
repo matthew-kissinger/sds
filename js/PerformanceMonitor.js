@@ -34,7 +34,11 @@ export class PerformanceMonitor {
             textures: 0,
             programs: 0
         };
-        
+
+        // Per-system triangle breakdown, keyed by name so systems can overwrite
+        // their own report if they rebuild (e.g. grass regeneration).
+        this.systemTriangles = new Map();
+
         this.init();
     }
     
@@ -217,6 +221,7 @@ export class PerformanceMonitor {
             <div>Geometries: ${this.metrics.geometries}</div>
             <div>Textures: ${this.metrics.textures}</div>
             <div>Programs: ${this.metrics.programs}</div>
+            ${this.renderSystemBreakdownHTML()}
             <div style="margin-top: 4px; color: #ff8800;">FRAME STATS</div>
             <div style="color: ${fpsColor};">Avg FPS: ${fps}</div>
             <div>Frame Time: ${this.metrics.avgFrameTime.toFixed(2)}ms</div>
@@ -225,6 +230,28 @@ export class PerformanceMonitor {
         `;
     }
     
+    /**
+     * Render the PER-SYSTEM TRIANGLES section HTML. Returns empty string
+     * when no systems have registered, so the section stays hidden until
+     * at least one system reports in.
+     * @returns {string} HTML fragment (possibly empty)
+     */
+    renderSystemBreakdownHTML() {
+        const breakdown = this.getSystemBreakdown();
+        if (breakdown.length === 0) return '';
+
+        const rows = breakdown
+            .map(({ name, count }) => `<div>${name}: ${count.toLocaleString()}</div>`)
+            .join('');
+        const total = breakdown.reduce((sum, entry) => sum + entry.count, 0);
+
+        return `
+            <div style="margin-top: 4px; color: #66ccff;">PER-SYSTEM TRIANGLES</div>
+            ${rows}
+            <div style="border-top: 1px solid #444; margin-top: 2px; padding-top: 2px;">Total: ${total.toLocaleString()}</div>
+        `;
+    }
+
     /**
      * Get memory information if available
      */
@@ -248,7 +275,30 @@ export class PerformanceMonitor {
     setGrassInstanceCount(count) {
         this.metrics.grassInstances = count;
     }
-    
+
+    /**
+     * Register a per-system triangle count for the stats overlay.
+     * Intended to be called once per system at init time with a static
+     * "total visible max" estimate (instance count x per-instance triangles).
+     * Subsequent calls with the same name overwrite the previous value so
+     * systems that rebuild (e.g. grass) stay accurate without growing the map.
+     * @param {string} name - System label, e.g. 'Grass', 'Trees'
+     * @param {number} triangleCount - Estimated triangle count for that system
+     */
+    addSystemTriangles(name, triangleCount) {
+        if (!name || !Number.isFinite(triangleCount) || triangleCount < 0) return;
+        this.systemTriangles.set(name, Math.round(triangleCount));
+    }
+
+    /**
+     * Get the per-system triangle breakdown sorted by count (desc).
+     * @returns {Array<{name: string, count: number}>}
+     */
+    getSystemBreakdown() {
+        return Array.from(this.systemTriangles, ([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count);
+    }
+
     /**
      * Toggle performance monitor visibility
      */

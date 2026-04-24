@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { loadShaderWithReplacements } from './shaders/ShaderLoader.js';
+import { geometryTriangleCount } from './utils/TriangleCount.js';
 
 // Shader cache for sync access after async load
 let grassDesktopVertexShader = null;
@@ -949,6 +950,18 @@ export class GrassSystem {
             totalChunks: this.chunks.size,
             effectiveBlades: this.stats.visibleClumps * this.config.bladesPerClump
         };
+    }
+
+    /**
+     * Estimate the total triangle count for the whole grass system
+     * (every chunk, every clump, every blade - not just currently visible).
+     * Each blade is double-sided (4 triangles) in the current quad geometry.
+     * Returns 0 if the clump geometry hasn't been created yet.
+     * @returns {number}
+     */
+    getTotalTriangleEstimate() {
+        const trisPerClump = geometryTriangleCount(this.clumpGeometry);
+        return Math.round(trisPerClump * this.stats.totalClumps);
     }
 
     /**
