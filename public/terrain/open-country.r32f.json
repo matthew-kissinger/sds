@@ -1,0 +1,9 @@
+{
+  "width": 1024,
+  "height": 1024,
+  "worldSize": 400,
+  "peakHeight": 5,
+  "version": 1,
+  "scene": "open-country",
+  "seed": 42
+}
