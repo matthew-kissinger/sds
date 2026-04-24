@@ -1,8 +1,8 @@
 # Cycle 1 Postmortem - Cloudflare Backend Migration Rollback
 
-> **Status update (2026-04-23, later session):** Cycle 2 shipped the migration successfully — see [docs/cycle-2-report.md](docs/cycle-2-report.md). This postmortem is now a record of what went wrong in Cycle 1 and the process rules that carried forward. The specific failures listed below were all addressed in Cycle 2; the process lessons (playtest as gate, integration tests, one-command rollback, docs-from-code) remain in force.
+> **Status update:** Cycle 2 shipped the migration successfully — see [../cycle-2-report.md](../cycle-2-report.md). This postmortem is now a record of what went wrong in Cycle 1 and the process rules that carried forward. The specific failures listed below were all addressed in Cycle 2; the process lessons (playtest as gate, integration tests, one-command rollback, docs-from-code) remain in force.
 
-> Written 2026-04-23 after a same-day full rollback of the DigitalOcean -> Cloudflare Workers/DO/D1/Pages migration. See `docs/cycle-1-audit.md` for the specific technical failures identified by an Opus 4.7 audit after the fact. This file is about **why** the failures shipped - process, not code - so the next attempt does not repeat them.
+> Written 2026-04-23 after a same-day full rollback of the DigitalOcean -> Cloudflare Workers/DO/D1/Pages migration. See [cycle-1-audit.md](cycle-1-audit.md) for the specific technical failures identified by an Opus 4.7 audit after the fact. This file is about **why** the failures shipped - process, not code - so the next attempt does not repeat them.
 
 ## 1. What was attempted
 

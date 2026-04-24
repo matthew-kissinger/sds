@@ -1,6 +1,6 @@
 # Next session — Cloudflare migration (overnight)
 
-> **Cycle 2 completed 2026-04-23.** See [docs/cycle-2-report.md](docs/cycle-2-report.md) for what shipped and [docs/cycle-2-todo.md](docs/cycle-2-todo.md) for what's left. The rest of this file is retained as historical context for the brief that drove Cycle 2; do not re-execute.
+> **Cycle 2 completed 2026-04-23, DNS cutover completed 2026-04-24.** See [../cycle-2-report.md](../cycle-2-report.md) for what shipped and [../cycle-2-todo.md](../cycle-2-todo.md) for what's left. The rest of this file is retained as historical context for the brief that drove Cycle 2; do not re-execute.
 
 **Start here.** This is the single entry point for the agent executing Cycle 2. Read this top to bottom before doing anything else. All other C-retry docs are reference material; this one is the plan.
 
