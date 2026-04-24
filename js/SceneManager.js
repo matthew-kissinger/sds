@@ -172,10 +172,14 @@ export class SceneManager {
         this.scene.add(secondaryLight);
     }
     
-    updateCamera(sheepdog) {
+    updateCamera(sheepdog, deltaTime = 1 / 60) {
         // Update camera to follow sheepdog - adjusted for dynamic zoom
+        // Per-frame lerp factor at the reference frame rate (60 FPS). Keeping this
+        // as a named constant makes the frame-rate-independent math below obvious.
+        const LERP_PER_FRAME_AT_60 = 0.05;
+
         let cameraOffset;
-        
+
         // Use competitive camera offset if we have a stored competitive direction
         if (this.competitiveCameraDirection) {
             cameraOffset = this.getCompetitiveCameraOffset();
@@ -183,14 +187,20 @@ export class SceneManager {
             // Default camera offset for solo/cooperative mode
             cameraOffset = new THREE.Vector3(0, this.cameraDistance, -this.cameraDistance);
         }
-        
+
         const targetPosition = new THREE.Vector3(
             sheepdog.position.x,
             0,
             sheepdog.position.z
         );
-        
-        this.camera.position.lerp(targetPosition.clone().add(cameraOffset), 0.05);
+
+        // Frame-rate-independent exponential smoothing. At deltaTime = 1/60 this
+        // evaluates to exactly LERP_PER_FRAME_AT_60 (0.05), preserving the
+        // original feel on 60 FPS displays. On higher-refresh monitors (e.g.
+        // 144 FPS) it damps proportionally less per frame, eliminating the
+        // over-damped camera shake on diagonal movement.
+        const k = 1 - Math.pow(1 - LERP_PER_FRAME_AT_60, deltaTime * 60);
+        this.camera.position.lerp(targetPosition.clone().add(cameraOffset), k);
         this.camera.lookAt(targetPosition);
     }
     
