@@ -17,6 +17,26 @@ import {
     DEFAULT_KEY_BINDINGS,
     isKeyAlreadyBound
 } from '../shared/settings.js';
+import { CameraMode } from '../../CameraController.js';
+
+const CAMERA_MODE_STORAGE_KEY = 'camera-mode';
+
+function loadCameraMode() {
+    try {
+        const saved = localStorage.getItem(CAMERA_MODE_STORAGE_KEY);
+        if (saved === CameraMode.CLASSIC || saved === CameraMode.FOLLOW || saved === CameraMode.FREE) {
+            return saved;
+        }
+    } catch (_) { /* localStorage may be unavailable */ }
+    return CameraMode.CLASSIC;
+}
+
+function persistCameraMode(mode) {
+    try {
+        localStorage.setItem(CAMERA_MODE_STORAGE_KEY, mode);
+    } catch (_) { /* ignore */ }
+    window.dispatchEvent(new CustomEvent('camera-mode-set', { detail: mode }));
+}
 
 // Toggle switch component
 function Toggle({ value, onChange, disabled = false, color = '#3b82f6' }) {
@@ -191,12 +211,72 @@ function PresetButton({ id, label, isActive, onClick, color }) {
     }, label);
 }
 
+const CAMERA_MODE_OPTIONS = [
+    { id: CameraMode.CLASSIC, label: 'Classic',  desc: 'High isometric view (default)' },
+    { id: CameraMode.FOLLOW,  label: 'Follow',   desc: 'Cinematic close-up behind the dog' },
+    { id: CameraMode.FREE,    label: 'Free',     desc: 'Right-mouse-drag to orbit the dog' }
+];
+
+function CameraModePicker({ mode, onChange }) {
+    return createElement('div', {
+        style: { marginBottom: '0.75rem' }
+    }, [
+        createElement('div', {
+            key: 'label',
+            style: {
+                color: 'rgba(255,255,255,0.7)',
+                fontSize: '0.75rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '0.5rem'
+            }
+        }, 'Camera Mode (press C to cycle)'),
+        createElement('div', {
+            key: 'options',
+            style: { display: 'flex', gap: '0.5rem' }
+        }, CAMERA_MODE_OPTIONS.map(opt =>
+            createElement('button', {
+                key: opt.id,
+                onClick: () => onChange(opt.id),
+                title: opt.desc,
+                style: {
+                    flex: 1,
+                    padding: '0.6rem 0.5rem',
+                    background: mode === opt.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                    border: mode === opt.id ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '0.5rem',
+                    color: mode === opt.id ? '#93c5fd' : 'rgba(255,255,255,0.8)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }
+            }, opt.label)
+        ))
+    ]);
+}
+
 export function SettingsPanel({ settings, onSettingsChange, onBack }) {
     const { t } = useTranslation();
     const { isCompact, isMobile } = useResponsive();
     const [activeTab, setActiveTab] = useState('graphics');
     const [listeningForKey, setListeningForKey] = useState(null);
     const [keyConflict, setKeyConflict] = useState(null);
+    const [cameraMode, setCameraMode] = useState(loadCameraMode);
+
+    const handleCameraModeChange = useCallback((mode) => {
+        setCameraMode(mode);
+        persistCameraMode(mode);
+    }, []);
+
+    // Sync from `C` hotkey so the radio reflects in-game cycles.
+    useEffect(() => {
+        const onChange = (e) => {
+            if (e?.detail) setCameraMode(e.detail);
+        };
+        window.addEventListener('camera-mode-changed', onChange);
+        return () => window.removeEventListener('camera-mode-changed', onChange);
+    }, []);
 
     // Handle key binding capture
     useEffect(() => {
@@ -420,6 +500,12 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
     const renderControlsTab = () => createElement('div', {
         style: { display: 'flex', flexDirection: 'column', gap: '0.25rem' }
     }, [
+        createElement(CameraModePicker, {
+            key: 'camera-mode',
+            mode: cameraMode,
+            onChange: handleCameraModeChange
+        }),
+
         // Keyboard bindings header
         createElement('div', {
             key: 'header',

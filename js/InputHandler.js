@@ -36,6 +36,11 @@ export class InputHandler {
         this.mobileControls = null;
         this.gamepadManager = new GamepadManager();
 
+        // Camera controller wired in from main.js — used for the `C` hotkey
+        // (cycle modes) and right-mouse-drag yaw input in Free mode.
+        this.cameraController = null;
+        this.rightMouseDown = false;
+
         // Load saved bindings
         this.loadKeyBindings();
 
@@ -129,10 +134,11 @@ export class InputHandler {
                 event.preventDefault();
             }
 
-            // DEBUG: Instant completion for testing with 'C' key
-            if (code === 'KeyC' && this.onDebugComplete) {
-                console.log('[DEBUG] Triggering instant completion...');
-                this.onDebugComplete();
+            // Cycle camera mode (Classic -> Follow -> Free) with 'C'
+            if (code === 'KeyC' && this.cameraController) {
+                const next = this.cameraController.cycleMode();
+                console.log(`[CAMERA] Mode -> ${next}`);
+                window.dispatchEvent(new CustomEvent('camera-mode-changed', { detail: next }));
                 event.preventDefault();
             }
         });
@@ -162,7 +168,43 @@ export class InputHandler {
             for (const action in this.actions) {
                 this.actions[action] = false;
             }
+            this.rightMouseDown = false;
         });
+
+        this.setupMouseCameraControls();
+    }
+
+    // Right-mouse-button drag → camera yaw delta. Only meaningful when the
+    // camera is in FREE mode (CameraController.applyYawDelta is a no-op
+    // otherwise). Suppresses the canvas context menu so the drag is usable.
+    setupMouseCameraControls() {
+        const target = window;
+
+        target.addEventListener('contextmenu', (event) => {
+            // Only suppress on the game canvas — leave HTML UI menus alone.
+            if (event.target && event.target.tagName === 'CANVAS') {
+                event.preventDefault();
+            }
+        });
+
+        target.addEventListener('mousedown', (event) => {
+            if (event.button === 2 && event.target && event.target.tagName === 'CANVAS') {
+                this.rightMouseDown = true;
+            }
+        });
+
+        target.addEventListener('mouseup', (event) => {
+            if (event.button === 2) this.rightMouseDown = false;
+        });
+
+        target.addEventListener('mousemove', (event) => {
+            if (!this.rightMouseDown || !this.cameraController) return;
+            this.cameraController.applyYawDelta(event.movementX * this.cameraController.mouseYawScale);
+        });
+    }
+
+    setCameraController(controller) {
+        this.cameraController = controller;
     }
 
     // Set mobile controls reference

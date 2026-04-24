@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import { Vector2D } from './Vector2D.js';
+import { CameraController } from './CameraController.js';
 
 /**
- * SceneManager - Handles Three.js scene setup, lighting, and camera management
- * Enhanced with mobile zoom control support
+ * SceneManager - Three.js scene/lighting/renderer lifecycle plus competitive
+ * player-color logic. Camera state lives in CameraController; this class
+ * exposes thin pass-throughs (setCameraDistance, transformMovementForCompetitive,
+ * etc.) so existing callers don't need to know about the split.
  */
 export class SceneManager {
     constructor() {
@@ -86,13 +88,12 @@ export class SceneManager {
         
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         
-        // Camera control with mobile-optimized distances
-        this.cameraDistance = 80;
-        this.minCameraDistance = this.isMobile ? 35 : 20;  // Safer minimum for mobile
-        this.maxCameraDistance = 150;
+        // Camera state owned by CameraController; SceneManager provides
+        // thin pass-throughs (setCameraDistance / transformMovementForCompetitive /
+        // updateCamera, etc.) for back-compat with existing call sites.
+        this.cameraController = new CameraController(this.camera, { isMobile: this.isMobile });
         this.mobileControls = null;
         this.gamepadManager = null;
-        this.competitiveCameraDirection = null; // Store competitive gate direction for camera positioning
         
         // Player color system
         this.playerColors = new Map(); // playerId -> color
@@ -105,10 +106,13 @@ export class SceneManager {
         this.coloredMeshes = new Map(); // playerId -> array of meshes with applied colors
         
         this.init();
-        
-        // Log mobile camera optimization status
+
         console.log(`[CAMERA] Initialized for ${this.isMobile ? 'MOBILE' : 'DESKTOP'} device`);
-        console.log(`[CAMERA] Parameters: near=${this.camera.near}, far=${this.camera.far}, minDistance=${this.minCameraDistance}`);
+        console.log(`[CAMERA] Parameters: near=${this.camera.near}, far=${this.camera.far}, minDistance=${this.cameraController.minDistance}`);
+    }
+
+    getCameraController() {
+        return this.cameraController;
     }
     
     /**
@@ -173,143 +177,57 @@ export class SceneManager {
     }
     
     updateCamera(sheepdog, deltaTime = 1 / 60) {
-        // Update camera to follow sheepdog - adjusted for dynamic zoom
-        // Per-frame lerp factor at the reference frame rate (60 FPS). Keeping this
-        // as a named constant makes the frame-rate-independent math below obvious.
-        const LERP_PER_FRAME_AT_60 = 0.05;
-
-        let cameraOffset;
-
-        // Use competitive camera offset if we have a stored competitive direction
-        if (this.competitiveCameraDirection) {
-            cameraOffset = this.getCompetitiveCameraOffset();
-        } else {
-            // Default camera offset for solo/cooperative mode
-            cameraOffset = new THREE.Vector3(0, this.cameraDistance, -this.cameraDistance);
-        }
-
-        const targetPosition = new THREE.Vector3(
-            sheepdog.position.x,
-            0,
-            sheepdog.position.z
-        );
-
-        // Frame-rate-independent exponential smoothing. At deltaTime = 1/60 this
-        // evaluates to exactly LERP_PER_FRAME_AT_60 (0.05), preserving the
-        // original feel on 60 FPS displays. On higher-refresh monitors (e.g.
-        // 144 FPS) it damps proportionally less per frame, eliminating the
-        // over-damped camera shake on diagonal movement.
-        const k = 1 - Math.pow(1 - LERP_PER_FRAME_AT_60, deltaTime * 60);
-        this.camera.position.lerp(targetPosition.clone().add(cameraOffset), k);
-        this.camera.lookAt(targetPosition);
+        if (!sheepdog) return;
+        this.cameraController.update(sheepdog.position, sheepdog.velocity, deltaTime);
     }
-    
-    /**
-     * Get camera offset for competitive mode based on gate direction
-     */
-    getCompetitiveCameraOffset() {
-        const distance = this.cameraDistance;
-        const height = this.cameraDistance; // Use dynamic height for proper zoom behavior
-        
-        switch (this.competitiveCameraDirection) {
-            case 'north':
-                // Gate at north, camera offset to south
-                return new THREE.Vector3(0, height, -distance);
-            case 'south':
-                // Gate at south, camera offset to north
-                return new THREE.Vector3(0, height, distance);
-            case 'east':
-                // Gate at east, camera offset to west
-                return new THREE.Vector3(-distance, height, 0);
-            case 'west':
-                // Gate at west, camera offset to east
-                return new THREE.Vector3(distance, height, 0);
-            case 'southeast':
-                // Gate at southeast, camera offset to northwest
-                return new THREE.Vector3(-distance * 0.7, height, distance * 0.7);
-            case 'southwest':
-                // Gate at southwest, camera offset to northeast
-                return new THREE.Vector3(distance * 0.7, height, distance * 0.7);
-            default:
-                // Fallback to default
-                return new THREE.Vector3(0, height, -distance);
-        }
-    }
-    
-    // Set mobile controls reference for zoom integration
+
     setMobileControls(mobileControls) {
         this.mobileControls = mobileControls;
-        
-        // Set up zoom change callback for mobile controls
+
         if (mobileControls) {
             mobileControls.setZoomChangeCallback((zoomLevel) => {
-                this.cameraDistance = zoomLevel;
+                this.cameraController.setZoom(zoomLevel);
             });
         }
     }
-    
-    // Set gamepad manager reference for zoom integration
+
     setGamepadManager(gamepadManager) {
         this.gamepadManager = gamepadManager;
     }
-    
+
     setupMouseControls() {
-        // Mouse wheel for zoom (desktop only)
+        // Mouse wheel for zoom (desktop only). Mobile zoom is owned by the
+        // React MobileHUD slider which calls setCameraZoom directly.
         this.renderer.domElement.addEventListener('wheel', (event) => {
             event.preventDefault();
-            
-            // Only handle mouse wheel if not on mobile device
-            if (this.mobileControls && this.mobileControls.getIsTouchDevice()) {
-                return;
-            }
-            
-            const zoomSpeed = 5;
-            
-            if (event.deltaY > 0) {
-                // Zoom out
-                this.cameraDistance = Math.min(this.maxCameraDistance, this.cameraDistance + zoomSpeed);
-            } else {
-                // Zoom in
-                this.cameraDistance = Math.max(this.minCameraDistance, this.cameraDistance - zoomSpeed);
-            }
-            
-            // Note: Mobile zoom slider now handled by React MobileHUD component
+            if (this.mobileControls && this.mobileControls.getIsTouchDevice()) return;
+            this.cameraController.handleWheel(event.deltaY);
         });
     }
-    
-    // Handle gamepad zoom controls - should be called every frame
+
     handleGamepadZoom() {
-        if (!this.gamepadManager || !this.gamepadManager.isConnected()) {
-            return;
-        }
-        
-        const zoomSpeed = 1.5; // Reduced sensitivity for more precise control
-        
-        if (this.gamepadManager.isZoomInPressed()) {
-            // Zoom in with A button
-            this.cameraDistance = Math.max(this.minCameraDistance, this.cameraDistance - zoomSpeed);
-        }
-        
-        if (this.gamepadManager.isZoomOutPressed()) {
-            // Zoom out with B button
-            this.cameraDistance = Math.min(this.maxCameraDistance, this.cameraDistance + zoomSpeed);
-        }
+        if (!this.gamepadManager || !this.gamepadManager.isConnected()) return;
+        this.cameraController.handleGamepadZoom({
+            zoomIn: this.gamepadManager.isZoomInPressed(),
+            zoomOut: this.gamepadManager.isZoomOutPressed()
+        });
     }
-    
-    // Get current camera distance for mobile controls synchronization
+
     getCameraDistance() {
-        return this.cameraDistance;
+        return this.cameraController.getZoom();
     }
-    
-    // Set camera distance (used by mobile controls)
+
     setCameraDistance(distance) {
-        this.cameraDistance = Math.max(this.minCameraDistance, 
-                                     Math.min(this.maxCameraDistance, distance));
+        this.cameraController.setZoom(distance);
     }
-    
-    // Set camera zoom (alias for setCameraDistance, used by UI)
+
     setCameraZoom(zoomLevel) {
-        this.setCameraDistance(zoomLevel);
+        this.cameraController.setZoom(zoomLevel);
+    }
+
+    // Legacy alias used by debug logging in main.js. Reads from controller.
+    get competitiveCameraDirection() {
+        return this.cameraController.getCompetitiveDirection();
     }
     
     render() {
@@ -507,123 +425,15 @@ export class SceneManager {
         return new Map(this.playerColors);
     }
     
-    /**
-     * Set camera position based on player's assigned gate in competitive mode
-     * @param {Object} playerGate - The gate assigned to the current player
-     */
     setCompetitiveCameraPosition(playerGate) {
-        if (!playerGate || !playerGate.direction) {
-            console.warn('Invalid player gate for competitive camera setup');
-            return;
-        }
-
-        // Store the competitive camera direction for use in updateCamera
-        this.competitiveCameraDirection = playerGate.direction;
-        
-        // Set initial camera position and look at center
-        const cameraHeight = this.cameraDistance;
-        const cameraDistance = this.cameraDistance;
-        
-        // Position camera on opposite side of the gate, looking towards center
-        switch (playerGate.direction) {
-            case 'north':
-                // Gate at north (0, 100), camera looks from south
-                this.camera.position.set(0, cameraHeight, -cameraDistance);
-                break;
-            case 'south':
-                // Gate at south (0, -100), camera looks from north  
-                this.camera.position.set(0, cameraHeight, cameraDistance);
-                break;
-            case 'east':
-                // Gate at east (100, 0), camera looks from west
-                this.camera.position.set(-cameraDistance, cameraHeight, 0);
-                break;
-            case 'west':
-                // Gate at west (-100, 0), camera looks from east
-                this.camera.position.set(cameraDistance, cameraHeight, 0);
-                break;
-            case 'southeast':
-                // Gate at southeast (70, -70), camera looks from northwest
-                this.camera.position.set(-cameraDistance * 0.7, cameraHeight, cameraDistance * 0.7);
-                break;
-            case 'southwest':
-                // Gate at southwest (-70, -70), camera looks from northeast
-                this.camera.position.set(cameraDistance * 0.7, cameraHeight, cameraDistance * 0.7);
-                break;
-            default:
-                console.warn(`Unknown gate direction: ${playerGate.direction}, using default camera position`);
-                this.camera.position.set(0, cameraHeight, -cameraDistance);
-                break;
-        }
-        
-        // Always look towards the center of the field
-        this.camera.lookAt(0, 0, 0);
-        
-        console.log(`[CAMERA] Set competitive camera for ${playerGate.direction} gate: position(${this.camera.position.x}, ${this.camera.position.y}, ${this.camera.position.z}), direction stored: ${this.competitiveCameraDirection}`);
+        this.cameraController.setCompetitiveCameraPosition(playerGate);
     }
 
-    /**
-     * Reset camera to default position for solo/cooperative modes
-     */
     resetCameraToDefault() {
-        // Clear competitive camera direction
-        this.competitiveCameraDirection = null;
-        
-        this.camera.position.set(0, 60, -60);
-        this.camera.lookAt(0, 0, 0);
-        console.log('[CAMERA] Reset to default position for solo/cooperative mode');
+        this.cameraController.resetCameraToDefault();
     }
 
-    /**
-     * Transform movement direction based on competitive camera orientation
-     * @param {Vector2D} movementDirection - Original movement direction from input
-     * @returns {Vector2D} - Transformed movement direction
-     */
     transformMovementForCompetitive(movementDirection) {
-        if (!this.competitiveCameraDirection || !movementDirection) {
-            return movementDirection; // No transformation needed
-        }
-
-        // Use the imported Vector2D class for creating new instances
-        const x = movementDirection.x;
-        const z = movementDirection.z;
-
-        switch (this.competitiveCameraDirection) {
-            case 'north':
-                // Default orientation - no transformation needed
-                return movementDirection;
-                
-            case 'south':
-                // Facing south - flip forward/backward, left/right
-                return new Vector2D(-x, -z);
-                
-            case 'east':
-                // Camera looking from west - rotate 90° counter-clockwise
-                // W (forward) should move right in world space (+X)
-                // D (right) should move forward in world space (+Z)
-                return new Vector2D(z, -x);
-                
-            case 'west':
-                // Camera looking from east - rotate 90° clockwise
-                // W (forward) should move left in world space (-X)
-                // D (right) should move backward in world space (-Z)
-                return new Vector2D(-z, x);
-                
-            case 'southeast':
-                // Facing southeast - rotate 135° clockwise
-                const seX = (-x - z) * 0.7071; // cos(135°) ≈ -0.7071
-                const seZ = (x - z) * 0.7071;  // sin(135°) ≈ 0.7071
-                return new Vector2D(seX, seZ);
-                
-            case 'southwest':
-                // Facing southwest - rotate 45° clockwise  
-                const swX = (-x + z) * 0.7071; // cos(45°) ≈ 0.7071
-                const swZ = (-x - z) * 0.7071; // sin(45°) ≈ 0.7071
-                return new Vector2D(swX, swZ);
-                
-            default:
-                return movementDirection;
-        }
+        return this.cameraController.transformMovement(movementDirection);
     }
-
 }

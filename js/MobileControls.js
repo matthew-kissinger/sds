@@ -19,21 +19,62 @@ export class MobileControls {
         this.fullscreenButton = null;
         this.persistentFullscreenButton = null;
         
+        // Free-mode camera controller (set by main after construction).
+        // Two-finger drag deltas drive applyYawDelta when this is wired.
+        this.cameraController = null;
+        this._twoFingerLastX = null;
+
         if (this.isTouchDevice) {
             this.createFullscreenButton();
             this.setupFullscreenListeners();
             this.createMobileUI();
             this.setupTouchPrevention();
-            
+            this.setupCameraTouchControls();
+
             // Add fullscreen change listeners that trigger resize
             if (this.sceneManager) {
                 ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'msfullscreenchange']
                     .forEach(evt => document.addEventListener(evt, () => this.sceneManager.onWindowResize()));
             }
-            
-            // Note: Fullscreen button now only shown via pause menu or initial banner
-            // Removed auto-appearing persistent button after 3 seconds per TASKLIST Phase 1.3
         }
+    }
+
+    setCameraController(controller) {
+        this.cameraController = controller;
+    }
+
+    /**
+     * Two-finger horizontal pan on the canvas → camera yaw delta. Single-finger
+     * touches are reserved for the existing virtual joystick.
+     */
+    setupCameraTouchControls() {
+        const canvas = document.querySelector('canvas');
+        if (!canvas) return;
+
+        const onStart = (e) => {
+            if (e.touches.length === 2) {
+                this._twoFingerLastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            } else {
+                this._twoFingerLastX = null;
+            }
+        };
+
+        const onMove = (e) => {
+            if (e.touches.length !== 2 || !this.cameraController || this._twoFingerLastX === null) return;
+            const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const delta = midX - this._twoFingerLastX;
+            this._twoFingerLastX = midX;
+            this.cameraController.applyYawDelta(delta * this.cameraController.touchYawScale);
+        };
+
+        const onEnd = (e) => {
+            if (e.touches.length < 2) this._twoFingerLastX = null;
+        };
+
+        canvas.addEventListener('touchstart', onStart, { passive: true });
+        canvas.addEventListener('touchmove', onMove, { passive: true });
+        canvas.addEventListener('touchend', onEnd, { passive: true });
+        canvas.addEventListener('touchcancel', onEnd, { passive: true });
     }
     
     /**

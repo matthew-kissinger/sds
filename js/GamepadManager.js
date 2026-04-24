@@ -227,6 +227,32 @@ export class GamepadManager {
     }
     
     /**
+     * Right-stick X axis after circular deadzone, normalized to [-1, 1].
+     * Positive = camera yaws right.
+     */
+    getRightStickX() {
+        return this._deadzonedAxis(this.axisMap.RIGHT_X, this.axisMap.RIGHT_Y);
+    }
+
+    /**
+     * Right-stick Y axis after circular deadzone, normalized to [-1, 1].
+     * Positive = down on the stick.
+     */
+    getRightStickY() {
+        return this._deadzonedAxis(this.axisMap.RIGHT_Y, this.axisMap.RIGHT_X);
+    }
+
+    _deadzonedAxis(primaryIndex, otherIndex) {
+        if (!this.connected || !this.gamepad) return 0;
+        const primary = this.gamepad.axes[primaryIndex] || 0;
+        const other = this.gamepad.axes[otherIndex] || 0;
+        const mag = Math.sqrt(primary * primary + other * other);
+        if (mag < this.deadzone) return 0;
+        const norm = Math.min(1, (mag - this.deadzone) / (1 - this.deadzone));
+        return (primary / mag) * norm;
+    }
+
+    /**
      * Check if zoom in button is pressed (A button)
      */
     isZoomInPressed() {
