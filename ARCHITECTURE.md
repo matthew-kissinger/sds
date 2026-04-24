@@ -271,15 +271,15 @@ The server-to-client state snapshot is the same shape the legacy Geckos server u
 │   ├── GameState.js        Game logic
 │   ├── GameTimer.js        Timing
 │   ├── NetworkManager.js   WebSocket + msgpack + fetch
-│   ├── MultiplayerUI.js    Multiplayer flow UI
+│   ├── MultiplayerState.js Multiplayer state tracker (players, scores, ping)
 │   ├── MobileControls.js   Touch controls
 │   ├── InputHandler.js     Keyboard / gamepad
 │   ├── GamepadManager.js   Controller support
 │   ├── AudioManager.js     Sound
-│   ├── StartScreen.js      Start screen glue
+│   ├── MenuController.js   Menu flow + NetworkManager owner + game-start callback
 │   ├── PerformanceMonitor.js FPS / triangles / per-system
 │   ├── GameAssetLoader.js  GLB / audio / texture loader
-│   ├── Boid.js, ExtremeBoid.js
+│   ├── Boid.js             Sheep flocking primitives
 │   ├── FencePresets.js     Fence configurations
 │   ├── Vector2D.js         2D math
 │   ├── utils/              Triangle counters, helpers

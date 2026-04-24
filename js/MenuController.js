@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import { NetworkManager } from './NetworkManager.js';
 
 /**
- * StartScreen - Modernized game logic controller for React UI integration
+ * MenuController - Modernized game logic controller for React UI integration
  * Provides clean API methods for React components to call
  */
-export class StartScreen {
+export class MenuController {
     constructor(sceneManager) {
         this.sceneManager = sceneManager;
         this.isActive = true;
@@ -13,9 +13,9 @@ export class StartScreen {
         this.audioManager = null;
         
         // Initialize NetworkManager
-        console.log('StartScreen: Creating NetworkManager...');
+        console.log('MenuController: Creating NetworkManager...');
         this.networkManager = new NetworkManager();
-        console.log('StartScreen: NetworkManager created:', !!this.networkManager);
+        console.log('MenuController: NetworkManager created:', !!this.networkManager);
         this.setupNetworkHandlers();
         
         // Cinematic camera settings
@@ -158,7 +158,7 @@ export class StartScreen {
     }
     
     startMultiplayerGame() {
-        console.log('[START] StartScreen.startMultiplayerGame isHost=', this.isHost, 'room=', this.currentRoom?.roomCode);
+        console.log('[START] MenuController.startMultiplayerGame isHost=', this.isHost, 'room=', this.currentRoom?.roomCode);
         if (!this.isHost) {
             console.warn('[START] aborting: this.isHost is false');
             return;
@@ -168,12 +168,12 @@ export class StartScreen {
     }
     
     selectSolo(dogType, singlePlayerMode = 'classic') {
-        console.log('[GAME] StartScreen.selectSolo called with dogType:', dogType, 'singlePlayerMode:', singlePlayerMode);
+        console.log('[GAME] MenuController.selectSolo called with dogType:', dogType, 'singlePlayerMode:', singlePlayerMode);
         this.selectedDog = dogType;
         this.selectedMode = 'solo';
         this.singlePlayerMode = singlePlayerMode;
         this.playUIClick();
-        console.log('[GAME] StartScreen.selectSolo calling startGame()');
+        console.log('[GAME] MenuController.selectSolo calling startGame()');
         this.startGame();
     }
 
@@ -185,7 +185,7 @@ export class StartScreen {
      * @param {string} config.player2Dog - Dog type for player 2
      */
     selectLocal(config) {
-        console.log('[GAME] StartScreen.selectLocal called with config:', config);
+        console.log('[GAME] MenuController.selectLocal called with config:', config);
         this.selectedMode = 'local';
         this.localConfig = config;
         this.playUIClick();
@@ -319,7 +319,7 @@ export class StartScreen {
         this.audioManager = audioManager;
     }
     
-    isStartScreenActive() {
+    isMenuActive() {
         return this.isActive;
     }
     

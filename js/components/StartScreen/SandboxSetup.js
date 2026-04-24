@@ -108,7 +108,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
         try {
             const cfg = new SandboxConfig(config);
             const encoded = cfg.serialize();
-            const url = `https://sheepdogsim.com/#s/${encoded}`;
+            const url = `${location.origin}/#s/${encoded}`;
             if (url.length > 1800) {
                 setShareToast('Config too large to share via URL');
             } else {

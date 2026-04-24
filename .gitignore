@@ -45,6 +45,14 @@ node_modules/
 .env.local
 .env.*.local
 
+# Wrangler local-dev secrets (prod secrets live in `wrangler secret put`)
+.dev.vars
+worker/.dev.vars
+
+# Wrangler local cache + state (workerd, D1 sqlite shadow, KV, etc.)
+.wrangler/
+worker/.wrangler/
+
 # SQLite database files (live data - never commit)
 *.db
 *.db-shm

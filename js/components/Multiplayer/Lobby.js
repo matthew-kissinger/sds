@@ -36,7 +36,9 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, gameMode, modeLoc
     };
 
     const copyInviteLink = () => {
-        const url = `https://sheepdogsim.com#/r/${roomCode}`;
+        // Use the current origin so links work in local dev (localhost:3001),
+        // preview deploys, and production (sheepdogsim.com) without rewriting.
+        const url = `${location.origin}#/r/${roomCode}`;
         navigator.clipboard.writeText(url);
         setLinkCopied(true);
         setTimeout(() => setLinkCopied(false), 2000);

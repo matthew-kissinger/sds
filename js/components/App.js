@@ -20,7 +20,8 @@ import '../i18n.js';
 import {
     getGameInstance,
     getNetworkManager,
-    getStartScreen,
+    getMenuController,
+
     getGameState,
     getInputHandler,
     selectDog,
@@ -290,9 +291,9 @@ export async function initReactUI() {
                 console.log('[UI] Starting local 2-player game:', localConfig);
                 if (!getGameInstance()) return;
 
-                const startScreen = getStartScreen();
-                if (startScreen) {
-                    startScreen.selectLocal(localConfig);
+                const menuController =getMenuController();
+                if (menuController) {
+                    menuController.selectLocal(localConfig);
                 }
             };
 
@@ -661,9 +662,9 @@ export async function initReactUI() {
                             gameMode: _room ? _room.gameMode : (lobbyData && lobbyData.gameMode),
                             modeLocked: _room ? !!_room.modeLocked : false,
                             onStart: () => {
-                                const startScreen = getStartScreen();
-                                if (startScreen) {
-                                    startScreen.selectedDog = selectedDog;
+                                const menuController =getMenuController();
+                                if (menuController) {
+                                    menuController.selectedDog = selectedDog;
                                 }
                                 startMultiplayerGame();
                             },
@@ -864,9 +865,9 @@ export async function initReactUI() {
                 }
 
                 // Show start screen
-                const startScreen = getStartScreen();
-                if (startScreen) {
-                    startScreen.reset();
+                const menuController =getMenuController();
+                if (menuController) {
+                    menuController.reset();
                 }
 
                 // Trigger return to menu

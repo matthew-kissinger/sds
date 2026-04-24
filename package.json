@@ -8,12 +8,11 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "vite --port 3000",
-    "dev:lan": "vite --port 3000 --host",
-    "server": "cd server && node index.js",
-    "server:dev": "cd server && node --watch index.js",
-    "dev:full": "concurrently \"npm run dev\" \"npm run server:dev\"",
-    "dev:lan:full": "concurrently \"npm run dev:lan\" \"npm run server:dev\"",
+    "dev": "concurrently -n client,worker -c cyan,magenta \"npm:dev:client\" \"npm:dev:worker\"",
+    "dev:client": "vite --port 3000",
+    "dev:worker": "cd worker && wrangler dev",
+    "dev:lan": "concurrently -n client,worker -c cyan,magenta \"vite --port 3000 --host\" \"npm:dev:worker\"",
+    "dev:setup": "cd worker && wrangler d1 execute sds-db --local --file=migrations/0001_init.sql",
     "build": "vite build",
     "build:itchio": "cross-env BUILD_TARGET=itchio vite build",
     "preview": "vite preview",

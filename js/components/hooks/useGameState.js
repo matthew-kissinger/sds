@@ -1,9 +1,21 @@
 import { useState, useEffect } from 'react';
-import { getGameState, getGameTimer, getNetworkManager, getMultiplayerUI, getSheepdog } from '../../GameBridge.js';
+import {
+    getGameState,
+    getGameTimer,
+    getNetworkManager,
+    getMultiplayerState,
+    getSheepdog,
+    subscribeGameEvent,
+} from '../../GameBridge.js';
 
 /**
- * Game state polling hook
- * Provides reactive access to game state for HUD components
+ * Reactive game-state hook for HUD components.
+ *
+ * Subscribes to the per-frame 'frame' event emitted by the animate loop
+ * (see `main.js` → `emitGameEvent('frame')`). Previously this was a
+ * `setInterval(..., 16)` poll across five managers; the subscription keeps
+ * the same cadence but unsubscribes cleanly on unmount and doesn't tick
+ * when the page is backgrounded (rAF-driven).
  */
 export function useGameState() {
     const [gameData, setGameData] = useState({
@@ -18,72 +30,70 @@ export function useGameState() {
         myPlayerId: null,
         scores: {},
         gates: {},
-        timeLimit: 0
+        timeLimit: 0,
     });
 
     useEffect(() => {
-        // Poll game state at 60fps
-        const pollInterval = setInterval(() => {
+        function readGameState() {
             const gameState = getGameState();
             const gameTimer = getGameTimer();
+            if (!gameState || !gameTimer) return;
+
             const networkManager = getNetworkManager();
-            const multiplayerUI = getMultiplayerUI();
+            const multiplayerState = getMultiplayerState();
+            const sheepdog = getSheepdog();
 
-            if (gameState && gameTimer) {
-                const sheepdog = getSheepdog();
+            const isInMultiplayer = networkManager?.currentRoom;
+            const actualGameMode = isInMultiplayer
+                ? (multiplayerState?.gameMode || networkManager?.currentRoom?.gameMode || 'cooperative')
+                : 'solo';
 
-                // Get sheep count based on game mode and multiplayer status
-                let sheepCount = 0;
-                const isInMultiplayer = networkManager?.currentRoom;
-                const actualGameMode = isInMultiplayer
-                    ? (multiplayerUI?.gameMode || networkManager?.currentRoom?.gameMode || 'cooperative')
-                    : 'solo';
-
-                if (isInMultiplayer && (actualGameMode === 'competitive' || actualGameMode === 'timed')) {
-                    // In multiplayer racing/timed mode, show player's individual score
-                    const playerId = networkManager?.getPlayerId();
-                    sheepCount = gameState.getPlayerScore(playerId) || 0;
-                } else if (isInMultiplayer && actualGameMode === 'cooperative') {
-                    // In cooperative multiplayer mode, show total sheep collected by all players
-                    sheepCount = gameState.sheepRetired || 0;
-                } else {
-                    // In single player mode, show sheep retired
-                    sheepCount = gameState.sheepRetired || 0;
-                }
-
-                // Calculate stamina percentage based on dog's max stamina
-                const currentStamina = sheepdog?.stamina || 100;
-                const maxStamina = sheepdog?.maxStamina || 100;
-                const staminaPercentage = Math.round((currentStamina / maxStamina) * 100);
-
-                const newData = {
-                    stamina: currentStamina,
-                    maxStamina: maxStamina,
-                    staminaPercentage: staminaPercentage,
-                    sheepCount: sheepCount,
-                    totalSheep: gameState.totalSheep || 200,
-                    gameTime: gameTimer.getGameTime ? gameTimer.getGameTime() : 0,
-                    isComplete: gameState.isComplete || false,
-                    isPaused: gameState.paused || false,
-                    gameMode: actualGameMode,
-                    singlePlayerMode: gameState.singlePlayerMode || 'classic'
-                };
-
-                // Add multiplayer data if available
-                if (networkManager?.currentRoom) {
-                    newData.players = multiplayerUI?.currentPlayers || [];
-                    newData.myPlayerId = networkManager.getPlayerId();
-                    newData.scores = gameState.playerScores || {};
-                    newData.gates = gameState.competitiveGates || {};
-                    newData.gameMode = gameState.gameMode || multiplayerUI?.gameMode || networkManager?.currentRoom?.gameMode || 'cooperative';
-                    newData.timeLimit = newData.gameMode === 'timed' ? 180 : 0;
-                }
-
-                setGameData(newData);
+            let sheepCount;
+            if (isInMultiplayer && (actualGameMode === 'competitive' || actualGameMode === 'timed')) {
+                const playerId = networkManager?.getPlayerId();
+                sheepCount = gameState.getPlayerScore(playerId) || 0;
+            } else {
+                sheepCount = gameState.sheepRetired || 0;
             }
-        }, 16); // 60fps
 
-        return () => clearInterval(pollInterval);
+            const currentStamina = sheepdog?.stamina || 100;
+            const maxStamina = sheepdog?.maxStamina || 100;
+            const staminaPercentage = Math.round((currentStamina / maxStamina) * 100);
+
+            const newData = {
+                stamina: currentStamina,
+                maxStamina,
+                staminaPercentage,
+                sheepCount,
+                totalSheep: gameState.totalSheep || 200,
+                gameTime: gameTimer.getGameTime ? gameTimer.getGameTime() : 0,
+                isComplete: gameState.isComplete || false,
+                isPaused: gameState.paused || false,
+                gameMode: actualGameMode,
+                singlePlayerMode: gameState.singlePlayerMode || 'classic',
+                players: [],
+                myPlayerId: null,
+                scores: {},
+                gates: {},
+                timeLimit: 0,
+            };
+
+            if (networkManager?.currentRoom) {
+                newData.players = multiplayerState?.currentPlayers || [];
+                newData.myPlayerId = networkManager.getPlayerId();
+                newData.scores = gameState.playerScores || {};
+                newData.gates = gameState.competitiveGates || {};
+                newData.gameMode = gameState.gameMode || multiplayerState?.gameMode || networkManager?.currentRoom?.gameMode || 'cooperative';
+                newData.timeLimit = newData.gameMode === 'timed' ? 180 : 0;
+            }
+
+            setGameData(newData);
+        }
+
+        // Prime once on mount so the HUD has a value before the first frame event.
+        readGameState();
+
+        return subscribeGameEvent('frame', readGameState);
     }, []);
 
     return gameData;

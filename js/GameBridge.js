@@ -14,6 +14,19 @@
 
 let gameInstance = null;
 
+// Per-frame event bus. The game loop emits 'frame' after each render; React HUD
+// hooks subscribe instead of polling on a setInterval.
+const gameEvents = new EventTarget();
+
+export function emitGameEvent(name) {
+    gameEvents.dispatchEvent(new Event(name));
+}
+
+export function subscribeGameEvent(name, handler) {
+    gameEvents.addEventListener(name, handler);
+    return () => gameEvents.removeEventListener(name, handler);
+}
+
 /**
  * Set the game instance (called once during initialization)
  * @param {Object} instance - The main game instance
@@ -123,19 +136,19 @@ export function getSheepdog() {
 }
 
 /**
- * Get the start screen
- * @returns {Object|null} - StartScreen instance or null
+ * Get the menu controller (owns NetworkManager + menu-phase flows)
+ * @returns {Object|null} - MenuController instance or null
  */
-export function getStartScreen() {
-    return gameInstance?.startScreen || null;
+export function getMenuController() {
+    return gameInstance?.menuController || null;
 }
 
 /**
- * Get the multiplayer UI
- * @returns {Object|null} - MultiplayerUI instance or null
+ * Get the multiplayer state tracker (players, scores, connection, ping)
+ * @returns {Object|null} - MultiplayerState instance or null
  */
-export function getMultiplayerUI() {
-    return gameInstance?.multiplayerUI || null;
+export function getMultiplayerState() {
+    return gameInstance?.multiplayerState || null;
 }
 
 // Game action methods - these call methods on the game instance
@@ -278,8 +291,8 @@ if (typeof window !== 'undefined') {
         getMobileControls,
         getPerformanceMonitor,
         getSheepdog,
-        getStartScreen,
-        getMultiplayerUI,
+        getMenuController,
+        getMultiplayerState,
         startSoloGame,
         startSandboxGame,
         selectDog,

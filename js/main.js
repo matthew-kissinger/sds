@@ -10,13 +10,13 @@ import { InputHandler } from './InputHandler.js';
 import { MobileControls } from './MobileControls.js';
 import { Sheepdog } from './Sheepdog.js';
 import { PerformanceMonitor } from './PerformanceMonitor.js';
-import { StartScreen } from './StartScreen.js';
+import { MenuController } from './MenuController.js';
 import { AudioManager } from './AudioManager.js';
 import { GameAssetLoader } from './GameAssetLoader.js';
 import { NetworkManager } from './NetworkManager.js';
-import { MultiplayerUI } from './MultiplayerUI.js';
+import { MultiplayerState } from './MultiplayerState.js';
 import { Vector2D } from './Vector2D.js';
-import { setGameInstance } from './GameBridge.js';
+import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
@@ -171,9 +171,9 @@ class SheepDogSimulation {
         this.performanceMonitor = new PerformanceMonitor();
         this.webVitalsMonitor = new WebVitalsMonitor();
         this.gameAssetLoader = new GameAssetLoader();
-        this.startScreen = new StartScreen(this.sceneManager);
+        this.menuController = new MenuController(this.sceneManager);
         this.audioManager = new AudioManager(this.sceneManager.getCamera());
-        this.multiplayerUI = new MultiplayerUI();
+        this.multiplayerState = new MultiplayerState();
         
         // Create mobile controls with sceneManager and audioManager
         this.mobileControls = new MobileControls(this.sceneManager, this.audioManager);
@@ -200,7 +200,7 @@ class SheepDogSimulation {
         this.setupPauseHandling();
         
         // Set up start screen callback
-        this.startScreen.setGameStartCallback((mode, roomData, singlePlayerMode) => {
+        this.menuController.setGameStartCallback((mode, roomData, singlePlayerMode) => {
             if (mode === 'local') {
                 // roomData is actually localConfig for local mode
                 this.startLocalGame(roomData);
@@ -211,14 +211,14 @@ class SheepDogSimulation {
         
         // Pass audio manager to modules that need it
         this.gameState.setAudioManager(this.audioManager);
-        this.startScreen.setAudioManager(this.audioManager);
+        this.menuController.setAudioManager(this.audioManager);
         
         // Animation timing
         this.lastTime = performance.now();
         
         // Multiplayer state
-        // Get NetworkManager from StartScreen (it creates one in its constructor)
-        this.networkManager = this.startScreen.networkManager;
+        // Get NetworkManager from MenuController (it creates one in its constructor)
+        this.networkManager = this.menuController.networkManager;
         this.isMultiplayer = false;
         this.otherPlayers = new Map(); // playerId -> Sheepdog instance
         this.playerWasMoving = false; // Track movement state from previous frame
@@ -440,7 +440,7 @@ class SheepDogSimulation {
         this.singlePlayerMode = singlePlayerMode;
         
         // Get the selected dog type from the start screen
-        const selectedDogType = this.startScreen.getSelectedDog();
+        const selectedDogType = this.menuController.getSelectedDog();
         console.log(`Selected dog type: ${selectedDogType}`);
         
         // Remove the old sheepdog and its indicator from scene if it exists
@@ -530,7 +530,7 @@ class SheepDogSimulation {
             // Configure UI for racing/timed mode if needed
             if (roomData.gameMode === 'racing' || roomData.gameMode === 'timed') {
                 console.log(`Setting up ${roomData.gameMode} mode UI`);
-                this.multiplayerUI.setGameMode(roomData.gameMode, roomData.players?.length || 0);
+                this.multiplayerState.setGameMode(roomData.gameMode, roomData.players?.length || 0);
                 this.gameState.setGameMode(roomData.gameMode);
                 this.gameState.setCurrentPlayerId(this.networkManager?.getPlayerId());
                 
@@ -581,7 +581,7 @@ class SheepDogSimulation {
             }
         } else {
             // Hide multiplayer UI for solo mode
-            this.multiplayerUI.hide();
+            this.multiplayerState.hide();
             this.audioManager.setGameMode('solo');
 
             // Reset camera to default position for solo mode
@@ -705,15 +705,15 @@ class SheepDogSimulation {
         }
 
         // Hide multiplayer UI
-        this.multiplayerUI.hide();
+        this.multiplayerState.hide();
         this.audioManager.setGameMode('solo');
 
         // Reset camera to default position
         this.sceneManager.resetCameraToDefault();
 
         // Mark start screen as inactive (same pattern as normal game start)
-        this.startScreen.isActive = false;
-        this.startScreen.gameStarted = true;
+        this.menuController.isActive = false;
+        this.menuController.gameStarted = true;
 
         // Fade out menu music and start gameplay music
         if (this.audioManager) {
@@ -853,12 +853,12 @@ class SheepDogSimulation {
         };
 
         // Hide multiplayer UI
-        this.multiplayerUI.hide();
+        this.multiplayerState.hide();
         this.audioManager.setGameMode('solo');
 
         // Mark start screen as inactive
-        this.startScreen.isActive = false;
-        this.startScreen.gameStarted = true;
+        this.menuController.isActive = false;
+        this.menuController.gameStarted = true;
 
         // Start music
         if (this.audioManager) {
@@ -953,14 +953,14 @@ class SheepDogSimulation {
         }
         
         // Show multiplayer UI
-        this.multiplayerUI.show();
+        this.multiplayerState.show();
         
         // Set up network event handlers
         this.setupMultiplayerEventHandlers();
         
         // Initialize multiplayer UI with current room data
         if (this.roomData && this.roomData.players) {
-            this.multiplayerUI.updatePlayers(this.roomData.players, this.networkManager.getPlayerId());
+            this.multiplayerState.updatePlayers(this.roomData.players, this.networkManager.getPlayerId());
         }
         
         console.log('Multiplayer mode initialized');
@@ -974,7 +974,7 @@ class SheepDogSimulation {
         
         // Connection state changes
         this.networkManager.onConnectionStateChange = (state) => {
-            this.multiplayerUI.updateConnectionStatus(state);
+            this.multiplayerState.updateConnectionStatus(state);
             
             if (state === 'disconnected') {
                 // Handle disconnection - could show reconnection message
@@ -985,12 +985,12 @@ class SheepDogSimulation {
         // Room/player updates
         this.networkManager.onRoomUpdate = (room) => {
             if (room && room.players) {
-                this.multiplayerUI.updatePlayers(room.players, this.networkManager.getPlayerId());
+                this.multiplayerState.updatePlayers(room.players, this.networkManager.getPlayerId());
                 
                 // Configure racing/timed mode if room has that setting
-                if ((room.gameMode === 'racing' || room.gameMode === 'timed') && this.multiplayerUI.gameMode !== room.gameMode) {
+                if ((room.gameMode === 'racing' || room.gameMode === 'timed') && this.multiplayerState.gameMode !== room.gameMode) {
                     console.log(`Configuring ${room.gameMode} mode from room update`);
-                    this.multiplayerUI.setGameMode(room.gameMode, room.players.length);
+                    this.multiplayerState.setGameMode(room.gameMode, room.players.length);
                     this.gameState.setGameMode(room.gameMode);
                     this.gameState.setCurrentPlayerId(this.networkManager.getPlayerId());
                 }
@@ -999,9 +999,9 @@ class SheepDogSimulation {
         
         this.networkManager.onPlayerUpdate = (update) => {
             if (update.type === 'joined' && update.player) {
-                this.multiplayerUI.addPlayer(update.player);
+                this.multiplayerState.addPlayer(update.player);
             } else if (update.type === 'left' && update.player) {
-                this.multiplayerUI.removePlayer(update.player.id);
+                this.multiplayerState.removePlayer(update.player.id);
                 // Remove the player's 3D visualization
                 this.removeOtherPlayer(update.player.id);
             } else if (update.type === 'gameComplete' && update.data) {
@@ -1079,7 +1079,7 @@ class SheepDogSimulation {
                 // Handle competitive state restoration after reconnection
                 console.log('[GAME] Restoring competitive state after reconnection:', update.data);
 
-                if (this.multiplayerUI.gameMode === 'racing' || this.multiplayerUI.gameMode === 'timed') {
+                if (this.multiplayerState.gameMode === 'racing' || this.multiplayerState.gameMode === 'timed') {
                     // Show the completion overlay using the React CompletionScreen
                     const currentPlayerId = this.networkManager.getPlayerId();
                     const isWinner = update.data.winner === currentPlayerId;
@@ -1097,7 +1097,7 @@ class SheepDogSimulation {
             // Update current room data
             if (this.networkManager.getCurrentRoom()) {
                 const room = this.networkManager.getCurrentRoom();
-                this.multiplayerUI.updatePlayers(room.players, this.networkManager.getPlayerId());
+                this.multiplayerState.updatePlayers(room.players, this.networkManager.getPlayerId());
             }
         };
         
@@ -1109,7 +1109,7 @@ class SheepDogSimulation {
         
         // Ping updates
         this.networkManager.onPingUpdate = (pingMs) => {
-            this.multiplayerUI.updatePing(pingMs);
+            this.multiplayerState.updatePing(pingMs);
         };
     }
     
@@ -1317,12 +1317,12 @@ class SheepDogSimulation {
             }
             
             // Update multiplayer UI with all competitive data
-            if (this.multiplayerUI.gameMode === 'competitive' || this.multiplayerUI.gameMode === 'timed') {
-                this.multiplayerUI.updatePlayerScores(competitiveData.playerScores);
+            if (this.multiplayerState.gameMode === 'competitive' || this.multiplayerState.gameMode === 'timed') {
+                this.multiplayerState.updatePlayerScores(competitiveData.playerScores);
                 
                 // Update win progress if available
                 if (competitiveData.winCondition) {
-                    this.multiplayerUI.updateWinProgress(competitiveData.winCondition);
+                    this.multiplayerState.updateWinProgress(competitiveData.winCondition);
                 }
             }
             
@@ -1370,8 +1370,8 @@ class SheepDogSimulation {
         }
         
         // Update start screen camera if active
-        if (this.startScreen.isStartScreenActive()) {
-            this.startScreen.updateCinematicCamera();
+        if (this.menuController.isMenuActive()) {
+            this.menuController.updateCinematicCamera();
         } else if (this.isLocalMultiplayer && this.localInputHandler && !this.localInputHandler.isPausedState()) {
             // --- LOCAL 2-PLAYER MODE ---
             this.updateLocalMultiplayer(deltaTime);
@@ -1654,6 +1654,9 @@ class SheepDogSimulation {
 
         // Render the scene (always render to show pause indicator)
         this.sceneManager.render();
+
+        // Notify HUD subscribers (replaces setInterval polling in useGameState).
+        emitGameEvent('frame');
     }
     
     // Legacy mobile UI organization removed - all mobile UI now handled by React components
@@ -2195,47 +2198,47 @@ window.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded - Creating game instance...');
     const gameInstance = new SheepDogSimulation();
 
-    // Add StartScreen methods to the game instance for GameBridge access
+    // Delegate menu/network flows from gameInstance to menuController for GameBridge
     gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {
-        gameInstance.startScreen.selectSolo(dogType, singlePlayerMode);
+        gameInstance.menuController.selectSolo(dogType, singlePlayerMode);
     };
 
     // Note: startSandboxGame is already defined on the class, no need to override
 
     gameInstance.createRoom = async (playerName, settings, dogType) => {
-        return await gameInstance.startScreen.createRoom(playerName, settings, dogType);
+        return await gameInstance.menuController.createRoom(playerName, settings, dogType);
     };
 
     gameInstance.joinRoom = async (roomCode, playerName, dogType) => {
-        return await gameInstance.startScreen.joinRoom(roomCode, playerName, dogType);
+        return await gameInstance.menuController.joinRoom(roomCode, playerName, dogType);
     };
 
     gameInstance.quickMatch = async (playerName, dogType) => {
-        return await gameInstance.startScreen.quickMatch(playerName, dogType);
+        return await gameInstance.menuController.quickMatch(playerName, dogType);
     };
 
     gameInstance.leaveRoom = () => {
-        gameInstance.startScreen.leaveRoom();
+        gameInstance.menuController.leaveRoom();
     };
 
     gameInstance.startMultiplayerGame = () => {
-        gameInstance.startScreen.startMultiplayerGame();
+        gameInstance.menuController.startMultiplayerGame();
     };
 
     gameInstance.selectDog = (dogType) => {
-        gameInstance.startScreen.selectDog(dogType);
+        gameInstance.menuController.selectDog(dogType);
     };
 
     gameInstance.getSelectedDog = () => {
-        return gameInstance.startScreen.getSelectedDog();
+        return gameInstance.menuController.getSelectedDog();
     };
 
     gameInstance.getCurrentRoom = () => {
-        return gameInstance.startScreen.getCurrentRoom();
+        return gameInstance.menuController.getCurrentRoom();
     };
 
     gameInstance.isCurrentHost = () => {
-        return gameInstance.startScreen.isCurrentHost();
+        return gameInstance.menuController.isCurrentHost();
     };
 
     // GameBridge already initialized in constructor (setGameInstance called there)

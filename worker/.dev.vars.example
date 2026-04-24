@@ -1,0 +1,5 @@
+# Local-dev secrets for wrangler. Copy this file to `.dev.vars` (which is
+# gitignored) and customize. Any non-empty JWT_SECRET works for local testing —
+# production uses the value set via `wrangler secret put JWT_SECRET`.
+
+JWT_SECRET=local-dev-secret-not-for-production
