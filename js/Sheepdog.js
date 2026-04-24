@@ -71,6 +71,28 @@ const SPEED_THRESHOLDS = {
 };
 
 /**
+ * Hysteresis margin (units/sec) applied to SPEED_THRESHOLDS in determineAnimationState.
+ * Prevents rapid oscillation between adjacent animation states when speed hovers at a boundary.
+ */
+const SPEED_HYSTERESIS = 1.0;
+
+/**
+ * "Ideal" speed (units/sec) each movement clip was designed for. Used to modulate mixer
+ * action timeScale so the legs visually match the body's actual speed instead of churning
+ * at 1x when the dog is gliding slowly (e.g. after stamina exhaustion while still in
+ * SPRINTING state). Values roughly match the upper edge of each SPEED_THRESHOLDS band;
+ * SPRINTING is set to 30 (above the 24 entry threshold) so the sprint clip plays at 1x
+ * during normal max-speed sprinting. Non-movement states (IDLE, BARKING) are omitted so
+ * their clips play at authored 1x speed.
+ */
+const SPEED_STATE_MAX = {
+    WALKING: 5.0,
+    TROTTING: 12.0,
+    RUNNING: 18.0,
+    SPRINTING: 30.0
+};
+
+/**
  * Sheepdog class - Professional player controlled entity with advanced animation system
  */
 export class Sheepdog {
@@ -342,28 +364,54 @@ export class Sheepdog {
     }
     
     /**
-     * Determine appropriate animation state based on speed and context - Improved
+     * Determine appropriate animation state based on speed and context.
+     *
+     * Applies SPEED_HYSTERESIS around SPEED_THRESHOLDS: climbing to a higher state requires
+     * speed >= (threshold + hysteresis), dropping to a lower state requires
+     * speed < (threshold - hysteresis). This prevents rapid flip-flop when speed hovers at
+     * a boundary (e.g. walking <-> trotting near 5.0).
      */
     determineAnimationState() {
         const speed = this.velocity.magnitude();
         const targetSpeed = this.targetVelocity.magnitude();
-        
+        const currentState = this.animationSystem.currentState;
+        const h = SPEED_HYSTERESIS;
+
         // Use target velocity to immediately stop idle when input is detected
         // This ensures idle stops as soon as the player starts moving
         if (speed < SPEED_THRESHOLDS.IDLE && targetSpeed < SPEED_THRESHOLDS.IDLE) {
             return 'IDLE';
         }
-        
-        // Speed-based states with smooth progression
-        if (speed < SPEED_THRESHOLDS.WALKING) {
-            return 'WALKING';
-        } else if (speed < SPEED_THRESHOLDS.TROTTING) {
-            return 'TROTTING';
-        } else if (speed < SPEED_THRESHOLDS.RUNNING) {
-            return 'RUNNING';
-        } else {
-            return 'SPRINTING';
+
+        // The "natural" state given raw thresholds; used when there is no movement state to
+        // bias toward (IDLE / BARKING / first call) and as the target on any boundary crossing.
+        const natural = (
+            speed < SPEED_THRESHOLDS.WALKING   ? 'WALKING'
+            : speed < SPEED_THRESHOLDS.TROTTING ? 'TROTTING'
+            : speed < SPEED_THRESHOLDS.RUNNING  ? 'RUNNING'
+            : 'SPRINTING'
+        );
+
+        // Climbing past an upper boundary requires +h margin.
+        const upperThreshold = {
+            WALKING:   SPEED_THRESHOLDS.TROTTING  + h,
+            TROTTING:  SPEED_THRESHOLDS.RUNNING   + h,
+            RUNNING:   SPEED_THRESHOLDS.SPRINTING + h
+        }[currentState];
+        // Dropping below a lower boundary requires -h margin.
+        const lowerThreshold = {
+            SPRINTING: SPEED_THRESHOLDS.RUNNING  - h,
+            RUNNING:   SPEED_THRESHOLDS.TROTTING - h,
+            TROTTING:  SPEED_THRESHOLDS.WALKING  - h
+        }[currentState];
+
+        // Not in a movement state (IDLE / BARKING / first call): no bias, enter at exact threshold.
+        if (upperThreshold === undefined && lowerThreshold === undefined) {
+            return natural;
         }
+        if (upperThreshold !== undefined && speed >= upperThreshold) return natural;
+        if (lowerThreshold !== undefined && speed <  lowerThreshold) return natural;
+        return currentState;
     }
     
     /**
@@ -440,10 +488,25 @@ export class Sheepdog {
      */
     updateAnimationSystem(deltaTime) {
         if (!this.animationSystem.mixer) return;
-        
+
         // Update mixer
         this.animationSystem.mixer.update(deltaTime);
-        
+
+        // Scale the active clip's playback rate to match body speed. Without this, when
+        // the dog slows (e.g. post-sprint exhaustion) while still in the SPRINTING state,
+        // the RunFast clip continues at timeScale=1 and the legs churn while the dog glides.
+        // Non-movement states (IDLE, BARKING) play at authored 1x speed.
+        const currentAction = this.animationSystem.currentAction;
+        if (currentAction) {
+            const stateMax = SPEED_STATE_MAX[this.animationSystem.currentState];
+            if (stateMax && stateMax > 0) {
+                const speed = this.velocity.magnitude();
+                currentAction.timeScale = THREE.MathUtils.clamp(speed / stateMax, 0.5, 1.5);
+            } else {
+                currentAction.timeScale = 1.0;
+            }
+        }
+
         // Update timers
         this.animationSystem.stateTimer += deltaTime * 1000;
         
