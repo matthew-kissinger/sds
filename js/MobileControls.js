@@ -369,12 +369,7 @@ export class MobileControls {
                         this.updateFullscreenLayout(); // Ensure layout is updated after resize
                     }, 50);
                     
-                    /* 2. If start-screen is still active, scroll it back in view */
-                    if (document.getElementById('start-screen')) {
-                        document.getElementById('start-screen').scrollIntoView({block:'center'});
-                    }
-                    
-                    /* 3. Guarantee AudioContext is resumed */
+                    /* 2. Guarantee AudioContext is resumed */
                     if (this.audioManager && this.audioManager.listener && this.audioManager.listener.context && 
                         this.audioManager.listener.context.state === 'suspended') {
                         this.audioManager.listener.context.resume().catch(() => {});

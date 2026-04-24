@@ -363,7 +363,7 @@ export async function initReactUI() {
 
                     if (screen !== 'lobby') setScreen('lobby');
 
-                    if (document.querySelector('canvas') && document.getElementById('start-screen')?.style.display === 'none') {
+                    if (getGameState()?.isGameActive?.()) {
                         clearInterval(window.currentLobbyInterval);
                     }
                 }, 500);
@@ -875,12 +875,6 @@ export async function initReactUI() {
                     onReturnToMenu();
                 }
 
-                // Show start screen element
-                const startScreenEl = document.getElementById('start-screen');
-                if (startScreenEl) {
-                    startScreenEl.style.display = '';
-                }
-
                 // Reload the page for a clean state (simplest approach)
                 window.location.reload();
             }, [handleResume, onReturnToMenu]);
@@ -968,12 +962,7 @@ export async function initReactUI() {
 
             useEffect(() => {
                 const check = setInterval(() => {
-                    const canvas = document.querySelector('canvas');
-                    const startScreenEl = document.getElementById('start-screen');
-                    const gameState = getGameState();
-                    const active = gameState?.isGameActive?.();
-
-                    if ((canvas && startScreenEl?.style.display === 'none') || active) {
+                    if (getGameState()?.isGameActive?.()) {
                         console.log('[UI] Game started');
                         setGameStarted(true);
                         clearInterval(check);
