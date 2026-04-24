@@ -54,11 +54,25 @@ export class GrassSystem {
     constructor(scene, isMobile = false, sceneGrass = null) {
         this.scene = scene;
         this.isMobile = isMobile;
+        this.sceneGrass = sceneGrass;
 
         const sceneClumps = sceneGrass?.clumpsPerChunk;
         const clumpsPerChunk = sceneClumps
             ? (isMobile ? sceneClumps.mobile : sceneClumps.desktop)
             : (isMobile ? 800 : 1800);
+
+        // Defaults match the original hardcoded values so behavior is
+        // byte-identical when sceneGrass.colors is absent.
+        const sceneColors = sceneGrass?.colors;
+        const baseColor = sceneColors?.base
+            ? new THREE.Color(sceneColors.base)
+            : new THREE.Color(0.08, 0.28, 0.04);
+        const midColor = sceneColors?.mid
+            ? new THREE.Color(sceneColors.mid)
+            : new THREE.Color(0.18, 0.48, 0.12);
+        const tipColor = sceneColors?.tip
+            ? new THREE.Color(sceneColors.tip)
+            : new THREE.Color(0.55, 0.82, 0.30);
 
         // Grass configuration
         this.config = {
@@ -77,10 +91,11 @@ export class GrassSystem {
             bladeHeight: 1.0,
             bladeHeightVariation: 0.7,
 
-            // Colors - richer, more vibrant greens that stand out from ground
-            baseColor: new THREE.Color(0.08, 0.28, 0.04),      // Very dark green at base
-            midColor: new THREE.Color(0.18, 0.48, 0.12),       // Rich mid green
-            tipColor: new THREE.Color(0.55, 0.82, 0.30),       // Bright yellow-green tips
+            // Colors - sourced from sceneGrass.colors when provided, else
+            // the original richer-green defaults
+            baseColor,
+            midColor,
+            tipColor,
 
             // Wind - gentle and zen-like
             windStrength: isMobile ? 0 : 0.12,
@@ -96,10 +111,18 @@ export class GrassSystem {
             // iOS Safari has ~128 vec4 uniform limit - use small array for mobile
             maxInteractors: isMobile ? 10 : 220,
 
-            // LOD distances
+            // Legacy LOD distance fields - settings.js still mutates
+            // config.lodFar via the quality preset, so keep all three.
             lodNear: 100,
             lodMid: 180,
             lodFar: 280,
+
+            // Instance-decimation LOD: render fewer instances per chunk
+            // beyond these distances. 5m hysteresis bands prevent flicker
+            // when the camera hovers near a threshold.
+            lodDecimateMid: 40,   // > 40m: 50% of instances
+            lodDecimateFar: 80,   // > 80m: 25% of instances
+            lodHysteresis: 5,
 
             // Fog
             fogNear: 200,
@@ -334,19 +357,21 @@ export class GrassSystem {
     }
 
     /**
-     * Create advanced grass shader material
-     * Uses externally loaded shaders if available, falls back to inline
+     * Create advanced grass shader material.
+     * Inline shaders are the source of truth for polish features (hue hash,
+     * rim-light); external glsl files mirror these and are kept as a backup
+     * load path. We pick whichever variant carries the polish varyings — the
+     * inline one — to keep the runtime visually consistent with the constants.
      */
     createGrassMaterial() {
-        // Use loaded shaders or fallback to inline
         let vertexShader, fragmentShader;
 
         if (this.isMobile) {
-            vertexShader = grassMobileVertexShader || this.getMobileVertexShader();
+            vertexShader = this.getMobileVertexShader();
         } else {
-            vertexShader = grassDesktopVertexShader || this.getDesktopVertexShader();
+            vertexShader = this.getDesktopVertexShader();
         }
-        fragmentShader = grassFragmentShader || this.getFragmentShader();
+        fragmentShader = this.getFragmentShader();
 
         const uniforms = {
             time: { value: 0 },
@@ -415,6 +440,7 @@ export class GrassSystem {
             varying float vHeight;
             varying float vColorVariation;
             varying float vShadow;
+            varying float vHueOffset;
 
             // Smooth falloff for interaction
             float smoothFalloff(float dist, float radius) {
@@ -422,9 +448,15 @@ export class GrassSystem {
                 return 1.0 - t * t * (3.0 - 2.0 * t);
             }
 
+            // Per-instance hash → small hue offset for blade-by-blade variety
+            float hash11(float n) {
+                return fract(sin(n) * 43758.5453123);
+            }
+
             void main() {
                 vUv = uv;
                 vHeight = bladeData.y;
+                vHueOffset = (hash11(float(gl_InstanceID) + 0.137) - 0.5) * 0.04;
 
                 vec3 pos = position;
                 vec4 worldPos4 = modelMatrix * instanceMatrix * vec4(pos, 1.0);
@@ -509,6 +541,7 @@ export class GrassSystem {
             varying float vHeight;
             varying float vColorVariation;
             varying float vShadow;
+            varying float vHueOffset;
 
             uniform vec3 interactorPositions[${this.config.maxInteractors}];
             uniform int interactorCount;
@@ -520,9 +553,14 @@ export class GrassSystem {
                 return 1.0 - t * t * (3.0 - 2.0 * t);
             }
 
+            float hash11(float n) {
+                return fract(sin(n) * 43758.5453123);
+            }
+
             void main() {
                 vUv = uv;
                 vHeight = bladeData.y;
+                vHueOffset = (hash11(float(gl_InstanceID) + 0.137) - 0.5) * 0.04;
 
                 vec3 pos = position;
                 vec4 worldPos4 = modelMatrix * instanceMatrix * vec4(pos, 1.0);
@@ -577,6 +615,7 @@ export class GrassSystem {
             varying float vHeight;
             varying float vColorVariation;
             varying float vShadow;
+            varying float vHueOffset;
 
             void main() {
                 // Rich three-point color gradient
@@ -586,6 +625,9 @@ export class GrassSystem {
                 } else {
                     color = mix(midColor, tipColor, (vHeight - 0.4) / 0.6);
                 }
+
+                // Per-blade hue offset (subtle G/-R/+B nudge for variety)
+                color += vec3(-vHueOffset, vHueOffset, vHueOffset * 0.5);
 
                 // Add natural color variation
                 vec3 variation = vec3(
@@ -606,6 +648,11 @@ export class GrassSystem {
                 vec3 toCamera = normalize(uCameraPos - vWorldPos);
                 float backlight = 1.0 + (1.0 - abs(dot(toCamera, vec3(0.0, 1.0, 0.0)))) * vHeight * 0.15;
                 color *= backlight;
+
+                // Rim-light on blade tips - back-lit tops naturally brighten
+                float tipMask = smoothstep(0.6, 1.0, vHeight);
+                float rim = pow(max(dot(toCamera, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
+                color += rim * tipColor * 0.6 * tipMask;
 
                 // Distance fog
                 float dist = length(vWorldPos - uCameraPos);
@@ -722,8 +769,9 @@ export class GrassSystem {
             center: new THREE.Vector3(centerX, 0.5, centerZ),
             radius,
             clumpCount: validPositions.length,
+            fullCount: validPositions.length, // Full instance count for LOD decimation
             visible: true,
-            lodLevel: 0 // 0 = full, 1 = medium, 2 = low
+            lodLevel: 0 // 0 = full, 1 = 50%, 2 = 25%
         };
 
         this.scene.add(instancedMesh);
@@ -855,8 +903,11 @@ export class GrassSystem {
         if (camera) {
             this.updateFrustumCulling(camera);
 
-            if (playerPosition) {
-                this.updateLOD(playerPosition);
+            // Decimation LOD measures distance from the camera (per spec).
+            // Fall back to playerPosition only if camera is missing.
+            const lodAnchor = camera?.position ?? playerPosition;
+            if (lodAnchor) {
+                this.updateLOD(lodAnchor);
             }
         }
     }
@@ -889,37 +940,40 @@ export class GrassSystem {
 
             if (isVisible) {
                 this.stats.chunksVisible++;
-                this.stats.visibleClumps += chunk.clumpCount;
+                this.stats.visibleClumps += chunk.mesh.count;
             }
         }
     }
 
     /**
-     * Update LOD based on distance from player
+     * Update LOD based on chunk-to-camera distance.
+     * Levels: 0 = full instances, 1 = 50%, 2 = 25%.
      */
-    updateLOD(playerPosition) {
-        const { lodNear, lodMid, lodFar } = this.config;
+    updateLOD(anchorPosition) {
+        const { lodDecimateMid, lodDecimateFar, lodHysteresis } = this.config;
+        const halfBand = lodHysteresis * 0.5;
 
-        for (const [key, chunk] of this.chunks) {
+        for (const [, chunk] of this.chunks) {
             if (!chunk.visible) continue;
 
-            const dx = chunk.center.x - playerPosition.x;
-            const dz = chunk.center.z - playerPosition.z;
+            const dx = chunk.center.x - anchorPosition.x;
+            const dz = chunk.center.z - anchorPosition.z;
             const dist = Math.sqrt(dx * dx + dz * dz);
 
-            let targetLOD;
-            if (dist < lodNear) {
-                targetLOD = 0; // Full detail
-            } else if (dist < lodMid) {
-                targetLOD = 1; // Medium
-            } else if (dist < lodFar) {
-                targetLOD = 2; // Low
+            // Asymmetric thresholds per current level give hysteresis: must
+            // cross threshold + halfBand to step out, threshold - halfBand to step in.
+            const current = chunk.lodLevel;
+            let targetLOD = current;
+            if (current === 0) {
+                if (dist > lodDecimateMid + halfBand) targetLOD = 1;
+            } else if (current === 1) {
+                if (dist < lodDecimateMid - halfBand) targetLOD = 0;
+                else if (dist > lodDecimateFar + halfBand) targetLOD = 2;
             } else {
-                targetLOD = 3; // Very low / hidden
+                if (dist < lodDecimateFar - halfBand) targetLOD = 1;
             }
 
-            // Only update if LOD changed
-            if (targetLOD !== chunk.lodLevel) {
+            if (targetLOD !== current) {
                 chunk.lodLevel = targetLOD;
                 this.applyLOD(chunk, targetLOD);
             }
@@ -927,28 +981,13 @@ export class GrassSystem {
     }
 
     /**
-     * Apply LOD to a chunk
+     * Apply LOD to a chunk by scaling InstancedMesh.count.
+     * createChunk samples positions in random order, so a contiguous prefix
+     * is already a uniform spatial sample — no geometry rebuild needed.
      */
     applyLOD(chunk, lodLevel) {
-        const mesh = chunk.mesh;
-
-        // LOD via instance visibility (scale to 0)
-        // For performance, we skip updating every instance and just control visibility
-        switch (lodLevel) {
-            case 0: // Full
-                mesh.visible = true;
-                mesh.material = this.grassMaterial;
-                break;
-            case 1: // Medium - slightly transparent/faded
-                mesh.visible = true;
-                break;
-            case 2: // Low
-                mesh.visible = true;
-                break;
-            case 3: // Very low / hidden at extreme distance
-                mesh.visible = chunk.visible; // Still respect frustum culling
-                break;
-        }
+        const fraction = lodLevel === 0 ? 1.0 : lodLevel === 1 ? 0.5 : 0.25;
+        chunk.mesh.count = Math.max(1, Math.round(chunk.fullCount * fraction));
     }
 
     /**
