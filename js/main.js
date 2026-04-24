@@ -1396,8 +1396,9 @@ class SheepDogSimulation {
                 this.gameTimer.start();
             }
             
-            // Update camera to follow sheepdog
-            this.sceneManager.updateCamera(sheepdog);
+            // Update camera to follow sheepdog (pass render deltaTime for
+            // frame-rate-independent smoothing - see SceneManager.updateCamera)
+            this.sceneManager.updateCamera(sheepdog, deltaTime);
         }
         
         // Update other players with interpolation for smooth movement
