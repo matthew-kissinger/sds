@@ -95,3 +95,6 @@ sheep-dog-sim-itchio.zip
 
 # Playtest screenshots (ephemeral)
 cycle2-*.png
+
+# GLB compression backups (regenerable from git history if rolled back)
+assets/_originals/

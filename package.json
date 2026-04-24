@@ -27,7 +27,9 @@
     "server:logs": "ssh sds \"pm2 logs sds-multiplayer-server --lines 50\"",
     "server:logs:live": "ssh sds \"pm2 logs sds-multiplayer-server\"",
     "server:deploy": "rsync -avz --exclude node_modules --exclude leaderboard.db --exclude '*.db-shm' --exclude '*.db-wal' server/ sds:/opt/sds-server/ && ssh sds \"cd /opt/sds-server && npm install --omit=dev && pm2 reload sds-multiplayer-server\"",
-    "server:ssh": "ssh sds"
+    "server:ssh": "ssh sds",
+    "compress-glbs": "node scripts/compress-glbs.mjs",
+    "bake-heightmaps": "node scripts/bake-heightmap.mjs --scene rolling-hills --peakHeight 6 --seed 1 --out public/terrain/rolling-hills.r32f && node scripts/bake-heightmap.mjs --scene field --peakHeight 0 --seed 0 --out public/terrain/field.r32f && node scripts/bake-heightmap.mjs --scene open-country --peakHeight 5 --seed 42 --out public/terrain/open-country.r32f"
   },
   "keywords": [
     "game",
@@ -40,9 +42,10 @@
   "author": "Matthew Kissinger",
   "license": "MIT",
   "devDependencies": {
-    "@gltf-transform/core": "^4.2.1",
-    "@gltf-transform/extensions": "^4.2.1",
-    "@gltf-transform/functions": "^4.2.1",
+    "@gltf-transform/cli": "^4.3.0",
+    "@gltf-transform/core": "^4.3.0",
+    "@gltf-transform/extensions": "^4.3.0",
+    "@gltf-transform/functions": "^4.3.0",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/vite": "^4.1.17",
     "@types/node": "^25.6.0",
@@ -50,6 +53,7 @@
     "@vitejs/plugin-react": "^5.1.1",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
+    "simplex-noise": "^4.0.3",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
     "vite": "^7.3.2",
@@ -66,6 +70,6 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-i18next": "^16.3.5",
-    "three": "^0.181.0"
+    "three": "^0.184.0"
   }
 }
