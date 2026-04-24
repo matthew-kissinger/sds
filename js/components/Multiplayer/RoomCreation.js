@@ -76,7 +76,7 @@ export function RoomCreation({ onBack, onCreate }) {
                         style: selectStyle,
                         value: settings.maxPlayers,
                         onChange: (e) => setSettings({ ...settings, maxPlayers: parseInt(e.target.value) })
-                    }, [2, 3, 4, 5, 6].map(n =>
+                    }, [2, 3, 4].map(n =>
                         createElement('option', { key: n, value: n }, t('multiplayer.playersCount', { count: n }))
                     ))
                 ]),
