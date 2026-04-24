@@ -8,12 +8,21 @@ import {
 } from './utils/TriangleCount.js';
 
 /**
- * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements
+ * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements.
+ * Scene-aware: when a SceneDef is passed, zones / farm house / grass density come
+ * from it. Without one, falls back to Home Field defaults (byte-identical to the
+ * pre-refactor hardcodes).
  */
 export class TerrainBuilder {
-    constructor(scene, isMobile = false) {
+    /**
+     * @param {THREE.Scene} scene
+     * @param {boolean} [isMobile=false]
+     * @param {import('../shared/scenes/types.js').SceneDef} [sceneDef]
+     */
+    constructor(scene, isMobile = false, sceneDef = null) {
         this.scene = scene;
         this.isMobile = isMobile;
+        this.sceneDef = sceneDef;
         this.grassMaterial = null;
         this.grassInstanceCount = 0;
         this.grassInstancedMesh = null;
@@ -26,7 +35,7 @@ export class TerrainBuilder {
         this.rocks = []; // Track rocks for removal
         this.mountains = []; // Track mountains
         this.buildings = []; // Track buildings
-        
+
         // Model loading - standard GLTFLoader (mobile models are animation-stripped, not Draco compressed)
         this.loader = new GLTFLoader();
         this.models = {
@@ -38,18 +47,18 @@ export class TerrainBuilder {
         };
         this.modelsLoaded = false;
 
-        // Terrain zones
-        this.zones = {
+        // Terrain zones — from scene if provided, otherwise Home Field defaults.
+        this.zones = sceneDef?.terrain?.zones ?? {
             playArea: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
             nearField: { minX: -200, maxX: 200, minZ: -200, maxZ: 200 },
             midField: { minX: -400, maxX: 400, minZ: -400, maxZ: 400 },
             farField: { minX: -600, maxX: 600, minZ: -600, maxZ: 600 },
             horizon: { minX: -800, maxX: 800, minZ: -800, maxZ: 800 }
         };
-        
-        // Farm house position and exclusion area
-        this.farmHousePosition = { x: 180, z: 160 }; // Northwest corner behind pen, farther back
-        this.farmHouseExclusionArea = {
+
+        // Farm house position and exclusion area — from scene if provided.
+        this.farmHousePosition = sceneDef?.farmHouse?.position ?? { x: 180, z: 160 };
+        this.farmHouseExclusionArea = sceneDef?.farmHouse?.exclusionArea ?? {
             minX: 140,
             maxX: 220,
             minZ: 120,
@@ -391,7 +400,7 @@ export class TerrainBuilder {
     
     async createGrass() {
         // Use new advanced grass system
-        this.grassSystem = new GrassSystem(this.scene, this.isMobile);
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass);
 
         // Add exclusion zone for farm house
         this.grassSystem.addExclusionZone(
@@ -1627,7 +1636,7 @@ export class TerrainBuilder {
         }
 
         // Create new grass system
-        this.grassSystem = new GrassSystem(this.scene, this.isMobile);
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass);
 
         // Add farmhouse exclusion zone
         this.grassSystem.addExclusionZone(

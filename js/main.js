@@ -17,6 +17,7 @@ import { NetworkManager } from './NetworkManager.js';
 import { MultiplayerState } from './MultiplayerState.js';
 import { Vector2D } from './Vector2D.js';
 import { setGameInstance, emitGameEvent } from './GameBridge.js';
+import { loadScene, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
@@ -165,7 +166,8 @@ class SheepDogSimulation {
         this.sceneManager = new SceneManager();
         this.gameState = new GameState();
         this.gameTimer = new GameTimer();
-        this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile);
+        this.currentScene = loadScene(DEFAULT_SCENE_ID);
+        this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile, this.currentScene);
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();

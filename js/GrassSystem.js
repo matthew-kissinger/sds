@@ -46,9 +46,19 @@ export async function preloadGrassShaders(config = {}) {
  * - Mobile optimizations
  */
 export class GrassSystem {
-    constructor(scene, isMobile = false) {
+    /**
+     * @param {THREE.Scene} scene
+     * @param {boolean} [isMobile=false]
+     * @param {import('../shared/scenes/types.js').GrassDef} [sceneGrass] Optional scene-sourced grass config; when present, its `clumpsPerChunk` wins over the default.
+     */
+    constructor(scene, isMobile = false, sceneGrass = null) {
         this.scene = scene;
         this.isMobile = isMobile;
+
+        const sceneClumps = sceneGrass?.clumpsPerChunk;
+        const clumpsPerChunk = sceneClumps
+            ? (isMobile ? sceneClumps.mobile : sceneClumps.desktop)
+            : (isMobile ? 800 : 1800);
 
         // Grass configuration
         this.config = {
@@ -59,7 +69,7 @@ export class GrassSystem {
             chunkSize: 40,
 
             // Grass density per chunk - MUCH denser
-            clumpsPerChunk: isMobile ? 800 : 1800,
+            clumpsPerChunk,
             bladesPerClump: isMobile ? 5 : 7,
 
             // Blade geometry - varied heights for lush look
