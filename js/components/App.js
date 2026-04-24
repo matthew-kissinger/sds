@@ -44,6 +44,7 @@ export async function initReactUI() {
             { getPlayerIdentity, savePlayerIdentity, generatePersistentId },
             { loadSettings, saveSettings, applySettingsToGame },
             { ModeSelection },
+            { ScenePicker },
             { DogSelection },
             { PlayerIdentitySetup },
             { SinglePlayerModes },
@@ -75,6 +76,7 @@ export async function initReactUI() {
             import('./shared/playerIdentity.js'),
             import('./shared/settings.js'),
             import('./StartScreen/ModeSelection.js'),
+            import('./StartScreen/ScenePicker.js'),
             import('./StartScreen/DogSelection.js'),
             import('./StartScreen/PlayerIdentitySetup.js'),
             import('./StartScreen/SinglePlayerModes.js'),
@@ -504,6 +506,7 @@ export async function initReactUI() {
                                     animation: 'fadeIn 0.6s ease-out 0.3s both'
                                 }
                             }, `Welcome back, ${playerIdentity.displayName}!`),
+                            createElement(ScenePicker, { key: 'scenes' }),
                             createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect }),
                             // Credits footer - fixed at bottom
                             createElement('div', {
