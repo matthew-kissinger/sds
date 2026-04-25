@@ -4,6 +4,28 @@
 
 ## Recently Completed
 
+### Cycle 6 — Trees as obstacles + woods density + Open Country portal (closed 2026-04-25)
+
+Plan: [`docs/cycle-6-plan.md`](cycle-6-plan.md). Headline:
+
+- **Phase 1: `shared/TreePlacement.js`.** Lifted Poisson-disk tree placement out of `TerrainBuilder.createTrees` into a pure shared module driven by `mulberry32(scene.terrain.seed)`. Same seed → identical `TreeInstance[]` across V8 instances; client (mesh spawn) + Worker (collision data) compute the same positions independently. Existing exclusions preserved (island safe radius, corral keep-out, farmhouse exclusion, rock footprint padding, default-pasture rect). 12 new specs (`tests/tree-placement.spec.js`).
+- **Phase 2: SceneObstacles wiring.** `gameState.obstacles` built once after terrain creation in `main.js` (and rebuilt on competitive-mode tree refresh). Sheep apply `obstacleAvoidance` per-tick in `OptimizedSheep.updateBehavior` (30m kdbush query, strength 6.0). Dog applies a hard position push-out + inward velocity reflection in `Sheepdog.move` (treats trunks like fences). The `obstacles.trees.length > 0` guard preserves Field's solo behavior — sheep stay inside the ±100 play area, all rect-scene trees are at ≥120m, queries return empty within 30m, no force applied.
+- **Q3 resolved (fallback path):** rocks with per-cluster `scale ≥ 0.8` become colliders with radius `finalScale * 0.55` (tighter than the visual silhouette since rocks are partially buried). Bespoke pixel-forge rock authoring deferred to a future cycle.
+- **Phase 3: Woods density bias.** `TreePlacement` reads `scene.woodsZones`; min-distance shrinks 0.6× inside any zone, expands 1.4× outside (only when zones are present). Open Country gains 3 wood clusters away from spawn + portal so players cross open ground into denser canopy.
+- **Phase 4: Open Country portal.** Coastal gate+pasture replaced with a corral trigger at the north shore (0, 295). New `js/effects/PortalEffect.js` — persistent visual: slowly rotating cyan→purple ring shader, vertical column of upward-streaking particles, soft ground glow; pulses on each retirement. Sheep already ascend vertically via `OptimizedSheep.checkCorralAndRetire`, matching the column visual. `CorralDef.effect: 'zap' | 'portal'` discriminator selects between Rolling Hills' lightning pool and the new portal. `StructureBuilder` skips the flag-pillar marker for `effect: 'portal'` (the portal is the marker).
+- **Phase 5a: Per-scene camera memory.** Lookup order on scene load is now `camera-mode-${sceneId}` → `scene.defaultCamera` → legacy `camera-mode` → CLASSIC. Cycle 5 only had the legacy global, so once a user picked Classic anywhere, RH + OC silently launched in Classic instead of Follow. The C-hotkey now writes the per-scene key on every change.
+- **Phase 5b: OC boid nudge.** Conservative starting point — `perception 5 → 9` to compensate for the ~4.5× area increase vs Rolling Hills. Cycle 5 wired the `scene.flocking` override pathway but didn't ship numbers. Tune in playtest.
+- **Cross-cutting:** Defensive null-gate guard added to `worker/src/GameSim.shouldSeekGate` — corral scenes (RH, OC) have no gate, so the gate-seek pathway is now skipped instead of NPEing.
+
+99 → 111 vitest specs pass (+12 tree-placement). Production build clean. Sim-baseline byte-identical.
+
+Carry-over to next cycle (need playtest verification):
+- Sheep + dog visibly route around tree trunks on RH + Open Country (Phase 2 acceptance).
+- OC woods read as recognizably denser canopy (Phase 3 acceptance).
+- Portal objective reads cleanly + retirement animation plays cleanly (Phase 4 acceptance).
+- Per-tick obstacle-query cost ≤ 0.4ms desktop / ≤ 1.5ms mobile (Phase 2 budget).
+- OC boid `perception 9` — re-tune if flocks still fragment or now over-cluster.
+
 ### Cycle 5 — Island + Woods (closed 2026-04-25)
 
 Plan: [`docs/cycle-5-plan.md`](cycle-5-plan.md). Headline:
@@ -29,21 +51,12 @@ For prior cycle history before this file existed, see:
 - [`docs/cycle-3-plan.md`](cycle-3-plan.md), [`docs/cycle-3-cleanup.md`](cycle-3-cleanup.md), [`docs/cycle-3-ui-ux.md`](cycle-3-ui-ux.md) — Cycle 3 plans
 - [`docs/cycle-4-plan.md`](cycle-4-plan.md), [`docs/cycle-4-phase-b.md`](cycle-4-phase-b.md), [`docs/cycle-4-hardening.md`](cycle-4-hardening.md) — Cycle 4 plans
 
-## In flight (Cycle 6 scope, locked 2026-04-25)
-
-See [`docs/cycle-6-plan.md`](cycle-6-plan.md). Items below are **not** deferred — they're in-flight and shouldn't be double-picked from the deferred list.
-
-- **Phase 1: Shared `TreePlacement.js` with seeded RNG** (Cycle 5 R7 + R10). Lift Poisson core out of `TerrainBuilder.createTrees`. Required before MP island scenes ship. ~2 hr.
-- **Phase 2: Trees-as-obstacles wiring.** `SceneObstacles + kdbush` primitive shipped Cycle 5; wire `MovementPhysics`/`GameSim` per-tick query for sheep + dog. ~2 hr.
-- **Phase 3: Wood zones with biased density.** `woodsZones` schema field exists; `createTrees` ignores it. ~1 hr.
-- **Phase 4: Open Country portal (Q1 reopened from Cycle 5 Q2).** Replace coastal pen with corral-style portal trigger zone + `PortalEffect.js` reusing the `CorralZapEffect` pool pattern. ~2.5 hr.
-- **Phase 5 polish (optional):** boid retune for island scale (Cycle 5 Phase 1.5 carry-over) + `defaultCamera` localStorage override semantics. ~2 hr.
-
-Open question still in the cycle plan: **Q3 — rock obstacle source.** Author lean: bespoke pixel-forge rock assets vs scale-threshold filter on existing cluster rocks. Resolves before Phase 2's rock wiring.
-
 ## Deferred / not blocking
 
-Items deferred from prior cycles that haven't been picked up and aren't in Cycle 6 scope. Move to a future cycle plan's Phase N when work starts.
+Items deferred from prior cycles that haven't been picked up. Move to a future cycle plan's Phase N when work starts.
+
+- **Bespoke pixel-forge rock assets (Q3 author lean from Cycle 6).** Cycle 6 shipped the fallback (`scale ≥ 0.8` filter on existing cluster rocks → colliders with `finalScale * 0.55` radius). The cleaner long-term path is to author 2-3 purpose-made rock GLBs in [`pixel-forge`](file:///C:/Users/Mattm/X/games-3d/pixel-forge) at obstacle-readable sizes and replace the cluster system. Pick up when next OC playtest flags rock collision as awkward.
+- **MP island scenes (Rolling Hills + Open Country in multiplayer).** Cycle 6 Phase 1's `TreePlacement` lift means MP island scenes are now feasible — Worker can call `generateTrees(scene, mulberry32(seed))` and produce identical positions to the client. The remaining work is wiring the obstacle bundle into Worker GameSim init + applying `obstacleAvoidance` in the shared sheep/dog tick. Solo Phase 2 wiring is the template.
 
 - **Resize behavior** — on hold pending user reproduction. Renderer's resize handler in [`SceneManager.onWindowResize`](../js/SceneManager.js) looks correct; need a specific viewport size or device to repro. Carried from Cycle 4 Hardening § 3.
 - **Octahedral impostors v2** for tree LOD — current 3-quad billboard impostor is solid (~99% triangle reduction past 250m). Only escalate to octahedral if a playtest specifically calls out the 3-quad version as inadequate. Carried from Cycle 4 Hardening § 4.
