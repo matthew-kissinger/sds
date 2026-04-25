@@ -81,7 +81,14 @@ export class SceneManager {
             this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         }
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        
+
+        // The Hosek-Wilkie sky shader (and its preset exposure values 0.18-0.22)
+        // assumes the renderer is tonemapping HDR radiance down. Without
+        // tonemapping the shader output ends up near-black. ACES Filmic is the
+        // de-facto-standard pick; it brightens midtones and rolls off highlights.
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.0;
+
         // Enable frustum culling and other optimizations
         this.renderer.sortObjects = true;
         this.renderer.autoClear = true;
