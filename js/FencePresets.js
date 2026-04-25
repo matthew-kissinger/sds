@@ -144,6 +144,7 @@ export class FencePresets {
                         post.rotation.y = Math.PI / 2;
                         post.position.z = i * actualSpacing - length / 2;
                     }
+                    post.userData.surfaceToTerrain = true;
                     group.add(post);
                 }
             }
@@ -172,6 +173,18 @@ export class FencePresets {
                                 i * actualSpacing + actualSpacing / 2 - length / 2
                             );
                         }
+                        rail.userData.surfaceToTerrain = true;
+                        // Slope-along-terrain metadata: _surfaceToTerrain reads
+                        // this to sample heightfield at both endpoints and
+                        // re-orient the rail so it actually spans the slope
+                        // between adjacent posts (instead of staying horizontal
+                        // and stair-stepping over hills).
+                        rail.userData.railSpan = {
+                            halfLen: actualSpacing / 2,
+                            axis: orientation,   // 'horizontal' = ±x, 'vertical' = ±z
+                            geomAxis: 'x',       // GLB rail's long axis is local +X
+                            baseY: height
+                        };
                         group.add(rail);
                     }
                 }
@@ -197,11 +210,15 @@ export class FencePresets {
 
             post.castShadow = true;
             post.receiveShadow = true;
+            post.userData.surfaceToTerrain = true;
             group.add(post);
         }
 
-        // Create rails (3 levels)
+        // Create rails (3 levels). Geometry's long axis is X for horizontal
+        // and Z for vertical orientation; tagged geomAxis lets the slope
+        // post-process build the right base-axis quaternion.
         const railLevels = [0.5, 1.2, 1.9];
+        const geomAxis = orientation === 'horizontal' ? 'x' : 'z';
         for (let level of railLevels) {
             for (let i = 0; i < postCount - 1; i++) {
                 const railGeo = new THREE.BoxGeometry(
@@ -227,6 +244,13 @@ export class FencePresets {
 
                 rail.castShadow = true;
                 rail.receiveShadow = true;
+                rail.userData.surfaceToTerrain = true;
+                rail.userData.railSpan = {
+                    halfLen: actualSpacing / 2,
+                    axis: orientation,
+                    geomAxis,
+                    baseY: level
+                };
                 group.add(rail);
             }
         }
@@ -285,8 +309,11 @@ export class FencePresets {
         } else {
             gateGroup.position.z = gatePosition;
         }
+        // Surface gate as one unit so the two posts + arch + threshold stay
+        // co-planar on slopes (don't sample per-child or the gate would shear).
+        gateGroup.userData.surfaceToTerrain = true;
         group.add(gateGroup);
-        
+
         return group;
     }
     
@@ -717,6 +744,78 @@ export class FenceConfigBuilder {
         this.presets = fencePresets;
     }
     
+    /**
+     * Build only the gate structure + pasture pen — no perimeter fence.
+     * Used by "open" scenes (no walls, just a goal floating on the field).
+     * @param {Object} bounds
+     * @param {Object} gate
+     * @param {Object} pasture
+     * @returns {THREE.Group}
+     */
+    buildGateAndPenOnly(bounds, gate, pasture) {
+        const group = new THREE.Group();
+        group.name = 'GateAndPen';
+
+        // Free-standing gate at gate.position. Mark as one unit so it
+        // surfaces to terrain coplanarly.
+        const gateGroup = this.presets.createGateStructure(gate.width, 'horizontal', {});
+        gateGroup.position.set(gate.position.x, 0, gate.position.z);
+        gateGroup.userData.surfaceToTerrain = true;
+        group.add(gateGroup);
+
+        // Pen behind the gate (same geometry as buildSinglePlayerFences,
+        // but anchored to the gate position rather than the bounds edge).
+        if (pasture) {
+            const penWidth = pasture.maxX - pasture.minX;
+            const penDepth = pasture.maxZ - pasture.minZ;
+            const penCenterX = (pasture.maxX + pasture.minX) / 2;
+
+            const pen = this.presets.createPenStructure({
+                width: penWidth,
+                depth: penDepth
+            }, 'north');
+            pen.position.set(penCenterX, 0, gate.position.z);
+            group.add(pen);
+
+            // Without a perimeter fence, the pen's front side has only the
+            // gate. Add two short border segments flanking the gate to span
+            // the full pen width — otherwise sheep walk around the gate.
+            const halfPen = penWidth / 2;
+            const halfGate = gate.width / 2;
+            const flankLength = halfPen - halfGate;
+            if (flankLength > 0.5) {
+                const gateLeftEdge = gate.position.x - halfGate;
+                const gateRightEdge = gate.position.x + halfGate;
+                const penLeftEdge = penCenterX - halfPen;
+                const penRightEdge = penCenterX + halfPen;
+
+                const leftFlankLen = gateLeftEdge - penLeftEdge;
+                if (leftFlankLen > 0.5) {
+                    const leftFlank = this.presets.createBorderSegment(leftFlankLen, 'horizontal');
+                    leftFlank.position.set(
+                        (penLeftEdge + gateLeftEdge) / 2,
+                        0,
+                        gate.position.z
+                    );
+                    group.add(leftFlank);
+                }
+
+                const rightFlankLen = penRightEdge - gateRightEdge;
+                if (rightFlankLen > 0.5) {
+                    const rightFlank = this.presets.createBorderSegment(rightFlankLen, 'horizontal');
+                    rightFlank.position.set(
+                        (gateRightEdge + penRightEdge) / 2,
+                        0,
+                        gate.position.z
+                    );
+                    group.add(rightFlank);
+                }
+            }
+        }
+
+        return group;
+    }
+
     /**
      * Build single player fence configuration
      */

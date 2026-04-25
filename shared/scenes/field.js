@@ -13,7 +13,7 @@
 export const field = {
     id: 'field',
     name: 'Home Field',
-    description: 'Flat fenced pasture ringed by mountains. The classic scene.',
+    description: 'Flat fenced pasture. The classic scene.',
 
     // --- Simulation (authoritative) ---
     // Mirrors shared/index.js createGameState defaults (lines 126-129)

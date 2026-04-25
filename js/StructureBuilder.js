@@ -25,6 +25,127 @@ export class StructureBuilder {
         this.fencePresets = new FencePresets();
         this.fenceConfigBuilder = new FenceConfigBuilder(this.fencePresets);
         this.modelsLoaded = false;
+
+        // Optional heightfield. When set, surfaceToTerrain() lifts each
+        // tagged structure piece to sit on the displaced terrain instead of
+        // the y=0 baseline (where it would be buried in heightmapped scenes).
+        /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
+        this.heightfield = null;
+        this._tmpWorldPos = new THREE.Vector3();
+    }
+
+    /**
+     * Provide (or clear) the scene's heightfield. Called from main.js after
+     * the heightmap loads. Pieces marked with `userData.surfaceToTerrain`
+     * are offset by `heightfield.sample(worldX, worldZ)` so fence posts,
+     * gates, and corner flags rise/fall with the terrain.
+     * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} heightfield
+     */
+    setHeightfield(heightfield) {
+        this.heightfield = heightfield ?? null;
+    }
+
+    /**
+     * Walk a structure subtree and lift each tagged node onto the terrain.
+     * Tags must be set by the structure builders (FencePresets, corner flags)
+     * before the parent group is committed to the scene. We tag at the
+     * granularity of "rigid pieces": individual posts/rails ride terrain
+     * independently, but a gate group rides as one unit so its two posts
+     * stay coplanar on slopes.
+     *
+     * Call AFTER the group is added to the scene so getWorldPosition reports
+     * the correct world (x,z). Idempotent — re-running on an already-surfaced
+     * group is a no-op for siblings since each tagged node samples once.
+     * @param {THREE.Object3D} root
+     * @private
+     */
+    _surfaceToTerrain(root) {
+        if (!this.heightfield || !root) return;
+        root.updateMatrixWorld(true);
+        const liftSamples = [];
+        const slopeSamples = [];
+        root.traverse(node => {
+            if (!node.userData?.surfaceToTerrain) return;
+            // Rails get the slope-along-terrain treatment so they actually
+            // span the height difference between adjacent posts. Everything
+            // else (posts, gate group, corner flags) just rides the terrain
+            // height at its own (x,z).
+            if (node.userData.railSpan && node.parent) {
+                slopeSamples.push(node);
+            } else {
+                node.getWorldPosition(this._tmpWorldPos);
+                const dy = this.heightfield.sample(this._tmpWorldPos.x, this._tmpWorldPos.z);
+                liftSamples.push({ node, dy });
+            }
+        });
+
+        // Lift posts/gates first so any rail's parent matrix already reflects
+        // its surfaced state if the parent itself was tagged (defensive — in
+        // practice the parent isn't tagged when rails are).
+        for (const { node, dy } of liftSamples) {
+            node.position.y += dy;
+        }
+
+        // Slope rails to span between their two posts.
+        for (const node of slopeSamples) {
+            this._slopeRailToTerrain(node);
+        }
+    }
+
+    /**
+     * Re-orient a tagged rail so its long axis spans the slope between the
+     * two posts it sits between. Reads `userData.railSpan` for span metadata,
+     * samples the heightfield at both endpoints, and rebuilds the rail's
+     * position + quaternion so it lands flush on both posts.
+     *
+     * Replaces (not composes with) any prior rotation, so the rail's geometry
+     * long axis must be tagged via `geomAxis` ('x' for GLB rails and procedural
+     * horizontal segments, 'z' for procedural vertical segments).
+     *
+     * @param {THREE.Object3D} rail
+     * @private
+     */
+    _slopeRailToTerrain(rail) {
+        const span = rail.userData.railSpan;
+        if (!span || !rail.parent) return;
+        const { halfLen, axis, geomAxis, baseY } = span;
+        rail.parent.updateMatrixWorld(true);
+        const parentMatrix = rail.parent.matrixWorld;
+
+        // Local-frame endpoints of the rail (relative to parent group).
+        // The rail's current local position is its midpoint between two posts
+        // — but we recompute from the post-pair offsets because subsequent
+        // calls would otherwise double-apply.
+        const midLocal = rail.position.clone();
+        const dxLocal = axis === 'horizontal' ? halfLen : 0;
+        const dzLocal = axis === 'horizontal' ? 0 : halfLen;
+        const aLocal = new THREE.Vector3(midLocal.x - dxLocal, 0, midLocal.z - dzLocal);
+        const bLocal = new THREE.Vector3(midLocal.x + dxLocal, 0, midLocal.z + dzLocal);
+
+        // World-space endpoints (parent transform applied).
+        const aWorld = aLocal.clone().applyMatrix4(parentMatrix);
+        const bWorld = bLocal.clone().applyMatrix4(parentMatrix);
+
+        // Sample terrain at each post's world (x, z).
+        const hA = this.heightfield.sample(aWorld.x, aWorld.z);
+        const hB = this.heightfield.sample(bWorld.x, bWorld.z);
+        aWorld.y = hA + baseY;
+        bWorld.y = hB + baseY;
+
+        // Convert lifted endpoints back to parent-local space.
+        const parentInv = parentMatrix.clone().invert();
+        const aLocalLifted = aWorld.clone().applyMatrix4(parentInv);
+        const bLocalLifted = bWorld.clone().applyMatrix4(parentInv);
+
+        // Rail at midpoint, oriented to span A→B in parent-local space. The
+        // rail mesh's geometry long axis is `geomAxis` (+x or +z), so the
+        // base unit vector for the quaternion picks the right axis.
+        rail.position.copy(aLocalLifted).add(bLocalLifted).multiplyScalar(0.5);
+        const dir = bLocalLifted.clone().sub(aLocalLifted).normalize();
+        const baseAxis = geomAxis === 'z'
+            ? new THREE.Vector3(0, 0, 1)
+            : new THREE.Vector3(1, 0, 0);
+        rail.quaternion.setFromUnitVectors(baseAxis, dir);
     }
 
     /**
@@ -80,20 +201,33 @@ export class StructureBuilder {
     }
     
     /**
-     * Build structures for single player mode
+     * Build structures for single player mode.
+     * @param {Object} bounds
+     * @param {Object} gate
+     * @param {Object} pasture
+     * @param {Object} [opts]
+     * @param {boolean} [opts.perimeterFence=true] When false, only the gate
+     *  + pen are built (no four border segments). For "no fences" scenes
+     *  like Open Country.
      */
-    buildSinglePlayerStructures(bounds, gate, pasture) {
-        console.log('[BUILD] Building single player structures');
+    buildSinglePlayerStructures(bounds, gate, pasture, opts = {}) {
+        const { perimeterFence = true } = opts;
+        console.log(`[BUILD] Building single player structures (perimeterFence=${perimeterFence})`);
 
         this.clearAllStructures();
 
-        // Build fences with integrated gate and pasture
-        const fenceGroup = this.fenceConfigBuilder.buildSinglePlayerFences(bounds, gate, pasture);
+        const fenceGroup = perimeterFence
+            ? this.fenceConfigBuilder.buildSinglePlayerFences(bounds, gate, pasture)
+            : this.fenceConfigBuilder.buildGateAndPenOnly(bounds, gate, pasture);
         this.scene.add(fenceGroup);
         this.structures.fences.push(fenceGroup);
+        this._surfaceToTerrain(fenceGroup);
 
-        // Add decorative elements
-        this.addFieldDecorations(bounds);
+        // Decorative corner flags only make sense with a perimeter; skip for
+        // fence-less scenes to avoid floating flags in the middle of nowhere.
+        if (perimeterFence) {
+            this.addFieldDecorations(bounds);
+        }
 
         console.log('[OK] Single player structures built');
     }
@@ -131,12 +265,14 @@ export class StructureBuilder {
 
         this.scene.add(fenceGroup);
         this.structures.fences.push(fenceGroup);
+        this._surfaceToTerrain(fenceGroup);
 
         // Build custom internal fences
         if (customFences && customFences.length > 0) {
             const customFenceGroup = this.buildCustomFences(customFences);
             this.scene.add(customFenceGroup);
             this.structures.fences.push(customFenceGroup);
+            this._surfaceToTerrain(customFenceGroup);
         }
 
         // Add decorative elements
@@ -564,12 +700,13 @@ export class StructureBuilder {
         const fenceGroup = this.fenceConfigBuilder.buildCompetitiveFences(bounds, competitiveGates);
         this.scene.add(fenceGroup);
         this.structures.fences.push(fenceGroup);
-        
+        this._surfaceToTerrain(fenceGroup);
+
         // Create individual gate markers and pastures
         competitiveGates.forEach(gate => {
             this.createCompetitiveGateMarker(gate);
         });
-        
+
         // Add field decorations
         this.addFieldDecorations(bounds);
         
@@ -626,8 +763,12 @@ export class StructureBuilder {
         
         cornerPositions.forEach(pos => {
             const flag = this.createCornerFlag(pos.x, pos.z);
+            // Surface the whole flag (pole + flag) as one unit so they stay
+            // anchored together on hills.
+            flag.userData.surfaceToTerrain = true;
             this.scene.add(flag);
             this.structures.decorations.push(flag);
+            this._surfaceToTerrain(flag);
         });
     }
     

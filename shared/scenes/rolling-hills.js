@@ -9,7 +9,7 @@
 export const rollingHills = {
     id: 'rolling-hills',
     name: 'Rolling Hills',
-    description: 'A larger flock scattered deeper into the field. More sheep, more patience.',
+    description: 'Hills you have to climb. The flock scatters wider; the gate sits across the ridge.',
 
     // Sim — bounds match Home Field so the current rendered perimeter fits.
     // The differentiation is in the spawn + sheep count.

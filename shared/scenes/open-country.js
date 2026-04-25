@@ -14,7 +14,7 @@
 export const openCountry = {
     id: 'open-country',
     name: 'Open Country',
-    description: 'A wide pastoral field. No fences — herd them through the gates yourself.',
+    description: 'A wide pastoral field. No perimeter fences. Herd them to the gate yourself.',
 
     bounds: { minX: -150, maxX: 150, minZ: -150, maxZ: 150 },
 
@@ -59,6 +59,12 @@ export const openCountry = {
     },
 
     farmHouse: null,
+
+    // Open-country has no perimeter fence — only the gate + pen stand
+    // alone in the field. Sheep are still bounded by the sim bounds box,
+    // they just can't see a wall. StructureBuilder reads this flag to
+    // skip the four border segments.
+    perimeterFence: false,
 
     sky: { preset: 'golden-hour' },
     fog: { color: '#e8d8b8', near: 250, far: 800 },
