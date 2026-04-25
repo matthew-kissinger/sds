@@ -385,11 +385,13 @@ class SheepDogSimulation {
             logStep('Creating grass');
             await this.terrainBuilder.createGrass();
 
-            logStep('Creating trees');
-            await this.terrainBuilder.createTrees();
-
+            // Rocks BEFORE trees so the tree placer can read rockPositions
+            // and reject candidates that would spawn on top of a formation.
             logStep('Adding environment details');
             await this.terrainBuilder.addEnvironmentDetails();
+
+            logStep('Creating trees');
+            await this.terrainBuilder.createTrees();
 
             logStep('Adding mountains');
             await this.terrainBuilder.addMountains();

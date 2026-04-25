@@ -56,6 +56,12 @@ export class TerrainBuilder {
         this.environmentDetails = [];
         this.trees = []; // Track trees for removal
         this.rocks = []; // Track rocks for removal
+        // Per-rock world-space footprint (populated by addEnvironmentDetails).
+        // createTrees reads this to skip tree candidates that would spawn
+        // inside a big rock formation. Initialised here so call-order
+        // ordering (rocks-before-trees) doesn't crash if `createTrees` ever
+        // runs before `addEnvironmentDetails`.
+        this.rockPositions = [];
         this.mountains = []; // Track mountains
         this.buildings = []; // Track buildings
 
@@ -623,7 +629,20 @@ export class TerrainBuilder {
 
                 // Check farm house area
                 if (this.isInFarmHouseArea(x, z)) return false;
-                
+
+                // Reject if inside a rock formation's footprint (so trees
+                // don't spawn ON TOP of big rocks). Requires that
+                // addEnvironmentDetails() has run before createTrees().
+                if (this.rockPositions && this.rockPositions.length > 0) {
+                    const treePadding = 4; // small buffer past rock edge
+                    for (const rock of this.rockPositions) {
+                        const rdx = x - rock.x;
+                        const rdz = z - rock.z;
+                        const rr = rock.radius + treePadding;
+                        if (rdx * rdx + rdz * rdz < rr * rr) return false;
+                    }
+                }
+
                 // Check grid neighbors
                 const gridX = Math.floor(x / cellSize);
                 const gridZ = Math.floor(z / cellSize);
@@ -1003,7 +1022,12 @@ export class TerrainBuilder {
             console.warn('Models not loaded yet. Loading models...');
             await this.loadModels();
         }
-        
+
+        // Reset rock-position tracker — populated as rocks are placed below.
+        // `createTrees` reads this list to exclude tree candidates that would
+        // spawn on top of a big rock formation.
+        this.rockPositions = [];
+
         const rockInstances = {
             rock1: [], // small rocks
             rock2: [], // medium rocks
@@ -1113,7 +1137,7 @@ export class TerrainBuilder {
                     // Calculate final scale
                     const baseScale = scaleRange.min + Math.random() * (scaleRange.max - scaleRange.min);
                     const finalScale = baseScale * rock.scale;
-                    
+
                     // Some rocks partially buried; add terrain height so they sit on the slope.
                     const baseY = this.heightfield ? this.heightfield.sample(rock.x, rock.z) : 0;
                     const yOffset = (Math.random() < 0.3 ? -finalScale * 0.15 : 0) + baseY;
@@ -1126,6 +1150,16 @@ export class TerrainBuilder {
                             Math.random() * Math.PI * 0.3
                         ),
                         scale: new THREE.Vector3(finalScale, finalScale * 0.7, finalScale * 1.2)
+                    });
+
+                    // Record this rock's footprint so a subsequent createTrees()
+                    // call can exclude tree placements over it. Footprint
+                    // radius approximates the rock's max XY-plane extent
+                    // (longest of x or z scale axes).
+                    this.rockPositions.push({
+                        x: rock.x,
+                        z: rock.z,
+                        radius: finalScale * 1.2
                     });
                 });
             }
