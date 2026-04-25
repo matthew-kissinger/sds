@@ -438,17 +438,33 @@ class SheepDogSimulation {
                 }
             );
 
-            // Cycle 5+: corral zap-effect pool (lightning + particles when
-            // sheep enter the corral). Listens for 'corral-retired' events
-            // dispatched by GameState's retirement loop.
+            // Cycle 5+: corral retirement effect. Listens for 'corral-retired'
+            // events dispatched by GameState's retirement loop. Cycle 6 Phase 4
+            // adds the persistent 'portal' variant for Open Country.
             if (this.currentScene.corral) {
-                const { CorralZapEffectPool } = await import('./effects/CorralZapEffect.js');
-                this._corralZapPool = new CorralZapEffectPool(this.sceneManager.getScene());
-                window.addEventListener('corral-retired', (e) => {
-                    if (e?.detail && this._corralZapPool) {
-                        this._corralZapPool.fire(e.detail);
-                    }
-                });
+                const corral = this.currentScene.corral;
+                if (corral.effect === 'portal') {
+                    const { PortalEffect } = await import('./effects/PortalEffect.js');
+                    const groundY = this.terrainBuilder._groundY
+                        ? this.terrainBuilder._groundY(corral.center.x, corral.center.z)
+                        : 0;
+                    this._portalEffect = new PortalEffect(
+                        this.sceneManager.getScene(),
+                        corral.center,
+                        groundY
+                    );
+                    window.addEventListener('corral-retired', () => {
+                        if (this._portalEffect) this._portalEffect.pulse();
+                    });
+                } else {
+                    const { CorralZapEffectPool } = await import('./effects/CorralZapEffect.js');
+                    this._corralZapPool = new CorralZapEffectPool(this.sceneManager.getScene());
+                    window.addEventListener('corral-retired', (e) => {
+                        if (e?.detail && this._corralZapPool) {
+                            this._corralZapPool.fire(e.detail);
+                        }
+                    });
+                }
             }
 
             // Cycle 5+: anime water + depth pre-pass for island scenes.
@@ -1826,9 +1842,12 @@ class SheepDogSimulation {
             this._animeWater.update(performance.now() * 0.001, sun);
         }
 
-        // Cycle 5+: corral lightning-zap pool
+        // Cycle 5+: corral lightning-zap pool / Cycle 6 portal
         if (this._corralZapPool) {
             this._corralZapPool.update(deltaTime);
+        }
+        if (this._portalEffect) {
+            this._portalEffect.update(deltaTime);
         }
 
         // Render the scene (always render to show pause indicator)

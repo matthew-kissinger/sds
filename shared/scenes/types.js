@@ -30,6 +30,9 @@
  * @typedef {Object} CorralDef
  * @property {{x: number, z: number}} center
  * @property {number} radius
+ * @property {'zap'|'portal'} [effect]   Cycle 6 Phase 4 — retirement visual.
+ *                                       'zap' (default): lightning bolt + flag pillar (Rolling Hills).
+ *                                       'portal': swirling vortex + ring shader (Open Country).
  */
 
 /**

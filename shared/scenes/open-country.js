@@ -1,15 +1,14 @@
 /**
- * Open Country — Cycle 5: a much larger island than Rolling Hills.
- * Wilderness round-up loop with woodland zones the sheep wander into.
- * Coastal pen at the north shore — drive sheep from the woods to the
- * gate. No perimeter fence (water replaces it).
+ * Open Country — Cycle 5 island, Cycle 6 portal.
+ * A wild island of meadow and woods. Drive the flock through the trees
+ * to a magical portal at the north shore, where sheep ascend to retire.
  *
  * @type {import('./types.js').SceneDef}
  */
 export const openCountry = {
     id: 'open-country',
     name: 'Open Country',
-    description: 'A wild island of meadow and woods. Drive the flock through the trees to the coastal pen.',
+    description: 'A wild island of meadow and woods. Drive the flock through the trees to the portal.',
 
     // Island ~760m diameter (radius 380) — way bigger than Rolling Hills
     // per playtest 2026-04-25. 70m falloff keeps the shoreline gentle.
@@ -20,19 +19,15 @@ export const openCountry = {
         falloff: 70
     },
 
-    // Coastal pen on the north shore (Q2 decision). Inside the island
-    // safe radius — at z=130 with safeRadius=200, gate is well within.
-    gate: {
-        position: { x: 0, z: 130 },
-        width: 10
-    },
-
-    pasture: {
-        centerZ: 145,
-        minX: -40,
-        maxX: 40,
-        minZ: 132,
-        maxZ: 158
+    // Cycle 6 Phase 4: portal trigger replaces the coastal gate+pasture.
+    // Placed at the north shore (z=295) so it reads as "edge of the world"
+    // — well inside the safe land radius (380 - 70 - 4 = 306).
+    // `effect: 'portal'` selects the swirling-vortex visual + ring shader
+    // (vs. Rolling Hills' lightning-zap default).
+    corral: {
+        center: { x: 0, z: 295 },
+        radius: 9,
+        effect: 'portal'
     },
 
     sheepSpawn: {
@@ -42,6 +37,15 @@ export const openCountry = {
         centerX: 0,
         centerZ: -150
     },
+
+    // Cycle 6 Phase 3: woodsZones drive density biasing in TreePlacement.
+    // Three clusters away from the south-shore spawn and the north-shore
+    // portal, so players cross from open ground into denser woods en route.
+    woodsZones: [
+        { center: { x: -150,  z: 60 }, radius: 70, density: 2 },
+        { center: { x:  170,  z: 0  }, radius: 80, density: 2 },
+        { center: { x:   30,  z: 170 }, radius: 65, density: 2 }
+    ],
 
     terrain: {
         seed: 42,
@@ -64,16 +68,15 @@ export const openCountry = {
 
     farmHouse: null,
 
-    // Open-country has no perimeter fence — only the gate + pen stand
-    // alone in the field. Sheep are still bounded by the sim bounds box,
-    // they just can't see a wall. StructureBuilder reads this flag to
-    // skip the four border segments.
+    // Open-country has no perimeter fence — only the portal stands alone
+    // in the field. Sheep are still bounded by the island, they just
+    // can't see a wall.
     perimeterFence: false,
 
     sky: { preset: 'golden-hour' },
 
     allowedModes: ['cooperative', 'timed'],
     defaultMode: 'cooperative',
-    defaultCamera: 'follow',  // Q6: Follow makes the woodland depth read
+    defaultCamera: 'follow',
     difficultyModifier: 1.1
 };

@@ -756,15 +756,17 @@ export class GameSimulation {
                         }
                     }
                 }
-            } else {
-                // Cooperative mode - use single gate
+            } else if (this.gameState.gate) {
+                // Cooperative mode - single gate. Cycle 5+ corral scenes
+                // (Rolling Hills, Open Country) have no gate, so the gate-seek
+                // pathway is skipped — corral retirement runs client-side.
                 const distanceToGate = sheep.position.distanceTo(this.gameState.gate.position);
                 const distanceToDog = sheep.position.distanceTo(sheepdog.position);
-                
+
                 if (distanceToDog < sheep.fleeRadius * 1.5 && distanceToGate < 30) {
                     const toGate = this.gameState.gate.position.clone().subtract(sheep.position);
                     const toDog = sheepdog.position.clone().subtract(sheep.position);
-                    
+
                     const dotProduct = toGate.x * toDog.x + toGate.z * toDog.z;
                     if (dotProduct < 0) { // Gate is opposite direction from dog
                         return true;

@@ -220,7 +220,13 @@ export class StructureBuilder {
         // the perimeter pen+gate. Even if FieldConfig still surfaces a legacy
         // gate object, corral wins — no fence ring, no pen at the perimeter.
         if (corral) {
-            this.buildCorralStructure(corral);
+            // Cycle 6 Phase 4: 'portal'-style corrals own their own visual
+            // (PortalEffect, instantiated in main.js). The flag-pillar marker
+            // is just for 'zap'-style corrals (Rolling Hills) where the
+            // retirement visual is event-driven, not persistent.
+            if (corral.effect !== 'portal') {
+                this.buildCorralStructure(corral);
+            }
             console.log('[OK] Corral structures built');
             return;
         }
