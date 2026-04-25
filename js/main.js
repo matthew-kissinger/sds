@@ -18,6 +18,7 @@ import { MultiplayerState } from './MultiplayerState.js';
 import { Vector2D } from './Vector2D.js';
 import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
+import { Heightfield } from '../shared/terrain/Heightfield.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
@@ -176,6 +177,7 @@ class SheepDogSimulation {
         if (activeSceneId !== DEFAULT_SCENE_ID) {
             console.log(`[SCENE] Loaded "${this.currentScene.name}" (${activeSceneId}) from URL param`);
         }
+        this.heightfield = null; // Loaded async in init() before createTerrain.
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile, this.currentScene);
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
@@ -336,6 +338,21 @@ class SheepDogSimulation {
             if (animalModels.length === 0) {
                 throw new Error('No animal models loaded! Check model paths and network.');
             }
+
+            // Load heightfield (if scene declares one) BEFORE building terrain so
+            // displacement and downstream y-clamps share the same instance.
+            const heightmapUrl = this.currentScene.terrain?.heightmapUrl;
+            if (heightmapUrl) {
+                logStep('Loading heightfield', heightmapUrl);
+                try {
+                    this.heightfield = await Heightfield.load(heightmapUrl);
+                    console.log(`[TERRAIN] Heightfield loaded: ${this.heightfield.width}x${this.heightfield.height}, peakHeight=${this.heightfield.peakHeight}m`);
+                } catch (err) {
+                    console.warn('[TERRAIN] Heightfield load failed; falling back to flat terrain:', err);
+                    this.heightfield = null;
+                }
+            }
+            this.terrainBuilder.setHeightfield(this.heightfield);
 
             // Create terrain and environment
             logStep('Creating terrain');
