@@ -1,6 +1,6 @@
-# Next Session — Cycle 5 closed, Cycle 6 not yet planned
+# Next Session — Cycle 6 active (Trees as obstacles + woods density + portal)
 
-> Updated 2026-04-25 after Cycle 5 (Island + Woods) closed. Cold-start agents: read this page top-to-bottom, then [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) for what landed and [`docs/BACKLOG.md`](docs/BACKLOG.md) for what's deferred. Earlier cycles: [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md), [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md), [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md).
+> Updated 2026-04-25. Active plan: [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md). Cold-start agents: read this page top-to-bottom, then the cycle-6 plan, then [`docs/BACKLOG.md`](docs/BACKLOG.md) for what's deferred. Earlier cycles: [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) (last closed), [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md), [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md), [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md).
 
 ## Running locally
 
@@ -54,9 +54,9 @@ Cross-cutting:
 - **R10 audited**: client `OptimizedSheepSystem` and Worker `generateInitialSheepPositions` are entirely different code paths — never both run for the same game (Worker authoritative in MP, client solo only). No determinism prerequisite needed for this cycle. Reframed as a Phase-3 design constraint when tree placement lifts into `shared/`.
 - **Bug fix**: Poisson-disk seed-point loop only tried once. For islands the zone box is bigger than the safe disc → ~64% of the time the seed landed in water → zero trees. Fixed with up-to-100-attempt retry.
 
-## What's still TODO (carry-over for next cycle)
+## Carry-over menu from Cycle 5 playtest
 
-Items the user raised during Cycle 5 playtest that were intentionally deferred so the cycle could close. Listed in priority order. **Read this section before opening any new work.**
+Items raised during Cycle 5 playtest that were intentionally deferred so the cycle could close. Listed in priority order. **Items #1-6 are now in Cycle 6 scope** (see locked-scope line below the list); items #7-9 remain deferred. Preserved here in full so the playtest reasoning behind each item stays discoverable.
 
 1. **Trees + rocks collision (sim-side).** User playtest: "i do not see the sheep or the sheep dog colliding with the trees or rocks". `shared/SceneObstacles.js` shipped with kdbush queries + `obstacleAvoidance` push-out math. The remaining work:
    - In [`shared/MovementPhysics.js`](shared/MovementPhysics.js), per tick, query nearby tree/rock obstacles around each sheep + dog (~30m radius) via `obstacles.queryTrees(pos, r)`. Push entities out of overlapping circles using `obstacleAvoidance`.
@@ -79,7 +79,7 @@ Items the user raised during Cycle 5 playtest that were intentionally deferred s
 4. **Wood zones with biased tree density.** `woodsZones: WoodsZoneDef[]` schema field exists; `createTrees` ignores it. Once `TreePlacement` lifts (item #2), bias Poisson density inside the zones (denser inside, sparser outside). Open Country plan called for 2-3 woodland clusters; current implementation has trees uniform across the entire safe radius.
    - Estimate: **~1 hr** (after item #2 lands).
 
-5. **Boid retune for island scale.** Cycle 5 Phase 1.5 wired `scene.flocking` override pathway but didn't ship tuned numbers. Open Country at 760m diameter is **3.5× Rolling Hills meadow area**. Without re-tuning, expect cohesion to under-reach (flocks fragment). Playtest-driven tuning.
+5. **Boid retune for island scale.** Cycle 5 Phase 1.5 wired `scene.flocking` override pathway but didn't ship tuned numbers. Open Country at 760m diameter is **~4.5× Rolling Hills meadow area** (π·380² / π·180² = 4.46). Without re-tuning, expect cohesion to under-reach (flocks fragment). Playtest-driven tuning.
    - Estimate: **~1.5 hr**.
 
 6. **`defaultCamera` localStorage override semantics.** Today the saved `camera-mode` value always wins, so `scene.defaultCamera` only fires on first visit. User playtest noted Rolling Hills launched in Classic instead of Follow. Options: (a) per-scene last-mode in localStorage, (b) refresh-only override that respects scene default once per session.
@@ -91,7 +91,7 @@ Items the user raised during Cycle 5 playtest that were intentionally deferred s
 
 9. **GitHub Actions Node.js 20 deprecation.** Bump action versions before June 2nd, 2026.
 
-Any of these is a reasonable Cycle 6 starter. Items #1 + #2 together unlock MP island scenes and the woodland gameplay loop — the highest-value combo.
+**Cycle 6 scope (locked 2026-04-25, see [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md)):** items #2, #1, #4, #3 in that build order, with #5 + #6 as optional polish. Items #7-9 carry forward to a future cycle. Q3 (rock obstacle source — bespoke pixel-forge assets vs scale-threshold filter) remains open in the cycle plan and should resolve before Phase 2's rock wiring.
 
 ### Standing risks
 
