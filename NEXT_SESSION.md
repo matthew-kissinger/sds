@@ -26,7 +26,7 @@ Open `http://localhost:3000` (or `:3001` if :3000 is taken — Vite auto-increme
 
 - `sheepdogsim.com` is live on Cloudflare Pages + Worker + DO + D1 (see [`docs/cycle-2-report.md`](docs/cycle-2-report.md)).
 - Gameplay loop (solo, sandbox, local 2P, online 2-4P, three modes) is stable.
-- Droplet decommissioned target ~2026-05-01 (see [`docs/cycle-2-todo.md`](docs/cycle-2-todo.md)).
+- Droplet destroyed 2026-04-25 (soak shortened from 1 week — CF stack stable, no rollback ever needed). `server/`, `DROPLET_DEPLOYMENT.md`, and the `server:*` npm scripts removed in the same housekeeping pass.
 - **Cycle 3 done.** [`DECISIONS.md`](DECISIONS.md) § Cycle 3.
 - **Cycle 4 Phase A done** (PRs B–M). 11 parallel units shipped: Three.js 0.184, baked heightmaps, scene schema widened, `Heightfield`, Atmosphere (Hosek-Wilkie sky), `ProceduralMountains`, `CameraController`, open-country biome, GrassSystem polish, scene retunes. Detail: [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md).
 - **Cycle 4 Phase B done** (#42 + tonemap fix). Heightfield wired through TerrainBuilder/GrassSystem/sheep/dog; Atmosphere wired into render path; slope-modulated sheep speed; prop placement on terrain; camera y-clamp.

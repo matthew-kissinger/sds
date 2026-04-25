@@ -13,7 +13,7 @@ The frontend runs on Cloudflare Pages, the multiplayer server is a Cloudflare Wo
 | Frontend | https://sheepdogsim.com | Cloudflare Pages (`sds-frontend`), CNAME → `sds-frontend.pages.dev`, proxied |
 | Frontend (preview) | https://sds-frontend.pages.dev | Pages project default hostname; also functional |
 | Multiplayer API | https://sds-worker.matt-m-kissinger.workers.dev | Cloudflare Worker + RoomDO/LobbyDO + D1 |
-| Legacy droplet | (no DNS) | DO droplet `147.182.185.185` still online as rollback safety; `api.sheepdogsim.com` record removed 2026-04-24 |
+| Legacy droplet | (destroyed) | DO droplet destroyed 2026-04-25; soak shortened from 1 week. `api.sheepdogsim.com` A record removed 2026-04-24. |
 
 ## Cloudflare resources
 
@@ -83,8 +83,8 @@ Each corresponds to a Cycle 1 bug in [archive/cycle-1-audit.md](archive/cycle-1-
 See [cycle-2-todo.md](cycle-2-todo.md) for the full punch list. Highlights:
 
 - GitHub Actions auto-deploy (`.github/workflows/deploy.yml`) — not re-added yet; deploys today are manual (`npm run build && npx wrangler pages deploy dist` + `cd worker && npx wrangler deploy`).
-- Droplet destroy — soak in progress, target ~1 week post-cutover (2026-05-01).
-- 207-row leaderboard backfill from the droplet's SQLite dump into D1 (optional — the leaderboard is rebuilding organically).
+- ~~Droplet destroy.~~ Done 2026-04-25, soak shortened from 1 week.
+- ~~207-row leaderboard backfill from the droplet's SQLite dump into D1.~~ Moot — droplet destroyed without a final dump; leaderboard rebuilt organically.
 - Observability — currently `wrangler tail` only. Worth wiring a basic Logpush or Sentry when volume warrants.
 - Hibernation WebSocket API migration — the worker currently uses `server.accept()` which keeps the DO warm (fine for active rooms but billable). Switch to `state.acceptWebSocket(ws)` when we care about idle-room cost.
 
@@ -99,7 +99,7 @@ See [cycle-2-todo.md](cycle-2-todo.md) for the full punch list. Highlights:
 If the new stack needs to be taken out of production during the soak window:
 
 1. **Pages-only issue:** `npx wrangler pages deployment list --project-name sds-frontend` lists recent deploys; promote a prior deployment from the CF dashboard.
-2. **Full rollback to legacy stack:** restore the `sheepdogsim.com` CNAME to `matthew-kissinger.github.io` and re-create the `api.sheepdogsim.com` A record pointing at the droplet IP (`147.182.185.185`, proxied). The droplet and its SQLite leaderboard are still online; a DNS-only revert puts the old stack back in minutes.
+2. ~~**Full rollback to legacy stack.**~~ No longer available — droplet destroyed 2026-04-25. Re-provisioning would mean rebuilding from `git show HEAD~N:DROPLET_DEPLOYMENT.md` (deleted in the same housekeeping commit) and `git show HEAD~N:server/` (also deleted), plus restoring `api.sheepdogsim.com` DNS. Treat the CF stack as the only live path going forward.
 3. **Worker-only issue:** `cd worker && npx wrangler rollback` reverts the worker to the previous deployment. Pages bundle still points at the workers.dev hostname, so that one-liner is enough.
 
 ## Final state of the postmortem rules

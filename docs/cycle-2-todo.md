@@ -1,6 +1,6 @@
 # Cycle 2 — What's Left
 
-> Punch list of remaining cleanup for the DigitalOcean → Cloudflare migration. `sheepdogsim.com` is live on Cloudflare Pages + Workers as of 2026-04-24. What's left here is automation, backfill, and droplet teardown. See [cycle-2-report.md](cycle-2-report.md) for the full shipped state.
+> Punch list of remaining cleanup for the DigitalOcean → Cloudflare migration. `sheepdogsim.com` is live on Cloudflare Pages + Workers as of 2026-04-24. **Droplet teardown completed 2026-04-25** (soak shortened from 1 week — CF stack stable). What's left here is CI auto-deploy and a few optional polish items. See [cycle-2-report.md](cycle-2-report.md) for the full shipped state.
 
 ## P0 — Cutover (done 2026-04-24)
 
@@ -15,16 +15,16 @@
 - [ ] **Also build & deploy the worker from CI.** `cd worker && npx wrangler deploy` in a separate job. Secret required: `CF_API_TOKEN` with Worker edit scope.
 - [ ] Decide if the worker needs its own tagged releases or if `main` is the release train. Recommendation: `main` is the release train for now; cut tags only when something warrants rollback rehearsal.
 
-## P2 — Tear down the droplet
+## P2 — Tear down the droplet (done 2026-04-25)
 
-- [ ] **Soak period:** target destroy ~2026-05-01 (1 week post-cutover). No action until then unless a regression surfaces.
-- [ ] **Final data pull:** on the droplet, `sqlite3 /opt/sds-server/leaderboard.db '.dump players' > /tmp/droplet-dump-YYYYMMDD.sql`. Copy off-box to a personal backup.
-- [ ] **Destroy the droplet** via the DigitalOcean dashboard (one-off, not Terraform-managed). Record the destroy date in `DECISIONS.md`.
-- [ ] Archive or delete `server/` from the repo, or leave it as historical reference. User preference — currently keeping it.
+- [x] **Soak period:** shortened from 1 week to ~1 day. CF stack ran clean from cutover through Cycle 4 Hardening; no rollback ever needed.
+- [x] **Final data pull:** skipped. The 207-row leaderboard was rebuilding organically on D1 by destroy time (cycle-2-report.md P3 item); the dump was deemed not worth pulling.
+- [x] **Destroy the droplet** via the DigitalOcean dashboard. Done 2026-04-25.
+- [x] **Delete `server/` from the repo.** Removed 2026-04-25 along with `DROPLET_DEPLOYMENT.md`, `scripts/legacy/upload-to-droplet.ps1`, and the `server:*` scripts in `package.json`. Geckos.io / WebRTC dependencies are no longer referenced anywhere in the tree.
 
 ## P3 — Optional but good
 
-- [ ] **Migrate the 207 legacy player rows** from the droplet's SQLite dump into D1 so leaderboards populate immediately on cutover rather than rebuilding organically. One-time `wrangler d1 execute sds-db --file /tmp/droplet-dump-*.sql --remote` after scrubbing PRAGMA / BEGIN / COMMIT lines.
+- [x] ~~**Migrate the 207 legacy player rows** from the droplet's SQLite dump into D1.~~ Moot — droplet destroyed 2026-04-25 without a final dump; leaderboard rebuilt organically.
 - [ ] **Switch worker WebSocket handling to the Hibernation API** (`state.acceptWebSocket(ws)`). Saves duration billing on idle rooms. Current code uses `server.accept()` which keeps the DO warm continuously. Fine for low volume; worth revisiting at scale.
 - [ ] **Delta-encode sheep state** in the worker broadcast. The client already extrapolates from `vx`/`vz`; sending only changed sheep would roughly halve outbound bandwidth from RoomDO. Requires a per-viewer `prevSnapshot` map in RoomDO and a `sheepFull` first frame on connect.
 - [ ] **Observability:** wire Logpush or a lightweight custom endpoint so request-level errors and DO exceptions accumulate somewhere queryable. Right now `wrangler tail` is the only story.

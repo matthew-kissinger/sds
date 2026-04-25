@@ -50,7 +50,7 @@ Worker was deployed to `sheepdogsim.com/api/*` and `/r/*`, D1 had 207 players mi
 
 ## Cycle 2 — CF backend shipped (2026-04-23, overnight)
 
-The migration from Geckos.io + DigitalOcean to Cloudflare Workers + Durable Objects + D1 + Pages shipped and is live. DNS cutover completed 2026-04-24: `sheepdogsim.com` now CNAMEs at `sds-frontend.pages.dev`; the legacy `api.sheepdogsim.com` record was removed in the same operation. The DigitalOcean droplet remains running for a brief soak (target destroy: ~2026-05-01) as a rollback safety net.
+The migration from Geckos.io + DigitalOcean to Cloudflare Workers + Durable Objects + D1 + Pages shipped and is live. DNS cutover completed 2026-04-24: `sheepdogsim.com` now CNAMEs at `sds-frontend.pages.dev`; the legacy `api.sheepdogsim.com` record was removed in the same operation. The DigitalOcean droplet ran in parallel for ~1 day as rollback safety, then was destroyed 2026-04-25 (soak shortened from 1 week — CF stack was stable). `server/`, `DROPLET_DEPLOYMENT.md`, and the `server:*` npm scripts were removed in the same housekeeping pass.
 
 Full closeout: [docs/cycle-2-report.md](docs/cycle-2-report.md).
 
@@ -65,11 +65,11 @@ Full closeout: [docs/cycle-2-report.md](docs/cycle-2-report.md).
 **Follow-ups that stayed on the list:**
 
 - GitHub Actions workflow for auto-deploy (Pages + Worker) — not re-added this cycle.
-- 207-row leaderboard migration from droplet SQLite to D1 — pending.
+- ~~207-row leaderboard migration from droplet SQLite to D1.~~ Moot — droplet destroyed 2026-04-25 without a final dump; leaderboard rebuilt organically.
 - Switching the worker to the Hibernation WebSocket API — deferred until idle-room cost matters.
-- Droplet destroy once the soak window closes (~1 week).
+- ~~Droplet destroy once the soak window closes (~1 week).~~ Done 2026-04-25, soak shortened from 1 week.
 
-**Decisions 1-5 from the top of this file remain in force** as the direction. Decision 10 (30-day parallel droplet) is relaxed: plan is a ~1-week soak then destroy.
+**Decisions 1-5 from the top of this file remain in force** as the direction. Decision 10 (30-day parallel droplet) was further relaxed in execution: actual soak was ~1 day (destroyed 2026-04-25).
 
 ---
 

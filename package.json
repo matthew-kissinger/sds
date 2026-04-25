@@ -23,11 +23,6 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "clean": "rm -rf dist node_modules/.vite",
-    "server:status": "ssh sds \"pm2 status\"",
-    "server:logs": "ssh sds \"pm2 logs sds-multiplayer-server --lines 50\"",
-    "server:logs:live": "ssh sds \"pm2 logs sds-multiplayer-server\"",
-    "server:deploy": "rsync -avz --exclude node_modules --exclude leaderboard.db --exclude '*.db-shm' --exclude '*.db-wal' server/ sds:/opt/sds-server/ && ssh sds \"cd /opt/sds-server && npm install --omit=dev && pm2 reload sds-multiplayer-server\"",
-    "server:ssh": "ssh sds",
     "compress-glbs": "node scripts/compress-glbs.mjs",
     "bake-heightmaps": "node scripts/bake-heightmap.mjs --scene rolling-hills --peakHeight 6 --seed 1 --out public/terrain/rolling-hills.r32f && node scripts/bake-heightmap.mjs --scene field --peakHeight 0 --seed 0 --out public/terrain/field.r32f && node scripts/bake-heightmap.mjs --scene open-country --peakHeight 5 --seed 42 --out public/terrain/open-country.r32f"
   },

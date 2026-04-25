@@ -114,9 +114,6 @@ npx wrangler d1 execute sds-db --file migrations/0001_init.sql --local   # wipe+
 |---------|------|---------|
 | Vite (client) | 3000 | — |
 | Wrangler dev (worker) | 8787 | — |
-| Legacy Geckos server | 9208 | `PORT` |
-
-The Geckos server (`server/`) is no longer in the critical path — `sheepdogsim.com` serves from Cloudflare Pages and the multiplayer API lives on a Cloudflare Worker. The directory is kept on disk as a short-term rollback archive until the DigitalOcean droplet is destroyed (~1 week post-cutover). See [docs/cycle-2-todo.md](docs/cycle-2-todo.md).
 
 ---
 
@@ -185,7 +182,6 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full module map. Short version:
 js/               client (Three.js + React + NetworkManager)
 worker/           Cloudflare Worker (RoomDO + LobbyDO + D1)
 shared/           deterministic sim (imported by both)
-server/           legacy Geckos server (being retired)
 tests/            vitest + Playwright
 docs/             design + cycle reports
 ```

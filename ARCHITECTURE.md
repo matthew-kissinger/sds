@@ -349,13 +349,6 @@ The server-to-client state snapshot is the same shape the legacy Geckos server u
 │   ├── tsconfig.json
 │   └── wrangler.toml
 │
-├── server/                 Legacy Geckos server (fallback, being retired)
-│   ├── index.js
-│   ├── GameSimulation.js
-│   ├── RoomManager.js
-│   ├── LeaderboardManager.js
-│   └── leaderboard.db
-│
 ├── shared/                 Deterministic sim, imported by both client and worker
 │   ├── BoundaryCollision.js
 │   ├── FlockingAlgorithms.js
