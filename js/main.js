@@ -368,6 +368,10 @@ class SheepDogSimulation {
             this.terrainBuilder.setHeightfield(this.heightfield);
             // GameState propagates heightfield to OptimizedSheepSystem when the flock spawns.
             this.gameState.heightfield = this.heightfield;
+            // Camera controller also samples the heightfield for Follow/Free clamps.
+            if (this.cameraController?.setHeightfield) {
+                this.cameraController.setHeightfield(this.heightfield);
+            }
 
             // Create terrain and environment
             logStep('Creating terrain');
