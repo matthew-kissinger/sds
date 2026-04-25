@@ -29,6 +29,8 @@ import {
     sumInstancedMeshTriangles,
     sumObjectTreeTriangles
 } from './utils/TriangleCount.js';
+import { generateTrees } from '../shared/TreePlacement.js';
+import { mulberry32 } from '../shared/Random.js';
 
 /**
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements.
@@ -609,239 +611,44 @@ export class TerrainBuilder {
             console.warn('Models not loaded yet. Loading models...');
             await this.loadModels();
         }
-        
-        // Helper function to check if a position is in any pasture area
-        const isInPastureArea = (x, z) => {
-            // Standard single-player pasture avoidance
-            if (z > 100 && z < 135 && Math.abs(x) < 35) {
-                return true;
-            }
-            
-            // Check competitive pastures if provided
-            if (competitivePastures && Array.isArray(competitivePastures)) {
-                for (const pasture of competitivePastures) {
-                    // Add buffer around pasture area to avoid trees too close to gates
-                    const buffer = 15; // 15 unit buffer around pastures
-                    if (x >= pasture.minX - buffer && x <= pasture.maxX + buffer &&
-                        z >= pasture.minZ - buffer && z <= pasture.maxZ + buffer) {
-                        return true;
-                    }
-                }
-            }
-            
-            return false;
-        };
-        
+
+        // Cycle 6 Phase 1: placement now lives in shared/TreePlacement.js
+        // so client + Worker compute identical positions from the same seed.
+        // The placement function returns flat (x, z, type, scale, rotationY)
+        // — Y math (_groundY + per-model base offset) stays here on the
+        // client because it's a renderer concern.
+        const seed = this.sceneDef?.terrain?.seed ?? 0;
+        const flatTrees = generateTrees(this.sceneDef, mulberry32(seed), {
+            competitivePastures,
+            rockPositions: this.rockPositions,
+        });
+
+        // Cache placement (Cycle 6 Phase 2 — main.js builds the obstacle
+        // bundle from this list).
+        this.treeInstances = flatTrees;
+
         const treeInstances = {
             tree1: [],
             tree2: [],
-            pine: []
+            pine: [],
         };
-        
-        // Cycle 5+ island scenes: trees + rocks live ON the island (the
-        // land disk), not OUTSIDE the play-area rect. We invert the
-        // legacy "exclude play area, fill outside" logic into "must be
-        // inside island land, exclude near corral".
-        const islandBoundary = this.sceneDef?.boundary?.kind === 'island' ? this.sceneDef.boundary : null;
-        const corral = this.sceneDef?.corral || null;
-        const islandSafeRadius = islandBoundary
-            ? islandBoundary.radius - islandBoundary.falloff - 4   // 4m past the falloff start = on stable land, not on the slope to water
-            : 0;
-
-        // Improved procedural generation using Poisson disk sampling
-        const poissonDisk = (minDistance, maxDistance, zone, avoidAreas = []) => {
-            const points = [];
-            const cellSize = minDistance / Math.sqrt(2);
-            const grid = {};
-            const active = [];
-            const k = 30; // Number of attempts before rejection
-
-            // Helper to check if point is valid
-            const isValidPoint = (x, z) => {
-                // Check zone bounds
-                if (x < zone.minX || x > zone.maxX || z < zone.minZ || z > zone.maxZ) return false;
-
-                // Check avoid areas
-                for (const area of avoidAreas) {
-                    if (x >= area.minX && x <= area.maxX && z >= area.minZ && z <= area.maxZ) return false;
-                }
-
-                if (islandBoundary) {
-                    // Island scene — must be inside the land disk, with margin past
-                    // the falloff so trees don't sit on the slope.
-                    const dx = x - islandBoundary.center.x;
-                    const dz = z - islandBoundary.center.z;
-                    const distSq = dx * dx + dz * dz;
-                    if (distSq > islandSafeRadius * islandSafeRadius) return false;
-
-                    // Don't crowd the corral
-                    if (corral) {
-                        const cdx = x - corral.center.x;
-                        const cdz = z - corral.center.z;
-                        const cradius = corral.radius + 5;
-                        if (cdx * cdx + cdz * cdz < cradius * cradius) return false;
-                    }
-                } else {
-                    // Legacy rect scene (Field) — trees decorate OUTSIDE the play area
-                    if (isInPastureArea(x, z)) return false;
-                    const playArea = this.zones.playArea;
-                    const buffer = 20;
-                    if (x >= playArea.minX - buffer && x <= playArea.maxX + buffer &&
-                        z >= playArea.minZ - buffer && z <= playArea.maxZ + buffer) {
-                        return false;
-                    }
-                }
-
-                // Check farm house area
-                if (this.isInFarmHouseArea(x, z)) return false;
-
-                // Reject if inside a rock formation's footprint (so trees
-                // don't spawn ON TOP of big rocks). Requires that
-                // addEnvironmentDetails() has run before createTrees().
-                if (this.rockPositions && this.rockPositions.length > 0) {
-                    const treePadding = 4; // small buffer past rock edge
-                    for (const rock of this.rockPositions) {
-                        const rdx = x - rock.x;
-                        const rdz = z - rock.z;
-                        const rr = rock.radius + treePadding;
-                        if (rdx * rdx + rdz * rdz < rr * rr) return false;
-                    }
-                }
-
-                // Check grid neighbors
-                const gridX = Math.floor(x / cellSize);
-                const gridZ = Math.floor(z / cellSize);
-                
-                for (let dx = -2; dx <= 2; dx++) {
-                    for (let dz = -2; dz <= 2; dz++) {
-                        const key = `${gridX + dx},${gridZ + dz}`;
-                        if (grid[key]) {
-                            for (const neighbor of grid[key]) {
-                                const dist = Math.sqrt((neighbor.x - x) ** 2 + (neighbor.z - z) ** 2);
-                                if (dist < minDistance) return false;
-                            }
-                        }
-                    }
-                }
-                
-                return true;
-            };
-            
-            // Start with a random point. Retry up to 100 times — for island
-            // scenes the zone box is much larger than the valid land disc,
-            // so a single shot often lands in water and the algorithm bails
-            // with zero trees. The retry guarantees the seed lands on land
-            // when there's any valid space at all.
-            for (let startAttempt = 0; startAttempt < 100; startAttempt++) {
-                const startX = zone.minX + Math.random() * (zone.maxX - zone.minX);
-                const startZ = zone.minZ + Math.random() * (zone.maxZ - zone.minZ);
-                if (isValidPoint(startX, startZ)) {
-                    const point = { x: startX, z: startZ };
-                    points.push(point);
-                    active.push(point);
-                    const key = `${Math.floor(startX / cellSize)},${Math.floor(startZ / cellSize)}`;
-                    grid[key] = [point];
-                    break;
-                }
-            }
-            
-            // Generate points
-            while (active.length > 0) {
-                const randomIndex = Math.floor(Math.random() * active.length);
-                const currentPoint = active[randomIndex];
-                let found = false;
-                
-                for (let n = 0; n < k; n++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const distance = minDistance + Math.random() * (maxDistance - minDistance);
-                    const newX = currentPoint.x + Math.cos(angle) * distance;
-                    const newZ = currentPoint.z + Math.sin(angle) * distance;
-                    
-                    if (isValidPoint(newX, newZ)) {
-                        const point = { x: newX, z: newZ };
-                        points.push(point);
-                        active.push(point);
-                        const key = `${Math.floor(newX / cellSize)},${Math.floor(newZ / cellSize)}`;
-                        if (!grid[key]) grid[key] = [];
-                        grid[key].push(point);
-                        found = true;
-                    }
-                }
-                
-                if (!found) {
-                    active.splice(randomIndex, 1);
-                }
-            }
-            
-            return points;
-        };
-        
-        // Define biome regions using noise-like patterns
-        const getBiome = (x, z) => {
-            const distFromCenter = Math.sqrt(x * x + z * z);
-            const angle = Math.atan2(z, x);
-            
-            // Create organic biome boundaries using sine waves
-            const wave1 = Math.sin(angle * 3 + distFromCenter * 0.01) * 50;
-            const wave2 = Math.sin(angle * 5 - distFromCenter * 0.02) * 30;
-            const biomeOffset = wave1 + wave2;
-            
-            const adjustedDist = distFromCenter + biomeOffset;
-            
-            if (adjustedDist < 250) return 'mixed';
-            if (adjustedDist < 350) return 'deciduous';
-            if (adjustedDist < 450) return 'pine';
-            return 'mixed';
-        };
-        
-        // Generate trees for each zone with better distribution
-        const zones = [
-            { name: 'nearField', zone: this.zones.nearField, minDist: 25, maxDist: 40, scale: 15.0 },
-            { name: 'midField', zone: this.zones.midField, minDist: 30, maxDist: 50, scale: 20.0 },
-            { name: 'farField', zone: this.zones.farField, minDist: 35, maxDist: 60, scale: 25.0 },
-            { name: 'horizon', zone: this.zones.horizon, minDist: 40, maxDist: 70, scale: 30.0 }
-        ];
-        
-        zones.forEach(({ name, zone, minDist, maxDist, scale }) => {
-            const points = poissonDisk(minDist, maxDist, zone);
-            
-            points.forEach(point => {
-                const biome = getBiome(point.x, point.z);
-                let treeType;
-                
-                if (biome === 'deciduous') {
-                    treeType = Math.random() < 0.6 ? 'tree1' : 'tree2';
-                } else if (biome === 'pine') {
-                    treeType = 'pine';
-                } else {
-                    // Mixed biome
-                    const r = Math.random();
-                    if (r < 0.3) treeType = 'tree1';
-                    else if (r < 0.6) treeType = 'tree2';
-                    else treeType = 'pine';
-                }
-                
-                // Add variation to scale
-                const scaleVariation = 0.7 + Math.random() * 0.6;
-                const finalScale = scale * scaleVariation;
-                
-                // Use _groundY (mirrors terrain falloff) instead of raw heightfield
-                // sample — trees in outer zones (midField/farField/horizon) extend
-                // past the heightfield's worldSize and would otherwise float above
-                // the flat skirt at the heightfield's clamped edge value.
-                const treeY = this._groundY(point.x, point.z);
-                // Compensate for the GLB's origin offset — different tree models
-                // place their pivot at trunk-base vs. centroid, which sinks half
-                // the trunk on hilly scenes if you just place at terrain Y.
-                const baseOffset = this.models.trees[treeType]?.userData?.modelBaseYOffset ?? 0;
-                const placementY = treeY + baseOffset * finalScale;
-                treeInstances[treeType].push({
-                    position: new THREE.Vector3(point.x, placementY, point.z),
-                    rotation: new THREE.Euler(0, Math.random() * Math.PI * 2, 0),
-                    scale: new THREE.Vector3(finalScale, finalScale, finalScale)
-                });
+        for (const t of flatTrees) {
+            // Use _groundY (mirrors terrain falloff) instead of raw heightfield
+            // sample — trees in outer zones (midField/farField/horizon) extend
+            // past the heightfield's worldSize and would otherwise float above
+            // the flat skirt at the heightfield's clamped edge value.
+            const treeY = this._groundY(t.x, t.z);
+            // Compensate for the GLB's origin offset — different tree models
+            // place their pivot at trunk-base vs. centroid, which sinks half
+            // the trunk on hilly scenes if you just place at terrain Y.
+            const baseOffset = this.models.trees[t.type]?.userData?.modelBaseYOffset ?? 0;
+            const placementY = treeY + baseOffset * t.scale;
+            treeInstances[t.type].push({
+                position: new THREE.Vector3(t.x, placementY, t.z),
+                rotation: new THREE.Euler(0, t.rotationY, 0),
+                scale: new THREE.Vector3(t.scale, t.scale, t.scale),
             });
-        });
+        }
 
         // Split each tree type's instances into near (full mesh) and far
         // (cross-billboard impostor). The cutoff is purely distance-based so
