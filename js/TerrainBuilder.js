@@ -421,24 +421,27 @@ export class TerrainBuilder {
             console.log(`[TERRAIN] Heightfield-displaced terrain (${positions.count} verts, plane=${terrainSize}m)`);
         }
 
-        // Create a custom shader material for varied ground
+        // Custom shader material for varied ground. Uses Three.js's standard
+        // fog chunks (fog_pars_*, fog_*) instead of a hand-rolled fog so
+        // `scene.fog`, which Atmosphere drives to match the sky's horizon
+        // color per-frame, is the single source of truth for terrain fade.
+        // Without this, terrain faded to a fixed warm-grey-green while the
+        // skybox showed sky color — a visible cutoff line where the two met.
         const terrainMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-                baseColor1: { value: new THREE.Color(0x3d5c2e) },  // Dark earthy green
-                baseColor2: { value: new THREE.Color(0x5a7a42) },  // Medium green
-                baseColor3: { value: new THREE.Color(0x4a6838) },  // Olive green
-                dirtColor: { value: new THREE.Color(0x6b5d4a) },   // Brown dirt patches
-                // Horizon haze — desaturated warm grey-green, not raw sky blue.
-                // The terrain plane extends past 1km now (no more procedural
-                // mountains); strong blue fog made the field read as "field
-                // floating in sky" especially when the camera angle showed
-                // the green-to-blue transition mid-frame. Pushed near/far
-                // further so foreground terrain stays its true colour.
-                fogColor: { value: new THREE.Color(0xa9b8a8) },
-                fogNear: { value: 350.0 },
-                fogFar: { value: 1100.0 }
-            },
+            uniforms: THREE.UniformsUtils.merge([
+                THREE.UniformsLib.fog,
+                {
+                    baseColor1: { value: new THREE.Color(0x3d5c2e) },  // Dark earthy green
+                    baseColor2: { value: new THREE.Color(0x5a7a42) },  // Medium green
+                    baseColor3: { value: new THREE.Color(0x4a6838) },  // Olive green
+                    dirtColor:  { value: new THREE.Color(0x6b5d4a) }   // Brown dirt patches
+                }
+            ]),
+            fog: true,
             vertexShader: `
+                #include <common>
+                #include <fog_pars_vertex>
+
                 varying vec2 vUv;
                 varying vec3 vWorldPos;
 
@@ -446,19 +449,21 @@ export class TerrainBuilder {
                     vUv = uv;
                     vec4 worldPos = modelMatrix * vec4(position, 1.0);
                     vWorldPos = worldPos.xyz;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    vec4 mvPosition = viewMatrix * worldPos;
+                    #include <fog_vertex>
+                    gl_Position = projectionMatrix * mvPosition;
                 }
             `,
             fragmentShader: `
                 precision highp float;
 
+                #include <common>
+                #include <fog_pars_fragment>
+
                 uniform vec3 baseColor1;
                 uniform vec3 baseColor2;
                 uniform vec3 baseColor3;
                 uniform vec3 dirtColor;
-                uniform vec3 fogColor;
-                uniform float fogNear;
-                uniform float fogFar;
 
                 varying vec2 vUv;
                 varying vec3 vWorldPos;
@@ -513,12 +518,12 @@ export class TerrainBuilder {
                     float ao = 0.85 + 0.15 * n1;
                     color *= ao;
 
-                    // Distance fog
-                    float dist = length(vWorldPos - cameraPosition);
-                    float fogFactor = smoothstep(fogNear, fogFar, dist);
-                    color = mix(color, fogColor, fogFactor);
-
                     gl_FragColor = vec4(color, 1.0);
+
+                    // Three.js-managed fog (scene.fog driven by Atmosphere
+                    // per-frame to match the sky's horizon color). Single
+                    // chunk handles both linear THREE.Fog and FogExp2.
+                    #include <fog_fragment>
                 }
             `,
             side: THREE.FrontSide
