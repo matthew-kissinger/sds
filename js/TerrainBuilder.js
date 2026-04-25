@@ -4,6 +4,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { GrassSystem } from './GrassSystem.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
+import { getSceneManager } from './GameBridge.js';
 
 // Phase A Unit B compressed all GLBs with Draco + Meshopt. Every GLTFLoader
 // in the codebase needs both decoders attached or those GLBs fail to parse
@@ -213,12 +214,48 @@ export class TerrainBuilder {
 
         const loadPromises = [];
 
-        // Load tree models (non-critical)
+        // Load tree models (non-critical). Bake child mesh transforms into
+        // their geometries so that the InstancedMesh-per-child path in
+        // createTrees correctly represents the tree's spatial layout (some
+        // GLBs nest trunk + foliage as separate child meshes with their own
+        // local offsets — without baking, those offsets are dropped). Then
+        // measure each child geometry's min.y so we can lift the visible
+        // bottom of the tree to terrain regardless of GLB origin convention.
         for (const model of modelPaths.trees) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
-                    this.models.trees[model.name] = gltf.scene;
-                    console.log(`[OK] Loaded tree model: ${model.name}`);
+                    const root = gltf.scene;
+                    root.updateMatrixWorld(true);
+                    let minY = Infinity;
+                    let maxY = -Infinity;
+                    root.traverse(child => {
+                        if (!child.isMesh || !child.geometry) return;
+                        // Clone before mutating so any other consumer of this
+                        // GLB sees the original geometry.
+                        child.geometry = child.geometry.clone();
+                        // Bake the world transform of this child (relative to
+                        // the gltf scene root) into its geometry. After this,
+                        // the child's own transform can be reset to identity
+                        // and the geometry alone represents the child's
+                        // contribution at the right position.
+                        child.geometry.applyMatrix4(child.matrixWorld);
+                        child.position.set(0, 0, 0);
+                        child.quaternion.identity();
+                        child.scale.set(1, 1, 1);
+                        child.updateMatrixWorld(true);
+                        child.geometry.computeBoundingBox();
+                        const bb = child.geometry.boundingBox;
+                        if (bb && isFinite(bb.min.y)) {
+                            if (bb.min.y < minY) minY = bb.min.y;
+                            if (bb.max.y > maxY) maxY = bb.max.y;
+                        }
+                    });
+                    if (!isFinite(minY)) { minY = 0; maxY = 1; }
+                    root.userData.modelBaseYOffset = -minY;
+                    root.userData.modelBboxMinY = minY;
+                    root.userData.modelBboxMaxY = maxY;
+                    this.models.trees[model.name] = root;
+                    console.log(`[OK] Loaded tree model: ${model.name} (bbox y=[${minY.toFixed(2)}, ${maxY.toFixed(2)}])`);
                 }).catch(err => {
                     const errMsg = `tree/${model.name}: ${err.message || err}`;
                     console.error(`[ERROR] Failed to load ${errMsg}`);
@@ -255,12 +292,20 @@ export class TerrainBuilder {
             );
         }
 
-        // Load building models (non-critical)
+        // Load building models (non-critical). Same bbox.min.y measurement
+        // as trees so we can lift each building's visible base to terrain
+        // height regardless of GLB origin convention. (Without this, the
+        // farmhouse sinks because its origin is at the centroid, not the
+        // foundation.)
         for (const model of modelPaths.buildings) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
-                    this.models.buildings[model.name] = gltf.scene;
-                    console.log(`[OK] Loaded building model: ${model.name}`);
+                    const root = gltf.scene;
+                    root.updateMatrixWorld(true);
+                    const bbox = new THREE.Box3().setFromObject(root);
+                    root.userData.modelBaseYOffset = isFinite(bbox.min.y) ? -bbox.min.y : 0;
+                    this.models.buildings[model.name] = root;
+                    console.log(`[OK] Loaded building model: ${model.name} (baseYOffset=${root.userData.modelBaseYOffset.toFixed(3)})`);
                 }).catch(err => {
                     const errMsg = `building/${model.name}: ${err.message || err}`;
                     console.error(`[ERROR] Failed to load ${errMsg}`);
@@ -327,17 +372,29 @@ export class TerrainBuilder {
     
     createTerrain() {
         // Create base terrain mesh; heightfield displacement applied below.
-        // 64x64 segments at 1000m = ~15.6m/segment — coarser than the
-        // heightfield resolution but cheap and good enough for "rolling
-        // hills" silhouettes from the player POV. Higher tessellation is
-        // a Phase C optimization if needed.
-        const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 64, 64);
+        // Plane is sized to extend past the tree horizon zone (±800m) so the
+        // ground reads as continuous to fog distance — no procedural mountain
+        // ring as of Cycle 4 Hardening. Quad size has to stay fine enough to
+        // resolve the heightfield (~25m wavelength content), or sheep/grass/
+        // trees end up displaced relative to the visible ground.
+        //   Desktop: 2400m / 384 = 6.25m/quad (~295k tris).
+        //   Mobile:  1600m / 192 = 8.33m/quad  (~74k tris).
+        const terrainSize = this.isMobile ? 1600 : 2400;
+        const terrainSegments = this.isMobile ? 192 : 384;
+        const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
 
         // Apply heightfield displacement before the mesh is rotated to lie flat.
         // Geometry is built in the XY plane; after the mesh is rotated -PI/2
         // around X, local (a, b, c) maps to world (a, c, -b). So local Z
         // displacement becomes world Y, and world (X, Z) maps to local (a, -b).
         if (this.heightfield) {
+            // Smooth radial falloff: heightfield content fades to 0 over the
+            // last few metres of its worldSize so the plane outside the
+            // heightfield extends as a flat skirt to the horizon (instead of
+            // an abrupt plateau at the edge texel value).
+            const hfHalf = this.heightfield.worldSize * 0.5;
+            const fadeStart = hfHalf - 20;
+            const fadeEnd = hfHalf;
             const positions = terrainGeometry.attributes.position;
             for (let i = 0; i < positions.count; i++) {
                 const a = positions.getX(i);
@@ -345,11 +402,17 @@ export class TerrainBuilder {
                 const worldX = a;
                 const worldZ = -b;
                 const h = this.heightfield.sample(worldX, worldZ);
-                positions.setZ(i, h);
+                const radial = Math.max(Math.abs(worldX), Math.abs(worldZ));
+                let falloff = 1;
+                if (radial > fadeStart) {
+                    const t = Math.min(1, (radial - fadeStart) / (fadeEnd - fadeStart));
+                    falloff = 1 - t * t * (3 - 2 * t); // smoothstep, inverted
+                }
+                positions.setZ(i, h * falloff);
             }
             positions.needsUpdate = true;
             terrainGeometry.computeVertexNormals();
-            console.log(`[TERRAIN] Heightfield-displaced terrain (${positions.count} verts)`);
+            console.log(`[TERRAIN] Heightfield-displaced terrain (${positions.count} verts, plane=${terrainSize}m)`);
         }
 
         // Create a custom shader material for varied ground
@@ -359,9 +422,15 @@ export class TerrainBuilder {
                 baseColor2: { value: new THREE.Color(0x5a7a42) },  // Medium green
                 baseColor3: { value: new THREE.Color(0x4a6838) },  // Olive green
                 dirtColor: { value: new THREE.Color(0x6b5d4a) },   // Brown dirt patches
-                fogColor: { value: new THREE.Color(0x87CEEB) },
-                fogNear: { value: 200.0 },
-                fogFar: { value: 600.0 }
+                // Horizon haze — desaturated warm grey-green, not raw sky blue.
+                // The terrain plane extends past 1km now (no more procedural
+                // mountains); strong blue fog made the field read as "field
+                // floating in sky" especially when the camera angle showed
+                // the green-to-blue transition mid-frame. Pushed near/far
+                // further so foreground terrain stays its true colour.
+                fogColor: { value: new THREE.Color(0xa9b8a8) },
+                fogNear: { value: 350.0 },
+                fogFar: { value: 1100.0 }
             },
             vertexShader: `
                 varying vec2 vUv;
@@ -667,34 +736,52 @@ export class TerrainBuilder {
                 const finalScale = scale * scaleVariation;
                 
                 const treeY = this.heightfield ? this.heightfield.sample(point.x, point.z) : 0;
+                // Compensate for the GLB's origin offset — different tree models
+                // place their pivot at trunk-base vs. centroid, which sinks half
+                // the trunk on hilly scenes if you just place at terrain Y.
+                const baseOffset = this.models.trees[treeType]?.userData?.modelBaseYOffset ?? 0;
+                const placementY = treeY + baseOffset * finalScale;
                 treeInstances[treeType].push({
-                    position: new THREE.Vector3(point.x, treeY, point.z),
+                    position: new THREE.Vector3(point.x, placementY, point.z),
                     rotation: new THREE.Euler(0, Math.random() * Math.PI * 2, 0),
                     scale: new THREE.Vector3(finalScale, finalScale, finalScale)
                 });
             });
         });
-        
-        // Create instanced meshes for each tree type
-        const instancedMeshes = [];
-        
+
+        // Split each tree type's instances into near (full mesh) and far
+        // (cross-billboard impostor). The cutoff is purely distance-based so
+        // it works for any scene's zone layout. ~250m matches "no longer
+        // resolvable as individual triangles" from the typical play camera.
+        // Far impostors drop ~99% of triangles per distant tree, which is
+        // the single biggest tree-tris cut available short of full octahedral
+        // impostors.
+        const FAR_LOD_DIST = 250;
+        const nearByType = { tree1: [], tree2: [], pine: [] };
+        const farByType  = { tree1: [], tree2: [], pine: [] };
         Object.entries(treeInstances).forEach(([treeType, instances]) => {
+            instances.forEach(inst => {
+                const r = Math.hypot(inst.position.x, inst.position.z);
+                (r > FAR_LOD_DIST ? farByType : nearByType)[treeType].push(inst);
+            });
+        });
+
+        // Create instanced meshes for each tree type (near = full GLB mesh).
+        const instancedMeshes = [];
+        Object.entries(nearByType).forEach(([treeType, instances]) => {
             if (instances.length === 0 || !this.models.trees[treeType]) return;
-            
+
             const model = this.models.trees[treeType];
             const dummy = new THREE.Object3D();
-            
-            // Get all meshes from the model
+
             model.traverse(child => {
                 if (child.isMesh) {
-                    // Keep original materials - just use LOD and culling for mobile optimization
                     const instancedMesh = new THREE.InstancedMesh(
                         child.geometry,
                         child.material,
                         instances.length
                     );
-                    
-                    // Set up instances
+
                     instances.forEach((instance, i) => {
                         dummy.position.copy(instance.position);
                         dummy.rotation.copy(instance.rotation);
@@ -702,28 +789,213 @@ export class TerrainBuilder {
                         dummy.updateMatrix();
                         instancedMesh.setMatrixAt(i, dummy.matrix);
                     });
-                    
-                    // Disable tree shadows on mobile
+
                     instancedMesh.castShadow = !this.isMobile;
                     instancedMesh.receiveShadow = true;
                     instancedMesh.instanceMatrix.needsUpdate = true;
-                    
-                    // Enable frustum culling for trees
-                    instancedMesh.frustumCulled = false; // We handle this manually in LOD
-                    
+                    instancedMesh.frustumCulled = false;
+
                     this.scene.add(instancedMesh);
                     instancedMeshes.push(instancedMesh);
                 }
             });
-            
-            console.log(`[TERRAIN] Created ${instances.length} ${treeType} instances`);
+
+            console.log(`[TERRAIN] Created ${instances.length} ${treeType} mesh instances (near)`);
         });
-        
+
+        // Build cross-billboard impostors for far trees. One InstancedMesh per
+        // tree type, sharing a baked texture of that GLB seen from the side.
+        const billboardMeshes = await this._buildFarTreeBillboards(farByType);
+        billboardMeshes.forEach(m => instancedMeshes.push(m));
+
         this.trees = instancedMeshes;
-        const totalTrees = Object.values(treeInstances).reduce((sum, arr) => sum + arr.length, 0);
-        console.log(`[TERRAIN] Total trees created: ${totalTrees} using instanced rendering`);
-        
+        const nearTotal = Object.values(nearByType).reduce((s, a) => s + a.length, 0);
+        const farTotal = Object.values(farByType).reduce((s, a) => s + a.length, 0);
+        console.log(`[TERRAIN] Total trees: ${nearTotal} near (mesh) + ${farTotal} far (impostor) = ${nearTotal + farTotal}`);
+
         return instancedMeshes;
+    }
+
+    /**
+     * Build cross-billboard InstancedMeshes for distant trees. Each tree
+     * type gets one InstancedMesh whose geometry is two perpendicular
+     * textured quads, sampled from a one-time render of the GLB to a
+     * RenderTarget. The result is ~8 triangles per far tree instead of
+     * thousands, with reasonable visual fidelity from the play camera.
+     *
+     * @param {Object<string, Array>} farByType
+     * @returns {Promise<THREE.InstancedMesh[]>}
+     * @private
+     */
+    async _buildFarTreeBillboards(farByType) {
+        const renderer = getSceneManager()?.getRenderer();
+        if (!renderer) {
+            console.warn('[TERRAIN] No renderer available for tree impostor bake; skipping far-tree LOD');
+            return [];
+        }
+
+        const out = [];
+        for (const [treeType, instances] of Object.entries(farByType)) {
+            if (instances.length === 0 || !this.models.trees[treeType]) continue;
+
+            const baked = this._bakeTreeImpostor(this.models.trees[treeType], renderer);
+            if (!baked) continue;
+
+            // Cross-billboard geometry uses the GLB's bbox Y-range so that
+            // per-instance placement (which uses the same `placementY = treeY
+            // + (-bbox.min.y) * scale` offset as the mesh path) lands the
+            // billboard's base on terrain, top of model at top of quad.
+            const geo = this._createCrossBillboardGeometry(baked.width, baked.bboxMinY, baked.bboxMaxY);
+            const mat = new THREE.MeshBasicMaterial({
+                map: baked.texture,
+                transparent: true,
+                alphaTest: 0.4,
+                side: THREE.DoubleSide,
+                depthWrite: true,
+                fog: true
+            });
+
+            const inst = new THREE.InstancedMesh(geo, mat, instances.length);
+            const dummy = new THREE.Object3D();
+            instances.forEach((instance, i) => {
+                dummy.position.copy(instance.position);
+                dummy.rotation.copy(instance.rotation);
+                dummy.scale.copy(instance.scale);
+                dummy.updateMatrix();
+                inst.setMatrixAt(i, dummy.matrix);
+            });
+            inst.castShadow = false;
+            inst.receiveShadow = false;
+            inst.instanceMatrix.needsUpdate = true;
+            inst.frustumCulled = false;
+
+            this.scene.add(inst);
+            out.push(inst);
+            console.log(`[TERRAIN] Created ${instances.length} ${treeType} billboard instances (far)`);
+        }
+        return out;
+    }
+
+    /**
+     * Render a tree GLB to an offscreen RenderTarget, viewed from the side
+     * with an orthographic camera, transparent background. Returns a texture
+     * + the model's bounding-box width/height so the billboard quad matches
+     * the GLB's footprint.
+     *
+     * @param {THREE.Object3D} model
+     * @param {THREE.WebGLRenderer} renderer
+     * @returns {{texture: THREE.Texture, width: number, height: number, baseY: number} | null}
+     * @private
+     */
+    _bakeTreeImpostor(model, renderer) {
+        const bakeScene = new THREE.Scene();
+        bakeScene.background = null;
+        const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+        bakeScene.add(ambient);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+        dirLight.position.set(2, 4, 3);
+        bakeScene.add(dirLight);
+
+        const treeClone = model.clone(true);
+        treeClone.traverse(node => {
+            if (node.isMesh) {
+                node.castShadow = false;
+                node.receiveShadow = false;
+            }
+        });
+        bakeScene.add(treeClone);
+
+        const box = new THREE.Box3().setFromObject(treeClone);
+        if (!isFinite(box.min.x) || box.isEmpty()) return null;
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+
+        // Pad the camera frustum slightly so the tree silhouette doesn't
+        // clip against the texture edges (alphaTest would chew off branch
+        // tips otherwise).
+        const halfW = Math.max(size.x, size.z) * 0.55;
+        const halfH = size.y * 0.55;
+        const aspect = halfW / halfH;
+        const TEX = 512;
+        const texW = aspect >= 1 ? TEX : Math.round(TEX * aspect);
+        const texH = aspect >= 1 ? Math.round(TEX / aspect) : TEX;
+
+        const cam = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, 0.1, 200);
+        cam.position.set(center.x, center.y, box.max.z + 50);
+        cam.lookAt(center.x, center.y, center.z);
+
+        const target = new THREE.WebGLRenderTarget(texW, texH, {
+            format: THREE.RGBAFormat,
+            type: THREE.UnsignedByteType,
+            minFilter: THREE.LinearMipmapLinearFilter,
+            magFilter: THREE.LinearFilter,
+            generateMipmaps: true
+        });
+
+        const prevTarget = renderer.getRenderTarget();
+        const prevClearColor = new THREE.Color();
+        renderer.getClearColor(prevClearColor);
+        const prevClearAlpha = renderer.getClearAlpha();
+
+        renderer.setRenderTarget(target);
+        renderer.setClearColor(0x000000, 0);
+        renderer.clear(true, true, true);
+        renderer.render(bakeScene, cam);
+
+        renderer.setRenderTarget(prevTarget);
+        renderer.setClearColor(prevClearColor, prevClearAlpha);
+
+        // Dispose the clone (geometries/materials are still referenced by the
+        // original `model`, so DON'T dispose them — only release the clone's
+        // node objects; GC handles the rest).
+        bakeScene.remove(treeClone);
+
+        return {
+            texture: target.texture,
+            width: halfW * 2,
+            bboxMinY: box.min.y,
+            bboxMaxY: box.max.y
+        };
+    }
+
+    /**
+     * Three textured quads arranged at 0°, 60°, 120° around the Y axis. Any
+     * view direction is within ~30° of one quad's normal, so the tree silhouette
+     * stays full-width regardless of camera angle (vs. the 2-quad cross which
+     * had a thin "edge-on" reading from 45°-and-multiples).
+     *
+     * Y range matches the GLB's bbox so the mesh and billboard paths share
+     * the same per-instance placement formula.
+     *
+     * @param {number} width
+     * @param {number} y0  Lower Y in unit scale (matches model bbox.min.y)
+     * @param {number} y1  Upper Y in unit scale (matches model bbox.max.y)
+     * @returns {THREE.BufferGeometry}
+     * @private
+     */
+    _createCrossBillboardGeometry(width, y0, y1) {
+        const halfW = width / 2;
+        const positions = [];
+        const uvs = [];
+        // 3 planes at 0°, 60°, 120°. Each plane is 2 triangles (6 verts).
+        for (let q = 0; q < 3; q++) {
+            const angle = (q * Math.PI) / 3;
+            const ax = Math.cos(angle) * halfW;
+            const az = Math.sin(angle) * halfW;
+            positions.push(
+                -ax, y0, -az,    ax, y0, az,    ax, y1, az,
+                -ax, y0, -az,    ax, y1, az,   -ax, y1, -az
+            );
+            uvs.push(
+                0, 0,   1, 0,   1, 1,
+                0, 0,   1, 1,   0, 1
+            );
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geo.computeVertexNormals();
+        return geo;
     }
     
     async addEnvironmentDetails() {
@@ -1151,22 +1423,15 @@ export class TerrainBuilder {
     }
 
     async addMountains() {
-        // Phase B step 6: replace the legacy GLB-mountain ring (~20 instances +
-        // hill formations) with a single procedural ridged-FBM ring-plane.
-        // One draw call, no GLB load, looks more cohesive with the heightfield
-        // terrain. Sun direction comes from the scene's fog tint as a stand-in
-        // until atmosphere is plumbed through (default works fine for daylight).
-        const fogColorHex = this.sceneDef?.fog?.color ?? 0xcfd9e8;
-        const procedural = new ProceduralMountains({
-            innerRadius: 600,
-            outerRadius: 1500,
-            peakHeight: 80,
-            sunDir: { x: 0.5, y: 0.7, z: 0.3 },
-            fogColor: fogColorHex
-        });
-        procedural.addToScene(this.scene);
-        this.mountains = [procedural.mesh];
-        console.log('[BUILD] Procedural mountain ring added (replaces legacy GLB instances)');
+        // Mountains are intentionally absent. The previous procedural ring
+        // (a flat annulus shader-displaced upward only) read as paper-thin
+        // peaks with sky between them, and didn't relate to the heightfield
+        // it was supposed to frame. Backdrop framing now comes from the
+        // atmosphere/sky preset on each scene. A real horizon ring is
+        // tracked as a future task (proper height-displaced skirt that the
+        // play-area heightfield blends into).
+        this.mountains = [];
+        console.log('[BUILD] Mountains skipped (procedural ring removed)');
         return this.mountains;
 
         // Legacy code retained below for reference; bypassed by the early
@@ -1351,11 +1616,18 @@ export class TerrainBuilder {
         // Position the farm house in the northwest corner
         // Behind the pen (positive Z relative to gate) and to the left (negative X)
         const farmY = this.heightfield ? this.heightfield.sample(this.farmHousePosition.x, this.farmHousePosition.z) : 0;
-        farmHouse.position.set(this.farmHousePosition.x, farmY, this.farmHousePosition.z);
-        
+
         // Scale the farm house appropriately - smaller and more realistic
         const scale = 1.0; // Further reduced for better proportions (2x smaller)
         farmHouse.scale.setScalar(scale);
+
+        // Compensate for GLB origin offset so the foundation sits on terrain.
+        const baseOffset = farmHouseModel.userData?.modelBaseYOffset ?? 0;
+        farmHouse.position.set(
+            this.farmHousePosition.x,
+            farmY + baseOffset * scale,
+            this.farmHousePosition.z
+        );
         
         // Rotate to face the pen area - facing southeast toward the pen
         farmHouse.rotation.y = Math.PI * 1.25; // 225-degree rotation to face southeast

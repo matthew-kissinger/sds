@@ -235,9 +235,13 @@ export class Sheepdog {
      */
     initializeModel() {
         this.mesh = new THREE.Group();
+        // YXZ rotation order so yaw is applied first (around world Y), then
+        // pitch/roll (around the dog's local axes). With the default XYZ
+        // order, terrain-tilt and yaw fight each other.
+        this.mesh.rotation.order = 'YXZ';
         const initY = this.heightfield ? this.heightfield.sample(this.position.x, this.position.z) : 0;
         this.mesh.position.set(this.position.x, initY, this.position.z);
-        
+
         // Load the Sheep Dog model
         this.loadSheepdogModel();
     }
@@ -642,13 +646,64 @@ export class Sheepdog {
             if (this.heightfield) {
                 this.mesh.position.y = this.heightfield.sample(this.position.x, this.position.z);
             }
-            
+
             // Smooth rotation
             this.updateRotation(deltaTime);
-            
+
+            // Tilt mesh to terrain slope (pitch + roll). Subtle — clamped to
+            // ~22° max so the dog reads as planted on the ground without
+            // looking like it's "flying" on cliffs.
+            this.updateTerrainTilt(deltaTime);
+
             // Update animation system
             this.updateAnimationSystem(deltaTime);
         }
+    }
+
+    /**
+     * Tilt the mesh's pitch (rotation.x) and roll (rotation.z) to follow the
+     * terrain slope, projected against the dog's facing direction. Yaw
+     * (rotation.y) stays controlled by `updateRotation`.
+     */
+    updateTerrainTilt(deltaTime) {
+        if (!this.heightfield || !this.mesh) return;
+
+        const n = this.heightfield.normal(this.position.x, this.position.z);
+
+        // Slope vector in XZ plane: where would a ball roll? That's -(nx, nz)
+        // scaled by 1/ny. Pitch+roll come from this vector projected against
+        // the dog's facing direction.
+        // currentRotation: yaw such that the model's local +Z faces world
+        // (sin(yaw), 0, cos(yaw)) — based on the existing convention in
+        // updateRotation. Forward = (sin(yaw), -, cos(yaw)).
+        const yaw = this.currentRotation;
+        const fx = Math.sin(yaw);
+        const fz = Math.cos(yaw);
+
+        // Pitch: how much forward direction goes "uphill". +pitch tips nose down.
+        // Slope rise per unit horizontal toward forward = -(n.x*fx + n.z*fz)/n.y.
+        const slopeForward = -(n.x * fx + n.z * fz) / Math.max(n.y, 0.001);
+        // Roll: how much sideways direction goes "uphill". Right vector for a
+        // mesh that faces +z when yaw=0 is (cos(yaw), 0, -sin(yaw)).
+        const rx = Math.cos(yaw);
+        const rz = -Math.sin(yaw);
+        const slopeRight = -(n.x * rx + n.z * rz) / Math.max(n.y, 0.001);
+
+        // Convert slope (rise/run) to angle, clamp to ~22° so the tilt stays
+        // tasteful even on the steepest baked terrain. With YXZ rotation
+        // order: pitch is negated (positive rx tips nose down, but we want
+        // the nose UP when going uphill), roll keeps its sign (positive rz
+        // tips the right side up, matching slope-rises-to-right).
+        const maxTilt = 0.38; // ~22°
+        const targetPitch = Math.max(-maxTilt, Math.min(maxTilt, -Math.atan(slopeForward)));
+        const targetRoll  = Math.max(-maxTilt, Math.min(maxTilt,  Math.atan(slopeRight)));
+
+        // Smooth toward target so the tilt doesn't snap when the dog crosses
+        // a sharp gradient. ~6 Hz convergence — fast enough to feel grounded,
+        // slow enough to absorb noise.
+        const k = Math.min(1, deltaTime * 6);
+        this.mesh.rotation.x += (targetPitch - this.mesh.rotation.x) * k;
+        this.mesh.rotation.z += (targetRoll  - this.mesh.rotation.z) * k;
     }
     
     /**
@@ -1043,9 +1098,17 @@ export class Sheepdog {
 
         if (!this.distanceIndicator || !this.distanceIndicator.userData) return;
 
-        // Update position to follow dog using mesh position (updated by Three.js)
+        // Update position to follow dog using mesh position (updated by Three.js).
+        // Track the dog's mesh.y (terrain-clamped) — not world y=0 — so the
+        // chevron + diamond stay anchored to the dog on hills. Was: y hard-set
+        // to 0, which made the indicator visibly drift uphill as the dog
+        // climbed (parallax through the angled camera).
         if (this.mesh) {
-            this.distanceIndicator.position.set(this.mesh.position.x, 0, this.mesh.position.z);
+            this.distanceIndicator.position.set(
+                this.mesh.position.x,
+                this.mesh.position.y,
+                this.mesh.position.z
+            );
         }
 
         const data = this.distanceIndicator.userData;

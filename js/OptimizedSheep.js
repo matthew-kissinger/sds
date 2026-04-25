@@ -293,6 +293,7 @@ export class OptimizedSheepSystem {
      */
     initializeSheepData() {
         const dummy = new THREE.Object3D();
+        dummy.rotation.order = 'YXZ';
         const { centerX, centerZ, spreadRadius, borderPoints } = this.spawnConfig;
         const edgeMargin = 5; // Minimum distance from fence edges
 
@@ -481,6 +482,7 @@ export class OptimizedSheepSystem {
      */
     update(deltaTime, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null) {
         const dummy = new THREE.Object3D();
+        dummy.rotation.order = 'YXZ';
 
         // Update time uniform
         this.material.uniforms.time.value += deltaTime;
@@ -580,11 +582,13 @@ export class OptimizedSheepSystem {
             // Update transform matrix using interpolated render position for smooth movement
             const sheepY = this.heightfield ? this.heightfield.sample(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
-            dummy.rotation.y = -sheep.renderFacingDirection + Math.PI / 2;
-            
+            const sheepYaw = -sheep.renderFacingDirection + Math.PI / 2;
+            dummy.rotation.y = sheepYaw;
+            this._applyTerrainTilt(dummy, sheep.renderPosition.x, sheep.renderPosition.z, sheepYaw);
+
             // Keep all sheep visible - no hiding for grazing sheep
             dummy.scale.set(1, 1, 1);
-            
+
             dummy.updateMatrix();
 
             // Defensive check for NaN/Infinity in the dummy matrix before setting instanceMatrix
@@ -626,6 +630,7 @@ export class OptimizedSheepSystem {
      */
     forceUpdateSheepPositions() {
         const dummy = new THREE.Object3D();
+        dummy.rotation.order = 'YXZ';
         
         for (let i = 0; i < this.sheepCount; i++) {
             const sheep = this.sheep[i];
@@ -638,7 +643,9 @@ export class OptimizedSheepSystem {
             // Update transform matrix
             const sheepY = this.heightfield ? this.heightfield.sample(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
-            dummy.rotation.y = -sheep.renderFacingDirection + Math.PI / 2;
+            const sheepYaw = -sheep.renderFacingDirection + Math.PI / 2;
+            dummy.rotation.y = sheepYaw;
+            this._applyTerrainTilt(dummy, sheep.renderPosition.x, sheep.renderPosition.z, sheepYaw);
             dummy.scale.set(1, 1, 1);
             dummy.updateMatrix();
             
@@ -651,6 +658,43 @@ export class OptimizedSheepSystem {
         this.instancedMesh.instanceMatrix.needsUpdate = true;
     }
     
+    /**
+     * Tilt the dummy's pitch (rotation.x) and roll (rotation.z) to follow the
+     * terrain slope at (x, z), projected against the given yaw. Mutates the
+     * dummy in place. Must be called AFTER `dummy.rotation.y` is set and
+     * BEFORE `dummy.updateMatrix()`. No-op when heightfield is unset.
+     *
+     * Sheep don't smooth-lerp like the dog (each sheep is stateless across
+     * frames in this loop) — the sample is fast enough that snapping straight
+     * to the slope reads fine on a 4-leg animal at this size, and there's no
+     * persistent rotation state per-sheep to interpolate from.
+     *
+     * @param {THREE.Object3D} dummy
+     * @param {number} x
+     * @param {number} z
+     * @param {number} yaw
+     */
+    _applyTerrainTilt(dummy, x, z, yaw) {
+        if (!this.heightfield) {
+            dummy.rotation.x = 0;
+            dummy.rotation.z = 0;
+            return;
+        }
+        const n = this.heightfield.normal(x, z);
+        const fx = Math.sin(yaw);
+        const fz = Math.cos(yaw);
+        const rx = Math.cos(yaw);
+        const rz = -Math.sin(yaw);
+        const ny = Math.max(n.y, 0.001);
+        const slopeForward = -(n.x * fx + n.z * fz) / ny;
+        const slopeRight   = -(n.x * rx + n.z * rz) / ny;
+        const maxTilt = 0.32; // ~18°, slightly tighter than the dog
+        const pitch = Math.max(-maxTilt, Math.min(maxTilt, -Math.atan(slopeForward)));
+        const roll  = Math.max(-maxTilt, Math.min(maxTilt,  Math.atan(slopeRight)));
+        dummy.rotation.x = pitch;
+        dummy.rotation.z = roll;
+    }
+
     /**
      * Get all sheep instances
      */
@@ -698,6 +742,7 @@ export class OptimizedSheepSystem {
      */
     resetAllSheep() {
         const dummy = new THREE.Object3D();
+        dummy.rotation.order = 'YXZ';
         const { centerX, centerZ, spreadRadius, borderPoints } = this.spawnConfig;
         const edgeMargin = 5; // Minimum distance from fence edges
 
