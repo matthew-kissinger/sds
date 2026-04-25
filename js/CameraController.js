@@ -70,9 +70,10 @@ export class CameraController {
         this.camera = camera;
         this.isMobile = isMobile;
 
-        // Optional heightfield for camera y-clamping in Follow/Free modes.
-        // Set via setHeightfield() after the scene's heightmap loads.
-        // Classic mode is high enough (60m) that no clamp is needed.
+        // Optional heightfield. Used to clamp camera Y in Follow/Free modes
+        // and to lift the look-at target to terrain height in all three modes
+        // so the dog stays framed on hills. Set via setHeightfield() after
+        // the scene's heightmap loads.
         /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
         this.heightfield = null;
         this.minTerrainClearance = 1.5; // metres above ground in Follow/Free
@@ -262,13 +263,15 @@ export class CameraController {
     transformMovement(direction) {
         if (!direction) return direction;
 
-        if (this.mode === CameraMode.FREE) {
-            const cos = Math.cos(this.freeYaw);
-            const sin = Math.sin(this.freeYaw);
-            // Free-mode camera looks toward +Z*cos + +X*sin from behind, so
-            // forward (W -> +z input) needs to map to world (-sin, +cos).
-            // Convention here mirrors the existing competitive transforms
-            // (input z is forward, input x is right).
+        // FREE and FOLLOW both rotate input by the camera's look-yaw so
+        // W is "forward in the direction the camera is facing." Without
+        // this in Follow mode, WASD stays world-axis and feels disconnected
+        // when the dog turns. followYaw is the smoothed dog facing (=
+        // camera look direction); freeYaw is user-controlled.
+        if (this.mode === CameraMode.FREE || this.mode === CameraMode.FOLLOW) {
+            const yaw = this.mode === CameraMode.FREE ? this.freeYaw : this.followYaw;
+            const cos = Math.cos(yaw);
+            const sin = Math.sin(yaw);
             return new Vector2D(
                 direction.x * cos + direction.z * sin,
                 -direction.x * sin + direction.z * cos
@@ -290,7 +293,14 @@ export class CameraController {
 
     _updateClassic(dogPosition, deltaTime) {
         const offset = this._classicOffset(); // mutates _tmpOffset, returns it
-        this._tmpTarget.set(dogPosition.x, 0, dogPosition.z);
+        // Lift target to the dog's terrain elevation so the rig + lookAt
+        // ride hills together. Without this, the camera looks at y=0 while
+        // the dog mesh sits on the heightfield, and the dog drifts away
+        // from screen centre as terrain rises.
+        const terrainY = this.heightfield
+            ? this.heightfield.sample(dogPosition.x, dogPosition.z)
+            : 0;
+        this._tmpTarget.set(dogPosition.x, terrainY, dogPosition.z);
         this._tmpDest.copy(this._tmpTarget).add(offset);
         const k = classicSmooth(deltaTime, CLASSIC_LERP_PER_FRAME_AT_60);
         this.camera.position.lerp(this._tmpDest, k);
@@ -332,8 +342,13 @@ export class CameraController {
         const posK = expSmooth(deltaTime, FOLLOW_POS_LAG_TAU);
         this.followPosition.lerp(this._tmpTarget, posK);
 
-        // Hard clamp to terrain at the camera's actual XZ so dipping into a
-        // valley behind the dog still leaves a buffer above the ground.
+        // Two clamps so the dog never disappears behind terrain:
+        //   1. Camera clears its own ground (existing behaviour — stops
+        //      diving into a valley behind the dog).
+        //   2. Camera Y >= max terrain along the camera->dog line + clearance,
+        //      so when the dog crests a hill the camera lifts above the
+        //      ridge between us and the dog instead of letting the ridge
+        //      occlude the dog.
         if (this.heightfield) {
             const camGroundY = this.heightfield.sample(
                 this.followPosition.x,
@@ -341,6 +356,13 @@ export class CameraController {
             );
             const minY = camGroundY + this.minTerrainClearance;
             if (this.followPosition.y < minY) this.followPosition.y = minY;
+
+            const ridgeY = this._sampleMaxTerrainAlong(
+                this.followPosition.x, this.followPosition.z,
+                dogPosition.x, dogPosition.z
+            );
+            const sightMinY = ridgeY + this.minTerrainClearance;
+            if (this.followPosition.y < sightMinY) this.followPosition.y = sightMinY;
         }
 
         this.camera.position.copy(this.followPosition);
@@ -353,6 +375,27 @@ export class CameraController {
             dogPosition.z + lookAheadZ
         );
         this.camera.lookAt(this._tmpLook);
+    }
+
+    /**
+     * Maximum terrain height sampled along the segment from (x0,z0) to
+     * (x1,z1). Used to ensure no ridge between camera and dog occludes
+     * the line of sight. Cheap — 6 samples plus the endpoints. Returns
+     * 0 when no heightfield is set.
+     * @private
+     */
+    _sampleMaxTerrainAlong(x0, z0, x1, z1) {
+        if (!this.heightfield) return 0;
+        const STEPS = 6;
+        let max = -Infinity;
+        for (let i = 0; i <= STEPS; i++) {
+            const t = i / STEPS;
+            const x = x0 + (x1 - x0) * t;
+            const z = z0 + (z1 - z0) * t;
+            const h = this.heightfield.sample(x, z);
+            if (h > max) max = h;
+        }
+        return max;
     }
 
     _updateFree(dogPosition, _deltaTime) {
@@ -370,6 +413,13 @@ export class CameraController {
             const camGroundY = this.heightfield.sample(camX, camZ);
             const minY = camGroundY + this.minTerrainClearance;
             if (camY < minY) camY = minY;
+            // Same ridge-clearance clamp as Follow: lift over any peak
+            // between the camera and the dog so it stays visible.
+            const ridgeY = this._sampleMaxTerrainAlong(
+                camX, camZ, dogPosition.x, dogPosition.z
+            );
+            const sightMinY = ridgeY + this.minTerrainClearance;
+            if (camY < sightMinY) camY = sightMinY;
         }
         this.camera.position.set(camX, camY, camZ);
         this._tmpLook.set(dogPosition.x, dogTerrainY + FOLLOW_LOOK_AT_HEIGHT, dogPosition.z);
