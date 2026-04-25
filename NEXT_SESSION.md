@@ -30,14 +30,14 @@ Open `http://localhost:3000` (or `:3001` if :3000 is taken — Vite auto-increme
 - **Cycle 3 done.** [`DECISIONS.md`](DECISIONS.md) § Cycle 3.
 - **Cycle 4 Phase A done** (PRs B–M). 11 parallel units shipped: Three.js 0.184, baked heightmaps, scene schema widened, `Heightfield`, Atmosphere (Hosek-Wilkie sky), `ProceduralMountains`, `CameraController`, open-country biome, GrassSystem polish, scene retunes. Detail: [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md).
 - **Cycle 4 Phase B done** (#42 + tonemap fix). Heightfield wired through TerrainBuilder/GrassSystem/sheep/dog; Atmosphere wired into render path; slope-modulated sheep speed; prop placement on terrain; camera y-clamp.
-- **Cycle 4 Hardening — substantially complete and deployed.** 23 fixes shipped across three playtest-driven batches in 6 commits on `main` (66b0df6 → 0a077d7); full table at [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md). 74/74 vitest specs pass; production build clean. GH Actions deploys ran green. **Verified live on sheepdogsim.com 2026-04-25** — zero console errors, all visual checks pass.
+- **Cycle 4 Hardening — substantially complete and deployed.** 24 fixes shipped across three playtest-driven batches in 7 commits on `main` (66b0df6 → 593f175); full table at [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md). 74/74 vitest specs pass; production build clean. GH Actions deploys ran green. **Verified live on sheepdogsim.com 2026-04-25** — zero console errors, all visual checks pass.
 
 ### What changed this session (one-line summary, full table in the hardening doc)
 
 Visual / perception:
 - **Mountains gone**, terrain plane extended to 2400m / 1600m with a smooth radial heightfield falloff so the play area reads as an island in a flat skirt, fading to fog horizon (no abrupt edge).
-- **Terrain fog retuned** from sky-blue to warm-grey-green at 350/1100m — kills the "field floating in sky" green-to-blue gradient.
-- **Atmosphere is the only sky/fog source** (Phase B already removed `scene.background` / `scene.fog`).
+- **Terrain fog driven by `scene.fog`** (Atmosphere-managed, FogExp2 density 0.0006). Color matches the sky's horizon per-frame so the terrain-to-sky transition is seamless across all presets (pastoral-noon, dusk, golden-hour, dawn, overcast). Earlier custom fog (warm-grey-green at 350/1100m) was replaced because it didn't match the dynamic sky.
+- **Atmosphere is the single source of truth for sky + fog** (Phase B removed `scene.background` and the legacy `scene.fog` setup; Hardening removed the terrain's competing custom fog).
 
 Grass:
 - **Stochastic LOD dither** in the vertex shader hides density transitions — smooth gradient in every camera, no ring snap.
@@ -59,9 +59,10 @@ UX:
 - **Player chevron** now tracks `mesh.position.y` instead of y=0 (no more parallax drift on hills).
 - **Scene descriptions** rewritten — em-dashes removed; Rolling Hills no longer says "more sheep" (sheep count is mode-driven, not scene-driven).
 
-Post-deploy polish (commit 0a077d7):
-- **Camera far plane bumped** from 1000m / 500m to 2800m / 1800m (desktop / mobile). Was clipping the new 2400m / 1600m terrain plane diagonals at wide zoom-outs, leaving a black wedge between terrain edge and atmosphere skybox. The skybox glues to the far plane, so the far plane now also controls how far the visible sky reaches.
-- **Trees no longer spawn on big rock formations.** `addEnvironmentDetails` populates `this.rockPositions = [{x, z, radius}]` as it places each rock; `createTrees` now runs after rocks (call order swapped in `main.js`) and the Poisson-disk validator rejects candidates inside any rock's footprint plus a 4m padding.
+Post-deploy polish:
+- **Camera far plane bumped** (commit 0a077d7) from 1000m / 500m to 2800m / 1800m (desktop / mobile). Was clipping the new 2400m / 1600m terrain plane diagonals at wide zoom-outs, leaving a black wedge between terrain edge and atmosphere skybox. The skybox glues to the far plane, so the far plane now also controls how far the visible sky reaches.
+- **Trees no longer spawn on big rock formations** (commit 0a077d7). `addEnvironmentDetails` populates `this.rockPositions = [{x, z, radius}]` as it places each rock; `createTrees` now runs after rocks (call order swapped in `main.js`) and the Poisson-disk validator rejects candidates inside any rock's footprint plus a 4m padding.
+- **Terrain shader wired to `scene.fog` instead of a custom hand-rolled fog** (commit 593f175). The terrain previously faded to a fixed warm-grey-green via its own uniforms, while Atmosphere drove `scene.fog` to match the sky's horizon color per-frame — so the meeting line between terrain (grey-green) and sky (whatever the preset showed: white at noon, dark at night) was a visible cutoff. Replaced with Three.js's standard fog chunks (`fog_pars_*` + `fog_*`), `material.fog = true`, and `THREE.UniformsLib.fog` merged into the material. Terrain now fades into the same color as the sky at the same distance regardless of preset; transition is seamless.
 
 ## What to pick up next
 

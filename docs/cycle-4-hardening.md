@@ -43,14 +43,15 @@ After Phase B, all three scenes load with displaced terrain, atmosphere, and the
 
 74/74 vitest specs still pass. Production build clean.
 
-### Post-deploy polish (2026-04-25, commit 0a077d7)
+### Post-deploy polish (2026-04-25)
 
 | Bug | Fix |
 |---|---|
-| Black wedge between terrain edge and atmosphere skybox at wide zoom | Camera far plane bumped 1000→2800m desktop / 500→1800m mobile to cover the new 2400m / 1600m terrain plane diagonals (~1700m / ~1130m). Skybox stays glued to the far plane in its shader, so this also controls how far the visible sky reaches. [SceneManager.js](../js/SceneManager.js) |
-| Trees spawning on top of big rock formations | `addEnvironmentDetails` populates `this.rockPositions = [{x, z, radius}]` as it places each rock (radius = `finalScale * 1.2`). `createTrees` now runs AFTER rocks (call order swapped in `main.js`), and the Poisson-disk validator rejects candidates inside any rock's footprint plus a 4m padding. [TerrainBuilder.js addEnvironmentDetails + createTrees](../js/TerrainBuilder.js), [main.js](../js/main.js) |
+| Black wedge between terrain edge and atmosphere skybox at wide zoom (commit 0a077d7) | Camera far plane bumped 1000→2800m desktop / 500→1800m mobile to cover the new 2400m / 1600m terrain plane diagonals (~1700m / ~1130m). Skybox stays glued to the far plane in its shader, so this also controls how far the visible sky reaches. [SceneManager.js](../js/SceneManager.js) |
+| Trees spawning on top of big rock formations (commit 0a077d7) | `addEnvironmentDetails` populates `this.rockPositions = [{x, z, radius}]` as it places each rock (radius = `finalScale * 1.2`). `createTrees` now runs AFTER rocks (call order swapped in `main.js`), and the Poisson-disk validator rejects candidates inside any rock's footprint plus a 4m padding. [TerrainBuilder.js addEnvironmentDetails + createTrees](../js/TerrainBuilder.js), [main.js](../js/main.js) |
+| Terrain-sky horizon cutoff line (white at noon, black at night) (commit 593f175) | Terrain shader had its own custom distance-fog (fixed warm-grey-green) while Atmosphere drove `scene.fog` to match the sky horizon dynamically. Where they met was a sharp colour transition. Wired the terrain shader to use Three.js's standard fog chunks (`fog_pars_*` + `fog_*`) with `material.fog = true` and `THREE.UniformsLib.fog`, so terrain fades into the *same* colour as the sky at the *same* distance regardless of preset. [TerrainBuilder.js terrainMaterial](../js/TerrainBuilder.js) |
 
-74/74 vitest specs still pass. Production build clean. Deployed to sheepdogsim.com via GH Actions; smoke test passes (zero console errors, big rock formations now have a clear ring of trees AROUND them, horizon fades smoothly to atmospheric haze with no black void).
+74/74 vitest specs still pass. Production build clean. Deployed to sheepdogsim.com via GH Actions; smoke tests pass at every step (zero console errors, big rock formations have a clear ring of trees AROUND them, horizon fades smoothly into the atmosphere with no visible cutoff at any time of day).
 
 ## Outstanding — what to pick up next
 
