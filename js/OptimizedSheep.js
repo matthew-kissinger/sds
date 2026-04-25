@@ -48,6 +48,8 @@ export class OptimizedSheepSystem {
         this.sheepCount = sheepCount;
         this.sheep = [];
         this.audioManager = null;
+        /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
+        this.heightfield = null;
 
         // Extreme boids optimization flag
         this.useExtremeBoids = useExtremeBoids;
@@ -343,7 +345,8 @@ export class OptimizedSheepSystem {
             this.sheep.push(sheep);
 
             // Set initial transform
-            dummy.position.set(x, 0, z);
+            const initY = this.heightfield ? this.heightfield.sample(x, z) : 0;
+            dummy.position.set(x, initY, z);
             dummy.rotation.y = Math.random() * Math.PI * 2;
             dummy.updateMatrix();
             this.instancedMesh.setMatrixAt(i, dummy.matrix);
@@ -575,7 +578,8 @@ export class OptimizedSheepSystem {
             sheep.updatePosition(deltaTime);
             
             // Update transform matrix using interpolated render position for smooth movement
-            dummy.position.set(sheep.renderPosition.x, 0, sheep.renderPosition.z);
+            const sheepY = this.heightfield ? this.heightfield.sample(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
+            dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
             dummy.rotation.y = -sheep.renderFacingDirection + Math.PI / 2;
             
             // Keep all sheep visible - no hiding for grazing sheep
@@ -632,7 +636,8 @@ export class OptimizedSheepSystem {
             sheep.renderFacingDirection = sheep.facingDirection;
             
             // Update transform matrix
-            dummy.position.set(sheep.renderPosition.x, 0, sheep.renderPosition.z);
+            const sheepY = this.heightfield ? this.heightfield.sample(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
+            dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
             dummy.rotation.y = -sheep.renderFacingDirection + Math.PI / 2;
             dummy.scale.set(1, 1, 1);
             dummy.updateMatrix();
@@ -765,7 +770,8 @@ export class OptimizedSheepSystem {
             sheep.renderFacingDirection = sheep.facingDirection;
             
             // Update transform matrix
-            dummy.position.set(x, 0, z);
+            const respawnY = this.heightfield ? this.heightfield.sample(x, z) : 0;
+            dummy.position.set(x, respawnY, z);
             dummy.rotation.y = sheep.facingDirection;
             dummy.scale.set(1, 1, 1);
             dummy.updateMatrix();

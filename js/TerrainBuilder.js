@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { GrassSystem } from './GrassSystem.js';
+import { ProceduralMountains } from './ProceduralMountains.js';
 
 // Phase A Unit B compressed all GLBs with Draco + Meshopt. Every GLTFLoader
 // in the codebase needs both decoders attached or those GLBs fail to parse
@@ -113,6 +114,23 @@ export class TerrainBuilder {
         // Mobile-optimized materials cache
         this.mobileMaterials = null;
         this.desktopMaterials = null;
+
+        // Optional heightfield for terrain displacement + prop placement.
+        // Threaded in by main.js after async load; null when scene has no
+        // heightmapUrl or load failed (flat-plane fallback).
+        /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
+        this.heightfield = null;
+    }
+
+    /**
+     * Set the heightfield used for terrain displacement and prop y-placement.
+     * Must be called BEFORE createTerrain() / createTrees() / addMountains() /
+     * addFarmHouse() to take effect.
+     *
+     * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} heightfield
+     */
+    setHeightfield(heightfield) {
+        this.heightfield = heightfield ?? null;
     }
     
     /**
@@ -308,8 +326,31 @@ export class TerrainBuilder {
 
     
     createTerrain() {
-        // Create flat terrain with procedural ground shader
+        // Create base terrain mesh; heightfield displacement applied below.
+        // 64x64 segments at 1000m = ~15.6m/segment — coarser than the
+        // heightfield resolution but cheap and good enough for "rolling
+        // hills" silhouettes from the player POV. Higher tessellation is
+        // a Phase C optimization if needed.
         const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 64, 64);
+
+        // Apply heightfield displacement before the mesh is rotated to lie flat.
+        // Geometry is built in the XY plane; after the mesh is rotated -PI/2
+        // around X, local (a, b, c) maps to world (a, c, -b). So local Z
+        // displacement becomes world Y, and world (X, Z) maps to local (a, -b).
+        if (this.heightfield) {
+            const positions = terrainGeometry.attributes.position;
+            for (let i = 0; i < positions.count; i++) {
+                const a = positions.getX(i);
+                const b = positions.getY(i);
+                const worldX = a;
+                const worldZ = -b;
+                const h = this.heightfield.sample(worldX, worldZ);
+                positions.setZ(i, h);
+            }
+            positions.needsUpdate = true;
+            terrainGeometry.computeVertexNormals();
+            console.log(`[TERRAIN] Heightfield-displaced terrain (${positions.count} verts)`);
+        }
 
         // Create a custom shader material for varied ground
         const terrainMaterial = new THREE.ShaderMaterial({
@@ -421,7 +462,7 @@ export class TerrainBuilder {
     
     async createGrass() {
         // Use new advanced grass system
-        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass);
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield);
 
         // Add exclusion zone for farm house
         this.grassSystem.addExclusionZone(
@@ -625,8 +666,9 @@ export class TerrainBuilder {
                 const scaleVariation = 0.7 + Math.random() * 0.6;
                 const finalScale = scale * scaleVariation;
                 
+                const treeY = this.heightfield ? this.heightfield.sample(point.x, point.z) : 0;
                 treeInstances[treeType].push({
-                    position: new THREE.Vector3(point.x, 0, point.z),
+                    position: new THREE.Vector3(point.x, treeY, point.z),
                     rotation: new THREE.Euler(0, Math.random() * Math.PI * 2, 0),
                     scale: new THREE.Vector3(finalScale, finalScale, finalScale)
                 });
@@ -800,9 +842,10 @@ export class TerrainBuilder {
                     const baseScale = scaleRange.min + Math.random() * (scaleRange.max - scaleRange.min);
                     const finalScale = baseScale * rock.scale;
                     
-                    // Some rocks partially buried
-                    const yOffset = Math.random() < 0.3 ? -finalScale * 0.15 : 0;
-                    
+                    // Some rocks partially buried; add terrain height so they sit on the slope.
+                    const baseY = this.heightfield ? this.heightfield.sample(rock.x, rock.z) : 0;
+                    const yOffset = (Math.random() < 0.3 ? -finalScale * 0.15 : 0) + baseY;
+
                     rockInstances[rockType].push({
                         position: new THREE.Vector3(rock.x, yOffset, rock.z),
                         rotation: new THREE.Euler(
@@ -1108,11 +1151,28 @@ export class TerrainBuilder {
     }
 
     async addMountains() {
-        if (!this.modelsLoaded) {
-            console.warn('Models not loaded yet. Loading models...');
-            await this.loadModels();
-        }
+        // Phase B step 6: replace the legacy GLB-mountain ring (~20 instances +
+        // hill formations) with a single procedural ridged-FBM ring-plane.
+        // One draw call, no GLB load, looks more cohesive with the heightfield
+        // terrain. Sun direction comes from the scene's fog tint as a stand-in
+        // until atmosphere is plumbed through (default works fine for daylight).
+        const fogColorHex = this.sceneDef?.fog?.color ?? 0xcfd9e8;
+        const procedural = new ProceduralMountains({
+            innerRadius: 600,
+            outerRadius: 1500,
+            peakHeight: 80,
+            sunDir: { x: 0.5, y: 0.7, z: 0.3 },
+            fogColor: fogColorHex
+        });
+        procedural.addToScene(this.scene);
+        this.mountains = [procedural.mesh];
+        console.log('[BUILD] Procedural mountain ring added (replaces legacy GLB instances)');
+        return this.mountains;
 
+        // Legacy code retained below for reference; bypassed by the early
+        // return above. Will be deleted in a follow-up cleanup pass once
+        // the procedural backdrop has soaked in production.
+        // eslint-disable-next-line no-unreachable
         const mountainInstances = [];
         
         // Define mountain placement zones - straddling the terrain edge (500 units boundary)
@@ -1290,7 +1350,8 @@ export class TerrainBuilder {
         
         // Position the farm house in the northwest corner
         // Behind the pen (positive Z relative to gate) and to the left (negative X)
-        farmHouse.position.set(this.farmHousePosition.x, 0, this.farmHousePosition.z);
+        const farmY = this.heightfield ? this.heightfield.sample(this.farmHousePosition.x, this.farmHousePosition.z) : 0;
+        farmHouse.position.set(this.farmHousePosition.x, farmY, this.farmHousePosition.z);
         
         // Scale the farm house appropriately - smaller and more realistic
         const scale = 1.0; // Further reduced for better proportions (2x smaller)
@@ -1419,7 +1480,8 @@ export class TerrainBuilder {
             // Find the farmhouse (first building)
             const farmhouse = this.buildings[0];
             if (farmhouse) {
-                farmhouse.position.set(this.farmHousePosition.x, 0, this.farmHousePosition.z);
+                const farmY = this.heightfield ? this.heightfield.sample(this.farmHousePosition.x, this.farmHousePosition.z) : 0;
+                farmhouse.position.set(this.farmHousePosition.x, farmY, this.farmHousePosition.z);
                 console.log(`[TERRAIN] Moved farmhouse to (${this.farmHousePosition.x}, ${this.farmHousePosition.z})`);
             }
         }
@@ -1488,7 +1550,7 @@ export class TerrainBuilder {
         }
 
         // Create new grass system
-        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass);
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield);
 
         // Add farmhouse exclusion zone
         this.grassSystem.addExclusionZone(

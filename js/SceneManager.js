@@ -81,7 +81,14 @@ export class SceneManager {
             this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         }
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        
+
+        // The Hosek-Wilkie sky shader (and its preset exposure values 0.18-0.22)
+        // assumes the renderer is tonemapping HDR radiance down. Without
+        // tonemapping the shader output ends up near-black. ACES Filmic is the
+        // de-facto-standard pick; it brightens midtones and rolls off highlights.
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.0;
+
         // Enable frustum culling and other optimizations
         this.renderer.sortObjects = true;
         this.renderer.autoClear = true;
@@ -146,8 +153,10 @@ export class SceneManager {
     
     setupLighting() {
         // Ambient light - adjusted for new lighting model (multiply by PI for similar appearance)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7 * Math.PI);
-        this.scene.add(ambientLight);
+        // Stored on `this` so the Atmosphere module can bind to it and modulate
+        // intensity / color from the active sky preset.
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.7 * Math.PI);
+        this.scene.add(this.ambientLight);
         
         // Directional light (sun) - adjusted for new lighting model
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8 * Math.PI);

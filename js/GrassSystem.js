@@ -50,11 +50,13 @@ export class GrassSystem {
      * @param {THREE.Scene} scene
      * @param {boolean} [isMobile=false]
      * @param {import('../shared/scenes/types.js').GrassDef} [sceneGrass] Optional scene-sourced grass config; when present, its `clumpsPerChunk` wins over the default.
+     * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} [heightfield] Optional heightfield; when present, clumps sit on the displaced terrain instead of y=0.
      */
-    constructor(scene, isMobile = false, sceneGrass = null) {
+    constructor(scene, isMobile = false, sceneGrass = null, heightfield = null) {
         this.scene = scene;
         this.isMobile = isMobile;
         this.sceneGrass = sceneGrass;
+        this.heightfield = heightfield;
 
         const sceneClumps = sceneGrass?.clumpsPerChunk;
         const clumpsPerChunk = sceneClumps
@@ -737,7 +739,8 @@ export class GrassSystem {
 
         // Set up instances
         validPositions.forEach((pos, i) => {
-            dummy.position.set(pos.x, 0, pos.z);
+            const y = this.heightfield ? this.heightfield.sample(pos.x, pos.z) : 0;
+            dummy.position.set(pos.x, y, pos.z);
 
             // Random rotation and scale
             dummy.rotation.y = Math.random() * Math.PI * 2;

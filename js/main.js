@@ -18,6 +18,8 @@ import { MultiplayerState } from './MultiplayerState.js';
 import { Vector2D } from './Vector2D.js';
 import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
+import { Heightfield } from '../shared/terrain/Heightfield.js';
+import { Atmosphere } from './atmosphere/index.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
@@ -176,6 +178,19 @@ class SheepDogSimulation {
         if (activeSceneId !== DEFAULT_SCENE_ID) {
             console.log(`[SCENE] Loaded "${this.currentScene.name}" (${activeSceneId}) from URL param`);
         }
+        this.heightfield = null; // Loaded async in init() before createTerrain.
+
+        // Atmosphere takes over scene.fog + adds a Hosek-Wilkie sky dome.
+        // Construction MUST happen after SceneManager so the scene exists; the
+        // initial preset comes from the loaded scene def.
+        const initialPreset = this.currentScene.sky?.preset ?? 'pastoral-noon';
+        this.atmosphere = new Atmosphere(this.sceneManager.getScene(), {
+            initialPreset,
+            enableClouds: true,
+            enableDayNight: false
+        });
+        this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
+
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile, this.currentScene);
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
@@ -337,6 +352,27 @@ class SheepDogSimulation {
                 throw new Error('No animal models loaded! Check model paths and network.');
             }
 
+            // Load heightfield (if scene declares one) BEFORE building terrain so
+            // displacement and downstream y-clamps share the same instance.
+            const heightmapUrl = this.currentScene.terrain?.heightmapUrl;
+            if (heightmapUrl) {
+                logStep('Loading heightfield', heightmapUrl);
+                try {
+                    this.heightfield = await Heightfield.load(heightmapUrl);
+                    console.log(`[TERRAIN] Heightfield loaded: ${this.heightfield.width}x${this.heightfield.height}, peakHeight=${this.heightfield.peakHeight}m`);
+                } catch (err) {
+                    console.warn('[TERRAIN] Heightfield load failed; falling back to flat terrain:', err);
+                    this.heightfield = null;
+                }
+            }
+            this.terrainBuilder.setHeightfield(this.heightfield);
+            // GameState propagates heightfield to OptimizedSheepSystem when the flock spawns.
+            this.gameState.heightfield = this.heightfield;
+            // Camera controller also samples the heightfield for Follow/Free clamps.
+            if (this.cameraController?.setHeightfield) {
+                this.cameraController.setHeightfield(this.heightfield);
+            }
+
             // Create terrain and environment
             logStep('Creating terrain');
             this.terrainBuilder.createTerrain();
@@ -376,7 +412,7 @@ class SheepDogSimulation {
 
             // Create sheepdog (but don't add to scene yet in pre-game state)
             logStep('Creating sheepdog');
-            const sheepdog = new Sheepdog(0, -30, 'jep');
+            const sheepdog = new Sheepdog(0, -30, 'jep', this.heightfield);
             this.sheepdog = sheepdog;
             this.sheepdogMesh = sheepdog.createMesh();
             this.gameState.setSheepdog(sheepdog);
@@ -475,7 +511,7 @@ class SheepDogSimulation {
         }
 
         // Create new sheepdog with selected type
-        const sheepdog = new Sheepdog(0, -30, selectedDogType);
+        const sheepdog = new Sheepdog(0, -30, selectedDogType, this.heightfield);
         this.sheepdog = sheepdog;
         this.sheepdogMesh = sheepdog.createMesh();
         this.gameState.setSheepdog(sheepdog);
@@ -652,7 +688,7 @@ class SheepDogSimulation {
         const dogStart = sandboxConfig.dog?.startPosition || { x: 0, z: -30 };
 
         // Create new sheepdog with selected type at configured position
-        const sheepdog = new Sheepdog(dogStart.x, dogStart.z, dogType);
+        const sheepdog = new Sheepdog(dogStart.x, dogStart.z, dogType, this.heightfield);
         this.sheepdog = sheepdog;
         this.sheepdogMesh = sheepdog.createMesh();
         this.gameState.setSheepdog(sheepdog);
@@ -800,7 +836,7 @@ class SheepDogSimulation {
 
         // Create Player 1 sheepdog (WASD)
         const p1StartX = localConfig.mode === 'versus' ? -30 : -15;
-        this.sheepdog = new Sheepdog(p1StartX, -30, localConfig.player1Dog);
+        this.sheepdog = new Sheepdog(p1StartX, -30, localConfig.player1Dog, this.heightfield);
         this.sheepdogMesh = this.sheepdog.createMesh();
         this.sheepdog.setAudioManager(this.audioManager);
         this.sheepdog.setPlayerInfo('player1', this.localMultiplayerManager.player1.color);
@@ -810,7 +846,7 @@ class SheepDogSimulation {
 
         // Create Player 2 sheepdog (Arrow Keys)
         const p2StartX = localConfig.mode === 'versus' ? 30 : 15;
-        this.sheepdog2 = new Sheepdog(p2StartX, -30, localConfig.player2Dog);
+        this.sheepdog2 = new Sheepdog(p2StartX, -30, localConfig.player2Dog, this.heightfield);
         this.sheepdogMesh2 = this.sheepdog2.createMesh();
         this.sheepdog2.setAudioManager(this.audioManager);
         this.sheepdog2.setPlayerInfo('player2', this.localMultiplayerManager.player2.color);
@@ -1483,6 +1519,14 @@ class SheepDogSimulation {
             // Update camera to follow sheepdog (pass render deltaTime for
             // frame-rate-independent smoothing - see SceneManager.updateCamera)
             this.sceneManager.updateCamera(sheepdog, deltaTime);
+
+            // Drive atmosphere (sky + clouds + day/night, when enabled).
+            // Camera position is synced AFTER the camera update so the sky
+            // dome rides above whatever pose the controller settled on.
+            if (this.atmosphere) {
+                this.atmosphere.syncCamera(this.sceneManager.getCamera().position);
+                this.atmosphere.update(deltaTime);
+            }
         }
         
         // Update other players with interpolation for smooth movement
@@ -1704,7 +1748,7 @@ class SheepDogSimulation {
             // Use dog type from server data, or fall back to 'jep'
             const dogType = dogData.dogType || 'jep';
             console.log(`Creating remote dog with type: ${dogType} for player ${playerId}`);
-            remoteDog = new Sheepdog(dogData.x, dogData.z, dogType);
+            remoteDog = new Sheepdog(dogData.x, dogData.z, dogType, this.heightfield);
             
             // Enable 2x speeds for multiplayer
             remoteDog.setMultiplayerSpeeds(true);

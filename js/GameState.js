@@ -14,6 +14,11 @@ import { getExtremeBoidSystem, resetExtremeBoidSystem } from './ExtremeBoidSyste
  */
 export class GameState {
     constructor() {
+        // Optional heightfield, set by main.js after async load. Propagated to
+        // OptimizedSheepSystem when the sheep are spawned (startGame).
+        /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
+        this.heightfield = null;
+
         // Get initial config from FieldConfig
         const fieldConfig = FieldConfig.getFullConfig();
 
@@ -108,6 +113,9 @@ export class GameState {
         const useExtremeBoids = this.singlePlayerMode === 'extreme' || this.singlePlayerMode === 'insane' || this.useExtremeBoids === true;
 
         this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig, useExtremeBoids);
+        if (this.heightfield) {
+            this.optimizedSheepSystem.heightfield = this.heightfield;
+        }
         this.sheep = this.optimizedSheepSystem.getSheep();
 
         if (useExtremeBoids) {

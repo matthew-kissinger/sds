@@ -96,11 +96,13 @@ const SPEED_STATE_MAX = {
  * Sheepdog class - Professional player controlled entity with advanced animation system
  */
 export class Sheepdog {
-    constructor(x, z, dogType = 'jep') {
+    constructor(x, z, dogType = 'jep', heightfield = null) {
         this.position = new Vector2D(x, z);
         this.velocity = new Vector2D(0, 0);
         this.targetVelocity = new Vector2D(0, 0);
         this.dogType = dogType;
+        /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
+        this.heightfield = heightfield;
         
         // Player identification for competitive mode
         this.playerId = null;
@@ -233,7 +235,8 @@ export class Sheepdog {
      */
     initializeModel() {
         this.mesh = new THREE.Group();
-        this.mesh.position.set(this.position.x, 0, this.position.z);
+        const initY = this.heightfield ? this.heightfield.sample(this.position.x, this.position.z) : 0;
+        this.mesh.position.set(this.position.x, initY, this.position.z);
         
         // Load the Sheep Dog model
         this.loadSheepdogModel();
@@ -636,6 +639,9 @@ export class Sheepdog {
         if (this.mesh) {
             this.mesh.position.x = this.position.x;
             this.mesh.position.z = this.position.z;
+            if (this.heightfield) {
+                this.mesh.position.y = this.heightfield.sample(this.position.x, this.position.z);
+            }
             
             // Smooth rotation
             this.updateRotation(deltaTime);
