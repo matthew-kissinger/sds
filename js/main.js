@@ -19,6 +19,7 @@ import { Vector2D } from './Vector2D.js';
 import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
 import { Heightfield } from '../shared/terrain/Heightfield.js';
+import { Atmosphere } from './atmosphere/index.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
@@ -178,6 +179,18 @@ class SheepDogSimulation {
             console.log(`[SCENE] Loaded "${this.currentScene.name}" (${activeSceneId}) from URL param`);
         }
         this.heightfield = null; // Loaded async in init() before createTerrain.
+
+        // Atmosphere takes over scene.fog + adds a Hosek-Wilkie sky dome.
+        // Construction MUST happen after SceneManager so the scene exists; the
+        // initial preset comes from the loaded scene def.
+        const initialPreset = this.currentScene.sky?.preset ?? 'pastoral-noon';
+        this.atmosphere = new Atmosphere(this.sceneManager.getScene(), {
+            initialPreset,
+            enableClouds: true,
+            enableDayNight: false
+        });
+        this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
+
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile, this.currentScene);
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
@@ -1502,6 +1515,14 @@ class SheepDogSimulation {
             // Update camera to follow sheepdog (pass render deltaTime for
             // frame-rate-independent smoothing - see SceneManager.updateCamera)
             this.sceneManager.updateCamera(sheepdog, deltaTime);
+
+            // Drive atmosphere (sky + clouds + day/night, when enabled).
+            // Camera position is synced AFTER the camera update so the sky
+            // dome rides above whatever pose the controller settled on.
+            if (this.atmosphere) {
+                this.atmosphere.syncCamera(this.sceneManager.getCamera().position);
+                this.atmosphere.update(deltaTime);
+            }
         }
         
         // Update other players with interpolation for smooth movement
