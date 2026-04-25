@@ -43,6 +43,15 @@ After Phase B, all three scenes load with displaced terrain, atmosphere, and the
 
 74/74 vitest specs still pass. Production build clean.
 
+### Post-deploy polish (2026-04-25, commit 0a077d7)
+
+| Bug | Fix |
+|---|---|
+| Black wedge between terrain edge and atmosphere skybox at wide zoom | Camera far plane bumped 1000→2800m desktop / 500→1800m mobile to cover the new 2400m / 1600m terrain plane diagonals (~1700m / ~1130m). Skybox stays glued to the far plane in its shader, so this also controls how far the visible sky reaches. [SceneManager.js](../js/SceneManager.js) |
+| Trees spawning on top of big rock formations | `addEnvironmentDetails` populates `this.rockPositions = [{x, z, radius}]` as it places each rock (radius = `finalScale * 1.2`). `createTrees` now runs AFTER rocks (call order swapped in `main.js`), and the Poisson-disk validator rejects candidates inside any rock's footprint plus a 4m padding. [TerrainBuilder.js addEnvironmentDetails + createTrees](../js/TerrainBuilder.js), [main.js](../js/main.js) |
+
+74/74 vitest specs still pass. Production build clean. Deployed to sheepdogsim.com via GH Actions; smoke test passes (zero console errors, big rock formations now have a clear ring of trees AROUND them, horizon fades smoothly to atmospheric haze with no black void).
+
 ## Outstanding — what to pick up next
 
 ### 1. Rolling Hills as an island (game loop)
