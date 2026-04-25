@@ -98,27 +98,55 @@ Don't pre-commit to "add woods density" or "shrink the island" — those are hyp
 
 Could also be a play-camera framing issue — grass renders fine but doesn't read at distance. Test by walking to the shore and looking inward.
 
-#### 3. Tree collision disrupts the Follow camera on Rolling Hills
+#### 3. Follow camera lurches on Rolling Hills — initially attributed to tree collision, may have a separate stamina trigger
 
-**Symptom (user, same playtest):** Tree collision is working on island scenes, but in **first-person / Follow mode** the camera lurches when the dog runs through (into) trees. The dog's hard push-out + velocity reflection ([`js/Sheepdog.js:638-680`](js/Sheepdog.js)) is correct sim behavior, but the camera follows position 1:1 — when the dog is shoved 1-2m sideways in a single frame, the camera does too, breaking immersion.
+**Symptom (user, same playtest):** Camera lurches on Rolling Hills in Follow mode when the dog runs into trees. **Follow-up observation from the user:** "It seems to be possibly partially related to an issue with dog stamina ending and user holding it down — specifically turning up-and-right or up-and-left too while holding stamina while it is out." That suggests at least part of the lurch is a **sprint→walk transition bug** that fires under diagonal input + held-sprint-after-empty, and may be entirely separable from tree collision (or compounded by it).
 
-**Objective:** Make the Follow camera read smoothly when the dog encounters trees, without sacrificing the routing behavior that's the whole point of Cycle 6 Phase 2.
+**Objective:** Make the Follow camera read smoothly under both (a) tree contact and (b) stamina-exhaustion-while-holding-sprint, without sacrificing Cycle 6's tree routing or the existing sprint-cap easing in [`js/Sheepdog.js:604-609`](js/Sheepdog.js).
+
+**Repro to attempt first (cheap and high-signal):**
+1. Open Rolling Hills, switch to Follow camera.
+2. Hold sprint + diagonal up-right (W + D + Shift) on flat open ground, far from any tree.
+3. Drain stamina to zero with sprint still held; keep holding the diagonal input.
+4. Watch the camera. If it lurches with no tree nearby, **the camera bug is at least partially independent of tree collision** and the stamina/sprint transition is its own root cause.
+5. Repeat with cardinal input (W only, no D). If the cardinal case is smooth and only diagonal lurches, the bug is in how diagonal target-velocity recomputes when `currentMaxSpeed` drops.
+
+If step 4 lurches: **address the stamina case first** before the tree-collision case — they're likely two bugs, not one. The tree collision case may even resolve once the underlying camera-following math handles fast velocity-vector changes.
 
 **Signals to investigate / questions to consider:**
-- Is the right fix **camera-side** (smooth/dampen sudden position deltas, raise the camera's lerp factor when the dog's frame-over-frame Δ exceeds a threshold) or **sim-side** (replace dog hard push-out with a force-based steering like the sheep, so the dog *steers around* trees rather than colliding) or **both**?
-- Should the dog use a **pre-collision steering force** (large steering force when a tree is within e.g. 5m of the heading vector) so contact rarely happens, with the hard push-out as a safety net for forced-into-tree cases?
-- Is the **dog's collision radius** (`DOG_RADIUS = 1.2` in Sheepdog.js) too generous for the visual mesh, making contact happen earlier than it should?
-- Does the **camera need scene-aware logic** — e.g. when in dense woods, raise the camera height or pull it back so trees block less of the view?
-- Is the **velocity reflection coefficient** (`× 0.85` after `vDotN`) too high → dog keeps energy after impact and lurches farther than expected?
-- Compare Classic camera (top-down, far away): does it have the same problem? If yes, the issue is sim-side. If no, it's camera-side.
+
+*Stamina-transition path (likely the simpler of the two):*
+- The existing easing in `Sheepdog.move` smooths `smoothMaxSpeed` on the way down to **avoid** the camera lerp surge that the easing comment explicitly calls out. Why is it not catching this case? Possibilities:
+  - The easing applies to `smoothMaxSpeed` (the safety clamp) but **not** to `targetVelocity` — `targetVelocity = direction.normalize().multiply(currentMaxSpeed)` uses the raw `currentMaxSpeed`, not the smoothed cap. Diagonal input means `direction` is normalized differently than cardinal, so the velocity-diff vector swings sharply when `currentMaxSpeed` halves.
+  - Stamina-runs-out happens mid-frame; `accelerationRate * deltaTime` is large; one-frame velocity correction gets multiplied by deltaTime once but the camera tracks the resulting position the next frame.
+  - Sprint key held after stamina=0 might re-arm `targetVelocity` at sprint-magnitude every frame and only the smooth cap is gating it — meaning the *velocity* never settles, just gets clamped down externally.
+- Is the lurch a **camera lerp surge** (`speedNorm` halves → look-ahead distance pops, position lerp factor changes), a **velocity-direction whip** (velocity vector changes magnitude on a diagonal more than cardinal), or both?
+
+*Tree-collision path (the original bug, may be compounded):*
+- Sim-side vs camera-side: dog hard push-out + velocity reflection ([`js/Sheepdog.js:638-680`](js/Sheepdog.js)) is correct sim, but Follow camera tracks position 1:1.
+- Should the dog use **pre-collision steering force** like the sheep (force-based, never makes contact) instead of hard push-out + reflection? Sheep have `SHEEP_OBSTACLE_STRENGTH = 6.0` starting at 30m; dog gets nothing until contact. That asymmetry is probably the root cause of the contact-lurch — but verify, don't assume.
+- Is `DOG_RADIUS = 1.2` larger than the visual mesh suggests, making contact happen earlier than expected?
+- Velocity reflection coefficient `× 0.85` after `vDotN` — keeps 85% of energy after impact, so the dog doesn't just stop, it bounces.
+
+**Triangulation matrix to consider before fixing:**
+
+| Scenario | Tree nearby? | Stamina draining mid-input? | Camera mode | Lurch? |
+|---|---|---|---|---|
+| Open ground, no sprint, into tree | yes | no | Follow | ? |
+| Open ground, no sprint, into tree | yes | no | Classic | ? |
+| Diagonal sprint, drain stamina, no tree | no | yes | Follow | yes (per user) |
+| Diagonal sprint, drain stamina, no tree | no | yes | Classic | ? |
+| Cardinal sprint, drain stamina, no tree | no | yes | Follow | ? |
+
+The matrix decomposes the bug. If the lurch only shows in Follow + diagonal-stamina, it's a camera-tracking issue specifically tied to how Follow handles abrupt velocity-direction swings on a diagonal. If it shows in both camera modes, the sim is producing physically jagged motion and the camera is faithful.
 
 **What to look at:**
-- `js/Sheepdog.js:639-678` — the obstacle hard push-out + velocity reflection.
-- `js/CameraController.js` Follow mode — position-tracking logic, any existing smoothing.
-- `js/OptimizedSheep.js:1364-1373` for comparison — sheep use a force, not a hard push, and don't have the camera issue.
-- The `SHEEP_OBSTACLE_STRENGTH = 6.0` vs the dog's 1.0 (implicit from the push-out math) — sheep get strong steering pressure; dog gets none until contact. That asymmetry is probably the root cause.
+- `js/Sheepdog.js:585-688` — `move()` end-to-end, including the `smoothMaxSpeed` easing and the obstacle push-out
+- `js/Sheepdog.js` — stamina logic (`updateStamina`)
+- `js/CameraController.js` Follow mode — `speedNorm`, position lerp factor, look-ahead distance computation, any existing smoothing windows
+- `js/OptimizedSheep.js:1364-1373` for comparison — force-based routing the dog could adopt
 
-Don't pre-commit to "soften the dog collision" or "smooth the camera" — verify which is the actual lever first. A force-based dog routing model with the camera unchanged would be the most architecturally clean outcome (matches how sheep work, no camera special-casing) but may have its own failure modes (dog momentum carrying it through a tree if the force isn't large enough).
+Don't pre-commit to a fix shape. The two scenarios may resolve through one change (smoother camera position tracking that doesn't follow single-frame jumps) or through two (camera smoothing + force-based dog routing), and only the repro-matrix above will tell.
 
 ### Standing risks (carried)
 
