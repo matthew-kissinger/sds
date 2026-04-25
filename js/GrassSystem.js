@@ -120,11 +120,27 @@ export class GrassSystem {
             lodFar: 280,
 
             // Instance-decimation LOD: render fewer instances per chunk
-            // beyond these distances. 5m hysteresis bands prevent flicker
-            // when the camera hovers near a threshold.
-            lodDecimateMid: 40,   // > 40m: 50% of instances
-            lodDecimateFar: 80,   // > 80m: 25% of instances
-            lodHysteresis: 5,
+            // beyond these distances. Hard count-step is the cheap part of
+            // the LOD; the shader does the perceptual smoothing via
+            // stochastic dither (see grassFadeStart/End below). Pushed out
+            // so the count step lands inside the already-stochastic-culled
+            // zone where it's invisible.
+            lodDecimateMid: 200,   // > 200m: 50% of instances
+            lodDecimateFar: 280,   // > 280m: 25% of instances
+            lodHysteresis: 14,
+
+            // Stochastic LOD dither in the vertex shader. Each blade has a
+            // stable per-instance hash; as `dist(camera, blade.xz)` grows
+            // through [grassFadeStart, grassFadeEnd], an increasing fraction
+            // of blades collapse to degenerate triangles (gl_Position with
+            // w=clipped). Result: a smooth density gradient — no ring snap
+            // visible in Classic top-down (where the entire LOD band is on
+            // screen) or in Follow (where it's out of view anyway).
+            //
+            // Reference technique: Cesium-for-Unreal "smoother LOD",
+            // Witcher-3-style stochastic foliage cull.
+            grassFadeStart: 70,
+            grassFadeEnd: 260,
 
             // Fog
             fogNear: 200,
@@ -139,6 +155,11 @@ export class GrassSystem {
         this.time = 0;
         this.interactorPositions = new Float32Array(this.config.maxInteractors * 3);
         this.interactorData = new Float32Array(this.config.maxInteractors); // 0=player/dog, 1=sheep
+        // Per-entity facing direction (unit vec2 in XZ). Used by the shader
+        // to push grass along an oriented body footprint instead of a
+        // world-axis-locked ellipse — so the dog's wake follows where the
+        // dog is heading.
+        this.interactorFacings = new Float32Array(this.config.maxInteractors * 2);
         this.interactorCount = 0;
 
         // Frustum culling
@@ -393,6 +414,7 @@ export class GrassSystem {
             // Interaction
             interactorPositions: { value: this.interactorPositions },
             interactorData: { value: this.interactorData },
+            interactorFacings: { value: this.interactorFacings },
             interactorCount: { value: 0 },
             interactionRadius: { value: this.config.interactionRadius },
             interactionStrength: { value: this.config.interactionStrength },
@@ -403,7 +425,11 @@ export class GrassSystem {
             fogFar: { value: this.config.fogFar },
 
             // Camera for distance calculations
-            uCameraPos: { value: new THREE.Vector3() }
+            uCameraPos: { value: new THREE.Vector3() },
+
+            // Distance-based blade-height fade (smooth LOD transition)
+            grassFadeStart: { value: this.config.grassFadeStart },
+            grassFadeEnd: { value: this.config.grassFadeEnd }
         };
 
         return new THREE.ShaderMaterial({
@@ -430,10 +456,15 @@ export class GrassSystem {
             uniform float gustStrength;
 
             uniform vec3 interactorPositions[${this.config.maxInteractors}];
-            uniform float interactorData[${this.config.maxInteractors}]; // w component: 0=player, 1=sheep
+            uniform float interactorData[${this.config.maxInteractors}]; // 0=player/dog, 1=sheep
+            uniform vec2 interactorFacings[${this.config.maxInteractors}];
             uniform int interactorCount;
             uniform float interactionRadius;
             uniform float interactionStrength;
+
+            uniform vec3 uCameraPos;
+            uniform float grassFadeStart;
+            uniform float grassFadeEnd;
 
             attribute vec4 bladeData;
 
@@ -460,6 +491,26 @@ export class GrassSystem {
                 vHeight = bladeData.y;
                 vHueOffset = (hash11(float(gl_InstanceID) + 0.137) - 0.5) * 0.04;
 
+                // Stochastic LOD dither — collapse this blade to a degenerate
+                // triangle when its per-instance hash falls below the
+                // distance-derived threshold. Result: smooth density gradient
+                // from 100% near camera to 0% past grassFadeEnd. Hides the
+                // count-decimation step in Classic top-down view (where the
+                // entire LOD band is visible on screen). Stable per-blade
+                // hash (gl_InstanceID + chunk world XZ) so blades neither
+                // swap with each other across frames nor dither in lockstep.
+                vec4 baseWorld = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+                float distXZ = length(baseWorld.xz - uCameraPos.xz);
+                float fadeT = clamp((distXZ - grassFadeStart) / (grassFadeEnd - grassFadeStart), 0.0, 1.0);
+                float bladeHash = hash11(float(gl_InstanceID) * 0.137 + baseWorld.x * 0.13 + baseWorld.z * 0.07);
+                if (bladeHash < fadeT) {
+                    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+                    vWorldPos = vec3(0.0);
+                    vColorVariation = 0.0;
+                    vShadow = 1.0;
+                    return;
+                }
+
                 vec3 pos = position;
                 vec4 worldPos4 = modelMatrix * instanceMatrix * vec4(pos, 1.0);
                 vWorldPos = worldPos4.xyz;
@@ -467,49 +518,80 @@ export class GrassSystem {
                 // Wind power - smooth curve, tips move more
                 float windPower = vHeight * vHeight;
 
-                // Sample noise texture for gentle organic wind
-                vec2 noiseUV = vWorldPos.xz * 0.008 + time * windSpeed * 0.05;
-                vec4 noise = texture2D(noiseTexture, noiseUV);
+                // Zen wind: three noise samples taken at DIFFERENT directions
+                // and scales so the field has no single visible "wavefront".
+                // The previous single-direction scroll created a coherent line
+                // of magnitude advancing across the grass; rotating each
+                // octave breaks that up so the field reads as a soft, organic
+                // shimmer rather than a marching wave.
+                vec2 perp = vec2(-windDirection.y, windDirection.x);
+                float t = time * windSpeed * 0.05;
+                vec2 uvA = vWorldPos.xz * 0.009 - windDirection * t;
+                vec2 uvB = vWorldPos.xz * 0.014 - perp * t * 0.6;
+                vec2 uvC = vWorldPos.xz * 0.023 - normalize(windDirection + perp) * t * 1.1;
+                float nA = texture2D(noiseTexture, uvA).r;
+                float nB = texture2D(noiseTexture, uvB).g;
+                float nC = texture2D(noiseTexture, uvC).b;
 
-                // Gentle wave-based wind - zen-like swaying
-                float wave1 = sin(vWorldPos.x * 0.03 + vWorldPos.z * 0.02 + time * 0.8) * 0.5 + 0.5;
-                float wave2 = sin(vWorldPos.x * 0.02 - vWorldPos.z * 0.03 + time * 0.5) * 0.5 + 0.5;
-                float combinedWave = (wave1 + wave2) * 0.5;
+                // Soft modulation around a constant background flow. Smaller
+                // variation than before (0.35..0.65 vs 0.4..1.2) — less
+                // pulse, more breath. The mean push along windDirection is
+                // what makes blades visibly lean; the noise just whispers.
+                float gust = (nA + nB + nC) * 0.333;
+                float flow = 0.5 + (gust - 0.5) * 0.3;
+                vec2 windDisp = windDirection * flow * windStrength * windPower;
 
-                // Smooth wind displacement
-                vec2 windDisp = windDirection * combinedWave * windStrength * windPower;
+                // Per-blade decorrelated side wobble — micro-jitter so blades
+                // don't all wave in lockstep along the wind axis.
+                windDisp.x += (nB - 0.5) * 0.05 * windPower;
+                windDisp.y += (nC - 0.5) * 0.05 * windPower;
 
-                // Add subtle noise variation
-                windDisp.x += (noise.r - 0.5) * 0.03 * windPower;
-                windDisp.y += (noise.g - 0.5) * 0.03 * windPower;
-
-                // Entity interaction - grass bends AWAY from entities
+                // Entity interaction — grass bends AWAY from each entity's
+                // oriented body footprint. Each entity has a forward direction;
+                // we transform the world-space delta into the entity's local
+                // frame, scale by its body half-extents, and use the SDF
+                // distance to a rounded rectangle. Result: the grass-bend
+                // zone follows the dog's actual mesh footprint as it turns,
+                // instead of being locked to a world-axis ellipse.
                 vec3 totalPush = vec3(0.0);
                 for (int i = 0; i < ${this.config.maxInteractors}; i++) {
                     if (i >= interactorCount) break;
 
                     vec3 entityPos = interactorPositions[i];
-                    float entityType = interactorData[i]; // 0=player/dog, 1=sheep
+                    float entityType = interactorData[i]; // 0=dog, 1=sheep
+                    vec2 facing = interactorFacings[i];
+                    if (length(facing) < 0.01) facing = vec2(0.0, 1.0); // safe default
+                    vec2 fwd = normalize(facing);
+                    vec2 right = vec2(fwd.y, -fwd.x);
+
                     vec2 fromEntity = vWorldPos.xz - entityPos.xz;
+                    // Entity-local frame: x = sideways, y = forward.
+                    vec2 local = vec2(dot(fromEntity, right), dot(fromEntity, fwd));
 
-                    // Different radius/strength for player vs sheep
-                    float radius = entityType < 0.5 ? ${this.config.interactionRadius.toFixed(1)} : ${this.config.sheepInteractionRadius.toFixed(1)};
-                    float strength = entityType < 0.5 ? ${this.config.interactionStrength.toFixed(1)} : ${this.config.sheepInteractionStrength.toFixed(1)};
+                    // Body half-extents per entity type. Dog is elongated
+                    // along its facing axis; sheep are roughly square.
+                    float halfLen = entityType < 0.5 ? 1.6 : 0.6; // along forward
+                    float halfWid = entityType < 0.5 ? 0.6 : 0.5; // along right
+                    float falloff = entityType < 0.5 ? 1.4 : 0.9; // outside-body push radius
 
-                    // For player (entityType 0), use elliptical shape (longer body)
-                    float dist;
-                    if (entityType < 0.5) {
-                        // Elliptical distance - dog is longer than wide
-                        // Scale X more to make it narrower, keeping Z longer
-                        vec2 scaledDist = fromEntity * vec2(1.8, 1.0); // Narrower in X, full length in Z
-                        dist = length(scaledDist);
-                    } else {
-                        dist = length(fromEntity);
-                    }
+                    // Rounded-rect SDF: distance from blade XZ to the body box.
+                    // Negative inside, zero on edge, positive outside.
+                    vec2 q = abs(local) - vec2(halfWid, halfLen);
+                    float sdf = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
 
-                    if (dist < radius && dist > 0.1) {
-                        float pushStrength = smoothFalloff(dist, radius) * strength;
-                        vec2 pushDir = normalize(fromEntity);
+                    // Push only when the blade is within the falloff ring of
+                    // the body. Inside the body (sdf<0), full push. Outside,
+                    // smoothstep-fall to zero over the falloff metres.
+                    if (sdf < falloff) {
+                        float strength = entityType < 0.5
+                            ? ${this.config.interactionStrength.toFixed(1)}
+                            : ${this.config.sheepInteractionStrength.toFixed(1)};
+                        // Inside body: full push. Outside: smooth fade to 0.
+                        float t = clamp(sdf / falloff, 0.0, 1.0);
+                        float pushStrength = (1.0 - t * t * (3.0 - 2.0 * t)) * strength;
+                        vec2 pushDir = length(fromEntity) > 0.001
+                            ? normalize(fromEntity)
+                            : right;
                         totalPush.xz += pushDir * pushStrength * windPower;
                         totalPush.y -= pushStrength * 0.1 * windPower;
                     }
@@ -546,9 +628,14 @@ export class GrassSystem {
             varying float vHueOffset;
 
             uniform vec3 interactorPositions[${this.config.maxInteractors}];
+            uniform vec2 interactorFacings[${this.config.maxInteractors}];
             uniform int interactorCount;
             uniform float interactionRadius;
             uniform float interactionStrength;
+
+            uniform vec3 uCameraPos;
+            uniform float grassFadeStart;
+            uniform float grassFadeEnd;
 
             float smoothFalloff(float dist, float radius) {
                 float t = clamp(dist / radius, 0.0, 1.0);
@@ -564,22 +651,50 @@ export class GrassSystem {
                 vHeight = bladeData.y;
                 vHueOffset = (hash11(float(gl_InstanceID) + 0.137) - 0.5) * 0.04;
 
+                // Stochastic LOD dither (same as desktop) — smooth density
+                // gradient, no count-step ring visible to the player.
+                vec4 baseWorld = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+                float distXZ = length(baseWorld.xz - uCameraPos.xz);
+                float fadeT = clamp((distXZ - grassFadeStart) / (grassFadeEnd - grassFadeStart), 0.0, 1.0);
+                float bladeHash = hash11(float(gl_InstanceID) * 0.137 + baseWorld.x * 0.13 + baseWorld.z * 0.07);
+                if (bladeHash < fadeT) {
+                    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+                    vWorldPos = vec3(0.0);
+                    vColorVariation = 0.0;
+                    vShadow = 1.0;
+                    return;
+                }
+
                 vec3 pos = position;
                 vec4 worldPos4 = modelMatrix * instanceMatrix * vec4(pos, 1.0);
                 vWorldPos = worldPos4.xyz;
 
                 float windPower = vHeight * vHeight;
 
-                // Player interaction on mobile - grass bends AWAY
+                // Player interaction on mobile — grass bends AWAY from the
+                // dog's oriented body footprint (same SDF as desktop, just
+                // applied to the first interactor only — mobile keeps a
+                // single push to fit the iOS Safari uniform limit).
                 vec3 totalPush = vec3(0.0);
                 if (interactorCount > 0) {
                     vec3 entityPos = interactorPositions[0];
+                    vec2 facing = interactorFacings[0];
+                    if (length(facing) < 0.01) facing = vec2(0.0, 1.0);
+                    vec2 fwd = normalize(facing);
+                    vec2 right = vec2(fwd.y, -fwd.x);
                     vec2 fromEntity = vWorldPos.xz - entityPos.xz;
-                    float dist = length(fromEntity);
-
-                    if (dist < interactionRadius && dist > 0.1) {
-                        float pushStrength = smoothFalloff(dist, interactionRadius) * interactionStrength;
-                        vec2 pushDir = normalize(fromEntity); // Points AWAY from entity
+                    vec2 local = vec2(dot(fromEntity, right), dot(fromEntity, fwd));
+                    float halfLen = 1.6;
+                    float halfWid = 0.6;
+                    float falloff = 1.4;
+                    vec2 q = abs(local) - vec2(halfWid, halfLen);
+                    float sdf = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
+                    if (sdf < falloff) {
+                        float t = clamp(sdf / falloff, 0.0, 1.0);
+                        float pushStrength = (1.0 - t * t * (3.0 - 2.0 * t)) * interactionStrength;
+                        vec2 pushDir = length(fromEntity) > 0.001
+                            ? normalize(fromEntity)
+                            : right;
                         totalPush.xz += pushDir * pushStrength * windPower;
                         totalPush.y -= pushStrength * 0.15 * windPower;
                     }
@@ -866,8 +981,32 @@ export class GrassSystem {
                 this.interactorPositions[idx + 1] = entity.position.y || 0;
                 this.interactorPositions[idx + 2] = entity.position.z || 0;
 
-                // Entity type: 0 = player/dog (elliptical), 1 = sheep (circular)
+                // Entity type: 0 = player/dog (oriented elongated body),
+                // 1 = sheep (oriented but more rounded).
                 this.interactorData[this.interactorCount] = entity.type === 'sheep' ? 1.0 : 0.0;
+
+                // Per-entity facing direction (unit vec2 in XZ). Used by the
+                // shader to orient the body-shaped trample zone. Falls back
+                // to (0, 1) (+Z forward) so a missing facing reads as "north"
+                // rather than zero-length (which would NaN the math).
+                let fx = 0, fz = 1;
+                if (typeof entity.facingDirection === 'number') {
+                    // Sheep / Boid: scalar angle in radians.
+                    fx = Math.cos(entity.facingDirection);
+                    fz = Math.sin(entity.facingDirection);
+                } else if (entity.facing && typeof entity.facing.x === 'number') {
+                    // Pre-supplied unit vector (caller may pass one explicitly).
+                    fx = entity.facing.x;
+                    fz = entity.facing.z;
+                } else if (typeof entity.currentRotation === 'number') {
+                    // Sheepdog: yaw mapped to forward via the same convention
+                    // the mesh uses (forward = (sin(yaw), 0, cos(yaw))).
+                    fx = Math.sin(entity.currentRotation);
+                    fz = Math.cos(entity.currentRotation);
+                }
+                const fIdx = this.interactorCount * 2;
+                this.interactorFacings[fIdx] = fx;
+                this.interactorFacings[fIdx + 1] = fz;
 
                 this.interactorCount++;
             }
@@ -877,6 +1016,7 @@ export class GrassSystem {
         if (this.grassMaterial) {
             this.grassMaterial.uniforms.interactorPositions.value = this.interactorPositions;
             this.grassMaterial.uniforms.interactorData.value = this.interactorData;
+            this.grassMaterial.uniforms.interactorFacings.value = this.interactorFacings;
             this.grassMaterial.uniforms.interactorCount.value = this.interactorCount;
         }
     }

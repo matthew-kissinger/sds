@@ -372,6 +372,11 @@ class SheepDogSimulation {
             if (this.cameraController?.setHeightfield) {
                 this.cameraController.setHeightfield(this.heightfield);
             }
+            // Structure builder surfaces fences/gates/flags onto the terrain
+            // so they don't sit at y=0 (buried in heightmapped scenes).
+            if (this.structureBuilder?.setHeightfield) {
+                this.structureBuilder.setHeightfield(this.heightfield);
+            }
 
             // Create terrain and environment
             logStep('Creating terrain');
@@ -397,12 +402,15 @@ class SheepDogSimulation {
             logStep('Loading fence models');
             await this.structureBuilder.loadModels();
 
-            // Create structures using new modular system
+            // Create structures using new modular system. Scenes can opt
+            // out of the perimeter fence (e.g. Open Country) — flag lives
+            // on the scene def.
             logStep('Building structures');
             this.structureBuilder.buildSinglePlayerStructures(
                 this.gameState.getBounds(),
                 this.gameState.getGate(),
-                this.gameState.getPasture()
+                this.gameState.getPasture(),
+                { perimeterFence: this.currentScene.perimeterFence !== false }
             );
 
             // Verify jep model before creating sheepdog
@@ -890,7 +898,8 @@ class SheepDogSimulation {
             this.structureBuilder.buildSinglePlayerStructures(
                 this.gameState.getBounds(),
                 this.gameState.getGate(),
-                this.gameState.getPasture()
+                this.gameState.getPasture(),
+                { perimeterFence: this.currentScene.perimeterFence !== false }
             );
         }
 
@@ -1648,11 +1657,14 @@ class SheepDogSimulation {
             // Gather entities for grass interaction
             const interactionEntities = [];
 
-            // Add player sheepdog (type: 'player' for elliptical shape)
+            // Add player sheepdog. `currentRotation` (yaw) feeds the
+            // grass shader's oriented body footprint so the bend zone follows
+            // the dog's facing direction, not a world-axis ellipse.
             if (this.sheepdog && this.sheepdog.mesh) {
                 interactionEntities.push({
                     position: this.sheepdog.mesh.position,
-                    type: 'player'
+                    type: 'player',
+                    currentRotation: this.sheepdog.currentRotation
                 });
             }
 
@@ -1676,19 +1688,24 @@ class SheepDogSimulation {
                     visibleSheep.forEach(sheep => {
                         interactionEntities.push({
                             position: { x: sheep.position.x, y: 0, z: sheep.position.z },
-                            type: 'sheep'
+                            type: 'sheep',
+                            // Sheep facingDirection is a scalar angle (radians)
+                            // matching the convention in OptimizedSheep.
+                            facingDirection: sheep.renderFacingDirection ?? sheep.facingDirection ?? 0
                         });
                     });
                 }
             }
 
-            // Add other players' dogs in multiplayer (type: 'dog' for elliptical shape)
+            // Add other players' dogs in multiplayer (type: 'dog' for
+            // elongated body footprint).
             if (this.otherPlayers) {
                 for (const [playerId, remoteDog] of this.otherPlayers) {
                     if (remoteDog && remoteDog.mesh) {
                         interactionEntities.push({
                             position: remoteDog.mesh.position,
-                            type: 'dog'
+                            type: 'dog',
+                            currentRotation: remoteDog.currentRotation
                         });
                     }
                 }
