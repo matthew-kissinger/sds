@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { GrassSystem } from './GrassSystem.js';
+import { ProceduralMountains } from './ProceduralMountains.js';
 
 // Phase A Unit B compressed all GLBs with Draco + Meshopt. Every GLTFLoader
 // in the codebase needs both decoders attached or those GLBs fail to parse
@@ -1148,11 +1149,28 @@ export class TerrainBuilder {
     }
 
     async addMountains() {
-        if (!this.modelsLoaded) {
-            console.warn('Models not loaded yet. Loading models...');
-            await this.loadModels();
-        }
+        // Phase B step 6: replace the legacy GLB-mountain ring (~20 instances +
+        // hill formations) with a single procedural ridged-FBM ring-plane.
+        // One draw call, no GLB load, looks more cohesive with the heightfield
+        // terrain. Sun direction comes from the scene's fog tint as a stand-in
+        // until atmosphere is plumbed through (default works fine for daylight).
+        const fogColorHex = this.sceneDef?.fog?.color ?? 0xcfd9e8;
+        const procedural = new ProceduralMountains({
+            innerRadius: 600,
+            outerRadius: 1500,
+            peakHeight: 80,
+            sunDir: { x: 0.5, y: 0.7, z: 0.3 },
+            fogColor: fogColorHex
+        });
+        procedural.addToScene(this.scene);
+        this.mountains = [procedural.mesh];
+        console.log('[BUILD] Procedural mountain ring added (replaces legacy GLB instances)');
+        return this.mountains;
 
+        // Legacy code retained below for reference; bypassed by the early
+        // return above. Will be deleted in a follow-up cleanup pass once
+        // the procedural backdrop has soaked in production.
+        // eslint-disable-next-line no-unreachable
         const mountainInstances = [];
         
         // Define mountain placement zones - straddling the terrain edge (500 units boundary)
