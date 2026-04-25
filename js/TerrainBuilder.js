@@ -461,7 +461,7 @@ export class TerrainBuilder {
     
     async createGrass() {
         // Use new advanced grass system
-        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass);
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield);
 
         // Add exclusion zone for farm house
         this.grassSystem.addExclusionZone(
@@ -1528,7 +1528,7 @@ export class TerrainBuilder {
         }
 
         // Create new grass system
-        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass);
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield);
 
         // Add farmhouse exclusion zone
         this.grassSystem.addExclusionZone(
