@@ -3,6 +3,7 @@ import { OptimizedSheepSystem } from './OptimizedSheep.js';
 import { FieldConfig, FIELD_SIZES, GATE_DEFAULTS, PASTURE_DEFAULTS } from './FieldConfig.js';
 import { getFenceCollisionSystem, resetFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { getExtremeBoidSystem, resetExtremeBoidSystem } from './ExtremeBoidSystem.js';
+import { emptyObstacles } from '../shared/SceneObstacles.js';
 
 /**
  * GameState - Handles game configuration, boundaries, and state management
@@ -36,6 +37,13 @@ export class GameState {
         // for the win condition.
         /** @type {import('../shared/scenes/types.js').CorralDef | null} */
         this.corral = null;
+
+        // Cycle 6 Phase 2: scene obstacles (trees + rocks + buildings) for
+        // sheep/dog routing. Built in main.js after terrain creation, then
+        // attached here. Empty until then; sheep + dog read this via
+        // getGameState() and skip query when trees.length === 0 (Field).
+        /** @type {import('../shared/SceneObstacles.js').SceneObstacleSet} */
+        this.obstacles = emptyObstacles();
 
         // Game mode ('solo', 'multiplayer', 'competitive', 'sandbox')
         this.gameMode = 'solo';

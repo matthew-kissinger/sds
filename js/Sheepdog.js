@@ -1,8 +1,12 @@
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { Vector2D } from './Vector2D.js';
-import { getTerrainBuilder, getSceneManager } from './GameBridge.js';
+import { getTerrainBuilder, getSceneManager, getGameState } from './GameBridge.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
+
+// Cycle 6 Phase 2 — dog obstacle hard push-out (treat trunks like fences).
+const DOG_OBSTACLE_QUERY_RADIUS = 30;
+const DOG_RADIUS = 1.2;
 
 /**
  * Animation States - Simplified and robust state machine for Sheep Dog animations
@@ -630,7 +634,46 @@ export class Sheepdog {
         // Calculate new position
         const newPosition = this.position.clone().add(this.velocity.clone().multiply(deltaTime));
         this.position = newPosition;
-        
+
+        // Cycle 6 Phase 2: hard push-out from tree trunks + large rocks.
+        // Treats obstacles like fences — corrects position directly, then
+        // reflects velocity along the contact normal so the dog doesn't
+        // glue to the trunk. Length-guard preserves Field's behavior.
+        const obstacles = getGameState()?.obstacles;
+        if (obstacles && (obstacles.trees.length > 0 || obstacles.rocks.length > 0)) {
+            const nearbyTrees = obstacles.trees.length
+                ? obstacles.queryTrees(this.position, DOG_OBSTACLE_QUERY_RADIUS)
+                : [];
+            const nearbyRocks = obstacles.rocks.length
+                ? obstacles.queryRocks(this.position, DOG_OBSTACLE_QUERY_RADIUS)
+                : [];
+            for (const list of [nearbyTrees, nearbyRocks]) {
+                for (const o of list) {
+                    const dx = this.position.x - o.x;
+                    const dz = this.position.z - o.z;
+                    const distSq = dx * dx + dz * dz;
+                    const minDist = DOG_RADIUS + o.radiusXZ;
+                    if (distSq < minDist * minDist && distSq > 1e-6) {
+                        const dist = Math.sqrt(distSq);
+                        const overlap = minDist - dist;
+                        const inv = 1 / dist;
+                        const nx = dx * inv;
+                        const nz = dz * inv;
+                        this.position.x += nx * overlap;
+                        this.position.z += nz * overlap;
+                        // Reflect inward velocity component
+                        const vDotN = this.velocity.x * nx + this.velocity.z * nz;
+                        if (vDotN < 0) {
+                            this.velocity.x -= vDotN * nx;
+                            this.velocity.z -= vDotN * nz;
+                            this.velocity.x *= 0.85;
+                            this.velocity.z *= 0.85;
+                        }
+                    }
+                }
+            }
+        }
+
         // Apply boundary constraints
         this.applyBoundaryConstraints(bounds);
 

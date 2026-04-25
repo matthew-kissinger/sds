@@ -1091,10 +1091,21 @@ export class TerrainBuilder {
                     // call can exclude tree placements over it. Footprint
                     // radius approximates the rock's max XY-plane extent
                     // (longest of x or z scale axes).
+                    //
+                    // Cycle 6 Phase 2 / Q3 (fallback): isObstacle marks rocks
+                    // big enough to collide with (per-rock multiplier ≥ 0.8).
+                    // Smaller rocks remain decorative — including them as
+                    // colliders made the world feel like an obstacle course.
+                    // Visual footprint radius covers tree-exclusion; collider
+                    // radius is half the visual since rocks are partially
+                    // buried + rounded, so the effective trip footprint is
+                    // tighter than the silhouette.
                     this.rockPositions.push({
                         x: rock.x,
                         z: rock.z,
-                        radius: finalScale * 1.2
+                        radius: finalScale * 1.2,
+                        isObstacle: rock.scale >= 0.8,
+                        colliderRadius: finalScale * 0.55
                     });
                 });
             }

@@ -413,6 +413,22 @@ class SheepDogSimulation {
             logStep('Creating trees');
             await this.terrainBuilder.createTrees();
 
+            // Cycle 6 Phase 2: build the SceneObstacles bundle once trees +
+            // rocks have been placed. Attached to gameState so sheep + dog
+            // can query it per-tick. Field has no obstacles (rect-scene path
+            // skips island trees) so the empty-set guard preserves baseline.
+            {
+                const { buildSceneObstacles } = await import('../shared/SceneObstacles.js');
+                const treeInstances = this.terrainBuilder.treeInstances || [];
+                const rockPositions = this.terrainBuilder.rockPositions || [];
+                const trees = treeInstances.map(t => ({ x: t.x, z: t.z, radiusXZ: t.radiusXZ }));
+                const rocks = rockPositions
+                    .filter(r => r.isObstacle)
+                    .map(r => ({ x: r.x, z: r.z, radiusXZ: r.colliderRadius }));
+                this.gameState.obstacles = buildSceneObstacles({ trees, rocks, buildings: [] });
+                console.log(`[OBSTACLES] ${trees.length} trees, ${rocks.length} rocks (filtered from ${rockPositions.length})`);
+            }
+
             logStep('Adding mountains');
             await this.terrainBuilder.addMountains();
 
@@ -2062,7 +2078,20 @@ class SheepDogSimulation {
         console.log('[TERRAIN] Recreating trees to avoid competitive pastures:', competitivePastures);
         this.terrainBuilder.clearTrees();
         await this.terrainBuilder.createTrees(competitivePastures);
-        
+
+        // Cycle 6 Phase 2: rebuild the obstacle bundle now that the tree
+        // set has changed (different positions in competitive mode).
+        {
+            const { buildSceneObstacles } = await import('../shared/SceneObstacles.js');
+            const treeInstances = this.terrainBuilder.treeInstances || [];
+            const rockPositions = this.terrainBuilder.rockPositions || [];
+            const trees = treeInstances.map(t => ({ x: t.x, z: t.z, radiusXZ: t.radiusXZ }));
+            const rocks = rockPositions
+                .filter(r => r.isObstacle)
+                .map(r => ({ x: r.x, z: r.z, radiusXZ: r.colliderRadius }));
+            this.gameState.obstacles = buildSceneObstacles({ trees, rocks, buildings: [] });
+        }
+
         // Apply player colors to gates based on current player
         const currentPlayerId = this.networkManager?.getPlayerId();
         if (currentPlayerId) {

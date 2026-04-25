@@ -8,6 +8,17 @@ import { FieldConfig, GATE_DEFAULTS } from './FieldConfig.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
+import { obstacleAvoidance } from '../shared/SceneObstacles.js';
+
+// Cycle 6 Phase 2 — sheep obstacle avoidance.
+//   - 30m query radius matches the cycle-6 plan budget (kdbush O(log N + k)).
+//   - Strength 6.0 tuned so a sheep arriving at a trunk visibly veers ~1m
+//     before contact instead of slipping through. Tune in playtest if it
+//     fluttters.
+//   - Sheep "radius" treated as 0.6m (existing convention from MovementPhysics).
+const SHEEP_OBSTACLE_QUERY_RADIUS = 30;
+const SHEEP_OBSTACLE_STRENGTH = 6.0;
+const SHEEP_RADIUS = 0.6;
 
 // Shader cache for sync access after async load
 let sheepVertexShader = null;
@@ -1338,7 +1349,28 @@ export class OptimizedSheepInstance extends Boid {
         // Boundary avoidance (always active)
         const boundaryForce = this.avoidBoundariesWithGate(bounds, gate);
         this.applyForce(boundaryForce);
-        
+
+        // Cycle 6 Phase 2: route around tree trunks + large rocks. The
+        // length-guard preserves Field's sim-baseline byte-identical path
+        // (Field has zero obstacles).
+        const obstacles = getGameState()?.obstacles;
+        if (obstacles && (obstacles.trees.length > 0 || obstacles.rocks.length > 0)) {
+            if (obstacles.trees.length > 0) {
+                const nearbyTrees = obstacles.queryTrees(this.position, SHEEP_OBSTACLE_QUERY_RADIUS);
+                if (nearbyTrees.length > 0) {
+                    const f = obstacleAvoidance(this.position, SHEEP_RADIUS, nearbyTrees, { strength: SHEEP_OBSTACLE_STRENGTH });
+                    if (f.x !== 0 || f.z !== 0) this.applyForce(new Vector2D(f.x, f.z));
+                }
+            }
+            if (obstacles.rocks.length > 0) {
+                const nearbyRocks = obstacles.queryRocks(this.position, SHEEP_OBSTACLE_QUERY_RADIUS);
+                if (nearbyRocks.length > 0) {
+                    const f = obstacleAvoidance(this.position, SHEEP_RADIUS, nearbyRocks, { strength: SHEEP_OBSTACLE_STRENGTH });
+                    if (f.x !== 0 || f.z !== 0) this.applyForce(new Vector2D(f.x, f.z));
+                }
+            }
+        }
+
         this.maxSpeed = params.speed;
         this.cohesionWeight = params.cohesion;
     }
