@@ -1,6 +1,6 @@
-# Next Session — Cycle 4 Phase B Entry Point
+# Next Session — Cycle 4 Hardening
 
-> Written 2026-04-24 after Cycle 4 Phase A shipped. If you are a cold-start agent, read this page, then [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md), then [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md). Earlier-cycle context lives in [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md) and [`docs/cycle-2-report.md`](docs/cycle-2-report.md) — read those if the Cycle 4 docs reference behavior you don't recognize.
+> Updated 2026-04-25. Cold-start agents: read this page top-to-bottom, then [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) for the live punch list and the full table of what shipped. Earlier-cycle context: [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md), [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md), [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md), [`docs/cycle-2-report.md`](docs/cycle-2-report.md).
 
 ## Running locally
 
@@ -20,65 +20,88 @@ npm run dev    # starts Vite (:3000) + wrangler (:8787) together
 
 Granular alternatives: `npm run dev:client` (just Vite), `npm run dev:worker` (just wrangler), `npm run dev:lan` (Vite with `--host` + wrangler).
 
-Open `http://localhost:3000` (or `:3001` if :3000 is taken — Vite auto-increments). Invite links built from the lobby now use `location.origin`, so host and join can both be on localhost without collision with production.
+Open `http://localhost:3000` (or `:3001` if :3000 is taken — Vite auto-increments). `?scene=field`, `?scene=rolling-hills`, `?scene=open-country` to skip the picker.
 
-## Where the project stands (end of 2026-04-24 session)
+## Where the project stands (2026-04-25)
 
 - `sheepdogsim.com` is live on Cloudflare Pages + Worker + DO + D1 (see [`docs/cycle-2-report.md`](docs/cycle-2-report.md)).
-- Gameplay loop (solo, sandbox, local 2P, online 2-4P, three modes) is stable. Playtested 2026-04-24.
-- Droplet still online as rollback safety; scheduled destroy ~2026-05-01 (see [`docs/cycle-2-todo.md`](docs/cycle-2-todo.md)).
-- **Cycle 3 done.** Track 1 cleanup, Track 3 scenes-as-data, Track 2 stepping-stones (ScenePicker + MP sceneId end-to-end). Detail: [`DECISIONS.md`](DECISIONS.md) § Cycle 3.
-- **Cycle 4 Phase A done** (assume merge happens before this lands). 11 parallel units shipped: Three.js bumped 0.181 → 0.184, baked heightmaps + asset pipeline, scene schema widened, `shared/terrain/Heightfield.js`, `js/atmosphere/Atmosphere.js` (Hosek-Wilkie sky port from Terror in the Jungle), `js/ProceduralMountains.js`, `js/CameraController.js` (Classic/Follow/Free), open-country biome, GrassSystem polish, TerrainBuilder dead-code delete, scene aesthetic retunes. Standalone modules ship unwired — Phase B is the integration. Detail: [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md).
+- Gameplay loop (solo, sandbox, local 2P, online 2-4P, three modes) is stable.
+- Droplet decommissioned target ~2026-05-01 (see [`docs/cycle-2-todo.md`](docs/cycle-2-todo.md)).
+- **Cycle 3 done.** [`DECISIONS.md`](DECISIONS.md) § Cycle 3.
+- **Cycle 4 Phase A done** (PRs B–M). 11 parallel units shipped: Three.js 0.184, baked heightmaps, scene schema widened, `Heightfield`, Atmosphere (Hosek-Wilkie sky), `ProceduralMountains`, `CameraController`, open-country biome, GrassSystem polish, scene retunes. Detail: [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md).
+- **Cycle 4 Phase B done** (#42 + tonemap fix). Heightfield wired through TerrainBuilder/GrassSystem/sheep/dog; Atmosphere wired into render path; slope-modulated sheep speed; prop placement on terrain; camera y-clamp.
+- **Cycle 4 Hardening — substantially complete.** 21 fixes shipped across two playtest-driven batches; full table at [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md). 74/74 vitest specs pass; production build clean. **All work since #42 is uncommitted on `main`** — ready to PR or commit when you're ready to ship.
+
+### What changed this session (one-line summary, full table in the hardening doc)
+
+Visual / perception:
+- **Mountains gone**, terrain plane extended to 2400m / 1600m with a smooth radial heightfield falloff so the play area reads as an island in a flat skirt, fading to fog horizon (no abrupt edge).
+- **Terrain fog retuned** from sky-blue to warm-grey-green at 350/1100m — kills the "field floating in sky" green-to-blue gradient.
+- **Atmosphere is the only sky/fog source** (Phase B already removed `scene.background` / `scene.fog`).
+
+Grass:
+- **Stochastic LOD dither** in the vertex shader hides density transitions — smooth gradient in every camera, no ring snap.
+- **Zen wind** — three noise samples at different rotations averaged; field shimmers softly, no advancing wavefront.
+- **Body-shaped interaction** — each entity reports a facing direction; the shader uses an oriented rounded-rectangle SDF so the dog's bend zone follows the dog's actual mesh footprint as it turns. Sheep get the same treatment with smaller extents.
+
+Terrain entities:
+- **Sheep + dog tilt on slopes** via `heightfield.normal`, clamped to ~22°/18°, YXZ rotation order.
+- **Trees + farmhouse no longer sink** — child mesh transforms baked into geometries at GLB load time + per-model `bbox.min.y` offset compensation.
+- **Far trees as 3-quad impostors past 250m** — ~99% triangle reduction; offscreen-baked texture per tree type.
+- **Fence rails span terrain slope** via per-rail `userData.railSpan` metadata + post-process quaternion rebuild.
+
+Game loop / structure:
+- **Open Country pen has a front fence** flanking the gate (sheep can no longer walk around).
+- **Open Country has no perimeter fence** (already shipped batch 1; flag-driven via `perimeterFence: false`).
+
+UX:
+- **Camera-mode HUD chip** at top-center, tappable on every platform (`C` on desktop, "Tap" on mobile) — full mobile parity.
+- **Player chevron** now tracks `mesh.position.y` instead of y=0 (no more parallax drift on hills).
+- **Scene descriptions** rewritten — em-dashes removed; Rolling Hills no longer says "more sheep" (sheep count is mode-driven, not scene-driven).
 
 ## What to pick up next
 
-**Cycle 4 Phase B — heightfield + atmosphere integration.** Single sequential PR by the user, NOT another parallel batch. Full plan: [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md).
+Read [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) for the live list. Big rocks remaining (none of these are blocking — all gameplay works today):
 
-The eight-step sequence:
-1. TerrainBuilder vertex displacement from `Heightfield`.
-2. GrassSystem y-sample so blades sit on terrain.
-3. OptimizedSheep + Sheepdog y-clamp.
-4. Atmosphere wiring in `main.js` (SceneManager loses its hardcoded `scene.background` + `scene.fog`).
-5. ProceduralMountains wiring into TerrainBuilder.
-6. Slope-modulated sheep speed in `shared/MovementPhysics.js`.
-7. Prop placement on terrain (one heightfield query per prop at scene-load).
-8. Camera y-clamp in Follow / Free.
+1. **Rolling Hills as an island** (game loop, ~5 hr). User-aligned design: water-bounded island, sheep roam free, find-the-corral objective. Spec in the hardening doc § 1.
+2. **Open Country game loop pick** (still undecided). Three options sketched in the hardening doc § 2; author preference is **time attack** (cheapest, distinct register from Rolling Hills). Needs user sign-off before code.
+3. **Resize behavior** — on hold pending user reproduction; resize handler looks correct.
 
-### Key risks for Phase B
+Smaller items / future:
+- Octahedral impostors as v2 of the tree LOD (current 3-quad version is solid).
+- Tree exclusion in play area is already implemented; verify visually if heightmaps re-bake.
 
-- **Y-sample regression surface is wide.** A bad Heightfield sample makes the dog float, sheep sink, and grass clip — all simultaneously. Verify each step with the e2e recipe (`npm test && npm run build && npm run dev:client`, cycle through `?scene=field`, `?scene=rolling-hills`, `?scene=open-country`) before moving to the next.
-- **Atmosphere wiring touches `SceneManager` which Unit M just refactored.** Re-read SceneManager carefully before deleting the hardcoded `scene.background` / `scene.fog` — Unit M's camera extraction may have moved or renamed surrounding code. Don't merge step 4 on muscle memory.
-- **Regenerate `tests/sim-baseline/` fixtures only after manual verification.** Step 6 (slope-modulated sheep speed) will break the existing baselines. Manually verify the new sheep behavior is intentional first, then `UPDATE_FIXTURES=true npm test`. Diff the new fixture vs. the old to confirm slopes add deterministic offsets, not chaotic noise. The fixture flip is one-way; don't commit it under merge pressure.
+### Standing risks
 
-### Deferred (still on the list, not blocking Phase B)
+- **Y-sample regression surface is wide.** A bad heightfield change still makes the dog float, sheep sink, grass clip — all simultaneously. After any change in this area, manually verify all three scenes in all three camera modes.
+- **MP joiner renderer sync.** Joiners whose URL-param scene differs from the room's see correct sim but mismatched visuals. Phase B's terrain displacement makes this more visible. Carried over from Cycle 3.
+- **Sim-baseline fixtures are one-way.** Don't regenerate without understanding the diff. They were last regenerated for the slope-modulated sheep speed in Phase B; do not touch unless `MovementPhysics` changes again.
 
-- **Cycle 3 Track 2 follow-through** (UI/UX polish): scene-first state machine in `App.js`, mode-shaped HUD profile, onboarding overlay, compass locator, real dog PNG thumbnails, MP-joiner renderer reactivity. Detail: [`docs/cycle-3-ui-ux.md`](docs/cycle-3-ui-ux.md).
-- **MP joiner renderer sync.** Joiners whose URL-param scene differs from the room's still see mismatched visuals. Phase B's heightfield displacement makes this more visible, not less — fix it during Phase B or document the user-facing implication.
+### Deferred (not blocking hardening)
+
+- **Cycle 3 Track 2 follow-through** (UI/UX polish): scene-first state machine in `App.js`, mode-shaped HUD profile, onboarding overlay, compass locator (now part of hardening item #1), real dog PNG thumbnails, MP-joiner renderer reactivity. Detail: [`docs/cycle-3-ui-ux.md`](docs/cycle-3-ui-ux.md).
 - **Cycle 3 Track 1 polish:** JSX flip (mechanical codemod), boid consolidation (needs architectural decision). See [`docs/cycle-3-cleanup.md`](docs/cycle-3-cleanup.md) § Remaining.
-
-## What Cycle 4 Phase A shipped
-
-Cycle 3 made biomes a data change. Cycle 4 Phase A built the foundation that lets biomes actually look different — heightfield terrain (baked, bilinear-sampled), an analytic Hosek-Wilkie sky with five named presets, a three-mode user camera (Classic preserved as default), and a refreshed pastoral grass + fog palette across all scenes. The standalone modules are unwired by design; Phase B is one sequential PR that connects them to the render path. See [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md) and [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md).
 
 ## How to read the rest of the repo
 
 | Area | Source of truth |
 |---|---|
-| Cycle 4 Phase A plan + units | [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md) |
-| Cycle 4 Phase B integration plan | [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md) |
-| Architecture (as of 2026-04-24) | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| Live hardening punch list | [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) |
+| Cycle 4 Phase A plan | [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md) |
+| Cycle 4 Phase B integration | [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md) |
+| Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Decisions log | [`DECISIONS.md`](DECISIONS.md) |
 | What Cycle 2 shipped | [`docs/cycle-2-report.md`](docs/cycle-2-report.md) |
 | Cycle 2 punch list | [`docs/cycle-2-todo.md`](docs/cycle-2-todo.md) |
 | Cycle 3 plan + tracks | [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md) |
 | How to add a biome | [`docs/adding-a-biome.md`](docs/adding-a-biome.md) |
 | Prior postmortem | [`docs/archive/POSTMORTEM.md`](docs/archive/POSTMORTEM.md) |
-| Pre-Cycle-2 planning (mostly historical) | [`docs/archive/`](docs/archive/) |
 
 ## What NOT to do
 
-- Don't rearchitect multiplayer. It works. The Worker + DO + D1 + `shared/` shape is settled.
-- Don't introduce a new ECS library, game engine, physics engine, or UI framework this cycle. Keep the bet small: cleanup + shell + scene definitions.
-- Don't write speculative abstractions for features that aren't in the roadmap (no predator-AI hooks "for later", no weather hooks "for later" — build them when the content track arrives).
+- Don't rearchitect multiplayer. It works.
+- Don't reintroduce procedural mountains. If we want a horizon ring later, the right path is a height-displaced skirt that blends into the play-area heightfield, not the annulus shader.
+- Don't add new scenes. Three is the right number; finish the loops on the ones we have.
+- Don't move sim logic out of `shared/`. Island boundary work belongs in `MovementPhysics` so the Worker sim stays in lockstep.
 - Don't blow up `main.js` in one PR. Shrink it one responsibility at a time.
-- Don't commit files you can't test. The cleanup track includes real file deletions; each deletion must be verified against `grep` and a clean `npm run build`.
+- Don't regenerate `tests/sim-baseline/` fixtures unless you understand exactly what changed and why.

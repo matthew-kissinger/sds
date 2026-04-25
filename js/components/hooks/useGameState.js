@@ -5,6 +5,7 @@ import {
     getNetworkManager,
     getMultiplayerState,
     getSheepdog,
+    getSceneManager,
     subscribeGameEvent,
 } from '../../GameBridge.js';
 
@@ -26,6 +27,7 @@ export function useGameState() {
         isComplete: false,
         isPaused: false,
         gameMode: 'solo',
+        cameraMode: 'classic',
         players: [],
         myPlayerId: null,
         scores: {},
@@ -60,6 +62,8 @@ export function useGameState() {
             const maxStamina = sheepdog?.maxStamina || 100;
             const staminaPercentage = Math.round((currentStamina / maxStamina) * 100);
 
+            const cameraMode = getSceneManager()?.getCameraController?.()?.getMode?.() ?? 'classic';
+
             const newData = {
                 stamina: currentStamina,
                 maxStamina,
@@ -71,6 +75,7 @@ export function useGameState() {
                 isPaused: gameState.paused || false,
                 gameMode: actualGameMode,
                 singlePlayerMode: gameState.singlePlayerMode || 'classic',
+                cameraMode,
                 players: [],
                 myPlayerId: null,
                 scores: {},

@@ -55,6 +55,7 @@ export async function initReactUI() {
             { LocalModeSetup },
             { GameTimer },
             { SheepCounter },
+            { CameraModeIndicator },
             { MobileHUD },
             { MobileControls },
             { ExtremeTuningPanel },
@@ -87,6 +88,7 @@ export async function initReactUI() {
             import('./StartScreen/LocalModeSetup.js'),
             import('./GameHUD/GameTimer.js'),
             import('./GameHUD/SheepCounter.js'),
+            import('./GameHUD/CameraModeIndicator.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
             import('./GameHUD/ExtremeTuningPanel.js'),
@@ -906,6 +908,7 @@ export async function initReactUI() {
             return createElement('div', { className: 'game-hud fixed inset-0 pointer-events-none' }, [
                 platform === 'desktop' && [
                     createElement(GameTimer, { key: 'timer', gameTime: gameData.gameTime, timeLimit: gameData.timeLimit }),
+                    createElement(CameraModeIndicator, { key: 'camera-mode', mode: gameData.cameraMode, platform }),
                     !isMultiplayer && createElement(SheepCounter, {
                         key: 'counter',
                         sheepCount: gameData.sheepCount,
@@ -931,6 +934,7 @@ export async function initReactUI() {
 	                        stamina: staminaPercentage,
                         onPause: handlePause
                     }),
+                    createElement(CameraModeIndicator, { key: 'camera-mode', mode: gameData.cameraMode, platform }),
                     createElement(MobileControls, { key: 'mobile-controls' }),
                     isMultiplayer && createElement(MultiplayerScoreboard, {
                         key: 'scoreboard',

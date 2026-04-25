@@ -109,7 +109,7 @@ Central coordination hub (Mediator pattern).
 - Three.js scene + WebGL renderer + lighting setup
 - Mobile detection with separate near/far plane, pixel ratio forced to 1, shadows disabled
 - **Camera state moved out** (Cycle 4 Unit M) — all camera positioning, follow smoothing, and competitive-mode offset now live in `CameraController`. SceneManager keeps `getCamera()` (still used widely) plus thin pass-throughs for legacy methods (`setCompetitiveCameraPosition`, `transformMovementForCompetitive`, etc.) so `main.js` call sites did not need rewriting.
-- Hardcoded `scene.background` and `scene.fog` will be removed in Cycle 4 Phase B once `Atmosphere` is wired into the render path.
+- Hardcoded `scene.background` and `scene.fog` were removed in Cycle 4 Phase B; `Atmosphere` is now wired into the render path and owns sky/fog per-scene.
 
 #### CameraController.js — Three-mode camera system (Cycle 4)
 Owns camera position, target, smoothing, and yaw state. Three modes selectable at runtime via `setMode()`, the settings panel, or the `C` hotkey.
@@ -117,7 +117,12 @@ Owns camera position, target, smoothing, and yaw state. Three modes selectable a
 - **Follow** — close-up cinematic: distance=22, height=11, lookAtHeight=1.5, lookAhead=`4 * speedNorm` along dog facing, yawLagTau=0.35s, posLagTau=0.15s. Frame-rate-independent smoothing using the same `1 - Math.pow(1 - alpha, dt * 60)` pattern that previously lived in SceneManager.
 - **Free** — yaw + zoom orbit: right-mouse-drag on desktop, two-finger drag on mobile, right-stick on gamepad. Pitch fixed at Follow's pitch; existing zoom retained. Snap freeYaw to Follow yaw on mode switch so there's no jump-cut.
 
-Public API: `setMode(CameraMode.X)`, `applyYawDelta(rad)`, `setZoom(d)`, `update(dogPos, dogFacing, dt)`, `transformMovement(dir)`, `setCompetitiveDirection(dir)`, `reset()`. `main.js` instantiates one `CameraController` and routes per-frame updates through it.
+Public API: `setMode(CameraMode.X)`, `applyYawDelta(rad)`, `setZoom(d)`, `update(dogPos, dogFacing, dt)`, `transformMovement(dir)`, `setHeightfield(hf)`, `setCompetitiveDirection(dir)`, `reset()`. `main.js` instantiates one `CameraController` and routes per-frame updates through it.
+
+**Hardening additions (2026-04-25):**
+- Classic mode now lifts its look-at target to `heightfield.sample(dog.x, dog.z)` so the dog stays centred on hills (was hardcoded y=0).
+- `transformMovement` now rotates input by `followYaw` in Follow mode as well as `freeYaw` in Free, so WASD is camera-relative in both. Classic stays world-axis (top-down isometric).
+- New `_sampleMaxTerrainAlong(camXZ, dogXZ)` samples 7 points along the camera→dog line; Follow and Free clamp camera Y above the max ridge + `minTerrainClearance` so the dog never disappears behind an intervening hill.
 
 #### atmosphere/Atmosphere.js — Hosek-Wilkie sky + presets (Cycle 4)
 Analytic atmospheric scattering ported from sibling repo Terror in the Jungle (`src/systems/environment/atmosphere/`). The GLSL shader is verbatim (already vanilla GLSL); the JS wrapper is JSDoc-typed.
@@ -125,7 +130,7 @@ Analytic atmospheric scattering ported from sibling repo Terror in the Jungle (`
 - **Presets** (`skyPresets.js`) — five named configurations matching the `SkyDef.preset` enum: `pastoral-noon`, `dusk`, `overcast`, `dawn`, `golden-hour`. Each preset carries sun elevation/azimuth, turbidity, ground albedo, and a fog multiplier table.
 - **Top-level class** — `Atmosphere.constructor(scene)`, `applyPreset(presetName)`, `updateSun(elevation, azimuth)`. Created once in `main.js`; `applyPreset(sceneDef.sky.preset)` is called on every scene-load.
 
-Phase B note: not yet wired to `main.js` or `SceneManager` — the module ships standalone in Phase A and integrates in Phase B (single sequential PR).
+Wired into `main.js` and the scene-load path in Cycle 4 Phase B (PR #42 + tonemap fix). SceneManager no longer references `scene.background` or `scene.fog`; Atmosphere is the single source of truth.
 
 #### shared/terrain/Heightfield.js — Bilinear height-sampled module (Cycle 4)
 Pure ES module + JSDoc, importable from both client (`js/`) and worker (`worker/src/`) since it lives in `shared/`. Loads a baked R32F heightmap and exposes O(1) sampling.
@@ -150,10 +155,24 @@ Pattern ported from `terror-in-the-jungle/src/systems/terrain/BakedHeightProvide
 - Chunk-based frustum culling
 - Wind shader animation + player/sheep interaction shader (ripple-through-grass)
 
+**Hardening additions (2026-04-25):**
+- **Stochastic LOD dither.** Each blade has a stable hash from `gl_InstanceID + chunk world XZ`. As distance from camera grows through `[grassFadeStart=70m, grassFadeEnd=260m]`, an increasing fraction of blades collapse to degenerate triangles (vertex shader emits `gl_Position = vec4(2.0)`). Smooth density gradient — no count-step ring visible in Classic top-down. Hard count-decimation LOD still runs (200/280m) for CPU savings but is hidden behind the dither. Same dither in mobile shader for parity. Standard production technique (Cesium-for-Unreal, Witcher 3, RDR2).
+- **Zen wind.** Three noise samples taken at *different rotations* (windDirection, perpendicular, bisector) at slightly different scales/speeds, averaged. Mean push along `windDirection` still leans the field, but the gust modulation has no single visible front. Variation tightened to 0.35–0.65 (was 0.4–1.2) so the field shimmers rather than pulses. Desktop-only; mobile has no wind by design.
+- **Body-shaped interaction.** Each entity reports a facing direction (`updateInteractors` reads dog's `currentRotation`, sheep's `renderFacingDirection`); shader transforms blade-to-entity delta into entity-local frame and computes a rounded-rectangle SDF against body half-extents. Dog 1.6m × 0.6m elongated body, 1.4m falloff ring. Sheep 0.6m × 0.5m near-square, 0.9m falloff. The clearing now turns with the entity instead of being world-axis-locked. Same SDF in mobile (single-interactor cap).
+
 #### TerrainBuilder.js — Environment
-- 1000×1000 terrain plane with procedural noise-based displacement
-- Trees and rocks placed via Poisson-disk distribution, rendered as instanced meshes
-- Mountains rendered at full resolution (earlier coarse-LOD simplification was reverted after visual issues)
+- **2400m × 2400m desktop / 1600m × 1600m mobile** terrain plane (was 1000m pre-hardening; extended after `addMountains()` became a no-op so the horizon doesn't end in a void). 256×256 segments desktop / 128×128 mobile — was 64×64 pre-hardening; bumped 2026-04-25 because the coarser mesh let entities sampling the heightfield clip into / float above the visible ground by ~0.6m.
+- Heightfield-displaced (`heightfield.sample(worldX, worldZ)` per vertex) when the scene declares a `heightmapUrl`; flat fallback otherwise. Heightfield content is multiplied by a smoothstep falloff over the last 20m of its `worldSize` so the play-area "island" blends smoothly into a flat skirt extending to the fog horizon.
+- Trees and rocks placed via Poisson-disk distribution; both query the heightfield for their Y at construction. **Tree GLBs**: at load time, child mesh transforms are baked into geometries (so InstancedMesh-per-child captures sub-mesh layout) and per-model `bbox.min.y` is stored on `userData.modelBaseYOffset`. At placement, `placementY = terrainY + (-bboxMinY) * scale` lifts the visible base to terrain regardless of GLB origin convention. Same compensation applied to the farmhouse.
+- **Far-tree LOD past 250m** via 3-quad impostors. Each tree GLB is rendered once to a 512² RenderTarget by an offscreen orthographic camera (transparent background, `MeshBasicMaterial { alphaTest: 0.4, transparent: true }`). Far instances use a 3-plane geometry at 60° apart sharing that texture — any view direction is within 30° of one quad's normal, so the silhouette never goes edge-on. ~99% triangle reduction in the farField + horizon zones.
+- **Terrain shader fog**: warm-grey-green `0xa9b8a8` at near=350m / far=1100m (was sky-blue at 200/600m). Removes the visible green-to-blue gradient mid-frame caused by the now-extended plane being fog-tinted prematurely.
+- `addMountains()` is a no-op as of 2026-04-25 — the previous procedural ring read as paper-thin shells. The `ProceduralMountains` class is left on disk for future revisit; use a real height-displaced skirt blending into the play-area heightfield, not the annulus shader.
+
+#### StructureBuilder.js — Fences, gates, pens
+- Owns the structure tree for each scene: perimeter fences (when scene allows), gate, pen, corner flags.
+- **`_surfaceToTerrain(group)`** — post-process that walks the group, finds nodes tagged with `userData.surfaceToTerrain`, and lifts each to terrain Y. Per-piece tagging on posts/individual rails so they ride hills independently; gate group tagged as a single rigid unit so the two posts stay coplanar and the arch doesn't shear.
+- **`_slopeRailToTerrain(rail)`** — for rails carrying `userData.railSpan = { halfLen, axis, geomAxis, baseY }`, samples the heightfield at both endpoints, sets the rail's local position to the midpoint and `quaternion.setFromUnitVectors(geomAxis, lifted_dir)`. Rails span the slope between adjacent posts instead of staying horizontal — no more stair-stepping over hills.
+- `perimeterFence: false` scene flag (Open Country) routes through `buildGateAndPenOnly`, which builds the gate + a closed pen (with two flanking border segments completing the front of the pen). Other scenes get the standard four-side perimeter via `buildSinglePlayerStructures`.
 
 #### Sheepdog.js — Player controller
 - Smooth movement with acceleration / deceleration
@@ -161,6 +180,8 @@ Pattern ported from `terror-in-the-jungle/src/systems/terrain/BakedHeightProvide
 - **Animation state machine** with 1.0-unit hysteresis on speed thresholds to prevent boundary oscillation
 - **Dynamic timeScale:** `currentAction.timeScale = clamp(speed / stateMax, 0.5, 1.5)` so legs slow proportionally when the dog decelerates post-exhaustion
 - 19+ animations from a GLB (Idle 1-7, Walk/Trot/Run/RunFast in F/L/R, Bark)
+- **Terrain tilt** (2026-04-25) — `updateTerrainTilt` reads `heightfield.normal(x, z)`, projects the slope vector against the dog's facing direction, and sets `mesh.rotation.x` (pitch) + `mesh.rotation.z` (roll) clamped to ~22°. Mesh `rotation.order = 'YXZ'` so yaw composes cleanly. Smoothed at ~6 Hz to avoid snap on sharp gradients. `OptimizedSheep` does the same with a stateless per-frame snap (no per-instance interpolation buffer worth keeping at 200+ instances) and tighter ~18° clamp.
+- **Distance indicator (chevron + diamond)** tracks `mesh.position.y` (terrain-clamped) so the marker stays anchored to the dog on hills — was hardcoded to `y = 0` before 2026-04-25, which caused parallax drift through the angled camera.
 
 #### NetworkManager.js — Multiplayer client
 - Native `WebSocket` + `@msgpack/msgpack` (no Geckos.io, no WebRTC)
@@ -291,7 +312,7 @@ The server-to-client state snapshot is the same shape the legacy Geckos server u
 │   ├── main.js             Orchestrator
 │   ├── SceneManager.js     Three.js scene / camera / renderer
 │   ├── TerrainBuilder.js   Terrain + trees + rocks + mountains
-│   ├── StructureBuilder.js Gates, fences, flags, pasture label
+│   ├── StructureBuilder.js Gates, fences, flags, pasture label (post-2026-04-25: surfaces to heightfield via userData.surfaceToTerrain tags)
 │   ├── OptimizedSheep.js   GPU sheep system
 │   ├── Sheepdog.js         Player controller + animation state machine
 │   ├── GrassSystem.js      Chunk-based grass
@@ -410,7 +431,7 @@ npx wrangler pages deploy dist --project-name=sds-frontend --branch=main
 - **Registry** — `shared/scenes/index.js`. Exports `loadScene(id)`, `listScenes()`, `DEFAULT_SCENE_ID`. Unknown ids throw; the helpers are re-exported from `shared/index.js` for convenience.
 - **Worker** — `worker/src/RoomDO.ts` stores `sceneId` on `RoomMeta` (validated against `listScenes()` at `initRoom`, defaults to `DEFAULT_SCENE_ID`; backfilled on rehydrate of pre-Cycle-3 rooms). `worker/src/GameSim.js` calls `loadScene(room.sceneId || DEFAULT_SCENE_ID)` once in the constructor. Both cooperative (`createGameState`) and competitive/timed (`createCompetitiveGameState`) paths read `bounds` and `sheepSpawn` from the resulting scene.
 - **Client** — `js/main.js` picks the scene (`?scene=<id>` URL param; selectable via `ScenePicker` strip above the menu) and threads the `SceneDef` into `TerrainBuilder`, which reads `zones` and `farmHouse`, and through to `GrassSystem`, which reads `grass.clumpsPerChunk`. `js/NetworkManager.js createRoom` sends the current `sceneId` to the Worker in `roomSettings`. Joiners whose URL-param scene differs from the room's sceneId currently render mismatched visuals — Track 2 follow-up.
-- **Shipped biomes (2026-04-24)** — `field` ("Home Field" — the flat fenced play area ringed by mountain props, previously called "valley"), `rolling-hills` ("Rolling Hills" — sim-differentiated harder variant; visual differentiation deferred until renderer consumes `terrain.heightScale` / `grass.colors` / `props`).
+- **Shipped biomes (2026-04-25)** — `field` ("Home Field" — the flat fenced play area, classic loop), `rolling-hills` ("Rolling Hills" — heightfield-displaced terrain, dusk lighting, 250 sheep scattered; gameplay loop still mirrors field, intended island-redesign tracked in [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) § 1), `open-country` ("Open Country" — heightfield-displaced terrain, golden-hour lighting, **no perimeter fence** (`perimeterFence: false` on the scene def — gate + pen stand alone), 200 sheep scattered across a 80 m radius). All three have `Atmosphere` wired and surface their fences/structures to terrain via `StructureBuilder._surfaceToTerrain`.
 
 See [`docs/adding-a-biome.md`](docs/adding-a-biome.md) for the step-by-step, and [`docs/cycle-3-scene-arch.md`](docs/cycle-3-scene-arch.md) for the design rationale and open questions (notably: harmonizing the client's `FieldConfig` + `SandboxConfig` with `SceneDef`).
 
