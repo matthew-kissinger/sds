@@ -1,6 +1,27 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { GrassSystem } from './GrassSystem.js';
+
+// Phase A Unit B compressed all GLBs with Draco + Meshopt. Every GLTFLoader
+// in the codebase needs both decoders attached or those GLBs fail to parse
+// with "No DRACOLoader instance provided". Draco decoder is hosted by Google;
+// Meshopt decoder ships as a JS module with three. Construct once, reuse.
+const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/v1/decoders/';
+let _sharedDracoLoader = null;
+export function getSharedDracoLoader() {
+    if (!_sharedDracoLoader) {
+        _sharedDracoLoader = new DRACOLoader();
+        _sharedDracoLoader.setDecoderPath(DRACO_DECODER_PATH);
+    }
+    return _sharedDracoLoader;
+}
+export function configureGLTFLoader(loader) {
+    loader.setDRACOLoader(getSharedDracoLoader());
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    return loader;
+}
 import {
     countMeshTriangles,
     sumInstancedMeshTriangles,
@@ -36,8 +57,8 @@ export class TerrainBuilder {
         this.mountains = []; // Track mountains
         this.buildings = []; // Track buildings
 
-        // Model loading - standard GLTFLoader (mobile models are animation-stripped, not Draco compressed)
-        this.loader = new GLTFLoader();
+        // Model loading - GLTFLoader with Draco + Meshopt decoders for compressed GLBs.
+        this.loader = configureGLTFLoader(new GLTFLoader());
         this.models = {
             trees: {},
             rocks: {},
