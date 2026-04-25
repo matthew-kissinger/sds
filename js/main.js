@@ -353,6 +353,8 @@ class SheepDogSimulation {
                 }
             }
             this.terrainBuilder.setHeightfield(this.heightfield);
+            // GameState propagates heightfield to OptimizedSheepSystem when the flock spawns.
+            this.gameState.heightfield = this.heightfield;
 
             // Create terrain and environment
             logStep('Creating terrain');
@@ -393,7 +395,7 @@ class SheepDogSimulation {
 
             // Create sheepdog (but don't add to scene yet in pre-game state)
             logStep('Creating sheepdog');
-            const sheepdog = new Sheepdog(0, -30, 'jep');
+            const sheepdog = new Sheepdog(0, -30, 'jep', this.heightfield);
             this.sheepdog = sheepdog;
             this.sheepdogMesh = sheepdog.createMesh();
             this.gameState.setSheepdog(sheepdog);
@@ -492,7 +494,7 @@ class SheepDogSimulation {
         }
 
         // Create new sheepdog with selected type
-        const sheepdog = new Sheepdog(0, -30, selectedDogType);
+        const sheepdog = new Sheepdog(0, -30, selectedDogType, this.heightfield);
         this.sheepdog = sheepdog;
         this.sheepdogMesh = sheepdog.createMesh();
         this.gameState.setSheepdog(sheepdog);
@@ -669,7 +671,7 @@ class SheepDogSimulation {
         const dogStart = sandboxConfig.dog?.startPosition || { x: 0, z: -30 };
 
         // Create new sheepdog with selected type at configured position
-        const sheepdog = new Sheepdog(dogStart.x, dogStart.z, dogType);
+        const sheepdog = new Sheepdog(dogStart.x, dogStart.z, dogType, this.heightfield);
         this.sheepdog = sheepdog;
         this.sheepdogMesh = sheepdog.createMesh();
         this.gameState.setSheepdog(sheepdog);
@@ -817,7 +819,7 @@ class SheepDogSimulation {
 
         // Create Player 1 sheepdog (WASD)
         const p1StartX = localConfig.mode === 'versus' ? -30 : -15;
-        this.sheepdog = new Sheepdog(p1StartX, -30, localConfig.player1Dog);
+        this.sheepdog = new Sheepdog(p1StartX, -30, localConfig.player1Dog, this.heightfield);
         this.sheepdogMesh = this.sheepdog.createMesh();
         this.sheepdog.setAudioManager(this.audioManager);
         this.sheepdog.setPlayerInfo('player1', this.localMultiplayerManager.player1.color);
@@ -827,7 +829,7 @@ class SheepDogSimulation {
 
         // Create Player 2 sheepdog (Arrow Keys)
         const p2StartX = localConfig.mode === 'versus' ? 30 : 15;
-        this.sheepdog2 = new Sheepdog(p2StartX, -30, localConfig.player2Dog);
+        this.sheepdog2 = new Sheepdog(p2StartX, -30, localConfig.player2Dog, this.heightfield);
         this.sheepdogMesh2 = this.sheepdog2.createMesh();
         this.sheepdog2.setAudioManager(this.audioManager);
         this.sheepdog2.setPlayerInfo('player2', this.localMultiplayerManager.player2.color);
@@ -1721,7 +1723,7 @@ class SheepDogSimulation {
             // Use dog type from server data, or fall back to 'jep'
             const dogType = dogData.dogType || 'jep';
             console.log(`Creating remote dog with type: ${dogType} for player ${playerId}`);
-            remoteDog = new Sheepdog(dogData.x, dogData.z, dogType);
+            remoteDog = new Sheepdog(dogData.x, dogData.z, dogType, this.heightfield);
             
             // Enable 2x speeds for multiplayer
             remoteDog.setMultiplayerSpeeds(true);
