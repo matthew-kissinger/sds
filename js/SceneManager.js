@@ -14,14 +14,14 @@ export class SceneManager {
         // Mobile-optimized camera parameters to prevent clipping
         this.isMobile = this.detectMobileDevice();
         const near = this.isMobile ? 2.0 : 0.1;    // 20x safer near plane for mobile
-        // Far plane sized for the post-Cycle-4-Hardening extended terrain
-        // plane (2400m desktop / 1600m mobile, diagonals ~1700m / ~1130m).
-        // The atmosphere skybox stays glued to the far plane in its shader,
-        // so this also controls how far the visible sky reaches. Was 1000/500
-        // pre-hardening when the terrain was only 1000m square — it left a
-        // visible black wedge between the terrain edge and the skybox at
-        // wide zoom-outs.
-        const far = this.isMobile ? 1800 : 2800;
+        // Far plane sized for the extended terrain plane
+        // (4000m desktop / 3200m mobile, diagonals ~2828m / ~2263m). Camera at
+        // max-zoom Classic offset adds another ~150m of slant distance to the
+        // far corner. The atmosphere skybox stays glued to the far plane in its
+        // shader, so this also controls how far the visible sky reaches.
+        // Earlier values: 1000/500 (Cycle 3) → 2800/1800 (Cycle 4 Hardening,
+        // with 2400/1600 plane) → 4500/3700 (plane grew to push edge into fog).
+        const far = this.isMobile ? 3700 : 4500;
         
         this.camera = new THREE.PerspectiveCamera(
             75, 

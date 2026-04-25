@@ -228,6 +228,11 @@ export class Sheepdog {
         this.minStaminaToSprint = 10;
         this.isSprinting = false;
         this.sprintExhausted = false; // Lock that requires releasing sprint key after exhaustion
+        // Smoothed speed cap. Tracks `currentMaxSpeed` (sprint vs walk) but
+        // eases on the way DOWN with τ≈0.2s so the velocity clamp doesn't
+        // pop velocity 25→15 in one frame on sprint exhaustion. Snaps on the
+        // way UP so pressing sprint stays responsive. See `move()`.
+        this.smoothMaxSpeed = this.maxSpeed;
     }
     
     /**
@@ -583,21 +588,43 @@ export class Sheepdog {
         
         // Determine current max speed
         const currentMaxSpeed = this.isSprinting ? this.sprintSpeed : this.maxSpeed;
-        
-        // Set target velocity
+
+        // Smooth the speed cap on the way down (sprint→walk transitions),
+        // snap on the way up (sprint press stays responsive). Without this,
+        // the safety clamp below would force velocity from 25 → 15 in one
+        // frame the instant stamina runs out, which:
+        //   - skips the RUNNING animation hysteresis band (SPRINT → TROT in
+        //     one transition rather than passing through RUNNING)
+        //   - pops the camera look-ahead distance (speedNorm halves instantly)
+        //   - lets the camera position lerp surge forward as soon as the dog
+        //     decelerates
+        // Easing the cap lets the existing acceleration system bring velocity
+        // down naturally over ~75ms. The animation state passes cleanly
+        // through SPRINTING → RUNNING and the camera tracks smoothly.
+        if (currentMaxSpeed >= this.smoothMaxSpeed) {
+            this.smoothMaxSpeed = currentMaxSpeed;
+        } else {
+            const k = 1 - Math.exp(-deltaTime / 0.2);
+            this.smoothMaxSpeed += (currentMaxSpeed - this.smoothMaxSpeed) * k;
+        }
+
+        // Set target velocity using the CURRENT max speed (so sprint-on
+        // accelerates immediately to the new target). The smoothed cap only
+        // gates the safety clamp below.
         this.targetVelocity = direction.clone().normalize().multiply(currentMaxSpeed);
-        
+
         // Smooth acceleration/deceleration
         const accelerationRate = direction.magnitude() > 0 ? this.acceleration : this.deceleration;
         const velocityDiff = this.targetVelocity.clone().subtract(this.velocity);
         const velocityChange = velocityDiff.clone().multiply(accelerationRate * deltaTime);
-        
+
         // Apply velocity change
         this.velocity.add(velocityChange);
-        
-        // Limit to current max speed
-        if (this.velocity.magnitude() > currentMaxSpeed) {
-            this.velocity.normalize().multiply(currentMaxSpeed);
+
+        // Soft cap using the smoothed max speed (rare safety net for
+        // collision-induced velocity spikes; absorbs sprint→walk pop).
+        if (this.velocity.magnitude() > this.smoothMaxSpeed) {
+            this.velocity.normalize().multiply(this.smoothMaxSpeed);
         }
         
         // Calculate new position

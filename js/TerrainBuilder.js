@@ -374,19 +374,47 @@ export class TerrainBuilder {
         return 'horizon';
     }
 
+    /**
+     * Terrain-mesh-accurate ground height for entity placement.
+     *
+     * `heightfield.sample()` clamps to edge values when (x,z) falls outside the
+     * heightfield's worldSize, but the terrain mesh applies a smoothstep
+     * falloff to 0 over the last 20m of that worldSize (so the visible ground
+     * past ~±200m is dead-flat at y=0). Trees and rocks placed in the outer
+     * zones (midField/farField/horizon, up to ±800m) would sample the clamped
+     * edge height and sit floating above a flat skirt — visible immediately
+     * in third-person. This helper mirrors the terrain's falloff so placement
+     * always tracks what's actually drawn.
+     */
+    _groundY(x, z) {
+        if (!this.heightfield) return 0;
+        const h = this.heightfield.sample(x, z);
+        const hfHalf = this.heightfield.worldSize * 0.5;
+        const fadeStart = hfHalf - 20;
+        const fadeEnd = hfHalf;
+        const radial = Math.max(Math.abs(x), Math.abs(z));
+        if (radial <= fadeStart) return h;
+        const t = Math.min(1, (radial - fadeStart) / (fadeEnd - fadeStart));
+        const falloff = 1 - t * t * (3 - 2 * t);
+        return h * falloff;
+    }
+
 
     
     createTerrain() {
         // Create base terrain mesh; heightfield displacement applied below.
-        // Plane is sized to extend past the tree horizon zone (±800m) so the
-        // ground reads as continuous to fog distance — no procedural mountain
-        // ring as of Cycle 4 Hardening. Quad size has to stay fine enough to
-        // resolve the heightfield (~25m wavelength content), or sheep/grass/
-        // trees end up displaced relative to the visible ground.
-        //   Desktop: 2400m / 384 = 6.25m/quad (~295k tris).
-        //   Mobile:  1600m / 192 = 8.33m/quad  (~74k tris).
-        const terrainSize = this.isMobile ? 1600 : 2400;
-        const terrainSegments = this.isMobile ? 192 : 384;
+        // Plane is sized so its edge falls deep into atmospheric fog before the
+        // camera can see it at max zoom-out. Heightfield content is confined to
+        // the inner ~±200m (worldSize/2); everything past that is a dead-flat
+        // skirt at y=0, so coarser quads in the outer zone cost nothing visually.
+        // The earlier 2400m/1600m sizes left the perpendicular edge only ~40%
+        // fogged at FogExp2 density 0.0006 — a faint but visible cutoff line.
+        //   Desktop: 4000m / 384 = 10.4m/quad — edge at 2000m is ~76% fogged.
+        //   Mobile:  3200m / 256 = 12.5m/quad — edge at 1600m is ~69% fogged.
+        // Segment count was bumped on mobile (192 → 256) so the inner heightfield
+        // sampling stays usable; desktop's 384 was already plenty for the larger plane.
+        const terrainSize = this.isMobile ? 3200 : 4000;
+        const terrainSegments = this.isMobile ? 256 : 384;
         const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
 
         // Apply heightfield displacement before the mesh is rotated to lie flat.
@@ -759,7 +787,11 @@ export class TerrainBuilder {
                 const scaleVariation = 0.7 + Math.random() * 0.6;
                 const finalScale = scale * scaleVariation;
                 
-                const treeY = this.heightfield ? this.heightfield.sample(point.x, point.z) : 0;
+                // Use _groundY (mirrors terrain falloff) instead of raw heightfield
+                // sample — trees in outer zones (midField/farField/horizon) extend
+                // past the heightfield's worldSize and would otherwise float above
+                // the flat skirt at the heightfield's clamped edge value.
+                const treeY = this._groundY(point.x, point.z);
                 // Compensate for the GLB's origin offset — different tree models
                 // place their pivot at trunk-base vs. centroid, which sinks half
                 // the trunk on hilly scenes if you just place at terrain Y.
@@ -1144,7 +1176,9 @@ export class TerrainBuilder {
                     const finalScale = baseScale * rock.scale;
 
                     // Some rocks partially buried; add terrain height so they sit on the slope.
-                    const baseY = this.heightfield ? this.heightfield.sample(rock.x, rock.z) : 0;
+                    // _groundY mirrors the terrain's radial falloff so rocks in outer zones
+                    // (which can sit past the heightfield's worldSize) match the flat skirt.
+                    const baseY = this._groundY(rock.x, rock.z);
                     const yOffset = (Math.random() < 0.3 ? -finalScale * 0.15 : 0) + baseY;
 
                     rockInstances[rockType].push({
@@ -1654,7 +1688,7 @@ export class TerrainBuilder {
         
         // Position the farm house in the northwest corner
         // Behind the pen (positive Z relative to gate) and to the left (negative X)
-        const farmY = this.heightfield ? this.heightfield.sample(this.farmHousePosition.x, this.farmHousePosition.z) : 0;
+        const farmY = this._groundY(this.farmHousePosition.x, this.farmHousePosition.z);
 
         // Scale the farm house appropriately - smaller and more realistic
         const scale = 1.0; // Further reduced for better proportions (2x smaller)
@@ -1791,7 +1825,7 @@ export class TerrainBuilder {
             // Find the farmhouse (first building)
             const farmhouse = this.buildings[0];
             if (farmhouse) {
-                const farmY = this.heightfield ? this.heightfield.sample(this.farmHousePosition.x, this.farmHousePosition.z) : 0;
+                const farmY = this._groundY(this.farmHousePosition.x, this.farmHousePosition.z);
                 farmhouse.position.set(this.farmHousePosition.x, farmY, this.farmHousePosition.z);
                 console.log(`[TERRAIN] Moved farmhouse to (${this.farmHousePosition.x}, ${this.farmHousePosition.z})`);
             }

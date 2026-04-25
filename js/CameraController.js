@@ -21,6 +21,14 @@ const FOLLOW_LOOK_AT_HEIGHT = 1.5;
 const FOLLOW_LOOK_AHEAD = 4;
 const FOLLOW_YAW_LAG_TAU = 0.35;
 const FOLLOW_POS_LAG_TAU = 0.15;
+// Aim yaw is the smoothed heading used to place the look-ahead point.
+// It tracks the dog's facing tighter than the camera-rotation lag (which is
+// 0.35s by design — gives the camera a graceful arc when the dog turns) but
+// not instantaneously: at high refresh rates raw atan2(velocity) picks up
+// physics micro-noise (fence contact, slope, boundary nudges) and the look-at
+// point jitters even though the camera position is smooth. 0.08s is short
+// enough to feel responsive and long enough to filter that noise.
+const FOLLOW_AIM_LAG_TAU = 0.08;
 
 const CLASSIC_LERP_PER_FRAME_AT_60 = 0.05;
 
@@ -95,6 +103,7 @@ export class CameraController {
 
         // Follow-mode internal state (smoothed yaw + position).
         this.followYaw = 0;
+        this.followAimYaw = 0;
         this.followPosition = new THREE.Vector3();
         this.followInitialized = false;
 
@@ -231,6 +240,8 @@ export class CameraController {
         this.mode = CameraMode.CLASSIC;
         this.distance = 80;
         this.freeYaw = 0;
+        this.followYaw = 0;
+        this.followAimYaw = 0;
         this.followInitialized = false;
         this.competitiveDirection = null;
     }
@@ -323,11 +334,14 @@ export class CameraController {
 
         if (!this.followInitialized) {
             this.followYaw = facingAngle;
+            this.followAimYaw = facingAngle;
             this.followPosition.set(dogPosition.x, dogTerrainY + FOLLOW_HEIGHT, dogPosition.z);
             this.followInitialized = true;
         } else {
             const yawK = expSmooth(deltaTime, FOLLOW_YAW_LAG_TAU);
             this.followYaw = lerpAngle(this.followYaw, facingAngle, yawK);
+            const aimK = expSmooth(deltaTime, FOLLOW_AIM_LAG_TAU);
+            this.followAimYaw = lerpAngle(this.followAimYaw, facingAngle, aimK);
         }
 
         // Camera sits behind the dog (opposite the facing dir).
@@ -367,8 +381,8 @@ export class CameraController {
 
         this.camera.position.copy(this.followPosition);
 
-        const lookAheadX = Math.sin(facingAngle) * FOLLOW_LOOK_AHEAD * speedNorm;
-        const lookAheadZ = Math.cos(facingAngle) * FOLLOW_LOOK_AHEAD * speedNorm;
+        const lookAheadX = Math.sin(this.followAimYaw) * FOLLOW_LOOK_AHEAD * speedNorm;
+        const lookAheadZ = Math.cos(this.followAimYaw) * FOLLOW_LOOK_AHEAD * speedNorm;
         this._tmpLook.set(
             dogPosition.x + lookAheadX,
             dogTerrainY + FOLLOW_LOOK_AT_HEIGHT,

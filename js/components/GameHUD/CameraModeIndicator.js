@@ -21,8 +21,17 @@ export function CameraModeIndicator({ mode, platform = 'desktop' }) {
         getSceneManager()?.getCameraController()?.cycleMode?.();
     };
 
+    // Desktop: top-center (slot is free; SheepCounter sits top-left, GameTimer top-right).
+    // Mobile: top-left. The MobileHUD chip lives top-center (pause + sheep + timer + stamina)
+    // so a top-center camera chip would stack on it; the right edge has the zoom rail in
+    // landscape and the panel itself can extend that far on narrow phones. Top-left is empty
+    // on mobile (SheepCounter is desktop-only) and the joystick is well below it.
+    const positionClass = isMobile
+        ? 'fixed top-2 left-2 z-20 animate-slide-down pointer-events-auto'
+        : 'fixed top-6 left-1/2 -translate-x-1/2 z-20 animate-slide-down pointer-events-auto';
+
     return createElement('div', {
-        className: 'fixed top-6 left-1/2 -translate-x-1/2 z-20 animate-slide-down pointer-events-auto',
+        className: positionClass,
         style: { paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)' }
     },
         createElement('button', {
