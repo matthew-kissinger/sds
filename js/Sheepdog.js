@@ -734,11 +734,38 @@ export class Sheepdog {
     }
     
     /**
-     * Apply boundary constraints with velocity correction
+     * Apply boundary constraints with velocity correction.
+     * Accepts either legacy `bounds` rect or new discriminated `Boundary`.
      */
-    applyBoundaryConstraints(bounds) {
+    applyBoundaryConstraints(boundsOrBoundary) {
         let hitBoundary = false;
-        
+
+        // Island branch — radial clamp + zero-out outward velocity component
+        if (boundsOrBoundary && boundsOrBoundary.kind === 'island') {
+            const center = boundsOrBoundary.center;
+            const radius = boundsOrBoundary.radius;
+            const dx = this.position.x - center.x;
+            const dz = this.position.z - center.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist > radius && dist > 1e-6) {
+                const inv = 1 / dist;
+                const nx = dx * inv;  // unit outward normal
+                const nz = dz * inv;
+                this.position.x = center.x + nx * radius;
+                this.position.z = center.z + nz * radius;
+                // Project velocity onto inward half-space (zero out outward component)
+                const vDotN = this.velocity.x * nx + this.velocity.z * nz;
+                if (vDotN > 0) {
+                    this.velocity.x -= vDotN * nx;
+                    this.velocity.z -= vDotN * nz;
+                }
+                hitBoundary = true;
+            }
+            return;
+        }
+
+        // Rect path — preserved
+        const bounds = boundsOrBoundary;
         if (this.position.x < bounds.minX) {
             this.position.x = bounds.minX;
             this.velocity.x = Math.max(0, this.velocity.x);

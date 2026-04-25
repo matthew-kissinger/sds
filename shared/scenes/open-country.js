@@ -1,23 +1,27 @@
 /**
- * Open Country — a wide pastoral field with no perimeter fences. The dog
- * and player must guide the flock to a gate that floats on the terrain
- * with no walls funneling them in. Golden-hour aesthetic reserved for
- * when the renderer's atmosphere wiring lands (Phase B).
- *
- * Sim differentiation today: larger bounds, no fence assumptions, gate
- * pushed deeper, scattered spawn across a wider radius. Heightmap URL
- * is referenced for Phase B asset consumption — runtime tolerates the
- * file being absent because no consumer fetches it yet.
+ * Open Country — Cycle 5: a much larger island than Rolling Hills.
+ * Wilderness round-up loop with woodland zones the sheep wander into.
+ * Coastal pen at the north shore — drive sheep from the woods to the
+ * gate. No perimeter fence (water replaces it).
  *
  * @type {import('./types.js').SceneDef}
  */
 export const openCountry = {
     id: 'open-country',
     name: 'Open Country',
-    description: 'A wide pastoral field. No perimeter fences. Herd them to the gate yourself.',
+    description: 'A wild island of meadow and woods. Drive the flock through the trees to the coastal pen.',
 
-    bounds: { minX: -150, maxX: 150, minZ: -150, maxZ: 150 },
+    // Island ~760m diameter (radius 380) — way bigger than Rolling Hills
+    // per playtest 2026-04-25. 70m falloff keeps the shoreline gentle.
+    boundary: {
+        kind: 'island',
+        center: { x: 0, z: 0 },
+        radius: 380,
+        falloff: 70
+    },
 
+    // Coastal pen on the north shore (Q2 decision). Inside the island
+    // safe radius — at z=130 with safeRadius=200, gate is well within.
     gate: {
         position: { x: 0, z: 130 },
         width: 10
@@ -34,9 +38,9 @@ export const openCountry = {
     sheepSpawn: {
         pattern: 'scattered',
         count: 200,
-        spreadRadius: 80,
+        spreadRadius: 160,
         centerX: 0,
-        centerZ: -50
+        centerZ: -150
     },
 
     terrain: {
@@ -45,11 +49,11 @@ export const openCountry = {
         heightmapUrl: '/terrain/open-country.r32f',
         version: 1,
         zones: {
-            playArea: { minX: -150, maxX: 150, minZ: -150, maxZ: 150 },
-            nearField: { minX: -250, maxX: 250, minZ: -250, maxZ: 250 },
-            midField: { minX: -450, maxX: 450, minZ: -450, maxZ: 450 },
-            farField: { minX: -700, maxX: 700, minZ: -700, maxZ: 700 },
-            horizon: { minX: -900, maxX: 900, minZ: -900, maxZ: 900 }
+            playArea: { minX: -380, maxX: 380, minZ: -380, maxZ: 380 },
+            nearField: { minX: -380, maxX: 380, minZ: -380, maxZ: 380 },
+            midField: { minX: -550, maxX: 550, minZ: -550, maxZ: 550 },
+            farField: { minX: -800, maxX: 800, minZ: -800, maxZ: 800 },
+            horizon: { minX: -1100, maxX: 1100, minZ: -1100, maxZ: 1100 }
         }
     },
 
@@ -67,9 +71,9 @@ export const openCountry = {
     perimeterFence: false,
 
     sky: { preset: 'golden-hour' },
-    fog: { color: '#e8d8b8', near: 250, far: 800 },
 
     allowedModes: ['cooperative', 'timed'],
     defaultMode: 'cooperative',
+    defaultCamera: 'follow',  // Q6: Follow makes the woodland depth read
     difficultyModifier: 1.1
 };

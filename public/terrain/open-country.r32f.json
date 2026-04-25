@@ -1,9 +1,19 @@
 {
   "width": 1024,
   "height": 1024,
-  "worldSize": 400,
+  "worldSize": 900,
   "peakHeight": 5,
   "version": 1,
   "scene": "open-country",
-  "seed": 42
+  "seed": 42,
+  "boundary": {
+    "kind": "island",
+    "center": {
+      "x": 0,
+      "z": 0
+    },
+    "radius": 380,
+    "falloff": 70,
+    "seaLevel": -2
+  }
 }

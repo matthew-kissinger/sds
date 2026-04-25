@@ -554,7 +554,14 @@ export class TerrainBuilder {
                     #include <fog_fragment>
                 }
             `,
-            side: THREE.FrontSide
+            side: THREE.FrontSide,
+            // Cycle 5+: pull terrain depth slightly back so the AnimeWater
+            // plane at y = -0.05 doesn't z-fight at the shoreline where
+            // terrain falls off through sea level. No-op for scenes without
+            // a water plane (Field).
+            polygonOffset: true,
+            polygonOffsetFactor: 1,
+            polygonOffsetUnits: 1
         });
 
         const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
@@ -631,6 +638,16 @@ export class TerrainBuilder {
             pine: []
         };
         
+        // Cycle 5+ island scenes: trees + rocks live ON the island (the
+        // land disk), not OUTSIDE the play-area rect. We invert the
+        // legacy "exclude play area, fill outside" logic into "must be
+        // inside island land, exclude near corral".
+        const islandBoundary = this.sceneDef?.boundary?.kind === 'island' ? this.sceneDef.boundary : null;
+        const corral = this.sceneDef?.corral || null;
+        const islandSafeRadius = islandBoundary
+            ? islandBoundary.radius - islandBoundary.falloff - 4   // 4m past the falloff start = on stable land, not on the slope to water
+            : 0;
+
         // Improved procedural generation using Poisson disk sampling
         const poissonDisk = (minDistance, maxDistance, zone, avoidAreas = []) => {
             const points = [];
@@ -638,26 +655,41 @@ export class TerrainBuilder {
             const grid = {};
             const active = [];
             const k = 30; // Number of attempts before rejection
-            
+
             // Helper to check if point is valid
             const isValidPoint = (x, z) => {
                 // Check zone bounds
                 if (x < zone.minX || x > zone.maxX || z < zone.minZ || z > zone.maxZ) return false;
-                
+
                 // Check avoid areas
                 for (const area of avoidAreas) {
                     if (x >= area.minX && x <= area.maxX && z >= area.minZ && z <= area.maxZ) return false;
                 }
-                
-                // Check pasture areas
-                if (isInPastureArea(x, z)) return false;
 
-                // Check play area (use dynamic bounds with buffer)
-                const playArea = this.zones.playArea;
-                const buffer = 20; // Buffer around play area
-                if (x >= playArea.minX - buffer && x <= playArea.maxX + buffer &&
-                    z >= playArea.minZ - buffer && z <= playArea.maxZ + buffer) {
-                    return false;
+                if (islandBoundary) {
+                    // Island scene — must be inside the land disk, with margin past
+                    // the falloff so trees don't sit on the slope.
+                    const dx = x - islandBoundary.center.x;
+                    const dz = z - islandBoundary.center.z;
+                    const distSq = dx * dx + dz * dz;
+                    if (distSq > islandSafeRadius * islandSafeRadius) return false;
+
+                    // Don't crowd the corral
+                    if (corral) {
+                        const cdx = x - corral.center.x;
+                        const cdz = z - corral.center.z;
+                        const cradius = corral.radius + 5;
+                        if (cdx * cdx + cdz * cdz < cradius * cradius) return false;
+                    }
+                } else {
+                    // Legacy rect scene (Field) — trees decorate OUTSIDE the play area
+                    if (isInPastureArea(x, z)) return false;
+                    const playArea = this.zones.playArea;
+                    const buffer = 20;
+                    if (x >= playArea.minX - buffer && x <= playArea.maxX + buffer &&
+                        z >= playArea.minZ - buffer && z <= playArea.maxZ + buffer) {
+                        return false;
+                    }
                 }
 
                 // Check farm house area
@@ -695,16 +727,22 @@ export class TerrainBuilder {
                 return true;
             };
             
-            // Start with random point
-            const startX = zone.minX + Math.random() * (zone.maxX - zone.minX);
-            const startZ = zone.minZ + Math.random() * (zone.maxZ - zone.minZ);
-            
-            if (isValidPoint(startX, startZ)) {
-                const point = { x: startX, z: startZ };
-                points.push(point);
-                active.push(point);
-                const key = `${Math.floor(startX / cellSize)},${Math.floor(startZ / cellSize)}`;
-                grid[key] = [point];
+            // Start with a random point. Retry up to 100 times — for island
+            // scenes the zone box is much larger than the valid land disc,
+            // so a single shot often lands in water and the algorithm bails
+            // with zero trees. The retry guarantees the seed lands on land
+            // when there's any valid space at all.
+            for (let startAttempt = 0; startAttempt < 100; startAttempt++) {
+                const startX = zone.minX + Math.random() * (zone.maxX - zone.minX);
+                const startZ = zone.minZ + Math.random() * (zone.maxZ - zone.minZ);
+                if (isValidPoint(startX, startZ)) {
+                    const point = { x: startX, z: startZ };
+                    points.push(point);
+                    active.push(point);
+                    const key = `${Math.floor(startX / cellSize)},${Math.floor(startZ / cellSize)}`;
+                    grid[key] = [point];
+                    break;
+                }
             }
             
             // Generate points
@@ -1128,26 +1166,64 @@ export class TerrainBuilder {
             return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
         };
         
-        // Generate rock formations in different zones
-        const zones = [
-            { zone: this.zones.nearField, formations: 2, types: ['cluster'], scaleRange: { min: 8, max: 15 } },
-            { zone: this.zones.midField, formations: 4, types: ['cluster', 'line'], scaleRange: { min: 10, max: 20 } },
-            { zone: this.zones.farField, formations: 6, types: ['cluster', 'line', 'field'], scaleRange: { min: 15, max: 30 } },
-            { zone: this.zones.horizon, formations: 8, types: ['field', 'line'], scaleRange: { min: 25, max: 50 } }
-        ];
-        
+        // Cycle 5+ island scenes: rocks stay on the land (inside the safe
+        // radius), corral kept clear. Same inversion as createTrees.
+        const islandBoundary = this.sceneDef?.boundary?.kind === 'island' ? this.sceneDef.boundary : null;
+
+        // Generate rock formations in different zones.
+        // Island scenes get fewer + smaller rocks (no horizon zone since
+        // that's water; no boulders/rock3-scale since the playtest 2026-04-25
+        // flagged the big rocks as unwelcome). Per-rock-type biasing
+        // (drop rock3) is applied later when rockType is picked.
+        const zones = islandBoundary
+            ? [
+                // Only nearField + midField on islands (rest is water)
+                { zone: this.zones.nearField, formations: 1, types: ['cluster'], scaleRange: { min: 4, max: 7 } },
+                { zone: this.zones.midField, formations: 2, types: ['cluster'], scaleRange: { min: 5, max: 9 } },
+            ]
+            : [
+                { zone: this.zones.nearField, formations: 2, types: ['cluster'], scaleRange: { min: 8, max: 15 } },
+                { zone: this.zones.midField, formations: 4, types: ['cluster', 'line'], scaleRange: { min: 10, max: 20 } },
+                { zone: this.zones.farField, formations: 6, types: ['cluster', 'line', 'field'], scaleRange: { min: 15, max: 30 } },
+                { zone: this.zones.horizon, formations: 8, types: ['field', 'line'], scaleRange: { min: 25, max: 50 } }
+            ];
+
         // Get current play area for rock exclusion
         const playArea = this.zones.playArea;
+        const corral = this.sceneDef?.corral || null;
+        const islandSafeRadius = islandBoundary
+            ? islandBoundary.radius - islandBoundary.falloff - 4
+            : 0;
+
+        const isInWater = (x, z) => {
+            if (!islandBoundary) return false;
+            const dx = x - islandBoundary.center.x;
+            const dz = z - islandBoundary.center.z;
+            return (dx * dx + dz * dz) > islandSafeRadius * islandSafeRadius;
+        };
+        const isInCorralKeepout = (x, z) => {
+            if (!corral) return false;
+            const dx = x - corral.center.x;
+            const dz = z - corral.center.z;
+            const r = corral.radius + 8;  // bigger margin for rocks (large footprint)
+            return (dx * dx + dz * dz) < r * r;
+        };
 
         zones.forEach(({ zone, formations, types, scaleRange }) => {
             for (let f = 0; f < formations; f++) {
                 const centerX = zone.minX + Math.random() * (zone.maxX - zone.minX);
                 const centerZ = zone.minZ + Math.random() * (zone.maxZ - zone.minZ);
 
-                // Skip if in play area (with buffer)
-                const buffer = 50;
-                if (centerX >= playArea.minX - buffer && centerX <= playArea.maxX + buffer &&
-                    centerZ >= playArea.minZ - buffer && centerZ <= playArea.maxZ + buffer) continue;
+                if (islandBoundary) {
+                    // Island scene — must be on land, away from corral
+                    if (isInWater(centerX, centerZ)) continue;
+                    if (isInCorralKeepout(centerX, centerZ)) continue;
+                } else {
+                    // Legacy rect scene — exclude play area
+                    const buffer = 50;
+                    if (centerX >= playArea.minX - buffer && centerX <= playArea.maxX + buffer &&
+                        centerZ >= playArea.minZ - buffer && centerZ <= playArea.maxZ + buffer) continue;
+                }
 
                 // Skip if in farm house area
                 if (this.isInFarmHouseArea(centerX, centerZ)) continue;
@@ -1156,20 +1232,33 @@ export class TerrainBuilder {
                 const formation = createRockFormation(centerX, centerZ, formationType);
 
                 formation.forEach(rock => {
-                    // Skip if too close to play area
-                    const rockBuffer = 20;
-                    if (rock.x >= playArea.minX - rockBuffer && rock.x <= playArea.maxX + rockBuffer &&
-                        rock.z >= playArea.minZ - rockBuffer && rock.z <= playArea.maxZ + rockBuffer) return;
+                    if (islandBoundary) {
+                        // Island scene — drop individual rocks that drifted outside the safe radius or into the corral
+                        if (isInWater(rock.x, rock.z)) return;
+                        if (isInCorralKeepout(rock.x, rock.z)) return;
+                    } else {
+                        // Legacy rect — too-close-to-play-area exclusion
+                        const rockBuffer = 20;
+                        if (rock.x >= playArea.minX - rockBuffer && rock.x <= playArea.maxX + rockBuffer &&
+                            rock.z >= playArea.minZ - rockBuffer && rock.z <= playArea.maxZ + rockBuffer) return;
+                    }
 
                     // Skip if in farm house area
                     if (this.isInFarmHouseArea(rock.x, rock.z)) return;
                     
-                    // Determine rock type based on size
+                    // Determine rock type based on size.
+                    // Island scenes skip rock3 (boulders) entirely — playtest
+                    // 2026-04-25 flagged the big formations as unwelcome on
+                    // a tight playable island. Bias toward rock1 (small).
                     const size = Math.random();
                     let rockType;
-                    if (size < 0.5) rockType = 'rock1';
-                    else if (size < 0.8) rockType = 'rock2';
-                    else rockType = 'rock3';
+                    if (islandBoundary) {
+                        rockType = size < 0.75 ? 'rock1' : 'rock2';
+                    } else {
+                        if (size < 0.5) rockType = 'rock1';
+                        else if (size < 0.8) rockType = 'rock2';
+                        else rockType = 'rock3';
+                    }
                     
                     // Calculate final scale
                     const baseScale = scaleRange.min + Math.random() * (scaleRange.max - scaleRange.min);
@@ -1672,11 +1761,18 @@ export class TerrainBuilder {
      * Add farm house to the scene in the northwest corner
      */
     async addFarmHouse() {
+        // Cycle 5+: scenes with farmHouse: null (or island scenes that
+        // didn't relocate the farmhouse onto the island) skip this entirely.
+        if (this.sceneDef && (this.sceneDef.farmHouse === null || this.sceneDef.farmHouse === undefined)) {
+            console.log('[TERRAIN] Scene has no farmhouse — skipping');
+            return null;
+        }
+
         if (!this.modelsLoaded) {
             console.warn('Models not loaded yet. Loading models...');
             await this.loadModels();
         }
-        
+
         const farmHouseModel = this.models.buildings.farmhouse;
         if (!farmHouseModel) {
             console.error('[ERROR] Farm house model not found');

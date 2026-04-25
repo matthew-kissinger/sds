@@ -1,40 +1,45 @@
 /**
- * Rolling Hills — a harder variant of Home Field, now with real
- * displaced terrain. Sim bounds match Home Field (so the existing
- * fenced perimeter still fits), but the ground rolls beneath via a
- * heightmap reference, and the sky burns dusk-orange.
+ * Rolling Hills — Cycle 5: an island bounded by water, with an off-centre
+ * corral the player must drive sheep into. No perimeter fence, no gate;
+ * the destination is a circular corral reached by navigation across
+ * the heightfield.
  *
  * @type {import('./types.js').SceneDef}
  */
 export const rollingHills = {
     id: 'rolling-hills',
     name: 'Rolling Hills',
-    description: 'Hills you have to climb. The flock scatters wider; the gate sits across the ridge.',
+    description: 'Find the corral on the island. Drive the flock home before they wander into the water.',
 
-    // Sim — bounds match Home Field so the current rendered perimeter fits.
-    // The differentiation is in the spawn + sheep count.
-    bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
-
-    gate: {
-        position: { x: 0, z: 100 },
-        width: 8
+    // Sim — Cycle 5 island. Centre at origin, 90m radius, 15m falloff into sea.
+    boundary: {
+        kind: 'island',
+        center: { x: 0, z: 0 },
+        // Bigger island per playtest 2026-04-25 — original 90m radius felt
+        // cramped. 180m gives a generous open meadow. 40m falloff drops
+        // the slope to ~15° (beach instead of cliff).
+        radius: 180,
+        falloff: 40
     },
 
-    pasture: {
-        centerZ: 115,
-        minX: -30,
-        maxX: 30,
-        minZ: 102,
-        maxZ: 130
+    // Off-centre corral (Q1 decision) — visible from the island centre but
+    // requires navigation to reach. Tall flag/pillar makes it findable from
+    // the far shore; CorralCompass HUD kicks in when off-screen.
+    corral: {
+        center: { x: 110, z: 60 },
+        radius: 8
     },
 
     sheepSpawn: {
         pattern: 'scattered',
         count: 250,
         spreadRadius: 45,
-        centerX: 0,
-        centerZ: -40
+        // Spawn south-west of origin so players have to traverse to reach the corral
+        centerX: -30,
+        centerZ: -30
     },
+
+    perimeterFence: false,
 
     terrain: {
         seed: 1,
@@ -55,15 +60,14 @@ export const rollingHills = {
         colors: { base: '#6a7038', mid: '#9a9858', tip: '#e8c878' }
     },
 
-    farmHouse: {
-        position: { x: 180, z: 160 },
-        exclusionArea: { minX: 140, maxX: 220, minZ: 120, maxZ: 200 }
-    },
+    // No farmhouse on the island — original (180, 160) would sit in the
+    // water with the new boundary. If we want set-dressing later it should
+    // move inside the island disc.
 
     sky: { preset: 'dusk' },
-    fog: { color: '#d8b888', near: 180, far: 600 },
 
     allowedModes: ['cooperative', 'competitive', 'timed'],
     defaultMode: 'cooperative',
+    defaultCamera: 'follow',  // Q6: Follow makes the island depth read
     difficultyModifier: 1.25
 };

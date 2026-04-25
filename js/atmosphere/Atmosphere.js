@@ -246,6 +246,15 @@ export class Atmosphere {
   }
 
   /**
+   * World-space sun direction (unit vector pointing toward the sun).
+   * Consumers (anime water shader sparkles, etc.) should call per frame.
+   * @returns {import('three').Vector3}
+   */
+  getSunDirection() {
+    return this.sun.dirVec;
+  }
+
+  /**
    * Apply weather-derived modulators on top of the preset baselines.
    * Caller passes whichever fields it cares about; the rest stay sticky.
    * @param {Object} intent

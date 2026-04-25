@@ -8,9 +8,17 @@
  *   --worldSize <m>       World extent the heightmap covers in metres (default 400)
  *   --peakHeight <m>      Maximum vertical amplitude in metres (default 6)
  *   --seed <int>          Integer seed (default 1)
+ *   --boundary <kind>     'rect' (default) or 'island' — island applies a radial
+ *                         smoothstep falloff outside `radius - falloff` toward `seaLevel`.
+ *   --radius <m>          Island radius in metres (only used when --boundary island, default 90)
+ *   --falloff <m>         Island falloff width in metres (default 15)
+ *   --seaLevel <m>        Height outside the falloff zone (default -2)
+ *   --centerX <m>         Island centre X (default 0)
+ *   --centerZ <m>         Island centre Z (default 0)
  *   --out <path>          Output .r32f path (required). A sibling .json manifest
  *                         is written next to it with shape
- *                         { width, height, worldSize, peakHeight, version, scene, seed }.
+ *                         { width, height, worldSize, peakHeight, version, scene, seed,
+ *                           boundary?: { kind, ... } }.
  *
  * Notes:
  *   - 3 octaves of ridged fBm: `ridge(n) = 1 - abs(n)`, amplitudes 1.0 / 0.4 / 0.15.
@@ -18,7 +26,9 @@
  *     coords, with origin at world centre) is flattened to 0 — that's the
  *     farmhouse footprint. 'open-country' and others are not flattened.
  *   - When peakHeight <= 0 the output is all zeros (`field` baseline) so consumers
- *     can use a single code path regardless of biome.
+ *     can use a single code path regardless of biome. The `--boundary island`
+ *     falloff is applied AFTER hill generation, so peakHeight=0 + island gives
+ *     a flat sea-level disc at peak.
  *   - Float32Array bytes are written raw, little-endian (Node default). Consumers
  *     should read with `new Float32Array(buf.buffer)`.
  */
@@ -75,32 +85,46 @@ const worldSize = Number(args.worldSize ?? 400);
 const peakHeight = Number(args.peakHeight ?? 6);
 const seed = Number(args.seed ?? 1);
 
+const boundaryKind = (args.boundary ?? 'rect').toString();
+if (boundaryKind !== 'rect' && boundaryKind !== 'island') {
+  throw new Error(`Invalid --boundary ${args.boundary} (must be 'rect' or 'island')`);
+}
+const islandRadius = Number(args.radius ?? 90);
+const islandFalloff = Number(args.falloff ?? 15);
+const seaLevel = Number(args.seaLevel ?? -2);
+const islandCenterX = Number(args.centerX ?? 0);
+const islandCenterZ = Number(args.centerZ ?? 0);
+
 if (!Number.isFinite(size) || size <= 0) throw new Error(`Invalid --size ${args.size}`);
 if (!Number.isFinite(worldSize) || worldSize <= 0) throw new Error(`Invalid --worldSize ${args.worldSize}`);
 if (!Number.isFinite(peakHeight)) throw new Error(`Invalid --peakHeight ${args.peakHeight}`);
 if (!Number.isInteger(seed)) throw new Error(`--seed must be an integer, got ${args.seed}`);
+if (boundaryKind === 'island') {
+  if (!Number.isFinite(islandRadius) || islandRadius <= 0) throw new Error(`Invalid --radius ${args.radius}`);
+  if (!Number.isFinite(islandFalloff) || islandFalloff < 0) throw new Error(`Invalid --falloff ${args.falloff}`);
+  if (islandFalloff > islandRadius) throw new Error(`--falloff (${islandFalloff}) cannot exceed --radius (${islandRadius})`);
+  if (!Number.isFinite(seaLevel)) throw new Error(`Invalid --seaLevel ${args.seaLevel}`);
+}
 
 const heights = new Float32Array(size * size);
 
-if (peakHeight > 0) {
-  const noise = createNoise2D(mulberry32(seed));
-  // Octave amplitudes per the plan; sum so we can normalise the ridged stack to [0, peakHeight].
-  const AMPLITUDES = [1.0, 0.4, 0.15];
-  const FREQUENCIES = [1, 2, 4];
-  const ampSum = AMPLITUDES.reduce((s, a) => s + a, 0);
+const noise = peakHeight > 0 ? createNoise2D(mulberry32(seed)) : null;
+const AMPLITUDES = [1.0, 0.4, 0.15];
+const FREQUENCIES = [1, 2, 4];
+const ampSum = AMPLITUDES.reduce((s, a) => s + a, 0);
+const BASE_FREQ = 2 / worldSize;
+const flatten = SCENES_WITH_FARMHOUSE.has(scene);
+const halfWorld = worldSize / 2;
+const islandSafeRadius = islandRadius - islandFalloff;
 
-  // Base frequency: ~2 ridges across the world extent gives gentle hills.
-  const BASE_FREQ = 2 / worldSize;
-  const flatten = SCENES_WITH_FARMHOUSE.has(scene);
-  const halfWorld = worldSize / 2;
+for (let z = 0; z < size; z++) {
+  // Map pixel index → world coordinate centred on origin.
+  const wz = (z / (size - 1)) * worldSize - halfWorld;
+  for (let x = 0; x < size; x++) {
+    const wx = (x / (size - 1)) * worldSize - halfWorld;
 
-  for (let z = 0; z < size; z++) {
-    // Map pixel index → world coordinate centred on origin.
-    const wz = (z / (size - 1)) * worldSize - halfWorld;
-    for (let x = 0; x < size; x++) {
-      const wx = (x / (size - 1)) * worldSize - halfWorld;
-
-      let h = 0;
+    let h = 0;
+    if (peakHeight > 0 && noise) {
       for (let o = 0; o < AMPLITUDES.length; o++) {
         const f = BASE_FREQ * FREQUENCIES[o];
         const n = noise(wx * f, wz * f); // [-1, 1]
@@ -121,9 +145,25 @@ if (peakHeight > 0) {
           h *= t * t * (3 - 2 * t); // smoothstep
         }
       }
-
-      heights[z * size + x] = h;
     }
+
+    // Island radial falloff: blend computed h toward seaLevel across the
+    // falloff band; clamp to seaLevel outside the radius. Mirrors the
+    // existing farmhouse smoothstep math.
+    if (boundaryKind === 'island') {
+      const dx = wx - islandCenterX;
+      const dz = wz - islandCenterZ;
+      const distFromIsland = Math.sqrt(dx * dx + dz * dz);
+      if (distFromIsland >= islandRadius) {
+        h = seaLevel;
+      } else if (distFromIsland > islandSafeRadius) {
+        const t = (distFromIsland - islandSafeRadius) / islandFalloff;
+        const ts = t * t * (3 - 2 * t); // smoothstep
+        h = h * (1 - ts) + seaLevel * ts;
+      }
+    }
+
+    heights[z * size + x] = h;
   }
 }
 
@@ -140,7 +180,19 @@ const manifest = {
   scene,
   seed,
 };
+if (boundaryKind === 'island') {
+  manifest.boundary = {
+    kind: 'island',
+    center: { x: islandCenterX, z: islandCenterZ },
+    radius: islandRadius,
+    falloff: islandFalloff,
+    seaLevel,
+  };
+}
 await writeFile(`${outAbs}.json`, JSON.stringify(manifest, null, 2) + '\n');
 
 const expectedBytes = size * size * 4;
-console.log(`Baked ${outAbs}: ${size}x${size} float32 (${expectedBytes} bytes), peakHeight=${peakHeight}, seed=${seed}`);
+const islandSummary = boundaryKind === 'island'
+  ? ` island(r=${islandRadius}, falloff=${islandFalloff}, sea=${seaLevel})`
+  : '';
+console.log(`Baked ${outAbs}: ${size}x${size} float32 (${expectedBytes} bytes), peakHeight=${peakHeight}, seed=${seed}${islandSummary}`);

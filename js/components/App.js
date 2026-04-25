@@ -56,6 +56,7 @@ export async function initReactUI() {
             { GameTimer },
             { SheepCounter },
             { CameraModeIndicator },
+            { CorralCompass },
             { MobileHUD },
             { MobileControls },
             { ExtremeTuningPanel },
@@ -89,6 +90,7 @@ export async function initReactUI() {
             import('./GameHUD/GameTimer.js'),
             import('./GameHUD/SheepCounter.js'),
             import('./GameHUD/CameraModeIndicator.js'),
+            import('./GameHUD/CorralCompass.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
             import('./GameHUD/ExtremeTuningPanel.js'),
@@ -906,6 +908,8 @@ export async function initReactUI() {
             const showFullscreenOption = platform === 'mobile' && !(/iPad|iPhone|iPod/.test(navigator.userAgent));
 
             return createElement('div', { className: 'game-hud fixed inset-0 pointer-events-none' }, [
+                // CorralCompass renders on both platforms; auto-hides when corral is on-screen
+                createElement(CorralCompass, { key: 'corral-compass', platform }),
                 platform === 'desktop' && [
                     createElement(GameTimer, { key: 'timer', gameTime: gameData.gameTime, timeLimit: gameData.timeLimit }),
                     createElement(CameraModeIndicator, { key: 'camera-mode', mode: gameData.cameraMode, platform }),

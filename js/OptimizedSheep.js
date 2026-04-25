@@ -578,7 +578,30 @@ export class OptimizedSheepSystem {
                 isHighDifficultyMode
             );
             sheep.updatePosition(deltaTime);
-            
+
+            // Cycle 5+ corral ascend: float upward, shrink, then disappear.
+            // Skip the regular horizontal/heightfield positioning so the
+            // sheep cleanly leaves the playfield instead of seeking a target.
+            if (sheep.isAscending) {
+                const ASCEND_DURATION = 1.6;  // seconds
+                const ASCEND_HEIGHT = 22;     // metres up
+                sheep.ascendT = Math.min(1, (sheep.ascendT || 0) + deltaTime / ASCEND_DURATION);
+                const t = sheep.ascendT;
+                // Ease-out cubic so the sheep accelerates upward then drifts
+                const easedT = 1 - Math.pow(1 - t, 3);
+                const baseY = this.heightfield ? this.heightfield.sample(sheep.position.x, sheep.position.z) : 0;
+                const ascendY = baseY + 0.5 + easedT * ASCEND_HEIGHT;
+                dummy.position.set(sheep.position.x, ascendY, sheep.position.z);
+                dummy.rotation.set(0, 0, 0);
+                // Stay full size until 70% then shrink quickly to nothing
+                const scaleT = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+                const scale = Math.max(0, scaleT);
+                dummy.scale.set(scale, scale, scale);
+                dummy.updateMatrix();
+                this.instancedMesh.setMatrixAt(i, dummy.matrix);
+                continue;
+            }
+
             // Update transform matrix using interpolated render position for smooth movement
             const sheepY = this.heightfield ? this.heightfield.sample(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
@@ -1353,8 +1376,23 @@ export class OptimizedSheepInstance extends Boid {
 
                 // Apply hard constraints unless in gate area
                 if (!inAnyGateArea) {
-                    this.position.x = Math.max(this.bounds.minX + margin, Math.min(this.bounds.maxX - margin, this.position.x));
-                    this.position.z = Math.max(this.bounds.minZ + margin, Math.min(this.bounds.maxZ - margin, this.position.z));
+                    if (this.boundary && this.boundary.kind === 'island') {
+                        // Radial clamp at island radius (with margin)
+                        const cx = this.boundary.center.x;
+                        const cz = this.boundary.center.z;
+                        const dx = this.position.x - cx;
+                        const dz = this.position.z - cz;
+                        const dist = Math.sqrt(dx * dx + dz * dz);
+                        const maxR = this.boundary.radius - margin;
+                        if (dist > maxR && dist > 1e-6) {
+                            const scale = maxR / dist;
+                            this.position.x = cx + dx * scale;
+                            this.position.z = cz + dz * scale;
+                        }
+                    } else {
+                        this.position.x = Math.max(this.bounds.minX + margin, Math.min(this.bounds.maxX - margin, this.position.x));
+                        this.position.z = Math.max(this.bounds.minZ + margin, Math.min(this.bounds.maxZ - margin, this.position.z));
+                    }
                 } else if (currentGateConstraints) {
                     // In gate area - apply gate-specific constraints
                     const gateWidth = currentGateConstraints.maxX - currentGateConstraints.minX;
@@ -1488,11 +1526,34 @@ export class OptimizedSheepInstance extends Boid {
     }
     
     // Boundary avoidance that excludes gate area(s)
-    avoidBoundariesWithGate(bounds, gate) {
+    // Accepts either legacy `bounds` rect or new discriminated `Boundary`.
+    avoidBoundariesWithGate(boundsOrBoundary, gate) {
         const margin = 3;
         const steer = new Vector2D(0, 0);
         const position = this.position;
-        
+
+        // Island branch — radial smoothstep inward force; gates aren't carved (islands have no perimeter gates)
+        if (boundsOrBoundary && boundsOrBoundary.kind === 'island') {
+            const center = boundsOrBoundary.center;
+            const radius = boundsOrBoundary.radius;
+            const falloff = boundsOrBoundary.falloff;
+            const dx = position.x - center.x;
+            const dz = position.z - center.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            const safeRadius = radius - falloff;
+            if (dist > safeRadius && dist > 1e-6) {
+                const tRaw = (dist - safeRadius) / falloff;
+                const t = Math.min(1, Math.max(0, tRaw));
+                const force = t * t * (3 - 2 * t);
+                const inv = 1 / dist;
+                steer.x = -dx * inv * this.maxSpeed * force * 1.2;
+                steer.z = -dz * inv * this.maxSpeed * force * 1.2;
+            }
+            return steer;
+        }
+
+        // Rect path — preserved
+        const bounds = boundsOrBoundary;
         const distToMinX = position.x - bounds.minX;
         const distToMaxX = bounds.maxX - position.x;
         const distToMinZ = position.z - bounds.minZ;
@@ -1718,12 +1779,58 @@ export class OptimizedSheepInstance extends Boid {
                 }
             }
         }
-        
+
         return false;
     }
-    
+
+    /**
+     * Cycle 5+ corral entry check (Rolling Hills). Sheep retires when it
+     * enters the circular corral zone. Returns true the first frame
+     * retirement triggers.
+     *
+     * Sets hasPassedGate (reusing the flag so existing counters work) and
+     * triggers the ascend-into-sky animation. The sheep stops horizontal
+     * movement, rises upward, and fades out — the lightning-zap effect
+     * fires at the sheep's position via a global event.
+     * @param {{center: {x: number, z: number}, radius: number}} corral
+     * @returns {boolean}
+     */
+    checkCorralAndRetire(corral) {
+        if (this.hasPassedGate) return false;
+        if (!corral || !corral.center) return false;
+
+        const dx = this.position.x - corral.center.x;
+        const dz = this.position.z - corral.center.z;
+        const distSq = dx * dx + dz * dz;
+        const r = corral.radius;
+
+        if (distSq <= r * r) {
+            this.hasPassedGate = true;
+            this.isRetiring = true;
+            this.isAscending = true;
+            this.ascendT = 0;
+            this.retirementTarget = null;  // no horizontal target — going straight up
+            this.velocity.set(0, 0);
+            this.acceleration.set(0, 0);
+            this.state = 2;  // grazing-equivalent — boundary force won't apply
+            return true;
+        }
+        return false;
+    }
+
     setBounds(bounds) {
         this.bounds = bounds;
+    }
+
+    /**
+     * Set the discriminated Boundary for this sheep. When set with kind 'island',
+     * boundary force + hard clamp use radial math instead of rect.
+     * Cycle 5+. `setBounds` continues to set the legacy rect bbox; the two
+     * coexist (renderer code may still read this.bounds).
+     * @param {import('../shared/scenes/types.js').Boundary} boundary
+     */
+    setBoundary(boundary) {
+        this.boundary = boundary;
     }
 
     setBorderPoints(borderPoints) {

@@ -98,6 +98,8 @@ sheep-dog-sim-itchio.zip
 # Playtest screenshots (ephemeral)
 cycle2-*.png
 phase-b-*.png
+phase2-*.png
+phase3-*.png
 prod-*.png
 verify-*.png
 verify[0-9]*-*.png

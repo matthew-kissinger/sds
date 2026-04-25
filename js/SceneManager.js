@@ -246,14 +246,38 @@ export class SceneManager {
         return this.cameraController.getCompetitiveDirection();
     }
     
+    /**
+     * Cycle 5+: optionally bind an anime water + depth pre-pass.
+     * When set, render() runs the depth pre-pass (with water hidden) before
+     * the main render so the water shader can sample scene depth for
+     * shoreline foam.
+     *
+     * @param {{mesh: import('three').Mesh, depthPrePass: import('./water/DepthPrePass.js').DepthPrePass, water: {mesh: import('three').Mesh, update: (t: number, sun?: import('three').Vector3) => void, resize: (w: number, h: number) => void, dispose: () => void}}} bundle
+     */
+    setWater(bundle) {
+        this.waterBundle = bundle || null;
+    }
+
     render() {
+        const water = this.waterBundle;
+        if (water && water.depthPrePass && water.mesh) {
+            // Render scene-without-water into the depth target
+            water.mesh.visible = false;
+            water.depthPrePass.render();
+            water.mesh.visible = true;
+        }
         this.renderer.render(this.scene, this.camera);
     }
-    
+
     onWindowResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        if (this.waterBundle) {
+            this.waterBundle.depthPrePass.resize();
+            const dpr = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+            this.waterBundle.water.resize(dpr.x, dpr.y);
+        }
     }
     
     add(object) {

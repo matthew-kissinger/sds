@@ -1,9 +1,19 @@
 {
   "width": 1024,
   "height": 1024,
-  "worldSize": 400,
+  "worldSize": 500,
   "peakHeight": 6,
   "version": 1,
   "scene": "rolling-hills",
-  "seed": 1
+  "seed": 1,
+  "boundary": {
+    "kind": "island",
+    "center": {
+      "x": 0,
+      "z": 0
+    },
+    "radius": 180,
+    "falloff": 40,
+    "seaLevel": -2
+  }
 }

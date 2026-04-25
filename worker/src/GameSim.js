@@ -17,6 +17,7 @@ import {
     applyHardBoundaryConstraints,
     applyHardBoundaryConstraintsWithMultipleGates,
     updateSheepRetirements,
+    updateSheepCorralRetirements,
     checkGameCompletion,
     validateEntityState,
     generateInitialSheepPositions,
@@ -77,11 +78,16 @@ export class GameSimulation {
         }
         
         // Configuration for entities (2x faster for multiplayer)
+        // Cycle 5+: scenes can override boid params via `scene.flocking` (e.g.
+        // larger neighbour radius for the bigger Open Country island, looser
+        // cohesion for the woodland feel). The override merges over the
+        // multiplayer baseline.
         this.sheepConfig = createBoidConfig({
             maxSpeed: 0.24,
             maxForce: 0.05,
             perceptionRadius: 6,
-            separationDistance: 2.5
+            separationDistance: 2.5,
+            ...(this.scene.flocking || {})
         });
         
         this.dogConfigs = new Map(); // playerId -> movement config
@@ -351,10 +357,10 @@ export class GameSimulation {
             const rotationSpeed = 8; // Match client rotation speed
             sheepdog.rotation += rotationDiff * rotationSpeed * this.deltaTime;
 
-            // Apply boundary constraints
+            // Apply boundary constraints (boundary preferred — handles island; bounds fallback for legacy)
             const constrainedPosition = applyHardBoundaryConstraints(
                 sheepdog,
-                this.gameState.bounds,
+                this.gameState.boundary || this.gameState.bounds,
                 null,
                 { margin: 1 }
             );
@@ -516,7 +522,7 @@ export class GameSimulation {
                     // Use single gate boundary avoidance for cooperative mode
                     boundaryForce = calculateBoundaryAvoidanceWithGate(
                         sheep,
-                        this.gameState.bounds,
+                        this.gameState.boundary || this.gameState.bounds,
                         this.gameState.gate,
                         {
                             margin: 4,
@@ -547,7 +553,7 @@ export class GameSimulation {
                     // Use single gate boundary constraints for cooperative mode
                     constrainedPosition = applyHardBoundaryConstraints(
                         sheep,
-                        this.gameState.bounds,
+                        this.gameState.boundary || this.gameState.bounds,
                         this.gameState.gate,
                         { margin: 0.5, allowGatePassage: true }
                     );
@@ -595,6 +601,15 @@ export class GameSimulation {
             }
             
             this.gameState.sheepRetired = retirementResult.totalRetired;
+        } else if (this.gameState.corral) {
+            // Cycle 5+: corral-based retirement (Rolling Hills). Sheep are
+            // retired when they enter the corral radius instead of crossing
+            // a gate. No pasture rect — random target inside the corral disc.
+            const retirementResult = updateSheepCorralRetirements(
+                this.gameState.sheep,
+                this.gameState.corral
+            );
+            this.gameState.sheepRetired = retirementResult.totalRetired;
         } else {
             // Use cooperative retirement logic
             const retirementResult = updateSheepRetirements(
@@ -602,7 +617,7 @@ export class GameSimulation {
                 this.gameState.gate,
                 this.gameState.pasture
             );
-            
+
             this.gameState.sheepRetired = retirementResult.totalRetired;
         }
     }

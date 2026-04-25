@@ -178,6 +178,20 @@ class SheepDogSimulation {
         if (activeSceneId !== DEFAULT_SCENE_ID) {
             console.log(`[SCENE] Loaded "${this.currentScene.name}" (${activeSceneId}) from URL param`);
         }
+        // Cycle 5+: propagate discriminated boundary if the scene declares one.
+        // Field stays on legacy bounds; Rolling Hills + Open Country migrate
+        // to island in Phases 2/3.
+        if (this.currentScene.boundary) {
+            this.gameState.setBoundary(this.currentScene.boundary);
+        }
+        // Cycle 5+: apply scene-specific flocking override if present (Phase 1.5).
+        if (this.currentScene.flocking) {
+            this.gameState.setFlockingOverride(this.currentScene.flocking);
+        }
+        // Cycle 5+: corral replaces gate+pasture for island scenes that have one.
+        if (this.currentScene.corral) {
+            this.gameState.setCorral(this.currentScene.corral);
+        }
         this.heightfield = null; // Loaded async in init() before createTerrain.
 
         // Atmosphere takes over scene.fog + adds a Hosek-Wilkie sky dome.
@@ -223,7 +237,13 @@ class SheepDogSimulation {
         this.mobileControls.setCameraController(this.cameraController);
         try {
             const savedMode = localStorage.getItem('camera-mode');
-            if (savedMode) this.cameraController.setMode(savedMode);
+            if (savedMode) {
+                // User preference wins
+                this.cameraController.setMode(savedMode);
+            } else if (this.currentScene.defaultCamera) {
+                // Cycle 5+: scene-suggested default (Rolling Hills + Open Country use 'follow')
+                this.cameraController.setMode(this.currentScene.defaultCamera);
+            }
         } catch (_) { /* localStorage may be unavailable */ }
         window.addEventListener('camera-mode-set', (e) => {
             if (e?.detail) this.cameraController.setMode(e.detail);
@@ -412,8 +432,58 @@ class SheepDogSimulation {
                 this.gameState.getBounds(),
                 this.gameState.getGate(),
                 this.gameState.getPasture(),
-                { perimeterFence: this.currentScene.perimeterFence !== false }
+                {
+                    perimeterFence: this.currentScene.perimeterFence !== false,
+                    corral: this.currentScene.corral || null
+                }
             );
+
+            // Cycle 5+: corral zap-effect pool (lightning + particles when
+            // sheep enter the corral). Listens for 'corral-retired' events
+            // dispatched by GameState's retirement loop.
+            if (this.currentScene.corral) {
+                const { CorralZapEffectPool } = await import('./effects/CorralZapEffect.js');
+                this._corralZapPool = new CorralZapEffectPool(this.sceneManager.getScene());
+                window.addEventListener('corral-retired', (e) => {
+                    if (e?.detail && this._corralZapPool) {
+                        this._corralZapPool.fire(e.detail);
+                    }
+                });
+            }
+
+            // Cycle 5+: anime water + depth pre-pass for island scenes.
+            // Built after structures so the depth target sees the same
+            // geometry the main pass will. Hidden in non-island scenes.
+            if (this.currentScene.boundary?.kind === 'island') {
+                logStep('Building anime water');
+                const { DepthPrePass } = await import('./water/DepthPrePass.js');
+                const { createAnimeWater } = await import('./water/AnimeWater.js');
+                const renderer = this.sceneManager.getRenderer();
+                const camera = this.sceneManager.getCamera();
+                const scene = this.sceneManager.getScene();
+
+                const depthPrePass = new DepthPrePass({
+                    renderer,
+                    scene,
+                    camera,
+                    isMobile: this.sceneManager.isMobile,
+                });
+                const water = createAnimeWater({
+                    renderer,
+                    camera,
+                    depthTexture: depthPrePass.texture,
+                    size: this.sceneManager.isMobile ? 3200 : 4000,
+                    y: -0.05,
+                    segments: this.sceneManager.isMobile ? 32 : 64,
+                });
+                scene.add(water.mesh);
+                this.sceneManager.setWater({
+                    mesh: water.mesh,
+                    depthPrePass,
+                    water,
+                });
+                this._animeWater = water;  // for per-frame uTime updates
+            }
 
             // Verify jep model before creating sheepdog
             if (!this.terrainBuilder.models.animals['jep']) {
@@ -896,12 +966,15 @@ class SheepDogSimulation {
             );
             console.log('[LOCAL] Built versus structures with 2 gates');
         } else {
-            // Co-op and Timed: single gate at north
+            // Co-op and Timed: single gate at north (or corral for Cycle 5+ island scenes)
             this.structureBuilder.buildSinglePlayerStructures(
                 this.gameState.getBounds(),
                 this.gameState.getGate(),
                 this.gameState.getPasture(),
-                { perimeterFence: this.currentScene.perimeterFence !== false }
+                {
+                    perimeterFence: this.currentScene.perimeterFence !== false,
+                    corral: this.currentScene.corral || null
+                }
             );
         }
 
@@ -1486,7 +1559,7 @@ class SheepDogSimulation {
                 const actualSprintState = serverSprintState !== null ? serverSprintState : wantsSprint;
                 
                 // 1. PREDICT: Run local simulation for our dog for instant feedback
-                sheepdog.move(movementDirection, this.gameState.getBounds(), deltaTime, actualSprintState);
+                sheepdog.move(movementDirection, this.gameState.getBoundary(), deltaTime, actualSprintState);
                 
                 const isMovingNow = movementDirection.magnitude() > 0 || wantsSprint;
 
@@ -1519,7 +1592,7 @@ class SheepDogSimulation {
                 // Client only handles rendering
             } else {
                 // --- SINGLE-PLAYER LOGIC (Unchanged) ---
-                sheepdog.move(movementDirection, this.gameState.getBounds(), deltaTime, wantsSprint);
+                sheepdog.move(movementDirection, this.gameState.getBoundary(), deltaTime, wantsSprint);
             }
             
             // Start timer on first actual movement
@@ -1746,6 +1819,17 @@ class SheepDogSimulation {
 
         // Update performance monitoring (always update for monitoring purposes)
         this.performanceMonitor.updateMetrics(this.gameState, this.sceneManager.getRenderer());
+
+        // Cycle 5+: animate water uniforms (uTime drives ripples + foam noise)
+        if (this._animeWater) {
+            const sun = this.atmosphere?.getSunDirection?.();
+            this._animeWater.update(performance.now() * 0.001, sun);
+        }
+
+        // Cycle 5+: corral lightning-zap pool
+        if (this._corralZapPool) {
+            this._corralZapPool.update(deltaTime);
+        }
 
         // Render the scene (always render to show pause indicator)
         this.sceneManager.render();
@@ -1989,7 +2073,7 @@ class SheepDogSimulation {
         const p2Direction = this.localInputHandler.getPlayer2Direction();
         const p2Sprint = this.localInputHandler.isPlayer2Sprinting();
 
-        const bounds = this.gameState.getBounds();
+        const bounds = this.gameState.getBoundary();
 
         // Get camera distance for distance indicators
         const cameraDistance = this.twoPlayerCamera ? this.twoPlayerCamera.getDistance() : 80;

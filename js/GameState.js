@@ -25,6 +25,18 @@ export class GameState {
         // Field boundaries - from FieldConfig
         this.bounds = fieldConfig.bounds;
 
+        // Discriminated boundary (Cycle 5+). Defaults to null; main.js sets
+        // it from currentScene.boundary after loadScene. When set with
+        // kind='island', sheep + dog use radial math instead of rect.
+        /** @type {import('../shared/scenes/types.js').Boundary | null} */
+        this.boundary = null;
+
+        // Corral (Cycle 5+ Rolling Hills). When set, sheep retire on entering
+        // the corral disc instead of crossing a gate. Replaces gate+pasture
+        // for the win condition.
+        /** @type {import('../shared/scenes/types.js').CorralDef | null} */
+        this.corral = null;
+
         // Game mode ('solo', 'multiplayer', 'competitive', 'sandbox')
         this.gameMode = 'solo';
 
@@ -125,6 +137,9 @@ export class GameState {
         // Set bounds and borderPoints for each sheep instance
         this.sheep.forEach(sheep => {
             sheep.setBounds(this.bounds);
+            if (this.boundary) {
+                sheep.setBoundary(this.boundary);
+            }
             if (this.borderPoints && this.borderPoints.length >= 3) {
                 sheep.setBorderPoints(this.borderPoints);
             }
@@ -309,7 +324,7 @@ export class GameState {
             this.gameActive ? this.sheepdog : null, // Only pass sheepdog if game is active
             this.gameActive ? this.getGateForSheepBehavior() : null,     // Use appropriate gate for current mode
             this.gameActive ? this.getPastureForSheepBehavior() : null,  // Use appropriate pasture for current mode
-            this.bounds,  // Always pass bounds so sheep stay in field
+            this.getBoundary(),  // Pass boundary (Cycle 5+) or bounds (legacy rect) — sheep avoid functions accept either
             this.params,  // Always pass params so sheep can flock
             true, // enableIndividualBleating
             this.gameMode === 'multiplayer', // isMultiplayer flag
@@ -324,19 +339,31 @@ export class GameState {
                 
                 // Count retired sheep
                 for (let sheep of this.sheep) {
-                    // Check if sheep has passed gate
+                    // Check retirement trigger:
+                    //   - Cycle 5+: corral entry (Rolling Hills) when scene has `corral`
+                    //   - Legacy: gate passage (Field, Open Country)
                     if (!sheep.hasPassedGate && !sheep.isRetiring) {
-                        if (sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior(), this.getPastureForSheepBehavior())) {
-                            // Sheep just passed through the gate
+                        let triggered = false;
+                        if (this.corral) {
+                            triggered = sheep.checkCorralAndRetire(this.corral);
+                        } else {
+                            triggered = sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior(), this.getPastureForSheepBehavior());
+                        }
+                        if (triggered) {
                             this.sheepRetired++;
-                            
-                            // Play rewarding chime sound
                             if (this.audioManager) {
                                 this.audioManager.playRewardingChime();
                             }
+                            // Cycle 5+: corral entry triggers a lightning zap
+                            // effect. main.js listens and fires CorralZapEffect.
+                            if (this.corral) {
+                                window.dispatchEvent(new CustomEvent('corral-retired', {
+                                    detail: { x: sheep.position.x, z: sheep.position.z, y: sheep.mesh?.position?.y ?? 0 }
+                                }));
+                            }
                         }
                     }
-                    
+
                     // Count all sheep that have passed or are retiring
                     if (sheep.hasPassedGate || sheep.isRetiring) {
                         this.sheepRetired++;
@@ -495,6 +522,52 @@ export class GameState {
     // Getters
     getBounds() {
         return this.bounds;
+    }
+
+    /**
+     * Returns the discriminated boundary if set (Cycle 5+ scenes), else the
+     * legacy rect bounds. Both shapes are accepted by Sheepdog.applyBoundaryConstraints
+     * and OptimizedSheep.avoidBoundariesWithGate.
+     * @returns {import('../shared/scenes/types.js').Boundary | Object}
+     */
+    getBoundary() {
+        return this.boundary || this.bounds;
+    }
+
+    /**
+     * Set the discriminated boundary and propagate to existing sheep.
+     * Call this after loading a scene def whose boundary is `island` or
+     * any other non-rect shape.
+     * @param {import('../shared/scenes/types.js').Boundary} boundary
+     */
+    setBoundary(boundary) {
+        this.boundary = boundary;
+        if (this.optimizedSheepSystem) {
+            const sheepArr = this.optimizedSheepSystem.getSheep();
+            for (const sheep of sheepArr) {
+                sheep.setBoundary(boundary);
+            }
+        }
+    }
+
+    /**
+     * Apply a per-scene flocking override (Cycle 5+). Merges the override
+     * keys into `this.params`. Field stays untouched (no override → no merge).
+     * Call after loadScene, before startGame.
+     * @param {import('../shared/scenes/types.js').FlockingOverride} [override]
+     */
+    setFlockingOverride(override) {
+        if (!override) return;
+        Object.assign(this.params, override);
+    }
+
+    /**
+     * Set the corral (Cycle 5+ Rolling Hills). Triggers corral-based
+     * retirement instead of gate-based. Pass null to revert.
+     * @param {import('../shared/scenes/types.js').CorralDef | null} corral
+     */
+    setCorral(corral) {
+        this.corral = corral;
     }
     
     getGate() {
@@ -747,6 +820,9 @@ export class GameState {
             // Update bounds and borderPoints for all sheep to match new field
             this.sheep.forEach(sheep => {
                 sheep.setBounds(this.bounds);
+                if (this.boundary) {
+                    sheep.setBoundary(this.boundary);
+                }
                 if (this.borderPoints && this.borderPoints.length >= 3) {
                     sheep.setBorderPoints(this.borderPoints);
                 }

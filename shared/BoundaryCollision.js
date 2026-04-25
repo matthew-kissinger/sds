@@ -1,35 +1,91 @@
 import { Vector2D } from './Vector2D.js';
 
 /**
- * Pure boundary and collision detection functions
- * Stateless and deterministic - no external dependencies
+ * Pure boundary and collision detection functions.
+ * Stateless and deterministic — no external dependencies.
+ *
+ * Cycle 5 introduced a discriminated `Boundary` (rect | island). The public
+ * dispatchers accept EITHER a legacy `bounds` object `{minX, maxX, minZ, maxZ}`
+ * OR a `Boundary` `{kind, ...}` and route internally on `kind`. Existing
+ * call sites passing legacy `bounds` keep working unchanged — the rect path
+ * is byte-identical to pre-Cycle-5 behaviour, which protects sim baselines.
+ *
+ * @typedef {import('./scenes/types.js').Boundary} Boundary
  */
 
 /**
- * Calculate boundary avoidance force for standard boundaries
+ * Normalise an arg that may be a legacy `bounds` rect object or a tagged
+ * `Boundary`. Always returns a tagged Boundary.
+ * @param {Object} boundsOrBoundary
+ * @returns {Boundary}
+ */
+function asBoundary(boundsOrBoundary) {
+    if (boundsOrBoundary && boundsOrBoundary.kind) {
+        return boundsOrBoundary;
+    }
+    // Legacy: assume rect bounds
+    return {
+        kind: 'rect',
+        minX: boundsOrBoundary.minX,
+        maxX: boundsOrBoundary.maxX,
+        minZ: boundsOrBoundary.minZ,
+        maxZ: boundsOrBoundary.maxZ
+    };
+}
+
+/**
+ * Cached rect view of an island for code paths that need a bounding box
+ * (debug HUD, prop placement). For rect boundaries returns the rect directly.
+ * @param {Boundary} boundary
+ */
+function boundaryAsRect(boundary) {
+    if (boundary.kind === 'rect') {
+        return boundary;
+    }
+    const r = boundary.radius;
+    return {
+        minX: boundary.center.x - r,
+        maxX: boundary.center.x + r,
+        minZ: boundary.center.z - r,
+        maxZ: boundary.center.z + r
+    };
+}
+
+/**
+ * Calculate boundary avoidance force for standard boundaries.
+ * Accepts legacy `bounds` or new `Boundary`.
  * @param {Object} entity - Entity with position and velocity
- * @param {Object} bounds - Boundary definition {minX, maxX, minZ, maxZ}
+ * @param {Object} boundsOrBoundary - Bounds rect or Boundary discriminated union
  * @param {Object} config - Boundary configuration
  * @returns {Vector2D} - Boundary avoidance force
  */
-export function calculateBoundaryAvoidance(entity, bounds, config = {}) {
+export function calculateBoundaryAvoidance(entity, boundsOrBoundary, config = {}) {
+    const boundary = asBoundary(boundsOrBoundary);
+    if (boundary.kind === 'island') {
+        return calculateIslandAvoidance(entity, boundary, config);
+    }
+    return calculateRectAvoidance(entity, boundary, config);
+}
+
+/**
+ * Rect-path implementation. Math preserved byte-identical to pre-Cycle-5.
+ */
+function calculateRectAvoidance(entity, bounds, config = {}) {
     const {
         margin = 10,
         maxSpeed = 1.5,
         maxForce = 0.05,
         forceMultiplier = 1.5
     } = config;
-    
+
     const steer = new Vector2D(0, 0);
     const position = entity.position;
-    
-    // Calculate distances to boundaries
+
     const distToMinX = position.x - bounds.minX;
     const distToMaxX = bounds.maxX - position.x;
     const distToMinZ = position.z - bounds.minZ;
     const distToMaxZ = bounds.maxZ - position.z;
-    
-    // Apply repulsion force based on proximity to boundary
+
     if (distToMinX < margin) {
         const force = (margin - distToMinX) / margin;
         steer.x = maxSpeed * force * 1.2;
@@ -37,7 +93,7 @@ export function calculateBoundaryAvoidance(entity, bounds, config = {}) {
         const force = (margin - distToMaxX) / margin;
         steer.x = -maxSpeed * force * 1.2;
     }
-    
+
     if (distToMinZ < margin) {
         const force = (margin - distToMinZ) / margin;
         steer.z = maxSpeed * force * 1.2;
@@ -45,40 +101,110 @@ export function calculateBoundaryAvoidance(entity, bounds, config = {}) {
         const force = (margin - distToMaxZ) / margin;
         steer.z = -maxSpeed * force * 1.2;
     }
-    
+
     if (steer.magnitude() > 0) {
         steer.normalize();
         steer.multiply(maxSpeed * forceMultiplier);
         steer.subtract(entity.velocity);
         steer.limit(maxForce * 2.5);
     }
-    
+
     return steer;
 }
 
 /**
- * Calculate boundary avoidance force that excludes gate area
+ * Island-path implementation. Radial smoothstep inward force inside the
+ * falloff zone; zero force inside the safe zone. Hard clamp at radius
+ * is applied separately by applyHardBoundaryConstraints.
+ *
+ *   safe zone:   d < radius - falloff       → force = 0
+ *   falloff:     d ∈ [radius - falloff, radius] → smoothstep ramp inward
+ *   outside:     d > radius                 → force at maximum (clamp does the rest)
+ */
+function calculateIslandAvoidance(entity, boundary, config = {}) {
+    const {
+        margin = 10,
+        maxSpeed = 1.5,
+        maxForce = 0.05,
+        forceMultiplier = 1.5
+    } = config;
+
+    const steer = new Vector2D(0, 0);
+    const position = entity.position;
+    const center = boundary.center;
+    const radius = boundary.radius;
+    const falloff = boundary.falloff;
+
+    const dx = position.x - center.x;
+    const dz = position.z - center.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    const safeRadius = radius - falloff;
+
+    if (dist <= safeRadius) {
+        return steer;
+    }
+
+    // Smoothstep t in [0, 1] across the falloff zone, saturating outside
+    const tRaw = (dist - safeRadius) / falloff;
+    const t = Math.min(1, Math.max(0, tRaw));
+    const force = t * t * (3 - 2 * t);
+
+    if (dist > 1e-6) {
+        // Inward unit vector
+        const inv = 1 / dist;
+        steer.x = -dx * inv * maxSpeed * force * 1.2;
+        steer.z = -dz * inv * maxSpeed * force * 1.2;
+    }
+
+    if (steer.magnitude() > 0) {
+        steer.normalize();
+        steer.multiply(maxSpeed * forceMultiplier);
+        steer.subtract(entity.velocity);
+        steer.limit(maxForce * 2.5);
+    }
+
+    return steer;
+}
+
+/**
+ * Calculate boundary avoidance force that excludes gate area.
+ * Accepts legacy `bounds` or new `Boundary`. Island branch ignores `gate`
+ * (islands don't have gates as boundary openings — gates if present are
+ * inside the island).
  * @param {Object} entity - Entity with position and velocity
- * @param {Object} bounds - Boundary definition
- * @param {Object} gate - Gate definition {position, width}
+ * @param {Object} boundsOrBoundary - Bounds rect or Boundary discriminated union
+ * @param {Object} gate - Gate definition {position, width} (rect only)
  * @param {Object} config - Configuration
  * @returns {Vector2D} - Boundary avoidance force
  */
-export function calculateBoundaryAvoidanceWithGate(entity, bounds, gate, config = {}) {
+export function calculateBoundaryAvoidanceWithGate(entity, boundsOrBoundary, gate, config = {}) {
+    const boundary = asBoundary(boundsOrBoundary);
+    if (boundary.kind === 'island') {
+        // Island: same radial avoidance, no gate carve-out
+        return calculateIslandAvoidance(entity, boundary, {
+            margin: config.margin ?? 3,
+            maxSpeed: config.maxSpeed ?? 0.1,
+            maxForce: config.maxForce ?? 0.02,
+            forceMultiplier: 1.5
+        });
+    }
+
+    // Rect path — preserved byte-identical.
+    const bounds = boundary;
     const {
         margin = 3,
         maxSpeed = 0.1,
         maxForce = 0.02
     } = config;
-    
+
     const steer = new Vector2D(0, 0);
     const position = entity.position;
-    
+
     const distToMinX = position.x - bounds.minX;
     const distToMaxX = bounds.maxX - position.x;
     const distToMinZ = position.z - bounds.minZ;
     const distToMaxZ = bounds.maxZ - position.z;
-    
+
     if (distToMinX < margin) {
         const force = (margin - distToMinX) / margin;
         steer.x = maxSpeed * force * 1.2;
@@ -86,32 +212,30 @@ export function calculateBoundaryAvoidanceWithGate(entity, bounds, gate, config 
         const force = (margin - distToMaxX) / margin;
         steer.x = -maxSpeed * force * 1.2;
     }
-    
+
     if (distToMinZ < margin) {
-        // Check if near a south gate
-        const nearSouthGateX = gate && gate.position.z <= bounds.minZ + 5 ? 
+        const nearSouthGateX = gate && gate.position.z <= bounds.minZ + 5 ?
             Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
         if (!nearSouthGateX) {
             const force = (margin - distToMinZ) / margin;
             steer.z = maxSpeed * force * 1.2;
         }
     } else if (distToMaxZ < margin) {
-        // Check if near a north gate
-        const nearNorthGateX = gate && gate.position.z >= bounds.maxZ - 5 ? 
+        const nearNorthGateX = gate && gate.position.z >= bounds.maxZ - 5 ?
             Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
         if (!nearNorthGateX) {
             const force = (margin - distToMaxZ) / margin;
             steer.z = -maxSpeed * force * 1.2;
         }
     }
-    
+
     if (steer.magnitude() > 0) {
         steer.normalize();
         steer.multiply(maxSpeed * 1.5);
         steer.subtract(entity.velocity);
         steer.limit(maxForce * 2.5);
     }
-    
+
     return steer;
 }
 
@@ -219,36 +343,64 @@ export function calculateBoundaryAvoidanceWithMultipleGates(entity, bounds, comp
 }
 
 /**
- * Apply hard boundary constraints to entity position
+ * Apply hard boundary constraints to entity position.
+ * Accepts legacy `bounds` or new `Boundary`. Island branch clamps radially.
  * @param {Object} entity - Entity with position
- * @param {Object} bounds - Boundary definition
- * @param {Object} gate - Optional gate definition
+ * @param {Object} boundsOrBoundary - Bounds rect or Boundary discriminated union
+ * @param {Object} gate - Optional gate definition (rect only)
  * @param {Object} config - Configuration
  * @returns {Vector2D} - Constrained position
  */
-export function applyHardBoundaryConstraints(entity, bounds, gate = null, config = {}) {
+export function applyHardBoundaryConstraints(entity, boundsOrBoundary, gate = null, config = {}) {
+    const boundary = asBoundary(boundsOrBoundary);
+    if (boundary.kind === 'island') {
+        return applyHardBoundaryConstraintsIsland(entity, boundary, config);
+    }
+
+    // Rect path — preserved byte-identical.
+    const bounds = boundary;
     const {
         margin = 0.2,
         allowGatePassage = false
     } = config;
-    
+
     const position = entity.position.clone();
-    
-    // Check if entity is in the gate area
-    const inGateArea = allowGatePassage && gate && 
-        Math.abs(position.x) <= gate.width / 2 && 
-        position.z >= gate.position.z - 2 && 
+
+    const inGateArea = allowGatePassage && gate &&
+        Math.abs(position.x) <= gate.width / 2 &&
+        position.z >= gate.position.z - 2 &&
         position.z <= gate.position.z + 2;
-    
+
     if (!inGateArea) {
-        // Apply hard constraints
         position.x = Math.max(bounds.minX + margin, Math.min(bounds.maxX - margin, position.x));
         position.z = Math.max(bounds.minZ + margin, Math.min(bounds.maxZ - margin, position.z));
     } else if (gate) {
-        // In gate area - only constrain X to gate width, allow Z movement
         position.x = Math.max(-gate.width / 2, Math.min(gate.width / 2, position.x));
     }
-    
+
+    return position;
+}
+
+/**
+ * Hard radial clamp at island boundary `radius` (with safety margin).
+ * Entities cannot leave the island.
+ */
+function applyHardBoundaryConstraintsIsland(entity, boundary, config = {}) {
+    const { margin = 0.2 } = config;
+    const position = entity.position.clone();
+    const center = boundary.center;
+    const maxR = boundary.radius - margin;
+
+    const dx = position.x - center.x;
+    const dz = position.z - center.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    if (dist > maxR && dist > 1e-6) {
+        const scale = maxR / dist;
+        position.x = center.x + dx * scale;
+        position.z = center.z + dz * scale;
+    }
+
     return position;
 }
 

@@ -120,6 +120,52 @@ export function createBoundaryConfig(overrides = {}) {
 }
 
 /**
+ * Synthesise a `Boundary` discriminated union from a scene def. If the scene
+ * already has `scene.boundary`, it wins (it's a superset). If only the legacy
+ * `bounds` field is present, wrap it as `{ kind: 'rect', ...bounds }`.
+ *
+ * Caller may pass an override `boundsOverride` (legacy `bounds` shape) which
+ * takes priority — this preserves the existing `createGameState({ bounds })`
+ * call signature.
+ *
+ * @param {Object} scene
+ * @param {Object} [boundsOverride]
+ * @returns {import('./scenes/types.js').Boundary}
+ */
+export function resolveBoundary(scene, boundsOverride) {
+    if (boundsOverride) {
+        return { kind: 'rect', ...boundsOverride };
+    }
+    if (scene.boundary) {
+        return scene.boundary;
+    }
+    if (scene.bounds) {
+        return { kind: 'rect', ...scene.bounds };
+    }
+    throw new Error(`Scene "${scene.id}" has neither boundary nor bounds`);
+}
+
+/**
+ * Derive legacy rect bounds from a Boundary for code paths that haven't
+ * migrated yet (renderer fall-through, prop placement, debug HUD). For
+ * islands we return the bounding box of the radius — close enough for
+ * non-sim-critical uses; sim code should consume `boundary` directly.
+ *
+ * @param {import('./scenes/types.js').Boundary} boundary
+ * @returns {import('./scenes/types.js').Bounds}
+ */
+export function boundaryToBounds(boundary) {
+    if (boundary.kind === 'rect') {
+        return { minX: boundary.minX, maxX: boundary.maxX, minZ: boundary.minZ, maxZ: boundary.maxZ };
+    }
+    if (boundary.kind === 'island') {
+        const r = boundary.radius;
+        return { minX: boundary.center.x - r, maxX: boundary.center.x + r, minZ: boundary.center.z - r, maxZ: boundary.center.z + r };
+    }
+    throw new Error(`Unknown boundary.kind: ${boundary.kind}`);
+}
+
+/**
  * Utility function to create a standard game state structure
  * @param {Object} config - Game configuration
  * @returns {Object} - Initial game state
@@ -128,15 +174,15 @@ export function createGameState(config = {}) {
     const { sceneId = DEFAULT_SCENE_ID, totalSheep, bounds, gatePosition, gateWidth, pastureConfig } = config;
     const scene = loadScene(sceneId);
 
-    const effectiveBounds = bounds ?? scene.bounds;
-    const effectiveGatePos = gatePosition ?? scene.gate.position;
-    const effectiveGateWidth = gateWidth ?? scene.gate.width;
-    const effectivePasture = pastureConfig ?? scene.pasture;
+    const effectiveBoundary = resolveBoundary(scene, bounds);
+    const effectiveBounds = boundaryToBounds(effectiveBoundary);
+    const effectiveGatePos = gatePosition ?? scene.gate?.position ?? null;
+    const effectiveGateWidth = gateWidth ?? scene.gate?.width ?? null;
+    const effectivePasture = pastureConfig ?? scene.pasture ?? null;
     const effectiveTotalSheep = totalSheep ?? scene.sheepSpawn.count;
 
-    return {
-        bounds: effectiveBounds,
-        gate: {
+    const gate = effectiveGatePos
+        ? {
             position: new Vector2D(effectiveGatePos.x, effectiveGatePos.z),
             width: effectiveGateWidth,
             height: 4,
@@ -146,8 +192,15 @@ export function createGameState(config = {}) {
                 minZ: effectiveGatePos.z - 2,
                 maxZ: effectiveGatePos.z + 2
             }
-        },
+        }
+        : null;
+
+    return {
+        boundary: effectiveBoundary,
+        bounds: effectiveBounds,
+        gate,
         pasture: effectivePasture,
+        corral: scene.corral ?? null,
         params: {
             speed: 0.1,
             cohesion: 1.0,

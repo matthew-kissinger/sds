@@ -211,10 +211,19 @@ export class StructureBuilder {
      *  like Open Country.
      */
     buildSinglePlayerStructures(bounds, gate, pasture, opts = {}) {
-        const { perimeterFence = true } = opts;
-        console.log(`[BUILD] Building single player structures (perimeterFence=${perimeterFence})`);
+        const { perimeterFence = true, corral = null } = opts;
+        console.log(`[BUILD] Building single player structures (perimeterFence=${perimeterFence}, corral=${!!corral})`);
 
         this.clearAllStructures();
+
+        // Cycle 5+ corral scene (Rolling Hills): the corral marker replaces
+        // the perimeter pen+gate. Even if FieldConfig still surfaces a legacy
+        // gate object, corral wins — no fence ring, no pen at the perimeter.
+        if (corral) {
+            this.buildCorralStructure(corral);
+            console.log('[OK] Corral structures built');
+            return;
+        }
 
         const fenceGroup = perimeterFence
             ? this.fenceConfigBuilder.buildSinglePlayerFences(bounds, gate, pasture)
@@ -230,6 +239,66 @@ export class StructureBuilder {
         }
 
         console.log('[OK] Single player structures built');
+    }
+
+    /**
+     * Cycle 5+ corral marker. Builds a tall flag pillar at corral.center so
+     * the destination is findable from the far shore. The corral disc itself
+     * is the retirement-trigger zone (no fence walls); sheep within
+     * `corral.radius` of the centre enter retirement.
+     *
+     * @param {{center: {x: number, z: number}, radius: number}} corral
+     */
+    buildCorralStructure(corral) {
+        const group = new THREE.Group();
+        group.name = 'CorralMarker';
+
+        // Pillar: 8m tall wooden post
+        const pillarHeight = 8;
+        const pillar = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.18, 0.22, pillarHeight, 8),
+            new THREE.MeshLambertMaterial({ color: 0x6b4a30 })
+        );
+        pillar.position.set(corral.center.x, pillarHeight / 2, corral.center.z);
+        pillar.castShadow = true;
+        pillar.userData.surfaceToTerrain = true;
+        group.add(pillar);
+
+        // Flag: a small banner near the top
+        const flagWidth = 1.6;
+        const flagHeight = 1.0;
+        const flag = new THREE.Mesh(
+            new THREE.PlaneGeometry(flagWidth, flagHeight),
+            new THREE.MeshLambertMaterial({
+                color: 0xc83a3a,
+                side: THREE.DoubleSide,
+                emissive: 0x4a0c0c,
+                emissiveIntensity: 0.15
+            })
+        );
+        flag.position.set(corral.center.x + flagWidth / 2, pillarHeight - flagHeight / 2 - 0.5, corral.center.z);
+        // Surface flag follows pillar's terrain offset
+        flag.userData.surfaceToTerrain = true;
+        group.add(flag);
+
+        // Faint ground ring at the corral radius — anime-style flat disc, subtle
+        const ringGeo = new THREE.RingGeometry(corral.radius - 0.4, corral.radius, 48);
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0xeaf6ff,
+            transparent: true,
+            opacity: 0.35,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(corral.center.x, 0.05, corral.center.z);
+        ring.userData.surfaceToTerrain = true;
+        group.add(ring);
+
+        this.scene.add(group);
+        this.structures.fences.push(group);
+        this._surfaceToTerrain(group);
     }
 
     /**

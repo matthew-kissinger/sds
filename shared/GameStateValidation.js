@@ -7,6 +7,63 @@ import { isWithinArea, checkGatePassage } from './BoundaryCollision.js';
  */
 
 /**
+ * Validate and update sheep retirement status for corral-based scenes
+ * (Cycle 5+: Rolling Hills). Sheep are retired when they enter a circular
+ * corral zone instead of crossing a rectangular gate.
+ *
+ * @param {Array} sheep - Array of sheep entities
+ * @param {Object} corral - Corral configuration {center: {x, z}, radius}
+ * @returns {Object} - Retirement status {newRetirements, totalRetired}
+ */
+export function updateSheepCorralRetirements(sheep, corral) {
+    let newRetirements = 0;
+    let totalRetired = 0;
+
+    const cx = corral.center.x;
+    const cz = corral.center.z;
+    const r = corral.radius;
+    const rSq = r * r;
+
+    for (let sheepEntity of sheep) {
+        if (!sheepEntity.hasPassedGate && !sheepEntity.isRetiring) {
+            const dx = sheepEntity.position.x - cx;
+            const dz = sheepEntity.position.z - cz;
+            if (dx * dx + dz * dz <= rSq) {
+                sheepEntity.hasPassedGate = true;  // reuse flag to keep counters working
+                sheepEntity.isRetiring = true;
+                // Retirement target: random point inside the corral with margin
+                const margin = 1;
+                const usableR = Math.max(0, r - margin);
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.sqrt(Math.random()) * usableR;
+                sheepEntity.retirementTarget = new Vector2D(
+                    cx + Math.cos(angle) * dist,
+                    cz + Math.sin(angle) * dist
+                );
+                newRetirements++;
+            }
+        }
+
+        // Reach retirement target → graze
+        if (sheepEntity.isRetiring && sheepEntity.retirementTarget) {
+            const distanceToTarget = sheepEntity.position.distanceTo(sheepEntity.retirementTarget);
+            if (distanceToTarget < 1.5) {
+                sheepEntity.retirementTarget = null;
+                sheepEntity.state = 2;
+                sheepEntity.velocity.set(0, 0);
+                sheepEntity.acceleration.set(0, 0);
+            }
+        }
+
+        if (sheepEntity.hasPassedGate || sheepEntity.isRetiring) {
+            totalRetired++;
+        }
+    }
+
+    return { newRetirements, totalRetired };
+}
+
+/**
  * Validate and update sheep retirement status
  * @param {Array} sheep - Array of sheep entities
  * @param {Object} gate - Gate configuration
