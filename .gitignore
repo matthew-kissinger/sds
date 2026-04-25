@@ -73,8 +73,10 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp 
-# Claude Code local settings
-.claude/
+# Claude Code local settings — ignore children, but re-include shared slash commands so they ship with the repo
+.claude/*
+!.claude/commands/
+!.claude/commands/**
 
 # Playwright MCP artifacts
 .playwright-mcp/

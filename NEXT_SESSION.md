@@ -1,6 +1,6 @@
-# Next Session — Cycle 4 Hardening
+# Next Session — Cycle 5 (Island + Woods)
 
-> Updated 2026-04-25. Cold-start agents: read this page top-to-bottom, then [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) for the live punch list and the full table of what shipped. Earlier-cycle context: [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md), [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md), [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md), [`docs/cycle-2-report.md`](docs/cycle-2-report.md).
+> Updated 2026-04-25. Cold-start agents: read this page top-to-bottom, then [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) for the active plan. Cycle 4 history (closed): [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md), [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md), [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md). Earlier cycles: [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md), [`docs/cycle-2-report.md`](docs/cycle-2-report.md).
 
 ## Running locally
 
@@ -73,15 +73,16 @@ Post-deploy polish round 2 (this session):
 
 ## What to pick up next
 
-Read [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) for the live list. Big rocks remaining (none of these are blocking — all gameplay works today):
+Read [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) for the live plan. Headline:
 
-1. **Rolling Hills as an island** (game loop, ~5 hr). User-aligned design: water-bounded island, sheep roam free, find-the-corral objective. Spec in the hardening doc § 1.
-2. **Open Country game loop pick** (still undecided). Three options sketched in the hardening doc § 2; author preference is **time attack** (cheapest, distinct register from Rolling Hills). Needs user sign-off before code.
-3. **Resize behavior** — on hold pending user reproduction; resize handler looks correct.
+- **Cycle 5 is "Island + Woods."** Both Rolling Hills and Open Country migrate to a shared island boundary primitive (water replaces the rectangular fence). Rolling Hills becomes a navigation/discovery loop with a corral somewhere on the island. Open Country becomes a wilderness round-up loop with woodland zones the sheep wander into.
+- **Phase 1** (~2 hr) is shared scaffolding — `boundary: { kind: 'rect' | 'island' }` schema field, `BoundaryCollision` island branch, heightmap re-bake support, water rendering stub. **Phase 1.5** (~1.5 hr) re-tunes the boid behaviour for the bigger island scale before Phases 2 + 3 ship. **Phase 2** is Rolling Hills (~3 hr); **Phase 3** is Open Country (~4 hr).
+- The plan deliberately leaves implementation choices open for water rendering, tree-as-obstacle data structure, and boid tuning. Agents picking up those phases should research current best practice and benchmark on the actual hardware target before committing to a technique. The plan fixes the data contracts and acceptance criteria, not the implementation.
 
-Smaller items / future:
-- Octahedral impostors as v2 of the tree LOD (current 3-quad version is solid).
-- Tree exclusion in play area is already implemented; verify visually if heightmaps re-bake.
+Carried over from Cycle 4 (now closed):
+- **Resize behavior** — on hold pending user reproduction; resize handler looks correct. If it surfaces during Cycle 5 playtest, fix in-cycle.
+- **Octahedral impostor v2** for tree LOD — defer until 3-quad version demonstrably fails in playtest.
+- **Tree exclusion in play area** — already implemented; verify visually after the woods-zone work in Phase 3.
 
 ### Standing risks
 
@@ -98,7 +99,12 @@ Smaller items / future:
 
 | Area | Source of truth |
 |---|---|
-| Live hardening punch list | [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) |
+| Active cycle plan (Cycle 5) | [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) |
+| Cycle stub template | [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) |
+| Frozen files / fence rules | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
+| Closed cycles + deferred items | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
+| Slash commands | [`.claude/commands/`](.claude/commands/) — `/cycle-start`, `/cycle-close`, `/validate` |
+| Cycle 4 Hardening (closed) | [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) |
 | Cycle 4 Phase A plan | [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md) |
 | Cycle 4 Phase B integration | [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md) |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
