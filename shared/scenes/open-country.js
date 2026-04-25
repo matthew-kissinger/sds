@@ -75,6 +75,18 @@ export const openCountry = {
 
     sky: { preset: 'golden-hour' },
 
+    // Cycle 6 Phase 5: starting-point boid override for the 380m radius
+    // island (~4.5× Rolling Hills meadow area). Without re-tuning, cohesion
+    // under-reaches and flocks fragment. Nudge perception radius up so
+    // sheep recruit more neighbours; keep everything else default.
+    // Tune in playtest. Both client `perception` and worker
+    // `perceptionRadius` keys included since the two pathways read
+    // different field names.
+    flocking: {
+        perception: 9,
+        perceptionRadius: 9
+    },
+
     allowedModes: ['cooperative', 'timed'],
     defaultMode: 'cooperative',
     defaultCamera: 'follow',

@@ -235,18 +235,34 @@ class SheepDogSimulation {
         this.cameraController = this.sceneManager.getCameraController();
         this.inputHandler.setCameraController(this.cameraController);
         this.mobileControls.setCameraController(this.cameraController);
+        // Cycle 6 Phase 5: per-scene camera memory. Lookup order:
+        //   1. camera-mode-${sceneId}     (per-scene override, this scene's last value)
+        //   2. scene.defaultCamera        (scene's first-visit default)
+        //   3. camera-mode                (legacy global fallback — start-screen panel writes this)
+        //   4. CLASSIC                    (final default in CameraController)
+        // Cycle 5 only had #3 → scene.defaultCamera only fired on first-ever
+        // visit; once a user picked Classic anywhere, RH + OC silently broke.
+        const sceneCameraKey = `camera-mode-${this.currentScene.id}`;
         try {
-            const savedMode = localStorage.getItem('camera-mode');
-            if (savedMode) {
-                // User preference wins
-                this.cameraController.setMode(savedMode);
+            const perScene = localStorage.getItem(sceneCameraKey);
+            if (perScene) {
+                this.cameraController.setMode(perScene);
             } else if (this.currentScene.defaultCamera) {
-                // Cycle 5+: scene-suggested default (Rolling Hills + Open Country use 'follow')
                 this.cameraController.setMode(this.currentScene.defaultCamera);
+            } else {
+                const legacy = localStorage.getItem('camera-mode');
+                if (legacy) this.cameraController.setMode(legacy);
             }
         } catch (_) { /* localStorage may be unavailable */ }
         window.addEventListener('camera-mode-set', (e) => {
             if (e?.detail) this.cameraController.setMode(e.detail);
+        });
+        // Persist in-game mode changes to the per-scene key. The 'C' hotkey
+        // dispatches camera-mode-changed; the SettingsPanel writes the legacy
+        // global key on start-screen change. Both writes are kept for back-compat.
+        window.addEventListener('camera-mode-changed', (e) => {
+            if (!e?.detail) return;
+            try { localStorage.setItem(sceneCameraKey, e.detail); } catch (_) { /* ignore */ }
         });
         
         // Connect performance monitor and game state to input handler
