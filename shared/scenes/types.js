@@ -43,13 +43,30 @@
  */
 
 /**
+ * Per-scene boid tuning override (Cycle 5+). The override is merged into
+ * two different config shapes — the client uses `gameState.params` keys,
+ * the Worker uses `createBoidConfig` keys. Include the keys for the
+ * pathway(s) you want to affect; unknown keys are harmless on either side.
+ *
+ * Client (`GameState.params`, consumed by `OptimizedSheep.updateBehavior`):
+ * @property {number} [perception]            Neighbour query radius (default 5)
+ * @property {number} [separationDistance]    (default 2)
+ * @property {number} [separationWeight]      (default 1.6)
+ * @property {number} [alignmentWeight]       (default 1.6)
+ * @property {number} [cohesion]              (default 0.1)
+ * @property {number} [maxForce]              (default 0.02)
+ * @property {number} [fleeMultiplier]        (default 4)
+ * @property {number} [fleeRadius]            (default 8)
+ * @property {number} [gateAttraction]        (default 2)
+ * @property {number} [edgeMargin]            (default 2.5)
+ * @property {number} [edgeTurnForce]         (default 0.05)
+ *
+ * Worker (`createBoidConfig`, consumed by `worker/src/GameSim.updateSheep`):
+ * @property {number} [perceptionRadius]      Neighbour query radius (default 5)
+ * @property {number} [maxSpeed]              (default 1.5)
+ * @property {number} [cohesionWeight]        (default 1.0)
+ *
  * @typedef {Object} FlockingOverride
- * @property {number} [separationDistance]
- * @property {number} [neighborRadius]
- * @property {number} [maxSpeed]
- * @property {number} [cohesionStrength]
- * @property {number} [alignmentStrength]
- * @property {number} [separationStrength]
  */
 
 /**

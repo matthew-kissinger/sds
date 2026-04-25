@@ -18,13 +18,15 @@ Each phase agent should:
 - **Measure on the actual hardware target** (RTX 3070 desktop, mid-tier mobile) using `PerformanceMonitor`. The per-tick obstacle-query budget is **≤ 0.4ms desktop / ≤ 1.5ms mobile** — verify before merging Phase 2.
 - **Pick the simplest thing that meets the budget.** If three lines of inline math read correctly, ship that — escalate only on demonstrated need.
 
-## Open questions to resolve before writing code
+## Decisions (was: open questions)
 
-- **Q1: Open Country objective — coastal pen, portal, or both?** **Resolved → portal trigger zone** (option b from NEXT_SESSION; reopens Cycle 5's Q2 which had locked the coastal pen, deliberately revisited after playtest). Replace the north-shore pen with a corral-style trigger + animated swirling vortex visual. Reuse the `CorralZapEffect` pool pattern with portal-specific GLSL.
-- **Q2: Tree trunk obstacle radius — fixed or per-mesh?** **Resolved → fixed 1.8m**. Matches the NEXT_SESSION estimate, simpler, and per-mesh adds determinism surface area for marginal visual gain. Trees are 12–22m mesh-scale; trunks read as ~1.5–2.5m visually so 1.8m is a defensible average.
-- **Q3: Rock obstacles — include all rocks, only large ones, or build bespoke pixel-forge rock assets first?** **Open — author lean: bespoke pixel-forge rocks.** Today's rocks come from `addEnvironmentDetails` clusters with scale variation 0.6–1.4. Including the smallest as colliders feels noisy; excluding them by scale threshold is a hack. The cleaner path is to author 2-3 purpose-made rock assets in [`C:/Users/Mattm/X/games-3d/pixel-forge`](file:///C:/Users/Mattm/X/games-3d/pixel-forge) (LLM-authored Three.js → GLB pipeline already in place) at sizes that read clearly as obstacles, then place those instead of the current cluster system. **If pixel-forge authoring slips this cycle**, fall back to: include only rocks with `scale >= 0.8` as colliders, keep smaller rocks as decoration.
+Locked 2026-04-25.
 
-These don't block Phase 1. Q3 must resolve before Phase 2's rock-collision wiring.
+| # | Question | Decision | Rationale |
+|---|---|---|---|
+| Q1 | Open Country objective | **Portal trigger zone** at `(0, 295)` north shore (option b) | Reopened Cycle 5's Q2 after playtest. Magical-portal vibe is consistent with Rolling Hills' lightning-zap retirement. Persistent `PortalEffect` ring shader + vertical particle column. |
+| Q2 | Tree trunk obstacle radius | **Fixed 1.8m** | Matches plan estimate; per-mesh adds determinism surface area for marginal visual gain. Trees are 12–22m mesh-scale, trunks read as ~1.5–2.5m visually, 1.8m is a defensible average. |
+| Q3 | Rock obstacle source | **Fallback path: scale ≥ 0.8 filter** with collider radius `finalScale * 0.55` (tighter than the visual silhouette since rocks are partially buried + rounded). | Bespoke pixel-forge authoring would balloon scope past the cycle envelope. Fallback ships obstacle behavior now; pixel-forge route deferred to a future cycle when an OC playtest specifically flags rock collision as awkward. Smallest rocks remain decorative. |
 
 ## Architecture / shared changes
 
