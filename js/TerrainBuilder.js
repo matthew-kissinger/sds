@@ -113,6 +113,23 @@ export class TerrainBuilder {
         // Mobile-optimized materials cache
         this.mobileMaterials = null;
         this.desktopMaterials = null;
+
+        // Optional heightfield for terrain displacement + prop placement.
+        // Threaded in by main.js after async load; null when scene has no
+        // heightmapUrl or load failed (flat-plane fallback).
+        /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
+        this.heightfield = null;
+    }
+
+    /**
+     * Set the heightfield used for terrain displacement and prop y-placement.
+     * Must be called BEFORE createTerrain() / createTrees() / addMountains() /
+     * addFarmHouse() to take effect.
+     *
+     * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} heightfield
+     */
+    setHeightfield(heightfield) {
+        this.heightfield = heightfield ?? null;
     }
     
     /**
@@ -308,8 +325,31 @@ export class TerrainBuilder {
 
     
     createTerrain() {
-        // Create flat terrain with procedural ground shader
+        // Create base terrain mesh; heightfield displacement applied below.
+        // 64x64 segments at 1000m = ~15.6m/segment — coarser than the
+        // heightfield resolution but cheap and good enough for "rolling
+        // hills" silhouettes from the player POV. Higher tessellation is
+        // a Phase C optimization if needed.
         const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 64, 64);
+
+        // Apply heightfield displacement before the mesh is rotated to lie flat.
+        // Geometry is built in the XY plane; after the mesh is rotated -PI/2
+        // around X, local (a, b, c) maps to world (a, c, -b). So local Z
+        // displacement becomes world Y, and world (X, Z) maps to local (a, -b).
+        if (this.heightfield) {
+            const positions = terrainGeometry.attributes.position;
+            for (let i = 0; i < positions.count; i++) {
+                const a = positions.getX(i);
+                const b = positions.getY(i);
+                const worldX = a;
+                const worldZ = -b;
+                const h = this.heightfield.sample(worldX, worldZ);
+                positions.setZ(i, h);
+            }
+            positions.needsUpdate = true;
+            terrainGeometry.computeVertexNormals();
+            console.log(`[TERRAIN] Heightfield-displaced terrain (${positions.count} verts)`);
+        }
 
         // Create a custom shader material for varied ground
         const terrainMaterial = new THREE.ShaderMaterial({
