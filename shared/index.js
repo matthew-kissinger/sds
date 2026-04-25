@@ -53,6 +53,7 @@ export {
 // Game state validation and management
 export {
     updateSheepRetirements,
+    updateSheepCorralRetirements,
     checkGameCompletion,
     validateGameState,
     calculateGameProgress,
