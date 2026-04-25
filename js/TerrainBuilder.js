@@ -666,8 +666,9 @@ export class TerrainBuilder {
                 const scaleVariation = 0.7 + Math.random() * 0.6;
                 const finalScale = scale * scaleVariation;
                 
+                const treeY = this.heightfield ? this.heightfield.sample(point.x, point.z) : 0;
                 treeInstances[treeType].push({
-                    position: new THREE.Vector3(point.x, 0, point.z),
+                    position: new THREE.Vector3(point.x, treeY, point.z),
                     rotation: new THREE.Euler(0, Math.random() * Math.PI * 2, 0),
                     scale: new THREE.Vector3(finalScale, finalScale, finalScale)
                 });
@@ -841,9 +842,10 @@ export class TerrainBuilder {
                     const baseScale = scaleRange.min + Math.random() * (scaleRange.max - scaleRange.min);
                     const finalScale = baseScale * rock.scale;
                     
-                    // Some rocks partially buried
-                    const yOffset = Math.random() < 0.3 ? -finalScale * 0.15 : 0;
-                    
+                    // Some rocks partially buried; add terrain height so they sit on the slope.
+                    const baseY = this.heightfield ? this.heightfield.sample(rock.x, rock.z) : 0;
+                    const yOffset = (Math.random() < 0.3 ? -finalScale * 0.15 : 0) + baseY;
+
                     rockInstances[rockType].push({
                         position: new THREE.Vector3(rock.x, yOffset, rock.z),
                         rotation: new THREE.Euler(
@@ -1348,7 +1350,8 @@ export class TerrainBuilder {
         
         // Position the farm house in the northwest corner
         // Behind the pen (positive Z relative to gate) and to the left (negative X)
-        farmHouse.position.set(this.farmHousePosition.x, 0, this.farmHousePosition.z);
+        const farmY = this.heightfield ? this.heightfield.sample(this.farmHousePosition.x, this.farmHousePosition.z) : 0;
+        farmHouse.position.set(this.farmHousePosition.x, farmY, this.farmHousePosition.z);
         
         // Scale the farm house appropriately - smaller and more realistic
         const scale = 1.0; // Further reduced for better proportions (2x smaller)
@@ -1477,7 +1480,8 @@ export class TerrainBuilder {
             // Find the farmhouse (first building)
             const farmhouse = this.buildings[0];
             if (farmhouse) {
-                farmhouse.position.set(this.farmHousePosition.x, 0, this.farmHousePosition.z);
+                const farmY = this.heightfield ? this.heightfield.sample(this.farmHousePosition.x, this.farmHousePosition.z) : 0;
+                farmhouse.position.set(this.farmHousePosition.x, farmY, this.farmHousePosition.z);
                 console.log(`[TERRAIN] Moved farmhouse to (${this.farmHousePosition.x}, ${this.farmHousePosition.z})`);
             }
         }
