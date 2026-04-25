@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { configureGLTFLoader } from './TerrainBuilder.js';
 
 /**
  * FencePresets - Modular fence asset system for reusable fence components
@@ -21,8 +22,8 @@ export class FencePresets {
         this.railWidth = 0.1;
         this.postSpacing = 5; // Distance between posts
 
-        // GLB Model loader
-        this.loader = new GLTFLoader();
+        // GLB Model loader (Draco + Meshopt decoders for Phase A Unit B compressed GLBs).
+        this.loader = configureGLTFLoader(new GLTFLoader());
         this.models = {
             fencePost: null,
             fenceRail: null,
