@@ -114,6 +114,20 @@ export class GameState {
         // Calculate spawn position - use polygon-aware spawning for non-rectangular shapes
         let spawnConfig;
 
+        // Cycle 8 Phase 2: derive maxRadius (the cap on density-driven spawn
+        // expansion in OptimizedSheepSystem). For island scenes use the safe
+        // radius (boundary minus falloff minus a 4m buffer); for rect bounds,
+        // 40% of the smaller dimension keeps spawn well inside fences.
+        let maxRadius;
+        if (this.boundary?.kind === 'island') {
+            const safe = this.boundary.radius - (this.boundary.falloff || 0) - 4;
+            maxRadius = Math.max(safe, 30);
+        } else if (this.bounds) {
+            const w = this.bounds.maxX - this.bounds.minX;
+            const h = this.bounds.maxZ - this.bounds.minZ;
+            maxRadius = Math.min(w, h) * 0.4;
+        }
+
         if (this.borderPoints && this.borderPoints.length >= 3 && this.gameMode === 'sandbox') {
             // Polygon shape - calculate centroid and use polygon-aware spawning
             spawnConfig = this.calculatePolygonSpawnConfig();
@@ -128,11 +142,12 @@ export class GameState {
                 centerX: this.sceneSpawnDef.centerX,
                 centerZ: this.sceneSpawnDef.centerZ,
                 spreadRadius: this.sceneSpawnDef.spreadRadius,
+                defaultCount: this.sceneSpawnDef.count,
             };
             if (this.sceneSpawnDef.clusterCenters) {
                 spawnConfig.clusterCenters = this.sceneSpawnDef.clusterCenters;
             }
-            console.log(`[SHEEP] Scene spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}, clusters=${spawnConfig.clusterCenters?.length ?? 1}`);
+            console.log(`[SHEEP] Scene spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}, clusters=${spawnConfig.clusterCenters?.length ?? 1}, defaultCount=${spawnConfig.defaultCount}`);
         } else {
             // Rectangular bounds - use standard spawning
             const fieldCenterX = (this.bounds.minX + this.bounds.maxX) / 2;
@@ -153,13 +168,20 @@ export class GameState {
             console.log(`[SHEEP] Rect spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}`);
         }
 
+        if (maxRadius != null) {
+            spawnConfig.maxRadius = maxRadius;
+        }
+
         // Pass borderPoints for polygon-aware spawning
         if (this.borderPoints && this.borderPoints.length >= 3) {
             spawnConfig.borderPoints = this.borderPoints;
         }
 
-        // Enable extreme boid optimization for extreme/insane mode or sandbox with useExtremeBoids flag
-        const useExtremeBoids = this.singlePlayerMode === 'extreme' || this.singlePlayerMode === 'insane' || this.useExtremeBoids === true;
+        // Enable extreme boid optimization for extreme/insane/chaos mode or sandbox with useExtremeBoids flag
+        const useExtremeBoids = this.singlePlayerMode === 'extreme'
+            || this.singlePlayerMode === 'insane'
+            || this.singlePlayerMode === 'chaos'
+            || this.useExtremeBoids === true;
 
         this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig, useExtremeBoids);
         if (this.heightfield) {
@@ -857,6 +879,39 @@ export class GameState {
         // Store sandbox config for reference
         this.sandboxConfig = sandboxConfig;
 
+        // Cycle 8 Phase 4: island-scene sandbox path. When sandbox runs on
+        // Rolling Hills or Open Country, the scene's heightfield + island
+        // boundary are authoritative — we don't rebuild bounds, fences, or
+        // gate. Just override sheep count and behavior params, then recreate
+        // the flock if needed. Custom fences are intentionally not supported
+        // on island heightfields in this cycle (Q3 carry-over).
+        const islandScene = sandboxConfig.sceneId && sandboxConfig.sceneId !== 'field';
+        if (islandScene) {
+            const previousSheepCount = this.totalSheep;
+            this.totalSheep = sandboxConfig.sheep?.count ?? this.totalSheep;
+            this.params = sandboxConfig.sheep?.behavior || this.params;
+            this.useExtremeBoids = sandboxConfig.useExtremeBoids === true;
+            this.sandboxRules = {
+                timerEnabled: sandboxConfig.rules?.timerEnabled ?? false,
+                timerMode: sandboxConfig.rules?.timerMode || 'countup',
+                timeLimit: sandboxConfig.rules?.timeLimit || 180,
+                winCondition: sandboxConfig.rules?.winCondition || 'all',
+                winPercentage: sandboxConfig.rules?.winPercentage || 100,
+                trackBestTime: sandboxConfig.rules?.trackBestTime ?? true,
+            };
+            this.customFences = [];
+            // Force recreation if count changed; the scene-driven sceneSpawnDef
+            // (already wired via setSheepSpawn at scene init) is the spawn
+            // source. recreateSheepFlock will pull it through createSheepFlock.
+            if (previousSheepCount !== this.totalSheep && this.optimizedSheepSystem) {
+                this.needsFlockRecreation = true;
+            }
+            // Don't touch bounds, gate, pasture, fences, or borderPoints — the
+            // scene owns those.
+            console.log(`[SANDBOX] Island scene ${sandboxConfig.sceneId}: ${this.totalSheep} sheep, extremeBoids=${this.useExtremeBoids}, rules=`, this.sandboxRules);
+            return;
+        }
+
         // Apply sandbox configuration
         const gameStateConfig = sandboxConfig.toGameStateFormat();
 
@@ -1106,6 +1161,16 @@ export class GameState {
         console.log(`GameState mode set to: ${mode}`);
     }
     
+    // Cycle 8 Phase 2b: lookup table replaces the prior `extreme ? 'soloExtreme' : 'soloClassic'`
+    // ternary that silently dumped insane (3000) and chaos (5000) runs into the
+    // soloClassic leaderboard. Each solo difficulty now has its own leaderboard.
+    static SOLO_MODE_TO_LEADERBOARD = {
+        classic: 'soloClassic',
+        extreme: 'soloExtreme',
+        insane:  'soloInsane',
+        chaos:   'soloChaos',
+    };
+
     // Submit score to leaderboard system
     submitScoreToLeaderboard(score, gameMode = null) {
         // IMPORTANT: Never submit sandbox scores to leaderboard
@@ -1118,7 +1183,8 @@ export class GameState {
         let leaderboardMode = gameMode;
         if (!leaderboardMode) {
             if (this.gameMode === 'solo') {
-                leaderboardMode = this.singlePlayerMode === 'extreme' ? 'soloExtreme' : 'soloClassic';
+                leaderboardMode = GameState.SOLO_MODE_TO_LEADERBOARD[this.singlePlayerMode]
+                    || 'soloClassic';
             } else if (this.gameMode === 'multiplayer') {
                 leaderboardMode = 'cooperative';
             } else {
@@ -1132,13 +1198,22 @@ export class GameState {
             return;
         }
 
-        console.log(`[GAME] Submitting score to leaderboard: ${score} for mode: ${leaderboardMode}`);
-        
+        // Cycle 8 Phase 3: include sceneId + sheepCount so the worker can lift
+        // them into score_submissions columns for partitioned leaderboards.
+        const sceneId = this.sceneId
+            || this.sceneSpawnDef?.sceneId
+            || (typeof window !== 'undefined' && window.__currentSceneId)
+            || 'field';
+
+        console.log(`[GAME] Submitting score to leaderboard: ${score} for mode: ${leaderboardMode}, scene: ${sceneId}, sheep: ${this.totalSheep}`);
+
         // Call the global score submission function
         if (window.submitGameScore) {
             window.submitGameScore(leaderboardMode, score, {
                 gameMode: this.gameMode,
                 singlePlayerMode: this.singlePlayerMode,
+                sceneId,
+                sheepCount: this.totalSheep,
                 totalSheep: this.totalSheep,
                 timestamp: Date.now()
             });

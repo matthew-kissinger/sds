@@ -51,12 +51,14 @@ export class GrassSystem {
      * @param {boolean} [isMobile=false]
      * @param {import('../shared/scenes/types.js').GrassDef} [sceneGrass] Optional scene-sourced grass config; when present, its `clumpsPerChunk` wins over the default.
      * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} [heightfield] Optional heightfield; when present, clumps sit on the displaced terrain instead of y=0.
+     * @param {import('../shared/scenes/types.js').BoundaryDef | null} [boundary] Optional scene boundary; for `kind:'island'` scenes, grass past `radius+falloff` is culled so clumps don't extend over the water.
      */
-    constructor(scene, isMobile = false, sceneGrass = null, heightfield = null) {
+    constructor(scene, isMobile = false, sceneGrass = null, heightfield = null, boundary = null) {
         this.scene = scene;
         this.isMobile = isMobile;
         this.sceneGrass = sceneGrass;
         this.heightfield = heightfield;
+        this.boundary = boundary || null;
 
         const sceneClumps = sceneGrass?.clumpsPerChunk;
         const clumpsPerChunk = sceneClumps
@@ -860,7 +862,16 @@ export class GrassSystem {
 
         // Set up instances
         validPositions.forEach((pos, i) => {
-            const y = this.heightfield ? this.heightfield.sample(pos.x, pos.z) : 0;
+            // Cycle 8: small downward Y offset hides bilinear-vs-mesh
+            // mismatch at hill peaks. The terrain mesh has ~10m vertices
+            // (4000m / 384 segments) while the heightfield is sampled at
+            // its full grid resolution; over a steep ridge the mesh
+            // triangle interpolation can sit 0.05–0.20m below the
+            // bilinear sample. Recessing grass slightly into the mesh
+            // makes any positive mismatch invisible without sinking the
+            // visible blade height meaningfully (clumps are ~1m tall).
+            const baseY = this.heightfield ? this.heightfield.sample(pos.x, pos.z) : 0;
+            const y = baseY - 0.1;
             dummy.position.set(pos.x, y, pos.z);
 
             // Random rotation and scale
@@ -908,6 +919,23 @@ export class GrassSystem {
      * Check if position is in an exclusion zone
      */
     isExcluded(x, z) {
+        // Cycle 8: cull grass past the island boundary so clumps don't
+        // extend out over the falloff/water annulus. Default `worldSize`
+        // (420 desktop) and `densityRange` (0.6) lets grass scatter to
+        // ~250m, which on RH (180+40=220m island) leaves ~30m of clumps
+        // sitting on the bilinear-smoothed falloff above the rendered
+        // shoreline. Visible as "floating grass" in third-person at the
+        // shore. We use a tight inner buffer (3m) so the very edge of
+        // the island still has grass.
+        if (this.boundary && this.boundary.kind === 'island') {
+            const cx = this.boundary.center?.x ?? 0;
+            const cz = this.boundary.center?.z ?? 0;
+            const dx = x - cx;
+            const dz = z - cz;
+            const r = this.boundary.radius + this.boundary.falloff - 3;
+            if (dx * dx + dz * dz > r * r) return true;
+        }
+
         // Check dynamic exclusion zones (farmhouse, pasture, etc.)
         // No more hardcoded zones - all exclusions are added via addExclusionZone()
         for (const zone of this.exclusionZones) {

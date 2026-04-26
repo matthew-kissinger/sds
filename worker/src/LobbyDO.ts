@@ -5,6 +5,10 @@ interface LobbyEntry {
   roomCode: string;
   hostName: string;
   gameMode: string;
+  // Cycle 8 Phase 5: surface scene + sheep count to lobby browsers so
+  // players can pick rooms by what they want to play, not just the mode.
+  sceneId?: string;
+  sheepCount?: number;
   playerCount: number;
   maxPlayers: number;
   state: 'waiting' | 'in-game' | 'finished';

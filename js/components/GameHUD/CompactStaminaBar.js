@@ -33,6 +33,24 @@ function getGlowStyle(stamina) {
 
 export function CompactStaminaBar({ stamina }) {
     const staminaValue = Math.round(stamina);
+    // Cycle 8: pulse the bar while stamina is fully empty, so the
+    // exhaustion event has a clear visual cue. The dog auto-stops
+    // sprinting at 0 (Sheepdog.updateStamina), but smoothMaxSpeed
+    // eases velocity back to walk over ~200ms — the pulse fills in
+    // the missing "you ran out!" beat.
+    const isExhausted = staminaValue <= 0;
+
+    const fillClassName = isExhausted
+        ? 'h-full rounded-full stamina-bar-exhausted'
+        : 'h-full rounded-full transition-[background,box-shadow] duration-300';
+
+    const fillStyle = isExhausted
+        ? { width: '100%' }
+        : {
+            width: `${staminaValue}%`,
+            background: getStaminaColor(stamina),
+            boxShadow: getGlowStyle(stamina)
+        };
 
     return createElement('div', {
         className: 'mt-3 pt-3 border-t border-white/10'
@@ -52,17 +70,8 @@ export function CompactStaminaBar({ stamina }) {
             className: 'h-2 bg-gray-700/50 rounded-full overflow-hidden'
         },
             createElement('div', {
-                // Cycle 7 fix: was `transition-all duration-300` which
-                // animated the width too, lagging the bar 300ms behind
-                // the percentage text. Width is now instant; only the
-                // color/glow keep their soft transition for a clean
-                // green→yellow→red blend as stamina drains.
-                className: 'h-full rounded-full transition-[background,box-shadow] duration-300',
-                style: {
-                    width: `${staminaValue}%`,
-                    background: getStaminaColor(stamina),
-                    boxShadow: getGlowStyle(stamina)
-                }
+                className: fillClassName,
+                style: fillStyle
             })
         )
     ]);

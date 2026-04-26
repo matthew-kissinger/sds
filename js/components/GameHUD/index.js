@@ -8,3 +8,4 @@ export { MobileHUD } from './MobileHUD.js';
 export { MobileControls } from './MobileControls.js';
 export { ExtremeTuningPanel } from './ExtremeTuningPanel.js';
 export { CorralCompass } from './CorralCompass.js';
+export { ObjectiveBanner } from './ObjectiveBanner.js';

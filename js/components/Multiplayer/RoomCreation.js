@@ -14,11 +14,16 @@ const gameModeDescriptions = {
     timed: 'multiplayer.timedDesc'
 };
 
+// Cycle 8 Phase 5: room-level sheep count picker. Capped at 1000 until
+// per-tick wire bandwidth is measured at higher counts (Q4 in cycle plan).
+const SHEEP_COUNT_OPTIONS = [200, 250, 500, 1000];
+
 export function RoomCreation({ onBack, onCreate }) {
     const { t } = useTranslation();
     const [settings, setSettings] = useState({
         maxPlayers: 4,
-        gameMode: 'cooperative'
+        gameMode: 'cooperative',
+        sheepCount: 200
     });
     const { isCompact } = useResponsive();
 
@@ -94,6 +99,19 @@ export function RoomCreation({ onBack, onCreate }) {
                         createElement('option', { key: 'competitive', value: 'competitive' }, t('multiplayer.competitive')),
                         createElement('option', { key: 'timed', value: 'timed' }, t('multiplayer.timed'))
                     ])
+                ]),
+
+                // Sheep count (Cycle 8 Phase 5)
+                createElement('div', { key: 'sheep-count' }, [
+                    createElement('label', { key: 'label', style: labelStyle }, 'Sheep count'),
+                    createElement('select', {
+                        key: 'select',
+                        style: selectStyle,
+                        value: settings.sheepCount,
+                        onChange: (e) => setSettings({ ...settings, sheepCount: parseInt(e.target.value) })
+                    }, SHEEP_COUNT_OPTIONS.map(n =>
+                        createElement('option', { key: n, value: n }, `${n} sheep`)
+                    ))
                 ]),
 
                 // Mode description

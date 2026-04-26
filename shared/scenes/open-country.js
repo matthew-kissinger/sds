@@ -33,20 +33,26 @@ export const openCountry = {
     sheepSpawn: {
         pattern: 'scattered',
         count: 200,
-        // Cycle 7: spread sheep across multiple cluster centers covering
-        // the southern + central play area instead of one tight blob, so
-        // the player has a real "go find them" gather phase rather than
-        // a pre-formed flock at spawn. Per-cluster spread is generous
-        // (90m) to give a random-feel scatter inside each.
-        spreadRadius: 90,
+        // Cycle 8 Phase B: 8-cluster ring around the perimeter at radius
+        // 240m (inside the 306m safe radius — boundary 380 minus 70
+        // falloff minus 4 buffer). Cycle 7's 5-cluster southern bias
+        // gave a "drive the flock north" loop but the user playtest
+        // wanted edges emphasized so the gather phase requires a real
+        // sweep across the island. Per-cluster spread tightened from
+        // 90m to 60m so each cluster reads as a "group at the edge"
+        // rather than scattered everywhere.
+        spreadRadius: 60,
         centerX: 0,
-        centerZ: -100,
+        centerZ: 0,
         clusterCenters: [
-            { x: -150, z: -180 },
-            { x:  150, z: -180 },
-            { x: -100, z:  -40 },
-            { x:  100, z:  -40 },
-            { x:    0, z: -120 }
+            { x:    0, z: -240 },  // S
+            { x:  170, z: -170 },  // SE
+            { x:  240, z:    0 },  // E
+            { x:  170, z:  170 },  // NE
+            { x:    0, z:  240 },  // N (~55m south of portal at z=295)
+            { x: -170, z:  170 },  // NW
+            { x: -240, z:    0 },  // W
+            { x: -170, z: -170 }   // SW
         ]
     },
 

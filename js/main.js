@@ -179,6 +179,10 @@ class SheepDogSimulation {
         if (activeSceneId !== DEFAULT_SCENE_ID) {
             console.log(`[SCENE] Loaded "${this.currentScene.name}" (${activeSceneId}) from URL param`);
         }
+        // Cycle 8 Phase 3: track active sceneId on gameState + window so the
+        // leaderboard submission path can include it as a partition key.
+        this.gameState.sceneId = activeSceneId;
+        if (typeof window !== 'undefined') window.__currentSceneId = activeSceneId;
         // Cycle 5+: propagate discriminated boundary if the scene declares one.
         // Field stays on legacy bounds; Rolling Hills + Open Country migrate
         // to island in Phases 2/3.
@@ -226,6 +230,61 @@ class SheepDogSimulation {
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();
+
+        // Cycle 8 Phase C: perf harness hook. When `?perfMode=1` is set,
+        // expose `window.__perfHarness` so Playwright (or a manual page
+        // probe) can sample frametime + render stats without touching
+        // the game's UI. Off by default — the in-game P-key panel is
+        // the interactive path. The harness is intentionally tiny:
+        // ready-check, current-metrics snapshot, fixed-window sampling.
+        // Per-system breakdowns (obstacle-query timing, etc.) can be
+        // layered on later by widening PerformanceMonitor.
+        if (new URLSearchParams(location.search).get('perfMode') === '1') {
+            const perfMon = this.performanceMonitor;
+            const gameStateRef = this.gameState;
+            window.__perfHarness = {
+                isReady: () => {
+                    const sheep = gameStateRef.getSheep?.() || [];
+                    return perfMon.isEnabled && sheep.length > 0 && perfMon.frameCount > 30;
+                },
+                getMetrics: () => ({ ...perfMon.metrics, frameCount: perfMon.frameCount }),
+                startSampling(durationMs = 8000) {
+                    this._samples = [];
+                    this._stop = Date.now() + durationMs;
+                    const tick = () => {
+                        if (Date.now() >= this._stop) return;
+                        this._samples.push({
+                            t: performance.now(),
+                            frameTime: perfMon.metrics.avgFrameTime,
+                            drawCalls: perfMon.metrics.drawCalls,
+                            triangles: perfMon.metrics.triangles,
+                            activeSheep: perfMon.metrics.activeSheepCount,
+                        });
+                        requestAnimationFrame(tick);
+                    };
+                    requestAnimationFrame(tick);
+                    return durationMs;
+                },
+                getSummary() {
+                    const samples = this._samples || [];
+                    if (samples.length === 0) return null;
+                    const frameTimes = samples.map(s => s.frameTime).sort((a, b) => a - b);
+                    const pct = (p) => frameTimes[Math.min(frameTimes.length - 1, Math.floor((p / 100) * frameTimes.length))];
+                    return {
+                        sampleCount: samples.length,
+                        avgFrameTime: frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length,
+                        p50FrameTime: pct(50),
+                        p95FrameTime: pct(95),
+                        p99FrameTime: pct(99),
+                        maxFrameTime: frameTimes[frameTimes.length - 1],
+                        avgDrawCalls: samples.reduce((a, s) => a + s.drawCalls, 0) / samples.length,
+                        avgTriangles: samples.reduce((a, s) => a + s.triangles, 0) / samples.length,
+                        avgActiveSheep: samples.reduce((a, s) => a + s.activeSheep, 0) / samples.length,
+                    };
+                },
+            };
+            console.log('[PERF] __perfHarness installed. Call window.__perfHarness.startSampling() to capture.');
+        }
         this.webVitalsMonitor = new WebVitalsMonitor();
         this.gameAssetLoader = new GameAssetLoader();
         this.menuController = new MenuController(this.sceneManager);
@@ -940,30 +999,40 @@ class SheepDogSimulation {
         // Start sandbox game state (this applies all the config)
         this.gameState.startSandboxGame(sandboxConfig);
 
-        // Rebuild structures with sandbox configuration
-        const bounds = this.gameState.bounds;
-        const gate = this.gameState.gate;
-        const pasture = this.gameState.pasture;
-        const customFences = this.gameState.getCustomFences();
-        const borderPoints = this.gameState.borderPoints;
-        const fieldShape = this.gameState.fieldShape;
+        // Cycle 8 Phase 4: skip rect-bounds/structure/terrain rebuild on
+        // island scenes — the scene owns its heightfield, corral, fences (or
+        // lack thereof), and pasture. The rest of the function still handles
+        // sheep flock recreation + timer setup, which both apply.
+        const islandScene = sandboxConfig.sceneId && sandboxConfig.sceneId !== 'field';
 
-        console.log('[SANDBOX] Building structures with:', {
-            bounds,
-            fieldShape,
-            borderPoints: borderPoints?.length || 0,
-            gatePosition: gate.position,
-            gateWidth: gate.width,
-            pasture
-        });
+        if (!islandScene) {
+            // Rebuild structures with sandbox configuration
+            const bounds = this.gameState.bounds;
+            const gate = this.gameState.gate;
+            const pasture = this.gameState.pasture;
+            const customFences = this.gameState.getCustomFences();
+            const borderPoints = this.gameState.borderPoints;
+            const fieldShape = this.gameState.fieldShape;
 
-        // Clear and rebuild structures for sandbox
-        this.structureBuilder.buildSandboxStructures(bounds, gate, pasture, customFences, borderPoints, fieldShape);
+            console.log('[SANDBOX] Building structures with:', {
+                bounds,
+                fieldShape,
+                borderPoints: borderPoints?.length || 0,
+                gatePosition: gate.position,
+                gateWidth: gate.width,
+                pasture
+            });
 
-        // Update terrain builder with dynamic bounds AND rebuild trees/rocks
-        // This ensures they respect the new field boundaries
-        if (this.terrainBuilder) {
-            await this.terrainBuilder.rebuildEnvironment(bounds, pasture);
+            // Clear and rebuild structures for sandbox
+            this.structureBuilder.buildSandboxStructures(bounds, gate, pasture, customFences, borderPoints, fieldShape);
+
+            // Update terrain builder with dynamic bounds AND rebuild trees/rocks
+            // This ensures they respect the new field boundaries
+            if (this.terrainBuilder) {
+                await this.terrainBuilder.rebuildEnvironment(bounds, pasture);
+            }
+        } else {
+            console.log(`[SANDBOX] Island scene ${sandboxConfig.sceneId}: scene owns terrain + structures, skipping sandbox rebuild`);
         }
 
         // Check if we need to recreate the sheep flock due to count change
@@ -2403,9 +2472,11 @@ class SheepDogSimulation {
         const existing = document.getElementById('game-completion-overlay');
         if (existing) existing.remove();
 
-        // Submit score to leaderboard for single player games (classic/extreme only, NOT sandbox)
+        // Submit score to leaderboard for all single-player solo modes (classic/extreme/insane/chaos), NOT sandbox.
+        // Cycle 8 Phase 2b: lookup table inside submitScoreToLeaderboard handles
+        // the mode→leaderboard mapping; this callsite just forwards the time.
         if (mode === 'single' && data.finalTime && this.gameMode !== 'sandbox' && this.singlePlayerMode !== 'sandbox') {
-            console.log(`[GAME] Submitting score to leaderboard: ${data.finalTime} seconds for ${this.singlePlayerMode === 'extreme' ? 'soloExtreme' : 'soloClassic'} mode`);
+            console.log(`[GAME] Submitting score to leaderboard: ${data.finalTime} seconds (mode=${this.singlePlayerMode})`);
             this.gameState.submitScoreToLeaderboard(data.finalTime);
         } else if (mode === 'single' && this.gameMode === 'sandbox') {
             console.log('[GAME] Sandbox mode - score not submitted to leaderboard');

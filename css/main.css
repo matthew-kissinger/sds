@@ -46,6 +46,26 @@
   to { transform: rotate(360deg); }
 }
 
+/* Cycle 8: exhausted-stamina pulse. Bar shifts between full red and a
+   brighter red-orange while stamina is at 0 so the player perceives the
+   exhaustion event clearly (the dog's velocity easing back to walk speed
+   is intentionally smooth — see smoothMaxSpeed in Sheepdog.js — so the
+   bar carries the cue instead). */
+@keyframes staminaExhaustedPulse {
+  0%, 100% {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    background: linear-gradient(90deg, #fb923c, #fbbf24);
+    box-shadow: 0 0 14px rgba(251, 146, 60, 0.85);
+  }
+}
+
+.stamina-bar-exhausted {
+  animation: staminaExhaustedPulse 0.6s ease-in-out infinite;
+}
+
 /* ==================== BASE LAYER ==================== */
 @layer base {
   html, body {

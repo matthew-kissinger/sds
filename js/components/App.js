@@ -57,6 +57,7 @@ export async function initReactUI() {
             { SheepCounter },
             { CameraModeIndicator },
             { CorralCompass },
+            { ObjectiveBanner },
             { MobileHUD },
             { MobileControls },
             { ExtremeTuningPanel },
@@ -91,6 +92,7 @@ export async function initReactUI() {
             import('./GameHUD/SheepCounter.js'),
             import('./GameHUD/CameraModeIndicator.js'),
             import('./GameHUD/CorralCompass.js'),
+            import('./GameHUD/ObjectiveBanner.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
             import('./GameHUD/ExtremeTuningPanel.js'),
@@ -288,6 +290,33 @@ export async function initReactUI() {
                 console.log('[UI] Starting sandbox game:', selectedDog, sandboxConfig);
                 if (!getGameInstance()) return;
 
+                // Cycle 8 Phase 4: if the sandbox's sceneId differs from the
+                // currently-loaded scene, reload with the right ?scene= and
+                // pass the config via #s/ so we land back on the sandbox setup
+                // screen on the correct scene. The player can click Start
+                // Game again from there. Reload is the simplest way to swap
+                // heightfield + atmosphere + spawn def without partial-state
+                // bugs.
+                const desiredScene = sandboxConfig.sceneId || 'field';
+                const currentSceneId = (typeof window !== 'undefined' && window.__currentSceneId) || 'field';
+                if (desiredScene !== currentSceneId) {
+                    try {
+                        const encoded = sandboxConfig.serialize();
+                        const url = new URL(location.href);
+                        if (desiredScene === 'field') {
+                            url.searchParams.delete('scene');
+                        } else {
+                            url.searchParams.set('scene', desiredScene);
+                        }
+                        url.hash = `s/${encoded}`;
+                        location.href = url.toString();
+                        return;
+                    } catch (err) {
+                        console.error('[UI] Failed to encode sandbox cross-scene reload:', err);
+                        // Fall through to attempt a same-scene start anyway.
+                    }
+                }
+
                 selectDog(selectedDog);
                 const dog = getSelectedDog() || selectedDog;
                 startSandboxGame(dog, sandboxConfig);
@@ -323,7 +352,8 @@ export async function initReactUI() {
                     await nm.createRoom("Player", {
                         maxPlayers: settings.maxPlayers,
                         isPublic: true,
-                        gameMode: settings.gameMode
+                        gameMode: settings.gameMode,
+                        sheepCount: settings.sheepCount
                     }, selectedDog);
 
                     monitorLobbyState();
@@ -910,6 +940,9 @@ export async function initReactUI() {
             return createElement('div', { className: 'game-hud fixed inset-0 pointer-events-none' }, [
                 // CorralCompass renders on both platforms; auto-hides when corral is on-screen
                 createElement(CorralCompass, { key: 'corral-compass', platform }),
+                // Cycle 8: ObjectiveBanner renders on scenes with a multi-stage
+                // objective (currently OC). Auto-hides on Field/RH.
+                createElement(ObjectiveBanner, { key: 'objective-banner' }),
                 platform === 'desktop' && [
                     createElement(GameTimer, { key: 'timer', gameTime: gameData.gameTime, timeLimit: gameData.timeLimit }),
                     createElement(CameraModeIndicator, { key: 'camera-mode', mode: gameData.cameraMode, platform }),

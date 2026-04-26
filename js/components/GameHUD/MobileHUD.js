@@ -174,17 +174,28 @@ export function MobileHUD({ gameData, stamina, onPause }) {
                     }
                 },
                     createElement('div', {
-                        style: {
-                            height: '100%',
-                            width: `${stamina}%`,
-                            background: getStaminaColor(stamina),
-                            boxShadow: stamina < 30 ? '0 0 6px rgba(239, 68, 68, 0.5)' : 'none',
-                            // Cycle 7 fix: width transition removed so the
-                            // bar tracks stamina instantly instead of
-                            // lagging 300ms behind the percentage text.
-                            transition: 'background 0.3s ease-out, box-shadow 0.3s ease-out',
-                            borderRadius: '9999px'
-                        }
+                        // Cycle 8: at 0% stamina, show the exhausted-pulse
+                        // class (defined in css/main.css) instead of the
+                        // static red. Bar fills the track so the pulse is
+                        // unmissable while the dog walks off the cooldown.
+                        className: stamina <= 0 ? 'stamina-bar-exhausted' : '',
+                        style: stamina <= 0
+                            ? {
+                                height: '100%',
+                                width: '100%',
+                                borderRadius: '9999px'
+                            }
+                            : {
+                                height: '100%',
+                                width: `${stamina}%`,
+                                background: getStaminaColor(stamina),
+                                boxShadow: stamina < 30 ? '0 0 6px rgba(239, 68, 68, 0.5)' : 'none',
+                                // Cycle 7 fix: width transition removed so the
+                                // bar tracks stamina instantly instead of
+                                // lagging 300ms behind the percentage text.
+                                transition: 'background 0.3s ease-out, box-shadow 0.3s ease-out',
+                                borderRadius: '9999px'
+                            }
                     })
                 )
             ])

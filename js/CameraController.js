@@ -116,6 +116,20 @@ export class CameraController {
         // sprint→jog transitions don't pop the look-ahead distance even
         // if the sim ever produces a one-frame velocity discontinuity.
         this.smoothedSpeedNorm = 0;
+        // Cycle 8 Phase 6: asymmetric terrain-clearance floor. Snap UP to
+        // avoid clipping into a rising ridge; ease DOWN off ridges so the
+        // camera glides instead of dropping. Pre-Cycle-8-Phase-6 the
+        // smoothing was symmetric (eased both ways) which let the camera
+        // briefly clip terrain on fast ascents. Initialized to -∞ so the
+        // first valid frame seats it instantly.
+        this.smoothedFloorY = -Infinity;
+        // Cycle 8 Phase 6: track the last valid dog facing angle. The
+        // previous behaviour returned `this.followYaw` when velocity
+        // magnitude was below threshold — that's a feedback loop with no
+        // anchor. Now we return the last *intent* angle from the dog, so
+        // the camera holds where the dog was facing instead of where it
+        // was pointing.
+        this._lastValidFacing = 0;
 
         // Tunable input scales.
         this.mouseYawScale = 0.005;   // rad per pixel
@@ -252,6 +266,7 @@ export class CameraController {
         this.freeYaw = 0;
         this.followYaw = 0;
         this.followAimYaw = 0;
+        this._lastValidFacing = 0;
         this.followInitialized = false;
         this.competitiveDirection = null;
     }
@@ -353,8 +368,10 @@ export class CameraController {
         if (!this.followInitialized) {
             this.followYaw = facingAngle;
             this.followAimYaw = facingAngle;
+            this._lastValidFacing = facingAngle;
             this.followPosition.set(dogPosition.x, dogTerrainY + FOLLOW_HEIGHT, dogPosition.z);
             this.smoothedSpeedNorm = rawSpeedNorm;
+            this.smoothedFloorY = -Infinity;  // re-seat below
             this.followInitialized = true;
         } else {
             const yawK = expSmooth(deltaTime, FOLLOW_YAW_LAG_TAU);
@@ -379,26 +396,39 @@ export class CameraController {
         this.followPosition.lerp(this._tmpTarget, posK);
 
         // Two clamps so the dog never disappears behind terrain:
-        //   1. Camera clears its own ground (existing behaviour — stops
-        //      diving into a valley behind the dog).
+        //   1. Camera clears its own ground (stops diving into a valley
+        //      behind the dog).
         //   2. Camera Y >= max terrain along the camera->dog line + clearance,
         //      so when the dog crests a hill the camera lifts above the
         //      ridge between us and the dog instead of letting the ridge
         //      occlude the dog.
+        // Cycle 8 Phase 6: asymmetric smoothing. Snap UP when the floor
+        // rises (e.g. dog ascending a ridge) so we never clip terrain;
+        // ease DOWN when it falls (cresting a peak) so the camera glides
+        // off the ridge instead of dropping. Symmetric smoothing in the
+        // first Cycle 8 pass let the camera briefly clip on fast ascents.
         if (this.heightfield) {
             const camGroundY = this.heightfield.sample(
                 this.followPosition.x,
                 this.followPosition.z
             );
-            const minY = camGroundY + this.minTerrainClearance;
-            if (this.followPosition.y < minY) this.followPosition.y = minY;
-
             const ridgeY = this._sampleMaxTerrainAlong(
                 this.followPosition.x, this.followPosition.z,
                 dogPosition.x, dogPosition.z
             );
-            const sightMinY = ridgeY + this.minTerrainClearance;
-            if (this.followPosition.y < sightMinY) this.followPosition.y = sightMinY;
+            const rawFloor = Math.max(camGroundY, ridgeY) + this.minTerrainClearance;
+
+            if (this.smoothedFloorY === -Infinity || rawFloor > this.smoothedFloorY) {
+                // Initial seat OR rising floor — snap to avoid clipping.
+                this.smoothedFloorY = rawFloor;
+            } else {
+                // Falling floor — ease down so we glide off ridges.
+                const floorK = expSmooth(deltaTime, FOLLOW_POS_LAG_TAU);
+                this.smoothedFloorY += (rawFloor - this.smoothedFloorY) * floorK;
+            }
+            if (this.followPosition.y < this.smoothedFloorY) {
+                this.followPosition.y = this.smoothedFloorY;
+            }
         }
 
         this.camera.position.copy(this.followPosition);
@@ -414,24 +444,37 @@ export class CameraController {
     }
 
     /**
-     * Maximum terrain height sampled along the segment from (x0,z0) to
-     * (x1,z1). Used to ensure no ridge between camera and dog occludes
-     * the line of sight. Cheap — 6 samples plus the endpoints. Returns
-     * 0 when no heightfield is set.
+     * Maximum terrain height sampled along the strict interior of the
+     * segment from (x0,z0) to (x1,z1). Used to ensure no ridge BETWEEN
+     * camera and dog occludes the line of sight.
+     *
+     * Cycle 8 Phase 6 changes:
+     *  - STEPS 6 → 12. Reduces step size from ~3.7m to ~1.8m on the
+     *    ~22m camera-dog segment so a sharp ridge can't slip between
+     *    adjacent samples (RH has 6m heightScale + 40m falloff and
+     *    enough relief for this to matter).
+     *  - Skip endpoints (i=0 and i=STEPS). The camera-side endpoint is
+     *    handled by the camGroundY clamp, and the dog-side endpoint is
+     *    where we *want* to be looking — including it would unnecessarily
+     *    lift the camera above the dog when the dog crests a hill, even
+     *    though no ridge actually occludes the view. Interior samples
+     *    only capture the "between us" terrain that matters.
      * @private
      */
     _sampleMaxTerrainAlong(x0, z0, x1, z1) {
         if (!this.heightfield) return 0;
-        const STEPS = 6;
+        const STEPS = 12;
         let max = -Infinity;
-        for (let i = 0; i <= STEPS; i++) {
+        for (let i = 1; i < STEPS; i++) {
             const t = i / STEPS;
             const x = x0 + (x1 - x0) * t;
             const z = z0 + (z1 - z0) * t;
             const h = this.heightfield.sample(x, z);
             if (h > max) max = h;
         }
-        return max;
+        // Degenerate segment (camera == dog) returns -Infinity from the
+        // unentered loop; substitute 0 so the clearance still applies.
+        return max === -Infinity ? 0 : max;
     }
 
     _updateFree(dogPosition, _deltaTime) {
@@ -487,11 +530,23 @@ export class CameraController {
         }
     }
 
+    /**
+     * Compute target facing angle from the dog's velocity vector. When
+     * the dog is essentially stopped (mag < 0.1) we hold the last *valid*
+     * facing instead of `this.followYaw` — that prior fallback was a
+     * feedback loop that re-fed the smoothed camera yaw back into
+     * itself, with no anchor when the dog was idle. This way the camera
+     * holds where the dog was last facing, even through long pauses or
+     * tree-collision wobbles.
+     * @private
+     */
     _facingAngle(facing) {
-        if (!facing) return this.followYaw;
+        if (!facing) return this._lastValidFacing;
         const mag = Math.hypot(facing.x, facing.z);
-        if (mag < 0.1) return this.followYaw; // keep last angle when idle
-        return Math.atan2(facing.x, facing.z);
+        if (mag < 0.1) return this._lastValidFacing;
+        const angle = Math.atan2(facing.x, facing.z);
+        this._lastValidFacing = angle;
+        return angle;
     }
 }
 

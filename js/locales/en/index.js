@@ -292,6 +292,8 @@ export default {
         title: 'Global Leaderboard',
         soloClassic: 'Solo Classic',
         soloExtreme: 'Solo Extreme',
+        soloInsane: 'Solo Insane',
+        soloChaos: 'Solo Chaos',
         timed: 'Timed (3 min)',
         competitive: 'Competitive',
         cooperative: 'Cooperative',

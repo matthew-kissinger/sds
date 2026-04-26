@@ -21,6 +21,17 @@ export class SandboxConfig {
         this.createdAt = config.createdAt || Date.now();
         this.updatedAt = config.updatedAt || Date.now();
 
+        // Cycle 8 Phase 4: which underlying scene this sandbox runs on. 'field'
+        // (default) keeps the legacy rect-bounded sandbox behaviour with custom
+        // sizes / shapes / fences. 'rolling-hills' or 'open-country' tells the
+        // start path to defer the boundary to the scene's heightfield + island
+        // disk, and the field/shape/fences pickers in the UI become no-ops.
+        // Custom fences on island heightfields are deferred to a later cycle.
+        const validSceneIds = ['field', 'rolling-hills', 'open-country'];
+        this.sceneId = validSceneIds.includes(config.sceneId)
+            ? config.sceneId
+            : 'field';
+
         // Sheep configuration
         this.sheep = {
             count: config.sheep?.count || 200,
@@ -708,6 +719,7 @@ export class SandboxConfig {
             description: this.description,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            sceneId: this.sceneId,
             sheep: this.sheep,
             field: this.field,
             fences: this.fences,
@@ -783,6 +795,7 @@ export class SandboxConfig {
      */
     serialize() {
         const compact = {
+            sceneId: this.sceneId,
             sheep: this.sheep,
             field: this.field,
             fences: this.fences,

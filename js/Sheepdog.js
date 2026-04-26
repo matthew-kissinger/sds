@@ -235,7 +235,6 @@ export class Sheepdog {
         this.stamina = this.maxStamina;
         this.minStaminaToSprint = 10;
         this.isSprinting = false;
-        this.sprintExhausted = false; // Lock that requires releasing sprint key after exhaustion
         // Smoothed speed cap. Tracks `currentMaxSpeed` (sprint vs walk) but
         // eases on the way DOWN with τ≈0.2s so the velocity clamp doesn't
         // pop velocity 25→15 in one frame on sprint exhaustion. Snaps on the
@@ -917,34 +916,31 @@ export class Sheepdog {
     }
     
     /**
-     * Update stamina system
-     * Sprint lock: when stamina is exhausted, player must release sprint key before sprinting again
+     * Update stamina system.
+     *
+     * Cycle 8 simplification: a single threshold gates re-engagement.
+     * Sprint stops automatically when stamina hits 0. Holding shift past
+     * exhaustion does NOT keep sprinting — the dog drops to walk, regen
+     * runs, and sprint resumes the moment stamina passes
+     * `minStaminaToSprint`. The Cycle 7 release-shift lock created two
+     * gates stacked (threshold + release-and-press) which made the
+     * mechanic feel like "I just sprint forever until I let go": there
+     * was no perceptible cliff when stamina hit 0 and re-engagement
+     * required a deliberate release the player rarely triggered.
+     * One gate, with the bar pulsing red while empty, is the clearer
+     * mechanic.
      */
     updateStamina(wantsSprint, deltaTime) {
         const isMoving = this.velocity.magnitude() > 0.1;
 
-        // Clear exhaustion lock when sprint key is released
-        if (!wantsSprint) {
-            this.sprintExhausted = false;
-        }
-
-        // Cycle 7 fix: explicit state machine. minStaminaToSprint gates
-        // STARTING a sprint (prevents stutter when partially regen'd).
-        // Once sprinting, can continue draining all the way to 0 — only
-        // then is the dog exhausted and locked until the sprint key is
-        // released. The previous `stamina >= minStaminaToSprint` check
-        // was applied to BOTH start AND continue, so stamina oscillated
-        // around the threshold instead of ever reaching 0; exhaustion
-        // never triggered and the player kept sprinting indefinitely.
-        const canStartSprint = this.stamina >= this.minStaminaToSprint && !this.sprintExhausted;
-        const canContinueSprint = this.isSprinting && this.stamina > 0 && !this.sprintExhausted;
+        const canStartSprint = this.stamina >= this.minStaminaToSprint;
+        const canContinueSprint = this.isSprinting && this.stamina > 0;
         const sprintActive = wantsSprint && isMoving && (canStartSprint || canContinueSprint);
 
         if (sprintActive) {
             this.isSprinting = true;
             this.stamina = Math.max(0, this.stamina - this.staminaDrainRate * deltaTime);
             if (this.stamina <= 0) {
-                this.sprintExhausted = true;
                 this.isSprinting = false;
             }
         } else {
@@ -953,7 +949,7 @@ export class Sheepdog {
             this.stamina = Math.min(this.maxStamina, this.stamina + regenRate * deltaTime);
         }
     }
-    
+
     /**
      * Get stamina information for UI
      */
@@ -963,8 +959,8 @@ export class Sheepdog {
             max: this.maxStamina,
             percentage: (this.stamina / this.maxStamina) * 100,
             isSprinting: this.isSprinting,
-            canSprint: this.stamina >= this.minStaminaToSprint && !this.sprintExhausted,
-            isExhausted: this.sprintExhausted
+            canSprint: this.stamina >= this.minStaminaToSprint,
+            isExhausted: this.stamina <= 0
         };
     }
     

@@ -305,21 +305,57 @@ export class OptimizedSheepSystem {
     initializeSheepData() {
         const dummy = new THREE.Object3D();
         dummy.rotation.order = 'YXZ';
-        const { centerX, centerZ, spreadRadius, borderPoints } = this.spawnConfig;
+        const {
+            centerX, centerZ, spreadRadius, borderPoints, clusterCenters, maxRadius,
+            defaultCount
+        } = this.spawnConfig;
         const edgeMargin = 5; // Minimum distance from fence edges
+        // Cycle 8 Phase 2: cluster + density-aware spawn.
+        // Strategy:
+        //   1) Use clusterCenters when provided (Open Country has 8 ring clusters);
+        //      otherwise fall back to a single (centerX, centerZ).
+        //   2) For counts <= per-cluster default, keep spreadRadius unchanged so
+        //      Field/RH/OC at their authored default counts spawn identically to
+        //      pre-Cycle-8 behaviour (sim-baseline byte-identical for Field 200).
+        //   3) For higher counts (Extreme/Insane/Chaos), scale per-cluster radius
+        //      by sqrt(count / scaledDefault) to hold the configured density. Cap
+        //      at maxRadius derived from scene boundary so spawns stay on land.
+        // Pre-Cycle-8 the radius was fixed regardless of count, so 3000-5000
+        // sheep stacked into a 25-60m disc — boid spatial hash thrashed and the
+        // run "didn't work".
+        const sceneClusters = (clusterCenters && clusterCenters.length > 0)
+            ? clusterCenters
+            : [{ x: centerX, z: centerZ }];
+        const baseCount = defaultCount && defaultCount > 0 ? defaultCount : 200;
+        const perClusterDefault = baseCount / sceneClusters.length;
+        const perClusterActual = this.sheepCount / sceneClusters.length;
+        let effectiveRadius = spreadRadius;
+        if (perClusterActual > perClusterDefault) {
+            const scale = Math.sqrt(perClusterActual / perClusterDefault);
+            effectiveRadius = spreadRadius * scale;
+        }
+        if (maxRadius && effectiveRadius > maxRadius) {
+            effectiveRadius = maxRadius;
+        }
+        if (effectiveRadius !== spreadRadius) {
+            console.log(`[SHEEP] Density-scaled spawn radius: base=${spreadRadius.toFixed(1)} effective=${effectiveRadius.toFixed(1)} (count=${this.sheepCount}, clusters=${sceneClusters.length}, defaultCount=${baseCount})`);
+        }
 
         for (let i = 0; i < this.sheepCount; i++) {
+            const cluster = sceneClusters[i % sceneClusters.length];
+            const clusterCx = cluster.x;
+            const clusterCz = cluster.z;
             let x, z;
             let attempts = 0;
             const maxAttempts = 100; // Increased attempts for safer spawning
 
             // Try to find a valid spawn position inside the polygon with margin from edges
             do {
-                // Random position in a cluster around spawn center
+                // Random position in a cluster around the chosen center
                 const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * spreadRadius;
-                x = centerX + Math.cos(angle) * distance;
-                z = centerZ + Math.sin(angle) * distance;
+                const distance = Math.random() * effectiveRadius;
+                x = clusterCx + Math.cos(angle) * distance;
+                z = clusterCz + Math.sin(angle) * distance;
                 attempts++;
             } while (borderPoints && !this.isPointSafelyInside(x, z, borderPoints, edgeMargin) && attempts < maxAttempts);
 
@@ -798,11 +834,33 @@ export class OptimizedSheepSystem {
     resetAllSheep() {
         const dummy = new THREE.Object3D();
         dummy.rotation.order = 'YXZ';
-        const { centerX, centerZ, spreadRadius, borderPoints } = this.spawnConfig;
+        const {
+            centerX, centerZ, spreadRadius, borderPoints, clusterCenters, maxRadius,
+            defaultCount
+        } = this.spawnConfig;
         const edgeMargin = 5; // Minimum distance from fence edges
+
+        // Cycle 8 Phase 2: same cluster + density logic as initializeSheepData.
+        const sceneClusters = (clusterCenters && clusterCenters.length > 0)
+            ? clusterCenters
+            : [{ x: centerX, z: centerZ }];
+        const baseCount = defaultCount && defaultCount > 0 ? defaultCount : 200;
+        const perClusterDefault = baseCount / sceneClusters.length;
+        const perClusterActual = this.sheepCount / sceneClusters.length;
+        let effectiveRadius = spreadRadius;
+        if (perClusterActual > perClusterDefault) {
+            const scale = Math.sqrt(perClusterActual / perClusterDefault);
+            effectiveRadius = spreadRadius * scale;
+        }
+        if (maxRadius && effectiveRadius > maxRadius) {
+            effectiveRadius = maxRadius;
+        }
 
         for (let i = 0; i < this.sheepCount; i++) {
             const sheep = this.sheep[i];
+            const cluster = sceneClusters[i % sceneClusters.length];
+            const clusterCx = cluster.x;
+            const clusterCz = cluster.z;
 
             // Reset position to starting area - use polygon-aware spawning with edge margin
             let x, z;
@@ -812,9 +870,9 @@ export class OptimizedSheepSystem {
             // Try to find a valid spawn position inside the polygon with margin from edges
             do {
                 const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * spreadRadius;
-                x = centerX + Math.cos(angle) * distance;
-                z = centerZ + Math.sin(angle) * distance;
+                const distance = Math.random() * effectiveRadius;
+                x = clusterCx + Math.cos(angle) * distance;
+                z = clusterCz + Math.sin(angle) * distance;
                 attempts++;
             } while (borderPoints && !this.isPointSafelyInside(x, z, borderPoints, edgeMargin) && attempts < maxAttempts);
 

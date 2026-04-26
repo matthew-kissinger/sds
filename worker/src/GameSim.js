@@ -56,23 +56,34 @@ export class GameSimulation {
             this.gameStartTime = null;
             this.gameDuration = 3 * 60 * 1000; // 3 minutes in ms
             this.sheepRemovalQueue = []; // Track sheep to remove after 5s
-            this.nextSheepId = 200; // For generating new sheep IDs
+            // Cycle 8 Phase 5: nextSheepId starts past the initial flock so
+            // respawned sheep don't collide with existing IDs. With variable
+            // room sheepCount, this needs to be at least the actual count.
+            this.nextSheepId = (typeof room.sheepCount === 'number' && room.sheepCount > 0)
+                ? room.sheepCount
+                : 200;
         }
         
+        // Cycle 8 Phase 5: room-level sheep count overrides the scene default.
+        // Falls back to scene default if room hasn't been migrated yet.
+        const roomSheepCount = (typeof room.sheepCount === 'number' && room.sheepCount > 0)
+            ? room.sheepCount
+            : this.scene.sheepSpawn.count;
+
         // Initialize game state based on mode
         if (this.isCompetitive || this.isTimedMode) {
             const modeEmoji = this.isTimedMode ? '⏱️' : '🏆';
             const modeName = this.isTimedMode ? 'timed' : 'competitive';
-            console.log(`${modeEmoji} Initializing ${modeName} game for ${playerIds.length} players`);
+            console.log(`${modeEmoji} Initializing ${modeName} game for ${playerIds.length} players (sheepCount=${roomSheepCount})`);
             this.gameState = createCompetitiveGameState({
-                totalSheep: this.scene.sheepSpawn.count,
+                totalSheep: roomSheepCount,
                 bounds: this.scene.bounds
             }, playerIds);
         } else {
             // Use cooperative mode (existing logic)
             this.gameState = createGameState({
                 sceneId: this.scene.id,
-                totalSheep: this.scene.sheepSpawn.count,
+                totalSheep: roomSheepCount,
                 bounds: this.scene.bounds
             });
         }

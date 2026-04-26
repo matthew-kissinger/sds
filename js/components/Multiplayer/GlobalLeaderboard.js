@@ -9,6 +9,22 @@ import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 
+// Cycle 8 Phase 3: scene + sheep-count partition selectors.
+const SCENE_FILTER_OPTIONS = [
+    { id: 'any', label: 'Any scene' },
+    { id: 'field', label: 'Home Field' },
+    { id: 'rolling-hills', label: 'Rolling Hills' },
+    { id: 'open-country', label: 'Open Country' }
+];
+const SHEEP_FILTER_OPTIONS = [
+    { value: 0, label: 'Any size' },
+    { value: 200, label: '200 sheep' },
+    { value: 250, label: '250 sheep' },
+    { value: 1000, label: '1000 sheep' },
+    { value: 3000, label: '3000 sheep' },
+    { value: 5000, label: '5000 sheep' }
+];
+
 export function GlobalLeaderboard({ onBack, playerIdentity }) {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('soloClassic');
@@ -16,11 +32,17 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [lastRefresh, setLastRefresh] = useState(null);
+    const [sceneFilter, setSceneFilter] = useState('any');
+    const [sheepFilter, setSheepFilter] = useState(0);
     const { isCompact, isMobile } = useResponsive();
 
     const tabs = [
         { id: 'soloClassic', labelKey: 'leaderboard.soloClassic' },
         { id: 'soloExtreme', labelKey: 'leaderboard.soloExtreme' },
+        // Cycle 8 Phase 2b: Insane (3000 sheep) and Chaos (5000 sheep) get
+        // their own boards instead of polluting soloClassic.
+        { id: 'soloInsane', labelKey: 'leaderboard.soloInsane' },
+        { id: 'soloChaos', labelKey: 'leaderboard.soloChaos' },
         { id: 'timed', labelKey: 'leaderboard.timed' },
         { id: 'competitive', labelKey: 'leaderboard.competitive' },
         { id: 'cooperative', labelKey: 'leaderboard.cooperative' }
@@ -41,7 +63,10 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 await nm.connect();
             }
 
-            const data = await nm.getAllLeaderboards(10);
+            const data = await nm.getAllLeaderboards(10, {
+                sceneId: sceneFilter,
+                sheepCount: sheepFilter
+            });
             console.log('[LEADERBOARD] Raw data received:', data);
 
             setLeaderboards(data);
@@ -62,7 +87,8 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
 
     useEffect(() => {
         loadLeaderboards();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sceneFilter, sheepFilter]);
 
     const renderLeaderboardTable = (gameMode) => {
         const data = leaderboards[gameMode] || [];
@@ -232,7 +258,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     display: 'flex',
                     flexWrap: 'wrap',
                     gap: '0.5rem',
-                    marginBottom: isCompact ? '1rem' : '1.5rem',
+                    marginBottom: isCompact ? '0.5rem' : '0.75rem',
                     overflowX: 'auto',
                     flexShrink: 0
                 }
@@ -243,6 +269,77 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     onClick: () => setActiveTab(tab.id)
                 }, t(tab.labelKey))
             )),
+
+            // Cycle 8 Phase 3: scene + sheep-count partition selectors.
+            createElement('div', {
+                key: 'filters',
+                style: {
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    marginBottom: isCompact ? '1rem' : '1.5rem',
+                    flexShrink: 0
+                }
+            }, [
+                createElement('label', {
+                    key: 'scene-label',
+                    style: {
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)'
+                    }
+                }, [
+                    createElement('span', { key: 't' }, 'Scene:'),
+                    createElement('select', {
+                        key: 's',
+                        value: sceneFilter,
+                        onChange: (e) => setSceneFilter(e.target.value),
+                        style: {
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '0.375rem',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'white',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer'
+                        }
+                    }, SCENE_FILTER_OPTIONS.map(opt =>
+                        createElement('option', {
+                            key: opt.id,
+                            value: opt.id,
+                            style: { background: '#1f2937' }
+                        }, opt.label)
+                    ))
+                ]),
+                createElement('label', {
+                    key: 'sheep-label',
+                    style: {
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)'
+                    }
+                }, [
+                    createElement('span', { key: 't' }, 'Sheep count:'),
+                    createElement('select', {
+                        key: 's',
+                        value: sheepFilter,
+                        onChange: (e) => setSheepFilter(parseInt(e.target.value, 10) || 0),
+                        style: {
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '0.375rem',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'white',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer'
+                        }
+                    }, SHEEP_FILTER_OPTIONS.map(opt =>
+                        createElement('option', {
+                            key: opt.value,
+                            value: opt.value,
+                            style: { background: '#1f2937' }
+                        }, opt.label)
+                    ))
+                ])
+            ]),
 
             // Content Area (scrollable)
             createElement('div', {

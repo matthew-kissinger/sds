@@ -193,6 +193,9 @@ export default {
                 roomCode: initBody.roomCode,
                 hostName: playerName,
                 gameMode: initBody.room.gameMode,
+                // Cycle 8 Phase 5: surface scene + sheep count to lobby browsers.
+                sceneId: initBody.room.sceneId,
+                sheepCount: initBody.room.sheepCount,
                 playerCount: initBody.room.playerCount,
                 maxPlayers: initBody.room.maxPlayers,
                 state: initBody.room.state,
@@ -244,6 +247,8 @@ export default {
                 roomCode: joinBody.room.roomCode,
                 hostName: joinBody.room.players.find((p: any) => p.isHost)?.name || 'Host',
                 gameMode: joinBody.room.gameMode,
+                sceneId: joinBody.room.sceneId,
+                sheepCount: joinBody.room.sheepCount,
                 playerCount: joinBody.room.playerCount,
                 maxPlayers: joinBody.room.maxPlayers,
                 state: joinBody.room.state,
@@ -344,6 +349,8 @@ export default {
               roomCode: initBody.roomCode,
               hostName: body.playerName || profile.display_name || 'Host',
               gameMode: initBody.room.gameMode,
+              sceneId: initBody.room.sceneId,
+              sheepCount: initBody.room.sheepCount,
               playerCount: initBody.room.playerCount,
               maxPlayers: initBody.room.maxPlayers,
               state: initBody.room.state,
@@ -379,13 +386,26 @@ export default {
       if (path === '/api/leaderboard' && method === 'GET') {
         const mode = (url.searchParams.get('mode') || 'cooperative') as GameMode;
         const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 10));
-        const entries = await getLeaderboard(env.DB, mode, limit);
+        // Cycle 8 Phase 3: optional partition filters.
+        const sceneId = url.searchParams.get('scene') || undefined;
+        const sheepCountRaw = url.searchParams.get('sheepCount');
+        const sheepCount = sheepCountRaw ? Number(sheepCountRaw) : undefined;
+        const entries = await getLeaderboard(env.DB, mode, limit, {
+          sceneId,
+          sheepCount: Number.isFinite(sheepCount) && (sheepCount as number) > 0 ? sheepCount : undefined,
+        });
         return json({ entries }, 200, cors);
       }
 
       if (path === '/api/leaderboards' && method === 'GET') {
         const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 10));
-        const leaderboards = await getAllLeaderboards(env.DB, limit);
+        const sceneId = url.searchParams.get('scene') || undefined;
+        const sheepCountRaw = url.searchParams.get('sheepCount');
+        const sheepCount = sheepCountRaw ? Number(sheepCountRaw) : undefined;
+        const leaderboards = await getAllLeaderboards(env.DB, limit, {
+          sceneId,
+          sheepCount: Number.isFinite(sheepCount) && (sheepCount as number) > 0 ? sheepCount : undefined,
+        });
         return json({ leaderboards }, 200, cors);
       }
 

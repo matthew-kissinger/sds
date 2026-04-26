@@ -8,9 +8,9 @@ import { defineConfig, devices } from '@playwright/test';
  *   npm run test:e2e:headed   - run with visible browser
  *   npm run test:e2e:ui       - Playwright UI mode
  *
- * The webServer block below boots `npm run dev:full`, which starts Vite on
- * port 3000 AND the Geckos server on port 9208 via concurrently. If a dev
- * server is already running on :3000 we reuse it.
+ * The webServer block below boots `npm run dev`, which starts Vite on
+ * port 3000 AND wrangler on port 8787 via concurrently. If a dev server
+ * is already running on :3000 we reuse it.
  */
 export default defineConfig({
   testDir: './tests/e2e',
@@ -44,7 +44,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev:full',
+    command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120_000,

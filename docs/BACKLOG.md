@@ -4,6 +4,30 @@
 
 ## Recently Completed
 
+### Cycle 8 — mode-matrix: modes × sheep counts × scenes × leaderboards (closed 2026-04-26)
+
+Plan: [`docs/archive/cycles/cycle-8-plan.md`](archive/cycles/cycle-8-plan.md). Headline:
+
+- **Phase 2a — Insane/Chaos sheep-count bug.** Root cause: [`OptimizedSheep.initializeSheepData`](../js/OptimizedSheep.js) ignored `clusterCenters` from scene defs and used a fixed `spreadRadius` (25-60m) regardless of count. At 3000-5000 sheep that's 1-2 m²/sheep — sheep stacked into a tight ball and the boid spatial hash thrashed, making Insane and Chaos "not work." Fixed with cluster-aware spawn (OC's 8 perimeter clusters now actually used) + density-driven radius scaling capped at scene-derived `maxRadius`. Field-200 behaviour preserved; sim-baseline byte-identical.
+- **Phase 2b — Leaderboard pollution fix.** Replaced the `extreme ? 'soloExtreme' : 'soloClassic'` ternary at [`js/GameState.js`](../js/GameState.js) with `SOLO_MODE_TO_LEADERBOARD` lookup. Worker [`d1.ts`](../worker/src/d1.ts) `GameMode` union extended with `soloInsane` + `soloChaos`. Frontend [`GlobalLeaderboard.js`](../js/components/Multiplayer/GlobalLeaderboard.js) gains the two new tabs.
+- **Phase 3 — Leaderboard matrix.** Migration [`worker/migrations/0002_mode_matrix.sql`](../worker/migrations/0002_mode_matrix.sql) adds `sheep_count INT` + `scene_id TEXT` to `score_submissions`, plus `solo_insane_best` / `solo_chaos_best` to `players`, plus a partition index. Backfill: pre-Cycle-8 `soloExtreme` rows get `sheep_count=1000`; everything else defaults to `(field, 200)`. `getLeaderboard` / `getAllLeaderboards` accept optional `{sceneId, sheepCount}` filters: fast path uses materialized `players.*_best` columns when unfiltered, partitioned path queries `score_submissions` with GROUP BY when filtered. Frontend leaderboard view gets scene + sheep-count selectors above the mode tabs.
+- **Phase 4 — Sandbox on Rolling Hills + Open Country.** [`SandboxConfig`](../js/SandboxConfig.js) gains `sceneId` (default `field`); flows through `serialize/deserialize/toJSON`. [`SandboxSetup`](../js/components/StartScreen/SandboxSetup.js) gains a 3-tile scene picker; non-Field scenes hide the field-size/shape/fence sections and show a scene-owns-terrain notice. [`App.js:handleStartSandbox`](../js/components/App.js) detects scene mismatch and reloads to `?scene=X#s/<encoded>` so the player lands back in sandbox setup on the right scene. [`GameState.startSandboxGame`](../js/GameState.js) takes an early-return path on island scenes that skips bounds/fence/structure rebuild — the scene owns its heightfield. Custom fences on heightfield deferred (Q3).
+- **Phase 5 — MP scope expansion.** [`RoomMeta`](../worker/src/RoomDO.ts) gains `sheepCount`, validated against allow-list `{200, 250, 500, 1000}` (cap held at 1000 pending Q4 bandwidth measurement). [`GameSimulation`](../worker/src/GameSim.js) reads `room.sheepCount`. [`LobbyEntry`](../worker/src/LobbyDO.ts) gains optional `sceneId` + `sheepCount` so lobby browsers can show what's on offer. [`RoomCreation.js`](../js/components/Multiplayer/RoomCreation.js) gains a sheep-count selector. [`NetworkManager.createRoom`](../js/NetworkManager.js) forwards `sheepCount` through `roomSettings`.
+- **Phase 6 — Follow camera triangulation polish.** Added late after re-analysing the Cycle 7 carry-over playtest matrix on Rolling Hills. Four targeted fixes in [`CameraController.js`](../js/CameraController.js): ridge sample STEPS 6→12 + interior-only (no more dog-endpoint over-lift, ~1.8m sample density vs 3.7m); asymmetric `smoothedFloorY` smoothing (snap up, ease down) so fast ascents don't briefly clip terrain; `_lastValidFacing` tracking replaces the prior `_facingAngle` feedback loop that re-fed the smoothed camera yaw back into itself when the dog stopped.
+
+111/111 vitest pass. Production build clean. Sim-baseline byte-identical.
+
+Carry-over to Cycle 9 (`playtest-and-polish`) — all are deferred verification items, not code-incomplete:
+
+- Insane / Chaos modes spawn correctly on each scene.
+- Insane / Chaos leaderboards populate cleanly, no soloClassic pollution.
+- Per-(mode × scene × sheepCount) partition filters return the right rows.
+- Sandbox-on-RH and Sandbox-on-OC end-to-end, including cross-scene reload UX.
+- MP at non-200 sheep counts (with Q4 bandwidth measurement to decide whether to lift the 1000 cap).
+- Phase 6 follow-camera fixes read smooth on RH Follow under stamina-out + tree contact.
+- Cycle 6 + 7 playtest items 1-6 (the original Phase 1 carry-over).
+- No frametime regression on RTX 3070 / mobile target.
+
 ### Cycle 7 — Camera smoothness + sky/water polish + OC outer-ring + OC differentiation (closed 2026-04-25)
 
 Plan: [`docs/archive/cycles/cycle-7-plan.md`](archive/cycles/cycle-7-plan.md). Headline:

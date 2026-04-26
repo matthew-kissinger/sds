@@ -11,12 +11,37 @@ export interface PlayerRow {
   last_active: number;
   solo_classic_best: number | null;
   solo_extreme_best: number | null;
+  // Cycle 8: separate materialized bests per solo difficulty so a 5000-sheep
+  // chaos run no longer pollutes the soloClassic board (prior bug).
+  solo_insane_best: number | null;
+  solo_chaos_best: number | null;
   timed_best: number | null;
   competitive_wins: number;
   cooperative_best: number | null;
 }
 
-export type GameMode = 'soloClassic' | 'soloExtreme' | 'timed' | 'competitive' | 'cooperative';
+export type GameMode =
+  | 'soloClassic'
+  | 'soloExtreme'
+  | 'soloInsane'
+  | 'soloChaos'
+  | 'timed'
+  | 'competitive'
+  | 'cooperative';
+
+// Cycle 8 Phase 3: known scenes for leaderboard partitioning. 'any' is a
+// pseudo-key the API accepts on read paths; never stored.
+export type SceneId = 'field' | 'rolling-hills' | 'open-country';
+
+export const ALL_GAME_MODES: GameMode[] = [
+  'soloClassic',
+  'soloExtreme',
+  'soloInsane',
+  'soloChaos',
+  'timed',
+  'competitive',
+  'cooperative',
+];
 
 const ADJECTIVES = [
   'Swift', 'Clever', 'Brave', 'Mighty', 'Gentle', 'Wise', 'Bold', 'Quick',
@@ -89,8 +114,9 @@ export async function registerPlayer(
     .prepare(
       `INSERT INTO players
        (persistent_id, display_name, discriminator, full_name, created_at, last_active,
-        solo_classic_best, solo_extreme_best, timed_best, competitive_wins, cooperative_best)
-       VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, 0, NULL)`,
+        solo_classic_best, solo_extreme_best, solo_insane_best, solo_chaos_best,
+        timed_best, competitive_wins, cooperative_best)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, 0, NULL)`,
     )
     .bind(persistentId, displayName, discriminator, fullName, now, now)
     .run();
@@ -104,6 +130,8 @@ export async function registerPlayer(
     last_active: now,
     solo_classic_best: null,
     solo_extreme_best: null,
+    solo_insane_best: null,
+    solo_chaos_best: null,
     timed_best: null,
     competitive_wins: 0,
     cooperative_best: null,
@@ -125,6 +153,24 @@ export interface SubmitScoreResult {
   player: PlayerRow | null;
 }
 
+// Cycle 8 Phase 3: time-modes vs win-mode for submission/leaderboard direction.
+// Time-modes (lower = better) match by score < best; competitive accumulates.
+// Insane and Chaos use the same time-based scoring as Classic and Extreme.
+const TIME_MODES: GameMode[] = [
+  'soloClassic',
+  'soloExtreme',
+  'soloInsane',
+  'soloChaos',
+  'cooperative',
+];
+
+export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean {
+  if (TIME_MODES.includes(mode)) return score >= 30 && score <= 3600;
+  if (mode === 'timed') return Number.isInteger(score) && score >= 0 && score <= 500;
+  if (mode === 'competitive') return score === 0 || score === 1;
+  return false;
+}
+
 export async function submitScore(
   db: D1Database,
   persistentId: string,
@@ -135,19 +181,8 @@ export async function submitScore(
   const player = await getPlayer(db, persistentId);
   if (!player) throw new Error('Player not found. Please register first.');
 
-  // Score bounds validation (matches server/LeaderboardManager.js).
-  switch (gameMode) {
-    case 'soloClassic':
-    case 'soloExtreme':
-    case 'cooperative':
-      if (!(score >= 30 && score <= 3600)) throw new Error(`score out of bounds for mode ${gameMode}`);
-      break;
-    case 'timed':
-      if (!(Number.isInteger(score) && score >= 0 && score <= 500)) throw new Error(`score out of bounds for mode ${gameMode}`);
-      break;
-    case 'competitive':
-      if (!(score === 0 || score === 1)) throw new Error(`score out of bounds for mode ${gameMode}`);
-      break;
+  if (!submissionScoreBoundsOk(gameMode, score)) {
+    throw new Error(`score out of bounds for mode ${gameMode}`);
   }
 
   const now = Date.now();
@@ -155,12 +190,27 @@ export async function submitScore(
   let isNewRecord = false;
   const roomCode = typeof additionalData.roomCode === 'string' ? additionalData.roomCode : null;
 
+  // Cycle 8 Phase 3: lift sceneId + sheepCount into dedicated columns so
+  // leaderboard queries can partition by them. Defaults match the pre-Cycle-8
+  // assumption that everything ran on Field at 200 sheep, except for
+  // soloExtreme which always ran at 1000.
+  const sceneId = typeof additionalData.sceneId === 'string'
+    ? additionalData.sceneId
+    : 'field';
+  const sheepCount = Number.isInteger(additionalData.sheepCount as number)
+    ? (additionalData.sheepCount as number)
+    : (gameMode === 'soloExtreme' ? 1000 : 200);
+
   // Audit row + materialized-best in a D1 batch so they land together.
   const stmts: D1PreparedStatement[] = [];
   stmts.push(
     db.prepare(
-      'INSERT INTO score_submissions (persistent_id, game_mode, score, submitted_at, room_code, additional_data) VALUES (?, ?, ?, ?, ?, ?)',
-    ).bind(persistentId, gameMode, score, now, roomCode, JSON.stringify(additionalData || {})),
+      'INSERT INTO score_submissions (persistent_id, game_mode, score, submitted_at, room_code, additional_data, sheep_count, scene_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(
+      persistentId, gameMode, score, now, roomCode,
+      JSON.stringify(additionalData || {}),
+      sheepCount, sceneId,
+    ),
   );
 
   switch (gameMode) {
@@ -182,6 +232,28 @@ export async function submitScore(
             .bind(score, now, persistentId),
         );
         player.solo_extreme_best = score;
+        updated = true;
+        isNewRecord = true;
+      }
+      break;
+    case 'soloInsane':
+      if (player.solo_insane_best === null || score < player.solo_insane_best) {
+        stmts.push(
+          db.prepare('UPDATE players SET solo_insane_best = ?, last_active = ? WHERE persistent_id = ?')
+            .bind(score, now, persistentId),
+        );
+        player.solo_insane_best = score;
+        updated = true;
+        isNewRecord = true;
+      }
+      break;
+    case 'soloChaos':
+      if (player.solo_chaos_best === null || score < player.solo_chaos_best) {
+        stmts.push(
+          db.prepare('UPDATE players SET solo_chaos_best = ?, last_active = ? WHERE persistent_id = ?')
+            .bind(score, now, persistentId),
+        );
+        player.solo_chaos_best = score;
         updated = true;
         isNewRecord = true;
       }
@@ -229,6 +301,8 @@ export function scoreColumn(mode: GameMode): string {
   switch (mode) {
     case 'soloClassic': return 'solo_classic_best';
     case 'soloExtreme': return 'solo_extreme_best';
+    case 'soloInsane': return 'solo_insane_best';
+    case 'soloChaos': return 'solo_chaos_best';
     case 'timed': return 'timed_best';
     case 'competitive': return 'competitive_wins';
     case 'cooperative': return 'cooperative_best';
@@ -237,19 +311,18 @@ export function scoreColumn(mode: GameMode): string {
 
 export function formatScore(mode: GameMode, score: number | null): string {
   if (score === null || score === undefined || Number.isNaN(score)) return 'No score';
+  if (TIME_MODES.includes(mode)) {
+    const m = Math.floor(score / 60);
+    const s = Math.floor(score % 60);
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
   switch (mode) {
-    case 'soloClassic':
-    case 'soloExtreme':
-    case 'cooperative': {
-      const m = Math.floor(score / 60);
-      const s = Math.floor(score % 60);
-      return `${m}:${String(s).padStart(2, '0')}`;
-    }
     case 'timed':
       return `${score} sheep`;
     case 'competitive':
       return `${score} wins`;
   }
+  return String(score);
 }
 
 export interface LeaderboardEntry {
@@ -262,49 +335,133 @@ export interface LeaderboardEntry {
   lastActive: number;
 }
 
+export interface LeaderboardFilters {
+  sceneId?: string;
+  sheepCount?: number;
+}
+
+/**
+ * Cycle 8 Phase 3: get leaderboard for a mode, optionally filtered by
+ * (sceneId, sheepCount). When no filters are passed, the fast path queries
+ * the materialized-best columns on `players`. When filters are passed, the
+ * partitioned path queries `score_submissions` directly with GROUP BY,
+ * yielding per-(mode, scene, sheepCount) rankings.
+ */
 export async function getLeaderboard(
   db: D1Database,
   mode: GameMode,
   limit = 10,
+  filters: LeaderboardFilters = {},
 ): Promise<LeaderboardEntry[]> {
-  let sql: string;
-  switch (mode) {
-    case 'soloClassic':
-      sql = 'SELECT * FROM players WHERE solo_classic_best IS NOT NULL ORDER BY solo_classic_best ASC LIMIT ?';
-      break;
-    case 'soloExtreme':
-      sql = 'SELECT * FROM players WHERE solo_extreme_best IS NOT NULL ORDER BY solo_extreme_best ASC LIMIT ?';
-      break;
-    case 'timed':
-      sql = 'SELECT * FROM players WHERE timed_best IS NOT NULL ORDER BY timed_best DESC LIMIT ?';
-      break;
-    case 'competitive':
-      sql = 'SELECT * FROM players WHERE competitive_wins > 0 ORDER BY competitive_wins DESC LIMIT ?';
-      break;
-    case 'cooperative':
-      sql = 'SELECT * FROM players WHERE cooperative_best IS NOT NULL ORDER BY cooperative_best ASC LIMIT ?';
-      break;
+  const hasFilters = (filters.sceneId && filters.sceneId !== 'any') ||
+    (typeof filters.sheepCount === 'number' && filters.sheepCount > 0);
+
+  // Fast path: no filters -> use materialized columns on players.
+  if (!hasFilters) {
+    let sql: string;
+    switch (mode) {
+      case 'soloClassic':
+        sql = 'SELECT * FROM players WHERE solo_classic_best IS NOT NULL ORDER BY solo_classic_best ASC LIMIT ?';
+        break;
+      case 'soloExtreme':
+        sql = 'SELECT * FROM players WHERE solo_extreme_best IS NOT NULL ORDER BY solo_extreme_best ASC LIMIT ?';
+        break;
+      case 'soloInsane':
+        sql = 'SELECT * FROM players WHERE solo_insane_best IS NOT NULL ORDER BY solo_insane_best ASC LIMIT ?';
+        break;
+      case 'soloChaos':
+        sql = 'SELECT * FROM players WHERE solo_chaos_best IS NOT NULL ORDER BY solo_chaos_best ASC LIMIT ?';
+        break;
+      case 'timed':
+        sql = 'SELECT * FROM players WHERE timed_best IS NOT NULL ORDER BY timed_best DESC LIMIT ?';
+        break;
+      case 'competitive':
+        sql = 'SELECT * FROM players WHERE competitive_wins > 0 ORDER BY competitive_wins DESC LIMIT ?';
+        break;
+      case 'cooperative':
+        sql = 'SELECT * FROM players WHERE cooperative_best IS NOT NULL ORDER BY cooperative_best ASC LIMIT ?';
+        break;
+    }
+    const { results } = await db.prepare(sql).bind(limit).all<PlayerRow>();
+    const col = scoreColumn(mode);
+    return (results || []).map((p, i) => {
+      const score = (p as any)[col] ?? 0;
+      return {
+        rank: i + 1,
+        displayName: p.display_name,
+        fullName: p.full_name,
+        score,
+        formattedScore: formatScore(mode, score),
+        persistent_id: p.persistent_id,
+        lastActive: p.last_active,
+      };
+    });
   }
-  const { results } = await db.prepare(sql).bind(limit).all<PlayerRow>();
-  const col = scoreColumn(mode);
-  return (results || []).map((p, i) => {
-    const score = (p as any)[col] ?? 0;
-    return {
-      rank: i + 1,
-      displayName: p.display_name,
-      fullName: p.full_name,
-      score,
-      formattedScore: formatScore(mode, score),
-      persistent_id: p.persistent_id,
-      lastActive: p.last_active,
-    };
-  });
+
+  // Partitioned path: filter score_submissions by (mode, scene, sheepCount)
+  // and aggregate per player. For TIME_MODES we want MIN(score). For 'timed'
+  // we want MAX(score). For 'competitive' we want COUNT of wins (score=1
+  // submissions). Join back to players for display fields.
+  const isTimeMode = TIME_MODES.includes(mode);
+  const isCompetitive = mode === 'competitive';
+  const aggSql = isCompetitive
+    ? 'SUM(s.score)'
+    : (isTimeMode ? 'MIN(s.score)' : 'MAX(s.score)');
+  const orderDir = isCompetitive
+    ? 'DESC'
+    : (isTimeMode ? 'ASC' : 'DESC');
+
+  const where: string[] = ['s.game_mode = ?'];
+  const binds: any[] = [mode];
+  if (filters.sceneId && filters.sceneId !== 'any') {
+    where.push('s.scene_id = ?');
+    binds.push(filters.sceneId);
+  }
+  if (typeof filters.sheepCount === 'number' && filters.sheepCount > 0) {
+    where.push('s.sheep_count = ?');
+    binds.push(filters.sheepCount);
+  }
+  binds.push(limit);
+
+  const sql = `
+    SELECT p.persistent_id, p.display_name, p.full_name, p.last_active,
+           ${aggSql} AS best_score
+    FROM score_submissions s
+    JOIN players p ON p.persistent_id = s.persistent_id
+    WHERE ${where.join(' AND ')}
+    GROUP BY s.persistent_id
+    ORDER BY best_score ${orderDir}
+    LIMIT ?
+  `;
+
+  type Row = {
+    persistent_id: string;
+    display_name: string;
+    full_name: string;
+    last_active: number;
+    best_score: number;
+  };
+  const { results } = await db.prepare(sql).bind(...binds).all<Row>();
+  return (results || []).map((p, i) => ({
+    rank: i + 1,
+    displayName: p.display_name,
+    fullName: p.full_name,
+    score: p.best_score,
+    formattedScore: formatScore(mode, p.best_score),
+    persistent_id: p.persistent_id,
+    lastActive: p.last_active,
+  }));
 }
 
-export async function getAllLeaderboards(db: D1Database, limit = 10): Promise<Record<string, LeaderboardEntry[]>> {
-  const modes: GameMode[] = ['soloClassic', 'soloExtreme', 'timed', 'competitive', 'cooperative'];
-  const results = await Promise.all(modes.map(m => getLeaderboard(db, m, limit)));
+export async function getAllLeaderboards(
+  db: D1Database,
+  limit = 10,
+  filters: LeaderboardFilters = {},
+): Promise<Record<string, LeaderboardEntry[]>> {
+  const results = await Promise.all(
+    ALL_GAME_MODES.map(m => getLeaderboard(db, m, limit, filters)),
+  );
   const out: Record<string, LeaderboardEntry[]> = {};
-  for (let i = 0; i < modes.length; i++) out[modes[i]] = results[i];
+  for (let i = 0; i < ALL_GAME_MODES.length; i++) out[ALL_GAME_MODES[i]] = results[i];
   return out;
 }

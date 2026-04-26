@@ -26,11 +26,21 @@ interface RoomMeta {
   isPublic: boolean;
   gameMode: string;
   sceneId: string;
+  // Cycle 8 Phase 5: room-level sheep count, picked at room creation. The
+  // worker GameSim is sized to this value at start. 200 (current default)
+  // remains the back-compat default for rooms persisted before Cycle 8.
+  sheepCount: number;
   modeLocked: boolean;
   state: 'waiting' | 'in-game' | 'finished';
   createdAt: number;
   lastActivity: number;
 }
+
+// Cycle 8 Phase 5: allow-list of sheep counts hosts can pick. Until the
+// per-tick wire bandwidth is measured at higher counts (Q4), keep the cap
+// at 1000 — the same ceiling Solo Extreme uses.
+const ALLOWED_SHEEP_COUNTS = new Set([200, 250, 500, 1000]);
+const DEFAULT_SHEEP_COUNT = 200;
 
 interface Env {
   ROOM_DO: DurableObjectNamespace;
@@ -77,6 +87,10 @@ export class RoomDO {
         this.meta = stored.meta;
         // Backfill sceneId for rooms persisted before Cycle 3 Track 3 shipped.
         if (!this.meta.sceneId) this.meta.sceneId = DEFAULT_SCENE_ID;
+        // Backfill sheepCount for rooms persisted before Cycle 8 Phase 5.
+        if (typeof (this.meta as any).sheepCount !== 'number') {
+          this.meta.sheepCount = DEFAULT_SHEEP_COUNT;
+        }
         this.players = new Map(stored.players);
         // If a sim was running, it's lost; snap back to 'waiting'.
         if (this.meta.state === 'in-game') this.meta.state = 'waiting';
@@ -134,6 +148,7 @@ export class RoomDO {
       isPublic?: boolean;
       gameMode?: string;
       sceneId?: string;
+      sheepCount?: number;
       modeLocked?: boolean;
     };
   }): Response {
@@ -152,6 +167,10 @@ export class RoomDO {
     const validSceneIds = listScenes().map((sc: any) => sc.id);
     const sceneId = s.sceneId && validSceneIds.includes(s.sceneId) ? s.sceneId : DEFAULT_SCENE_ID;
     const maxPlayers = Math.min(4, Math.max(2, s.maxPlayers || 4));
+    // Cycle 8 Phase 5: validate sheepCount against allow-list.
+    const sheepCount = (typeof s.sheepCount === 'number' && ALLOWED_SHEEP_COUNTS.has(s.sheepCount))
+      ? s.sheepCount
+      : DEFAULT_SHEEP_COUNT;
 
     this.meta = {
       roomCode: body.roomCode,
@@ -161,6 +180,7 @@ export class RoomDO {
       isPublic: !!s.isPublic,
       gameMode,
       sceneId,
+      sheepCount,
       modeLocked: !!s.modeLocked,
       state: 'waiting',
       createdAt: Date.now(),
@@ -405,6 +425,8 @@ export class RoomDO {
       modeLocked: this.meta.modeLocked,
       gameMode: this.meta.gameMode,
       sceneId: this.meta.sceneId,
+      // Cycle 8 Phase 5: pass room-level sheepCount through to GameSim.
+      sheepCount: this.meta.sheepCount,
       state: this.meta.state,
       lastActivity: this.meta.lastActivity,
       simulation: null,
@@ -426,6 +448,11 @@ export class RoomDO {
       onSubmitScores: async (playerScores: Record<string, number>, completionData: any) => {
         try {
           const gameMode = completionData?.isTimedMode ? 'timed' : 'competitive';
+          // Cycle 8 Phase 3+5: include sceneId + sheepCount in audit trail
+          // so leaderboards can partition by them. Phase 5 will let hosts
+          // pick a non-200 sheepCount; until then the meta default is 200.
+          const sceneId = self.meta!.sceneId || 'field';
+          const sheepCount = (self.meta as any).sheepCount || 200;
           for (const [sessionId, score] of Object.entries(playerScores)) {
             const p = self.players.get(sessionId);
             if (!p?.persistentId) continue;
@@ -435,7 +462,9 @@ export class RoomDO {
             try {
               await d1SubmitScore(self.env.DB, p.persistentId, gameMode as any, value, {
                 roomCode: self.meta!.roomCode,
-                totalSheep: 200,
+                sceneId,
+                sheepCount,
+                totalSheep: sheepCount,
                 playerCount: Object.keys(playerScores).length,
               });
             } catch (err) {
@@ -572,6 +601,8 @@ export class RoomDO {
       maxPlayers: this.meta.maxPlayers,
       isPublic: this.meta.isPublic,
       gameMode: this.meta.gameMode,
+      sceneId: this.meta.sceneId,
+      sheepCount: this.meta.sheepCount,
       modeLocked: this.meta.modeLocked,
       state: this.meta.state,
       playerCount: this.players.size,

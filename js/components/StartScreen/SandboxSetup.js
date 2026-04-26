@@ -26,6 +26,31 @@ const FIELD_SHAPE_OPTIONS = Object.values(FIELD_SHAPES).map(shape => ({
     icon: shape.icon
 }));
 
+// Cycle 8 Phase 4: scene options for sandbox. 'field' (default) keeps the
+// legacy rect-bounded sandbox; the two island scenes use the scene's
+// heightfield + island disc as the boundary, and disable the field-shape /
+// custom-fences pickers.
+const SCENE_OPTIONS = [
+    {
+        id: 'field',
+        label: 'Home Field',
+        icon: '\u{1F33E}',
+        description: 'Flat fenced pasture - full sandbox controls'
+    },
+    {
+        id: 'rolling-hills',
+        label: 'Rolling Hills',
+        icon: '\u{1F30A}',
+        description: 'Island with corral - 180m radius'
+    },
+    {
+        id: 'open-country',
+        label: 'Open Country',
+        icon: '\u{1F332}',
+        description: 'Big island with woods + portal - 380m radius'
+    }
+];
+
 // Fence layout presets
 const FENCE_PRESETS = [
     { id: 'open', labelKey: 'sandbox.fencePresets.open', descKey: 'sandbox.fencePresets.openDesc' },
@@ -128,6 +153,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
     const updateConfig = (path, value) => {
         // Deep clone the config to avoid mutating nested objects
         const newConfig = JSON.parse(JSON.stringify({
+            sceneId: config.sceneId,
             sheep: config.sheep,
             field: config.field,
             fences: config.fences,
@@ -150,6 +176,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
         current[keys[keys.length - 1]] = value;
         onConfigChange(newConfig);
     };
+
+    const isIslandScene = config.sceneId && config.sceneId !== 'field';
 
     // Tabs for mobile/compact view
     const tabs = [
@@ -225,8 +253,32 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
 
             case 'field':
                 return createElement('div', null, [
-                    createElement(SectionHeader, { key: 'h1' }, t('sandbox.fieldSize')),
+                    // Cycle 8 Phase 4: scene picker.
+                    createElement(SectionHeader, { key: 'h-scene' }, 'Scene'),
                     createElement('div', {
+                        key: 'scenes',
+                        className: 'grid grid-cols-3 gap-2 mb-2'
+                    }, SCENE_OPTIONS.map(scene =>
+                        createElement('button', {
+                            key: scene.id,
+                            onClick: () => updateConfig('sceneId', scene.id),
+                            className: `p-2 rounded-lg transition-all flex flex-col items-center justify-center text-center ${
+                                (config.sceneId || 'field') === scene.id
+                                    ? 'bg-emerald-500 text-white ring-2 ring-emerald-400'
+                                    : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                            }`,
+                            title: scene.description
+                        }, [
+                            createElement('span', { key: 'icon', className: 'text-2xl mb-1' }, scene.icon),
+                            createElement('span', { key: 'label', className: 'text-[10px] font-medium' }, scene.label)
+                        ])
+                    )),
+                    isIslandScene && createElement('div', {
+                        key: 'island-notice',
+                        className: 'text-[11px] text-white/55 mb-3 px-2 py-2 bg-white/5 rounded-lg'
+                    }, 'Island scene selected. Field size, shape, and custom fences are disabled - the scene\'s heightfield is the boundary.'),
+                    !isIslandScene && createElement(SectionHeader, { key: 'h1' }, t('sandbox.fieldSize')),
+                    !isIslandScene && createElement('div', {
                         key: 'sizes',
                         className: 'grid grid-cols-2 gap-2'
                     }, FIELD_SIZES.map(size =>
@@ -239,8 +291,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         })
                     )),
 
-                    createElement(SectionHeader, { key: 'h-shape' }, t('sandbox.fieldShape')),
-                    createElement('div', {
+                    !isIslandScene && createElement(SectionHeader, { key: 'h-shape' }, t('sandbox.fieldShape')),
+                    !isIslandScene && createElement('div', {
                         key: 'shapes',
                         className: 'grid grid-cols-4 gap-2'
                     }, FIELD_SHAPE_OPTIONS.map(shape =>
@@ -266,7 +318,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         ])
                     )),
                     // Show "Edit Shape" button when custom shape is selected
-                    config.field?.shape === 'custom' && createElement(Button, {
+                    !isIslandScene && config.field?.shape === 'custom' && createElement(Button, {
                         key: 'edit-shape-btn',
                         variant: 'secondary',
                         onClick: () => onEditFences && onEditFences({ mode: 'shape' }),
@@ -276,8 +328,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         ? t('sandbox.editCustomShape')
                         : t('sandbox.drawCustomShape')),
 
-                    createElement(SectionHeader, { key: 'h2' }, t('sandbox.fenceLayout')),
-                    createElement('div', {
+                    !isIslandScene && createElement(SectionHeader, { key: 'h2' }, t('sandbox.fenceLayout')),
+                    !isIslandScene && createElement('div', {
                         key: 'presets',
                         className: 'grid grid-cols-2 gap-2'
                     }, FENCE_PRESETS.map(preset =>
@@ -296,7 +348,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         })
                     )),
 
-                    config.preset === 'custom' && createElement(Button, {
+                    !isIslandScene && config.preset === 'custom' && createElement(Button, {
                         key: 'edit-btn',
                         variant: 'secondary',
                         onClick: onEditFences,

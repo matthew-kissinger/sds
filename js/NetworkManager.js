@@ -301,14 +301,19 @@ export class NetworkManager {
         };
     }
 
-    async getLeaderboard(gameMode, limit = 10) {
+    async getLeaderboard(gameMode, limit = 10, filters = {}) {
         const params = new URLSearchParams({ mode: gameMode, limit: String(limit) });
+        if (filters.sceneId && filters.sceneId !== 'any') params.set('scene', filters.sceneId);
+        if (filters.sheepCount && filters.sheepCount > 0) params.set('sheepCount', String(filters.sheepCount));
         const data = await this._getJson(`/api/leaderboard?${params}`);
         return { success: true, gameMode, leaderboard: data.entries || [] };
     }
 
-    async getAllLeaderboards(limit = 10) {
-        const data = await this._getJson(`/api/leaderboards?limit=${limit}`);
+    async getAllLeaderboards(limit = 10, filters = {}) {
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (filters.sceneId && filters.sceneId !== 'any') params.set('scene', filters.sceneId);
+        if (filters.sheepCount && filters.sheepCount > 0) params.set('sheepCount', String(filters.sheepCount));
+        const data = await this._getJson(`/api/leaderboards?${params}`);
         return data.leaderboards || {};
     }
 
@@ -354,6 +359,8 @@ export class NetworkManager {
                 name: roomSettings.roomName || `${playerName}'s Room`,
                 gameMode: roomSettings.gameMode || 'cooperative',
                 ...(sceneId ? { sceneId } : {}),
+                // Cycle 8 Phase 5: forward room-level sheep count picked by host.
+                ...(typeof roomSettings.sheepCount === 'number' ? { sheepCount: roomSettings.sheepCount } : {}),
             },
         };
         const data = await this._postJson('/api/rooms', body);
