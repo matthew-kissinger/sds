@@ -14,11 +14,27 @@
  * - Sandbox mode (when enabled for performance)
  */
 
+import { boundaryToBounds } from '../shared/index.js';
+
 // Constants
 // Default capacity for high-count modes. The system can grow dynamically if needed.
 const MAX_BOIDS = 5000;
 const MAX_NEIGHBORS = 50;
 const MAX_FORCE = 0.6;  // Higher for better reactivity
+
+/**
+ * Normalize the polymorphic bounds input (legacy rect with no `kind`, or
+ * discriminated boundary `{kind:'rect'|'island',...}`) into the legacy
+ * rect AABB the spatial hash and edge-turn force consume. Delegates the
+ * boundary→AABB formula to the shared helper so islands don't have to
+ * duplicate the math here.
+ */
+function normalizeBoundsToRect(bounds) {
+    if (bounds && bounds.kind) {
+        return boundaryToBounds(bounds);
+    }
+    return bounds;
+}
 
 /**
  * ExtremeBoidSystem manages high-performance flocking calculations
@@ -88,13 +104,17 @@ export class ExtremeBoidSystem {
     }
 
     /**
-     * Initialize the spatial grid based on bounds
+     * Initialize the spatial grid based on bounds. Accepts either a legacy
+     * rect or a discriminated boundary; islands collapse to their AABB
+     * (per-sheep radial clamping happens in OptimizedSheep, so the AABB
+     * corners outside the disc just stay empty in the spatial hash).
      */
     initSpatialGrid(bounds) {
-        this.bounds = bounds;
+        const rect = normalizeBoundsToRect(bounds);
+        this.bounds = rect;
 
-        const width = bounds.maxX - bounds.minX;
-        const depth = bounds.maxZ - bounds.minZ;
+        const width = rect.maxX - rect.minX;
+        const depth = rect.maxZ - rect.minZ;
 
         // Cell size should be at least as large as perception radius
         this.gridCellSize = Math.max(this.perception * 1.5, 10);
@@ -440,9 +460,9 @@ export class ExtremeBoidSystem {
      * Update bounds (e.g., when field size changes)
      */
     setBounds(bounds) {
-        this.bounds = bounds;
+        this.bounds = normalizeBoundsToRect(bounds);
         if (this.enabled) {
-            this.initSpatialGrid(bounds);
+            this.initSpatialGrid(this.bounds);
         }
     }
 }
