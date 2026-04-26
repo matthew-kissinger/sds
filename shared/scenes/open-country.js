@@ -33,9 +33,21 @@ export const openCountry = {
     sheepSpawn: {
         pattern: 'scattered',
         count: 200,
-        spreadRadius: 160,
+        // Cycle 7: spread sheep across multiple cluster centers covering
+        // the southern + central play area instead of one tight blob, so
+        // the player has a real "go find them" gather phase rather than
+        // a pre-formed flock at spawn. Per-cluster spread is generous
+        // (90m) to give a random-feel scatter inside each.
+        spreadRadius: 90,
         centerX: 0,
-        centerZ: -150
+        centerZ: -100,
+        clusterCenters: [
+            { x: -150, z: -180 },
+            { x:  150, z: -180 },
+            { x: -100, z:  -40 },
+            { x:  100, z:  -40 },
+            { x:    0, z: -120 }
+        ]
     },
 
     // Cycle 6 Phase 3: woodsZones drive density biasing in TreePlacement.
@@ -63,7 +75,13 @@ export const openCountry = {
 
     grass: {
         clumpsPerChunk: { desktop: 2400, mobile: 1000 },
-        colors: { base: '#7a8a4e', mid: '#a8b870', tip: '#d8d088' }
+        colors: { base: '#7a8a4e', mid: '#a8b870', tip: '#d8d088' },
+        // Cycle 7 Phase 2b (round 2): bumped 0.75→0.92 so grass extends
+        // to ~387m on desktop's 420m worldSize, past OC's 380m island
+        // edge. Prior 0.75 left ~70m of bare terrain between safe radius
+        // and shore. Grass beyond actual shoreline gets culled by the
+        // heightfield falloff anyway, so going wide is safe.
+        densityRange: 0.92
     },
 
     farmHouse: null,
@@ -72,6 +90,17 @@ export const openCountry = {
     // in the field. Sheep are still bounded by the island, they just
     // can't see a wall.
     perimeterFence: false,
+
+    // Cycle 7 Phase 3: gather → drive multi-stage objective. Player must
+    // hold ≥40 sheep (20% of 200) inside the round-up zone at (0, 50)
+    // radius 30m for 2.0 seconds before the portal at (0, 295) accepts
+    // retirement. First-pass values, easy on purpose so the verb reads —
+    // tune up if it's trivial.
+    objective: {
+        roundupZone: { x: 0, z: 50, radius: 30 },
+        requiredSheep: 40,
+        holdRequired: 2.0
+    },
 
     sky: { preset: 'golden-hour' },
 

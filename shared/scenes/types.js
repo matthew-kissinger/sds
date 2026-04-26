@@ -123,6 +123,22 @@
  * @property {GrassColors} [colors]
  * @property {{strength: number, frequency: number}} [wind]
  * @property {number} [cutoffDistance]
+ * @property {number} [densityRange] Multiplier on `worldSize` for the radial
+ *   density-falloff zero point. Default 0.6 — grass density drops to zero at
+ *   `worldSize * 0.6` from origin. Open Country sets 0.75 to extend grass to
+ *   its 306m safe radius. RH/Field omit this; the 0.6 default covers them.
+ */
+
+/**
+ * Cycle 7 Phase 3: multi-stage objective. When set on a scene, the scene's
+ * corral retirement is gated until the round-up condition is met — the player
+ * must hold `requiredSheep` count within `roundupZone` for `holdRequired`
+ * seconds. Until then, sheep that wander into the corral don't retire.
+ *
+ * @typedef {Object} ObjectiveDef
+ * @property {{x: number, z: number, radius: number}} roundupZone Center + radius of the gather zone.
+ * @property {number} requiredSheep   Number of sheep that must be inside the zone simultaneously.
+ * @property {number} holdRequired    Seconds the count must be held before stage transitions.
  */
 
 /**
@@ -159,6 +175,7 @@
  * @property {GateDef} [gate]                   Optional for `island` scenes that use a `corral` instead
  * @property {PastureDef} [pasture]             Optional for `island` scenes that use a `corral` instead
  * @property {CorralDef} [corral]               Cycle 5+ — circular destination zone (Rolling Hills); replaces gate+pasture when present
+ * @property {ObjectiveDef} [objective]         Cycle 7+ — multi-stage objective (round-up → drive). When absent, scene retires sheep on corral entry directly.
  * @property {SheepSpawnDef} sheepSpawn
  * @property {WoodsZoneDef[]} [woodsZones]      Cycle 5+ — biased tree placement clusters (Open Country)
  * @property {FlockingOverride} [flocking]      Cycle 5+ — per-scene boid tuning override (Phase 1.5)

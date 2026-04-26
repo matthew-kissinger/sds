@@ -37,6 +37,10 @@ function makeRingMaterial() {
         uniforms: {
             uTime: { value: 0 },
             uPulse: { value: 0 },
+            // Cycle 7 Phase 3 / Q5: scales the entire ring intensity. Lerped
+            // 0..1 via setIntensity() so multi-stage scenes can keep the
+            // portal "closed" (dim) until the round-up condition is met.
+            uIntensity: { value: 1 },
             uColorInner: { value: new THREE.Color(0x6cf2ff) },
             uColorOuter: { value: new THREE.Color(0x9b6cff) },
         },
@@ -54,6 +58,7 @@ function makeRingMaterial() {
         fragmentShader: /* glsl */`
             uniform float uTime;
             uniform float uPulse;
+            uniform float uIntensity;
             uniform vec3 uColorInner;
             uniform vec3 uColorOuter;
             varying vec2 vUv;
@@ -66,7 +71,7 @@ function makeRingMaterial() {
                 vec3 col = mix(uColorInner, uColorOuter, r);
                 float base = 0.55 + 0.35 * sin(phase);
                 float pulseGlow = uPulse * (1.0 - smoothstep(0.0, 1.0, abs(r - 0.5) * 2.0));
-                float intensity = base + pulseGlow * 0.9;
+                float intensity = (base + pulseGlow * 0.9) * uIntensity;
                 // Fade toward inner/outer edges so the ring reads as a band
                 float edge = smoothstep(0.0, 0.18, r) * smoothstep(1.0, 0.82, r);
                 gl_FragColor = vec4(col * intensity, intensity * edge);
@@ -88,6 +93,12 @@ export class PortalEffect {
         this.groundY = groundY;
         this.elapsed = 0;
         this.pulseT = 0;
+        // Cycle 7 Phase 3: closed/open state. `intensity` lerps toward
+        // `targetIntensity` over INTENSITY_TAU. Multi-stage scenes hold
+        // it at ~0.25 during roundup, then call setIntensity(1) on
+        // transition for a tween-to-full visual.
+        this.intensity = 1;
+        this.targetIntensity = 1;
 
         // Ring at ground level — flat torus-like band
         const ringGeo = new THREE.RingGeometry(RING_RADIUS_INNER, RING_RADIUS_OUTER, 64, 1);
@@ -166,14 +177,38 @@ export class PortalEffect {
     }
 
     /**
+     * Cycle 7 Phase 3: set the target intensity (0..1). The actual visual
+     * intensity tweens toward this over ~0.6s so transitions read as a
+     * portal "opening" rather than a hard switch. Scales ring brightness,
+     * particle rise speed, and ring rotation speed together.
+     * @param {number} v
+     */
+    setIntensity(v) {
+        this.targetIntensity = Math.max(0, Math.min(1, v));
+    }
+
+    /**
      * Per-frame integration. Called from main.js animate loop with dt.
      * @param {number} dt seconds
      */
     update(dt) {
         this.elapsed += dt;
+        // Cycle 7 Phase 3: ease intensity toward target. ~0.6s tau gives a
+        // legible "opening" visual on the roundup→drive transition without
+        // dragging on so long it feels like a cutscene.
+        const intK = 1 - Math.exp(-dt / 0.6);
+        this.intensity += (this.targetIntensity - this.intensity) * intK;
+        // Floor used for the dim-but-not-dead "closed" state, so the portal
+        // remains discoverable as a landmark even before activation.
+        const visualIntensity = 0.25 + this.intensity * 0.75;
+        // Speed factor scales rotation + particle motion with intensity.
+        // Closed portal: slow ambient drift. Open portal: full motion.
+        const speedFactor = 0.4 + this.intensity * 0.6;
+
         // Slow ring rotation
-        this.ring.rotation.z += dt * 0.18;
+        this.ring.rotation.z += dt * 0.18 * speedFactor;
         this.ringMaterial.uniforms.uTime.value = this.elapsed;
+        this.ringMaterial.uniforms.uIntensity.value = visualIntensity;
         if (this.pulseT > 0) {
             this.pulseT = Math.max(0, this.pulseT - dt);
             // Smooth ease-out: 1 -> 0
@@ -183,8 +218,10 @@ export class PortalEffect {
             this.ringMaterial.uniforms.uPulse.value = 0;
         }
 
-        // Particle integration — rise and recycle
-        const speedBoost = this.pulseT > 0 ? 1.6 : 1.0;
+        // Particle integration — rise and recycle. Rise speed scales with
+        // intensity so the closed portal has a slow drift, the open portal
+        // a brisk column.
+        const speedBoost = (this.pulseT > 0 ? 1.6 : 1.0) * speedFactor;
         const positions = this._partPositions;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
             this._partLifetimes[i] += dt;

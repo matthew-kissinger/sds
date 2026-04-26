@@ -29,6 +29,12 @@ const FOLLOW_POS_LAG_TAU = 0.15;
 // point jitters even though the camera position is smooth. 0.08s is short
 // enough to feel responsive and long enough to filter that noise.
 const FOLLOW_AIM_LAG_TAU = 0.08;
+// Cycle 7 Phase 1c: smooth speedNorm so the look-ahead distance can't pop
+// in one frame, and rate-limit posK so a single dropped frame can't lurch
+// the camera position. 0.1s tau matches AIM lag's "responsive but filters
+// micro-noise" balance; the 0.3 posK cap only kicks in below ~22 fps.
+const FOLLOW_SPEEDNORM_TAU = 0.1;
+const FOLLOW_POS_K_MAX = 0.3;
 
 const CLASSIC_LERP_PER_FRAME_AT_60 = 0.05;
 
@@ -106,6 +112,10 @@ export class CameraController {
         this.followAimYaw = 0;
         this.followPosition = new THREE.Vector3();
         this.followInitialized = false;
+        // Cycle 7 Phase 1c: smooth speedNorm independently of dog speed so
+        // sprint→jog transitions don't pop the look-ahead distance even
+        // if the sim ever produces a one-frame velocity discontinuity.
+        this.smoothedSpeedNorm = 0;
 
         // Tunable input scales.
         this.mouseYawScale = 0.005;   // rad per pixel
@@ -322,7 +332,15 @@ export class CameraController {
         const facingAngle = this._facingAngle(dogFacing);
         const speed = dogFacing ? Math.hypot(dogFacing.x, dogFacing.z) : 0;
         // ~30 is the dog's max sprint speed; clamp so look-ahead saturates.
-        const speedNorm = Math.min(1, speed / 30);
+        const rawSpeedNorm = Math.min(1, speed / 30);
+        // Cycle 7 Phase 1c: smooth speedNorm before it feeds the look-ahead
+        // distance. With Phase 1a smoothing currentMaxSpeed in sim, the dog's
+        // velocity already eases on stamina-out, but this defends against
+        // any future single-frame velocity step and helps Classic too if it
+        // ever shares this derivation.
+        const speedK = expSmooth(deltaTime, FOLLOW_SPEEDNORM_TAU);
+        this.smoothedSpeedNorm += (rawSpeedNorm - this.smoothedSpeedNorm) * speedK;
+        const speedNorm = this.smoothedSpeedNorm;
 
         // Lift the rig by terrain elevation under the dog so we don't dive
         // through hills. Uses sample at dog position (not at the offset
@@ -336,6 +354,7 @@ export class CameraController {
             this.followYaw = facingAngle;
             this.followAimYaw = facingAngle;
             this.followPosition.set(dogPosition.x, dogTerrainY + FOLLOW_HEIGHT, dogPosition.z);
+            this.smoothedSpeedNorm = rawSpeedNorm;
             this.followInitialized = true;
         } else {
             const yawK = expSmooth(deltaTime, FOLLOW_YAW_LAG_TAU);
@@ -353,7 +372,10 @@ export class CameraController {
             dogPosition.z + camOffsetZ
         );
 
-        const posK = expSmooth(deltaTime, FOLLOW_POS_LAG_TAU);
+        // Cycle 7 Phase 1c: cap posK so a single dropped frame can't
+        // teleport the camera most of the way to the target in one step.
+        // Below ~22 fps the cap engages; above, this is a no-op.
+        const posK = Math.min(FOLLOW_POS_K_MAX, expSmooth(deltaTime, FOLLOW_POS_LAG_TAU));
         this.followPosition.lerp(this._tmpTarget, posK);
 
         // Two clamps so the dog never disappears behind terrain:

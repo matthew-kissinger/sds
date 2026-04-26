@@ -61,6 +61,36 @@ class _Effect {
         this.origin = new THREE.Vector3();
     }
 
+    /**
+     * Cycle 7: fire a small "ascend top" spark — particle-only burst, no
+     * lightning bolt. Used to mark the moment a retiring sheep finishes
+     * tracing the bolt upward and vanishes. Reuses the same particle
+     * pool but skips the bolt geometry rebuild.
+     */
+    fireSpark(pos) {
+        this.active = true;
+        this.elapsed = FLASH_DURATION; // skip the bolt-flash phase entirely
+        this.origin.copy(pos);
+        // Bolt opacity stays 0 — no lightning for the spark.
+        this.bolt.material.opacity = 0;
+        // Tighter, more upward-biased particle burst at the top.
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const i3 = i * 3;
+            this._partPositions[i3 + 0] = pos.x;
+            this._partPositions[i3 + 1] = pos.y;
+            this._partPositions[i3 + 2] = pos.z;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(0.6 + Math.random() * 0.4); // strongly upward
+            const sinPhi = Math.sin(phi);
+            const speed = PARTICLE_SPEED * 0.6;
+            this._partVelocities[i3 + 0] = Math.cos(theta) * sinPhi * speed;
+            this._partVelocities[i3 + 1] = Math.cos(phi) * speed;
+            this._partVelocities[i3 + 2] = Math.sin(theta) * sinPhi * speed;
+        }
+        this.particles.geometry.attributes.position.needsUpdate = true;
+        this.particles.material.opacity = 1.0;
+    }
+
     fire(pos) {
         this.active = true;
         this.elapsed = 0;
@@ -191,6 +221,19 @@ export class CorralZapEffectPool {
         }
         const p = new THREE.Vector3(pos.x, pos.y ?? 0, pos.z);
         target.fire(p);
+    }
+
+    /**
+     * Cycle 7: top-of-bolt spark when a retiring sheep finishes its ascent.
+     * Particle-only burst (no lightning bolt rebuild).
+     */
+    fireSpark(pos) {
+        let target = this.effects.find(e => !e.active);
+        if (!target) {
+            target = this.effects.reduce((a, b) => (a.elapsed > b.elapsed ? a : b));
+        }
+        const p = new THREE.Vector3(pos.x, pos.y ?? 0, pos.z);
+        target.fireSpark(p);
     }
 
     update(dt) {

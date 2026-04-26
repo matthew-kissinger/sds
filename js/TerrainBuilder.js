@@ -581,17 +581,24 @@ export class TerrainBuilder {
         // Use new advanced grass system
         this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield);
 
-        // Add exclusion zone for farm house
-        this.grassSystem.addExclusionZone(
-            this.farmHouseExclusionArea.minX,
-            this.farmHouseExclusionArea.maxX,
-            this.farmHouseExclusionArea.minZ,
-            this.farmHouseExclusionArea.maxZ
-        );
+        // Add exclusion zone for farm house — only if the scene actually
+        // has one (Field has farmHouse; RH/OC don't).
+        if (this.sceneDef?.farmHouse) {
+            this.grassSystem.addExclusionZone(
+                this.farmHouseExclusionArea.minX,
+                this.farmHouseExclusionArea.maxX,
+                this.farmHouseExclusionArea.minZ,
+                this.farmHouseExclusionArea.maxZ
+            );
+        }
 
-        // Add exclusion zone for default pasture (pen area)
-        // Default pasture is at z: 100-133, x: -30 to 30
-        this.grassSystem.addExclusionZone(-35, 35, 98, 138);
+        // Cycle 7 fix: legacy pasture exclusion at z=98-138 was hardcoded
+        // for Field's pen, but applied to every scene — leaving a bare
+        // 70×40m patch on RH and on OC's spawn→portal corridor. Only
+        // apply when the scene has a pasture.
+        if (this.sceneDef?.pasture) {
+            this.grassSystem.addExclusionZone(-35, 35, 98, 138);
+        }
 
         // Initialize the grass system
         await this.grassSystem.init();
@@ -657,7 +664,14 @@ export class TerrainBuilder {
         // Far impostors drop ~99% of triangles per distant tree, which is
         // the single biggest tree-tris cut available short of full octahedral
         // impostors.
-        const FAR_LOD_DIST = 250;
+        // Cycle 7 Phase 2a (round 2): raised again 280→400m. The threshold
+        // is distance-from-origin (set once at scene load) not distance-
+        // from-camera, so any tree past it is a billboard regardless of
+        // where the player is. OC's 380m island radius means trees at
+        // 280–380m on the playable disc were billboards. 400m covers the
+        // entire island; only the horizon-zone trees (radius >400m) stay
+        // billboards. RH (safe radius ~161m) and Field unaffected.
+        const FAR_LOD_DIST = 400;
         const nearByType = { tree1: [], tree2: [], pine: [] };
         const farByType  = { tree1: [], tree2: [], pine: [] };
         Object.entries(treeInstances).forEach(([treeType, instances]) => {

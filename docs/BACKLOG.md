@@ -4,6 +4,24 @@
 
 ## Recently Completed
 
+### Cycle 7 — Camera smoothness + sky/water polish + OC outer-ring + OC differentiation (closed 2026-04-25)
+
+Plan: [`docs/archive/cycles/cycle-7-plan.md`](archive/cycles/cycle-7-plan.md). Headline:
+
+- **Phase 1: Camera lurch fixes.** 1a `targetVelocity` reads `smoothMaxSpeed` (was raw `currentMaxSpeed`) so diagonal sprint→jog on stamina-out doesn't whip the velocity vector. 1b force-based dog obstacle avoidance at strength 4.0 (gentler than sheep's 6.0) layered in front of the existing hard push-out + reflection. 1c camera `speedNorm` exponentially smoothed (0.1s tau) and `posK` capped at 0.3 per frame.
+- **Phase 1.5: Sky horizontal seam.** Took 4 rounds. Real culprit was [`js/atmosphere/CloudLayer.js`](../js/atmosphere/CloudLayer.js) — a separate planar cloud system with its own `horizonFade` smoothstep. Widened from `(0.02, 0.18)` to `(0.02, 0.85)`. Dome shader cloud-deck math + bounce term also softened; SunBillboard halo edge hardened.
+- **Phase 2: OC outer-ring + water/sun.** 2a `FAR_LOD_DIST` 250→**400m** (covers OC's full 380m island disc). 2b per-scene `grass.densityRange` field (default 0.6, OC=0.92). 2d water sun-glint specular term (Blinn exponent 8). 2e new [`js/effects/SunBillboard.js`](../js/effects/SunBillboard.js) places a billboarded sun disc anchored to sun direction.
+- **Phase 3: OC multi-stage objective (gather → drive → portal).** New `ObjectiveDef` schema + `gameState.objective` state. Round-up zone at (0, 50) radius 30m, **40 sheep / 2.0s hold**. Portal `setIntensity()` tweens "open" over 0.6s; round-up decal is a 96-segment terrain-conformed cyan ring. `CorralCompass` refactored to accept generic target.
+- **Mid-cycle playtest fixes:** legacy pasture grass-exclusion gated on scene def; OC spawn 5-cluster distribution; stamina state machine `canStartSprint`/`canContinueSprint` split; stamina bar `transition: all` removed; lightning retirement traces full bolt with spark at top; classic mode reads scene's `sheepSpawn.count`.
+
+111/111 vitest specs pass. Production build clean. Sim-baseline byte-identical.
+
+Carry-over to Cycle 8 (`playtest-sweep`):
+- Camera triangulation matrix all-smooth on RH Follow (explicit user pass).
+- OC gather→drive verb feels distinct at 40/2.0 (tune up/down per playtest feel).
+- Frametime budget on OC under FAR_LOD_DIST=400 + densityRange=0.92.
+- Cycle 6 carry-over playtest items 1–6 (most de facto verified during this cycle's playtest, but explicit pass deferred).
+
 ### Cycle 6 — Trees as obstacles + woods density + Open Country portal (closed 2026-04-25)
 
 Plan: [`docs/cycle-6-plan.md`](cycle-6-plan.md). Headline:

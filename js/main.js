@@ -20,6 +20,7 @@ import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
 import { Heightfield } from '../shared/terrain/Heightfield.js';
 import { Atmosphere } from './atmosphere/index.js';
+import { SunBillboard } from './effects/SunBillboard.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
@@ -192,6 +193,17 @@ class SheepDogSimulation {
         if (this.currentScene.corral) {
             this.gameState.setCorral(this.currentScene.corral);
         }
+        // Cycle 7 Phase 3: multi-stage objective (gather → drive → portal).
+        // Only OC sets this; RH/Field leave it null and run the standard
+        // single-stage retirement flow.
+        if (this.currentScene.objective) {
+            this.gameState.setObjective(this.currentScene.objective);
+        }
+        // Cycle 7: forward scene's sheepSpawn so islands can override the
+        // tight bounds-derived defaults with a wider/clustered distribution.
+        if (this.currentScene.sheepSpawn) {
+            this.gameState.setSheepSpawn(this.currentScene.sheepSpawn);
+        }
         this.heightfield = null; // Loaded async in init() before createTerrain.
 
         // Atmosphere takes over scene.fog + adds a Hosek-Wilkie sky dome.
@@ -204,6 +216,11 @@ class SheepDogSimulation {
             enableDayNight: false
         });
         this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
+
+        // Cycle 7 Phase 2e: visible sun disc anchors the water sun-glint
+        // perceptually. Position + color are driven from the atmosphere each
+        // frame in animate().
+        this._sunBillboard = new SunBillboard(this.sceneManager.getScene());
 
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile, this.currentScene);
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
@@ -485,15 +502,100 @@ class SheepDogSimulation {
                         corral.center,
                         groundY
                     );
+                    // Cycle 7 Phase 3: portal starts dimmed when the scene
+                    // has a multi-stage objective (gather → drive). Wakes
+                    // up on the stage transition with a tween-to-full.
+                    if (this.currentScene.objective) {
+                        this._portalEffect.intensity = 0;
+                        this._portalEffect.setIntensity(0);
+                        window.addEventListener('objective-stage-changed', (e) => {
+                            if (e?.detail?.stage === 'drive' && this._portalEffect) {
+                                this._portalEffect.setIntensity(1);
+                            }
+                        });
+                    }
                     window.addEventListener('corral-retired', () => {
                         if (this._portalEffect) this._portalEffect.pulse();
                     });
+
+                    // Cycle 7 Phase 3 / Q6: round-up zone ground decal —
+                    // terrain-conformed cyan ring at the zone center while
+                    // stage is 'roundup', fades out on transition. Built
+                    // as a custom triangle strip with per-vertex Y sampled
+                    // from the heightfield so the ring follows the ground
+                    // instead of being clipped by hills (a flat-Y ring at
+                    // 30m radius gets eaten by terrain variation).
+                    if (this.currentScene.objective) {
+                        const zone = this.currentScene.objective.roundupZone;
+                        const segments = 96;
+                        const innerR = zone.radius - 0.6;
+                        const outerR = zone.radius;
+                        const positions = new Float32Array((segments + 1) * 2 * 3);
+                        const indices = [];
+                        const sampleY = (x, z) => {
+                            if (this.terrainBuilder._groundY) return this.terrainBuilder._groundY(x, z);
+                            return 0;
+                        };
+                        for (let i = 0; i <= segments; i++) {
+                            const theta = (i / segments) * Math.PI * 2;
+                            const cos = Math.cos(theta);
+                            const sin = Math.sin(theta);
+                            const innerX = zone.x + innerR * cos;
+                            const innerZ = zone.z + innerR * sin;
+                            const outerX = zone.x + outerR * cos;
+                            const outerZ = zone.z + outerR * sin;
+                            const innerY = sampleY(innerX, innerZ) + 0.08;
+                            const outerY = sampleY(outerX, outerZ) + 0.08;
+                            const idx = i * 6;
+                            positions[idx + 0] = innerX;
+                            positions[idx + 1] = innerY;
+                            positions[idx + 2] = innerZ;
+                            positions[idx + 3] = outerX;
+                            positions[idx + 4] = outerY;
+                            positions[idx + 5] = outerZ;
+                            if (i < segments) {
+                                const a = i * 2;
+                                const b = a + 1;
+                                const c = a + 2;
+                                const d = a + 3;
+                                indices.push(a, b, c, b, d, c);
+                            }
+                        }
+                        const decalGeo = new THREE.BufferGeometry();
+                        decalGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                        decalGeo.setIndex(indices);
+                        decalGeo.computeVertexNormals();
+                        const decalMat = new THREE.MeshBasicMaterial({
+                            color: 0x00d4d4,
+                            transparent: true,
+                            opacity: 0.75,
+                            side: THREE.DoubleSide,
+                            depthWrite: false,
+                        });
+                        const decal = new THREE.Mesh(decalGeo, decalMat);
+                        decal.renderOrder = 4;
+                        this.sceneManager.getScene().add(decal);
+                        this._roundupZoneDecal = decal;
+                        window.addEventListener('objective-stage-changed', (e) => {
+                            if (e?.detail?.stage === 'drive' && this._roundupZoneDecal) {
+                                this._roundupZoneDecal.visible = false;
+                            }
+                        });
+                    }
                 } else {
                     const { CorralZapEffectPool } = await import('./effects/CorralZapEffect.js');
                     this._corralZapPool = new CorralZapEffectPool(this.sceneManager.getScene());
                     window.addEventListener('corral-retired', (e) => {
                         if (e?.detail && this._corralZapPool) {
                             this._corralZapPool.fire(e.detail);
+                        }
+                    });
+                    // Cycle 7: spark at the top of the bolt when a retiring
+                    // sheep finishes its upward ascent. Marks the moment of
+                    // removal cleanly — small particle burst, no new bolt.
+                    window.addEventListener('corral-ascend-top', (e) => {
+                        if (e?.detail && this._corralZapPool) {
+                            this._corralZapPool.fireSpark(e.detail);
                         }
                     });
                 }
@@ -1869,9 +1971,15 @@ class SheepDogSimulation {
         this.performanceMonitor.updateMetrics(this.gameState, this.sceneManager.getRenderer());
 
         // Cycle 5+: animate water uniforms (uTime drives ripples + foam noise)
+        const sunDir = this.atmosphere?.getSunDirection?.();
         if (this._animeWater) {
-            const sun = this.atmosphere?.getSunDirection?.();
-            this._animeWater.update(performance.now() * 0.001, sun);
+            this._animeWater.update(performance.now() * 0.001, sunDir);
+        }
+        // Cycle 7 Phase 2e: keep sun disc aligned with the atmosphere's
+        // sun direction + color, anchored at a fixed offset from the camera.
+        if (this._sunBillboard && sunDir) {
+            const sunColor = this.atmosphere?.sun?.light?.color;
+            this._sunBillboard.update(this.sceneManager.getCamera(), sunDir, sunColor);
         }
 
         // Cycle 5+: corral lightning-zap pool / Cycle 6 portal

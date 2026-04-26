@@ -81,6 +81,12 @@ export class GrassSystem {
             // World bounds for grass
             worldSize: isMobile ? 220 : 420,
 
+            // Cycle 7 Phase 2b: per-scene-overridable radial density-falloff
+            // multiplier. Default 0.6 keeps RH/Field byte-identical; OC sets
+            // 0.75 to extend grass to its 306m safe radius (otherwise the
+            // outer 250–306m ring renders as bare terrain).
+            densityRange: sceneGrass?.densityRange ?? 0.6,
+
             // Chunk system - smaller chunks = more grass density control
             chunkSize: 40,
 
@@ -835,7 +841,7 @@ export class GrassSystem {
 
             // Distance-based density falloff
             const distFromCenter = Math.sqrt(x * x + z * z);
-            const densityFactor = Math.max(0, 1 - distFromCenter / (this.config.worldSize * 0.6));
+            const densityFactor = Math.max(0, 1 - distFromCenter / (this.config.worldSize * this.config.densityRange));
             if (Math.random() > densityFactor * 0.8 + 0.2) continue;
 
             validPositions.push({ x, z });

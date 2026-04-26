@@ -38,6 +38,20 @@ export class GameState {
         /** @type {import('../shared/scenes/types.js').CorralDef | null} */
         this.corral = null;
 
+        // Cycle 7 Phase 3: multi-stage objective state. Null on scenes
+        // without an `objective` def (RH, Field) — those skip the gate.
+        // When set, retirement is gated until `stage === 'drive'`.
+        /** @type {{
+         *   stage: 'roundup' | 'drive',
+         *   roundupZone: {x: number, z: number, radius: number},
+         *   requiredSheep: number,
+         *   holdRequired: number,
+         *   sheepInZone: number,
+         *   holdTimer: number
+         * } | null}
+         */
+        this.objective = null;
+
         // Cycle 6 Phase 2: scene obstacles (trees + rocks + buildings) for
         // sheep/dog routing. Built in main.js after terrain creation, then
         // attached here. Empty until then; sheep + dog read this via
@@ -104,6 +118,21 @@ export class GameState {
             // Polygon shape - calculate centroid and use polygon-aware spawning
             spawnConfig = this.calculatePolygonSpawnConfig();
             console.log(`[SHEEP] Polygon spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}`);
+        } else if (this.sceneSpawnDef) {
+            // Cycle 7: scene-provided spawn def (centerX/centerZ/spreadRadius
+            // and optional clusterCenters). Lets island scenes override the
+            // bounds-derived defaults to spread sheep across more of the
+            // playable area, which gives the player a real gathering task
+            // rather than a tight pre-formed flock at spawn.
+            spawnConfig = {
+                centerX: this.sceneSpawnDef.centerX,
+                centerZ: this.sceneSpawnDef.centerZ,
+                spreadRadius: this.sceneSpawnDef.spreadRadius,
+            };
+            if (this.sceneSpawnDef.clusterCenters) {
+                spawnConfig.clusterCenters = this.sceneSpawnDef.clusterCenters;
+            }
+            console.log(`[SHEEP] Scene spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}, clusters=${spawnConfig.clusterCenters?.length ?? 1}`);
         } else {
             // Rectangular bounds - use standard spawning
             const fieldCenterX = (this.bounds.minX + this.bounds.maxX) / 2;
@@ -339,12 +368,49 @@ export class GameState {
             this.gameActive ? this.sheepdog2 : null // Second sheepdog for local 2-player
         );
         
+        // Cycle 7 Phase 3: tick the multi-stage objective. Counts sheep
+        // inside the round-up zone, accumulates the hold timer, and flips
+        // stage 'roundup' → 'drive' once the threshold is met. RH/Field
+        // skip this entirely (no objective set).
+        if (this.gameActive && this.objective && this.objective.stage === 'roundup') {
+            const zone = this.objective.roundupZone;
+            const rSq = zone.radius * zone.radius;
+            let count = 0;
+            for (const s of this.sheep) {
+                if (s.hasPassedGate || s.isRetiring) continue;
+                const dx = s.position.x - zone.x;
+                const dz = s.position.z - zone.z;
+                if (dx * dx + dz * dz <= rSq) count++;
+            }
+            this.objective.sheepInZone = count;
+            if (count >= this.objective.requiredSheep) {
+                this.objective.holdTimer += deltaTime;
+                if (this.objective.holdTimer >= this.objective.holdRequired) {
+                    this.objective.stage = 'drive';
+                    window.dispatchEvent(new CustomEvent('objective-stage-changed', {
+                        detail: { stage: 'drive' }
+                    }));
+                }
+            } else {
+                // Hold broken — reset the timer. Encourages keeping the flock
+                // together through the full hold rather than tagging the
+                // threshold for an instant.
+                this.objective.holdTimer = 0;
+            }
+        }
+
         // Only count retired sheep if game is active
         if (this.gameActive) {
             // In multiplayer mode, sheep count is managed by server
             if (this.gameMode !== 'multiplayer') {
                 this.sheepRetired = 0;
-                
+
+                // Cycle 7 Phase 3: corral retirement is gated on the
+                // multi-stage objective. While stage === 'roundup', sheep
+                // entering the portal radius do NOT retire — they walk
+                // through. Once stage flips to 'drive', the gate opens.
+                const corralOpen = !this.objective || this.objective.stage === 'drive';
+
                 // Count retired sheep
                 for (let sheep of this.sheep) {
                     // Check retirement trigger:
@@ -352,9 +418,9 @@ export class GameState {
                     //   - Legacy: gate passage (Field, Open Country)
                     if (!sheep.hasPassedGate && !sheep.isRetiring) {
                         let triggered = false;
-                        if (this.corral) {
+                        if (this.corral && corralOpen) {
                             triggered = sheep.checkCorralAndRetire(this.corral);
-                        } else {
+                        } else if (!this.corral) {
                             triggered = sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior(), this.getPastureForSheepBehavior());
                         }
                         if (triggered) {
@@ -577,6 +643,36 @@ export class GameState {
     setCorral(corral) {
         this.corral = corral;
     }
+
+    /**
+     * Cycle 7: set the scene's sheepSpawn definition for the next
+     * createSheepFlock call. Pass null to revert to the bounds-derived
+     * defaults.
+     * @param {import('../shared/scenes/types.js').SheepSpawnDef | null} sheepSpawn
+     */
+    setSheepSpawn(sheepSpawn) {
+        this.sceneSpawnDef = sheepSpawn || null;
+    }
+
+    /**
+     * Cycle 7 Phase 3: set the multi-stage objective definition. Pass null on
+     * scenes without an objective; the retirement path then runs unchanged.
+     * @param {import('../shared/scenes/types.js').ObjectiveDef | null} objective
+     */
+    setObjective(objective) {
+        if (!objective) {
+            this.objective = null;
+            return;
+        }
+        this.objective = {
+            stage: 'roundup',
+            roundupZone: { x: objective.roundupZone.x, z: objective.roundupZone.z, radius: objective.roundupZone.radius },
+            requiredSheep: objective.requiredSheep,
+            holdRequired: objective.holdRequired,
+            sheepInZone: 0,
+            holdTimer: 0
+        };
+    }
     
     getGate() {
         // For competitive mode, return all gates; for cooperative, return single gate
@@ -670,6 +766,10 @@ export class GameState {
         const previousSheepCount = this.totalSheep;
 
         // Set sheep count based on single player mode
+        // Cycle 7: classic mode now honors the scene def's sheepSpawn.count
+        // (e.g., RH says 250) instead of always defaulting to 200. The
+        // boosted modes still apply uniformly across all scenes.
+        const sceneCount = this.sceneSpawnDef?.count ?? 200;
         if (mode === 'solo') {
             if (singlePlayerMode === 'chaos') {
                 this.totalSheep = 5000;
@@ -681,12 +781,12 @@ export class GameState {
                 this.totalSheep = 1000;
                 console.log('Game started in extreme mode with 1000 sheep!');
             } else {
-                this.totalSheep = 200;
-                console.log('Game started in classic mode with 200 sheep');
+                this.totalSheep = sceneCount;
+                console.log(`Game started in classic mode with ${sceneCount} sheep (from scene def)`);
             }
         } else {
-            // Multiplayer modes always use 200 sheep
-            this.totalSheep = 200;
+            // Multiplayer modes use the scene's count (server still authoritative).
+            this.totalSheep = sceneCount;
         }
 
         // If sheep count changed, we need to recreate the sheep flock

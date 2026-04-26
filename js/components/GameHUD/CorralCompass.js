@@ -17,13 +17,16 @@ import * as THREE from 'three';
 const _projectVec = new THREE.Vector3();
 
 /**
- * Project world (x,z) at corral height onto NDC. Returns:
- *   { x, y, behind, distance }
- *   x, y: NDC space [-1, 1]; behind=true if camera points away from target
+ * Project a world {x, z} target onto NDC. Returns:
+ *   { x, y, behind }
+ *   x, y: NDC space [-1, 1]; behind=true if camera points away from target.
+ *
+ * Cycle 7 Phase 3: refactored from corral-only to a generic target so the
+ * compass can also point at the round-up zone during the gather stage.
  */
-function projectCorralToNdc(corral, camera) {
-    if (!corral || !camera) return null;
-    _projectVec.set(corral.center.x, 4, corral.center.z); // 4m up so it tracks the flag
+function projectTargetToNdc(target, camera) {
+    if (!target || !camera) return null;
+    _projectVec.set(target.x, 4, target.z); // 4m up so the indicator tracks above ground
     _projectVec.project(camera);
     return {
         x: _projectVec.x,
@@ -41,17 +44,27 @@ export function CorralCompass({ platform = 'desktop' }) {
         const gameState = getGameState();
         const sceneManager = getSceneManager();
         if (!gameState || !sceneManager) return null;
-        const corral = gameState.corral;
-        if (!corral) return null;
         const camera = sceneManager.getCamera();
         const dog = gameState.sheepdog;
         if (!camera || !dog) return null;
 
-        const proj = projectCorralToNdc(corral, camera);
+        // Cycle 7 Phase 3: target is the round-up zone while objective is in
+        // 'roundup' stage, otherwise the corral. Falls back to nothing when
+        // neither is set (e.g., gate-based scenes).
+        let target = null;
+        const objective = gameState.objective;
+        if (objective && objective.stage === 'roundup') {
+            target = { x: objective.roundupZone.x, z: objective.roundupZone.z };
+        } else if (gameState.corral) {
+            target = { x: gameState.corral.center.x, z: gameState.corral.center.z };
+        }
+        if (!target) return null;
+
+        const proj = projectTargetToNdc(target, camera);
         if (!proj) return null;
 
-        const dx = corral.center.x - dog.position.x;
-        const dz = corral.center.z - dog.position.z;
+        const dx = target.x - dog.position.x;
+        const dz = target.z - dog.position.z;
         const distance = Math.round(Math.sqrt(dx * dx + dz * dz));
 
         const onScreen = !proj.behind && proj.x >= -0.95 && proj.x <= 0.95 && proj.y >= -0.95 && proj.y <= 0.95;

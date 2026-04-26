@@ -161,12 +161,26 @@ void main() {
   // brighten the underside of the dome and forest presets darken it.
   // Cheaper than full HW upper-hemisphere coefficients but captures the
   // visible effect the brief asks for.
-  float bounce = max( 0.0, -direction.y );
+  //
+  // Cycle 7 Phase 1.5 (round 3): smoothstep onset replaces the linear
+  // max(0, -direction.y). The linear ramp combined with the zenithAngle
+  // clamp at horizon (line ~136) created a visible bright/warm band
+  // exactly at direction.y = 0 — a horizontal "line break" in the sky
+  // that no camera angle could escape. Smoothstep delays the bounce
+  // contribution until direction.y < -0.05 and ramps it in over a 0.15
+  // window, keeping the transition derivative-continuous.
+  float bounce = smoothstep( 0.0, 0.20, -direction.y );
   texColor += uGroundAlbedo * bounce * 0.35 * ( 0.5 + vSunfade );
 
   texColor *= uExposure;
 
-  if ( uCloudCoverage > 0.001 && direction.y > -0.02 ) {
+  // Cycle 7 Phase 1.5: gate widened from -0.02 to -0.10 so the
+  // horizonFeather smoothstep (which starts at -0.05) runs through its
+  // entire fade range. Prior gate stopped cloud math at -0.02 while the
+  // smoothstep wanted to fade to zero at -0.05, leaving a discrete
+  // cloud/no-cloud step exactly at the horizon line — visible as a
+  // "line break" near the top of screen in Follow's upward pitch.
+  if ( uCloudCoverage > 0.001 && direction.y > -0.10 ) {
     float altitude = clamp( direction.y, 0.0, 1.0 );
     vec2 wind = length( uCloudWindDir ) > 0.0001 ? normalize( uCloudWindDir ) : vec2( 0.0 );
 
@@ -189,8 +203,15 @@ void main() {
     float brokenEdge = smoothstep( lowerEdge - 0.12, lowerEdge + 0.22, bodyDetail ) * ( 1.0 - smoothstep( 0.48, 0.86, edgeDetail ) * 0.35 );
     float horizonWisps = smoothstep( 0.44, 0.78, fbm( cloudUv * 2.05 + vec2( 3.0, -2.0 ) ) ) * smoothstep( 0.02, 0.22, altitude );
     float mask = clamp( max( body, max( brokenEdge * 0.48, horizonWisps * coverage * 0.42 ) ) * largeField, 0.0, 1.0 );
-    float horizonFeather = smoothstep( -0.015, 0.16, direction.y );
-    float zenithFeather = mix( 1.0, 0.72, smoothstep( 0.78, 1.0, altitude ) );
+    // Cycle 7 Phase 1.5 (round 2): widen the upper end far past where the
+    // smoothstep can saturate within the visible hemisphere. Was 0.25 →
+    // upper end created a visible "ceiling" line at ~14° elevation where
+    // clouds slammed to full opacity. Pushing the upper end to 0.95 means
+    // the smoothstep never saturates in any practical view direction —
+    // the cloud alpha keeps fading smoothly from 0 at horizon to ~1 at
+    // zenith. Likewise widen the zenith fade range.
+    float horizonFeather = smoothstep( -0.10, 0.95, direction.y );
+    float zenithFeather = mix( 1.0, 0.72, smoothstep( 0.50, 1.0, altitude ) );
     float cloudAlpha = mask * horizonFeather * zenithFeather * mix( 0.56, 0.88, coverage );
     float veilNoise = smoothstep( 0.28, 0.82, fbm( cloudUv * 0.42 + vec2( -4.0, 11.0 ) ) );
     cloudAlpha += coverage * horizonFeather * zenithFeather * veilNoise * 0.14;

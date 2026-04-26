@@ -3,10 +3,14 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { Vector2D } from './Vector2D.js';
 import { getTerrainBuilder, getSceneManager, getGameState } from './GameBridge.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
+import { obstacleAvoidance } from '../shared/SceneObstacles.js';
 
 // Cycle 6 Phase 2 — dog obstacle hard push-out (treat trunks like fences).
+// Cycle 7 Phase 1b — force-based pre-contact avoidance gentler than sheep
+// (4.0 vs 6.0) so the dog doesn't fight the player's input too hard.
 const DOG_OBSTACLE_QUERY_RADIUS = 30;
 const DOG_RADIUS = 1.2;
+const DOG_OBSTACLE_STRENGTH = 4.0;
 
 /**
  * Animation States - Simplified and robust state machine for Sheep Dog animations
@@ -612,10 +616,14 @@ export class Sheepdog {
             this.smoothMaxSpeed += (currentMaxSpeed - this.smoothMaxSpeed) * k;
         }
 
-        // Set target velocity using the CURRENT max speed (so sprint-on
-        // accelerates immediately to the new target). The smoothed cap only
-        // gates the safety clamp below.
-        this.targetVelocity = direction.clone().normalize().multiply(currentMaxSpeed);
+        // Cycle 7 Phase 1a: target velocity uses smoothMaxSpeed, not raw
+        // currentMaxSpeed. smoothMaxSpeed snaps up on sprint-on (line above)
+        // so responsiveness is preserved, but eases down on sprint-out so
+        // the diagonal stamina-exhaustion case no longer steps the target
+        // velocity magnitude in one frame. Without this, the camera's
+        // speedNorm + look-ahead would still pop even though the safety
+        // clamp at the bottom of the function was already smoothed.
+        this.targetVelocity = direction.clone().normalize().multiply(this.smoothMaxSpeed);
 
         // Smooth acceleration/deceleration
         const accelerationRate = direction.magnitude() > 0 ? this.acceleration : this.deceleration;
@@ -625,12 +633,45 @@ export class Sheepdog {
         // Apply velocity change
         this.velocity.add(velocityChange);
 
+        // Cycle 7 Phase 1b: force-based pre-contact avoidance from trees +
+        // rocks. Same shared `obstacleAvoidance` the sheep use; the force
+        // fires when entity overlaps the obstacle radius and grows with
+        // overlap depth, so the velocity is steered tangentially before
+        // the hard push-out below ever has to reflect. Length-guard
+        // preserves Field's behavior. Computed once and reused for the
+        // hard-contact pass below.
+        const obstacles = getGameState()?.obstacles;
+        let nearbyTrees = null;
+        let nearbyRocks = null;
+        if (obstacles && (obstacles.trees.length > 0 || obstacles.rocks.length > 0)) {
+            nearbyTrees = obstacles.trees.length
+                ? obstacles.queryTrees(this.position, DOG_OBSTACLE_QUERY_RADIUS)
+                : [];
+            nearbyRocks = obstacles.rocks.length
+                ? obstacles.queryRocks(this.position, DOG_OBSTACLE_QUERY_RADIUS)
+                : [];
+            if (nearbyTrees.length > 0) {
+                const f = obstacleAvoidance(this.position, DOG_RADIUS, nearbyTrees, { strength: DOG_OBSTACLE_STRENGTH });
+                if (f.x !== 0 || f.z !== 0) {
+                    this.velocity.x += f.x * deltaTime;
+                    this.velocity.z += f.z * deltaTime;
+                }
+            }
+            if (nearbyRocks.length > 0) {
+                const f = obstacleAvoidance(this.position, DOG_RADIUS, nearbyRocks, { strength: DOG_OBSTACLE_STRENGTH });
+                if (f.x !== 0 || f.z !== 0) {
+                    this.velocity.x += f.x * deltaTime;
+                    this.velocity.z += f.z * deltaTime;
+                }
+            }
+        }
+
         // Soft cap using the smoothed max speed (rare safety net for
         // collision-induced velocity spikes; absorbs sprint→walk pop).
         if (this.velocity.magnitude() > this.smoothMaxSpeed) {
             this.velocity.normalize().multiply(this.smoothMaxSpeed);
         }
-        
+
         // Calculate new position
         const newPosition = this.position.clone().add(this.velocity.clone().multiply(deltaTime));
         this.position = newPosition;
@@ -638,15 +679,11 @@ export class Sheepdog {
         // Cycle 6 Phase 2: hard push-out from tree trunks + large rocks.
         // Treats obstacles like fences — corrects position directly, then
         // reflects velocity along the contact normal so the dog doesn't
-        // glue to the trunk. Length-guard preserves Field's behavior.
-        const obstacles = getGameState()?.obstacles;
-        if (obstacles && (obstacles.trees.length > 0 || obstacles.rocks.length > 0)) {
-            const nearbyTrees = obstacles.trees.length
-                ? obstacles.queryTrees(this.position, DOG_OBSTACLE_QUERY_RADIUS)
-                : [];
-            const nearbyRocks = obstacles.rocks.length
-                ? obstacles.queryRocks(this.position, DOG_OBSTACLE_QUERY_RADIUS)
-                : [];
+        // glue to the trunk. Cycle 7 Phase 1b kept this as a fallback for
+        // edge cases (sprint into trunk, frame jumps) where the force-based
+        // avoidance above didn't fully deflect. Reuses the kdbush queries
+        // computed above to avoid double work.
+        if (nearbyTrees && (nearbyTrees.length > 0 || nearbyRocks.length > 0)) {
             for (const list of [nearbyTrees, nearbyRocks]) {
                 for (const o of list) {
                     const dx = this.position.x - o.x;
@@ -891,12 +928,21 @@ export class Sheepdog {
             this.sprintExhausted = false;
         }
 
-        // Can only sprint if: wants to sprint, is moving, has stamina, and not exhausted
-        if (wantsSprint && isMoving && this.stamina >= this.minStaminaToSprint && !this.sprintExhausted) {
+        // Cycle 7 fix: explicit state machine. minStaminaToSprint gates
+        // STARTING a sprint (prevents stutter when partially regen'd).
+        // Once sprinting, can continue draining all the way to 0 — only
+        // then is the dog exhausted and locked until the sprint key is
+        // released. The previous `stamina >= minStaminaToSprint` check
+        // was applied to BOTH start AND continue, so stamina oscillated
+        // around the threshold instead of ever reaching 0; exhaustion
+        // never triggered and the player kept sprinting indefinitely.
+        const canStartSprint = this.stamina >= this.minStaminaToSprint && !this.sprintExhausted;
+        const canContinueSprint = this.isSprinting && this.stamina > 0 && !this.sprintExhausted;
+        const sprintActive = wantsSprint && isMoving && (canStartSprint || canContinueSprint);
+
+        if (sprintActive) {
             this.isSprinting = true;
             this.stamina = Math.max(0, this.stamina - this.staminaDrainRate * deltaTime);
-
-            // Set exhaustion lock when stamina runs out
             if (this.stamina <= 0) {
                 this.sprintExhausted = true;
                 this.isSprinting = false;

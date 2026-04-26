@@ -179,7 +179,10 @@ export function MobileHUD({ gameData, stamina, onPause }) {
                             width: `${stamina}%`,
                             background: getStaminaColor(stamina),
                             boxShadow: stamina < 30 ? '0 0 6px rgba(239, 68, 68, 0.5)' : 'none',
-                            transition: 'all 0.3s ease-out',
+                            // Cycle 7 fix: width transition removed so the
+                            // bar tracks stamina instantly instead of
+                            // lagging 300ms behind the percentage text.
+                            transition: 'background 0.3s ease-out, box-shadow 0.3s ease-out',
                             borderRadius: '9999px'
                         }
                     })

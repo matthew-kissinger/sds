@@ -99,8 +99,13 @@ void main() {
   float edgeDist = min(min(vPlaneUv.x, 1.0 - vPlaneUv.x), min(vPlaneUv.y, 1.0 - vPlaneUv.y));
   float footprintFade = smoothstep(0.0, 0.08, edgeDist);
   vec3 viewDir = normalize(vWorldPos - cameraPosition);
-  // Horizon fade widened so grazing rays hide the planar approximation.
-  float horizonFade = smoothstep(0.02, 0.18, abs(viewDir.y));
+  // Cycle 7 Phase 1.5 (round 4): horizonFade upper end widened from 0.18
+  // to 0.85 so the smoothstep never saturates within the visible upper
+  // hemisphere. The prior 0.18 value created a sharp horizontal "line"
+  // at ~10° elevation where the planar cloud layer slammed to full
+  // opacity; now alpha grows continuously from 0 at horizon to ~1 near
+  // zenith, hiding the fact that the layer is a flat plane.
+  float horizonFade = smoothstep(0.02, 0.85, abs(viewDir.y));
   alpha *= uEdgeFade * footprintFade * horizonFade;
 
   if (alpha <= 0.001) {

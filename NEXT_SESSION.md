@@ -1,6 +1,6 @@
-# Next Session — Cycle 6 closed (awaiting playtest review)
+# Next Session — Cycle 8 (playtest-sweep) scaffolded
 
-> Updated 2026-04-25. Last closed: [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md). Cold-start agents: read this page top-to-bottom, then [`docs/BACKLOG.md`](docs/BACKLOG.md) for what's deferred. Earlier cycles: [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md), [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md), [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md), [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md).
+> Updated 2026-04-25. Active plan: [`docs/cycle-8-plan.md`](docs/cycle-8-plan.md) — scaffold needs Goal + Phases filled in by /cycle-start. Last closed: [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md) (camera + sky/water + OC outer-ring + OC multi-stage objective; deployed live). Cold-start agents: read this page top-to-bottom, then [`docs/BACKLOG.md`](docs/BACKLOG.md) for what's deferred. Earlier cycles: [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md), [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md), [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md), [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md).
 
 ## Running locally
 
@@ -25,120 +25,59 @@ Open `http://localhost:3000` (or `:3001` if :3000 is taken). `?scene=field`, `?s
 ## Where the project stands (2026-04-25)
 
 - `sheepdogsim.com` is live on Cloudflare Pages + Worker + DO + D1.
-- **Cycle 6 closed.** Trees + large rocks are real obstacles (sheep + dog route around them). Open Country gained a magical portal at the north shore replacing the coastal pen. Wood zones have biased density. Per-scene camera memory + first-pass OC boid nudge shipped. Full detail: [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), summary in [`docs/BACKLOG.md`](docs/BACKLOG.md) § Recently Completed.
-- 99 → **111 / 111** vitest specs pass (+12 from `tree-placement.spec.js`). Production build clean. Sim-baseline byte-identical.
+- **Cycle 7 closed and deployed.** Camera lurch fixed under stamina-out and tree contact; sky horizontal-line artifacts traced to a separate `CloudLayer` shader and resolved; OC outer ring reads as continuous grass + mesh trees out to the shore; OC gained a gather→drive→portal multi-stage loop. Detail in [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md) §Shipped status; headline summary in [`docs/BACKLOG.md`](docs/BACKLOG.md).
+- 111 / 111 vitest specs pass. Production build clean. Sim-baseline byte-identical (preserved through cycles 5 + 6 + 7).
+- **Cycle 8 (`playtest-sweep`) scaffolded** at [`docs/cycle-8-plan.md`](docs/cycle-8-plan.md). Stub Goal + Phases — needs filling in. Run `/cycle-start` after that.
 
-### What changed this cycle (one-line summary, full table in BACKLOG)
+### What this cycle shipped (full detail in [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md) §Shipped status)
 
-- **`shared/TreePlacement.js`** — pure `generateTrees(scene, rng) → TreeInstance[]`, mulberry32-driven, canonically sorted. Client iterates the result to spawn meshes; Worker can do the same when MP island scenes get wired (deferred).
-- **Trees + rocks-as-obstacles, solo.** `gameState.obstacles` built from `terrainBuilder.treeInstances + rockPositions` in `main.js`. Sheep apply `obstacleAvoidance` per-tick (30m, strength 6.0). Dog applies a hard push-out + velocity reflection in `Sheepdog.move`. Field's bounds keep its sheep/dog ≥120m from any tree → queries return empty → behavior preserved.
-- **Q3 fallback path** — rocks with per-cluster `scale ≥ 0.8` become colliders with radius `finalScale * 0.55`. Pixel-forge bespoke rocks deferred.
-- **Wood zones biased density** — inside any `WoodsZoneDef` circle: 0.6× min-distance (denser); outside (when zones present): 1.4× (sparser). Open Country has 3 clusters away from spawn + portal.
-- **Open Country portal** — corral at (0, 295). New `PortalEffect.js`: rotating cyan→purple ring shader + vertical particle column + soft ground glow. `CorralDef.effect: 'zap' | 'portal'` discriminator. Sheep retire vertically (existing `isAscending` path). `CorralCompass` HUD already generic over `gameState.corral`.
-- **Per-scene camera memory** — `camera-mode-${sceneId}` overrides scene default, falls back to legacy global. C-hotkey writes per-scene on every change.
-- **OC boid nudge** — `flocking: { perception: 9, perceptionRadius: 9 }`. Conservative starting point (was 5 / 6); tune in playtest.
-- **Defensive null-gate guard** in worker `shouldSeekGate` — corral scenes now skip the gate-seek pathway instead of NPEing.
+**Phase 1 — Camera lurch fixes (Rolling Hills regression):**
+- 1a `targetVelocity` uses `smoothMaxSpeed` so sprint-out on diagonals doesn't whip the velocity vector. [js/Sheepdog.js:626](js/Sheepdog.js)
+- 1b force-based dog obstacle avoidance (strength 4.0, 30m broad-phase) with hard push-out + reflection retained as fallback. [js/Sheepdog.js:636-667](js/Sheepdog.js)
+- 1c camera `speedNorm` exponentially smoothed (0.1s tau) + `posK` cap at 0.3 per frame. [js/CameraController.js:325-356](js/CameraController.js)
 
-### Carry-over to next cycle (playtest verification + tuning)
+**Phase 1.5 — Sky horizontal seam.** Took 4 rounds; the actual culprit was a SECOND cloud system — [`js/atmosphere/CloudLayer.js`](js/atmosphere/CloudLayer.js)'s `horizonFade` smoothstep, not the dome's integrated cloud math. Widened to `(0.02, 0.85)`; also softened the dome's bounce term and SunBillboard halo as defense-in-depth.
 
-These are the Cycle 6 acceptance items that need user playtest review:
+**Phase 2 — OC outer-ring + water/sun:**
+- 2a `FAR_LOD_DIST` 250 → **400** (250 was distance-from-origin, not distance-from-camera; 400 covers OC's full 380m island).
+- 2b per-scene `grass.densityRange` field. RH/Field default 0.6; OC = **0.92** (covers shore at ~387m).
+- 2c (woods bias) — skipped per plan.
+- 2d water sun-glint: smooth Blinn-spec term added at exponent 8 alongside cel sparkles. `uSunSpecularIntensity` default 0.6.
+- 2e billboard sun: new [js/effects/SunBillboard.js](js/effects/SunBillboard.js), quad at `cameraPosition + sunDir × 3000`, additive blending, halo color from atmosphere sun light.
 
-1. **Sheep + dog visibly route around tree trunks** on Rolling Hills + Open Country (no clipping, no fluttering at trunk edges). If fluttering, lower `SHEEP_OBSTACLE_STRENGTH` in [`js/OptimizedSheep.js`](js/OptimizedSheep.js) (currently 6.0). If clipping, raise it.
-2. **Open Country woods read as recognizably denser canopy** — three clusters at (-150, 60), (170, 0), (30, 170) with radius 65–80. Adjust positions/radii in [`shared/scenes/open-country.js`](shared/scenes/open-country.js) `woodsZones` if they sit awkwardly relative to the play paths.
-3. **Portal objective is clear and the retirement animation plays cleanly.** Portal at (0, 295). If the visual reads weak from the play camera, raise `RING_RADIUS_OUTER` or particle counts in [`js/effects/PortalEffect.js`](js/effects/PortalEffect.js).
-4. **Per-tick obstacle-query cost ≤ 0.4ms desktop / ≤ 1.5ms mobile.** Verify with `PerformanceMonitor` (P key) on Open Country after walking into a dense wood cluster. If over budget, drop the query radius from 30m or precompute per-cell candidate lists.
-5. **OC boid `perception: 9`** — tune up if flocks still fragment, down if they over-cluster. Edit `shared/scenes/open-country.js` `flocking` block.
-6. **Sheep spawn safety on OC.** Spawn at (0, -150) with `spreadRadius: 160` can put a sheep at z=-310, just past the 306m safe radius. Cycle 5 carry-over — sheep get clamped back by the island boundary, but it's ugly. Tighten spread to 130 or shift spawn center to (0, -130) if visible.
+**Phase 3 — OC multi-stage objective (gather → drive → portal):**
+- New `ObjectiveDef` schema in [shared/scenes/types.js](shared/scenes/types.js); state on [GameState](js/GameState.js) via `setObjective()`.
+- OC: round-up zone at (0, 50) radius 30m, **40 sheep / 2.0 sec hold** (tuned down from 120/3.0 mid-playtest).
+- Stage transition fires `objective-stage-changed` event; portal `setIntensity(0..1)` tweens visible "open" over 0.6s; round-up decal hides.
+- Round-up decal is a 96-segment terrain-conformed cyan ring (each vertex samples heightfield Y so it follows the ground contour).
+- [CorralCompass](js/components/GameHUD/CorralCompass.js) refactored to accept generic target — points at round-up zone first, retargets to portal on transition.
 
-### Cycle 7 candidate themes (user playtest 2026-04-25, framed as objectives — next agent does its own analysis)
+**Mid-cycle playtest-driven additions:**
+- **Legacy pasture grass-exclusion zone removed for non-Field scenes.** The hardcoded `(-35..35, 98..138)` rect in [js/TerrainBuilder.js:584-600](js/TerrainBuilder.js) is now gated on `sceneDef?.farmHouse` and `sceneDef?.pasture`. RH and OC no longer have a 70×40m bare grass patch.
+- **OC sheep spawn distribution.** Was a single tight cluster; now 5 cluster centers across the southern + central island. New `setSheepSpawn()` on GameState wires scene's `sheepSpawn` def into `createSheepFlock`.
+- **Stamina state machine fix.** Original logic gated *both* starting and continuing a sprint on `stamina >= minStaminaToSprint(10)`, so stamina oscillated around 10 and never hit 0 — exhaustion lock was unreachable. Now `canStartSprint` (≥10) and `canContinueSprint` (>0) are separate. Drains all the way to 0 then locks until release. [js/Sheepdog.js:923-953](js/Sheepdog.js).
+- **Stamina bar visual lag fix.** `transition: all 0.3s` was animating the bar's **width** as well as colors, lagging the bar 300ms behind the percentage text. Now only background and box-shadow transition.
+- **Lightning retirement (RH zap) overhaul.** Sheep ascend was 22m / late-shrink, looked like sideways drift. Now: 60m ascend matching bolt height, smoothstep ease, scale shrinks continuously, position locked to ascend-start coords, new `corral-ascend-top` event fires a particle-only spark at the bolt's tip. [js/OptimizedSheep.js](js/OptimizedSheep.js) + [js/effects/CorralZapEffect.js](js/effects/CorralZapEffect.js).
+- **Sheep count from scene def** in classic mode (was hardcoded 200). RH = 250, Field/OC = 200.
 
-Three issues surfaced post-Cycle-6-deploy that the next cycle should investigate. Each is described as an **objective + signals**, not a prescribed fix — pick the path after analysis. Don't take the bullets below as architectural decisions; they're starting questions.
+### Carry-over to Cycle 8 (playtest-sweep)
 
-#### 1. Open Country plays too similarly to Rolling Hills
+These are the Cycle 7 acceptance items that weren't explicitly checked off at close + the still-open Cycle 6 carry-over:
 
-**Symptom (user, post-Cycle-6 playtest):** "How is open really different from rolling hills now?" Both are islands with corral retirement; the only real differences are size (380m vs 180m), woods zones, and the portal-vs-flag visual. The intended distinction from cycle-5-plan was **"drive sheep through forest to coastal pen"** — a traversal challenge with discrete dense woods to navigate around — but in play that read isn't landing.
+1. **Camera triangulation matrix all-smooth on RH Follow** — stamina-out diagonal (W+D+Shift) + tree contact at sprint, both modes (Classic + Follow). Phase 1a/1b/1c shipped; needs explicit user pass.
+2. **OC gather→drive verb feels distinct from RH** — currently tuned to 40 sheep / 2.0s; tune up if trivial, down if still too hard.
+3. **Frametime budget on OC** — FAR_LOD_DIST=400 raises mesh tree count; verify ≤ 0.4ms desktop / ≤ 1.5ms mobile per-tick obstacle query and overall frame budget on OC after walking into a dense wood cluster.
+4. **Cycle 6 carry-over items 1-6** (originally pending; most are de facto verified during Cycle 7 playtest):
+   - Sheep + dog visibly route around tree trunks on RH + OC.
+   - OC woods read as recognizably denser canopy.
+   - Portal objective is clear and the retirement animation plays cleanly.
+   - Per-tick obstacle-query cost ≤ 0.4ms desktop / ≤ 1.5ms mobile.
+   - OC boid `perception: 9` — tune up/down if flocks fragment / over-cluster.
+   - Sheep spawn safety on OC (now distributed across 5 cluster centers; verify no edge-clamp ugliness).
 
-**Objective:** Make Open Country feel like a meaningfully different game loop from Rolling Hills, not a bigger version of the same scene.
+### Cycle 7 themes — all resolved
 
-**Signals to investigate / questions to consider:**
-- Is the issue **shape of the loop** (objective + path), or **density of obstacles** (woods don't actually obstruct), or **flock behavior at scale** (200 sheep on a 4.5×-area island feel as cohesive as 250 on a small one)?
-- Should OC have a **multi-stage objective** (gather → drive → portal) rather than a single retirement target?
-- Should the woods be **traversal-blocking** (sheep refuse to enter dense canopy without dog pressure) rather than just visually denser?
-- Are the woodsZones at (-150, 60), (170, 0), (30, 170) **on the player's path** or off to the side? If the player can route around them, they're scenery.
-- Does OC need a **distinct verb** — predator avoidance, time pressure, lost-sheep recovery, scattered sub-flocks at multiple cardinal directions — to differentiate from RH's "collect to corral"?
-- Is the **flock density** the issue? RH has 250 sheep on ~100k m², OC has 200 on ~450k m² — sheep-per-m² is ~5× lower, which may be why OC feels empty.
-
-**What to look at:**
-- `shared/scenes/open-country.js` (sheepSpawn, woodsZones, corral location) — the design parameters.
-- `shared/scenes/rolling-hills.js` for the contrast.
-- Cycle 5 plan §"Open Country" and §"Goal" for the original intent.
-- Cycle 6 plan §Phase 3 for what woodsZones currently do.
-
-Don't pre-commit to "add woods density" or "shrink the island" — those are hypotheses, not the answer. The right move is to identify **what the game loop should be** before tuning numbers.
-
-#### 2. Open Country grass + tree distribution looks inverted
-
-**Symptom (user, same playtest):** "Open mode seems to have grass in middle and trees in middle and no grass on outside and only impostors where the no grass is." The expectation is grass everywhere on the safe land disc with trees scattered through it; what ships is grass + close-up trees concentrated near origin and a barren outer ring populated only by impostor (billboard) trees.
-
-**Objective:** Diagnose why OC's outer ring reads as bare-terrain-with-billboard-trees instead of grass-with-tree-mesh.
-
-**Signals to investigate / questions to consider:**
-- Is **grass culling distance** the cause? The grass system has a `cutoffDistance` config. OC's safe radius is 306m; if the cutoff is e.g. 200m, the outer 100m ring shows as bare ground. Check `js/GrassSystem.js` + the `grass.cutoffDistance` field per scene.
-- Is **`woodsZones` clustering** placing all the dense (mesh) trees in the center, leaving outside to be sparse + impostor-only? The Cycle 6 bias is 0.6× inside woods, 1.4× outside — that's a 2.3× density delta. With three woods zones near origin and outer rings at 1.4×, the **mesh tree count** stays similar but their **distribution** is now origin-weighted. Verify by counting trees inside vs outside the woodsZones radii after generation.
-- Is the **LOD distance cut** ([`js/TerrainBuilder.js` `FAR_LOD_DIST = 250`](js/TerrainBuilder.js)) putting most outer trees into impostor mode? Anything past 250m is a billboard regardless of zone. With OC at 380m radius, ~30% of the disc is past 250m from origin.
-- Is the **terrain heightmap falloff** (70m falloff zone) creating bare terrain near the shore that grass legitimately can't render on?
-- Combine these: woodsZones cluster mesh trees at center, FAR_LOD_DIST sends outer trees to impostor, grass cutoff abandons the outer ring → the visual lands exactly as the user describes. The fix could be in any of those three levers, or in their interaction.
-
-**What to look at:**
-- `shared/scenes/open-country.js` — `grass.clumpsPerChunk` (no cutoffDistance set); compare to RH/Field defaults
-- `js/GrassSystem.js` — actual cutoff logic + chunk culling
-- `js/TerrainBuilder.js:FAR_LOD_DIST` and `_buildFarTreeBillboards` — impostor cutoff
-- `shared/TreePlacement.js` woods-bias factors (0.6× / 1.4×)
-- The `terrain.zones` rect spans ([-380, 380] for nearField but [-1100, 1100] for horizon) — outer zones may legitimately have very few trees because Poisson-disk terminates after exhausting valid points
-
-Could also be a play-camera framing issue — grass renders fine but doesn't read at distance. Test by walking to the shore and looking inward.
-
-#### 3. Follow camera lurches on Rolling Hills — initially attributed to tree collision, may have a separate stamina trigger
-
-**Symptom (user, same playtest):** Camera lurches on Rolling Hills in Follow mode when the dog runs into trees. **Follow-up observation from the user:** "It seems to be possibly partially related to an issue with dog stamina ending and user holding it down — specifically turning up-and-right or up-and-left too while holding stamina while it is out." That suggests at least part of the lurch is a **sprint→walk transition bug** that fires under diagonal input + held-sprint-after-empty, and may be entirely separable from tree collision (or compounded by it).
-
-**Objective:** Make the Follow camera read smoothly under both (a) tree contact and (b) stamina-exhaustion-while-holding-sprint, without sacrificing Cycle 6's tree routing or the existing sprint-cap easing in [`js/Sheepdog.js:604-609`](js/Sheepdog.js).
-
-**Repro to attempt first (cheap and high-signal):**
-1. Open Rolling Hills, switch to Follow camera.
-2. Hold sprint + diagonal up-right (W + D + Shift) on flat open ground, far from any tree.
-3. Drain stamina to zero with sprint still held; keep holding the diagonal input.
-4. Watch the camera. If it lurches with no tree nearby, **the camera bug is at least partially independent of tree collision** and the stamina/sprint transition is its own root cause.
-5. Repeat with cardinal input (W only, no D). If the cardinal case is smooth and only diagonal lurches, the bug is in how diagonal target-velocity recomputes when `currentMaxSpeed` drops.
-
-If step 4 lurches: **address the stamina case first** before the tree-collision case — they're likely two bugs, not one. The tree collision case may even resolve once the underlying camera-following math handles fast velocity-vector changes.
-
-**Signals to investigate / questions to consider:**
-
-*Stamina-transition path (likely the simpler of the two):*
-- The existing easing in `Sheepdog.move` smooths `smoothMaxSpeed` on the way down to **avoid** the camera lerp surge that the easing comment explicitly calls out. Why is it not catching this case? Possibilities:
-  - The easing applies to `smoothMaxSpeed` (the safety clamp) but **not** to `targetVelocity` — `targetVelocity = direction.normalize().multiply(currentMaxSpeed)` uses the raw `currentMaxSpeed`, not the smoothed cap. Diagonal input means `direction` is normalized differently than cardinal, so the velocity-diff vector swings sharply when `currentMaxSpeed` halves.
-  - Stamina-runs-out happens mid-frame; `accelerationRate * deltaTime` is large; one-frame velocity correction gets multiplied by deltaTime once but the camera tracks the resulting position the next frame.
-  - Sprint key held after stamina=0 might re-arm `targetVelocity` at sprint-magnitude every frame and only the smooth cap is gating it — meaning the *velocity* never settles, just gets clamped down externally.
-- Is the lurch a **camera lerp surge** (`speedNorm` halves → look-ahead distance pops, position lerp factor changes), a **velocity-direction whip** (velocity vector changes magnitude on a diagonal more than cardinal), or both?
-
-*Tree-collision path (the original bug, may be compounded):*
-- Sim-side vs camera-side: dog hard push-out + velocity reflection ([`js/Sheepdog.js:638-680`](js/Sheepdog.js)) is correct sim, but Follow camera tracks position 1:1.
-- Should the dog use **pre-collision steering force** like the sheep (force-based, never makes contact) instead of hard push-out + reflection? Sheep have `SHEEP_OBSTACLE_STRENGTH = 6.0` starting at 30m; dog gets nothing until contact. That asymmetry is probably the root cause of the contact-lurch — but verify, don't assume.
-- Is `DOG_RADIUS = 1.2` larger than the visual mesh suggests, making contact happen earlier than expected?
-- Velocity reflection coefficient `× 0.85` after `vDotN` — keeps 85% of energy after impact, so the dog doesn't just stop, it bounces.
-
-**Triangulation matrix to consider before fixing:**
-
-| Scenario | Tree nearby? | Stamina draining mid-input? | Camera mode | Lurch? |
-|---|---|---|---|---|
-| Open ground, no sprint, into tree | yes | no | Follow | ? |
-| Open ground, no sprint, into tree | yes | no | Classic | ? |
-| Diagonal sprint, drain stamina, no tree | no | yes | Follow | yes (per user) |
-| Diagonal sprint, drain stamina, no tree | no | yes | Classic | ? |
-| Cardinal sprint, drain stamina, no tree | no | yes | Follow | ? |
-
-The matrix decomposes the bug. If the lurch only shows in Follow + diagonal-stamina, it's a camera-tracking issue specifically tied to how Follow handles abrupt velocity-direction swings on a diagonal. If it shows in both camera modes, the sim is producing physically jagged motion and the camera is faithful.
+The three themes that triggered Cycle 7 (OC similarity to RH, OC inverted grass/tree distribution, Follow camera lurch) are all addressed in [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md). See the original investigation prompts in git history at commit [c7698b9](https://github.com/matthew-kissinger/sds) (`docs: refine cycle-7 camera-lurch theme`) and [cb1175a](https://github.com/matthew-kissinger/sds) (`docs: cycle-7 candidate themes`).
 
 **What to look at:**
 - `js/Sheepdog.js:585-688` — `move()` end-to-end, including the `smoothMaxSpeed` easing and the obstacle push-out
@@ -158,8 +97,10 @@ Don't pre-commit to a fix shape. The two scenarios may resolve through one chang
 
 | Area | Source of truth |
 |---|---|
-| Latest closed cycle | [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), summary in [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Prior cycle | [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) |
+| Active cycle (scaffolded) | [`docs/cycle-8-plan.md`](docs/cycle-8-plan.md) — needs Goal + Phases filled in |
+| Latest closed cycle | [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md) — see §Shipped status |
+| Prior closed cycle | [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), summary in [`docs/BACKLOG.md`](docs/BACKLOG.md) |
+| Older cycles | [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) |
 | Cycle stub template | [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) |
 | Frozen files / fence rules | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Closed cycles + deferred items | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
@@ -180,4 +121,8 @@ Don't pre-commit to a fix shape. The two scenarios may resolve through one chang
 - Don't add new scenes. Three is the right number.
 - Don't touch `shared/MovementPhysics.js`'s `updateMovement` to insert obstacle logic — Cycle 6 deliberately put obstacle force composition at the **call site** (`OptimizedSheep`, `Sheepdog`, future Worker `GameSim`) so MovementPhysics stays a pure-functions library.
 - Don't blow up `main.js` in one PR. Shrink it one responsibility at a time.
-- Don't regenerate `tests/sim-baseline/` fixtures unless you understand exactly what changed and why. Cycle 5 + 6 preserved them bit-identical.
+- Don't regenerate `tests/sim-baseline/` fixtures unless you understand exactly what changed and why. Cycle 5 + 6 + 7 preserved them bit-identical.
+- **Cycle 7:** Don't hardcode grass-exclusion zones for non-Field scenes. The pasture/farmHouse rect was hardcoded for *every* scene before, which left bare patches on RH/OC. Now gated on `sceneDef?.farmHouse` and `sceneDef?.pasture`.
+- **Cycle 7:** Don't gate sprint *continuation* on `stamina >= minStaminaToSprint` — only sprint *start*. The state machine separates `canStartSprint` (≥10) from `canContinueSprint` (>0); merging them creates the oscillation-around-threshold bug that hides exhaustion entirely.
+- **Cycle 7:** Don't set CSS `transition: all` on stamina/progress bars. Width must be instant; only color/glow should animate. Otherwise the bar lags the percentage text by the transition duration.
+- **Cycle 7:** Don't assume the dome's integrated cloud math is the only cloud system. [`CloudLayer.js`](js/atmosphere/CloudLayer.js) is a separate planar mesh with its own shader. Both can produce horizontal-line artifacts at low elevation angles; verify the right one when debugging sky seams.

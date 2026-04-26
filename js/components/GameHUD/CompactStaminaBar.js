@@ -52,7 +52,12 @@ export function CompactStaminaBar({ stamina }) {
             className: 'h-2 bg-gray-700/50 rounded-full overflow-hidden'
         },
             createElement('div', {
-                className: 'h-full rounded-full transition-all duration-300',
+                // Cycle 7 fix: was `transition-all duration-300` which
+                // animated the width too, lagging the bar 300ms behind
+                // the percentage text. Width is now instant; only the
+                // color/glow keep their soft transition for a clean
+                // green→yellow→red blend as stamina drains.
+                className: 'h-full rounded-full transition-[background,box-shadow] duration-300',
                 style: {
                     width: `${staminaValue}%`,
                     background: getStaminaColor(stamina),

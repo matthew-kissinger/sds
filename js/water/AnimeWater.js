@@ -60,6 +60,7 @@ const FRAG = /* glsl */ `
   uniform float uSparkleStrength; // 0..1
 
   uniform vec3 uSunDirection;     // world space, normalized
+  uniform float uSunSpecularIntensity; // 0..1 — Cycle 7 Phase 2d sun-glint scale
 
   #include <packing>
   #include <fog_pars_fragment>
@@ -129,11 +130,19 @@ const FRAG = /* glsl */ `
     vec3 viewDir = normalize(cameraPosition - vWorldPos);
     vec3 N = vec3(0.0, 1.0, 0.0); // flat plane normal in world space
     vec3 H = normalize(uSunDirection + viewDir);
-    float spec = pow(max(dot(N, H), 0.0), 64.0);
+    float NdotH = max(dot(N, H), 0.0);
+    float spec = pow(NdotH, 64.0);
     float sparkleMask = snoise(vWorldPos.xz * 0.8 + vec2(uTime * 0.15));
     float sparkles = step(0.85, spec) * step(0.55, sparkleMask) * uSparkleStrength;
 
-    vec3 color = baseColor + vec3(sparkles);
+    // Cycle 7 Phase 2d: smooth sun-glint alongside the cel sparkles. Exponent
+    // 8 gives a wider, coherent reflection path along the sun's screen
+    // direction (vs the sparkles' exponent 64 which produces discrete
+    // flecks). Reads as "sun on water" rather than ambient shimmer.
+    float sunGlint = pow(NdotH, 8.0) * uSunSpecularIntensity;
+    vec3 sunGlintColor = vec3(1.0, 0.95, 0.82); // warm-white — tune in playtest
+
+    vec3 color = baseColor + vec3(sparkles) + sunGlintColor * sunGlint;
     color = mix(color, uFoamColor, foamMask);
 
     gl_FragColor = vec4(color, 1.0);
@@ -177,6 +186,7 @@ export function createAnimeWaterMaterial({ renderer, camera, depthTexture }) {
             uSparkleStrength: { value: 0.7 },
 
             uSunDirection:    { value: new THREE.Vector3(0.4, 0.6, 0.7).normalize() },
+            uSunSpecularIntensity: { value: 0.6 },
         }
     ]);
 

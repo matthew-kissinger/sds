@@ -590,26 +590,47 @@ export class OptimizedSheepSystem {
             );
             sheep.updatePosition(deltaTime);
 
-            // Cycle 5+ corral ascend: float upward, shrink, then disappear.
-            // Skip the regular horizontal/heightfield positioning so the
-            // sheep cleanly leaves the playfield instead of seeking a target.
+            // Cycle 5+ corral ascend: float upward along the lightning bolt,
+            // shrink as it rises, dispatch a spark event at the top.
+            // Cycle 7: ascend height matched to BOLT_HEIGHT (60m) so the
+            // sheep traces the entire bolt before vanishing — was 22m
+            // (too short, sheep visibly stopped at 1/3 the bolt's reach).
+            // Position is locked to ascendStart{X,Z} from the zap moment
+            // so any residual physics doesn't drift the sheep sideways.
             if (sheep.isAscending) {
-                const ASCEND_DURATION = 1.6;  // seconds
-                const ASCEND_HEIGHT = 22;     // metres up
+                const ASCEND_DURATION = 1.8;  // seconds — matches bolt fade window
+                const ASCEND_HEIGHT = 60;     // metres up — matches BOLT_HEIGHT
                 sheep.ascendT = Math.min(1, (sheep.ascendT || 0) + deltaTime / ASCEND_DURATION);
                 const t = sheep.ascendT;
-                // Ease-out cubic so the sheep accelerates upward then drifts
-                const easedT = 1 - Math.pow(1 - t, 3);
-                const baseY = this.heightfield ? this.heightfield.sample(sheep.position.x, sheep.position.z) : 0;
+                // Ease-in cubic so the sheep takes off fast (yanked by the
+                // bolt) and decelerates near the top — reads as "pulled
+                // upward" rather than "drifting off".
+                const easedT = t * t * (3 - 2 * t); // smoothstep — symmetric in/out
+                const sx = sheep.ascendStartX ?? sheep.position.x;
+                const sz = sheep.ascendStartZ ?? sheep.position.z;
+                const baseY = this.heightfield ? this.heightfield.sample(sx, sz) : 0;
                 const ascendY = baseY + 0.5 + easedT * ASCEND_HEIGHT;
-                dummy.position.set(sheep.position.x, ascendY, sheep.position.z);
+                dummy.position.set(sx, ascendY, sz);
                 dummy.rotation.set(0, 0, 0);
-                // Stay full size until 70% then shrink quickly to nothing
-                const scaleT = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
-                const scale = Math.max(0, scaleT);
+                // Shrink continuously across the ascent — by ~50% at half-
+                // way, near zero by the top. Reads as the sheep being
+                // "pulled into" the lightning, not floating up at full size.
+                const scale = Math.max(0, 1 - t * t);
                 dummy.scale.set(scale, scale, scale);
                 dummy.updateMatrix();
                 this.instancedMesh.setMatrixAt(i, dummy.matrix);
+                // Fire a spark at the top of the bolt the moment the sheep
+                // reaches it — main.js listens and triggers a small burst
+                // via the CorralZapEffectPool. Idempotent guard so it
+                // only fires once per ascending sheep.
+                if (t >= 1 && !sheep.ascendSparked) {
+                    sheep.ascendSparked = true;
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('corral-ascend-top', {
+                            detail: { x: sx, y: baseY + ASCEND_HEIGHT, z: sz }
+                        }));
+                    }
+                }
                 continue;
             }
 
@@ -1841,6 +1862,14 @@ export class OptimizedSheepInstance extends Boid {
             this.isRetiring = true;
             this.isAscending = true;
             this.ascendT = 0;
+            // Cycle 7: cache the position at the moment of zap so the
+            // ascend renders straight up the lightning bolt, not drifting
+            // with any residual physics. Without these, post-zap render
+            // can read sheep.position from a frame where some other system
+            // nudged it (boundary, terrain) and the visual drifts off.
+            this.ascendStartX = this.position.x;
+            this.ascendStartZ = this.position.z;
+            this.ascendSparked = false;
             this.retirementTarget = null;  // no horizontal target — going straight up
             this.velocity.set(0, 0);
             this.acceleration.set(0, 0);
