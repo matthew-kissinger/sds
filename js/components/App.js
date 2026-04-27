@@ -338,6 +338,39 @@ export async function initReactUI() {
                 setSandboxConfig(updated);
             };
 
+            // Cycle 9 Phase 2: after createRoom/joinRoom/quickMatch resolve,
+            // make the client's loaded scene match `room.sceneId`. The client's
+            // scene is fixed at boot from `?scene=` URL param; the room's
+            // scene is the server's source of truth. When they disagree, the
+            // joiner sees correct sim but mismatched terrain/sky/water (the
+            // standing risk in NEXT_SESSION.md). Reload with the correct
+            // ?scene= and `#/r/<roomCode>` so the existing invite flow
+            // re-enters the room on the right scene.
+            const ensureSceneMatchesRoom = (room, { isHost = false } = {}) => {
+                if (!room?.sceneId || !room?.roomCode) return false;
+                const currentSceneId = (typeof window !== 'undefined' && window.__currentSceneId) || 'field';
+                if (room.sceneId === currentSceneId) return false;
+                if (isHost) {
+                    // Host already created the room; reloading would drop
+                    // host status. This branch only fires if the worker chose
+                    // a different scene than the host's URL, which means the
+                    // URL was wrong pre-flight. Log so we can find and fix
+                    // the source; don't auto-reload.
+                    console.warn(`[SCENE-SYNC] Host scene mismatch: url=${currentSceneId} room=${room.sceneId}. URL pre-flight (ScenePicker) is the right place to fix this.`);
+                    return false;
+                }
+                console.log(`[SCENE-SYNC] Reloading: url=${currentSceneId} -> room=${room.sceneId} (room ${room.roomCode})`);
+                const url = new URL(location.href);
+                if (room.sceneId === 'field') {
+                    url.searchParams.delete('scene');
+                } else {
+                    url.searchParams.set('scene', room.sceneId);
+                }
+                url.hash = `/r/${room.roomCode}`;
+                location.href = url.toString();
+                return true;
+            };
+
             const handleCreateRoom = async (settings) => {
                 setRoomSettings(settings);
                 try {
@@ -356,6 +389,7 @@ export async function initReactUI() {
                         sheepCount: settings.sheepCount
                     }, selectedDog);
 
+                    ensureSceneMatchesRoom(nm.currentRoom, { isHost: true });
                     monitorLobbyState();
                 } catch (error) {
                     console.error('[UI] Failed to create room:', error);
@@ -415,6 +449,7 @@ export async function initReactUI() {
                     }
                     if (!nm.connected && !nm.connecting) await nm.connect();
                     await nm.joinRoom(code, "Player", selectedDog);
+                    if (ensureSceneMatchesRoom(nm.currentRoom)) return;
                     monitorLobbyState();
                 } catch (error) {
                     console.error('[UI] Failed to join room:', error);
@@ -433,6 +468,7 @@ export async function initReactUI() {
                     }
                     if (!nm.connected && !nm.connecting) await nm.connect();
                     await nm.quickMatch("Player", selectedDog);
+                    if (ensureSceneMatchesRoom(nm.currentRoom)) return;
                     monitorLobbyState();
                 } catch (error) {
                     console.error('[UI] Failed to quick match:', error);

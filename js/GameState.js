@@ -4,6 +4,7 @@ import { FieldConfig, FIELD_SIZES, GATE_DEFAULTS, PASTURE_DEFAULTS } from './Fie
 import { getFenceCollisionSystem, resetFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { getExtremeBoidSystem, resetExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { emptyObstacles } from '../shared/SceneObstacles.js';
+import { getCurrentRoom } from './GameBridge.js';
 
 /**
  * GameState - Handles game configuration, boundaries, and state management
@@ -787,28 +788,28 @@ export class GameState {
         // Store previous sheep count to check if we need to recreate the flock
         const previousSheepCount = this.totalSheep;
 
-        // Set sheep count based on single player mode
-        // Cycle 7: classic mode now honors the scene def's sheepSpawn.count
-        // (e.g., RH says 250) instead of always defaulting to 200. The
-        // boosted modes still apply uniformly across all scenes.
-        const sceneCount = this.sceneSpawnDef?.count ?? 200;
+        // Cycle 9 Phase 1: solo sheep count is owned by mode, not scene def.
+        // Classic=200 / Extreme=1000 / Insane=3000 / Chaos=5000 unconditionally.
+        // Scene defs may keep `sheepSpawn.count` only as a density hint
+        // (forwarded via spawnConfig.defaultCount for radius scaling); it is
+        // no longer authoritative for `totalSheep`. Multiplayer reads the
+        // host-configured count from the room (server authoritative).
+        const SOLO_MODE_SHEEP_COUNT = {
+            classic: 200,
+            extreme: 1000,
+            insane: 3000,
+            chaos: 5000,
+        };
         if (mode === 'solo') {
-            if (singlePlayerMode === 'chaos') {
-                this.totalSheep = 5000;
-                console.log('Game started in CHAOS mode with 5000 sheep!');
-            } else if (singlePlayerMode === 'insane') {
-                this.totalSheep = 3000;
-                console.log('Game started in INSANE mode with 3000 sheep!');
-            } else if (singlePlayerMode === 'extreme') {
-                this.totalSheep = 1000;
-                console.log('Game started in extreme mode with 1000 sheep!');
-            } else {
-                this.totalSheep = sceneCount;
-                console.log(`Game started in classic mode with ${sceneCount} sheep (from scene def)`);
-            }
+            this.totalSheep = SOLO_MODE_SHEEP_COUNT[singlePlayerMode] ?? 200;
+            console.log(`Game started in ${singlePlayerMode} mode with ${this.totalSheep} sheep`);
         } else {
-            // Multiplayer modes use the scene's count (server still authoritative).
-            this.totalSheep = sceneCount;
+            const room = getCurrentRoom();
+            const roomSheepCount = room?.sheepCount;
+            this.totalSheep = (typeof roomSheepCount === 'number' && roomSheepCount > 0)
+                ? roomSheepCount
+                : (this.sceneSpawnDef?.count ?? 200);
+            console.log(`MP game started with ${this.totalSheep} sheep (room=${roomSheepCount ?? 'n/a'}, sceneDef=${this.sceneSpawnDef?.count ?? 'n/a'})`);
         }
 
         // If sheep count changed, we need to recreate the sheep flock

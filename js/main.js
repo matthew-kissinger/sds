@@ -25,6 +25,7 @@ import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
 import { TwoPlayerCamera } from './TwoPlayerCamera.js';
+import { captureFramebufferSample, isProbeEnabled } from './diagnostics/glProbe.js';
 
 /**
  * Core Web Vitals monitoring for SEO performance tracking
@@ -665,33 +666,42 @@ class SheepDogSimulation {
             // geometry the main pass will. Hidden in non-island scenes.
             if (this.currentScene.boundary?.kind === 'island') {
                 logStep('Building anime water');
-                const { DepthPrePass } = await import('./water/DepthPrePass.js');
-                const { createAnimeWater } = await import('./water/AnimeWater.js');
-                const renderer = this.sceneManager.getRenderer();
-                const camera = this.sceneManager.getCamera();
-                const scene = this.sceneManager.getScene();
+                try {
+                    const { DepthPrePass } = await import('./water/DepthPrePass.js');
+                    const { createAnimeWater } = await import('./water/AnimeWater.js');
+                    const renderer = this.sceneManager.getRenderer();
+                    const camera = this.sceneManager.getCamera();
+                    const scene = this.sceneManager.getScene();
 
-                const depthPrePass = new DepthPrePass({
-                    renderer,
-                    scene,
-                    camera,
-                    isMobile: this.sceneManager.isMobile,
-                });
-                const water = createAnimeWater({
-                    renderer,
-                    camera,
-                    depthTexture: depthPrePass.texture,
-                    size: this.sceneManager.isMobile ? 3200 : 4000,
-                    y: -0.05,
-                    segments: this.sceneManager.isMobile ? 32 : 64,
-                });
-                scene.add(water.mesh);
-                this.sceneManager.setWater({
-                    mesh: water.mesh,
-                    depthPrePass,
-                    water,
-                });
-                this._animeWater = water;  // for per-frame uTime updates
+                    const depthPrePass = new DepthPrePass({
+                        renderer,
+                        scene,
+                        camera,
+                        isMobile: this.sceneManager.isMobile,
+                    });
+                    const water = createAnimeWater({
+                        renderer,
+                        camera,
+                        depthTexture: depthPrePass.texture,
+                        size: this.sceneManager.isMobile ? 3200 : 4000,
+                        y: -0.05,
+                        segments: this.sceneManager.isMobile ? 32 : 64,
+                    });
+                    scene.add(water.mesh);
+                    this.sceneManager.setWater({
+                        mesh: water.mesh,
+                        depthPrePass,
+                        water,
+                    });
+                    this._animeWater = water;  // for per-frame uTime updates
+                } catch (err) {
+                    // Cycle 9 Phase 4: water requires render-to-texture +
+                    // depth-stencil format support that Safari/Metal has
+                    // historically been flaky about. If anything throws
+                    // here, the island stays dry rather than crashing the
+                    // whole game.
+                    console.error('[WATER] Init failed; island will render without water.', err);
+                }
             }
 
             // Verify jep model before creating sheepdog
@@ -2061,6 +2071,18 @@ class SheepDogSimulation {
 
         // Render the scene (always render to show pause indicator)
         this.sceneManager.render();
+
+        // Cycle 9 Phase 4: post-first-frame framebuffer sample to detect
+        // the "ground rendered white" failure mode on Safari/Metal. Run a
+        // few seconds in to give shaders + atmosphere time to bind, then
+        // sample once.
+        if (isProbeEnabled() && !this._probeFbSampled) {
+            this._probeFrameCount = (this._probeFrameCount || 0) + 1;
+            if (this._probeFrameCount === 240) { // ~4s at 60fps
+                this._probeFbSampled = true;
+                try { captureFramebufferSample(this.sceneManager.renderer); } catch {}
+            }
+        }
 
         // Notify HUD subscribers (replaces setInterval polling in useGameState).
         emitGameEvent('frame');

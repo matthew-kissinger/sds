@@ -1,22 +1,24 @@
-# Next Session — Cycle 9 (playtest-and-polish) scaffolded
+# Next Session — Cycle 9 shipped, awaiting playtest verification
 
-> Updated 2026-04-26. Active plan: [`docs/cycle-9-plan.md`](docs/cycle-9-plan.md) — scaffolded; needs Goal + Phases filled in by `/cycle-start`. Last closed: [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md) (`mode-matrix`: modes × sheep counts × scenes × leaderboards + follow-camera Phase 6 polish; deployed live). Cold-start agents: read this page top-to-bottom, then the cycle-9 plan, then [`docs/BACKLOG.md`](docs/BACKLOG.md) for what's deferred. Earlier cycles: [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md), [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md), [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md), [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md), [`docs/cycle-3-plan.md`](docs/cycle-3-plan.md).
+> Updated 2026-04-27. Active plan: [`docs/cycle-9-plan.md`](docs/cycle-9-plan.md) — Phases 9.1 — 9.5 shipped in one push, deployed, awaiting playtest + macOS Safari nightly artifact. Last closed: [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md). Cold-start agents: read this page top-to-bottom, then the cycle-9 plan §Shipped status, then [`docs/BACKLOG.md`](docs/BACKLOG.md). Earlier cycles: [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md), [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md).
 
-## Where the project stands (2026-04-26)
+## Where the project stands (2026-04-27)
 
 - `sheepdogsim.com` is live on Cloudflare Pages + Worker + DO + D1.
-- **Cycle 8 closed and deployed.** mode-matrix shipped: per-(mode × scene × sheepCount) leaderboard partitioning + new soloInsane/soloChaos modes + cluster-aware spawn that fixes the Insane/Chaos sheep-stacking bug + sandbox on RH/OC + MP sheep-count selector (cap 1000 pending Q4 bandwidth measurement) + follow-camera Phase 6 polish (interior-only ridge sampling, asymmetric floor smoothing, `_lastValidFacing` tracking). Detail in [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md) §Shipped status; headline summary in [`docs/BACKLOG.md`](docs/BACKLOG.md).
-- 111/111 vitest pass. Production build clean. Sim-baseline byte-identical (preserved through cycles 5-8).
-- Migration `0002_mode_matrix.sql` applied to remote D1 + verified.
-- **Cycle 9 (`playtest-and-polish`) scaffolded** at [`docs/cycle-9-plan.md`](docs/cycle-9-plan.md). Stub Goal + Phases — needs filling in. Run `/cycle-start` after that.
+- **Cycle 9 (`playtest-triage + cross-platform`) shipped.** Seven user-reported bugs from a 2026-04-27 playtest converted into five phases that all landed in one push:
+  - **9.1:** Sheep count is owned by mode in solo (Classic=200/Extreme=1000/Insane=3000/Chaos=5000) and by host config in MP. Scene defs lose their authoritative role over `totalSheep` (kept only as a density hint for spawn radius). Fixes the "0/250 on RH Classic" surprise. MP `RoomCreation.sheepCount` plumbed through `MenuController.createRoom`. Leaderboard hides the redundant sheep-count dropdown on solo tabs and resets filters on tab switch.
+  - **9.2:** New `ensureSceneMatchesRoom` helper called after every createRoom/joinRoom/quickMatch in [`App.js`](js/components/App.js). Guests with mismatched URL `?scene=` reload via `?scene=<id>#/r/<roomCode>` to re-enter the invite flow on the right scene. Closes the long-standing `MP joiner renderer sync` risk.
+  - **9.3:** Cross-platform test infra. Playwright projects: Chromium + Firefox + WebKit. New `e2e` job in [`deploy.yml`](.github/workflows/deploy.yml). New nightly + workflow_dispatch [`macos-safari.yml`](.github/workflows/macos-safari.yml) running real macOS Safari via `safaridriver` + a Selenium runner at [`tests/safari-smoke/run.mjs`](tests/safari-smoke/run.mjs). New WebGL-extensions probe spec. Living doc at [`docs/cross-platform-testing.md`](docs/cross-platform-testing.md).
+  - **9.4:** Mac rendering bug (white ground / no sun / no water on RH+OC). Diagnostic probe at [`js/diagnostics/glProbe.js`](js/diagnostics/glProbe.js) gated on `?debug=gl` — dumps GL context, RT events, post-first-frame framebuffer sample to `window.__sdsDiag`. Water init wrapped in try/catch in [`main.js`](js/main.js). DepthPrePass per-frame render wrapped in `_safeRender`. Speculative shader fixes deferred until Safari nightly artifact lands.
+  - **9.5:** New [`Heightfield.surfaceY(x, z)`](shared/terrain/Heightfield.js) = `sample + 0.05` lift for visual entity placement. Sheep + dog use it for InstancedMesh/mesh Y; sim still uses raw `sample`. Sim baseline byte-identical. Full mesh-aligned bake deferred to [`BACKLOG.md`](docs/BACKLOG.md).
+- 111/111 vitest pass. Production build clean. Sim-baseline byte-identical (preserved through cycles 5-9).
 
-### Cycle 9 starter scope
+### Outstanding before Cycle 9 closes
 
-Most Cycle 8 acceptance items were code-complete but playtest-deferred. Cycle 9 is the verification + tuning pass:
-
-1. **Phase 1 — Cycle 8 acceptance walkthrough** (~1hr). Walk every Cycle 8 carryover item end-to-end on the deployed build. Document green/yellow/red per item.
-2. **Phase 2 — MP bandwidth measurement** (~2hr). Q4 — measure WS+MessagePack at 500/1000 sheep on a representative connection. Decide whether to lift the 1000 cap.
-3. **Phase 3 — Tune from Phase 1 findings** (TBD).
+1. **macOS Safari nightly first run.** Workflow `macos-safari.yml` needs to fire (or be triggered via `gh workflow run`) so we see whether `safaridriver` boots cleanly on the GH macOS runner and whether `__sdsDiag` shows up in the artifact. The output drives the Phase 9.4 follow-up patch.
+2. **Q3 (Mac bug root cause).** Once telemetry lands, identify whether the white-ground failure is the FBM precision collapse, the render-target alloc failure, or the tone-mapping/atmosphere fog ordering. Patch one path; re-run nightly; iterate.
+3. **User playtest of the changed flows.** Solo Classic on RH/OC shows `0/200`. MP host's chosen sheepCount sticks. Guest joining via invite renders the room's scene. Leaderboard solo tab hides the sheep-count dropdown. Sheep + dog no longer sink in bare patches.
+4. **Cycle 8 carryover items** (untouched in this session): Phase 1 acceptance walkthrough + Phase 2 MP bandwidth measurement (Q2). Carry into Cycle 10 if not picked up before close.
 
 ## Running locally
 

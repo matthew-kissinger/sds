@@ -27,6 +27,34 @@ jobs:
       - run: npm ci
       - run: npm test --if-present
 
+  e2e:
+    # Cycle 9 Phase 3: cross-browser smoke on Chromium + Firefox + WebKit.
+    # Linux only; real macOS Safari runs nightly via macos-safari.yml.
+    name: E2E (Chromium / Firefox / WebKit)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: worker
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright test
+        env:
+          CI: 'true'
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   pages:
     name: Deploy Pages
     needs: test

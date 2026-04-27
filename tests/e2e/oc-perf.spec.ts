@@ -58,6 +58,11 @@ async function startSoloClassic(page: Page) {
 }
 
 test.describe('OC frametime harness', () => {
+  // Cycle 9 Phase 3: budgets are calibrated for headless Chromium on Linux
+  // CI. Firefox/WebKit headless render at materially different speeds and
+  // would flake the budget; gate this spec to Chromium only.
+  test.skip(({ browserName }) => browserName !== 'chromium', 'frametime budget is Chromium-only');
+
   test('open-country averages within frame budget', async ({ page }) => {
     test.setTimeout(180_000);
 

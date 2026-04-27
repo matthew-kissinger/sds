@@ -133,6 +133,28 @@ export class Heightfield {
     }
 
     /**
+     * Visual surface Y for entity placement. Returns `sample(x, z)` plus a
+     * small upward lift to compensate for the systematic bias between this
+     * sampler (bilinear over the heightfield grid) and the terrain mesh's
+     * triangle interpolation, which on convex ridges sits slightly above
+     * the bilinear sample. Without this, sheep/dog visibly sink into the
+     * mesh in spots where grass isn't there to hide the gap.
+     *
+     * Use this for visual placement only. Sim/physics should keep using
+     * raw `sample()` so behaviour stays decoupled from a render-time tweak.
+     *
+     * Cycle 9 Phase 5 mitigation. Full fix (a baked, mesh-aligned height
+     * grid that all consumers share) is deferred to BACKLOG.
+     *
+     * @param {number} x World X
+     * @param {number} z World Z
+     * @returns {number} Visual surface Y in metres.
+     */
+    surfaceY(x, z) {
+        return this.sample(x, z) + 0.05;
+    }
+
+    /**
      * Surface normal via central finite differences (epsilon = 1m).
      * @param {number} x World X
      * @param {number} z World Z

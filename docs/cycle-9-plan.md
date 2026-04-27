@@ -1,12 +1,12 @@
-# Cycle 9 — playtest-and-polish
+# Cycle 9 — playtest-triage + cross-platform
 
-> Drafted 2026-04-26 after Cycle 8 (`mode-matrix`: modes × sheep counts × scenes × leaderboards) closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
+> Drafted 2026-04-26 after Cycle 8 (`mode-matrix`) closed. Re-scoped 2026-04-27 from a user playtest that surfaced seven concrete bugs. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
 
 ## Goal
 
-One paragraph. What's this cycle for? What's the **user-visible** difference between "before" and "after"? If you can't write this paragraph clearly, the cycle isn't ready to start.
+Fix the seven user-reported playtest bugs, build the cross-platform / cross-browser test infrastructure that prevents the Mac-only rendering regression class from recurring, and ship safety nets for surfaces that failed silently on Safari.
 
-**Starter context (fill in or replace):** Cycle 8 shipped a large code surface — sheep-count matrix, partitioned leaderboards, sandbox on island scenes, MP scope expansion, follow-camera triangulation polish — but most of its acceptance criteria are *playtest-confirmed*, not test-confirmed. Cycle 9 is the verification + tuning pass. Walk the deferred Cycle 8 carryover items, measure MP bandwidth at 500/1000 sheep (Q4), tune the new follow-camera Phase 6 fixes if needed, and address whatever the playtest surfaces. Pull in small Cycle 7 carry-over polish items only if Cycle 9 has spare cycles after verification.
+**User-visible after:** solo Classic always shows `0/200` regardless of scene; multiplayer rooms honour the host's chosen sheep count; multiplayer guests render the room's actual scene instead of the URL default; leaderboard solo tabs no longer show a redundant sheep-count dropdown; macOS Safari is exercised every night in CI; entities sit slightly above the heightfield instead of sinking into ridges.
 
 ## How to read this plan
 
@@ -24,6 +24,7 @@ Each agent picking up a phase should:
 
 1. **Q1: Cycle 8 playtest verdict on each acceptance item.** Walk the Cycle 8 carryover list (below) end-to-end. Mark each item green / yellow / red.
 2. **Q2: MP bandwidth at 500/1000 sheep.** Measure WS+MessagePack throughput on a representative consumer connection. If bandwidth holds at 1000, lift the cap to 3000. If it doesn't, document the cap and consider delta compression.
+3. **Q3: Mac rendering bug root cause.** White ground / no sun / no water on RH+OC. Diagnostics shipped behind `?debug=gl`; needs the macOS Safari nightly to fire and surface telemetry before guarded fixes can target the actual culprit.
 
 ## Cycle 8 carry-over (deferred from `mode-matrix` close)
 
@@ -38,29 +39,46 @@ These were code-complete at Cycle 8 close but needed live playtest to confirm. C
 - Phase 6 follow-camera triangulation polish reads smooth on RH Follow under stamina-out + tree contact (no clipping on ascent, no camera lurch on tree graze, no facing-flip when dog stops).
 - No frametime regression on RTX 3070 desktop or mobile target.
 
-## Phase 1 — Cycle 8 acceptance walkthrough (~1hr)
+## Shipped status (2026-04-27)
 
-**Independently testable.** Verifies what shipped in Cycle 8 actually works in users' hands.
+Phases 9.1 — 9.5 below shipped in one push. Verification deferred to a later session driven by the macOS Safari nightly artifact + a manual playtest of the changed flows.
 
-(Drive the carryover list above. For each item, document green / yellow / red and any observed defects.)
+### Phase 9.1 — sheep-count ownership refactor + leaderboard simplification + MP plumbing
 
-**Acceptance:** explicit verdict on each carryover item.
+- **Solo:** count is owned by mode unconditionally — Classic=200, Extreme=1000, Insane=3000, Chaos=5000. [`js/GameState.js:790-816`](../js/GameState.js) replaces the Cycle 7 `sceneSpawnDef.count` override path. `sceneSpawn.count` on scene defs is now a *density hint* only, forwarded as `defaultCount` for spawn-radius scaling but never authoritative for `totalSheep`.
+- **MP:** [`js/GameState.js`](../js/GameState.js) reads `room.sheepCount` via `getCurrentRoom()` from [`GameBridge`](../js/GameBridge.js); falls back to scene def, then 200. [`js/MenuController.createRoom`](../js/MenuController.js) now forwards `settings.sheepCount` (the React path at [`App.handleCreateRoom`](../js/components/App.js) already did).
+- **Leaderboard:** [`GlobalLeaderboard.js`](../js/components/Multiplayer/GlobalLeaderboard.js) hides the sheep-count dropdown on solo tabs (the mode determines the count), keeps it on MP tabs (host picks). Switching tabs resets both filters to prevent cross-mode contamination. The dropdown's options are also corrected to MP's allowed set `{200, 250, 500, 1000}` (was including 3000/5000 which were never valid MP partitions).
 
-## Phase 2 — MP bandwidth measurement + tune (~2hr)
+### Phase 9.2 — MP scene-sync helper
 
-**Depends on:** Phase 1.
+[`App.js`](../js/components/App.js) now calls `ensureSceneMatchesRoom(room, {isHost})` after every `createRoom` / `joinRoom` / `quickMatch`. Guests/quickMatch with a mismatched URL `?scene=` reload to `?scene=<roomSceneId>#/r/<roomCode>`, hitting the existing invite-flow re-entry. Hosts log a warning instead of reloading (their pre-flight URL is set by `ScenePicker`; auto-reloading would drop their newly-created room). Closes the `MP joiner renderer sync` standing risk.
 
-(Q2 — measure 500-sheep and 1000-sheep MP rooms on a representative consumer connection. PerformanceMonitor + WS bandwidth telemetry. Decide whether to raise the cap, hold at 1000, or lower.)
+### Phase 9.3 — Cross-platform test infrastructure
 
-**Acceptance:** documented bandwidth + sim cost numbers + the chosen cap.
+- [`playwright.config.ts`](../playwright.config.ts) gains Firefox + WebKit projects.
+- New [`tests/e2e/webgl-extensions.spec.ts`](../tests/e2e/webgl-extensions.spec.ts) — runs across all three Playwright browsers, asserts `EXT_color_buffer_float` + `OES_texture_float_linear`, attaches a full GL snapshot to the test report.
+- [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) gains an `e2e` job (Linux, all three Playwright browsers) on every push.
+- New [`.github/workflows/macos-safari.yml`](../.github/workflows/macos-safari.yml) — nightly + `workflow_dispatch` real macOS Safari smoke. Builds the site, serves `dist`, drives Safari via `safaridriver`, captures per-scene screenshot + `__sdsDiag` JSON. Uploads as a 14-day artifact.
+- New [`tests/safari-smoke/run.mjs`](../tests/safari-smoke/run.mjs) — Selenium-based runner; skips silently on non-macOS.
+- [`tests/e2e/oc-perf.spec.ts`](../tests/e2e/oc-perf.spec.ts) gated to chromium-only (frametime budgets are headless-Chromium calibrated).
+- New [`docs/cross-platform-testing.md`](cross-platform-testing.md) — living matrix + 2026 tooling reference.
+- `selenium-webdriver` added as a devDep.
 
-## Phase 3 — Tune from Phase 1 findings (TBD)
+### Phase 9.4 — Mac rendering bug (diagnostics + safety nets)
 
-**Depends on:** Phase 1.
+Speculative shader fixes deferred until the macOS Safari nightly produces telemetry; the alternative (shotgunning fixes blind) had a high false-positive rate.
 
-(Numbers to potentially tune based on Phase 1 feel: density-scaled spawn radius, follow-camera Phase 6 ridge sample / floor smoothing, OC objective requiredSheep / holdRequired.)
+- New [`js/diagnostics/glProbe.js`](../js/diagnostics/glProbe.js) — behind `?debug=gl`, dumps WebGL context info, render-target lifecycle events, and a post-first-frame framebuffer sample (4 points; flags `near-white` / `near-black` collapse) to `window.__sdsDiag`. Picked up by both Playwright and the Safari smoke runner.
+- [`js/SceneManager.js`](../js/SceneManager.js) and [`js/main.js`](../js/main.js) wire context capture and the post-frame sample.
+- [`js/water/DepthPrePass.js`](../js/water/DepthPrePass.js) reports render-target alloc events to the probe and wraps the per-frame `setRenderTarget`/`render` in `_safeRender` so a single bad frame can't break the loop.
+- [`js/main.js:663`](../js/main.js) wraps the entire water init in try/catch so a Safari/Metal alloc failure degrades the island to dry-island instead of crashing.
 
-**Acceptance:** TBD per the tuning that lands.
+### Phase 9.5 — Heightfield Y-sample mitigation
+
+Defensive lift instead of the full mesh-aligned bake (deferred to BACKLOG).
+
+- New [`Heightfield.surfaceY(x, z)`](../shared/terrain/Heightfield.js) returns `sample(x, z) + 0.05`. Documented as visual-placement-only; sim/physics keep using raw `sample()` so behaviour stays decoupled.
+- [`js/OptimizedSheep.js`](../js/OptimizedSheep.js) (2 sites) and [`js/Sheepdog.js`](../js/Sheepdog.js) use `surfaceY` for the InstancedMesh / mesh transform Y. Sim baseline byte-identical (verified — sim never read the visual Y).
 
 ## Dependencies
 

@@ -10,6 +10,8 @@ import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 
 // Cycle 8 Phase 3: scene + sheep-count partition selectors.
+// Cycle 9 Phase 1: solo modes own their sheep count; the dropdown is only
+// meaningful for MP tabs where the host picks the count per room.
 const SCENE_FILTER_OPTIONS = [
     { id: 'any', label: 'Any scene' },
     { id: 'field', label: 'Home Field' },
@@ -20,10 +22,15 @@ const SHEEP_FILTER_OPTIONS = [
     { value: 0, label: 'Any size' },
     { value: 200, label: '200 sheep' },
     { value: 250, label: '250 sheep' },
-    { value: 1000, label: '1000 sheep' },
-    { value: 3000, label: '3000 sheep' },
-    { value: 5000, label: '5000 sheep' }
+    { value: 500, label: '500 sheep' },
+    { value: 1000, label: '1000 sheep' }
 ];
+const SOLO_TAB_FIXED_SHEEP_COUNT = {
+    soloClassic: 200,
+    soloExtreme: 1000,
+    soloInsane: 3000,
+    soloChaos: 5000
+};
 
 export function GlobalLeaderboard({ onBack, playerIdentity }) {
     const { t } = useTranslation();
@@ -33,7 +40,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
     const [error, setError] = useState('');
     const [lastRefresh, setLastRefresh] = useState(null);
     const [sceneFilter, setSceneFilter] = useState('any');
-    const [sheepFilter, setSheepFilter] = useState(0);
+    const [sheepFilter, setSheepFilter] = useState(SOLO_TAB_FIXED_SHEEP_COUNT.soloClassic);
     const { isCompact, isMobile } = useResponsive();
 
     const tabs = [
@@ -88,7 +95,18 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
     useEffect(() => {
         loadLeaderboards();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sceneFilter, sheepFilter]);
+    }, [sceneFilter, sheepFilter, activeTab]);
+
+    // Cycle 9 Phase 1: solo tabs own their sheep count. Switching to a solo
+    // tab forces the filter to that mode's count and hides the dropdown.
+    // Switching to an MP tab clears the filter back to "Any size" so stale
+    // solo selections don't leak across mode boundaries.
+    const isSoloTab = activeTab in SOLO_TAB_FIXED_SHEEP_COUNT;
+    const handleTabChange = (tabId) => {
+        setActiveTab(tabId);
+        setSceneFilter('any');
+        setSheepFilter(SOLO_TAB_FIXED_SHEEP_COUNT[tabId] ?? 0);
+    };
 
     const renderLeaderboardTable = (gameMode) => {
         const data = leaderboards[gameMode] || [];
@@ -266,7 +284,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 createElement('button', {
                     key: tab.id,
                     style: tabButtonStyle(activeTab === tab.id),
-                    onClick: () => setActiveTab(tab.id)
+                    onClick: () => handleTabChange(tab.id)
                 }, t(tab.labelKey))
             )),
 
@@ -310,7 +328,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                         }, opt.label)
                     ))
                 ]),
-                createElement('label', {
+                !isSoloTab && createElement('label', {
                     key: 'sheep-label',
                     style: {
                         display: 'flex', alignItems: 'center', gap: '0.5rem',

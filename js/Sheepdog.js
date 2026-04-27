@@ -750,7 +750,7 @@ export class Sheepdog {
             this.mesh.position.x = this.position.x;
             this.mesh.position.z = this.position.z;
             if (this.heightfield) {
-                this.mesh.position.y = this.heightfield.sample(this.position.x, this.position.z);
+                this.mesh.position.y = this.heightfield.surfaceY(this.position.x, this.position.z);
             }
 
             // Smooth rotation

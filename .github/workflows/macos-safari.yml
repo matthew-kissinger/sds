@@ -1,0 +1,81 @@
+name: macOS Safari Smoke
+
+# Cycle 9 Phase 3: real macOS Safari via safaridriver. Catches the class of
+# rendering bugs that ANGLE-on-Metal exposes (terrain shader FBM precision,
+# water render-target alloc, sky shader) which Playwright's bundled WebKit
+# does not, since the bundled WebKit doesn't use Metal.
+#
+# Runs nightly + on-demand. Skipped on PRs by default to avoid burning macOS
+# minutes on every push (macOS runners are 10x the Linux minute rate).
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 08:00 UTC daily (~ midnight PT)
+  workflow_dispatch:
+    inputs:
+      scenes:
+        description: 'Scenes to smoke-test (comma-separated: field,rolling-hills,open-country)'
+        required: false
+        default: 'field,rolling-hills,open-country'
+
+jobs:
+  safari:
+    name: Safari smoke (real macOS)
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install worker deps
+        working-directory: worker
+        run: npm ci
+
+      - name: Enable Safari WebDriver
+        run: |
+          # safaridriver requires one-time enablement and developer mode.
+          # On GH macos-latest runners Safari is preinstalled and dev mode
+          # is already on; this just authorises the WebDriver binary.
+          sudo safaridriver --enable || true
+          safaridriver --version
+
+      - name: Build site
+        run: npm run build
+
+      - name: Serve dist
+        run: npx --yes http-server dist -p 3000 -s &
+        # Use plain static serve since this smoke doesn't exercise the
+        # worker. MP scene-sync verification stays on a separate workflow.
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sSf http://localhost:3000/ > /dev/null; then
+              echo "Server ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server did not come up"
+          exit 1
+
+      - name: Run Safari smoke
+        env:
+          SCENES: ${{ github.event.inputs.scenes || 'field,rolling-hills,open-country' }}
+        run: node tests/safari-smoke/run.mjs
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safari-smoke
+          path: |
+            tests/safari-smoke/out/**
+          retention-days: 14

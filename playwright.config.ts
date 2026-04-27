@@ -41,6 +41,19 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    // Cycle 9 Phase 3: Firefox + WebKit projects so we catch a class of
+    // bugs that Chromium-only smoke misses. WebKit is NOT macOS Safari
+    // (different JS engine wrapper, no Metal/ANGLE), but it still flags
+    // shader / WebGL extension differences. Real Safari runs nightly on a
+    // separate macos-latest GH Actions workflow.
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
   ],
 
   webServer: {

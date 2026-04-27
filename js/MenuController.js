@@ -101,7 +101,11 @@ export class MenuController {
                 roomName: roomName,
                 maxPlayers: settings.maxPlayers,
                 isPublic: true,
-                gameMode: settings.gameMode
+                gameMode: settings.gameMode,
+                // Cycle 9 Phase 1: forward host-picked sheep count. Without this
+                // the worker silently defaults to 200 even if RoomCreation showed
+                // 250/500/1000.
+                ...(typeof settings.sheepCount === 'number' ? { sheepCount: settings.sheepCount } : {}),
             }, dogType);
             
             return { success: true };

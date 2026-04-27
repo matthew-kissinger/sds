@@ -671,7 +671,7 @@ export class OptimizedSheepSystem {
             }
 
             // Update transform matrix using interpolated render position for smooth movement
-            const sheepY = this.heightfield ? this.heightfield.sample(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
+            const sheepY = this.heightfield ? this.heightfield.surfaceY(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
             const sheepYaw = -sheep.renderFacingDirection + Math.PI / 2;
             dummy.rotation.y = sheepYaw;
@@ -732,7 +732,7 @@ export class OptimizedSheepSystem {
             sheep.renderFacingDirection = sheep.facingDirection;
             
             // Update transform matrix
-            const sheepY = this.heightfield ? this.heightfield.sample(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
+            const sheepY = this.heightfield ? this.heightfield.surfaceY(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
             const sheepYaw = -sheep.renderFacingDirection + Math.PI / 2;
             dummy.rotation.y = sheepYaw;

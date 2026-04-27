@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CameraController } from './CameraController.js';
+import { initGlProbe, captureContext } from './diagnostics/glProbe.js';
 
 /**
  * SceneManager - Three.js scene/lighting/renderer lifecycle plus competitive
@@ -101,6 +102,11 @@ export class SceneManager {
         this.renderer.autoClear = true;
         
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+
+        // Cycle 9 Phase 4: capture WebGL context info into window.__sdsDiag
+        // when ?debug=gl is set. macOS Safari smoke harvests this.
+        initGlProbe();
+        captureContext(this.renderer);
         
         // Camera state owned by CameraController; SceneManager provides
         // thin pass-throughs (setCameraDistance / transformMovementForCompetitive /

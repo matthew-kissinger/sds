@@ -21,6 +21,7 @@
  *   renderer.render(scene, camera);
  */
 import * as THREE from 'three';
+import { reportRenderTarget, log as probeLog } from '../diagnostics/glProbe.js';
 
 export class DepthPrePass {
     /**
@@ -62,6 +63,23 @@ export class DepthPrePass {
 
         this._dpr = dpr;
         this._lastSize = { w, h };
+        reportRenderTarget('depthPrePass', this.target);
+    }
+
+    /**
+     * Cycle 9 Phase 4: render() can fail silently on Safari/Metal if the
+     * depth-stencil format isn't supported in this driver. Wrap so a
+     * single bad frame doesn't break the whole game loop, and surface
+     * via the diagnostic probe.
+     */
+    _safeRender(call) {
+        try {
+            call();
+            return true;
+        } catch (err) {
+            probeLog('depthPrePass.render.error', { error: String(err?.message || err) });
+            return false;
+        }
     }
 
     /** The scene-depth texture; bind to AnimeWater's `uDepthTex` uniform. */
@@ -77,9 +95,11 @@ export class DepthPrePass {
     render() {
         const prev = this.renderer.getRenderTarget();
         const prevAuto = this.renderer.autoClear;
-        this.renderer.setRenderTarget(this.target);
-        this.renderer.autoClear = true;
-        this.renderer.render(this.scene, this.camera);
+        this._safeRender(() => {
+            this.renderer.setRenderTarget(this.target);
+            this.renderer.autoClear = true;
+            this.renderer.render(this.scene, this.camera);
+        });
         this.renderer.setRenderTarget(prev);
         this.renderer.autoClear = prevAuto;
     }
