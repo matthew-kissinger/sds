@@ -28,9 +28,14 @@ jobs:
       - run: npm test --if-present
 
   e2e:
-    # Cycle 9 Phase 3: cross-browser smoke on Chromium + Firefox + WebKit.
-    # Linux only; real macOS Safari runs nightly via macos-safari.yml.
-    name: E2E (Chromium / Firefox / WebKit)
+    # Cycle 9 Phase 3: smoke + WebGL probe on Chromium. Firefox/WebKit projects
+    # exist in playwright.config.ts for local cross-browser runs but are NOT
+    # exercised in CI: headless Linux GH runners don't ship a software WebGL
+    # backend for Firefox/WebKit, so a `THREE.WebGLRenderer` failure is
+    # guaranteed and not a real regression. Real cross-engine coverage runs
+    # nightly via macos-safari.yml (real Safari + Metal on a macos-latest
+    # runner). Run all three browsers locally with `npm run test:e2e`.
+    name: E2E (Chromium)
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -42,8 +47,8 @@ jobs:
       - run: npm ci
       - run: npm ci
         working-directory: worker
-      - run: npx playwright install --with-deps chromium firefox webkit
-      - run: npx playwright test
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --project=chromium --grep-invert='@local-only'
         env:
           CI: 'true'
       - if: always()
