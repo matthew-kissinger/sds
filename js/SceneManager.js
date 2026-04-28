@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CameraController } from './CameraController.js';
-import { initGlProbe, captureContext } from './diagnostics/glProbe.js';
+import { initGlProbe, captureContext, captureFramebufferSample } from './diagnostics/glProbe.js';
 
 /**
  * SceneManager - Three.js scene/lighting/renderer lifecycle plus competitive
@@ -107,6 +107,21 @@ export class SceneManager {
         // when ?debug=gl is set. macOS Safari smoke harvests this.
         initGlProbe();
         captureContext(this.renderer);
+        // Expose a deterministic on-demand sampler so the Safari smoke (and
+        // a human in devtools) can capture exactly when needed instead of
+        // relying on a 240-frame counter that drifts when rAF is throttled.
+        // Usage in devtools: `window.__sdsCaptureSample('inGame')`.
+        if (typeof window !== 'undefined') {
+            const renderer = this.renderer;
+            window.__sdsCaptureSample = (label = 'manual') => {
+                try {
+                    captureFramebufferSample(renderer, label);
+                    return window.__sdsDiag?.framebufferSample ?? null;
+                } catch (err) {
+                    return { error: String(err?.message || err) };
+                }
+            };
+        }
         
         // Camera state owned by CameraController; SceneManager provides
         // thin pass-throughs (setCameraDistance / transformMovementForCompetitive /

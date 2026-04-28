@@ -129,9 +129,17 @@ try {
       await driver.get(url);
 
       await driver.wait(until.elementLocated(By.css('canvas')), 30_000);
-      // Wait for shaders/atmosphere to bind. The probe samples at frame
-      // 240 (~4s @60fps); we wait 6s to be safe.
-      await driver.sleep(6_000);
+      // Wait for shaders/atmosphere/heightfield to bind. RH and OC's
+      // heightfield + DepthPrePass alloc takes longer than Field's flat
+      // setup; 8s is enough for both. (The first run showed OC's
+      // terrain.created firing after the auto-sample at frame 240, which
+      // means the auto-sample read sky pixels instead of ground.)
+      await driver.sleep(8_000);
+
+      // Trigger the startScreen sample explicitly so we don't depend on
+      // the 240-frame auto-sample's timing (rAF is throttled to ~30fps
+      // under safaridriver, so frame counts drift).
+      await driver.executeScript("window.__sdsCaptureSample && window.__sdsCaptureSample('startScreen');");
 
       sceneOut.stages.startScreen = {
         screenshot: await takeScreenshotTo(`${sceneId}-startScreen.png`),
@@ -153,10 +161,12 @@ try {
         throw err;
       }
 
-      // The game canvas appears once the scene is ready. The probe samples
-      // again at frame 240 after gameState.gameActive flips true; we wait
-      // 8s to give terrain bake + sheep spawn time to settle.
+      // Wait for the game canvas to settle (sheep spawn, terrain bake,
+      // grass culling, water depth-prepass), then explicitly trigger the
+      // inGame sample. Same reason as startScreen — the 240-frame
+      // auto-sample timing isn't reliable under safaridriver.
       await driver.sleep(8_000);
+      await driver.executeScript("window.__sdsCaptureSample && window.__sdsCaptureSample('inGame');");
 
       sceneOut.stages.inGame = {
         screenshot: await takeScreenshotTo(`${sceneId}-inGame.png`),

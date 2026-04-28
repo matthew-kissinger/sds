@@ -15,10 +15,28 @@
 
 ### Outstanding before Cycle 9 closes
 
-1. **macOS Safari nightly first run.** Workflow `macos-safari.yml` needs to fire (or be triggered via `gh workflow run`) so we see whether `safaridriver` boots cleanly on the GH macOS runner and whether `__sdsDiag` shows up in the artifact. The output drives the Phase 9.4 follow-up patch.
-2. **Q3 (Mac bug root cause).** Once telemetry lands, identify whether the white-ground failure is the FBM precision collapse, the render-target alloc failure, or the tone-mapping/atmosphere fog ordering. Patch one path; re-run nightly; iterate.
-3. **User playtest of the changed flows.** Solo Classic on RH/OC shows `0/200`. MP host's chosen sheepCount sticks. Guest joining via invite renders the room's scene. Leaderboard solo tab hides the sheep-count dropdown. Sheep + dog no longer sink in bare patches.
-4. **Cycle 8 carryover items** (untouched in this session): Phase 1 acceptance walkthrough + Phase 2 MP bandwidth measurement (Q2). Carry into Cycle 10 if not picked up before close.
+1. **Q3 (Mac bug root cause) — bug does NOT reproduce on GH Actions Safari.** Two macOS Safari nightly runs landed (artifacts [25023642777](https://github.com/matthew-kissinger/sds/actions/runs/25023642777) and [25028575425](https://github.com/matthew-kissinger/sds/actions/runs/25028575425)). On the macos-latest runner, **Field, Rolling Hills, and Open Country all render correctly in-game** — green terrain, sheep, HUD, no white-out. Real Safari 26.3 + Apple Inc / Apple GPU + WebGL2 + ACES Filmic + every required extension present, no GL errors, water + depthPrePass both create successfully, terrain shader compiles after `scene.fog` is bound. The bug is **environmental to Matt's specific Mac** (likely an Intel-Mac + older Safari + work-laptop driver combination). All four hypotheses we shipped diagnostics for (FBM precision, render-target alloc, compile-order race, extension gap) are ruled out on a stock macOS-latest runner.
+
+   **Tomorrow's debug recipe (run on Matt's Mac):**
+   - Open https://sheepdogsim.com/?scene=rolling-hills&debug=gl → Solo Play → Confirm → Classic Mode
+   - Wait for the bug to manifest (white ground, no sun, no water)
+   - Open Safari devtools console
+   - Run: `window.__sdsCaptureSample('inGame')` — captures a labeled framebuffer sample now
+   - Run: `copy(JSON.stringify(window.__sdsDiag, null, 2))` — full diag to clipboard
+   - Paste into Slack/email/file. Compare to the working baseline at [`/tmp/safari-smoke-2/summary.json`](https://github.com/matthew-kissinger/sds/actions/runs/25028575425) (download via `gh run download 25028575425 --name safari-smoke`).
+   - Things to look for in the diff: `glErrorsSeen` non-empty? `water.failed` event? `terrain.created` with `sceneFog: false`? `framebuffer.sampled` with `flag: near-white` and ground samples actually white (RGB > 230)?
+
+2. **User playtest of the changed flows.** Solo Classic on RH/OC shows `0/200`. MP host's chosen sheepCount sticks. Guest joining via invite renders the room's scene. Leaderboard solo tab hides the sheep-count dropdown. Sheep + dog no longer sink in bare patches.
+
+3. **Cycle 8 carryover items** (untouched in this session): Phase 1 acceptance walkthrough + Phase 2 MP bandwidth measurement (Q2). Carry into Cycle 10 if not picked up before close.
+
+### Diagnostic surface (for tomorrow)
+
+- `?debug=gl` — installs the diagnostic probe; `window.__sdsDiag` populated.
+- `window.__sdsCaptureSample(label)` — synchronous on-demand framebuffer sample with a label; returns the captured `{label, samples, avg, flag}` object.
+- Diag stream events worth grepping: `atmosphere.fog.attached`, `atmosphere.preset.applied`, `terrain.created` (sceneFog bool), `sunBillboard.created`, `renderTarget.depthPrePass`, `water.created` / `water.failed`, `gl.error` (drained once/sec), `framebuffer.sampled`.
+- Probe code: [`js/diagnostics/glProbe.js`](js/diagnostics/glProbe.js).
+- Safari smoke runner: [`tests/safari-smoke/run.mjs`](tests/safari-smoke/run.mjs). Trigger with `gh workflow run macos-safari.yml`.
 
 ## Running locally
 
