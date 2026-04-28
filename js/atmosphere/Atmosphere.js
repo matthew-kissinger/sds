@@ -3,6 +3,7 @@ import { HosekWilkieSky } from './HosekWilkieSky.js';
 import { CloudLayer } from './CloudLayer.js';
 import { SunSystem } from './SunSystem.js';
 import { DayNightCycle } from './DayNightCycle.js';
+import { log as probeLog } from '../diagnostics/glProbe.js';
 import {
   SKY_PRESETS,
   FOG_DENSITY_MULTIPLIERS,
@@ -91,6 +92,12 @@ export class Atmosphere {
     if (attachFog) {
       this.fog = new THREE.FogExp2(0xcccccc, 0.0006);
       scene.fog = this.fog;
+      // Cycle 9 Phase 4: log so we can confirm scene.fog is set BEFORE the
+      // terrain shader's <fog_fragment> chunk is compiled. If terrain logs
+      // its `terrain.created` event with `sceneFog: false`, fog uniforms
+      // never bind and the terrain falls through to a default white in
+      // some drivers.
+      probeLog('atmosphere.fog.attached', { density: this.fog.density });
     }
 
     /** @type {THREE.AmbientLight | THREE.HemisphereLight | null} */
@@ -162,6 +169,11 @@ export class Atmosphere {
     if (this.fog && preset.fogColor) {
       this.fog.color.copy(preset.fogColor);
     }
+    probeLog('atmosphere.preset.applied', {
+      preset: name,
+      fogDensity: this.fog?.density ?? null,
+      fogColor: this.fog ? `#${this.fog.color.getHexString()}` : null,
+    });
 
     const coverage = preset.cloudCoverageDefault ?? 0;
     this.basePresetCoverage = coverage;

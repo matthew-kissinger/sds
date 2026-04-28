@@ -25,7 +25,7 @@ import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
 import { TwoPlayerCamera } from './TwoPlayerCamera.js';
-import { captureFramebufferSample, isProbeEnabled } from './diagnostics/glProbe.js';
+import { captureFramebufferSample, isProbeEnabled, log as probeLog, drainGlErrors } from './diagnostics/glProbe.js';
 
 /**
  * Core Web Vitals monitoring for SEO performance tracking
@@ -226,6 +226,7 @@ class SheepDogSimulation {
         // perceptually. Position + color are driven from the atmosphere each
         // frame in animate().
         this._sunBillboard = new SunBillboard(this.sceneManager.getScene());
+        probeLog('sunBillboard.created', { initialPreset });
 
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile, this.currentScene);
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
@@ -694,6 +695,10 @@ class SheepDogSimulation {
                         water,
                     });
                     this._animeWater = water;  // for per-frame uTime updates
+                    probeLog('water.created', {
+                        size: this.sceneManager.isMobile ? 3200 : 4000,
+                        segments: this.sceneManager.isMobile ? 32 : 64,
+                    });
                 } catch (err) {
                     // Cycle 9 Phase 4: water requires render-to-texture +
                     // depth-stencil format support that Safari/Metal has
@@ -701,6 +706,7 @@ class SheepDogSimulation {
                     // here, the island stays dry rather than crashing the
                     // whole game.
                     console.error('[WATER] Init failed; island will render without water.', err);
+                    probeLog('water.failed', { error: String(err?.message || err) });
                 }
             }
 
@@ -2072,15 +2078,33 @@ class SheepDogSimulation {
         // Render the scene (always render to show pause indicator)
         this.sceneManager.render();
 
-        // Cycle 9 Phase 4: post-first-frame framebuffer sample to detect
-        // the "ground rendered white" failure mode on Safari/Metal. Run a
-        // few seconds in to give shaders + atmosphere time to bind, then
-        // sample once.
-        if (isProbeEnabled() && !this._probeFbSampled) {
+        // Cycle 9 Phase 4: framebuffer samples to detect the "ground
+        // rendered white" failure mode on Safari/Metal. Take two:
+        //   - startScreen at frame 240 (~4s after boot, before user clicks
+        //     into the game). Captures the start-screen background scene.
+        //   - inGame after gameState becomes active and another ~4s have
+        //     elapsed since the canvas first showed game-mode (so terrain,
+        //     atmosphere, water, sun billboard are all bound).
+        // The first run on real Safari (artifact 25023642777) showed the
+        // bug doesn't manifest at boot — only after entering gameplay.
+        if (isProbeEnabled()) {
             this._probeFrameCount = (this._probeFrameCount || 0) + 1;
-            if (this._probeFrameCount === 240) { // ~4s at 60fps
-                this._probeFbSampled = true;
-                try { captureFramebufferSample(this.sceneManager.renderer); } catch {}
+            if (!this._probeFbSampledStart && this._probeFrameCount === 240) {
+                this._probeFbSampledStart = true;
+                try { captureFramebufferSample(this.sceneManager.renderer, 'startScreen'); } catch {}
+            }
+            if (!this._probeFbSampledInGame && this.gameState.gameActive) {
+                this._probeInGameFrameCount = (this._probeInGameFrameCount || 0) + 1;
+                if (this._probeInGameFrameCount === 240) {
+                    this._probeFbSampledInGame = true;
+                    try { captureFramebufferSample(this.sceneManager.renderer, 'inGame'); } catch {}
+                }
+            }
+            // Drain any accumulated GL errors once per second so the diag
+            // stream catches OUT_OF_MEMORY / INVALID_FRAMEBUFFER_OPERATION
+            // that don't throw.
+            if (this._probeFrameCount % 60 === 0) {
+                try { drainGlErrors(this.sceneManager.renderer); } catch {}
             }
         }
 

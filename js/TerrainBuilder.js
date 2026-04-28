@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { GrassSystem } from './GrassSystem.js';
+import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
 
@@ -573,6 +574,17 @@ export class TerrainBuilder {
         this.scene.add(terrain);
 
         this.terrainMesh = terrain;
+
+        // Cycle 9 Phase 4: log terrain shader creation so the diag stream
+        // shows the order of operations relative to atmosphere/water init.
+        // If the shader fails to compile on Safari/Metal it usually shows
+        // up as a console error, but the order itself is what we want.
+        probeLog('terrain.created', {
+            sceneFog: !!this.scene.fog,
+            sceneFogType: this.scene.fog?.constructor?.name || null,
+            verts: terrainGeometry.attributes.position.count,
+            heightfield: !!this.heightfield,
+        });
 
         return terrain;
     }

@@ -114,12 +114,61 @@ export function reportShader(name, ok, info) {
     log(`shader.${name}`, { ok, info });
 }
 
+const GL_ERROR_NAMES = {
+    0x0500: 'INVALID_ENUM',
+    0x0501: 'INVALID_VALUE',
+    0x0502: 'INVALID_OPERATION',
+    0x0503: 'STACK_OVERFLOW',
+    0x0504: 'STACK_UNDERFLOW',
+    0x0505: 'OUT_OF_MEMORY',
+    0x0506: 'INVALID_FRAMEBUFFER_OPERATION',
+    0x0507: 'CONTEXT_LOST_WEBGL',
+};
+
+/**
+ * Pull any pending WebGL errors. Errors from previous frames are sticky
+ * until consumed; calling this once per second is enough. Each unique
+ * error code is logged once per session to avoid event-stream spam.
+ */
+export function drainGlErrors(renderer) {
+    if (!installed) return;
+    try {
+        const gl = renderer?.getContext?.();
+        if (!gl) return;
+        const seen = window.__sdsDiag.glErrorsSeen = window.__sdsDiag.glErrorsSeen || {};
+        let code;
+        let pulled = 0;
+        // Bound the loop so a runaway driver doesn't lock up the probe.
+        while ((code = gl.getError()) !== gl.NO_ERROR && pulled < 8) {
+            pulled += 1;
+            const name = GL_ERROR_NAMES[code] || `0x${code.toString(16)}`;
+            if (!seen[name]) {
+                seen[name] = true;
+                log('gl.error', { code, name });
+            }
+        }
+    } catch (err) {
+        log('gl.error.probe', { error: String(err?.message || err) });
+    }
+}
+
 /**
  * Sample N points from the canvas after the first frame. If they all read
  * close to white (or close to black), we're in the failure-mode the user
  * reported — flag it.
+ *
+ * Sample positions are described in *screen coordinates* (top-left origin)
+ * and converted to GL coordinates (bottom-left origin) before readPixels.
+ * The earlier version skipped the flip and sampled sky pixels instead of
+ * ground, producing a misleading `near-white` flag on Field's pastoral-noon
+ * sky preset. Each sample is also tagged with a region label so the dump
+ * is readable without re-deriving the geometry.
+ *
+ * `label` lets callers distinguish samples taken at different game-state
+ * points (e.g., 'startScreen' vs 'inGame'); the latest sample is also
+ * mirrored to `window.__sdsDiag.framebufferSample` for back-compat.
  */
-export function captureFramebufferSample(renderer) {
+export function captureFramebufferSample(renderer, label = 'default') {
     if (!installed) return;
     try {
         const canvas = renderer.domElement;
@@ -128,31 +177,51 @@ export function captureFramebufferSample(renderer) {
         const w = canvas.width;
         const h = canvas.height;
         if (!w || !h) return;
-        const samplePoints = [
-            [Math.floor(w * 0.25), Math.floor(h * 0.25)],
-            [Math.floor(w * 0.5),  Math.floor(h * 0.6)],
-            [Math.floor(w * 0.75), Math.floor(h * 0.75)],
-            [Math.floor(w * 0.5),  Math.floor(h * 0.85)],
+
+        // Screen-coords (0=top, 1=bottom). Picked to land on what *should*
+        // be the visible ground / horizon for the bug we're hunting.
+        const screenPoints = [
+            { region: 'sky-upper',     x: 0.50, y: 0.18 },
+            { region: 'horizon',       x: 0.50, y: 0.45 },
+            { region: 'mid-ground',    x: 0.50, y: 0.65 },
+            { region: 'near-ground',   x: 0.50, y: 0.85 },
+            { region: 'left-ground',   x: 0.18, y: 0.80 },
+            { region: 'right-ground',  x: 0.82, y: 0.80 },
         ];
+
         const px = new Uint8Array(4);
-        const samples = samplePoints.map(([x, y]) => {
+        const samples = screenPoints.map(({ region, x, y }) => {
+            const pxX = Math.floor(w * x);
+            // GL coords: bottom-left origin. Screen y=0 is canvas top, which
+            // is GL y = h-1.
+            const pxY = Math.floor(h * (1 - y));
             try {
-                gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
-                return [px[0], px[1], px[2], px[3]];
+                gl.readPixels(pxX, pxY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+                return { region, x: pxX, y: pxY, rgba: [px[0], px[1], px[2], px[3]] };
             } catch (err) {
-                return { error: String(err?.message || err) };
+                return { region, x: pxX, y: pxY, error: String(err?.message || err) };
             }
         });
-        const validSamples = samples.filter((s) => Array.isArray(s));
-        const avg = validSamples.length === 0
+
+        // Aggregate "ground" samples (everything below the horizon row) for
+        // the white-ground heuristic; sky pixels are excluded so a bright
+        // sky no longer triggers a false `near-white`.
+        const groundSamples = samples
+            .filter((s) => s.rgba && /ground/.test(s.region))
+            .map((s) => s.rgba);
+        const avg = groundSamples.length === 0
             ? null
-            : validSamples.reduce((acc, s) => [acc[0] + s[0], acc[1] + s[1], acc[2] + s[2]], [0, 0, 0])
-                .map((v) => Math.round(v / validSamples.length));
+            : groundSamples
+                .reduce((acc, s) => [acc[0] + s[0], acc[1] + s[1], acc[2] + s[2]], [0, 0, 0])
+                .map((v) => Math.round(v / groundSamples.length));
         const isNearWhite = avg && avg.every((c) => c >= 230);
         const isNearBlack = avg && avg.every((c) => c <= 16);
         const flag = isNearWhite ? 'near-white' : isNearBlack ? 'near-black' : 'ok';
-        window.__sdsDiag.framebufferSample = { samples, avg, flag };
-        log('framebuffer.sampled', { avg, flag });
+        const entry = { label, samples, avg, flag };
+        window.__sdsDiag.framebufferSample = entry;
+        window.__sdsDiag.framebufferSamples = window.__sdsDiag.framebufferSamples || [];
+        window.__sdsDiag.framebufferSamples.push(entry);
+        log('framebuffer.sampled', { label, avg, flag });
     } catch (err) {
         log('framebuffer.error', { error: String(err?.message || err) });
     }
