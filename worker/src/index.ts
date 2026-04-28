@@ -416,7 +416,7 @@ export default {
       // swallowed client-side so analytics never affects gameplay UX.
       if (path === '/api/event' && method === 'POST') {
         let body: any = {};
-        try { body = await req.json(); } catch {}
+        try { body = await request.json(); } catch {}
         const name = String(body?.name ?? '').slice(0, 64);
         if (!name) return err('event name required', 400, cors);
         const propsRaw = body?.props && typeof body.props === 'object' ? body.props : {};
@@ -431,7 +431,7 @@ export default {
         const propsJson = JSON.stringify(safeProps).slice(0, 2048);
         // Optional auth — present token => recognized player.
         let pid: string | null = null;
-        const auth = req.headers.get('authorization') || '';
+        const auth = request.headers.get('authorization') || '';
         const token = auth.startsWith('Bearer ') ? auth.slice(7) : (body?.token || null);
         if (token) {
           try {
