@@ -182,6 +182,13 @@ export class TerrainBuilder {
     }
     
     async loadModels() {
+        // Idempotent — Cycle 11 Phase 1 in-process scene swap reuses the same
+        // TerrainBuilder instance across scenes, and re-fetching the GLB cache
+        // every swap blows the warm-swap perf budget (target ≤600ms desktop).
+        if (this.modelsLoaded) {
+            return;
+        }
+
         // Create mobile materials if needed
         if (this.isMobile) {
             this.createMobileMaterials();
@@ -762,11 +769,21 @@ export class TerrainBuilder {
         }
 
         const out = [];
+        // Cache baked impostors per tree type — survives dispose() like the
+        // models cache. Cycle 11 Phase 1 A8 finding: re-baking on each scene
+        // swap leaks one WebGLRenderTarget framebuffer per tree species per
+        // swap (~5 GL textures per cycle). Reuse instead.
+        if (!this._bakeImpostorCache) this._bakeImpostorCache = new Map();
+
         for (const [treeType, instances] of Object.entries(farByType)) {
             if (instances.length === 0 || !this.models.trees[treeType]) continue;
 
-            const baked = this._bakeTreeImpostor(this.models.trees[treeType], renderer);
-            if (!baked) continue;
+            let baked = this._bakeImpostorCache.get(treeType);
+            if (!baked) {
+                baked = this._bakeTreeImpostor(this.models.trees[treeType], renderer);
+                if (!baked) continue;
+                this._bakeImpostorCache.set(treeType, baked);
+            }
 
             // Cross-billboard geometry uses the GLB's bbox Y-range so that
             // per-instance placement (which uses the same `placementY = treeY
@@ -1901,5 +1918,72 @@ export class TerrainBuilder {
 
         this.rocks = [];
         this.environmentDetails = [];
+    }
+
+    /**
+     * Replace the active scene definition. Used by Cycle 11 Phase 1 to keep
+     * the same TerrainBuilder instance (and its models cache) across scene
+     * swaps while updating per-scene fields like grass density, farmhouse
+     * exclusion, and boundary kind.
+     */
+    setSceneDef(sceneDef) {
+        this.sceneDef = sceneDef;
+        this.farmHousePosition = sceneDef?.farmHouse?.position ?? this.farmHousePosition;
+        if (sceneDef?.farmHouse?.exclusionArea) {
+            this.farmHouseExclusionArea = sceneDef.farmHouse.exclusionArea;
+        }
+    }
+
+    /**
+     * Top-level scene-coupled teardown for in-process scene swap (Cycle 11
+     * Phase 1). Composes existing partial-clears + adds the missing terrain
+     * mesh / mountains / buildings disposal that no prior method covered.
+     *
+     * Re-usable across multiple swaps on the same instance. Preserves
+     * `this.models` GLB cache (modelsLoaded stays true) — those are reusable
+     * across scenes and re-fetching them on each swap blows the perf budget.
+     */
+    dispose() {
+        try { this.clearTrees(); } catch (err) { console.warn('[TERRAIN] clearTrees threw:', err); }
+        try { this.clearRocks(); } catch (err) { console.warn('[TERRAIN] clearRocks threw:', err); }
+
+        if (this.grassSystem) {
+            try { this.grassSystem.dispose(); } catch (err) { console.warn('[TERRAIN] grass dispose threw:', err); }
+            this.grassSystem = null;
+            this.grassMaterial = null;
+            this.grassInstanceCount = 0;
+        }
+
+        // Mountains + buildings are cloned from this.models (GLB cache);
+        // their geometries + materials are SHARED with the original. Disposing
+        // would invalidate the cache and force re-upload on next clone (the
+        // Phase 1 A8 texture-leak finding). Remove from scene only.
+        if (this.mountains?.length) {
+            this.mountains.forEach(m => {
+                if (m.parent) m.parent.remove(m);
+            });
+            this.mountains = [];
+        }
+
+        if (this.buildings?.length) {
+            this.buildings.forEach(b => {
+                if (b.parent) b.parent.remove(b);
+            });
+            this.buildings = [];
+        }
+
+        if (this.terrainMesh) {
+            if (this.terrainMesh.parent) this.terrainMesh.parent.remove(this.terrainMesh);
+            this.terrainMesh.geometry?.dispose();
+            if (this.terrainMesh.material) {
+                if (Array.isArray(this.terrainMesh.material)) this.terrainMesh.material.forEach(m => m?.dispose?.());
+                else this.terrainMesh.material.dispose();
+            }
+            this.terrainMesh = null;
+        }
+
+        this.environmentDetails = [];
+        this.rockPositions = [];
+        this.heightfield = null;
     }
 }

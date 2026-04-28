@@ -287,6 +287,25 @@ export class SceneManager {
         this.waterBundle = bundle || null;
     }
 
+    /**
+     * Tear down the active water bundle (Cycle 11 Phase 1). Disposes the
+     * depth pre-pass render target first to release the depth-stencil
+     * texture before atmosphere disposal — the dispose-order coupling is
+     * the Mac/Safari WebGL crash class flagged in cycle-11-plan.md.
+     */
+    disposeWater() {
+        if (!this.waterBundle) return;
+        const bundle = this.waterBundle;
+        try {
+            if (bundle.mesh && bundle.mesh.parent) bundle.mesh.parent.remove(bundle.mesh);
+            bundle.water?.dispose?.();
+            bundle.depthPrePass?.dispose?.();
+        } catch (err) {
+            console.warn('[SCENE] disposeWater threw:', err);
+        }
+        this.waterBundle = null;
+    }
+
     render() {
         const water = this.waterBundle;
         if (water && water.depthPrePass && water.mesh) {

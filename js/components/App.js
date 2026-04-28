@@ -28,8 +28,10 @@ import {
     getSelectedDog,
     startSoloGame,
     startSandboxGame,
-    startMultiplayerGame
+    startMultiplayerGame,
+    subscribeGameEvent
 } from '../GameBridge.js';
+import { SceneSwapOverlay } from './ui/SceneSwapOverlay.js';
 
 // Initialize React UI with dynamic imports
 export async function initReactUI() {
@@ -1043,12 +1045,24 @@ export async function initReactUI() {
                         document.getElementById('react-overlay')?.style.setProperty('display', '');
                     }
                 }, 100);
-                return () => clearInterval(check);
+
+                // Cycle 11 Phase 1: in-process restartToMenu emits this so we
+                // remount StartScreen immediately (no 100ms polling latency).
+                const unsubRestart = subscribeGameEvent('scene-restart-to-menu', () => {
+                    console.log('[UI] scene-restart-to-menu — remounting StartScreen');
+                    setGameStarted(false);
+                });
+
+                return () => {
+                    clearInterval(check);
+                    unsubRestart();
+                };
             }, []);
 
             return createElement(Fragment, null, [
                 !gameStarted && createElement(StartScreen, { key: 'start' }),
-                gameStarted && createElement(GameHUD, { key: 'hud' })
+                gameStarted && createElement(GameHUD, { key: 'hud' }),
+                createElement(SceneSwapOverlay, { key: 'swap-overlay' })
             ]);
         }
 

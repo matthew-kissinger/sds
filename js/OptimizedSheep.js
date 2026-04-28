@@ -943,6 +943,46 @@ export class OptimizedSheepSystem {
     }
 
     /**
+     * Tear down GPU resources and release scene refs. Used by Cycle 11
+     * Phase 1 in-process scene swap. Idempotent. Mirrors the removal half
+     * of GameState.recreateSheepFlock() but adds geometry + material disposal
+     * the recreate path skipped (because the page reloaded right after).
+     *
+     * Owned-and-disposed: instancedMesh + mergedGeometry + material.
+     * Borrowed-but-released: audioManager, heightfield (owned by GameState).
+     * Untouched: extreme-boid module singleton (GameState.reset() resets it
+     * via resetExtremeBoidSystem(); double-resetting from here would race).
+     */
+    dispose() {
+        if (this._disposed) return;
+        this._disposed = true;
+
+        if (this.instancedMesh) {
+            if (this.instancedMesh.parent) this.instancedMesh.parent.remove(this.instancedMesh);
+            this.instancedMesh = null;
+        }
+        if (this.mergedGeometry) {
+            this.mergedGeometry.dispose();
+            this.mergedGeometry = null;
+        }
+        if (this.material) {
+            if (Array.isArray(this.material)) {
+                this.material.forEach(m => m?.dispose?.());
+            } else {
+                this.material.dispose();
+            }
+            this.material = null;
+        }
+
+        this.sheep = [];
+        this.audioManager = null;
+        this.heightfield = null;
+        this.scene = null;
+
+        this.extremeBoidSystemInitialized = false;
+    }
+
+    /**
      * Inline vertex shader fallback (used if external shader fails to load)
      * Premium Wool Edition with displacement
      */

@@ -165,36 +165,20 @@ export class StructureBuilder {
      */
     clearAllStructures() {
         console.log('[BUILD] Clearing all structures');
-        
+
+        // Cycle 11 Phase 1 A8: structures mix per-call geometries (BoxGeometry
+        // / CylinderGeometry built each invocation, must be disposed) with
+        // GLB-cloned meshes that share materials/textures with the fenceModels
+        // cache (must NOT be disposed, or next clone forces texture re-upload).
+        // Strategy: dispose only the geometries; leave material refs alive.
         Object.values(this.structures).forEach(structureArray => {
             structureArray.forEach(element => {
                 if (element.parent) {
                     element.parent.remove(element);
                 }
-                
-                // Dispose of geometries and materials
-                if (element.geometry) element.geometry.dispose();
-                if (element.material) {
-                    if (Array.isArray(element.material)) {
-                        element.material.forEach(mat => mat.dispose());
-                    } else {
-                        element.material.dispose();
-                    }
-                }
-                
-                // Recursively dispose children
-                if (element.children) {
-                    element.traverse(child => {
-                        if (child.geometry) child.geometry.dispose();
-                        if (child.material) {
-                            if (Array.isArray(child.material)) {
-                                child.material.forEach(mat => mat.dispose());
-                            } else {
-                                child.material.dispose();
-                            }
-                        }
-                    });
-                }
+                element.traverse?.(child => {
+                    if (child.geometry) child.geometry.dispose();
+                });
             });
             structureArray.length = 0;
         });

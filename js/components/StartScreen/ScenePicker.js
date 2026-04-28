@@ -7,9 +7,9 @@
  * Worker always defaults to the `field` scene on its side.
  */
 
-import React, { createElement } from 'react';
+import React, { createElement, useState, useEffect } from 'react';
 import { listScenes, DEFAULT_SCENE_ID } from '../../../shared/scenes/index.js';
-import { getGameInstance } from '../../GameBridge.js';
+import { getGameInstance, subscribeGameEvent } from '../../GameBridge.js';
 
 function currentSceneId() {
     const fromUrl = new URLSearchParams(location.search).get('scene');
@@ -85,6 +85,12 @@ function SceneTile({ scene, isActive, onClick }) {
 export function ScenePicker() {
     const scenes = listScenes();
     if (scenes.length <= 1) return null; // Hide strip when there's nothing to pick.
+
+    // Cycle 11 Phase 1: in-process scene swap fires 'scene-swap-end' but
+    // history.replaceState doesn't trigger a React re-render. Force one so
+    // the "(current)" label tracks the live scene.
+    const [, force] = useState(0);
+    useEffect(() => subscribeGameEvent('scene-swap-end', () => force(n => n + 1)), []);
 
     const activeId = currentSceneId();
 

@@ -457,11 +457,65 @@ class SheepDogSimulation {
         try {
             logStep('Starting initialization', `mobile=${this.sceneManager.isMobile}`);
 
-            // Start progressive asset loading for SEO performance
+            // Start progressive asset loading for SEO performance. First-run-only;
+            // not repeated on scene swaps.
             logStep('Loading critical assets');
             await this.gameAssetLoader.loadCriticalAssets();
 
-            // Load all 3D models first
+            // Per-scene construction. Cycle 11 Phase 1 extracted this body into
+            // _buildSceneBody so rebuildScene() can reuse it.
+            await this._buildSceneBody(logStep);
+
+            // First-run-only: setup persistent input listeners (mouse wheel).
+            // Not repeated on scene swaps — the renderer canvas persists.
+            logStep('Setting up controls');
+            this.sceneManager.setupMouseControls();
+
+            // Set grass instance count for performance monitoring
+            this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
+
+            // Register per-system triangle estimates for the PERF overlay.
+            this.registerSystemTriangleCounts();
+
+            // Cycle 11 Phase 1: stress test harness. Always installed (small);
+            // call from DevTools as `await window.__sdsStressTestSwaps(5)`.
+            this._installStressTestHarness();
+
+            // Cycle 10 Phase 3: cinematic capture infrastructure. First-run-only;
+            // installCinemaApi() is itself idempotent (early-out on window.__sdsCinema).
+            if (isCinematicMode()) {
+                installCinemaApi(this);
+                if (isUiHidden()) {
+                    const overlay = document.getElementById('react-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                }
+                const sunT = getRequestedSun();
+                if (sunT != null && this.atmosphere?.setSun) {
+                    this.atmosphere.setSun({ elevation: sunT * Math.PI * 0.5 });
+                }
+            }
+
+            logStep('Initialization complete!');
+
+        } catch (error) {
+            console.error('[INIT] Fatal error during initialization:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Per-scene construction. Builds heightfield → terrain → grass → trees →
+     * rocks → mountains → farmHouse → structures → effects → water →
+     * sheepdog → sheep flock for `this.currentScene`. Called by init() on
+     * first run and by rebuildScene() on every in-process swap.
+     *
+     * Window listeners (corral-retired, objective-stage-changed,
+     * corral-ascend-top) attach against `this._sceneAbort.signal` so
+     * disposeScene() can tear them down cleanly.
+     */
+    async _buildSceneBody(logStep = (s) => console.log(`[BUILD] ${s}`)) {
+        try {
+            // Load all 3D models first (idempotent — cached after first run).
             logStep('Loading 3D models');
             await this.terrainBuilder.loadModels();
 
@@ -740,40 +794,63 @@ class SheepDogSimulation {
             logStep('Creating sheep flock');
             this.gameState.createSheepFlock(this.sceneManager.getScene());
 
-            // Setup controls
-            logStep('Setting up controls');
-            this.sceneManager.setupMouseControls();
+            logStep('Scene body complete');
 
-            // Set grass instance count for performance monitoring
-            this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
+        } catch (error) {
+            console.error('[BUILD] Fatal error during scene build:', error);
+            throw error;
+        }
+    }
 
-            // Register per-system triangle estimates for the PERF overlay.
-            // Static totals (instance count x per-instance tris) computed once
-            // post-init; drives the "PER-SYSTEM TRIANGLES" section, no behavior.
-            this.registerSystemTriangleCounts();
+    /**
+     * Cycle 11 Phase 1 acceptance A8: stress test harness for in-process
+     * scene swap. Snapshots renderer.info baseline and post-1-swap, then
+     * runs N×A→B→C→A loops, reports drift. Acceptance: drift < 5% on
+     * geometries, textures, programs.
+     *
+     * Usage from DevTools:
+     *   await window.__sdsStressTestSwaps(5)
+     */
+    _installStressTestHarness() {
+        if (typeof window === 'undefined' || window.__sdsStressTestSwaps) return;
+        window.__sdsStressTestSwaps = async (n = 5) => {
+            const renderer = this.sceneManager?.getRenderer?.();
+            if (!renderer) {
+                console.warn('[STRESS] no renderer; skipping');
+                return null;
+            }
+            const snap = () => ({
+                geometries: renderer.info.memory.geometries,
+                textures: renderer.info.memory.textures,
+                programs: renderer.info.programs?.length ?? 0,
+            });
+            const baseline = snap();
+            console.log('[STRESS] baseline:', baseline);
 
-            // Cycle 10 Phase 3: cinematic capture infrastructure. Only
-            // installs when ?cinematic=1; default-off so normal play has
-            // no perf hit from the exposed globals.
-            if (isCinematicMode()) {
-                installCinemaApi(this);
-                if (isUiHidden()) {
-                    const overlay = document.getElementById('react-overlay');
-                    if (overlay) overlay.style.display = 'none';
-                }
-                const sunT = getRequestedSun();
-                if (sunT != null && this.atmosphere?.setSun) {
-                    // Map t in [0..1] to elevation [0, π/2].
-                    this.atmosphere.setSun({ elevation: sunT * Math.PI * 0.5 });
+            const scenes = ['field', 'rolling-hills', 'open-country'];
+            let postFirst = null;
+            for (let i = 0; i < n; i++) {
+                for (const s of scenes) {
+                    if (this.currentScene?.id === s) continue;
+                    await this.swapScene(s);
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                    if (postFirst === null) {
+                        postFirst = snap();
+                        console.log('[STRESS] post-1-swap:', postFirst);
+                    }
                 }
             }
 
-            logStep('Initialization complete!');
-
-        } catch (error) {
-            console.error('[INIT] Fatal error during initialization:', error);
-            throw error;
-        }
+            const final = snap();
+            const pct = (a, b) => b === 0 ? '0%' : ((a - b) / b * 100).toFixed(2) + '%';
+            const drift = {
+                geometries: pct(final.geometries, postFirst.geometries),
+                textures: pct(final.textures, postFirst.textures),
+                programs: pct(final.programs, postFirst.programs),
+            };
+            console.log('[STRESS] final:', final, 'drift:', drift);
+            return { baseline, postFirst, final, drift };
+        };
     }
 
     // -------- Cycle 10 Phase 1 — scene lifecycle (Step 1 plumbing) --------
@@ -809,17 +886,41 @@ class SheepDogSimulation {
             return;
         }
 
-        console.log(`[SWAP] swapScene(${toId}) — Step 1 hard-reload fallback`);
+        // Cycle 11 Phase 1 Q1: solo + sandbox + start-screen-pre-game hit
+        // the in-process path; multiplayer falls back to hard reload. RoomDO
+        // doesn't broadcast scene-specific state mid-game, but rooms lock the
+        // scene at creation, so guests don't initiate cross-scene swaps. The
+        // gate keeps WS state intact for the rare edge case.
+        const isMp = this.isMultiplayer || this.gameState?.gameMode === 'multiplayer';
+        if (isMp) {
+            console.log(`[SWAP] swapScene(${toId}) — MP client, falling back to hard reload`);
+            location.href = this._buildSwapUrl(toId, opts);
+            return new Promise(() => {});
+        }
+
+        console.log(`[SWAP] swapScene(${fromId} -> ${toId}) — in-process`);
+        emitGameEvent('scene-swap-start');
+        const t0 = performance.now();
 
         try {
-            // Step 3 will replace this body with:
-            //   await this.disposeScene();
-            //   await this.rebuildScene(loadScene(toId));
-            //   history.replaceState(null, '', this._buildSwapUrl(toId, opts));
-            location.href = this._buildSwapUrl(toId, opts);
-            return new Promise(() => {}); // Page is reloading; never resolves.
+            const newSceneDef = loadScene(toId);
+            await this.disposeScene();
+            await this.rebuildScene(newSceneDef);
+
+            // Update the URL bar only on success. If rebuildScene threw, the
+            // user's URL still reflects the original scene — they reload and
+            // land on the working scene.
+            history.replaceState(null, '', this._buildSwapUrl(toId, opts));
+
+            const elapsed = Math.round(performance.now() - t0);
+            console.log(`[SWAP] complete in ${elapsed}ms`);
+            emitGameEvent('scene-swap-end');
         } catch (err) {
-            console.warn('[SWAP] swapScene fallback to location.href after error:', err);
+            // Q2: option (a) — half-built scene is unrecoverable; throw the
+            // document away. The catch path keeps URL intact (replaceState
+            // never fired) so reload lands on the original scene.
+            console.error('[SWAP] in-process swap failed; falling back to reload:', err);
+            emitGameEvent('scene-swap-error');
             location.href = this._buildSwapUrl(toId, opts);
             return new Promise(() => {});
         }
@@ -847,44 +948,28 @@ class SheepDogSimulation {
     }
 
     /**
-     * Drain scene-coupled GPU + listener state. Step 1 lands the listener
-     * teardown + effects-family disposal (lowest-risk subset that prevents
-     * the leak class flagged in cycle-10-plan.md). Subsequent cycles fill
-     * out the heavier families (atmosphere, water, terrain, sheep+dog) and
-     * flip swapScene to call this method as part of an in-process swap.
-     *
-     * Today this is invoked only by an opt-in `swapScene(toId, { dispose: true })`
-     * code path used by stress tests; the production callers all hard-reload,
-     * so the page itself drops everything. Validating dispose calls now keeps
-     * the surface honest for the future flip.
+     * Drain scene-coupled GPU + listener state. Cycle 11 Phase 1 fills out
+     * the full ordering: events → effects → actors → structures → water
+     * (before atmosphere — depth pre-pass coupling) → terrain → atmosphere
+     * → sun billboard → state drain → renderer cache. Each disposer wraps
+     * in try/catch with warn logs so a single subsystem failure doesn't
+     * abort the rest of the teardown.
      */
     async disposeScene() {
-        console.log('[SWAP] disposeScene() — effects + listener teardown');
+        console.log('[SWAP] disposeScene() — full teardown');
+        this._sceneRebuilding = true;
 
-        // Tear down scene-coupled window listeners. AbortController.abort()
-        // removes every listener registered with { signal: signal }. The
-        // five listeners attached inside init() (objective-stage-changed,
-        // corral-retired, corral-ascend-top) all use this.
-        try {
-            this._sceneAbort?.abort();
-        } catch (err) {
-            console.warn('[SWAP] sceneAbort.abort threw (ignored):', err);
-        }
+        // 1. Stop event-driven systems first — listeners can fire mid-teardown.
+        try { this._sceneAbort?.abort(); } catch (err) { console.warn('[SWAP] sceneAbort.abort threw:', err); }
         this._sceneAbort = new AbortController();
 
-        // Effects family — each dispose method exists today. PortalEffect
-        // and CorralZapEffectPool ship full dispose; the round-up decal is
-        // a raw Mesh built in init(), so we tear it down by hand.
+        // 2. Effects (PortalEffect, CorralZapPool, roundupZoneDecal).
         if (this._portalEffect) {
-            try { this._portalEffect.dispose(); } catch (err) {
-                console.warn('[SWAP] portalEffect.dispose threw:', err);
-            }
+            try { this._portalEffect.dispose(); } catch (err) { console.warn('[SWAP] portalEffect.dispose:', err); }
             this._portalEffect = null;
         }
         if (this._corralZapPool) {
-            try { this._corralZapPool.dispose(); } catch (err) {
-                console.warn('[SWAP] corralZapPool.dispose threw:', err);
-            }
+            try { this._corralZapPool.dispose(); } catch (err) { console.warn('[SWAP] corralZapPool.dispose:', err); }
             this._corralZapPool = null;
         }
         if (this._roundupZoneDecal) {
@@ -893,31 +978,150 @@ class SheepDogSimulation {
                 if (mesh.parent) mesh.parent.remove(mesh);
                 mesh.geometry?.dispose();
                 if (Array.isArray(mesh.material)) {
-                    mesh.material.forEach(m => m.dispose());
+                    mesh.material.forEach(m => m?.dispose?.());
                 } else {
                     mesh.material?.dispose();
                 }
-            } catch (err) {
-                console.warn('[SWAP] roundupZoneDecal teardown threw:', err);
-            }
+            } catch (err) { console.warn('[SWAP] roundupZoneDecal teardown:', err); }
             this._roundupZoneDecal = null;
         }
-        // Future cycles: atmosphere / water / structures / flora / terrain /
-        // sheep+dog disposal lands here. Each family's dispose method is
-        // already in place (see TerrainBuilder, GrassSystem, ProceduralMountains,
-        // Atmosphere, AnimeWater, DepthPrePass) — wiring them up is the
-        // remaining work, alongside OptimizedSheepSystem.dispose (new).
+
+        // 3. Sheep + sheepdog. Sheep before sheepdog so removeDistanceIndicator
+        //    has a valid scene during sheepdog teardown.
+        try {
+            if (this.gameState?.optimizedSheepSystem) {
+                this.gameState.optimizedSheepSystem.dispose();
+                this.gameState.optimizedSheepSystem = null;
+            }
+            if (this.gameState) this.gameState.sheep = [];
+        } catch (err) { console.warn('[SWAP] sheep dispose:', err); }
+
+        try {
+            if (this.sheepdog?.removeDistanceIndicator) this.sheepdog.removeDistanceIndicator();
+            if (this.sheepdog?.removePlayerIcon) this.sheepdog.removePlayerIcon();
+            if (this.sheepdogMesh) {
+                // Sheepdog mesh is a SkeletonUtils.clone of the cached GLB
+                // — its geometries + materials are SHARED with the original.
+                // Disposing would invalidate the GLB cache and force re-upload
+                // on the next clone, which doubled texture count under stress
+                // (Phase 1 A8 finding). Remove from scene only; let the cloned
+                // skeleton + material refs be garbage-collected.
+                if (this.sheepdogMesh.parent) this.sheepdogMesh.parent.remove(this.sheepdogMesh);
+            }
+            this.sheepdog = null;
+            this.sheepdogMesh = null;
+        } catch (err) { console.warn('[SWAP] sheepdog dispose:', err); }
+
+        // 4. Other-player dogs (MP — solo path is no-op, harmless).
+        if (this.otherPlayers?.size) {
+            for (const [, dog] of this.otherPlayers) {
+                try {
+                    dog.removeDistanceIndicator?.();
+                    dog.removePlayerIcon?.();
+                } catch {}
+            }
+            this.otherPlayers.clear();
+        }
+
+        // 5. Structures (StructureBuilder.clearAllStructures handles dispose).
+        try { this.structureBuilder?.clearAllStructures?.(); } catch (err) { console.warn('[SWAP] structures:', err); }
+
+        // 6. Water — BEFORE atmosphere. Depth pre-pass holds a depth-stencil
+        //    target tied to the renderer; freeing it before atmosphere avoids
+        //    the Mac/Safari WebGL crash class flagged in cycle-11-plan.md.
+        try { this.sceneManager?.disposeWater?.(); } catch (err) { console.warn('[SWAP] water:', err); }
+        this._animeWater = null;
+
+        // 7. Terrain (composes grass + trees + rocks + mountains + buildings + mesh).
+        //    Keep the instance alive — its GLB models cache is reused across
+        //    swaps. dispose() drops scene-coupled state but preserves models.
+        try { this.terrainBuilder?.dispose?.(); } catch (err) { console.warn('[SWAP] terrain:', err); }
+
+        // 8. Atmosphere (sky dome + sun + cloud layer + scene.fog).
+        try { this.atmosphere?.dispose?.(); } catch (err) { console.warn('[SWAP] atmosphere:', err); }
+        this.atmosphere = null;
+
+        // 9. Sun billboard.
+        try { this._sunBillboard?.dispose?.(); } catch (err) { console.warn('[SWAP] sunBillboard:', err); }
+        this._sunBillboard = null;
+
+        // 10. GameState scene-coupled fields. Don't call gameState.reset() —
+        //     that resets gameMode/competitiveGates which restartToMenu wants
+        //     preserved.
+        try {
+            if (this.gameState) {
+                this.gameState.boundary = null;
+                this.gameState.corral = null;
+                this.gameState.objective = null;
+                this.gameState.sheepSpawn = null;
+                this.gameState.flockingOverride = null;
+                this.gameState.heightfield = null;
+            }
+        } catch (err) { console.warn('[SWAP] gameState drain:', err); }
+
+        this.heightfield = null;
+
+        // 11. Renderer cache — reduces ghost-frame risk before rebuild's
+        //     first render.
+        try { this.sceneManager?.getRenderer?.()?.renderLists?.dispose?.(); } catch {}
     }
 
     /**
-     * Extracted reusable form of init() lines 444-753.
-     * Step 1: no-op. Step 3 fills this by extracting init()'s body.
+     * Cycle 11 Phase 1: in-process scene rebuild. Sets currentScene + game
+     * state side-effects (mirroring the constructor lines 180-213), recreates
+     * atmosphere + sun billboard (disposeScene tore them down), points
+     * terrainBuilder at the new sceneDef, then runs _buildSceneBody.
+     *
+     * Caller (swapScene) catches throws and falls back to location.href.
+     * Sets `_sceneRebuilding = false` only on success — animate()'s
+     * early-out remains armed if the rebuild errors.
      */
     async rebuildScene(sceneDef) {
-        console.log(`[SWAP] rebuildScene(${sceneDef?.id ?? '?'}) — Step 1 no-op`);
-        // Step 3: heightfield load + terrain/grass/structures/sheep/dog
-        // construction lives here, plus AbortController-tracked window
-        // listener registration so disposeScene can tear them down.
+        if (!sceneDef) throw new Error('rebuildScene called with null sceneDef');
+        console.log(`[SWAP] rebuildScene(${sceneDef.id}) — building`);
+
+        // 1. Currentscene side-effects (mirror constructor lines 180-213).
+        this.currentScene = sceneDef;
+        this.gameState.sceneId = sceneDef.id;
+        if (typeof window !== 'undefined') window.__currentSceneId = sceneDef.id;
+        if (sceneDef.boundary) this.gameState.setBoundary(sceneDef.boundary);
+        if (sceneDef.flocking) this.gameState.setFlockingOverride(sceneDef.flocking);
+        if (sceneDef.corral) this.gameState.setCorral(sceneDef.corral);
+        if (sceneDef.objective) this.gameState.setObjective(sceneDef.objective);
+        if (sceneDef.sheepSpawn) this.gameState.setSheepSpawn(sceneDef.sheepSpawn);
+
+        // 2. Recreate scene-coupled subsystems disposed in disposeScene().
+        const initialPreset = sceneDef.sky?.preset ?? 'pastoral-noon';
+        this.atmosphere = new Atmosphere(this.sceneManager.getScene(), {
+            initialPreset,
+            enableClouds: true,
+            enableDayNight: false,
+        });
+        this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
+
+        this._sunBillboard = new SunBillboard(this.sceneManager.getScene());
+
+        // 3. Repoint terrainBuilder at the new sceneDef. The instance persists
+        //    so its GLB models cache (modelsLoaded) is preserved.
+        this.terrainBuilder.setSceneDef(sceneDef);
+
+        // 4. Run the same body init() uses on first run.
+        await this._buildSceneBody();
+
+        // 5. Re-register triangle estimates for the new scene.
+        this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
+        this.registerSystemTriangleCounts();
+
+        // 6. Re-apply cinematic sun if requested (lazy getters in __sdsCinema
+        //    re-resolve atmosphere automatically; just need to honour ?sun=).
+        if (isCinematicMode()) {
+            const sunT = getRequestedSun();
+            if (sunT != null && this.atmosphere?.setSun) {
+                this.atmosphere.setSun({ elevation: sunT * Math.PI * 0.5 });
+            }
+        }
+
+        this._sceneRebuilding = false;
     }
 
     /**
@@ -926,12 +1130,38 @@ class SheepDogSimulation {
      * Step 3: in-process menu re-mount, no audio cut, no canvas flash.
      */
     async restartToMenu() {
-        console.log('[SWAP] restartToMenu() — Step 1 reload fallback');
-        try {
+        // Cycle 11 Phase 1: in-process menu remount. Same-scene dispose +
+        // rebuild keeps audio context, renderer, and React root alive — no
+        // canvas flash, no audio cut. React's App listens for
+        // 'scene-restart-to-menu' to swap StartScreen back in.
+        const isMp = this.isMultiplayer || this.gameState?.gameMode === 'multiplayer';
+        if (isMp) {
+            console.log('[SWAP] restartToMenu — MP client, hard reload');
             window.location.reload();
             return new Promise(() => {});
+        }
+
+        console.log('[SWAP] restartToMenu() — in-process menu remount');
+        emitGameEvent('scene-swap-start');
+
+        try {
+            const sceneDef = this.currentScene;
+            await this.disposeScene();
+            await this.rebuildScene(sceneDef);
+
+            // Reset gameplay flags — but NOT gameMode/competitiveGates,
+            // which the menu wants to remember for "Play Again" UX.
+            if (this.gameState) {
+                this.gameState.gameActive = false;
+                this.gameState.gameCompleted = false;
+                this.gameState.sheepRetired = 0;
+            }
+
+            emitGameEvent('scene-swap-end');
+            emitGameEvent('scene-restart-to-menu');
         } catch (err) {
-            console.warn('[SWAP] restartToMenu fallback after error:', err);
+            console.error('[SWAP] restartToMenu failed; reloading:', err);
+            emitGameEvent('scene-swap-error');
             window.location.reload();
             return new Promise(() => {});
         }
@@ -2138,7 +2368,17 @@ class SheepDogSimulation {
     
     animate() {
         requestAnimationFrame(() => this.animate());
-        
+
+        // Cycle 11 Phase 1: hard early-out while disposeScene/rebuildScene is
+        // mid-flight. Renderer + scene + camera persist across swaps, so a
+        // single render keeps the canvas alive under the SceneSwapOverlay.
+        // Game-logic update path is skipped — half-disposed references would
+        // otherwise crash the rAF loop.
+        if (this._sceneRebuilding) {
+            try { this.sceneManager?.render?.(); } catch {}
+            return;
+        }
+
         // Calculate delta time
         const currentTime = performance.now();
         const deltaTime = (currentTime - this.lastTime) / 1000; // Convert to seconds
@@ -2210,16 +2450,18 @@ class SheepDogSimulation {
             const camera = this.sceneManager.getCamera();
             const playerPosition = this.sheepdog?.mesh?.position;
 
-            this.terrainBuilder.updateGrassAnimation(
-                deltaTime,
-                camera,
-                playerPosition,
-                interactionEntities
-            );
+            if (this.terrainBuilder) {
+                this.terrainBuilder.updateGrassAnimation(
+                    deltaTime,
+                    camera,
+                    playerPosition,
+                    interactionEntities
+                );
 
-            // Simple LOD system for other objects on mobile only
-            if (this.sceneManager.isMobile && playerPosition) {
-                this.terrainBuilder.updateSimpleLOD(playerPosition);
+                // Simple LOD system for other objects on mobile only
+                if (this.sceneManager.isMobile && playerPosition) {
+                    this.terrainBuilder.updateSimpleLOD(playerPosition);
+                }
             }
 
         }

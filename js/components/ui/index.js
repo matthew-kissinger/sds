@@ -6,3 +6,4 @@
 export { Panel, PanelTitle } from './Panel.js';
 export { Button, BackButton } from './Button.js';
 export { MenuOption, MenuOptionGrid } from './MenuOption.js';
+export { SceneSwapOverlay } from './SceneSwapOverlay.js';
