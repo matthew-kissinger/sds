@@ -16,11 +16,17 @@ let _disabled = false;
 let _inFlight = 0;
 const MAX_IN_FLIGHT = 4;
 
+function isLocalDev() {
+    if (typeof window === 'undefined') return false;
+    const h = window.location.hostname;
+    return h === 'localhost' || h === '127.0.0.1';
+}
+
 function getApiBase() {
-    if (typeof window === 'undefined') return '';
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:8787';
-    }
+    // Only emit telemetry on prod (or whatever the user's deployment domain is).
+    // Local dev + e2e tests skip the network call entirely so the worker
+    // doesn't need to be up and the test runner doesn't see a phantom
+    // ERR_CONNECTION_REFUSED in the console.
     return '';
 }
 
@@ -43,6 +49,8 @@ function getToken() {
 export function emitEvent(name, props = {}) {
     if (_disabled || _inFlight >= MAX_IN_FLIGHT) return Promise.resolve(null);
     if (typeof fetch === 'undefined' || typeof window === 'undefined') return Promise.resolve(null);
+    // Skip in local dev / e2e test runs (no worker on :8787 in those environments).
+    if (isLocalDev()) return Promise.resolve(null);
     _inFlight++;
     const token = getToken();
     return fetch(`${getApiBase()}/api/event`, {
