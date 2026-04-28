@@ -4,6 +4,33 @@
 
 ## Recently Completed
 
+### Cycle 9 — playtest-triage + cross-platform (closed 2026-04-27)
+
+Plan: [`docs/archive/cycles/cycle-9-plan.md`](archive/cycles/cycle-9-plan.md). Headline:
+
+- **Phase 9.1 — sheep-count ownership refactor + leaderboard simplification + MP plumbing.** Solo count is now owned by mode unconditionally (Classic=200 / Extreme=1000 / Insane=3000 / Chaos=5000); `sceneSpawn.count` demoted to a density hint. MP `RoomCreation.sheepCount` plumbed through `MenuController.createRoom`. Leaderboard hides the redundant sheep-count dropdown on solo tabs and resets filters on tab switch; MP option list corrected to `{200, 250, 500, 1000}`. Fixes the "0/250 on RH Classic" surprise.
+- **Phase 9.2 — MP scene-sync helper.** New `ensureSceneMatchesRoom(room, {isHost})` called after every createRoom/joinRoom/quickMatch in [`App.js`](../js/components/App.js). Guests with mismatched URL `?scene=` reload via `?scene=<id>#/r/<roomCode>` to re-enter the invite flow on the right scene. Closes the long-standing `MP joiner renderer sync` standing risk.
+- **Phase 9.3 — Cross-platform test infrastructure.** [`playwright.config.ts`](../playwright.config.ts) gains Firefox + WebKit projects. New WebGL-extensions probe spec. New `e2e` job in [`deploy.yml`](../.github/workflows/deploy.yml). New nightly + workflow_dispatch [`macos-safari.yml`](../.github/workflows/macos-safari.yml) running real macOS Safari via `safaridriver` + a Selenium runner at [`tests/safari-smoke/run.mjs`](../tests/safari-smoke/run.mjs). Living doc at [`docs/cross-platform-testing.md`](cross-platform-testing.md). `selenium-webdriver` added as devDep. `oc-perf` spec gated to chromium-only.
+- **Phase 9.4 — Mac rendering bug (diagnostics + safety nets).** Diagnostic probe at [`js/diagnostics/glProbe.js`](../js/diagnostics/glProbe.js) gated on `?debug=gl` — dumps GL context, render-target events, post-first-frame framebuffer sample to `window.__sdsDiag`. Water init wrapped in try/catch in [`main.js`](../js/main.js). DepthPrePass per-frame render wrapped in `_safeRender`. Speculative shader fixes deferred — bug does NOT reproduce on GH Actions Safari (two macos-latest runs both rendered correctly); environmental to Matt's specific Mac. Tomorrow's debug recipe captured in NEXT_SESSION at close.
+- **Phase 9.5 — Heightfield Y-sample mitigation.** New [`Heightfield.surfaceY(x, z)`](../shared/terrain/Heightfield.js) returns `sample + 0.05` lift for visual entity placement. Sheep + dog use it for InstancedMesh/mesh Y; sim still uses raw `sample`. Sim baseline byte-identical. Full mesh-aligned bake deferred (see Deferred section).
+
+111/111 vitest pass. Production build clean. Sim-baseline byte-identical (preserved through cycles 5-9).
+
+Commits:
+- [`7627d77`](https://github.com/matthew-kissinger/sds/commit/7627d77) fix: ExtremeBoidSystem accepts island boundaries, not just rects
+- [`1c6864f`](https://github.com/matthew-kissinger/sds/commit/1c6864f) Cycle 9: playtest triage + cross-platform test infra
+- [`0c47fd8`](https://github.com/matthew-kissinger/sds/commit/0c47fd8) fix(ci): restrict e2e to Chromium; tag oc-perf as @local-only
+- [`aa81930`](https://github.com/matthew-kissinger/sds/commit/aa81930) diag: extend Safari smoke to gameplay; richer probe checkpoints
+- [`be0f09e`](https://github.com/matthew-kissinger/sds/commit/be0f09e) diag: deterministic sample trigger + tomorrow-debug handoff
+
+Carryover to Cycle 10 (`release-polish`) — all explicitly deferred per user direction "I will playtest after cycle 10":
+
+- **Mac rendering bug root cause.** Matt to debug on his Mac with `?debug=gl`, capture `window.__sdsDiag` via the recipe in cycle-9-plan §Outstanding. Compare against working baseline at GH run [25028575425](https://github.com/matthew-kissinger/sds/actions/runs/25028575425).
+- **User playtest of Cycle 9 changed flows.** Solo Classic on RH/OC shows `0/200`; MP host's chosen sheepCount sticks; guest invite flow renders the room's scene; leaderboard solo tab hides sheep-count dropdown; sheep + dog no longer sink in bare patches.
+- **Cycle 8 carryover items not picked up.** Phase 1 acceptance walkthrough (Insane/Chaos sheep counts, leaderboard partition filters, sandbox cross-scene reload UX, MP at non-200 sheep counts) + Phase 2 MP bandwidth measurement (Q2) + Phase 6 follow-camera triangulation polish read smooth on RH Follow under stamina-out + tree contact + frametime regression check on RTX 3070 / mobile target.
+
+Notes: Five commits across the cycle (one feature commit + four follow-on diag/CI fixes). All work shipped to live deployment by 2026-04-27. The "Mac white-ground" investigation produced no fix this cycle — the bug environmental to Matt's machine and the diagnostic probe is the deliverable that will let him isolate it in next session. Cycle 10 plan (`release-polish`) drafted in same session as close.
+
 ### Cycle 8 — mode-matrix: modes × sheep counts × scenes × leaderboards (closed 2026-04-26)
 
 Plan: [`docs/archive/cycles/cycle-8-plan.md`](archive/cycles/cycle-8-plan.md). Headline:
