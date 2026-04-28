@@ -3,33 +3,56 @@
  * Dog selection grid with stats display and visual avatars
  * Responsive: adapts to mobile portrait and landscape
  *
- * Dog icon: "Sitting Dog" by Delapouite from game-icons.net (CC BY 3.0)
+ * Cycle 11 Phase 3 produced real WebP/PNG thumbnails via the cinematic
+ * pipeline (`?cinematic=1` + window.__sdsCinema.mountDogShowcase). Each dog
+ * now renders as `<img>` against a colored backdrop. Fallback path: the
+ * svg avatar is preserved below for browsers/devices that fail to load
+ * the asset.
  */
-import React, { createElement } from 'react';
+import React, { createElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { PanelTitle } from '../ui/Panel.js';
 
-// Dog avatar using game-icons.net sitting dog icon
-const DogAvatar = ({ color = '#3b82f6', size = 48 }) => createElement('div', {
-    style: {
-        width: size,
-        height: size,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: `${color}22`,
-        borderRadius: '12px',
-        padding: '6px'
-    }
-}, createElement('svg', {
-    width: size - 12,
-    height: size - 12,
-    viewBox: '0 0 512 512',
-    fill: color
-}, createElement('path', {
-    d: 'm231.6 16.18 16.7 120.02 73.8 20.5c37.3-11.2 78.5-18.2 102.3-43.6 9.7-10.3 17.2-24.78 9.1-37.92l-75.3 2.22-14.6-31.79h-74.7c-7.7-11.71-22.8-20.46-37.3-29.43zm5.7 145.22c-46.9 19.8-110.1 146.3-111.8 276.5-34.02-58.1-24.9-122.6-2.9-202.6C55.31 287 4.732 448.4 133.1 486.9H346s-6.3-21.5-14.1-28.9c-12.7-12-48.2-20.2-48.2-20.2 27.8-39.2 33.5-71.7 38.6-103.9 4.5 59.8 40.7 126.8 57.4 153h76.5s4.6-15.9.2-21.5c-10.9-13.8-51.3-11.9-51.3-11.9-31.1-107.2-46.3-260.2-90-273.2-21.7-6.5-54.3-14.1-77.8-18.9z'
-})));
+const DogAvatar = ({ id, color = '#3b82f6', size = 48 }) => {
+    const [errored, setErrored] = useState(false);
+    const inner = errored
+        ? createElement('svg', {
+              width: size - 12,
+              height: size - 12,
+              viewBox: '0 0 512 512',
+              fill: color,
+          }, createElement('path', {
+              d: 'm231.6 16.18 16.7 120.02 73.8 20.5c37.3-11.2 78.5-18.2 102.3-43.6 9.7-10.3 17.2-24.78 9.1-37.92l-75.3 2.22-14.6-31.79h-74.7c-7.7-11.71-22.8-20.46-37.3-29.43zm5.7 145.22c-46.9 19.8-110.1 146.3-111.8 276.5-34.02-58.1-24.9-122.6-2.9-202.6C55.31 287 4.732 448.4 133.1 486.9H346s-6.3-21.5-14.1-28.9c-12.7-12-48.2-20.2-48.2-20.2 27.8-39.2 33.5-71.7 38.6-103.9 4.5 59.8 40.7 126.8 57.4 153h76.5s4.6-15.9.2-21.5c-10.9-13.8-51.3-11.9-51.3-11.9-31.1-107.2-46.3-260.2-90-273.2-21.7-6.5-54.3-14.1-77.8-18.9z',
+          }))
+        : createElement('img', {
+              src: `/assets/dogs/${id}.webp`,
+              alt: '',
+              width: size,
+              height: size,
+              loading: 'lazy',
+              onError: () => setErrored(true),
+              style: {
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: '10px',
+              },
+          });
+    return createElement('div', {
+        style: {
+            width: size,
+            height: size,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: `${color}22`,
+            borderRadius: '12px',
+            padding: errored ? '6px' : 0,
+            overflow: 'hidden',
+        },
+    }, inner);
+};
 
 // Dog data with stats and avatar colors - using translation keys
 const DOGS = [
@@ -180,7 +203,7 @@ export function DogSelection({ selectedDog, onSelect }) {
                 !isVeryCompact && createElement('div', {
                     key: 'avatar',
                     className: `flex justify-center ${isCompact ? 'mb-1.5' : 'mb-3'} ${isSelected ? 'opacity-100' : 'opacity-80'} transition-opacity duration-300`
-                }, createElement(DogAvatar, { color: dog.color, size: avatarSize })),
+                }, createElement(DogAvatar, { id: dog.id, color: dog.color, size: avatarSize })),
 
                 // Dog name and breed - using type scale
                 createElement('div', {

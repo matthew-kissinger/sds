@@ -250,6 +250,12 @@ export async function initReactUI() {
             };
 
             const handleModeSelect = (mode) => {
+                // Cycle 11 Phase 5: emit mode_selected for analytics.
+                try {
+                    import('../telemetry.js').then(({ emitEvent }) => {
+                        emitEvent('mode_selected', { mode });
+                    });
+                } catch {}
                 if (mode === 'leaderboard') setScreen('leaderboard');
                 else if (mode === 'settings') setScreen('settings');
                 else if (mode === 'local') setScreen('localModeSetup');
@@ -379,6 +385,17 @@ export async function initReactUI() {
                         gameMode: settings.gameMode,
                         sheepCount: settings.sheepCount
                     }, selectedDog);
+
+                    // Cycle 11 Phase 5: telemetry.
+                    try {
+                        import('../telemetry.js').then(({ emitEvent }) => {
+                            emitEvent('mp_room_created', {
+                                gameMode: settings.gameMode,
+                                sheepCount: settings.sheepCount,
+                                maxPlayers: settings.maxPlayers,
+                            });
+                        });
+                    } catch {}
 
                     ensureSceneMatchesRoom(nm.currentRoom, { isHost: true });
                     monitorLobbyState();

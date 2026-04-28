@@ -68,7 +68,11 @@ export const SKY_PRESETS = {
     turbidity: 3.2,
     rayleigh: 2.0,
     groundAlbedo: new THREE.Color(0x4d6638),
-    exposure: 0.22,
+    // Cycle 11: lowered from 0.22 -> 0.08. Hosek-Wilkie zenith luminance at
+    // 70deg sun elevation crushed to near-white through ACES tone-mapping at
+    // the higher value. 0.08 keeps the soft pastoral palette without
+    // saturating the dome.
+    exposure: 0.08,
     fogDensity: 0.0006,
     fogColor: new THREE.Color(0xcfd9e8),
     sunColor: new THREE.Color(0xfff0d8),

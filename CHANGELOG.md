@@ -4,7 +4,30 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] — 2026-04-27
+## [1.0.0] — 2026-04-28 (release-finish)
+
+This is the v1.0 release.
+
+### Changed
+- **Scene swap is in-process.** Switching between Field / Rolling Hills / Open Country no longer reloads the page — audio, renderer, and React state all persist across the transition. A 200ms fade-in / fade-out overlay covers the swap window. URL bar updates via `history.replaceState`.
+- **Sky is properly tone-mapped.** The pastoral-noon preset (used in Home Field and as fallback) was crushing to near-white through ACES tone-mapping at high-noon sun elevations. Exposure dropped 0.22 → 0.08 — sky now reads as soft pastoral blue with proper horizon haze.
+
+### Added
+- **Real dog portrait thumbnails** in DogSelection — rendered via the cinematic pipeline at 512×512 WebP + PNG fallback.
+- **Reset-and-re-run-onboarding button** in Settings → Audio tab.
+- **Production OG / Twitter / schema.org images** at 1200×630 WebP under 200KB each.
+- **Properly-sized PWA icons** at 192×192, 512×512, and 512×512 maskable PNG.
+- **Anonymous client telemetry** — `/api/event` worker route + JWT-aware client wrapper. Game completions, mode selections, scene swaps, and MP room creations are recorded.
+
+### Fixed
+- Rocks no longer spawn inside the Home Field play area. Per-rock buffer tightened 20m → 40m so clusters straddling the boundary trim cleanly.
+- Rocks no longer float — always partially buried so GLB-origin offsets can't surface above the visible ground line.
+
+### Database
+- `score_anomalies` column added to `score_submissions` (cycle-10 migration applied to prod).
+- New `events` table for client telemetry log.
+
+## [1.0.0-rc] — 2026-04-27
 
 First public release.
 

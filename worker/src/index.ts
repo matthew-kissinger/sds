@@ -409,6 +409,47 @@ export default {
         return json({ leaderboards }, 200, cors);
       }
 
+      // Cycle 11 Phase 5: lightweight client telemetry. Anonymous events
+      // welcome (game_completed, mode_selected, scene_swapped); persistent_id
+      // recorded when token present so we can deduplicate users without
+      // gating the route on auth. Body is best-effort — failures are
+      // swallowed client-side so analytics never affects gameplay UX.
+      if (path === '/api/event' && method === 'POST') {
+        let body: any = {};
+        try { body = await req.json(); } catch {}
+        const name = String(body?.name ?? '').slice(0, 64);
+        if (!name) return err('event name required', 400, cors);
+        const propsRaw = body?.props && typeof body.props === 'object' ? body.props : {};
+        // Strip props to JSON-able primitives only; cap payload size.
+        const safeProps: Record<string, string | number | boolean> = {};
+        for (const k of Object.keys(propsRaw).slice(0, 16)) {
+          const v = propsRaw[k];
+          if (typeof v === 'string') safeProps[k] = v.slice(0, 256);
+          else if (typeof v === 'number' && Number.isFinite(v)) safeProps[k] = v;
+          else if (typeof v === 'boolean') safeProps[k] = v;
+        }
+        const propsJson = JSON.stringify(safeProps).slice(0, 2048);
+        // Optional auth — present token => recognized player.
+        let pid: string | null = null;
+        const auth = req.headers.get('authorization') || '';
+        const token = auth.startsWith('Bearer ') ? auth.slice(7) : (body?.token || null);
+        if (token) {
+          try {
+            const claims = await verifyJwt(token, env.JWT_SECRET);
+            pid = (claims?.sub as string) || null;
+          } catch { /* invalid token: stay anonymous */ }
+        }
+        try {
+          await env.DB.prepare(
+            'INSERT INTO events (name, props, player_id) VALUES (?, ?, ?)'
+          ).bind(name, propsJson, pid).run();
+        } catch (e: any) {
+          // Don't crash — events table may not exist yet on first deploy.
+          console.warn('[event] insert failed:', e?.message);
+        }
+        return json({ ok: true }, 200, cors);
+      }
+
       if (path === '/' || path === '/healthz') {
         return json({ ok: true, worker: 'sds-worker' }, 200, cors);
       }

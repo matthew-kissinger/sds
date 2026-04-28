@@ -1233,6 +1233,18 @@ export class GameState {
         } else {
             console.warn('Score submission function not available');
         }
+
+        // Cycle 11 Phase 5: telemetry — fire-and-forget, never blocks UX.
+        try {
+            import('./telemetry.js').then(({ emitEvent }) => {
+                emitEvent('game_completed', {
+                    mode: leaderboardMode,
+                    sceneId,
+                    sheepCount: this.totalSheep,
+                    score: typeof score === 'number' ? Math.round(score * 100) / 100 : 0,
+                });
+            });
+        } catch {}
     }
     
     reset() {

@@ -1087,8 +1087,13 @@ export class TerrainBuilder {
                         if (isInWater(rock.x, rock.z)) return;
                         if (isInCorralKeepout(rock.x, rock.z)) return;
                     } else {
-                        // Legacy rect — too-close-to-play-area exclusion
-                        const rockBuffer = 20;
+                        // Legacy rect — too-close-to-play-area exclusion.
+                        // Cycle 11: tightened buffer 20 -> 40 after a playtest
+                        // flagged rocks landing on the inside edge of the
+                        // perimeter fence on Home Field. Pair with the per-
+                        // formation centerBuffer of 50 above so a cluster
+                        // straddling the boundary trims to outside-only.
+                        const rockBuffer = 40;
                         if (rock.x >= playArea.minX - rockBuffer && rock.x <= playArea.maxX + rockBuffer &&
                             rock.z >= playArea.minZ - rockBuffer && rock.z <= playArea.maxZ + rockBuffer) return;
                     }
@@ -1114,11 +1119,14 @@ export class TerrainBuilder {
                     const baseScale = scaleRange.min + Math.random() * (scaleRange.max - scaleRange.min);
                     const finalScale = baseScale * rock.scale;
 
-                    // Some rocks partially buried; add terrain height so they sit on the slope.
-                    // _groundY mirrors the terrain's radial falloff so rocks in outer zones
-                    // (which can sit past the heightfield's worldSize) match the flat skirt.
+                    // Always partially bury rocks so the bottom of the silhouette
+                    // sinks below the ground plane. Cycle 11: changed from
+                    // 70%-not-buried to always-buried after the playtest flagged
+                    // floaters whose GLB origin sat above the visible base.
+                    // _groundY mirrors the terrain's radial falloff so rocks in
+                    // outer zones (past the heightfield) match the flat skirt.
                     const baseY = this._groundY(rock.x, rock.z);
-                    const yOffset = (Math.random() < 0.3 ? -finalScale * 0.15 : 0) + baseY;
+                    const yOffset = baseY - finalScale * (0.10 + Math.random() * 0.10);
 
                     rockInstances[rockType].push({
                         position: new THREE.Vector3(rock.x, yOffset, rock.z),

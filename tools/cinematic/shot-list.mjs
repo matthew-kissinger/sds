@@ -107,6 +107,31 @@ export const SHOTS = [
     },
 ];
 
+// Cycle 11 Phase 3: dog portrait shots for DogSelection thumbnails.
+// Each renders into assets/dogs/<id>.webp at 512x512 + a PNG fallback.
+export const DOG_SHOTS = ['jep', 'pip', 'sally', 'shiloh', 'george_washington'].map(id => ({
+    id: `dog-${id}`,
+    kind: 'dog',
+    dogId: id,
+    scene: 'field', // any scene works; mountDogShowcase replaces visible content
+    sun: 0.5,
+    size: { width: 1024, height: 1024 },
+    output: { width: 512, height: 512 }, // sharp resize target
+    notes: `DogSelection thumbnail for ${id}.`,
+}));
+
+// Cycle 11 Phase 3: PWA icon hero shot. Pose Jep portrait at 1024x1024 PNG;
+// sharp pipeline produces 192/512/maskable PNG variants.
+export const PWA_ICON_SHOT = {
+    id: 'pwa-icon-hero',
+    kind: 'pwa-icon',
+    dogId: 'jep',
+    scene: 'field',
+    sun: 0.55,
+    size: { width: 1024, height: 1024 },
+    notes: 'PWA icon hero — Jep portrait at 1024x1024.',
+};
+
 function orbital({ radius, height, target, fullCircle = true, sweep = 1 }) {
     const segments = 8;
     const totalAngle = fullCircle ? Math.PI * 2 : Math.PI * 2 * sweep;

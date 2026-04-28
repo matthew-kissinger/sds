@@ -50,6 +50,7 @@
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "selenium-webdriver": "^4.27.0",
+    "sharp": "^0.34.5",
     "simplex-noise": "^4.0.3",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",

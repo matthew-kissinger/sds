@@ -493,6 +493,40 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                 }
             }, t('settings.language')),
             createElement(LanguageSelector, { key: 'selector', variant: 'full' })
+        ]),
+
+        // Reset player profile (re-trigger onboarding) — Cycle 11 Phase 2.
+        createElement('div', {
+            key: 'reset-profile',
+            style: { marginTop: '1.25rem' }
+        }, [
+            createElement('div', {
+                key: 'label',
+                style: {
+                    color: 'rgba(255,255,255,0.7)',
+                    fontSize: '0.75rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: '0.5rem'
+                }
+            }, 'Player profile'),
+            createElement('button', {
+                key: 'btn',
+                onClick: () => {
+                    if (!confirm('Reset your player profile and re-run onboarding? Your local stats and bindings stay.')) return;
+                    try { localStorage.removeItem('playerIdentity'); } catch {}
+                    window.location.reload();
+                },
+                style: {
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    color: '#fca5a5',
+                    padding: '0.5rem 0.85rem',
+                    borderRadius: '0.4rem',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                }
+            }, 'Reset & re-run onboarding')
         ])
     ]);
 

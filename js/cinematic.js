@@ -169,6 +169,95 @@ export function installCinemaApi(game) {
             if (!renderer) return null;
             return renderer.domElement.toDataURL('image/png');
         },
+
+        // Cycle 11 Phase 3 additions ----------------------------------------
+
+        /**
+         * Wait until the scene is fully ready for capture: gameState mounted,
+         * atmosphere initialized, renderer alive, and at least one frame
+         * rendered. Resolves once those conditions hold; rejects after timeout.
+         */
+        async waitReady(timeoutMs = 20000) {
+            const start = performance.now();
+            const ok = () => game.gameState && game.atmosphere && game.sceneManager?.getRenderer?.();
+            while (!ok()) {
+                if (performance.now() - start > timeoutMs) throw new Error('waitReady timeout');
+                await new Promise(r => requestAnimationFrame(r));
+            }
+            // One more frame for renderer info to settle.
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        },
+
+        /** Pause the gameplay loop so static shots aren't blurred by sheep. */
+        pauseSimulation() { cinema.paused = true; },
+        resumeSimulation() { cinema.paused = false; },
+        paused: false,
+
+        /** Wraps SheepDogSimulation.startSoloGame for Playwright shot drives. */
+        startSolo(dogId = 'jep', mode = 'classic') {
+            game.startSoloGame?.(dogId, mode);
+        },
+
+        /**
+         * Pose a single dog model at origin against a neutral backdrop plane.
+         * Used by Phase 3 to render dog thumbnails (DogSelection PNGs).
+         * Removes existing flock + dog, mounts a fresh clone of the named
+         * dog's GLB, locks camera. Phase 3 acceptance: 5 dogs at 512×512.
+         */
+        async mountDogShowcase(dogId = 'jep') {
+            const SkeletonUtils = await import('three/addons/utils/SkeletonUtils.js');
+            const tb = game.terrainBuilder;
+            const sm = game.sceneManager;
+            if (!tb || !sm) throw new Error('mountDogShowcase: builders not ready');
+
+            // Hide existing flock.
+            if (game.gameState?.optimizedSheepSystem) {
+                const inst = game.gameState.optimizedSheepSystem.instancedMesh;
+                if (inst) inst.visible = false;
+            }
+            // Hide existing sheepdog (don't dispose — it's still owned by gameState).
+            if (game.sheepdogMesh) game.sheepdogMesh.visible = false;
+            // Hide structures and trees so the dog is the focal subject.
+            const scene = sm.getScene();
+            scene.traverse(obj => {
+                if (obj.userData?._showcaseHide) obj.visible = false;
+            });
+
+            // Backdrop plane (matches manifest theme color #0c1c2c).
+            if (!cinema._showcaseBackdrop) {
+                const planeGeo = new THREE.PlaneGeometry(2000, 2000);
+                const planeMat = new THREE.MeshBasicMaterial({ color: 0x0c1c2c, fog: false });
+                const plane = new THREE.Mesh(planeGeo, planeMat);
+                plane.position.set(0, -0.5, -50);
+                plane.lookAt(0, -0.5, 0);
+                plane.renderOrder = -1000;
+                scene.add(plane);
+                cinema._showcaseBackdrop = plane;
+            }
+
+            // Mount the requested dog clone at origin.
+            const original = tb.models?.animals?.[dogId];
+            if (!original) throw new Error(`mountDogShowcase: model not found for ${dogId}`);
+            if (cinema._showcaseDog) {
+                if (cinema._showcaseDog.parent) cinema._showcaseDog.parent.remove(cinema._showcaseDog);
+            }
+            const clone = SkeletonUtils.clone(original);
+            clone.scale.set(4, 4, 4);
+            clone.position.set(0, 0, 0);
+            clone.rotation.y = Math.PI * 0.15; // slight 3/4 angle for portrait
+            scene.add(clone);
+            cinema._showcaseDog = clone;
+
+            // Lock camera at portrait pose.
+            const cam = sm.getCamera();
+            cam.position.set(0, 2.4, 5.5);
+            cam.lookAt(0, 1.6, 0);
+
+            // Brighten ambient so the dog reads cleanly against the backdrop.
+            if (sm.ambientLight) sm.ambientLight.intensity = 1.6;
+
+            cinema.paused = true; // freeze sheep simulation
+        },
     };
 
     window.__sdsCinema = cinema;

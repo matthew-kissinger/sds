@@ -915,6 +915,13 @@ class SheepDogSimulation {
             const elapsed = Math.round(performance.now() - t0);
             console.log(`[SWAP] complete in ${elapsed}ms`);
             emitGameEvent('scene-swap-end');
+
+            // Cycle 11 Phase 5: telemetry.
+            try {
+                import('./telemetry.js').then(({ emitEvent }) => {
+                    emitEvent('scene_swapped', { from: fromId || null, to: toId, elapsedMs: elapsed });
+                });
+            } catch {}
         } catch (err) {
             // Q2: option (a) — half-built scene is unrecoverable; throw the
             // document away. The catch path keeps URL intact (replaceState
@@ -2466,8 +2473,12 @@ class SheepDogSimulation {
 
         }
 
-        // Update game logic with deltaTime (this updates sheepdog position)
-        this.update(deltaTime);
+        // Update game logic with deltaTime (this updates sheepdog position).
+        // Phase 3: cinema.paused short-circuits gameplay so static OG/portrait
+        // shots aren't blurred by sheep motion.
+        if (!window.__sdsCinema?.paused) {
+            this.update(deltaTime);
+        }
 
         // Update distance indicator for local player AFTER update so position is current
         if (this.sheepdog && this.sheepdog.isLocalPlayer) {

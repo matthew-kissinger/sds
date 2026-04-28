@@ -87,6 +87,11 @@ playwright-report/
 blob-report/
 playwright/.cache/
 
+# Cinematic capture intermediates (regenerable via `npm run cinema`)
+tools/cinematic/output/
+# Marketing video output (too large for git; ship via CDN if needed)
+assets/marketing/videos/
+
 # Build output
 dist/
 dist-react/

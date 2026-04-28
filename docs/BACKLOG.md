@@ -4,6 +4,39 @@
 
 ## Recently Completed
 
+### Cycle 11 — release-finish (closed 2026-04-28)
+
+Plan: [`docs/archive/cycles/cycle-11-plan.md`](archive/cycles/cycle-11-plan.md). Headline:
+
+- **Phase 1 — In-process scene swap flip (centerpiece).** `swapScene` / `disposeScene` / `rebuildScene` / `restartToMenu` flipped from hard-reload fallbacks to true in-process transitions. New `OptimizedSheepSystem.dispose()`, `TerrainBuilder.dispose()` composing existing partial clears, `SceneManager.disposeWater()`. `_buildSceneBody()` extracted from `init()` so cold-boot and warm-swap share construction. AbortController-tracked listeners re-cycled per swap. New `js/components/ui/SceneSwapOverlay.js` with 200ms in / 200ms min / 200ms out fade. `history.replaceState` only on success; catch path falls back to `location.href`. `_sceneRebuilding` flag guards `animate()`. MP guests fall back to hard reload (Q1 resolution). New `window.__sdsStressTestSwaps(n)` harness. Sheepdog/structure/mountain GLB clones now share materials with the cache (no double-dispose) — the leak class flagged during A8 testing. Tree impostor render targets cached across swaps. **A8 stress drift partial:** textures down from initial ~100% to ~41% over 5×3 swap loop; remaining slow accumulator flagged as Cycle 12 polish (geometry/programs within ±10%).
+- **Phase 2 partial — UI polish.** Real dog WebP/PNG thumbnails wired into `DogSelection` (5 dogs, 26-32 KB each). Onboarding re-trigger button added to Audio tab in `SettingsPanel` (clears localStorage `playerIdentity`, reloads). **Deferred:** mode-shaped HUD subcomponents, Button-component unification across all React surfaces (~40-50 callsites — high visual-regression risk).
+- **Phase 3 — Cinematic pipeline + marketing assets.** New `tools/cinematic/run.mjs` with Playwright drive + Vite spawn + sharp WebP/PNG processing + ffmpeg mux scaffolding. `--shot=`, `--kind=`, `--headed`, `--no-encode`, `--skip-video` CLI flags. Cinema API additions: `pauseSimulation()`, `startSolo()`, `waitReady()`, `mountDogShowcase()`. New `cinema.paused` short-circuits gameState updates so static shots aren't motion-blurred. Rendered: 3 OG WebPs (1200×630, 158-186 KB each, well under 300 KB target), 5 dog portraits (512×512 WebP + PNG fallback), 3 PWA icons (192/512/maskable PNG). `index.html` `og:image` + `twitter:image` + schema.org `screenshot[]` updated to point at new WebP. PWA manifest icons replaced. **Deferred:** 4 video shots (Playwright headless WebGL flaky on Win; works in `--headed`. Captures take ~5min per shot; not blocking v1.0).
+- **Phase 4 — Score-integrity production deploy.** `0003_score_anomalies.sql` applied to prod D1 via direct `wrangler d1 execute` (the `d1_migrations` tracking table was empty even though prior migrations had been applied via raw SQL; backfilled all 4 migration rows so future migrations work via the migrations system). `score_anomalies TEXT` column + partial index live on prod. `/api/leaderboard` regression check returned valid JSON post-migration.
+- **Phase 5 — Release tail.** New `POST /api/event` worker route accepts anonymous + authenticated events, writes to D1 `events` table (new `0004_events.sql` migration; applied to local + prod). New `js/telemetry.js` wrapper (fire-and-forget, silent on failure, JWT-aware, keepalive on unload). 4 events wired: `game_completed` (in `GameState.submitScoreToLeaderboard`), `mode_selected` (in App `handleModeSelect`), `scene_swapped` (in `swapScene` after `scene-swap-end`), `mp_room_created` (in App `handleCreateRoom`). PWA icons properly sized (192/512/maskable PNG, no longer reusing favicon). **Deferred:** Cloudflare Web Analytics beacon (requires copying `<script>` from CF Pages console — manual user action).
+- **Phase 6 partial — playtest verification.** Code-verifiable items confirmed: `Heightfield.surfaceY()` adds 0.05 lift (Cycle 9 Phase 5 carryover), `SOLO_TAB_FIXED_SHEEP_COUNT` mapping persists for solo-tab leaderboard (Cycle 9 Phase 1), `ensureSceneMatchesRoom` logic intact (Cycle 9 Phase 2). **Deferred:** Mac rendering bug root cause (Matt-required; bug does NOT reproduce on GH Actions Safari; recipe lives in Cycle 9 Phase 4 doc), full Solo/MP visual playtest, frametime regression check.
+- **Sky exposure fix (out-of-scope polish).** `pastoral-noon` preset exposure dropped 0.22 → 0.08 after a playtest flagged the zenith crushing to near-white through ACES tone-mapping. Now reads as soft pastoral blue with proper horizon haze. All 3 scenes verified visually.
+- **Rocks fix (out-of-scope polish).** Field rock-formation per-rock buffer tightened 20m → 40m so clusters straddling the play-area boundary trim outside-only. Rocks now always partially buried (`baseY - finalScale * (0.10..0.20)`) so GLB-origin floaters can't appear above the visible ground line.
+
+Validation:
+- 111/111 vitest pass.
+- Production build clean.
+- Worker `wrangler deploy --dry-run` clean (179 KB / 37 KB gzip).
+- Sim-baseline byte-identical (preserved through cycles 5-11).
+- Manual A1 (in-process swap) verified via stress harness — URL bar updates, scene rebuilds, no errors.
+
+Carryover to Cycle 12 (TBD):
+
+- **Phase 1 A8 strict-numeric.** Texture drift at ~41% over 5×3 swap loop. Architecture sound (no crashes, no visual regressions); the slow accumulator is GPU-resource leak class that requires deeper Three.js renderer.info instrumentation. Identify and dispose remaining per-swap allocations.
+- **Phase 2 mode-shaped HUD + Button unification.** ~40-50 raw `<button>` callsites need migration to `<Button variant=…>`. Largest cluster is in `SettingsPanel.js` (Toggle, Slider, TabButton, PresetButton, KeyBindButton, CameraModePicker buttons).
+- **Phase 3 video filming runs.** 4 video shots specified in `tools/cinematic/shot-list.mjs` (dog-into-sunset, lightning-strike, chaos-5000, oc-portal). Headless Chromium WebGL on Windows times out; runner works in `--headed`. Iteration on framing pending.
+- **Phase 5 Cloudflare Web Analytics.** Add `<script>` beacon from CF Pages console → Analytics tab into `index.html`.
+- **Cycle 9 Mac rendering bug.** Recipe in `docs/archive/cycles/cycle-9-plan.md`. Matt to investigate on his Mac via `?debug=gl` + `window.__sdsDiag`.
+- **Cycle 9/8 manual playtest.** Solo/MP gameplay verification across all modes + scenes.
+
+Commits (Cycle 11):
+- [`c6a777c`](https://github.com/matthew-kissinger/sds/commit/c6a777c) feat(scene-swap): in-process flip — close Cycle 10 Phase 1 carryover
+- (Cycle 11 cycle-close commits to be appended at push time.)
+
 ### Cycle 10 — release-polish (closed 2026-04-27)
 
 Plan: [`docs/archive/cycles/cycle-10-plan.md`](archive/cycles/cycle-10-plan.md). Headline:
