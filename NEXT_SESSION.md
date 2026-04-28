@@ -1,41 +1,50 @@
-# Next Session — Cycle 10 (`release-polish`) ready to start
+# Next Session — Cycle 11 (`release-finish`) ready to start
 
-> Updated 2026-04-27. Active plan: [`docs/cycle-10-plan.md`](docs/cycle-10-plan.md) — fully drafted, seven phases, ready to pick up. Last closed: [`docs/archive/cycles/cycle-9-plan.md`](docs/archive/cycles/cycle-9-plan.md). Cold-start agents: read this page top-to-bottom, then [`docs/cycle-10-plan.md`](docs/cycle-10-plan.md), then [`docs/BACKLOG.md`](docs/BACKLOG.md). Earlier cycles: [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md), [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md).
+> Updated 2026-04-27. Active plan: [`docs/cycle-11-plan.md`](docs/cycle-11-plan.md) — drafted, six phases, picks up Cycle 10's deferred carryover. Last closed: [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md). Cold-start agents: read this page top-to-bottom, then [`docs/cycle-11-plan.md`](docs/cycle-11-plan.md), then [`docs/BACKLOG.md`](docs/BACKLOG.md). Earlier cycles: [`docs/archive/cycles/cycle-9-plan.md`](docs/archive/cycles/cycle-9-plan.md), [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md).
 
 ## Where the project stands (2026-04-27)
 
 - `sheepdogsim.com` is live on Cloudflare Pages + Worker + DO + D1.
-- **Cycle 9 (`playtest-triage + cross-platform`) closed 2026-04-27.** All five phases (9.1-9.5) shipped. 111/111 vitest pass; production build clean; sim-baseline byte-identical (preserved through cycles 5-9). Headlines: solo sheep count owned by mode (Classic=200/Extreme=1000/Insane=3000/Chaos=5000), MP scene-sync helper for guest joiners, Playwright + macOS Safari nightly cross-platform test infra, GL diagnostic probe behind `?debug=gl`, defensive `Heightfield.surfaceY` lift. Full headline + commit list in [`docs/BACKLOG.md`](docs/BACKLOG.md).
-- **Cycle 10 (`release-polish`) plan drafted and ready.** Seven phases — in-process scene swap (centerpiece), UI/UX polish, cinematic capture infrastructure, marketing asset production, SEO + release prep (PWA, analytics, v1.0.0 tag, CHANGELOG), score integrity (server-side plausibility), Electron-readiness research doc.
+- **Cycle 10 (`release-polish`) closed 2026-04-27.** Mixed completion: full on Phases 3, 5 (most), 6 (code), 7. Partial on Phases 1, 2, 4. Deferred items in `BACKLOG.md` carryover. Headlines: scene-lifecycle plumbing on `SheepDogSimulation` (`swapScene`, `disposeScene`, `rebuildScene`, `restartToMenu` — bodies still hard-reload, callsites routed), AbortController-tracked window-listener teardown closes the leak class, effects-family disposal, `?cinematic=1` infra with `window.__sdsCinema` API + `?ui=off` + `?sun` URL params, cinematic shot list + runner scaffold (`npm run cinema`, Playwright/ffmpeg drive deferred), PWA manifest + CHANGELOG + PRESSKIT, score-integrity worker code (cross-field plausibility + anomaly detection + migration `0003_score_anomalies.sql`), electron-readiness research doc.
+- **111/111 vitest pass.** Production build clean. Worker typecheck clean. Sim-baseline byte-identical (preserved through cycles 5-10).
+- **Cycle 11 (`release-finish`) plan drafted.** Six phases — finish the in-process scene swap (Phase 1), UI polish completion (Phase 2), real cinematic filming (Phase 3), score-integrity prod migration (Phase 4), release tail incl. v1.0.0 tag (Phase 5), deferred playtest walkthrough (Phase 6).
 
 ## What to pick up next
 
-Run `/cycle-start` to orient on Cycle 10. The plan has Goal + Phases + Acceptance written; no scaffolding gaps. Phase 1 (in-process scene swap) is the long pole — start there. Phases 3 + 5 + 6 + 7 can run in parallel branches.
+Run `/cycle-start` to orient on Cycle 11. Phase 1 (in-process scene swap flip) is the long pole — picks up directly from Cycle 10's Step 1 plumbing. The plumbing is in place + listener-leak-safe + sim-baseline byte-identical, so Phase 1's actual flip is unblocked. Everything else can run in parallel branches once Phase 1 is in motion.
 
-Key pre-code decisions captured in cycle-10-plan §Open questions (Q1-Q4): MP guest WS strategy on swap (lean: keep WS open), in-game cinematic UI (lean: no — Playwright-only), analytics provider (lean: Cloudflare Web Analytics), score-integrity approach (lean: bounds tightening + telemetry heuristics).
+## Cycle 10 → 11 carryover (deferred items)
 
-## Cycle 9 carryover (deferred per user direction)
+Per `BACKLOG.md` close entry — list here for fast-recall:
 
-Per user direction at Cycle 9 close ("I will playtest after cycle 10"), all playtest verification is deferred to post-Cycle-10. Items to walk after Cycle 10 ships:
+1. **Phase 1 in-process flip (Cycle 10 carryover, becomes Cycle 11 Phase 1).** Step 1 plumbing shipped; AbortController + effects disposal in `disposeScene()`. Remaining: terrain/water/atmosphere/sheep+dog disposal, `<SceneSwapOverlay>` React component, defensive null-checks in `animate()`, `history.replaceState`, MP guest WS strategy Q1, stress test + visual regression. Estimated 8-12 hours.
+2. **Phase 2 UI polish remainder.** Mode-shaped HUD (Solo/Timed/Competitive variants), onboarding re-trigger, real dog PNG thumbnails (Phase 3 cinematic pipeline produces them), Button unification across React surfaces.
+3. **Phase 4 marketing filming runs.** Install ffmpeg, fill in Playwright drive + ffmpeg mux in `tools/cinematic/run.mjs`, iterate shot framing, replace OG images with sub-300 KB WebP at 1200×630.
+4. **Phase 5 release tail.** Cloudflare Web Analytics dashboard hookup. `/api/event` worker route. Properly-sized PWA icons (currently reusing favicon.png). `git tag v1.0.0` push.
+5. **Phase 6 score-integrity prod migration.** `wrangler d1 migrations apply sds-prod --remote` for `0003_score_anomalies.sql`. Verify anomaly column populates for last 24h post-deploy.
+6. **Cycle 9 verification carryover** (still deferred per user direction "I will playtest after release"). Mac rendering bug root cause (debug recipe below). Cycle 9 changed-flow walkthrough. Cycle 8 twice-deferred items.
+
+## Cycle 9 verification recipe (still relevant for Cycle 11 Phase 6)
 
 1. **Mac rendering bug root cause.** Bug does NOT reproduce on GH Actions Safari (verified across two macos-latest runs). Environmental to Matt's specific Mac. Debug recipe:
    - Open https://sheepdogsim.com/?scene=rolling-hills&debug=gl → Solo Play → Confirm → Classic Mode
    - Wait for the white-ground manifestation
    - In Safari devtools console: `window.__sdsCaptureSample('inGame')` then `copy(JSON.stringify(window.__sdsDiag, null, 2))`
    - Compare against working baseline at GH run [25028575425](https://github.com/matthew-kissinger/sds/actions/runs/25028575425).
-   - Things to look for in diff: `glErrorsSeen` non-empty? `water.failed` event? `terrain.created` with `sceneFog: false`? `framebuffer.sampled` with `flag: near-white` and ground samples actually white (RGB > 230)?
+   - Things to look for: `glErrorsSeen` non-empty? `water.failed` event? `terrain.created` with `sceneFog: false`? `framebuffer.sampled` with `flag: near-white` and ground samples actually white (RGB > 230)?
 
 2. **Cycle 9 changed-flow playtest.** Solo Classic on RH/OC shows `0/200`; MP host's chosen sheepCount sticks; guest joining via invite renders the room's scene; leaderboard solo tab hides the sheep-count dropdown; sheep + dog no longer sink in bare patches (Phase 9.5 +0.05m lift).
 
 3. **Cycle 8 carryover (twice-deferred).** Phase 1 acceptance walkthrough (Insane/Chaos sheep counts, leaderboard partition filters, sandbox cross-scene reload UX, MP at non-200 sheep counts) + Phase 2 MP bandwidth measurement (Q2) + Phase 6 follow-camera triangulation polish reads smooth on RH Follow under stamina-out + tree contact + frametime regression check on RTX 3070 / mobile target.
 
-## Diagnostic surface
+## Cycle 10 surfaces worth knowing
 
-- `?debug=gl` — installs the diagnostic probe; `window.__sdsDiag` populated.
-- `window.__sdsCaptureSample(label)` — synchronous on-demand framebuffer sample; returns `{label, samples, avg, flag}`.
-- Diag stream events: `atmosphere.fog.attached`, `atmosphere.preset.applied`, `terrain.created` (sceneFog bool), `sunBillboard.created`, `renderTarget.depthPrePass`, `water.created` / `water.failed`, `gl.error`, `framebuffer.sampled`.
-- Probe code: [`js/diagnostics/glProbe.js`](js/diagnostics/glProbe.js).
-- Safari smoke runner: [`tests/safari-smoke/run.mjs`](tests/safari-smoke/run.mjs). Trigger with `gh workflow run macos-safari.yml`.
+- **Lifecycle entry points** ([`js/main.js`](js/main.js)): `SheepDogSimulation.swapScene(toId, opts)`, `disposeScene()`, `rebuildScene(sceneDef)`, `restartToMenu()`. All four legacy reload callsites route through these. `_buildSwapUrl(toId, opts)` private helper for URL construction.
+- **AbortController-tracked listeners**: `this._sceneAbort` field; the five corral/objective listeners in `init()` (lines 572, 578, 640, 649, 657) attach with `{ signal: this._sceneAbort.signal }`. `disposeScene()` calls `abort()` and re-creates the controller.
+- **Cinematic API** ([`js/cinematic.js`](js/cinematic.js)): `?cinematic=1` opts in. `window.__sdsCinema` exposes `camera`, `atmosphere`, `gameState`, `scene`, `renderer` getters + `setSun(t)`, `setCameraPose`, `getCameraPose`, `playPath(keyframes, durationMs)`, `triggerLightning(pos)`, `swapScene`, `captureFrame`, `hideUI`/`showUI`. Companion params: `?ui=off`, `?sun=N` (in `[0..1]`).
+- **Score-integrity surface** ([`worker/src/d1.ts`](worker/src/d1.ts)): `submissionScoreBoundsOk` + new `modeSheepCountOk`, `plausibleScoreForCount`, `durationFloorForCount`, `detectScoreAnomalies`. Hard rejects on cross-field plausibility violations; soft-flags via `score_anomalies` JSON column (see migration `0003_score_anomalies.sql`).
+- **Cinematic shot list** ([`tools/cinematic/shot-list.mjs`](tools/cinematic/shot-list.mjs)): four video shots + three OG static cards. Driver scaffold at [`tools/cinematic/run.mjs`](tools/cinematic/run.mjs) with `npm run cinema`. Playwright + ffmpeg drive is the unfilled portion.
+- **Diag probe** still active (`?debug=gl`, `window.__sdsDiag`, [`js/diagnostics/glProbe.js`](js/diagnostics/glProbe.js)).
 
 ## Running locally
 
@@ -55,45 +64,44 @@ npm run dev    # starts Vite (:3000) + wrangler (:8787) together
 
 Granular alternatives: `npm run dev:client` (just Vite), `npm run dev:worker` (just wrangler), `npm run dev:lan` (Vite with `--host` + wrangler).
 
-Open `http://localhost:3000` (or `:3001` if :3000 is taken). `?scene=field`, `?scene=rolling-hills`, `?scene=open-country` to skip the picker.
+Open `http://localhost:3000`. URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl` (probe), `?cinematic=1` (filming infra), `?ui=off` (hide React overlay), `?sun=0.5` (sun position).
 
-### Standing risks (carried into Cycle 10)
+### Standing risks (carried into Cycle 11)
 
-- **Y-sample regression surface is wide.** A bad heightfield change makes the dog float, sheep sink, grass clip — all simultaneously. After any change in this area, manually verify all three scenes in all three camera modes.
-- **Sim-baseline fixtures are one-way.** Don't regenerate without understanding the diff. Cycles 5-9 left them bit-identical — the byte-preserved rect path in `BoundaryCollision`, the `obstacles.trees.length > 0` guard in OptimizedSheep, and the count-aware spawn radius gate (preserves Field-200) are the contracts that let this hold. Cycle 10 Phase 1 (in-process scene swap) must preserve this.
-- **Scene-coupled GPU resources currently leak on reload.** Cycle 10 Phase 1 addresses this directly; the disposal audit in cycle-10-plan §Phase 1 enumerates the families.
+- **Y-sample regression surface is wide.** A bad heightfield change makes the dog float, sheep sink, grass clip — all simultaneously. Manually verify all three scenes in all three camera modes after any change in this area.
+- **Sim-baseline fixtures are one-way.** Don't regenerate without understanding the diff. Cycles 5-10 left them bit-identical. Cycle 11 Phase 1 (in-process scene swap) must preserve this.
+- **Scene-coupled GPU resources still leak on reload.** Cycle 10 Phase 1 closed the listener leak; the GPU-resource leak waits on Cycle 11 Phase 1's full disposal pass.
+- **`?cinematic=1` flips `preserveDrawingBuffer`.** Documented perf hit. Any change that lets the flag affect normal play is a Hard Stop.
 
 ## How to read the rest of the repo
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-10-plan.md`](docs/cycle-10-plan.md) — full plan, Goal + 7 Phases written |
-| Latest closed cycle | [`docs/archive/cycles/cycle-9-plan.md`](docs/archive/cycles/cycle-9-plan.md) — see §Shipped status |
-| Prior closed cycle | [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md), summary in [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Older cycles | [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md), [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) |
+| Active cycle | [`docs/cycle-11-plan.md`](docs/cycle-11-plan.md) — six phases, picks up Cycle 10 carryover |
+| Latest closed cycle | [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md) |
+| Prior closed cycle | [`docs/archive/cycles/cycle-9-plan.md`](docs/archive/cycles/cycle-9-plan.md) |
+| Older cycles | [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md), [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md), [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) |
 | Cycle stub template | [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) |
 | Frozen files / fence rules | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Closed cycles + deferred items | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Slash commands | [`.claude/commands/`](.claude/commands/) — `/cycle-start`, `/cycle-close`, `/validate` |
-| Cycle 4 Hardening | [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) |
-| Cycle 4 Phase A plan | [`docs/cycle-4-plan.md`](docs/cycle-4-plan.md) |
-| Cycle 4 Phase B integration | [`docs/cycle-4-phase-b.md`](docs/cycle-4-phase-b.md) |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Decisions log | [`DECISIONS.md`](DECISIONS.md) |
-| What Cycle 2 shipped | [`docs/cycle-2-report.md`](docs/cycle-2-report.md) |
+| Player CHANGELOG | [`CHANGELOG.md`](CHANGELOG.md) |
+| Press kit | [`PRESSKIT.md`](PRESSKIT.md) |
+| Electron readiness | [`docs/electron-readiness.md`](docs/electron-readiness.md) |
 | How to add a biome | [`docs/adding-a-biome.md`](docs/adding-a-biome.md) |
-| Prior postmortem | [`docs/archive/POSTMORTEM.md`](docs/archive/POSTMORTEM.md) |
 
 ## What NOT to do
 
 - Don't rearchitect multiplayer. It works.
-- Don't reintroduce procedural mountains. If we want a horizon ring later, the right path is a height-displaced skirt that blends into the play-area heightfield, not the annulus shader.
+- Don't reintroduce procedural mountains. If we want a horizon ring later, the right path is a height-displaced skirt that blends into the play-area heightfield.
 - Don't add new scenes. Three is the right number.
-- Don't touch `shared/MovementPhysics.js`'s `updateMovement` to insert obstacle logic — Cycle 6 deliberately put obstacle force composition at the **call site** (`OptimizedSheep`, `Sheepdog`, future Worker `GameSim`) so MovementPhysics stays a pure-functions library.
+- Don't touch `shared/MovementPhysics.js`'s `updateMovement` to insert obstacle logic — Cycle 6 deliberately put obstacle force composition at the **call site**.
 - Don't blow up `main.js` in one PR. Shrink it one responsibility at a time.
-- Don't regenerate `tests/sim-baseline/` fixtures unless you understand exactly what changed and why. Cycle 5-9 preserved them bit-identical.
+- Don't regenerate `tests/sim-baseline/` fixtures unless you understand exactly what changed and why. Cycles 5-10 preserved them bit-identical.
 - Don't hardcode grass-exclusion zones for non-Field scenes. Gate on `sceneDef?.farmHouse` and `sceneDef?.pasture`.
-- Don't gate sprint *continuation* on `stamina >= minStaminaToSprint` — only sprint *start*. The state machine separates `canStartSprint` (≥10) from `canContinueSprint` (>0); merging them creates the oscillation-around-threshold bug.
-- Don't set CSS `transition: all` on stamina/progress bars. Width must be instant; only color/glow should animate.
-- Don't assume the dome's integrated cloud math is the only cloud system. [`CloudLayer.js`](js/atmosphere/CloudLayer.js) is a separate planar mesh with its own shader. Both can produce horizontal-line artifacts at low elevation angles.
-- **Cycle 10:** Don't ship an in-game cinematic record UI (Q2 — Playwright-driven only). Don't implement Electron packaging (Phase 7 is research only). Don't do a from-scratch UI redesign — Phase 2 is unification + Cycle 3 carry-over close-out, not a new aesthetic. Don't let `?cinematic=1` flip `preserveDrawingBuffer` on the normal-play codepath.
+- Don't gate sprint *continuation* on `stamina >= minStaminaToSprint` — only sprint *start*.
+- Don't set CSS `transition: all` on stamina/progress bars.
+- Don't assume the dome's integrated cloud math is the only cloud system. [`CloudLayer.js`](js/atmosphere/CloudLayer.js) is separate.
+- **Cycle 11:** Don't ship an in-game cinematic record UI (carries from Cycle 10 Q2 — Playwright-driven only). Don't implement Electron packaging (Phase 7 of Cycle 10 was research-only). Don't do a from-scratch UI redesign — Phase 2 is unification + carry-over close-out. Don't let `?cinematic=1` flip `preserveDrawingBuffer` on the normal-play codepath.

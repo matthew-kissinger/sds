@@ -785,6 +785,12 @@ export class GameState {
         this.sheepRetired = 0;
         this.isPaused = false; // Ensure game starts unpaused
 
+        // Cycle 10 Phase 6: capture wall-clock start so the score submission
+        // can include clientStartedAt + clientFinishedAt. The worker compares
+        // their delta against the claimed score (= duration in seconds for
+        // time modes); >10s skew flags a score_anomalies entry.
+        this._clientStartedAt = Date.now();
+
         // Store previous sheep count to check if we need to recreate the flock
         const previousSheepCount = this.totalSheep;
 
@@ -1216,7 +1222,13 @@ export class GameState {
                 sceneId,
                 sheepCount: this.totalSheep,
                 totalSheep: this.totalSheep,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                // Cycle 10 Phase 6: client wall-clock window. Worker compares
+                // (clientFinishedAt - clientStartedAt) against the claimed
+                // score (= duration in seconds for time modes); >10s skew
+                // flags a score_anomalies row.
+                clientStartedAt: this._clientStartedAt || null,
+                clientFinishedAt: Date.now()
             });
         } else {
             console.warn('Score submission function not available');

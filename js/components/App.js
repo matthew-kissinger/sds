@@ -290,26 +290,19 @@ export async function initReactUI() {
                 console.log('[UI] Starting sandbox game:', selectedDog, sandboxConfig);
                 if (!getGameInstance()) return;
 
-                // Cycle 8 Phase 4: if the sandbox's sceneId differs from the
-                // currently-loaded scene, reload with the right ?scene= and
-                // pass the config via #s/ so we land back on the sandbox setup
-                // screen on the correct scene. The player can click Start
-                // Game again from there. Reload is the simplest way to swap
-                // heightfield + atmosphere + spawn def without partial-state
-                // bugs.
+                // Cycle 8 Phase 4 / Cycle 10 Phase 1: if the sandbox's sceneId
+                // differs from the currently-loaded scene, route through
+                // SheepDogSimulation.swapScene with the encoded config in the
+                // hash so we land back on the sandbox setup screen on the
+                // correct scene. Step 1's swapScene still hard-reloads, so
+                // behaviour is identical to the previous inline reload.
+                // Step 3 will flip swapScene to in-process.
                 const desiredScene = sandboxConfig.sceneId || 'field';
                 const currentSceneId = (typeof window !== 'undefined' && window.__currentSceneId) || 'field';
                 if (desiredScene !== currentSceneId) {
                     try {
                         const encoded = sandboxConfig.serialize();
-                        const url = new URL(location.href);
-                        if (desiredScene === 'field') {
-                            url.searchParams.delete('scene');
-                        } else {
-                            url.searchParams.set('scene', desiredScene);
-                        }
-                        url.hash = `s/${encoded}`;
-                        location.href = url.toString();
+                        getGameInstance().swapScene(desiredScene, { hash: `s/${encoded}` });
                         return;
                     } catch (err) {
                         console.error('[UI] Failed to encode sandbox cross-scene reload:', err);
@@ -360,14 +353,10 @@ export async function initReactUI() {
                     return false;
                 }
                 console.log(`[SCENE-SYNC] Reloading: url=${currentSceneId} -> room=${room.sceneId} (room ${room.roomCode})`);
-                const url = new URL(location.href);
-                if (room.sceneId === 'field') {
-                    url.searchParams.delete('scene');
-                } else {
-                    url.searchParams.set('scene', room.sceneId);
-                }
-                url.hash = `/r/${room.roomCode}`;
-                location.href = url.toString();
+                // Cycle 10 Phase 1: route through swapScene so Step 3 can flip
+                // MP guest scene-match to in-process without re-touching App.js.
+                // Step 1 still hard-reloads so behaviour is unchanged.
+                getGameInstance().swapScene(room.sceneId, { hash: `/r/${room.roomCode}` });
                 return true;
             };
 
@@ -948,8 +937,13 @@ export async function initReactUI() {
                     onReturnToMenu();
                 }
 
-                // Reload the page for a clean state (simplest approach)
-                window.location.reload();
+                // Cycle 10 Phase 1: route through restartToMenu so Step 3 can
+                // flip return-to-menu to in-process without re-touching
+                // handleMainMenu. Step 1 still does window.location.reload(),
+                // so behaviour is unchanged. The gameState/menuController
+                // resets above stay here for Step 1; Step 3 will pull them
+                // into restartToMenu itself.
+                getGameInstance()?.restartToMenu();
             }, [handleResume, onReturnToMenu]);
 
             // Toggle fullscreen

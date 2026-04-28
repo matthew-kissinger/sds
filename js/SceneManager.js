@@ -34,12 +34,20 @@ export class SceneManager {
         // iOS-safe WebGL renderer settings
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
+        // Cycle 10 Phase 3: opt-in cinematic mode. ?cinematic=1 enables
+        // preserveDrawingBuffer so canvas.toDataURL() returns non-blank
+        // frames for Playwright-driven filming. Off by default — the flag
+        // is documented to have a perf hit on the normal-play codepath, so
+        // we strictly gate it.
+        const isCinematic = typeof location !== 'undefined' &&
+            new URLSearchParams(location.search).get('cinematic') === '1';
+
         this.renderer = new THREE.WebGLRenderer({
             antialias: !isIOS, // Disable antialiasing on iOS (known issues)
             powerPreference: "high-performance",
             stencil: false,
             alpha: false, // Opaque canvas for better performance
-            preserveDrawingBuffer: false,
+            preserveDrawingBuffer: isCinematic,
             failIfMajorPerformanceCaveat: false // Don't fail on software rendering
         });
 

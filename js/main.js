@@ -26,6 +26,7 @@ import { LocalInputHandler } from './LocalInputHandler.js';
 import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
 import { TwoPlayerCamera } from './TwoPlayerCamera.js';
 import { captureFramebufferSample, isProbeEnabled, log as probeLog, drainGlErrors } from './diagnostics/glProbe.js';
+import { isCinematicMode, isUiHidden, getRequestedSun, installCinemaApi } from './cinematic.js';
 
 /**
  * Core Web Vitals monitoring for SEO performance tracking
@@ -210,6 +211,13 @@ class SheepDogSimulation {
             this.gameState.setSheepSpawn(this.currentScene.sheepSpawn);
         }
         this.heightfield = null; // Loaded async in init() before createTerrain.
+
+        // Cycle 10 Phase 1: AbortController-tracked window listeners
+        // registered inside init() (corral-retired, objective-stage-changed,
+        // corral-ascend-top). disposeScene().abort() tears them down so old
+        // PortalEffect / CorralZapPool references don't fire after a swap.
+        // Created here so init() can attach to it on first run.
+        this._sceneAbort = new AbortController();
 
         // Atmosphere takes over scene.fog + adds a Hosek-Wilkie sky dome.
         // Construction MUST happen after SceneManager so the scene exists; the
@@ -573,11 +581,11 @@ class SheepDogSimulation {
                             if (e?.detail?.stage === 'drive' && this._portalEffect) {
                                 this._portalEffect.setIntensity(1);
                             }
-                        });
+                        }, { signal: this._sceneAbort.signal });
                     }
                     window.addEventListener('corral-retired', () => {
                         if (this._portalEffect) this._portalEffect.pulse();
-                    });
+                    }, { signal: this._sceneAbort.signal });
 
                     // Cycle 7 Phase 3 / Q6: round-up zone ground decal —
                     // terrain-conformed cyan ring at the zone center while
@@ -641,7 +649,7 @@ class SheepDogSimulation {
                             if (e?.detail?.stage === 'drive' && this._roundupZoneDecal) {
                                 this._roundupZoneDecal.visible = false;
                             }
-                        });
+                        }, { signal: this._sceneAbort.signal });
                     }
                 } else {
                     const { CorralZapEffectPool } = await import('./effects/CorralZapEffect.js');
@@ -650,7 +658,7 @@ class SheepDogSimulation {
                         if (e?.detail && this._corralZapPool) {
                             this._corralZapPool.fire(e.detail);
                         }
-                    });
+                    }, { signal: this._sceneAbort.signal });
                     // Cycle 7: spark at the top of the bolt when a retiring
                     // sheep finishes its upward ascent. Marks the moment of
                     // removal cleanly — small particle burst, no new bolt.
@@ -658,7 +666,7 @@ class SheepDogSimulation {
                         if (e?.detail && this._corralZapPool) {
                             this._corralZapPool.fireSpark(e.detail);
                         }
-                    });
+                    }, { signal: this._sceneAbort.signal });
                 }
             }
 
@@ -744,11 +752,188 @@ class SheepDogSimulation {
             // post-init; drives the "PER-SYSTEM TRIANGLES" section, no behavior.
             this.registerSystemTriangleCounts();
 
+            // Cycle 10 Phase 3: cinematic capture infrastructure. Only
+            // installs when ?cinematic=1; default-off so normal play has
+            // no perf hit from the exposed globals.
+            if (isCinematicMode()) {
+                installCinemaApi(this);
+                if (isUiHidden()) {
+                    const overlay = document.getElementById('react-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                }
+                const sunT = getRequestedSun();
+                if (sunT != null && this.atmosphere?.setSun) {
+                    // Map t in [0..1] to elevation [0, π/2].
+                    this.atmosphere.setSun({ elevation: sunT * Math.PI * 0.5 });
+                }
+            }
+
             logStep('Initialization complete!');
 
         } catch (error) {
             console.error('[INIT] Fatal error during initialization:', error);
             throw error;
+        }
+    }
+
+    // -------- Cycle 10 Phase 1 — scene lifecycle (Step 1 plumbing) --------
+    // Step 1 ships these as scaffolding: swapScene + restartToMenu fall back
+    // to the legacy hard-reload behaviour. disposeScene wires up the
+    // AbortController teardown for scene-coupled window listeners (the leak
+    // class flagged in cycle-10-plan.md §"Highest-risk subtasks") so future
+    // steps land without listener leaks. rebuildScene is a no-op until
+    // Step 3. The four legacy reload callsites already route through these
+    // methods so future steps can land without re-touching plumbing.
+
+    /**
+     * Canonical scene-transition entry point.
+     *
+     * Step 1: hard-reloads via location.href (today's behaviour).
+     * Step 3: dispose + rebuild in-process; URL via history.replaceState.
+     *
+     * @param {string} toId  Target scene id (e.g. 'field', 'rolling-hills').
+     * @param {{ hash?: string }} [opts]  hash: raw hash payload to preserve
+     *   across the reload (no leading '#'), e.g. 's/<encoded>' or '/r/<code>'.
+     * @returns {Promise<void>}  Same-scene branch resolves immediately;
+     *   cross-scene branch returns a never-resolving Promise because the
+     *   page is reloading. Callers fire-and-forget — do not await.
+     */
+    async swapScene(toId, opts = {}) {
+        if (!toId) {
+            console.warn('[SWAP] swapScene called with no toId; ignoring');
+            return;
+        }
+        const fromId = this.currentScene?.id;
+        if (fromId === toId && !opts.hash) {
+            // Same-scene no-op. Step 3 may add an opts.force escape hatch.
+            return;
+        }
+
+        console.log(`[SWAP] swapScene(${toId}) — Step 1 hard-reload fallback`);
+
+        try {
+            // Step 3 will replace this body with:
+            //   await this.disposeScene();
+            //   await this.rebuildScene(loadScene(toId));
+            //   history.replaceState(null, '', this._buildSwapUrl(toId, opts));
+            location.href = this._buildSwapUrl(toId, opts);
+            return new Promise(() => {}); // Page is reloading; never resolves.
+        } catch (err) {
+            console.warn('[SWAP] swapScene fallback to location.href after error:', err);
+            location.href = this._buildSwapUrl(toId, opts);
+            return new Promise(() => {});
+        }
+    }
+
+    /**
+     * Build the URL for a scene swap, preserving any explicit hash payload.
+     * Mirrors the pre-Cycle-10 URL-build logic in ScenePicker.switchScene,
+     * handleStartSandbox, and ensureSceneMatchesRoom so all four callsites
+     * produce byte-identical URLs to today's hard-reload paths.
+     */
+    _buildSwapUrl(toId, opts = {}) {
+        const url = new URL(location.href);
+        if (toId === DEFAULT_SCENE_ID) {
+            url.searchParams.delete('scene');
+        } else {
+            url.searchParams.set('scene', toId);
+        }
+        if (opts.hash) {
+            url.hash = opts.hash;
+        }
+        // No opts.hash: leave existing hash untouched (matches ScenePicker's
+        // pre-Cycle-10 behaviour of not setting url.hash).
+        return url.toString();
+    }
+
+    /**
+     * Drain scene-coupled GPU + listener state. Step 1 lands the listener
+     * teardown + effects-family disposal (lowest-risk subset that prevents
+     * the leak class flagged in cycle-10-plan.md). Subsequent cycles fill
+     * out the heavier families (atmosphere, water, terrain, sheep+dog) and
+     * flip swapScene to call this method as part of an in-process swap.
+     *
+     * Today this is invoked only by an opt-in `swapScene(toId, { dispose: true })`
+     * code path used by stress tests; the production callers all hard-reload,
+     * so the page itself drops everything. Validating dispose calls now keeps
+     * the surface honest for the future flip.
+     */
+    async disposeScene() {
+        console.log('[SWAP] disposeScene() — effects + listener teardown');
+
+        // Tear down scene-coupled window listeners. AbortController.abort()
+        // removes every listener registered with { signal: signal }. The
+        // five listeners attached inside init() (objective-stage-changed,
+        // corral-retired, corral-ascend-top) all use this.
+        try {
+            this._sceneAbort?.abort();
+        } catch (err) {
+            console.warn('[SWAP] sceneAbort.abort threw (ignored):', err);
+        }
+        this._sceneAbort = new AbortController();
+
+        // Effects family — each dispose method exists today. PortalEffect
+        // and CorralZapEffectPool ship full dispose; the round-up decal is
+        // a raw Mesh built in init(), so we tear it down by hand.
+        if (this._portalEffect) {
+            try { this._portalEffect.dispose(); } catch (err) {
+                console.warn('[SWAP] portalEffect.dispose threw:', err);
+            }
+            this._portalEffect = null;
+        }
+        if (this._corralZapPool) {
+            try { this._corralZapPool.dispose(); } catch (err) {
+                console.warn('[SWAP] corralZapPool.dispose threw:', err);
+            }
+            this._corralZapPool = null;
+        }
+        if (this._roundupZoneDecal) {
+            try {
+                const mesh = this._roundupZoneDecal;
+                if (mesh.parent) mesh.parent.remove(mesh);
+                mesh.geometry?.dispose();
+                if (Array.isArray(mesh.material)) {
+                    mesh.material.forEach(m => m.dispose());
+                } else {
+                    mesh.material?.dispose();
+                }
+            } catch (err) {
+                console.warn('[SWAP] roundupZoneDecal teardown threw:', err);
+            }
+            this._roundupZoneDecal = null;
+        }
+        // Future cycles: atmosphere / water / structures / flora / terrain /
+        // sheep+dog disposal lands here. Each family's dispose method is
+        // already in place (see TerrainBuilder, GrassSystem, ProceduralMountains,
+        // Atmosphere, AnimeWater, DepthPrePass) — wiring them up is the
+        // remaining work, alongside OptimizedSheepSystem.dispose (new).
+    }
+
+    /**
+     * Extracted reusable form of init() lines 444-753.
+     * Step 1: no-op. Step 3 fills this by extracting init()'s body.
+     */
+    async rebuildScene(sceneDef) {
+        console.log(`[SWAP] rebuildScene(${sceneDef?.id ?? '?'}) — Step 1 no-op`);
+        // Step 3: heightfield load + terrain/grass/structures/sheep/dog
+        // construction lives here, plus AbortController-tracked window
+        // listener registration so disposeScene can tear them down.
+    }
+
+    /**
+     * Return to start screen on the current scene without changing scenes.
+     * Step 1: window.location.reload() (today's handleMainMenu behaviour).
+     * Step 3: in-process menu re-mount, no audio cut, no canvas flash.
+     */
+    async restartToMenu() {
+        console.log('[SWAP] restartToMenu() — Step 1 reload fallback');
+        try {
+            window.location.reload();
+            return new Promise(() => {});
+        } catch (err) {
+            console.warn('[SWAP] restartToMenu fallback after error:', err);
+            window.location.reload();
+            return new Promise(() => {});
         }
     }
 
@@ -1310,7 +1495,7 @@ class SheepDogSimulation {
                     </div>
                 </div>
                 <p style="color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 20px;">Local mode - scores not submitted to leaderboard</p>
-                <button onclick="location.reload()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
+                <button onclick="window.gameInstance?.restartToMenu()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
                     Play Again
                 </button>
             </div>
@@ -2564,8 +2749,11 @@ class SheepDogSimulation {
             root.render(createElement(window.CompletionScreen, {
                 mode: mode,
                 data: screenData,
-                onPlayAgain: () => location.reload(),
-                onMainMenu: () => location.reload()
+                // Cycle 10 Phase 1 + 2: route through restartToMenu so future
+                // cycles can flip to in-process menu return without re-touching
+                // the completion screen.
+                onPlayAgain: () => this.restartToMenu(),
+                onMainMenu: () => this.restartToMenu()
             }));
 
             console.log('[GAME] React completion overlay rendered!');
@@ -2592,7 +2780,7 @@ class SheepDogSimulation {
                 <div style="padding: 40px; background: rgba(16, 185, 129, 0.2); border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.4);">
                     <h1 style="font-size: 36px; margin: 0 0 20px 0;">Victory!</h1>
                     <p style="font-size: 18px; margin: 0 0 30px 0;">Time: ${timeStr}</p>
-                    <button onclick="location.reload()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
+                    <button onclick="window.gameInstance?.restartToMenu()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
                         Play Again
                     </button>
                 </div>

@@ -171,6 +171,120 @@ export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean 
   return false;
 }
 
+// Cycle 10 Phase 6: cross-field plausibility. Allowed (mode, sheep_count)
+// pairings — anything outside this set is hard-rejected at the worker
+// boundary alongside out-of-bounds scores.
+const ALLOWED_MODE_SHEEPCOUNT: Record<GameMode, number[] | 'any'> = {
+  soloClassic: [200],
+  soloExtreme: [1000],
+  soloInsane: [3000],
+  soloChaos: [5000],
+  timed: [200],
+  competitive: 'any',
+  cooperative: 'any',
+};
+
+export function modeSheepCountOk(mode: GameMode, sheepCount: number): boolean {
+  const allowed = ALLOWED_MODE_SHEEPCOUNT[mode];
+  if (allowed === 'any') return true;
+  return allowed.includes(sheepCount);
+}
+
+// Cycle 10 Phase 6: minimum-plausible-duration heuristic for time modes.
+// Floor on score (=duration in seconds) given the claimed sheep_count.
+// A 5000-sheep Chaos run completing in 30s is implausible regardless of
+// skill; if claimed, hard-reject. The floors below are intentionally
+// generous: better to under-flag than over-flag when the leaderboard
+// is also a marketing surface. Tighten with telemetry data over time.
+const MIN_PLAUSIBLE_DURATION_BY_COUNT: Array<[number, number]> = [
+  // [sheepCount, minSeconds]
+  [200, 30],     // soloClassic / timed floor stays at 30s (existing bound)
+  [1000, 90],    // soloExtreme — 1000 sheep can't realistically be herded in <90s
+  [3000, 180],   // soloInsane — 3 minute floor
+  [5000, 240],   // soloChaos — 4 minute floor
+];
+
+export function durationFloorForCount(sheepCount: number): number {
+  // Pick the largest entry whose count <= sheepCount; defaults to 30s.
+  let floor = 30;
+  for (const [count, minSec] of MIN_PLAUSIBLE_DURATION_BY_COUNT) {
+    if (sheepCount >= count) floor = minSec;
+  }
+  return floor;
+}
+
+export function plausibleScoreForCount(
+  mode: GameMode,
+  score: number,
+  sheepCount: number,
+): boolean {
+  if (!TIME_MODES.includes(mode)) return true;
+  return score >= durationFloorForCount(sheepCount);
+}
+
+export interface ScoreAnomaly {
+  tag: string;
+  detail?: Record<string, unknown>;
+}
+
+// Cycle 10 Phase 6: telemetry-driven soft signals. Returned alongside
+// the (already-passed) bounds + plausibility checks. Anomalies are stored
+// on the audit row, NOT used to reject — leaderboard query layers gate
+// on score_anomalies IS NULL by default.
+export function detectScoreAnomalies(input: {
+  mode: GameMode;
+  score: number;
+  sheepCount: number;
+  clientStartedAt?: number | null;
+  clientFinishedAt?: number | null;
+  serverNow: number;
+}): ScoreAnomaly[] {
+  const anomalies: ScoreAnomaly[] = [];
+
+  // 1) Client clock skew: if start/finish timestamps were submitted, compare
+  //    their delta against the claimed score (= duration in seconds for time
+  //    modes). >10s divergence is a soft flag — could be a paused tab, could
+  //    be a tampered submission.
+  if (
+    typeof input.clientStartedAt === 'number' &&
+    typeof input.clientFinishedAt === 'number' &&
+    TIME_MODES.includes(input.mode)
+  ) {
+    const clientDurationSec = (input.clientFinishedAt - input.clientStartedAt) / 1000;
+    const skew = Math.abs(clientDurationSec - input.score);
+    if (skew > 10) {
+      anomalies.push({
+        tag: 'client_clock_skew',
+        detail: {
+          claimed_score: input.score,
+          client_duration_sec: Math.round(clientDurationSec * 10) / 10,
+          skew_sec: Math.round(skew * 10) / 10,
+        },
+      });
+    }
+  }
+
+  // 2) Fast-for-count: passes the hard plausibility floor but still falls
+  //    in the bottom 10% of the floor range (e.g. 95s for soloExtreme).
+  //    Soft signal — informs future floor tuning.
+  if (TIME_MODES.includes(input.mode)) {
+    const floor = durationFloorForCount(input.sheepCount);
+    const fastBand = floor * 1.1;
+    if (input.score < fastBand) {
+      anomalies.push({
+        tag: 'fast_for_count',
+        detail: {
+          score: input.score,
+          sheep_count: input.sheepCount,
+          floor_seconds: floor,
+        },
+      });
+    }
+  }
+
+  return anomalies;
+}
+
 export async function submitScore(
   db: D1Database,
   persistentId: string,
@@ -201,15 +315,40 @@ export async function submitScore(
     ? (additionalData.sheepCount as number)
     : (gameMode === 'soloExtreme' ? 1000 : 200);
 
+  // Cycle 10 Phase 6: cross-field plausibility — hard rejects.
+  if (!modeSheepCountOk(gameMode, sheepCount)) {
+    throw new Error(`sheep_count ${sheepCount} not allowed for mode ${gameMode}`);
+  }
+  if (!plausibleScoreForCount(gameMode, score, sheepCount)) {
+    throw new Error(`score ${score} implausibly low for ${gameMode} at ${sheepCount} sheep`);
+  }
+
+  // Cycle 10 Phase 6: soft signals. Stored on the audit row; do NOT reject.
+  const clientStartedAt = typeof additionalData.clientStartedAt === 'number'
+    ? (additionalData.clientStartedAt as number)
+    : null;
+  const clientFinishedAt = typeof additionalData.clientFinishedAt === 'number'
+    ? (additionalData.clientFinishedAt as number)
+    : null;
+  const anomalies = detectScoreAnomalies({
+    mode: gameMode,
+    score,
+    sheepCount,
+    clientStartedAt,
+    clientFinishedAt,
+    serverNow: now,
+  });
+  const anomaliesJson = anomalies.length > 0 ? JSON.stringify(anomalies) : null;
+
   // Audit row + materialized-best in a D1 batch so they land together.
   const stmts: D1PreparedStatement[] = [];
   stmts.push(
     db.prepare(
-      'INSERT INTO score_submissions (persistent_id, game_mode, score, submitted_at, room_code, additional_data, sheep_count, scene_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO score_submissions (persistent_id, game_mode, score, submitted_at, room_code, additional_data, sheep_count, scene_id, score_anomalies) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       persistentId, gameMode, score, now, roomCode,
       JSON.stringify(additionalData || {}),
-      sheepCount, sceneId,
+      sheepCount, sceneId, anomaliesJson,
     ),
   );
 

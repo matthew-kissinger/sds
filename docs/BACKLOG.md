@@ -4,6 +4,33 @@
 
 ## Recently Completed
 
+### Cycle 10 — release-polish (closed 2026-04-27)
+
+Plan: [`docs/archive/cycles/cycle-10-plan.md`](archive/cycles/cycle-10-plan.md). Headline:
+
+- **Phase 1 partial — scene lifecycle plumbing.** New `swapScene(toId, opts)`, `disposeScene()`, `rebuildScene(sceneDef)`, `restartToMenu()` on `SheepDogSimulation` ([`js/main.js`](../js/main.js)). Step 1 plumbing: all four legacy `location.href`/`reload()` callsites — [ScenePicker.switchScene](../js/components/StartScreen/ScenePicker.js), `App.handleStartSandbox`, `App.ensureSceneMatchesRoom`, `App.handleMainMenu` — now route through these methods. Step 1 bodies still hard-reload, so user-visible behavior is identical to pre-cycle. AbortController-tracked window listener teardown (`corral-retired`, `objective-stage-changed`, `corral-ascend-top`) closes the leak class flagged in cycle plan §"Highest-risk subtasks". Effects-family disposal (PortalEffect, CorralZapEffectPool, round-up decal) wired into `disposeScene()`. **Deferred to a future cycle:** in-process flip (terrain/sheep/water/atmosphere disposal, `<SceneSwapOverlay>`, `history.replaceState`, defensive null-checks in `animate()`, MP guest WS strategy Q1).
+- **Phase 2 partial — Button consistency.** Inline `onclick="location.reload()"` buttons in `main.js` (local-MP completion overlay, fallback completion overlay, React `CompletionScreen` callbacks) routed through `restartToMenu()` so they inherit the lifecycle method. **Deferred:** mode-shaped HUD profiles, onboarding overlay re-trigger, real dog PNG thumbnails, full Button-component unification across React surfaces.
+- **Phase 3 — cinematic capture infrastructure.** New [`js/cinematic.js`](../js/cinematic.js) with `?cinematic=1` flag, `?ui=off`, `?sun=N` URL params and `window.__sdsCinema` API exposing camera/atmosphere/effects/scene refs plus `setSun`, `setCameraPose`, `getCameraPose`, `playPath` (smoothed dolly), `triggerLightning`, `swapScene`, `captureFrame`, `hideUI`/`showUI`. `SceneManager` flips `preserveDrawingBuffer` to `true` only when `?cinematic=1` so normal play has no perf hit.
+- **Phase 4 partial — cinematic shot list scaffolding.** [`tools/cinematic/shot-list.mjs`](../tools/cinematic/shot-list.mjs) declarative shot manifest (dog-into-sunset, lightning-strike, chaos-5000, oc-portal videos + 3 OG static cards). [`tools/cinematic/run.mjs`](../tools/cinematic/run.mjs) runner skeleton with arg parsing, output dir setup, shot iteration. `npm run cinema` script wired. **Deferred:** Playwright drive + ffmpeg mux (require ffmpeg + extended runtime, gated on user availability).
+- **Phase 5 — SEO + release prep.** New [`public/manifest.webmanifest`](../public/manifest.webmanifest) for PWA installability, `<link rel="manifest">` + `<link rel="apple-touch-icon">` in [`index.html`](../index.html). New repo-root [`CHANGELOG.md`](../CHANGELOG.md) and [`PRESSKIT.md`](../PRESSKIT.md). **Deferred:** Cloudflare Web Analytics dashboard hookup (Pages console action), `/api/event` worker route for custom events, properly-sized 192/512/maskable PWA icons (currently reuse favicon.png), `git tag v1.0.0` push.
+- **Phase 6 — score integrity.** Worker code: new `modeSheepCountOk`, `plausibleScoreForCount`, `durationFloorForCount`, `detectScoreAnomalies` in [`worker/src/d1.ts`](../worker/src/d1.ts). `submitScore` now hard-rejects mode×sheep_count mismatches (`soloClassic` with 1000 sheep, etc.) and minimum-duration-floor violations (`soloChaos` < 240s); soft-flags `client_clock_skew` (>10s skew between clientStartedAt/clientFinishedAt and claimed score) and `fast_for_count` (within 10% of duration floor). New migration [`worker/migrations/0003_score_anomalies.sql`](../worker/migrations/0003_score_anomalies.sql) adds `score_anomalies` JSON column + filtered index. `GameState.startGame` captures `_clientStartedAt`; `submitScoreToLeaderboard` includes both timestamps. **Deferred:** production D1 `wrangler d1 migrations apply sds-prod --remote` (destructive, user-authorized).
+- **Phase 7 — Electron-readiness research doc.** New [`docs/electron-readiness.md`](electron-readiness.md): hard worker dependencies, asset paths, bundle size targets, file:// gotchas, fullscreen mapping, offline leaderboard sketch (sql.js), update channel options, code-signing costs, Tauri-vs-Electron decision matrix. No code; recommends Tauri 2.0 contingent on macOS WebKit-WebGL spike outcome (gated by Cycle-9 macOS rendering bug investigation).
+
+111/111 vitest pass. Production build clean. Worker typecheck clean. Sim-baseline byte-identical (preserved through cycles 5-10).
+
+Carryover to Cycle 11 — explicitly deferred:
+
+- **Phase 1 in-process flip (the centerpiece).** Step 1 plumbing is shipped and listener-leak-safe; the actual flip from `location.href` to in-process disposeScene/rebuildScene needs careful surgical work: terrain/water/atmosphere disposal, `<SceneSwapOverlay>` React component, AbortController-aware rAF defensive null-checks in `animate()`, `history.replaceState` for URL bar, MP guest WS strategy decision (Q1). 8-12 hours estimated. The cycle plan's Step 2-5 ordering remains the right shape.
+- **Phase 2 remaining UI/UX polish.** Mode-shaped HUD (Solo/Timed/Competitive variants, MP "waiting for players" pre-game state), onboarding overlay re-trigger from Settings, real dog PNG thumbnails replacing emoji/text, Button component unification across all React surfaces.
+- **Phase 4 marketing asset filming runs.** Install ffmpeg, fill in Playwright drive + ffmpeg mux in `tools/cinematic/run.mjs`, iterate on shot framing, replace existing OG images with sub-300 KB WebP at 1200×630.
+- **Phase 5 release-prep tail.** Cloudflare Web Analytics + custom-events worker route. Properly-sized PWA icons. `git tag v1.0.0` push.
+- **Phase 6 production migration deploy.** `wrangler d1 migrations apply sds-prod --remote` for `0003_score_anomalies.sql`. Verify anomaly column populated for last 24h post-deploy.
+- **Cycle 9 verification carryover (still deferred per user direction).** Mac rendering bug root cause, Cycle 9 changed-flow playtest, Cycle 8 twice-deferred items (acceptance walkthrough, MP bandwidth, follow-camera polish, frametime regression).
+
+Commits:
+- [`a0649ba`](https://github.com/matthew-kissinger/sds/commit/a0649ba) docs: close cycle-9 + scaffold cycle-10
+- (Cycle 10 commits to be appended at push time.)
+
 ### Cycle 9 — playtest-triage + cross-platform (closed 2026-04-27)
 
 Plan: [`docs/archive/cycles/cycle-9-plan.md`](archive/cycles/cycle-9-plan.md). Headline:

@@ -9,6 +9,7 @@
 
 import React, { createElement } from 'react';
 import { listScenes, DEFAULT_SCENE_ID } from '../../../shared/scenes/index.js';
+import { getGameInstance } from '../../GameBridge.js';
 
 function currentSceneId() {
     const fromUrl = new URLSearchParams(location.search).get('scene');
@@ -16,7 +17,7 @@ function currentSceneId() {
     return fromUrl && ids.includes(fromUrl) ? fromUrl : DEFAULT_SCENE_ID;
 }
 
-function switchScene(sceneId) {
+function legacySwitchSceneFallback(sceneId) {
     const url = new URL(location.href);
     if (sceneId === DEFAULT_SCENE_ID) {
         url.searchParams.delete('scene');
@@ -24,6 +25,23 @@ function switchScene(sceneId) {
         url.searchParams.set('scene', sceneId);
     }
     location.href = url.toString();
+}
+
+function switchScene(sceneId) {
+    // Cycle 10 Phase 1: route through SheepDogSimulation.swapScene so future
+    // steps can flip cross-scene transitions to in-process without touching
+    // ScenePicker. Step 1's swapScene still hard-reloads, so behaviour is
+    // unchanged. Fall back to the inline reload if the game instance is
+    // unavailable or the swap throws.
+    const game = getGameInstance();
+    if (game?.swapScene) {
+        game.swapScene(sceneId).catch(err => {
+            console.warn('[SCENE] swapScene failed; hard-reload fallback', err);
+            legacySwitchSceneFallback(sceneId);
+        });
+        return;
+    }
+    legacySwitchSceneFallback(sceneId);
 }
 
 function SceneTile({ scene, isActive, onClick }) {
