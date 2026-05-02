@@ -1,6 +1,6 @@
-# Next Session — Cycle 12 closed; Cycle 13 (`marketing-and-validation`) drafted
+# Next Session — Cycle 12 closed; Cycle 13 (`marketing-and-validation`) drafted with Phase 4 already done
 
-> Updated 2026-05-02 (Cycle 12 close). Active plan: [`docs/cycle-13-plan.md`](docs/cycle-13-plan.md). Cycle 12 closed 2026-05-02 with Phases 1, 2, 4, 6 shipped; Phases 3 (cinematic videos) and 5 (CF Analytics + manual playtest) carried forward as Matt-gated. Last closed: [`docs/archive/cycles/cycle-12-plan.md`](docs/archive/cycles/cycle-12-plan.md). Cold-start agents: read this page top-to-bottom, then [`docs/cycle-13-plan.md`](docs/cycle-13-plan.md), then [`docs/BACKLOG.md`](docs/BACKLOG.md). Earlier cycles: [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md), [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md).
+> Updated 2026-05-02 (Cycle 12 close + same-day post-close sky-shader fix). Active plan: [`docs/cycle-13-plan.md`](docs/cycle-13-plan.md). Cycle 12 closed 2026-05-02 with Phases 1, 2, 4, 6 shipped; Cycle 13 Phase 4 (sky-shader precision + dither) was pulled forward and shipped post-close on the same day (commit `04e62e7`). Phases 3 (cinematic videos + hero OG refresh) and 5 (CF Analytics + manual playtest) remain Matt-gated. Last closed: [`docs/archive/cycles/cycle-12-plan.md`](docs/archive/cycles/cycle-12-plan.md). Cold-start agents: read this page top-to-bottom, then [`docs/cycle-13-plan.md`](docs/cycle-13-plan.md), then [`docs/BACKLOG.md`](docs/BACKLOG.md). Earlier cycles: [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md), [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md).
 
 ## Where the project stands (2026-05-02)
 
@@ -10,7 +10,11 @@
   - **Phase 2 — Button.js variants.** Added `ghost` + `danger` variants and a `size: sm|md|lg` prop. Migrated 3 raw `<button>` sites in SettingsPanel. Mode-shaped HUD extraction documented as N/A (HUD branches by platform + multiplayer, not mode). Rest of the 60 raw buttons across the codebase stay as their specialized components on purpose (Toggle, TabButton, KeyBindButton, PresetButton, MenuOption, icon-circular).
   - **Phase 4 — Mac bug research doc.** Browserbase no-go for Safari (Chromium-only). Sky shader missing precision declaration — likely cause of rainbow horizon-banding under WebKit-on-Metal. White-ground suspect narrowed to terrain inline ShaderMaterial / grass GLSL / fog chunk. Pending Matt's `__sdsDiag` capture.
   - **Phase 6 — Leaderboard data-visibility + filter UX (closed 2026-05-02 prior to this session).** Worker validates `mode=`, slow→fast fallback, per-mode dispatch. Migration 0005 applied. Frontend filters disclosure + Clear-filters action. 25 new vitest cases.
-- **141/141 vitest pass** (was 136/136; +5 from `tests/swap-drift-glb-guard.spec.js`). Production build clean (739 KB main / 218 KB gzip; matches Cycle 11 baseline). Sim-baseline byte-identical through Cycles 5-12.
+- **149/149 vitest pass** (was 136/136; +5 from `tests/swap-drift-glb-guard.spec.js`, +8 from `tests/shader-precision.spec.js`). Production build clean (739 KB main / 218 KB gzip; matches Cycle 11 baseline). Sim-baseline byte-identical through Cycles 5-12.
+
+- **Phase 4 sky-banding fix shipped post-close** (commit `04e62e7`, 2026-05-02). `precision highp float;` + `precision highp int;` declared at source in [`js/atmosphere/skyShader.glsl.js`](js/atmosphere/skyShader.glsl.js), [`js/atmosphere/cloudShader.glsl.js`](js/atmosphere/cloudShader.glsl.js), and the grass vertex shaders. 1/255 hash dither at sky's final fragment write to break 8-bit color quantization on the horizon gradient. Verification on Matt's actual Mac (via `gh workflow run macos-safari.yml`) is the only outstanding item.
+
+- **Cinema runner extended** with a live-action static path (`mode` + `liveAction: true` + `settleMs`) so future hero OG captures can render Solo Extreme mid-flock instead of paused start screen. `og-rh-sunset` shot scaffolded in [`tools/cinematic/shot-list.mjs`](tools/cinematic/shot-list.mjs); first-pass capture 2026-05-02 surfaced two issues for tomorrow's iteration: (a) only 24/1000 sheep spawned at `settleMs=4500` — bump higher or add a `waitForFlockSize` helper; (b) the HUD reappeared after `startSolo()` despite `?ui=off` — likely need a `c.hideUI()` re-assert after gameplay starts.
 
 ## Cycle 13 entry points
 
@@ -18,13 +22,13 @@ Run `/cycle-start` to orient on Cycle 13.
 
 **Recommended order (per the active plan):**
 
-- **Phase 4 (sky shader precision + dither)** — pure code work, ~1-2hr. Highest-confidence concrete fix from the Cycle 12 research. Force `precision highp float;` + `precision highp int;` in the sky/cloud/grass fragment shaders, add 1/255 hash dither at sky's final fragment write. Trigger the macOS Safari workflow manually post-merge.
-- **Phase 1 (cinematic videos)** — Matt-gated. Run `npm run cinema -- --headed`, iterate framing, mux 1080p/720p, embed in marketing page (Q1 location TBD). Pipeline is verified ready (ffmpeg, Chromium 1217, sharp, shot list, full `__sdsCinema` API).
+- **Phase 1 (cinematic videos + hero OG refresh)** — Matt-gated. Iterate the `og-rh-sunset` scaffolded shot first (fix sheep spawn settle + HUD-after-startSolo), replicate for field + open-country, then run `npm run cinema -- --headed` for the four video shots. Pipeline is ready.
 - **Phase 2 (CF Web Analytics)** — Matt-gated, ~30min. Copy beacon `<script>` from CF Pages console into `index.html` head.
-- **Phase 3 (manual playtest sweep)** — Matt-gated, ~2-3hr. Solo (5 modes × 3 scenes = 15 runs minimum), MP (200/250/500/1000 sheep counts), leaderboard surface, plus the Cycle 8/9 carry-forward items. Includes `await window.__sdsStressTestSwaps(5)` to verify Phase 1 A8 acceptance (drift < 5%).
-- **Phase 5 (`v1.1.0` tag)** — once Phase 1 + Phase 4 land.
+- **Phase 3 (manual playtest sweep)** — Matt-gated, ~2-3hr. Solo (5 modes × 3 scenes = 15 runs minimum), MP (200/250/500/1000 sheep counts), leaderboard surface, plus the Cycle 8/9 carry-forward items. Includes `await window.__sdsStressTestSwaps(5)` to verify Cycle 12 Phase 1 A8 acceptance (drift < 5%) and a sweep on sheepdogsim.com to confirm the sky-banding stripe is gone.
+- **Phase 4 (sky shader precision + dither)** — ✅ **shipped 2026-05-02** in commit `04e62e7`. Mac visual confirmation via `gh workflow run macos-safari.yml` is the only outstanding item.
+- **Phase 5 (`v1.1.0` tag)** — once Phase 1 lands.
 
-Phases 1-4 are fully parallelizable. Phase 5 waits.
+Phases 1, 2, 3 are fully parallelizable. Phase 5 waits on Phase 1.
 
 ## Cycle 12 surfaces worth knowing
 

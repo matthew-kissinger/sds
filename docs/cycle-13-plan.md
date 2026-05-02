@@ -15,19 +15,20 @@ This doc fixes the shape of the changes, not the implementation choices. Phases 
 1. **Q1: Marketing-page location for the cinematic videos.** Author lean: a new section on `index.html` below the start screen, OR a separate `/about.html` block. Decide before Phase 1 lands so the embed targets are clear.
 2. **Q2: Sky-shader precision/dither — ship behind a flag or hard ship?** Author lean: hard ship. The fix is a no-op on hardware that already runs at highp; the dither is +1 instruction in the fragment write. No reason to flag-gate.
 
-## Phase 1 — Cinematic video render + marketing embed (~4-6hr) [Matt-gated]
+## Phase 1 — Cinematic video render + marketing-asset refresh (~4-6hr) [Matt-gated]
 
-Carryover from Cycle 12 Phase 3.
+Carryover from Cycle 12 Phase 3, plus a new marketing-asset refresh task that came up at Cycle 12 close: the OG cards and dog portraits in `assets/marketing/og` and `assets/dogs` are from 2026-04-28 and feel stale.
 
 **Depends on:** nothing.
 
-1. Run `npm run cinema -- --headed` and let it render the 4 video shots (`dog-into-sunset`, `lightning-strike`, `chaos-5000`, `oc-portal`). Vite must be on port 3000; runner spawns it if not running.
-2. Iterate framing in [`tools/cinematic/shot-list.mjs`](../tools/cinematic/shot-list.mjs) per shot. The `oc-portal` shot has a "Pause until first sheep ascends" inline note (line 74) — adjust the schedule so the descent lands at the moment the first sheep enters the corral portal.
-3. Mux 1080p master + 720p downscale per shot (the runner does both via ffmpeg).
-4. Marketing-page embed (Q1 location).
-5. CDN upload — gitignored MP4s land in `assets/marketing/videos/<id>.mp4`; upload to whichever CDN serves `sheepdogsim.com`.
+1. **Hero OG card refresh.** A scaffolding shot is in place at [`tools/cinematic/shot-list.mjs`](../tools/cinematic/shot-list.mjs) — `og-rh-sunset` — Solo Extreme on Rolling Hills at dusk with a behind-the-dog camera, `liveAction: true` so the 1000-sheep flock is mid-motion (not paused). First-pass capture 2026-05-02 had two issues to address tomorrow: (a) only 24/1000 sheep had spawned at `settleMs=4500` — bump to 8000-12000ms or add a `waitForFlockSize` helper; (b) the HUD reappeared after `startSolo()` despite `?ui=off` — likely need a `c.hideUI()` call inside `captureStatic` after `startSolo` and after `setCameraPose` (or have the cinematic API re-assert it). The runner-side support is shipped in [`tools/cinematic/run.mjs`](../tools/cinematic/run.mjs) (live-action static path, settleMs, post-settle camera re-pin). Iterate framing on this shot first; once it lands, replicate the pattern for `og-field-hero` and `og-open-country-hero`.
+2. **Video shots.** Run `npm run cinema -- --headed` and let it render the 4 video shots (`dog-into-sunset`, `lightning-strike`, `chaos-5000`, `oc-portal`). Vite must be on port 3000; runner spawns it if not running.
+3. Iterate framing in [`tools/cinematic/shot-list.mjs`](../tools/cinematic/shot-list.mjs) per shot. The `oc-portal` shot has a "Pause until first sheep ascends" inline note (line 74) — adjust the schedule so the descent lands at the moment the first sheep enters the corral portal.
+4. Mux 1080p master + 720p downscale per shot (the runner does both via ffmpeg).
+5. Marketing-page embed (Q1 location).
+6. CDN upload — gitignored MP4s land in `assets/marketing/videos/<id>.mp4`; upload to whichever CDN serves `sheepdogsim.com`.
 
-**Acceptance:** 4 MP4s on the CDN with embed working in the marketing page. Each <10MB.
+**Acceptance:** Updated hero OG cards committed (≤300KB each). 4 MP4s on the CDN with embed working in the marketing page. Each video <10MB.
 
 ## Phase 2 — Cloudflare Web Analytics beacon (~30min) [Matt-gated]
 
@@ -55,23 +56,17 @@ Carryover from Cycle 12 Phase 5.
 
 **Acceptance:** All items walked. Any regression filed as a Cycle 13 hotfix (or escalated as a Cycle 14 phase if structural).
 
-## Phase 4 — Sky-shader precision + dither (~1-2hr)
+## Phase 4 — Sky-shader precision + dither (~1-2hr) — **CLOSED 2026-05-02 (shipped post-Cycle-12-close)**
 
-Carryover from Cycle 12 Phase 4 close-summary research.
+Carryover from Cycle 12 Phase 4 close-summary research. Pulled forward and shipped on the same day Cycle 12 closed.
 
-**Depends on:** nothing.
+**Shipped (commit `04e62e7`):**
 
-1. Add `precision highp float;` and `precision highp int;` to the top of the fragment-shader source in [`js/atmosphere/skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js). Before the `varying` declarations.
-2. Apply the same change to the cloud shader in [`js/atmosphere/cloudShader.glsl.js`](../js/atmosphere/cloudShader.glsl.js) and the grass shader's external `.glsl` files.
-3. Add 1/255 hash dither at the final fragment write in `skyShader.glsl.js`:
-   ```glsl
-   float dither = (hash21(gl_FragCoord.xy) - 0.5) / 255.0;
-   gl_FragColor = vec4(texColor + vec3(dither), 1.0);
-   ```
-   `hash21` is already defined.
-4. Trigger the macOS Safari workflow manually via `gh workflow run macos-safari.yml` and inspect the artifact for sky-region samples in the captured framebuffer.
+1. `precision highp float;` and `precision highp int;` added at source in [`js/atmosphere/skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js) (vertex + fragment), [`js/atmosphere/cloudShader.glsl.js`](../js/atmosphere/cloudShader.glsl.js) (vertex + fragment), [`js/shaders/grass/desktop-vertex.glsl`](../js/shaders/grass/desktop-vertex.glsl), and [`js/shaders/grass/mobile-vertex.glsl`](../js/shaders/grass/mobile-vertex.glsl). Grass fragment already had it from a prior cycle.
+2. 1/255 hash dither at the final fragment write in `skyShader.glsl.js` to break 8-bit color quantization on the horizon gradient. Stable per-pixel-per-frame so it doesn't shimmer.
+3. New [`tests/shader-precision.spec.js`](../tests/shader-precision.spec.js) — 8 cases pinning the shader-source contract.
 
-**Acceptance:** GH macOS Safari smoke green. Visual sweep on Matt's actual Mac confirms rainbow-banding stripe is gone. No frame-rate regression on RTX 3070 (precision and dither are both essentially free ops).
+**Acceptance:** Source contract is pinned; tests green; production build clean. **Outstanding verification (Matt-gated):** trigger the macOS Safari workflow manually via `gh workflow run macos-safari.yml` after deploy and inspect the artifact for sky-region samples — the rainbow stripe should be gone. Visual sweep on Matt's actual Mac is the final confirmation.
 
 ## Phase 5 — `v1.1.0` tag push (~15min)
 
@@ -118,10 +113,10 @@ Phases 1-4 are fully parallelizable. Phase 5 waits on the others.
 
 `/cycle-close` reads this section and asks the user to confirm each item. Don't pre-check.
 
-- [ ] Phase 1 — 4 cinematic video shots rendered + uploaded; embedded on marketing page.
+- [ ] Phase 1 — Hero OG cards refreshed + 4 cinematic video shots rendered + uploaded; embedded on marketing page.
 - [ ] Phase 2 — CF Web Analytics beacon flowing pageviews to dashboard.
 - [ ] Phase 3 — Manual Solo + MP playtest sweep walked + documented.
-- [ ] Phase 4 — Sky-shader precision + dither shipped; rainbow-banding gone on Matt's Mac.
+- [x] Phase 4 — Sky-shader precision + dither shipped (commit `04e62e7`, 2026-05-02). Mac visual confirmation via `gh workflow run macos-safari.yml` still pending.
 - [ ] Phase 5 — `v1.1.0` tag pushed.
 - [ ] All vitest specs pass.
 - [ ] Production build clean.

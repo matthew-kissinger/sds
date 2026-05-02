@@ -4,27 +4,29 @@
 
 ## Recently Completed
 
-### Cycle 12 — post-v1-polish (closed 2026-05-02)
+### Cycle 12 — post-v1-polish (closed 2026-05-02; Phase 4 fix shipped post-close)
 
 Plan: [`docs/archive/cycles/cycle-12-plan.md`](archive/cycles/cycle-12-plan.md). Headline:
 
+**Post-close addendum (same day, commit `04e62e7`).** The Phase 4 sky-banding fix that the research doc sketched as "deferred" was pulled forward and shipped: `precision highp float;` + `precision highp int;` declared at source in sky/cloud/grass shaders, plus 1/255 hash dither at sky's final fragment write. New [`tests/shader-precision.spec.js`](../tests/shader-precision.spec.js) — 8 cases pinning the contract. Verification on Matt's actual Mac (via `gh workflow run macos-safari.yml`) still pending after deploy lands. Cinema runner ([`tools/cinematic/run.mjs`](../tools/cinematic/run.mjs)) extended with a live-action static path (mode + liveAction + settleMs) so future hero OG captures can render Solo Extreme mid-flock instead of a paused start screen — `og-rh-sunset` shot scaffolded in [`tools/cinematic/shot-list.mjs`](../tools/cinematic/shot-list.mjs); first-pass capture exposed two issues (only 24/1000 sheep spawned at the chosen settle time; HUD reappeared after `startSolo()` despite `?ui=off`) — fold into Cycle 13 Phase 1 iteration.
+
 - **Phase 1 — A8 stress drift closed.** Same GLB shared-material trap Cycle 11 found for sheepdog and structures, applied to **trees and rocks** in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js): `clearTrees()` and `clearRocks()` were calling `geometry.dispose()` + `material.dispose()` on near-tree/rock InstancedMeshes whose geometry+material are SHARED with the cached GLB models. Disposing invalidated the cache and forced a full texture re-upload on the next swap — the dominant ~41% drift class. Fix: tag near-tree/rock InstancedMeshes with `userData.sharedFromGlbCache = true` on creation; clearers skip dispose for tagged meshes (remove-from-scene only). Far-tree billboards keep their per-swap `MeshBasicMaterial` dispose path with `.map = null` first so the cached impostor texture survives. Added optional per-subsystem `renderer.info` instrumentation in [`disposeScene()`](../js/main.js) gated behind `window.__sdsSwapDriftLog`. New [`tests/swap-drift-glb-guard.spec.js`](../tests/swap-drift-glb-guard.spec.js) — 5 cases pinning the disposal contract.
 - **Phase 2 — UI Button variants shipped with measured scope.** [`Button.js`](../js/components/ui/Button.js) extended with `ghost` (transparent text-link) and `danger` (red destructive) variants on top of the existing `primary` / `secondary` glass family, plus a `size: 'sm' | 'md' | 'lg'` prop. Migrated 3 raw `<button>` sites in [`SettingsPanel.js`](../js/components/StartScreen/SettingsPanel.js): player-profile reset (danger sm), keybind-reset link (ghost sm), Reset defaults header action (danger sm). Two findings the cycle plan didn't anticipate: (a) the mode-shaped HUD extraction (`<SoloClassicHUD>`, `<TimedHUD>`, ...) is N/A — the existing HUD branches by platform + multiplayer status, not by mode; (b) the raw button count is 60 across 20 files, not ~40-50 in SettingsPanel (which has 8). The remaining specialized clusters (Toggle, TabButton, KeyBindButton, PresetButton, MenuOption, icon-circular zoom/sprint, mode-themed completion-screen CTA) stay distinct on purpose — they're separate UI primitives, not visual variants.
-- **Phase 4 — Mac bug research doc shipped at [`docs/mac-bug-research.md`](mac-bug-research.md).** Three concrete findings: (1) Browserbase no-go for Safari — managed Chromium-family containers only; "WebKit" in Playwright is the bundled non-Metal build. The provisioned `BROWSERBASE_API_KEY` is retained for Chromium remote work. (2) Sky shader has no precision declaration — likely root cause of rainbow horizon-banding under Apple's WebKit-on-Metal. Fix sketch (precision highp + 1/255 hash dither) deferred to Cycle 13 Phase 4. (3) White-ground bug is terrain-only; suspect surface narrowed to inline `ShaderMaterial` in [`TerrainBuilder.js:468-575`](../js/TerrainBuilder.js) (the cycle plan's `BlendedTerrainMaterial` doesn't exist), grass external `.glsl` shaders, or `<fog_fragment>` chunk wiring. Pending Matt's `__sdsDiag` capture from his actual machine to discriminate.
+- **Phase 4 — Mac bug research doc shipped at [`docs/mac-bug-research.md`](mac-bug-research.md), AND the sky-banding fix shipped post-close on the same day (commit `04e62e7`).** Three concrete findings: (1) Browserbase no-go for Safari — managed Chromium-family containers only; "WebKit" in Playwright is the bundled non-Metal build. The provisioned `BROWSERBASE_API_KEY` is retained for Chromium remote work. (2) Sky shader was missing a precision declaration — likely root cause of rainbow horizon-banding under Apple's WebKit-on-Metal. Fix landed: `precision highp float;` + `precision highp int;` in sky/cloud/grass shaders + 1/255 hash dither at sky's final fragment write + new vitest spec pinning the contract. (3) White-ground bug is terrain-only; suspect surface narrowed to inline `ShaderMaterial` in [`TerrainBuilder.js:468-575`](../js/TerrainBuilder.js) (the cycle plan's `BlendedTerrainMaterial` doesn't exist), grass external `.glsl` shaders, or `<fog_fragment>` chunk wiring. Pending Matt's `__sdsDiag` capture from his actual machine to discriminate.
 - **Phase 6 — Leaderboard data-visibility + filter UX shipped 2026-05-02.** Worker validates `mode=` at boundary (400 not 500); `getLeaderboard` slow-path → fast-path fallback when filters match mode's natural partition; `getAllLeaderboards` per-mode dispatch (drops `sheepCount` on solo/timed). Migration `0005_score_submissions_backfill.sql` applied to prod. Frontend wraps filters in collapsible `▾ Filters` disclosure (default-collapsed on solo+timed), defaults `sheepFilter=0` everywhere, surfaces inline + empty-state Clear-filters action. New [`tests/worker-leaderboard.spec.ts`](../tests/worker-leaderboard.spec.ts) — 25 cases.
 
 Validation:
-- 141/141 vitest pass (was 136; +5 new from `tests/swap-drift-glb-guard.spec.js`).
+- 149/149 vitest pass (was 136; +5 from `tests/swap-drift-glb-guard.spec.js`, +8 from `tests/shader-precision.spec.js`).
 - Production build clean (739 KB main / 615 KB three / 218 KB main gzip; matches Cycle 11 baseline).
 - Worker `wrangler deploy` clean (Phase 6 deployed 2026-05-02).
 - Sim-baseline byte-identical (preserved through cycles 5-12).
 
 Carryover to Cycle 13:
 
-- **Phase 3 — Cinematic video shots.** Pipeline ready (ffmpeg, Playwright Chromium 1217, sharp, shot list, all 8 `__sdsCinema` API methods implemented). Render not executed in Cycle 12 because iterating shot framing requires a visible Chromium window + visual judgment, and re-running the runner re-renders committed OG/dog/PWA assets with sub-pixel-different WebP encoding (diff noise). Cycle 13 Phase 1.
+- **Phase 3 — Cinematic video shots + hero OG refresh.** Pipeline ready (ffmpeg, Playwright Chromium 1217, sharp, shot list, all 8 `__sdsCinema` API methods implemented). Cycle 12 close-day post-mortem also stood up the live-action static path in `run.mjs` and a scaffolded `og-rh-sunset` shot — first-pass capture surfaced two issues to fix tomorrow (sheep settle time too short for 1000-sheep spawn; HUD reappears after `startSolo()` despite `?ui=off`). Cycle 13 Phase 1.
 - **Phase 5 — CF Web Analytics + manual playtest.** Pure Matt-gated. CF beacon `<script>` lives only in CF Pages dashboard; manual playtest needs a real player. Cycle 13 Phases 2-3.
-- **Sky-banding fix.** Sketched in research doc. Cycle 13 Phase 4.
-- **`v1.1.0` tag.** Deferred until Phase 1 (videos) + Phase 4 (sky banding) land. Cycle 13 Phase 5.
+- **Sky-banding fix.** ✅ Shipped post-cycle-close on the same day (commit `04e62e7`). Cycle 13 Phase 4 marked closed at draft time.
+- **`v1.1.0` tag.** Deferred until Phase 1 (videos + hero OG) lands. Cycle 13 Phase 5.
 
 Commits (Cycle 12):
 
@@ -32,7 +34,9 @@ Commits (Cycle 12):
 - [`7a266b3`](https://github.com/matthew-kissinger/sds/commit/7a266b3) fix(swap): cycle 12 phase 1 — close A8 stress drift via GLB shared-material guard
 - [`fd9cef9`](https://github.com/matthew-kissinger/sds/commit/fd9cef9) feat(ui): cycle 12 phase 2 — Button.js ghost+danger variants + size prop
 - [`49a1403`](https://github.com/matthew-kissinger/sds/commit/49a1403) docs(mac-bug): cycle 12 phase 4 — research doc for white-ground + sky banding
-- (Cycle 12 cycle-close commits to be appended at push time.)
+- [`3420588`](https://github.com/matthew-kissinger/sds/commit/3420588) docs(cycle-close): cycle 12 closed — archive plan, scaffold cycle 13
+- [`04e62e7`](https://github.com/matthew-kissinger/sds/commit/04e62e7) fix(sky): cycle 12 phase 4 — pin highp + dither sky/cloud/grass shaders (post-close addendum)
+- (Cycle 12 final commits to be appended at push time.)
 
 ### Cycle 11 — release-finish (closed 2026-04-28)
 

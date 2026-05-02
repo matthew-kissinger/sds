@@ -2,6 +2,8 @@
 
 > Cycle 12 Phase 4 deliverable. Photos at `~/Downloads/sds-mac-bug/` (NOT in repo).
 > Status as of 2026-05-02: bug does NOT reproduce on GH Actions Safari (`macos-latest` runner with `safaridriver`). Two daily nightly runs in a row green: 2026-04-30, 2026-05-01.
+>
+> **Update 2026-05-02 (post-cycle-close):** the sky-banding fix sketched below was actually shipped (commit `04e62e7` — `precision highp float;` + `precision highp int;` in sky/cloud/grass shaders, plus 1/255 hash dither at sky's final fragment write). Verification on Matt's actual Mac is still pending; trigger the macOS Safari workflow manually via `gh workflow run macos-safari.yml` after deploy lands. White-ground hypothesis is unchanged — still pending Matt's `__sdsDiag` capture.
 
 ## Symptoms (from photo evidence)
 
@@ -82,9 +84,9 @@ Verified 2026-05-02:
 
 **Free-tier limits** for Browserbase are not a constraint here because we are not using Safari support that does not exist. The key remains in `~/.config/mk-agent/env` for any future Chromium-based remote work.
 
-## Sky-banding fix — implementation sketch (deferred)
+## Sky-banding fix — implementation (shipped 2026-05-02 in commit `04e62e7`)
 
-Not landing in Cycle 12 (Phase 4 acceptance is "fix or document"; documenting is the chosen path). When the time comes, the diff is roughly:
+Originally documented as deferred; pulled forward and shipped post-cycle-close. The sketch below is the actual diff that landed:
 
 ```glsl
 // js/atmosphere/skyShader.glsl.js — fragment header
@@ -109,6 +111,8 @@ gl_FragColor = vec4(texColor + vec3(dither), 1.0);
 `hash21` is already defined in this shader (line 95).
 
 **Test plan when shipping:** run `npm test`, run `npm run build`, smoke locally, then trigger the macOS Safari workflow manually via `gh workflow run macos-safari.yml` and inspect the artifact for any banding-style diffs in the captured framebuffer samples.
+
+**Test status (shipped 2026-05-02):** 149/149 vitest pass, including 8 new cases in `tests/shader-precision.spec.js` pinning the precision declarations + the dither math in source. Production build clean. `gh workflow run macos-safari.yml` verification still pending after the deploy lands.
 
 ## Open questions
 
