@@ -95,7 +95,11 @@ export const SHOTS = [
         scene: 'rolling-hills',
         mode: 'extreme',          // Solo Extreme = exactly 1000 sheep
         liveAction: true,         // skip pauseSimulation so the flock is moving
-        settleMs: 4500,           // give 1000 sheep time to spawn + settle
+        // Cycle 13 Phase 1 fix: gate on actual flock size instead of a
+        // fixed wait. First-pass capture at settleMs=4500 only spawned
+        // 24/1000 sheep. waitForFlockSize polls the sheep system directly.
+        waitForFlockSize: 1000,
+        settleMs: 1200,           // brief post-settle for boid distribution
         sun: 0.06,                // dusk, just above horizon (mirrors dog-into-sunset)
         // Behind-the-dog low overlook: dog-spawn at world origin, sun
         // sets to the west. Camera placed back+high enough to see the

@@ -199,6 +199,25 @@ export function installCinemaApi(game) {
         },
 
         /**
+         * Wait until the optimized sheep system has spawned at least
+         * `target` instances. Used by live-action static shots so we
+         * don't capture mid-spawn-pop. At Solo Extreme = 1000 sheep,
+         * spawn takes ~6-10s on desktop; chaos = 5000 takes longer.
+         * Falls back to a settle delay if the sheep system isn't reachable.
+         */
+        async waitForFlockSize(target, timeoutMs = 30000) {
+            const start = performance.now();
+            while (true) {
+                const count = game.gameState?.optimizedSheepSystem?.sheep?.length ?? 0;
+                if (count >= target) return count;
+                if (performance.now() - start > timeoutMs) {
+                    throw new Error(`waitForFlockSize timeout: have ${count}, want ${target}`);
+                }
+                await new Promise(r => requestAnimationFrame(r));
+            }
+        },
+
+        /**
          * Pose a single dog model at origin against a neutral backdrop plane.
          * Used by Phase 3 to render dog thumbnails (DogSelection PNGs).
          * Removes existing flock + dog, mounts a fresh clone of the named

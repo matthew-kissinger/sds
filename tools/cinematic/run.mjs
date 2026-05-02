@@ -219,23 +219,44 @@ async function captureStatic(page, shot) {
     // we kick off the gameplay (so e.g. Solo Extreme spawns 1000 sheep);
     // when `liveAction` is set we leave the simulation running so sheep
     // are mid-flock when we capture, instead of frozen on the start
-    // screen. `settleMs` lets the shot settle for a moment before we
-    // grab the frame so spawn pops aren't visible.
+    // screen. Cycle 13 Phase 1 fix: prefer `waitForFlockSize` over
+    // `settleMs` for sheep-count-bound shots (1000 sheep needs 6-10s
+    // on desktop; a fixed settleMs guesses wrong), and re-assert
+    // `hideUI()` after `startSolo()` because the React HUD remounts
+    // when gameplay starts even with `?ui=off` set at boot.
     await page.evaluate((s) => {
         const c = window.__sdsCinema;
         if (s.mode) c.startSolo('jep', s.mode);
+        if (s.mode) c.hideUI(); // re-assert — gameplay start remounts the HUD overlay
         if (typeof s.sun === 'number') c.setSun(s.sun);
         if (s.camera) c.setCameraPose(s.camera.pos, s.camera.target);
         if (!s.liveAction) c.pauseSimulation();
     }, shot);
-    await page.waitForTimeout(shot.liveAction ? (shot.settleMs ?? 3000) : 300);
+    if (shot.liveAction && shot.waitForFlockSize) {
+        console.log(`[CINEMA] [${shot.id}] waiting for ${shot.waitForFlockSize} sheep…`);
+        try {
+            const reached = await page.evaluate(
+                (target) => window.__sdsCinema.waitForFlockSize(target, 30000),
+                shot.waitForFlockSize
+            );
+            console.log(`[CINEMA] [${shot.id}] flock reached ${reached} sheep`);
+        } catch (err) {
+            console.warn(`[CINEMA] [${shot.id}] waitForFlockSize failed: ${err.message} — proceeding anyway`);
+        }
+        // Brief settle after target reached so sheep distribute past
+        // initial cluster spawn poses (boids smooth out in <1s).
+        await page.waitForTimeout(shot.settleMs ?? 800);
+    } else {
+        await page.waitForTimeout(shot.liveAction ? (shot.settleMs ?? 3000) : 300);
+    }
     if (shot.liveAction && shot.camera) {
         // setCameraPose runs once; if the game's CameraController grabbed
         // back during settle (it does — Classic camera is rebuilt per
-        // frame), re-pin the pose just before the capture.
+        // frame), re-pin the pose AND re-assert hideUI just before capture.
         await page.evaluate((s) => {
             const c = window.__sdsCinema;
             c.setCameraPose(s.camera.pos, s.camera.target);
+            c.hideUI();
         }, shot);
         await page.waitForTimeout(50);
     }
