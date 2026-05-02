@@ -715,6 +715,12 @@ export class TerrainBuilder {
                         child.material,
                         instances.length
                     );
+                    // Cycle 12 Phase 1 A8: this InstancedMesh shares its
+                    // geometry + material with the cached GLB model. Tag so
+                    // clearTrees() removes-from-scene only — disposing would
+                    // invalidate the GLB cache and force a texture re-upload
+                    // on the next swap (the dominant ~41% drift class).
+                    instancedMesh.userData.sharedFromGlbCache = true;
 
                     instances.forEach((instance, i) => {
                         dummy.position.copy(instance.position);
@@ -1180,7 +1186,10 @@ export class TerrainBuilder {
                         child.material,
                         instances.length
                     );
-                    
+                    // Cycle 12 Phase 1 A8: shared with the cached GLB. Tag so
+                    // clearRocks() does not dispose — see clearTrees comment.
+                    instancedMesh.userData.sharedFromGlbCache = true;
+
                     // Set up instances
                     instances.forEach((instance, i) => {
                         dummy.position.copy(instance.position);
@@ -1189,12 +1198,12 @@ export class TerrainBuilder {
                         dummy.updateMatrix();
                         instancedMesh.setMatrixAt(i, dummy.matrix);
                     });
-                    
+
                     // Disable rock shadows on mobile
                     instancedMesh.castShadow = !this.isMobile;
                     instancedMesh.receiveShadow = true;
                     instancedMesh.instanceMatrix.needsUpdate = true;
-                    
+
                     this.scene.add(instancedMesh);
                     instancedMeshes.push(instancedMesh);
                 }
@@ -1609,20 +1618,34 @@ export class TerrainBuilder {
      */
     clearTrees() {
         console.log(`[BUILD] Removing ${this.trees.length} existing trees`);
-        
+
         this.trees.forEach(tree => {
             this.scene.remove(tree);
-            // Dispose of geometry and materials to free memory
+            // Cycle 12 Phase 1 A8: near-tree InstancedMeshes share their
+            // geometry + material with the cached GLB models. Disposing them
+            // invalidates the cache and forces a full texture re-upload on
+            // the next swap (the dominant leak class behind the ~41% texture
+            // drift). Far billboards (cross-quad impostors) DO own their
+            // MeshBasicMaterial — that's per-swap allocated. Their `.map`
+            // points at the cached impostor texture which must NOT be
+            // disposed (cleared explicitly below).
+            if (tree.userData?.sharedFromGlbCache) return;
             if (tree.geometry) tree.geometry.dispose();
             if (tree.material) {
                 if (Array.isArray(tree.material)) {
-                    tree.material.forEach(mat => mat.dispose());
+                    tree.material.forEach(mat => {
+                        if (mat) {
+                            mat.map = null;
+                            mat.dispose();
+                        }
+                    });
                 } else {
+                    tree.material.map = null;
                     tree.material.dispose();
                 }
             }
         });
-        
+
         this.trees = []; // Clear the tracking array
     }
     
@@ -1913,11 +1936,14 @@ export class TerrainBuilder {
 
         this.rocks.forEach(rock => {
             this.scene.remove(rock);
-            // Dispose of geometry and materials to free memory
+            // Cycle 12 Phase 1 A8: rock InstancedMeshes share their geometry +
+            // material with the cached GLB. See clearTrees() for the full
+            // explanation of the GLB-shared-material trap.
+            if (rock.userData?.sharedFromGlbCache) return;
             if (rock.geometry) rock.geometry.dispose();
             if (rock.material) {
                 if (Array.isArray(rock.material)) {
-                    rock.material.forEach(mat => mat.dispose());
+                    rock.material.forEach(mat => mat?.dispose?.());
                 } else {
                     rock.material.dispose();
                 }
