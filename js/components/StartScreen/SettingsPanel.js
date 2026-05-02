@@ -510,21 +510,14 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                     marginBottom: '0.5rem'
                 }
             }, 'Player profile'),
-            createElement('button', {
+            createElement(Button, {
                 key: 'btn',
+                variant: 'danger',
+                size: 'sm',
                 onClick: () => {
                     if (!confirm('Reset your player profile and re-run onboarding? Your local stats and bindings stay.')) return;
                     try { localStorage.removeItem('playerIdentity'); } catch {}
                     window.location.reload();
-                },
-                style: {
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.35)',
-                    color: '#fca5a5',
-                    padding: '0.5rem 0.85rem',
-                    borderRadius: '0.4rem',
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
                 }
             }, 'Reset & re-run onboarding')
         ])
@@ -559,17 +552,11 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                     letterSpacing: '0.05em'
                 }
             }, t('settings.keyBindings')),
-            createElement('button', {
+            createElement(Button, {
                 key: 'reset',
-                onClick: resetKeyBindings,
-                style: {
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'rgba(255,255,255,0.5)',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
-                }
+                variant: 'ghost',
+                size: 'sm',
+                onClick: resetKeyBindings
             }, t('settings.resetBindings'))
         ]),
 
@@ -658,18 +645,11 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                 }
             }, [
                 createElement(PanelTitle, { key: 'title', style: { marginBottom: 0 } }, t('settings.title')),
-                createElement('button', {
+                createElement(Button, {
                     key: 'reset',
-                    onClick: resetToDefaults,
-                    style: {
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        borderRadius: '0.5rem',
-                        padding: '0.4rem 0.75rem',
-                        color: '#fca5a5',
-                        fontSize: '0.75rem',
-                        cursor: 'pointer'
-                    }
+                    variant: 'danger',
+                    size: 'sm',
+                    onClick: resetToDefaults
                 }, t('settings.resetDefaults'))
             ]),
 
