@@ -26,9 +26,10 @@ Run `/cycle-start` to orient on Cycle 13.
 - **Phase 2 (CF Web Analytics)** — Matt-gated, ~30min. Copy beacon `<script>` from CF Pages console into `index.html` head.
 - **Phase 3 (manual playtest sweep)** — Matt-gated, ~2-3hr. Solo (5 modes × 3 scenes = 15 runs minimum), MP (200/250/500/1000 sheep counts), leaderboard surface, plus the Cycle 8/9 carry-forward items. Includes `await window.__sdsStressTestSwaps(5)` to verify Cycle 12 Phase 1 A8 acceptance (drift < 5%) and a sweep on sheepdogsim.com to confirm the sky-banding stripe is gone.
 - **Phase 4 (sky shader precision + dither)** — ✅ **shipped 2026-05-02** in commit `04e62e7`. Mac visual confirmation via `gh workflow run macos-safari.yml` is the only outstanding item.
-- **Phase 5 (`v1.1.0` tag)** — once Phase 1 lands.
+- **Phase 5 (leaderboard scene-as-classification)** — new design ask 2026-05-02 from Matt: scene should be a classification axis, not a filter. Each `(mode, scene)` pair becomes its own top-N. Three open questions (Q1 two-axis tabs vs mode-tab + scene segmented-control; Q2 `getAllLeaderboards` shape; Q3 empty-state CTA) to resolve before coding. See [`docs/cycle-13-plan.md`](docs/cycle-13-plan.md) Phase 5 for the full plan.
+- **Phase 6 (`v1.1.0` tag)** — once Phase 1 lands.
 
-Phases 1, 2, 3 are fully parallelizable. Phase 5 waits on Phase 1.
+Phases 1, 2, 3, 5 are fully parallelizable. Phase 6 waits on Phase 1.
 
 ## Cycle 12 surfaces worth knowing
 

@@ -68,9 +68,31 @@ Carryover from Cycle 12 Phase 4 close-summary research. Pulled forward and shipp
 
 **Acceptance:** Source contract is pinned; tests green; production build clean. **Outstanding verification (Matt-gated):** trigger the macOS Safari workflow manually via `gh workflow run macos-safari.yml` after deploy and inspect the artifact for sky-region samples — the rainbow stripe should be gone. Visual sweep on Matt's actual Mac is the final confirmation.
 
-## Phase 5 — `v1.1.0` tag push (~15min)
+## Phase 5 — Leaderboard scene-as-classification (~3-5hr)
 
-**Depends on:** Phase 1 (videos shipped) and Phase 4 (sky banding fix landed). Phase 2 + Phase 3 are nice-to-haves but should also land first if they're going to.
+Reported 2026-05-02 by Matt at Cycle 12 close: scene should be a classification axis, not a filter. Each `(mode, scene)` pair is fundamentally a different competition (terrain changes strategy) and should have its own top-N leaderboard.
+
+**Depends on:** nothing. Builds on Cycle 12 Phase 6's slow-path / fast-path fallback semantics.
+
+**Open questions before writing code:**
+
+1. **Q1: Two-axis tabs or mode-tab + scene segmented-control inside?** Author lean: mode-tab + scene segmented-control inside, replacing the disclosure. Smaller visual delta from today's surface; reads like "pick a mode, pick a course." Two-axis tabs are cleaner taxonomically but a bigger UX rewrite.
+2. **Q2: Does `getAllLeaderboards` (the panel-overview endpoint) return one entry per (mode, scene) or per mode with an embedded scene rollup?** Author lean: one entry per (mode, scene) — cleaner, mirrors the slow-path query shape, lets the frontend dedupe by mode locally.
+3. **Q3: What does the empty-state look like when a (mode, scene) pair has no entries?** Today's "Clear filters" affordance won't apply since the user is making an explicit choice, not filtering. Probably "Be the first — play this scene now" CTA that links into the start screen pre-selected.
+
+**Plan (subject to Q1-Q3 resolution):**
+
+1. **Frontend ([`js/components/Multiplayer/GlobalLeaderboard.js`](../js/components/Multiplayer/GlobalLeaderboard.js)):** scene becomes a primary classification. Replace the collapsible Filters disclosure on solo+timed tabs with a scene segmented-control directly under the tab header (Field / Rolling Hills / Open Country). Cooperative + competitive keep their existing filter model since they don't have meaningful per-scene partitioning today (or do they? — fold into Q3).
+2. **Worker:** `getLeaderboard` already partitions by `(mode, scene_id, sheep_count)` — no schema change. The frontend just stops defaulting `scene=` to undefined and starts always sending it. Validate at the boundary that scene is a known scene id.
+3. **`getAllLeaderboards` shape:** decide per Q2. If one-entry-per-(mode,scene), bump 7 modes × 3 scenes = 21 board responses; might want pagination or a "summary" mode that returns top-3 only.
+4. **No D1 backfill needed.** The 0005 backfill from Cycle 12 already synthesized one row per (player, mode) on the mode's natural scene; entries on non-natural scenes simply have no row, which is correct ("no entries on this leaderboard yet").
+5. **Tests:** extend [`tests/worker-leaderboard.spec.ts`](../tests/worker-leaderboard.spec.ts) — every (mode, scene) pair returns the right top-N. New frontend snapshot test (when introduced) for the segmented-control wiring.
+
+**Acceptance:** Each `(mode, scene)` pair has its own top-N visible directly in the panel. Scene is no longer a filter — it's a classification axis. Empty (mode, scene) pairs show a helpful CTA, not a "clear filter" affordance. No regression on existing valid scene+sheepCount combinations for cooperative/competitive.
+
+## Phase 6 — `v1.1.0` tag push (~15min)
+
+**Depends on:** Phase 1 (videos + hero OG shipped). Phases 2, 3, 5 are nice-to-haves but should land first if they're going to.
 
 1. Bump version in [`package.json`](../package.json) and [`worker/package.json`](../worker/package.json).
 2. Append CHANGELOG entry.
@@ -81,14 +103,15 @@ Carryover from Cycle 12 Phase 4 close-summary research. Pulled forward and shipp
 ## Dependencies
 
 ```
-Phase 1 (videos)         — independent, Matt-gated
-Phase 2 (CF Analytics)   — independent, Matt-gated
-Phase 3 (playtest)       — depends on Cycle 12 Phase 6 (closed); Matt-gated
-Phase 4 (sky precision)  — independent
-Phase 5 (v1.1.0 tag)     — depends on Phase 1 + Phase 4
+Phase 1 (videos + hero OG)            — independent, Matt-gated
+Phase 2 (CF Analytics)                — independent, Matt-gated
+Phase 3 (playtest)                    — depends on Cycle 12 Phase 6 (closed); Matt-gated
+Phase 4 (sky precision)               — closed 2026-05-02
+Phase 5 (leaderboard classification)  — independent
+Phase 6 (v1.1.0 tag)                  — depends on Phase 1
 ```
 
-Phases 1-4 are fully parallelizable. Phase 5 waits on the others.
+Phases 1, 2, 3, 5 fully parallelizable. Phase 6 waits on Phase 1.
 
 ## Frozen files (cycle-specific additions)
 
@@ -117,7 +140,8 @@ Phases 1-4 are fully parallelizable. Phase 5 waits on the others.
 - [ ] Phase 2 — CF Web Analytics beacon flowing pageviews to dashboard.
 - [ ] Phase 3 — Manual Solo + MP playtest sweep walked + documented.
 - [x] Phase 4 — Sky-shader precision + dither shipped (commit `04e62e7`, 2026-05-02). Mac visual confirmation via `gh workflow run macos-safari.yml` still pending.
-- [ ] Phase 5 — `v1.1.0` tag pushed.
+- [ ] Phase 5 — Leaderboard scene-as-classification: each `(mode, scene)` pair has its own top-N; scene is no longer a filter.
+- [ ] Phase 6 — `v1.1.0` tag pushed.
 - [ ] All vitest specs pass.
 - [ ] Production build clean.
 - [ ] Live on sheepdogsim.com via GH Actions.
