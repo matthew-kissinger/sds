@@ -215,20 +215,37 @@ async function captureStatic(page, shot) {
     await page.evaluate(() => window.__sdsCinema.waitReady());
     await page.waitForTimeout(1500);
 
+    // Cycle 12 (post-close): live-action static path. When `mode` is set
+    // we kick off the gameplay (so e.g. Solo Extreme spawns 1000 sheep);
+    // when `liveAction` is set we leave the simulation running so sheep
+    // are mid-flock when we capture, instead of frozen on the start
+    // screen. `settleMs` lets the shot settle for a moment before we
+    // grab the frame so spawn pops aren't visible.
     await page.evaluate((s) => {
         const c = window.__sdsCinema;
+        if (s.mode) c.startSolo('jep', s.mode);
         if (typeof s.sun === 'number') c.setSun(s.sun);
         if (s.camera) c.setCameraPose(s.camera.pos, s.camera.target);
-        c.pauseSimulation();
+        if (!s.liveAction) c.pauseSimulation();
     }, shot);
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(shot.liveAction ? (shot.settleMs ?? 3000) : 300);
+    if (shot.liveAction && shot.camera) {
+        // setCameraPose runs once; if the game's CameraController grabbed
+        // back during settle (it does — Classic camera is rebuilt per
+        // frame), re-pin the pose just before the capture.
+        await page.evaluate((s) => {
+            const c = window.__sdsCinema;
+            c.setCameraPose(s.camera.pos, s.camera.target);
+        }, shot);
+        await page.waitForTimeout(50);
+    }
 
     const pngBuf = await page.screenshot({ type: 'png' });
     mkdirSync(OG_OUT, { recursive: true });
     const outPath = join(OG_OUT, `${shot.id}.webp`);
     await sharp(pngBuf)
         .resize(shot.size.width, shot.size.height)
-        .webp({ quality: 78, effort: 6 })
+        .webp({ quality: 82, effort: 6 })
         .toFile(outPath);
     const sz = statSync(outPath).size;
     console.log(`[CINEMA] [${shot.id}] → ${outPath} (${(sz / 1024).toFixed(1)} KB)`);

@@ -85,6 +85,26 @@ export const SHOTS = [
         size: { width: 1200, height: 630 },
         notes: 'OG card for sharing on RH.',
     },
+    // Cycle 12 marketing refresh — Matt's hero shot ask 2026-05-02.
+    // Behind-the-dog over Rolling Hills at dusk with the Solo Extreme
+    // 1000-sheep flock spread across the hills. Live-action capture so
+    // sheep are mid-flock instead of frozen.
+    {
+        id: 'og-rh-sunset',
+        kind: 'static',
+        scene: 'rolling-hills',
+        mode: 'extreme',          // Solo Extreme = exactly 1000 sheep
+        liveAction: true,         // skip pauseSimulation so the flock is moving
+        settleMs: 4500,           // give 1000 sheep time to spawn + settle
+        sun: 0.06,                // dusk, just above horizon (mirrors dog-into-sunset)
+        // Behind-the-dog low overlook: dog-spawn at world origin, sun
+        // sets to the west. Camera placed back+high enough to see the
+        // dog silhouette + the hills + the flock spread, looking past
+        // the dog toward the horizon.
+        camera: { pos: { x: 18, y: 8, z: 22 }, target: { x: -10, y: 1, z: -20 } },
+        size: { width: 1200, height: 630 },
+        notes: 'Hero OG: behind-dog Rolling Hills sunset with 1000-sheep flock.',
+    },
     {
         id: 'og-open-country',
         kind: 'static',
