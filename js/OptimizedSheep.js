@@ -258,12 +258,14 @@ export class OptimizedSheepSystem {
             uniforms: {
                 time: { value: 0 },
                 globalAnimSpeed: { value: 1.0 },
-                fogColor: { value: new THREE.Color(0x87CEEB) },
-                fogNear: { value: 200 },
-                fogFar: { value: 600 }
+                // Synced to scene.fog every frame in update() so sheep fade
+                // to the same horizon color as the terrain. Initial values
+                // are placeholders — Atmosphere overwrites them per-frame.
+                fogColor: { value: new THREE.Color(0xcccccc) },
+                fogDensity: { value: 0.0006 }
             },
             vertexColors: true,
-            fog: false // We handle fog manually in shader
+            fog: false // We handle fog manually in shader (synced to scene.fog)
         });
     }
     
@@ -533,6 +535,22 @@ export class OptimizedSheepSystem {
 
         // Update time uniform
         this.material.uniforms.time.value += deltaTime;
+
+        // Sync fog to scene.fog so distant sheep fade to the same horizon
+        // color as the terrain (Atmosphere updates scene.fog.color per
+        // frame from the sky's horizon). Supports FogExp2 (current) and
+        // falls back gracefully for legacy linear THREE.Fog.
+        const sceneFog = this.scene && this.scene.fog;
+        if (sceneFog) {
+            this.material.uniforms.fogColor.value.copy(sceneFog.color);
+            if (sceneFog.isFogExp2) {
+                this.material.uniforms.fogDensity.value = sceneFog.density;
+            } else if (sceneFog.isFog) {
+                // Approximate linear fog as an FogExp2 density that hits
+                // ~95% opacity at `far`. exp(-d*d*far*far)=0.05 → d≈sqrt(3)/far.
+                this.material.uniforms.fogDensity.value = 1.732 / Math.max(1, sceneFog.far);
+            }
+        }
 
         // Ensure instance matrix is available
         if (!this.instancedMesh.instanceMatrix) {
@@ -1100,8 +1118,7 @@ export class OptimizedSheepSystem {
 
             uniform float time;
             uniform vec3 fogColor;
-            uniform float fogNear;
-            uniform float fogFar;
+            uniform float fogDensity;
 
             float hash(vec3 p) {
                 p = fract(p * 0.3183099 + 0.1);
@@ -1173,8 +1190,9 @@ export class OptimizedSheepSystem {
 
                 finalColor -= vec3(0.03) * vDisplacement * 1.5;
 
+                // FogExp2 — matches scene.fog, kept in sync via update().
                 float depth = length(vViewPosition);
-                float fogFactor = smoothstep(fogNear, fogFar, depth);
+                float fogFactor = 1.0 - exp(-fogDensity * fogDensity * depth * depth);
                 finalColor = mix(finalColor, fogColor, fogFactor);
                 gl_FragColor = vec4(finalColor, 1.0);
             }

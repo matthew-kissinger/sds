@@ -13,8 +13,7 @@ varying float vVertexId;
 
 uniform float time;
 uniform vec3 fogColor;
-uniform float fogNear;
-uniform float fogFar;
+uniform float fogDensity;
 
 // Noise functions for wool texture
 float hash(vec3 p) {
@@ -96,9 +95,11 @@ void main() {
     // Subtle displacement-based shading
     finalColor -= vec3(0.03) * vDisplacement * 1.5;
 
-    // Apply fog
+    // FogExp2 — matches scene.fog (driven per-frame by Atmosphere to the
+    // sky horizon color). Without this, sheep faded to a hardcoded sky-blue
+    // while terrain faded to the warm horizon, making far sheep look blue.
     float depth = length(vViewPosition);
-    float fogFactor = smoothstep(fogNear, fogFar, depth);
+    float fogFactor = 1.0 - exp(-fogDensity * fogDensity * depth * depth);
     finalColor = mix(finalColor, fogColor, fogFactor);
 
     gl_FragColor = vec4(finalColor, 1.0);

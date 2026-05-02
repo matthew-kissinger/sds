@@ -9,8 +9,7 @@ uniform vec3 baseColor;
 uniform vec3 midColor;
 uniform vec3 tipColor;
 uniform vec3 fogColor;
-uniform float fogNear;
-uniform float fogFar;
+uniform float fogDensity;
 uniform vec3 uCameraPos;
 
 varying vec2 vUv;
@@ -48,9 +47,9 @@ void main() {
     float backlight = 1.0 + (1.0 - abs(dot(toCamera, vec3(0.0, 1.0, 0.0)))) * vHeight * 0.15;
     color *= backlight;
 
-    // Distance fog
+    // FogExp2 — matches scene.fog (kept in sync with the sky horizon).
     float dist = length(vWorldPos - uCameraPos);
-    float fogFactor = smoothstep(fogNear, fogFar, dist);
+    float fogFactor = 1.0 - exp(-fogDensity * fogDensity * dist * dist);
     color = mix(color, fogColor, fogFactor);
 
     gl_FragColor = vec4(color, 1.0);

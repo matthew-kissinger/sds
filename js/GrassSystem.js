@@ -150,10 +150,11 @@ export class GrassSystem {
             grassFadeStart: 70,
             grassFadeEnd: 260,
 
-            // Fog
-            fogNear: 200,
-            fogFar: 550,
-            fogColor: new THREE.Color(0x87CEEB)
+            // Fog — placeholders only. update() syncs to scene.fog every
+            // frame so distant grass fades to the same horizon color the
+            // Atmosphere driver writes into scene.fog (matches sky + terrain).
+            fogDensity: 0.0006,
+            fogColor: new THREE.Color(0xcccccc)
         };
 
         // Runtime state
@@ -427,10 +428,9 @@ export class GrassSystem {
             interactionRadius: { value: this.config.interactionRadius },
             interactionStrength: { value: this.config.interactionStrength },
 
-            // Fog
+            // Fog (synced to scene.fog every frame in update())
             fogColor: { value: this.config.fogColor },
-            fogNear: { value: this.config.fogNear },
-            fogFar: { value: this.config.fogFar },
+            fogDensity: { value: this.config.fogDensity },
 
             // Camera for distance calculations
             uCameraPos: { value: new THREE.Vector3() },
@@ -731,8 +731,7 @@ export class GrassSystem {
             uniform vec3 midColor;
             uniform vec3 tipColor;
             uniform vec3 fogColor;
-            uniform float fogNear;
-            uniform float fogFar;
+            uniform float fogDensity;
             uniform vec3 uCameraPos;
 
             varying vec2 vUv;
@@ -779,9 +778,10 @@ export class GrassSystem {
                 float rim = pow(max(dot(toCamera, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
                 color += rim * tipColor * 0.6 * tipMask;
 
-                // Distance fog
+                // FogExp2 — matches scene.fog (Atmosphere keeps the color
+                // and density in sync with the sky horizon every frame).
                 float dist = length(vWorldPos - uCameraPos);
-                float fogFactor = smoothstep(fogNear, fogFar, dist);
+                float fogFactor = 1.0 - exp(-fogDensity * fogDensity * dist * dist);
                 color = mix(color, fogColor, fogFactor);
 
                 gl_FragColor = vec4(color, 1.0);
@@ -1073,6 +1073,19 @@ export class GrassSystem {
             // Update camera position for fog/lighting calculations
             if (camera) {
                 this.grassMaterial.uniforms.uCameraPos.value.copy(camera.position);
+            }
+
+            // Sync fog to scene.fog so distant grass fades to the same horizon
+            // color the Atmosphere driver writes per frame (FogExp2 currently;
+            // legacy linear THREE.Fog handled via density approximation).
+            const sceneFog = this.scene && this.scene.fog;
+            if (sceneFog) {
+                this.grassMaterial.uniforms.fogColor.value.copy(sceneFog.color);
+                if (sceneFog.isFogExp2) {
+                    this.grassMaterial.uniforms.fogDensity.value = sceneFog.density;
+                } else if (sceneFog.isFog) {
+                    this.grassMaterial.uniforms.fogDensity.value = 1.732 / Math.max(1, sceneFog.far);
+                }
             }
         }
 
