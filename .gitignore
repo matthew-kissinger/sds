@@ -111,3 +111,4 @@ verify[0-9]*-*.png
 
 # GLB compression backups (regenerable from git history if rolled back)
 assets/_originals/
+TODO.local.txt
