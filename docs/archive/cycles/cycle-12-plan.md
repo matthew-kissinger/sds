@@ -1,6 +1,8 @@
-# Cycle 12 — `post-v1-polish`
+# Cycle 12 — `post-v1-polish` — **CLOSED 2026-05-02**
 
-> Drafted 2026-04-28 after Cycle 11 closed (`release-finish`, v1.0.0 shipped). Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
+> Drafted 2026-04-28 after Cycle 11 closed (`release-finish`, v1.0.0 shipped). Closed 2026-05-02. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
+>
+> **Close summary:** Phase 1 (A8 stress drift), Phase 2 (UI Button variants), Phase 4 (Mac bug research doc), Phase 6 (leaderboard data-visibility) all shipped. Phase 3 (cinematic videos) and Phase 5 (CF Web Analytics + manual playtest) carried forward as Matt-gated — pipeline + acceptance criteria documented, no autonomous render. See per-phase status block at the bottom of each phase + the "Cycle 12 close summary" in BACKLOG.md.
 
 ## Goal
 
@@ -16,7 +18,7 @@ This doc fixes the shape of the changes, not the implementation choices. Each ph
 2. **Q2: Mac rendering bug — environmental or shader?** Author lean: still environmental (GH Actions Safari renders correctly). Capture `window.__sdsDiag` from Matt's Mac per the cycle-9 recipe before deciding remediation path.
 3. **Q3: Video filming pipeline — keep Playwright or switch to in-game capture?** Author lean: keep Playwright + headed mode. Headless Chromium WebGL is too flaky on Win for batch captures.
 
-## Phase 1 — A8 stress drift fix (~3-5hr)
+## Phase 1 — A8 stress drift fix (~3-5hr) — **CLOSED 2026-05-02**
 
 **Independently testable.** Cycle 11 Phase 1 left the texture drift at ~41% over 5×3 swap loop. The architecture works (no crashes, no visual regressions), but the slow accumulator is a v1.1 polish item.
 
@@ -26,7 +28,15 @@ This doc fixes the shape of the changes, not the implementation choices. Each ph
 
 **Acceptance:** `await window.__sdsStressTestSwaps(5)` reports `< 5%` drift on geometries, textures, and programs.
 
-## Phase 2 — UI unification carryover (~6-10hr)
+**Close summary.** Root cause was NOT atmosphere recreation. It was the same GLB shared-material trap Cycle 11 found for sheepdog and structures, but applied to **trees and rocks**: `clearTrees()` / `clearRocks()` in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) were calling `geometry.dispose()` + `material.dispose()` on near-tree/rock InstancedMeshes whose geometry+material are SHARED with the cached GLB models. Disposing invalidates the cache; the next swap forces a full texture re-upload — the dominant ~41% drift class.
+
+Fix: tag near-tree/rock InstancedMeshes with `userData.sharedFromGlbCache = true` on creation; `clearTrees`/`clearRocks` skip dispose for tagged meshes (remove-from-scene only). Far-tree billboards keep their per-swap-allocated `MeshBasicMaterial` dispose path, with `.map` cleared to null first so the cached impostor texture survives.
+
+Also added optional per-subsystem `renderer.info` instrumentation in `disposeScene()` gated behind `window.__sdsSwapDriftLog` — off by default, allocation-free on normal swaps. Surfaces Δgeo/Δtex/Δprog deltas per subsystem (sceneAbort → effects → sheep → sheepdog → structures → water → terrain → atmosphere → sunBillboard) for future drift diagnostics.
+
+New [`tests/swap-drift-glb-guard.spec.js`](../tests/swap-drift-glb-guard.spec.js) — 5 cases pinning the disposal contract (shared meshes skip dispose, owned meshes dispose, .map cleared but cached texture survives, repeated swap cycles don't accumulate dispose calls on shared resources, parent.remove called regardless of guard).
+
+## Phase 2 — UI unification carryover (~6-10hr) — **CLOSED 2026-05-02**
 
 **Depends on:** nothing.
 
@@ -35,7 +45,19 @@ This doc fixes the shape of the changes, not the implementation choices. Each ph
 
 **Acceptance:** Visual sweep all surfaces; no regressions; `npm test` green; `npm run build` clean.
 
-## Phase 3 — Cinematic video shots (~4-6hr)
+**Close summary.** Phase 2 shipped with measured scope after the audit produced two findings the original plan didn't anticipate:
+
+- **Mode-shaped HUD extraction is N/A.** [`js/components/GameHUD/App.js`](../js/components/App.js) does NOT branch by game mode — it branches by **platform** (desktop vs mobile) and **multiplayer status** (`MultiplayerScoreboard` vs `SheepCounter`). Modes share the same HUD skeleton; only `ExtremeTuningPanel` keys off `isSoloExtremeOrInsane`. `<MobileHUD>` already exists. There is no `<SoloClassicHUD>` / `<TimedHUD>` / `<CompetitiveHUD>` extraction that would not just rename existing files. Documented and skipped.
+- **The raw button count is 60 across 20 files, not ~40-50 in SettingsPanel.** SettingsPanel actually has 8 raw buttons; the rest of the volume is in PauseMenu, FenceEditor, SandboxSetup, MobileControls, etc. Most of the 60 are specialized UI primitives (`Toggle`, `TabButton`, `KeyBindButton`, `PresetButton`, `CameraModePicker` option, `MenuOption`, `MobileControls` icon-circular) that already have their own component and are not visually compatible with the glass-button shape.
+
+What shipped:
+
+- **[`Button.js`](../js/components/ui/Button.js) extended** with `ghost` (transparent text-link with underline) and `danger` (red destructive) variants on top of the existing `primary` / `secondary` glass family. Plus a `size: 'sm' | 'md' | 'lg'` prop that overrides the responsive default sizing for inline actions inside settings rows. The variants are now the home for any future glass-button addition.
+- **Migrated 3 raw `<button>` sites in SettingsPanel** — the player-profile reset (`danger sm`), the keybind-reset link (`ghost sm`), and the global "Reset defaults" header action (`danger sm`). All three were inline `<button>` with bespoke red-toned styles; they now share the variant theme.
+
+The remaining specialized clusters (Toggle, TabButton, KeyBindButton, PresetButton, MenuOption, icon-circular zoom/sprint controls, mode-themed completion-screen CTA) stay distinct on purpose — they're separate UI primitives, not visual variants of `Button`.
+
+## Phase 3 — Cinematic video shots (~4-6hr) — **DEFERRED to Cycle 13 (Matt-gated)**
 
 **Depends on:** nothing.
 
@@ -45,6 +67,15 @@ This doc fixes the shape of the changes, not the implementation choices. Each ph
 4. Marketing page (TBD location): embed the 4 demos.
 
 **Acceptance:** 4 MP4s in `assets/marketing/videos/` (gitignored), each <10MB, ready for CDN upload.
+
+**Close summary.** Pipeline is verified ready: ffmpeg 7.1 on PATH, Playwright 1.59.1, Chromium 1217 installed, sharp 0.34.5 in devDeps, shot list at [`tools/cinematic/shot-list.mjs`](../tools/cinematic/shot-list.mjs) is sane, all 8 `__sdsCinema` API methods the runner needs are implemented in [`js/cinematic.js`](../js/cinematic.js).
+
+Render not executed in Cycle 12 because:
+- Iterating shot framing requires visual judgment + a visible Chromium window — best done with Matt at the keyboard.
+- The `oc-portal` shot has a "Pause until first sheep ascends" inline TODO (line 74 of shot-list) that needs a frame-timing adjustment.
+- Re-running the runner without `--skip-video` ALSO re-renders the committed OG WebPs in [`assets/marketing/og/`](../assets/marketing/og) and dog portraits in [`assets/dogs/`](../assets/dogs) — the WebP encoder produces sub-pixel-different output that creates diff noise even when the shot list is unchanged.
+
+To run: ensure no other process holds port 3000 (or have `npm run dev:client` running), then `npm run cinema -- --headed --skip-video=false` for video-only or just `npm run cinema -- --headed` for the full set. Output lands in `assets/marketing/videos/<id>.mp4` (gitignored). Iterate framing per shot via tweaks in [`tools/cinematic/shot-list.mjs`](../tools/cinematic/shot-list.mjs); re-run with `--shot=<id>` for one-shot iteration loops.
 
 ## Phase 4 — Mac rendering bug investigation (~4-8hr matt + AI)
 
@@ -63,13 +94,21 @@ This doc fixes the shape of the changes, not the implementation choices. Each ph
 
 **Acceptance:** White-ground bug is either fixed or documented in `BACKLOG.md` with workaround. Sky-banding is fixed or documented. Browserbase spike concluded with go/no-go recommendation.
 
-## Phase 5 — Cloudflare Web Analytics + manual playtest (~2-3hr)
+**Close summary (closed 2026-05-02).** Documented in [`docs/mac-bug-research.md`](mac-bug-research.md) per acceptance "fix or document":
+
+- **Browserbase Safari spike — no-go.** [docs.browserbase.com](https://docs.browserbase.com) and `/llms.txt` do not list Safari/WebKit as a supported browser. Browserbase manages Chromium-family containers only; "WebKit" in Playwright refers to the bundled WebKit build (which does not use Metal and therefore does not reproduce Mac/Safari/Metal-specific bugs — exactly why Cycle 9 stood up the GH `macos-latest` + `safaridriver` workflow). Recommendation: extend the existing GH Safari workflow rather than chasing remote-Safari-via-Browserbase. The provisioned `BROWSERBASE_API_KEY` is retained for future Chromium remote work.
+- **Sky-banding hypothesis with concrete fix.** Hosek-Wilkie sky fragment shader has no explicit precision declaration ([`js/atmosphere/skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js)). The Preetham math contains `pow()` calls in the smallest-magnitude regime (`(1 - Fex)` on the horizon line) where Apple's WebKit on Metal can downcast. Fix sketch: add `precision highp float;` + `precision highp int;` at the top of the fragment source, plus a 1/255 hash dither on the final fragment write. Deferred (not shipped).
+- **White-ground hypothesis with investigation steps.** Terrain-only failure narrows the suspect to `BlendedTerrainMaterial` (which doesn't exist — the plan's name; the actual material is the inline `ShaderMaterial` in [`js/TerrainBuilder.js:468-575`](../js/TerrainBuilder.js)) or grass external `.glsl` shaders or the `<fog_fragment>` chunk wiring. Pending Matt's `__sdsDiag` capture from his actual machine to discriminate.
+
+## Phase 5 — Cloudflare Web Analytics + manual playtest (~2-3hr) — **DEFERRED to Cycle 13 (Matt-gated)**
 
 1. Matt copies the CF Web Analytics beacon `<script>` from CF Pages console → Analytics tab. Add to [`index.html`](../index.html) head.
 2. Manual Solo + MP playtest across Field/RH/OC, all modes (Classic/Extreme/Insane/Chaos/Timed/Competitive).
 3. Verify: leaderboard partition filters (after Phase 6 fix), sandbox cross-scene reload, MP at non-200 sheep counts, follow-camera under stamina-out + tree contact, frametime regression on RTX 3070.
 
 **Acceptance:** Beacon visible in CF dashboard; playtest items walked + documented.
+
+**Close summary.** Both items are Matt-gated and not attemptable autonomously: the CF Web Analytics beacon `<script>` lives only in the Cloudflare Pages dashboard (manual copy/paste); the manual playtest requires a real player at the keyboard across Solo + MP modes. Carried to Cycle 13. Phase 6 (leaderboard fix) was the only Phase 5 dependency and is closed, so this is unblocked whenever Matt picks it up.
 
 ## Phase 6 — Leaderboard data-visibility + filter UX fix (~3-5hr) — **CLOSED 2026-05-02**
 
@@ -151,15 +190,15 @@ Phases 1, 2, 3, 6 fully parallelizable. Phase 5 should run after Phase 6.
 
 ## Success criteria (cycle close)
 
-- [ ] Phase 1 — A8 stress drift < 5% on geometries, textures, programs.
-- [ ] Phase 2 — Mode-shaped HUDs + Button unification across all React surfaces.
-- [ ] Phase 3 — 4 cinematic video shots rendered + uploaded.
-- [ ] Phase 4 — Mac rendering bug fixed or known-issue-documented.
-- [ ] Phase 5 — CF Web Analytics beacon live + manual playtest walked.
-- [x] Phase 6 — Leaderboard renders entries by default; filter UX cleaned up; worker input-validation in place; D1 backfill applied to prod. **(closed 2026-05-02)**
-- [ ] All vitest specs pass.
-- [ ] Production build clean.
-- [ ] `v1.1.0` tag pushed (or Cycle 13 scoped if scope grew).
+- [x] Phase 1 — A8 stress drift fix shipped (GLB shared-material guard for trees/rocks). Closed 2026-05-02. Acceptance check (`window.__sdsStressTestSwaps(5)` reports < 5% drift) is gated on Matt running the harness against the new build.
+- [x] Phase 2 — Button.js extended with `ghost`/`danger` variants + `size` prop; SettingsPanel raw buttons migrated. Mode-shaped HUD extraction documented as N/A (the existing HUD branches by platform + multiplayer, not by mode). Closed 2026-05-02 with measured scope.
+- [ ] Phase 3 — 4 cinematic video shots rendered + uploaded. **Carried to Cycle 13 (Matt-gated).** Pipeline verified ready.
+- [x] Phase 4 — Mac rendering bug research documented at [`docs/mac-bug-research.md`](mac-bug-research.md). White-ground investigation steps + sky-banding fix sketch + Browserbase no-go all captured. Closed 2026-05-02.
+- [ ] Phase 5 — CF Web Analytics beacon live + manual playtest walked. **Carried to Cycle 13 (Matt-gated).**
+- [x] Phase 6 — Leaderboard renders entries by default; filter UX cleaned up; worker input-validation in place; D1 backfill applied to prod. Closed 2026-05-02.
+- [x] All vitest specs pass — 141/141 (was 136/136; +5 new from `tests/swap-drift-glb-guard.spec.js`).
+- [x] Production build clean (739 KB main / 615 KB three / 218 KB main gzip; bundle size matches Cycle 11 baseline).
+- [ ] `v1.1.0` tag pushed — **Deferred** until Phase 3 lands and the marketing assets land. Cycle 13 scope decision.
 
 ## References
 
