@@ -43,6 +43,37 @@ export const ALL_GAME_MODES: GameMode[] = [
   'cooperative',
 ];
 
+const ALL_GAME_MODES_SET: ReadonlySet<string> = new Set(ALL_GAME_MODES);
+
+export function isValidGameMode(mode: unknown): mode is GameMode {
+  return typeof mode === 'string' && ALL_GAME_MODES_SET.has(mode);
+}
+
+// Cycle 12 Phase 6: every materialized-best column on `players` was written
+// against a single natural (scene_id, sheep_count) pair. Pre-Cycle-8 entries
+// were submitted before partition columns existed, so `score_submissions` is
+// sparse for them and the slow path returns []. When a partitioned query
+// targets a mode's NATURAL partition and finds no rows, we fall through to
+// the fast path so old data stays visible. `null` means "no natural partition"
+// (competitive/cooperative are MP and legitimately partition by either dim).
+const MODE_NATURAL_PARTITION: Record<GameMode, { sceneId: string; sheepCount: number } | null> = {
+  soloClassic: { sceneId: 'field', sheepCount: 200 },
+  soloExtreme: { sceneId: 'field', sheepCount: 1000 },
+  soloInsane: { sceneId: 'field', sheepCount: 3000 },
+  soloChaos: { sceneId: 'field', sheepCount: 5000 },
+  timed: { sceneId: 'field', sheepCount: 200 },
+  competitive: null,
+  cooperative: null,
+};
+
+export function isNaturalPartition(mode: GameMode, filters: LeaderboardFilters): boolean {
+  const natural = MODE_NATURAL_PARTITION[mode];
+  if (!natural) return false;
+  const sceneOk = !filters.sceneId || filters.sceneId === 'any' || filters.sceneId === natural.sceneId;
+  const sheepOk = !filters.sheepCount || filters.sheepCount === natural.sheepCount;
+  return sceneOk && sheepOk;
+}
+
 const ADJECTIVES = [
   'Swift', 'Clever', 'Brave', 'Mighty', 'Gentle', 'Wise', 'Bold', 'Quick',
   'Steady', 'Silent', 'Golden', 'Silver', 'Shadow', 'Storm', 'Wind',
@@ -581,6 +612,15 @@ export async function getLeaderboard(
     best_score: number;
   };
   const { results } = await db.prepare(sql).bind(...binds).all<Row>();
+  // Cycle 12 Phase 6: if the partitioned query is empty AND the requested
+  // (scene, sheepCount) is the mode's natural partition, fall through to the
+  // fast path. Pre-Cycle-8 submissions never wrote partition columns, so
+  // their best is materialized on `players.*_best` but absent from
+  // `score_submissions`. Without this, "soloClassic + scene=field" looks
+  // empty even though the all-time leaderboard is populated.
+  if ((!results || results.length === 0) && isNaturalPartition(mode, filters)) {
+    return getLeaderboard(db, mode, limit, {});
+  }
   return (results || []).map((p, i) => ({
     rank: i + 1,
     displayName: p.display_name,
@@ -597,8 +637,18 @@ export async function getAllLeaderboards(
   limit = 10,
   filters: LeaderboardFilters = {},
 ): Promise<Record<string, LeaderboardEntry[]>> {
+  // Cycle 12 Phase 6: per-mode filter dispatch. Solo + timed modes have a
+  // fixed intrinsic sheep count, so the leaderboards-panel sheepCount
+  // dropdown is meaningful only for competitive/cooperative. Drop it for the
+  // others — otherwise picking "250 sheep" in the dropdown blanks every solo
+  // board even though those modes never partition by that count.
   const results = await Promise.all(
-    ALL_GAME_MODES.map(m => getLeaderboard(db, m, limit, filters)),
+    ALL_GAME_MODES.map(m => {
+      const perMode: LeaderboardFilters = MODE_NATURAL_PARTITION[m]
+        ? { sceneId: filters.sceneId }
+        : filters;
+      return getLeaderboard(db, m, limit, perMode);
+    }),
   );
   const out: Record<string, LeaderboardEntry[]> = {};
   for (let i = 0; i < ALL_GAME_MODES.length; i++) out[ALL_GAME_MODES[i]] = results[i];

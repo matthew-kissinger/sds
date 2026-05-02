@@ -1,17 +1,38 @@
-# Next Session — Cycle 12 (`post-v1-polish`) ready to start
+# Next Session — Cycle 12 (`post-v1-polish`) Phase 6 closed; 5 phases remain
 
-> Updated 2026-04-28. Active plan: [`docs/cycle-12-plan.md`](docs/cycle-12-plan.md) — drafted, five parallel-able phases, picks up Cycle 11 carryover. Last closed: [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md). Cold-start agents: read this page top-to-bottom, then [`docs/cycle-12-plan.md`](docs/cycle-12-plan.md), then [`docs/BACKLOG.md`](docs/BACKLOG.md). Earlier cycles: [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md), [`docs/archive/cycles/cycle-9-plan.md`](docs/archive/cycles/cycle-9-plan.md).
+> Updated 2026-05-02 (post Phase 6 land). Active plan: [`docs/cycle-12-plan.md`](docs/cycle-12-plan.md) — Phase 6 (leaderboard data-visibility + filter UX) shipped to prod 2026-05-02. Five phases remain (1, 2, 3, 4, 5). Last closed: [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md). Cold-start agents: read this page top-to-bottom, then [`docs/cycle-12-plan.md`](docs/cycle-12-plan.md), then [`docs/BACKLOG.md`](docs/BACKLOG.md). Earlier cycles: [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md), [`docs/archive/cycles/cycle-9-plan.md`](docs/archive/cycles/cycle-9-plan.md).
 
-## Where the project stands (2026-04-28)
+## Where the project stands (2026-05-02)
 
-- **`sheepdogsim.com` is live with v1.0.0** on Cloudflare Pages + Worker + DO + D1.
-- **Cycle 11 (`release-finish`) closed 2026-04-28.** Headlines: in-process scene swap shipped (`swapScene`/`disposeScene`/`rebuildScene`/`restartToMenu` flipped from hard-reload to true in-process, with `<SceneSwapOverlay>` fade and `history.replaceState`); marketing assets generated via cinematic pipeline (3 OG WebPs, 5 dog portraits, 192/512/maskable PWA icons); `0003_score_anomalies` + `0004_events` migrations applied to prod D1; new `/api/event` route + `js/telemetry.js` wrapper + 4 wired events; sky exposure fix on pastoral-noon (was crushing to white through ACES); rocks no longer spawn inside Field play area or float above ground.
-- **111/111 vitest pass.** Production build clean. Worker `wrangler deploy --dry-run` clean (179 KB / 37 KB gzip). Sim-baseline byte-identical (preserved through cycles 5-11).
-- **Cycle 12 (`post-v1-polish`) plan drafted.** Five phases — A8 stress drift fix (Phase 1), UI unification carryover (Phase 2), cinematic video shots (Phase 3), Mac rendering bug investigation (Phase 4), CF Web Analytics + manual playtest (Phase 5).
+- **`sheepdogsim.com` is live with v1.0.0** on Cloudflare Pages + Worker + DO + D1. Three post-v1.0.0 hotfixes on main (`faad467` skip /api/event in dev/e2e; `55f6db7` worker `req`→`request` typo; **Phase 6 leaderboard fix shipped 2026-05-02** — see below).
+- **Cycle 11 (`release-finish`) closed 2026-04-28.** Headlines: in-process scene swap shipped (`swapScene`/`disposeScene`/`rebuildScene`/`restartToMenu` flipped from hard-reload to true in-process, with `<SceneSwapOverlay>` fade and `history.replaceState`); marketing assets generated via cinematic pipeline (3 OG WebPs, 5 dog portraits, 192/512/maskable PWA icons); `0003_score_anomalies` + `0004_events` migrations applied to prod D1; new `/api/event` route + `js/telemetry.js` wrapper + 4 wired events; sky exposure fix on pastoral-noon; rocks no longer spawn inside Field play area or float above ground.
+- **131/131 vitest pass** (was 111; +20 from new `tests/worker-leaderboard.spec.ts`). Production build clean. Worker `wrangler deploy --dry-run` clean (180 KB / 37 KB gzip). Sim-baseline byte-identical (preserved through cycles 5-11).
+- **Cycle 12 (`post-v1-polish`) Phase 6 closed 2026-05-02.** Five phases remain (1, 2, 3, 4, 5). Worker now: validates `mode=` at the boundary (400 not 500), per-mode dispatch in `getAllLeaderboards` (drops sheepCount on solo+timed), and slow-path → fast-path fallback when partition matches mode's natural (scene, sheepCount). Migration `0005_score_submissions_backfill.sql` applied to prod (synthesizes one row per (player, mode) for pre-partition entries). Frontend now: collapsible Filters disclosure (default-collapsed on solo+timed), default `sheepFilter=0`, inline + empty-state Clear-filters action.
+
+## Phase 6 close (2026-05-02) — leaderboard fix shipped
+
+Fix landed on prod. Surface map:
+
+- **Worker** ([`worker/src/index.ts`](worker/src/index.ts), [`worker/src/d1.ts`](worker/src/d1.ts)) — exported `isValidGameMode` validates the `mode=` param at the boundary (400 with `{"error":"invalid mode"}` instead of leaking 500 D1_ERROR). New `MODE_NATURAL_PARTITION` map + exported `isNaturalPartition(mode, filters)` helper drives the slow-path → fast-path fallback in `getLeaderboard` (when the partitioned slow-path returns 0 rows AND the requested `(scene, sheepCount)` matches the mode's natural pair, recurse into the fast path). `getAllLeaderboards` now dispatches per-mode filters: solo + timed modes drop `sheepCount` (their counts are intrinsic, never variable), so picking "250 sheep" from the panel dropdown no longer blanks every solo board.
+- **Migration** ([`worker/migrations/0005_score_submissions_backfill.sql`](worker/migrations/0005_score_submissions_backfill.sql)) — synthesizes one `score_submissions` row per (player, mode) for entries whose materialized best exists on `players.*_best` but has no matching submission row (pre-Cycle-8 entries). Idempotent (`NOT EXISTS` guard), append-only. Belt-and-suspenders to the in-worker fallback.
+- **Frontend** ([`js/components/Multiplayer/GlobalLeaderboard.js`](js/components/Multiplayer/GlobalLeaderboard.js)) — `SOLO_TAB_FIXED_SHEEP_COUNT` map removed; replaced with `FIXED_COUNT_TABS` set covering `soloClassic`/`soloExtreme`/`soloInsane`/`soloChaos`/`timed`. `sheepFilter` defaults to `0` ("Any size") on every tab. Filters now live behind a collapsible `▾ Filters` disclosure: default-collapsed on fixed-count tabs, default-expanded on cooperative/competitive. Active filters surface a `•` in the disclosure label. Empty-state shows an inline `Clear filters` button when filters are responsible for the empty result.
+- **Tests** ([`tests/worker-leaderboard.spec.ts`](tests/worker-leaderboard.spec.ts)) — 25 cases: `isValidGameMode` matrix (rejects unknown modes, casing, non-strings); `isNaturalPartition` matrix (every solo+timed mode at its natural pair, none of the non-natural pairs, no natural for competitive/cooperative); 5 mocked-D1 cases for `getLeaderboard` slow-path → fast-path fallback (fast-path direct, fallback fires on natural-partition empty, no fallback on non-natural-partition empty, no fallback for competitive scene-filter, slow-path-with-rows returns slow-path results without fallback).
+
+### Carry-forward findings (still relevant for later phases)
+
+1. **Mac white-ground bug** — photos at `~/Downloads/sds-mac-bug/` (NOT in repo). Three frames show: pre-bug rendering with **rainbow color-banding stripe across the sky horizon** (separate artifact, likely 8-bit color quantization or ACES tonemap precision); white-ground manifest with **terrain-only failure** (trees/sheep/rocks/fence still render correctly). The terrain-only signal narrows the suspect to `BlendedTerrainMaterial`, the grass instanced mesh, or heightfield texture upload — not a global WebGL context failure. Fold into Phase 4.
+2. **Browserbase API key provisioned** at `~/.config/mk-agent/env` as `BROWSERBASE_API_KEY` — use it for Phase 4 remote-Safari repro spike. Free-tier; flag for upgrade if iteration burns through limits. See `reference_cloudflare.md` memory.
+3. ~~Leaderboard panel renders empty~~ — fixed by Phase 6 (this commit).
 
 ## What to pick up next
 
-Run `/cycle-start` to orient on Cycle 12. Phase 1 (A8 drift fix) is the technical unknown — instrument disposeScene step-by-step to isolate the remaining ~41% texture leak. Phase 2 (UI unification) is mechanical work on a known surface. Phases 3-5 are independent / Matt-gated.
+Run `/cycle-start` to orient on Cycle 12.
+
+**Recommended order (Phase 6 done 2026-05-02):**
+- **Phase 1 (A8 drift)** — the technical unknown. Clean acceptance test (`window.__sdsStressTestSwaps(5)` reports drift). Instrument `disposeScene` step-by-step to isolate the remaining ~41% texture leak.
+- **Phase 2 (UI unification)** is mechanical work on a known surface — good background-thread work.
+- **Phase 5 manual playtest** is now unblocked (Phase 6 dependency satisfied). Walk the Cycle 8/9 backlog plus the new leaderboard surface (`Filters` disclosure, Clear-filters action, partition behavior on MP tabs).
+- **Phases 3-4 are independent / Matt-gated.** Phase 4 (Mac) is Browserbase-enabled so AI can iterate without round-tripping; start the spike when ready.
 
 ## Cycle 11 → 12 carryover (deferred items)
 

@@ -10,6 +10,7 @@ import {
   submitScore,
   getLeaderboard,
   getAllLeaderboards,
+  isValidGameMode,
   type GameMode,
 } from './d1';
 
@@ -384,7 +385,12 @@ export default {
       }
 
       if (path === '/api/leaderboard' && method === 'GET') {
-        const mode = (url.searchParams.get('mode') || 'cooperative') as GameMode;
+        // Cycle 12 Phase 6: validate mode at the boundary. Previously an
+        // unknown mode flowed into the SQL builder and surfaced as a 500
+        // D1_ERROR; now we 400 cleanly.
+        const modeRaw = url.searchParams.get('mode') || 'cooperative';
+        if (!isValidGameMode(modeRaw)) return err('invalid mode', 400, cors);
+        const mode: GameMode = modeRaw;
         const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 10));
         // Cycle 8 Phase 3: optional partition filters.
         const sceneId = url.searchParams.get('scene') || undefined;
