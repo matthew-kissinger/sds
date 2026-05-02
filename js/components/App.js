@@ -549,17 +549,15 @@ export async function initReactUI() {
                             animation: 'subtitleBounce 2.5s ease-in-out infinite 0.15s'
                         };
 
-                        // Wrap everything in a centering container for the main menu
+                        // Wrap everything in a column layout: centered content fills, footer parks at bottom
                         return createElement('div', {
                             key: 'main-menu-wrapper',
                             style: {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                justifyContent: 'center',
                                 width: '100%',
-                                height: '100%',
-                                gap: '0.5rem'
+                                height: '100%'
                             }
                         }, [
                             // Language selector in top-right corner (positioned fixed, so outside flow)
@@ -567,33 +565,47 @@ export async function initReactUI() {
                                 key: 'lang-selector',
                                 style: languageSelectorStyle
                             }, createElement(LanguageSelector, { variant: 'icon' })),
-                            // 3D Title
+                            // Centered content region — claims all available space, footer can't overlap
                             createElement('div', {
-                                key: 'title-container',
-                                style: titleContainerStyle
-                            }, [
-                                createElement('span', { key: 'main', style: mainTitleStyle }, 'Sheepdog'),
-                                createElement('span', { key: 'sub', style: subtitleStyle }, 'Simulator')
-                            ]),
-                            playerIdentity && createElement('p', {
-                                key: 'greeting',
+                                key: 'menu-center',
                                 style: {
-                                    color: 'rgba(255, 255, 255, 0.8)',
-                                    marginBottom: '1rem',
-                                    fontSize: platform.isMobile ? '0.9rem' : '1.125rem',
-                                    animation: 'fadeIn 0.6s ease-out 0.3s both'
+                                    flex: '1 1 auto',
+                                    minHeight: 0,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '100%',
+                                    gap: '0.5rem'
                                 }
-                            }, `Welcome back, ${playerIdentity.displayName}!`),
-                            createElement(ScenePicker, { key: 'scenes' }),
-                            createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect }),
-                            // Credits footer - fixed at bottom
+                            }, [
+                                // 3D Title
+                                createElement('div', {
+                                    key: 'title-container',
+                                    style: titleContainerStyle
+                                }, [
+                                    createElement('span', { key: 'main', style: mainTitleStyle }, 'Sheepdog'),
+                                    createElement('span', { key: 'sub', style: subtitleStyle }, 'Simulator')
+                                ]),
+                                playerIdentity && createElement('p', {
+                                    key: 'greeting',
+                                    style: {
+                                        color: 'rgba(255, 255, 255, 0.8)',
+                                        marginBottom: '1rem',
+                                        fontSize: platform.isMobile ? '0.9rem' : '1.125rem',
+                                        animation: 'fadeIn 0.6s ease-out 0.3s both'
+                                    }
+                                }, `Welcome back, ${playerIdentity.displayName}!`),
+                                createElement(ScenePicker, { key: 'scenes' }),
+                                createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect })
+                            ]),
+                            // Credits footer — flows at the bottom of the column, no fixed positioning
                             createElement('div', {
                                 key: 'credits',
                                 style: {
-                                    position: 'fixed',
-                                    bottom: platform.isMobile ? 'max(env(safe-area-inset-bottom, 8px), 8px)' : '12px',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
+                                    flex: '0 0 auto',
+                                    width: '100%',
+                                    paddingTop: '8px',
                                     color: 'rgba(255, 255, 255, 0.4)',
                                     fontSize: '0.7rem',
                                     textAlign: 'center',

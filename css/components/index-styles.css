@@ -216,8 +216,12 @@ html, body {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
+    width: 100vw;
+    /* Use dynamic viewport height so layout matches the visible area
+       even when mobile browser chrome (URL bar) is shown/hidden.
+       Fall back to 100vh for older browsers. */
+    height: 100vh;
+    height: 100dvh;
     overflow: hidden; /* Prevent scrollbar from causing offset */
     -webkit-overflow-scrolling: touch;
 

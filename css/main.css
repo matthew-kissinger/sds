@@ -143,10 +143,16 @@
     touch-action: manipulation;
   }
 
-  /* Start screen container - centers content with safe areas */
+  /* Start screen container - centers content with safe areas.
+     Uses 100dvh so layout matches the visible viewport when mobile
+     browser chrome (URL bar) is shown/hidden. */
   .start-screen-container {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
