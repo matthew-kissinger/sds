@@ -13,6 +13,13 @@
  */
 
 export const hosekWilkieVertexShader = /* glsl */ `
+// Cycle 12 Phase 4: force highp on Apple WebKit-on-Metal. Three.js injects
+// a default precision for WebGL2 fragments but vertex precision is implicit
+// (highp on most platforms, mediump on iOS). Declaring at the source level
+// prevents Metal's compiler from down-casting the analytic-sky math.
+precision highp float;
+precision highp int;
+
 varying vec3 vWorldDirection;
 varying vec3 vSunDirection;
 varying float vSunfade;
@@ -69,6 +76,14 @@ void main() {
 `;
 
 export const hosekWilkieFragmentShader = /* glsl */ `
+// Cycle 12 Phase 4: force highp. The Preetham math has pow() calls in the
+// smallest-magnitude regime (1 - Fex on the horizon line) that Apple's
+// WebKit-on-Metal can downcast — this is the rainbow-banding artifact the
+// pre-bug photo capture showed across the horizon. Declaring at source
+// pins precision regardless of injected defaults.
+precision highp float;
+precision highp int;
+
 varying vec3 vWorldDirection;
 varying vec3 vSunDirection;
 varying vec3 vBetaR;
@@ -225,6 +240,12 @@ void main() {
     texColor = mix( texColor, cloudColor, clamp( cloudAlpha, 0.0, 0.90 ) );
   }
 
-  gl_FragColor = vec4( texColor, 1.0 );
+  // Cycle 12 Phase 4: 1/255 hash-based dither breaks the 8-bit color
+  // quantization on the horizon gradient (the visible "rainbow stripe"
+  // class in the Mac photo evidence). Stable per-pixel-per-frame: the
+  // dome rides with the camera so gl_FragCoord.xy is geometry-stable
+  // and the pattern doesn't shimmer.
+  float dither = ( hash21( gl_FragCoord.xy ) - 0.5 ) / 255.0;
+  gl_FragColor = vec4( texColor + vec3( dither ), 1.0 );
 }
 `;

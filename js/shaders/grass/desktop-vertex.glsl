@@ -10,6 +10,14 @@
  * - %SHEEP_INTERACTION_STRENGTH% - Sheep push strength
  */
 
+// Cycle 12 Phase 4: pin precision at source. Sampling noiseTexture +
+// computing wind/interaction displacement on Apple WebKit-on-Metal can
+// silently downcast to mediump and cause grass blade jitter on iOS Safari
+// — independent of the Mac white-ground bug but in the same hypothesis
+// class as the sky/cloud precision fix.
+precision highp float;
+precision highp int;
+
 uniform float time;
 uniform sampler2D noiseTexture;
 uniform float windStrength;

@@ -8,6 +8,12 @@
  */
 
 export const cloudVertexShader = /* glsl */ `
+// Cycle 12 Phase 4: pin precision at source so Apple WebKit-on-Metal
+// doesn't downcast in the cloud-noise math. See skyShader.glsl.js
+// for the full hypothesis.
+precision highp float;
+precision highp int;
+
 varying vec2 vWorldXZ;
 varying vec2 vPlaneUv;
 varying vec3 vWorldPos;
@@ -22,6 +28,9 @@ void main() {
 `;
 
 export const cloudFragmentShader = /* glsl */ `
+precision highp float;
+precision highp int;
+
 varying vec2 vWorldXZ;
 varying vec2 vPlaneUv;
 varying vec3 vWorldPos;

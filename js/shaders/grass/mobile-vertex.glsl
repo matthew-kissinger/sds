@@ -6,6 +6,9 @@
  * - %MAX_INTERACTORS% - Maximum number of interactors (entities)
  */
 
+precision highp float;
+precision highp int;
+
 attribute vec4 bladeData;
 
 varying vec2 vUv;
