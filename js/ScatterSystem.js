@@ -53,8 +53,8 @@ const PROP_VARIANTS = [
     { name: 'pebble_round_1', path: 'assets/models/scatter/pebble_round_1.glb', weight: 20, type: 'pebble', targetHeight: 0.10 },
     { name: 'pebble_round_2', path: 'assets/models/scatter/pebble_round_2.glb', weight: 20, type: 'pebble', targetHeight: 0.10 },
     { name: 'pebble_round_3', path: 'assets/models/scatter/pebble_round_3.glb', weight: 20, type: 'pebble', targetHeight: 0.10 },
-    { name: 'mushroom_common', path: 'assets/models/scatter/mushroom_common.glb', weight: 7.5, type: 'mushroom', targetHeight: 0.35 },
-    { name: 'mushroom_laetiporus', path: 'assets/models/scatter/mushroom_laetiporus.glb', weight: 7.5, type: 'mushroom', targetHeight: 0.30 },
+    { name: 'mushroom_common', path: 'assets/models/scatter/mushroom_common.glb', weight: 7.5, type: 'mushroom', targetHeight: 0.50 },
+    { name: 'mushroom_laetiporus', path: 'assets/models/scatter/mushroom_laetiporus.glb', weight: 7.5, type: 'mushroom', targetHeight: 0.50 },
     { name: 'clover_1', path: 'assets/models/scatter/clover_1.glb', weight: 6.25, type: 'flora', targetHeight: 0.12 },
     { name: 'clover_2', path: 'assets/models/scatter/clover_2.glb', weight: 6.25, type: 'flora', targetHeight: 0.12 },
     { name: 'flower_3_single', path: 'assets/models/scatter/flower_3_single.glb', weight: 6.25, type: 'flora', targetHeight: 0.40 },
@@ -186,7 +186,10 @@ export class ScatterSystem {
         // and place 5–8 flowers in a 1.5m radius around each. Per the
         // dossier, ~5% of points give the right cluster density without
         // tipping into "lawn of dandelions."
-        this.oversampleFraction = 0.05;
+        // Cycle 16 Phase 3 (Q4 resolution): bumped 0.05 → 0.10 to make
+        // dandelion clusters visibly catch the eye on Field + RH at
+        // sheep-cam. Tune-first decision; if reading too dense, revert.
+        this.oversampleFraction = 0.10;
         this.oversampleClusterMin = 5;
         this.oversampleClusterMax = 8;
         this.oversampleRadius = 1.5;

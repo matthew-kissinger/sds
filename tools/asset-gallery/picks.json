@@ -1,7 +1,7 @@
 {
   "dir": "tools/asset-gallery/staging",
   "savedAt": "2026-05-03T22:00:00.000Z",
-  "_note": "Cycle 16 Phase 1 autonomous picks. Each entry carries an explicit `canonicalName` so semantic slot mapping (aspen→tree1 slim, oak→tree2 broad, pine→pine conifer) doesn't depend on bbox-height sort. Re-run `npm run gallery` to swap any pick — gallery save will overwrite this file (without canonicalName, so re-add the field by hand or run integrate with the gallery's emitted bbox-sort if you want to skip the override).",
+  "_note": "Cycle 16 Phase 1+3 autonomous picks. Each entry carries an explicit `canonicalName` so semantic slot mapping doesn't depend on bbox-height sort. Re-run `npm run gallery` to swap any pick — gallery save will overwrite this file (without canonicalName, so re-add the field by hand or run integrate with the gallery's emitted bbox-sort if you want to skip the override).",
   "picks": [
     {
       "path": "tools/asset-gallery/staging/trees/aspen_medium_single.glb",
@@ -50,6 +50,27 @@
       "_role": "conifer evergreen — LOD1 sibling",
       "tris": 444,
       "bbox": { "sy": 49.97 }
+    },
+    {
+      "path": "tools/asset-gallery/staging/rocks/pebble_oval_chunky.glb",
+      "name": "pebble_oval_chunky.glb",
+      "canonicalName": "rock1.glb",
+      "_role": "small pebble (~0.12m) — matches existing rock1 vibe",
+      "size": 25320
+    },
+    {
+      "path": "tools/asset-gallery/staging/rocks/boulder_chunky_mid.glb",
+      "name": "boulder_chunky_mid.glb",
+      "canonicalName": "rock2.glb",
+      "_role": "medium grey-brown boulder (~0.28m)",
+      "size": 25320
+    },
+    {
+      "path": "tools/asset-gallery/staging/rocks/craggy_chunk_warm.glb",
+      "name": "craggy_chunk_warm.glb",
+      "canonicalName": "rock3.glb",
+      "_role": "large warm-granite craggy formation (~0.38m)",
+      "size": 43772
     }
   ]
 }
