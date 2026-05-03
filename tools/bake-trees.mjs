@@ -46,9 +46,14 @@ const OUT_DIR = resolve(ROOT, 'assets/models/trees');
 //
 //   - bark.textured = false: drop the full PBR bark texture stack
 //     (color + normal + roughness + metalness + AO at 1K each ≈ 1.5MB
-//     per tree). The existing Resource_Tree*.glb baseline is ~10KB
-//     total; solid-color bark lands in the same ballpark and reads as
-//     stylized rather than "tree photo wrapped on cylinder."
+//     per tree). Solid-color bark lands in the same ballpark as the
+//     existing baseline and reads as stylized.
+//
+//   - bark.tint = warm brown: EZ-Tree's preset tints are near-white
+//     cream (0xFFEAB1), designed to MODULATE a bark texture. With
+//     `textured: false` the tint becomes the full surface color, and
+//     near-white reads as "dead birch" instead of healthy bark. Per-
+//     recipe brown overrides below; this default kept as fallback.
 //
 //   - bark.flatShading = true: faceted shading matches the low-poly
 //     world aesthetic (sheep, dog, terrain are all faceted).
@@ -57,19 +62,24 @@ const OUT_DIR = resolve(ROOT, 'assets/models/trees');
 //     without visible silhouette change at the camera distances trees
 //     are seen from in SDS (always ≥10m away).
 //
-//   - branch.children significantly reduced: target ~1500–2500 tris per
-//     tree (mid-poly stylized) so 100+ instances per scene stay cheap.
-//     EZ-Tree defaults (children = 6/4/3) generate ~12K tris which is
-//     too dense for our boid-heavy budget. Fewer branches also keeps
-//     the silhouette readable as "stylized cozy" rather than "realistic."
+//   - branch.children kept close to EZ-Tree defaults so the canopy
+//     reads as a proper leafy tree silhouette. Earlier (4/2/0) cut
+//     produced visibly skeletal "dead birch" trees in the first
+//     deploy. (6/4/2) is the lightest pruning that still reads as
+//     a full canopy.
+//
+//   - leaves.count bumped well above EZ-Tree's defaults — at the
+//     camera distances + scale ranges trees are placed at, more leaves
+//     produce a fuller silhouette without showing the underlying
+//     branch structure. Per-recipe tweaks below tune density per type.
 const STYLIZED_BARK = {
-    bark: { textured: false, flatShading: true },
+    bark: { textured: false, flatShading: true, tint: 0x6b4226 },
     branch: {
         sections: { 0: 4, 1: 3, 2: 2, 3: 1 },
         segments: { 0: 5, 1: 4, 2: 3, 3: 3 },
-        children: { 0: 4, 1: 2, 2: 0 }
+        children: { 0: 6, 1: 4, 2: 2 }
     },
-    leaves: { count: 10, sizeVariance: 0.4 }
+    leaves: { count: 28, sizeVariance: 0.5 }
 };
 
 const RECIPES = [
@@ -79,22 +89,24 @@ const RECIPES = [
         seed: 7,
         normalizeHeight: 1.0,
         // Aspen — slim vertical silhouette for cozy pasture scenes.
-        tweaks: { ...STYLIZED_BARK }
+        // Slightly lighter brown for the aspen species.
+        tweaks: {
+            ...STYLIZED_BARK,
+            bark: { ...STYLIZED_BARK.bark, tint: 0x7a5a3a }
+        }
     },
     {
         name: 'tree2',
         preset: 'Oak Medium',
         seed: 13,
         normalizeHeight: 1.0,
-        // Oak — broad canopy anchor for field/RH scenes. Slightly more
-        // children than the shared default for that "rounder" silhouette.
+        // Oak — broad canopy anchor for field/RH scenes. Darker bark +
+        // even more leaves than the shared default for that "rounder,
+        // fuller" Studio Ghibli oak silhouette.
         tweaks: {
             ...STYLIZED_BARK,
-            branch: {
-                ...STYLIZED_BARK.branch,
-                children: { 0: 5, 1: 2, 2: 0 }
-            },
-            leaves: { count: 12, sizeVariance: 0.5 }
+            bark: { ...STYLIZED_BARK.bark, tint: 0x5a3a26 },
+            leaves: { count: 36, sizeVariance: 0.6 }
         }
     },
     {
@@ -102,8 +114,13 @@ const RECIPES = [
         preset: 'Pine Medium',
         seed: 21,
         normalizeHeight: 1.0,
-        // Pine — conifer evergreen, billboarded frond leaves.
-        tweaks: { ...STYLIZED_BARK }
+        // Pine — conifer evergreen, billboarded frond leaves. Dark
+        // brown bark; pine's frond geometry already gives a full
+        // silhouette so the shared count works.
+        tweaks: {
+            ...STYLIZED_BARK,
+            bark: { ...STYLIZED_BARK.bark, tint: 0x4a3525 }
+        }
     }
 ];
 

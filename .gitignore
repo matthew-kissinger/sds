@@ -89,6 +89,9 @@ playwright/.cache/
 
 # Cinematic capture intermediates (regenerable via `npm run cinema`)
 tools/cinematic/output/
+# Playtest screenshot captures (regenerable via `node tools/probe.mjs` /
+# `node tools/playtest-screenshots.mjs`)
+tools/playtest/
 # Marketing video output (too large for git; ship via CDN if needed)
 assets/marketing/videos/
 
