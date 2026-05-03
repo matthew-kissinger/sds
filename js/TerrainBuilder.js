@@ -322,12 +322,57 @@ export class TerrainBuilder {
             );
         }
 
-        // Load rock models (non-critical)
+        // Load rock models (non-critical). Cycle 14 Phase 4: same bake-
+        // and-capture pattern as trees, plus a uniform height
+        // normalization. Quaternius MegaKit rocks ship at "real-world"
+        // ~2m native span, but the existing TerrainBuilder placement
+        // scaleRange is 4–50 — designed for ~0.2m native unit assets.
+        // Normalizing to a fixed native height (0.2m) means the existing
+        // scale ranges produce 0.8–10m visible rocks (boulder range)
+        // without tweaking the per-zone scaleRange tuples.
+        const ROCK_NATIVE_HEIGHT = 0.2;
         for (const model of modelPaths.rocks) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
-                    this.models.rocks[model.name] = gltf.scene;
-                    console.log(`[OK] Loaded rock model: ${model.name}`);
+                    const root = gltf.scene;
+                    root.updateMatrixWorld(true);
+                    let minY = Infinity;
+                    let maxY = -Infinity;
+                    /** @type {THREE.BufferGeometry[]} */
+                    const childGeos = [];
+                    root.traverse(child => {
+                        if (!child.isMesh || !child.geometry) return;
+                        child.geometry = child.geometry.clone();
+                        child.geometry.applyMatrix4(child.matrixWorld);
+                        child.position.set(0, 0, 0);
+                        child.quaternion.identity();
+                        child.scale.set(1, 1, 1);
+                        child.updateMatrixWorld(true);
+                        child.geometry.computeBoundingBox();
+                        const bb = child.geometry.boundingBox;
+                        if (bb && isFinite(bb.min.y)) {
+                            if (bb.min.y < minY) minY = bb.min.y;
+                            if (bb.max.y > maxY) maxY = bb.max.y;
+                        }
+                        childGeos.push(child.geometry);
+                    });
+                    if (!isFinite(minY)) { minY = 0; maxY = 1; }
+                    // Normalize to a fixed native height so the existing
+                    // scaleRange tuples (4–50) produce reasonable visible
+                    // sizes regardless of GLB authoring convention.
+                    const nativeSpan = Math.max(maxY - minY, 1e-6);
+                    const normFactor = ROCK_NATIVE_HEIGHT / nativeSpan;
+                    for (const geo of childGeos) {
+                        geo.scale(normFactor, normFactor, normFactor);
+                        geo.computeBoundingBox();
+                    }
+                    minY *= normFactor;
+                    maxY *= normFactor;
+                    root.userData.modelBaseYOffset = -minY;
+                    root.userData.modelBboxMinY = minY;
+                    root.userData.modelBboxMaxY = maxY;
+                    this.models.rocks[model.name] = root;
+                    console.log(`[OK] Loaded rock model: ${model.name} (native span ${nativeSpan.toFixed(2)}m → ${ROCK_NATIVE_HEIGHT}m, bbox y=[${minY.toFixed(2)}, ${maxY.toFixed(2)}])`);
                 }).catch(err => {
                     const errMsg = `rock/${model.name}: ${err.message || err}`;
                     console.error(`[ERROR] Failed to load ${errMsg}`);
@@ -1459,13 +1504,18 @@ export class TerrainBuilder {
                     const finalScale = baseScale * rock.scale;
 
                     // Always partially bury rocks so the bottom of the silhouette
-                    // sinks below the ground plane. Cycle 14 Phase 1: now that
-                    // _groundY samples the visible mesh Y, the old 0.10–0.20
-                    // bury was over-correcting for the bilinear-vs-mesh gap.
-                    // Reduced to 0.03–0.06 — enough for a deliberate buried
-                    // look without sinking half the rock.
+                    // sinks below the ground plane. Cycle 14 Phase 4:
+                    // compensate for the GLB's pivot via modelBaseYOffset
+                    // (Quaternius rocks pivot at centroid, not base — without
+                    // the lift they'd float by ~half their height). The lift
+                    // is multiplied by the Y-scale factor (0.7 below) so the
+                    // lowest visible vertex lands exactly on terrain Y. Bury
+                    // is in world units so it feels consistent across the
+                    // scale variance.
+                    const ROCK_Y_SCALE = 0.7;
                     const baseY = this._groundY(rock.x, rock.z);
-                    const yOffset = baseY - finalScale * (0.03 + Math.random() * 0.03);
+                    const baseOffset = this.models.rocks[rockType]?.userData?.modelBaseYOffset ?? 0;
+                    const yOffset = baseY + baseOffset * finalScale * ROCK_Y_SCALE - finalScale * (0.03 + Math.random() * 0.03);
 
                     rockInstances[rockType].push({
                         position: new THREE.Vector3(rock.x, yOffset, rock.z),
@@ -1474,7 +1524,7 @@ export class TerrainBuilder {
                             Math.random() * Math.PI * 2,
                             Math.random() * Math.PI * 0.3
                         ),
-                        scale: new THREE.Vector3(finalScale, finalScale * 0.7, finalScale * 1.2)
+                        scale: new THREE.Vector3(finalScale, finalScale * ROCK_Y_SCALE, finalScale * 1.2)
                     });
 
                     // Record this rock's footprint so a subsequent createTrees()

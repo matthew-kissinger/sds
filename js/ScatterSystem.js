@@ -43,16 +43,22 @@ import { configureGLTFLoader } from './TerrainBuilder.js';
  * The yellow-flower oversampling on top of the base distribution adds
  * dandelion-cluster eye anchors without skewing the base ratio.
  */
+// targetHeight (metres) normalizes each variant at load so the
+// per-instance scale jitter in populate() lands on a predictable
+// real-world size regardless of how Quaternius authored the asset.
+// MegaKit ships clovers at 1.14m and single flowers at 2.07m native
+// (intended for stylized scenes scaled in-engine); without this
+// normalize, scatter clovers would render as small flowering trees.
 const PROP_VARIANTS = [
-    { name: 'pebble_round_1', path: 'assets/models/scatter/pebble_round_1.glb', weight: 20, type: 'pebble' },
-    { name: 'pebble_round_2', path: 'assets/models/scatter/pebble_round_2.glb', weight: 20, type: 'pebble' },
-    { name: 'pebble_round_3', path: 'assets/models/scatter/pebble_round_3.glb', weight: 20, type: 'pebble' },
-    { name: 'mushroom_common', path: 'assets/models/scatter/mushroom_common.glb', weight: 7.5, type: 'mushroom' },
-    { name: 'mushroom_laetiporus', path: 'assets/models/scatter/mushroom_laetiporus.glb', weight: 7.5, type: 'mushroom' },
-    { name: 'clover_1', path: 'assets/models/scatter/clover_1.glb', weight: 6.25, type: 'flora' },
-    { name: 'clover_2', path: 'assets/models/scatter/clover_2.glb', weight: 6.25, type: 'flora' },
-    { name: 'flower_3_single', path: 'assets/models/scatter/flower_3_single.glb', weight: 6.25, type: 'flora' },
-    { name: 'flower_4_single', path: 'assets/models/scatter/flower_4_single.glb', weight: 6.25, type: 'flora' }
+    { name: 'pebble_round_1', path: 'assets/models/scatter/pebble_round_1.glb', weight: 20, type: 'pebble', targetHeight: 0.10 },
+    { name: 'pebble_round_2', path: 'assets/models/scatter/pebble_round_2.glb', weight: 20, type: 'pebble', targetHeight: 0.10 },
+    { name: 'pebble_round_3', path: 'assets/models/scatter/pebble_round_3.glb', weight: 20, type: 'pebble', targetHeight: 0.10 },
+    { name: 'mushroom_common', path: 'assets/models/scatter/mushroom_common.glb', weight: 7.5, type: 'mushroom', targetHeight: 0.35 },
+    { name: 'mushroom_laetiporus', path: 'assets/models/scatter/mushroom_laetiporus.glb', weight: 7.5, type: 'mushroom', targetHeight: 0.30 },
+    { name: 'clover_1', path: 'assets/models/scatter/clover_1.glb', weight: 6.25, type: 'flora', targetHeight: 0.12 },
+    { name: 'clover_2', path: 'assets/models/scatter/clover_2.glb', weight: 6.25, type: 'flora', targetHeight: 0.12 },
+    { name: 'flower_3_single', path: 'assets/models/scatter/flower_3_single.glb', weight: 6.25, type: 'flora', targetHeight: 0.40 },
+    { name: 'flower_4_single', path: 'assets/models/scatter/flower_4_single.glb', weight: 6.25, type: 'flora', targetHeight: 0.40 }
 ];
 
 // Variant used for the yellow-flower oversampling clusters. flower_4
@@ -216,6 +222,8 @@ export class ScatterSystem {
                     root.updateMatrixWorld(true);
                     let minY = Infinity;
                     let maxY = -Infinity;
+                    /** @type {THREE.BufferGeometry[]} */
+                    const childGeos = [];
                     root.traverse((child) => {
                         if (!child.isMesh || !child.geometry) return;
                         child.geometry = child.geometry.clone();
@@ -229,8 +237,23 @@ export class ScatterSystem {
                             if (bb.min.y < minY) minY = bb.min.y;
                             if (bb.max.y > maxY) maxY = bb.max.y;
                         }
+                        childGeos.push(child.geometry);
                     });
                     if (!isFinite(minY)) { minY = 0; maxY = 1; }
+                    // Per-variant uniform-scale normalization. Quaternius
+                    // ships clovers at 1.14m + single flowers at 2.07m
+                    // native — without this, scatter renders them as
+                    // small flowering trees. Pebbles + mushrooms get a
+                    // smaller correction since they're already authored
+                    // close to real-world scale.
+                    const nativeSpan = Math.max(maxY - minY, 1e-6);
+                    const normFactor = variant.targetHeight / nativeSpan;
+                    for (const geo of childGeos) {
+                        geo.scale(normFactor, normFactor, normFactor);
+                        geo.computeBoundingBox();
+                    }
+                    minY *= normFactor;
+                    maxY *= normFactor;
                     root.userData.modelBboxMinY = minY;
                     root.userData.modelBboxMaxY = maxY;
                     this.models.set(variant.name, root);
@@ -316,12 +339,17 @@ export class ScatterSystem {
         // Build one InstancedMesh2 per (variant × child mesh). Variants
         // may have multiple child meshes (rare for scatter) — same pattern
         // as TerrainBuilder.createTrees.
-        const dummy = new THREE.Object3D();
         for (const variant of PROP_VARIANTS) {
             const positions = byVariant.get(variant.name);
             if (!positions || positions.length === 0) continue;
             const model = this.models.get(variant.name);
             if (!model) continue;
+
+            // Quaternius scatter props pivot at the model centroid, not
+            // the base. baseOffset = -bbox.min.y lifts the lowest visible
+            // vertex back to the ground. With uniform scale s, the
+            // world-space lift is baseOffset * s.
+            const baseOffset = -(model.userData?.modelBboxMinY ?? 0);
 
             model.traverse((child) => {
                 if (!child.isMesh) return;
@@ -337,8 +365,6 @@ export class ScatterSystem {
 
                 inst.addInstances(positions.length, (obj, i) => {
                     const [x, z] = positions[i];
-                    const y = this.heightfield ? this.heightfield.meshSampleY(x, z) : 0;
-                    obj.position.set(x, y, z);
                     obj.rotation.y = Math.random() * Math.PI * 2;
                     // Per-instance scale jitter — pebbles/mushrooms
                     // benefit from variety, flora less so (their meshes
@@ -347,11 +373,12 @@ export class ScatterSystem {
                     const sRange = variant.type === 'flora' ? 0.3 : 0.6;
                     const s = sJitter + Math.random() * sRange;
                     obj.scale.setScalar(s);
-                    obj.updateMatrix();
-                    // InstancedMesh2's addInstances callback receives a
-                    // helper Object3D — we don't need to call updateMatrix
-                    // explicitly since the host class composes the matrix
-                    // from position/rotation/scale during finalize.
+                    const baseY = this.heightfield ? this.heightfield.meshSampleY(x, z) : 0;
+                    // Pebbles bury slightly into the ground for a
+                    // settled look; mushrooms/flowers/clovers sit
+                    // exactly on the surface.
+                    const bury = variant.type === 'pebble' ? s * 0.05 : 0;
+                    obj.position.set(x, baseY + baseOffset * s - bury, z);
                 });
 
                 inst.castShadow = false;
