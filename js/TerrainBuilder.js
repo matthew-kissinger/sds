@@ -145,6 +145,17 @@ export class TerrainBuilder {
         // Set when each tree-type model is patched at load time. Per-tree-
         // type bbox bounds drive the leaf-vs-trunk weight in the shader.
         this._patchedTreeMaterials = new WeakSet();
+
+        // Cycle 14 Phase 4: shared rock-rim uniforms. Per the rocks
+        // dossier, fresnel rim-light is the single biggest "AAA tell"
+        // for stylized rocks — silhouettes against grass pop without
+        // changing geometry. Color is sun-tinted (set per-frame from
+        // atmosphere.sun.light.color via setRockRimColor).
+        this._rockShader = {
+            uRimColor: { value: new THREE.Color(0xffe0b0) },
+            uRimStrength: { value: 0.35 }
+        };
+        this._patchedRockMaterials = new WeakSet();
     }
 
     /**
@@ -372,6 +383,8 @@ export class TerrainBuilder {
         // shader. Done once at load — material refs are shared across scene
         // swaps via the GLB cache, so the patch survives.
         this._setupTreeWind();
+        // Cycle 14 Phase 4: patch rock materials with fresnel rim-light.
+        this._setupRockShader();
 
         // Report loading results
         const loadedAnimals = Object.keys(this.models.animals).filter(k => !k.endsWith('_animations'));
@@ -514,6 +527,90 @@ export class TerrainBuilder {
                 }
             });
         }
+    }
+
+    /**
+     * Cycle 14 Phase 4: patch a rock material with a fresnel rim-light
+     * shader. Per docs/research-rocks-and-scatter-2026-05.md, rim-light is
+     * the single biggest "AAA tell" for stylized rocks — brightens the
+     * silhouette against grass without changing geometry.
+     *
+     * Rim factor: `pow(1 - dot(viewDir, normal), 2)`. Tinted by
+     * `uRimColor` (sun colour, updated per frame) at `uRimStrength`
+     * intensity. Added to `totalEmissiveRadiance` so the contribution
+     * lights up unlit shadow sides too — a stylized "sky bounce" cheat.
+     *
+     * Idempotent via `_patchedRockMaterials` WeakSet so re-invocation on
+     * scene swap is a no-op.
+     *
+     * @param {THREE.Material} material
+     */
+    _patchRockMaterial(material) {
+        if (!material || this._patchedRockMaterials.has(material)) return;
+        this._patchedRockMaterials.add(material);
+
+        const uRimColor = this._rockShader.uRimColor;
+        const uRimStrength = this._rockShader.uRimStrength;
+
+        const prev = material.onBeforeCompile;
+        material.onBeforeCompile = (shader, renderer) => {
+            if (typeof prev === 'function') prev(shader, renderer);
+            shader.uniforms.uRimColor = uRimColor;
+            shader.uniforms.uRimStrength = uRimStrength;
+
+            shader.fragmentShader = shader.fragmentShader
+                .replace(
+                    '#include <common>',
+                    [
+                        '#include <common>',
+                        'uniform vec3 uRimColor;',
+                        'uniform float uRimStrength;'
+                    ].join('\n')
+                )
+                .replace(
+                    '#include <emissivemap_fragment>',
+                    [
+                        '#include <emissivemap_fragment>',
+                        '{',
+                        '  vec3 viewDir = normalize(vViewPosition);',
+                        '  float ndv = max(dot(viewDir, normal), 0.0);',
+                        '  float rockRim = pow(1.0 - ndv, 2.0);',
+                        '  totalEmissiveRadiance += rockRim * uRimColor * uRimStrength;',
+                        '}'
+                    ].join('\n')
+                );
+        };
+        material.needsUpdate = true;
+    }
+
+    /**
+     * Walk every rock-type GLB and apply the rim-light patch. Called once
+     * after loadModels resolves; the WeakSet guard makes re-invocation a
+     * no-op across scene swaps.
+     */
+    _setupRockShader() {
+        for (const rockType of Object.keys(this.models.rocks)) {
+            const model = this.models.rocks[rockType];
+            if (!model) continue;
+            model.traverse(child => {
+                if (!child.isMesh || !child.material) return;
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => this._patchRockMaterial(m));
+                } else {
+                    this._patchRockMaterial(child.material);
+                }
+            });
+        }
+    }
+
+    /**
+     * Update the shared rock-rim color from the atmosphere's sun light.
+     * Called per-frame from main.js so rim hue tracks sunrise/sunset.
+     * @param {THREE.Color} color
+     */
+    setRockRimColor(color) {
+        if (!color || !this._rockShader) return;
+        this._rockShader.uRimColor.value.copy(color);
     }
 
     /**

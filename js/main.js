@@ -2538,6 +2538,12 @@ class SheepDogSimulation {
         if (sunDir) {
             this.terrainBuilder?.grassSystem?.setSunDirection?.(sunDir);
         }
+        // Cycle 14 Phase 4: feed sun light color to rocks for rim-light
+        // tinting. Tracks sunrise/sunset hue without per-rock state.
+        const sunLightColor = this.atmosphere?.sun?.light?.color;
+        if (sunLightColor) {
+            this.terrainBuilder?.setRockRimColor?.(sunLightColor);
+        }
         // Cycle 7 Phase 2e: keep sun disc aligned with the atmosphere's
         // sun direction + color, anchored at a fixed offset from the camera.
         if (this._sunBillboard && sunDir) {
