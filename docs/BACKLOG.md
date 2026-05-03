@@ -4,6 +4,48 @@
 
 ## Recently Completed
 
+### Cycle 14 — visuals-foundation (Phases 1–4 shipped + deployed 2026-05-03; Phase 5 + v1.1.0 tag awaiting Matt's playtest)
+
+Plan: [`docs/cycle-14-plan.md`](cycle-14-plan.md). Headline: lifted the world from "indie tech demo" to "AAA browser game" via four sequenced visual fixes plus a load-time integration audit that caught Quaternius asset oversize / centroid-pivot issues before they reached the browser.
+
+- **Phase 1 — Heightfield Y unification ✅ shipped.** New [`Heightfield.meshSampleY(x, z)`](../shared/terrain/Heightfield.js) triangle-interpolates against a captured `(segs+1)²` grid of post-displacement Ys. [`TerrainBuilder.createTerrain()`](../js/TerrainBuilder.js) captures into a `Float32Array` and hands it via `setMeshGrid()`. Visual consumers (Sheepdog, OptimizedSheep, GrassSystem, trees, rocks, farmhouse) routed through `meshSampleY` either directly or via the thin `surfaceY` / `_groundY` wrappers. The historical Cycle 9 0.05 lift and the GrassSystem `-0.1` "dip into mesh" hack both gone — replaced with exact mesh Y. Worker / tests fall back to `sample(x, z) + 0.05`. Sim-baseline byte-identical. New [`tests/heightfield-mesh-y.spec.js`](../tests/heightfield-mesh-y.spec.js) — 9 cases.
+- **Phase 2 — Grass modernization ✅ shader shipped.** Replaced per-vertex simplex-noise wind with the dossier playbook in [`js/GrassSystem.js`](../js/GrassSystem.js): scrolling gust envelope along `windDirection` (~30m wavelength, ~30/70 strong/calm), two octaves of analytic sway, t² amplitude weighting, per-blade decorrelator, tip-only flutter. Fragment-shader fake-SSS via new `uSunDirection` uniform plumbed from `atmosphere.getSunDirection()` per frame — `pow(saturate(dot(toCamera, -sunDir)), 4) * tipColor * 0.7 * tipMask` for the tight halo on the sun silhouette. Render-texture interactors + critically-damped trample recovery deferred to Cycle 15+ (need per-blade render-target ping-pong state).
+- **Phase 3 — Trees ✅ FULLY SHIPPED.** Three pieces: (a) `_patchTreeWindMaterial()` + `_setupTreeWind()` `onBeforeCompile` patch on every tree-leaf material — same gust-envelope + 2-octave sway math as grass, mirrored at lower amplitude (0.18 multiplier), wind direction synced from `grassSystem` for whole-world coherence. (b) **EZ-Tree build-time bake** (pivoted from Quaternius MegaKit after follow-up research found it Patreon-gated): [`tools/bake-trees.mjs`](../tools/bake-trees.mjs) (Node) + [`tools/bake-trees/bake.html`](../tools/bake-trees/bake.html) (Playwright harness) generate 3 stylized GLBs from seeded recipes via `@dgreenheck/ez-tree@1.1.0`. De-textured bark + reduced branch counts + 256² leaf alpha + uniform 1m-height normalization. Final: tree1 81 KB / 1092 tris, tree2 112 KB / 1744 tris, pine 91 KB / 296 tris. Old `Resource_Tree*.glb` deleted. (c) **InstancedMesh2** (`@three.ez/instanced-mesh@0.3.15`) drop-in upgrade for both near (full mesh) + far (cross-billboard impostor) tree paths — per-instance frustum culling skips ~30–70% of vertex shader work depending on camera direction. LOD-pool unification deferred to Cycle 15 (needs trunk-only + leaves-only impostor authoring since EZ-Tree splits each tree into two child meshes).
+- **Phase 4 — Rocks + ScatterSystem ✅ FULLY SHIPPED.** Three pieces: (a) `_patchRockMaterial()` + `_setupRockShader()` `onBeforeCompile` patch — fresnel rim-light injecting after `<emissivemap_fragment>` adds `pow(1 - max(dot(viewDir, normal), 0), 2) * uRimColor * 0.35` to `totalEmissiveRadiance`. `uRimColor` plumbed from `atmosphere.sun.light.color` per frame so rim hue tracks sunrise/sunset. (b) **Quaternius MegaKit rocks** — `Rock_Medium_1/2/3.gltf` (CC0) converted via `gltf-transform optimize --texture-size 128`, ~46 KB each at [`assets/models/rocks/`](../assets/models/rocks/). Old `Resource_Rock_*.glb` deleted. (c) **New [`js/ScatterSystem.js`](../js/ScatterSystem.js)** (~330 LoC) — sibling to GrassSystem. Bridson Poisson-disk sampler within a circular area, 9 prop variants from MegaKit (3 pebbles, 2 mushrooms, 2 clovers, 2 single flowers; ~450 KB), yellow-flower oversampling (5% of base × 5–8 flowers in 1.5m radius for Ghibli eye-anchors), weighted-random variant assignment per dossier ratio (~60/25/15 pebbles/flora/mushrooms), one InstancedMesh2 per variant for per-instance frustum culling, flora-only leaf-wind via dependency-injected hook (mushrooms + pebbles stay still). Lifecycle: `TerrainBuilder.createScatter()` after `createTrees`; `clearScatter()` integrated into `rebuildEnvironment` + `dispose` paths. Cycle 11+12 A8 GLB-shared-material invariants preserved (`userData.sharedFromGlbCache`).
+- **Pivot + scale audit ✅ shipped post-Phase-4.** Two GLB inspectors ([`tools/inspect-glb.mjs`](../tools/inspect-glb.mjs) + [`tools/inspect-glb-three.mjs`](../tools/inspect-glb-three.mjs)) found three integration issues that would have manifested as floating rocks + 100m-tall boulders + flowering-tree clovers the moment the dev server fired up. Fixed at load time: rocks + scatter props go through the same bake-and-capture pattern trees use; `ROCK_NATIVE_HEIGHT = 0.2m` uniform-scale normalization keeps existing `scaleRange: 4-50` tuples producing 0.8-10m boulders; per-variant `targetHeight` on `PROP_VARIANTS` normalizes pebbles (10cm), mushrooms (30-35cm), clovers (12cm), flowers (40cm) to real-world ground-scatter scale.
+
+Validation:
+- 158/158 vitest pass (was 149; +9 from `tests/heightfield-mesh-y.spec.js`).
+- Production build clean (main 815 KB / 241 KB gzip — +57 KB raw / +17 KB gzip from `@three.ez/instanced-mesh` + bvh.js, +7 KB from ScatterSystem + shader patches).
+- Sim-baseline byte-identical (Phase 1 explicit design — visuals route through new `meshSampleY` while sim keeps `sample()`).
+- New deps: `@dgreenheck/ez-tree` (dev), `@three.ez/instanced-mesh` (runtime).
+- New assets: 3 rocks (~140 KB) + 3 trees (~284 KB) + 9 scatter props (~450 KB) = ~870 KB.
+
+Carryover to Phase 5 / v1.1.0 close:
+
+- **Phase 5 hero cards.** Matt-gated. After visual review on sheepdogsim.com, run `__sdsCinema.freeFly()` → pose 3 OG cards → `snapshotPose()` → pin in [`tools/cinematic/shot-list.mjs`](../tools/cinematic/shot-list.mjs) → `npm run cinema --shot=<id>`. Then render the 4 cinematic videos. Then `git tag v1.1.0`.
+- **Tuning knobs surfaced for first-playtest adjustments.** `_treeWind.uWindStrength` (0.6 desktop / 0 mobile), `_rockShader.uRimStrength` (0.35), `ROCK_NATIVE_HEIGHT` (0.2m), `ScatterSystem` `minDist` (4m desktop / 6m mobile), `oversampleFraction` (0.05), per-variant `targetHeight` in `PROP_VARIANTS`.
+
+Cycle 15+ candidates surfaced:
+
+- Tree LOD-pool unification (per-instance dynamic full-mesh → impostor switch via `InstancedMesh2.addLOD`; needs trunk-only + leaves-only impostor authoring).
+- Grass render-texture interactors + critically-damped trample recovery (deferred from Phase 2; pairs with WebGPU spike since TSL maps cleanly onto compute shaders).
+- WebGPU spike (Phase 2 grass + Phase 3 tree wind shader math both port cleanly to TSL).
+- ScatterSystem polish: seeded RNG via `mulberry32` for byte-identical placement across machines/swaps, density tuning post-playtest.
+- [Procedural Instanced Forest](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610) (red-reddington, Dec 2025) as a higher-tree-count alternative to EZ-Tree (2,800 trees in 8 draw calls at 60fps mid-range desktop, TSL/WebGPU port already done).
+
+Commits (Cycle 14):
+
+- [`3796f3c`](https://github.com/matthew-kissinger/sds/commit/3796f3c) feat(heightfield): cycle 14 phase 1 — meshSampleY unification
+- [`f1e0d78`](https://github.com/matthew-kissinger/sds/commit/f1e0d78) feat(grass): cycle 14 phase 2 — gust-envelope wind + sun-aligned SSS
+- [`ec0b902`](https://github.com/matthew-kissinger/sds/commit/ec0b902) feat(trees): cycle 14 phase 3 partial — leaf wind shader
+- [`42c9f63`](https://github.com/matthew-kissinger/sds/commit/42c9f63) feat(rocks): cycle 14 phase 4 partial — fresnel rim-light shader
+- [`a469a00`](https://github.com/matthew-kissinger/sds/commit/a469a00) feat(trees): cycle 14 phase 3 — EZ-Tree build-time bake
+- [`9f025f8`](https://github.com/matthew-kissinger/sds/commit/9f025f8) feat(trees): cycle 14 phase 3 — InstancedMesh2 per-instance culling
+- [`f683a13`](https://github.com/matthew-kissinger/sds/commit/f683a13) feat(scatter): cycle 14 phase 4 — Quaternius rocks + ScatterSystem
+- [`ea9547a`](https://github.com/matthew-kissinger/sds/commit/ea9547a) fix(cycle-14): rock + scatter pivot + native-scale normalization
+- (Final docs + close commits appended at push time.)
+
 ### Cycle 12 — post-v1-polish (closed 2026-05-02; Phase 4 fix shipped post-close)
 
 Plan: [`docs/archive/cycles/cycle-12-plan.md`](archive/cycles/cycle-12-plan.md). Headline:
