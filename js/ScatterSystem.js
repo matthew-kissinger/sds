@@ -363,9 +363,13 @@ export class ScatterSystem {
                 inst.userData.scatterSystem = true;
                 inst.userData.variantName = variant.name;
 
+                // InstancedMesh2 entities expose quaternion (no Euler).
+                // Use a shared scratch axis-vector to avoid per-instance
+                // allocation across the whole scatter pool.
+                const _Y_AXIS = new THREE.Vector3(0, 1, 0);
                 inst.addInstances(positions.length, (obj, i) => {
                     const [x, z] = positions[i];
-                    obj.rotation.y = Math.random() * Math.PI * 2;
+                    obj.quaternion.setFromAxisAngle(_Y_AXIS, Math.random() * Math.PI * 2);
                     // Per-instance scale jitter — pebbles/mushrooms
                     // benefit from variety, flora less so (their meshes
                     // are already varied).

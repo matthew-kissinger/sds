@@ -1092,10 +1092,13 @@ export class TerrainBuilder {
                     // on the next swap (the dominant ~41% drift class).
                     instancedMesh.userData.sharedFromGlbCache = true;
 
+                    // InstancedMesh2 entities expose position/quaternion/scale
+                    // (no Euler `rotation`). Convert from the placement
+                    // record's THREE.Euler via the shared scratch.
                     instancedMesh.addInstances(instances.length, (obj, i) => {
                         const inst = instances[i];
                         obj.position.copy(inst.position);
-                        obj.rotation.copy(inst.rotation);
+                        obj.quaternion.setFromEuler(inst.rotation);
                         obj.scale.copy(inst.scale);
                     });
 
@@ -1191,7 +1194,7 @@ export class TerrainBuilder {
             inst.addInstances(instances.length, (obj, i) => {
                 const instance = instances[i];
                 obj.position.copy(instance.position);
-                obj.rotation.copy(instance.rotation);
+                obj.quaternion.setFromEuler(instance.rotation);
                 obj.scale.copy(instance.scale);
             });
             inst.castShadow = false;
