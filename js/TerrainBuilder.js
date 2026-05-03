@@ -130,6 +130,21 @@ export class TerrainBuilder {
         // heightmapUrl or load failed (flat-plane fallback).
         /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
         this.heightfield = null;
+
+        // Cycle 14 Phase 3: shared tree-wind uniforms. All tree-leaf
+        // materials patched via _patchTreeWindMaterial reference these
+        // (one set; per-frame update touches every patched material).
+        // Direction matches grass for visual coherence; strength is its
+        // own value because trees feel weight differently — leaves
+        // shimmer at much lower amplitude than grass blades.
+        this._treeWind = {
+            uTime: { value: 0 },
+            uWindStrength: { value: this.isMobile ? 0 : 0.6 },
+            uWindDirection: { value: new THREE.Vector2(0.7, 0.7) }
+        };
+        // Set when each tree-type model is patched at load time. Per-tree-
+        // type bbox bounds drive the leaf-vs-trunk weight in the shader.
+        this._patchedTreeMaterials = new WeakSet();
     }
 
     /**
@@ -353,6 +368,11 @@ export class TerrainBuilder {
         await Promise.all(loadPromises);
         this.modelsLoaded = true;
 
+        // Cycle 14 Phase 3: patch tree-leaf materials with the leaf-wind
+        // shader. Done once at load — material refs are shared across scene
+        // swaps via the GLB cache, so the patch survives.
+        this._setupTreeWind();
+
         // Report loading results
         const loadedAnimals = Object.keys(this.models.animals).filter(k => !k.endsWith('_animations'));
         console.log(`[ASSET] Loaded ${loadedAnimals.length}/5 animal models:`, loadedAnimals);
@@ -382,6 +402,118 @@ export class TerrainBuilder {
         if (dist < 400) return 'midField';
         if (dist < 600) return 'farField';
         return 'horizon';
+    }
+
+    /**
+     * Cycle 14 Phase 3: patch a tree-leaf material with the shared leaf-wind
+     * shader. Idempotent — re-patching a material is a no-op so successive
+     * scene swaps don't compound. The shared `this._treeWind` uniform set
+     * means a single per-frame update drives every patched material.
+     *
+     * Wind weight is `smoothstep(0.25, 1.0, posY01)²` where `posY01` is the
+     * fraction up the tree from `modelBboxMinY` to `modelBboxMaxY`. Trunk
+     * vertices (low Y) get weight ~0 and stay still; leaf vertices (high Y)
+     * get weight 1 and sway fully. World-space wind math is applied AFTER
+     * the instance Y-rotation by patching `<project_vertex>` so the wind
+     * blows in the same world direction across every tree regardless of
+     * its random spawn rotation.
+     *
+     * @param {THREE.Material} material
+     * @param {number} bboxMinY GLB bbox min.y (object space, post-bake).
+     * @param {number} bboxMaxY GLB bbox max.y.
+     */
+    _patchTreeWindMaterial(material, bboxMinY, bboxMaxY) {
+        if (!material || this._patchedTreeMaterials.has(material)) return;
+        this._patchedTreeMaterials.add(material);
+
+        const uTime = this._treeWind.uTime;
+        const uWindStrength = this._treeWind.uWindStrength;
+        const uWindDirection = this._treeWind.uWindDirection;
+        const uTreeBaseY = { value: bboxMinY };
+        const uTreeTopY = { value: bboxMaxY };
+
+        const prev = material.onBeforeCompile;
+        material.onBeforeCompile = (shader, renderer) => {
+            if (typeof prev === 'function') prev(shader, renderer);
+            shader.uniforms.uTime = uTime;
+            shader.uniforms.uWindStrength = uWindStrength;
+            shader.uniforms.uWindDirection = uWindDirection;
+            shader.uniforms.uTreeBaseY = uTreeBaseY;
+            shader.uniforms.uTreeTopY = uTreeTopY;
+
+            shader.vertexShader = shader.vertexShader
+                .replace(
+                    '#include <common>',
+                    [
+                        '#include <common>',
+                        'uniform float uTime;',
+                        'uniform float uWindStrength;',
+                        'uniform vec2 uWindDirection;',
+                        'uniform float uTreeBaseY;',
+                        'uniform float uTreeTopY;'
+                    ].join('\n')
+                )
+                .replace(
+                    '#include <project_vertex>',
+                    [
+                        'vec4 mvPosition = vec4( transformed, 1.0 );',
+                        '#ifdef USE_INSTANCING',
+                        '  mvPosition = instanceMatrix * mvPosition;',
+                        '#endif',
+                        '{',
+                        '  // Vertical fraction up the tree (0=base, 1=top).',
+                        '  float treeRange = max(uTreeTopY - uTreeBaseY, 0.001);',
+                        '  float posY01 = clamp((position.y - uTreeBaseY) / treeRange, 0.0, 1.0);',
+                        '  float windWeight = smoothstep(0.25, 1.0, posY01);',
+                        '  windWeight *= windWeight;',
+                        '  if (windWeight > 0.001) {',
+                        '    vec3 worldPos = (modelMatrix * mvPosition).xyz;',
+                        '    vec2 perp = vec2(-uWindDirection.y, uWindDirection.x);',
+                        '    vec2 windFlow = uWindDirection * uTime * 1.2;',
+                        '    vec2 gustPos = worldPos.xz - windFlow;',
+                        '    float gA = sin(gustPos.x * 0.04 + gustPos.y * 0.034);',
+                        '    float gB = sin(gustPos.x * 0.018 + gustPos.y * 0.022 + 1.4);',
+                        '    float gustEnv = smoothstep(-0.2, 1.0, gA * 0.6 + gB * 0.4);',
+                        '    float sway1 = sin(worldPos.x * 0.15 + worldPos.z * 0.11 + uTime * 0.85);',
+                        '    float sway2 = sin(worldPos.x * 0.07 - worldPos.z * 0.13 + uTime * 0.55);',
+                        '    float sway = sway1 * 0.6 + sway2 * 0.4;',
+                        '    float carrier = sway * (0.4 + gustEnv * 0.8);',
+                        '    vec2 windDisp = uWindDirection * carrier * uWindStrength * 0.18 * windWeight;',
+                        '    float flutter = sin(worldPos.x * 0.6 + worldPos.z * 0.5 + uTime * 4.5);',
+                        '    windDisp += perp * flutter * 0.05 * windWeight * uWindStrength;',
+                        '    // Apply in instance/world space (modelMatrix is identity for our tree InstancedMeshes).',
+                        '    mvPosition.xz += windDisp;',
+                        '  }',
+                        '}',
+                        'mvPosition = modelViewMatrix * mvPosition;',
+                        'gl_Position = projectionMatrix * mvPosition;'
+                    ].join('\n')
+                );
+        };
+        // Force a recompile if the material has already been compiled.
+        material.needsUpdate = true;
+    }
+
+    /**
+     * Walk every tree-type GLB cached on `this.models.trees` and apply the
+     * leaf-wind shader patch to each child material. Called once after
+     * loadModels resolves; the WeakSet guard makes re-invocation a no-op.
+     */
+    _setupTreeWind() {
+        for (const treeType of Object.keys(this.models.trees)) {
+            const model = this.models.trees[treeType];
+            if (!model) continue;
+            const minY = model.userData?.modelBboxMinY ?? 0;
+            const maxY = model.userData?.modelBboxMaxY ?? 1;
+            model.traverse(child => {
+                if (!child.isMesh || !child.material) return;
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => this._patchTreeWindMaterial(m, minY, maxY));
+                } else {
+                    this._patchTreeWindMaterial(child.material, minY, maxY);
+                }
+            });
+        }
     }
 
     /**
@@ -1238,6 +1370,17 @@ export class TerrainBuilder {
             // Legacy: Only update animation on desktop
             if (!this.isMobile && this.grassMaterial && this.grassMaterial.uniforms.time) {
                 this.grassMaterial.uniforms.time.value = performance.now() * 0.001;
+            }
+        }
+
+        // Cycle 14 Phase 3: drive the shared tree-wind uniforms. Mirror the
+        // grass system's wind direction so trees and grass agree on which
+        // way the wind is blowing per scene.
+        if (this._treeWind) {
+            this._treeWind.uTime.value = performance.now() * 0.001;
+            const grassWind = this.grassSystem?.grassMaterial?.uniforms?.windDirection?.value;
+            if (grassWind) {
+                this._treeWind.uWindDirection.value.copy(grassWind);
             }
         }
     }
