@@ -190,3 +190,25 @@ Phases 2, 3, 4 are fully parallelizable after Phase 1. Phase 5 waits on all.
 ## What got deferred from this draft
 
 The earlier Cycle 14 draft ("code-health-and-perf-foundation") had six phases focused on bundle slim, gameplay constants, main.js split, test coverage, and a WebGPU spike. Those threads are still real — they got pushed because Matt's playtest of Cycle 13 close exposed visual issues that would block hero card quality regardless of code health. The bundle slim + constants + WebGPU spike threads carry forward to Cycle 15+ as their own focused cycles. The cycle 13 hero card commitment carries forward to Cycle 14 Phase 5.
+
+## Partial-close progress log (2026-05-03 autonomous session)
+
+The shader half of every phase landed in a single autonomous pass. Asset-dependent steps surfaced as Matt-blockers because GLB downloads + browser playtest can't be done autonomously.
+
+| Phase | Shader / structural work | Asset work | Status |
+| --- | --- | --- | --- |
+| 1 — Heightfield Y unification | `meshSampleY` + grid capture in [`shared/terrain/Heightfield.js`](../shared/terrain/Heightfield.js) + [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) + 9-case [`tests/heightfield-mesh-y.spec.js`](../tests/heightfield-mesh-y.spec.js). Sim-baseline byte-identical. | n/a | ✅ shipped (commit `3796f3c`) |
+| 2 — Grass | Gust envelope + 2-octave analytic sway + tip flutter + sun-aligned fake-SSS in [`js/GrassSystem.js`](../js/GrassSystem.js) and [`js/shaders/grass/`](../js/shaders/grass/). | n/a | ✅ shipped (commit `f1e0d78`); render-texture interactors + critically-damped recovery deferred to Cycle 15+ |
+| 3 — Trees | `_patchTreeWindMaterial()` + `_setupTreeWind()` on `TerrainBuilder` — `onBeforeCompile` leaf-wind patch on existing tree GLBs. Shared uniforms; idempotent. | Quaternius MegaKit GLB swap + `@three.ez/instanced-mesh` LOD pool unification | ✅ shader shipped (commit `ec0b902`); 🟡 asset swap Matt-blocked |
+| 4 — Rocks + scatter | `_patchRockMaterial()` + `_setupRockShader()` — fresnel rim-light + sun-tinted `setRockRimColor()`. | Quaternius MegaKit rocks + new `js/ScatterSystem.js` (Poisson pebbles/sticks/mushrooms/wildflowers + dandelion oversampling) | ✅ rim-light shipped (commit `42c9f63`); 🟡 asset swap + ScatterSystem Matt-blocked |
+| 5 — Hero cards + v1.1.0 | n/a (waits on Phases 1–4 polish in browser) | `freeFly()` posing → `shot-list.mjs` pin → `npm run cinema` × 7 + `git tag v1.1.0` | 🟡 Matt-blocked (needs browser playtest) |
+
+**Cycle stats:** 158/158 vitest pass (was 149; +9 from new mesh-Y spec). Production build clean (main 751 KB / 222 KB gzip — +7 KB from shader patches, within noise). Sim-baseline byte-identical (the whole point of routing visuals through `meshSampleY` while sim keeps `sample()`).
+
+**What an agent picking up the asset work needs to know:**
+
+- The shader patches in Phases 3 + 4 walk every `child.material` of every cached GLB at load time. New GLBs pick up the leaf-wind + rim-light patches automatically — no shader code changes when swapping assets.
+- Tree placement in [`shared/TreePlacement.js`](../shared/TreePlacement.js) is the contract; only the GLB *targets* in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) `modelPaths.trees` need updating. Same for rocks.
+- The 250m near→far billboard impostor seam still exists. Unifying via `@three.ez/instanced-mesh` LOD pool is paired with the asset swap — landing both together gives one coherent visual upgrade rather than two adjacent ones.
+- `_treeWind.uWindStrength.value` defaults to 0.6 desktop / 0 mobile. Tune after the asset swap if leaves look too active or too still.
+- `_rockShader.uRimStrength.value` defaults to 0.35. Push to 0.5 for a more graphic-novel look, drop to 0.2 for grounded realism.
