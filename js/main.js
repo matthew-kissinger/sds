@@ -2532,6 +2532,12 @@ class SheepDogSimulation {
         if (this._animeWater) {
             this._animeWater.update(performance.now() * 0.001, sunDir);
         }
+        // Cycle 14 Phase 2: feed sun direction to grass for fake-SSS
+        // back-light. Same source as water shader so they agree on time
+        // of day every frame.
+        if (sunDir) {
+            this.terrainBuilder?.grassSystem?.setSunDirection?.(sunDir);
+        }
         // Cycle 7 Phase 2e: keep sun disc aligned with the atmosphere's
         // sun direction + color, anchored at a fixed offset from the camera.
         if (this._sunBillboard && sunDir) {

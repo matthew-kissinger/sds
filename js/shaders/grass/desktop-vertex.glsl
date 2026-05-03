@@ -45,6 +45,10 @@ float smoothFalloff(float dist, float radius) {
     return 1.0 - t * t * (3.0 - 2.0 * t);
 }
 
+float hash11(float n) {
+    return fract(sin(n) * 43758.5453123);
+}
+
 void main() {
     vUv = uv;
     vHeight = bladeData.y;
@@ -53,24 +57,34 @@ void main() {
     vec4 worldPos4 = modelMatrix * instanceMatrix * vec4(pos, 1.0);
     vWorldPos = worldPos4.xyz;
 
-    // Wind power - smooth curve, tips move more
+    // Wind power — t² weighting keeps base anchored, tip gets full sway.
     float windPower = vHeight * vHeight;
+    vec2 perp = vec2(-windDirection.y, windDirection.x);
 
-    // Sample noise texture for gentle organic wind
-    vec2 noiseUV = vWorldPos.xz * 0.008 + time * windSpeed * 0.05;
-    vec4 noise = texture2D(noiseTexture, noiseUV);
+    // Cycle 14 Phase 2: layered analytic wind (no texture sampling).
+    // Gust envelope scrolls across world space along windDirection at
+    // ~1.5 m/s; modulates two octaves of low-freq sway.
+    vec2 windFlow = windDirection * time * 1.5;
+    vec2 gustPos = vWorldPos.xz - windFlow;
+    float gA = sin(gustPos.x * 0.045 + gustPos.y * 0.038);
+    float gB = sin(gustPos.x * 0.022 + gustPos.y * 0.029 + 1.7);
+    float gustEnv = smoothstep(-0.2, 1.0, gA * 0.6 + gB * 0.4);
 
-    // Gentle wave-based wind - zen-like swaying
-    float wave1 = sin(vWorldPos.x * 0.03 + vWorldPos.z * 0.02 + time * 0.8) * 0.5 + 0.5;
-    float wave2 = sin(vWorldPos.x * 0.02 - vWorldPos.z * 0.03 + time * 0.5) * 0.5 + 0.5;
-    float combinedWave = (wave1 + wave2) * 0.5;
+    float t = time * windSpeed;
+    float sway1 = sin(vWorldPos.x * 0.13 + vWorldPos.z * 0.09 + t * 0.85);
+    float sway2 = sin(vWorldPos.x * 0.07 - vWorldPos.z * 0.11 + t * 0.55 + 1.3);
+    float sway = sway1 * 0.6 + sway2 * 0.4;
 
-    // Smooth wind displacement
-    vec2 windDisp = windDirection * combinedWave * windStrength * windPower;
+    float carrier = 0.45 + sway * 0.5 * (0.4 + gustEnv * 0.8);
+    vec2 windDisp = windDirection * carrier * windStrength * windPower;
 
-    // Add subtle noise variation
-    windDisp.x += (noise.r - 0.5) * 0.03 * windPower;
-    windDisp.y += (noise.g - 0.5) * 0.03 * windPower;
+    float bladeJitter = hash11(float(gl_InstanceID) * 0.137);
+    windDisp *= 0.85 + bladeJitter * 0.3;
+
+    // Tip-only flutter — leaf-tip shimmer on the top ~35% of the blade.
+    float tipMask = smoothstep(0.65, 1.0, vHeight);
+    float flutter = sin(vWorldPos.x * 0.7 + vWorldPos.z * 0.6 + time * 4.5 + bladeJitter * 6.28);
+    windDisp += perp * flutter * 0.06 * tipMask * windStrength;
 
     // Entity interaction - grass bends AWAY from entities
     vec3 totalPush = vec3(0.0);

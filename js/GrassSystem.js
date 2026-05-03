@@ -435,6 +435,12 @@ export class GrassSystem {
             // Camera for distance calculations
             uCameraPos: { value: new THREE.Vector3() },
 
+            // Cycle 14 Phase 2: world-space sun direction for fake-SSS
+            // back-light. main.js calls grassSystem.setSunDirection() per
+            // frame from atmosphere.getSunDirection(). Default points up
+            // (overhead noon) so the term is harmless before first update.
+            uSunDirection: { value: new THREE.Vector3(0, 1, 0) },
+
             // Distance-based blade-height fade (smooth LOD transition)
             grassFadeStart: { value: this.config.grassFadeStart },
             grassFadeEnd: { value: this.config.grassFadeEnd }
@@ -523,36 +529,58 @@ export class GrassSystem {
                 vec4 worldPos4 = modelMatrix * instanceMatrix * vec4(pos, 1.0);
                 vWorldPos = worldPos4.xyz;
 
-                // Wind power - smooth curve, tips move more
+                // Wind power — smooth t² curve with the base anchored. This
+                // is the Bezier-spine analogue: with only 2 vertical levels
+                // in geometry, weighting amplitude by vHeight² keeps the
+                // root still and pushes the tip most, which is what a 4-CP
+                // Bezier curve would do for a flat-quad blade.
                 float windPower = vHeight * vHeight;
-
-                // Zen wind: three noise samples taken at DIFFERENT directions
-                // and scales so the field has no single visible "wavefront".
-                // The previous single-direction scroll created a coherent line
-                // of magnitude advancing across the grass; rotating each
-                // octave breaks that up so the field reads as a soft, organic
-                // shimmer rather than a marching wave.
                 vec2 perp = vec2(-windDirection.y, windDirection.x);
-                float t = time * windSpeed * 0.05;
-                vec2 uvA = vWorldPos.xz * 0.009 - windDirection * t;
-                vec2 uvB = vWorldPos.xz * 0.014 - perp * t * 0.6;
-                vec2 uvC = vWorldPos.xz * 0.023 - normalize(windDirection + perp) * t * 1.1;
-                float nA = texture2D(noiseTexture, uvA).r;
-                float nB = texture2D(noiseTexture, uvB).g;
-                float nC = texture2D(noiseTexture, uvC).b;
 
-                // Soft modulation around a constant background flow. Smaller
-                // variation than before (0.35..0.65 vs 0.4..1.2) — less
-                // pulse, more breath. The mean push along windDirection is
-                // what makes blades visibly lean; the noise just whispers.
-                float gust = (nA + nB + nC) * 0.333;
-                float flow = 0.5 + (gust - 0.5) * 0.3;
-                vec2 windDisp = windDirection * flow * windStrength * windPower;
+                // === Cycle 14 Phase 2 wind playbook ===
+                // Per docs/research-grass-2026-05.md: replace per-vertex
+                // simplex noise with a layered analytic field — two octaves
+                // of low-frequency sway in world space, modulated by a
+                // slow scrolling gust envelope. The envelope is the single
+                // biggest "zen" lever: it's what makes the field "breathe"
+                // in waves instead of shaking uniformly.
 
-                // Per-blade decorrelated side wobble — micro-jitter so blades
-                // don't all wave in lockstep along the wind axis.
-                windDisp.x += (nB - 0.5) * 0.05 * windPower;
-                windDisp.y += (nC - 0.5) * 0.05 * windPower;
+                // Gust envelope: stacked sinusoids in world space, scrolled
+                // at ~1.5 m/s along windDirection. Reads as gusts crossing
+                // the meadow with ~30m wavelength and slow temporal drift.
+                vec2 windFlow = windDirection * time * 1.5;
+                vec2 gustPos = vWorldPos.xz - windFlow;
+                float gA = sin(gustPos.x * 0.045 + gustPos.y * 0.038);
+                float gB = sin(gustPos.x * 0.022 + gustPos.y * 0.029 + 1.7);
+                // Bias toward calm with occasional strong gusts (~30/70).
+                float gustEnv = smoothstep(-0.2, 1.0, gA * 0.6 + gB * 0.4);
+
+                // Two octaves of analytic low-frequency sway in world space.
+                // No texture sampling — sin/cos is cheap and avoids the
+                // temporal aliasing of low-res scrolling noise.
+                float t = time * windSpeed;
+                float sway1 = sin(vWorldPos.x * 0.13 + vWorldPos.z * 0.09 + t * 0.85);
+                float sway2 = sin(vWorldPos.x * 0.07 - vWorldPos.z * 0.11 + t * 0.55 + 1.3);
+                float sway = sway1 * 0.6 + sway2 * 0.4;
+
+                // Carrier: constant background lean + gust-modulated sway.
+                // The constant lean is what makes blades visibly point
+                // downwind in calm air; the gust modulation is the breath.
+                float carrier = 0.45 + sway * 0.5 * (0.4 + gustEnv * 0.8);
+                vec2 windDisp = windDirection * carrier * windStrength * windPower;
+
+                // Per-blade decorrelator so neighbouring blades aren't in
+                // lockstep along the wind axis.
+                float bladeJitter = hash11(float(gl_InstanceID) * 0.137);
+                windDisp *= 0.85 + bladeJitter * 0.3;
+
+                // Tip-only flutter: high-freq, perpendicular to wind, only
+                // the top ~35% of blade height. Reads as leaf-tip shimmer
+                // without the whole-blade rattle that signaled "noisy"
+                // before.
+                float tipMask = smoothstep(0.65, 1.0, vHeight);
+                float flutter = sin(vWorldPos.x * 0.7 + vWorldPos.z * 0.6 + time * 4.5 + bladeJitter * 6.28);
+                windDisp += perp * flutter * 0.06 * tipMask * windStrength;
 
                 // Entity interaction — grass bends AWAY from each entity's
                 // oriented body footprint. Each entity has a forward direction;
@@ -733,6 +761,7 @@ export class GrassSystem {
             uniform vec3 fogColor;
             uniform float fogDensity;
             uniform vec3 uCameraPos;
+            uniform vec3 uSunDirection;
 
             varying vec2 vUv;
             varying vec3 vWorldPos;
@@ -768,15 +797,29 @@ export class GrassSystem {
                 float ao = 0.7 + 0.3 * vHeight;
                 color *= ao;
 
-                // Slight translucency effect at tips (brighter when backlit)
                 vec3 toCamera = normalize(uCameraPos - vWorldPos);
+
+                // Slight translucency effect at tips (brighter when backlit)
                 float backlight = 1.0 + (1.0 - abs(dot(toCamera, vec3(0.0, 1.0, 0.0)))) * vHeight * 0.15;
                 color *= backlight;
 
-                // Rim-light on blade tips - back-lit tops naturally brighten
+                // Cycle 14 Phase 2 fake-SSS: sun-aligned back-lit term.
+                // pow^4 keeps the halo tight to the sun silhouette so the
+                // rim only fires on sunrise/sunset compositions where the
+                // camera is looking toward the sun through the blade.
+                // tipColor (~30% brighter than base) gives the warm-yellow
+                // halo grass needs to read as thin organic foliage.
+                vec3 toSun = normalize(uSunDirection);
                 float tipMask = smoothstep(0.6, 1.0, vHeight);
-                float rim = pow(max(dot(toCamera, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
-                color += rim * tipColor * 0.6 * tipMask;
+                float backlitSun = pow(max(dot(toCamera, -toSun), 0.0), 4.0);
+                color += backlitSun * tipColor * 0.7 * tipMask;
+
+                // Soft vertical rim — generic ambient lift on tips, kept at
+                // ~⅓ the previous strength so the new sun-aligned halo
+                // dominates without losing the all-day "tip catches light"
+                // read.
+                float verticalRim = pow(max(dot(toCamera, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
+                color += verticalRim * tipColor * 0.2 * tipMask;
 
                 // FogExp2 — matches scene.fog (Atmosphere keeps the color
                 // and density in sync with the sky horizon every frame).
@@ -1207,6 +1250,18 @@ export class GrassSystem {
                 this.grassMaterial.uniforms.windDirection.value.set(direction.x, direction.y);
             }
         }
+    }
+
+    /**
+     * Hand the world-space sun direction to the grass material every frame.
+     * Drives the Cycle 14 Phase 2 fake-SSS back-light: blades the camera
+     * looks toward the sun through gain a tipColor halo, which sells "thin
+     * organic foliage" at sunrise/sunset.
+     * @param {THREE.Vector3} sunDir Unit vector pointing at the sun
+     */
+    setSunDirection(sunDir) {
+        if (!sunDir || !this.grassMaterial) return;
+        this.grassMaterial.uniforms.uSunDirection.value.copy(sunDir);
     }
 
     /**
