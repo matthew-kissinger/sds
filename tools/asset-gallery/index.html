@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SDS asset gallery</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg: #0e0f12;
+    --panel: #1a1d22;
+    --line: #2a2e35;
+    --text: #d8dde6;
+    --dim: #8a91a0;
+    --accent: #ffcd5c;
+    --accent-dim: #6f5e3a;
+    --good: #6fdd9b;
+    --bad: #d97070;
+}
+html, body { height: 100%; }
+body {
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+header {
+    padding: 0.75rem 1rem;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+header h1 { font-size: 14px; font-weight: 600; }
+header .meta { color: var(--dim); }
+header button, header select, header input {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 0.4rem 0.75rem;
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+}
+header button:hover { border-color: var(--accent); color: var(--accent); }
+header button.primary { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+header button.primary:hover { background: var(--accent); color: #000; }
+header .spacer { flex: 1; }
+header kbd {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--dim);
+}
+main {
+    display: grid;
+    grid-template-columns: 1fr 480px;
+    overflow: hidden;
+}
+#grid {
+    overflow-y: auto;
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+    align-content: start;
+}
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.1s, transform 0.1s;
+    position: relative;
+    user-select: none;
+}
+.card:hover { border-color: var(--accent); }
+.card.active { border-color: var(--accent); transform: translateY(-2px); }
+.card.picked { border-color: var(--good); }
+.card .thumb {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #14171c;
+    background-image: linear-gradient(45deg, #1a1d22 25%, transparent 25%, transparent 75%, #1a1d22 75%),
+                      linear-gradient(45deg, #1a1d22 25%, transparent 25%, transparent 75%, #1a1d22 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 8px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    font-size: 11px;
+}
+.card .thumb img { width: 100%; height: 100%; object-fit: contain; image-rendering: -webkit-optimize-contrast; }
+.card .info { padding: 0.5rem; border-top: 1px solid var(--line); }
+.card .filename { font-weight: 500; font-size: 12px; word-break: break-all; }
+.card .stats { color: var(--dim); font-size: 11px; margin-top: 0.25rem; display: flex; justify-content: space-between; }
+.card .pick-toggle {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    font-size: 14px;
+    transition: all 0.1s;
+}
+.card.picked .pick-toggle { color: var(--good); border-color: var(--good); background: rgba(111,221,155,0.15); }
+.card .pick-toggle:hover { color: var(--accent); border-color: var(--accent); }
+#viewer {
+    background: var(--panel);
+    border-left: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#viewer-canvas-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 320px;
+}
+#viewer-canvas { width: 100%; height: 100%; display: block; }
+#viewer-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    pointer-events: none;
+}
+#viewer-info {
+    padding: 1rem;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    font-size: 12px;
+}
+#viewer-info h2 { font-size: 14px; font-weight: 600; margin-bottom: 0.5rem; word-break: break-all; }
+#viewer-info dl { display: grid; grid-template-columns: 110px 1fr; gap: 0.25rem 0.75rem; color: var(--dim); }
+#viewer-info dd { color: var(--text); font-family: ui-monospace, monospace; }
+#viewer-info .actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; }
+#viewer-info .actions button { flex: 1; }
+#status {
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    color: var(--dim);
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+#status.show { opacity: 1; }
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--dim);
+    padding: 3rem 1rem;
+}
+.empty-state code { background: var(--panel); padding: 2px 6px; border-radius: 3px; font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<header>
+    <h1>SDS asset gallery</h1>
+    <span class="meta" id="meta">Loading…</span>
+    <span class="spacer"></span>
+    <select id="filter">
+        <option value="all">All</option>
+        <option value="picked">Picked only</option>
+        <option value="unpicked">Unpicked only</option>
+    </select>
+    <select id="sort">
+        <option value="name">Sort: name</option>
+        <option value="size">Sort: size</option>
+        <option value="tris">Sort: tris</option>
+    </select>
+    <button id="refresh">↻ Refresh</button>
+    <button id="save" class="primary">Save picks</button>
+    <span class="meta">
+        <kbd>←/→</kbd> nav <kbd>space</kbd> pick <kbd>s</kbd> save
+    </span>
+</header>
+<main>
+    <div id="grid"></div>
+    <div id="viewer">
+        <div id="viewer-canvas-wrap">
+            <canvas id="viewer-canvas"></canvas>
+            <div id="viewer-empty">Click a card to inspect</div>
+        </div>
+        <div id="viewer-info" hidden>
+            <h2 id="vi-name">—</h2>
+            <dl>
+                <dt>Path</dt><dd id="vi-path">—</dd>
+                <dt>Size</dt><dd id="vi-size">—</dd>
+                <dt>Triangles</dt><dd id="vi-tris">—</dd>
+                <dt>Bounds</dt><dd id="vi-bounds">—</dd>
+                <dt>Materials</dt><dd id="vi-mats">—</dd>
+            </dl>
+            <div class="actions">
+                <button id="vi-pick">Toggle pick (space)</button>
+            </div>
+        </div>
+    </div>
+</main>
+<div id="status"></div>
+<script type="importmap">
+{
+    "imports": {
+        "three": "/node_modules/three/build/three.module.js",
+        "three/addons/": "/node_modules/three/examples/jsm/"
+    }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const grid = document.getElementById('grid');
+const meta = document.getElementById('meta');
+const status = document.getElementById('status');
+const viewerCanvas = document.getElementById('viewer-canvas');
+const viewerEmpty = document.getElementById('viewer-empty');
+const viewerInfo = document.getElementById('viewer-info');
+const filterSel = document.getElementById('filter');
+const sortSel = document.getElementById('sort');
+
+const PARAMS = new URLSearchParams(location.search);
+const DIR = PARAMS.get('dir') || 'tools/asset-gallery/staging';
+const PORT = location.port;
+
+let entries = [];
+let activeIndex = -1;
+const picks = new Set();
+
+function showStatus(text, ms = 1800) {
+    status.textContent = text;
+    status.classList.add('show');
+    clearTimeout(showStatus._t);
+    showStatus._t = setTimeout(() => status.classList.remove('show'), ms);
+}
+
+// ----- Big viewer (orbit) -----
+const renderer = new THREE.WebGLRenderer({ canvas: viewerCanvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14171c);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 1000);
+camera.position.set(2, 1.6, 2);
+const controls = new OrbitControls(camera, viewerCanvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(0, 0.5, 0);
+const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.9);
+scene.add(hemi);
+const dir = new THREE.DirectionalLight(0xffeecc, 1.0);
+dir.position.set(3, 4, 2);
+scene.add(dir);
+
+// Tiny ground reference plane.
+const groundGeo = new THREE.CircleGeometry(2, 64);
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x2a2e35, roughness: 0.9, metalness: 0 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+let currentRoot = null;
+function clearViewer() {
+    if (currentRoot) {
+        scene.remove(currentRoot);
+        currentRoot.traverse((o) => {
+            if (o.isMesh) {
+                o.geometry?.dispose();
+                if (Array.isArray(o.material)) o.material.forEach((m) => m.dispose());
+                else o.material?.dispose();
+            }
+        });
+        currentRoot = null;
+    }
+}
+
+function frameOnObject(obj) {
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+    const maxDim = Math.max(size.x, size.y, size.z, 0.5);
+    const dist = maxDim * 2.2;
+    camera.position.copy(center).add(new THREE.Vector3(dist, dist * 0.7, dist));
+    camera.near = Math.max(0.001, dist * 0.001);
+    camera.far = dist * 100;
+    camera.updateProjectionMatrix();
+    controls.target.copy(center);
+    return { box, size, center };
+}
+
+const gltf = new GLTFLoader();
+
+async function loadIntoViewer(entry) {
+    clearViewer();
+    viewerEmpty.hidden = true;
+    try {
+        const { scene: root } = await gltf.loadAsync('/' + entry.path);
+        currentRoot = root;
+        scene.add(root);
+        const { box, size } = frameOnObject(root);
+        const tris = countTris(root);
+        document.getElementById('vi-name').textContent = entry.name;
+        document.getElementById('vi-path').textContent = entry.path;
+        document.getElementById('vi-size').textContent = formatBytes(entry.size);
+        document.getElementById('vi-tris').textContent = tris.toLocaleString() + ' tris';
+        document.getElementById('vi-bounds').textContent =
+            `${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} m`;
+        document.getElementById('vi-mats').textContent = countMaterials(root) + ' materials';
+        viewerInfo.hidden = false;
+        entry.tris = tris;
+        entry.bbox = { sx: size.x, sy: size.y, sz: size.z };
+    } catch (err) {
+        showStatus('Load failed: ' + err.message, 4000);
+        viewerEmpty.textContent = 'Failed: ' + err.message;
+        viewerEmpty.hidden = false;
+        viewerInfo.hidden = true;
+    }
+}
+
+function countTris(root) {
+    let n = 0;
+    root.traverse((o) => {
+        if (o.isMesh && o.geometry) {
+            const idx = o.geometry.getIndex();
+            const pos = o.geometry.getAttribute('position');
+            n += idx ? idx.count / 3 : (pos ? pos.count / 3 : 0);
+        }
+    });
+    return Math.round(n);
+}
+
+function countMaterials(root) {
+    const set = new Set();
+    root.traverse((o) => {
+        if (o.isMesh && o.material) {
+            if (Array.isArray(o.material)) o.material.forEach((m) => set.add(m.uuid));
+            else set.add(o.material.uuid);
+        }
+    });
+    return set.size;
+}
+
+function formatBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(2) + ' MB';
+}
+
+function tick() {
+    requestAnimationFrame(tick);
+    controls.update();
+    if (currentRoot) {
+        currentRoot.rotation.y += 0.003;
+    }
+    const wrap = viewerCanvas.parentElement;
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    if (viewerCanvas.width !== w || viewerCanvas.height !== h) {
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+    }
+    renderer.render(scene, camera);
+}
+tick();
+
+// ----- Thumbnail rendering (offscreen) -----
+const thumbCanvas = document.createElement('canvas');
+thumbCanvas.width = thumbCanvas.height = 256;
+const thumbRenderer = new THREE.WebGLRenderer({ canvas: thumbCanvas, antialias: true, alpha: true });
+thumbRenderer.outputColorSpace = THREE.SRGBColorSpace;
+const thumbScene = new THREE.Scene();
+const thumbCam = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
+thumbScene.add(new THREE.HemisphereLight(0xffffff, 0x404040, 1.0));
+const thumbDir = new THREE.DirectionalLight(0xffeecc, 0.9);
+thumbDir.position.set(2, 3, 2);
+thumbScene.add(thumbDir);
+
+async function renderThumbnail(entry) {
+    try {
+        const { scene: root } = await gltf.loadAsync('/' + entry.path);
+        thumbScene.add(root);
+        const box = new THREE.Box3().setFromObject(root);
+        const size = new THREE.Vector3(); box.getSize(size);
+        const center = new THREE.Vector3(); box.getCenter(center);
+        const maxDim = Math.max(size.x, size.y, size.z, 0.5);
+        const dist = maxDim * 2.0;
+        thumbCam.position.copy(center).add(new THREE.Vector3(dist, dist * 0.65, dist));
+        thumbCam.lookAt(center);
+        thumbRenderer.render(thumbScene, thumbCam);
+        const url = thumbCanvas.toDataURL('image/png');
+        // Track stats for sort.
+        let n = 0;
+        root.traverse((o) => {
+            if (o.isMesh && o.geometry) {
+                const idx = o.geometry.getIndex();
+                const pos = o.geometry.getAttribute('position');
+                n += idx ? idx.count / 3 : (pos ? pos.count / 3 : 0);
+            }
+        });
+        entry.tris = Math.round(n);
+        entry.bbox = { sx: size.x, sy: size.y, sz: size.z };
+        // Cleanup.
+        thumbScene.remove(root);
+        root.traverse((o) => {
+            if (o.isMesh) {
+                o.geometry?.dispose();
+                if (Array.isArray(o.material)) o.material.forEach((m) => m.dispose());
+                else o.material?.dispose();
+            }
+        });
+        return url;
+    } catch (err) {
+        console.warn('Thumbnail failed for', entry.path, err);
+        return null;
+    }
+}
+
+// ----- Card rendering -----
+function applyFilterSort() {
+    const filter = filterSel.value;
+    const sort = sortSel.value;
+    const view = entries.filter((e) => {
+        if (filter === 'picked') return picks.has(e.path);
+        if (filter === 'unpicked') return !picks.has(e.path);
+        return true;
+    });
+    view.sort((a, b) => {
+        if (sort === 'size') return a.size - b.size;
+        if (sort === 'tris') return (a.tris ?? Infinity) - (b.tris ?? Infinity);
+        return a.name.localeCompare(b.name);
+    });
+    return view;
+}
+
+function renderGrid() {
+    const view = applyFilterSort();
+    grid.innerHTML = '';
+    if (view.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.innerHTML = `
+            No GLBs in <code>${DIR}</code>.<br><br>
+            Drop GLBs into that folder, or run <code>npm run gen:meshy -- --prompt-set=rocks --count=8</code>.<br>
+            Then click <strong>↻ Refresh</strong>.
+        `;
+        grid.appendChild(empty);
+        meta.textContent = '0 GLBs';
+        return;
+    }
+    view.forEach((entry) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        if (picks.has(entry.path)) card.classList.add('picked');
+        if (entry === entries[activeIndex]) card.classList.add('active');
+        card.dataset.path = entry.path;
+        card.innerHTML = `
+            <div class="thumb">${entry.thumbnail ? `<img src="${entry.thumbnail}" alt="">` : '…'}</div>
+            <div class="info">
+                <div class="filename">${entry.name}</div>
+                <div class="stats">
+                    <span>${formatBytes(entry.size)}</span>
+                    <span>${entry.tris != null ? entry.tris.toLocaleString() + ' tris' : '—'}</span>
+                </div>
+            </div>
+            <div class="pick-toggle" title="Toggle pick (space)">★</div>
+        `;
+        card.addEventListener('click', (e) => {
+            if (e.target.classList.contains('pick-toggle')) {
+                togglePick(entry);
+                return;
+            }
+            setActive(entries.indexOf(entry));
+        });
+        grid.appendChild(card);
+    });
+    meta.textContent = `${view.length} of ${entries.length} GLBs · ${picks.size} picked`;
+}
+
+function togglePick(entry) {
+    if (picks.has(entry.path)) picks.delete(entry.path);
+    else picks.add(entry.path);
+    renderGrid();
+    showStatus(picks.has(entry.path) ? `Picked: ${entry.name}` : `Unpicked: ${entry.name}`);
+}
+
+function setActive(idx) {
+    if (idx < 0 || idx >= entries.length) return;
+    activeIndex = idx;
+    loadIntoViewer(entries[activeIndex]);
+    renderGrid();
+    const card = grid.querySelector(`[data-path="${CSS.escape(entries[idx].path)}"]`);
+    if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+document.getElementById('vi-pick').addEventListener('click', () => {
+    if (activeIndex >= 0) togglePick(entries[activeIndex]);
+});
+
+filterSel.addEventListener('change', renderGrid);
+sortSel.addEventListener('change', renderGrid);
+
+document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (e.key === 'ArrowRight') { setActive(Math.min(activeIndex + 1, entries.length - 1)); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { setActive(Math.max(activeIndex - 1, 0)); e.preventDefault(); }
+    else if (e.key === ' ') {
+        if (activeIndex >= 0) togglePick(entries[activeIndex]);
+        e.preventDefault();
+    }
+    else if (e.key === 's' || e.key === 'S') { savePicks(); }
+});
+
+document.getElementById('refresh').addEventListener('click', loadList);
+
+document.getElementById('save').addEventListener('click', savePicks);
+
+async function savePicks() {
+    if (picks.size === 0) {
+        showStatus('Nothing picked yet.', 2500);
+        return;
+    }
+    const payload = {
+        dir: DIR,
+        savedAt: new Date().toISOString(),
+        picks: [...picks].map((p) => {
+            const e = entries.find((x) => x.path === p);
+            return {
+                path: p,
+                name: e?.name,
+                size: e?.size,
+                tris: e?.tris,
+                bbox: e?.bbox
+            };
+        })
+    };
+    const res = await fetch('/api/save-picks', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+        const { written } = await res.json();
+        showStatus(`Saved ${picks.size} picks → ${written}`, 4000);
+    } else {
+        showStatus('Save failed: ' + res.status, 4000);
+    }
+}
+
+async function loadList() {
+    grid.innerHTML = '<div class="empty-state">Loading…</div>';
+    try {
+        const res = await fetch('/api/list?dir=' + encodeURIComponent(DIR));
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        entries = data.entries.map((e) => ({ ...e, thumbnail: null, tris: null, bbox: null }));
+        meta.textContent = `${entries.length} GLBs · 0 picked · rendering thumbnails…`;
+        renderGrid();
+        // Render thumbnails sequentially to avoid GPU thrash.
+        for (let i = 0; i < entries.length; i++) {
+            const url = await renderThumbnail(entries[i]);
+            entries[i].thumbnail = url;
+            renderGrid();
+        }
+        showStatus(`Loaded ${entries.length} GLBs.`, 2500);
+    } catch (err) {
+        grid.innerHTML = `<div class="empty-state">Load failed: ${err.message}</div>`;
+    }
+}
+
+loadList();
+</script>
+</body>
+</html>

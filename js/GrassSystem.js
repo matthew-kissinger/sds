@@ -908,7 +908,12 @@ export class GrassSystem {
             // Cycle 14 Phase 1: meshSampleY returns the exact visible mesh Y
             // via triangle interpolation, so the old -0.1 "dip into mesh"
             // hack is gone. Blades sit on the surface, not 10cm below it.
-            const baseY = this.heightfield ? this.heightfield.meshSampleY(pos.x, pos.z) : 0;
+            let baseY = this.heightfield ? this.heightfield.meshSampleY(pos.x, pos.z) : 0;
+            // Cycle 15 Phase 4: defensive clamp. NaN/Infinity propagates as
+            // "blade-to-the-sky" anomaly on the GPU; bound to a generous Y
+            // range so any out-of-band sampler result becomes a flat-skirt
+            // placement instead of a rogue blade.
+            if (!Number.isFinite(baseY) || baseY > 50 || baseY < -10) baseY = 0;
             dummy.position.set(pos.x, baseY, pos.z);
 
             // Random rotation and scale

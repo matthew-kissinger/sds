@@ -1,0 +1,23 @@
+{
+  "category": "flora",
+  "stagingSubdir": "flora",
+  "stylePrefix": "low-poly stylized cozy game prop, single small plant, faceted flat shading, soft palette, transparent background",
+  "negative": "high-poly, photorealistic, ground plane, multiple plants, dirt patch",
+  "artStyle": "sculpture",
+  "topology": "triangle",
+  "polycount": 1200,
+  "prompts": [
+    "small cluster of yellow dandelions in grass, four heads",
+    "patch of white daisies, six small flowers",
+    "single red mushroom with white spots, fly agaric",
+    "small brown forest mushroom with rounded cap",
+    "fern frond with curled tip, bright green",
+    "small purple lupine flower spike",
+    "patch of bluebells, drooping bells",
+    "wild strawberry plant with red berries",
+    "small clover patch with white flowers",
+    "tall grass tuft, golden-tipped",
+    "thistle with purple bloom",
+    "low moss-covered log fragment"
+  ]
+}

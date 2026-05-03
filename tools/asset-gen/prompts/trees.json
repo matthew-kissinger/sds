@@ -1,0 +1,23 @@
+{
+  "category": "trees",
+  "stagingSubdir": "trees",
+  "stylePrefix": "low-poly stylized cozy game tree, faceted flat shading, soft autumn palette, single tree, transparent background, Studio Ghibli aesthetic",
+  "negative": "high-poly, photorealistic, glossy, dead, leafless, sparse canopy, no leaves",
+  "artStyle": "sculpture",
+  "topology": "triangle",
+  "polycount": 4500,
+  "prompts": [
+    "tall slender aspen with golden autumn leaves, slim white trunk",
+    "broad rounded oak with full green canopy, sturdy brown trunk",
+    "ancient gnarled oak, twisted branches, partial canopy",
+    "cherry blossom tree in full pink bloom, slender trunk",
+    "evergreen pine, conical silhouette, dark green needles",
+    "spruce tree with downward-sloping branches, deep green",
+    "red maple tree with crimson autumn leaves",
+    "weeping willow with cascading green leaves",
+    "bare birch silhouette, slim white trunk, no leaves",
+    "small bushy young oak, dense leafy canopy",
+    "yellow ginkgo with fan-shaped golden leaves",
+    "windswept coastal pine, leaning silhouette"
+  ]
+}

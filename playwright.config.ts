@@ -32,7 +32,10 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    actionTimeout: 10_000,
+    // Cycle 15 Phase 6: bumped from 10s to 30s. The main bundle (~800 KB) +
+    // React hydration on a cold GH Actions Linux runner can stall
+    // dispatchEvent's actionability wait long enough to trip the 10s ceiling.
+    actionTimeout: 30_000,
     navigationTimeout: 30_000,
   },
 

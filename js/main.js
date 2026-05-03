@@ -252,6 +252,14 @@ class SheepDogSimulation {
         if (new URLSearchParams(location.search).get('perfMode') === '1') {
             const perfMon = this.performanceMonitor;
             const gameStateRef = this.gameState;
+            // Cycle 15 Phase 3: expose renderer so the perf harness can read
+            // WebGLRenderer.info per-system without depending on cinematic=1
+            // (which flips preserveDrawingBuffer and biases the numbers).
+            const sceneManagerRef = this.sceneManager;
+            Object.defineProperty(window, '__sdsRenderer', {
+                configurable: true,
+                get() { return sceneManagerRef?.getRenderer?.() ?? null; }
+            });
             window.__perfHarness = {
                 isReady: () => {
                     const sheep = gameStateRef.getSheep?.() || [];

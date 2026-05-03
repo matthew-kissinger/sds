@@ -27,6 +27,11 @@
     "compress-glbs": "node scripts/compress-glbs.mjs",
     "bake-trees": "node tools/bake-trees.mjs",
     "bake-rocks": "node tools/bake-rocks.mjs",
+    "gallery": "node tools/asset-gallery.mjs",
+    "gen:meshy": "node tools/asset-gen/meshy.mjs",
+    "gen:integrate": "node tools/asset-gen/integrate.mjs",
+    "perf:baseline": "node tools/perf-harness.mjs --baseline",
+    "perf:check": "node tools/perf-harness.mjs --check",
     "bake-heightmaps": "node scripts/bake-heightmap.mjs --scene rolling-hills --peakHeight 6 --seed 1 --out public/terrain/rolling-hills.r32f && node scripts/bake-heightmap.mjs --scene field --peakHeight 0 --seed 0 --out public/terrain/field.r32f && node scripts/bake-heightmap.mjs --scene open-country --peakHeight 5 --seed 42 --out public/terrain/open-country.r32f"
   },
   "keywords": [

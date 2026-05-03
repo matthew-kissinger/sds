@@ -1,0 +1,23 @@
+{
+  "category": "rocks",
+  "stagingSubdir": "rocks",
+  "stylePrefix": "low-poly stylized game asset, faceted flat shading, soft palette, single object, white background, cozy cartoon",
+  "negative": "high-poly, photorealistic, glossy, cluttered, ground texture, vegetation",
+  "artStyle": "sculpture",
+  "topology": "triangle",
+  "polycount": 2000,
+  "prompts": [
+    "weathered granite boulder, mossy edges, irregular silhouette",
+    "moss-covered round river stone with cracks",
+    "tall jagged slate spire, layered shale",
+    "flat sandstone slab with weathered surface",
+    "trio of round stacked pebbles",
+    "angular limestone outcrop with sharp facets",
+    "smooth obsidian-shaped boulder, dark gray",
+    "lichen-spotted granite chunk, cozy storybook style",
+    "split geode boulder showing crystal interior",
+    "cracked desert rock with sun-bleached surface",
+    "fern-shaped fossil embedded sandstone",
+    "small mossy boulder cluster, low irregular cluster"
+  ]
+}
