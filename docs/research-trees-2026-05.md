@@ -62,19 +62,47 @@ Reference: [renanbomtempo/polygon-wind](https://github.com/RenanBomtempo/polygon
 
 ## Recommended path for SDS
 
-1. **Swap GLBs** → Quaternius Stylized Tree Pack (CC0, no attribution). Pick 3-4 hero trees that fit the cozy-game feel.
-2. **Replace `InstancedMesh` calls** in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) with `@three.ez/instanced-mesh`; **register existing 3-quad impostor as LOD1** on the same instance pool — kills the 250m hand-off seam, reuses kdbush colliders.
-3. **Author leaves as cross-quads in Blender**, paint trunk-vs-leaf weight into vertex color R.
-4. **Add wind shader** above to the leaf material via `onBeforeCompile` patch. ~30 lines of GLSL, ~zero per-frame CPU.
-5. **Optional: fake SSS** rim-on-shadow-side ramp for Ghibli pop.
+> **Updated 2026-05-03 after a fresh research pass.** Original recommendation was Quaternius MegaKit GLBs. The pivot to EZ-Tree below is driven by three things that landed after the dossier first shipped: (a) [EZ-Tree v1.1.0](https://github.com/dgreenheck/ez-tree) (Jan 2026) is now an actively-maintained MIT NPM library with cross-quad leaves + built-in wind shader baked in; (b) Quaternius MegaKit's 60–70% free / 30–40% Patreon-gated split is friction we don't need; (c) procedural at build time gives per-tree-type tunability (gnarliness, branch angles, leaf size) without committing to a fixed authored silhouette. **For rocks, Quaternius remains the right call** — see [`research-rocks-and-scatter-2026-05.md`](research-rocks-and-scatter-2026-05.md). For details on the Dec-2025 [Procedural Instanced Forest](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610) (the WebGPU/TSL alternative), see "Frontier alternatives" below — that's a Cycle 15+ candidate.
+
+1. **Add EZ-Tree as a dev dependency** → `bun add -D @dgreenheck/ez-tree`. MIT. Cross-quad leaves + recursive procedural branching + built-in shader-based wind already implemented.
+2. **Author `tools/bake-trees.mjs`** that generates 4–5 GLBs at build time using tuned EZ-Tree parameters: 2–3 broadleaf variants (replacing tree1, tree2), 1–2 conifer (replacing pine). Output to `assets/models/trees/`. Re-runnable so style adjustments don't require remembering one-off tweaks. Run before `npm run compress-glbs` so the existing GLB compression pipeline picks them up.
+3. **Update `modelPaths.trees` paths** in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) to the new GLB filenames. Verify `userData.modelBaseYOffset` lands the GLB pivot on terrain.
+4. **Replace `InstancedMesh` calls** with `@three.ez/instanced-mesh`; **register existing 3-quad impostor as LOD1** on the same instance pool — kills the 250m hand-off seam, reuses kdbush colliders.
+5. **Leaf-wind shader** ✅ already shipped Cycle 14 Phase 3 partial — the `onBeforeCompile` patch on `_patchTreeWindMaterial` walks every child material, so EZ-Tree's output picks up the wind automatically the moment the new GLBs land. No extra shader code needed.
+6. **Optional: fake-SSS rim-on-shadow-side ramp** for Ghibli pop. Would also be applied via `onBeforeCompile` on the leaf material, mirroring Phase 2's grass back-light.
+
+## Why not Quaternius MegaKit (the original recommendation)?
+
+Quaternius is hand-crafted Ghibli-leaning CC0 — visually very strong. The reasons to prefer EZ-Tree for trees specifically:
+
+- **Patreon split.** "60–70% free in Standard, 30–40% in Pro/Source" means the free trees might not include the exact silhouettes we want. Picking the right hero trees risks bumping into paywalled assets.
+- **No per-instance variation.** With Quaternius we ship N static silhouettes; every tree of type "tree1" looks identical. EZ-Tree generates a *family* per type by varying the seed, then we pick the best 1–2 within that family per type.
+- **Re-bakability.** A future "make trees more gnarly" or "drop pine variant" decision is a parameter tweak + re-run, not a re-download + re-cherry-pick.
+- **No external download in the repo's reproducibility chain.** Anyone cloning a fresh checkout can run `npm i && npm run bake-trees` and reproduce the trees. Quaternius assets would need to be committed (potentially large) or external-fetched at build (fragile).
+
+For **rocks**, none of those arguments hold — chunky authored rock silhouettes are what makes them read as obstacles, hand-authoring beats procedural icosahedron+noise here, and Quaternius MegaKit's 27 free rocks plus shared atlas with mushrooms/sticks for the Phase 4 ScatterSystem make it a single coherent source.
+
+## Frontier alternatives (Cycle 15+ candidates)
+
+- **[Procedural Instanced Forest](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610)** (red-reddington, Dec 2025) — L-system branching + 2 draw calls (bark cylinders + leaf quads) + vertex-shader LOD culling. Hits 2,800 trees in 8 draw calls at 60fps on mid-range desktop. WebGPU/TSL port already done. MIT. Demos on CodePen + integration in [pmmathias/birdybird](https://github.com/pmmathias/birdybird). The future-forward play once SDS does the WebGPU spike. Skipping for Cycle 14 because (a) it's a forum post + demos rather than a polished library — extraction work isn't trivial, and (b) the L-system look skews stylized-natural rather than Ghibli-cozy. Worth re-evaluating alongside the WebGPU migration.
 
 ## Mobile budget check
 
 2 InstancedMesh draws (trunk + leaves) per tree species × 3 species = **6 draws total** for hundreds of trees. RTX 3070 will not notice. Mid-tier mobile should also be fine — the cost is in geometry density, not draw calls, and Quaternius models are budgeted accordingly.
 
+## Decision history
+
+- **2026-05-02 (initial):** Recommended Quaternius MegaKit + `@three.ez/instanced-mesh` LOD pool + `onBeforeCompile` leaf wind.
+- **2026-05-03 (revised):** Pivoted trees to EZ-Tree v1.1.0 build-time generator after a follow-up research pass surfaced Quaternius's Patreon-gated split, EZ-Tree's MIT NPM availability with cross-quad leaves + wind already implemented, and the reproducibility win of procedural-at-build-time. Rocks stay on Quaternius. Conversation context: see Cycle 14 partial-close session notes.
+
 ## All sources
 
-- [Quaternius Stylized Nature MegaKit](https://quaternius.com/packs/stylizednaturemegakit.html)
+- [EZ-Tree on GitHub](https://github.com/dgreenheck/ez-tree) ⭐ **chosen for trees**
+- [@dgreenheck/ez-tree on npm](https://www.npmjs.com/package/@dgreenheck/ez-tree)
+- [Procedural Instanced Forest (three.js forum, Dec 2025)](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610) — frontier Cycle 15+ candidate
+- [pmmathias/birdybird](https://github.com/pmmathias/birdybird) — Procedural Instanced Forest integration
+- [Codrops: Fractals to Forests (Jan 2025)](https://tympanus.net/codrops/2025/01/27/fractals-to-forests-creating-realistic-3d-trees-with-three-js/) — EZ-Tree technique writeup
+- [Quaternius Stylized Nature MegaKit](https://quaternius.com/packs/stylizednaturemegakit.html) — alternative considered, kept for Phase 4 rocks
 - [Quaternius Stylized Tree Pack](https://quaternius.com/packs/stylizedtree.html)
 - [Quaternius 150+ LowPoly Nature](https://quaternius.itch.io/150-lowpoly-nature-models)
 - [Kenney Nature Kit](https://kenney.nl/assets/nature-kit)
@@ -84,8 +112,7 @@ Reference: [renanbomtempo/polygon-wind](https://github.com/RenanBomtempo/polygon
 - [Three.js BatchedMesh docs](https://threejs.org/docs/pages/BatchedMesh.html)
 - [adcimon/stylized-foliage](https://github.com/adcimon/stylized-foliage)
 - [douges.dev Fluffy Trees pt 1](https://douges.dev/blog/threejs-trees-1)
-- [Codrops: Fractals to Forests (Jan 2025)](https://tympanus.net/codrops/2025/01/27/fractals-to-forests-creating-realistic-3d-trees-with-three-js/)
-- [EZ-Tree on GitHub](https://github.com/dgreenheck/ez-tree)
+- [craftzdog/ghibli-style-shader](https://github.com/craftzdog/ghibli-style-shader)
 - [glTF Procedural Trees (proctree.js)](https://gltf-trees.donmccurdy.com/)
 - [FloraSynth thread](https://discourse.threejs.org/t/florasynth-procedural-tree-generator/58740)
 - [polygon-wind shader (Unity, portable)](https://github.com/RenanBomtempo/polygon-wind)

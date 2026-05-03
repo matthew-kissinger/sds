@@ -23,7 +23,7 @@ Each agent picking up a phase should:
 
 1. **Q1 (Phase 1): How aggressive should the heightfield-Y unification be?** Author lean: **add a new `Heightfield.meshSampleY()` method**, leave existing `sample()` untouched (sim depends on it byte-identical), migrate visual consumers (grass, trees, rocks, sheep, dog) to the new method. Keep `surfaceY()` as a thin wrapper for backward compat. This is the conservative path; the alternative (rewriting `sample` itself) risks sim-baseline breakage.
 2. **Q2 (Phase 2): Grass shader — port to TSL now or stay GLSL?** Author lean: **stay GLSL.** The Bezier+gust math from [`research-grass-2026-05.md`](research-grass-2026-05.md) ports to either; rewriting in TSL adds WebGPU-migration scope creep. TSL conversion belongs to the WebGPU spike (deferred to Cycle 15).
-3. **Q3 (Phase 3): Tree assets — Quaternius MegaKit, Stylized Tree Pack, or 150+ LowPoly?** Author lean: **MegaKit** — it pairs with the rocks pack from the same author for visual coherence and is bundled-CC0. Audit 4-5 hero trees that match the cozy-game feel; reject any that look too cartoony.
+3. **Q3 (Phase 3): Tree assets — Quaternius MegaKit GLBs, EZ-Tree procedural build-time generator, or red-reddington's Procedural Instanced Forest?** **Resolved 2026-05-03 → EZ-Tree.** A follow-up research pass surfaced (a) MegaKit's 60–70% free / 30–40% Patreon split as needless friction, (b) [EZ-Tree v1.1.0](https://github.com/dgreenheck/ez-tree) (Jan 2026, MIT, NPM) as an actively-maintained library with cross-quad leaves + built-in shader wind already implemented, and (c) procedural-at-build-time as a reproducibility win (anyone cloning a fresh checkout can `npm i && npm run bake-trees`). Trees ship as a `tools/bake-trees.mjs` build step. Rocks stay on Quaternius — chunky authored silhouettes are exactly where hand-crafted CC0 wins, and the same pack feeds Phase 4's ScatterSystem (mushrooms, flowers, pebbles, sticks). The frontier [red-reddington Procedural Instanced Forest](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610) (Dec 2025) is a Cycle 15+ candidate alongside the WebGPU spike.
 4. **Q4 (Phase 4): ScatterSystem — sibling to GrassSystem or bolt onto it?** Author lean: **sibling.** Per the rocks dossier, "the timing/wind/LOD coupling will hurt" if grafted onto grass. New file [`js/ScatterSystem.js`](../js/ScatterSystem.js) following the GrassSystem instancing pattern.
 5. **Q5 (Phase 5): Hero card framing — re-derive in-browser via `__sdsCinema.freeFly()` or pin in `shot-list.mjs`?** Author lean: **pin in shot-list.mjs.** Cycle 13 Phase 1 added `freeFly` + `snapshotPose` for live posing, then ship the resulting coords back into the shot config so `npm run cinema --shot=...` is reproducible. Cycle 13's shipped og-rh-sunset.webp was hand-captured; replacing it with a cinema-runner render means future asset refreshes don't require remembering this exact pose.
 
@@ -31,7 +31,7 @@ Each agent picking up a phase should:
 
 **Phase 1 introduces `Heightfield.meshSampleY()` + a captured `displacedHeights: Float32Array`.** This is the load-bearing primitive for the rest of the cycle. After [`TerrainBuilder.createTerrain()`](../js/TerrainBuilder.js#L414) computes vertex displacement, it captures the displaced Ys into a Float32Array sized to the terrain mesh vertex grid (385×385 desktop, 257×257 mobile) and hands it to the Heightfield instance. The new method does triangle interpolation against this array — the same interpolation the renderer does, so consumers see exactly the visible ground Y.
 
-**No new dependencies for Phase 2** (grass is shader-only). **Phase 3 adds `@three.ez/instanced-mesh`** for tree LOD. **Phase 4 adds `poisson-disk-sampling`** (or rolls our own — kdbush already has spatial bones we could reuse). **Phase 5 reuses Cycle 13's freeFly helper** — no new code.
+**No new dependencies for Phase 2** (grass is shader-only). **Phase 3 adds `@dgreenheck/ez-tree` as a dev dependency** (build-time procedural tree generator → ships GLBs into `assets/models/trees/`) and `@three.ez/instanced-mesh` as a runtime dependency for tree LOD pool unification. **Phase 4 adds `poisson-disk-sampling`** (or rolls our own — kdbush already has spatial bones we could reuse). **Phase 5 reuses Cycle 13's freeFly helper** — no new code.
 
 ## Phase 1 — Heightfield Y unification (~3-4hr)
 
@@ -78,17 +78,18 @@ Per [`docs/research-grass-2026-05.md`](research-grass-2026-05.md). Current pain:
 
 **Depends on:** Phase 1 (no more floating trees). Independent of Phase 2.
 
-Per [`docs/research-trees-2026-05.md`](research-trees-2026-05.md).
+Per [`docs/research-trees-2026-05.md`](research-trees-2026-05.md). Trees swap to **EZ-Tree procedural build-time generator** (resolved Q3, see open questions). Rocks stay on Quaternius — see Phase 4.
 
-1. **Source replacement GLBs** from Quaternius Stylized Nature MegaKit (CC0). Pick 4-5 hero trees that match the cozy-game feel: 2-3 broadleaf variants (replacing tree1, tree2), 1-2 conifer (replacing pine). Drop into `assets/models/trees/`. Compress via existing `npm run compress-glbs` pipeline.
-2. **Update the GLB loader path** in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) to point at the new model files. Keep the existing model registry naming (`tree1`, `tree2`, `pine`) so [`shared/TreePlacement.js`](../shared/TreePlacement.js) stays untouched. **Verify `userData.modelBaseYOffset` is computed correctly** for the new pivots — different GLB authoring tools place pivots differently.
-3. **Add `@three.ez/instanced-mesh` dependency.** `bun add @three.ez/instanced-mesh`. **Replace tree InstancedMesh sites** with the upgraded class — get per-instance frustum culling, BVH raycast, sorting, LOD for free.
-4. **Register existing 3-quad billboard impostor as LOD1** on the same instance pool. Kills the 250m hand-off seam, reuses kdbush colliders. The current near→far swap logic at the 250m boundary becomes a single `setLOD(0|1, distance)` call per frame.
-5. **Add leaf wind shader** via `onBeforeCompile` patch on the leaf material. ~30 lines GLSL: 3-octave sin in world space, weighted by `uv.y` (or vertex color R painted in Blender so trunk stays still). Reference: `EZ-Tree`, `douges.dev`, `polygon-wind`.
-6. **Optional: fake-SSS back-light ramp** for Ghibli pop on shadow side. Same math as the grass back-lit term.
-7. **Verify obstacle radius.** New tree silhouettes may need a different `kdbush` collider radius — check that sheep route around them naturally.
+1. **Add EZ-Tree as a dev dependency.** `bun add -D @dgreenheck/ez-tree`. MIT, v1.1.0 (Jan 2026), cross-quad leaves + recursive procedural branching baked in.
+2. **Author `tools/bake-trees.mjs`.** Node script that imports `Tree` from `@dgreenheck/ez-tree`, instantiates 4–5 trees with tuned parameters (seed + trunk length + branch levels + leaf size + gnarliness), and exports each as a GLB into `assets/models/trees/` via `GLTFExporter`. Aim for: 2–3 broadleaf variants (replacing tree1, tree2), 1–2 conifer (replacing pine). Wire as `npm run bake-trees`. Re-runnable so style adjustments don't require remembering one-off tweaks. Run before `npm run compress-glbs` so the existing GLB compression pipeline picks them up.
+3. **Update `modelPaths.trees`** in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) to point at the new model files. Keep the registry naming (`tree1`, `tree2`, `pine`) so [`shared/TreePlacement.js`](../shared/TreePlacement.js) stays untouched. **Verify `userData.modelBaseYOffset` lands the GLB pivot on terrain** — EZ-Tree's pivot convention may differ from the current Resource_Tree* GLBs.
+4. **Add `@three.ez/instanced-mesh`.** `bun add @three.ez/instanced-mesh`. **Replace tree InstancedMesh sites** with the upgraded class — gets per-instance frustum culling, BVH raycast, sorting, LOD for free.
+5. **Register existing 3-quad billboard impostor as LOD1** on the same instance pool. Kills the 250m hand-off seam, reuses kdbush colliders. The current near→far swap logic at the 250m boundary becomes a single `setLOD(0|1, distance)` call per frame.
+6. **Leaf wind shader** ✅ already shipped (Cycle 14 Phase 3 partial commit `ec0b902`). The `_patchTreeWindMaterial` `onBeforeCompile` patch walks every child material at GLB load time, so EZ-Tree's output picks up the wind automatically the moment new GLBs land. No extra shader code needed for this step.
+7. **Optional: fake-SSS back-light ramp** for Ghibli pop on shadow side. Mirror the grass back-lit term — `pow(saturate(dot(toCamera, -sunDir)), 4) * leafTipColor * sssStrength`, weighted by leaf-vs-trunk fraction. Patched via the same `onBeforeCompile` flow.
+8. **Verify obstacle radius.** New tree silhouettes may need a different `kdbush` collider radius — check that sheep route around them naturally.
 
-**Acceptance:** Trees on Field, RH, OC all read as cozy-game stylized (Ghibli-leaning). No 250m hand-off seam. Frametime within ±5% of current. Sheep + dog still route around trunks. Visual sweep on each scene at noon + sunset.
+**Acceptance:** Trees on Field, RH, OC all read as cozy-game stylized. No 250m hand-off seam. Frametime within ±5% of current. Sheep + dog still route around trunks. Visual sweep on each scene at noon + sunset. `npm run bake-trees` reproducibly regenerates the GLBs from scratch.
 
 ## Phase 4 — Rocks + ScatterSystem (~4-6hr)
 
@@ -159,6 +160,7 @@ Phases 2, 3, 4 are fully parallelizable after Phase 1. Phase 5 waits on all.
 - **Don't migrate to TSL or WebGPU** — that's deferred Cycle 15 work; the dossiers note where the math ports cleanly when the time comes, but the port is out of scope here.
 - **Don't introduce a new scene** — three is the right number.
 - **Don't author custom rock GLBs** — Quaternius gets us 80% of the way; bespoke rocks are deferred per BACKLOG Q3.
+- **Don't switch trees to red-reddington's Procedural Instanced Forest** — it's the right Cycle 15+ frontier candidate alongside the WebGPU spike, but extraction from CodePen + L-system style tuning is more scope than EZ-Tree's drop-in NPM library deserves to compete with for Phase 3.
 - **Don't render hero cards before Phase 5** — they should show the polished world, not the in-progress one.
 - **Don't rebuild GrassSystem from scratch** — Phase 2 is shader work (wind math, interactor texture), not a rewrite.
 - **Don't change the tree placement algorithm** — Phase 3 swaps GLBs only; [`shared/TreePlacement.js`](../shared/TreePlacement.js) is the contract.
@@ -199,7 +201,7 @@ The shader half of every phase landed in a single autonomous pass. Asset-depende
 | --- | --- | --- | --- |
 | 1 — Heightfield Y unification | `meshSampleY` + grid capture in [`shared/terrain/Heightfield.js`](../shared/terrain/Heightfield.js) + [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) + 9-case [`tests/heightfield-mesh-y.spec.js`](../tests/heightfield-mesh-y.spec.js). Sim-baseline byte-identical. | n/a | ✅ shipped (commit `3796f3c`) |
 | 2 — Grass | Gust envelope + 2-octave analytic sway + tip flutter + sun-aligned fake-SSS in [`js/GrassSystem.js`](../js/GrassSystem.js) and [`js/shaders/grass/`](../js/shaders/grass/). | n/a | ✅ shipped (commit `f1e0d78`); render-texture interactors + critically-damped recovery deferred to Cycle 15+ |
-| 3 — Trees | `_patchTreeWindMaterial()` + `_setupTreeWind()` on `TerrainBuilder` — `onBeforeCompile` leaf-wind patch on existing tree GLBs. Shared uniforms; idempotent. | Quaternius MegaKit GLB swap + `@three.ez/instanced-mesh` LOD pool unification | ✅ shader shipped (commit `ec0b902`); 🟡 asset swap Matt-blocked |
+| 3 — Trees | `_patchTreeWindMaterial()` + `_setupTreeWind()` on `TerrainBuilder` — `onBeforeCompile` leaf-wind patch on existing tree GLBs. Shared uniforms; idempotent. | EZ-Tree build-time bake (`tools/bake-trees.mjs`) + `@three.ez/instanced-mesh` LOD pool unification | ✅ shader shipped (commit `ec0b902`); 🟡 asset bake + LOD refactor pending — autonomous-actionable now that EZ-Tree is the chosen path (no manual download) |
 | 4 — Rocks + scatter | `_patchRockMaterial()` + `_setupRockShader()` — fresnel rim-light + sun-tinted `setRockRimColor()`. | Quaternius MegaKit rocks + new `js/ScatterSystem.js` (Poisson pebbles/sticks/mushrooms/wildflowers + dandelion oversampling) | ✅ rim-light shipped (commit `42c9f63`); 🟡 asset swap + ScatterSystem Matt-blocked |
 | 5 — Hero cards + v1.1.0 | n/a (waits on Phases 1–4 polish in browser) | `freeFly()` posing → `shot-list.mjs` pin → `npm run cinema` × 7 + `git tag v1.1.0` | 🟡 Matt-blocked (needs browser playtest) |
 
@@ -207,8 +209,10 @@ The shader half of every phase landed in a single autonomous pass. Asset-depende
 
 **What an agent picking up the asset work needs to know:**
 
-- The shader patches in Phases 3 + 4 walk every `child.material` of every cached GLB at load time. New GLBs pick up the leaf-wind + rim-light patches automatically — no shader code changes when swapping assets.
+- **Trees: EZ-Tree build-time bake.** `bun add -D @dgreenheck/ez-tree`, then write `tools/bake-trees.mjs` that imports `Tree` from `@dgreenheck/ez-tree`, generates 4–5 stylized trees with tuned parameters, and exports each as a GLB via three.js `GLTFExporter`. Output to `assets/models/trees/`. Wire as `npm run bake-trees` in `package.json`. The script is the contract for "what tree style ships" — keep it small and re-runnable so future style adjustments are a parameter change + re-run.
+- **Rocks: Quaternius MegaKit.** Manual download per Phase 4 spec; drop into `assets/models/rocks/`. The same pack feeds the Phase 4 ScatterSystem (mushrooms, flowers, pebbles, sticks) so one download covers both.
+- The shader patches in Phases 3 + 4 walk every `child.material` of every cached GLB at load time. New GLBs (EZ-Tree-baked or Quaternius) pick up the leaf-wind + rim-light patches automatically — no shader code changes when swapping assets.
 - Tree placement in [`shared/TreePlacement.js`](../shared/TreePlacement.js) is the contract; only the GLB *targets* in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) `modelPaths.trees` need updating. Same for rocks.
-- The 250m near→far billboard impostor seam still exists. Unifying via `@three.ez/instanced-mesh` LOD pool is paired with the asset swap — landing both together gives one coherent visual upgrade rather than two adjacent ones.
+- The 250m near→far billboard impostor seam still exists. Unifying via `@three.ez/instanced-mesh` LOD pool is paired with the tree asset swap — landing both together gives one coherent visual upgrade rather than two adjacent ones.
 - `_treeWind.uWindStrength.value` defaults to 0.6 desktop / 0 mobile. Tune after the asset swap if leaves look too active or too still.
 - `_rockShader.uRimStrength.value` defaults to 0.35. Push to 0.5 for a more graphic-novel look, drop to 0.2 for grounded realism.
