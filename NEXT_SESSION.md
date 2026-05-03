@@ -1,19 +1,43 @@
-# Next Session — Cycle 15 mid-flight; Phase 4 + 6 shipped, Phase 1 pipeline ready, Phase 2/3/5 awaiting asset picks
+# Next Session — Cycle 16 (`tree-foliage-lod-and-perf`) scaffolded; Phase 1 LOD authoring is the foundation
 
-> Updated 2026-05-03 (autonomous Phase 1+3+4+6 pass landed at `f84b723`). **Active plan: [`docs/cycle-15-plan.md`](docs/cycle-15-plan.md).** Live on [sheepdogsim.com](https://sheepdogsim.com) at the `b5e1e45` build (Cycle 14 visual-issues followup) — `f84b723` is tooling-only so the deployed world is unchanged until Phase 1 picks integrate. Last closed cycle: [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md).
+> Updated 2026-05-03 (Cycle 15 closed). **Active plan: [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md).** Live on [sheepdogsim.com](https://sheepdogsim.com) at the cycle-15-close push. Last closed cycle: [`docs/archive/cycles/cycle-15-plan.md`](docs/archive/cycles/cycle-15-plan.md).
 
-## Cycle 15 mid-flight state (post-`f84b723`)
+## Where the project stands (Cycle 15 close)
 
-What landed in the autonomous run:
+Cycle 15 closed with Phases 4 + 6 fully shipped, Phase 1 tooling shipped (gallery + bake-and-pick pipeline + 28 baked variations in staging), Phase 3 scaffold shipped (perf-harness scripts), and Phases 1 picks / 2 / 3 baseline / 5 carrying to Cycle 16. Tree review during the cycle surfaced a foundational issue that gates everything downstream: leaves are 90-96% of all tree triangles and there's no LOD chain — each tree at every distance renders the full ~50k-tri canopy.
 
-- **Phase 1 — AI asset pipeline ✅ tooling, ⏳ picks pending.** Browser gallery + Meshy text-to-GLB + integrate scripts shipped. Matt drives the actual generation + picking; once picks land, Phase 2 (perf) and Phase 5 (hero cards + tag) unblock.
-- **Phase 3 — Perf harness ✅ scaffolded, ⏳ baseline pending.** `tools/perf-harness.mjs` ready, 6-config matrix wired, `window.__sdsRenderer` hook added behind `perfMode=1`. Per Matt's mid-cycle direction: actual baseline capture happens AFTER Phase 1 picks integrate, so the numbers reflect the polished world.
-- **Phase 4 — Grass anomaly + tree audit ✅** Defensive `meshSampleY` clamp in [`js/GrassSystem.js`](js/GrassSystem.js), [`docs/tree-pipeline.md`](docs/tree-pipeline.md) doc, [`tests/tree-assets.spec.js`](tests/tree-assets.spec.js) contract spec.
-- **Phase 6 — CI E2E smoke ✅** Bumped `actionTimeout` 10s→30s in [`playwright.config.ts`](playwright.config.ts).
-- **Phase 2 — Perf regression triage ⏳ awaiting Phase 1 picks.**
-- **Phase 5 — Hero cards + `v1.1.0` ⏳ awaiting Phase 1 + Phase 2.**
+Headlines from Cycle 15:
 
-165/165 vitest pass (was 158, +7 from tree-assets spec). Production build clean (816 KB main / 241 KB gzip — flat vs Cycle 14). The `f84b723` commit is tooling-only, no runtime visual change.
+- **Phase 4 ✅** Grass anomaly clamp shipped + tree pipeline doc + tree-assets contract spec (165/165 vitest after +7).
+- **Phase 6 ✅** CI E2E smoke fix — `actionTimeout: 10s → 30s` in [`playwright.config.ts`](playwright.config.ts).
+- **Phase 1 tooling ✅, picks deferred to Cycle 16.** 16 rocks (~450 KB) + 12 trees (~23 MB pre-compress, ~7 MB post-draco) baked into `tools/asset-gallery/staging/`. Browser-based gallery picker + integrate script with canonical-rename promotion shipped. npm scripts: `bake-rocks`, `bake-trees`, `gallery`, `gen:integrate`, `gen:meshy` (escape hatch), `perf:baseline`, `perf:check`.
+- **Phase 3 scaffold ✅, baseline deferred to Cycle 16.** `tools/perf-harness.mjs` 6-config matrix ready. `window.__sdsRenderer` hook behind `perfMode=1`.
+- **Tree-foliage research ✅ logged.** Industry-standard answer is 3-tier LOD (full / reduced / billboard impostor via `InstancedMesh2.addLOD`). Cycle 16 Phase 1 ships this.
+
+165/165 vitest pass. Production build clean (816 KB main / 241 KB gzip — flat vs Cycle 14).
+
+## Cycle 16 — what's next
+
+Cycle 16 plan is at [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md). Goal: ship the proper tree foliage LOD pipeline (LOD0 mesh / LOD1 reduced / LOD2 billboard impostor), pick + integrate asset variations on top of the optimized geometry, capture perf baseline, ship hero cards + the `v1.1.0` tag.
+
+Phase order (mostly sequential — tree LOD gates everything):
+
+```
+Phase 1 (LOD authoring + recipe re-tune)  — foundation
+Phase 2 (billboard impostor LOD2)         — depends on Phase 1
+Phase 3 (asset picks + flora tuning)      — depends on Phase 1 (trees)
+Phase 4 (perf baseline + triage)          — depends on Phases 1, 2, 3
+Phase 5 (perf:check CI integration)       — depends on Phase 4
+Phase 6 (hero cards + v1.1.0)             — depends on Phases 1, 2, 3, 4
+```
+
+Open questions for Cycle 16 (author leans recorded; resolve at start):
+1. Bark color contrast strategy (tighten range / single tone / current).
+2. Asymmetric canopy fix (re-roll seeds / bump `branch.children`).
+3. LOD strategy — A+B+E (proper foundation) is the lean.
+4. Flora rebuild scope (tune existing Quaternius vs new bake).
+
+Run `/cycle-start` to orient on the cycle-16 plan once you're ready to begin.
 
 ## How to drive the asset pipeline (Phase 1)
 
@@ -74,34 +98,7 @@ npm version 1.1.0 -m "release: v1.1.0 — visuals polish + perf harness"
 git push origin main --tags
 ```
 
-## Where the project stands (Cycle 14 close; Cycle 15 mid-flight)
-
-Cycle 14 (`visuals-foundation`) closed with Phases 1–3 shipped + visually verified, Phase 4 needing rebuild, Phase 5 + `v1.1.0` tag bumped to Cycle 15. Headlines:
-
-- **Phase 1 — Heightfield Y unification ✅** — `Heightfield.meshSampleY()` triangle-interps against captured displaced-Y grid; visual consumers (sheep, dog, grass, trees, rocks, farmhouse) routed through it; sim baseline byte-identical.
-- **Phase 2 — Grass shader modernization ✅** — gust-envelope wind + 2-octave analytic sway + tip flutter + sun-aligned fake-SSS; render-texture interactors + critically-damped recovery deferred to Cycle 15+.
-- **Phase 3 — Trees ✅** — EZ-Tree build-time bake, 3 seeded recipes, InstancedMesh2 per-instance frustum culling, leaf-wind shader patch via `onBeforeCompile`, denser canopy + brown bark + trunk-grounded placement after the visual-issues followup pass.
-- **Phase 4 — Rocks + ScatterSystem 🟡 partial** — fresnel rim-light shader + new `js/ScatterSystem.js` (Bridson Poisson sampler, 9 prop variants, yellow-flower oversampling) shipped. Procedural icosa+simplex rock bake (~33 KB total) shipped. **Matt's playtest verdict: rocks + mushrooms tiny + floating, no dandelions visible — needs full rebuild in Cycle 15.**
-- **Phase 5 — Hero cards + `v1.1.0`** — bumped to end of Cycle 15.
-
-158/158 vitest pass. Production build clean (815 KB main / 241 KB gzip). Sim-baseline byte-identical.
-
-**CI status:** Pages + Worker deploys green on `b5e1e45`; E2E (Chromium) smoke red (10s `locator.dispatchEvent` timeout, likely first-paint slowdown from the 2.2 MB tree bundle). Site is live and serving correctly. Smoke-fix is Phase 6 of Cycle 15.
-
-## Cycle 15 carryover from Matt's 2026-05-03 playtest
-
-Captured during cycle close — these are the things Cycle 15 picks up:
-
-1. **Rocks + scatter rebuild.** Rocks tiny + floating, mushrooms tiny + floating, no yellow dandelion patches visible. Procedural icosa+simplex bake doesn't carry visual presence. Decision needed: re-tune procedural with much larger scale ranges, or swap to hand-curated CC0 / Pixel Forge generation. The rim-light + flora-wind shader patches will auto-apply to whatever new GLBs land at `assets/models/rocks/` + `assets/models/scatter/`.
-2. **Grass anomaly.** A few rogue blades stretch up to the sky near trees outside the play area on Field. Suspect zone: GrassSystem placement meets a tree exclusion-zone or terrain-falloff edge case where `meshSampleY` returns an outlier, OR an `_treeWind` uniform leaks into grass shader sway. Triage with probe at suspect zones.
-3. **Tree pipeline audit.** Trees ARE 100% seed→build-time GLBs (`tools/bake-trees.mjs` → `assets/models/trees/` committed). Pin the contract: short doc at `docs/tree-pipeline.md` + vitest spec asserting GLBs exist + are non-empty.
-4. **Perf regression triage + perf harness build-out.** Frametime degraded post-Cycle-14. Matt wants root-cause + a real perf harness with CI regression detection. Suspects (in order of plausibility): InstancedMesh2 BVH bookkeeping, ScatterSystem 9-variant draw-call multiplication, 2.2 MB tree GLB GPU upload spike. Profile before patching.
-5. **Hero cards + `v1.1.0` tag.** Bumped to end of Cycle 15. Workflow already shipped in Cycle 13 (`__sdsCinema.freeFly()` + `snapshotPose()` + `npm run cinema --shot=<id>`).
-6. **CI E2E smoke fix.** 1hr; bump timeout or address load timing.
-
-**Plus:** Matt is gathering additional analysis this session for further polish/upgrade/perf items to fold into Cycle 15. The plan is scaffolded but not final — leave room for additional phases or scope adjustments before treating it as locked.
-
-## Tuning knobs surfaced from Cycle 14 (1-line tweaks for Cycle 15 iteration)
+## Tuning knobs (1-line tweaks for Cycle 16 iteration)
 
 | Looks off? | Knob | File | Default |
 | --- | --- | --- | --- |
@@ -177,9 +174,9 @@ Open `http://localhost:3000`. URL params: `?scene=field|rolling-hills|open-count
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-15-plan.md`](docs/cycle-15-plan.md) — scaffolded; Matt folding in additional analysis |
-| Latest closed cycle | [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md) |
-| Prior closed cycles | [`docs/archive/cycles/cycle-12-plan.md`](docs/archive/cycles/cycle-12-plan.md), [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md), [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md) |
+| Active cycle | [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md) — tree-foliage-lod-and-perf |
+| Latest closed cycle | [`docs/archive/cycles/cycle-15-plan.md`](docs/archive/cycles/cycle-15-plan.md) |
+| Prior closed cycles | [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md), [`docs/archive/cycles/cycle-12-plan.md`](docs/archive/cycles/cycle-12-plan.md), [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md), [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md) |
 | Older cycles | [`docs/archive/cycles/cycle-9-plan.md`](docs/archive/cycles/cycle-9-plan.md), [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md), [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md), [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) |
 | Cycle stub template | [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) |
 | Frozen files / fence rules | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
@@ -206,4 +203,5 @@ Open `http://localhost:3000`. URL params: `?scene=field|rolling-hills|open-count
 - Don't traverse-and-dispose materials on GLB clones (SkeletonUtils.clone, .clone()) — they share materials with the cache. Tag with `userData.sharedFromGlbCache = true` and remove-from-scene only.
 - Don't let `?cinematic=1` flip `preserveDrawingBuffer` on the normal-play codepath.
 - Don't re-trigger the cinema runner without `--shot=<id>` during regular dev — committed OG/dog/PWA assets re-render with sub-pixel-different WebP encoding and create diff noise.
-- **Cycle 15:** Don't tag `v1.1.0` until Phase 1 (rocks/scatter rebuild) + Phase 2 (perf regression) + Phase 4 (grass anomaly) land cleanly. The hero cards and tag should ship on a polished world.
+- **Cycle 16:** Don't tag `v1.1.0` until tree foliage LOD + asset picks + perf baseline land cleanly. The hero cards and tag should ship on a perf-clean polished world.
+- **Cycle 16:** Don't replace EZ-Tree with the Procedural Instanced Forest unless `InstancedMesh2.addLOD` demonstrably misses the perf budget. PIF is interesting + MIT but a different aesthetic + pipeline.
