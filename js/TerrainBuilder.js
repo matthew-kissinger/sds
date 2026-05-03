@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { GrassSystem } from './GrassSystem.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
@@ -938,19 +939,29 @@ export class TerrainBuilder {
         });
 
         // Create instanced meshes for each tree type (near = full GLB mesh).
+        // Cycle 14 Phase 3: upgraded to InstancedMesh2 (`@three.ez/instanced-mesh`)
+        // for per-instance frustum culling. Drop-in replacement — the
+        // shader path stays identical (`instanceMatrix` attribute), so
+        // the leaf-wind onBeforeCompile patch survives untouched. Out-of-
+        // frame tree instances now skip vertex shader execution, which
+        // matters when the camera looks one direction and ~50–70% of the
+        // forest sits behind it. Full LOD-pool unification (instance-
+        // dynamic switch to billboard impostor) is a Cycle 15 candidate
+        // — it requires authoring trunk-only and leaves-only impostors
+        // since EZ-Tree splits each tree into trunk + leaves child meshes
+        // with separate materials.
         const instancedMeshes = [];
         Object.entries(nearByType).forEach(([treeType, instances]) => {
             if (instances.length === 0 || !this.models.trees[treeType]) return;
 
             const model = this.models.trees[treeType];
-            const dummy = new THREE.Object3D();
 
             model.traverse(child => {
                 if (child.isMesh) {
-                    const instancedMesh = new THREE.InstancedMesh(
+                    const instancedMesh = new InstancedMesh2(
                         child.geometry,
                         child.material,
-                        instances.length
+                        { capacity: instances.length, createEntities: false }
                     );
                     // Cycle 12 Phase 1 A8: this InstancedMesh shares its
                     // geometry + material with the cached GLB model. Tag so
@@ -959,18 +970,20 @@ export class TerrainBuilder {
                     // on the next swap (the dominant ~41% drift class).
                     instancedMesh.userData.sharedFromGlbCache = true;
 
-                    instances.forEach((instance, i) => {
-                        dummy.position.copy(instance.position);
-                        dummy.rotation.copy(instance.rotation);
-                        dummy.scale.copy(instance.scale);
-                        dummy.updateMatrix();
-                        instancedMesh.setMatrixAt(i, dummy.matrix);
+                    instancedMesh.addInstances(instances.length, (obj, i) => {
+                        const inst = instances[i];
+                        obj.position.copy(inst.position);
+                        obj.rotation.copy(inst.rotation);
+                        obj.scale.copy(inst.scale);
                     });
 
                     instancedMesh.castShadow = !this.isMobile;
                     instancedMesh.receiveShadow = true;
-                    instancedMesh.instanceMatrix.needsUpdate = true;
-                    instancedMesh.frustumCulled = false;
+                    // perObjectFrustumCulled = true (default) — InstancedMesh2
+                    // computes the per-instance bounding internally and tests
+                    // against the camera frustum each frame. The Object3D
+                    // itself can stay frustumCulled=true (the parent) because
+                    // InstancedMesh2 fits its own scene-bounding box.
 
                     this.scene.add(instancedMesh);
                     instancedMeshes.push(instancedMesh);
@@ -1042,19 +1055,25 @@ export class TerrainBuilder {
                 fog: true
             });
 
-            const inst = new THREE.InstancedMesh(geo, mat, instances.length);
-            const dummy = new THREE.Object3D();
-            instances.forEach((instance, i) => {
-                dummy.position.copy(instance.position);
-                dummy.rotation.copy(instance.rotation);
-                dummy.scale.copy(instance.scale);
-                dummy.updateMatrix();
-                inst.setMatrixAt(i, dummy.matrix);
+            // Cycle 14 Phase 3: InstancedMesh2 for far impostors too —
+            // per-instance frustum culling matters more here than for
+            // near trees, since the horizon ring of billboards typically
+            // spans ~270° of world space and any single camera direction
+            // sees only ~25%. The geometry+material are NOT shared from
+            // the GLB cache (built fresh per scene), so no need for the
+            // sharedFromGlbCache guard.
+            const inst = new InstancedMesh2(geo, mat, {
+                capacity: instances.length,
+                createEntities: false
+            });
+            inst.addInstances(instances.length, (obj, i) => {
+                const instance = instances[i];
+                obj.position.copy(instance.position);
+                obj.rotation.copy(instance.rotation);
+                obj.scale.copy(instance.scale);
             });
             inst.castShadow = false;
             inst.receiveShadow = false;
-            inst.instanceMatrix.needsUpdate = true;
-            inst.frustumCulled = false;
 
             this.scene.add(inst);
             out.push(inst);
