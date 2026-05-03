@@ -105,7 +105,7 @@ export const SHOTS = [
         // sets to the west. Camera placed back+high enough to see the
         // dog silhouette + the hills + the flock spread, looking past
         // the dog toward the horizon.
-        camera: { pos: { x: 18, y: 8, z: 22 }, target: { x: -10, y: 1, z: -20 } },
+        camera: { pos: { x: -102.7, y: 38, z: -21.4 }, target: { x: -110.5, y: 34.6, z: -40.3 } },
         size: { width: 1200, height: 630 },
         notes: 'Hero OG: behind-dog Rolling Hills sunset with 1000-sheep flock.',
     },

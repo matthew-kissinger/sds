@@ -112,6 +112,8 @@ export function installCinemaApi(game) {
     if (typeof window === 'undefined') return;
     if (window.__sdsCinema) return; // idempotent
 
+    const round = (n) => Math.round(n * 10) / 10; // 1-decimal precision for shot configs
+
     const cinema = {
         // Direct refs (looked up lazily so a future scene swap doesn't strand them).
         get camera() { return game.sceneManager?.getCamera() ?? null; },
@@ -196,6 +198,105 @@ export function installCinemaApi(game) {
         /** Wraps SheepDogSimulation.startSoloGame for Playwright shot drives. */
         startSolo(dogId = 'jep', mode = 'classic') {
             game.startSoloGame?.(dogId, mode);
+        },
+
+        /**
+         * Free-fly camera mode. Mounts OrbitControls on the canvas and
+         * suspends the gameplay CameraController (gated in SceneManager.
+         * updateCamera). Drag = orbit; right-drag = pan; scroll = zoom.
+         * Use snapshotPose() to print paste-ready coords, then lockFly()
+         * to restore the gameplay camera.
+         *
+         * Typical workflow for posing a hero shot:
+         *   __sdsCinema.startSolo('jep', 'extreme');
+         *   await __sdsCinema.waitForFlockSize(1000);
+         *   await __sdsCinema.freeFly();
+         *   // ... orbit/pan/zoom in the browser ...
+         *   __sdsCinema.snapshotPose();   // copy coords from console
+         *   __sdsCinema.lockFly();        // restore gameplay camera
+         */
+        async freeFly() {
+            if (cinema.freeFlyActive) {
+                console.warn('[CINEMA] freeFly already active');
+                return cinema._orbitControls;
+            }
+            const cam = cinema.camera;
+            const renderer = cinema.renderer;
+            if (!cam || !renderer) {
+                console.error('[CINEMA] freeFly: camera or renderer not ready');
+                return null;
+            }
+            const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+            const controls = new OrbitControls(cam, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.08;
+            controls.screenSpacePanning = true;
+            controls.minDistance = 1;
+            controls.maxDistance = 2000;
+            // Initial target = origin if not set; user pans away as needed.
+            controls.target.set(0, 1, 0);
+            controls.update();
+            cinema._orbitControls = controls;
+            cinema.freeFlyActive = true;
+            // Auto-hide the React overlay so it doesn't swallow pointer events.
+            cinema.hideUI();
+            // Damped controls need an animation tick to feel right.
+            cinema._orbitTickId = requestAnimationFrame(function tick() {
+                if (!cinema.freeFlyActive) return;
+                controls.update();
+                cinema._orbitTickId = requestAnimationFrame(tick);
+            });
+            console.log('[CINEMA] freeFly ON — drag/scroll/right-drag to pose; call snapshotPose() to print coords; lockFly() to restore.');
+            return controls;
+        },
+
+        /** Restore gameplay camera control. */
+        lockFly() {
+            if (!cinema.freeFlyActive) return;
+            try { cinema._orbitControls?.dispose(); } catch {}
+            cinema._orbitControls = null;
+            if (cinema._orbitTickId) cancelAnimationFrame(cinema._orbitTickId);
+            cinema._orbitTickId = null;
+            cinema.freeFlyActive = false;
+            cinema.showUI();
+            console.log('[CINEMA] freeFly OFF — gameplay camera restored.');
+        },
+
+        /** Status flag — true when freeFly() is mounted; gates SceneManager.updateCamera. */
+        freeFlyActive: false,
+
+        /**
+         * Print + return paste-ready { pos, target } JSON for the current
+         * camera state. Target comes from OrbitControls when freeFly is
+         * active; otherwise it's derived from the camera's forward vector
+         * projected 30m out (good enough for setCameraPose round-trip).
+         */
+        snapshotPose() {
+            const cam = cinema.camera;
+            if (!cam) return null;
+            let target;
+            if (cinema._orbitControls) {
+                const t = cinema._orbitControls.target;
+                target = { x: round(t.x), y: round(t.y), z: round(t.z) };
+            } else {
+                // Project camera forward 30m as a reasonable lookAt target.
+                const fwd = new THREE.Vector3();
+                cam.getWorldDirection(fwd);
+                target = {
+                    x: round(cam.position.x + fwd.x * 30),
+                    y: round(cam.position.y + fwd.y * 30),
+                    z: round(cam.position.z + fwd.z * 30),
+                };
+            }
+            const pose = {
+                pos: { x: round(cam.position.x), y: round(cam.position.y), z: round(cam.position.z) },
+                target,
+            };
+            const oneLine = `camera: { pos: { x: ${pose.pos.x}, y: ${pose.pos.y}, z: ${pose.pos.z} }, target: { x: ${pose.target.x}, y: ${pose.target.y}, z: ${pose.target.z} } },`;
+            console.log('[CINEMA] snapshotPose:');
+            console.log(oneLine);
+            console.log(JSON.stringify(pose, null, 2));
+            return pose;
         },
 
         /**

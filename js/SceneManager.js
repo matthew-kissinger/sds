@@ -223,6 +223,10 @@ export class SceneManager {
     
     updateCamera(sheepdog, deltaTime = 1 / 60) {
         if (!sheepdog) return;
+        // Cycle 13 cinema: __sdsCinema.freeFly() suspends gameplay camera
+        // so OrbitControls can pose the camera for hero-shot framing while
+        // the simulation keeps running (sheep stay mid-flock).
+        if (typeof window !== 'undefined' && window.__sdsCinema?.freeFlyActive) return;
         this.cameraController.update(sheepdog.position, sheepdog.velocity, deltaTime);
     }
 
