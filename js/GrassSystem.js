@@ -862,17 +862,11 @@ export class GrassSystem {
 
         // Set up instances
         validPositions.forEach((pos, i) => {
-            // Cycle 8: small downward Y offset hides bilinear-vs-mesh
-            // mismatch at hill peaks. The terrain mesh has ~10m vertices
-            // (4000m / 384 segments) while the heightfield is sampled at
-            // its full grid resolution; over a steep ridge the mesh
-            // triangle interpolation can sit 0.05–0.20m below the
-            // bilinear sample. Recessing grass slightly into the mesh
-            // makes any positive mismatch invisible without sinking the
-            // visible blade height meaningfully (clumps are ~1m tall).
-            const baseY = this.heightfield ? this.heightfield.sample(pos.x, pos.z) : 0;
-            const y = baseY - 0.1;
-            dummy.position.set(pos.x, y, pos.z);
+            // Cycle 14 Phase 1: meshSampleY returns the exact visible mesh Y
+            // via triangle interpolation, so the old -0.1 "dip into mesh"
+            // hack is gone. Blades sit on the surface, not 10cm below it.
+            const baseY = this.heightfield ? this.heightfield.meshSampleY(pos.x, pos.z) : 0;
+            dummy.position.set(pos.x, baseY, pos.z);
 
             // Random rotation and scale
             dummy.rotation.y = Math.random() * Math.PI * 2;

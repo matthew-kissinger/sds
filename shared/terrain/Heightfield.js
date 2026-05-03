@@ -43,6 +43,19 @@ export class Heightfield {
     worldSize;
     /** @type {number} */
     peakHeight;
+    /**
+     * Captured post-displacement Ys of the visible terrain mesh, indexed by
+     * `iy * (segments + 1) + ix` over a `(segments+1)²` grid covering
+     * `meshSize × meshSize` centred on origin. Set by `TerrainBuilder` after
+     * vertex displacement so `meshSampleY` can interpolate against the same
+     * triangles the renderer draws. Null on the worker / in tests.
+     * @type {Float32Array | null}
+     */
+    displacedHeights;
+    /** @type {number | null} */
+    meshSegments;
+    /** @type {number | null} */
+    meshSize;
 
     /** @param {HeightfieldInit} init */
     constructor({ data, width, height, worldSize, peakHeight }) {
@@ -59,6 +72,33 @@ export class Heightfield {
         this.height = height;
         this.worldSize = worldSize;
         this.peakHeight = peakHeight;
+        this.displacedHeights = null;
+        this.meshSegments = null;
+        this.meshSize = null;
+    }
+
+    /**
+     * Hand the captured visible-mesh heights to the heightfield so visual
+     * consumers can query the same Y the renderer draws. `displacedHeights`
+     * MUST have length `(segments + 1)²` and be in PlaneGeometry vertex
+     * order (`iy * (segments+1) + ix`, with ix east, iy south after the
+     * canonical `-PI/2` rotation about X).
+     *
+     * @param {{ displacedHeights: Float32Array, segments: number, size: number }} grid
+     */
+    setMeshGrid({ displacedHeights, segments, size }) {
+        if (!(displacedHeights instanceof Float32Array)) {
+            throw new TypeError('Heightfield.setMeshGrid: displacedHeights must be a Float32Array');
+        }
+        const expected = (segments + 1) * (segments + 1);
+        if (displacedHeights.length !== expected) {
+            throw new RangeError(
+                `Heightfield.setMeshGrid: displacedHeights length ${displacedHeights.length} != (segments+1)² ${expected}`
+            );
+        }
+        this.displacedHeights = displacedHeights;
+        this.meshSegments = segments;
+        this.meshSize = size;
     }
 
     /**
@@ -133,25 +173,81 @@ export class Heightfield {
     }
 
     /**
-     * Visual surface Y for entity placement. Returns `sample(x, z)` plus a
-     * small upward lift to compensate for the systematic bias between this
-     * sampler (bilinear over the heightfield grid) and the terrain mesh's
-     * triangle interpolation, which on convex ridges sits slightly above
-     * the bilinear sample. Without this, sheep/dog visibly sink into the
-     * mesh in spots where grass isn't there to hide the gap.
+     * Visual surface Y at world (x, z) — triangle-interpolated against the
+     * captured terrain-mesh vertex grid so consumers see *exactly* the Y
+     * the renderer draws. Eliminates the bilinear-vs-mesh divergence that
+     * makes grass / trees / rocks float intermittently inside any 10m quad
+     * on a slope (Cycle 14 Phase 1).
      *
-     * Use this for visual placement only. Sim/physics should keep using
-     * raw `sample()` so behaviour stays decoupled from a render-time tweak.
+     * Falls back to `sample(x, z) + 0.05` when no mesh grid has been set
+     * (worker, tests). The 0.05 lift is the Cycle 9 Phase 5 mitigation —
+     * still useful as a defensive default.
      *
-     * Cycle 9 Phase 5 mitigation. Full fix (a baked, mesh-aligned height
-     * grid that all consumers share) is deferred to BACKLOG.
+     * Use for visual placement only. Sim/physics keep using raw `sample()`
+     * so behaviour stays decoupled from any render-time mesh resampling.
+     *
+     * @param {number} x World X
+     * @param {number} z World Z
+     * @returns {number} Visual surface Y in metres.
+     */
+    meshSampleY(x, z) {
+        const grid = this.displacedHeights;
+        if (!grid) return this.sample(x, z) + 0.05;
+
+        const segs = this.meshSegments;
+        const size = this.meshSize;
+        const stride = segs + 1;
+        const half = size * 0.5;
+
+        // World -> mesh grid coords. Plane verts are laid out with ix east,
+        // iy south after the canonical -PI/2 rotation about X (see
+        // TerrainBuilder.createTerrain).
+        const u = ((x + half) / size) * segs;
+        const v = ((z + half) / size) * segs;
+
+        // Clamp to grid; out-of-range queries fall on the flat-skirt edge.
+        const maxIdx = segs;
+        const cu = u < 0 ? 0 : u > maxIdx ? maxIdx : u;
+        const cv = v < 0 ? 0 : v > maxIdx ? maxIdx : v;
+
+        const ix0 = Math.floor(cu);
+        const iy0 = Math.floor(cv);
+        const ix1 = ix0 < maxIdx ? ix0 + 1 : ix0;
+        const iy1 = iy0 < maxIdx ? iy0 + 1 : iy0;
+
+        const fu = cu - ix0;
+        const fv = cv - iy0;
+
+        // PlaneGeometry's index order (a, b, d / b, c, d) splits each quad
+        // along the SW->NE diagonal. NW triangle (containing the NW corner
+        // a) covers fu+fv<1; SE triangle (containing SE corner c) covers
+        // fu+fv>1.
+        //   a = (ix0, iy0) NW, b = (ix0, iy1) SW, c = (ix1, iy1) SE, d = (ix1, iy0) NE
+        const ha = grid[iy0 * stride + ix0];
+        const hb = grid[iy1 * stride + ix0];
+        const hc = grid[iy1 * stride + ix1];
+        const hd = grid[iy0 * stride + ix1];
+
+        if (fu + fv <= 1) {
+            // NW triangle: P = (1-fu-fv)*a + fv*b + fu*d
+            return (1 - fu - fv) * ha + fv * hb + fu * hd;
+        }
+        // SE triangle: P = (1-fu)*b + (fu+fv-1)*c + (1-fv)*d
+        return (1 - fu) * hb + (fu + fv - 1) * hc + (1 - fv) * hd;
+    }
+
+    /**
+     * Visual surface Y for entity placement — thin wrapper around
+     * `meshSampleY` for backward compat. Pre-Cycle 14 this added a fixed
+     * 0.05 lift to mask the bilinear-vs-mesh gap; that gap is now closed
+     * directly so the lift is gone.
      *
      * @param {number} x World X
      * @param {number} z World Z
      * @returns {number} Visual surface Y in metres.
      */
     surfaceY(x, z) {
-        return this.sample(x, z) + 0.05;
+        return this.meshSampleY(x, z);
     }
 
     /**

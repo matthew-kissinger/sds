@@ -387,26 +387,16 @@ export class TerrainBuilder {
     /**
      * Terrain-mesh-accurate ground height for entity placement.
      *
-     * `heightfield.sample()` clamps to edge values when (x,z) falls outside the
-     * heightfield's worldSize, but the terrain mesh applies a smoothstep
-     * falloff to 0 over the last 20m of that worldSize (so the visible ground
-     * past ~±200m is dead-flat at y=0). Trees and rocks placed in the outer
-     * zones (midField/farField/horizon, up to ±800m) would sample the clamped
-     * edge height and sit floating above a flat skirt — visible immediately
-     * in third-person. This helper mirrors the terrain's falloff so placement
-     * always tracks what's actually drawn.
+     * Visible ground Y at (x, z) — triangle-interpolates against the captured
+     * terrain-mesh vertex grid. Cycle 14 Phase 1: this used to mirror the
+     * radial falloff in JS to compensate for `heightfield.sample()` clamping
+     * past `worldSize`. The mesh-grid path now carries the exact same falloff
+     * already (it's baked into the captured displacedHeights), so the JS
+     * mirror is gone and we just delegate.
      */
     _groundY(x, z) {
         if (!this.heightfield) return 0;
-        const h = this.heightfield.sample(x, z);
-        const hfHalf = this.heightfield.worldSize * 0.5;
-        const fadeStart = hfHalf - 20;
-        const fadeEnd = hfHalf;
-        const radial = Math.max(Math.abs(x), Math.abs(z));
-        if (radial <= fadeStart) return h;
-        const t = Math.min(1, (radial - fadeStart) / (fadeEnd - fadeStart));
-        const falloff = 1 - t * t * (3 - 2 * t);
-        return h * falloff;
+        return this.heightfield.meshSampleY(x, z);
     }
 
 
@@ -440,6 +430,13 @@ export class TerrainBuilder {
             const fadeStart = hfHalf - 20;
             const fadeEnd = hfHalf;
             const positions = terrainGeometry.attributes.position;
+            // Capture post-displacement Ys into a (segs+1)² grid so visual
+            // consumers (grass, trees, rocks, sheep, dog) can triangle-
+            // interpolate against exactly the geometry the renderer draws.
+            // PlaneGeometry vertex order: ix walks east (+X), iy walks south
+            // (+Z after rotation), index = iy * (segs+1) + ix.
+            const stride = terrainSegments + 1;
+            const displacedHeights = new Float32Array(stride * stride);
             for (let i = 0; i < positions.count; i++) {
                 const a = positions.getX(i);
                 const b = positions.getY(i);
@@ -452,10 +449,17 @@ export class TerrainBuilder {
                     const t = Math.min(1, (radial - fadeStart) / (fadeEnd - fadeStart));
                     falloff = 1 - t * t * (3 - 2 * t); // smoothstep, inverted
                 }
-                positions.setZ(i, h * falloff);
+                const y = h * falloff;
+                positions.setZ(i, y);
+                displacedHeights[i] = y;
             }
             positions.needsUpdate = true;
             terrainGeometry.computeVertexNormals();
+            this.heightfield.setMeshGrid({
+                displacedHeights,
+                segments: terrainSegments,
+                size: terrainSize
+            });
             console.log(`[TERRAIN] Heightfield-displaced terrain (${positions.count} verts, plane=${terrainSize}m)`);
         }
 
@@ -1126,13 +1130,13 @@ export class TerrainBuilder {
                     const finalScale = baseScale * rock.scale;
 
                     // Always partially bury rocks so the bottom of the silhouette
-                    // sinks below the ground plane. Cycle 11: changed from
-                    // 70%-not-buried to always-buried after the playtest flagged
-                    // floaters whose GLB origin sat above the visible base.
-                    // _groundY mirrors the terrain's radial falloff so rocks in
-                    // outer zones (past the heightfield) match the flat skirt.
+                    // sinks below the ground plane. Cycle 14 Phase 1: now that
+                    // _groundY samples the visible mesh Y, the old 0.10–0.20
+                    // bury was over-correcting for the bilinear-vs-mesh gap.
+                    // Reduced to 0.03–0.06 — enough for a deliberate buried
+                    // look without sinking half the rock.
                     const baseY = this._groundY(rock.x, rock.z);
-                    const yOffset = baseY - finalScale * (0.10 + Math.random() * 0.10);
+                    const yOffset = baseY - finalScale * (0.03 + Math.random() * 0.03);
 
                     rockInstances[rockType].push({
                         position: new THREE.Vector3(rock.x, yOffset, rock.z),
