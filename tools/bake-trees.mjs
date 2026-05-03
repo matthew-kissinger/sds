@@ -1,5 +1,5 @@
 /**
- * Cycle 14 Phase 3: bake stylized tree GLBs at build time.
+ * Cycle 16 Phase 1: bake stylized tree GLBs at build time, with LOD chain.
  *
  * Drives Playwright Chromium against `tools/bake-trees/bake.html` to:
  *   - Generate trees via EZ-Tree (`@dgreenheck/ez-tree`, MIT, v1.1.0+)
@@ -7,13 +7,18 @@
  *   - Normalize each tree to ~1m height so the existing TerrainBuilder
  *     placement code's scale-variance ranges work unchanged.
  *   - Export each as a binary GLB via three.js `GLTFExporter`.
- *   - Write to `assets/models/trees/<name>.glb`.
  *
- * Run as `npm run bake-trees`. Output is committed (deterministic per
- * the seeded recipes below — same seed + same EZ-Tree version === same
- * bytes). Re-run after editing recipes; the existing TerrainBuilder
- * loader picks up new GLBs automatically the next time the dev server
- * reloads.
+ * Cycle 16 expansion: bakes a 36-GLB matrix into staging:
+ *   - 24 LOD0 candidates → tools/asset-gallery/staging/trees/
+ *     (4 species × 3 scales × 2 billboard modes — Double + Single sibling
+ *      per recipe so the gallery can A/B the visual tradeoff)
+ *   - 12 LOD1 candidates → tools/asset-gallery/staging/trees-lod1/
+ *     (same species/scales, always Single, halved leaf count, fewer
+ *      branch.children — used as the mid-distance addLOD entry)
+ *
+ * Run as `npm run bake-trees`. Pass `--set=lod0|lod1|all` to bake a
+ * subset (default: all). Output is gitignored (staging/); only picked +
+ * integrated assets land in `assets/models/`.
  *
  * Why a Playwright harness instead of plain Node? GLTFExporter encodes
  * embedded textures via canvas.toDataURL — that needs a DOM. Spinning
@@ -30,115 +35,171 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
-// Cycle 15 Phase 1: bake all variations into the gallery staging dir by
-// default; pick + integrate flow promotes 3 picks → tree1/tree2/pine in
-// `assets/models/trees/`. Pass `--out=assets/models/trees` to bake
-// directly into committed assets.
 const args = Object.fromEntries(
     process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => {
         const [k, v] = a.replace(/^--/, '').split('=');
         return [k, v ?? true];
     })
 );
-const OUT_REL = args.out ?? 'tools/asset-gallery/staging/trees';
-const OUT_DIR = resolve(ROOT, OUT_REL);
+const SET = args.set ?? 'all'; // 'lod0' | 'lod1' | 'all'
+const OUT_OVERRIDE = args.out;
 
 // ---------------------------------------------------------------------
-// Recipes — each maps an SDS tree-type registry name to an EZ-Tree
-// preset + per-recipe overrides + per-recipe normalized height.
+// Cycle 16 recipe matrix.
 //
-// Heights are tuned so the existing placement scale ranges
-// (~3–5x in TerrainBuilder) put trees at 3–7m visible — same as the
-// current Resource_Tree*.glb baseline. Adjust here if the visual sweep
-// flags trees as too tall/short; re-run `npm run bake-trees`.
-//
-// Seeds are fixed so the bake is byte-stable across machines.
+// Bark tints — per Q1 resolution in cycle-16-tree-research.md. Tightened
+// to a brown family (mediums cluster 0x6a-0x7a) but per-species variation
+// is preserved so silhouettes still differentiate at sheep-cam.
 // ---------------------------------------------------------------------
-// Shared bark/branch overrides for the cozy-game low-poly target.
-//
-//   - bark.textured = false: drop the full PBR bark texture stack
-//     (color + normal + roughness + metalness + AO at 1K each ≈ 1.5MB
-//     per tree). Solid-color bark lands in the same ballpark as the
-//     existing baseline and reads as stylized.
-//
-//   - bark.tint = warm brown: EZ-Tree's preset tints are near-white
-//     cream (0xFFEAB1), designed to MODULATE a bark texture. With
-//     `textured: false` the tint becomes the full surface color, and
-//     near-white reads as "dead birch" instead of healthy bark. Per-
-//     recipe brown overrides below; this default kept as fallback.
-//
-//   - bark.flatShading = true: faceted shading matches the low-poly
-//     world aesthetic (sheep, dog, terrain are all faceted).
-//
-//   - branch.sections + segments halved: ~4x trunk-tris reduction
-//     without visible silhouette change at the camera distances trees
-//     are seen from in SDS (always ≥10m away).
-//
-//   - branch.children kept close to EZ-Tree defaults so the canopy
-//     reads as a proper leafy tree silhouette. Earlier (4/2/0) cut
-//     produced visibly skeletal "dead birch" trees in the first
-//     deploy. (6/4/2) is the lightest pruning that still reads as
-//     a full canopy.
-//
-//   - leaves.count bumped well above EZ-Tree's defaults — at the
-//     camera distances + scale ranges trees are placed at, more leaves
-//     produce a fuller silhouette without showing the underlying
-//     branch structure. Per-recipe tweaks below tune density per type.
-const STYLIZED_BARK = {
-    bark: { textured: false, flatShading: true, tint: 0x6b4226 },
-    branch: {
-        sections: { 0: 4, 1: 3, 2: 2, 3: 1 },
-        segments: { 0: 5, 1: 4, 2: 3, 3: 3 },
-        children: { 0: 8, 1: 5, 2: 3 }
-    },
-    leaves: { count: 48, sizeVariance: 0.55 }
+const BARK_TINTS = {
+    // species:           [small,    medium,   large]
+    ash:   [0x7a5e3c, 0x6e4f30, 0x6a4928],
+    aspen: [0x8c7050, 0x7a5a3a, 0x6a4a32],
+    oak:   [0x70502e, 0x6a4630, 0x5a3a26],
+    pine:  [0x664a32, 0x583c26, 0x4a3525]
 };
 
-// Cycle 15 Phase 1: 12 recipes covering all EZ-Tree presets at S/M/L
-// scale. Each per-species tint differentiates the GLB so the gallery
-// pick step has real silhouette + color variety to choose from.
-//
-// Pine's preset default ships ~82 children at level 0 vs STYLIZED_BARK's
-// 8; restore some of that volume so conifers read as full rather than
-// sparse sticks. Oak gets extra leaf count for the Ghibli "rounded,
-// fuller" canopy. Ash and Aspen sit between.
-const PINE_BRANCH = {
-    sections: STYLIZED_BARK.branch.sections,
-    segments: STYLIZED_BARK.branch.segments,
+// Re-rolled seeds (Q2) — fresh LCG region from the Cycle 15 set so
+// per-recipe symmetric canopies have a fresh shot. The gallery review
+// is the authoritative pick step; if any seed lands asymmetric, swap
+// the entry below and re-bake.
+const SEEDS = {
+    // species:  [smallSeed, mediumSeed, largeSeed]
+    ash:   [27, 39, 51],
+    aspen: [11, 23, 41],
+    oak:   [5,  17, 53],
+    pine:  [9,  33, 67]
+};
+
+// Cycle 16: leaf counts dropped from 40-72 → 24-42. Combined with
+// Single-vs-Double billboard variants in the gallery, this targets a
+// 60-70% reduction on leaf tris vs the Cycle 15 baseline.
+const LEAF_COUNTS = {
+    // species:  [small, medium, large]
+    ash:   [24, 30, 36],
+    aspen: [24, 30, 36],
+    oak:   [30, 36, 42],
+    pine:  [24, 30, 36]
+};
+
+// Pine needs more level-0 branches than the deciduous default to read
+// as a full conifer fronds silhouette. Other species use the LOD0
+// default below.
+const LOD0_BRANCH_DEFAULT = {
+    sections: { 0: 4, 1: 3, 2: 2, 3: 1 },
+    segments: { 0: 5, 1: 4, 2: 3, 3: 3 },
+    children: { 0: 8, 1: 5, 2: 3 }
+};
+
+const LOD0_BRANCH_PINE = {
+    sections: LOD0_BRANCH_DEFAULT.sections,
+    segments: LOD0_BRANCH_DEFAULT.segments,
     children: { 0: 14, 1: 6, 2: 3 }
 };
 
-function recipe(name, preset, seed, tint, leafCount, branchOverride) {
+// LOD1 cuts: fewer level-2 children = fewer leaf-bearing tips, plus
+// halved leaf count = ~75% fewer leaf tris vs LOD0 same-species. Trunk
+// tessellation also halved at level 0 for a small extra trunk-tris cut.
+const LOD1_BRANCH_DEFAULT = {
+    sections: { 0: 3, 1: 2, 2: 2, 3: 1 },
+    segments: { 0: 4, 1: 3, 2: 3, 3: 3 },
+    children: { 0: 6, 1: 4, 2: 0 }
+};
+
+const LOD1_BRANCH_PINE = {
+    sections: LOD1_BRANCH_DEFAULT.sections,
+    segments: LOD1_BRANCH_DEFAULT.segments,
+    children: { 0: 10, 1: 4, 2: 0 }
+};
+
+const SPECIES_TO_PRESET = {
+    ash:   ['Ash Small',   'Ash Medium',   'Ash Large'],
+    aspen: ['Aspen Small', 'Aspen Medium', 'Aspen Large'],
+    oak:   ['Oak Small',   'Oak Medium',   'Oak Large'],
+    pine:  ['Pine Small',  'Pine Medium',  'Pine Large']
+};
+
+const SCALES = ['small', 'medium', 'large'];
+
+/**
+ * Build a single recipe.
+ *
+ * @param species   'ash' | 'aspen' | 'oak' | 'pine'
+ * @param scaleIdx  0=small, 1=medium, 2=large
+ * @param tier      'lod0' | 'lod1'
+ * @param billboard 'single' | 'double'  (per EZ-Tree Billboard enum —
+ *                  internally a lowercase string; capital-case is silently
+ *                  ignored by EZ-Tree's `=== L.Double` check, fix-up date
+ *                  2026-05-03)
+ */
+function buildRecipe(species, scaleIdx, tier, billboard, sizeBoost = 1.0) {
+    const preset = SPECIES_TO_PRESET[species][scaleIdx];
+    const seed = SEEDS[species][scaleIdx];
+    const tint = BARK_TINTS[species][scaleIdx];
+
+    const baseLeafCount = LEAF_COUNTS[species][scaleIdx];
+    const leafCount = tier === 'lod1' ? Math.round(baseLeafCount * 0.5) : baseLeafCount;
+
+    const branch = tier === 'lod1'
+        ? (species === 'pine' ? LOD1_BRANCH_PINE : LOD1_BRANCH_DEFAULT)
+        : (species === 'pine' ? LOD0_BRANCH_PINE : LOD0_BRANCH_DEFAULT);
+
+    // Single-billboard leaves read 50% smaller from grazing camera angles
+    // (only one quad to catch the light). Bump leaves.size ~30% so the
+    // canopy still reads dense at the same count.
+    const baseSize = 1.0; // EZ-Tree presets ship leaves.size ~ 0.6-0.9
+    const leafSize = baseSize * sizeBoost * (billboard === 'single' ? 1.3 : 1.0);
+
     const tweaks = {
-        ...STYLIZED_BARK,
-        bark: { ...STYLIZED_BARK.bark, tint },
-        leaves: { ...STYLIZED_BARK.leaves, count: leafCount }
+        bark: {
+            textured: false,
+            flatShading: true,
+            tint
+        },
+        branch,
+        leaves: {
+            billboard,
+            count: leafCount,
+            size: leafSize,
+            sizeVariance: 0.55
+        }
     };
-    if (branchOverride) tweaks.branch = branchOverride;
-    return { name, preset, seed, normalizeHeight: 1.0, tweaks };
+
+    const tierSlug = tier === 'lod1' ? '_lod1' : '';
+    const name = `${species}_${SCALES[scaleIdx]}_${billboard}${tierSlug}`;
+    const outSubdir = tier === 'lod1' ? 'tools/asset-gallery/staging/trees-lod1'
+                                       : 'tools/asset-gallery/staging/trees';
+
+    return { name, preset, seed, normalizeHeight: 1.0, tweaks, outSubdir };
 }
 
-const RECIPES = [
-    // ASH — versatile hardwood, slim trunk, light canopy
-    recipe('ash_small',    'Ash Small',    3,  0x6e4f30, 40),
-    recipe('ash_medium',   'Ash Medium',   5,  0x6e4f30, 48),
-    recipe('ash_large',    'Ash Large',    9,  0x6e4f30, 56),
+// ---------------------------------------------------------------------
+// Generate the 36-GLB matrix.
+//   LOD0: 4 species × 3 scales × 2 billboard modes = 24
+//   LOD1: 4 species × 3 scales × Single only       = 12
+// ---------------------------------------------------------------------
+function buildAllRecipes() {
+    const out = [];
+    const species = Object.keys(SPECIES_TO_PRESET);
+    if (SET === 'all' || SET === 'lod0') {
+        for (const sp of species) {
+            for (let s = 0; s < 3; s++) {
+                out.push(buildRecipe(sp, s, 'lod0', 'double'));
+                out.push(buildRecipe(sp, s, 'lod0', 'single'));
+            }
+        }
+    }
+    if (SET === 'all' || SET === 'lod1') {
+        for (const sp of species) {
+            for (let s = 0; s < 3; s++) {
+                out.push(buildRecipe(sp, s, 'lod1', 'single'));
+            }
+        }
+    }
+    return out;
+}
 
-    // ASPEN — slim vertical silhouette, lighter bark
-    recipe('aspen_small',  'Aspen Small',  31, 0x8c6e4a, 40),
-    recipe('aspen_medium', 'Aspen Medium', 7,  0x7a5a3a, 48),  // canonical (was tree1)
-    recipe('aspen_large',  'Aspen Large',  47, 0x9a7a52, 56),
-
-    // OAK — broad canopy anchor, darkest bark, fullest canopy
-    recipe('oak_small',    'Oak Small',    19, 0x4a2e1c, 56),
-    recipe('oak_medium',   'Oak Medium',   13, 0x5a3a26, 64),  // canonical (was tree2)
-    recipe('oak_large',    'Oak Large',    71, 0x6a4630, 72),
-
-    // PINE — conifer evergreen, dark bark, dense conifer fronds
-    recipe('pine_small',   'Pine Small',   59, 0x4a3525, 40, PINE_BRANCH),
-    recipe('pine_medium',  'Pine Medium',  21, 0x4a3525, 48, PINE_BRANCH),  // canonical (was pine)
-    recipe('pine_large',   'Pine Large',   83, 0x523a28, 56, PINE_BRANCH)
-];
+const RECIPES = buildAllRecipes();
 
 // ---------------------------------------------------------------------
 // Tiny static server: serves /node_modules/* + /tools/bake-trees/*.
@@ -183,10 +244,10 @@ function startServer() {
 // ---------------------------------------------------------------------
 
 async function main() {
-    await mkdir(OUT_DIR, { recursive: true });
     const { server, port } = await startServer();
     const url = `http://127.0.0.1:${port}/bake.html`;
     console.log(`[BAKE] static server on ${url}`);
+    console.log(`[BAKE] set=${SET} → ${RECIPES.length} recipes`);
 
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
@@ -200,21 +261,26 @@ async function main() {
         await page.goto(url, { waitUntil: 'load', timeout: 30000 });
         await page.waitForFunction(() => window.__bakeReady === true, null, { timeout: 30000 });
 
-        let totalBytes = 0;
+        const bytesByDir = new Map();
         for (const recipe of RECIPES) {
             const t0 = Date.now();
             const result = await page.evaluate(async (r) => await window.__bakeTree(r), recipe);
             const buf = Buffer.from(result.bytesB64, 'base64');
-            const outPath = join(OUT_DIR, `${recipe.name}.glb`);
+            const outRel = OUT_OVERRIDE ?? recipe.outSubdir;
+            const outDir = resolve(ROOT, outRel);
+            await mkdir(outDir, { recursive: true });
+            const outPath = join(outDir, `${recipe.name}.glb`);
             await writeFile(outPath, buf);
-            totalBytes += buf.length;
+            bytesByDir.set(outRel, (bytesByDir.get(outRel) ?? 0) + buf.length);
             const ms = Date.now() - t0;
             console.log(
                 `[OK] ${recipe.name}.glb  ${(buf.length / 1024).toFixed(1)} KB  ` +
-                `~${result.triangleCount} tris  native h=${result.nativeHeight.toFixed(1)}m → ${result.normalizedHeight}m  ${ms}ms`
+                `~${result.triangleCount} tris  → ${outRel}  ${ms}ms`
             );
         }
-        console.log(`[BAKE] total ${(totalBytes / 1024).toFixed(1)} KB across ${RECIPES.length} GLBs → ${OUT_DIR}`);
+        for (const [dir, total] of bytesByDir) {
+            console.log(`[BAKE] ${dir}/  total ${(total / 1024).toFixed(1)} KB`);
+        }
     } finally {
         await browser.close();
         server.close();

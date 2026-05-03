@@ -66,6 +66,13 @@ export class GameAssetLoader {
             'assets/models/rocks/rock2.glb',
             'assets/models/rocks/rock3.glb',
             'assets/models/trees/pine.glb',
+
+            // Cycle 16: LOD1 sibling GLBs (mid-distance reduced canopy).
+            // Loaded deferred — first scene paint uses LOD0 only;
+            // InstancedMesh2.addLOD wires these in once available.
+            'assets/models/trees/tree1_lod1.glb',
+            'assets/models/trees/tree2_lod1.glb',
+            'assets/models/trees/pine_lod1.glb',
             
             // Additional audio files
             'assets/sounds_compressed/music_start.mp3',

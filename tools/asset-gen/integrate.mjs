@@ -35,41 +35,62 @@ const PICKS_PATH = resolve(ROOT, args.picks ?? 'tools/asset-gallery/picks.json')
 const DRY = !!args['dry-run'];
 
 // Map gallery staging subfolders → committed asset locations.
+//
+// Cycle 16: `trees-lod1` is the LOD1 sibling tier — picks land in the
+// same `assets/models/trees/` dir as LOD0 picks but with a `_lod1`
+// suffix on the canonical names. The runtime LOD chain in
+// `js/TerrainBuilder.js` looks up matching siblings by name.
 const ASSET_TARGETS = {
     rocks: 'assets/models/rocks',
     trees: 'assets/models/trees',
+    'trees-lod1': 'assets/models/trees',
     flora: 'assets/models/scatter',
     scatter: 'assets/models/scatter'
 };
 
 // Loader-name canonicalization. The TerrainBuilder rock loader reads
 // rock1/rock2/rock3 by literal path; the asset loader's tree-critical
-// path reads tree1/tree2/pine. Picks must rename to these so the
-// runtime keeps working without code changes. Order: smallest first.
+// path reads tree1/tree2/pine (and tree1_lod1/tree2_lod1/pine_lod1 for
+// the Cycle 16 mid-distance LOD swap). Picks must rename to these so
+// the runtime keeps working without code changes. Order: smallest first.
 //
 // If picks > slots, extra picks get descriptive names appended (loader
 // won't pick them up; the user widens the loader array manually).
 const CANONICAL_NAMES = {
     rocks: ['rock1.glb', 'rock2.glb', 'rock3.glb'],
-    trees: ['tree1.glb', 'tree2.glb', 'pine.glb']
+    trees: ['tree1.glb', 'tree2.glb', 'pine.glb'],
+    'trees-lod1': ['tree1_lod1.glb', 'tree2_lod1.glb', 'pine_lod1.glb']
 };
 
 function pickCanonicalName(category, picks) {
-    // Sort picks by size (smaller → smaller-named slot) so rock1 stays the
-    // small pebble-class and rock3 stays the largest. Same for trees: small
-    // vertical (tree1), broad canopy (tree2), conifer (pine).
+    // Cycle 16 update: each pick may carry an explicit `canonicalName`
+    // override (e.g. `'tree1.glb'`). When present, that wins. Useful when
+    // the natural bbox-height sort doesn't match semantics — e.g. pine is
+    // shorter than aspen but belongs in the `pine` slot regardless.
+    //
+    // Without an override: fall back to bbox-height-ascending sort. That
+    // works for rocks (rock1 = small pebble, rock3 = largest) and for
+    // tree species where height matches the desired slot (rare).
     const slots = CANONICAL_NAMES[category];
     if (!slots) return picks.map((p) => ({ pick: p, name: basename(p.path) }));
 
-    const sorted = [...picks].sort((a, b) => {
+    const explicit = picks.filter((p) => typeof p.canonicalName === 'string');
+    const implicit = picks.filter((p) => typeof p.canonicalName !== 'string');
+
+    const out = explicit.map((p) => ({ pick: p, name: p.canonicalName }));
+
+    const taken = new Set(out.map((o) => o.name));
+    const remainingSlots = slots.filter((s) => !taken.has(s));
+
+    const sortedImplicit = [...implicit].sort((a, b) => {
         const aH = a.bbox?.sy ?? 0;
         const bH = b.bbox?.sy ?? 0;
         return aH - bH;
     });
-    return sorted.map((p, i) => ({
-        pick: p,
-        name: i < slots.length ? slots[i] : basename(p.path)
-    }));
+    sortedImplicit.forEach((p, i) => {
+        out.push({ pick: p, name: i < remainingSlots.length ? remainingSlots[i] : basename(p.path) });
+    });
+    return out;
 }
 
 function categoryOf(picPath) {

@@ -1,0 +1,55 @@
+{
+  "dir": "tools/asset-gallery/staging",
+  "savedAt": "2026-05-03T22:00:00.000Z",
+  "_note": "Cycle 16 Phase 1 autonomous picks. Each entry carries an explicit `canonicalName` so semantic slot mapping (aspen→tree1 slim, oak→tree2 broad, pine→pine conifer) doesn't depend on bbox-height sort. Re-run `npm run gallery` to swap any pick — gallery save will overwrite this file (without canonicalName, so re-add the field by hand or run integrate with the gallery's emitted bbox-sort if you want to skip the override).",
+  "picks": [
+    {
+      "path": "tools/asset-gallery/staging/trees/aspen_medium_single.glb",
+      "name": "aspen_medium_single.glb",
+      "canonicalName": "tree1.glb",
+      "_role": "slim vertical pasture silhouette",
+      "tris": 4392,
+      "bbox": { "sy": 67.85 }
+    },
+    {
+      "path": "tools/asset-gallery/staging/trees/oak_medium_single.glb",
+      "name": "oak_medium_single.glb",
+      "canonicalName": "tree2.glb",
+      "_role": "broad canopy anchor",
+      "tris": 18772,
+      "bbox": { "sy": 67.54 }
+    },
+    {
+      "path": "tools/asset-gallery/staging/trees/pine_medium_single.glb",
+      "name": "pine_medium_single.glb",
+      "canonicalName": "pine.glb",
+      "_role": "conifer evergreen",
+      "tris": 1216,
+      "bbox": { "sy": 49.98 }
+    },
+    {
+      "path": "tools/asset-gallery/staging/trees-lod1/aspen_medium_single_lod1.glb",
+      "name": "aspen_medium_single_lod1.glb",
+      "canonicalName": "tree1_lod1.glb",
+      "_role": "slim vertical pasture — LOD1 sibling",
+      "tris": 1672,
+      "bbox": { "sy": 67.59 }
+    },
+    {
+      "path": "tools/asset-gallery/staging/trees-lod1/oak_medium_single_lod1.glb",
+      "name": "oak_medium_single_lod1.glb",
+      "canonicalName": "tree2_lod1.glb",
+      "_role": "broad canopy anchor — LOD1 sibling",
+      "tris": 2314,
+      "bbox": { "sy": 66.05 }
+    },
+    {
+      "path": "tools/asset-gallery/staging/trees-lod1/pine_medium_single_lod1.glb",
+      "name": "pine_medium_single_lod1.glb",
+      "canonicalName": "pine_lod1.glb",
+      "_role": "conifer evergreen — LOD1 sibling",
+      "tris": 444,
+      "bbox": { "sy": 49.97 }
+    }
+  ]
+}

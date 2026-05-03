@@ -79,6 +79,12 @@ export class TerrainBuilder {
         this.loader = configureGLTFLoader(new GLTFLoader());
         this.models = {
             trees: {},
+            // Cycle 16 Phase 1: LOD1 sibling GLBs (reduced canopy, used as
+            // the mid-distance addLOD entry on the trunk + leaves
+            // InstancedMesh2). Loaded alongside `trees` in loadModels;
+            // createTrees pairs each LOD0 child mesh with its LOD1 sibling
+            // by name (`trunk` / `leaves`).
+            treesLod1: {},
             rocks: {},
             mountains: {},
             buildings: {},
@@ -243,6 +249,14 @@ export class TerrainBuilder {
                 { name: 'tree2', path: 'assets/models/trees/tree2.glb' },
                 { name: 'pine',  path: 'assets/models/trees/pine.glb' }
             ],
+            // Cycle 16 Phase 1: LOD1 sibling GLBs (reduced canopy + Single
+            // billboard + halved level-2 children). Mid-distance addLOD
+            // entry on each tree's trunk + leaves InstancedMesh2.
+            treesLod1: [
+                { name: 'tree1', path: 'assets/models/trees/tree1_lod1.glb' },
+                { name: 'tree2', path: 'assets/models/trees/tree2_lod1.glb' },
+                { name: 'pine',  path: 'assets/models/trees/pine_lod1.glb' }
+            ],
             // Cycle 14 Phase 4: rocks from Quaternius Stylized Nature
             // MegaKit (CC0). Rock_Medium_1/2/3 converted via gltf-transform
             // with 128px diffuse texture (distance-viewed; rim-light
@@ -331,6 +345,35 @@ export class TerrainBuilder {
                     const errMsg = `tree/${model.name}: ${err.message || err}`;
                     console.error(`[ERROR] Failed to load ${errMsg}`);
                     loadErrors.push(errMsg);
+                })
+            );
+        }
+
+        // Cycle 16 Phase 1: load LOD1 sibling tree GLBs. Same world-matrix
+        // baking as LOD0; the per-mesh geometry is what InstancedMesh2.addLOD
+        // consumes. We don't need the modelBaseYOffset / bbox bookkeeping
+        // here — the LOD0 model's offset already drives placement; the LOD1
+        // child geometry just gets swapped in at distance > 80m.
+        for (const model of modelPaths.treesLod1) {
+            loadPromises.push(
+                this.loader.loadAsync(model.path).then(gltf => {
+                    const root = gltf.scene;
+                    root.updateMatrixWorld(true);
+                    root.traverse(child => {
+                        if (!child.isMesh || !child.geometry) return;
+                        child.geometry = child.geometry.clone();
+                        child.geometry.applyMatrix4(child.matrixWorld);
+                        child.position.set(0, 0, 0);
+                        child.quaternion.identity();
+                        child.scale.set(1, 1, 1);
+                        child.updateMatrixWorld(true);
+                    });
+                    this.models.treesLod1[model.name] = root;
+                    console.log(`[OK] Loaded tree LOD1 model: ${model.name}`);
+                }).catch(err => {
+                    // LOD1 missing is degraded-but-recoverable: createTrees
+                    // falls back to LOD0-only when no sibling exists.
+                    console.warn(`[WARN] Failed to load tree LOD1 ${model.name}: ${err.message || err} — falling back to LOD0-only chain`);
                 })
             );
         }
@@ -1049,175 +1092,144 @@ export class TerrainBuilder {
             });
         }
 
-        // Split each tree type's instances into near (full mesh) and far
-        // (cross-billboard impostor). The cutoff is purely distance-based so
-        // it works for any scene's zone layout. ~250m matches "no longer
-        // resolvable as individual triangles" from the typical play camera.
-        // Far impostors drop ~99% of triangles per distant tree, which is
-        // the single biggest tree-tris cut available short of full octahedral
-        // impostors.
-        // Cycle 7 Phase 2a (round 2): raised again 280→400m. The threshold
-        // is distance-from-origin (set once at scene load) not distance-
-        // from-camera, so any tree past it is a billboard regardless of
-        // where the player is. OC's 380m island radius means trees at
-        // 280–380m on the playable disc were billboards. 400m covers the
-        // entire island; only the horizon-zone trees (radius >400m) stay
-        // billboards. RH (safe radius ~161m) and Field unaffected.
-        const FAR_LOD_DIST = 400;
-        const nearByType = { tree1: [], tree2: [], pine: [] };
-        const farByType  = { tree1: [], tree2: [], pine: [] };
-        Object.entries(treeInstances).forEach(([treeType, instances]) => {
-            instances.forEach(inst => {
-                const r = Math.hypot(inst.position.x, inst.position.z);
-                (r > FAR_LOD_DIST ? farByType : nearByType)[treeType].push(inst);
-            });
-        });
-
-        // Create instanced meshes for each tree type (near = full GLB mesh).
-        // Cycle 14 Phase 3: upgraded to InstancedMesh2 (`@three.ez/instanced-mesh`)
-        // for per-instance frustum culling. Drop-in replacement — the
-        // shader path stays identical (`instanceMatrix` attribute), so
-        // the leaf-wind onBeforeCompile patch survives untouched. Out-of-
-        // frame tree instances now skip vertex shader execution, which
-        // matters when the camera looks one direction and ~50–70% of the
-        // forest sits behind it. Full LOD-pool unification (instance-
-        // dynamic switch to billboard impostor) is a Cycle 15 candidate
-        // — it requires authoring trunk-only and leaves-only impostors
-        // since EZ-Tree splits each tree into trunk + leaves child meshes
-        // with separate materials.
-        const instancedMeshes = [];
-        Object.entries(nearByType).forEach(([treeType, instances]) => {
-            if (instances.length === 0 || !this.models.trees[treeType]) return;
-
-            const model = this.models.trees[treeType];
-
-            model.traverse(child => {
-                if (child.isMesh) {
-                    const instancedMesh = new InstancedMesh2(
-                        child.geometry,
-                        child.material,
-                        { capacity: instances.length, createEntities: false }
-                    );
-                    // Cycle 12 Phase 1 A8: this InstancedMesh shares its
-                    // geometry + material with the cached GLB model. Tag so
-                    // clearTrees() removes-from-scene only — disposing would
-                    // invalidate the GLB cache and force a texture re-upload
-                    // on the next swap (the dominant ~41% drift class).
-                    instancedMesh.userData.sharedFromGlbCache = true;
-
-                    // InstancedMesh2 entities expose position/quaternion/scale
-                    // (no Euler `rotation`). Convert from the placement
-                    // record's THREE.Euler via the shared scratch.
-                    instancedMesh.addInstances(instances.length, (obj, i) => {
-                        const inst = instances[i];
-                        obj.position.copy(inst.position);
-                        obj.quaternion.setFromEuler(inst.rotation);
-                        obj.scale.copy(inst.scale);
-                    });
-
-                    instancedMesh.castShadow = !this.isMobile;
-                    instancedMesh.receiveShadow = true;
-                    // perObjectFrustumCulled = true (default) — InstancedMesh2
-                    // computes the per-instance bounding internally and tests
-                    // against the camera frustum each frame. The Object3D
-                    // itself can stay frustumCulled=true (the parent) because
-                    // InstancedMesh2 fits its own scene-bounding box.
-
-                    this.scene.add(instancedMesh);
-                    instancedMeshes.push(instancedMesh);
-                }
-            });
-
-            console.log(`[TERRAIN] Created ${instances.length} ${treeType} mesh instances (near)`);
-        });
-
-        // Build cross-billboard impostors for far trees. One InstancedMesh per
-        // tree type, sharing a baked texture of that GLB seen from the side.
-        const billboardMeshes = await this._buildFarTreeBillboards(farByType);
-        billboardMeshes.forEach(m => instancedMeshes.push(m));
-
-        this.trees = instancedMeshes;
-        const nearTotal = Object.values(nearByType).reduce((s, a) => s + a.length, 0);
-        const farTotal = Object.values(farByType).reduce((s, a) => s + a.length, 0);
-        console.log(`[TERRAIN] Total trees: ${nearTotal} near (mesh) + ${farTotal} far (impostor) = ${nearTotal + farTotal}`);
-
-        return instancedMeshes;
-    }
-
-    /**
-     * Build cross-billboard InstancedMeshes for distant trees. Each tree
-     * type gets one InstancedMesh whose geometry is two perpendicular
-     * textured quads, sampled from a one-time render of the GLB to a
-     * RenderTarget. The result is ~8 triangles per far tree instead of
-     * thousands, with reasonable visual fidelity from the play camera.
-     *
-     * @param {Object<string, Array>} farByType
-     * @returns {Promise<THREE.InstancedMesh[]>}
-     * @private
-     */
-    async _buildFarTreeBillboards(farByType) {
+        // Cycle 16 Phase 1+2: per-instance LOD chain via InstancedMesh2.addLOD.
+        // Each tree GLB has trunk + leaves child meshes; each gets its own
+        // InstancedMesh2 with up to a 3-tier chain:
+        //   LOD0 (mesh)      — full baked geometry, near distance.
+        //   LOD1 (reduced)   — sibling LOD1 GLB's matching child geometry,
+        //                      swap at 80m.
+        //   LOD2 (impostor)  — leaves swap to cross-billboard atlas at 150m;
+        //                      trunk swaps to a degenerate 3-vert geometry
+        //                      (the cross-billboard texture already shows
+        //                      the trunk silhouette; rendering the LOD1
+        //                      trunk on top of it would z-fight + alpha-bleed).
+        //
+        // Replaces the Cycle 14 world-distance-from-origin split (FAR_LOD_DIST
+        // 400m) with a per-instance per-frame camera-distance test. Net win:
+        // one camera position no longer freezes "far = billboard" for the
+        // entire scene's lifetime; the chase camera moving toward a tree now
+        // smoothly upgrades it through LOD2 → LOD1 → LOD0 with hysteresis.
         const renderer = getSceneManager()?.getRenderer();
-        if (!renderer) {
-            console.warn('[TERRAIN] No renderer available for tree impostor bake; skipping far-tree LOD');
-            return [];
-        }
+        const instancedMeshes = [];
 
-        const out = [];
-        // Cache baked impostors per tree type — survives dispose() like the
-        // models cache. Cycle 11 Phase 1 A8 finding: re-baking on each scene
-        // swap leaks one WebGLRenderTarget framebuffer per tree species per
-        // swap (~5 GL textures per cycle). Reuse instead.
+        // Cache baked cross-billboard impostors per tree type — survives
+        // dispose() like the models cache. Cycle 11 Phase 1 A8 finding:
+        // re-baking on each scene swap leaks one WebGLRenderTarget per
+        // tree species per swap (~5 GL textures per cycle).
         if (!this._bakeImpostorCache) this._bakeImpostorCache = new Map();
 
-        for (const [treeType, instances] of Object.entries(farByType)) {
-            if (instances.length === 0 || !this.models.trees[treeType]) continue;
+        // Reusable degenerate geometry for the trunk's LOD2 entry. Three
+        // co-located verts → zero-area triangle → effectively no draw work,
+        // but addLOD requires a real BufferGeometry.
+        if (!this._lod2EmptyGeo) {
+            const empty = new THREE.BufferGeometry();
+            empty.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3));
+            empty.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0, 0, 1, 0], 3));
+            empty.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 2));
+            this._lod2EmptyGeo = empty;
+        }
 
-            let baked = this._bakeImpostorCache.get(treeType);
-            if (!baked) {
-                baked = this._bakeTreeImpostor(this.models.trees[treeType], renderer);
-                if (!baked) continue;
-                this._bakeImpostorCache.set(treeType, baked);
+        Object.entries(treeInstances).forEach(([treeType, instances]) => {
+            if (instances.length === 0 || !this.models.trees[treeType]) return;
+
+            const lod0Model = this.models.trees[treeType];
+            const lod1Model = this.models.treesLod1?.[treeType] ?? null;
+
+            // Index LOD0 + LOD1 children by mesh name so trunk pairs with
+            // trunk and leaves with leaves. The bake script names them
+            // 'trunk' and 'leaves'; older / hand-edited GLBs may not, in
+            // which case the LOD1 lookup falls back to "no LOD1 sibling
+            // for this child" → LOD chain degrades to LOD0→LOD2 only.
+            const lod1ChildByName = new Map();
+            if (lod1Model) {
+                lod1Model.traverse(c => { if (c.isMesh && c.geometry) lod1ChildByName.set(c.name, c); });
             }
 
-            // Cross-billboard geometry uses the GLB's bbox Y-range so that
-            // per-instance placement (which uses the same `placementY = treeY
-            // + (-bbox.min.y) * scale` offset as the mesh path) lands the
-            // billboard's base on terrain, top of model at top of quad.
-            const geo = this._createCrossBillboardGeometry(baked.width, baked.bboxMinY, baked.bboxMaxY);
-            const mat = new THREE.MeshBasicMaterial({
-                map: baked.texture,
-                transparent: true,
-                alphaTest: 0.4,
-                side: THREE.DoubleSide,
-                depthWrite: true,
-                fog: true
+            // Bake cross-billboard impostor (texture + bbox) once per type.
+            let impostor = this._bakeImpostorCache.get(treeType);
+            if (!impostor && renderer) {
+                impostor = this._bakeTreeImpostor(lod0Model, renderer);
+                if (impostor) this._bakeImpostorCache.set(treeType, impostor);
+            }
+            const billboardGeo = impostor
+                ? this._createCrossBillboardGeometry(impostor.width, impostor.bboxMinY, impostor.bboxMaxY)
+                : null;
+            const billboardMat = impostor
+                ? new THREE.MeshBasicMaterial({
+                    map: impostor.texture,
+                    transparent: true,
+                    alphaTest: 0.4,
+                    side: THREE.DoubleSide,
+                    depthWrite: true,
+                    fog: true
+                })
+                : null;
+
+            lod0Model.traverse(child => {
+                if (!child.isMesh || !child.geometry) return;
+
+                const isLeavesMesh = child.name === 'leaves';
+                const lod1Child = lod1ChildByName.get(child.name);
+
+                const im = new InstancedMesh2(
+                    child.geometry,
+                    child.material,
+                    { capacity: instances.length, createEntities: false }
+                );
+                // Cycle 12 Phase 1 A8: this InstancedMesh shares its
+                // geometry + material with the cached GLB model. Tag so
+                // clearTrees() removes-from-scene only — disposing would
+                // invalidate the GLB cache and force a texture re-upload
+                // on the next swap (the dominant ~41% drift class).
+                im.userData.sharedFromGlbCache = true;
+
+                // LOD1: reduced geometry from sibling GLB. Material is
+                // SHARED with LOD0 — the leaf-wind shader patch attached
+                // to the original material is correct at any LOD geometry.
+                if (lod1Child?.geometry) {
+                    im.addLOD(lod1Child.geometry, child.material, 80);
+                }
+
+                // LOD2: leaves swap to cross-billboard; trunk swaps to a
+                // degenerate empty geometry so the billboard texture
+                // (which contains the trunk silhouette) is the only thing
+                // drawn at far distance.
+                if (billboardGeo && billboardMat) {
+                    if (isLeavesMesh) {
+                        im.addLOD(billboardGeo, billboardMat, 150);
+                    } else {
+                        im.addLOD(this._lod2EmptyGeo, child.material, 150);
+                    }
+                }
+
+                // InstancedMesh2 entities expose position/quaternion/scale
+                // (no Euler `rotation`). Convert from the placement record's
+                // THREE.Euler via the shared scratch.
+                im.addInstances(instances.length, (obj, i) => {
+                    const inst = instances[i];
+                    obj.position.copy(inst.position);
+                    obj.quaternion.setFromEuler(inst.rotation);
+                    obj.scale.copy(inst.scale);
+                });
+
+                im.castShadow = !this.isMobile;
+                im.receiveShadow = true;
+
+                this.scene.add(im);
+                instancedMeshes.push(im);
             });
 
-            // Cycle 14 Phase 3: InstancedMesh2 for far impostors too —
-            // per-instance frustum culling matters more here than for
-            // near trees, since the horizon ring of billboards typically
-            // spans ~270° of world space and any single camera direction
-            // sees only ~25%. The geometry+material are NOT shared from
-            // the GLB cache (built fresh per scene), so no need for the
-            // sharedFromGlbCache guard.
-            const inst = new InstancedMesh2(geo, mat, {
-                capacity: instances.length,
-                createEntities: false
-            });
-            inst.addInstances(instances.length, (obj, i) => {
-                const instance = instances[i];
-                obj.position.copy(instance.position);
-                obj.quaternion.setFromEuler(instance.rotation);
-                obj.scale.copy(instance.scale);
-            });
-            inst.castShadow = false;
-            inst.receiveShadow = false;
+            const lodTag = lod1Model
+                ? (billboardGeo ? 'LOD0+LOD1+impostor' : 'LOD0+LOD1')
+                : (billboardGeo ? 'LOD0+impostor'      : 'LOD0-only');
+            console.log(`[TERRAIN] Created ${instances.length} ${treeType} mesh instances (${lodTag})`);
+        });
 
-            this.scene.add(inst);
-            out.push(inst);
-            console.log(`[TERRAIN] Created ${instances.length} ${treeType} billboard instances (far)`);
-        }
-        return out;
+        this.trees = instancedMeshes;
+        const total = Object.values(treeInstances).reduce((s, a) => s + a.length, 0);
+        console.log(`[TERRAIN] Total trees: ${total} (per-instance LOD0/LOD1/LOD2 chain)`);
+
+        return instancedMeshes;
     }
 
     /**
