@@ -279,13 +279,24 @@ export class TerrainBuilder {
         // local offsets — without baking, those offsets are dropped). Then
         // measure each child geometry's min.y so we can lift the visible
         // bottom of the tree to terrain regardless of GLB origin convention.
+        // Cycle 14 floating-tree fix: ground reference uses ONLY the trunk
+        // mesh's bbox. EZ-Tree presets sometimes droop leaves below the
+        // trunk base — if those leaves drove modelBaseYOffset, the trunk
+        // would float above terrain at scale (e.g. trunk 0.05m above
+        // lowest-leaf × 15 scale → 0.75m hover). The bake script names
+        // the trunk mesh 'trunk' (see tools/bake-trees/bake.html), so we
+        // can pick it out reliably. Drooping leaves are then allowed to
+        // sit at or below grass-blade level, which reads correctly.
+        // modelBboxMinY/MaxY still reflect the full tree for the leaf-
+        // wind shader's height normalization.
         for (const model of modelPaths.trees) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     const root = gltf.scene;
                     root.updateMatrixWorld(true);
-                    let minY = Infinity;
-                    let maxY = -Infinity;
+                    let trunkMinY = Infinity;
+                    let allMinY = Infinity;
+                    let allMaxY = -Infinity;
                     root.traverse(child => {
                         if (!child.isMesh || !child.geometry) return;
                         // Clone before mutating so any other consumer of this
@@ -304,16 +315,18 @@ export class TerrainBuilder {
                         child.geometry.computeBoundingBox();
                         const bb = child.geometry.boundingBox;
                         if (bb && isFinite(bb.min.y)) {
-                            if (bb.min.y < minY) minY = bb.min.y;
-                            if (bb.max.y > maxY) maxY = bb.max.y;
+                            if (child.name === 'trunk' && bb.min.y < trunkMinY) trunkMinY = bb.min.y;
+                            if (bb.min.y < allMinY) allMinY = bb.min.y;
+                            if (bb.max.y > allMaxY) allMaxY = bb.max.y;
                         }
                     });
-                    if (!isFinite(minY)) { minY = 0; maxY = 1; }
-                    root.userData.modelBaseYOffset = -minY;
-                    root.userData.modelBboxMinY = minY;
-                    root.userData.modelBboxMaxY = maxY;
+                    if (!isFinite(allMinY)) { allMinY = 0; allMaxY = 1; }
+                    const groundRef = isFinite(trunkMinY) ? trunkMinY : allMinY;
+                    root.userData.modelBaseYOffset = -groundRef;
+                    root.userData.modelBboxMinY = allMinY;
+                    root.userData.modelBboxMaxY = allMaxY;
                     this.models.trees[model.name] = root;
-                    console.log(`[OK] Loaded tree model: ${model.name} (bbox y=[${minY.toFixed(2)}, ${maxY.toFixed(2)}])`);
+                    console.log(`[OK] Loaded tree model: ${model.name} (trunk y_min=${groundRef.toFixed(3)}, bbox y=[${allMinY.toFixed(2)}, ${allMaxY.toFixed(2)}])`);
                 }).catch(err => {
                     const errMsg = `tree/${model.name}: ${err.message || err}`;
                     console.error(`[ERROR] Failed to load ${errMsg}`);

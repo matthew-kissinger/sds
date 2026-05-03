@@ -77,9 +77,9 @@ const STYLIZED_BARK = {
     branch: {
         sections: { 0: 4, 1: 3, 2: 2, 3: 1 },
         segments: { 0: 5, 1: 4, 2: 3, 3: 3 },
-        children: { 0: 6, 1: 4, 2: 2 }
+        children: { 0: 8, 1: 5, 2: 3 }
     },
-    leaves: { count: 28, sizeVariance: 0.5 }
+    leaves: { count: 48, sizeVariance: 0.55 }
 };
 
 const RECIPES = [
@@ -106,7 +106,7 @@ const RECIPES = [
         tweaks: {
             ...STYLIZED_BARK,
             bark: { ...STYLIZED_BARK.bark, tint: 0x5a3a26 },
-            leaves: { count: 36, sizeVariance: 0.6 }
+            leaves: { count: 64, sizeVariance: 0.6 }
         }
     },
     {
@@ -115,11 +115,16 @@ const RECIPES = [
         seed: 21,
         normalizeHeight: 1.0,
         // Pine — conifer evergreen, billboarded frond leaves. Dark
-        // brown bark; pine's frond geometry already gives a full
-        // silhouette so the shared count works.
+        // brown bark. Pine's preset default ships 82 children at
+        // level 0 (vs the shared 8); restore some of that volume so
+        // the conifer reads as full rather than a sparse stick.
         tweaks: {
             ...STYLIZED_BARK,
-            bark: { ...STYLIZED_BARK.bark, tint: 0x4a3525 }
+            bark: { ...STYLIZED_BARK.bark, tint: 0x4a3525 },
+            branch: {
+                ...STYLIZED_BARK.branch,
+                children: { 0: 14, 1: 6, 2: 3 }
+            }
         }
     }
 ];

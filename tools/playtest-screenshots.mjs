@@ -92,16 +92,17 @@ async function captureShot(page, shot, baseUrl) {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
 
     // Wait for the cinema API to be wired up. The full init flow
-    // (heightfield fetch + GLB parse + grass + trees + scatter) can
-    // take 30–60s on cold network; give it 90s headroom.
-    await page.waitForFunction(() => !!window.__sdsCinema, null, { timeout: 90000 });
+    // (heightfield fetch + GLB parse + grass + trees + scatter +
+    // ~28 MB of fence GLBs) can take 90–120s under headless Chromium
+    // on a cold dev/preview server; give it 180s headroom.
+    await page.waitForFunction(() => !!window.__sdsCinema, null, { timeout: 180000 });
 
     // Stamp the parameters before kicking off Solo so the first
     // rendered frame already has correct sun + camera.
     await page.evaluate(async (s) => {
         const c = window.__sdsCinema;
         c.setSun(s.sun);
-        c.setCameraPose(s.camera);
+        c.setCameraPose(s.camera.pos, s.camera.target);
     }, shot);
 
     // Start Solo Classic with a representative dog. Default to Jep
@@ -119,7 +120,7 @@ async function captureShot(page, shot, baseUrl) {
     await page.evaluate(async (s) => {
         const c = window.__sdsCinema;
         c.setSun(s.sun);
-        c.setCameraPose(s.camera);
+        c.setCameraPose(s.camera.pos, s.camera.target);
         // Hide any UI that may have re-mounted.
         if (typeof c.hideUI === 'function') c.hideUI();
     }, shot);

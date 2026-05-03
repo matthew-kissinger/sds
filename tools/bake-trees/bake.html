@@ -72,11 +72,12 @@ window.__bakeTree = async function bakeTree(recipe) {
 
     // Downsample the leaf alpha texture before export. EZ-Tree ships
     // 1024×1024 leaf PNGs; in SDS trees are seen from ≥10m and shrink
-    // further with distance — 256×256 is visually indistinguishable
-    // and ~16x smaller after PNG encode. Cuts ~80% off final GLB size.
+    // further with distance — 384×384 keeps mid-distance leaves crisp
+    // while staying ~7× smaller than native after PNG encode. (256²
+    // earlier round read soft once leaf-count was bumped past 40.)
     const leafMap = tree.leavesMesh?.material?.map;
     if (leafMap?.image) {
-        const target = recipe.leafTextureSize ?? 256;
+        const target = recipe.leafTextureSize ?? 384;
         const src = leafMap.image;
         const cnv = document.createElement('canvas');
         cnv.width = target;

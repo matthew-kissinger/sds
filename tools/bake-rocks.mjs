@@ -1,0 +1,172 @@
+/**
+ * Cycle 14 followup: bake stylized procedural rock GLBs at build time.
+ *
+ * Mirrors `tools/bake-trees.mjs`: a tiny static server serves
+ * `tools/bake-rocks/bake.html` to a headless Chromium that generates
+ * each rock with three.js `IcosahedronGeometry` + 3D simplex noise
+ * displacement, then exports it via `GLTFExporter` as a binary GLB.
+ *
+ * Why a Playwright harness? `GLTFExporter` encodes embedded resources
+ * via canvas APIs — we don't ship textures here, but staying in
+ * lockstep with the tree pipeline keeps the dev story uniform: same
+ * `npm run bake-X` cadence, same output layout, same compress-glbs
+ * step. (The browser also gives us three.js for free without polluting
+ * Node with a rendering stack.)
+ *
+ * Output: `assets/models/rocks/{rock1,rock2,rock3}.glb`.
+ *
+ * Replaces the prior Quaternius MegaKit rocks (which read as broken
+ * mesh shards in playtest). The downstream loader in
+ * `js/TerrainBuilder.js` is unchanged: same file paths, same
+ * `ROCK_NATIVE_HEIGHT` normalization, same `_patchRockMaterial`
+ * fresnel rim-light. We just hand it better geometry.
+ */
+
+import { chromium } from 'playwright';
+import { createServer } from 'node:http';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { join, resolve, dirname, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '..');
+const OUT_DIR = resolve(ROOT, 'assets/models/rocks');
+
+// ---------------------------------------------------------------------
+// Recipes — three rocks that map 1:1 onto the existing rock1/2/3 file
+// names so the loader doesn't change. Each starts as an
+// IcosahedronGeometry (detail=2 → 320 tris) and gets per-vertex 3D
+// simplex displacement + a non-uniform xyz scale to escape the regular
+// "polyhedron silhouette" feel.
+//
+// The amplitudes and frequencies were tuned by eye for "round boulder
+// with chunky facets" rather than "spiky asteroid". Seeds are fixed so
+// the bake is byte-stable across machines.
+//
+// Native height stays near 0.2m so the existing
+// `ROCK_NATIVE_HEIGHT = 0.2m` normalization in TerrainBuilder is a
+// near-identity (avoids re-tuning rock placement scale ranges).
+// ---------------------------------------------------------------------
+const RECIPES = [
+    {
+        name: 'rock1',
+        radius: 0.10,
+        detail: 2,
+        seed: 11,
+        // Lower amp = rounder, more "pebble-like".
+        displacementAmp: 0.018,
+        // Two-octave noise: low-freq lumps + high-freq facet break-up.
+        noise: { freq1: 8.0, freq2: 22.0, weight2: 0.25 },
+        // Non-uniform scale flattens the rock into a squat boulder so
+        // it doesn't look like a fully spherical pebble.
+        scale: { x: 1.10, y: 0.70, z: 1.00 },
+        color: 0x9c8e7a,         // warm light grey-brown
+        targetHeight: 0.20
+    },
+    {
+        name: 'rock2',
+        radius: 0.10,
+        detail: 2,
+        seed: 23,
+        displacementAmp: 0.026,
+        noise: { freq1: 7.0, freq2: 20.0, weight2: 0.30 },
+        scale: { x: 1.20, y: 0.85, z: 1.05 },
+        color: 0x8a7e6b,         // mid grey-brown (canonical)
+        targetHeight: 0.20
+    },
+    {
+        name: 'rock3',
+        radius: 0.10,
+        detail: 2,
+        seed: 41,
+        // Higher amp + more high-freq weight = chunkier, more
+        // "boulder-with-character".
+        displacementAmp: 0.034,
+        noise: { freq1: 6.0, freq2: 18.0, weight2: 0.35 },
+        scale: { x: 1.35, y: 0.90, z: 1.10 },
+        color: 0x7a6f5c,         // darker mossy grey-brown
+        targetHeight: 0.20
+    }
+];
+
+// ---------------------------------------------------------------------
+// Tiny static server (same pattern as bake-trees.mjs).
+// ---------------------------------------------------------------------
+const MIME = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript',
+    '.mjs': 'application/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.css': 'text/css'
+};
+
+function startServer() {
+    const server = createServer(async (req, res) => {
+        try {
+            let url = decodeURIComponent(req.url.split('?')[0]);
+            if (url === '/' || url === '/bake.html') url = '/tools/bake-rocks/bake.html';
+            const path = resolve(ROOT, '.' + url);
+            if (!path.startsWith(ROOT)) {
+                res.writeHead(403); res.end('Forbidden'); return;
+            }
+            const data = await readFile(path);
+            res.setHeader('Content-Type', MIME[extname(path).toLowerCase()] || 'application/octet-stream');
+            res.setHeader('Cache-Control', 'no-store');
+            res.end(data);
+        } catch (err) {
+            res.writeHead(404);
+            res.end(`Not found: ${req.url}\n${err.message}`);
+        }
+    });
+    return new Promise((resolve, reject) => {
+        server.listen(0, '127.0.0.1', () => resolve({ server, port: server.address().port }));
+        server.on('error', reject);
+    });
+}
+
+// ---------------------------------------------------------------------
+
+async function main() {
+    await mkdir(OUT_DIR, { recursive: true });
+    const { server, port } = await startServer();
+    const url = `http://127.0.0.1:${port}/bake.html`;
+    console.log(`[BAKE] static server on ${url}`);
+
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    page.on('pageerror', err => console.error('[PAGE ERROR]', err.message));
+    page.on('console', msg => {
+        const t = msg.type();
+        if (t === 'error' || t === 'warning') console.log(`[PAGE ${t}]`, msg.text());
+    });
+
+    try {
+        await page.goto(url, { waitUntil: 'load', timeout: 30000 });
+        await page.waitForFunction(() => window.__bakeReady === true, null, { timeout: 30000 });
+
+        let totalBytes = 0;
+        for (const recipe of RECIPES) {
+            const t0 = Date.now();
+            const result = await page.evaluate(async (r) => await window.__bakeRock(r), recipe);
+            const buf = Buffer.from(result.bytesB64, 'base64');
+            const outPath = join(OUT_DIR, `${recipe.name}.glb`);
+            await writeFile(outPath, buf);
+            totalBytes += buf.length;
+            const ms = Date.now() - t0;
+            console.log(
+                `[OK] ${recipe.name}.glb  ${(buf.length / 1024).toFixed(1)} KB  ` +
+                `${result.triangleCount} tris  height=${result.height.toFixed(3)}m  ${ms}ms`
+            );
+        }
+        console.log(`[BAKE] total ${(totalBytes / 1024).toFixed(1)} KB across ${RECIPES.length} GLBs → ${OUT_DIR}`);
+    } finally {
+        await browser.close();
+        server.close();
+    }
+}
+
+main().catch(err => {
+    console.error(err);
+    process.exit(1);
+});
