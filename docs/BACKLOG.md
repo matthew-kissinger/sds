@@ -4,9 +4,9 @@
 
 ## Recently Completed
 
-### Cycle 14 — visuals-foundation (Phases 1–4 shipped + deployed + visually verified 2026-05-03; Phase 5 + v1.1.0 tag awaiting Matt's playtest)
+### Cycle 14 — visuals-foundation (closed 2026-05-03; Phases 1–3 shipped, Phase 4 needs rebuild, Phase 5 hero cards + v1.1.0 carryover to Cycle 15)
 
-Plan: [`docs/cycle-14-plan.md`](cycle-14-plan.md). Headline: lifted the world from "indie tech demo" to "AAA browser game" via four sequenced visual fixes plus a load-time integration audit that caught Quaternius asset oversize / centroid-pivot issues before they reached the browser.
+Plan: [`docs/archive/cycles/cycle-14-plan.md`](archive/cycles/cycle-14-plan.md). Headline: lifted the world from "indie tech demo" toward "AAA browser game" via four sequenced visual fixes plus a load-time integration audit that caught Quaternius asset oversize / centroid-pivot issues before they reached the browser. Matt's 2026-05-03 playtest landed Phases 1–3 cleanly, surfaced Phase 4 rocks/scatter as needing a full rebuild (tiny + floating + no dandelions), found one grass anomaly (rogue blades skyward near trees outside play area), confirmed perf regression worth root-causing, and bumped Phase 5 hero cards + v1.1.0 tag to end of Cycle 15.
 
 - **Phase 1 — Heightfield Y unification ✅ shipped.** New [`Heightfield.meshSampleY(x, z)`](../shared/terrain/Heightfield.js) triangle-interpolates against a captured `(segs+1)²` grid of post-displacement Ys. [`TerrainBuilder.createTerrain()`](../js/TerrainBuilder.js) captures into a `Float32Array` and hands it via `setMeshGrid()`. Visual consumers (Sheepdog, OptimizedSheep, GrassSystem, trees, rocks, farmhouse) routed through `meshSampleY` either directly or via the thin `surfaceY` / `_groundY` wrappers. The historical Cycle 9 0.05 lift and the GrassSystem `-0.1` "dip into mesh" hack both gone — replaced with exact mesh Y. Worker / tests fall back to `sample(x, z) + 0.05`. Sim-baseline byte-identical. New [`tests/heightfield-mesh-y.spec.js`](../tests/heightfield-mesh-y.spec.js) — 9 cases.
 - **Phase 2 — Grass modernization ✅ shader shipped.** Replaced per-vertex simplex-noise wind with the dossier playbook in [`js/GrassSystem.js`](../js/GrassSystem.js): scrolling gust envelope along `windDirection` (~30m wavelength, ~30/70 strong/calm), two octaves of analytic sway, t² amplitude weighting, per-blade decorrelator, tip-only flutter. Fragment-shader fake-SSS via new `uSunDirection` uniform plumbed from `atmosphere.getSunDirection()` per frame — `pow(saturate(dot(toCamera, -sunDir)), 4) * tipColor * 0.7 * tipMask` for the tight halo on the sun silhouette. Render-texture interactors + critically-damped trample recovery deferred to Cycle 15+ (need per-blade render-target ping-pong state).
@@ -33,10 +33,21 @@ Validation:
 - New deps: `@dgreenheck/ez-tree` (dev), `@three.ez/instanced-mesh` (runtime).
 - New assets: 3 rocks (~140 KB) + 3 trees (~284 KB) + 9 scatter props (~450 KB) = ~870 KB.
 
-Carryover to Phase 5 / v1.1.0 close:
+Carryover to Cycle 15 (Matt's 2026-05-03 playtest review of the deployed `b5e1e45` build):
 
-- **Phase 5 hero cards.** Matt-gated. After visual review on sheepdogsim.com, run `__sdsCinema.freeFly()` → pose 3 OG cards → `snapshotPose()` → pin in [`tools/cinematic/shot-list.mjs`](../tools/cinematic/shot-list.mjs) → `npm run cinema --shot=<id>`. Then render the 4 cinematic videos. Then `git tag v1.1.0`.
-- **Tuning knobs surfaced for first-playtest adjustments.** `_treeWind.uWindStrength` (0.6 desktop / 0 mobile), `_rockShader.uRimStrength` (0.35), `ROCK_NATIVE_HEIGHT` (0.2m), `ScatterSystem` `minDist` (4m desktop / 6m mobile), `oversampleFraction` (0.05), per-variant `targetHeight` in `PROP_VARIANTS`.
+- **Phase 5 hero cards + `v1.1.0` tag** — bumped to end of Cycle 15. Workflow already shipped in Cycle 13 (`__sdsCinema.freeFly()` + `snapshotPose()` + `npm run cinema --shot=<id>`); just needs the polished world to actually be polished first. Matt-gated.
+- **Phase 4 rocks + scatter need a full rebuild.** Rocks read as tiny + floating; mushrooms are tiny + floating; no yellow dandelion patches visible. Procedural icosa+simplex bake (~33 KB total) doesn't carry visual presence — variants are barely-visible vs gameplay-meaningful. Decision: research Pixel Forge or hand-author CC0 stylized variants with proper grounded scale; keep the ScatterSystem perf budget (per-variant InstancedMesh2 + Bridson Poisson) but lift the scale + grounding logic. The rim-light + leaf-wind shader patches will auto-apply to whatever new GLBs land.
+- **Grass anomaly: rogue blades shooting skyward near trees outside play area.** A few stray blades stretch up to the sky. Suspect: GrassSystem placement-Y meets a tree exclusion-zone or terrain-falloff edge case where `meshSampleY` returns an outlier, OR an `_treeWind` uniform leaks into grass sway. Triage with the existing instrumentation; reproduce via probe before patching.
+- **Tree pipeline audit.** Confirm trees are 100% seed→build-time GLBs (they are — `tools/bake-trees.mjs` writes to `assets/models/trees/` which is committed) and pin/document the seed→GLB contract so no future regression introduces runtime tree generation. One short doc + a vitest spec asserting the GLB files exist and are non-empty would close this permanently.
+- **Perf regression triage + perf harness build-out.** Frametime degraded post-Cycle-14. Suspects: `@three.ez/instanced-mesh` BVH overhead on tree LODs, ScatterSystem per-variant InstancedMesh2 cost, or the 2.2 MB tree bundle's GPU upload spike. Build out a real perf harness — RTX 3070 desktop + mid-tier mobile baselines, automated frametime regression detection in CI (extending the existing `oc-perf` Playwright spec).
+- **CI E2E (Chromium) smoke timeout** — `locator.dispatchEvent` 10s timeout on the "solo classic starts and 3D canvas renders" case in [`tests/e2e/smoke.spec.ts`](../tests/e2e/smoke.spec.ts), surfaced on the `b5e1e45` deploy. Pages + Worker deploys both succeeded, site is live; only the smoke gate is red. Likely first-paint slowdown from the 2.2 MB tree bundle. Bump timeout or address load timing.
+
+Tuning knobs surfaced (1-line tweaks for in-cycle iteration):
+
+- `_treeWind.uWindStrength` (0.6 desktop / 0 mobile) — leaf-wind amplitude.
+- `_rockShader.uRimStrength` (0.35) — fresnel rim-light intensity.
+- `ROCK_NATIVE_HEIGHT` (0.2m) — rock per-variant scale normalization target.
+- `ScatterSystem` `minDist` (4m desktop / 6m mobile), `oversampleFraction` (0.05), per-variant `targetHeight` in `PROP_VARIANTS`.
 
 Cycle 15+ candidates surfaced:
 
