@@ -37,7 +37,7 @@ export class GameAssetLoader {
 
             // Critical terrain models
             'assets/models/trees/tree1.glb',
-            'assets/models/Resource_Rock_1.glb'
+            'assets/models/rocks/rock1.glb'
         ];
     }
 
@@ -63,8 +63,8 @@ export class GameAssetLoader {
             'assets/models/Mountain_Group_1.glb',
             'assets/models/Mountain_Group_2.glb',
             'assets/models/trees/tree2.glb',
-            'assets/models/Resource_Rock_2.glb',
-            'assets/models/Resource_Rock_3.glb',
+            'assets/models/rocks/rock2.glb',
+            'assets/models/rocks/rock3.glb',
             'assets/models/trees/pine.glb',
             
             // Additional audio files

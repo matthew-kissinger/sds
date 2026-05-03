@@ -4,6 +4,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { GrassSystem } from './GrassSystem.js';
+import { ScatterSystem } from './ScatterSystem.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
@@ -56,6 +57,11 @@ export class TerrainBuilder {
 
         // New advanced grass system
         this.grassSystem = null;
+        // Cycle 14 Phase 4: scatter system (pebbles, mushrooms, clovers,
+        // flowers — the "alive meadow" detail layer). Sibling to grass;
+        // populated after createTrees so heightfield + tree placement are
+        // settled. Cleared via clearScatter() during scene swap.
+        this.scatterSystem = null;
         this.terrainMesh = null;
         this.environmentDetails = [];
         this.trees = []; // Track trees for removal
@@ -237,10 +243,15 @@ export class TerrainBuilder {
                 { name: 'tree2', path: 'assets/models/trees/tree2.glb' },
                 { name: 'pine',  path: 'assets/models/trees/pine.glb' }
             ],
+            // Cycle 14 Phase 4: rocks from Quaternius Stylized Nature
+            // MegaKit (CC0). Rock_Medium_1/2/3 converted via gltf-transform
+            // with 128px diffuse texture (distance-viewed; rim-light
+            // shader supplies the silhouette pop). Same pack feeds the
+            // ScatterSystem (pebbles, mushrooms, flowers).
             rocks: [
-                { name: 'rock1', path: 'assets/models/Resource_Rock_1.glb' },
-                { name: 'rock2', path: 'assets/models/Resource_Rock_2.glb' },
-                { name: 'rock3', path: 'assets/models/Resource_Rock_3.glb' }
+                { name: 'rock1', path: 'assets/models/rocks/rock1.glb' },
+                { name: 'rock2', path: 'assets/models/rocks/rock2.glb' },
+                { name: 'rock3', path: 'assets/models/rocks/rock3.glb' }
             ],
             mountains: [
                 { name: 'mountain1', path: 'assets/models/Mountain_Group_1.glb' },
@@ -868,6 +879,72 @@ export class TerrainBuilder {
         console.log(`[GRASS] Advanced grass system created: ${stats.totalClumps} clumps (~${this.grassInstanceCount} effective blades)`);
 
         return this.grassSystem;
+    }
+
+    /**
+     * Cycle 14 Phase 4: build the scatter detail layer (pebbles +
+     * mushrooms + clovers + flowers) that sells "alive meadow" feel.
+     * Call AFTER createTrees so the heightfield is settled and the
+     * tree-leaf-wind shader patch hooks are wired (flora props piggyback
+     * on the same patch).
+     *
+     * Idempotent — re-invoking populates a fresh pool only if the
+     * previous scatter was cleared via clearScatter() (typically during
+     * scene swap).
+     */
+    async createScatter() {
+        if (!this.scatterSystem) {
+            this.scatterSystem = new ScatterSystem(
+                this.scene,
+                this.isMobile,
+                this.sceneDef,
+                this.heightfield,
+                this.sceneDef?.boundary ?? null,
+                {
+                    // Reuse the leaf-wind patch hooks for flora variants.
+                    // Direction + uTime are shared with trees so the
+                    // whole world agrees on wind. Strength is the same
+                    // per-uniform value; the per-prop bbox keeps the
+                    // shader's vertical-fraction weight tight to the
+                    // prop's own height (~30cm flowers don't sway as
+                    // far in absolute metres as 5m trees do).
+                    patchFloraWind: (mat, minY, maxY) => this._patchTreeWindMaterial(mat, minY, maxY)
+                }
+            );
+        } else {
+            // Refresh boundary + sceneDef in case the scene changed
+            // before re-population.
+            this.scatterSystem.sceneDef = this.sceneDef;
+            this.scatterSystem.boundary = this.sceneDef?.boundary ?? null;
+        }
+
+        // Mirror GrassSystem's exclusion-zone wiring so scatter doesn't
+        // spawn inside structures or play-critical zones.
+        this.scatterSystem.exclusionZones = [];
+        if (this.sceneDef?.farmHouse) {
+            this.scatterSystem.addExclusionZone(
+                this.farmHouseExclusionArea.minX,
+                this.farmHouseExclusionArea.maxX,
+                this.farmHouseExclusionArea.minZ,
+                this.farmHouseExclusionArea.maxZ
+            );
+        }
+        if (this.sceneDef?.pasture) {
+            this.scatterSystem.addExclusionZone(-35, 35, 98, 138);
+        }
+
+        await this.scatterSystem.loadModels();
+        this.scatterSystem.populate();
+        return this.scatterSystem;
+    }
+
+    /**
+     * Tear down the scatter pool. Mirrors clearTrees / clearRocks: meshes
+     * are removed from the scene but geometry + materials stay (shared
+     * GLB cache, see Cycle 12 Phase 1 A8 finding).
+     */
+    clearScatter() {
+        if (this.scatterSystem) this.scatterSystem.dispose();
     }
 
     async createTrees(competitivePastures = null) {
@@ -2123,16 +2200,18 @@ export class TerrainBuilder {
             this.currentPasture = pasture;
         }
 
-        // Clear existing trees and rocks
+        // Clear existing trees, rocks, and scatter
         this.clearTrees();
         this.clearRocks();
+        this.clearScatter();
 
         // Regenerate grass with new exclusion zones
         await this.regenerateGrass(bounds, pasture);
 
-        // Rebuild trees and rocks with new exclusion zones
+        // Rebuild trees, rocks, and scatter with new exclusion zones
         await this.createTrees();
         await this.addEnvironmentDetails();
+        await this.createScatter();
 
         console.log('[TERRAIN] Environment rebuild complete');
     }
@@ -2247,6 +2326,7 @@ export class TerrainBuilder {
     dispose() {
         try { this.clearTrees(); } catch (err) { console.warn('[TERRAIN] clearTrees threw:', err); }
         try { this.clearRocks(); } catch (err) { console.warn('[TERRAIN] clearRocks threw:', err); }
+        try { this.clearScatter(); } catch (err) { console.warn('[TERRAIN] clearScatter threw:', err); }
 
         if (this.grassSystem) {
             try { this.grassSystem.dispose(); } catch (err) { console.warn('[TERRAIN] grass dispose threw:', err); }

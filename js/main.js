@@ -569,6 +569,13 @@ class SheepDogSimulation {
             logStep('Creating trees');
             await this.terrainBuilder.createTrees();
 
+            // Cycle 14 Phase 4: scatter detail layer. After trees so
+            // heightfield is settled and so leaf-wind hooks for flora
+            // variants are wired (createScatter reuses _patchTreeWindMaterial
+            // so flora swaying matches trees + grass for visual coherence).
+            logStep('Adding scatter detail');
+            await this.terrainBuilder.createScatter();
+
             // Cycle 6 Phase 2: build the SceneObstacles bundle once trees +
             // rocks have been placed. Attached to gameState so sheep + dog
             // can query it per-tick. Field has no obstacles (rect-scene path
