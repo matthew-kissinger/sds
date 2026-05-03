@@ -1,8 +1,77 @@
-# Next Session — Cycle 15 (`visuals-polish-and-harness`) scaffolded; Matt is folding in additional analysis before phases are final
+# Next Session — Cycle 15 mid-flight; Phase 4 + 6 shipped, Phase 1 pipeline ready, Phase 2/3/5 awaiting asset picks
 
-> Updated 2026-05-03 (Cycle 14 closed, Cycle 15 scaffolded). **Active plan: [`docs/cycle-15-plan.md`](docs/cycle-15-plan.md).** Live on [sheepdogsim.com](https://sheepdogsim.com) at the `b5e1e45` build (Cycle 14 visual-issues followup). Last closed cycle: [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md).
+> Updated 2026-05-03 (autonomous Phase 1+3+4+6 pass landed at `f84b723`). **Active plan: [`docs/cycle-15-plan.md`](docs/cycle-15-plan.md).** Live on [sheepdogsim.com](https://sheepdogsim.com) at the `b5e1e45` build (Cycle 14 visual-issues followup) — `f84b723` is tooling-only so the deployed world is unchanged until Phase 1 picks integrate. Last closed cycle: [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md).
 
-## Where the project stands (2026-05-03 close of Cycle 14)
+## Cycle 15 mid-flight state (post-`f84b723`)
+
+What landed in the autonomous run:
+
+- **Phase 1 — AI asset pipeline ✅ tooling, ⏳ picks pending.** Browser gallery + Meshy text-to-GLB + integrate scripts shipped. Matt drives the actual generation + picking; once picks land, Phase 2 (perf) and Phase 5 (hero cards + tag) unblock.
+- **Phase 3 — Perf harness ✅ scaffolded, ⏳ baseline pending.** `tools/perf-harness.mjs` ready, 6-config matrix wired, `window.__sdsRenderer` hook added behind `perfMode=1`. Per Matt's mid-cycle direction: actual baseline capture happens AFTER Phase 1 picks integrate, so the numbers reflect the polished world.
+- **Phase 4 — Grass anomaly + tree audit ✅** Defensive `meshSampleY` clamp in [`js/GrassSystem.js`](js/GrassSystem.js), [`docs/tree-pipeline.md`](docs/tree-pipeline.md) doc, [`tests/tree-assets.spec.js`](tests/tree-assets.spec.js) contract spec.
+- **Phase 6 — CI E2E smoke ✅** Bumped `actionTimeout` 10s→30s in [`playwright.config.ts`](playwright.config.ts).
+- **Phase 2 — Perf regression triage ⏳ awaiting Phase 1 picks.**
+- **Phase 5 — Hero cards + `v1.1.0` ⏳ awaiting Phase 1 + Phase 2.**
+
+165/165 vitest pass (was 158, +7 from tree-assets spec). Production build clean (816 KB main / 241 KB gzip — flat vs Cycle 14). The `f84b723` commit is tooling-only, no runtime visual change.
+
+## How to drive the asset pipeline (Phase 1)
+
+```bash
+# 1. Get a Meshy API key (app.meshy.ai → API), store in ~/.config/mk-agent/env as MESHY_API_KEY=...
+export MESHY_API_KEY=$(grep ^MESHY_API_KEY= ~/.config/mk-agent/env | cut -d= -f2)
+
+# 2. Generate variations (rocks first, then trees + flora)
+npm run gen:meshy -- --set=rocks --count=8
+npm run gen:meshy -- --set=trees --count=8
+npm run gen:meshy -- --set=flora --count=8
+
+# 3. View + pick (browser opens; ★ to pick, s to save)
+npm run gallery -- --dir=tools/asset-gallery/staging/rocks
+npm run gallery -- --dir=tools/asset-gallery/staging/trees
+npm run gallery -- --dir=tools/asset-gallery/staging/flora
+
+# 4. Wire picks into committed assets
+node tools/asset-gen/integrate.mjs --compress
+
+# 5. Tune ScatterSystem PROP_VARIANTS weights manually per the script's printed diff,
+#    then re-run npm test to make sure tree-assets spec still passes.
+```
+
+Tweak the prompt sets at [`tools/asset-gen/prompts/`](tools/asset-gen/prompts/) before generation if the style direction needs to shift. `--dry-run` previews request bodies without burning credits.
+
+Pixel Forge note (Matt asked): the actual "PixelForge 3D" tool is a Gemini Flash + Imagen concept-art generator (2D images, not GLBs). Meshy AI is the closest match for what's needed here. The image-to-3D path (PNG → Meshy) gives more controlled output than text-to-3D; not yet wired into `meshy.mjs`, but trivial to add as `meshy-image.mjs` if the text-to-3D quality ceilings out.
+
+## Phase 2 — perf baseline capture workflow
+
+After Phase 1 picks land:
+
+```bash
+npm run dev                                    # leave running
+npm run perf:baseline                          # captures + writes tests/perf-baseline/baseline.json
+git add tests/perf-baseline/baseline.json && git commit -m "perf: pin baseline post-asset-integration"
+npm run perf:check                             # verifies fits inside +5% threshold
+```
+
+If `perf:check` flags a regression > 5% on any of the 6 configs, that's Phase 2 work. The harness prints renderer.info per config so the bottleneck localizes (draw calls, triangles, geometries, textures).
+
+## Phase 5 — hero cards + `v1.1.0` workflow
+
+Reqs: at the keyboard with mouse for `__sdsCinema.freeFly()` posing.
+
+```bash
+# OG cards (3): og-rh-sunset, og-field, og-open-country
+# Open localhost:3000/?cinematic=1, start Solo Extreme, pose with mouse
+await __sdsCinema.freeFly()
+__sdsCinema.snapshotPose()                     # paste pose into tools/cinematic/shot-list.mjs
+npm run cinema --shot=og-field
+
+# Tag v1.1.0 only after Phase 1 + Phase 2 land cleanly
+npm version 1.1.0 -m "release: v1.1.0 — visuals polish + perf harness"
+git push origin main --tags
+```
+
+## Where the project stands (Cycle 14 close; Cycle 15 mid-flight)
 
 Cycle 14 (`visuals-foundation`) closed with Phases 1–3 shipped + visually verified, Phase 4 needing rebuild, Phase 5 + `v1.1.0` tag bumped to Cycle 15. Headlines:
 
