@@ -227,10 +227,14 @@ export class TerrainBuilder {
         const criticalErrors = [];
 
         const modelPaths = {
+            // Cycle 14 Phase 3: trees baked from EZ-Tree v1.1.0 via
+            // `npm run bake-trees` (tools/bake-trees.mjs). Stylized
+            // cozy-game silhouettes with embedded leaf alpha at 256x256.
+            // Re-bake whenever recipes change in tools/bake-trees.mjs.
             trees: [
-                { name: 'tree1', path: 'assets/models/Resource_Tree1.glb' },
-                { name: 'tree2', path: 'assets/models/Resource_Tree2.glb' },
-                { name: 'pine', path: 'assets/models/Resource_PineTree.glb' }
+                { name: 'tree1', path: 'assets/models/trees/tree1.glb' },
+                { name: 'tree2', path: 'assets/models/trees/tree2.glb' },
+                { name: 'pine',  path: 'assets/models/trees/pine.glb' }
             ],
             rocks: [
                 { name: 'rock1', path: 'assets/models/Resource_Rock_1.glb' },

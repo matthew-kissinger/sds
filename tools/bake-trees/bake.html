@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SDS bake-trees harness</title>
+<style>body { font-family: sans-serif; padding: 1rem; color: #ccc; background: #1a1a1a; }</style>
+</head>
+<body>
+<h1>SDS bake-trees</h1>
+<p id="status">Loading EZ-Tree…</p>
+<script type="importmap">
+{
+  "imports": {
+    "three": "/node_modules/three/build/three.module.js",
+    "three/addons/": "/node_modules/three/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { Tree } from '/node_modules/@dgreenheck/ez-tree/build/ez-tree.es.js';
+
+const status = document.getElementById('status');
+
+/**
+ * Apply nested tweaks to a TreeOptions object.
+ *   { branch: { length: { 0: 25 } }, leaves: { count: 24 } }
+ * deep-merges into tree.options without nuking siblings.
+ */
+function applyTweaks(target, tweaks) {
+    for (const [key, val] of Object.entries(tweaks)) {
+        if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+            if (typeof target[key] !== 'object' || target[key] === null) target[key] = {};
+            applyTweaks(target[key], val);
+        } else {
+            target[key] = val;
+        }
+    }
+}
+
+/**
+ * Generate a tree, normalize it to a target world-space height (so the
+ * existing TerrainBuilder placement code's scale-variance ranges remain
+ * unchanged), name child meshes for downstream identification, strip
+ * EZ-Tree's runtime-only onBeforeCompile callbacks (SDS owns leaf wind),
+ * and export as a binary GLB.
+ *
+ * Returns base64-encoded GLB bytes. Playwright's page.evaluate doesn't
+ * round-trip Uint8Array cleanly — base64 is the lowest-friction transit
+ * format; the Node side decodes back to bytes for writeFile.
+ */
+window.__bakeTree = async function bakeTree(recipe) {
+    status.textContent = `Baking ${recipe.name}…`;
+    const tree = new Tree();
+    tree.loadPreset(recipe.preset);
+    if (recipe.seed != null) tree.options.seed = recipe.seed;
+    if (recipe.tweaks) applyTweaks(tree.options, recipe.tweaks);
+    tree.generate();
+
+    // Name children so downstream GLB consumers can distinguish trunk
+    // from leaves (e.g. for per-mesh shader weights or LOD impostors).
+    tree.branchesMesh.name = 'trunk';
+    tree.leavesMesh.name = 'leaves';
+
+    // Drop EZ-Tree's runtime onBeforeCompile callbacks. They don't
+    // survive the GLB roundtrip anyway, but stripping them locally
+    // keeps the exported material lean and makes intent explicit:
+    // SDS's _patchTreeWindMaterial owns leaf wind end-to-end.
+    if (tree.leavesMesh.material) tree.leavesMesh.material.onBeforeCompile = undefined;
+    if (tree.branchesMesh.material) tree.branchesMesh.material.onBeforeCompile = undefined;
+
+    // Downsample the leaf alpha texture before export. EZ-Tree ships
+    // 1024×1024 leaf PNGs; in SDS trees are seen from ≥10m and shrink
+    // further with distance — 256×256 is visually indistinguishable
+    // and ~16x smaller after PNG encode. Cuts ~80% off final GLB size.
+    const leafMap = tree.leavesMesh?.material?.map;
+    if (leafMap?.image) {
+        const target = recipe.leafTextureSize ?? 256;
+        const src = leafMap.image;
+        const cnv = document.createElement('canvas');
+        cnv.width = target;
+        cnv.height = target;
+        const ctx = cnv.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(src, 0, 0, target, target);
+        leafMap.image = cnv;
+        leafMap.needsUpdate = true;
+    }
+
+    // Normalize to a target height so the existing placement code's
+    // per-tree scale-variance ranges work unchanged. EZ-Tree presets
+    // generate at ~30–50m native; SDS expects ~1m baseline.
+    tree.updateMatrixWorld(true);
+    const bbox = new THREE.Box3().setFromObject(tree);
+    const nativeH = Math.max(bbox.max.y - bbox.min.y, 1e-6);
+    const targetH = recipe.normalizeHeight ?? 1.0;
+    const s = targetH / nativeH;
+    tree.scale.setScalar(s);
+    // Also drop the tree so its base sits at y=0 (existing GLBs are
+    // authored that way; modelBaseYOffset = -minY would otherwise be
+    // a large negative number for a tree authored about its centroid).
+    tree.position.y = -bbox.min.y * s;
+    tree.updateMatrixWorld(true);
+
+    const exporter = new GLTFExporter();
+    const arrayBuffer = await new Promise((resolve, reject) => {
+        exporter.parse(
+            tree,
+            (result) => resolve(result),
+            reject,
+            { binary: true, embedImages: true }
+        );
+    });
+
+    const u8 = new Uint8Array(arrayBuffer);
+    let bin = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < u8.length; i += CHUNK) {
+        bin += String.fromCharCode.apply(null, u8.subarray(i, Math.min(i + CHUNK, u8.length)));
+    }
+
+    // Useful diagnostics for the Node side log.
+    const triCount = tree.triangleCount ?? 'n/a';
+    status.textContent = `Baked ${recipe.name} (${u8.length} bytes, ~${triCount} tris)`;
+    return {
+        bytesB64: btoa(bin),
+        triangleCount: triCount,
+        nativeHeight: nativeH,
+        normalizedHeight: targetH
+    };
+};
+
+window.__bakeReady = true;
+status.textContent = 'EZ-Tree harness ready.';
+</script>
+</body>
+</html>

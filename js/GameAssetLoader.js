@@ -36,7 +36,7 @@ export class GameAssetLoader {
             'assets/sounds_compressed/dog_bark_jep.mp3',
 
             // Critical terrain models
-            'assets/models/Resource_Tree1.glb',
+            'assets/models/trees/tree1.glb',
             'assets/models/Resource_Rock_1.glb'
         ];
     }
@@ -62,10 +62,10 @@ export class GameAssetLoader {
             'assets/models/Farm house.glb',
             'assets/models/Mountain_Group_1.glb',
             'assets/models/Mountain_Group_2.glb',
-            'assets/models/Resource_Tree2.glb',
+            'assets/models/trees/tree2.glb',
             'assets/models/Resource_Rock_2.glb',
             'assets/models/Resource_Rock_3.glb',
-            'assets/models/Resource_PineTree.glb',
+            'assets/models/trees/pine.glb',
             
             // Additional audio files
             'assets/sounds_compressed/music_start.mp3',
