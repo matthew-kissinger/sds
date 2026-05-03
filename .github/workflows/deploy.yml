@@ -9,6 +9,11 @@ on:
       - 'LICENSE'
       - '.gitignore'
   workflow_dispatch:
+    inputs:
+      capture_baseline:
+        description: 'Capture perf baseline (Linux runner) and commit. Run once to bootstrap perf-check.'
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -102,3 +107,121 @@ jobs:
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           workingDirectory: worker
           command: deploy
+
+  # Cycle 16 Phase 4+5: perf baseline + check. Both gated to workflow_dispatch
+  # initially because a baseline must be captured on a Linux runner (per
+  # cycle-16-plan.md — Linux software-WebGL through swiftshader is materially
+  # slower than the local dev workstation, so baseline numbers must be Linux
+  # numbers, not local numbers).
+  #
+  # Bootstrap workflow:
+  #   1. Trigger workflow_dispatch with `capture_baseline: true` ONCE — runs
+  #      perf-baseline-capture, commits tests/perf-baseline/baseline.json.
+  #   2. After that, every push runs perf-check against the committed
+  #      baseline. To flip from workflow_dispatch-only to push-gated, remove
+  #      the `if: github.event_name == 'workflow_dispatch'` line on perf-check
+  #      below.
+  #   3. perf-check fails the workflow if any config exceeds +5% of baseline
+  #      (`tools/perf-harness.mjs`'s built-in threshold).
+  perf-baseline-capture:
+    name: Perf baseline (capture on Linux runner)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.capture_baseline == true }}
+    needs: test
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: worker
+      - run: cp worker/.dev.vars.example worker/.dev.vars
+      - run: npx playwright install --with-deps chromium
+      - run: npm run dev:setup
+      - name: Start dev server in background
+        run: |
+          npm run dev > /tmp/dev.log 2>&1 &
+          # Poll until vite is up (max 60s).
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/ > /dev/null; then
+              echo "vite up after ${i}s"; break
+            fi
+            sleep 1
+          done
+      - run: npm run perf:baseline
+      - name: Commit baseline if changed
+        run: |
+          if [ -n "$(git status --porcelain tests/perf-baseline/baseline.json)" ]; then
+            git config user.name "perf-baseline-bot"
+            git config user.email "perf-baseline-bot@users.noreply.github.com"
+            git add tests/perf-baseline/baseline.json
+            git commit -m "perf(cycle-16): capture Linux baseline via deploy.yml workflow_dispatch (swiftshader software-WebGL; +5% threshold per tools/perf-harness.mjs)"
+            git push
+          else
+            echo "Baseline unchanged; nothing to commit."
+          fi
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-baseline-output
+          path: tests/perf-baseline/
+
+  perf-check:
+    name: Perf check vs baseline
+    runs-on: ubuntu-latest
+    # Initially workflow_dispatch-only. Remove this `if:` to gate every push
+    # on perf-check (per cycle-16-plan.md Phase 5 acceptance) once a baseline
+    # exists at tests/perf-baseline/baseline.json.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip when no baseline committed yet
+        id: gate
+        run: |
+          if [ ! -f tests/perf-baseline/baseline.json ]; then
+            echo "::warning::No perf baseline at tests/perf-baseline/baseline.json. Trigger workflow_dispatch with capture_baseline=true once to bootstrap."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+      - if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.gate.outputs.skip != 'true'
+        run: npm ci
+      - if: steps.gate.outputs.skip != 'true'
+        run: npm ci
+        working-directory: worker
+      - if: steps.gate.outputs.skip != 'true'
+        run: cp worker/.dev.vars.example worker/.dev.vars
+      - if: steps.gate.outputs.skip != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.gate.outputs.skip != 'true'
+        run: npm run dev:setup
+      - if: steps.gate.outputs.skip != 'true'
+        name: Start dev server in background
+        run: |
+          npm run dev > /tmp/dev.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/ > /dev/null; then
+              echo "vite up after ${i}s"; break
+            fi
+            sleep 1
+          done
+      - if: steps.gate.outputs.skip != 'true'
+        run: npm run perf:check
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-last-run
+          path: tests/perf-baseline/last-run.json
+        continue-on-error: true

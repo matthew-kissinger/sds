@@ -1,137 +1,120 @@
-# Next Session — Cycle 16 (`tree-foliage-lod-and-perf`) scaffolded; Phase 1 LOD authoring is the foundation
+# Next Session — Cycle 16 Phases 1-3 + 5 shipped autonomous; Phase 4 baseline-capture awaits Linux runner trigger; Phase 6 awaits keyboard session
 
-> Updated 2026-05-03 (Cycle 15 closed). **Active plan: [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md).** Live on [sheepdogsim.com](https://sheepdogsim.com) at the cycle-15-close push. Last closed cycle: [`docs/archive/cycles/cycle-15-plan.md`](docs/archive/cycles/cycle-15-plan.md).
+> Updated 2026-05-03 mid-cycle. **Active plan: [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md).** Companion docs: [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md) (decision brief), [`docs/cycle-16-tree-gallery-review.md`](docs/cycle-16-tree-gallery-review.md) (per-variant pros/cons + how to swap), [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) (hero cards + v1.1.0 keyboard workflow). Live on [sheepdogsim.com](https://sheepdogsim.com).
 
-## Where the project stands (Cycle 15 close)
+## Where the project stands (cycle 16 mid-cycle close)
 
-Cycle 15 closed with Phases 4 + 6 fully shipped, Phase 1 tooling shipped (gallery + bake-and-pick pipeline + 28 baked variations in staging), Phase 3 scaffold shipped (perf-harness scripts), and Phases 1 picks / 2 / 3 baseline / 5 carrying to Cycle 16. Tree review during the cycle surfaced a foundational issue that gates everything downstream: leaves are 90-96% of all tree triangles and there's no LOD chain — each tree at every distance renders the full ~50k-tri canopy.
+Cycle 16 ran autonomous through Phases 1-3 + 5 in one pass. Two phases need a touch outside what an autonomous agent can do:
+- **Phase 4** — perf baseline must be captured on a Linux runner (per cycle plan); the workflow_dispatch path is wired and ready.
+- **Phase 6** — hero cards + v1.1.0 tag need Matt at the keyboard for `__sdsCinema.freeFly()` posing.
 
-Headlines from Cycle 15:
+Headlines from autonomous Cycle 16 pass:
 
-- **Phase 4 ✅** Grass anomaly clamp shipped + tree pipeline doc + tree-assets contract spec (165/165 vitest after +7).
-- **Phase 6 ✅** CI E2E smoke fix — `actionTimeout: 10s → 30s` in [`playwright.config.ts`](playwright.config.ts).
-- **Phase 1 tooling ✅, picks deferred to Cycle 16.** 16 rocks (~450 KB) + 12 trees (~23 MB pre-compress, ~7 MB post-draco) baked into `tools/asset-gallery/staging/`. Browser-based gallery picker + integrate script with canonical-rename promotion shipped. npm scripts: `bake-rocks`, `bake-trees`, `gallery`, `gen:integrate`, `gen:meshy` (escape hatch), `perf:baseline`, `perf:check`.
-- **Phase 3 scaffold ✅, baseline deferred to Cycle 16.** `tools/perf-harness.mjs` 6-config matrix ready. `window.__sdsRenderer` hook behind `perfMode=1`.
-- **Tree-foliage research ✅ logged.** Industry-standard answer is 3-tier LOD (full / reduced / billboard impostor via `InstancedMesh2.addLOD`). Cycle 16 Phase 1 ships this.
+- **Research spike + decision brief ✅.** [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md) surveys 8 techniques (A-H from EZ-Tree recipe re-tune through PIF and WebGPU port) and pins **A+B+E** as the chosen path: recipe re-tune at LOD0 + `InstancedMesh2.addLOD` chain + existing 3-quad cross-billboard. Octahedral impostors + PIF deferred to long-tail (different aesthetic / different pipeline).
+- **Phase 1+2 ✅.** Per-instance LOD chain wired in [`js/TerrainBuilder.js`](js/TerrainBuilder.js): LOD0 (full mesh, 0-80m) → LOD1 (reduced canopy, 80-150m) → LOD2 (cross-billboard impostor, 150m+). Trunk's LOD2 is a degenerate 3-vert geom since the cross-billboard texture already shows the trunk silhouette. **Retired** the Cycle 14 world-distance-from-origin split (`FAR_LOD_DIST=400m`, set once at scene load) — the chase camera moving through the scene now smoothly upgrades trees per-instance per-frame instead.
+  - Recipe re-tune: `leaves.billboard='single'` (caught a casing bug — EZ-Tree expects lowercase strings; capital-case was silently ignored), leaves.count 40-72→24-42, bark tints tightened to 0x4a-0x8c brown family (Q1 resolution), seeds re-rolled per recipe (Q2 resolution).
+  - LOD1 sibling GLBs ship in `assets/models/trees/{tree1,tree2,pine}_lod1.glb` — ~25-30% the LOD0 tris.
+- **Gallery + autonomous picks ✅.** 36-GLB matrix baked into staging (24 LOD0 candidates — 4 species × 3 scales × 2 billboard modes — plus 12 LOD1). Auto-picked: `aspen_medium_single` → tree1, `oak_medium_single` → tree2, `pine_medium_single` → pine + matching LOD1 siblings. Each pick has explicit `canonicalName` in [`tools/asset-gallery/picks.json`](tools/asset-gallery/picks.json) (the natural bbox-height sort doesn't fit the species-based slot semantics). Total committed trees: **6 GLBs / 1.59 MB post-draco** (4 MB ceiling).
+- **Phase 3 ✅.** Rock picks: `pebble_oval_chunky` → rock1, `boulder_chunky_mid` → rock2, `craggy_chunk_warm` → rock3 (39 KB total post-draco). Flora tuning: `oversampleFraction` 0.05→0.10 (visible dandelion clusters), mushroom `targetHeight` 0.30/0.35 → 0.50 (readable at sheep-cam).
+- **Phase 5 ✅ (scaffold).** [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) now ships `perf-baseline-capture` and `perf-check` jobs, both `workflow_dispatch`-only initially. Bootstrap: trigger workflow_dispatch with `capture_baseline: true` to create the baseline.json, then remove the `if: ${{ github.event_name == 'workflow_dispatch' }}` line on `perf-check` to gate every push. Baseline must be Linux-runner numbers per the cycle plan.
+- **Phase 6 prep doc ✅.** [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) captures the exact 7-deliverable workflow (3 OG cards + 4 cinematic videos + v1.1.0 tag).
 
-165/165 vitest pass. Production build clean (816 KB main / 241 KB gzip — flat vs Cycle 14).
+174/174 vitest pass. Production build clean.
 
-## Cycle 16 — what's next
+## Cycle 16 — what's left (in priority order)
 
-Cycle 16 plan is at [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md). Goal: ship the proper tree foliage LOD pipeline (LOD0 mesh / LOD1 reduced / LOD2 billboard impostor), pick + integrate asset variations on top of the optimized geometry, capture perf baseline, ship hero cards + the `v1.1.0` tag.
+### 1. Trigger the perf-baseline-capture workflow (Phase 4)
 
-Phase order (mostly sequential — tree LOD gates everything):
+GitHub → Actions tab → Deploy workflow → Run workflow → set `capture_baseline: true`. The job spins up the dev server on a Linux runner, runs `npm run perf:baseline`, and pushes the resulting `tests/perf-baseline/baseline.json` back via `perf-baseline-bot`. ~15min.
 
-```
-Phase 1 (LOD authoring + recipe re-tune)  — foundation
-Phase 2 (billboard impostor LOD2)         — depends on Phase 1
-Phase 3 (asset picks + flora tuning)      — depends on Phase 1 (trees)
-Phase 4 (perf baseline + triage)          — depends on Phases 1, 2, 3
-Phase 5 (perf:check CI integration)       — depends on Phase 4
-Phase 6 (hero cards + v1.1.0)             — depends on Phases 1, 2, 3, 4
-```
+After the baseline lands, edit `.github/workflows/deploy.yml` and remove `if: ${{ github.event_name == 'workflow_dispatch' }}` from the `perf-check` job to enforce on every push.
 
-Open questions for Cycle 16 (author leans recorded; resolve at start):
-1. Bark color contrast strategy (tighten range / single tone / current).
-2. Asymmetric canopy fix (re-roll seeds / bump `branch.children`).
-3. LOD strategy — A+B+E (proper foundation) is the lean.
-4. Flora rebuild scope (tune existing Quaternius vs new bake).
+### 2. Visual review of the autonomous tree picks (Phase 1 polish)
 
-Run `/cycle-start` to orient on the cycle-16 plan once you're ready to begin.
+The gallery review doc lists what's worth a real eye:
+- Aspen vs Ash for the `tree1` slim slot
+- Pine size — `pine_medium_single` vs `pine_large_single` for OC horizon
+- Bark coherence across species
+- LOD0 → LOD1 pop visibility at 80m during chase-cam tracking
 
-## How to drive the asset pipeline (Phase 1)
+Swap path: edit [`tools/asset-gallery/picks.json`](tools/asset-gallery/picks.json) `canonicalName` fields, then `node tools/asset-gen/integrate.mjs --compress`. No code changes needed.
 
-The primary path uses the in-repo primitive bakes. **Variations are already baked** at `tools/asset-gallery/staging/` — `f-NEW` shipped 16 rocks + 12 trees there for review.
+### 3. Hero cards + v1.1.0 (Phase 6) — keyboard session
+
+[`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) has the exact workflow. Needs Matt at the keyboard with mouse for `__sdsCinema.freeFly()` posing. Don't tag v1.1.0 until Phases 1-4 land cleanly per the cycle plan's Hard Stops.
+
+## How to drive the asset pipeline (Phase 1 swap path)
 
 ```bash
-# 1. View + pick (browser opens; ★ to pick, s to save). Default scans all
-#    staging subfolders; the category filter switches between rocks/trees.
-npm run gallery
+# Browse the 36-GLB gallery matrix
+npm run gallery                                                # all subfolders
+npm run gallery -- --dir=tools/asset-gallery/staging/trees     # LOD0 only (24 candidates)
+npm run gallery -- --dir=tools/asset-gallery/staging/trees-lod1  # LOD1 only (12 candidates)
 
-# 2. Wire picks into committed assets. Sorts picks by bbox height, renames
-#    to rock1/rock2/rock3 + tree1/tree2/pine so the loader works unchanged.
+# Re-bake from scratch (~9 min for full 36-GLB matrix)
+npm run bake-trees                  # all 36
+npm run bake-trees -- --set=lod0    # 24 LOD0 only
+npm run bake-trees -- --set=lod1    # 12 LOD1 only
+
+# Wire picks → committed assets. Edit picks.json to add `canonicalName` per pick
+# (the gallery's save flow doesn't emit canonicalName; bbox-height sort is the
+# fallback but doesn't fit pine vs aspen vs oak slot semantics).
 node tools/asset-gen/integrate.mjs --compress
 
-# 3. Re-run npm test to make sure tree-assets spec still passes.
-npm test
+# Verify
+npm test -- tests/tree-assets.spec.js
 ```
 
-Re-bake variations any time:
+The tree-assets spec pins both LOD0 and LOD1 sibling contracts — if a re-bake drops one, the test fails closed.
 
-```bash
-npm run bake-rocks                  # 16 rocks → staging/rocks/, ~1 min
-npm run bake-trees                  # 12 trees → staging/trees/, ~3 min
-```
-
-**Adding more variations:** edit [`tools/bake-rocks/recipes.mjs`](tools/bake-rocks/recipes.mjs) (rocks) or the `RECIPES` array in [`tools/bake-trees.mjs`](tools/bake-trees.mjs) (trees), append entries, re-run the bake. Recipes are committed code — every variant is reproducible from its `(seed, knobs)` tuple.
-
-The Meshy AI text-to-GLB path is kept in-tree as an optional escape hatch (`npm run gen:meshy -- --set=rocks --count=8`, requires `MESHY_API_KEY`) but is NOT the primary path. Per Matt's note: prefer extending the in-repo bakes — Meshy only when the primitive recipes can't get there visually.
-
-(Note: "Pixel Forge 3D" turned out to be a Gemini Flash + Imagen concept-art tool — 2D images, not GLBs. Not the same product as Meshy.)
-
-## Phase 2 — perf baseline capture workflow
-
-After Phase 1 picks land:
-
-```bash
-npm run dev                                    # leave running
-npm run perf:baseline                          # captures + writes tests/perf-baseline/baseline.json
-git add tests/perf-baseline/baseline.json && git commit -m "perf: pin baseline post-asset-integration"
-npm run perf:check                             # verifies fits inside +5% threshold
-```
-
-If `perf:check` flags a regression > 5% on any of the 6 configs, that's Phase 2 work. The harness prints renderer.info per config so the bottleneck localizes (draw calls, triangles, geometries, textures).
-
-## Phase 5 — hero cards + `v1.1.0` workflow
-
-Reqs: at the keyboard with mouse for `__sdsCinema.freeFly()` posing.
-
-```bash
-# OG cards (3): og-rh-sunset, og-field, og-open-country
-# Open localhost:3000/?cinematic=1, start Solo Extreme, pose with mouse
-await __sdsCinema.freeFly()
-__sdsCinema.snapshotPose()                     # paste pose into tools/cinematic/shot-list.mjs
-npm run cinema --shot=og-field
-
-# Tag v1.1.0 only after Phase 1 + Phase 2 land cleanly
-npm version 1.1.0 -m "release: v1.1.0 — visuals polish + perf harness"
-git push origin main --tags
-```
-
-## Tuning knobs (1-line tweaks for Cycle 16 iteration)
+## Tuning knobs (1-line tweaks)
 
 | Looks off? | Knob | File | Default |
 | --- | --- | --- | --- |
+| LOD0→LOD1 pop visible at 80m | `addLOD(lod1Geo, mat, 80)` distance | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 80m camera distance |
+| LOD1→LOD2 pop visible at 150m | `addLOD(billboardGeo, mat, 150)` distance | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 150m camera distance |
+| LOD1 too expensive on mobile | LOD1 `branch.children` + `leaves.count` | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | `LOD1_BRANCH_DEFAULT` + 0.5x leaves |
 | Trees rattle too much / too still | `_treeWind.uWindStrength` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.6 desktop / 0 mobile |
-| Tree bark color wrong | `bark.tint` per recipe | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | brown 0x4a–0x7a range |
+| Tree bark color wrong | `BARK_TINTS[species][scale]` | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | per-species 0x4a-0x8c brown |
+| Single-leaf canopy too sparse | `leaves.size` boost factor | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | 1.3x for single, 1.0x for double |
 | Rocks too big / too small | `ROCK_NATIVE_HEIGHT` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.2m |
 | Rocks float / sink | `ROCK_Y_SCALE` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.7 |
 | Rim-light too strong / dull | `_rockShader.uRimStrength` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.35 |
 | Scatter density sparse / dense | `minDist` | [`js/ScatterSystem.js`](js/ScatterSystem.js) | 4m desktop / 6m mobile |
-| Yellow-flower clusters wrong | `oversampleFraction` | [`js/ScatterSystem.js`](js/ScatterSystem.js) | 0.05 |
-| Specific scatter prop sized wrong | `targetHeight` in `PROP_VARIANTS` | [`js/ScatterSystem.js`](js/ScatterSystem.js) | per type (10–40cm) |
+| Yellow-flower clusters wrong | `oversampleFraction` | [`js/ScatterSystem.js`](js/ScatterSystem.js) | 0.10 (was 0.05 pre-cycle-16) |
+| Mushrooms unreadable at sheep-cam | `targetHeight` in `PROP_VARIANTS` | [`js/ScatterSystem.js`](js/ScatterSystem.js) | 0.50m (was 0.30/0.35 pre-cycle-16) |
 
-Re-baking trees: edit recipes, then `rm assets/_originals/models/trees/*.glb && npm run bake-trees && npm run compress-glbs`. The `_originals` rm is required to invalidate the compress-glbs backup cache.
+Re-baking trees: edit recipes/seeds in [`tools/bake-trees.mjs`](tools/bake-trees.mjs), then `rm assets/_originals/models/trees/*.glb && npm run bake-trees && npm run compress-glbs`. The `_originals/` rm is required to invalidate the compress-glbs backup cache (cycle 14 finding, commit `39f44fb`).
 
-## Visual review tooling shipped during Cycle 14
+## Standing risks (carried forward)
 
-If anything in the deployed world reads as "off," these tools triage without depending on a live human eye:
+- **Sim-baseline fixtures one-way.** Don't regenerate without understanding the diff. Cycles 5-16 left them bit-identical.
+- **`?cinematic=1` flips `preserveDrawingBuffer`.** Documented perf hit. Any change letting the flag affect normal play is a Hard Stop.
+- **GLB shared-material trap (Cycle 11+12 finding).** Any new code creating an `InstancedMesh` from a cached GLB's `child.geometry` + `child.material` must tag with `userData.sharedFromGlbCache = true` and rely on remove-from-scene only. Cycle 16's LOD chain follows this: trunk + leaves InstancedMesh2 share the LOD0 material across LOD0 + LOD1 entries (the leaf-wind shader patch attaches to the material once, correct for all LODs).
+- **InstancedMesh2 entity API.** Entities in `addInstances` callback use `quaternion` (not Euler `rotation`). Cycle 14 hotfix `a41f9a6` documented this; Cycle 16's createTrees follows.
+- **`scripts/compress-glbs.mjs` reads from `assets/_originals/` backup.** Re-baking GLBs requires `rm assets/_originals/models/trees/*.glb` first.
+- **Mac white-ground bug.** Reproduces on Matt's specific Mac, not on GH `macos-latest` Safari. Environmental. Investigation pending Matt's `__sdsDiag` capture.
+- **EZ-Tree billboard string casing.** Caught in cycle 16: EZ-Tree's `leaves.billboard` field expects lowercase `'single'` / `'double'`; capital-case is silently ignored. Codified in `tools/bake-trees.mjs` JSDoc comments and the new `tools/bake-trees.mjs:buildRecipe` helper.
 
-- **[`tools/probe.mjs <baseUrl> <scene>`](tools/probe.mjs)** — Playwright harness. Loads cinematic URL, sleeps 45s for full init, dumps canvas via `toDataURL('image/png')` to `tools/playtest/probe/<scene>.png`. Captures page-errors + warnings + failed network requests.
-- **[`tools/playtest-screenshots.mjs`](tools/playtest-screenshots.mjs)** — six-shot scene sweep harness (Field/RH/OC × noon/sunset). Uses `__sdsCinema.startSolo` + `setSun` + `setCameraPose`. Useful as a starting point.
-- **[`tools/inspect-glb.mjs <path>`](tools/inspect-glb.mjs)** + **[`tools/inspect-glb-three.mjs <path>`](tools/inspect-glb-three.mjs)** — GLB bbox + pivot inspectors. The Cycle 14 pivot+scale audit (commit `ea9547a`) caught issues via these inspectors before the browser.
+## How to read the rest of the repo
 
-`tools/playtest/` and inspector outputs are gitignored (regenerable on demand).
-
-## Long-tail Cycle 15+ candidates surfaced during Cycle 14 (optional escalations)
-
-- **Tree LOD-pool unification** — per-instance dynamic full-mesh → impostor switch via `InstancedMesh2.addLOD`. Needs trunk-only + leaves-only impostor authoring since EZ-Tree splits each tree into trunk + leaves child meshes with separate materials.
-- **Grass render-texture interactors + critically-damped trample recovery** — Phase 2 deferred this; needs per-blade render-target ping-pong state. Pairs with the WebGPU spike since TSL maps cleanly onto compute shaders.
-- **WebGPU spike** — Phase 2 grass + Phase 3 tree shader math both port cleanly to TSL.
-- **[Procedural Instanced Forest](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610)** (red-reddington, Dec 2025) as alternative to EZ-Tree if higher tree-count scenes become a priority — 2,800 trees in 8 draw calls at 60fps mid-range desktop, TSL/WebGPU port done.
-- **ScatterSystem polish** — seeded RNG via `mulberry32` from `shared/Random.js` for byte-identical placement across machines/scene swaps; tune density post-playtest.
-
-Earlier cycle threads still real but unblocked-by-but-not-blocking the visual fixes: bundle slim, gameplay constants, main.js split, broader test coverage. These carry to Cycle 16+ as their own focused cycle.
+| Area | Source of truth |
+|---|---|
+| Active cycle | [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md) — tree-foliage-lod-and-perf |
+| Cycle 16 decision brief | [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md) |
+| Cycle 16 gallery review (per-variant pros/cons) | [`docs/cycle-16-tree-gallery-review.md`](docs/cycle-16-tree-gallery-review.md) |
+| Cycle 16 Phase 6 keyboard workflow | [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-15-plan.md`](docs/archive/cycles/cycle-15-plan.md) |
+| Prior closed cycles | [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md), [`docs/archive/cycles/cycle-12-plan.md`](docs/archive/cycles/cycle-12-plan.md), [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md) |
+| Frozen files / fence rules | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
+| Closed cycles + deferred items | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
+| Slash commands | [`.claude/commands/`](.claude/commands/) — `/cycle-start`, `/cycle-close`, `/validate` |
+| Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| Decisions log | [`DECISIONS.md`](DECISIONS.md) |
+| Player CHANGELOG | [`CHANGELOG.md`](CHANGELOG.md) |
+| Press kit | [`PRESSKIT.md`](PRESSKIT.md) |
+| Tree pipeline contract | [`docs/tree-pipeline.md`](docs/tree-pipeline.md) |
+| Asset pipeline (gallery + integrate) | [`tools/asset-gallery/README.md`](tools/asset-gallery/README.md) |
 
 ## Running locally
 
@@ -159,36 +142,7 @@ npm run cinema -- --skip-video --headed                          # render OG + d
 npm run cinema -- --shot=dog-into-sunset --headed                # iterate single shot
 ```
 
-Open `http://localhost:3000`. URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl` (probe), `?cinematic=1` (filming infra), `?ui=off` (hide React overlay), `?sun=0.5` (sun position).
-
-## Standing risks (carried forward)
-
-- **Sim-baseline fixtures one-way.** Don't regenerate without understanding the diff. Cycles 5-14 left them bit-identical.
-- **`?cinematic=1` flips `preserveDrawingBuffer`.** Documented perf hit. Any change letting the flag affect normal play is a Hard Stop.
-- **GLB shared-material trap (Cycle 11+12 finding).** Any new code creating an `InstancedMesh` from a cached GLB's `child.geometry` + `child.material` must tag with `userData.sharedFromGlbCache = true` and rely on remove-from-scene only. ScatterSystem already follows this; new asset work must too.
-- **InstancedMesh2 entity API.** Entities in `addInstances` callback use `quaternion` (not Euler `rotation`). Cycle 14 hotfix `a41f9a6` documented this; new InstancedMesh2 sites must follow.
-- **`scripts/compress-glbs.mjs` reads from `assets/_originals/` backup.** Re-baking GLBs requires `rm assets/_originals/models/trees/*.glb` first. Documented in `39f44fb`. Future polish: teach compress-glbs to detect newer-mtime-than-backup and re-back-up automatically.
-- **Mac white-ground bug.** Reproduces on Matt's specific Mac, not on GH `macos-latest` Safari. Environmental. Investigation pending Matt's `__sdsDiag` capture.
-
-## How to read the rest of the repo
-
-| Area | Source of truth |
-|---|---|
-| Active cycle | [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md) — tree-foliage-lod-and-perf |
-| Latest closed cycle | [`docs/archive/cycles/cycle-15-plan.md`](docs/archive/cycles/cycle-15-plan.md) |
-| Prior closed cycles | [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md), [`docs/archive/cycles/cycle-12-plan.md`](docs/archive/cycles/cycle-12-plan.md), [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md), [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md) |
-| Older cycles | [`docs/archive/cycles/cycle-9-plan.md`](docs/archive/cycles/cycle-9-plan.md), [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md), [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md), [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) |
-| Cycle stub template | [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) |
-| Frozen files / fence rules | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
-| Closed cycles + deferred items | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Mac bug research | [`docs/mac-bug-research.md`](docs/mac-bug-research.md) |
-| Slash commands | [`.claude/commands/`](.claude/commands/) — `/cycle-start`, `/cycle-close`, `/validate` |
-| Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
-| Decisions log | [`DECISIONS.md`](DECISIONS.md) |
-| Player CHANGELOG | [`CHANGELOG.md`](CHANGELOG.md) |
-| Press kit | [`PRESSKIT.md`](PRESSKIT.md) |
-| Electron readiness | [`docs/electron-readiness.md`](docs/electron-readiness.md) |
-| How to add a biome | [`docs/adding-a-biome.md`](docs/adding-a-biome.md) |
+URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl` (probe), `?cinematic=1` (filming infra), `?ui=off` (hide React overlay), `?sun=0.5` (sun position), `?perfMode=1` (`__perfHarness` global for the perf harness driver).
 
 ## What NOT to do
 
@@ -204,4 +158,5 @@ Open `http://localhost:3000`. URL params: `?scene=field|rolling-hills|open-count
 - Don't let `?cinematic=1` flip `preserveDrawingBuffer` on the normal-play codepath.
 - Don't re-trigger the cinema runner without `--shot=<id>` during regular dev — committed OG/dog/PWA assets re-render with sub-pixel-different WebP encoding and create diff noise.
 - **Cycle 16:** Don't tag `v1.1.0` until tree foliage LOD + asset picks + perf baseline land cleanly. The hero cards and tag should ship on a perf-clean polished world.
-- **Cycle 16:** Don't replace EZ-Tree with the Procedural Instanced Forest unless `InstancedMesh2.addLOD` demonstrably misses the perf budget. PIF is interesting + MIT but a different aesthetic + pipeline.
+- **Cycle 16:** Don't replace EZ-Tree with the [Procedural Instanced Forest](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610) unless `InstancedMesh2.addLOD` demonstrably misses the perf budget. PIF is interesting + MIT but a different aesthetic + pipeline.
+- **Cycle 16:** Don't pass capital-case `'Single'` / `'Double'` strings to EZ-Tree's `leaves.billboard` — they're silently ignored. Use lowercase `'single'` / `'double'` (per `Billboard` enum's underlying string values).
