@@ -42,6 +42,36 @@ const ASSET_TARGETS = {
     scatter: 'assets/models/scatter'
 };
 
+// Loader-name canonicalization. The TerrainBuilder rock loader reads
+// rock1/rock2/rock3 by literal path; the asset loader's tree-critical
+// path reads tree1/tree2/pine. Picks must rename to these so the
+// runtime keeps working without code changes. Order: smallest first.
+//
+// If picks > slots, extra picks get descriptive names appended (loader
+// won't pick them up; the user widens the loader array manually).
+const CANONICAL_NAMES = {
+    rocks: ['rock1.glb', 'rock2.glb', 'rock3.glb'],
+    trees: ['tree1.glb', 'tree2.glb', 'pine.glb']
+};
+
+function pickCanonicalName(category, picks) {
+    // Sort picks by size (smaller → smaller-named slot) so rock1 stays the
+    // small pebble-class and rock3 stays the largest. Same for trees: small
+    // vertical (tree1), broad canopy (tree2), conifer (pine).
+    const slots = CANONICAL_NAMES[category];
+    if (!slots) return picks.map((p) => ({ pick: p, name: basename(p.path) }));
+
+    const sorted = [...picks].sort((a, b) => {
+        const aH = a.bbox?.sy ?? 0;
+        const bH = b.bbox?.sy ?? 0;
+        return aH - bH;
+    });
+    return sorted.map((p, i) => ({
+        pick: p,
+        name: i < slots.length ? slots[i] : basename(p.path)
+    }));
+}
+
 function categoryOf(picPath) {
     // tools/asset-gallery/staging/<category>/<filename>.glb
     const parts = picPath.split('/');
@@ -101,16 +131,21 @@ async function main() {
             skipped.push(...picks.map((p) => ({ ...p, reason: 'no target dir' })));
             continue;
         }
+        const renamed = pickCanonicalName(cat, picks);
         console.log(`\n[INTEGRATE] ${cat} → ${targetBase}/  (${picks.length} GLBs)`);
-        for (const pick of picks) {
-            const filename = basename(pick.path);
-            const dest = `${targetBase}/${filename}`;
+        if (CANONICAL_NAMES[cat]) {
+            console.log(`            Renaming picks to canonical loader names (sorted by bbox height):`);
+        }
+        for (const { pick, name } of renamed) {
+            const srcName = basename(pick.path);
+            const dest = `${targetBase}/${name}`;
             try {
                 const bytes = DRY ? pick.size : await safeCopy(pick.path, dest);
-                console.log(`            ✓ ${filename}  (${(bytes / 1024).toFixed(1)} KB)`);
-                copied.push({ ...pick, dest, category: cat });
+                const renameTag = name !== srcName ? ` (was ${srcName})` : '';
+                console.log(`            ✓ ${name}${renameTag}  (${(bytes / 1024).toFixed(1)} KB)`);
+                copied.push({ ...pick, dest, category: cat, canonicalName: name, originalName: srcName });
             } catch (err) {
-                console.error(`            ✗ ${filename}  ${err.message}`);
+                console.error(`            ✗ ${name}  ${err.message}`);
                 skipped.push({ ...pick, reason: err.message });
             }
         }

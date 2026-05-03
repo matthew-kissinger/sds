@@ -101,6 +101,19 @@ main {
 .card .info { padding: 0.5rem; border-top: 1px solid var(--line); }
 .card .filename { font-weight: 500; font-size: 12px; word-break: break-all; }
 .card .stats { color: var(--dim); font-size: 11px; margin-top: 0.25rem; display: flex; justify-content: space-between; }
+.card .category-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
 .card .pick-toggle {
     position: absolute;
     top: 6px;
@@ -181,6 +194,9 @@ main {
     <h1>SDS asset gallery</h1>
     <span class="meta" id="meta">Loading…</span>
     <span class="spacer"></span>
+    <select id="categoryFilter">
+        <option value="all">All categories</option>
+    </select>
     <select id="filter">
         <option value="all">All</option>
         <option value="picked">Picked only</option>
@@ -241,6 +257,7 @@ const viewerEmpty = document.getElementById('viewer-empty');
 const viewerInfo = document.getElementById('viewer-info');
 const filterSel = document.getElementById('filter');
 const sortSel = document.getElementById('sort');
+const categoryFilterSel = document.getElementById('categoryFilter');
 
 const PARAMS = new URLSearchParams(location.search);
 const DIR = PARAMS.get('dir') || 'tools/asset-gallery/staging';
@@ -445,7 +462,9 @@ async function renderThumbnail(entry) {
 function applyFilterSort() {
     const filter = filterSel.value;
     const sort = sortSel.value;
+    const cat = categoryFilterSel.value;
     const view = entries.filter((e) => {
+        if (cat !== 'all' && e.category !== cat) return false;
         if (filter === 'picked') return picks.has(e.path);
         if (filter === 'unpicked') return !picks.has(e.path);
         return true;
@@ -458,6 +477,15 @@ function applyFilterSort() {
     return view;
 }
 
+function rebuildCategoryFilter() {
+    const seen = new Set();
+    for (const e of entries) if (e.category) seen.add(e.category);
+    const current = categoryFilterSel.value;
+    categoryFilterSel.innerHTML = '<option value="all">All categories</option>' +
+        [...seen].sort().map((c) => `<option value="${c}">${c}</option>`).join('');
+    if (seen.has(current)) categoryFilterSel.value = current;
+}
+
 function renderGrid() {
     const view = applyFilterSort();
     grid.innerHTML = '';
@@ -466,7 +494,10 @@ function renderGrid() {
         empty.className = 'empty-state';
         empty.innerHTML = `
             No GLBs in <code>${DIR}</code>.<br><br>
-            Drop GLBs into that folder, or run <code>npm run gen:meshy -- --prompt-set=rocks --count=8</code>.<br>
+            Run <code>npm run bake-rocks</code> or <code>npm run bake-trees</code> to populate
+            staging from the in-repo primitive bakes (16 rocks, 12 trees).<br>
+            Or, optionally, <code>npm run gen:meshy -- --set=rocks --count=8</code> for AI-driven
+            text-to-GLB (requires <code>MESHY_API_KEY</code>).<br><br>
             Then click <strong>↻ Refresh</strong>.
         `;
         grid.appendChild(empty);
@@ -481,6 +512,7 @@ function renderGrid() {
         card.dataset.path = entry.path;
         card.innerHTML = `
             <div class="thumb">${entry.thumbnail ? `<img src="${entry.thumbnail}" alt="">` : '…'}</div>
+            ${entry.category ? `<div class="category-badge">${entry.category}</div>` : ''}
             <div class="info">
                 <div class="filename">${entry.name}</div>
                 <div class="stats">
@@ -524,6 +556,7 @@ document.getElementById('vi-pick').addEventListener('click', () => {
 
 filterSel.addEventListener('change', renderGrid);
 sortSel.addEventListener('change', renderGrid);
+categoryFilterSel.addEventListener('change', renderGrid);
 
 document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
@@ -580,6 +613,7 @@ async function loadList() {
         const data = await res.json();
         entries = data.entries.map((e) => ({ ...e, thumbnail: null, tris: null, bbox: null }));
         meta.textContent = `${entries.length} GLBs · 0 picked · rendering thumbnails…`;
+        rebuildCategoryFilter();
         renderGrid();
         // Render thumbnails sequentially to avoid GPU thrash.
         for (let i = 0; i < entries.length; i++) {

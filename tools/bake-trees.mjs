@@ -29,7 +29,19 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const OUT_DIR = resolve(ROOT, 'assets/models/trees');
+
+// Cycle 15 Phase 1: bake all variations into the gallery staging dir by
+// default; pick + integrate flow promotes 3 picks → tree1/tree2/pine in
+// `assets/models/trees/`. Pass `--out=assets/models/trees` to bake
+// directly into committed assets.
+const args = Object.fromEntries(
+    process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => {
+        const [k, v] = a.replace(/^--/, '').split('=');
+        return [k, v ?? true];
+    })
+);
+const OUT_REL = args.out ?? 'tools/asset-gallery/staging/trees';
+const OUT_DIR = resolve(ROOT, OUT_REL);
 
 // ---------------------------------------------------------------------
 // Recipes — each maps an SDS tree-type registry name to an EZ-Tree
@@ -82,51 +94,50 @@ const STYLIZED_BARK = {
     leaves: { count: 48, sizeVariance: 0.55 }
 };
 
+// Cycle 15 Phase 1: 12 recipes covering all EZ-Tree presets at S/M/L
+// scale. Each per-species tint differentiates the GLB so the gallery
+// pick step has real silhouette + color variety to choose from.
+//
+// Pine's preset default ships ~82 children at level 0 vs STYLIZED_BARK's
+// 8; restore some of that volume so conifers read as full rather than
+// sparse sticks. Oak gets extra leaf count for the Ghibli "rounded,
+// fuller" canopy. Ash and Aspen sit between.
+const PINE_BRANCH = {
+    sections: STYLIZED_BARK.branch.sections,
+    segments: STYLIZED_BARK.branch.segments,
+    children: { 0: 14, 1: 6, 2: 3 }
+};
+
+function recipe(name, preset, seed, tint, leafCount, branchOverride) {
+    const tweaks = {
+        ...STYLIZED_BARK,
+        bark: { ...STYLIZED_BARK.bark, tint },
+        leaves: { ...STYLIZED_BARK.leaves, count: leafCount }
+    };
+    if (branchOverride) tweaks.branch = branchOverride;
+    return { name, preset, seed, normalizeHeight: 1.0, tweaks };
+}
+
 const RECIPES = [
-    {
-        name: 'tree1',
-        preset: 'Aspen Medium',
-        seed: 7,
-        normalizeHeight: 1.0,
-        // Aspen — slim vertical silhouette for cozy pasture scenes.
-        // Slightly lighter brown for the aspen species.
-        tweaks: {
-            ...STYLIZED_BARK,
-            bark: { ...STYLIZED_BARK.bark, tint: 0x7a5a3a }
-        }
-    },
-    {
-        name: 'tree2',
-        preset: 'Oak Medium',
-        seed: 13,
-        normalizeHeight: 1.0,
-        // Oak — broad canopy anchor for field/RH scenes. Darker bark +
-        // even more leaves than the shared default for that "rounder,
-        // fuller" Studio Ghibli oak silhouette.
-        tweaks: {
-            ...STYLIZED_BARK,
-            bark: { ...STYLIZED_BARK.bark, tint: 0x5a3a26 },
-            leaves: { count: 64, sizeVariance: 0.6 }
-        }
-    },
-    {
-        name: 'pine',
-        preset: 'Pine Medium',
-        seed: 21,
-        normalizeHeight: 1.0,
-        // Pine — conifer evergreen, billboarded frond leaves. Dark
-        // brown bark. Pine's preset default ships 82 children at
-        // level 0 (vs the shared 8); restore some of that volume so
-        // the conifer reads as full rather than a sparse stick.
-        tweaks: {
-            ...STYLIZED_BARK,
-            bark: { ...STYLIZED_BARK.bark, tint: 0x4a3525 },
-            branch: {
-                ...STYLIZED_BARK.branch,
-                children: { 0: 14, 1: 6, 2: 3 }
-            }
-        }
-    }
+    // ASH — versatile hardwood, slim trunk, light canopy
+    recipe('ash_small',    'Ash Small',    3,  0x6e4f30, 40),
+    recipe('ash_medium',   'Ash Medium',   5,  0x6e4f30, 48),
+    recipe('ash_large',    'Ash Large',    9,  0x6e4f30, 56),
+
+    // ASPEN — slim vertical silhouette, lighter bark
+    recipe('aspen_small',  'Aspen Small',  31, 0x8c6e4a, 40),
+    recipe('aspen_medium', 'Aspen Medium', 7,  0x7a5a3a, 48),  // canonical (was tree1)
+    recipe('aspen_large',  'Aspen Large',  47, 0x9a7a52, 56),
+
+    // OAK — broad canopy anchor, darkest bark, fullest canopy
+    recipe('oak_small',    'Oak Small',    19, 0x4a2e1c, 56),
+    recipe('oak_medium',   'Oak Medium',   13, 0x5a3a26, 64),  // canonical (was tree2)
+    recipe('oak_large',    'Oak Large',    71, 0x6a4630, 72),
+
+    // PINE — conifer evergreen, dark bark, dense conifer fronds
+    recipe('pine_small',   'Pine Small',   59, 0x4a3525, 40, PINE_BRANCH),
+    recipe('pine_medium',  'Pine Medium',  21, 0x4a3525, 48, PINE_BRANCH),  // canonical (was pine)
+    recipe('pine_large',   'Pine Large',   83, 0x523a28, 56, PINE_BRANCH)
 ];
 
 // ---------------------------------------------------------------------

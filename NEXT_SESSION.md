@@ -17,30 +17,33 @@ What landed in the autonomous run:
 
 ## How to drive the asset pipeline (Phase 1)
 
+The primary path uses the in-repo primitive bakes. **Variations are already baked** at `tools/asset-gallery/staging/` — `f-NEW` shipped 16 rocks + 12 trees there for review.
+
 ```bash
-# 1. Get a Meshy API key (app.meshy.ai → API), store in ~/.config/mk-agent/env as MESHY_API_KEY=...
-export MESHY_API_KEY=$(grep ^MESHY_API_KEY= ~/.config/mk-agent/env | cut -d= -f2)
+# 1. View + pick (browser opens; ★ to pick, s to save). Default scans all
+#    staging subfolders; the category filter switches between rocks/trees.
+npm run gallery
 
-# 2. Generate variations (rocks first, then trees + flora)
-npm run gen:meshy -- --set=rocks --count=8
-npm run gen:meshy -- --set=trees --count=8
-npm run gen:meshy -- --set=flora --count=8
-
-# 3. View + pick (browser opens; ★ to pick, s to save)
-npm run gallery -- --dir=tools/asset-gallery/staging/rocks
-npm run gallery -- --dir=tools/asset-gallery/staging/trees
-npm run gallery -- --dir=tools/asset-gallery/staging/flora
-
-# 4. Wire picks into committed assets
+# 2. Wire picks into committed assets. Sorts picks by bbox height, renames
+#    to rock1/rock2/rock3 + tree1/tree2/pine so the loader works unchanged.
 node tools/asset-gen/integrate.mjs --compress
 
-# 5. Tune ScatterSystem PROP_VARIANTS weights manually per the script's printed diff,
-#    then re-run npm test to make sure tree-assets spec still passes.
+# 3. Re-run npm test to make sure tree-assets spec still passes.
+npm test
 ```
 
-Tweak the prompt sets at [`tools/asset-gen/prompts/`](tools/asset-gen/prompts/) before generation if the style direction needs to shift. `--dry-run` previews request bodies without burning credits.
+Re-bake variations any time:
 
-Pixel Forge note (Matt asked): the actual "PixelForge 3D" tool is a Gemini Flash + Imagen concept-art generator (2D images, not GLBs). Meshy AI is the closest match for what's needed here. The image-to-3D path (PNG → Meshy) gives more controlled output than text-to-3D; not yet wired into `meshy.mjs`, but trivial to add as `meshy-image.mjs` if the text-to-3D quality ceilings out.
+```bash
+npm run bake-rocks                  # 16 rocks → staging/rocks/, ~1 min
+npm run bake-trees                  # 12 trees → staging/trees/, ~3 min
+```
+
+**Adding more variations:** edit [`tools/bake-rocks/recipes.mjs`](tools/bake-rocks/recipes.mjs) (rocks) or the `RECIPES` array in [`tools/bake-trees.mjs`](tools/bake-trees.mjs) (trees), append entries, re-run the bake. Recipes are committed code — every variant is reproducible from its `(seed, knobs)` tuple.
+
+The Meshy AI text-to-GLB path is kept in-tree as an optional escape hatch (`npm run gen:meshy -- --set=rocks --count=8`, requires `MESHY_API_KEY`) but is NOT the primary path. Per Matt's note: prefer extending the in-repo bakes — Meshy only when the primitive recipes can't get there visually.
+
+(Note: "Pixel Forge 3D" turned out to be a Gemini Flash + Imagen concept-art tool — 2D images, not GLBs. Not the same product as Meshy.)
 
 ## Phase 2 — perf baseline capture workflow
 

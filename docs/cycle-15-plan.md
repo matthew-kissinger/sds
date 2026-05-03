@@ -38,27 +38,36 @@ Per Matt's 2026-05-03 playtest review: rocks + mushrooms read as tiny + floating
 
 Mid-cycle direction (Matt, 2026-05-03): generate "a lot of different trees with different variations as well as rocks and other things, view them in a gallery and select the best ones." This reframes Phase 1 from "re-tune procedural" to "AI-generate + curate."
 
-**Tooling shipped at `f84b723`:**
+**Tooling shipped:**
 
-- [`tools/asset-gallery/`](../tools/asset-gallery/) — browser-based GLB picker (Three.js orbit preview, thumbnail grid, ★ to pick, `s` to save). Reads any directory; default = `tools/asset-gallery/staging/`.
-- [`tools/asset-gen/meshy.mjs`](../tools/asset-gen/meshy.mjs) — Meshy AI text-to-GLB batch with `preview → refine` flow. Prompt sets at [`tools/asset-gen/prompts/`](../tools/asset-gen/prompts/) (rocks, trees, flora). `--dry-run` for cost-free prompt-tuning.
-- [`tools/asset-gen/integrate.mjs`](../tools/asset-gen/integrate.mjs) — copies picks into committed asset locations + prints suggested `PROP_VARIANTS` patches.
-- npm scripts: `gallery`, `gen:meshy`, `gen:integrate`.
+- [`tools/bake-rocks.mjs`](../tools/bake-rocks.mjs) — extended from 3 to 16 recipes (in [`tools/bake-rocks/recipes.mjs`](../tools/bake-rocks/recipes.mjs)). IcosahedronGeometry + 3D simplex displacement + non-uniform scale + AO-baked vertex colors. 16 variations span small pebbles → tall jagged spires, with diverse colors.
+- [`tools/bake-trees.mjs`](../tools/bake-trees.mjs) — extended from 3 to 12 recipes covering all EZ-Tree presets (Ash/Aspen/Oak/Pine × S/M/L) with per-species tints + branch-density tweaks.
+- Default `--out` for both bake scripts now writes to `tools/asset-gallery/staging/<category>/`. Pass `--out=assets/models/<category>` to bypass and write directly.
+- [`tools/asset-gallery/`](../tools/asset-gallery/) — browser-based GLB picker. Recursively scans the staging tree, shows category badges + filter dropdown, thumbnail grid + orbit-controlled big preview. ★ to pick, `s` to save.
+- [`tools/asset-gen/integrate.mjs`](../tools/asset-gen/integrate.mjs) — sorts picks by bbox height, renames to canonical loader names (rock1/rock2/rock3 + tree1/tree2/pine), copies into `assets/models/<category>/`. `--compress` chains gltfpack draco.
+- [`tools/asset-gen/meshy.mjs`](../tools/asset-gen/meshy.mjs) — Meshy AI text-to-GLB kept in-tree as an OPTIONAL escape hatch only. Not the primary path; in-repo primitive bakes own the canonical flow.
+- npm scripts: `bake-rocks`, `bake-trees`, `gallery`, `gen:integrate`, `gen:meshy`.
+
+**Variations baked + ready for Matt to review:**
+
+`tools/asset-gallery/staging/rocks/` has 16 rocks (~450 KB total, 180-320 tris each). `tools/asset-gallery/staging/trees/` has 12 trees (~23 MB pre-compress, will draco down to ~7 MB after integrate). Both are ready in the staging directory.
 
 **Picks pending — Matt drives:**
 
-1. Set `MESHY_API_KEY` (from app.meshy.ai → API), then `npm run gen:meshy -- --set=rocks --count=8` (and similar for trees, flora).
-2. Open the gallery (`npm run gallery -- --dir=tools/asset-gallery/staging/rocks`), pick the best 3-4 per category, hit Save.
-3. `node tools/asset-gen/integrate.mjs --compress` copies picks → `assets/models/{rocks,scatter,trees}/`.
-4. Hand-tune `PROP_VARIANTS` weights in [`js/ScatterSystem.js`](../js/ScatterSystem.js) per the integrate script's printed diff. Sum of weights ≈ 100.
-5. Yellow dandelion patches: verify `OVERSAMPLE_VARIANT` points to whichever picked flora reads as yellow. Bump `oversampleFraction` from 0.05 to 0.08-0.10 if clusters still don't catch the eye.
-6. Visual verification via [`tools/probe.mjs`](../tools/probe.mjs) on each scene at noon + sunset.
+1. `npm run gallery` — browser opens. Use the category filter to switch between `rocks` and `trees`. ★ the best 3 of each (rocks: vary size — small/medium/large; trees: vary species — ideally one slim, one broad, one conifer). Hit `s` to save.
+2. `node tools/asset-gen/integrate.mjs --compress` copies picks → `assets/models/{rocks,trees}/` with canonical names.
+3. `npm test` to confirm `tests/tree-assets.spec.js` still passes (the spec pins the GLB-existence + total-size contract).
+4. Visual verification via [`tools/probe.mjs`](../tools/probe.mjs) on each scene at noon + sunset.
+
+**Adding more variations later:** edit `tools/bake-rocks/recipes.mjs` or `tools/bake-trees.mjs`'s RECIPES array, re-run the bake. Recipes are byte-stable; every variant is reproducible from its seed.
 
 The grounding bug (rocks "floating") was likely the procedural icosa pivot offset, not a `meshSampleY` issue — Cycle 14 hotfix `b5e1e45` already trunk-grounded trees via the same path. New Meshy GLBs author centroids at the asset's center; `js/TerrainBuilder.js`'s rock loader already handles per-asset `modelBaseYOffset` via bbox.min.y. If new picks float, the fix is per-pick `targetHeight` tuning in PROP_VARIANTS, not a placement-layer change.
 
 **Acceptance:** Rocks read as **rocks** at sheep-cam distance (not pebble-shards). Mushrooms either present-and-visible or absent. Yellow dandelion patches catch the eye on Field + RH. No floating; ScatterSystem props ground via the same `meshSampleY` path as Cycle 14 trees.
 
-**Optional: Pixel Forge / image-to-3D.** "PixelForge 3D" turned out to be a Gemini Flash + Imagen concept-art tool (2D images, not GLBs), so it's not a direct match for what's needed here. Meshy's image-to-3D path exists as an alternative to text-to-3D when text prompts cap out — generate a concept image first (any tool), then submit it via the `/openapi/v1/image-to-3d` endpoint for tighter style control. Not yet wired in; trivial to add as `meshy-image.mjs` if needed.
+**Optional escape hatch — Meshy AI text-to-GLB.** If primitive bakes can't reach the visual ceiling needed (the EZ-Tree presets don't cover, say, a cherry blossom), Meshy AI's text-to-GLB endpoint is wired in as `npm run gen:meshy -- --set=rocks --count=8` (requires `MESHY_API_KEY` in env). Outputs land in the same `staging/<category>/` directory as the primitive bakes, so the gallery + integrate flow handles them identically. Per Matt's note: this is NOT the primary path; prefer extending the in-repo recipes we own end-to-end.
+
+(Note for cold-start agents: "Pixel Forge 3D" is NOT a 3D-generation tool — it's a Gemini Flash + Imagen concept-art generator that outputs 2D images. Don't try to integrate it directly; if you want concept-driven mesh generation, the path is concept-image → Meshy image-to-3D, not Pixel Forge → anything.)
 
 ## Phase 2 — Perf regression triage (~4-6hr)
 

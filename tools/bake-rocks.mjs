@@ -27,67 +27,24 @@ import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, resolve, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { RECIPES } from './bake-rocks/recipes.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const OUT_DIR = resolve(ROOT, 'assets/models/rocks');
 
-// ---------------------------------------------------------------------
-// Recipes — three rocks that map 1:1 onto the existing rock1/2/3 file
-// names so the loader doesn't change. Each starts as an
-// IcosahedronGeometry (detail=2 → 320 tris) and gets per-vertex 3D
-// simplex displacement + a non-uniform xyz scale to escape the regular
-// "polyhedron silhouette" feel.
-//
-// The amplitudes and frequencies were tuned by eye for "round boulder
-// with chunky facets" rather than "spiky asteroid". Seeds are fixed so
-// the bake is byte-stable across machines.
-//
-// Native height stays near 0.2m so the existing
-// `ROCK_NATIVE_HEIGHT = 0.2m` normalization in TerrainBuilder is a
-// near-identity (avoids re-tuning rock placement scale ranges).
-// ---------------------------------------------------------------------
-const RECIPES = [
-    {
-        name: 'rock1',
-        radius: 0.10,
-        detail: 2,
-        seed: 11,
-        // Lower amp = rounder, more "pebble-like".
-        displacementAmp: 0.018,
-        // Two-octave noise: low-freq lumps + high-freq facet break-up.
-        noise: { freq1: 8.0, freq2: 22.0, weight2: 0.25 },
-        // Non-uniform scale flattens the rock into a squat boulder so
-        // it doesn't look like a fully spherical pebble.
-        scale: { x: 1.10, y: 0.70, z: 1.00 },
-        color: 0x9c8e7a,         // warm light grey-brown
-        targetHeight: 0.20
-    },
-    {
-        name: 'rock2',
-        radius: 0.10,
-        detail: 2,
-        seed: 23,
-        displacementAmp: 0.026,
-        noise: { freq1: 7.0, freq2: 20.0, weight2: 0.30 },
-        scale: { x: 1.20, y: 0.85, z: 1.05 },
-        color: 0x8a7e6b,         // mid grey-brown (canonical)
-        targetHeight: 0.20
-    },
-    {
-        name: 'rock3',
-        radius: 0.10,
-        detail: 2,
-        seed: 41,
-        // Higher amp + more high-freq weight = chunkier, more
-        // "boulder-with-character".
-        displacementAmp: 0.034,
-        noise: { freq1: 6.0, freq2: 18.0, weight2: 0.35 },
-        scale: { x: 1.35, y: 0.90, z: 1.10 },
-        color: 0x7a6f5c,         // darker mossy grey-brown
-        targetHeight: 0.20
-    }
-];
+// Cycle 15 Phase 1: bake into the gallery staging dir by default so the
+// pipeline is "bake all variations → review → pick → integrate." Pass
+// `--out=assets/models/rocks` to bake directly into committed assets
+// (canonical post-pick flow), but the integrate.mjs script handles the
+// promotion + rename to rock1/rock2/rock3 from a curated subset.
+const args = Object.fromEntries(
+    process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => {
+        const [k, v] = a.replace(/^--/, '').split('=');
+        return [k, v ?? true];
+    })
+);
+const OUT_REL = args.out ?? 'tools/asset-gallery/staging/rocks';
+const OUT_DIR = resolve(ROOT, OUT_REL);
 
 // ---------------------------------------------------------------------
 // Tiny static server (same pattern as bake-trees.mjs).

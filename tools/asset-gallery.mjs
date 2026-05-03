@@ -74,27 +74,44 @@ function safeResolve(rel) {
 
 async function listGlbs(relDir) {
     const dir = safeResolve(relDir);
-    let names;
-    try {
-        names = await readdir(dir);
-    } catch (err) {
-        if (err.code === 'ENOENT') return [];
-        throw err;
-    }
     const entries = [];
-    for (const name of names) {
-        if (!name.toLowerCase().endsWith('.glb')) continue;
-        const full = resolve(dir, name);
-        const st = await stat(full).catch(() => null);
-        if (!st || !st.isFile()) continue;
-        entries.push({
-            name,
-            path: relative(ROOT, full).split('\\').join('/'),
-            size: st.size,
-            mtime: st.mtimeMs
-        });
+
+    async function walk(absDir) {
+        let names;
+        try {
+            names = await readdir(absDir);
+        } catch (err) {
+            if (err.code === 'ENOENT') return;
+            throw err;
+        }
+        for (const name of names) {
+            const full = resolve(absDir, name);
+            const st = await stat(full).catch(() => null);
+            if (!st) continue;
+            if (st.isDirectory()) {
+                await walk(full);
+            } else if (st.isFile() && name.toLowerCase().endsWith('.glb')) {
+                const rel = relative(ROOT, full).split('\\').join('/');
+                // category = first sub-folder under the root listed dir.
+                const relFromDir = relative(dir, full).split('\\').join('/');
+                const parts = relFromDir.split('/');
+                const category = parts.length > 1 ? parts[0] : '';
+                entries.push({
+                    name,
+                    path: rel,
+                    category,
+                    size: st.size,
+                    mtime: st.mtimeMs
+                });
+            }
+        }
     }
-    entries.sort((a, b) => a.name.localeCompare(b.name));
+
+    await walk(dir);
+    entries.sort((a, b) => {
+        if (a.category !== b.category) return a.category.localeCompare(b.category);
+        return a.name.localeCompare(b.name);
+    });
     return entries;
 }
 
