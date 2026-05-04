@@ -967,15 +967,21 @@ export class GrassSystem {
             // via triangle interpolation, so the old -0.1 "dip into mesh"
             // hack is gone. Blades sit on the surface, not 10cm below it.
             let baseY = this.heightfield ? this.heightfield.meshSampleY(pos.x, pos.z) : 0;
-            // Cycle 17 Phase 3: tightened from prior `> 50 || < -10` clamp
-            // to `> 10 || < -10`. Per-scene terrain heightScale tops out
-            // at 6 (RH) — Y > 10 is a heightfield discontinuity, not a
-            // legit terrain elevation. Pre-tightening, gallery-review
-            // 2026-05-04 saw skyward grass blades near trees that the
-            // loose `> 50` cap allowed through (any spike in [10, 50]
-            // produced a tall blade). New cap snaps the spike to 0,
-            // which is visually consistent with the surrounding flat skirt.
-            if (!Number.isFinite(baseY) || baseY > 10 || baseY < -10) baseY = 0;
+            // Cycle 19 Phase 1 hotfix (2026-05-04): reverted Cycle 17 Phase
+            // 3's tighten of `> 50` → `> 10`. The tighten assumed terrain
+            // mesh Y stays under heightScale (max 6m). In practice the
+            // baked heightmaps store values already in metres while
+            // `Heightfield.sample()` multiplies by `peakHeight` again — a
+            // longstanding double-amplification (since Cycle 4/5) that
+            // makes OC peaks ~25m and RH peaks ~36m on the rendered mesh.
+            // The `> 10` cap was snapping every legit displaced-mesh Y to
+            // 0 across both scenes, dropping grass to water level. Relaxing
+            // back to `> 50` restores grass-on-terrain. The original
+            // gallery-review "skyward blade near trees" spike concern
+            // remains; if it re-surfaces after this revert, fix the bake-
+            // amplitude bug at the root (`scripts/bake-heightmap.mjs` writes
+            // pre-multiplied metres) instead of clamping the symptom.
+            if (!Number.isFinite(baseY) || baseY > 50 || baseY < -10) baseY = 0;
             dummy.position.set(pos.x, baseY, pos.z);
 
             // Random rotation and scale
