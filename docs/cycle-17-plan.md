@@ -26,25 +26,25 @@ Each agent picking up a phase should:
 - **Measure on the actual hardware target** (RTX 3070 desktop, mid-tier mobile, iOS Safari). Use `__sdsRenderer.info` per-frame snapshots and the `tools/probe.mjs` canvas dump to triage without a live human eye.
 - **Pick the simplest thing that meets the budget.** If a one-line change fixes the symptom, ship it. Escalate to architectural rework only when the symptom recurs.
 
-## Open questions to resolve before writing code
+## Open questions
 
-1. **Q1 — Octahedral impostor pipeline.** Three options: (a) reuse local Pixel Forge Kiln (`pixelforge kiln bake-imposter ./tree.glb --out ./tree.png --angles 16` per the Kiln vision doc at [`pixel-forge/docs/kiln-vision.md`](file:///C:/Users/Mattm/X/games-3d/pixel-forge/docs/kiln-vision.md)), (b) port Brucks' UE octahedral impostor technique into a new `tools/bake-impostors.mjs` (Three.js render-to-texture, 8 or 16 angles, octahedral atlas + vertex-shader sampling), (c) stay with the existing 3-quad cross-billboard as the only impostor tier. Author lean: **(a) try Kiln first** — it's a tool we already understand and built; if its bake-imposter output doesn't fit the GLB → atlas → shader-sample pipeline cleanly, fall back to (b). (c) is a non-answer; the user explicitly asked for more LOD tiers.
+> Resolved 2026-05-04 in [`cycle-17-research.md`](cycle-17-research.md). Summaries below for cold-start context; the research doc has the evidence trail.
 
-2. **Q2 — Mobile asset invisibility root cause.** Three suspects: (a) the cross-billboard impostor texture fails to bake silently because `getSceneManager().getRenderer()` returns null at the moment `createTrees()` runs on mobile (timing race), (b) `InstancedMesh2.perObjectFrustumCulled` over-culls at LOD2 distance because the cross-billboard's bounding sphere is computed from the unrotated 3-quad geometry and doesn't match per-instance rotated bounds, (c) the trunk's degenerate empty geometry (which I share across all tree types) ends up with a zero bounding sphere that pulls the InstancedMesh2's overall bounds toward origin, breaking parent-frustum-cull. Author lean: **profile-driven** — add a `?probeRender=1` URL param that logs LOD-active per tree per frame, then look at the data. Don't guess.
+1. **Q1 — Octahedral impostor pipeline.** **Resolved: defer.** Pixel Forge's `kiln bake-imposter` CLI doesn't exist (the kiln-vision doc never specs it). Real surface is the programmatic `kiln.bakeImposter()` API at `pixel-forge/packages/core/src/kiln/imposter/bake.ts` — TypeScript, sibling repo, integration friction. Cross-billboard stays primary. Phase 5 narrows to cull-sync investigation + LOD2.5 mid-tier. Octahedral integration is its own future cycle.
 
-3. **Q3 — White-bark tree origin.** Two possibilities: (a) one of the LOD0 or LOD1 GLBs ships with `bark.tint` not applied (recipe bug — maybe `tweaks.bark` got overwritten somewhere), (b) the cross-billboard impostor `_bakeTreeImpostor` lights the tree with white ambient 0.55 + white dirLight 0.85 (combined 1.4× white) — the resulting impostor texture reads as washed-out cream/white at distance even though the live mesh's bark is brown. Author lean: **(b) impostor lighting** is the more likely culprit since (a) would have shown up in Matt's gallery review, and the "tall and skinny" silhouette description matches a single tree species' impostor seen edge-on. Drop ambient to 0.20 + dirLight to 0.50 + use `THREE.Color(0x6e4f30).convertSRGBToLinear()` for the bake background to better match in-scene lighting.
+2. **Q2 — Mobile asset invisibility root cause.** **Resolved: profile-driven, no pre-commit.** All three plan suspects survive code inspection but a fourth dominates: mobile classic-camera at wide zoom positions the camera 60-80m from action, and `addLOD(..., 80)` + `addLOD(..., 150)` are CAMERA-distance thresholds. Trees swap aggressively. If the cross-billboard bake had any failure mode on mobile (e.g. silent renderer-null path), the LOD2 tier becomes invisible. Phase 1 builds the mobile-probe harness with `?probeRender=1` URL param to capture renderer truthy at createTrees time, per-type bake success, per-frame LOD distribution.
 
-4. **Q4 — OC portal scaling formula.** Currently [`shared/scenes/open-country.js:107`](../shared/scenes/open-country.js) has `requiredSheep: 40` hardcoded. Three formulas: (a) `Math.max(10, Math.floor(totalSheep * 0.40))` — 200→80, 1000→400, 3000→1200, 5000→2000. (b) Step function per mode (Classic=80, Extreme=400, Insane=1200, Chaos=2000). (c) Logarithmic — `Math.floor(40 * Math.log2(totalSheep / 200) + 80)` — gentler scaling at high counts. Author lean: **(a) flat 40% with min-clamp** matches user's stated preference ("if 200 then lets go 80 and scale for all the other amounts") and is the simplest to reason about. The required field on `CorralDef` becomes `requiredSheepFraction: 0.40` + a per-scene `requiredSheepMin: 10`, computed at game-start from the mode's total.
+3. **Q3 — White-bark tree origin.** **Resolved: visual reproduction first.** Lighting math (1.4× white) doesn't fully account for "white" — brown `0x6e4f30` lit at 1.4× is tan, not white. Likely needs visual triage to identify the offender. Phase 2 builds `tools/probe-glbs.mjs` to render all 6 committed tree GLBs side-by-side, isolate the bad one, then pick the fix (drop bake lighting + neutral bake background OR re-bake the recipe).
 
-5. **Q5 — Grass-stretch root cause.** Cycle 15 added a defensive `Number.isFinite(baseY) || baseY > 50 || baseY < -10 → 0` clamp on the placement Y in [`js/GrassSystem.js:916`](../js/GrassSystem.js). That fixed the NaN-Y "blade-to-the-sky" path. The recurrence is therefore most likely a different mechanism: the leaf-wind shader patch on TREES uses `position.y += offset` in vertex space; if anything causes the GRASS material's `onBeforeCompile` to inherit the tree-wind patch (shared-material trap?), grass blades near trees would pick up the offset and stretch. Author lean: **shader patch leakage** via shared material reference. Audit `_patchTreeWindMaterial` in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) — does it WeakSet-tag the patched material so re-apply is a no-op? Does grass material end up sharing with a tree material accidentally?
+4. **Q4 — OC objective scaling formula.** **Resolved: 40% flat with min-clamp on `ObjectiveDef`, NOT `CorralDef`.** [`shared/scenes/open-country.js:107`](../shared/scenes/open-country.js) — `requiredSheep: 40` is on the `objective` block. Add `ObjectiveDef.requiredSheepFraction: number` (default 0.40) + `ObjectiveDef.requiredSheepMin: number` (default 10). Helper: `getRequiredSheep(objective, totalSheep)`. Consumers: `js/GameState.js:409,693`, `js/components/GameHUD/ObjectiveBanner.js:36`. **`shared/GameStateValidation.js` is NOT a consumer** (verified via grep) — fence change there is unneeded.
 
-6. **Q6 — Bundle slim strategy.** Three approaches: (a) manual chunks via `build.rollupOptions.output.manualChunks` to split three.js + react + game code into named bundles, (b) dynamic-import the deferred React panels (Multiplayer, Leaderboard, Settings) so they load on first menu interaction not first paint, (c) precache shell + lazy-load assets via `vite-plugin-pwa` with a workbox config. Author lean: **(b) dynamic imports** for the deferred panels — simplest win, no Vite-config gymnastics, drops first-paint by exactly the size of the panel bundle. (a) is the next-best escalation if (b) doesn't move the needle enough.
+5. **Q5 — Grass-stretch root cause.** **Resolved: shader-leak hypothesis dis-proven by inspection.** `_patchTreeWindMaterial` is only called from `_setupTreeWind()` (iterates `this.models.trees`) and `patchFloraWind` (ScatterSystem flora callback). Grass material in GrassSystem never enters either path. New leading hypothesis: **vertex-shader NaN propagation in the grass blade shader near tree placements** (heightfield discontinuity → bad sample → NaN through wind/interaction displacement → vertex spikes to clip-space Infinity). Phase 3 step 1 pivots to add `?probeGrass=1` to capture per-blade post-shader Y values + log first 100 anomalies.
 
-These don't all block Phase 1. Q1 + Q2 should be resolved before Phase 5. Q3 should be resolved before re-baking trees in Phase 2. Q4 should be settled before touching the sim contract in Phase 6.
+6. **Q6 — Bundle slim strategy.** **Resolved: (b) dynamic-import deferred panels first, escalate to (a) manual chunks if needed.** Phase 7 starts with (b); rollup-plugin-visualizer pass tells whether (a) is also needed.
 
 ## Architecture / shared changes
 
-One contract change in this cycle: `CorralDef.requiredSheep: number` → `CorralDef.requiredSheepFraction: number` + `CorralDef.requiredSheepMin: number`. Shared schema in [`shared/scenes/types.js`](../shared/scenes/types.js); migration in Phase 6.
+One contract change in this cycle: `ObjectiveDef.requiredSheep: number` → adds `ObjectiveDef.requiredSheepFraction: number` (default `0.40`) + `ObjectiveDef.requiredSheepMin: number` (default `10`). The original `requiredSheep` is preserved as opt-out for legacy / non-scaling scenes (the helper uses `?? Math.max(min, floor(total*frac))`). Shared schema in [`shared/scenes/types.js`](../shared/scenes/types.js); migration in Phase 6.
 
 ## Phase 1 — Mobile asset visibility audit (~3-4hr) [foundation]
 
@@ -79,6 +79,8 @@ One contract change in this cycle: `CorralDef.requiredSheep: number` → `Corral
 
 **Acceptance:** No skyward grass blades visible near trees on any scene at any camera angle. OC grass extends to within ~10m of island edge. Field + RH grass extent unchanged.
 
+> Per [`cycle-17-research.md`](cycle-17-research.md) Q5: shader-leak hypothesis dis-proven. Step 1 pivots to **vertex-shader NaN-spike instrumentation** via `?probeGrass=1` URL param. Step 2 OC extent root cause is the density-falloff formula at [`GrassSystem.js:889`](../js/GrassSystem.js) (already extends to ~387m geometrically but density factor drops to ~0.016 at 380m on `densityRange: 0.92`); fix is to switch the falloff radius to `boundary.radius - 8` for island scenes.
+
 ## Phase 4 — Portrait-mobile HUD layout (~2-3hr)
 
 **Depends on:** none.
@@ -89,28 +91,29 @@ One contract change in this cycle: `CorralDef.requiredSheep: number` → `Corral
 
 **Acceptance:** No HUD elements overlap on portrait at the common mobile viewports. Camera-mode indicator visible without obscuring time/score. New playwright visual-regression spec for each (scene × viewport) pair.
 
-## Phase 5 — LOD chain extensions + culling sync (~5-7hr)
+## Phase 5 — LOD chain extensions + culling sync (~3-5hr, narrowed)
 
-**Depends on:** Phase 1 (need to know cull behavior baseline before extending), Phase 2 (no white-bark outliers in the impostor input).
+**Depends on:** Phase 1 (need cull-behavior baseline before extending), Phase 2 (no white-bark outliers in the impostor input).
 
-1. **Per-instance frustum-cull sync investigation.** InstancedMesh2's `perObjectFrustumCulled = true` is the default; if Matt sees out-of-frustum trees rendering OR in-frustum trees disappearing mid-pan, the per-instance BVH is stale. Profile via Chrome DevTools performance tab. If the BVH is the issue, manually call `instancedMesh.computeBVH({ margin: 0 })` after `addInstances` finishes (currently we don't, since the LOD chain handles distance — but addLOD changes the bounding sphere and might invalidate).
-2. **Add a LOD2-reduced tier.** Currently the chain is LOD0 (full) → LOD1 (reduced) at 80m → cross-billboard at 150m. Insert a LOD2-reduced tier at ~110m: same trunk geometry as LOD1 but `leaves.count` halved again (12 → 6 leaves per branch endpoint). This bridges the visual gap between LOD1 and the impostor swap.
-3. **Octahedral impostor evaluation via Pixel Forge Kiln.** Per Q1: Pixel Forge ships a Kiln subcommand `pixelforge kiln bake-imposter ./tree.glb --out ./tree.png --angles 16`. Run on tree1/tree2/pine, get a 16-angle atlas + UV layout. Evaluate visual quality at 250m+ vs current 3-quad cross. If demonstrably better, add as a new LOD3 entry at ~250m. Keep cross as LOD2 for the 150-250m band. If Kiln output doesn't fit (wrong UV layout, missing depth/normal channels, etc.), fall back to (b) building a `tools/bake-impostors.mjs` Three.js port of the same technique.
-4. **Wire vertex-shader sampling for octahedral.** New material with custom fragment that picks the 3 closest sprites to camera direction and blends. Reference: agargaro/octahedral-impostor + shaderbits.com/blog/octahedral-impostors.
+> Per [`cycle-17-research.md`](cycle-17-research.md) Q1: octahedral evaluation deferred to a future cycle. Phase 5 narrows to cull-sync investigation + a LOD2.5 mid-tier. Acceptance updated below.
 
-**Acceptance:** Trees render correctly at all distances on both desktop and mobile. Either: (a) octahedral impostor demonstrably better than 3-quad cross at 250m+ → ships as LOD3; or (b) cross-billboard remains the only impostor tier and we document why octahedral didn't fit in the cycle close notes.
+1. **Per-instance frustum-cull sync investigation.** InstancedMesh2's `perObjectFrustumCulled = true` is the default; if Matt sees out-of-frustum trees rendering OR in-frustum trees disappearing mid-pan, the per-instance BVH is stale. Profile via Chrome DevTools performance tab. If the BVH is the issue, manually call `instancedMesh.computeBVH({ margin: 0 })` after `addInstances` finishes — addLOD changes the bounding sphere and may invalidate the BVH.
+2. **Mobile LOD-distance retune.** Per Q2: mobile classic-camera at wide zoom positions camera 60-80m from action, so default `addLOD(..., 80)` for LOD1 + `addLOD(..., 150)` for impostor swap aggressively. On mobile, push to `100m` + `180m` to give wide-zoom headroom. Verify against the perf budget on Linux baseline.
+3. **(Optional) Add a LOD2.5-reduced tier.** Currently chain is LOD0 (full) → LOD1 (reduced) at 80m → cross-billboard at 150m. Insert a LOD2.5 at ~115m: same trunk geom as LOD1 but `leaves.count` halved again (12 → 6 per branch endpoint). Re-bake via [`tools/bake-trees.mjs`](../tools/bake-trees.mjs) with a new `--set=lod2half` matrix. Skip if Phase 1's mobile cull-sync fix alone meets the visibility acceptance.
 
-## Phase 6 — OC portal scales to total sheep (~1-2hr)
+**Acceptance:** Trees render correctly at all distances on desktop and mobile. Per-instance cull is stable (no in-frustum trees disappearing). Either LOD2.5 ships OR cycle-close notes document why it wasn't needed.
+
+## Phase 6 — OC objective scales to total sheep (~1-2hr)
 
 **Depends on:** none.
 
-1. **Schema change in [`shared/scenes/types.js`](../shared/scenes/types.js).** Add `CorralDef.requiredSheepFraction: number` (default 0.40) + `CorralDef.requiredSheepMin: number` (default 10). Keep `requiredSheep: number` as a fallback for scenes that want to opt out (zap effect on RH).
-2. **Compute-at-game-start helper.** New `shared/CorralLogic.js` (or add to existing) — `getRequiredSheep(corral, totalSheep)` returns `corral.requiredSheep ?? Math.max(corral.requiredSheepMin, Math.floor(totalSheep * corral.requiredSheepFraction))`.
-3. **Update consumers.** Every site that reads `corral.requiredSheep` directly — sim (`worker/src/GameSim.js` + `shared/GameStateValidation.js`) and UI (HUD progress indicator) — routes through the helper.
-4. **Update [`shared/scenes/open-country.js`](../shared/scenes/open-country.js)** to drop the hardcoded 40 in favor of fraction 0.40. Field / RH retain their `requiredSheep` (or migrate at the same time if appropriate).
-5. **Sim-baseline check.** Re-run the baseline traces. Since the formula isn't part of per-tick state, traces should be byte-identical. If not, the corral logic touched the sim path — back out and re-think.
+1. **Schema change in [`shared/scenes/types.js`](../shared/scenes/types.js).** Add `ObjectiveDef.requiredSheepFraction: number` (default 0.40) + `ObjectiveDef.requiredSheepMin: number` (default 10). Keep `requiredSheep: number` as opt-out for legacy / non-scaling scenes.
+2. **Compute-at-game-start helper.** New `shared/ObjectiveLogic.js` — `getRequiredSheep(objective, totalSheep)` returns `objective.requiredSheep ?? Math.max(objective.requiredSheepMin ?? 10, Math.floor(totalSheep * (objective.requiredSheepFraction ?? 0.40)))`.
+3. **Update consumers.** Every site that reads `objective.requiredSheep` directly — `js/GameState.js:409,693` + `js/components/GameHUD/ObjectiveBanner.js:36` — routes through the helper. (`shared/GameStateValidation.js` is NOT a consumer; verified via grep.)
+4. **Update [`shared/scenes/open-country.js`](../shared/scenes/open-country.js)** to drop the hardcoded 40 in favor of the 0.40 default. Update the explanatory comment ("20% of 200" → "40% of total mode sheep").
+5. **Sim-baseline check.** Re-run baseline traces. Since the formula isn't part of per-tick state, traces should be byte-identical. If not, back out — the change should not enter the deterministic core.
 
-**Acceptance:** Portal unlock count scales with total sheep mode (Classic 200→80, Extreme 1000→400, Insane 3000→1200, Chaos 5000→2000). Sim-baseline byte-identical. UI HUD shows correct count.
+**Acceptance:** Objective hold-count scales with total sheep mode (Classic 200→80, Extreme 1000→400, Insane 3000→1200, Chaos 5000→2000). Sim-baseline byte-identical. ObjectiveBanner shows correct count.
 
 ## Phase 7 — Bundle slim (deferred from cycle's original framing) (~4-6hr)
 
@@ -140,10 +143,11 @@ Phases 1, 2, 3, 4, 6 can ship in any order. Phase 5 needs the visibility baselin
 ## Frozen files (cycle-specific additions)
 
 Phase 6 modifies:
-- [`shared/scenes/types.js`](../shared/scenes/types.js) — schema add for `requiredSheepFraction` + `requiredSheepMin`. Backwards-compat: keep `requiredSheep` as opt-out. Migration is additive — every existing scene continues working.
-- [`shared/GameStateValidation.js`](../shared/GameStateValidation.js) — sim-core file, fence-authorized for Phase 6 only.
+- [`shared/scenes/types.js`](../shared/scenes/types.js) — schema add for `ObjectiveDef.requiredSheepFraction` + `ObjectiveDef.requiredSheepMin`. Backwards-compat: keep `requiredSheep` as opt-out. Migration is additive — every existing scene continues working.
 
-Both must be authorized in the Phase 6 task brief per [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md). Sim-baseline regenerate NOT required (formula doesn't change per-tick state); if baseline diverges, back out the change.
+`shared/GameStateValidation.js` was originally listed as fence-authorized but is NOT a `requiredSheep` consumer (verified via grep on 2026-05-04 in [`cycle-17-research.md`](cycle-17-research.md)). Phase 6 does not need to touch it.
+
+The schema change must be authorized in the Phase 6 task brief per [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md). Sim-baseline regenerate NOT required (formula doesn't change per-tick state); if baseline diverges, back out the change.
 
 ## Hard stops
 
@@ -153,7 +157,7 @@ Surface to the user, do not proceed:
 2. Sim-baseline test failure — escalate, don't regenerate fixtures.
 3. Visual regression on a previously-passing scene — fix or revert before adding new scope.
 4. Frametime regression > 5% on `perf-check` (now push-gating per Cycle 16) — diagnose before adding new scope.
-5. Phase 5 octahedral impostor doesn't reach quality parity with current cross-billboard — keep cross, document why, move on. Don't ship a worse impostor.
+5. Phase 5 LOD2.5 mid-tier visibly worse than current LOD1 → 150m impostor — keep current chain, document why, move on. Don't ship a worse intermediate.
 
 ## What NOT to do during this cycle
 

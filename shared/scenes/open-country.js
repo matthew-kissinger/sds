@@ -97,14 +97,16 @@ export const openCountry = {
     // can't see a wall.
     perimeterFence: false,
 
-    // Cycle 7 Phase 3: gather → drive multi-stage objective. Player must
-    // hold ≥40 sheep (20% of 200) inside the round-up zone at (0, 50)
-    // radius 30m for 2.0 seconds before the portal at (0, 295) accepts
-    // retirement. First-pass values, easy on purpose so the verb reads —
-    // tune up if it's trivial.
+    // Cycle 7 Phase 3 / Cycle 17 Phase 6: gather → drive multi-stage objective.
+    // Player must hold (≥ 40% of total mode sheep) inside the round-up zone at
+    // (0, 50) radius 30m for 2.0 seconds before the portal at (0, 295) accepts
+    // retirement. Per-mode: Classic 200→80, Extreme 1000→400, Insane 3000→1200,
+    // Chaos 5000→2000. Min clamp 10 keeps the gate meaningful at the smallest
+    // sandbox counts. Helper: `shared/ObjectiveLogic.getRequiredSheep`.
     objective: {
         roundupZone: { x: 0, z: 50, radius: 30 },
-        requiredSheep: 40,
+        requiredSheepFraction: 0.40,
+        requiredSheepMin: 10,
         holdRequired: 2.0
     },
 

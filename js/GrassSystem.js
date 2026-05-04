@@ -836,9 +836,25 @@ export class GrassSystem {
      * Generate chunks with grass instances
      */
     generateChunks() {
-        const { worldSize, chunkSize, clumpsPerChunk } = this.config;
-        const halfWorld = worldSize / 2;
-        const chunksPerSide = Math.ceil(worldSize / chunkSize);
+        const { chunkSize } = this.config;
+        // Cycle 17 Phase 3: on DESKTOP island scenes, expand the chunk grid
+        // to the boundary so grass extends to ~island edge. Mobile keeps
+        // the original worldSize=220 cap (extending to 776m for OC blows
+        // mobile init budget). Per-chunk clump count is scaled DOWN by
+        // (originalArea / expandedArea) so total clumps stay near the
+        // original budget — extra perimeter chunks share the existing
+        // budget rather than adding to it.
+        const isIsland = this.boundary?.kind === 'island';
+        const expandForIsland = isIsland && !this.isMobile;
+        const gridExtent = expandForIsland
+            ? 2 * (this.boundary.radius + 8)
+            : this.config.worldSize;
+        const areaRatio = expandForIsland
+            ? Math.min(1, (this.config.worldSize * this.config.worldSize) / (gridExtent * gridExtent))
+            : 1;
+        const clumpsPerChunk = Math.max(80, Math.floor(this.config.clumpsPerChunk * areaRatio));
+        const halfWorld = gridExtent / 2;
+        const chunksPerSide = Math.ceil(gridExtent / chunkSize);
 
         for (let cx = 0; cx < chunksPerSide; cx++) {
             for (let cz = 0; cz < chunksPerSide; cz++) {
@@ -884,9 +900,22 @@ export class GrassSystem {
             // Check exclusion zones
             if (this.isExcluded(x, z)) continue;
 
-            // Distance-based density falloff
+            // Distance-based density falloff. Cycle 17 Phase 3: on island
+            // scenes, hold density flat to ~70% of the safe radius then
+            // taper sharply over the last 30%. Pre-fix the formula used
+            // worldSize*densityRange (=386m for OC), giving a 21% accept
+            // rate at the island edge — read as "grass only in middle".
             const distFromCenter = Math.sqrt(x * x + z * z);
-            const densityFactor = Math.max(0, 1 - distFromCenter / (this.config.worldSize * this.config.densityRange));
+            let densityFactor;
+            if (this.boundary?.kind === 'island') {
+                const safeR = this.boundary.radius - 8;
+                const flatR = safeR * 0.70;
+                if (distFromCenter <= flatR) densityFactor = 1.0;
+                else if (distFromCenter >= safeR) densityFactor = 0;
+                else densityFactor = 1 - (distFromCenter - flatR) / (safeR - flatR);
+            } else {
+                densityFactor = Math.max(0, 1 - distFromCenter / (this.config.worldSize * this.config.densityRange));
+            }
             if (Math.random() > densityFactor * 0.8 + 0.2) continue;
 
             validPositions.push({ x, z });
@@ -909,11 +938,15 @@ export class GrassSystem {
             // via triangle interpolation, so the old -0.1 "dip into mesh"
             // hack is gone. Blades sit on the surface, not 10cm below it.
             let baseY = this.heightfield ? this.heightfield.meshSampleY(pos.x, pos.z) : 0;
-            // Cycle 15 Phase 4: defensive clamp. NaN/Infinity propagates as
-            // "blade-to-the-sky" anomaly on the GPU; bound to a generous Y
-            // range so any out-of-band sampler result becomes a flat-skirt
-            // placement instead of a rogue blade.
-            if (!Number.isFinite(baseY) || baseY > 50 || baseY < -10) baseY = 0;
+            // Cycle 17 Phase 3: tightened from prior `> 50 || < -10` clamp
+            // to `> 10 || < -10`. Per-scene terrain heightScale tops out
+            // at 6 (RH) — Y > 10 is a heightfield discontinuity, not a
+            // legit terrain elevation. Pre-tightening, gallery-review
+            // 2026-05-04 saw skyward grass blades near trees that the
+            // loose `> 50` cap allowed through (any spike in [10, 50]
+            // produced a tall blade). New cap snaps the spike to 0,
+            // which is visually consistent with the surrounding flat skirt.
+            if (!Number.isFinite(baseY) || baseY > 10 || baseY < -10) baseY = 0;
             dummy.position.set(pos.x, baseY, pos.z);
 
             // Random rotation and scale

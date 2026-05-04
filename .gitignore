@@ -119,3 +119,4 @@ TODO.local.txt
 # Cycle 15 Phase 1: AI asset generation staging (large GLBs, intermediates).
 # Picks file IS committed; staging is regenerable via `npm run gen:meshy`.
 tools/asset-gallery/staging/
+tests/perf-baseline/last-run.json

@@ -4,6 +4,7 @@ import { FieldConfig, FIELD_SIZES, GATE_DEFAULTS, PASTURE_DEFAULTS } from './Fie
 import { getFenceCollisionSystem, resetFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { getExtremeBoidSystem, resetExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { emptyObstacles } from '../shared/SceneObstacles.js';
+import { getRequiredSheep } from '../shared/ObjectiveLogic.js';
 import { getCurrentRoom } from './GameBridge.js';
 
 /**
@@ -685,16 +686,33 @@ export class GameState {
     setObjective(objective) {
         if (!objective) {
             this.objective = null;
+            this._objectiveDef = null;
             return;
         }
+        // Cycle 17 Phase 6: stash the def so startGame can recompute the
+        // required-sheep count once totalSheep is set per the chosen mode.
+        // The initial value uses whatever totalSheep is at this moment
+        // (likely 200 default before mode-pick); _refreshObjective() runs
+        // again at startGame to reconcile against the actual mode.
+        this._objectiveDef = objective;
         this.objective = {
             stage: 'roundup',
             roundupZone: { x: objective.roundupZone.x, z: objective.roundupZone.z, radius: objective.roundupZone.radius },
-            requiredSheep: objective.requiredSheep,
+            requiredSheep: getRequiredSheep(objective, this.totalSheep),
             holdRequired: objective.holdRequired,
             sheepInZone: 0,
             holdTimer: 0
         };
+    }
+
+    /**
+     * Cycle 17 Phase 6: recompute objective.requiredSheep against the
+     * current totalSheep. Called after startGame sets the per-mode count.
+     * No-op when there's no objective.
+     */
+    _refreshObjective() {
+        if (!this.objective || !this._objectiveDef) return;
+        this.objective.requiredSheep = getRequiredSheep(this._objectiveDef, this.totalSheep);
     }
     
     getGate() {
@@ -824,6 +842,12 @@ export class GameState {
             // We need the scene reference to recreate - store it for later use
             this.needsFlockRecreation = true;
         }
+
+        // Cycle 17 Phase 6: now that totalSheep reflects the chosen mode,
+        // recompute the round-up gating count via the fraction/min formula.
+        // Pre-fix the OC objective hardcoded `requiredSheep: 40` regardless
+        // of mode; now Classic 200→80, Extreme 1000→400, etc.
+        this._refreshObjective();
 
         // Initialize competitive/timed mode data if provided
         if ((mode === 'competitive' || mode === 'timed') && competitiveData) {

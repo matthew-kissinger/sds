@@ -132,13 +132,21 @@
 /**
  * Cycle 7 Phase 3: multi-stage objective. When set on a scene, the scene's
  * corral retirement is gated until the round-up condition is met — the player
- * must hold `requiredSheep` count within `roundupZone` for `holdRequired`
+ * must hold the required-sheep count within `roundupZone` for `holdRequired`
  * seconds. Until then, sheep that wander into the corral don't retire.
+ *
+ * Cycle 17 Phase 6: required count can scale with total mode sheep via
+ * `requiredSheepFraction` + `requiredSheepMin`. If `requiredSheep` is set
+ * explicitly, it wins (legacy + opt-out for non-scaling scenes). The
+ * `getRequiredSheep` helper in `shared/ObjectiveLogic.js` resolves all
+ * three fields into a single value at game-start.
  *
  * @typedef {Object} ObjectiveDef
  * @property {{x: number, z: number, radius: number}} roundupZone Center + radius of the gather zone.
- * @property {number} requiredSheep   Number of sheep that must be inside the zone simultaneously.
- * @property {number} holdRequired    Seconds the count must be held before stage transitions.
+ * @property {number} [requiredSheep]            Explicit count. When present, fraction/min are ignored.
+ * @property {number} [requiredSheepFraction]    Fraction of total sheep (default 0.40).
+ * @property {number} [requiredSheepMin]         Lower bound on the computed count (default 10).
+ * @property {number} holdRequired               Seconds the count must be held before stage transitions.
  */
 
 /**

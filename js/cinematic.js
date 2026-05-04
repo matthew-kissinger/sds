@@ -22,25 +22,10 @@
  * of building a new one.
  */
 import * as THREE from 'three';
-
-export function isCinematicMode() {
-    if (typeof location === 'undefined') return false;
-    return new URLSearchParams(location.search).get('cinematic') === '1';
-}
-
-export function isUiHidden() {
-    if (typeof location === 'undefined') return false;
-    return new URLSearchParams(location.search).get('ui') === 'off';
-}
-
-export function getRequestedSun() {
-    if (typeof location === 'undefined') return null;
-    const raw = new URLSearchParams(location.search).get('sun');
-    if (raw == null) return null;
-    const v = parseFloat(raw);
-    if (!Number.isFinite(v)) return null;
-    return Math.max(0, Math.min(1, v));
-}
+// Cycle 17 Phase 7: URL-param helpers moved to ./cinematic-url.js so main.js
+// can import them without pulling three.js into the main bundle. Re-exported
+// here for any legacy import paths.
+export { isCinematicMode, isUiHidden, getRequestedSun } from './cinematic-url.js';
 
 /**
  * Lerp a camera along a list of pose keyframes. Each keyframe is

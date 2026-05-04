@@ -144,6 +144,13 @@ export class TerrainBuilder {
         /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
         this.heightfield = null;
 
+        // Cycle 17 Phase 1: opt-in tree-creation diagnostics for the
+        // mobile-probe harness. URL `?probeRender=1` flips this so
+        // createTrees + _bakeTreeImpostor publish per-type bake outcomes
+        // to `window.__sds.probe.trees`.
+        this._probeRender = typeof window !== 'undefined'
+            && new URLSearchParams(window.location?.search ?? '').get('probeRender') === '1';
+
         // Cycle 14 Phase 3: shared tree-wind uniforms. All tree-leaf
         // materials patched via _patchTreeWindMaterial reference these
         // (one set; per-frame update touches every patched material).
@@ -336,6 +343,22 @@ export class TerrainBuilder {
                     });
                     if (!isFinite(allMinY)) { allMinY = 0; allMaxY = 1; }
                     const groundRef = isFinite(trunkMinY) ? trunkMinY : allMinY;
+                    // Cycle 17 Phase 1: reset every node's local transform
+                    // (root + intermediate Groups) after baking child world
+                    // matrices into geometry. Otherwise gltf.scene's Group
+                    // hierarchy retains its native scale (~0.021 for EZ-Tree
+                    // GLBs), and any later `Box3.setFromObject(modelClone)` —
+                    // which `_bakeTreeImpostor` does — re-applies that scale
+                    // on top of the already-world-baked geometry, producing
+                    // a ~30x undersized cross-billboard impostor (invisible
+                    // at LOD2 distance). createTrees doesn't hit this because
+                    // it consumes child.geometry directly.
+                    root.traverse(node => {
+                        node.position.set(0, 0, 0);
+                        node.quaternion.identity();
+                        node.scale.set(1, 1, 1);
+                    });
+                    root.updateMatrixWorld(true);
                     root.userData.modelBaseYOffset = -groundRef;
                     root.userData.modelBboxMinY = allMinY;
                     root.userData.modelBboxMaxY = allMaxY;
@@ -368,6 +391,15 @@ export class TerrainBuilder {
                         child.scale.set(1, 1, 1);
                         child.updateMatrixWorld(true);
                     });
+                    // Match LOD0: drop every node's local transform (root +
+                    // intermediate Groups) so any Box3.setFromObject sees
+                    // identity-rooted geometry.
+                    root.traverse(node => {
+                        node.position.set(0, 0, 0);
+                        node.quaternion.identity();
+                        node.scale.set(1, 1, 1);
+                    });
+                    root.updateMatrixWorld(true);
                     this.models.treesLod1[model.name] = root;
                     console.log(`[OK] Loaded tree LOD1 model: ${model.name}`);
                 }).catch(err => {
@@ -424,6 +456,14 @@ export class TerrainBuilder {
                     }
                     minY *= normFactor;
                     maxY *= normFactor;
+                    // Cycle 17 Phase 1: same root + intermediate-Group reset
+                    // as trees, so Box3.setFromObject(rockModel) stays sane.
+                    root.traverse(node => {
+                        node.position.set(0, 0, 0);
+                        node.quaternion.identity();
+                        node.scale.set(1, 1, 1);
+                    });
+                    root.updateMatrixWorld(true);
                     root.userData.modelBaseYOffset = -minY;
                     root.userData.modelBboxMinY = minY;
                     root.userData.modelBboxMaxY = maxY;
@@ -1112,6 +1152,17 @@ export class TerrainBuilder {
         const renderer = getSceneManager()?.getRenderer();
         const instancedMeshes = [];
 
+        // Cycle 17 Phase 1: probe hook (gated on `?probeRender=1`). Captures
+        // renderer-truthy + per-type bake outcome + final LOD chain so the
+        // mobile-probe harness can diagnose invisible-trees-at-distance
+        // without DevTools. No cost when the param isn't set.
+        const probe = this._probeRender ? (window.__sds = window.__sds || {}, window.__sds.probe = window.__sds.probe || { trees: {} }) : null;
+        if (probe) {
+            probe.trees.rendererAtCreate = !!renderer;
+            probe.trees.isMobile = !!this.isMobile;
+            probe.trees.byType = {};
+        }
+
         // Cache baked cross-billboard impostors per tree type — survives
         // dispose() like the models cache. Cycle 11 Phase 1 A8 finding:
         // re-baking on each scene swap leaks one WebGLRenderTarget per
@@ -1147,9 +1198,36 @@ export class TerrainBuilder {
 
             // Bake cross-billboard impostor (texture + bbox) once per type.
             let impostor = this._bakeImpostorCache.get(treeType);
+            const impostorWasCached = !!impostor;
             if (!impostor && renderer) {
                 impostor = this._bakeTreeImpostor(lod0Model, renderer);
                 if (impostor) this._bakeImpostorCache.set(treeType, impostor);
+            }
+            if (probe) {
+                probe.trees.byType[treeType] = {
+                    instances: instances.length,
+                    lod1Available: !!lod1Model,
+                    impostorBaked: !!impostor,
+                    impostorFromCache: impostorWasCached,
+                    impostorWidth: impostor ? +impostor.width.toFixed(3) : null,
+                    impostorBboxMinY: impostor ? +impostor.bboxMinY.toFixed(3) : null,
+                    impostorBboxMaxY: impostor ? +impostor.bboxMaxY.toFixed(3) : null,
+                    bakeBox: probe.trees.lastBakeBox ? { ...probe.trees.lastBakeBox } : null,
+                    lod0ChildBoxes: (() => {
+                        const out = [];
+                        lod0Model.traverse(c => {
+                            if (!c.isMesh || !c.geometry) return;
+                            if (!c.geometry.boundingBox) c.geometry.computeBoundingBox();
+                            const bb = c.geometry.boundingBox;
+                            out.push({
+                                name: c.name,
+                                size: { x: +(bb.max.x - bb.min.x).toFixed(3), y: +(bb.max.y - bb.min.y).toFixed(3), z: +(bb.max.z - bb.min.z).toFixed(3) }
+                            });
+                        });
+                        return out;
+                    })(),
+                    rendererAvailable: !!renderer,
+                };
             }
             const billboardGeo = impostor
                 ? this._createCrossBillboardGeometry(impostor.width, impostor.bboxMinY, impostor.bboxMaxY)
@@ -1246,9 +1324,14 @@ export class TerrainBuilder {
     _bakeTreeImpostor(model, renderer) {
         const bakeScene = new THREE.Scene();
         bakeScene.background = null;
-        const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+        // Cycle 17 Phase 2: dropped ambient 0.55 → 0.30 + dirLight 0.85 → 0.55
+        // (combined 0.85× vs prior 1.40×). Prior values washed brown bark
+        // (e.g. 0x6e4f30 = RGB 0.43/0.31/0.19) up to RGB ~0.60/0.43/0.27 —
+        // a tan/cream tone that read as a "white bark" silhouette against
+        // grass at LOD2 distance. New values keep brown brown.
+        const ambient = new THREE.AmbientLight(0xffffff, 0.30);
         bakeScene.add(ambient);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.55);
         dirLight.position.set(2, 4, 3);
         bakeScene.add(dirLight);
 
@@ -1265,6 +1348,13 @@ export class TerrainBuilder {
         if (!isFinite(box.min.x) || box.isEmpty()) return null;
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
+        // Cycle 17 Phase 1 probe: capture pre-camera bbox size so the
+        // mobile-probe harness can detect zero-width bake regressions.
+        if (this._probeRender && typeof window !== 'undefined') {
+            window.__sds = window.__sds || {};
+            window.__sds.probe = window.__sds.probe || { trees: {} };
+            window.__sds.probe.lastBakeBox = { x: size.x, y: size.y, z: size.z, minY: box.min.y, maxY: box.max.y };
+        }
 
         // Pad the camera frustum slightly so the tree silhouette doesn't
         // clip against the texture edges (alphaTest would chew off branch

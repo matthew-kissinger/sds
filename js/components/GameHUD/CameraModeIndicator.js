@@ -6,6 +6,7 @@
  */
 import React, { createElement } from 'react';
 import { getSceneManager } from '../../GameBridge.js';
+import { useResponsive } from '../hooks/usePlatform.js';
 
 const MODE_LABEL = {
     classic: 'Classic',
@@ -22,17 +23,30 @@ export function CameraModeIndicator({ mode, platform = 'desktop' }) {
     };
 
     // Desktop: top-center (slot is free; SheepCounter sits top-left, GameTimer top-right).
-    // Mobile: top-left. The MobileHUD chip lives top-center (pause + sheep + timer + stamina)
-    // so a top-center camera chip would stack on it; the right edge has the zoom rail in
-    // landscape and the panel itself can extend that far on narrow phones. Top-left is empty
-    // on mobile (SheepCounter is desktop-only) and the joystick is well below it.
+    // Mobile landscape: top-left at top-2 (clear of MobileHUD chip which is top-center;
+    // landscape is wide enough that left + center don't collide).
+    // Mobile portrait: dropped to top-left BELOW MobileHUD (Cycle 17 Phase 4 — gallery
+    // review reported overlap on iPhone SE 375x667 where the centered MobileHUD's
+    // ~240px footprint clipped into the top-left chip). top: 60px clears the chip.
+    const { isPortrait } = useResponsive();
+    const portraitMobile = isMobile && isPortrait;
+
     const positionClass = isMobile
-        ? 'fixed top-2 left-2 z-20 animate-slide-down pointer-events-auto'
+        ? 'fixed left-2 z-20 animate-slide-down pointer-events-auto'
         : 'fixed top-6 left-1/2 -translate-x-1/2 z-20 animate-slide-down pointer-events-auto';
+
+    const inlineTop = portraitMobile
+        ? 'max(env(safe-area-inset-top, 0px), 60px)'
+        : isMobile
+            ? 'max(env(safe-area-inset-top, 8px), 8px)'
+            : undefined;
 
     return createElement('div', {
         className: positionClass,
-        style: { paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)' }
+        style: {
+            paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)',
+            ...(inlineTop ? { top: inlineTop } : {}),
+        }
     },
         createElement('button', {
             type: 'button',

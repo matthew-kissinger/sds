@@ -22,11 +22,13 @@ import { Heightfield } from '../shared/terrain/Heightfield.js';
 import { Atmosphere } from './atmosphere/index.js';
 import { SunBillboard } from './effects/SunBillboard.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
-import { LocalInputHandler } from './LocalInputHandler.js';
-import { LocalMultiplayerManager } from './LocalMultiplayerManager.js';
-import { TwoPlayerCamera } from './TwoPlayerCamera.js';
+// Cycle 17 Phase 7: local-multiplayer modules dynamic-imported in
+// startLocalGame() so they only ship when the user actually picks Local Mode.
+// Keeps ~860 LoC out of the main bundle for the 99% of users who never use it.
 import { captureFramebufferSample, isProbeEnabled, log as probeLog, drainGlErrors } from './diagnostics/glProbe.js';
-import { isCinematicMode, isUiHidden, getRequestedSun, installCinemaApi } from './cinematic.js';
+import { isCinematicMode, isUiHidden, getRequestedSun } from './cinematic-url.js';
+// installCinemaApi (three.js-dependent) is dynamic-imported only when
+// `?cinematic=1` is set, keeping it out of the main bundle.
 
 /**
  * Core Web Vitals monitoring for SEO performance tracking
@@ -303,6 +305,21 @@ class SheepDogSimulation {
             };
             console.log('[PERF] __perfHarness installed. Call window.__perfHarness.startSampling() to capture.');
         }
+
+        // Cycle 17 Phase 1: lightweight diagnostic surface for the
+        // mobile-probe harness. URL `?probeRender=1` exposes
+        // window.__sds.cameraController + scene-manager so the harness
+        // can max-zoom the classic camera and read render.info without
+        // depending on `?cinematic=1` (which flips preserveDrawingBuffer).
+        if (new URLSearchParams(location.search).get('probeRender') === '1') {
+            const sm = this.sceneManager;
+            const cc = this.sceneManager.getCameraController?.();
+            window.__sds = window.__sds || {};
+            window.__sds.cameraController = cc;
+            window.__sds.sceneManager = sm;
+            window.__sds.maxZoom = () => cc?.setZoom?.(cc.maxDistance);
+            console.log('[PROBE] window.__sds installed (probeRender=1)');
+        }
         this.webVitalsMonitor = new WebVitalsMonitor();
         this.gameAssetLoader = new GameAssetLoader();
         this.menuController = new MenuController(this.sceneManager);
@@ -491,7 +508,10 @@ class SheepDogSimulation {
 
             // Cycle 10 Phase 3: cinematic capture infrastructure. First-run-only;
             // installCinemaApi() is itself idempotent (early-out on window.__sdsCinema).
+            // Cycle 17 Phase 7: dynamic-import keeps the three.js-dependent
+            // cinema surface out of main.js for non-cinematic users.
             if (isCinematicMode()) {
+                const { installCinemaApi } = await import('./cinematic.js');
                 installCinemaApi(this);
                 if (isUiHidden()) {
                     const overlay = document.getElementById('react-overlay');
@@ -1585,6 +1605,18 @@ class SheepDogSimulation {
         }
 
         console.log('[LOCAL] Starting local 2-player game:', localConfig);
+
+        // Cycle 17 Phase 7: load local-MP modules on demand. ~860 LoC kept
+        // out of main.js for non-LocalMode users.
+        const [
+            { LocalMultiplayerManager },
+            { LocalInputHandler },
+            { TwoPlayerCamera },
+        ] = await Promise.all([
+            import('./LocalMultiplayerManager.js'),
+            import('./LocalInputHandler.js'),
+            import('./TwoPlayerCamera.js'),
+        ]);
 
         // Store mode
         this.gameMode = 'local';

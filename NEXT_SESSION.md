@@ -1,6 +1,6 @@
-# Next Session — Cycle 17 (`mobile-hardening-lod-and-bundle-slim`) plan written; ready for `/cycle-start`
+# Next Session — Cycle 17 (`mobile-hardening-lod-and-bundle-slim`) shipped end-to-end; ready for `/cycle-close`
 
-> Updated 2026-05-04 (Cycle 16 closed; Cycle 17 plan written from gallery-review regressions). **Active plan: [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md)** — 7 phases folded in from Matt's post-deploy review (mobile asset visibility, white-bark tree, grass anomalies, portrait HUD overlap, LOD chain extensions + octahedral impostor evaluation via local Pixel Forge Kiln, OC portal scaling, bundle slim). Live on [sheepdogsim.com](https://sheepdogsim.com) at the cycle-16-close push. Last closed cycle: [`docs/archive/cycles/cycle-16-plan.md`](docs/archive/cycles/cycle-16-plan.md). All deploy + e2e + perf-check jobs green in CI.
+> Updated 2026-05-04 (Cycle 17 ran autonomous end-to-end through all 7 phases). **Active plan: [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md)** + research doc [`docs/cycle-17-research.md`](docs/cycle-17-research.md) (open-question resolutions). Headline finding: `_bakeTreeImpostor` was reading `Box3.setFromObject(modelClone)` against a gltf.scene that retained ~0.021× native Group scales, producing a ~30× undersized cross-billboard. Fix: reset every node's local transform after baking child world matrices into geometry. Mobile cross-billboards now render visibly at LOD2. e2e smoke spec gates the regression. Live on [sheepdogsim.com](https://sheepdogsim.com) at the cycle-16-close push (ship after this commit's CI passes). Last closed cycle: [`docs/archive/cycles/cycle-16-plan.md`](docs/archive/cycles/cycle-16-plan.md).
 
 ## Where the project stands (Cycle 16 close)
 
