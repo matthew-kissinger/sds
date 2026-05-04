@@ -143,10 +143,19 @@ jobs:
         working-directory: worker
       - run: cp worker/.dev.vars.example worker/.dev.vars
       - run: npx playwright install --with-deps chromium
-      - run: npm run dev:setup
-      - name: Start dev server in background
+      # The root `dev:setup` + `dev:worker` npm scripts do `cd worker &&
+      # wrangler ...` which loses npm's bin-PATH injection in CI (wrangler
+      # lives in worker/node_modules/.bin). Run via `npx wrangler` directly
+      # so CI doesn't need wrangler globally.
+      - name: Run D1 migrations (dev:setup equivalent)
+        working-directory: worker
         run: |
-          npm run dev > /tmp/dev.log 2>&1 &
+          npx wrangler d1 execute sds-db --local --file=migrations/0001_init.sql
+          npx wrangler d1 execute sds-db --local --file=migrations/0002_mode_matrix.sql
+      - name: Start dev server (vite + wrangler) in background
+        run: |
+          npx vite --port 3000 > /tmp/vite.log 2>&1 &
+          (cd worker && npx wrangler dev) > /tmp/wrangler.log 2>&1 &
           # Poll until vite is up (max 60s).
           for i in $(seq 1 60); do
             if curl -sf http://localhost:3000/ > /dev/null; then
@@ -205,12 +214,19 @@ jobs:
         run: cp worker/.dev.vars.example worker/.dev.vars
       - if: steps.gate.outputs.skip != 'true'
         run: npx playwright install --with-deps chromium
+      # See perf-baseline-capture comment above for why we bypass the root
+      # dev:setup / dev:worker scripts in CI.
       - if: steps.gate.outputs.skip != 'true'
-        run: npm run dev:setup
-      - if: steps.gate.outputs.skip != 'true'
-        name: Start dev server in background
+        name: Run D1 migrations (dev:setup equivalent)
+        working-directory: worker
         run: |
-          npm run dev > /tmp/dev.log 2>&1 &
+          npx wrangler d1 execute sds-db --local --file=migrations/0001_init.sql
+          npx wrangler d1 execute sds-db --local --file=migrations/0002_mode_matrix.sql
+      - if: steps.gate.outputs.skip != 'true'
+        name: Start dev server (vite + wrangler) in background
+        run: |
+          npx vite --port 3000 > /tmp/vite.log 2>&1 &
+          (cd worker && npx wrangler dev) > /tmp/wrangler.log 2>&1 &
           for i in $(seq 1 60); do
             if curl -sf http://localhost:3000/ > /dev/null; then
               echo "vite up after ${i}s"; break
