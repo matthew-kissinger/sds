@@ -1,57 +1,55 @@
-# Next Session — Cycle 18 (`scene-stability-and-octahedral-impostors`) plan drafted; autonomous overnight run authorised
+# Next Session — Cycle 19 (`visual-verification-and-octahedral-polish-and-v1.1.0`) plan scaffolded
 
-> Updated 2026-05-04. **Active plan: [`docs/cycle-18-plan.md`](docs/cycle-18-plan.md)** — 3 phases: (1) RH full-island grass via per-scene `grassRadius`, (2) scene-swap + mode-switch state hygiene (rocks/mushrooms terrain Y, sheep out-of-bounds), (3) octahedral impostors (real ones — Cycle 17 shipped only cross-billboard). **Plan declares an AUTONOMOUS EXECUTION MANDATE — overnight run, do not wait for user responses, all 6 open questions pre-resolved.** Run `/cycle-start` to orient. Cycle 17 shipped end-to-end through all 7 phases plus a follow-up commit (bb922fb) addressing four post-deploy regressions; not yet formally `/cycle-close`'d but all work merged + live. Cycle 17 plan still at [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md), research at [`docs/cycle-17-research.md`](docs/cycle-17-research.md).
+> Updated 2026-05-04. **Active plan: [`docs/cycle-19-plan.md`](docs/cycle-19-plan.md)** — 3 phases: (1) visual verification of Cycle 18 phases on real WebGL hardware, (2) octahedral polish (3-tile blend / normal-map / 32-angle) only if Phase 1 surfaces visible defects, (3) `v1.1.0` hero cards + cinematic videos + tag (Cycle 16 carryover). Run `/cycle-start` to orient. Cycle 18 closed end-to-end: shipped per-scene `grassRadius`, scene-swap + mode-restart state hygiene, real octahedral impostors. Cycle 17 also closed retroactively (was shipped 2026-05-04 but never formally `/cycle-close`'d).
 
-## Where the project stands (Cycle 16 close)
+## Where the project stands (Cycle 18 close)
 
-Cycle 16 ran end-to-end autonomous through Phases 1-5 in one pass. Tree foliage LOD chain shipped (per-instance `InstancedMesh2.addLOD`: LOD0 → LOD1 at 80m → cross-billboard impostor at 150m), retiring the Cycle 14 world-distance-from-origin split. Recipe re-tune layered on top (single-billboard leaves, halved leaf count, tightened bark, re-rolled seeds). Linux perf baseline captured + `perf-check` graduated to gate every push. Two bug fixes Matt flagged during gallery review (mobile bottom-bar overlap + auto-refresh-mid-interaction) shipped in the same pass. Phase 6 (hero cards + v1.1.0 tag) carryover — needs Matt at the keyboard for `__sdsCinema.freeFly()` posing.
+Cycle 18 ran end-to-end autonomous overnight from a single "resume and run without checkins" prompt. All three phases shipped + pushed in independent commits with CI gates green on Pages + Worker deploys. Plan declared an autonomous mandate with all 6 open questions pre-resolved; agent followed the leans verbatim through three independent threads.
 
-Headlines from Cycle 16:
+Headlines from Cycle 18:
 
-- **Decision brief ✅.** [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md) surveyed 8 techniques and pinned A+B+E (recipe re-tune + addLOD chain + cross-billboard). Octahedral impostors + Procedural Instanced Forest deferred to long-tail.
-- **Phase 1+2 ✅** Tree LOD chain wired in [`js/TerrainBuilder.js`](js/TerrainBuilder.js). Trunk + leaves InstancedMesh2 each get LOD0 → LOD1 (80m) → LOD2 (150m). Trunk's LOD2 = degenerate triangle since cross-billboard texture covers it. LOD1 sibling GLBs at `assets/models/trees/{tree1,tree2,pine}_lod1.glb` (~25-30% the LOD0 tris). Caught + documented an EZ-Tree casing bug — `'Single'/'Double'` capital-case is silently ignored; must be lowercase.
-- **Phase 3 ✅** Rocks (gallery-reviewed: pebble_round_small / boulder_chunky_mid / spire_jagged_dark, 38 KB total post-draco) + flora tuning (oversampleFraction 0.05 → 0.10, mushroom targetHeight → 0.50).
-- **Phase 4 ✅** Linux baseline at `tests/perf-baseline/baseline.json` (committed by `perf-baseline-bot`). Numbers reflect ubuntu-latest swiftshader (~3.8s/frame avg on extreme); ±5% threshold absorbs runner noise.
-- **Phase 5 ✅** `perf-check` gates every push. CI fix bundled: bypass the broken root `dev:setup` / `dev:worker` npm scripts (they `cd worker && wrangler ...` which loses npm bin-PATH in CI) by calling `npx wrangler` directly. Side-effect win: long-standing E2E flakiness unblocked too.
-- **Bug fixes shipped during review pass:**
-  - Mobile bottom-bar overlap (about/github links bleeding into menu buttons on short viewports) → [`js/components/App.js`](js/components/App.js): credits div uses safe-area-inset-bottom + larger mobile font + 14px top buffer; menu-center has explicit padding-bottom.
-  - Auto-refresh-back-to-home mid-interaction → [`index.html`](index.html): SW `controllerchange` listener now defers reload until `visibilitychange → hidden` (next tab-switch / minimise / close) instead of yanking the user mid-click.
+- **Phase 1 — Per-scene `grassRadius` ✅** (commit `b376034`). New `GrassDef.grassRadius?: number` schema field; RH sets 172m, OC sets 372m (= boundary.radius - 8). [`js/GrassSystem.js`](js/GrassSystem.js) expands chunk grid to fit, culls tighter (`grassRadius + chunkSize`), rescales per-chunk clumps so OC's wider extent doesn't blow the perf budget. Field omits the field — byte-identical. Replaces the implicit area math from Cycle 17 Phase 3 (which was reverted for dropping per-m² density 3.4x).
+- **Phase 2 — Scene-swap + mode-restart hygiene ✅** (commit `c8c899f`). Two regression fixes: (a) `TerrainBuilder.createScatter` else-branch now refreshes `scatterSystem.heightfield` (it was stale post-swap, leaving flora pinned to prior scene's heightmap); (b) `GameState.startGame` always sets `needsFlockRecreation = true` (was gated on count change, leaving sheep at prior session's positions on same-count restarts). New regression spec [`tests/e2e/scene-swap-stability.spec.ts`](tests/e2e/scene-swap-stability.spec.ts) gates both — tagged `@local-only` because the full scene-rebuild × 4 swaps takes ~6 min on swiftshader CI.
+- **Phase 3 — Octahedral impostors ✅** (commit `04ffef6`). New [`js/octahedral-impostor-material.js`](js/octahedral-impostor-material.js) — single-quad billboard `ShaderMaterial` that picks 1 of 16 atlas tiles per-instance per-frame from camera direction. New `_bakeOctahedralImpostor(model, renderer)` in [`js/TerrainBuilder.js`](js/TerrainBuilder.js) — runtime atlas baker (16 RTT renders × 3 species per session, cached for app lifetime). Cross-billboard kept as the bake-failure fallback. Per Q4 lean: self-contained Three.js (no Pixel Forge dep). Per Q5 lean: single-tile picker (3-tile blend deferred to Cycle 19 Phase 2).
 
-174/174 vitest pass. Production build clean (817 KB main / 241 KB gzip — flat vs Cycle 15; the chunk-size warning here is what motivates Cycle 17's slug).
+180/180 vitest pass (was 174 in cycle 16). Production build clean (806 KB main / 239 KB gzip — flat vs Cycle 17). All three Cycle 18 push commits deployed live via GH Actions.
 
-## Cycle 17 — what to pick up next
+## CI quirks shipped this cycle (worth knowing)
 
-Plan at [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md). 7 phases, all grounded in regressions Matt flagged during the Cycle 16 deploy review. Run `/cycle-start` to orient.
+- **perf-check is noisy on swiftshader at extreme mode.** Phase 1's CI run flagged Field-Extreme at +11.5% vs 5% threshold — Phase 2's CI run on the same Field code path passed cleanly. The runner is rendering at ~4 seconds per frame on swiftshader software-WebGL, with only ~2 sample frames in the 15s measure window — variance is structurally high. Don't immediately trust a single perf-check failure on extreme mode; check whether the next push reproduces.
+- **`scene-swap-stability.spec.ts` is `@local-only`.** Full scene-rebuild × 4 swaps takes ~6 min on swiftshader (vs ~30s on real WebGL). The fix verification is a JS reference equality + int comparison — CI doesn't need to gate on a 6-minute browser test. Run locally with `npm run test:e2e -- scene-swap-stability` after touching scene-swap or flock-recreation code.
 
-Slug: `mobile-hardening-lod-and-bundle-slim` (renamed from `bundle-slim` after the regression intake — bundle-slim becomes Phase 7). The hardening is the gate: don't tag `v1.1.0` until Phases 1-4 land cleanly.
+## Cycle 19 — what to pick up next
+
+Plan at [`docs/cycle-19-plan.md`](docs/cycle-19-plan.md). 3 phases, all gated on Phase 1 (visual verification of Cycle 18 on real WebGL hardware). Hardening gates `v1.1.0`.
 
 **Phase summary:**
-1. **Mobile asset visibility audit** (~3-4hr, foundation) — trees / rocks / flora invisible at distance on mobile classic camera; root-cause via mobile-probe harness + e2e smoke spec.
-2. **White-bark tree + bark coherence** (~2hr) — one stray "white bark, tall and skinny, few branches" tree in the live build; likely cross-billboard impostor lighting washout (white ambient 0.55 + dirLight 0.85 = 1.4× washout) but recipe-level `bark.tint` not applied also possible.
-3. **Grass anomalies** (~3-4hr) — skyward grass blades near trees recurring (Cycle 15's `Number.isFinite` clamp fixed placement Y; theory: shared-material trap leaks tree-wind shader patch into grass material). Plus OC grass only in middle of island, not extending to edge — generation radius hardcoded ~250m, OC island is 380m.
-4. **Portrait-mobile HUD layout** (~2-3hr) — camera-mode toggle button overlaps time/score on portrait. General portrait UX audit while we're there (iPhone SE 375×667, iPhone 14 390×844, Android 360×780, iPad 768×1024).
-5. **LOD chain extensions + culling sync** (~5-7hr) — Matt observed culling out-of-sync with camera; needs profiling. Plus more LOD tiers including octahedral impostor evaluation via local **Pixel Forge Kiln** (`pixelforge kiln bake-imposter ./tree.glb --out ./tree.png --angles 16` per [`pixel-forge/docs/kiln-vision.md`](file:///C:/Users/Mattm/X/games-3d/pixel-forge/docs/kiln-vision.md)).
-6. **OC portal scales to total sheep** (~1-2hr) — currently hardcoded `requiredSheep: 40`; should be ~40% of mode count (Classic 200→80, Extreme 1000→400, Insane 3000→1200, Chaos 5000→2000). Schema change to `CorralDef.requiredSheepFraction` + `requiredSheepMin`.
-7. **Bundle slim** (~4-6hr, deferred from cycle's original framing) — main.js 817 KB / 241 KB gzip flagged by Vite chunk-size warning; dynamic-import the deferred React panels (Multiplayer, Leaderboard, Settings, Sandbox).
+1. **Visual verification of Cycle 18** (~2-3hr, foundation) — boot all three scenes × all modes × all camera modes on RTX 3070. Confirm RH grass to slopes / OC grass to shore (Phase 1 acceptance) + octahedral impostor brightness parity across 4 sun positions (Phase 3 acceptance) + scene-swap stability (Phase 2 acceptance). If any phase doesn't visually verify, ROLL BACK and document why.
+2. **Octahedral polish** (~2-3hr, optional) — 3-tile blend / normal-map atlas / 32-angle bake variant. Only triggers if Phase 1 surfaces visible azimuth-step or brightness-parity issues.
+3. **`v1.1.0` hero cards + tag** (~3-4hr, keyboard session) — 3 OG cards + 4 cinematic videos + `npm version 1.1.0` + tag push. Cycle 16 carryover. Hard stop on tagging until Phase 1 visual verification passes.
 
-**Open questions (5 in the plan; settle at `/cycle-start`):** octahedral pipeline (Kiln vs internal), mobile-invisibility root cause, white-bark origin, OC portal formula, grass-stretch mechanism, bundle-slim strategy.
+**Open questions (4 in plan):** Q1 octahedral single-tile-picker quality, Q2 OC-Extreme perf budget post-grass-expansion, Q3 cinematic palette, Q4 octahedral fallback telemetry.
 
-Standing alternatives if Cycle 17 scope shifts:
+Standing alternatives if Cycle 19 scope shifts:
 - `webgpu-tsl-spike` — port grass + tree-leaf shader math to TSL; bring up WebGPU renderer with WebGL fallback
 - `grass-render-texture-trample` — per-blade RT ping-pong for sheep trample recovery
 - `procedural-instanced-forest-eval` — measure PIF perf vs current LOD chain on the actual scene
 - `mac-white-ground-bug` — investigate Matt's Mac-specific repro
 
-## Cycle 16 carryover (do whenever — not Cycle 17 phases)
+## Cycle 18 carryover (folded into Cycle 19 Phase 1+2)
 
-### Phase 6 — Hero cards + v1.1.0 (keyboard session)
+Visual playtest + Phase 4 polish from Cycle 18 plan. See `docs/cycle-19-plan.md` for the playbook.
+
+## Cycle 16 carryover (folded into Cycle 19 Phase 3)
+
+### Hero cards + v1.1.0 tag (keyboard session)
 
 [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) has the exact workflow:
 - 3 OG cards (`og-rh-sunset`, `og-field`, `og-open-country`) — open URL → Solo Extreme → `await __sdsCinema.freeFly()` + `__sdsCinema.snapshotPose()` → paste into `tools/cinematic/shot-list.mjs` → `npm run cinema --shot=<id>`.
-- 4 cinematic videos (`dog-into-sunset`, `lightning-strike`, `chaos-5000`, `oc-portal`) — iterate framing on the polished post-LOD-chain world.
+- 4 cinematic videos (`dog-into-sunset`, `lightning-strike`, `chaos-5000`, `oc-portal`) — iterate framing on the post-octahedral world.
 - Tag `v1.1.0`: `npm version 1.1.0 -m "..."` + bump worker/package.json + append CHANGELOG + `git push origin main --tags`.
 
-**Hard stop on tagging:** confirm no LOD pop visible at typical play distances during the cinematic-video shoot. If popping shows, raise distances to 100m / 180m (one-line edits in [`js/TerrainBuilder.js`](js/TerrainBuilder.js)).
+**Hard stop on tagging:** confirm no LOD pop visible at typical play distances during the cinematic-video shoot. If popping shows, raise distances to 110m / 180m (one-line edit in [`js/TerrainBuilder.js`](js/TerrainBuilder.js)).
 
 ### Optional polish — gallery picks visual review
 
@@ -59,7 +57,7 @@ Standing alternatives if Cycle 17 scope shifts:
 - Aspen vs ash for tree1 slim slot
 - Pine size — pine_medium_single vs pine_large_single for OC horizon
 - Bark coherence across species
-- LOD1 → LOD2 (cross-billboard) pop at 150m
+- LOD0 → octahedral pop at 100m
 
 Swap path: edit [`tools/asset-gallery/picks.json`](tools/asset-gallery/picks.json) `canonicalName` fields, then `node tools/asset-gen/integrate.mjs --compress`. No code changes needed.
 
@@ -87,9 +85,12 @@ npm test -- tests/tree-assets.spec.js
 
 | Looks off? | Knob | File | Default |
 | --- | --- | --- | --- |
-| LOD0→LOD1 pop visible at 80m | `addLOD(lod1Geo, mat, 80)` distance | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 80m camera distance |
-| LOD1→LOD2 pop visible at 150m | `addLOD(billboardGeo, mat, 150)` distance | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 150m camera distance |
-| LOD1 too expensive on mobile | LOD1 `branch.children` + `leaves.count` | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | `LOD1_BRANCH_DEFAULT` + 0.5x leaves |
+| Octahedral impostor azimuth step visible | `COLS` in `_bakeOctahedralImpostor` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 4 (90° step) → 8 (45° step) |
+| Octahedral impostor brightness wrong | ambient + dirLight in `_bakeOctahedralImpostor` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.30 / 0.55 (matches cross-billboard) |
+| Sun-tint blend strength | `BLEND` in `setImpostorTint` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.35 |
+| LOD0→impostor pop visible at 100m | `addLOD(billboardGeo, mat, 100)` distance | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 100m camera distance |
+| RH grass too tight to inner area | `grassRadius` in [`shared/scenes/rolling-hills.js`](shared/scenes/rolling-hills.js) | scene config | 172m |
+| OC grass not reaching shore | `grassRadius` in [`shared/scenes/open-country.js`](shared/scenes/open-country.js) | scene config | 372m |
 | Trees rattle too much / too still | `_treeWind.uWindStrength` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.6 desktop / 0 mobile |
 | Tree bark color wrong | `BARK_TINTS[species][scale]` | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | per-species 0x4a-0x8c brown |
 | Single-leaf canopy too sparse | `baseSize` per species + single boost | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | 1.6 deciduous / 1.2 pine; ×1.25 single |
@@ -104,25 +105,27 @@ Re-baking trees: edit recipes/seeds in [`tools/bake-trees.mjs`](tools/bake-trees
 
 ## Standing risks (carried forward)
 
-- **Sim-baseline fixtures one-way.** Don't regenerate without understanding the diff. Cycles 5-16 left them bit-identical.
+- **Sim-baseline fixtures one-way.** Don't regenerate without understanding the diff. Cycles 5-18 left them bit-identical.
 - **`?cinematic=1` flips `preserveDrawingBuffer`.** Documented perf hit. Any change letting the flag affect normal play is a Hard Stop.
-- **GLB shared-material trap (Cycle 11+12 finding).** Any new code creating an `InstancedMesh` from a cached GLB's `child.geometry` + `child.material` must tag with `userData.sharedFromGlbCache = true` and rely on remove-from-scene only. Cycle 16's LOD chain follows this: trunk + leaves InstancedMesh2 share the LOD0 material across LOD0 + LOD1 entries.
+- **GLB shared-material trap (Cycle 11+12 finding).** Any new code creating an `InstancedMesh` from a cached GLB's `child.geometry` + `child.material` must tag with `userData.sharedFromGlbCache = true` and rely on remove-from-scene only. Cycle 16's LOD chain follows this; Cycle 18's octahedral impostor path explicitly does NOT share materials with the GLB cache.
 - **InstancedMesh2 entity API.** Entities in `addInstances` callback use `quaternion` (not Euler `rotation`). Cycle 14 hotfix `a41f9a6` documented this; Cycle 16's createTrees follows.
+- **Cycle 18 finding — InstancedMesh2 + custom ShaderMaterial.** Custom shaders that need per-instance matrix MUST `#include <batching_pars_vertex>` + `#include <batching_vertex>` so `getInstancedMatrix()` + `matricesTexture` get declared inside `USE_INSTANCING_INDIRECT`. See [`js/octahedral-impostor-material.js`](js/octahedral-impostor-material.js).
 - **`scripts/compress-glbs.mjs` reads from `assets/_originals/` backup.** Re-baking GLBs requires `rm assets/_originals/models/trees/*.glb` first.
 - **EZ-Tree billboard string casing.** `leaves.billboard` expects lowercase `'single'` / `'double'`; capital-case is silently ignored. Codified in `tools/bake-trees.mjs` JSDoc.
 - **CI worker scripts depend on `npx wrangler`** (Cycle 16 `be09eb7`). The root `dev:setup` / `dev:worker` npm scripts use bare `wrangler` after `cd worker` which loses the bin-PATH in CI environments. The deploy.yml workflow calls `npx wrangler` directly to bypass.
 - **Mac white-ground bug.** Reproduces on Matt's specific Mac, not on GH `macos-latest` Safari. Environmental. Investigation pending Matt's `__sdsDiag` capture.
+- **perf-check noise on swiftshader extreme.** ~4-second-per-frame baseline with ~2 sample frames per measure window. Single-run failures may be noise; check whether the next push reproduces.
+- **scene-swap-stability spec is `@local-only`.** Run locally after touching scene-swap or flock-recreation code: `npm run test:e2e -- scene-swap-stability`.
 
 ## How to read the rest of the repo
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md) — `mobile-hardening-lod-and-bundle-slim` (7 phases written + 6 open questions) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-16-plan.md`](docs/archive/cycles/cycle-16-plan.md) |
-| Cycle 16 decision brief | [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md) |
-| Cycle 16 gallery review | [`docs/cycle-16-tree-gallery-review.md`](docs/cycle-16-tree-gallery-review.md) |
-| Cycle 16 Phase 6 keyboard workflow | [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) |
-| Prior closed cycles | [`docs/archive/cycles/cycle-15-plan.md`](docs/archive/cycles/cycle-15-plan.md), [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md), [`docs/archive/cycles/cycle-12-plan.md`](docs/archive/cycles/cycle-12-plan.md), [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md) |
+| Active cycle | [`docs/cycle-19-plan.md`](docs/cycle-19-plan.md) — `visual-verification-and-octahedral-polish-and-v1.1.0` |
+| Latest closed cycle | [`docs/archive/cycles/cycle-18-plan.md`](docs/archive/cycles/cycle-18-plan.md) |
+| Cycle 17 (also closed) | [`docs/archive/cycles/cycle-17-plan.md`](docs/archive/cycles/cycle-17-plan.md) + [`docs/archive/cycles/cycle-17-research.md`](docs/archive/cycles/cycle-17-research.md) |
+| Cycle 16 — tree research + gallery review + Phase 6 prep | [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md), [`docs/cycle-16-tree-gallery-review.md`](docs/cycle-16-tree-gallery-review.md), [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) |
+| Prior closed cycles | [`docs/archive/cycles/cycle-16-plan.md`](docs/archive/cycles/cycle-16-plan.md), [`docs/archive/cycles/cycle-15-plan.md`](docs/archive/cycles/cycle-15-plan.md), [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md), [`docs/archive/cycles/cycle-12-plan.md`](docs/archive/cycles/cycle-12-plan.md), [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md) |
 | Older cycles | [`docs/archive/cycles/cycle-10-plan.md`](docs/archive/cycles/cycle-10-plan.md), [`docs/archive/cycles/cycle-9-plan.md`](docs/archive/cycles/cycle-9-plan.md), [`docs/archive/cycles/cycle-8-plan.md`](docs/archive/cycles/cycle-8-plan.md), [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle-7-plan.md), [`docs/cycle-6-plan.md`](docs/cycle-6-plan.md), [`docs/cycle-5-plan.md`](docs/cycle-5-plan.md) |
 | Cycle stub template | [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) |
 | Frozen files / fence rules | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
@@ -159,7 +162,7 @@ URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl` (probe), `?ci
 - Don't reintroduce procedural mountains. The right path is a height-displaced skirt.
 - Don't add new scenes. Three is the right number.
 - Don't touch `shared/MovementPhysics.js`'s `updateMovement` for obstacle composition — Cycle 6 deliberately put obstacle-force composition at the call site.
-- Don't blow up `main.js` in one PR. Shrink one responsibility at a time. (Cycle 17's `bundle-slim` slug specifically aims at this — careful, incremental splits.)
+- Don't blow up `main.js` in one PR. Shrink one responsibility at a time. (Cycle 17 `bundle-slim` Phase 7 specifically aimed at this — careful, incremental splits.)
 - Don't regenerate `tests/sim-baseline/` fixtures unless you understand exactly what changed and why.
 - Don't hardcode grass-exclusion zones for non-Field scenes. Gate on `sceneDef?.farmHouse` and `sceneDef?.pasture`.
 - Don't gate sprint *continuation* on `stamina >= minStaminaToSprint` — only sprint *start*.
@@ -168,3 +171,4 @@ URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl` (probe), `?ci
 - Don't re-trigger the cinema runner without `--shot=<id>` during regular dev — committed OG/dog/PWA assets re-render with sub-pixel-different WebP encoding and create diff noise.
 - Don't pass capital-case `'Single'` / `'Double'` strings to EZ-Tree's `leaves.billboard` — they're silently ignored. Use lowercase.
 - Don't replace EZ-Tree with the [Procedural Instanced Forest](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610) unless `InstancedMesh2.addLOD` demonstrably misses the perf budget. PIF is interesting + MIT but a different aesthetic + pipeline.
+- Don't tag `v1.1.0` on a build that hasn't passed Cycle 19 Phase 1 visual verification. Hardening gates the version tag.
