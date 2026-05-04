@@ -848,6 +848,56 @@ class SheepDogSimulation {
      */
     _installStressTestHarness() {
         if (typeof window === 'undefined' || window.__sdsStressTestSwaps) return;
+        // Cycle 18 Phase 2: swap-stability probe surface for the e2e regression
+        // gate. Drives a swap to the named scene + exposes per-prop terrain
+        // delta + sheep-in-bounds counters so the spec can assert clean state
+        // post-swap without DOM scraping.
+        window.__sdsSwapTo = async (id) => {
+            await this.swapScene(id);
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            return id;
+        };
+        window.__sdsSwapProbe = () => {
+            const tb = this.terrainBuilder;
+            const hf = this.heightfield;
+            const scene = this.currentScene?.id ?? null;
+            const out = {
+                scene,
+                hasHeightfield: !!hf,
+                // Direct fix verification: ScatterSystem captured heightfield
+                // ref must match the current heightfield post-swap. The bug
+                // was the else-branch in TerrainBuilder.createScatter not
+                // refreshing this ref, leaving flora pinned to the prior
+                // scene's heightfield.
+                scatterHeightfieldMatches: tb?.scatterSystem ? tb.scatterSystem.heightfield === hf : true,
+                grassHeightfieldMatches: tb?.grassSystem ? tb.grassSystem.heightfield === hf : true,
+                sheep: { count: 0, outOfBounds: 0 },
+            };
+            // Sheep in-bounds vs scene boundary. Q3 fix gate: post-swap mode
+            // start should respawn within the new scene's playArea, not
+            // leftover positions from the prior mode/scene.
+            const sys = this.gameState?.optimizedSheepSystem;
+            const boundary = this.currentScene?.boundary;
+            if (sys?.sheep && boundary) {
+                for (const s of sys.sheep) {
+                    out.sheep.count += 1;
+                    const x = s?.position?.x;
+                    const z = s?.position?.z;
+                    if (typeof x !== 'number' || typeof z !== 'number') continue;
+                    if (boundary.kind === 'island') {
+                        const dx = x - (boundary.center?.x ?? 0);
+                        const dz = z - (boundary.center?.z ?? 0);
+                        const r = boundary.radius - (boundary.falloff ?? 0);
+                        if (dx * dx + dz * dz > r * r) out.sheep.outOfBounds += 1;
+                    } else if (boundary.minX != null) {
+                        if (x < boundary.minX || x > boundary.maxX || z < boundary.minZ || z > boundary.maxZ) {
+                            out.sheep.outOfBounds += 1;
+                        }
+                    }
+                }
+            }
+            return out;
+        };
         window.__sdsStressTestSwaps = async (n = 5) => {
             const renderer = this.sceneManager?.getRenderer?.();
             if (!renderer) {

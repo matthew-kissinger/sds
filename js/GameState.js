@@ -836,10 +836,18 @@ export class GameState {
             console.log(`MP game started with ${this.totalSheep} sheep (room=${roomSheepCount ?? 'n/a'}, sceneDef=${this.sceneSpawnDef?.count ?? 'n/a'})`);
         }
 
-        // If sheep count changed, we need to recreate the sheep flock
-        if (previousSheepCount !== this.totalSheep && this.optimizedSheepSystem) {
-            console.log(`Sheep count changed from ${previousSheepCount} to ${this.totalSheep} - needs recreation`);
-            // We need the scene reference to recreate - store it for later use
+        // Cycle 18 Phase 2 (Q6 resolution): always recreate the flock on
+        // `startGame`. The previous gate (`previousSheepCount !== totalSheep`)
+        // skipped recreation on same-count restarts (Classic→Classic, or any
+        // mode-cycle that returned to the same count), leaving sheep at the
+        // prior session's positions and any previously-set spawnConfig
+        // stickiness — observed as sheep stuck out-of-bounds on OC after a
+        // restart from another scene/mode. Fresh recreation costs ~ms in the
+        // common case and is bulletproof across mode-cycle paths.
+        if (this.optimizedSheepSystem) {
+            if (previousSheepCount !== this.totalSheep) {
+                console.log(`Sheep count changed from ${previousSheepCount} to ${this.totalSheep} - needs recreation`);
+            }
             this.needsFlockRecreation = true;
         }
 

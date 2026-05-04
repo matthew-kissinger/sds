@@ -1079,10 +1079,16 @@ export class TerrainBuilder {
                 }
             );
         } else {
-            // Refresh boundary + sceneDef in case the scene changed
-            // before re-population.
+            // Refresh boundary + sceneDef + heightfield in case the scene
+            // changed before re-population. Cycle 18 Phase 2 fix: heightfield
+            // was missing from this refresh, so a swap (e.g. RH→Field) left
+            // the ScatterSystem holding the prior scene's heightfield ref —
+            // mushrooms / pebbles / flowers got placed at Y values from the
+            // wrong heightmap. Visible as floating or sunken flora after a
+            // scene swap.
             this.scatterSystem.sceneDef = this.sceneDef;
             this.scatterSystem.boundary = this.sceneDef?.boundary ?? null;
+            this.scatterSystem.heightfield = this.heightfield;
         }
 
         // Mirror GrassSystem's exclusion-zone wiring so scatter doesn't
