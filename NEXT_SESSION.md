@@ -1,12 +1,10 @@
-# Next Session — Cycle 16 Phases 1-3 + 5 shipped autonomous; Phase 4 baseline-capture awaits Linux runner trigger; Phase 6 awaits keyboard session
+# Next Session — Cycle 16 Phases 1-5 closed; Phase 6 (hero cards + v1.1.0) awaits keyboard session
 
-> Updated 2026-05-03 mid-cycle. **Active plan: [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md).** Companion docs: [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md) (decision brief), [`docs/cycle-16-tree-gallery-review.md`](docs/cycle-16-tree-gallery-review.md) (per-variant pros/cons + how to swap), [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) (hero cards + v1.1.0 keyboard workflow). Live on [sheepdogsim.com](https://sheepdogsim.com).
+> Updated 2026-05-04 (cycle-16 close pending Phase 6). **Active plan: [`docs/cycle-16-plan.md`](docs/cycle-16-plan.md).** Companion docs: [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md) (decision brief), [`docs/cycle-16-tree-gallery-review.md`](docs/cycle-16-tree-gallery-review.md) (per-variant pros/cons + how to swap), [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) (hero cards + v1.1.0 keyboard workflow). Live on [sheepdogsim.com](https://sheepdogsim.com). All deploy + e2e + perf-check jobs green.
 
-## Where the project stands (cycle 16 mid-cycle close)
+## Where the project stands (cycle 16 close pending Phase 6)
 
-Cycle 16 ran autonomous through Phases 1-3 + 5 in one pass. Two phases need a touch outside what an autonomous agent can do:
-- **Phase 4** — perf baseline must be captured on a Linux runner (per cycle plan); the workflow_dispatch path is wired and ready.
-- **Phase 6** — hero cards + v1.1.0 tag need Matt at the keyboard for `__sdsCinema.freeFly()` posing.
+Cycle 16 ran autonomous through Phases 1-5 in one pass. Phase 6 (hero cards + v1.1.0 tag) needs Matt at the keyboard for `__sdsCinema.freeFly()` posing. Two follow-up bugs Matt flagged during gallery review (mobile bottom-bar overlap + auto-refresh-back-to-home) are also fixed in this pass.
 
 Headlines from autonomous Cycle 16 pass:
 
@@ -16,32 +14,36 @@ Headlines from autonomous Cycle 16 pass:
   - LOD1 sibling GLBs ship in `assets/models/trees/{tree1,tree2,pine}_lod1.glb` — ~25-30% the LOD0 tris.
 - **Gallery + autonomous picks ✅.** 36-GLB matrix baked into staging (24 LOD0 candidates — 4 species × 3 scales × 2 billboard modes — plus 12 LOD1). Auto-picked: `aspen_medium_single` → tree1, `oak_medium_single` → tree2, `pine_medium_single` → pine + matching LOD1 siblings. Each pick has explicit `canonicalName` in [`tools/asset-gallery/picks.json`](tools/asset-gallery/picks.json) (the natural bbox-height sort doesn't fit the species-based slot semantics). Total committed trees: **6 GLBs / 1.59 MB post-draco** (4 MB ceiling).
 - **Phase 3 ✅.** Rock picks: `pebble_oval_chunky` → rock1, `boulder_chunky_mid` → rock2, `craggy_chunk_warm` → rock3 (39 KB total post-draco). Flora tuning: `oversampleFraction` 0.05→0.10 (visible dandelion clusters), mushroom `targetHeight` 0.30/0.35 → 0.50 (readable at sheep-cam).
-- **Phase 5 ✅ (scaffold).** [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) now ships `perf-baseline-capture` and `perf-check` jobs, both `workflow_dispatch`-only initially. Bootstrap: trigger workflow_dispatch with `capture_baseline: true` to create the baseline.json, then remove the `if: ${{ github.event_name == 'workflow_dispatch' }}` line on `perf-check` to gate every push. Baseline must be Linux-runner numbers per the cycle plan.
+- **Phase 4 ✅.** Linux baseline captured by `perf-baseline-bot` via `workflow_dispatch capture_baseline: true` and committed at `tests/perf-baseline/baseline.json` (commit `1b62fe0`). Numbers reflect ubuntu-latest swiftshader software-WebGL — significantly slower than dev workstations (avg ~3.8s/frame on extreme), but the ±5% threshold absorbs runner noise.
+- **Phase 5 ✅.** [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) ships `perf-baseline-capture` (workflow_dispatch-only — re-trigger with `capture_baseline: true` to refresh baseline) and `perf-check` (now gates every push). CI fix: bypass the broken root `dev:setup` / `dev:worker` npm scripts (they `cd worker && wrangler ...` which loses npm bin-PATH in CI) by calling `npx wrangler` directly.
 - **Phase 6 prep doc ✅.** [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) captures the exact 7-deliverable workflow (3 OG cards + 4 cinematic videos + v1.1.0 tag).
+- **Bug fixes shipped during this cycle's review pass:**
+  - Mobile bottom-bar overlap (about/github links bleeding into menu buttons on short viewports) → [`js/components/App.js`](js/components/App.js): credits div now uses safe-area-inset-bottom + larger mobile font + 14px top buffer; menu-center has explicit `padding-bottom` so the mode-grid never bleeds into the footer.
+  - Auto-refresh-back-to-home mid-interaction → [`index.html`](index.html): SW `controllerchange` listener used to call `location.reload()` immediately when a new deploy landed, yanking the user out of mid-click. Now defers the reload until `visibilitychange → hidden` (next tab-switch / minimise / close), so the new bundle loads invisibly on the next visit.
 
 174/174 vitest pass. Production build clean.
 
-## Cycle 16 — what's left (in priority order)
+## Cycle 16 — what's left
 
-### 1. Trigger the perf-baseline-capture workflow (Phase 4)
+### 1. Hero cards + v1.1.0 (Phase 6) — keyboard session
 
-GitHub → Actions tab → Deploy workflow → Run workflow → set `capture_baseline: true`. The job spins up the dev server on a Linux runner, runs `npm run perf:baseline`, and pushes the resulting `tests/perf-baseline/baseline.json` back via `perf-baseline-bot`. ~15min.
+[`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) has the exact workflow. Needs Matt at the keyboard with mouse for `__sdsCinema.freeFly()` posing. The Phase 6 prep doc walks through:
+- 3 OG cards (`og-rh-sunset`, `og-field`, `og-open-country`) — open URL → Solo Extreme → freeFly + snapshotPose → paste into `tools/cinematic/shot-list.mjs` → `npm run cinema --shot=<id>`.
+- 4 cinematic videos (`dog-into-sunset`, `lightning-strike`, `chaos-5000`, `oc-portal`) — iterate framing on the polished post-LOD-chain world.
+- Tag `v1.1.0` after all 7 deliverables land cleanly.
 
-After the baseline lands, edit `.github/workflows/deploy.yml` and remove `if: ${{ github.event_name == 'workflow_dispatch' }}` from the `perf-check` job to enforce on every push.
+Phases 1-5 acceptance is met (perf-check is now gating every push). The remaining hard stop on tagging `v1.1.0` is "no visible LOD pop at typical play distances on any scene" — confirm during the cinematic-video shoot.
 
-### 2. Visual review of the autonomous tree picks (Phase 1 polish)
+### 2. Optional polish — visual review of the gallery picks
 
 The gallery review doc lists what's worth a real eye:
 - Aspen vs Ash for the `tree1` slim slot
 - Pine size — `pine_medium_single` vs `pine_large_single` for OC horizon
 - Bark coherence across species
 - LOD0 → LOD1 pop visibility at 80m during chase-cam tracking
+- LOD1 → LOD2 (cross-billboard) pop visibility at 150m
 
 Swap path: edit [`tools/asset-gallery/picks.json`](tools/asset-gallery/picks.json) `canonicalName` fields, then `node tools/asset-gen/integrate.mjs --compress`. No code changes needed.
-
-### 3. Hero cards + v1.1.0 (Phase 6) — keyboard session
-
-[`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) has the exact workflow. Needs Matt at the keyboard with mouse for `__sdsCinema.freeFly()` posing. Don't tag v1.1.0 until Phases 1-4 land cleanly per the cycle plan's Hard Stops.
 
 ## How to drive the asset pipeline (Phase 1 swap path)
 

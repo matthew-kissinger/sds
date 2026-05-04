@@ -184,10 +184,11 @@ jobs:
   perf-check:
     name: Perf check vs baseline
     runs-on: ubuntu-latest
-    # Initially workflow_dispatch-only. Remove this `if:` to gate every push
-    # on perf-check (per cycle-16-plan.md Phase 5 acceptance) once a baseline
-    # exists at tests/perf-baseline/baseline.json.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    # Cycle 16 close: flipped to push-gated after the first Linux baseline
+    # landed in commit 1b62fe0 (perf-baseline-bot via deploy.yml
+    # workflow_dispatch capture_baseline=true). The job still gates itself
+    # on the baseline.json existing — if a future cleanup deletes it,
+    # perf-check skips with a warning rather than failing closed.
     needs: test
     steps:
       - uses: actions/checkout@v4

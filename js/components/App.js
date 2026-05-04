@@ -576,7 +576,12 @@ export async function initReactUI() {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     width: '100%',
-                                    gap: '0.5rem'
+                                    gap: '0.5rem',
+                                    // Reserve space below the centered content so the
+                                    // mode-grid buttons don't bleed into the credits
+                                    // footer on short mobile viewports. Pairs with
+                                    // explicit padding on the credits div below.
+                                    paddingBottom: platform.isMobile ? '0.75rem' : '0.5rem'
                                 }
                             }, [
                                 // 3D Title
@@ -599,15 +604,22 @@ export async function initReactUI() {
                                 createElement(ScenePicker, { key: 'scenes' }),
                                 createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect })
                             ]),
-                            // Credits footer — flows at the bottom of the column, no fixed positioning
+                            // Credits footer — flows at the bottom of the column, no fixed positioning.
+                            // Cycle 16 mobile fix: explicit padding-top guards a buffer between
+                            // the mode-grid buttons above and these links; padding-bottom respects
+                            // iOS safe-area-inset (home-indicator devices) so links never tuck
+                            // under the system gesture area. The text also bumps slightly larger
+                            // on mobile so tap targets are reachable.
                             createElement('div', {
                                 key: 'credits',
                                 style: {
                                     flex: '0 0 auto',
                                     width: '100%',
-                                    paddingTop: '8px',
+                                    paddingTop: platform.isMobile ? '14px' : '8px',
+                                    paddingBottom: 'max(0.6rem, env(safe-area-inset-bottom))',
                                     color: 'rgba(255, 255, 255, 0.4)',
-                                    fontSize: '0.7rem',
+                                    fontSize: platform.isMobile ? '0.78rem' : '0.7rem',
+                                    lineHeight: '1.4',
                                     textAlign: 'center',
                                     pointerEvents: 'auto'
                                 }
