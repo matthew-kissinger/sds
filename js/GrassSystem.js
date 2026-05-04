@@ -78,16 +78,44 @@ export class GrassSystem {
             ? new THREE.Color(sceneColors.tip)
             : new THREE.Color(0.55, 0.82, 0.30);
 
+        // Cycle 18 Phase 1: explicit per-scene grass radius takes precedence
+        // over the legacy `worldSize * densityRange` formula. When set on a
+        // scene's grass config, two things happen here:
+        //   (1) the chunk grid extent grows to (grassRadius + buffer) * 2 if
+        //       that's larger than the device-default worldSize — so chunks
+        //       actually exist out at the radius the scene asked for.
+        //   (2) the density-falloff zero point uses grassRadius directly,
+        //       independent of worldSize (no implicit area math).
+        // Field omits grassRadius and stays byte-identical to pre-cycle-18.
+        const baseWorldSize = isMobile ? 220 : 420;
+        const baseDensityRange = sceneGrass?.densityRange ?? 0.6;
+        const explicitGrassRadius = (typeof sceneGrass?.grassRadius === 'number')
+            ? sceneGrass.grassRadius
+            : null;
+        const grassRadius = explicitGrassRadius ?? (baseWorldSize * baseDensityRange);
+        // 40m buffer = one chunk past the falloff zero point so the curve's
+        // 0.2 acceptance floor still has chunks to populate at the perimeter.
+        const worldSize = explicitGrassRadius != null
+            ? Math.max(baseWorldSize, (explicitGrassRadius + 40) * 2)
+            : baseWorldSize;
+
         // Grass configuration
         this.config = {
-            // World bounds for grass
-            worldSize: isMobile ? 220 : 420,
+            // World bounds for grass — drives the chunk grid extent.
+            worldSize,
 
-            // Cycle 7 Phase 2b: per-scene-overridable radial density-falloff
-            // multiplier. Default 0.6 keeps RH/Field byte-identical; OC sets
-            // 0.75 to extend grass to its 306m safe radius (otherwise the
-            // outer 250–306m ring renders as bare terrain).
-            densityRange: sceneGrass?.densityRange ?? 0.6,
+            // Density-falloff zero point in metres from origin. Defaults to
+            // pre-cycle-18 `worldSize * densityRange = 252m` for opt-out
+            // scenes; explicit `grassRadius` on the scene config wins.
+            grassRadius,
+
+            // Whether the scene opted into the cycle-18 explicit-radius path.
+            // Used for the per-area clump-budget rescale + tighter circular
+            // cull (so OC's expanded grid doesn't blow the perf budget).
+            hasExplicitGrassRadius: explicitGrassRadius != null,
+
+            // Legacy fallback when `grassRadius` isn't set (pre-cycle-18).
+            densityRange: baseDensityRange,
 
             // Chunk system - smaller chunks = more grass density control
             chunkSize: 40,
@@ -836,17 +864,33 @@ export class GrassSystem {
      * Generate chunks with grass instances
      */
     generateChunks() {
-        const { worldSize, chunkSize, clumpsPerChunk } = this.config;
+        const { worldSize, chunkSize, clumpsPerChunk, grassRadius, hasExplicitGrassRadius } = this.config;
         const halfWorld = worldSize / 2;
         const chunksPerSide = Math.ceil(worldSize / chunkSize);
-        // (Cycle 17 Phase 3 island grid-expansion + clump-rescale REVERTED
-        // post-deploy gallery review on 2026-05-04. Expansion shrank RH's
-        // grid (376m vs 420m default — bug) and dropped OC per-m² density
-        // 3.4x by holding total clumps flat across a 776m grid. Net effect:
-        // RH grass patchy on slopes, OC grass nearly invisible everywhere.
-        // The "OC grass to island edge" goal stays as deferred backlog —
-        // achieving it without per-area density loss needs a more careful
-        // perf-budgeted approach than blindly enlarging the grid.)
+
+        // Cycle 18 Phase 1: when a scene declares `grassRadius`, cull chunks
+        // tighter (`grassRadius + chunkSize`) so the expanded grid doesn't
+        // generate dead chunks on the corners — total chunk count tracks the
+        // declared radius rather than the bounding-box default. Legacy
+        // (Field, no explicit radius) keeps the original `halfWorld * 1.2`
+        // generous cull byte-identical.
+        const cullDistance = hasExplicitGrassRadius
+            ? grassRadius + chunkSize
+            : halfWorld * 1.2;
+
+        // Per Cycle 18 Phase 1 step 4: when grassRadius is wider than the
+        // pre-cycle-18 default falloff (`baseWorldSize * 0.6 = 252m` desktop,
+        // `132m` mobile), rescale per-chunk clump count down so the user-tuned
+        // `clumpsPerChunk` lands roughly the same per-m² density across the
+        // wider zone. min(1, defaultRadius / grassRadius) caps at 1 so RH
+        // (172m, smaller than default 252m) keeps full clump density.
+        // Total clump count still grows for OC because more chunks exist —
+        // but the per-chunk number doesn't get multiplied a second time.
+        const defaultRadius = (this.isMobile ? 220 : 420) * 0.6;
+        const clumpScale = hasExplicitGrassRadius
+            ? Math.min(1, defaultRadius / grassRadius)
+            : 1;
+        const adjustedClumpsPerChunk = Math.max(1, Math.round(clumpsPerChunk * clumpScale));
 
         for (let cx = 0; cx < chunksPerSide; cx++) {
             for (let cz = 0; cz < chunksPerSide; cz++) {
@@ -859,14 +903,14 @@ export class GrassSystem {
 
                 // Skip chunks that are too far from center (create circular field)
                 const distFromCenter = Math.sqrt(chunkCenterX * chunkCenterX + chunkCenterZ * chunkCenterZ);
-                if (distFromCenter > halfWorld * 1.2) continue;
+                if (distFromCenter > cullDistance) continue;
 
                 // Create chunk
                 const chunk = this.createChunk(
                     cx, cz,
                     chunkMinX, chunkMinZ,
                     chunkMaxX, chunkMaxZ,
-                    clumpsPerChunk
+                    adjustedClumpsPerChunk
                 );
 
                 if (chunk) {
@@ -892,13 +936,15 @@ export class GrassSystem {
             // Check exclusion zones
             if (this.isExcluded(x, z)) continue;
 
-            // Distance-based density falloff. Original formula restored
-            // 2026-05-04 after the Cycle 17 Phase 3 island-aware variant
-            // dropped per-m² density on RH (patchy slopes) + OC (nearly
-            // invisible). The OC "grass to island edge" goal remains
-            // backlog — needs a perf-budgeted approach, not a formula swap.
+            // Distance-based density falloff. Cycle 18 Phase 1: zero point is
+            // `grassRadius` — `worldSize * densityRange` for opt-out scenes
+            // (byte-identical to pre-cycle-18) or the explicit per-scene
+            // value for RH/OC (172m / 372m respectively). The 0.2 acceptance
+            // floor keeps a sparse outer ring up to the chunk-cull distance,
+            // which lets the boundary cull (island scenes) draw the actual
+            // shoreline rather than the density curve.
             const distFromCenter = Math.sqrt(x * x + z * z);
-            const densityFactor = Math.max(0, 1 - distFromCenter / (this.config.worldSize * this.config.densityRange));
+            const densityFactor = Math.max(0, 1 - distFromCenter / this.config.grassRadius);
             if (Math.random() > densityFactor * 0.8 + 0.2) continue;
 
             validPositions.push({ x, z });

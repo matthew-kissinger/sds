@@ -57,7 +57,13 @@ export const rollingHills = {
 
     grass: {
         clumpsPerChunk: { desktop: 2200, mobile: 900 },
-        colors: { base: '#6a7038', mid: '#9a9858', tip: '#e8c878' }
+        colors: { base: '#6a7038', mid: '#9a9858', tip: '#e8c878' },
+        // Cycle 18 Phase 1: explicit grass radius. boundary.radius (180) minus
+        // 8m inner buffer = 172m. Density falloff zero point lands inside the
+        // 217m island.boundary cull, so the boundary still owns the cliff edge
+        // while the falloff curve is shaped to the island instead of the
+        // worldSize default (252m extended past the shoreline).
+        grassRadius: 172
     },
 
     // No farmhouse on the island — original (180, 160) would sit in the

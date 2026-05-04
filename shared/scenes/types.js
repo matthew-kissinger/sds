@@ -125,8 +125,17 @@
  * @property {number} [cutoffDistance]
  * @property {number} [densityRange] Multiplier on `worldSize` for the radial
  *   density-falloff zero point. Default 0.6 — grass density drops to zero at
- *   `worldSize * 0.6` from origin. Open Country sets 0.75 to extend grass to
- *   its 306m safe radius. RH/Field omit this; the 0.6 default covers them.
+ *   `worldSize * 0.6` from origin. Legacy fallback when `grassRadius` is absent.
+ * @property {number} [grassRadius] Cycle 18 Phase 1 — explicit inner generation
+ *   extent in metres. Grass density falloff goes to zero at this distance from
+ *   origin. When set, overrides the legacy `worldSize * densityRange` formula
+ *   AND drives the chunk-grid extent so grass actually reaches the radius
+ *   (the Cycle 17 Phase 3 attempt to do this implicitly via island math was
+ *   reverted; explicit per-scene control was the lesson). When absent, falls
+ *   back to `worldSize * densityRange` (byte-identical for opt-out scenes).
+ *   - Field: omit (default 252m falloff is correct for the rect scene).
+ *   - Rolling Hills: 172 (= boundary.radius - 8).
+ *   - Open Country: 372 (= boundary.radius - 8).
  */
 
 /**

@@ -82,11 +82,15 @@ export const openCountry = {
     grass: {
         clumpsPerChunk: { desktop: 2400, mobile: 1000 },
         colors: { base: '#7a8a4e', mid: '#a8b870', tip: '#d8d088' },
-        // Cycle 7 Phase 2b (round 2): bumped 0.75→0.92 so grass extends
-        // to ~387m on desktop's 420m worldSize, past OC's 380m island
-        // edge. Prior 0.75 left ~70m of bare terrain between safe radius
-        // and shore. Grass beyond actual shoreline gets culled by the
-        // heightfield falloff anyway, so going wide is safe.
+        // Cycle 18 Phase 1: explicit grass radius supersedes Cycle 7's
+        // densityRange=0.92. boundary.radius (380) minus 8m inner buffer
+        // = 372m. With explicit grassRadius, GrassSystem expands the chunk
+        // grid to cover the island AND uses 372m as the density falloff
+        // zero point, so grass actually reaches the shore on the perimeter.
+        // The Cycle 17 Phase 3 implicit grid expansion was reverted post-
+        // gallery-review (broke per-m² density); per-scene explicit control
+        // is the durable fix. densityRange retained as an inert fallback.
+        grassRadius: 372,
         densityRange: 0.92
     },
 
