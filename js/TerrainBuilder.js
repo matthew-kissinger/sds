@@ -4,7 +4,6 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { GrassSystem } from './GrassSystem.js';
-import { ScatterSystem } from './ScatterSystem.js';
 import { createOctahedralImpostorMaterial, createOctahedralImpostorGeometry } from './octahedral-impostor-material.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
@@ -58,11 +57,6 @@ export class TerrainBuilder {
 
         // New advanced grass system
         this.grassSystem = null;
-        // Cycle 14 Phase 4: scatter system (pebbles, mushrooms, clovers,
-        // flowers — the "alive meadow" detail layer). Sibling to grass;
-        // populated after createTrees so heightfield + tree placement are
-        // settled. Cleared via clearScatter() during scene swap.
-        this.scatterSystem = null;
         this.terrainMesh = null;
         this.environmentDetails = [];
         this.trees = []; // Track trees for removal
@@ -268,8 +262,7 @@ export class TerrainBuilder {
             // Cycle 14 Phase 4: rocks from Quaternius Stylized Nature
             // MegaKit (CC0). Rock_Medium_1/2/3 converted via gltf-transform
             // with 128px diffuse texture (distance-viewed; rim-light
-            // shader supplies the silhouette pop). Same pack feeds the
-            // ScatterSystem (pebbles, mushrooms, flowers).
+            // shader supplies the silhouette pop).
             rocks: [
                 { name: 'rock1', path: 'assets/models/rocks/rock1.glb' },
                 { name: 'rock2', path: 'assets/models/rocks/rock2.glb' },
@@ -793,6 +786,17 @@ export class TerrainBuilder {
         if (!color || !this._impostorMaterials) return;
         const BLEND = 0.35;
         const tmp = new THREE.Color(0xffffff).lerp(color, BLEND);
+        // Cycle 19 follow-up (2026-05-04): drive a 1.0×–1.2× brightness
+        // multiplier off the sun's perceptual brightness so impostors lift
+        // along with LOD0 when the sun is high (and dim slightly at dusk).
+        // Sun color near noon is roughly (1.0, 0.95, 0.85) → brightness
+        // ~0.93 → boost ~1.18×; dusk's (1.0, 0.60, 0.33) → brightness ~0.64
+        // → boost ~1.13×. Impostors pre-Cycle-19 sat at the bake's flat
+        // brightness regardless of time-of-day, which made the LOD swap
+        // read as a hard exposure step.
+        const lum = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
+        const boost = 1.0 + 0.20 * Math.max(0, Math.min(1, lum));
+        tmp.multiplyScalar(boost);
         for (const mat of this._impostorMaterials) {
             // Cycle 18 Phase 3: octahedral material exposes the tint via
             // `uniforms.uColor` (ShaderMaterial) instead of MeshBasicMaterial
@@ -1057,77 +1061,13 @@ export class TerrainBuilder {
         return this.grassSystem;
     }
 
-    /**
-     * Cycle 14 Phase 4: build the scatter detail layer (pebbles +
-     * mushrooms + clovers + flowers) that sells "alive meadow" feel.
-     * Call AFTER createTrees so the heightfield is settled and the
-     * tree-leaf-wind shader patch hooks are wired (flora props piggyback
-     * on the same patch).
-     *
-     * Idempotent — re-invoking populates a fresh pool only if the
-     * previous scatter was cleared via clearScatter() (typically during
-     * scene swap).
-     */
-    async createScatter() {
-        if (!this.scatterSystem) {
-            this.scatterSystem = new ScatterSystem(
-                this.scene,
-                this.isMobile,
-                this.sceneDef,
-                this.heightfield,
-                this.sceneDef?.boundary ?? null,
-                {
-                    // Reuse the leaf-wind patch hooks for flora variants.
-                    // Direction + uTime are shared with trees so the
-                    // whole world agrees on wind. Strength is the same
-                    // per-uniform value; the per-prop bbox keeps the
-                    // shader's vertical-fraction weight tight to the
-                    // prop's own height (~30cm flowers don't sway as
-                    // far in absolute metres as 5m trees do).
-                    patchFloraWind: (mat, minY, maxY) => this._patchTreeWindMaterial(mat, minY, maxY)
-                }
-            );
-        } else {
-            // Refresh boundary + sceneDef + heightfield in case the scene
-            // changed before re-population. Cycle 18 Phase 2 fix: heightfield
-            // was missing from this refresh, so a swap (e.g. RH→Field) left
-            // the ScatterSystem holding the prior scene's heightfield ref —
-            // mushrooms / pebbles / flowers got placed at Y values from the
-            // wrong heightmap. Visible as floating or sunken flora after a
-            // scene swap.
-            this.scatterSystem.sceneDef = this.sceneDef;
-            this.scatterSystem.boundary = this.sceneDef?.boundary ?? null;
-            this.scatterSystem.heightfield = this.heightfield;
-        }
-
-        // Mirror GrassSystem's exclusion-zone wiring so scatter doesn't
-        // spawn inside structures or play-critical zones.
-        this.scatterSystem.exclusionZones = [];
-        if (this.sceneDef?.farmHouse) {
-            this.scatterSystem.addExclusionZone(
-                this.farmHouseExclusionArea.minX,
-                this.farmHouseExclusionArea.maxX,
-                this.farmHouseExclusionArea.minZ,
-                this.farmHouseExclusionArea.maxZ
-            );
-        }
-        if (this.sceneDef?.pasture) {
-            this.scatterSystem.addExclusionZone(-35, 35, 98, 138);
-        }
-
-        await this.scatterSystem.loadModels();
-        this.scatterSystem.populate();
-        return this.scatterSystem;
-    }
-
-    /**
-     * Tear down the scatter pool. Mirrors clearTrees / clearRocks: meshes
-     * are removed from the scene but geometry + materials stay (shared
-     * GLB cache, see Cycle 12 Phase 1 A8 finding).
-     */
-    clearScatter() {
-        if (this.scatterSystem) this.scatterSystem.dispose();
-    }
+    // Cycle 19 follow-up (2026-05-04): the Cycle 14 Phase 4 ScatterSystem
+    // (pebbles + mushrooms + clovers + flowers — the "alive meadow" detail
+    // layer) was removed. The sub-metre props were too small to read at
+    // gameplay camera distances and contributed enough draw cost to be
+    // visible in PERF without a corresponding visual payoff. Grass already
+    // sells the meadow feel; trees + rocks + the heightfield carry the
+    // landscape silhouette.
 
     async createTrees(competitivePastures = null) {
         if (!this.modelsLoaded) {
@@ -1216,16 +1156,29 @@ export class TerrainBuilder {
         // tree species per swap (~5 GL textures per cycle).
         if (!this._bakeImpostorCache) this._bakeImpostorCache = new Map();
 
-        // Reusable degenerate geometry for the trunk's LOD2 entry. Three
-        // co-located verts → zero-area triangle → effectively no draw work,
-        // but addLOD requires a real BufferGeometry.
-        if (!this._lod2EmptyGeo) {
+        // Cycle 19 follow-up (2026-05-04): build the trunk's LOD2 empty
+        // geometry by cloning the trunk's own attribute schema with zero-
+        // length buffers. The previous shared 3-vert empty triggered ANGLE
+        // "Vertex buffer is not big enough for the draw call" warnings
+        // when the active trunk material expected attributes (e.g. tangent)
+        // not provided by the shared empty. Cloning per-trunk-type ensures
+        // every attribute the trunk's vertex shader binds resolves to a
+        // real (zero-length) buffer.
+        const makeMatchingEmptyGeo = (srcGeo) => {
             const empty = new THREE.BufferGeometry();
-            empty.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3));
-            empty.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0, 0, 1, 0], 3));
-            empty.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 2));
-            this._lod2EmptyGeo = empty;
-        }
+            for (const [name, attr] of Object.entries(srcGeo.attributes)) {
+                const TypedArray = attr.array.constructor;
+                empty.setAttribute(name, new THREE.BufferAttribute(new TypedArray(0), attr.itemSize));
+            }
+            if (srcGeo.index) {
+                const TypedArray = srcGeo.index.array.constructor;
+                empty.setIndex(new THREE.BufferAttribute(new TypedArray(0), 1));
+            }
+            empty.boundingBox = new THREE.Box3();
+            empty.boundingSphere = new THREE.Sphere();
+            return empty;
+        };
+        if (!this._lod2EmptyGeoCache) this._lod2EmptyGeoCache = new WeakMap();
 
         Object.entries(treeInstances).forEach(([treeType, instances]) => {
             if (instances.length === 0 || !this.models.trees[treeType]) return;
@@ -1364,7 +1317,12 @@ export class TerrainBuilder {
                     if (isLeavesMesh) {
                         im.addLOD(billboardGeo, billboardMat, 100);
                     } else {
-                        im.addLOD(this._lod2EmptyGeo, child.material, 100);
+                        let trunkLod2 = this._lod2EmptyGeoCache.get(child.geometry);
+                        if (!trunkLod2) {
+                            trunkLod2 = makeMatchingEmptyGeo(child.geometry);
+                            this._lod2EmptyGeoCache.set(child.geometry, trunkLod2);
+                        }
+                        im.addLOD(trunkLod2, child.material, 100);
                     }
                 }
 
@@ -1377,6 +1335,13 @@ export class TerrainBuilder {
                     obj.quaternion.setFromEuler(inst.rotation);
                     obj.scale.copy(inst.scale);
                 });
+
+                // Cycle 19 follow-up (2026-05-04): build a BVH so per-instance
+                // frustum culling + LOD distance checks short-circuit by tree-
+                // chunk instead of scanning every instance. Trees are static
+                // post-placement (no per-frame matrix updates), so margin: 0
+                // is fine — the BVH stays valid for the lifetime of the swap.
+                im.computeBVH({ margin: 0 });
 
                 im.castShadow = !this.isMobile;
                 im.receiveShadow = true;
@@ -1519,13 +1484,18 @@ export class TerrainBuilder {
 
         const bakeScene = new THREE.Scene();
         bakeScene.background = null;
-        // Match the cross-billboard bake's lighting (Cycle 17 Phase 2
-        // dropped 0.55→0.30 ambient and 0.85→0.55 dirLight) so silhouette
-        // brightness stays in the live-tree neighbourhood. Otherwise the
-        // octahedral atlas would re-introduce the white-bark wash that
-        // Cycle 17 fixed.
-        bakeScene.add(new THREE.AmbientLight(0xffffff, 0.30));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.55);
+        // Cycle 19 follow-up (2026-05-04, second pass): pushed bake lighting
+        // 0.30+0.55 → 0.70+1.20 (1.90× total). Matt's first-pass review at
+        // 1.40× still read as "exceptionally dark" against bright sky.
+        // 1.90× lifts the impostor into the same exposure band as a sunlit
+        // LOD0 MeshStandardMaterial tree at noon, and combined with the
+        // sun-luma multiplier in `setImpostorTint` the LOD2 → LOD0 swap
+        // reads as a smooth exposure step instead of a brightness pop.
+        // The Cycle 17 white-bark concern is addressed by sticking to a
+        // pure-white dirLight (no warm tint at bake time) — the runtime
+        // sun-tint pulls the live atmosphere's color in over the top.
+        bakeScene.add(new THREE.AmbientLight(0xffffff, 0.70));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.20);
         dirLight.position.set(2, 4, 3);
         bakeScene.add(dirLight);
 
@@ -1921,48 +1891,61 @@ export class TerrainBuilder {
             }
         });
         
-        // Create instanced meshes for each rock type
+        // Create instanced meshes for each rock type.
+        //
+        // Cycle 19 follow-up (2026-05-04): migrated from THREE.InstancedMesh
+        // → InstancedMesh2 (@three.ez/instanced-mesh) so we get per-instance
+        // CPU frustum culling (the plain InstancedMesh tests only the *whole-
+        // mesh* AABB against the frustum — with rocks scattered across a
+        // 1.5km² map the AABB always covers the camera, so every instance
+        // gets submitted regardless of view direction). InstancedMesh2's
+        // `perObjectFrustumCulled` defaults to true; `computeBVH()` after
+        // `addInstances` accelerates that linear scan.
         const instancedMeshes = [];
-        
+
         Object.entries(rockInstances).forEach(([rockType, instances]) => {
             if (instances.length === 0 || !this.models.rocks[rockType]) return;
-            
+
             const model = this.models.rocks[rockType];
-            const dummy = new THREE.Object3D();
-            
+
             // Get all meshes from the model
             model.traverse(child => {
                 if (child.isMesh) {
-                    // Keep original materials - just use LOD and culling for mobile optimization
-                    const instancedMesh = new THREE.InstancedMesh(
+                    const instancedMesh = new InstancedMesh2(
                         child.geometry,
                         child.material,
-                        instances.length
+                        { capacity: instances.length, createEntities: false }
                     );
                     // Cycle 12 Phase 1 A8: shared with the cached GLB. Tag so
                     // clearRocks() does not dispose — see clearTrees comment.
                     instancedMesh.userData.sharedFromGlbCache = true;
 
-                    // Set up instances
-                    instances.forEach((instance, i) => {
-                        dummy.position.copy(instance.position);
-                        dummy.rotation.copy(instance.rotation);
-                        dummy.scale.copy(instance.scale);
-                        dummy.updateMatrix();
-                        instancedMesh.setMatrixAt(i, dummy.matrix);
+                    instancedMesh.addInstances(instances.length, (obj, i) => {
+                        const inst = instances[i];
+                        obj.position.copy(inst.position);
+                        obj.quaternion.setFromEuler(inst.rotation);
+                        obj.scale.copy(inst.scale);
                     });
+
+                    // Build the BVH that accelerates per-instance culling.
+                    // Rocks are static (no per-frame position updates), so
+                    // the BVH never needs to rebuild — pass margin: 0.
+                    // `getBBoxFromBSphere` is a faster bbox approximation
+                    // when geometry is centered; rock GLBs aren't strictly
+                    // origin-centered (Quaternius pivots are at the
+                    // centroid) so we leave it false to use a precise bbox.
+                    instancedMesh.computeBVH({ margin: 0 });
 
                     // Disable rock shadows on mobile
                     instancedMesh.castShadow = !this.isMobile;
                     instancedMesh.receiveShadow = true;
-                    instancedMesh.instanceMatrix.needsUpdate = true;
 
                     this.scene.add(instancedMesh);
                     instancedMeshes.push(instancedMesh);
                 }
             });
-            
-            console.log(`[BUILD] Created ${instances.length} ${rockType} instances`);
+
+            console.log(`[BUILD] Created ${instances.length} ${rockType} instances (InstancedMesh2 + BVH)`);
         });
         
         this.rocks = instancedMeshes;
@@ -2620,18 +2603,16 @@ export class TerrainBuilder {
             this.currentPasture = pasture;
         }
 
-        // Clear existing trees, rocks, and scatter
+        // Clear existing trees + rocks
         this.clearTrees();
         this.clearRocks();
-        this.clearScatter();
 
         // Regenerate grass with new exclusion zones
         await this.regenerateGrass(bounds, pasture);
 
-        // Rebuild trees, rocks, and scatter with new exclusion zones
+        // Rebuild trees + rocks with new exclusion zones
         await this.createTrees();
         await this.addEnvironmentDetails();
-        await this.createScatter();
 
         console.log('[TERRAIN] Environment rebuild complete');
     }
@@ -2746,7 +2727,6 @@ export class TerrainBuilder {
     dispose() {
         try { this.clearTrees(); } catch (err) { console.warn('[TERRAIN] clearTrees threw:', err); }
         try { this.clearRocks(); } catch (err) { console.warn('[TERRAIN] clearRocks threw:', err); }
-        try { this.clearScatter(); } catch (err) { console.warn('[TERRAIN] clearScatter threw:', err); }
 
         if (this.grassSystem) {
             try { this.grassSystem.dispose(); } catch (err) { console.warn('[TERRAIN] grass dispose threw:', err); }

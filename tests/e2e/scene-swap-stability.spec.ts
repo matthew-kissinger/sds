@@ -3,22 +3,17 @@ import { test, expect, type Page } from '@playwright/test';
 /**
  * Cycle 18 Phase 2 — scene-swap + mode-restart state hygiene gate.
  *
- * Two regressions Matt flagged in the Cycle 17 deploy review:
+ * Originally guarded two regressions from the Cycle 17 deploy review:
+ * scatter heightfield ref staleness + sheep respawn after mode restart.
+ * Cycle 19 follow-up (2026-05-04) removed the ScatterSystem entirely
+ * (pebbles + mushrooms + flowers + clovers were too small to read at
+ * gameplay distance), so the scatter-heightfield half of this spec is
+ * now a tautology — kept as a grass-heightfield gate (same code path,
+ * different captured ref).
  *
- * 1. Scene swap (e.g. Field → RH → OC) left flora / mushrooms placed
- *    against the prior scene's heightfield Y. Root cause: TerrainBuilder
- *    .createScatter()'s else-branch refreshed sceneDef + boundary but
- *    forgot heightfield, so ScatterSystem held a stale ref.
- *
- * 2. Mode restart (Classic → Extreme → Classic) left sheep at the prior
- *    mode's leftover positions. Root cause: GameState.startGame gated
- *    flock recreation on `previousSheepCount !== totalSheep`, so any
- *    same-count restart skipped recreation and inherited stale state.
- *
- * This spec drives the swap matrix via window.__sdsSwapTo (installed in
- * main.js _installStressTestHarness) and reads __sdsSwapProbe() for the
- * direct fix-verification numbers (scatterHeightfieldMatches +
- * sheep.outOfBounds). No DOM scraping.
+ * Drives the swap matrix via window.__sdsSwapTo (installed in main.js
+ * _installStressTestHarness) and reads __sdsSwapProbe() for the direct
+ * fix-verification numbers. No DOM scraping.
  */
 
 async function seedIdentity(page: Page) {
@@ -91,13 +86,12 @@ async function startSoloClassic(page: Page) {
 test.describe('Cycle 18 Phase 2 — scene-swap + mode-restart hygiene @local-only', () => {
   test.setTimeout(360_000);
 
-  test('scatter heightfield ref refreshes across Field → RH → OC swap matrix @local-only', async ({ page }) => {
+  test('grass heightfield ref refreshes across Field → RH → OC swap matrix @local-only', async ({ page }) => {
     await bootSolo(page);
     await startSoloClassic(page);
 
     // Swap matrix: Field → RH → OC → Field → RH. After every swap,
-    // ScatterSystem.heightfield should be the same object as
-    // app.heightfield. The bug pre-fix: scatter held the prior scene's ref.
+    // GrassSystem.heightfield should be the same object as app.heightfield.
     const matrix = ['rolling-hills', 'open-country', 'field', 'rolling-hills'];
 
     for (const target of matrix) {
@@ -108,8 +102,6 @@ test.describe('Cycle 18 Phase 2 — scene-swap + mode-restart hygiene @local-onl
 
       expect(probeBefore.scene, `landed on ${target}`).toBe(target);
       expect(probeBefore.hasHeightfield, `heightfield loaded for ${target}`).toBe(true);
-      expect(probeBefore.scatterHeightfieldMatches,
-        `scatter heightfield ref must match current heightfield post-swap to ${target}`).toBe(true);
       expect(probeBefore.grassHeightfieldMatches,
         `grass heightfield ref must match current heightfield post-swap to ${target}`).toBe(true);
     }

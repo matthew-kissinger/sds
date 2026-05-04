@@ -99,7 +99,13 @@ void main() {
     vec2 tileBase = vec2(colIdx * tileSize.x, rowIdx * tileSize.y);
     vUvAtlas = tileBase + uv * tileSize;
 
-    // Billboard around Y (face camera horizontally), centred at originWorld.
+    // Cylindrical billboard around world-Y. The high-elevation atlas tiles
+    // (rows near zenith) are mostly dead space at gameplay camera angles,
+    // and tilting the quad to face an overhead camera distorts the tile's
+    // baked aspect ratio (the bake uses halfW=max(x,z) × halfH=y, so a
+    // top-down tile letterboxes the canopy inside a tall rectangle).
+    // Tracked as follow-up: bake square tiles + tilt the quad so high-
+    // elevation views read correctly from cinematic altitudes.
     vec3 horizForward = vec3(dirWorld.x, 0.0, dirWorld.z);
     if (length(horizForward) < 1e-4) horizForward = vec3(0.0, 0.0, 1.0);
     horizForward = normalize(horizForward);
@@ -107,13 +113,19 @@ void main() {
 
     // Quad vertices are object-space coords. position.x in [-halfW, halfW]
     // maps to the billboard's horizontal axis; position.y in [yMin, yMax]
-    // maps to world up. Both scaled by the instance scale.
+    // maps to world up.
     vec3 vertexWorld = originWorld
         + horizRight * (position.x * scaleVal)
         + vec3(0.0, (position.y - uTreeOriginObj.y) * scaleVal, 0.0);
 
-    vec4 mvPos = viewMatrix * vec4(vertexWorld, 1.0);
-    gl_Position = projectionMatrix * mvPos;
+    // Three.js's <fog_vertex> chunk references the symbol mvPosition by
+    // name, so we keep the local name in lockstep instead of inventing
+    // mvPos. Otherwise the injected "vFogDepth = - mvPosition.z;" fails
+    // to compile on strict drivers (e.g. SwiftShader in headless CI),
+    // which silently collapses the impostor LOD to nothing on permissive
+    // drivers too.
+    vec4 mvPosition = viewMatrix * vec4(vertexWorld, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
 
     #include <fog_vertex>
 }
@@ -155,17 +167,24 @@ void main() {
 export function createOctahedralImpostorMaterial({ atlas, cols, rows, bboxMinY, bboxMaxY }) {
     const yCenter = (bboxMinY + bboxMaxY) * 0.5;
     const material = new THREE.ShaderMaterial({
-        uniforms: THREE.UniformsUtils.merge([
-            THREE.UniformsLib.fog,
-            {
-                uAtlas: { value: atlas },
-                uColor: { value: new THREE.Color(1, 1, 1) },
-                uAlphaTest: { value: 0.4 },
-                uAtlasCols: { value: cols },
-                uAtlasRows: { value: rows },
-                uTreeOriginObj: { value: new THREE.Vector3(0, yCenter, 0) }
-            }
-        ]),
+        // Spread instead of UniformsUtils.merge — merge calls cloneUniforms
+        // which emits a "Textures of render targets cannot be cloned"
+        // warning per material instance because `atlas` is the runtime-
+        // baked atlas texture (i.e. a RenderTarget.texture). Spreading
+        // shares the same uniform descriptors directly. Fog uniforms
+        // (fogColor / fogNear / fogFar / fogDensity) are auto-driven by
+        // WebGLRenderer so we don't need our own writes — Three.js sees
+        // `fog: true` on the material and pushes the scene fog values
+        // every frame.
+        uniforms: {
+            ...THREE.UniformsLib.fog,
+            uAtlas: { value: atlas },
+            uColor: { value: new THREE.Color(1, 1, 1) },
+            uAlphaTest: { value: 0.4 },
+            uAtlasCols: { value: cols },
+            uAtlasRows: { value: rows },
+            uTreeOriginObj: { value: new THREE.Vector3(0, yCenter, 0) }
+        },
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
         side: THREE.DoubleSide,

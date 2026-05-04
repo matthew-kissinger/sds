@@ -1,6 +1,6 @@
 # Next Session — Cycle 20 (`heightfield-amplitude-fix-and-cinematic-videos`) plan scaffolded
 
-> Updated 2026-05-04. **Active plan: [`docs/cycle-20-plan.md`](docs/cycle-20-plan.md)** — 3 phases: (1) fix the longstanding `Heightfield.sample()` double-amplification bug at root, (2) debug + fix the `tools/cinematic/run.mjs` `page.screenshot` 30s timeout, (3) re-pose + render the 4 cinematic videos deferred from Cycle 19. Run `/cycle-start` to orient. Cycle 19 closed end-to-end autonomous; `v1.1.0` shipped.
+> Updated 2026-05-04. **Active plan: [`docs/cycle-20-plan.md`](docs/cycle-20-plan.md)** — 3 phases: (1) fix the longstanding `Heightfield.sample()` double-amplification bug at root, (2) debug + fix the `tools/cinematic/run.mjs` `page.screenshot` 30s timeout, (3) re-pose + render the 4 cinematic videos deferred from Cycle 19. Run `/cycle-start` to orient. Cycle 19 closed end-to-end autonomous; `v1.1.0` shipped. **Cycle 19.5 polish landed on top** (deploy unblock, per-instance frustum culling, ScatterSystem removal, impostor brightness lift) — see BACKLOG `Cycle 19.5` entry.
 
 ## Where the project stands (Cycle 19 close)
 
@@ -47,15 +47,15 @@ Standing alternatives if Cycle 20 scope shifts:
 | RH grass too tight to inner area | `grassRadius` in [`shared/scenes/rolling-hills.js`](shared/scenes/rolling-hills.js) | scene config | 172m |
 | OC grass not reaching shore | `grassRadius` in [`shared/scenes/open-country.js`](shared/scenes/open-country.js) | scene config | 372m |
 | Octahedral impostor azimuth step visible | `COLS` in `_bakeOctahedralImpostor` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 4 (90° step) → 8 (45° step) |
-| Octahedral impostor brightness wrong | ambient + dirLight in `_bakeOctahedralImpostor` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.30 / 0.55 (matches cross-billboard) |
+| Octahedral impostor brightness wrong | ambient + dirLight in `_bakeOctahedralImpostor` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.70 / 1.20 (Cycle 19.5 lift; was 0.30 / 0.55 pre-cycle) |
 | Sun-tint blend strength | `BLEND` in `setImpostorTint` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.35 |
+| Impostor sun-luma brightness boost | inline `0.20 * lum` factor in `setImpostorTint` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.20 (Cycle 19.5; up to 1.2× brighter at noon) |
 | LOD0→impostor pop visible at 100m | `addLOD(billboardGeo, mat, 100)` distance | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 100m camera distance |
 | Trees rattle too much / too still | `_treeWind.uWindStrength` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.6 desktop / 0 mobile |
 | Tree bark color wrong | `BARK_TINTS[species][scale]` | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | per-species 0x4a-0x8c brown |
 | Single-leaf canopy too sparse | `baseSize` per species + single boost | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | 1.6 deciduous / 1.2 pine; ×1.25 single |
 | Rocks too big / too small | `ROCK_NATIVE_HEIGHT` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.2m |
 | Rocks float / sink | `ROCK_Y_SCALE` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.7 |
-| Scatter density sparse / dense | `minDist` | [`js/ScatterSystem.js`](js/ScatterSystem.js) | 4m desktop / 6m mobile |
 
 Re-baking trees: edit recipes/seeds in [`tools/bake-trees.mjs`](tools/bake-trees.mjs), then `rm assets/_originals/models/trees/*.glb && npm run bake-trees && npm run compress-glbs`. The `_originals/` rm is required to invalidate the compress-glbs backup cache (Cycle 14 finding, commit `39f44fb`).
 

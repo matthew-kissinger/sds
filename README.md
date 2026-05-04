@@ -168,7 +168,7 @@ With the backend on Cloudflare's edge, the engine modular, and three biomes ship
 - **More multi-stage objectives** beyond Open Country's gather→drive. River crossings, predator-flushing, time-pressure herding to a closing gate, lost-sheep recovery, scattered sub-flocks at multiple cardinal directions — each unlocked by data in `shared/scenes/*.js` rather than new code paths.
 - **Predators + NPCs.** Wolves or strays as obstacle-aware boids using the same `SceneObstacles` index sheep already query. A second AI shepherd that competes or assists.
 - **Mod-friendly scene format.** Sandbox uses lz-string-encoded URLs today; growing this to full scene descriptions (heightmap + tree zones + woods clusters + objective def) so a custom biome ships as a link.
-- **Octahedral tree impostors v2** for crisper distance LOD. Today's billboards work but distant tree masses on Open Country read as flat — proper octahedral impostors would carry.
+- **Spherical-billboard impostors** so the high-elevation atlas tiles aren't dead pixels at cinematic / freeFly altitudes. The Cycle 18 octahedral atlas already bakes 16 views per species (4 azimuth × 4 elevation), and Cycle 19.5 brightened the bake to match LOD0 exposure — but the runtime quad still billboards around world-Y only, so high-elevation atlas tiles render edge-on. A proper spherical billboard with a square-tile bake would unlock the overhead shots.
 - **Competitive seasons + tournaments** once the leaderboard has enough player history to make them meaningful.
 
 None of this is gated on the backend — D1 scales trivially, DO rooms are independent, Workers autoscale at the edge. Contributions toward any direction welcome.
@@ -186,8 +186,8 @@ This codebase is deliberately easy to read. Whether you want to mod the game, us
 ### Places a PR would be genuinely useful
 
 - **Delta-encoded state broadcast** in `worker/src/RoomDO.ts` — the client already extrapolates from `vx`/`vz`, so per-viewer deltas would roughly halve bandwidth.
-- **Octahedral impostors** for distant trees, replacing the current flat-billboard LOD past `FAR_LOD_DIST`.
-- **Camera-relative tree LOD.** Today `FAR_LOD_DIST` is distance-from-origin (set once at scene load). Per-frame mesh↔billboard switching tied to camera distance would let smaller LOD distances be useful again.
+- **LOD2 → LOD0 cross-fade** at the 100 m boundary. The hard pop is visible — alpha-dither / fade across a 5-10 m hysteresis band would soften it. Requires the impostor material to participate in the fade (alpha output), which isn't a one-line patch.
+- **Spherical-billboard tilt for overhead camera angles** (paired with a square-tile re-bake) — see roadmap above.
 - **More languages.** i18n keys live in `js/locales/`; PRs add a new directory + JSON files.
 - **Dog GLB compression** via gltf-transform + Draco — 25-40k triangles per dog, five dog models.
 - **Better mobile perf.** Current target is 30-60 fps; getting 60 reliable on mid-range Android would help.
