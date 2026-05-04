@@ -1,76 +1,76 @@
 {
   "dir": "tools/asset-gallery/staging",
-  "savedAt": "2026-05-03T22:00:00.000Z",
-  "_note": "Cycle 16 Phase 1+3 autonomous picks. Each entry carries an explicit `canonicalName` so semantic slot mapping doesn't depend on bbox-height sort. Re-run `npm run gallery` to swap any pick — gallery save will overwrite this file (without canonicalName, so re-add the field by hand or run integrate with the gallery's emitted bbox-sort if you want to skip the override).",
+  "savedAt": "2026-05-04T00:30:00.000Z",
+  "_note": "Cycle 16 Phase 1+3 integrated picks (gallery-reviewed by Matt 2026-05-04). The full 18-item gallery selection is preserved in git history of this file (commit 595e30c → next). Each entry below carries an explicit `canonicalName` so semantic slot mapping doesn't depend on bbox-height sort. To swap any pick: edit the canonicalName field, run `node tools/asset-gen/integrate.mjs --compress`.",
   "picks": [
     {
-      "path": "tools/asset-gallery/staging/trees/aspen_medium_single.glb",
-      "name": "aspen_medium_single.glb",
+      "path": "tools/asset-gallery/staging/trees/aspen_small_single.glb",
+      "name": "aspen_small_single.glb",
       "canonicalName": "tree1.glb",
-      "_role": "slim vertical pasture silhouette",
-      "tris": 4392,
-      "bbox": { "sy": 67.85 }
+      "_role": "slim pasture silhouette (lightest at 3.7k tris)",
+      "tris": 3744,
+      "bbox": { "sx": 0.645, "sy": 1.0, "sz": 0.708 }
     },
     {
       "path": "tools/asset-gallery/staging/trees/oak_medium_single.glb",
       "name": "oak_medium_single.glb",
       "canonicalName": "tree2.glb",
-      "_role": "broad canopy anchor",
+      "_role": "broad canopy anchor (~18.8k tris)",
       "tris": 18772,
-      "bbox": { "sy": 67.54 }
+      "bbox": { "sx": 0.821, "sy": 1.0, "sz": 0.818 }
     },
     {
       "path": "tools/asset-gallery/staging/trees/pine_medium_single.glb",
       "name": "pine_medium_single.glb",
       "canonicalName": "pine.glb",
-      "_role": "conifer evergreen",
+      "_role": "conifer (kept from autonomous pick — no pine in gallery selection)",
       "tris": 1216,
       "bbox": { "sy": 49.98 }
     },
     {
-      "path": "tools/asset-gallery/staging/trees-lod1/aspen_medium_single_lod1.glb",
-      "name": "aspen_medium_single_lod1.glb",
+      "path": "tools/asset-gallery/staging/trees-lod1/aspen_small_single_lod1.glb",
+      "name": "aspen_small_single_lod1.glb",
       "canonicalName": "tree1_lod1.glb",
-      "_role": "slim vertical pasture — LOD1 sibling",
-      "tris": 1672,
-      "bbox": { "sy": 67.59 }
+      "_role": "auto-paired LOD1 sibling for aspen_small_single",
+      "tris": 1462
     },
     {
       "path": "tools/asset-gallery/staging/trees-lod1/oak_medium_single_lod1.glb",
       "name": "oak_medium_single_lod1.glb",
       "canonicalName": "tree2_lod1.glb",
-      "_role": "broad canopy anchor — LOD1 sibling",
-      "tris": 2314,
-      "bbox": { "sy": 66.05 }
+      "_role": "auto-paired LOD1 sibling for oak_medium_single",
+      "tris": 2314
     },
     {
       "path": "tools/asset-gallery/staging/trees-lod1/pine_medium_single_lod1.glb",
       "name": "pine_medium_single_lod1.glb",
       "canonicalName": "pine_lod1.glb",
-      "_role": "conifer evergreen — LOD1 sibling",
-      "tris": 444,
-      "bbox": { "sy": 49.97 }
+      "_role": "auto-paired LOD1 sibling for kept pine",
+      "tris": 444
     },
     {
-      "path": "tools/asset-gallery/staging/rocks/pebble_oval_chunky.glb",
-      "name": "pebble_oval_chunky.glb",
+      "path": "tools/asset-gallery/staging/rocks/pebble_round_small.glb",
+      "name": "pebble_round_small.glb",
       "canonicalName": "rock1.glb",
-      "_role": "small pebble (~0.12m) — matches existing rock1 vibe",
-      "size": 25320
+      "_role": "small classic pebble (~0.10m)",
+      "tris": 180,
+      "bbox": { "sy": 0.10 }
     },
     {
       "path": "tools/asset-gallery/staging/rocks/boulder_chunky_mid.glb",
       "name": "boulder_chunky_mid.glb",
       "canonicalName": "rock2.glb",
       "_role": "medium grey-brown boulder (~0.28m)",
-      "size": 25320
+      "tris": 180,
+      "bbox": { "sy": 0.28 }
     },
     {
-      "path": "tools/asset-gallery/staging/rocks/craggy_chunk_warm.glb",
-      "name": "craggy_chunk_warm.glb",
+      "path": "tools/asset-gallery/staging/rocks/spire_jagged_dark.glb",
+      "name": "spire_jagged_dark.glb",
       "canonicalName": "rock3.glb",
-      "_role": "large warm-granite craggy formation (~0.38m)",
-      "size": 43772
+      "_role": "tall jagged slate spire (~0.50m) — replaces the previous warm-granite craggy formation for more silhouette drama",
+      "tris": 320,
+      "bbox": { "sy": 0.50 }
     }
   ]
 }

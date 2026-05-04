@@ -144,11 +144,19 @@ function buildRecipe(species, scaleIdx, tier, billboard, sizeBoost = 1.0) {
         ? (species === 'pine' ? LOD1_BRANCH_PINE : LOD1_BRANCH_DEFAULT)
         : (species === 'pine' ? LOD0_BRANCH_PINE : LOD0_BRANCH_DEFAULT);
 
-    // Single-billboard leaves read 50% smaller from grazing camera angles
-    // (only one quad to catch the light). Bump leaves.size ~30% so the
-    // canopy still reads dense at the same count.
-    const baseSize = 1.0; // EZ-Tree presets ship leaves.size ~ 0.6-0.9
-    const leafSize = baseSize * sizeBoost * (billboard === 'single' ? 1.3 : 1.0);
+    // Cycle 16 follow-up (2026-05-03): Matt flagged leaves as too small
+    // in coverage from the gallery. Bumped baseSize 1.0 → 1.6 across the
+    // board so canopies read with proper coverage from grazing camera
+    // angles. Pine reduced because pine "leaves" are needle clusters
+    // that get visually overpowering past size 1.6.
+    //
+    // Single-billboard leaves still get an extra ~25% bump on top to
+    // compensate for the missing perpendicular quad. Net leaf-card
+    // dimensions roughly: deciduous-single ~2.0, deciduous-double ~1.6,
+    // pine-single ~1.5, pine-double ~1.2. Leaf TRIS stay flat (size
+    // affects per-card scale, not card count).
+    const baseSize = species === 'pine' ? 1.2 : 1.6;
+    const leafSize = baseSize * sizeBoost * (billboard === 'single' ? 1.25 : 1.0);
 
     const tweaks = {
         bark: {
@@ -161,7 +169,10 @@ function buildRecipe(species, scaleIdx, tier, billboard, sizeBoost = 1.0) {
             billboard,
             count: leafCount,
             size: leafSize,
-            sizeVariance: 0.55
+            // 0.55 → 0.65: more variance among individual leaf cards so
+            // the canopy reads as a textured cluster rather than a
+            // uniform foam wad. Cheap (just per-instance scale jitter).
+            sizeVariance: 0.65
         }
     };
 
