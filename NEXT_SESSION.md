@@ -1,6 +1,6 @@
-# Next Session — Cycle 17 (`bundle-slim`) scaffolded; needs Goal + Phases filled in
+# Next Session — Cycle 17 (`mobile-hardening-lod-and-bundle-slim`) plan written; ready for `/cycle-start`
 
-> Updated 2026-05-04 (Cycle 16 closed). **Active plan: [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md)** (stub — Goal + Phases need filling in next session). Live on [sheepdogsim.com](https://sheepdogsim.com) at the cycle-16-close push. Last closed cycle: [`docs/archive/cycles/cycle-16-plan.md`](docs/archive/cycles/cycle-16-plan.md). All deploy + e2e + perf-check jobs green in CI.
+> Updated 2026-05-04 (Cycle 16 closed; Cycle 17 plan written from gallery-review regressions). **Active plan: [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md)** — 7 phases folded in from Matt's post-deploy review (mobile asset visibility, white-bark tree, grass anomalies, portrait HUD overlap, LOD chain extensions + octahedral impostor evaluation via local Pixel Forge Kiln, OC portal scaling, bundle slim). Live on [sheepdogsim.com](https://sheepdogsim.com) at the cycle-16-close push. Last closed cycle: [`docs/archive/cycles/cycle-16-plan.md`](docs/archive/cycles/cycle-16-plan.md). All deploy + e2e + perf-check jobs green in CI.
 
 ## Where the project stands (Cycle 16 close)
 
@@ -21,11 +21,22 @@ Headlines from Cycle 16:
 
 ## Cycle 17 — what to pick up next
 
-**Cycle 17 plan is scaffolded as a stub at [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md); needs Goal + Phases filled in.** Run `/cycle-start` after that to orient.
+Plan at [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md). 7 phases, all grounded in regressions Matt flagged during the Cycle 16 deploy review. Run `/cycle-start` to orient.
 
-Slug: `bundle-slim`. Starting hint (in the plan stub): the Cycle 16 build flagged `main-ChqZvyrU.js 817 KB / 241 KB gzip` with a Vite chunk-size warning. That single bundle is the dominant cold-start cost on mobile (CI E2E had to bump `actionTimeout: 10s → 30s` in Cycle 15 to absorb it). Likely cycle goal: split `main.js` so first-paint downloads ~half, with the rest dynamic-imported on demand. User-visible difference: meaningfully faster cold-start on mobile.
+Slug: `mobile-hardening-lod-and-bundle-slim` (renamed from `bundle-slim` after the regression intake — bundle-slim becomes Phase 7). The hardening is the gate: don't tag `v1.1.0` until Phases 1-4 land cleanly.
 
-Other standing candidates from BACKLOG / ARCHITECTURE if `bundle-slim` turns out wrong:
+**Phase summary:**
+1. **Mobile asset visibility audit** (~3-4hr, foundation) — trees / rocks / flora invisible at distance on mobile classic camera; root-cause via mobile-probe harness + e2e smoke spec.
+2. **White-bark tree + bark coherence** (~2hr) — one stray "white bark, tall and skinny, few branches" tree in the live build; likely cross-billboard impostor lighting washout (white ambient 0.55 + dirLight 0.85 = 1.4× washout) but recipe-level `bark.tint` not applied also possible.
+3. **Grass anomalies** (~3-4hr) — skyward grass blades near trees recurring (Cycle 15's `Number.isFinite` clamp fixed placement Y; theory: shared-material trap leaks tree-wind shader patch into grass material). Plus OC grass only in middle of island, not extending to edge — generation radius hardcoded ~250m, OC island is 380m.
+4. **Portrait-mobile HUD layout** (~2-3hr) — camera-mode toggle button overlaps time/score on portrait. General portrait UX audit while we're there (iPhone SE 375×667, iPhone 14 390×844, Android 360×780, iPad 768×1024).
+5. **LOD chain extensions + culling sync** (~5-7hr) — Matt observed culling out-of-sync with camera; needs profiling. Plus more LOD tiers including octahedral impostor evaluation via local **Pixel Forge Kiln** (`pixelforge kiln bake-imposter ./tree.glb --out ./tree.png --angles 16` per [`pixel-forge/docs/kiln-vision.md`](file:///C:/Users/Mattm/X/games-3d/pixel-forge/docs/kiln-vision.md)).
+6. **OC portal scales to total sheep** (~1-2hr) — currently hardcoded `requiredSheep: 40`; should be ~40% of mode count (Classic 200→80, Extreme 1000→400, Insane 3000→1200, Chaos 5000→2000). Schema change to `CorralDef.requiredSheepFraction` + `requiredSheepMin`.
+7. **Bundle slim** (~4-6hr, deferred from cycle's original framing) — main.js 817 KB / 241 KB gzip flagged by Vite chunk-size warning; dynamic-import the deferred React panels (Multiplayer, Leaderboard, Settings, Sandbox).
+
+**Open questions (5 in the plan; settle at `/cycle-start`):** octahedral pipeline (Kiln vs internal), mobile-invisibility root cause, white-bark origin, OC portal formula, grass-stretch mechanism, bundle-slim strategy.
+
+Standing alternatives if Cycle 17 scope shifts:
 - `webgpu-tsl-spike` — port grass + tree-leaf shader math to TSL; bring up WebGPU renderer with WebGL fallback
 - `grass-render-texture-trample` — per-blade RT ping-pong for sheep trample recovery
 - `procedural-instanced-forest-eval` — measure PIF perf vs current LOD chain on the actual scene
@@ -106,7 +117,7 @@ Re-baking trees: edit recipes/seeds in [`tools/bake-trees.mjs`](tools/bake-trees
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md) — `bundle-slim` (stub; needs Goal + Phases) |
+| Active cycle | [`docs/cycle-17-plan.md`](docs/cycle-17-plan.md) — `mobile-hardening-lod-and-bundle-slim` (7 phases written + 6 open questions) |
 | Latest closed cycle | [`docs/archive/cycles/cycle-16-plan.md`](docs/archive/cycles/cycle-16-plan.md) |
 | Cycle 16 decision brief | [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md) |
 | Cycle 16 gallery review | [`docs/cycle-16-tree-gallery-review.md`](docs/cycle-16-tree-gallery-review.md) |
