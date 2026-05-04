@@ -1,0 +1,91 @@
+{
+  "capturedAt": "2026-05-04T00:40:12.909Z",
+  "warmupMs": 3000,
+  "measureMs": 15000,
+  "target": "http://localhost:3000",
+  "results": [
+    {
+      "configId": "field-classic",
+      "scene": "field",
+      "mode": "classic",
+      "ok": false,
+      "summary": null,
+      "rendererInfo": null,
+      "errors": [],
+      "warning": "page.waitForFunction: Timeout 90000ms exceeded.",
+      "elapsedSec": "110.8"
+    },
+    {
+      "configId": "field-extreme",
+      "scene": "field",
+      "mode": "extreme",
+      "ok": true,
+      "summary": {
+        "sampleCount": 2,
+        "avgFrameTime": 3807.4853846153846,
+        "p50FrameTime": 3894.1399999999994,
+        "p95FrameTime": 3894.1399999999994,
+        "p99FrameTime": 3894.1399999999994,
+        "maxFrameTime": 3894.1399999999994,
+        "avgDrawCalls": 1001.5,
+        "avgTriangles": 4707712,
+        "avgActiveSheep": 999.5
+      },
+      "rendererInfo": {
+        "calls": 1003,
+        "triangles": 4516262,
+        "points": 0,
+        "lines": 0,
+        "geometries": 53,
+        "textures": 50
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "172.5"
+    },
+    {
+      "configId": "rolling-hills-classic",
+      "scene": "rolling-hills",
+      "mode": "classic",
+      "ok": false,
+      "summary": null,
+      "rendererInfo": null,
+      "errors": [],
+      "warning": "page.waitForFunction: Timeout 90000ms exceeded.",
+      "elapsedSec": "100.4"
+    },
+    {
+      "configId": "rolling-hills-extreme",
+      "scene": "rolling-hills",
+      "mode": "extreme",
+      "ok": false,
+      "summary": null,
+      "rendererInfo": null,
+      "errors": [],
+      "warning": "page.waitForFunction: Timeout 120000ms exceeded.",
+      "elapsedSec": "136.0"
+    },
+    {
+      "configId": "open-country-classic",
+      "scene": "open-country",
+      "mode": "classic",
+      "ok": false,
+      "summary": null,
+      "rendererInfo": null,
+      "errors": [],
+      "warning": "page.waitForFunction: Timeout 90000ms exceeded.",
+      "elapsedSec": "117.8"
+    },
+    {
+      "configId": "open-country-extreme",
+      "scene": "open-country",
+      "mode": "extreme",
+      "ok": false,
+      "summary": null,
+      "rendererInfo": null,
+      "errors": [],
+      "warning": "page.waitForFunction: Timeout 120000ms exceeded.",
+      "elapsedSec": "136.6"
+    }
+  ]
+}
