@@ -771,6 +771,26 @@ export class TerrainBuilder {
     }
 
     /**
+     * Cycle 17 follow-up (2026-05-04): tint cross-billboard tree impostors
+     * by the current sun light color so they track time-of-day instead of
+     * staying frozen at the bake's neutral lighting. Called per-frame from
+     * main.js next to setRockRimColor; same source (atmosphere.sun.light.color)
+     * so the whole scene agrees on the sun's hue at every tick.
+     *
+     * MeshBasicMaterial's `.color` multiplies the texture sample directly
+     * — no shader patching needed. Per-material .copy() is cheap (~3
+     * field copies per frame per impostor; one impostor per tree species).
+     *
+     * @param {THREE.Color} color
+     */
+    setImpostorTint(color) {
+        if (!color || !this._impostorMaterials) return;
+        for (const mat of this._impostorMaterials) {
+            mat.color.copy(color);
+        }
+    }
+
+    /**
      * Terrain-mesh-accurate ground height for entity placement.
      *
      * Visible ground Y at (x, z) — triangle-interpolates against the captured
@@ -1152,6 +1172,12 @@ export class TerrainBuilder {
         const renderer = getSceneManager()?.getRenderer();
         const instancedMeshes = [];
 
+        // Cycle 17 follow-up: reset the per-swap impostor-material list so
+        // setImpostorTint() doesn't hold stale refs from the prior scene's
+        // billboards (which are removed from scene + may be disposed in
+        // clearTrees depending on their sharedFromGlbCache flag).
+        this._impostorMaterials = [];
+
         // Cycle 17 Phase 1: probe hook (gated on `?probeRender=1`). Captures
         // renderer-truthy + per-type bake outcome + final LOD chain so the
         // mobile-probe harness can diagnose invisible-trees-at-distance
@@ -1232,16 +1258,28 @@ export class TerrainBuilder {
             const billboardGeo = impostor
                 ? this._createCrossBillboardGeometry(impostor.width, impostor.bboxMinY, impostor.bboxMaxY)
                 : null;
+            // Cycle 17 follow-up (2026-05-04): switched `transparent: true`
+            // → `false` to put the cross-billboard in the OPAQUE render
+            // queue with a hard alpha cutoff. The transparent queue's
+            // alpha-blend interaction with mipmapped silhouettes was
+            // producing a light halo around tree edges at distance.
+            // Material tracked on `this._impostorMaterials` so the
+            // per-frame setImpostorTint() can update each `.color` to
+            // follow sun direction + time-of-day.
             const billboardMat = impostor
                 ? new THREE.MeshBasicMaterial({
                     map: impostor.texture,
-                    transparent: true,
+                    transparent: false,
                     alphaTest: 0.4,
                     side: THREE.DoubleSide,
                     depthWrite: true,
                     fog: true
                 })
                 : null;
+            if (billboardMat) {
+                if (!this._impostorMaterials) this._impostorMaterials = [];
+                this._impostorMaterials.push(billboardMat);
+            }
 
             lod0Model.traverse(child => {
                 if (!child.isMesh || !child.geometry) return;
@@ -1261,22 +1299,23 @@ export class TerrainBuilder {
                 // on the next swap (the dominant ~41% drift class).
                 im.userData.sharedFromGlbCache = true;
 
-                // LOD1: reduced geometry from sibling GLB. Material is
-                // SHARED with LOD0 — the leaf-wind shader patch attached
-                // to the original material is correct at any LOD geometry.
-                if (lod1Child?.geometry) {
-                    im.addLOD(lod1Child.geometry, child.material, 80);
-                }
-
-                // LOD2: leaves swap to cross-billboard; trunk swaps to a
-                // degenerate empty geometry so the billboard texture
-                // (which contains the trunk silhouette) is the only thing
-                // drawn at far distance.
+                // Cycle 17 follow-up (2026-05-04): LOD1 dropped from the
+                // chain. The reduced-leaf-count LOD1 produced a visible
+                // quality cliff (Matt's gallery review: "less leaves...
+                // does not look good"). Replaced with a clean LOD0 →
+                // impostor cutover at 100m (was LOD1 at 80 + impostor at
+                // 150). LOD0 zone shrinks from 80m to 100m; total tris
+                // roughly preserved since the 80-150m band that used to
+                // be LOD1 is now impostor (cheaper) instead.
+                //
+                // LOD1 GLBs are still loaded in loadModels (cheap, leaves
+                // option open to re-enable) but not consumed here. To
+                // re-enable: add `if (lod1Child?.geometry) im.addLOD(...)`.
                 if (billboardGeo && billboardMat) {
                     if (isLeavesMesh) {
-                        im.addLOD(billboardGeo, billboardMat, 150);
+                        im.addLOD(billboardGeo, billboardMat, 100);
                     } else {
-                        im.addLOD(this._lod2EmptyGeo, child.material, 150);
+                        im.addLOD(this._lod2EmptyGeo, child.material, 100);
                     }
                 }
 
@@ -1297,9 +1336,7 @@ export class TerrainBuilder {
                 instancedMeshes.push(im);
             });
 
-            const lodTag = lod1Model
-                ? (billboardGeo ? 'LOD0+LOD1+impostor' : 'LOD0+LOD1')
-                : (billboardGeo ? 'LOD0+impostor'      : 'LOD0-only');
+            const lodTag = billboardGeo ? 'LOD0+impostor' : 'LOD0-only';
             console.log(`[TERRAIN] Created ${instances.length} ${treeType} mesh instances (${lodTag})`);
         });
 

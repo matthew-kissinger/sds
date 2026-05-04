@@ -836,25 +836,17 @@ export class GrassSystem {
      * Generate chunks with grass instances
      */
     generateChunks() {
-        const { chunkSize } = this.config;
-        // Cycle 17 Phase 3: on DESKTOP island scenes, expand the chunk grid
-        // to the boundary so grass extends to ~island edge. Mobile keeps
-        // the original worldSize=220 cap (extending to 776m for OC blows
-        // mobile init budget). Per-chunk clump count is scaled DOWN by
-        // (originalArea / expandedArea) so total clumps stay near the
-        // original budget — extra perimeter chunks share the existing
-        // budget rather than adding to it.
-        const isIsland = this.boundary?.kind === 'island';
-        const expandForIsland = isIsland && !this.isMobile;
-        const gridExtent = expandForIsland
-            ? 2 * (this.boundary.radius + 8)
-            : this.config.worldSize;
-        const areaRatio = expandForIsland
-            ? Math.min(1, (this.config.worldSize * this.config.worldSize) / (gridExtent * gridExtent))
-            : 1;
-        const clumpsPerChunk = Math.max(80, Math.floor(this.config.clumpsPerChunk * areaRatio));
-        const halfWorld = gridExtent / 2;
-        const chunksPerSide = Math.ceil(gridExtent / chunkSize);
+        const { worldSize, chunkSize, clumpsPerChunk } = this.config;
+        const halfWorld = worldSize / 2;
+        const chunksPerSide = Math.ceil(worldSize / chunkSize);
+        // (Cycle 17 Phase 3 island grid-expansion + clump-rescale REVERTED
+        // post-deploy gallery review on 2026-05-04. Expansion shrank RH's
+        // grid (376m vs 420m default — bug) and dropped OC per-m² density
+        // 3.4x by holding total clumps flat across a 776m grid. Net effect:
+        // RH grass patchy on slopes, OC grass nearly invisible everywhere.
+        // The "OC grass to island edge" goal stays as deferred backlog —
+        // achieving it without per-area density loss needs a more careful
+        // perf-budgeted approach than blindly enlarging the grid.)
 
         for (let cx = 0; cx < chunksPerSide; cx++) {
             for (let cz = 0; cz < chunksPerSide; cz++) {
@@ -900,22 +892,13 @@ export class GrassSystem {
             // Check exclusion zones
             if (this.isExcluded(x, z)) continue;
 
-            // Distance-based density falloff. Cycle 17 Phase 3: on island
-            // scenes, hold density flat to ~70% of the safe radius then
-            // taper sharply over the last 30%. Pre-fix the formula used
-            // worldSize*densityRange (=386m for OC), giving a 21% accept
-            // rate at the island edge — read as "grass only in middle".
+            // Distance-based density falloff. Original formula restored
+            // 2026-05-04 after the Cycle 17 Phase 3 island-aware variant
+            // dropped per-m² density on RH (patchy slopes) + OC (nearly
+            // invisible). The OC "grass to island edge" goal remains
+            // backlog — needs a perf-budgeted approach, not a formula swap.
             const distFromCenter = Math.sqrt(x * x + z * z);
-            let densityFactor;
-            if (this.boundary?.kind === 'island') {
-                const safeR = this.boundary.radius - 8;
-                const flatR = safeR * 0.70;
-                if (distFromCenter <= flatR) densityFactor = 1.0;
-                else if (distFromCenter >= safeR) densityFactor = 0;
-                else densityFactor = 1 - (distFromCenter - flatR) / (safeR - flatR);
-            } else {
-                densityFactor = Math.max(0, 1 - distFromCenter / (this.config.worldSize * this.config.densityRange));
-            }
+            const densityFactor = Math.max(0, 1 - distFromCenter / (this.config.worldSize * this.config.densityRange));
             if (Math.random() > densityFactor * 0.8 + 0.2) continue;
 
             validPositions.push({ x, z });

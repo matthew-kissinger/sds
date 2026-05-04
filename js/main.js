@@ -2587,9 +2587,13 @@ class SheepDogSimulation {
         }
         // Cycle 14 Phase 4: feed sun light color to rocks for rim-light
         // tinting. Tracks sunrise/sunset hue without per-rock state.
+        // Cycle 17 follow-up: also tint tree-impostor cross-billboards
+        // so distant trees follow time-of-day instead of staying frozen
+        // at the bake's neutral lighting (Matt's gallery feedback).
         const sunLightColor = this.atmosphere?.sun?.light?.color;
         if (sunLightColor) {
             this.terrainBuilder?.setRockRimColor?.(sunLightColor);
+            this.terrainBuilder?.setImpostorTint?.(sunLightColor);
         }
         // Cycle 7 Phase 2e: keep sun disc aligned with the atmosphere's
         // sun direction + color, anchored at a fixed offset from the camera.
