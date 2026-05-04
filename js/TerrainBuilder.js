@@ -777,16 +777,22 @@ export class TerrainBuilder {
      * main.js next to setRockRimColor; same source (atmosphere.sun.light.color)
      * so the whole scene agrees on the sun's hue at every tick.
      *
-     * MeshBasicMaterial's `.color` multiplies the texture sample directly
-     * — no shader patching needed. Per-material .copy() is cheap (~3
-     * field copies per frame per impostor; one impostor per tree species).
+     * Tint formula: lerp neutral-white (1,1,1) TOWARD sun color at weight
+     * `IMPOSTOR_TINT_BLEND`. Pure-multiply (mat.color.copy(sunColor)) was
+     * darkening impostors noticeably under non-noon presets — dusk's
+     * 0xff9a55 (RGB 1.0, 0.60, 0.33) drops green channel to 60% and blue
+     * to 33%, making leaves look murky vs the in-scene MeshStandardMaterial
+     * trees which also receive sky ambient. The lerp keeps impostor at
+     * ~bake brightness while picking up enough sun hue to track sunrise
+     * / sunset / overcast without losing parity against live trees.
      *
      * @param {THREE.Color} color
      */
     setImpostorTint(color) {
         if (!color || !this._impostorMaterials) return;
+        const BLEND = 0.35;
         for (const mat of this._impostorMaterials) {
-            mat.color.copy(color);
+            mat.color.set(0xffffff).lerp(color, BLEND);
         }
     }
 
