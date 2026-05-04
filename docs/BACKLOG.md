@@ -4,6 +4,26 @@
 
 ## Recently Completed
 
+### Cycle 19 — visual-verification-and-octahedral-polish-and-v1.1.0 (closed 2026-05-04 autonomous; v1.1.0 shipped)
+
+Plan: [`docs/archive/cycles/cycle-19-plan.md`](archive/cycles/cycle-19-plan.md). Headline: visual verification of Cycle 18 on RTX 3070 surfaced a **separate** longstanding regression masking Phase 1 acceptance — grass on RH/OC was rendering at sea level, not on terrain. Diagnosed root cause (a Cycle 17 Phase 3 clamp tighten interacting with a longstanding Heightfield amplification bug), shipped a hotfix, then captured 3 OG cards on the post-fix build and tagged `v1.1.0`.
+
+- **Phase 1.A — Grass-Y heightfield clamp regression ✅ HOTFIX shipped (commit `0790333`).** `js/GrassSystem.js` clamp `baseY > 10 → 0` was tightened in Cycle 17 Phase 3 with the comment "heightScale tops out at 6". In practice the displaced terrain mesh peaks at ~25m on OC and ~36m on RH — **all legit terrain Y was being snapped to 0, dropping grass to water level on RH and OC.** Field stayed byte-identical because heightScale=0 and meshSampleY returns 0. Reverted clamp to `> 50`. Verified post-fix: OC inner-chunk grass at meanY=21 (matches displaced terrain), RH at meanY=20-30, Field byte-identical.
+- **Phase 1.B/C/D/E — Cycle 18 verification ✅ all phases verified post-grass-fix.** Octahedral impostors brightness parity confirmed at noon + dawn across mixed-LOD frames (no visible cliff at the 100m boundary). No visible azimuth-step in any wide shot. Scene-swap OC→RH preserves grass-on-terrain (spec passes the JS reference-equality test from Cycle 18). OC-Extreme on RTX 3070 = 73 fps avg, p95 frame 13.88 ms (Q2 settled — no clumpsPerChunk reduction needed).
+- **Phase 2 — octahedral polish SKIPPED.** No defects surfaced in Phase 1.
+- **Phase 3.A — 3 OG cards refreshed ✅ shipped (commit `897ce29`).** og-field, og-rh-sunset (Solo Extreme + 1000 sheep), og-open-country. All under 200 KB. Captured directly via Playwright MCP because the cinema runner has a separate `page.screenshot` 30s timeout issue.
+- **Phase 3.C — `v1.1.0` tagged + pushed ✅** (commit `d0fcb66`). CHANGELOG.md updated, worker/package.json bumped 0.1.0 → 1.1.0, root package 1.0.0 → 1.1.0 via `npm version`.
+
+Validation (end of cycle):
+- **180/180 vitest pass.**
+- **Production build clean** — 812.80 KB main / 241.46 KB gzip (flat vs Cycle 18's 806 KB).
+- **macOS Safari Smoke fail** is the standing mac-white-ground bug, environmental (not on CI Safari).
+
+Carryover (deferred to Cycle 20, see `docs/cycle-20-plan.md`):
+- **Phase 3.B — 4 cinematic videos (`dog-into-sunset`, `lightning-strike`, `chaos-5000`, `oc-portal`) deferred.** `tools/cinematic/run.mjs` hits a `page.screenshot: Timeout 30000ms exceeded — waiting for fonts to load…` on the first frame, even though "fonts loaded" message fires before the timeout. Single-shot static-card path also affected; my workaround was capturing OG cards via Playwright MCP directly. Cinema runner needs a debug pass (Playwright/font-load race or a screenshot-timeout option) before video shots can run.
+- **Heightfield amplification bug (root cause).** `Heightfield.sample()` multiplies by `peakHeight` while the bake script `scripts/bake-heightmap.mjs` already writes pre-multiplied metres (`h = (h / ampSum) * peakHeight; // [0, peakHeight]`). The unit tests at `tests/heightfield.spec.js` use normalized [0,1] inputs and pass — they encode the design contract. The data files violate the contract. Net effect: every scene's terrain mesh has shipped at peakHeight² metres for ~14 cycles (RH 36m peaks, OC 25m peaks instead of the documented 6m / 5m). Visual character of the game depends on the amplified state now. Fix is one of: (a) re-bake heightmaps to write [0,1] (changes scene visual character), (b) drop the `* peakHeight` in `sample()` (same result, fewer file changes), or (c) normalize at `Heightfield.load()` time (preserves files + tests). The Cycle 19 hotfix worked around the symptom by relaxing the GrassSystem clamp; the proper fix is its own cycle.
+- **Phase 4 polish (deferred from Cycle 18 then 19).** 3-tile octahedral blend / aux normal-map atlas / 32-angle bake — only fires if a future visual review surfaces step or brightness mismatch.
+
 ### Cycle 18 — scene-stability-and-octahedral-impostors (closed 2026-05-04; Phases 1-3 shipped autonomous overnight)
 
 Plan: [`docs/archive/cycles/cycle-18-plan.md`](archive/cycles/cycle-18-plan.md). Headline: closed the three visible gaps from Matt's Cycle 17 deploy review — RH/OC grass to island edge (per-scene `grassRadius`), scene-swap + mode-restart state hygiene (stale ScatterSystem heightfield + always-recreate flock on `startGame`), and real octahedral impostors (Cycle 17 shipped only cross-billboard). Ran end-to-end autonomous from a single "resume and run without checkins" prompt; all 6 open questions pre-resolved in the plan.
