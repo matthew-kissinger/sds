@@ -3,9 +3,14 @@ import { Vector2D } from './Vector2D.js';
 
 /**
  * Camera modes:
- *   CLASSIC - High isometric, preserves the original feel. Tracks zoom for height too.
- *   FOLLOW  - Cinematic close-up, dog framed clearly with smoothed yaw lag.
+ *   FOLLOW  - Cinematic close-up, dog framed clearly with smoothed yaw lag. Default.
  *   FREE    - User-controlled yaw orbit (mouse/touch/gamepad), Follow's pitch retained.
+ *   CLASSIC - High isometric, preserves the original feel. Tracks zoom for height too.
+ *
+ * Cycle 23 Phase A2 (Q6): Classic demoted to third option per v1.3.0
+ * playtest. MODE_ORDER governs the C-key cycle traversal so the third
+ * tap lands on Classic. The default boot mode is Follow (Cycle 21
+ * Phase 5).
  */
 export const CameraMode = Object.freeze({
     CLASSIC: 'classic',
@@ -13,7 +18,7 @@ export const CameraMode = Object.freeze({
     FREE: 'free'
 });
 
-const MODE_ORDER = [CameraMode.CLASSIC, CameraMode.FOLLOW, CameraMode.FREE];
+const MODE_ORDER = [CameraMode.FOLLOW, CameraMode.FREE, CameraMode.CLASSIC];
 
 const FOLLOW_DISTANCE = 22;
 const FOLLOW_HEIGHT = 11;

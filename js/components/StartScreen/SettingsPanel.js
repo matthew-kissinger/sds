@@ -28,7 +28,9 @@ function loadCameraMode() {
             return saved;
         }
     } catch (_) { /* localStorage may be unavailable */ }
-    return CameraMode.CLASSIC;
+    // Cycle 23 Phase A2 (Q6): default Follow per v1.3.0 playtest. Classic
+    // is now the third selectable option, not the boot mode.
+    return CameraMode.FOLLOW;
 }
 
 function persistCameraMode(mode) {
@@ -211,10 +213,12 @@ function PresetButton({ id, label, isActive, onClick, color }) {
     }, label);
 }
 
+// Cycle 23 Phase A2 (Q6): Follow is the default; Classic demoted to
+// third option. Order here matches the C-key cycle in MODE_ORDER.
 const CAMERA_MODE_OPTIONS = [
-    { id: CameraMode.CLASSIC, label: 'Classic',  desc: 'High isometric view (default)' },
-    { id: CameraMode.FOLLOW,  label: 'Follow',   desc: 'Cinematic close-up behind the dog' },
-    { id: CameraMode.FREE,    label: 'Free',     desc: 'Right-mouse-drag to orbit the dog' }
+    { id: CameraMode.FOLLOW,  label: 'Follow',   desc: 'Cinematic close-up behind the dog (default)' },
+    { id: CameraMode.FREE,    label: 'Free',     desc: 'Right-mouse-drag to orbit the dog' },
+    { id: CameraMode.CLASSIC, label: 'Classic',  desc: 'High isometric overhead view' }
 ];
 
 function CameraModePicker({ mode, onChange }) {

@@ -6,6 +6,7 @@ import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { GrassSystem } from './GrassSystem.js';
 import { loadKilnImpostor } from './kiln-impostor-material.js';
 import { patchMaterialDesat } from './shaders/AtmosphericDesatPatch.js';
+import { getOccluderUniforms, patchMaterialOccluder } from './shaders/OccluderFadePatch.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
@@ -187,6 +188,17 @@ export class TerrainBuilder {
         // drops to 20% of configured rather than 0% so far trees still desat
         // a bit. Tunable knob.
         this._desatHighPitchFloor = 0.2;
+
+        // Cycle 23 Phase A2: camera-to-dog occluder fade. Shared uniform set
+        // attached to every leaf MeshStandardMaterial AND propagated into
+        // the kiln impostor. Each frame, uOccluderDogVS gets the dog world
+        // pos transformed into camera view space; uOccluderStrength gates
+        // the effect (0 = disabled, 1 = full). Capsule radius 2.0m covers a
+        // dog (~1m wide, ~0.6m tall) plus a comfort margin so leaves clear
+        // even when the dog is low in frame.
+        this._occluder = getOccluderUniforms({ radius: 2.0, strength: 0.0 });
+        // Reusable scratch so updateGrassAnimation has no per-frame alloc.
+        this._occluderDogScratch = new THREE.Vector3();
         // Set when each tree-type model is patched at load time. Per-tree-
         // type bbox bounds drive the leaf-vs-trunk weight in the shader.
         this._patchedTreeMaterials = new WeakSet();
@@ -634,6 +646,13 @@ export class TerrainBuilder {
         // wraps whatever onBeforeCompile is currently set, so the order
         // (desat first, wind appended below) means both patches run.
         patchMaterialDesat(material, this._desat);
+
+        // Cycle 23 Phase A2: camera-to-dog occluder fade. Same chained-patch
+        // pattern as desat. The fragment hash-discards leaf pixels inside a
+        // thin view-space capsule between camera and dog so trees blocking
+        // line of sight turn into a stochastic dither curtain. Shared
+        // uniforms with the kiln impostor (set via setKilnImpostorOccluder).
+        patchMaterialOccluder(material, this._occluder);
 
         const uTime = this._treeWind.uTime;
         const uWindStrength = this._treeWind.uWindStrength;
@@ -2052,6 +2071,22 @@ export class TerrainBuilder {
             const t = smoothstep01(25, 50, Math.abs(pitchDeg));
             const lerp = 1.0 + (this._desatHighPitchFloor - 1.0) * t;
             this._desat.uDesatStrength.value = this._desatConfiguredStrength * lerp;
+        }
+
+        // Cycle 23 Phase A2: occluder fade — transform dog world pos into
+        // current camera view space, write into shared uniform. Strength is
+        // ON when both camera + dog are present; the radius-based capsule
+        // check in the shader handles the rest. A dog directly behind the
+        // camera produces t=0 / closest=origin so the dist check still gates
+        // correctly. No per-frame allocation: scratch Vector3 reused.
+        if (this._occluder && camera?.matrixWorldInverse && playerPosition) {
+            this._occluderDogScratch
+                .copy(playerPosition)
+                .applyMatrix4(camera.matrixWorldInverse);
+            this._occluder.uOccluderDogVS.value.copy(this._occluderDogScratch);
+            this._occluder.uOccluderStrength.value = 1.0;
+        } else if (this._occluder) {
+            this._occluder.uOccluderStrength.value = 0.0;
         }
     }
 
