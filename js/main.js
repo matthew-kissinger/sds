@@ -2630,7 +2630,11 @@ class SheepDogSimulation {
         const sunLightColor = this.atmosphere?.sun?.light?.color;
         if (sunLightColor) {
             this.terrainBuilder?.setRockRimColor?.(sunLightColor);
-            this.terrainBuilder?.setImpostorTint?.(sunLightColor);
+            // Cycle 20 Phase 2: kiln impostors do per-fragment relighting,
+            // so feed sunDir + ambient color too. The cross-billboard
+            // fallback ignores extra args (signature back-compatible).
+            const ambientColor = this.atmosphere?.ambientLight?.color ?? null;
+            this.terrainBuilder?.setImpostorTint?.(sunLightColor, sunDir, ambientColor);
         }
         // Cycle 7 Phase 2e: keep sun disc aligned with the atmosphere's
         // sun direction + color, anchored at a fixed offset from the camera.

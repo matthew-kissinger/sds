@@ -4,7 +4,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { GrassSystem } from './GrassSystem.js';
-import { createOctahedralImpostorMaterial, createOctahedralImpostorGeometry } from './octahedral-impostor-material.js';
+import { loadKilnImpostor } from './kiln-impostor-material.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
@@ -782,28 +782,33 @@ export class TerrainBuilder {
      *
      * @param {THREE.Color} color
      */
-    setImpostorTint(color) {
-        if (!color || !this._impostorMaterials) return;
+    setImpostorTint(sunColor, sunDirWorld = null, ambientColor = null) {
+        if (!sunColor || !this._impostorMaterials) return;
+
+        // Cycle 20 Phase 2: split materials by impostor kind. Kiln impostors
+        // run proper per-fragment relighting — they consume sunColor +
+        // sunDirWorld + ambientColor and need no pre-multiplied tint hack.
+        // Cross-billboard fallback (Cycle 16/17 impostor or any
+        // MeshBasicMaterial) keeps the Cycle 19 sun-luma boost since they
+        // can't relight on their own.
         const BLEND = 0.35;
-        const tmp = new THREE.Color(0xffffff).lerp(color, BLEND);
-        // Cycle 19 follow-up (2026-05-04): drive a 1.0×–1.2× brightness
-        // multiplier off the sun's perceptual brightness so impostors lift
-        // along with LOD0 when the sun is high (and dim slightly at dusk).
-        // Sun color near noon is roughly (1.0, 0.95, 0.85) → brightness
-        // ~0.93 → boost ~1.18×; dusk's (1.0, 0.60, 0.33) → brightness ~0.64
-        // → boost ~1.13×. Impostors pre-Cycle-19 sat at the bake's flat
-        // brightness regardless of time-of-day, which made the LOD swap
-        // read as a hard exposure step.
-        const lum = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
+        const tmp = new THREE.Color(0xffffff).lerp(sunColor, BLEND);
+        const lum = 0.299 * sunColor.r + 0.587 * sunColor.g + 0.114 * sunColor.b;
         const boost = 1.0 + 0.20 * Math.max(0, Math.min(1, lum));
         tmp.multiplyScalar(boost);
+
         for (const mat of this._impostorMaterials) {
-            // Cycle 18 Phase 3: octahedral material exposes the tint via
-            // `uniforms.uColor` (ShaderMaterial) instead of MeshBasicMaterial
-            // .color. The tag is set by createOctahedralImpostorMaterial.
-            if (mat.userData?.isOctahedralImpostor) {
-                mat.uniforms.uColor.value.copy(tmp);
+            if (mat.userData?.isKilnImpostor) {
+                mat.uniforms.uSunColor.value.copy(sunColor);
+                if (sunDirWorld) mat.uniforms.uSunDirWorld.value.copy(sunDirWorld);
+                if (ambientColor) {
+                    mat.uniforms.uAmbientColor.value.copy(ambientColor);
+                } else {
+                    // Default ambient = 35% grey if main.js can't supply.
+                    mat.uniforms.uAmbientColor.value.setRGB(0.35, 0.35, 0.35);
+                }
             } else if (mat.color) {
+                // Cross-billboard fallback path.
                 mat.color.copy(tmp);
             }
         }
@@ -1180,6 +1185,23 @@ export class TerrainBuilder {
         };
         if (!this._lod2EmptyGeoCache) this._lod2EmptyGeoCache = new WeakMap();
 
+        // Cycle 20 Phase 2: pre-load offline-baked Kiln impostors in parallel
+        // for every tree type that's actually about to be instanced. The
+        // loader caches by URL across scene swaps, so the cost is paid once
+        // per session per species. Concurrent fetch + decode hides under
+        // the existing tree-instance build (see Promise.all join below).
+        const kilnImpostorByType = new Map();
+        const kilnTreeTypes = Object.entries(treeInstances)
+            .filter(([type, list]) => list.length > 0 && this.models.trees[type])
+            .map(([type]) => type);
+        const kilnLoadResults = await Promise.all(
+            kilnTreeTypes.map((type) => loadKilnImpostor(`assets/models/trees/${type}.imposter`))
+        );
+        for (let i = 0; i < kilnTreeTypes.length; i++) {
+            const triple = kilnLoadResults[i];
+            if (triple) kilnImpostorByType.set(kilnTreeTypes[i], triple);
+        }
+
         Object.entries(treeInstances).forEach(([treeType, instances]) => {
             if (instances.length === 0 || !this.models.trees[treeType]) return;
 
@@ -1196,69 +1218,53 @@ export class TerrainBuilder {
                 lod1Model.traverse(c => { if (c.isMesh && c.geometry) lod1ChildByName.set(c.name, c); });
             }
 
-            // Cycle 18 Phase 3: bake octahedral atlas first; fall back to
-            // the Cycle 16/17 cross-billboard if octahedral fails (e.g.
-            // headless WebGL where setScissorTest isn't supported, or a
-            // pathological GLB). Both bakes are cached for the app
-            // lifetime so the cost is paid once per species per session.
-            let octa = this._bakeOctahedralCache?.get(treeType) ?? null;
-            const octaWasCached = !!octa;
-            if (!octa && renderer) {
-                if (!this._bakeOctahedralCache) this._bakeOctahedralCache = new Map();
-                octa = this._bakeOctahedralImpostor(lod0Model, renderer);
-                if (octa) this._bakeOctahedralCache.set(treeType, octa);
-            }
+            // Cycle 20 Phase 2: prefer the offline-baked Kiln impostor (loaded
+            // above into kilnImpostorByType). Fall back to the Cycle 16/17
+            // cross-billboard if the kiln load failed — Pixel Forge bakes
+            // are committed bytes, so the only realistic failure modes are
+            // missing files (re-bake required) or a malformed sidecar
+            // (`tests/imposter-sidecar.spec.js` should have caught it).
+            const kiln = kilnImpostorByType.get(treeType) ?? null;
 
             // Cross-billboard fallback (also the cached path for headless
-            // probes since octa might fail).
-            let impostor = octa ? null : this._bakeImpostorCache.get(treeType);
+            // probes / kiln-load failure).
+            let impostor = kiln ? null : this._bakeImpostorCache.get(treeType);
             const impostorWasCached = !!impostor;
-            if (!octa && !impostor && renderer) {
+            if (!kiln && !impostor && renderer) {
                 impostor = this._bakeTreeImpostor(lod0Model, renderer);
                 if (impostor) this._bakeImpostorCache.set(treeType, impostor);
             }
             if (probe) {
-                const activeBake = octa || impostor;
                 probe.trees.byType[treeType] = {
                     instances: instances.length,
                     lod1Available: !!lod1Model,
-                    impostorBaked: !!activeBake,
-                    impostorFromCache: octaWasCached || impostorWasCached,
-                    impostorKind: octa ? 'octahedral' : impostor ? 'cross-billboard' : 'none',
-                    impostorWidth: activeBake ? +activeBake.width.toFixed(3) : null,
-                    impostorBboxMinY: activeBake ? +activeBake.bboxMinY.toFixed(3) : null,
-                    impostorBboxMaxY: activeBake ? +activeBake.bboxMaxY.toFixed(3) : null,
+                    impostorBaked: !!(kiln || impostor),
+                    impostorFromCache: !!kiln || impostorWasCached,
+                    impostorKind: kiln ? 'kiln' : impostor ? 'cross-billboard' : 'none',
+                    impostorWidth: kiln
+                        ? +(kiln.sidecar.worldSize).toFixed(3)
+                        : impostor ? +impostor.width.toFixed(3) : null,
+                    impostorBboxMinY: kiln
+                        ? +(kiln.sidecar.bbox.min[1]).toFixed(3)
+                        : impostor ? +impostor.bboxMinY.toFixed(3) : null,
+                    impostorBboxMaxY: kiln
+                        ? +(kiln.sidecar.bbox.max[1]).toFixed(3)
+                        : impostor ? +impostor.bboxMaxY.toFixed(3) : null,
                     bakeBox: probe.trees.lastBakeBox ? { ...probe.trees.lastBakeBox } : null,
-                    lod0ChildBoxes: (() => {
-                        const out = [];
-                        lod0Model.traverse(c => {
-                            if (!c.isMesh || !c.geometry) return;
-                            if (!c.geometry.boundingBox) c.geometry.computeBoundingBox();
-                            const bb = c.geometry.boundingBox;
-                            out.push({
-                                name: c.name,
-                                size: { x: +(bb.max.x - bb.min.x).toFixed(3), y: +(bb.max.y - bb.min.y).toFixed(3), z: +(bb.max.z - bb.min.z).toFixed(3) }
-                            });
-                        });
-                        return out;
-                    })(),
                     rendererAvailable: !!renderer,
                 };
             }
 
             let billboardGeo = null;
             let billboardMat = null;
-            if (octa) {
-                // Octahedral path (Cycle 18 Phase 3 primary).
-                const halfW = octa.width / 2;
-                billboardGeo = createOctahedralImpostorGeometry(halfW, octa.bboxMinY, octa.bboxMaxY);
-                billboardMat = createOctahedralImpostorMaterial({
-                    atlas: octa.texture,
-                    cols: octa.cols,
-                    rows: octa.rows,
-                    bboxMinY: octa.bboxMinY,
-                    bboxMaxY: octa.bboxMaxY
-                });
+            if (kiln) {
+                // Cycle 20 Phase 2 primary path. Geometry + material were
+                // built once by loadKilnImpostor and cached — reuse the
+                // exact instances across all tree-children of this type
+                // (only the leaves child takes the impostor LOD; trunk
+                // children get the empty geometry below).
+                billboardGeo = kiln.geometry;
+                billboardMat = kiln.material;
             } else if (impostor) {
                 // Cross-billboard fallback (Cycle 16/17).
                 // `transparent: false` puts the billboard in the OPAQUE
@@ -1455,176 +1461,12 @@ export class TerrainBuilder {
         };
     }
 
-    /**
-     * Cycle 18 Phase 3 — octahedral impostor atlas baker.
-     *
-     * Renders the model from N×M views into a single composed atlas (one
-     * tile per view, viewport-blitted into a square render target). Returns
-     * the atlas + bbox metadata for `createOctahedralImpostorMaterial`.
-     *
-     * Camera distribution is azimuth × elevation (4 cols × 4 rows = 16
-     * tiles) — see `octahedral-impostor-material.js` for the runtime tile-
-     * pick math. Tile centres land at:
-     *   azimuth   = (col + 0.5) * 2π / cols
-     *   elevation = (row + 0.5) * π/2 / rows
-     *
-     * Returns null on bake failure; caller falls back to cross-billboard.
-     *
-     * @param {THREE.Object3D} model
-     * @param {THREE.WebGLRenderer} renderer
-     * @returns {{ texture: THREE.Texture, atlasW: number, atlasH: number, cols: number, rows: number, tileSize: number, width: number, bboxMinY: number, bboxMaxY: number } | null}
-     * @private
-     */
-    _bakeOctahedralImpostor(model, renderer) {
-        if (!renderer) return null;
-
-        const COLS = 4;
-        const ROWS = 4;
-        const TILE = 256; // 256×256 per tile = 1024×1024 atlas, ~1MB GPU per species.
-
-        const bakeScene = new THREE.Scene();
-        bakeScene.background = null;
-        // Cycle 19 follow-up (2026-05-04, second pass): pushed bake lighting
-        // 0.30+0.55 → 0.70+1.20 (1.90× total). Matt's first-pass review at
-        // 1.40× still read as "exceptionally dark" against bright sky.
-        // 1.90× lifts the impostor into the same exposure band as a sunlit
-        // LOD0 MeshStandardMaterial tree at noon, and combined with the
-        // sun-luma multiplier in `setImpostorTint` the LOD2 → LOD0 swap
-        // reads as a smooth exposure step instead of a brightness pop.
-        // The Cycle 17 white-bark concern is addressed by sticking to a
-        // pure-white dirLight (no warm tint at bake time) — the runtime
-        // sun-tint pulls the live atmosphere's color in over the top.
-        bakeScene.add(new THREE.AmbientLight(0xffffff, 0.70));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.20);
-        dirLight.position.set(2, 4, 3);
-        bakeScene.add(dirLight);
-
-        const treeClone = model.clone(true);
-        treeClone.traverse(node => {
-            if (node.isMesh) {
-                node.castShadow = false;
-                node.receiveShadow = false;
-            }
-        });
-        bakeScene.add(treeClone);
-
-        const box = new THREE.Box3().setFromObject(treeClone);
-        if (!isFinite(box.min.x) || box.isEmpty()) {
-            bakeScene.remove(treeClone);
-            return null;
-        }
-        const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
-
-        // Pad the camera frustum so silhouettes don't clip against tile
-        // edges. Using max(width, depth) makes oblique-view tiles fit the
-        // tree even when the bbox is rotated.
-        const halfDim = Math.max(size.x, size.z, size.y) * 0.55;
-        const halfW = Math.max(size.x, size.z) * 0.55;
-        const halfH = size.y * 0.55;
-
-        const atlasW = COLS * TILE;
-        const atlasH = ROWS * TILE;
-
-        const target = new THREE.WebGLRenderTarget(atlasW, atlasH, {
-            format: THREE.RGBAFormat,
-            type: THREE.UnsignedByteType,
-            minFilter: THREE.LinearMipmapLinearFilter,
-            magFilter: THREE.LinearFilter,
-            generateMipmaps: true
-        });
-
-        const prevTarget = renderer.getRenderTarget();
-        const prevClearColor = new THREE.Color();
-        renderer.getClearColor(prevClearColor);
-        const prevClearAlpha = renderer.getClearAlpha();
-        const prevAutoClear = renderer.autoClear;
-        const prevScissorTest = renderer.getScissorTest?.() ?? false;
-
-        renderer.setRenderTarget(target);
-        renderer.setClearColor(0x000000, 0);
-        renderer.clear(true, true, true);
-        renderer.autoClear = false;
-
-        // Each tile is rendered into its own viewport rect within the
-        // atlas. Scissor matches the viewport so cross-tile clears don't
-        // wipe earlier tiles.
-        renderer.setScissorTest(true);
-
-        let bakeOk = true;
-        try {
-            for (let row = 0; row < ROWS; row++) {
-                const elevation = ((row + 0.5) / ROWS) * (Math.PI * 0.5);
-                const cosE = Math.cos(elevation);
-                const sinE = Math.sin(elevation);
-
-                for (let col = 0; col < COLS; col++) {
-                    const azimuth = ((col + 0.5) / COLS) * (Math.PI * 2.0);
-                    const cosA = Math.cos(azimuth);
-                    const sinA = Math.sin(azimuth);
-
-                    // Camera placed at distance D from tree centre,
-                    // along the (azimuth, elevation) direction.
-                    const D = Math.max(size.x, size.y, size.z) * 4.0 + 5.0;
-                    const camX = center.x + D * cosE * cosA;
-                    const camY = center.y + D * sinE;
-                    const camZ = center.z + D * cosE * sinA;
-
-                    const cam = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, 0.1, D * 4);
-                    cam.position.set(camX, camY, camZ);
-                    cam.up.set(0, 1, 0);
-                    cam.lookAt(center.x, center.y, center.z);
-
-                    const x = col * TILE;
-                    const y = row * TILE;
-                    renderer.setViewport(x, y, TILE, TILE);
-                    renderer.setScissor(x, y, TILE, TILE);
-                    renderer.clear(true, true, true);
-                    renderer.render(bakeScene, cam);
-                }
-            }
-        } catch (err) {
-            console.warn('[TERRAIN] octahedral bake threw, falling back to cross-billboard:', err);
-            bakeOk = false;
-        } finally {
-            renderer.setScissorTest(prevScissorTest);
-            renderer.setRenderTarget(prevTarget);
-            renderer.setClearColor(prevClearColor, prevClearAlpha);
-            renderer.autoClear = prevAutoClear;
-            // Reset viewport/scissor to match the new render target. Three.js
-            // doesn't auto-restore these, so leaving them mid-atlas would
-            // clip the next world frame to a 256×256 square in the lower-
-            // left of the canvas — visible as a tiny black inset.
-            const dst = prevTarget;
-            if (dst) {
-                renderer.setViewport(0, 0, dst.width, dst.height);
-                renderer.setScissor(0, 0, dst.width, dst.height);
-            } else {
-                const sz = renderer.getSize(new THREE.Vector2());
-                renderer.setViewport(0, 0, sz.x, sz.y);
-                renderer.setScissor(0, 0, sz.x, sz.y);
-            }
-        }
-
-        bakeScene.remove(treeClone);
-
-        if (!bakeOk) {
-            target.dispose();
-            return null;
-        }
-
-        return {
-            texture: target.texture,
-            atlasW,
-            atlasH,
-            cols: COLS,
-            rows: ROWS,
-            tileSize: TILE,
-            width: halfW * 2,
-            bboxMinY: box.min.y,
-            bboxMaxY: box.max.y
-        };
-    }
+    // Cycle 20 Phase 2 — `_bakeOctahedralImpostor()` removed. The runtime
+    // atlas baker (Cycle 18 Phase 3) is replaced by the offline Pixel Forge
+    // / Kiln pipeline. Build path:
+    //   `npm run bake-tree-impostors` → assets/models/trees/<name>.imposter.{png,normal.png,depth.png,json}
+    //   js/kiln-impostor-material.js  ← runtime material; loadKilnImpostor() consumes the sidecar
+    // See cycle20-validation/phase0/AUDIT.md for the migration rationale.
 
     /**
      * Three textured quads arranged at 0°, 60°, 120° around the Y axis. Any

@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "angles": 16,
+  "tilesX": 4,
+  "tilesY": 4,
+  "tileSize": 512,
+  "atlasWidth": 2048,
+  "atlasHeight": 2048,
+  "worldSize": 1,
+  "yOffset": 0.5,
+  "projection": "orthographic",
+  "axis": "hemi-y",
+  "hemi": true,
+  "layout": "latlon",
+  "azimuths": [
+    0,
+    1.5707963267948966,
+    3.141592653589793,
+    4.71238898038469
+  ],
+  "elevations": [
+    1.48352986419518,
+    1.0471975511965976,
+    0.5235987755982988,
+    0.08726646259971647
+  ],
+  "bbox": {
+    "min": [
+      -0.4135517670121835,
+      0,
+      -0.37792487801166696
+    ],
+    "max": [
+      0.40728931178869804,
+      1,
+      0.4397178862682093
+    ]
+  },
+  "source": {
+    "path": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree2.glb",
+    "bytes": 1373592,
+    "tris": 18772
+  },
+  "auxLayers": [
+    "albedo",
+    "normal",
+    "depth"
+  ],
+  "bgColor": "transparent",
+  "colorLayer": "baseColor",
+  "normalSpace": "capture-view",
+  "edgeBleedPx": 2,
+  "textureColorSpace": "srgb"
+}
