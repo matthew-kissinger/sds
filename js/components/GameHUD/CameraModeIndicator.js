@@ -2,10 +2,11 @@
  * CameraModeIndicator
  * Persistent HUD chip showing the current camera mode and how to cycle it.
  * Tappable on every platform — desktop also exposes the `C` key. Cycles
- * Classic → Follow → Free → Classic via the camera controller.
+ * Follow → Free → Classic → Follow via the camera controller (Cycle 23
+ * Phase A2 — Classic demoted to third option).
  */
-import React, { createElement } from 'react';
-import { getSceneManager } from '../../GameBridge.js';
+import React, { createElement, useEffect, useState } from 'react';
+import { getGameState, getSceneManager, subscribeGameEvent } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 
 const MODE_LABEL = {
@@ -18,11 +19,27 @@ export function CameraModeIndicator({ mode, platform = 'desktop' }) {
     const label = MODE_LABEL[mode] ?? 'Camera';
     const isMobile = platform === 'mobile';
 
+    // Cycle 23 Phase C: subscribe to objective state so the indicator drops
+    // below the ObjectiveBanner on Open Country (where the banner takes
+    // top-center). Cheap — same per-frame subscription pattern as the
+    // banner; we only re-render when the boolean flips.
+    const [hasObjective, setHasObjective] = useState(false);
+    useEffect(() => {
+        const read = () => {
+            const gs = getGameState();
+            setHasObjective(!!gs?.objective);
+        };
+        read();
+        return subscribeGameEvent('frame', read);
+    }, []);
+
     const handleCycle = () => {
         getSceneManager()?.getCameraController()?.cycleMode?.();
     };
 
     // Desktop: top-center (slot is free; SheepCounter sits top-left, GameTimer top-right).
+    // Cycle 23 Phase C: when an ObjectiveBanner is mounted (OC), drop the
+    // chip below it (~80px) so they vertical-stack instead of overlap.
     // Mobile landscape: top-left at top-2 (clear of MobileHUD chip which is top-center;
     // landscape is wide enough that left + center don't collide).
     // Mobile portrait: dropped to top-left BELOW MobileHUD (Cycle 17 Phase 4 — gallery
@@ -33,13 +50,17 @@ export function CameraModeIndicator({ mode, platform = 'desktop' }) {
 
     const positionClass = isMobile
         ? 'fixed left-2 z-20 animate-slide-down pointer-events-auto'
-        : 'fixed top-6 left-1/2 -translate-x-1/2 z-20 animate-slide-down pointer-events-auto';
+        : 'fixed left-1/2 -translate-x-1/2 z-20 animate-slide-down pointer-events-auto';
+
+    const desktopTop = hasObjective
+        ? 'calc(env(safe-area-inset-top, 0px) + 88px)'  // below ObjectiveBanner (~70px) + 18px gap
+        : 'calc(env(safe-area-inset-top, 0px) + 24px)'; // matches Tailwind top-6
 
     const inlineTop = portraitMobile
         ? 'max(env(safe-area-inset-top, 0px), 60px)'
         : isMobile
             ? 'max(env(safe-area-inset-top, 8px), 8px)'
-            : undefined;
+            : desktopTop;
 
     return createElement('div', {
         className: positionClass,
