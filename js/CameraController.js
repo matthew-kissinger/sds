@@ -92,7 +92,14 @@ export class CameraController {
         this.heightfield = null;
         this.minTerrainClearance = 1.5; // metres above ground in Follow/Free
 
-        this.mode = CameraMode.CLASSIC;
+        // Cycle 21 Phase 5 (2026-05-05): default to FOLLOW. Classic-cam high-
+        // pitch (45°) was surfacing impostor sampling/shadow artifacts that
+        // FOLLOW (~26° pitch, on-the-ground intimacy) doesn't trigger. Follow
+        // is also the natural play camera for sheep-herding gameplay — the
+        // dog is the protagonist, the camera should sit close. Players can
+        // still toggle to Classic via the C key. The mode-cycle list still
+        // visits Classic → Follow → Free in order.
+        this.mode = CameraMode.FOLLOW;
 
         // Zoom (used by Classic; Free retains the same range; Follow ignores).
         this.minDistance = isMobile ? 35 : 20;
@@ -246,11 +253,14 @@ export class CameraController {
     }
 
     /**
-     * Restore the default, non-competitive camera. Resets mode to Classic.
+     * Restore the default, non-competitive camera. Cycle 21 Phase 5: now
+     * resets to Follow (matches new boot default). Competitive mode uses
+     * Classic by design; leaving competitive should restore the player's
+     * normal-play experience.
      */
     resetCameraToDefault() {
         this.competitiveDirection = null;
-        this.mode = CameraMode.CLASSIC;
+        this.mode = CameraMode.FOLLOW;
         this.followInitialized = false;
         this.camera.position.set(0, 60, -60);
         this.camera.lookAt(0, 0, 0);
@@ -258,10 +268,10 @@ export class CameraController {
 
     /**
      * Reset camera state to defaults (mode + zoom). Used on mode-cycle reset
-     * or settings reset.
+     * or settings reset. Cycle 21 Phase 5: defaults to Follow.
      */
     reset() {
-        this.mode = CameraMode.CLASSIC;
+        this.mode = CameraMode.FOLLOW;
         this.distance = 80;
         this.freeYaw = 0;
         this.followYaw = 0;

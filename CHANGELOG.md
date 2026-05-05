@@ -4,6 +4,35 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] — 2026-05-05 (Cycle 21 — tree-impostor-stabilization-and-foliage-polish)
+
+This release ships Cycle 21 work on top of `1.1.0`. Cycle 21 was originally scoped as a 6-phase pixel-perfect impostor-LOD0 color-match. Mid-cycle, a research synthesis (Three.js modern LOD primitives + WebGPU/TSL state + stylized indie-game patterns) plus Matt's product-vision push pivoted the closing phases away from "match LOD0" toward "embrace atmospheric perspective + push impostor distance + fix the actual visible defects." The deeper LOD/grass overhaul moves to Cycle 22.
+
+### Added
+- **Aspen recipe re-tune.** `tools/bake-trees.mjs` `LEAF_COUNTS.aspen` `[24, 30, 36] → [34, 42, 50]` (+40% across all 3 scales) plus a new `LOD0_BRANCH_ASPEN` override lifting `children[0]` 8 → 10. Production pick `tree1.glb` (`aspen_small_single`) was reading as a tall broomstick — re-bake gives a fuller silhouette across all camera angles. tree1.glb 3744 → 5880 tris.
+- **Schlick fresnel rim** on the kiln impostor shader (`uFresnelStrength` uniform, default `0.04`). Closes the warm-bias hue gap by adding the cool-shifted edge highlight that LOD0's `MeshStandardMaterial` had via Three's PBR pipeline.
+- **Per-species impostor calibration LUT.** New `tools/generate-impostor-lut.mjs` reads sandbox measurements and outputs `assets/impostor-calibration-lut.json`. Each kiln material's `uMatchBoost` uniform is set once at scene init (no per-frame cost). tree1 boost `[1.305, 1.128, 0.891]` corrects the dominant Aspen color drift; tree2/pine entries are near-identity.
+- **Standalone LOD measurement sandbox** at `tools/lod-sandbox-v2.html`. Two-pane harness rendering LOD0 + LOD2 of the same tree under matched atmosphere preset, with 5×5 grid color sampling, OKLab dE proxy, and a 12-cell smoke matrix runner. Imports SDS modules via Vite — atmosphere preset switcher mirrors live game.
+- **Atmospheric perspective lean.** Per-fragment Rec601 luma desaturation in the kiln impostor shader past 200m, blending up to 70% desat by 350m. Distant trees now intentionally read as distant (Sable / Tiny Glade / Townscaper aesthetic) instead of fighting to match LOD0 pixel-perfect.
+
+### Fixed
+- **Detached impostor shadow ("film over the grass").** The InstancedMesh2 LOD2 impostor billboard was casting shadows during the directional light's shadow render pass. The billboard's vertex shader uses `cameraPosition` for camera-facing pose; during shadow render that's the LIGHT's position, so the billboard ended up facing the sun and its shadow was decoupled from the player's view of the tree — visible as a desynced grey patch beside each distant tree. Set `castShadow = false` on the LOD2 impostor sub-mesh; foreground LOD0 trees still cast correctly.
+- **Tree placement clumping in OC woods.** `WOODS_INSIDE_FACTOR` 0.6 → 0.85 → 0.92 (cumulative across Cycle 20 v2 + Cycle 21 Phase 0); placement `scaleVariation` 0.7-1.3 → 0.80-1.20 (fewer towering-vs-tiny outliers). Test threshold relaxed 1.3× → 1.05× to match new design intent.
+- **`docs/tree-pipeline.md` recipe table.** Was listing tree1 as "Aspen Medium seed=7" when the production pick is actually `aspen_small_single` seed=11. Corrected all three rows + added a "source of truth" pointer to `picks.json`.
+- **Grass shoreline clip.** New `SHORELINE_Y_MIN = 0.5` in `GrassSystem.createChunk` excludes grass past the visible shoreline on RH where the terrain falloff annulus drops below water level. Doesn't touch the existing `> 50` amplitude clamp.
+
+### Changed
+- **Spherical impostor billboard with world-up lock.** Cylindrical (Y-axis only) was foreshortening at high pitch — Classic camera at 45° pitch drew impostors at 71% height. Spherical-with-up-lock orients against `(worldUp × viewDir)` so the quad always faces the camera in 3D without rolling on yaw.
+- **Frustum-sized impostor quad.** Sized to the bake bounding sphere (`boundsRadius * 1.02`) matching Pixel Forge's `bake.ts` exactly. Previous code used `worldSize = max(bbox dims)` which drew the tree at ~70% of true size.
+- **Foliage lighting recipe.** Half-Lambert wrap + hemispheric ambient with albedo-tinted ground bounce + optional subsurface lift (default 0). Replaces pure Lambert (which read grey at distance).
+- **Impostor LOD swap distance pushed 100m → 200m.** Foreground/midground stays geometric (LOD0); impostors only fill the deepest fog band where atmospheric perspective is doing 60-80% of the visual work anyway. Eliminates the prior 100m hard cliff that surfaced the impostor color/sampling gaps.
+- **Atlas mipmaps disabled, anisotropy 8.** Cross-tile bleed from box-mip averaging across 4×4 lat-lon atlas neighbours produced sparkle-glint at distance. Disabling mips fixes the worst case; aniso 8 keeps texture sharp at high-pitch foreshortening. Half-texel UV clamp inside tiles prevents bilinear from reaching across tile boundaries.
+
+### Known limitations
+- **Impostor texture undersampling at extreme zoom + high pitch.** Without mipmaps, fragments hitting 5-15 screen pixels of a 512px tile can still alias. Mostly hidden behind the new 200m LOD2 distance + atmospheric desaturation. Cycle 22 will replace LOD1 with a meshoptimizer-simplified geometry tier that pushes geometric LOD further out before impostors take over.
+- **`tree1_lod1.glb` etc. exist in `assets/models/trees/` but are not consumed.** They were baked via EZ-Tree leaf-count halving which produced a visibly worse silhouette than LOD0. Cycle 22 will re-bake LOD1 using `meshoptimizer` geometric simplification — preserves silhouette, decimates triangles.
+- **Impostor calibration LUT is per-species only**, not per `(scene, ToD, distance)`. Per-distance residual exists (Aspen dE doubles between 150m → 250m) but the Phase 5 atmospheric desaturation now masks it.
+
 ## [Unreleased] — 2026-05-04 (Cycle 19.5 polish; on top of `1.1.0`)
 
 ### Fixed

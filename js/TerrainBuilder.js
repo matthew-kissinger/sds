@@ -786,6 +786,38 @@ export class TerrainBuilder {
      * @param {number} [sunIntensity=1]      Pre-multiplied into uSunColor for kiln impostors
      * @param {number} [ambientIntensity=1]  Pre-multiplied into uAmbientColor for kiln impostors
      */
+    /**
+     * Cycle 21 Phase 2 (2026-05-04): bind the impostor calibration LUT
+     * loaded from `assets/impostor-calibration-lut.json`. Called once at
+     * scene init by main.js after fetch. The LUT's per-species boost
+     * vector gets written into each kiln material's `uMatchBoost`
+     * uniform when materials are created in createTrees(). Storing the
+     * LUT reference (not the resolved values) means a hot-reload of the
+     * LUT JSON during dev would re-apply on next scene load.
+     *
+     * @param {object} lut Parsed impostor-calibration-lut.json (v1
+     *   schema: { version, boost: { species: [r,g,b] } }).
+     */
+    setImpostorCalibrationLUT(lut) {
+        this._impostorMatchLUT = lut;
+        // If kiln materials are already alive (LUT loaded after createTrees
+        // ran), retroactively apply. Phase 2 v1: createTrees runs after
+        // main.js's await fetch, so this branch is unused, but it's cheap
+        // insurance against future load-order changes.
+        if (this._impostorMaterials && lut?.boost) {
+            for (const mat of this._impostorMaterials) {
+                if (!mat.userData?.isKilnImpostor) continue;
+                const species = mat.userData?.species;
+                const boost = species ? lut.boost[species] : null;
+                if (boost && mat.uniforms.uMatchBoost) {
+                    mat.uniforms.uMatchBoost.value.set(
+                        boost[0] ?? 1, boost[1] ?? 1, boost[2] ?? 1,
+                    );
+                }
+            }
+        }
+    }
+
     setImpostorTint(sunColor, sunDirWorld = null, ambientColor = null, sunIntensity = 1, ambientIntensity = 1) {
         if (!sunColor || !this._impostorMaterials) return;
 
@@ -1272,7 +1304,24 @@ export class TerrainBuilder {
         );
         for (let i = 0; i < kilnTreeTypes.length; i++) {
             const triple = kilnLoadResults[i];
-            if (triple) kilnImpostorByType.set(kilnTreeTypes[i], triple);
+            if (!triple) continue;
+            kilnImpostorByType.set(kilnTreeTypes[i], triple);
+            // Tag the material with its species so setImpostorCalibrationLUT
+            // can retroactively apply boost on hot-LUT reload.
+            if (triple.material?.userData) {
+                triple.material.userData.species = kilnTreeTypes[i];
+            }
+            // Cycle 21 Phase 2 (2026-05-04): apply per-species calibration
+            // boost from impostor-calibration-lut.json. Set once at material
+            // creation — no per-frame update needed since the boost is
+            // sampling/bake-property correction, not lighting state. Defaults
+            // to (1,1,1) when LUT is missing or species absent.
+            const boost = this._impostorMatchLUT?.boost?.[kilnTreeTypes[i]];
+            if (boost && triple.material?.uniforms?.uMatchBoost) {
+                triple.material.uniforms.uMatchBoost.value.set(
+                    boost[0] ?? 1, boost[1] ?? 1, boost[2] ?? 1,
+                );
+            }
         }
 
         Object.entries(treeInstances).forEach(([treeType, instances]) => {
@@ -1394,14 +1443,48 @@ export class TerrainBuilder {
                 // re-enable: add `if (lod1Child?.geometry) im.addLOD(...)`.
                 if (billboardGeo && billboardMat) {
                     if (isLeavesMesh) {
-                        im.addLOD(billboardGeo, billboardMat, 100);
+                        // Cycle 21 Phase 5 (2026-05-05): pushed LOD swap
+                        // 100m → 200m. Foreground/midground stays geometric
+                        // (LOD0) where the camera spends most time; impostors
+                        // only fill the deepest fog band where atmospheric
+                        // perspective is doing most of the visual work.
+                        im.addLOD(billboardGeo, billboardMat, 200);
+                        // Cycle 21 Phase 5 fix: explicitly route the SHADOW
+                        // render pass through LOD0 ONLY — never through the
+                        // LOD2 impostor billboard. Default behaviour falls
+                        // back to LODinfo.render when shadowRender is null
+                        // (see @three.ez/instanced-mesh FrustumCulling.js
+                        // line 20: `LODinfo.shadowRender ?? LODinfo.render`),
+                        // which routes the impostor billboard quad into
+                        // shadow rendering. The billboard vertex shader uses
+                        // `cameraPosition` for camera-facing pose; during
+                        // the shadow pass `cameraPosition` is the LIGHT's
+                        // position, so the billboard ends up facing the sun
+                        // and its shadow on the ground doesn't align with
+                        // the player camera's view of the tree — visible as
+                        // a "detached film" beside each distant tree (Matt
+                        // 2026-05-05 review). Setting shadowRender to a
+                        // single-level chain pinned to LOD0 (`im` itself,
+                        // distance 0) means every instance renders LOD0
+                        // geometry into the shadow map regardless of
+                        // camera-LOD pick → leaf-shaped shadow that
+                        // matches the player's view of the canopy. Slight
+                        // perf cost (shadow pass renders LOD0 for all
+                        // instances) but shadow rendering is depth-only +
+                        // no fragment shader, so it's negligible at our
+                        // 200-500-tree scale.
+                        im.LODinfo.shadowRender = {
+                            levels: [{ distance: 0, hysteresis: 0, object: im }],
+                            count: [0],
+                        };
                     } else {
                         let trunkLod2 = this._lod2EmptyGeoCache.get(child.geometry);
                         if (!trunkLod2) {
                             trunkLod2 = makeMatchingEmptyGeo(child.geometry);
                             this._lod2EmptyGeoCache.set(child.geometry, trunkLod2);
                         }
-                        im.addLOD(trunkLod2, child.material, 100);
+                        // Cycle 21 Phase 5: same 200m distance as leaves.
+                        im.addLOD(trunkLod2, child.material, 200);
                     }
                 }
 

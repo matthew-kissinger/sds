@@ -4,6 +4,35 @@
 
 ## Recently Completed
 
+### Cycle 21 — `tree-impostor-pixel-match-and-foliage-polish` → pivoted mid-cycle (closed as `v1.2.0`, 2026-05-05)
+
+Original plan was 6 phases of "make distant impostors pixel-perfect match LOD0." Phase 0+1+2+5 shipped; Phase 3 (padded-atlas mips) and Phase 4 (hybrid trunk-mesh) abandoned mid-cycle after a strategic pivot triggered by Matt's review questions ("are trees that expensive vs grass?", "what would a proper game dev with vision do here?", "look at latest implementations").
+
+**Shipped:**
+- **Phase 0** Aspen recipe (+40% leaves, branches[0] 8→10 via Aspen-specific override), placement diff (WOODS_INSIDE_FACTOR 0.85→0.92, scaleVariation 0.7-1.3→0.80-1.20), Schlick fresnel rim (uFresnelStrength=0.04 default), tree-pipeline.md doc fix (table was listing Aspen Medium seed=7 — actual is Aspen Small seed=11).
+- **Phase 1** Standalone sandbox v2 at `tools/lod-sandbox-v2.html`. Imports SDS Atmosphere directly, two-pane LOD0/LOD2 with 5×5 grid sampling, OKLab dE proxy, 12-cell smoke matrix runner. Baseline saved at `cycle21-validation/phase1/sandbox-baseline.json` — tree1 ratio R/G/B = 0.78/0.89/1.16 (dominant residual), tree2/pine within 7% of identity.
+- **Phase 2** Per-species calibration LUT. `tools/generate-impostor-lut.mjs` reads sandbox JSON, outputs `assets/impostor-calibration-lut.json`. Loaded at scene init, applied via `setImpostorCalibrationLUT(lut)` → `uMatchBoost` per kiln material. tree1 boost [1.305, 1.128, 0.891] corrects the Aspen drift. Wired retroactively + at material creation.
+- **Phase 5 (pivot scope)** Detached-shadow fix: `LODinfo.shadowRender = { levels: [{distance:0, hysteresis:0, object: im}], count: [0] }` routes shadow pass through LOD0 only — never through the LOD2 impostor billboard quad whose shadow doesn't align with the player camera's view. Pushed LOD swap 100m → 200m so foreground/midground stays geometric. Atmospheric perspective desat: per-fragment Rec601 luma blend (110m start, 250m full, 0.85 max strength) — distant trees intentionally read as distant per Sable / Tiny Glade / Townscaper idiom. Default camera mode: CLASSIC → FOLLOW (avoids the high-pitch worst-case for residual impostor artifacts; matches herding-game ergonomics).
+
+**Pivoted away from:**
+- Phase 3 padded-atlas mipmaps (would have required Pixel Forge upstream changes, brittle bake pipeline)
+- Phase 4 hybrid trunk-mesh closest band (premature — needs Phase A meshopt LOD1 first)
+- "Pixel-perfect color match" as a goal — research synthesis on modern stylized indie games (Sable, Tiny Glade, Townscaper, Among Trees) showed the right idiom is atmospheric perspective via fog + per-fragment desat, NOT impostor color-match.
+
+**Carryover deferred to Cycle 22 (already plan'd, autonomous-runnable):**
+- Phase A: meshopt-baked LOD1 (re-bakes via `@gltf-transform/functions` simplify, replacing the EZ-Tree leaf-count-halved LOD1 GLBs that Cycle 17 rejected)
+- Phase B: alphaHash stochastic LOD crossfade (Three r154+ / r176 shadow-cast-fixed)
+- Phase C: unified `MeshStandardMaterial.onBeforeCompile` desat patch across all three LOD tiers
+- Phase D: grass auto-LOD (FPS-driven `clumpsPerChunk` adjustment)
+- Phase E: BatchedMesh migration research (Cycle 23+ candidate)
+- Phase F: ship v1.3.0
+
+See [`docs/cycle-22-plan.md`](cycle-22-plan.md). Closes Cycle 19.5 carryover impostor-quality items #1, #2 partial, #3, #4 — drops the standing impostor-quality risk into Cycle 22's structural fix path.
+
+### Cycle 20 — `heightfield-amplitude-fix-and-cinematic-videos` → closed early into Cycle 21
+
+Phase 0+1+2v1 shipped (commit `dbcc06d`). Pixel Forge / Kiln impostor pipeline integrated end-to-end. Phases 3-5 absorbed into Cycle 21 + 22 per Matt's "bake all recommendations into the next cycle" directive after the 6-agent research compilation. Cycle 20 v2-v5 polish work (commit `848f0e7`) committed as foundation for Cycle 21.
+
 ### Cycle 19.5 — post-close polish (no plan, ad-hoc; on top of `v1.1.0`)
 
 Cycle 19 was closed with deploy red and several visual issues unresolved. Matt requested a single autonomous pass to clean up before moving to Cycle 20. Shipped on top of `v1.1.0` without a tag bump.

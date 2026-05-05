@@ -206,6 +206,7 @@ uniform vec3 uGroundBounceColor; // ground-bounce ambient tint, pre-multiplied
 uniform float uWrapPow;          // half-Lambert wrap exponent (1.0 = standard, 1.5 = more contrast)
 uniform float uSubsurfaceLift;   // chromatic floor magnitude (0..0.5, foliage-typical 0.10-0.20)
 uniform float uFresnelStrength;  // Schlick rim term magnitude (0 = disabled; 0.04 ≈ MeshStandard metalness=0)
+uniform vec3 uMatchBoost;        // Cycle 21 Phase 2 calibration vec — per-channel multiplier; (1,1,1) = no-op
 uniform float uAlphaTest;
 uniform float uParallaxScale;       // 0 = disabled (v1 default)
 uniform float uDepthDiscardThr;     // 1 = disabled (v1 default; tune to ~0.15 to enable)
@@ -428,6 +429,30 @@ void main() {
   float fresnel = pow(1.0 - dotNV, 5.0) * uFresnelStrength;
   reflected += fresnel * uSunColor;
 
+  // Cycle 21 Phase 2 (2026-05-04): per-(scene, species) calibration boost.
+  // Phase 1 sandbox measured per-channel ratio impostor/LOD0; the LUT
+  // generator (tools/generate-impostor-lut.mjs) inverts those ratios to
+  // produce a multiplier that pulls impostor pixel toward LOD0 magnitude.
+  // Defaults to (1,1,1) so a missing-LUT load is a no-op. Applied AFTER
+  // fresnel so the rim isn't double-tinted, BEFORE tonemapping so the
+  // boost lives in linear-irradiance space (where the ratio was measured).
+  reflected *= uMatchBoost;
+
+  // Cycle 21 Phase 5 (2026-05-05): atmospheric perspective lean. Distant
+  // impostors should READ as distant, not try to match LOD0 pixel-perfect.
+  // Real stylized indie games (Sable, Tiny Glade, Townscaper) embrace
+  // distance-desaturation as the cue. Threshold tuned for the classic-cam
+  // overhead worst-case Matt flagged: at zoom=150 + 45° pitch the camera
+  // sits ~106m off the ground, so the LOD-cliff band starts ~110m camera-
+  // space, fully desat by ~250m. Mixes per-fragment toward Rec601 luma
+  // (no chromaticity = full perceptual atmospheric perspective). fog_fragment
+  // below then takes the desaturated color and fades it toward fogColor for
+  // the silhouette-into-sky effect. Cycle 22 unifies this patch across
+  // LOD0/LOD1/impostor via MeshStandardMaterial.onBeforeCompile.
+  float distFade = clamp((vFogDepth - 110.0) / 140.0, 0.0, 1.0);
+  float lum = dot(reflected, vec3(0.2126, 0.7152, 0.0722));
+  reflected = mix(reflected, vec3(lum), distFade * 0.85);
+
   gl_FragColor = vec4(reflected, aBlended);
   #include <fog_fragment>
   #include <tonemapping_fragment>
@@ -515,6 +540,11 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
       // adding the cool-shifted edge highlight LOD0 had via Three's
       // PBR pipeline. 0 disables.
       uFresnelStrength: { value: 0.04 },
+      // Cycle 21 Phase 2 (2026-05-04): match-boost multiplier per
+      // species. Loader sets this from assets/impostor-calibration-lut.json
+      // at scene init via TerrainBuilder.setImpostorMatchBoost. Default
+      // (1,1,1) = no-op (LUT missing or species not in LUT).
+      uMatchBoost:      { value: new THREE.Vector3(1, 1, 1) },
       // 0.30 instead of 0.40: alpha is bleed-padded 2px into transparent
       // neighbours by Pixel Forge so a lower test pulls in the soft fringe,
       // closing the "snappy" silhouette gap vs LOD0 geometric edges.

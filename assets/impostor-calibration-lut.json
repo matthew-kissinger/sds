@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-05T03:39:09.617Z",
+  "source": "cycle21-validation/phase1/sandbox-baseline.json",
+  "boost": {
+    "tree1": [
+      1.305,
+      1.128,
+      0.891
+    ],
+    "tree2": [
+      0.97,
+      1.007,
+      0.969
+    ],
+    "pine": [
+      0.94,
+      1.008,
+      0.965
+    ]
+  }
+}
