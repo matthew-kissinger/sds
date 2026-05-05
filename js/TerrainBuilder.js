@@ -168,7 +168,7 @@ export class TerrainBuilder {
         this._desat = {
             uDesatStartM:   { value: 100 },
             uDesatEndM:     { value: 320 },
-            uDesatStrength: { value: 0.6 },
+            uDesatStrength: { value: 0.8 }, // Phase C variant — stronger
         };
         // Set when each tree-type model is patched at load time. Per-tree-
         // type bbox bounds drive the leaf-vs-trunk weight in the shader.
