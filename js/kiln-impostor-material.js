@@ -209,6 +209,9 @@ uniform float uFresnelStrength;  // Schlick rim term magnitude (0 = disabled; 0.
 uniform vec3 uMatchBoost;        // Cycle 21 Phase 2 calibration vec — per-channel multiplier; (1,1,1) = no-op
 uniform float uAlphaTest;
 uniform float uAlphaHashScale;      // Cycle 22 Phase B; 0 = disabled, 1 = full dither
+uniform float uDesatStartM;         // Cycle 22 Phase C; view-space distance where desat begins
+uniform float uDesatEndM;           // Cycle 22 Phase C; view-space distance where desat fully on
+uniform float uDesatStrength;       // Cycle 22 Phase C; mix amount toward (luma + fogColor)
 uniform float uParallaxScale;       // 0 = disabled (v1 default)
 uniform float uDepthDiscardThr;     // 1 = disabled (v1 default; tune to ~0.15 to enable)
 
@@ -462,20 +465,20 @@ void main() {
   // boost lives in linear-irradiance space (where the ratio was measured).
   reflected *= uMatchBoost;
 
-  // Cycle 21 Phase 5 (2026-05-05): atmospheric perspective lean. Distant
-  // impostors should READ as distant, not try to match LOD0 pixel-perfect.
-  // Real stylized indie games (Sable, Tiny Glade, Townscaper) embrace
-  // distance-desaturation as the cue. Threshold tuned for the classic-cam
-  // overhead worst-case Matt flagged: at zoom=150 + 45° pitch the camera
-  // sits ~106m off the ground, so the LOD-cliff band starts ~110m camera-
-  // space, fully desat by ~250m. Mixes per-fragment toward Rec601 luma
-  // (no chromaticity = full perceptual atmospheric perspective). fog_fragment
-  // below then takes the desaturated color and fades it toward fogColor for
-  // the silhouette-into-sky effect. Cycle 22 unifies this patch across
-  // LOD0/LOD1/impostor via MeshStandardMaterial.onBeforeCompile.
-  float distFade = clamp((vFogDepth - 110.0) / 140.0, 0.0, 1.0);
-  float lum = dot(reflected, vec3(0.2126, 0.7152, 0.0722));
-  reflected = mix(reflected, vec3(lum), distFade * 0.85);
+  // Cycle 22 Phase C (2026-05-05): atmospheric desat unified with LOD0+LOD1
+  // leaves via shared uniforms uDesatStartM / uDesatEndM / uDesatStrength.
+  // Same math pattern as js/shaders/AtmosphericDesatPatch.js (different
+  // shader so the formula is duplicated — keep them in sync). vFogDepth
+  // is the impostor's view-space distance varying. Mixes toward
+  // (luma + fogColor) so far impostors read as colorless silhouettes
+  // against the sky, not faded color cards.
+  float dt = smoothstep(uDesatStartM, uDesatEndM, vFogDepth);
+  if (dt > 0.0) {
+    float lum = dot(reflected, vec3(0.2126, 0.7152, 0.0722));
+    vec3 luma = vec3(lum);
+    vec3 fogTint = mix(luma, fogColor, 0.4);
+    reflected = mix(reflected, fogTint, dt * uDesatStrength);
+  }
 
   gl_FragColor = vec4(reflected, aBlended);
   #include <fog_fragment>
@@ -579,6 +582,13 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
       // with material.alphaHash=true on LOD0+LOD1 leaf MeshStandardMaterials
       // so all three LOD tiers crossfade with matching dither pattern.
       uAlphaHashScale:  { value: 0.30 },
+      // Cycle 22 Phase C: atmospheric desat. Defaults overwritten by
+      // TerrainBuilder.setKilnImpostorDesat to share the same uniform set
+      // with LOD0+LOD1 leaves; the values here are sane fallbacks for the
+      // standalone sandbox + impostor inspector pages.
+      uDesatStartM:     { value: 100 },
+      uDesatEndM:       { value: 320 },
+      uDesatStrength:   { value: 0.6 },
       // v1 defaults: parallax + depth-discard scaffolded but disabled.
       // Tune via TerrainBuilder.setKilnImpostorTunables() per Layer F.
       uParallaxScale:   { value: 0.0 },

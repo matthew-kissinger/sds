@@ -5,6 +5,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { GrassSystem } from './GrassSystem.js';
 import { loadKilnImpostor } from './kiln-impostor-material.js';
+import { patchMaterialDesat } from './shaders/AtmosphericDesatPatch.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
@@ -156,6 +157,18 @@ export class TerrainBuilder {
             uTime: { value: 0 },
             uWindStrength: { value: this.isMobile ? 0 : 0.6 },
             uWindDirection: { value: new THREE.Vector2(0.7, 0.7) }
+        };
+        // Cycle 22 Phase C: shared atmospheric-desat uniforms. Same set is
+        // attached to every patched leaf MeshStandardMaterial AND propagated
+        // into the kiln impostor (`setKilnImpostorTunables`) so all three
+        // LOD tiers desaturate in lock-step. Defaults sized for the
+        // 0-320m typical play viewport: <60m unchanged, 200m+ near full
+        // desat (impostors take over there). uDesatStrength can be retuned
+        // per scene preset via Atmosphere.applyPreset.
+        this._desat = {
+            uDesatStartM:   { value: 100 },
+            uDesatEndM:     { value: 320 },
+            uDesatStrength: { value: 0.6 },
         };
         // Set when each tree-type model is patched at load time. Per-tree-
         // type bbox bounds drive the leaf-vs-trunk weight in the shader.
@@ -598,6 +611,12 @@ export class TerrainBuilder {
         if (material.transparent !== true) {
             material.alphaHash = true;
         }
+
+        // Cycle 22 Phase C: atmospheric desaturation toward fog. Composes
+        // with the wind onBeforeCompile chained below — patchMaterialDesat
+        // wraps whatever onBeforeCompile is currently set, so the order
+        // (desat first, wind appended below) means both patches run.
+        patchMaterialDesat(material, this._desat);
 
         const uTime = this._treeWind.uTime;
         const uWindStrength = this._treeWind.uWindStrength;
@@ -1329,6 +1348,16 @@ export class TerrainBuilder {
                 triple.material.uniforms.uMatchBoost.value.set(
                     boost[0] ?? 1, boost[1] ?? 1, boost[2] ?? 1,
                 );
+            }
+            // Cycle 22 Phase C: rebind kiln-impostor desat uniforms to the
+            // shared TerrainBuilder set so LOD0+LOD1 leaves and the impostor
+            // billboard stay in lock-step on tweaks. Must happen after the
+            // material is fully constructed but before first render.
+            const kmat = triple?.material;
+            if (kmat?.uniforms) {
+                kmat.uniforms.uDesatStartM   = this._desat.uDesatStartM;
+                kmat.uniforms.uDesatEndM     = this._desat.uDesatEndM;
+                kmat.uniforms.uDesatStrength = this._desat.uDesatStrength;
             }
         }
 
