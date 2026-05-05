@@ -34,8 +34,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TREES_DIR = resolve(__dirname, '..', 'assets', 'models', 'trees');
 
-const LOD0_FILES = ['tree1.glb', 'tree2.glb', 'pine.glb'];
-const LOD1_FILES = ['tree1_lod1.glb', 'tree2_lod1.glb', 'pine_lod1.glb'];
+const LOD0_FILES = ['tree1.glb', 'tree2.glb'];
+const LOD1_FILES = ['tree1_lod1.glb', 'tree2_lod1.glb'];
 const TREE_FILES = [...LOD0_FILES, ...LOD1_FILES];
 
 // Cycle 16: LOD1 sibling GLBs roughly 30-50% the LOD0 size after draco,

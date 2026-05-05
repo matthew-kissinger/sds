@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TREES_DIR = resolve(__dirname, '../assets/models/trees');
-const TREES = ['tree1', 'tree2', 'pine'];
+const TREES = ['tree1', 'tree2'];
 
 function loadSidecar(name) {
   const path = resolve(TREES_DIR, `${name}.imposter.json`);

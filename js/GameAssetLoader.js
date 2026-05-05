@@ -65,14 +65,12 @@ export class GameAssetLoader {
             'assets/models/trees/tree2.glb',
             'assets/models/rocks/rock2.glb',
             'assets/models/rocks/rock3.glb',
-            'assets/models/trees/pine.glb',
 
-            // Cycle 16: LOD1 sibling GLBs (mid-distance reduced canopy).
-            // Loaded deferred — first scene paint uses LOD0 only;
-            // InstancedMesh2.addLOD wires these in once available.
+            // Cycle 22 Phase A: meshopt-baked LOD1 (geometry-simplified, same
+            // leaf count as LOD0). Loaded eagerly so InstancedMesh2.addLOD
+            // wires them in on first scene build.
             'assets/models/trees/tree1_lod1.glb',
             'assets/models/trees/tree2_lod1.glb',
-            'assets/models/trees/pine_lod1.glb',
             
             // Additional audio files
             'assets/sounds_compressed/music_start.mp3',

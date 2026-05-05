@@ -1,7 +1,7 @@
 /**
  * Cycle 20 Phase 1 — bake tree impostors via Pixel Forge / Kiln.
  *
- * For each of `tree1.glb`, `tree2.glb`, `pine.glb` in `assets/_originals/models/trees/`,
+ * For each of `tree1.glb`, `tree2.glb` in `assets/_originals/models/trees/`,
  * shells out to the Pixel Forge `kiln bake-imposter` CLI to produce:
  *   <name>.imposter.png         — albedo atlas (4×4 lat/lon hemi-y, baseColor unlit)
  *   <name>.imposter.normal.png  — capture-view-space normal aux atlas
@@ -40,7 +40,7 @@ const PF_TSX_WIN_CMD = `${PF_TSX}.cmd`;
 
 const SOURCE_DIR = resolve(SDS_ROOT, 'assets/_originals/models/trees');
 const OUT_DIR = resolve(SDS_ROOT, 'assets/models/trees');
-const TREES = ['tree1', 'tree2', 'pine'];
+const TREES = ['tree1', 'tree2'];
 
 // Q2 verdict — see cycle20-validation/phase0/AUDIT.md.
 const ANGLES = '16';

@@ -248,16 +248,14 @@ export class TerrainBuilder {
             // Re-bake whenever recipes change in tools/bake-trees.mjs.
             trees: [
                 { name: 'tree1', path: 'assets/models/trees/tree1.glb' },
-                { name: 'tree2', path: 'assets/models/trees/tree2.glb' },
-                { name: 'pine',  path: 'assets/models/trees/pine.glb' }
+                { name: 'tree2', path: 'assets/models/trees/tree2.glb' }
             ],
-            // Cycle 16 Phase 1: LOD1 sibling GLBs (reduced canopy + Single
-            // billboard + halved level-2 children). Mid-distance addLOD
-            // entry on each tree's trunk + leaves InstancedMesh2.
+            // Cycle 22 Phase A: meshopt-baked LOD1 (geometry-simplified, same
+            // leaf count as LOD0). Re-enabled in createTrees with the LOD1
+            // band at 80m. Cycle 16 leaf-count-halved version replaced.
             treesLod1: [
                 { name: 'tree1', path: 'assets/models/trees/tree1_lod1.glb' },
-                { name: 'tree2', path: 'assets/models/trees/tree2_lod1.glb' },
-                { name: 'pine',  path: 'assets/models/trees/pine_lod1.glb' }
+                { name: 'tree2', path: 'assets/models/trees/tree2_lod1.glb' }
             ],
             // Cycle 14 Phase 4: rocks from Quaternius Stylized Nature
             // MegaKit (CC0). Rock_Medium_1/2/3 converted via gltf-transform
@@ -1203,7 +1201,6 @@ export class TerrainBuilder {
         const treeInstances = {
             tree1: [],
             tree2: [],
-            pine: [],
         };
         for (const t of flatTrees) {
             // Use _groundY (mirrors terrain falloff) instead of raw heightfield
@@ -1429,18 +1426,23 @@ export class TerrainBuilder {
                 // on the next swap (the dominant ~41% drift class).
                 im.userData.sharedFromGlbCache = true;
 
-                // Cycle 17 follow-up (2026-05-04): LOD1 dropped from the
-                // chain. The reduced-leaf-count LOD1 produced a visible
-                // quality cliff (Matt's gallery review: "less leaves...
-                // does not look good"). Replaced with a clean LOD0 →
-                // impostor cutover at 100m (was LOD1 at 80 + impostor at
-                // 150). LOD0 zone shrinks from 80m to 100m; total tris
-                // roughly preserved since the 80-150m band that used to
-                // be LOD1 is now impostor (cheaper) instead.
+                // Cycle 22 Phase A (2026-05-05): LOD1 80m band re-enabled
+                // with meshopt-baked geometry (same leaf count as LOD0; ~38%
+                // tree1 / ~45% tree2 vert reduction). Replaces the Cycle 16
+                // leaf-count-halved LOD1 that produced the Cycle 17 visual
+                // rejection. LOD chain:
+                //   LOD0 (full geo)  0-80m
+                //   LOD1 (meshopt)   80-200m
+                //   LOD2 (impostor)  200m+ for leaves; trunk → empty quad
                 //
-                // LOD1 GLBs are still loaded in loadModels (cheap, leaves
-                // option open to re-enable) but not consumed here. To
-                // re-enable: add `if (lod1Child?.geometry) im.addLOD(...)`.
+                // LOD1 attaches per matching child mesh name (trunk paired
+                // with trunk, leaves with leaves). lod1Child may be null
+                // for unmatched children — fall back to LOD0-only band
+                // until impostor takeover.
+                if (lod1Child?.geometry && lod1Child?.material) {
+                    im.addLOD(lod1Child.geometry, lod1Child.material, 80);
+                }
+
                 if (billboardGeo && billboardMat) {
                     if (isLeavesMesh) {
                         // Cycle 21 Phase 5 (2026-05-05): pushed LOD swap

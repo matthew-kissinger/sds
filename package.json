@@ -27,6 +27,7 @@
     "compress-glbs": "node scripts/compress-glbs.mjs",
     "bake-trees": "node tools/bake-trees.mjs",
     "bake-tree-impostors": "node tools/bake-tree-impostors.mjs",
+    "bake-tree-lod1": "node tools/bake-tree-lod1.mjs",
     "bake-rocks": "node tools/bake-rocks.mjs",
     "gallery": "node tools/asset-gallery.mjs",
     "gen:meshy": "node tools/asset-gen/meshy.mjs",

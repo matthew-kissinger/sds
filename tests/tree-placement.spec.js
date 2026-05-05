@@ -44,7 +44,7 @@ describe('generateTrees — TreeInstance shape', () => {
         for (const t of trees) {
             expect(typeof t.x).toBe('number');
             expect(typeof t.z).toBe('number');
-            expect(['tree1', 'tree2', 'pine']).toContain(t.type);
+            expect(['tree1', 'tree2']).toContain(t.type);
             expect(t.scale).toBeGreaterThan(0);
             expect(t.rotationY).toBeGreaterThanOrEqual(0);
             expect(t.rotationY).toBeLessThan(Math.PI * 2 + 1e-6);

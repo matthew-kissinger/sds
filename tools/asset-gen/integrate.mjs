@@ -50,16 +50,16 @@ const ASSET_TARGETS = {
 
 // Loader-name canonicalization. The TerrainBuilder rock loader reads
 // rock1/rock2/rock3 by literal path; the asset loader's tree-critical
-// path reads tree1/tree2/pine (and tree1_lod1/tree2_lod1/pine_lod1 for
-// the Cycle 16 mid-distance LOD swap). Picks must rename to these so
+// path reads tree1/tree2 (and tree1_lod1/tree2_lod1 for the Cycle 22
+// mid-distance LOD swap; pine removed). Picks must rename to these so
 // the runtime keeps working without code changes. Order: smallest first.
 //
 // If picks > slots, extra picks get descriptive names appended (loader
 // won't pick them up; the user widens the loader array manually).
 const CANONICAL_NAMES = {
     rocks: ['rock1.glb', 'rock2.glb', 'rock3.glb'],
-    trees: ['tree1.glb', 'tree2.glb', 'pine.glb'],
-    'trees-lod1': ['tree1_lod1.glb', 'tree2_lod1.glb', 'pine_lod1.glb']
+    trees: ['tree1.glb', 'tree2.glb'],
+    'trees-lod1': ['tree1_lod1.glb', 'tree2_lod1.glb']
 };
 
 function pickCanonicalName(category, picks) {

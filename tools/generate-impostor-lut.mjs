@@ -14,8 +14,7 @@
  *     "source": "<input json path>",
  *     "boost": {
  *       "tree1": [r, g, b],
- *       "tree2": [r, g, b],
- *       "pine":  [r, g, b]
+ *       "tree2": [r, g, b]
  *     }
  *   }
  *

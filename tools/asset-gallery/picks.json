@@ -1,7 +1,7 @@
 {
   "dir": "tools/asset-gallery/staging",
   "savedAt": "2026-05-04T00:30:00.000Z",
-  "_note": "Cycle 16 Phase 1+3 integrated picks (gallery-reviewed by Matt 2026-05-04). The full 18-item gallery selection is preserved in git history of this file (commit 595e30c → next). Each entry below carries an explicit `canonicalName` so semantic slot mapping doesn't depend on bbox-height sort. To swap any pick: edit the canonicalName field, run `node tools/asset-gen/integrate.mjs --compress`.",
+  "_note": "Cycle 16 Phase 1+3 integrated picks (gallery-reviewed by Matt 2026-05-04). Cycle 22: pine slot removed per Matt's directive. The full 18-item gallery selection is preserved in git history of this file (commit 595e30c → next). Each entry below carries an explicit `canonicalName` so semantic slot mapping doesn't depend on bbox-height sort. To swap any pick: edit the canonicalName field, run `node tools/asset-gen/integrate.mjs --compress`.",
   "picks": [
     {
       "path": "tools/asset-gallery/staging/trees/aspen_small_single.glb",
@@ -20,14 +20,6 @@
       "bbox": { "sx": 0.821, "sy": 1.0, "sz": 0.818 }
     },
     {
-      "path": "tools/asset-gallery/staging/trees/pine_medium_single.glb",
-      "name": "pine_medium_single.glb",
-      "canonicalName": "pine.glb",
-      "_role": "conifer (kept from autonomous pick — no pine in gallery selection)",
-      "tris": 1216,
-      "bbox": { "sy": 49.98 }
-    },
-    {
       "path": "tools/asset-gallery/staging/trees-lod1/aspen_small_single_lod1.glb",
       "name": "aspen_small_single_lod1.glb",
       "canonicalName": "tree1_lod1.glb",
@@ -40,13 +32,6 @@
       "canonicalName": "tree2_lod1.glb",
       "_role": "auto-paired LOD1 sibling for oak_medium_single",
       "tris": 2314
-    },
-    {
-      "path": "tools/asset-gallery/staging/trees-lod1/pine_medium_single_lod1.glb",
-      "name": "pine_medium_single_lod1.glb",
-      "canonicalName": "pine_lod1.glb",
-      "_role": "auto-paired LOD1 sibling for kept pine",
-      "tris": 444
     },
     {
       "path": "tools/asset-gallery/staging/rocks/pebble_round_small.glb",

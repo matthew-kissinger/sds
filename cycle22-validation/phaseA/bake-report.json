@@ -1,0 +1,101 @@
+{
+  "variants": {
+    "aggressive": {
+      "config": {
+        "tag": "aggressive",
+        "ratio": 0.3,
+        "error": 0.05,
+        "lockBorder": false
+      },
+      "trees": {
+        "tree1": {
+          "lod0Bytes": 470988,
+          "lod1Bytes": 285784,
+          "reductionPct": 39.3,
+          "tris": 2774,
+          "verts": 5345
+        },
+        "tree2": {
+          "lod0Bytes": 1373592,
+          "lod1Bytes": 512572,
+          "reductionPct": 62.7,
+          "tris": 5617,
+          "verts": 10841
+        }
+      }
+    },
+    "default": {
+      "config": {
+        "tag": "default",
+        "ratio": 0.5,
+        "error": 0.05,
+        "lockBorder": false
+      },
+      "trees": {
+        "tree1": {
+          "lod0Bytes": 470988,
+          "lod1Bytes": 291088,
+          "reductionPct": 38.2,
+          "tris": 3026,
+          "verts": 5503
+        },
+        "tree2": {
+          "lod0Bytes": 1373592,
+          "lod1Bytes": 750160,
+          "reductionPct": 45.4,
+          "tris": 9340,
+          "verts": 17678
+        }
+      }
+    },
+    "conservative": {
+      "config": {
+        "tag": "conservative",
+        "ratio": 0.7,
+        "error": 0.05,
+        "lockBorder": false
+      },
+      "trees": {
+        "tree1": {
+          "lod0Bytes": 470988,
+          "lod1Bytes": 354456,
+          "reductionPct": 24.7,
+          "tris": 4112,
+          "verts": 7316
+        },
+        "tree2": {
+          "lod0Bytes": 1373592,
+          "lod1Bytes": 985664,
+          "reductionPct": 28.2,
+          "tris": 13090,
+          "verts": 24423
+        }
+      }
+    },
+    "pristine": {
+      "config": {
+        "tag": "pristine",
+        "ratio": 0.5,
+        "error": 0.001,
+        "lockBorder": true
+      },
+      "trees": {
+        "tree1": {
+          "lod0Bytes": 470988,
+          "lod1Bytes": 458544,
+          "reductionPct": 2.6,
+          "tris": 5772,
+          "verts": 10314
+        },
+        "tree2": {
+          "lod0Bytes": 1373592,
+          "lod1Bytes": 1338748,
+          "reductionPct": 2.5,
+          "tris": 18428,
+          "verts": 34603
+        }
+      }
+    }
+  },
+  "defaultTag": "default"
+}

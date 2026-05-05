@@ -16,7 +16,7 @@
  * @typedef {Object} TreeInstance
  * @property {number} x
  * @property {number} z
- * @property {'tree1'|'tree2'|'pine'} type
+ * @property {'tree1'|'tree2'} type
  * @property {number} scale         Final placement scale (zone scale * 0.7..1.3 variation)
  * @property {number} rotationY     Radians
  * @property {number} radiusXZ      Trunk collision radius (1.8m fixed — Q2 decision)
@@ -74,7 +74,9 @@ function woodsBias(point, woodsZones) {
 
 /**
  * Organic biome boundaries — same sine-wave logic the legacy client used.
- * Drives the tree-type pick (tree1/tree2/pine) given a candidate position.
+ * Drives the tree-type pick (tree1/tree2) given a candidate position.
+ * Cycle 22: pine species removed; biomes now collapse to deciduous + mixed
+ * (the old 'pine' biome ring becomes a wider deciduous fade).
  * @param {number} x
  * @param {number} z
  */
@@ -84,9 +86,10 @@ function getBiome(x, z) {
     const wave1 = Math.sin(angle * 3 + distFromCenter * 0.01) * 50;
     const wave2 = Math.sin(angle * 5 - distFromCenter * 0.02) * 30;
     const adjustedDist = distFromCenter + wave1 + wave2;
+    // Cycle 22: pine biome removed. Outer rings collapse to mixed (tree1+tree2)
+    // so the species split stays organic without introducing a third type.
     if (adjustedDist < 250) return 'mixed';
     if (adjustedDist < 350) return 'deciduous';
-    if (adjustedDist < 450) return 'pine';
     return 'mixed';
 }
 
@@ -276,13 +279,10 @@ export function generateTrees(scene, rng, opts = {}) {
             let type;
             if (biome === 'deciduous') {
                 type = rng() < 0.6 ? 'tree1' : 'tree2';
-            } else if (biome === 'pine') {
-                type = 'pine';
             } else {
-                const r = rng();
-                if (r < 0.3) type = 'tree1';
-                else if (r < 0.6) type = 'tree2';
-                else type = 'pine';
+                // mixed: 50/50 — Cycle 22 pine removal collapsed the
+                // 30/30/40 (tree1/tree2/pine) split.
+                type = rng() < 0.5 ? 'tree1' : 'tree2';
             }
             // Cycle 21 Phase 0 (2026-05-04): tighter scale jitter
             // 0.7-1.3 → 0.80-1.20. Pairs with the wider WOODS_INSIDE_FACTOR

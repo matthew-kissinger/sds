@@ -51,12 +51,13 @@ const OUT_OVERRIDE = args.out;
 // to a brown family (mediums cluster 0x6a-0x7a) but per-species variation
 // is preserved so silhouettes still differentiate at sheep-cam.
 // ---------------------------------------------------------------------
+// Cycle 22: pine species removed — recipe entries deleted across BARK_TINTS,
+// SEEDS, LEAF_COUNTS, LOD1_BRANCH_PINE / LOD0_BRANCH_PINE, SPECIES_TO_PRESET.
 const BARK_TINTS = {
     // species:           [small,    medium,   large]
     ash:   [0x7a5e3c, 0x6e4f30, 0x6a4928],
     aspen: [0x8c7050, 0x7a5a3a, 0x6a4a32],
-    oak:   [0x70502e, 0x6a4630, 0x5a3a26],
-    pine:  [0x664a32, 0x583c26, 0x4a3525]
+    oak:   [0x70502e, 0x6a4630, 0x5a3a26]
 };
 
 // Re-rolled seeds (Q2) — fresh LCG region from the Cycle 15 set so
@@ -67,8 +68,7 @@ const SEEDS = {
     // species:  [smallSeed, mediumSeed, largeSeed]
     ash:   [27, 39, 51],
     aspen: [11, 23, 41],
-    oak:   [5,  17, 53],
-    pine:  [9,  33, 67]
+    oak:   [5,  17, 53]
 };
 
 // Cycle 16: leaf counts dropped from 40-72 → 24-42. Combined with
@@ -85,8 +85,7 @@ const LEAF_COUNTS = {
     // species:  [small, medium, large]
     ash:   [24, 30, 36],
     aspen: [34, 42, 50],
-    oak:   [30, 36, 42],
-    pine:  [24, 30, 36]
+    oak:   [30, 36, 42]
 };
 
 // Pine needs more level-0 branches than the deciduous default to read
@@ -99,11 +98,7 @@ const LOD0_BRANCH_DEFAULT = {
     children: { 0: 8, 1: 5, 2: 3 }
 };
 
-const LOD0_BRANCH_PINE = {
-    sections: LOD0_BRANCH_DEFAULT.sections,
-    segments: LOD0_BRANCH_DEFAULT.segments,
-    children: { 0: 14, 1: 6, 2: 3 }
-};
+// Cycle 22: LOD0_BRANCH_PINE removed (pine species deleted).
 
 // Cycle 21 Phase 0: Aspen-specific level-0 branch bump 8→10 — pairs
 // with the +40% leaf-count bump above to fill out tree1's silhouette.
@@ -122,17 +117,12 @@ const LOD1_BRANCH_DEFAULT = {
     children: { 0: 6, 1: 4, 2: 0 }
 };
 
-const LOD1_BRANCH_PINE = {
-    sections: LOD1_BRANCH_DEFAULT.sections,
-    segments: LOD1_BRANCH_DEFAULT.segments,
-    children: { 0: 10, 1: 4, 2: 0 }
-};
+// Cycle 22: LOD1_BRANCH_PINE removed (pine species deleted).
 
 const SPECIES_TO_PRESET = {
     ash:   ['Ash Small',   'Ash Medium',   'Ash Large'],
     aspen: ['Aspen Small', 'Aspen Medium', 'Aspen Large'],
-    oak:   ['Oak Small',   'Oak Medium',   'Oak Large'],
-    pine:  ['Pine Small',  'Pine Medium',  'Pine Large']
+    oak:   ['Oak Small',   'Oak Medium',   'Oak Large']
 };
 
 const SCALES = ['small', 'medium', 'large'];
@@ -140,7 +130,7 @@ const SCALES = ['small', 'medium', 'large'];
 /**
  * Build a single recipe.
  *
- * @param species   'ash' | 'aspen' | 'oak' | 'pine'
+ * @param species   'ash' | 'aspen' | 'oak'
  * @param scaleIdx  0=small, 1=medium, 2=large
  * @param tier      'lod0' | 'lod1'
  * @param billboard 'single' | 'double'  (per EZ-Tree Billboard enum —
@@ -157,23 +147,19 @@ function buildRecipe(species, scaleIdx, tier, billboard, sizeBoost = 1.0) {
     const leafCount = tier === 'lod1' ? Math.round(baseLeafCount * 0.5) : baseLeafCount;
 
     const branch = tier === 'lod1'
-        ? (species === 'pine' ? LOD1_BRANCH_PINE : LOD1_BRANCH_DEFAULT)
-        : (species === 'pine'  ? LOD0_BRANCH_PINE
-         : species === 'aspen' ? LOD0_BRANCH_ASPEN
-         :                       LOD0_BRANCH_DEFAULT);
+        ? LOD1_BRANCH_DEFAULT
+        : (species === 'aspen' ? LOD0_BRANCH_ASPEN : LOD0_BRANCH_DEFAULT);
 
     // Cycle 16 follow-up (2026-05-03): Matt flagged leaves as too small
     // in coverage from the gallery. Bumped baseSize 1.0 → 1.6 across the
     // board so canopies read with proper coverage from grazing camera
-    // angles. Pine reduced because pine "leaves" are needle clusters
-    // that get visually overpowering past size 1.6.
+    // angles.
     //
     // Single-billboard leaves still get an extra ~25% bump on top to
     // compensate for the missing perpendicular quad. Net leaf-card
-    // dimensions roughly: deciduous-single ~2.0, deciduous-double ~1.6,
-    // pine-single ~1.5, pine-double ~1.2. Leaf TRIS stay flat (size
-    // affects per-card scale, not card count).
-    const baseSize = species === 'pine' ? 1.2 : 1.6;
+    // dimensions roughly: deciduous-single ~2.0, deciduous-double ~1.6.
+    // Leaf TRIS stay flat (size affects per-card scale, not card count).
+    const baseSize = 1.6;
     const leafSize = baseSize * sizeBoost * (billboard === 'single' ? 1.25 : 1.0);
 
     const tweaks = {
