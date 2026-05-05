@@ -4,6 +4,34 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — 2026-05-05 (Cycle 22 — stylized-lod-pivot-and-grass-perf)
+
+This release ships Cycle 22's stylized-LOD pivot plus a long-deferred species cull. Distant trees now fade smoothly into the atmosphere instead of popping; grass adjusts itself to maintain smooth framerate; pine trees retired so every scene is a tree1+tree2 mix.
+
+### Added
+- **Meshopt-baked LOD1 GLBs.** New `tools/bake-tree-lod1.mjs` script wraps `@gltf-transform/functions.simplify()` with `MeshoptSimplifier`. Replaces the Cycle 16 leaf-count-halved LOD1 (which produced the Cycle 17 visual rejection) with geometric simplification — same leaf count, fewer trunk verts. Runs four variants (aggressive / default / conservative / pristine) saved under `cycle22-validation/phaseA/variants/` for branch-back options. Default lands at `_originals/<name>_lod1.glb`. Tree1 -38% / tree2 -45% bytes; LOD chain re-enabled at 80m.
+- **alphaHash stochastic LOD crossfade.** `material.alphaHash = true` on every LOD0+LOD1 leaf MeshStandardMaterial; equivalent screen-space-hashed alpha threshold inline in the kiln impostor (custom ShaderMaterial gets its own dither since Three's auto chunk injection only applies to `MeshStandardMaterial`). Result: LOD0→LOD1 (80m) and LOD1→impostor (200m) handoffs read as smooth density gradients, not hard pop bands.
+- **Atmospheric desaturation toward fog.** New `js/shaders/AtmosphericDesatPatch.js` exports a composable `onBeforeCompile` that mixes `gl_FragColor` toward `(luma + 40% fogColor)` over `[uDesatStartM, uDesatEndM]` at `uDesatStrength` weight. Defaults 100m / 320m / 0.6. Single shared uniform set drives LOD0+LOD1 leaves AND the kiln impostor — all three tiers desaturate in lock-step.
+- **Grass auto-LOD.** GrassSystem ticks a 60-sample frame-time ring buffer; if the rolling average crosses 18ms, per-chunk clump density scales toward 0.5×. Recovers toward 1.0× under 14ms. Applied at chunk-rebuild time only — no live geometry mutation. Floor 0.5 keeps grass visible under sustained perf trouble.
+- **BatchedMesh research doc.** [`docs/cycle-22-batchedmesh-research.md`](docs/cycle-22-batchedmesh-research.md) — Cycle 23+ migration evaluation. Recommendation: defer (no native per-instance LOD in Three r184; community workaround requires shared vertex arrays, blocking our meshopt simplify pipeline).
+
+### Changed
+- **Pine species removed.** Per Matt's directive ("remove pine altogether i dont like it"). Dropped from `TreePlacement` biomes (mixed becomes 50/50 tree1+tree2; the outer pine ring collapses into mixed), all bake scripts, asset specs, the impostor LUT, the asset-gallery pick list, and the dev sandboxes (`lod-sandbox-v2`, `lod-color-match`, `impostor-inspector`). `pine.glb` + `pine_lod1.glb` + `pine.imposter.{png,depth.png,normal.png,json}` archived under `cycle22-validation/phaseA/removed-pine/` then deleted from runtime + originals. Sim-baseline byte-identical (trees are visual-only).
+
+### Fixed
+- **LOD pop bands.** alphaHash dither (Cycle 22 Phase B) plus per-fragment desat (Phase C) replace the prior hard alphaTest cutoff at LOD swap distances. Camera dollys through 80m and 200m no longer show the visible LOD-tier discontinuity.
+
+### Performance
+- **Grass auto-LOD** scales density at the next chunk rebuild, so sustained sub-56fps episodes self-correct without a manual quality switch.
+- **LOD1 80m band.** Restoring LOD1 reduces tris in the 80–200m band (now ~40–55% of LOD0 rather than full LOD0 → impostor cliff at 200m).
+
+### Validation
+- vitest 179/179 pass throughout all phases.
+- Production build clean; main bundle 821 KB / 246 KB gzip (+9 KB vs `1.2.0` for the new shader patch + LOD1 wiring).
+- Cycle 22 phase tags landed: `cycle-22-base`, `cycle-22-phaseA-default`, `cycle-22-phaseB-default`, `cycle-22-phaseC-default`, `cycle-22-phaseD-default`. Phase C variant branches: `cycle-22-phaseC-strength-0.4`, `cycle-22-phaseC-strength-0.8`. Phase A iteration variants under `cycle22-validation/phaseA/variants/{aggressive,default,conservative,pristine}`.
+
+---
+
 ## [1.2.0] — 2026-05-05 (Cycle 21 — tree-impostor-stabilization-and-foliage-polish)
 
 This release ships Cycle 21 work on top of `1.1.0`. Cycle 21 was originally scoped as a 6-phase pixel-perfect impostor-LOD0 color-match. Mid-cycle, a research synthesis (Three.js modern LOD primitives + WebGPU/TSL state + stylized indie-game patterns) plus Matt's product-vision push pivoted the closing phases away from "match LOD0" toward "embrace atmospheric perspective + push impostor distance + fix the actual visible defects." The deeper LOD/grass overhaul moves to Cycle 22.

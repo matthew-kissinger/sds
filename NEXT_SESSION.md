@@ -1,6 +1,31 @@
-# Next Session — Cycle 22 (stylized-lod-pivot-and-grass-perf)
+# Next Session — Cycle 23 (heightfield-amplitude-fix-and-cinema, stub)
 
-> Updated 2026-05-05 (close of Cycle 21 → `v1.2.0` shipped). Cycle 21 ran Phase 0+1+2 as planned then pivoted Phase 3-5 mid-cycle after a research synthesis + Matt's product-vision push: the kiln-impostor pixel-match approach is wrong abstraction for SDS's 200-500-tree stylized scale. Cycle 22 is the structural pivot to modern Three.js indie patterns (meshopt-baked geometric LOD1, alphaHash stochastic crossfade, atmospheric desaturation + grass auto-LOD). **Active plan: [`docs/cycle-22-plan.md`](docs/cycle-22-plan.md)** — fully spec'd for autonomous overnight execution. Cycle 21 close context: [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md) (only Phases 0+1+2+5 actually shipped; 3+4 abandoned per pivot — see BACKLOG.md "Recently Completed" for the absorbed-scope summary).
+> Updated 2026-05-05 (close of Cycle 22 → `v1.3.0` shipped autonomously overnight). Cycle 22 ran end-to-end on a single "Autonomous run - save iterations so we can branch back" prompt: meshopt LOD1, alphaHash crossfade, atmospheric desat, grass auto-LOD, BatchedMesh research, ship. Mid-cycle absorbed Matt's pine-removal directive — sim-baseline byte-identical. **Active plan: [`docs/cycle-23-plan.md`](docs/cycle-23-plan.md) — STUB; direction not chosen.** Three candidate goals catalogued (A heightfield amplitude root fix, B cinema runner + 4 deferred videos, C WebGPU/TSL spike). Pick at `/cycle-start`.
+
+## What landed in Cycle 22 (closed as `v1.3.0`)
+
+Six phases all shipped on `main` plus two Phase C variant branches:
+
+- **Phase A — meshopt-baked LOD1 + pine removal.** [`tools/bake-tree-lod1.mjs`](tools/bake-tree-lod1.mjs) wraps `@gltf-transform/functions.simplify()` with `MeshoptSimplifier`. Four variants (aggressive/default/conservative/pristine) saved under `cycle22-validation/phaseA/variants/`. Default lands at `_originals/<name>_lod1.glb` — tree1 -38.2%, tree2 -45.4% bytes. LOD chain re-enabled at 80m. Pine deleted across `TreePlacement` (mixed becomes 50/50 tree1+tree2), all bake scripts, asset specs, impostor LUT, asset-gallery picks, dev sandboxes. Pine assets archived under `cycle22-validation/phaseA/removed-pine/`.
+- **Phase B — alphaHash stochastic LOD crossfade.** `material.alphaHash = true` on every leaf MeshStandardMaterial via `_patchTreeWindMaterial`. Kiln impostor (custom ShaderMaterial) gets a screen-space hashed alpha threshold inline (`uAlphaHashScale = 0.30`).
+- **Phase C — atmospheric desaturation.** New [`js/shaders/AtmosphericDesatPatch.js`](js/shaders/AtmosphericDesatPatch.js) module. Single shared `{ uDesatStartM, uDesatEndM, uDesatStrength }` uniform set drives LOD0+LOD1 leaves AND the kiln impostor. Defaults 100m / 320m / 0.6. Variants `cycle-22-phaseC-strength-0.4` and `cycle-22-phaseC-strength-0.8` committed as branches.
+- **Phase D — grass auto-LOD.** GrassSystem ticks 60-sample frame-time ring buffer; `_autoLodFactor` scales `clumpsPerChunk` toward 0.5 at 0.05/sec when avg > 18ms. Recovery toward 1.0 under 14ms. Floor 0.5. Stats added: `stats.autoLodFactor`, `stats.avgFrameMs`. No new clamps (Hard-Stop #8 stays clean).
+- **Phase E — BatchedMesh research doc.** [`docs/cycle-22-batchedmesh-research.md`](docs/cycle-22-batchedmesh-research.md). Recommendation: **defer to Cycle 24+**. Three.js r184 BatchedMesh has no native per-instance LOD; community workaround requires shared vertex arrays — incompatible with Phase A's meshopt simplify pipeline.
+- **Phase F — ship `v1.3.0`.** vitest 179/179, build 825.62 KB / 246.99 KB gzip (+13 KB), perf:check `field-extreme` -26.7%.
+
+Iteration artifacts saved per "branch-back" directive: tags `cycle-22-base`, `cycle-22-phase{A,B,C,D}-default`, `v1.3.0`; branches `cycle-22-phaseC-strength-{0.4,0.8}`; LOD1 variants under `cycle22-validation/phaseA/variants/`; pine archive under `cycle22-validation/phaseA/removed-pine/`.
+
+## Where the project stands
+
+180+ vitest pass. Production build clean (825.62 KB / 246.99 KB gzip). Cycle 22 closed the kiln-impostor / LOD-pop / grass-perf risks. Standing risks (heightfield amplitude, mac-white-ground, cinema runner timeout, sim-baseline care) all unchanged from Cycle 21.
+
+## Cycle 23 candidate paths (pick one)
+
+See [`docs/cycle-23-plan.md`](docs/cycle-23-plan.md):
+
+- **A. Heightfield amplitude root fix.** Flatness vs character-preservation choice; needs Matt's go-ahead before re-baking.
+- **B. Cinema runner timeout + 4 deferred cinematic videos.** Press-kit unblocker.
+- **C. WebGPU/TSL exploratory spike.** Long-term direction question.
 
 ## What landed in Cycle 20 (Phase 0 + 1 + 2 v1, closed early into Cycle 21)
 
@@ -72,6 +97,10 @@ Headlines from Cycle 19:
 | RH grass too tight to inner area | `grassRadius` in [`shared/scenes/rolling-hills.js`](shared/scenes/rolling-hills.js) | scene config | 172m |
 | OC grass not reaching shore | `grassRadius` in [`shared/scenes/open-country.js`](shared/scenes/open-country.js) | scene config | 372m |
 | Kiln LOD2 azimuth step visible | enable parallax: `uParallaxScale` default in [`js/kiln-impostor-material.js`](js/kiln-impostor-material.js) — try 0.04. If still bad, escalate to 32 hemi-y in [`tools/bake-tree-impostors.mjs`](tools/bake-tree-impostors.mjs) `--angles` flag and re-bake. | shader uniform / bake | 0 / 16 hemi-y |
+| LOD1 dither too noisy at <40m | reduce `material.alphaHash` impact via `alphaTest` lift in [`js/TerrainBuilder.js`](js/TerrainBuilder.js) `_patchTreeWindMaterial` (raise EZ-Tree leaf material alphaTest 0.5 → 0.6); for kiln, lower `uAlphaHashScale` toward 0 (hard alphaTest fallback) | leaf MeshStandardMaterial / kiln uniform | 0.5 / 0.30 |
+| Distant trees too desaturated / not enough | tune `uDesatStrength` in `TerrainBuilder._desat` (0..1; `cycle-22-phaseC-strength-{0.4,0.8}` branches preserve alternates) | shared uniform | 0.6 |
+| Distant desat starts too close / too far | tune `uDesatStartM` / `uDesatEndM` in `TerrainBuilder._desat` | shared uniform | 100m / 320m |
+| Grass collapses density when frames spike | raise `_autoLodHi` (default 18ms) in [`js/GrassSystem.js`](js/GrassSystem.js) — auto-LOD trips later. Raise `_autoLodFloor` (default 0.5) to bound how far density can drop. | constructor field | 18ms / 0.5 |
 | Kiln LOD2 ghost / double-image during blend | `uDepthDiscardThr` in [`js/kiln-impostor-material.js`](js/kiln-impostor-material.js) — try 0.15 | shader uniform | 1.0 (disabled) |
 | Kiln LOD2 too dim at noon | `uAmbientColor` write in `setImpostorTint`, [`js/TerrainBuilder.js`](js/TerrainBuilder.js) — atmosphere ambient may need a `uAmbientBoost` multiplier | runtime uniform | atmosphere `ambientLight.color` (or 0.35-grey fallback) |
 | Cross-billboard fallback sun-tint blend | `BLEND` in `setImpostorTint` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.35 (only fires if kiln load fails) |
@@ -109,10 +138,12 @@ Re-baking heightmaps: `npm run bake-heightmaps` regenerates all three. **Cycle 2
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md) — `tree-impostor-pixel-match-and-foliage-polish` (absorbs Cycle 20 Phase 3-5; closes Cycle 19.5 impostor-quality carryovers) |
-| Cycle 21 research | [`docs/cycle-21-tree-impostor-research.md`](docs/cycle-21-tree-impostor-research.md) — 6-agent research compilation that produced the plan |
+| Active cycle | [`docs/cycle-23-plan.md`](docs/cycle-23-plan.md) — STUB; direction not chosen |
+| Latest closed cycle | [`docs/cycle-22-plan.md`](docs/cycle-22-plan.md) — `stylized-lod-pivot-and-grass-perf` shipped as `v1.3.0` 2026-05-05 |
+| Cycle 22 research | [`docs/cycle-22-batchedmesh-research.md`](docs/cycle-22-batchedmesh-research.md) — BatchedMesh defer-to-24+ recommendation |
+| Cycle 21 (closed) | [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md) — `tree-impostor-pixel-match-and-foliage-polish` (pivoted mid-cycle) |
 | Cycle 20 (closed early into 21) | [`docs/cycle-20-plan.md`](docs/cycle-20-plan.md) + [`docs/cycle-20-impostor-color-handoff.md`](docs/cycle-20-impostor-color-handoff.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-19-plan.md`](docs/archive/cycles/cycle-19-plan.md) |
+| Older closed | [`docs/archive/cycles/cycle-19-plan.md`](docs/archive/cycles/cycle-19-plan.md) |
 | Cycle 18 (also closed) | [`docs/archive/cycles/cycle-18-plan.md`](docs/archive/cycles/cycle-18-plan.md) |
 | Cycle 17 | [`docs/archive/cycles/cycle-17-plan.md`](docs/archive/cycles/cycle-17-plan.md) + [`docs/archive/cycles/cycle-17-research.md`](docs/archive/cycles/cycle-17-research.md) |
 | Cycle 16 — tree research + gallery review + Phase 6 prep | [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md), [`docs/cycle-16-tree-gallery-review.md`](docs/cycle-16-tree-gallery-review.md), [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) |

@@ -4,6 +4,30 @@
 
 ## Recently Completed
 
+### Cycle 22 — `stylized-lod-pivot-and-grass-perf` (closed as `v1.3.0`, 2026-05-05, autonomous overnight run)
+
+Plan from [`docs/cycle-22-plan.md`](cycle-22-plan.md) shipped end-to-end in a single autonomous "save iterations so we can branch back" overnight run. Mid-cycle absorbed Matt's pine-removal directive — sim-baseline byte-identical despite TreePlacement RNG-sequence delta because trees are visual-only.
+
+**Shipped:**
+
+- **Phase A — meshopt-baked LOD1 + pine removal.** New `tools/bake-tree-lod1.mjs` runs four variants (aggressive `r=0.3 e=0.05` / default `r=0.5 e=0.05` / conservative `r=0.7 e=0.05` / pristine `r=0.5 e=0.001 lockBorder=true`) saved under `cycle22-validation/phaseA/variants/`. Default lands at `_originals/<name>_lod1.glb`. tree1 -38.2%, tree2 -45.4% bytes; LOD chain re-enabled at 80m. Initial run with `lockBorder=true` showed a 2.6% byte reduction — diagnosed empirically that EZ-Tree foliage cards have UV-split borders that lock the simplifier; switching to `lockBorder=false + error 0.05` unlocked 30%+ reduction. Pine species deleted across `TreePlacement` (mixed becomes 50/50 tree1+tree2), all bake scripts, asset specs, impostor LUT, asset-gallery picks, dev sandboxes. Pine assets archived under `cycle22-validation/phaseA/removed-pine/`.
+- **Phase B — alphaHash stochastic LOD crossfade.** `material.alphaHash = true` on every leaf MeshStandardMaterial via `_patchTreeWindMaterial` (skipped if `transparent:true`). Kiln impostor (custom ShaderMaterial — no Three auto chunk injection) gets a screen-space hashed alpha threshold inline (`uAlphaHashScale = 0.30`). All three LOD tiers crossfade with consistent dither so 80m and 200m handoffs read as smooth gradients.
+- **Phase C — atmospheric desaturation.** New `js/shaders/AtmosphericDesatPatch.js` exports composable `patchMaterialDesat`. Single `{ uDesatStartM, uDesatEndM, uDesatStrength }` uniform set (defaults 100m / 320m / 0.6) drives LOD0+LOD1 leaves AND the kiln impostor (uniform-rebound in `createTrees`). Replaces Cycle 21's hardcoded inline desat with unified luma+fogColor mix. Variants `cycle-22-phaseC-strength-0.4` and `cycle-22-phaseC-strength-0.8` committed as branches for branch-back validation.
+- **Phase D — grass auto-LOD.** GrassSystem ticks a 60-sample frame-time ring buffer; `_autoLodFactor` decays toward 0.5 at 0.05/sec when avg > 18ms, recovers toward 1.0 when < 14ms. Floor 0.5. Applied at chunk-rebuild time only — no live mutation. Stats added: `stats.autoLodFactor`, `stats.avgFrameMs`. Hard-Stop #8 stays clean (no new GrassSystem clamps).
+- **Phase E — BatchedMesh research.** [`docs/cycle-22-batchedmesh-research.md`](cycle-22-batchedmesh-research.md), 2022 words. Recommendation: **defer to Cycle 24+**. Three.js r184 BatchedMesh has no native per-instance LOD; community workaround `@three.ez/batched-mesh-extensions` requires shared vertex arrays across LODs — directly incompatible with the meshopt simplify pipeline shipped in Phase A. Migration ROI doesn't justify the constraint.
+- **Phase F — ship v1.3.0.** Validation: vitest 179/179, build clean (825.62 KB / 246.99 KB gzip; +13 KB vs v1.2.0), perf:check `field-extreme` -26.7% (3807 → 2789 ms; SwiftShader timeouts elsewhere are standing CI noise per NEXT_SESSION). Sim-baseline byte-identical despite TreePlacement RNG delta. Tagged `v1.3.0` + pushed.
+
+**Iteration artifacts saved (per "branch-back" directive):**
+- Tags: `cycle-22-base`, `cycle-22-phaseA-default`, `cycle-22-phaseB-default`, `cycle-22-phaseC-default`, `cycle-22-phaseD-default`, `v1.3.0`.
+- Branches: `cycle-22-phaseC-strength-0.4`, `cycle-22-phaseC-strength-0.8`.
+- LOD1 GLB variants: `cycle22-validation/phaseA/variants/{aggressive,default,conservative,pristine}/`.
+- Pine archive: `cycle22-validation/phaseA/removed-pine/`.
+
+**Carryover deferred (no change from Cycle 21):**
+- Heightfield amplitude bug (root fix in `Heightfield.sample()` / `scripts/bake-heightmap.mjs`). Visual character of game depends on amplified state across ~14 cycles.
+- Cinema runner `page.screenshot` 30s font-wait timeout. 4 deferred cinematic videos (`dog-into-sunset`, `lightning-strike`, `chaos-5000`, `oc-portal`).
+- WebGPU/TSL spike, grass render-texture trample, procedural-instanced-forest eval, mac-white-ground-bug.
+
 ### Cycle 21 — `tree-impostor-pixel-match-and-foliage-polish` → pivoted mid-cycle (closed as `v1.2.0`, 2026-05-05)
 
 Original plan was 6 phases of "make distant impostors pixel-perfect match LOD0." Phase 0+1+2+5 shipped; Phase 3 (padded-atlas mips) and Phase 4 (hybrid trunk-mesh) abandoned mid-cycle after a strategic pivot triggered by Matt's review questions ("are trees that expensive vs grass?", "what would a proper game dev with vision do here?", "look at latest implementations").
