@@ -36,11 +36,17 @@ interface RoomMeta {
   lastActivity: number;
 }
 
-// Cycle 8 Phase 5: allow-list of sheep counts hosts can pick. Until the
-// per-tick wire bandwidth is measured at higher counts (Q4), keep the cap
-// at 1000 — the same ceiling Solo Extreme uses.
-const ALLOWED_SHEEP_COUNTS = new Set([200, 250, 500, 1000]);
+// Cycle 8 Phase 5: allow-list of sheep counts hosts can pick.
+// Cycle 23 Phase E (Q5): extended to include Insane (3000) + Chaos (5000)
+// matching the solo-mode roster. RoomDO already runs the same per-tick
+// physics + spatial-hash as solo, so 5000-sheep MP is feasible at 60Hz on
+// desktop. Mobile guests at >1000 sheep are gated below.
+const ALLOWED_SHEEP_COUNTS = new Set([200, 250, 500, 1000, 3000, 5000]);
 const DEFAULT_SHEEP_COUNT = 200;
+// Cycle 23 Phase E: counts above this require all guests on desktop. Wire
+// + render bandwidth at 3000/5000 was measured for solo only; mobile
+// guests join only at <= MOBILE_GUEST_MAX_SHEEP_COUNT.
+const MOBILE_GUEST_MAX_SHEEP_COUNT = 1000;
 
 interface Env {
   ROOM_DO: DurableObjectNamespace;
@@ -282,6 +288,18 @@ export class RoomDO {
     const playerId = url.searchParams.get('playerId');
     if (!playerId || !this.players.has(playerId)) {
       return new Response('unknown playerId', { status: 403 });
+    }
+
+    // Cycle 23 Phase E: gate mobile guests on Insane/Chaos rooms (>1000
+    // sheep). Same wire/render reasoning as Q5: those modes were measured
+    // for solo desktop only; mobile clients can't reliably keep up at the
+    // resulting per-tick bandwidth and render cost.
+    if (this.meta.sheepCount > MOBILE_GUEST_MAX_SHEEP_COUNT) {
+      const ua = request.headers.get('user-agent') ?? '';
+      const isMobileUA = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      if (isMobileUA) {
+        return new Response('Insane/Chaos rooms require all guests on desktop', { status: 403 });
+      }
     }
 
     const pair = new WebSocketPair();

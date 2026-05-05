@@ -30,6 +30,24 @@ import { isCinematicMode, isUiHidden, getRequestedSun } from './cinematic-url.js
 // installCinemaApi (three.js-dependent) is dynamic-imported only when
 // `?cinematic=1` is set, keeping it out of the main bundle.
 
+// Cycle 23 Phase E: cinematic-flag strip on invite-hash join. If a user
+// lands on `?cinematic=1#/r/ABC123`, the cinematic flag would leak
+// `preserveDrawingBuffer: true` into a normal MP play session. Strip it
+// from location.search BEFORE SceneManager constructs (which reads the
+// flag synchronously). The hash itself is consumed by App.js's
+// useEffect later in this module's bootstrap.
+(function stripCinematicOnInvite() {
+    if (typeof location === 'undefined') return;
+    if (!location.hash || !location.hash.startsWith('#/r/')) return;
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('cinematic') !== '1') return;
+    sp.delete('cinematic');
+    const newSearch = sp.toString();
+    const newUrl = `${location.pathname}${newSearch ? '?' + newSearch : ''}${location.hash}`;
+    history.replaceState(null, '', newUrl);
+    console.log('[CINEMA] Stripped ?cinematic=1 from invite-hash URL — preserveDrawingBuffer stays off for guests.');
+})();
+
 /**
  * Core Web Vitals monitoring for SEO performance tracking
  */

@@ -21,12 +21,17 @@ const SCENE_FILTER_OPTIONS = [
     { id: 'rolling-hills', label: 'Rolling Hills' },
     { id: 'open-country', label: 'Open Country' }
 ];
+// Cycle 23 Phase E (Q5): leaderboard filter mirrors RoomCreation's
+// extended sheep-count list so cooperative/competitive boards at the new
+// Insane/Chaos counts are filterable.
 const SHEEP_FILTER_OPTIONS = [
     { value: 0, label: 'Any size' },
-    { value: 200, label: '200 sheep' },
+    { value: 200, label: '200 sheep — Classic' },
     { value: 250, label: '250 sheep' },
     { value: 500, label: '500 sheep' },
-    { value: 1000, label: '1000 sheep' }
+    { value: 1000, label: '1000 sheep — Extreme' },
+    { value: 3000, label: '3000 sheep — Insane' },
+    { value: 5000, label: '5000 sheep — Chaos' }
 ];
 // Solo tabs and `timed` are fixed at one sheep count by design — partition
 // filtering by sheepCount is meaningless for them. Tabs in this set hide
