@@ -1,44 +1,48 @@
-# Next Session — Tree LOD2 fix-and-polish (focused, NOT a numbered cycle)
+# Next Session — Cycle 21 (tree-impostor-pixel-match-and-foliage-polish)
 
-> Updated 2026-05-04 (end of Cycle 20 working session). **Cycle 20 Phase 0 + 1 + 2 v1 landed in one session** — Pixel Forge / Kiln pipeline integrated, all 3 trees baked at 16 hemi-y, new `js/kiln-impostor-material.js` shader written, octahedral runtime baker deleted, 186/186 vitest pass, prod build clean, browser smoke test green (177 trees, zero errors). **But the LOD2 trees don't look right yet** — Matt flagged this on smoke-test review. The next session is a **focused tree-LOD2 fix-and-polish pass**, not a numbered cycle (similar pattern to Cycle 19.5). Once trees look right, resume Cycle 20 Phase 3-5 (per-scene matrix → perf → ship). Active cycle plan: [`docs/cycle-20-plan.md`](docs/cycle-20-plan.md) — Phases 3-5 still pending.
+> Updated 2026-05-04 (end of Cycle 20 working session, after Matt's "bake all recommendations into the next cycle" directive). **Cycle 20 closes early — its remaining Phase 3-5 work absorbs into Cycle 21.** Cycle 21 is the focused, structurally-larger response to (a) the Cycle 20 v1 visual gap (impostor pixels don't match LOD0 in color, hue, brightness, sampling) and (b) Matt's two side-asks: re-tune the slim-and-sparse Aspen, open up tree placement so groves don't read as canopy-overlap clumps. **Active plan: [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md).** Research evidence base that produced the plan: [`docs/cycle-21-tree-impostor-research.md`](docs/cycle-21-tree-impostor-research.md). Cycle 20 v1-v5 polish-attempt findings (still relevant context): [`docs/cycle-20-impostor-color-handoff.md`](docs/cycle-20-impostor-color-handoff.md).
 
-## What landed this session (Cycle 20 Phase 0 + 1 + 2 v1)
+## What landed in Cycle 20 (Phase 0 + 1 + 2 v1, closed early into Cycle 21)
 
-- **Phase 0 — recon + Q2 verdict.** Pixel Forge CLI verified working (with two install fixes: bun→Node tsx on Windows, bake from `_originals/` not Draco-compressed runtime). 6-bug audit complete (5 confirmed analytically against the runtime source, Bug 6 anchor mismatch REFUTED via createTrees code reading). **Q2 locked at 16 hemi-y** via 2D barycentric simulation (`tools/q2-orbital-sim.mjs`, max/median ratio 1.024 — visually smooth) corroborated by AAA shipping precedent (Ghost of Tsushima 4×4+parallax, Horizon FW 3×3+parallax+dither, Far Cry 6 5×5 with depth-essential). Saves ~15 MB committed atlas data vs 32 hemi-y. Phase 2 spec refined to promote parallax depth offset + depth-discard ghost suppression to must-have based on research. Full audit: [`cycle20-validation/phase0/AUDIT.md`](cycle20-validation/phase0/AUDIT.md).
-- **Phase 1 — bake pipeline integration.** [`tools/bake-tree-impostors.mjs`](tools/bake-tree-impostors.mjs) wraps Pixel Forge CLI; `npm run bake-tree-impostors` regenerates 12 production atlas files (3 trees × albedo + normal + depth + sidecar JSON). [`tools/impostor-inspector.html`](tools/impostor-inspector.html) — one-page debug page with tile labels + atlas grid. [`tests/imposter-sidecar.spec.js`](tests/imposter-sidecar.spec.js) — 6 specs pinning the schema contract (3 trees × 2 specs each).
-- **Phase 2 v1 — runtime shader rewrite.** [`js/kiln-impostor-material.js`](js/kiln-impostor-material.js) with 3-tile lat/lon-cell barycentric blend, per-fragment relighting via decoded capture-view normals, anchor via sidecar `worldSize` + `bbox`. Parallax depth offset + depth-discard ghost suppression scaffolded as uniforms but **disabled by default** (`uParallaxScale = 0`, `uDepthDiscardThr = 1`) — atlas already contains the depth aux layer, no re-bake required to enable. `_bakeOctahedralImpostor` (~165 LOC) deleted. `setImpostorTint(sunColor, sunDirWorld, ambientColor)` extended; main.js wires sunDir + ambient through. Smoke-test status: [`cycle20-validation/phase2/PHASE2-V1-STATUS.md`](cycle20-validation/phase2/PHASE2-V1-STATUS.md).
+- **Phase 0 — recon + Q2 verdict.** Pixel Forge CLI verified (with two install fixes: bun→Node tsx on Windows, bake from `_originals/` not Draco-compressed runtime). 6-bug audit complete. Q2 locked at 16 hemi-y via 2D barycentric simulation + AAA shipping precedent (Ghost of Tsushima 4×4+parallax, Horizon FW 3×3+parallax+dither, Far Cry 6 5×5 with depth-essential).
+- **Phase 1 — bake pipeline.** [`tools/bake-tree-impostors.mjs`](tools/bake-tree-impostors.mjs) wraps Pixel Forge CLI; `npm run bake-tree-impostors` regenerates 12 production atlas files. Inspector HTML + 6 vitest specs pinning the schema.
+- **Phase 2 v1 — runtime shader rewrite.** [`js/kiln-impostor-material.js`](js/kiln-impostor-material.js) ships with 3-tile barycentric blend, per-fragment relighting via decoded capture-view normals, anchor via sidecar `worldSize` + `bbox`. Parallax + depth-discard ghost suppression scaffolded but disabled. Octahedral runtime baker deleted.
 
-Validation gates green at end of session: 186/186 vitest, prod build 812.28 KB / 242.09 KB gzip (flat with v1.1.0), browser smoke test on rolling-hills with 177 trees logging `LOD0+impostor` chain and zero console errors.
+Validation at Cycle 20 pause: 186/186 vitest, prod build 812.28 KB / 242.09 KB gzip (flat with v1.1.0). Phases 3-5 (per-scene matrix, perf, ship) absorb into Cycle 21 Phase 5.
 
-## Where we are visually (and what's not right)
+## Where we are visually (and why Cycle 21 exists)
 
-The kiln impostors **render** end-to-end but they don't look right yet on Matt's review. Specifically: distant LOD2 trees read as flat darker patches at noon, possibly too dim, and the visual continuity with LOD0 hasn't been validated under controlled poses. The infrastructure is correct; the visual tuning + acceptance evidence is incomplete.
+The kiln impostors **render** end-to-end but the visual gap with LOD0 surfaced multiple structural issues that incremental tuning can't close:
 
-## Next session — tree LOD2 fix-and-polish (focused pass, not a cycle)
+- **Lighting model gap.** LOD0 uses MeshStandardMaterial (full PBR — Schlick fresnel + GGX + IBL); impostor is half-Lambert + hemi only. Missing rim is the dominant single visible defect (reads warm-biased).
+- **Texture sampling gap.** 512px tiles → 5-15 screen pixels at distance: glint without mips, cross-tile bleed with mips. Current half-texel UV clamp + aniso=8 is a compromise, not a fix.
+- **Aspen recipe undercut.** `tree1` (Aspen Medium, leaves=30, branches[0]=8) reads as a tall broomstick.
+- **Open Country canopy clumping.** `WOODS_INSIDE_FACTOR = 0.85` still sometimes overlaps canopies.
 
-Same shape as Cycle 19.5 — single ad-hoc pass with no formal phase scaffolding. Goal: make the LOD2 trees actually look right, then unblock Cycle 20 Phase 3-5.
+A 6-agent parallel research pass produced a layered fix sequence — shipped as the [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md) phases below.
 
-**Single-tree harness first.** The bottleneck is that Layers E-I (anchor diff, orbital sweep, sun-dir sweep, elevation sweep, LOD-boundary dolly) all need a controlled scene with one tree, no grass/sheep/dog, and a scriptable camera pose. Build [`tools/single-tree-harness.html`](tools/single-tree-harness.html) — one-page no-deps Three.js scaffolding that calls `loadKilnImpostor()` and accepts `?az=N&el=N&dist=N&sun=N` URL params. ~1hr scaffolding → unlocks all five layers in fast iteration.
+## Cycle 21 phases (active plan)
 
-**Order of operations** (each block falsifiable; stop and tune the moment evidence diverges from prediction):
+Plan: [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md). 6 phases, mostly serial, Phase 6 optional.
 
-1. **Layer F — orbital azimuth sweep** at radius 120m / elevation 5° / 24 frames. The 3D analogue of the Phase 0 2D simulation. If max-Δ stays within 1.5× median (matching the simulation), Q2's 16 hemi-y verdict ports to 3D and we're done with that branch. If a step shows, enable parallax (`uParallaxScale = 0.04`), re-run; if still showing, escalate to 32 hemi-y (one CLI flag flip + re-bake).
-2. **Layer G — sun direction sweep**, 11 frames sun=0.0..1.0. Confirms per-fragment relighting tracks time-of-day. The smoke test already showed sunset trees dimmer than noon — Layer G turns that into evidence.
-3. **Layer E — anchor pixel-diff** at LOD0 vs LOD2 of one tree. Already analytically REFUTED in Phase 1 AUDIT.md, so this is a regression guard. Should be ≤2px aligned out of the box.
-4. **Layer H — elevation sweep**, 5°→75° in 6 frames. Documents the cylindrical-billboard quad's known-bad behavior at high-elevation views (Bug 4, deferred to Cycle 19.5 carryover #2 follow-up cycle). Establishes baseline.
-5. **Layer I — LOD2→LOD0 boundary dolly**, z=110→90 over 20 frames. Position-pop / silhouette-pop / brightness-step. Anchor alignment + sidecar-based geometry should keep position pop ≤2px.
+0. **Quick wins (~3hr)** — Aspen re-tune (leaves 30→42, branches 8→10), placement diff (WOODS_INSIDE_FACTOR 0.85→0.92, scaleVariation 0.7-1.3 → 0.80-1.20), Schlick fresnel rim (~10 LOC), tree-pipeline.md seed doc fix. Independently shippable.
+1. **Sandbox v2 + first measurement (~1 day)** — standalone `tools/lod-sandbox-v2.html`, 5×5 grid sampling, dE2000/dRGB/dLuma per cell, 12-cell smoke matrix baseline.
+2. **Calibration LUT (~2 days)** — full 80-cell matrix, generate `(scene, ToD) → vec3 boost` JSON, ship as `uMatchBoost` uniform. Target post-LUT mean dE2000 < 5.
+3. **Padded-atlas mipmaps (~1.5 wk)** — re-bake atlases with N=16-32px tile padding, re-enable mipmaps in shader, kill the glint without cross-tile bleed. Halen et al. HPG 2022 approach.
+4. **Hybrid trunk-mesh closest band (~1 wk)** — bake trunk-only GLB per tree, render `(trunk-mesh + impostor-canopy)` at 100-150m. Trunk inherits LOD0 MeshStandardMaterial → pixel-perfect anchor.
+5. **Per-scene verification + perf + ship (~1 day)** — 12 captures vs v1.1.0, perf delta, sim-baseline byte equality, tag v1.2.0.
+6. **Structural escalation (OPTIONAL)** — only if Phase 5 mean dE2000 > 5. Options: MeshStandard.onBeforeCompile extension, RiLoD geometry-image impostor, 2D LUT.
 
-**Tuning candidates** (start at default, adjust empirically per the screenshots):
-- `uParallaxScale` — try `0.04` if Layer F shows azimuth step.
-- `uDepthDiscardThr` — try `0.15` if blend produces visible ghost / double-image.
-- Ambient lift in `setImpostorTint` — if trees too dim at noon despite atmosphere ambient being correct, the kiln baseColor + atmosphere ambient combo may need a multiplier. The shader currently sets a 0.35-grey fallback when atmosphere gives null; consider a `uAmbientBoost` uniform.
-- Bake-time light direction in `_bakeOctahedralImpostor` was `(2, 4, 3)` (Cycle 18). The Pixel Forge bake is unlit (`baseColor`) — sun comes entirely from runtime. If LOD0 PBR vs LOD2 baseColor produces a brightness step at the swap, the gap is material-level (PBR has roughness/metallic/specular; baseColor is flat). Worth measuring before tuning.
+**Closes** Cycle 19.5 carryover impostor-quality items #1, #2 (partial), #3, #4. Drops the standing impostor-quality risk.
 
-**Then resume Cycle 20**: Phase 3 (12-capture per-scene matrix vs `v1.1.0` deployed), Phase 4 (perf + sim-baseline), Phase 5 (ship — closes Cycle 19.5 carryover impostor-quality items #1, #2 partial, #4).
+## Explicitly DEFERRED out of Cycle 21 (carry forward)
 
-## Original Cycle 20 plan (Phases 3-5 still pending)
+Per Matt's "push back other objectives" directive, these stay in BACKLOG and do NOT land in Cycle 21:
 
-Plan at [`docs/cycle-20-plan.md`](docs/cycle-20-plan.md). Open it after the polish session unblocks the visuals. The plan is unchanged — it correctly tracks Phases 3-5 as the remaining acceptance gates.
+- **Heightfield amplitude bug** (root fix in `Heightfield.sample()` / `scripts/bake-heightmap.mjs`). Cycle 19 hotfix worked around the symptom by relaxing the GrassSystem clamp. RH/OC terrain shipped at peakHeight² metres for ~14 cycles; visual character of the game depends on the amplified state now. Fix is its own cycle.
+- **Cinema runner `page.screenshot` font-wait timeout.** Workaround (Playwright MCP for one-off captures) is fine for Cycle 21 Phase 5.
+- **4 cinematic videos** (`dog-into-sunset`, `lightning-strike`, `chaos-5000`, `oc-portal`) — depend on cinema runner fix and heightfield decision.
+- **WebGPU/TSL spike, grass render-texture trample, procedural-instanced-forest eval, mac-white-ground-bug** — standing alternatives, not Cycle 21 scope.
 
 ## Where the project stands (Cycle 19 close)
 
@@ -58,36 +62,7 @@ Headlines from Cycle 19:
 ## CI quirks worth knowing
 
 - **macOS Safari Smoke** is the standing mac-white-ground bug, environmental (not on CI Safari, only Matt's Mac). Documented in BACKLOG standing risks.
-- **Cinema runner timeout** is *new* this cycle — `page.screenshot: Timeout 30000ms exceeded - waiting for fonts to load... fonts loaded` then hang. Affects all shots. Cycle 20 Phase 2 fixes.
-
-## Cycle 20 — what to pick up next
-
-Plan at [`docs/cycle-20-plan.md`](docs/cycle-20-plan.md). 6 phases, strictly serial.
-
-**Why this cycle exists.** The current LOD2 impostor at `js/octahedral-impostor-material.js` is named octahedral but is actually a 4×4 lat/lon grid with a cylindrical Y-billboard, single-tile pick, no relighting data, and a likely anchor mismatch at the LOD0→LOD2 swap. **Pixel Forge / Kiln** (local at `C:\Users\Mattm\X\games-3d\pixel-forge\packages\core\src\kiln\imposter\`) is a polished offline impostor baker matching SDS's stack (Three.js 0.184 + Playwright + sharp), with a sidecar JSON contract, normal + depth aux layers, and a CLI `pixelforge kiln bake-imposter`. This cycle adopts it.
-
-**Phase summary:**
-0. **Recon + assumption audit** (~1hr). Document 6 suspected impostor bugs with optical evidence; verify Pixel Forge CLI works on a real SDS GLB.
-1. **Bake pipeline integration** (~2hr). New `tools/bake-tree-impostors.mjs` calling Kiln CLI; outputs PNG + normal + depth + JSON sidecar to `assets/models/trees/`.
-2. **Runtime shader rewrite** (~3hr). New `js/kiln-impostor-material.js` consumes sidecar, anchors via `worldSize`+`yOffset`, samples normal atlas for `dot(N, sunDir)` per-fragment lighting, 3-tile barycentric blend across azimuth.
-3. **Per-scene verification** (~1hr). 12 captures (3 scenes × 4 sun positions); side-by-side with `v1.1.0`-deployed.
-4. **Perf + sim-baseline** (~30min).
-5. **Ship** (~30min). Closes Cycle 19.5 carryover impostor-quality items #1, #2 (partial), #4. Doesn't bump version.
-
-**Optical validation matrix:** the plan defines 12 layers (A-L) covering atlas inspection, schema contracts, anchor pixel-diff, orbital sweep, sun-direction sweep, elevation sweep, LOD-boundary dolly, per-scene matrix, perf delta, sim-baseline byte equality. Cycle is not done until all 12 have saved artifacts in `cycle20-validation/`.
-
-**Open questions:** Q1 integration mechanism (CLI subprocess favored), Q2 16 vs 32 angles (16 to start), Q3 atlas size budget (~15 MB total), Q4 baseColor vs beauty (baseColor — runtime relighting), Q5 LOD2/LOD0 swap distance (keep 100m), Q6 artifact path (next to GLBs).
-
-**Deferred from this cycle (carryover from prior Cycle 20 plan):**
-- Heightfield amplitude bug (root fix in `Heightfield.sample()` / `scripts/bake-heightmap.mjs`).
-- Cinema runner `page.screenshot` font-wait timeout.
-- 4 cinematic videos (depend on heightfield decision).
-
-Standing alternatives if Cycle 20 scope shifts:
-- `webgpu-tsl-spike` — port grass + tree-leaf shader math to TSL; bring up WebGPU renderer with WebGL fallback
-- `grass-render-texture-trample` — per-blade RT ping-pong for sheep trample recovery
-- `procedural-instanced-forest-eval` — measure PIF perf vs current LOD chain
-- `mac-white-ground-bug` — investigate Matt's Mac-specific repro
+- **Cinema runner timeout** — `page.screenshot: Timeout 30000ms exceeded - waiting for fonts to load... fonts loaded` then hang. Affects all shots. **Deferred** out of Cycle 21; workaround for Phase 5 captures is direct Playwright MCP.
 
 ## Tuning knobs (1-line tweaks)
 
@@ -134,7 +109,9 @@ Re-baking heightmaps: `npm run bake-heightmaps` regenerates all three. **Cycle 2
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-20-plan.md`](docs/cycle-20-plan.md) — `tree-impostor-overhaul-via-kiln` (Phase 0+1+2 v1 landed; tree-polish then Phase 3-5 next) |
+| Active cycle | [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md) — `tree-impostor-pixel-match-and-foliage-polish` (absorbs Cycle 20 Phase 3-5; closes Cycle 19.5 impostor-quality carryovers) |
+| Cycle 21 research | [`docs/cycle-21-tree-impostor-research.md`](docs/cycle-21-tree-impostor-research.md) — 6-agent research compilation that produced the plan |
+| Cycle 20 (closed early into 21) | [`docs/cycle-20-plan.md`](docs/cycle-20-plan.md) + [`docs/cycle-20-impostor-color-handoff.md`](docs/cycle-20-impostor-color-handoff.md) |
 | Latest closed cycle | [`docs/archive/cycles/cycle-19-plan.md`](docs/archive/cycles/cycle-19-plan.md) |
 | Cycle 18 (also closed) | [`docs/archive/cycles/cycle-18-plan.md`](docs/archive/cycles/cycle-18-plan.md) |
 | Cycle 17 | [`docs/archive/cycles/cycle-17-plan.md`](docs/archive/cycles/cycle-17-plan.md) + [`docs/archive/cycles/cycle-17-research.md`](docs/archive/cycles/cycle-17-research.md) |

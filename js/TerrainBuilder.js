@@ -780,9 +780,13 @@ export class TerrainBuilder {
      * ~bake brightness while picking up enough sun hue to track sunrise
      * / sunset / overcast without losing parity against live trees.
      *
-     * @param {THREE.Color} color
+     * @param {THREE.Color} sunColor
+     * @param {THREE.Vector3 | null} [sunDirWorld]
+     * @param {THREE.Color | null} [ambientColor]
+     * @param {number} [sunIntensity=1]      Pre-multiplied into uSunColor for kiln impostors
+     * @param {number} [ambientIntensity=1]  Pre-multiplied into uAmbientColor for kiln impostors
      */
-    setImpostorTint(sunColor, sunDirWorld = null, ambientColor = null) {
+    setImpostorTint(sunColor, sunDirWorld = null, ambientColor = null, sunIntensity = 1, ambientIntensity = 1) {
         if (!sunColor || !this._impostorMaterials) return;
 
         // Cycle 20 Phase 2: split materials by impostor kind. Kiln impostors
@@ -797,20 +801,89 @@ export class TerrainBuilder {
         const boost = 1.0 + 0.20 * Math.max(0, Math.min(1, lum));
         tmp.multiplyScalar(boost);
 
+        // Cycle 20 Phase 2 v3 (2026-05-04): pre-multiply by light intensity
+        // ONLY — the kiln fragment shader now divides by RECIPROCAL_PI to
+        // match Three's BRDF_Lambert exactly, so the v2 SUN_BOOST/AMB_BOOST
+        // fudge factors are gone. uSunColor + uAmbientColor here are
+        // byte-identical to what Three's WebGLLights writes into its
+        // directionalLights[i].color and ambientLightColor uniforms — so
+        // the impostor's diffuse-direct + diffuse-indirect math produces
+        // the same magnitude as MeshLambertMaterial / MeshStandardMaterial
+        // would on the same surface.
+
+        // Cycle 20 v4 (2026-05-04): also drive the ground-bounce hemi term.
+        // Foliage research recipe (Megascans / IceFall / NedMakesGames URP):
+        // shadow side of canopy must pick up SOME chromatic bounce, not
+        // flat-grey ambient, or impostor reads desaturated vs LOD0. We
+        // synthesize the bounce color by tilting the current ambient toward
+        // a warm earth tone — half-strength of the sky-side fill so it
+        // doesn't wash out the directional shading.
+        const GROUND_BOUNCE_TILT = new THREE.Color(0.85, 0.70, 0.55);  // warm-earth
+        const GROUND_BOUNCE_SCALE = 0.5;
+
         for (const mat of this._impostorMaterials) {
             if (mat.userData?.isKilnImpostor) {
-                mat.uniforms.uSunColor.value.copy(sunColor);
+                mat.uniforms.uSunColor.value
+                    .copy(sunColor)
+                    .multiplyScalar(sunIntensity);
                 if (sunDirWorld) mat.uniforms.uSunDirWorld.value.copy(sunDirWorld);
                 if (ambientColor) {
-                    mat.uniforms.uAmbientColor.value.copy(ambientColor);
+                    mat.uniforms.uAmbientColor.value
+                        .copy(ambientColor)
+                        .multiplyScalar(ambientIntensity);
+                    // Ground bounce = ambient × earth-tilt × scale.
+                    mat.uniforms.uGroundBounceColor.value
+                        .copy(ambientColor)
+                        .multiply(GROUND_BOUNCE_TILT)
+                        .multiplyScalar(ambientIntensity * GROUND_BOUNCE_SCALE);
                 } else {
-                    // Default ambient = 35% grey if main.js can't supply.
-                    mat.uniforms.uAmbientColor.value.setRGB(0.35, 0.35, 0.35);
+                    // Default ambient when atmosphere hasn't bound yet — use
+                    // Three's physical-light convention (color × π).
+                    const fallback = 0.7 * Math.PI;
+                    mat.uniforms.uAmbientColor.value.setRGB(fallback, fallback, fallback);
+                    mat.uniforms.uGroundBounceColor.value.setRGB(
+                        fallback * GROUND_BOUNCE_TILT.r * GROUND_BOUNCE_SCALE,
+                        fallback * GROUND_BOUNCE_TILT.g * GROUND_BOUNCE_SCALE,
+                        fallback * GROUND_BOUNCE_TILT.b * GROUND_BOUNCE_SCALE,
+                    );
                 }
             } else if (mat.color) {
                 // Cross-billboard fallback path.
                 mat.color.copy(tmp);
             }
+        }
+
+        // Cycle 20 v4 debug tap: surface the latest input + first impostor
+        // material's uniforms via window so the LOD-color-match sandbox /
+        // playwright_evaluate can introspect the live values without
+        // reaching into the renderer/scene graph.
+        if (typeof window !== 'undefined') {
+            const firstKiln = this._impostorMaterials.find(m => m.userData?.isKilnImpostor);
+            window.__sdsImpostorProbe = {
+                input: {
+                    sunColor: sunColor ? sunColor.toArray() : null,
+                    sunIntensity,
+                    sunDirWorld: sunDirWorld ? sunDirWorld.toArray() : null,
+                    ambientColor: ambientColor ? ambientColor.toArray() : null,
+                    ambientIntensity,
+                },
+                live: firstKiln ? {
+                    uSunColor: firstKiln.uniforms.uSunColor.value.toArray(),
+                    uAmbientColor: firstKiln.uniforms.uAmbientColor.value.toArray(),
+                    uGroundBounceColor: firstKiln.uniforms.uGroundBounceColor.value.toArray(),
+                    uSunDirWorld: firstKiln.uniforms.uSunDirWorld.value.toArray(),
+                    uWrapPow: firstKiln.uniforms.uWrapPow.value,
+                    uSubsurfaceLift: firstKiln.uniforms.uSubsurfaceLift.value,
+                } : null,
+                count: this._impostorMaterials.filter(m => m.userData?.isKilnImpostor).length,
+                // Cycle 20 v5: expose scene + first kiln material so the
+                // tools/lod-color-match.html (and ad-hoc playwright probes)
+                // can sample live LOD0 vs impostor pixels under the
+                // current atmosphere — replaces the synthetic sandbox.
+                scene: this.scene,
+                trees: this.trees,
+                kilnMaterial: firstKiln,
+            };
         }
     }
 

@@ -33,8 +33,15 @@ const ZONES = [
     { name: 'horizon',   minDist: 40, maxDist: 70, scale: 30.0 },
 ];
 
-const WOODS_INSIDE_FACTOR = 0.6;
-const WOODS_OUTSIDE_FACTOR = 1.4;
+// Cycle 20 Phase 2 v2 (2026-05-04): relaxed `INSIDE_FACTOR` 0.60 → 0.85.
+// At zone-scale ~15-30m and tree canopy ~10-21m wide, the previous 0.6×
+// shrunk min-distance below the canopy diameter, producing visible
+// canopy-overlap clumping in OC woods (Matt's review post-tilt-fix).
+// 0.85 keeps "denser inside the woods than outside" without overlapping
+// canopies. OUTSIDE_FACTOR 1.4 → 1.5 widens the field-spaced trees a touch
+// more so the inside/outside contrast still reads as intentional zoning.
+const WOODS_INSIDE_FACTOR = 0.85;
+const WOODS_OUTSIDE_FACTOR = 1.5;
 
 /**
  * @param {{x: number, z: number}} p

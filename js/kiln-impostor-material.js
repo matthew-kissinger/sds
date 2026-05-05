@@ -19,10 +19,26 @@ import * as THREE from 'three';
  *     90° boundaries). Triangulation: cell split along the TR-BL diagonal
  *     (u + v < 1 ? upper-left triangle TL/TR/BL : lower-right TR/BR/BL).
  *
- *   - **Anchor via sidecar `worldSize` + `bbox`**. Quad sized in object
- *     space spanning bbox.min.y → bbox.max.y. Ground anchor matches LOD0
- *     trunk-base for trunk-pivot GLBs (Bug 6 was already correct for
- *     EZ-Tree GLBs but the sidecar makes the contract explicit).
+ *   - **Anchor via sidecar `bbox` center**. Quad sized in object
+ *     space to the BAKE FRUSTUM (= boundsRadius × 2 × 1.02 from the bbox
+ *     diagonal, matching Pixel Forge's `bake.ts:444-447`). Anchored at
+ *     bbox center on all three axes — same point Pixel Forge's bake
+ *     camera looks at. Cycle 20 v2 fix: previous code used
+ *     `worldSize = max(bbox dims)` from the sidecar, which is the bbox
+ *     longest axis — but the bake frustum is sized to the bounding
+ *     SPHERE (covers any rotation). Quad-vs-frustum mismatch drew the
+ *     tree at ~70% of true size. Now matches the frustum exactly.
+ *
+ *   - **Spherical billboard (camera-facing in 3D, world-up locked)**.
+ *     Cycle 20 v2 fix: previous cylindrical (Y-axis only) billboard
+ *     foreshortened cos(camera_pitch) — Classic camera at 45° pitch
+ *     drew impostors at 71% height; cinematic overhead drew them
+ *     edge-on as a "thin slice." Spherical-with-up-lock orients the
+ *     quad against (worldUp × viewDir) so it always faces the camera
+ *     in 3D without rolling when the camera yaws. The tile-pick
+ *     content already encodes the angle-dependent silhouette, so
+ *     drawing it onto a camera-facing quad presents it without
+ *     geometric distortion.
  *
  *   - **Parallax depth offset + depth-discard ghost suppression**:
  *     scaffolded as uniforms `uParallaxScale` (0 = disabled) and
@@ -53,8 +69,7 @@ const TILES_Y = 4;
 const VERTEX_SHADER = /* glsl */`
 uniform vec4 uAzimuths;          // length-4, ascending; matches sidecar.azimuths
 uniform vec4 uElevations;        // length-4, descending; matches sidecar.elevations
-uniform float uHalfWidth;        // worldSize / 2 in object-space units
-uniform vec3 uTreeOriginObj;     // (0, yOffset, 0) — bbox center in object space
+uniform vec3 uTreeOriginObj;     // bbox center in object space (matches bake camera target)
 uniform vec3 uSunDirWorld;
 
 varying vec2 vUv;
@@ -89,7 +104,7 @@ void main() {
 
   // Camera direction in world + object space. Object-space dir feeds the
   // tile pick (so per-instance Y-rotation rotates which face is shown);
-  // world dir feeds the cylindrical-billboard quad orientation.
+  // world dir feeds the spherical-billboard quad orientation.
   vec3 dirWorld = cameraPosition - originWorld;
   mat3 modelRot = mat3(modelMatrix);
   mat3 worldFromObj = modelRot * instRot;
@@ -150,21 +165,27 @@ void main() {
 
   vUv = uv;
 
-  // Cylindrical billboard around world-Y. Same as Cycle 18 — the high-
-  // elevation tiles read incorrectly because the quad never tilts back;
-  // Cycle 19.5 carryover #2 is the future cycle that fixes this with
-  // square tiles + tilt math in lockstep. For Cycle 20 v1, we keep the
-  // billboard as-is and the lighting does the heavy lifting.
-  vec3 horizForward = vec3(dirWorld.x, 0.0, dirWorld.z);
-  if (length(horizForward) < 1e-4) horizForward = vec3(0.0, 0.0, 1.0);
-  horizForward = normalize(horizForward);
-  vec3 horizRight = normalize(cross(vec3(0.0, 1.0, 0.0), horizForward));
+  // Spherical billboard with world-up lock. The bake camera always uses
+  // up=(0,1,0); the runtime quad's "up" is the camera-up projected onto
+  // the plane perpendicular to viewDir, which lines up with the bake's
+  // up convention everywhere except directly overhead (handled below).
+  // Quad is symmetric: position.xy ∈ [-frustumHalf, +frustumHalf], spans
+  // the same square footprint Pixel Forge captured into each tile.
+  vec3 viewDir = dirWorld;
+  float vdLen = length(viewDir);
+  viewDir = vdLen > 1e-4 ? viewDir / vdLen : vec3(0.0, 0.0, 1.0);
 
-  // position.x ∈ [-uHalfWidth, +uHalfWidth] → billboard horizontal axis.
-  // position.y ∈ [bbox.min.y, bbox.max.y] → world up.
+  vec3 worldUp = vec3(0.0, 1.0, 0.0);
+  vec3 billRight = cross(worldUp, viewDir);
+  float rLen = length(billRight);
+  // Degenerate when viewing straight down (viewDir parallel to worldUp).
+  // Pick any horizontal axis; Up follows from the cross.
+  billRight = rLen > 1e-4 ? billRight / rLen : vec3(1.0, 0.0, 0.0);
+  vec3 billUp = cross(viewDir, billRight);
+
   vec3 vertexWorld = originWorld
-    + horizRight * (position.x * scaleVal)
-    + vec3(0.0, (position.y - uTreeOriginObj.y) * scaleVal, 0.0);
+    + billRight * (position.x * scaleVal)
+    + billUp    * (position.y * scaleVal);
 
   vec4 mvPosition = viewMatrix * vec4(vertexWorld, 1.0);
   gl_Position = projectionMatrix * mvPosition;
@@ -179,8 +200,11 @@ uniform sampler2D uNormal;
 uniform sampler2D uDepth;
 uniform vec4 uAzimuths;
 uniform vec4 uElevations;
-uniform vec3 uSunColor;
-uniform vec3 uAmbientColor;
+uniform vec3 uSunColor;          // pre-multiplied by sun.intensity
+uniform vec3 uAmbientColor;      // pre-multiplied by ambient.intensity (sky-side fill)
+uniform vec3 uGroundBounceColor; // ground-bounce ambient tint, pre-multiplied
+uniform float uWrapPow;          // half-Lambert wrap exponent (1.0 = standard, 1.5 = more contrast)
+uniform float uSubsurfaceLift;   // chromatic floor magnitude (0..0.5, foliage-typical 0.10-0.20)
 uniform float uAlphaTest;
 uniform float uParallaxScale;       // 0 = disabled (v1 default)
 uniform float uDepthDiscardThr;     // 1 = disabled (v1 default; tune to ~0.15 to enable)
@@ -195,6 +219,10 @@ varying vec3 vViewDirObj;
 #include <common>
 #include <packing>
 #include <fog_pars_fragment>
+// tonemapping_pars_fragment + colorspace_pars_fragment are auto-injected
+// by Three WebGLProgram when toneMapped:true + the renderer outputColorSpace
+// requires conversion. Including them manually here caused duplicate
+// function definitions on compile (Cycle 20 v2 finding 2026-05-04).
 
 const float TILES_X = ${TILES_X.toFixed(1)};
 const float TILES_Y = ${TILES_Y.toFixed(1)};
@@ -228,9 +256,23 @@ mat3 captureRotForTile(float azIdx, float elIdx) {
 // of image. So tile (azIdx=0, elIdx=0) sits at uv.y high; we map elIdx=0
 // to the top by inverting. Sidecar's tilesY=4, so the top row's UV.y range
 // is [3/4, 4/4].
+//
+// Cycle 20 v5 (2026-05-04): UV clamped to half-texel INSIDE tile bounds so
+// bilinear sampling at tile edges cannot reach across to the neighbour
+// tile. Without this clamp, fragments near uvLocal=0 or 1 read 50% of
+// adjacent-tile content via bilinear — produces glints / hue shifts
+// because adjacent tiles are completely different views (azimuth or
+// elevation neighbours). 0.5/atlasW = 0.5/2048 ≈ 0.000244 inset per axis.
+const float HALF_TEXEL_U = 0.5 / 2048.0;  // atlas is 4 tiles × 512px square
+const float HALF_TEXEL_V = 0.5 / 2048.0;
+
 vec2 atlasUvForTile(float azIdx, float elIdx, vec2 uvLocal) {
   vec2 base = vec2(azIdx * TILE_SCALE.x, (TILES_Y - 1.0 - elIdx) * TILE_SCALE.y);
-  return base + uvLocal * TILE_SCALE;
+  // Clamp uvLocal to [HALF_TEXEL/TILE_SCALE, 1 - HALF_TEXEL/TILE_SCALE] so the
+  // resulting global UV stays at least half a texel inside the tile.
+  vec2 inset = vec2(HALF_TEXEL_U / TILE_SCALE.x, HALF_TEXEL_V / TILE_SCALE.y);
+  vec2 uvLocalClamped = clamp(uvLocal, inset, vec2(1.0) - inset);
+  return base + uvLocalClamped * TILE_SCALE;
 }
 
 struct TileSample {
@@ -318,13 +360,63 @@ void main() {
   float nLen = length(nObjBlended);
   vec3 N_obj = nLen > 1e-4 ? nObjBlended / nLen : vec3(0.0, 1.0, 0.0);
 
-  // Lighting: object-space dot product (vSunDirObj already pre-rotated in
-  // vertex shader). Lambert diffuse + ambient flat term.
-  float diffuse = max(dot(N_obj, vSunDirObj), 0.0);
-  vec3 lit = uAmbientColor + diffuse * uSunColor;
+  // Foliage-specific lighting model — research-backed (see Cycle 20 v4
+  // 2026-05-04). Three primitives, each chosen for chromatic preservation:
+  //
+  // 1) HALF-LAMBERT WRAP. pow(N.L * 0.5 + 0.5, k) — Valve foliage
+  //    standard. Replaces saturate(N.L) so even back-facing leaves get
+  //    50% sun. Avoids the grey-shadow-side failure mode of pure
+  //    Lambert. k=1 (standard) softens, k=1.5 retains some contrast;
+  //    tunable via uWrapPow.
+  //
+  // 2) HEMISPHERIC AMBIENT WITH ALBEDO-TINTED GROUND BOUNCE. Top of canopy
+  //    (N.y to +1) gets uAmbientColor (sky-side, neutral). Bottom (N.y
+  //    to -1) gets uGroundBounceColor * albedo — the ground-bounce term
+  //    multiplies albedo so the underside picks up its OWN color back,
+  //    matching how MeshLambertMaterial diffuse retains saturation via
+  //    BRDF_Lambert(diffuseColor). Cures shadow-side-goes-grey without
+  //    half-Lambert blunt lift.
+  //
+  // 3) SUBSURFACE FLOOR. albedo * uSubsurfaceLift added unconditionally
+  //    (no N.L gate) — un-darkenable chromatic floor mimicking foliage
+  //    SSS / leaf translucency. Small (0.15 default) so it doesn't wash
+  //    directional shading.
+  //
+  // Energy conservation: BRDF_Lambert (1/π) applied to the direct term
+  // only — the hemispheric + subsurface terms are already in irradiance
+  // space (pre-multiplied by intensity in setImpostorTint).
+  // Match Three's MeshLambertMaterial structurally: irradiance flows through
+  // BRDF_Lambert(albedo) = albedo / pi. We modify only the irradiance
+  // computation — keeping the BRDF applied uniformly preserves chroma.
+  //
+  //   reflected = irradiance(direct) * BRDF_Lambert(albedo)
+  //             + irradiance(indirect) * BRDF_Lambert(albedo)
+  //             + sssFloor(albedo)
+  //
+  // direct.irradiance: half-Lambert wrap × sunColor (foliage standard,
+  //   replaces saturate(N.L) so back-leaves still pick up some sun).
+  // indirect.irradiance: hemi-blend between sky-side (uAmbientColor) and
+  //   ground-bounce (uGroundBounceColor). BRDF then tints by albedo so
+  //   underside leaves pick up their own color back — the IceFall
+  //   chromatic-bounce trick, expressed as irradiance not as direct
+  //   color injection.
+  // sssFloor: small albedo-tinted constant added OUTSIDE the BRDF — a
+  //   foliage-specific subsurface translucency cheat. Not part of LOD0
+  //   but small enough (0.15 default) not to break parity.
+  float dotNL = dot(N_obj, vSunDirObj);
+  float wrap = pow(saturate(dotNL * 0.5 + 0.5), uWrapPow);
+  vec3 directIrradiance = wrap * uSunColor;
 
-  gl_FragColor = vec4(albedoBlended * lit, aBlended);
+  float hemiBlend = N_obj.y * 0.5 + 0.5;  // 0=down (ground bounce), 1=up (sky)
+  vec3 indirectIrradiance = mix(uGroundBounceColor, uAmbientColor, hemiBlend);
+
+  vec3 reflected = (directIrradiance + indirectIrradiance) * (albedoBlended * RECIPROCAL_PI)
+                 + albedoBlended * uSubsurfaceLift;
+
+  gl_FragColor = vec4(reflected, aBlended);
   #include <fog_fragment>
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
 }
 `;
 
@@ -362,8 +454,14 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
     sidecar.elevations[3] ?? 0,
   ];
 
-  const yCenter = sidecar.yOffset ?? 0;
-  const halfWidth = sidecar.worldSize * 0.5;
+  // Anchor at the bbox center on all three axes — this is the point Pixel
+  // Forge's bake camera looks at (`bake.ts:447: camera.lookAt(boundsCenter)`),
+  // so the tile content is centered around it. Trees with non-zero x/z
+  // offsets in their authoring (pine has x-center ≈ -0.035) align cleanly.
+  // Y prefers sidecar.yOffset (already (min+max)/2, but explicit).
+  const xCenter = (sidecar.bbox.min[0] + sidecar.bbox.max[0]) * 0.5;
+  const yCenter = sidecar.yOffset ?? (sidecar.bbox.min[1] + sidecar.bbox.max[1]) * 0.5;
+  const zCenter = (sidecar.bbox.min[2] + sidecar.bbox.max[2]) * 0.5;
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
@@ -373,12 +471,33 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
       uDepth:           { value: depthAtlas },
       uAzimuths:        { value: new THREE.Vector4(...azPad) },
       uElevations:      { value: new THREE.Vector4(...elPad) },
-      uHalfWidth:       { value: halfWidth },
-      uTreeOriginObj:   { value: new THREE.Vector3(0, yCenter, 0) },
+      uTreeOriginObj:   { value: new THREE.Vector3(xCenter, yCenter, zCenter) },
       uSunDirWorld:     { value: new THREE.Vector3(0.5, 0.7, 0.3).normalize() },
-      uSunColor:        { value: new THREE.Color(1, 1, 1) },
-      uAmbientColor:    { value: new THREE.Color(0.4, 0.4, 0.4) },
-      uAlphaTest:       { value: 0.4 },
+      // sun + ambient pre-multiplied by light intensity in setImpostorTint.
+      // Defaults are sane fallbacks for the boot-frame paint.
+      uSunColor:        { value: new THREE.Color(1.0, 1.0, 1.0) },
+      uAmbientColor:    { value: new THREE.Color(0.7 * Math.PI, 0.7 * Math.PI, 0.7 * Math.PI) },
+      // Ground-bounce ambient — irradiance value for the ground-side of the
+      // hemi blend. Live updates via setImpostorTint multiply atmosphere
+      // ambient by a small earth-tilt factor at half-strength. Default
+      // here is a neutral 50% of sky-side magnitude, no hue tilt — so
+      // the sandbox (which bypasses setImpostorTint) renders neutrally.
+      uGroundBounceColor: { value: new THREE.Color().setRGB(0.35 * Math.PI, 0.35 * Math.PI, 0.35 * Math.PI) },
+      // Half-Lambert wrap exponent. 1.0 = standard Valve wrap (very soft);
+      // 1.5 retains slightly more directional contrast. Foliage typically
+      // wants 1.0-1.5.
+      uWrapPow:         { value: 1.2 },
+      // Subsurface "constant glow" floor — albedo-tinted lift independent
+      // of N.L. 0.10-0.20 typical for foliage; 0 disables. Cycle 20 v4
+      // measured at 0.0 in the LOD-color-match sandbox: with the hemi
+      // ambient already lifting shadow-side saturation, SSS pushed
+      // impostor +13 luma over LOD0. Re-enable if shadow side still
+      // reads grey at distance.
+      uSubsurfaceLift:  { value: 0.0 },
+      // 0.30 instead of 0.40: alpha is bleed-padded 2px into transparent
+      // neighbours by Pixel Forge so a lower test pulls in the soft fringe,
+      // closing the "snappy" silhouette gap vs LOD0 geometric edges.
+      uAlphaTest:       { value: 0.3 },
       // v1 defaults: parallax + depth-discard scaffolded but disabled.
       // Tune via TerrainBuilder.setKilnImpostorTunables() per Layer F.
       uParallaxScale:   { value: 0.0 },
@@ -391,6 +510,11 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
     depthWrite: true,
     depthTest: true,
     fog: true,
+    // Hook into the renderer's tone-mapping + output-colorspace pipeline
+    // (ACESFilmic + sRGB on this project — see SceneManager.js:99-106).
+    // Without this, our raw albedo×lit values bypass the gamma curve LOD0
+    // gets and read noticeably darker / less saturated.
+    toneMapped: true,
   });
 
   // Tag for setImpostorTint() so the per-frame sun update knows to write
@@ -402,25 +526,36 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
 }
 
 /**
- * Quad geometry sized to the sidecar's bbox. Width = worldSize, height =
- * bbox.max.y - bbox.min.y. position.x ∈ [-worldSize/2, +worldSize/2],
- * position.y ∈ [bbox.min.y, bbox.max.y], position.z = 0. uv ∈ [0,1]².
+ * Square quad sized to the bake frustum so each tile's content maps 1:1
+ * to the runtime quad. Pixel Forge bakes with a square ortho frustum sized
+ * to the bounding SPHERE (`bake.ts:444: const half = boundsRadius * 1.02`)
+ * so the tree fits at any rotation. We match that here:
+ *
+ *   boundsRadius = sqrt(dx² + dy² + dz²) / 2   (bbox diagonal × 0.5)
+ *   frustumHalf  = boundsRadius * 1.02         (bake camera's half-extent)
+ *
+ * Quad spans [-frustumHalf, +frustumHalf] on both X and Y, centered around
+ * the bbox center (translated in by the vertex shader's uTreeOriginObj).
+ * UV (0,0) is bottom-left, matching the bake atlas's tile orientation
+ * after Three's auto Y-flip on PNG load.
  *
  * @param {object} sidecar
  * @returns {THREE.BufferGeometry}
  */
 export function createKilnImpostorGeometry(sidecar) {
-  const halfWidth = sidecar.worldSize * 0.5;
-  const yMin = sidecar.bbox.min[1];
-  const yMax = sidecar.bbox.max[1];
+  const dx = sidecar.bbox.max[0] - sidecar.bbox.min[0];
+  const dy = sidecar.bbox.max[1] - sidecar.bbox.min[1];
+  const dz = sidecar.bbox.max[2] - sidecar.bbox.min[2];
+  const boundsRadius = Math.sqrt(dx * dx + dy * dy + dz * dz) * 0.5;
+  const frustumHalf = boundsRadius * 1.02;
 
   const positions = new Float32Array([
-    -halfWidth, yMin, 0,
-     halfWidth, yMin, 0,
-     halfWidth, yMax, 0,
-    -halfWidth, yMin, 0,
-     halfWidth, yMax, 0,
-    -halfWidth, yMax, 0,
+    -frustumHalf, -frustumHalf, 0,
+     frustumHalf, -frustumHalf, 0,
+     frustumHalf,  frustumHalf, 0,
+    -frustumHalf, -frustumHalf, 0,
+     frustumHalf,  frustumHalf, 0,
+    -frustumHalf,  frustumHalf, 0,
   ]);
   const uvs = new Float32Array([
     0, 0,
@@ -476,11 +611,26 @@ export async function loadKilnImpostor(basePath) {
         url,
         (tex) => {
           tex.colorSpace = colorSpace;
-          tex.minFilter = THREE.LinearMipmapLinearFilter;
+          // Cycle 20 v5 (2026-05-04): NO mipmaps but KEEP anisotropy.
+          // Adjacent tiles in the 4x4 lat/lon atlas are completely
+          // different views (azimuth/elevation neighbours); the box-mip
+          // generator averaged across these boundaries → "glinted
+          // reflective" sparkle at distance. Disabling mips fixes that.
+          // Anisotropy stays at 8 because at high camera pitch the
+          // impostor quad is foreshortened along its azimuth-tile axis,
+          // and aniso is what keeps the texture sharp under that
+          // foreshortening — without it, distant impostors read as
+          // washed-out grey ghosts. The two evils are NOT equivalent:
+          // aniso reads ~8 texels along ONE axis (mostly within the same
+          // tile if the camera-yaw axis aligns with the texel grid),
+          // while mip generation averages 2x2 across BOTH axes including
+          // tile boundaries.
+          tex.minFilter = THREE.LinearFilter;
           tex.magFilter = THREE.LinearFilter;
+          tex.anisotropy = 8;
           tex.wrapS = THREE.ClampToEdgeWrapping;
           tex.wrapT = THREE.ClampToEdgeWrapping;
-          tex.generateMipmaps = true;
+          tex.generateMipmaps = false;
           tex.needsUpdate = true;
           resolve(tex);
         },

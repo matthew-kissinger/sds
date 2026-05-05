@@ -320,6 +320,14 @@ class SheepDogSimulation {
             window.__sds.maxZoom = () => cc?.setZoom?.(cc.maxDistance);
             console.log('[PROBE] window.__sds installed (probeRender=1)');
         }
+        // Cycle 20 v5: ALWAYS expose a thin debug surface so playwright /
+        // dev-tool consumers can sample LOD0 vs impostor pixel colors
+        // without the cinematic flag's preserveDrawingBuffer side-effect.
+        // Read-only references; no mutation hooks.
+        window.__sds = window.__sds || {};
+        window.__sds.sceneManagerRef = this.sceneManager;
+        window.__sds.atmosphereRef = this.atmosphere;
+        window.__sds.terrainBuilderRef = this.terrainBuilder;
         this.webVitalsMonitor = new WebVitalsMonitor();
         this.gameAssetLoader = new GameAssetLoader();
         this.menuController = new MenuController(this.sceneManager);
@@ -2633,8 +2641,16 @@ class SheepDogSimulation {
             // Cycle 20 Phase 2: kiln impostors do per-fragment relighting,
             // so feed sunDir + ambient color too. The cross-billboard
             // fallback ignores extra args (signature back-compatible).
+            // v2 (2026-05-04): also pass light intensities — kiln impostors
+            // pre-multiply them in so brightness tracks LOD0's
+            // `color * intensity` PBR magnitude across time-of-day presets.
             const ambientColor = this.atmosphere?.ambientLight?.color ?? null;
-            this.terrainBuilder?.setImpostorTint?.(sunLightColor, sunDir, ambientColor);
+            const sunIntensity = this.atmosphere?.sun?.light?.intensity ?? 1;
+            const ambientIntensity = this.atmosphere?.ambientLight?.intensity ?? 1;
+            this.terrainBuilder?.setImpostorTint?.(
+                sunLightColor, sunDir, ambientColor,
+                sunIntensity, ambientIntensity,
+            );
         }
         // Cycle 7 Phase 2e: keep sun disc aligned with the atmosphere's
         // sun direction + color, anchored at a fixed offset from the camera.

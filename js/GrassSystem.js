@@ -8,6 +8,14 @@ let grassMobileVertexShader = null;
 let grassFragmentShader = null;
 let grassShadersLoaded = false;
 
+// Cycle 20 Phase 2 v3 (2026-05-04): minimum displaced-terrain Y under which
+// grass is excluded — keeps clumps off the water-merging strip past the
+// visible shoreline. 0.5m gives ~one-blade-base of clearance above the water
+// plane (Y=0). Tuned with RH's heightfield falloff curve in mind: terrain
+// drops past Y=0.5 near the outer half of the falloff annulus where the
+// shore visually meets the water.
+const SHORELINE_Y_MIN = 0.5;
+
 /**
  * Preload grass shaders - call this early in app initialization
  * @param {Object} config - Grass config with placeholder values
@@ -1044,6 +1052,18 @@ export class GrassSystem {
             const dz = z - cz;
             const r = this.boundary.radius + this.boundary.falloff - 3;
             if (dx * dx + dz * dz > r * r) return true;
+        }
+
+        // Cycle 20 Phase 2 v3 (2026-05-04): shoreline-Y clip. The radius +
+        // falloff cull still lets grass spawn in the outer falloff annulus
+        // where terrain Y has dropped below water level — visible on RH as
+        // grass clumps sitting "on the water" past the visible shoreline.
+        // Sample the displaced terrain mesh Y here and exclude positions
+        // submerged or within a small water-line margin. Auto-adapts to any
+        // future scene's island shape regardless of falloff curve.
+        if (this.heightfield) {
+            const baseY = this.heightfield.meshSampleY(x, z);
+            if (Number.isFinite(baseY) && baseY < SHORELINE_Y_MIN) return true;
         }
 
         // Check dynamic exclusion zones (farmhouse, pasture, etc.)
