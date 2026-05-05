@@ -40,7 +40,13 @@ const ZONES = [
 // 0.85 keeps "denser inside the woods than outside" without overlapping
 // canopies. OUTSIDE_FACTOR 1.4 → 1.5 widens the field-spaced trees a touch
 // more so the inside/outside contrast still reads as intentional zoning.
-const WOODS_INSIDE_FACTOR = 0.85;
+//
+// Cycle 21 Phase 0 (2026-05-04): bump INSIDE_FACTOR 0.85 → 0.92. Even at
+// 0.85, dense rows of OC woods still showed visible canopy overlap from
+// classic-camera high-pitch — the +40% Aspen leaf bump (paired Phase 0
+// change) widens canopies further, so the placement Poisson radius needs
+// to widen in lockstep to keep groves from reading as one big blob.
+const WOODS_INSIDE_FACTOR = 0.92;
 const WOODS_OUTSIDE_FACTOR = 1.5;
 
 /**
@@ -278,7 +284,11 @@ export function generateTrees(scene, rng, opts = {}) {
                 else if (r < 0.6) type = 'tree2';
                 else type = 'pine';
             }
-            const scaleVariation = 0.7 + rng() * 0.6;
+            // Cycle 21 Phase 0 (2026-05-04): tighter scale jitter
+            // 0.7-1.3 → 0.80-1.20. Pairs with the wider WOODS_INSIDE_FACTOR
+            // to reduce towering-vs-tiny outliers that read as
+            // unintentional asymmetry from chase-cam classic.
+            const scaleVariation = 0.80 + rng() * 0.40;
             const finalScale = z.scale * scaleVariation;
             const rotationY = rng() * Math.PI * 2;
             out.push({

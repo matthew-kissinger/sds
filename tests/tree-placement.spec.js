@@ -131,8 +131,13 @@ describe('generateTrees — woods zones (Phase 3)', () => {
         const baseInside = baseTrees.filter(inside).length;
         const woodedInside = woodedTrees.filter(inside).length;
 
-        // Expect at least 30% more trees inside the woods zone.
-        expect(woodedInside).toBeGreaterThan(baseInside * 1.3);
+        // Expect a meaningful bias inside the woods zone. Cycle 21 Phase 0
+        // (2026-05-04): threshold relaxed 1.3× → 1.05× when WOODS_INSIDE_FACTOR
+        // tightened 0.85 → 0.92 to reduce canopy overlap. (1/0.92)² ≈ 1.18×
+        // theoretical density gain; Poisson-disc packing efficiency near the
+        // zone boundary lands closer to ~1.09× empirically. 1.05× still
+        // guards against losing the bias entirely (1.0× = no bias).
+        expect(woodedInside).toBeGreaterThan(baseInside * 1.05);
     });
 
     it('woodsZones do not affect scenes that omit the field', () => {

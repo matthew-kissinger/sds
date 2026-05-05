@@ -205,6 +205,7 @@ uniform vec3 uAmbientColor;      // pre-multiplied by ambient.intensity (sky-sid
 uniform vec3 uGroundBounceColor; // ground-bounce ambient tint, pre-multiplied
 uniform float uWrapPow;          // half-Lambert wrap exponent (1.0 = standard, 1.5 = more contrast)
 uniform float uSubsurfaceLift;   // chromatic floor magnitude (0..0.5, foliage-typical 0.10-0.20)
+uniform float uFresnelStrength;  // Schlick rim term magnitude (0 = disabled; 0.04 ≈ MeshStandard metalness=0)
 uniform float uAlphaTest;
 uniform float uParallaxScale;       // 0 = disabled (v1 default)
 uniform float uDepthDiscardThr;     // 1 = disabled (v1 default; tune to ~0.15 to enable)
@@ -413,6 +414,20 @@ void main() {
   vec3 reflected = (directIrradiance + indirectIrradiance) * (albedoBlended * RECIPROCAL_PI)
                  + albedoBlended * uSubsurfaceLift;
 
+  // Cycle 21 Phase 0 (2026-05-04): Schlick fresnel rim. LOD0 leaves use
+  // MeshStandardMaterial roughness=1 metalness=0 — Three internally
+  // applies a Schlick fresnel × F0=0.04 (the dielectric "metalness=0"
+  // implicit reflectance) at glancing angles. Without it, our pure-
+  // diffuse impostor reads warm-biased vs LOD0's subtle cool rim.
+  // dotNV uses object-space view dir + blended object-space normal, so
+  // the rim sits where the leaf surface looks edge-on to the camera.
+  // F0=0.04 × pow5 falls off fast — at 0° incidence ~0.04, at glancing
+  // ~1.0 × uFresnelStrength. Added directly to reflected as a sun-
+  // colored highlight (matches Three's reflected-light direct path).
+  float dotNV = max(dot(N_obj, normalize(vViewDirObj)), 0.0);
+  float fresnel = pow(1.0 - dotNV, 5.0) * uFresnelStrength;
+  reflected += fresnel * uSunColor;
+
   gl_FragColor = vec4(reflected, aBlended);
   #include <fog_fragment>
   #include <tonemapping_fragment>
@@ -494,6 +509,12 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
       // impostor +13 luma over LOD0. Re-enable if shadow side still
       // reads grey at distance.
       uSubsurfaceLift:  { value: 0.0 },
+      // Cycle 21 Phase 0 (2026-05-04): Schlick fresnel rim magnitude.
+      // 0.04 matches MeshStandardMaterial's implicit F0 at metalness=0
+      // (dielectric reflectance). Closes the warm-bias hue gap by
+      // adding the cool-shifted edge highlight LOD0 had via Three's
+      // PBR pipeline. 0 disables.
+      uFresnelStrength: { value: 0.04 },
       // 0.30 instead of 0.40: alpha is bleed-padded 2px into transparent
       // neighbours by Pixel Forge so a lower test pulls in the soft fringe,
       // closing the "snappy" silhouette gap vs LOD0 geometric edges.

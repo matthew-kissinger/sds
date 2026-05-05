@@ -34,9 +34,11 @@ Three recipes, one GLB each, all in `tools/bake-trees.mjs`:
 
 | File | Preset | Seed | Visual role |
 | --- | --- | --- | --- |
-| `tree1.glb` | Aspen Medium | 7 | Slim vertical silhouette — pasture scenes |
-| `tree2.glb` | Oak Medium | 13 | Broad canopy anchor — Field + RH |
-| `pine.glb` | Pine Medium | 21 | Conifer evergreen — Open Country horizons |
+| `tree1.glb` | Aspen Small | 11 | Slim vertical silhouette — pasture scenes |
+| `tree2.glb` | Oak Medium | 17 | Broad canopy anchor — Field + RH |
+| `pine.glb` | Pine Medium | 33 | Conifer evergreen — Open Country horizons |
+
+> **Source of truth** for the canonical tree mapping is [`tools/asset-gallery/picks.json`](../tools/asset-gallery/picks.json). The seeds above match `tools/bake-trees.mjs` `SEEDS[species][scaleIdx]` for the scale chosen in picks. Cycle 21 Phase 0 corrected this table — prior entries listed Aspen Medium / seed 7 (and similar drift on the other two), which never matched the source.
 
 All three share `STYLIZED_BARK` (untextured + flat-shaded brown bark, halved branch tessellation, leaf count tuned for a fuller silhouette than EZ-Tree's defaults). Per-recipe `bark.tint` and `branch.children` overrides differentiate the species.
 

@@ -74,17 +74,25 @@ const SEEDS = {
 // Cycle 16: leaf counts dropped from 40-72 → 24-42. Combined with
 // Single-vs-Double billboard variants in the gallery, this targets a
 // 60-70% reduction on leaf tris vs the Cycle 15 baseline.
+//
+// Cycle 21 Phase 0 (2026-05-04): Aspen lifted +40% across all 3 scales
+// to close "tall broomstick" silhouette gap Matt flagged at end of Cycle
+// 20. The actual production pick (picks.json `tree1.glb`) is
+// `aspen_small_single` — at leaves=24 it read sparse from any camera
+// angle. Bumping all 3 scales (not just small) preserves the fix
+// against future picks-swap to medium/large.
 const LEAF_COUNTS = {
     // species:  [small, medium, large]
     ash:   [24, 30, 36],
-    aspen: [24, 30, 36],
+    aspen: [34, 42, 50],
     oak:   [30, 36, 42],
     pine:  [24, 30, 36]
 };
 
 // Pine needs more level-0 branches than the deciduous default to read
 // as a full conifer fronds silhouette. Other species use the LOD0
-// default below.
+// default below — except Aspen, which gets its own override (Cycle 21
+// Phase 0) lifting children[0] 8→10 for a denser branching backbone.
 const LOD0_BRANCH_DEFAULT = {
     sections: { 0: 4, 1: 3, 2: 2, 3: 1 },
     segments: { 0: 5, 1: 4, 2: 3, 3: 3 },
@@ -95,6 +103,14 @@ const LOD0_BRANCH_PINE = {
     sections: LOD0_BRANCH_DEFAULT.sections,
     segments: LOD0_BRANCH_DEFAULT.segments,
     children: { 0: 14, 1: 6, 2: 3 }
+};
+
+// Cycle 21 Phase 0: Aspen-specific level-0 branch bump 8→10 — pairs
+// with the +40% leaf-count bump above to fill out tree1's silhouette.
+const LOD0_BRANCH_ASPEN = {
+    sections: LOD0_BRANCH_DEFAULT.sections,
+    segments: LOD0_BRANCH_DEFAULT.segments,
+    children: { 0: 10, 1: 5, 2: 3 }
 };
 
 // LOD1 cuts: fewer level-2 children = fewer leaf-bearing tips, plus
@@ -142,7 +158,9 @@ function buildRecipe(species, scaleIdx, tier, billboard, sizeBoost = 1.0) {
 
     const branch = tier === 'lod1'
         ? (species === 'pine' ? LOD1_BRANCH_PINE : LOD1_BRANCH_DEFAULT)
-        : (species === 'pine' ? LOD0_BRANCH_PINE : LOD0_BRANCH_DEFAULT);
+        : (species === 'pine'  ? LOD0_BRANCH_PINE
+         : species === 'aspen' ? LOD0_BRANCH_ASPEN
+         :                       LOD0_BRANCH_DEFAULT);
 
     // Cycle 16 follow-up (2026-05-03): Matt flagged leaves as too small
     // in coverage from the gallery. Bumped baseSize 1.0 → 1.6 across the
