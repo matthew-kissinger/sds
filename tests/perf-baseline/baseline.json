@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-04T00:40:12.909Z",
+  "capturedAt": "2026-05-05T23:28:29.653Z",
   "warmupMs": 3000,
   "measureMs": 15000,
   "target": "http://localhost:3000",
@@ -13,7 +13,7 @@
       "rendererInfo": null,
       "errors": [],
       "warning": "page.waitForFunction: Timeout 90000ms exceeded.",
-      "elapsedSec": "110.8"
+      "elapsedSec": "98.2"
     },
     {
       "configId": "field-extreme",
@@ -22,26 +22,26 @@
       "ok": true,
       "summary": {
         "sampleCount": 2,
-        "avgFrameTime": 3807.4853846153846,
-        "p50FrameTime": 3894.1399999999994,
-        "p95FrameTime": 3894.1399999999994,
-        "p99FrameTime": 3894.1399999999994,
-        "maxFrameTime": 3894.1399999999994,
-        "avgDrawCalls": 1001.5,
-        "avgTriangles": 4707712,
-        "avgActiveSheep": 999.5
+        "avgFrameTime": 4064.106907308378,
+        "p50FrameTime": 4120.64411764706,
+        "p95FrameTime": 4120.64411764706,
+        "p99FrameTime": 4120.64411764706,
+        "maxFrameTime": 4120.64411764706,
+        "avgDrawCalls": 558.5,
+        "avgTriangles": 2660167,
+        "avgActiveSheep": 999
       },
       "rendererInfo": {
-        "calls": 1003,
-        "triangles": 4516262,
+        "calls": 543,
+        "triangles": 2561973,
         "points": 0,
         "lines": 0,
-        "geometries": 53,
-        "textures": 50
+        "geometries": 40,
+        "textures": 35
       },
       "errors": [],
       "warning": null,
-      "elapsedSec": "172.5"
+      "elapsedSec": "157.8"
     },
     {
       "configId": "rolling-hills-classic",
@@ -52,7 +52,7 @@
       "rendererInfo": null,
       "errors": [],
       "warning": "page.waitForFunction: Timeout 90000ms exceeded.",
-      "elapsedSec": "100.4"
+      "elapsedSec": "99.9"
     },
     {
       "configId": "rolling-hills-extreme",
@@ -63,7 +63,7 @@
       "rendererInfo": null,
       "errors": [],
       "warning": "page.waitForFunction: Timeout 120000ms exceeded.",
-      "elapsedSec": "136.0"
+      "elapsedSec": "133.8"
     },
     {
       "configId": "open-country-classic",
@@ -74,7 +74,7 @@
       "rendererInfo": null,
       "errors": [],
       "warning": "page.waitForFunction: Timeout 90000ms exceeded.",
-      "elapsedSec": "117.8"
+      "elapsedSec": "104.6"
     },
     {
       "configId": "open-country-extreme",
@@ -85,7 +85,7 @@
       "rendererInfo": null,
       "errors": [],
       "warning": "page.waitForFunction: Timeout 120000ms exceeded.",
-      "elapsedSec": "136.6"
+      "elapsedSec": "133.0"
     }
   ]
 }
