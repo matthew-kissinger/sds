@@ -1,6 +1,6 @@
-# Next Session — Cycle 23 (heightfield-amplitude-fix-and-cinema, stub)
+# Next Session — Cycle 23 (overhead-polish-grass-LOD-and-mp-cap-fix)
 
-> Updated 2026-05-05 (close of Cycle 22 → `v1.3.0` shipped autonomously overnight). Cycle 22 ran end-to-end on a single "Autonomous run - save iterations so we can branch back" prompt: meshopt LOD1, alphaHash crossfade, atmospheric desat, grass auto-LOD, BatchedMesh research, ship. Mid-cycle absorbed Matt's pine-removal directive — sim-baseline byte-identical. **Active plan: [`docs/cycle-23-plan.md`](docs/cycle-23-plan.md) — STUB; direction not chosen.** Three candidate goals catalogued (A heightfield amplitude root fix, B cinema runner + 4 deferred videos, C WebGPU/TSL spike). Pick at `/cycle-start`.
+> Updated 2026-05-05 (post-v1.3.0 playtest + Cycle 23 plan locked). v1.3.0 playtest by Matt surfaced six items targeting next cycle: overhead Classic-cam trees fade into fog "in a way that does not look zen"; stamina-sprint exit doesn't fire on depletion; OC HUD camera-mode + sheep-in-circle overlap (desktop + mobile); grass dominates 94% of tri budget so far-ring meadow-quad LOD + hardware tiering land here; v1.3.0 MP audit found sheep cap at 1000 silently drops Insane/Chaos modes for guests + likely pine 404s, cheap fixes land here, full audit deferred to Cycle 24. **Active plan: [`docs/cycle-23-plan.md`](docs/cycle-23-plan.md) — six phases (A atmospheric polish, B stamina, C HUD, D grass T4 + tiering, E MP cheap wins, F ship v1.4.0).** Heightfield amplitude root fix, cinema runner, WebGPU/TSL spike all explicitly deferred — keep as Cycle 24+ candidates.
 
 ## What landed in Cycle 22 (closed as `v1.3.0`)
 
@@ -19,13 +19,16 @@ Iteration artifacts saved per "branch-back" directive: tags `cycle-22-base`, `cy
 
 180+ vitest pass. Production build clean (825.62 KB / 246.99 KB gzip). Cycle 22 closed the kiln-impostor / LOD-pop / grass-perf risks. Standing risks (heightfield amplitude, mac-white-ground, cinema runner timeout, sim-baseline care) all unchanged from Cycle 21.
 
-## Cycle 23 candidate paths (pick one)
+## Cycle 23 phases (locked plan)
 
 See [`docs/cycle-23-plan.md`](docs/cycle-23-plan.md):
 
-- **A. Heightfield amplitude root fix.** Flatness vs character-preservation choice; needs Matt's go-ahead before re-baking.
-- **B. Cinema runner timeout + 4 deferred cinematic videos.** Press-kit unblocker.
-- **C. WebGPU/TSL exploratory spike.** Long-term direction question.
+- **Phase A — overhead atmospheric polish (~6hr).** Pitch-aware desat strength (drop above 30°), prime fog color from sky on first frame, wire dead scene-level fog defs, finally land impostor pitch-tilt (Cycle 19.5 carryover #2(b)). Closes the "trees look terrible from overhead" playtest finding without removing Classic camera.
+- **Phase B — stamina sprint-exit fix (~2hr).** `canContinueSprint` gate isn't firing mid-sprint; trace + fix + new vitest spec.
+- **Phase C — OC HUD overlap (~1–2hr).** Camera-mode indicator + sheep-in-circle objective overlap on desktop + mobile; vertical-stack layout fix.
+- **Phase D — grass T4 meadow-quad LOD + hardware tiering (~1–1.5d).** Far-ring (>260m) renders as single textured quad per chunk instead of clumps (~50–60% tri reduction on OC-Extreme); HardwareTier service reads `MAX_VERTEX_UNIFORM_VECTORS` + GPU vendor → low/med/high preset; auto-LOD extends to blade count.
+- **Phase E — MP cheap wins (~3–4hr).** Extend `RoomDO.ALLOWED_SHEEP_COUNTS` to include 3000/5000 + UI gate "all guests desktop"; cinematic-flag URL strip on `joinRoomByInvite`; pine 404 sweep across worker/client/shared. Full MP audit + test suite → Cycle 24.
+- **Phase F — misc + ship `v1.4.0` (~3hr).** Trees triangle-counter unwired in stats panel; CHANGELOG + version bumps + tag.
 
 ## What landed in Cycle 20 (Phase 0 + 1 + 2 v1, closed early into Cycle 21)
 
