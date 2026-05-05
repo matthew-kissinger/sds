@@ -31,9 +31,17 @@ export function countMeshTriangles(mesh) {
 }
 
 /**
- * Sum triangle counts across an array of InstancedMeshes.
+ * Sum triangle counts across an array of InstancedMeshes (or InstancedMesh2).
  * Each instance renders the same geometry, so total = trisPerInstance * count.
- * @param {Array<THREE.InstancedMesh>} instancedMeshes
+ *
+ * Cycle 23 Phase F: prefer `instancesCount` (set immediately by
+ * InstancedMesh2.addInstances) over `count` (re-set per-frame after frustum
+ * culling — it can be 0 at init time before the first render). This fix
+ * unwedges the "Trees: 0" stat-panel reading for v1.3.0 trees, which use
+ * @three.ez/instanced-mesh and were being measured at the post-cull count
+ * before the first frame had drawn.
+ *
+ * @param {Array<THREE.InstancedMesh|InstancedMesh2>} instancedMeshes
  * @returns {number}
  */
 export function sumInstancedMeshTriangles(instancedMeshes) {
@@ -42,7 +50,9 @@ export function sumInstancedMeshTriangles(instancedMeshes) {
     for (const mesh of instancedMeshes) {
         if (!mesh) continue;
         const tris = geometryTriangleCount(mesh.geometry);
-        const count = typeof mesh.count === 'number' ? mesh.count : 0;
+        const count = typeof mesh.instancesCount === 'number'
+            ? mesh.instancesCount
+            : (typeof mesh.count === 'number' ? mesh.count : 0);
         total += tris * count;
     }
     return total;

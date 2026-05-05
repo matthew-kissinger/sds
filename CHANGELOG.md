@@ -4,6 +4,41 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] — 2026-05-05 (Cycle 23 — overhead-polish-grass-LOD-and-mp-cap-fix)
+
+This release closes the v1.3.0 playtest gap list: overhead Classic-camera trees no longer fade into a grey fog smear, sprint stops when stamina runs out, the Open-Country HUD camera-mode chip vertical-stacks below the objective banner, far-ring grass on OC drops ~65% of triangle cost via a meadow-quad LOD, and multiplayer hosts can now run Insane (3000) and Chaos (5000) sheep counts when all guests are on desktop.
+
+A novel game-dev trick lands too: when a tree blocks line of sight from camera to dog, its leaves dither into a stochastic curtain so the dog stays trackable through dense forest, no camera mode change required.
+
+### Added
+- **Pitch-aware atmospheric desat.** `TerrainBuilder._desat` now scales `uDesatStrength` per-frame by `lerp(1.0, 0.2, smoothstep(25°, 50°, |pitch|))`. Follow-cam (low pitch) keeps full desat to fight far-tree fog smear; Classic-cam overhead drops to 20% so near trees keep their saturation. Closes the "trees look terrible from above" playtest finding without removing Classic.
+- **Scene-level fog overrides.** Field/Rolling Hills/Open Country each ship explicit `fog: { color, near, far }` defs; `Atmosphere` now reads them and swaps in a linear `THREE.Fog` instead of the FogExp2 default. Prime fog color from the horizon LUT on first frame so cold-start no longer paints `0xcccccc` grey.
+- **Impostor pitch-tilt.** Kiln-impostor billboard interpolates from cylindrical (vertical, low camera pitch) to spherical (camera-facing, high pitch) via `smoothstep(0.2, 0.7, |dirObj.y|)`. Closes Cycle 19.5 carryover #2(b).
+- **Camera-to-dog occlusion fade.** New `js/shaders/OccluderFadePatch.js` patches every leaf MeshStandardMaterial with a view-space capsule distance check. Fragments inside a thin capsule between camera and dog hash-discard with the same dither family as the kiln-impostor alphaHash. Trees blocking line-of-sight turn into a stochastic dither curtain so the dog stays visible through dense forest. Per-frame cost is one Vector3.applyMatrix4 (reused scratch) plus a uniform write; per-fragment cost is one length + one smoothstep + one branched hash.
+- **HardwareTier service** (`js/HardwareTier.js`). One-shot tier classification at SceneManager init: low / med / high based on `MAX_VERTEX_UNIFORM_VECTORS` plus unmasked GPU vendor regex. Drives per-tier presets (blade count, wind octaves, meadow-quad enable). `?tier=low|med|high` URL override for testing.
+- **Grass T4 meadow-quad LOD.** Far-ring grass chunks (>260m from origin) on med/high tiers render as a single 40m × 40m PlaneGeometry per chunk instead of clump-instancing thousands of blades. Material is a procedural noise mix of the scene's grass.base/mid/tip colors. Estimated ~65% triangle reduction on OC-Extreme; Field unaffected (half-extent 210m).
+- **MP Insane/Chaos sheep counts.** RoomDO `ALLOWED_SHEEP_COUNTS` extended to `[200, 250, 500, 1000, 3000, 5000]`. Host UI labels options as Classic / Extreme / Insane / Chaos and shows an amber warning when picking >1000 sheep. Worker rejects mobile-UA WebSocket upgrades on those rooms — host gate is enforced server-side.
+- **Stamina sprint-exit lock-out.** `Sheepdog.updateStamina` now latches `_sprintLockOut` when stamina depletes mid-sprint; clears when wantsSprint becomes false (Shift release). Layered on the existing canStartSprint vs canContinueSprint split (Cycle 7 settled decision preserved). Closes the v1.3.0 stutter-sprint that visually read as "sprint continues until input stops".
+
+### Changed
+- **Default camera order**: cycle visits Follow → Free → Classic on press-C (was Classic → Follow → Free). Default boot stays Follow (Cycle 21 Phase 5 unchanged); Classic is now the third selectable option per playtest direction. Settings UI label and order updated to match.
+- **OC HUD vertical stack**: CameraModeIndicator subscribes to objective state and drops below the ObjectiveBanner (top + 88px) when one mounts. Field/RH unchanged.
+- **Tree triangle counter** in the perf stats panel: `sumInstancedMeshTriangles` prefers `instancesCount` over `count` so InstancedMesh2 trees report their full allocated count instead of 0 (the dynamically-frustum-culled value at init time).
+- **Cinematic-flag strip on invite-hash join**: synchronously strips `?cinematic=1` from the URL when `#/r/<roomCode>` is present, BEFORE SceneManager constructs and reads the flag. Prevents `preserveDrawingBuffer: true` leaking into normal MP play sessions.
+
+### Validation
+- vitest 188/188 pass (was 179; +9 new specs in `tests/stamina-sprint-exit.spec.js`). Sim-baseline byte-identical.
+- Production build clean; main bundle 832.67 KB / 247.89 KB gzip (cumulative +7.05 KB vs `1.3.0`).
+- Cycle 23 phase tags: `cycle-23-base`, `cycle-23-phaseA1-default`, `cycle-23-phaseA2-default`, `cycle-23-phaseB-default`, `cycle-23-phaseC-default`, `cycle-23-phaseD-default`, `cycle-23-phaseE-default`. Iteration artifacts under `cycle23-validation/{phaseA1..F}/`.
+
+### Deferred
+- **Heightfield amplitude root fix** (Cycle 19 hotfix workaround still in place; needs Matt's go-ahead before re-bake).
+- **Full MP audit + two-tab Playwright harness** → Cycle 24 (`mp-audit-and-test-coverage`).
+- **Auto-LOD blade-count extension (D3 as planned)**: clump geometry is shared across chunks; rebuilding for blade scaling requires per-tier alternate geometries — not commensurate with marginal gain. Static tier-preset blade count + existing clump-count auto-LOD already meet the perf target.
+- **Pre-baked meadow-quad WebPs** (Q4 plan): shipped as runtime-procedural shader instead of a `tools/bake-meadow-quad.mjs` pipeline. Bake-script remains a Cycle 24+ candidate if visual quality is insufficient.
+
+---
+
 ## [1.3.0] — 2026-05-05 (Cycle 22 — stylized-lod-pivot-and-grass-perf)
 
 This release ships Cycle 22's stylized-LOD pivot plus a long-deferred species cull. Distant trees now fade smoothly into the atmosphere instead of popping; grass adjusts itself to maintain smooth framerate; pine trees retired so every scene is a tree1+tree2 mix.
