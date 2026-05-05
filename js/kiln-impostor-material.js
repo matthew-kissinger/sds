@@ -165,12 +165,17 @@ void main() {
 
   vUv = uv;
 
-  // Spherical billboard with world-up lock. The bake camera always uses
+  // Pitch-aware billboard with world-up lock. The bake camera always uses
   // up=(0,1,0); the runtime quad's "up" is the camera-up projected onto
-  // the plane perpendicular to viewDir, which lines up with the bake's
-  // up convention everywhere except directly overhead (handled below).
-  // Quad is symmetric: position.xy ∈ [-frustumHalf, +frustumHalf], spans
-  // the same square footprint Pixel Forge captured into each tile.
+  // the plane perpendicular to viewDir.
+  //
+  // Cycle 23 Phase A1: smoothstep from CYLINDRICAL (worldUp) to SPHERICAL
+  // (cross(viewDir, billRight)) as |dirObj.y| crosses ~0.2-0.7. At low
+  // camera elevation (Follow cam, ~0° dirObj.y), trees stand upright with
+  // vertical billboards so trunks read as vertical lines and the canopy
+  // doesn't read as a horizontal smear. At high pitch (Classic / cinematic
+  // overhead), the billboard tilts toward camera-facing-in-3D so the quad
+  // doesn't render edge-on. Closes Cycle 19.5 carryover #2(b).
   vec3 viewDir = dirWorld;
   float vdLen = length(viewDir);
   viewDir = vdLen > 1e-4 ? viewDir / vdLen : vec3(0.0, 0.0, 1.0);
@@ -181,7 +186,9 @@ void main() {
   // Degenerate when viewing straight down (viewDir parallel to worldUp).
   // Pick any horizontal axis; Up follows from the cross.
   billRight = rLen > 1e-4 ? billRight / rLen : vec3(1.0, 0.0, 0.0);
-  vec3 billUp = cross(viewDir, billRight);
+  vec3 billUpSpherical = cross(viewDir, billRight);
+  float pitchT = smoothstep(0.2, 0.7, abs(dirObj.y));
+  vec3 billUp = normalize(mix(worldUp, billUpSpherical, pitchT));
 
   vec3 vertexWorld = originWorld
     + billRight * (position.x * scaleVal)

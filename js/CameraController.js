@@ -155,6 +155,23 @@ export class CameraController {
     getMode() { return this.mode; }
 
     /**
+     * Camera pitch in degrees. 0 = horizontal, +90 = looking straight down,
+     * -90 = looking straight up. Drives pitch-aware desat strength in
+     * TerrainBuilder._desat so Classic-cam (high pitch) doesn't kill near-
+     * tree saturation the way Follow-cam (~26° pitch) needs it to kill far.
+     * @returns {number}
+     */
+    getPitchDeg() {
+        // Three.js camera convention: looks down its local -Z axis. matrixWorld
+        // columns are the camera's local basis in world space — col2 (m[8..10])
+        // is camera +Z (back), so forward = -col2 and forward.y = -m[9].
+        // Pitch angle below horizon: pitch = -asin(forward.y) = asin(m[9]).
+        const my = this.camera.matrixWorld.elements[9];
+        const clamped = Math.max(-1, Math.min(1, my));
+        return Math.asin(clamped) * (180 / Math.PI);
+    }
+
+    /**
      * Provide (or clear) the scene's heightfield. Used to clamp the camera
      * above terrain in Follow / Free modes and to lift the look-at point
      * to terrain height in those modes too.

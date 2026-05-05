@@ -115,6 +115,12 @@ export const openCountry = {
     },
 
     sky: { preset: 'golden-hour' },
+    // Cycle 23 Phase A1: cooler open-horizon linear fog. far 800m clears
+    // the 380m island radius + 70m falloff with headroom for the
+    // visible-from-shore mountain ring. Color tracks horizon LUT each
+    // frame; near 220m so the desat (start 100m) and fog (near 220m)
+    // layer cleanly.
+    fog: { color: '#b8c8d8', near: 220, far: 800 },
 
     // Cycle 6 Phase 5: starting-point boid override for the 380m radius
     // island (~4.5× Rolling Hills meadow area). Without re-tuning, cohesion

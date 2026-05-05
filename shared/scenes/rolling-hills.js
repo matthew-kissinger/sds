@@ -71,6 +71,12 @@ export const rollingHills = {
     // move inside the island disc.
 
     sky: { preset: 'dusk' },
+    // Cycle 23 Phase A1: warm dusk-tinted linear fog. near 200m matches
+    // the Cycle 22 atmospheric desat start; far 650m is just past the
+    // 380m island shore so off-island horizon reads as a soft fade
+    // instead of crisp ocean line. Color is lifted toward sky horizon
+    // each frame in Atmosphere.applyFogColor().
+    fog: { color: '#d4c4a8', near: 200, far: 650 },
 
     allowedModes: ['cooperative', 'competitive', 'timed'],
     defaultMode: 'cooperative',

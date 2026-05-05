@@ -228,7 +228,11 @@ class SheepDogSimulation {
         this.atmosphere = new Atmosphere(this.sceneManager.getScene(), {
             initialPreset,
             enableClouds: true,
-            enableDayNight: false
+            enableDayNight: false,
+            // Cycle 23 Phase A1: scene-level fog override (linear THREE.Fog).
+            // Field/RH/OC each ship explicit `fog: { color, near, far }`. Falls
+            // back to FogExp2 default when sceneDef omits.
+            sceneFog: this.currentScene.fog ?? null,
         });
         this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
 
@@ -1239,6 +1243,7 @@ class SheepDogSimulation {
             initialPreset,
             enableClouds: true,
             enableDayNight: false,
+            sceneFog: sceneDef.fog ?? null,
         });
         this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
 

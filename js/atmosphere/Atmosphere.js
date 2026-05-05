@@ -135,6 +135,26 @@ export class Atmosphere {
 
     const initial = options.initialPreset ?? DEFAULT_PRESET;
     this.applyPreset(isKnownPreset(initial) ? initial : DEFAULT_PRESET);
+
+    // Cycle 23 Phase A1: optional scene-level fog override. When sceneDef.fog
+    // is supplied (Field/RH/OC each ship explicit `{ color, near, far }`), we
+    // replace the FogExp2 default with a linear THREE.Fog whose color is
+    // primed from the preset. Per-frame applyFogColor() still drives the
+    // color from the horizon LUT so fog color tracks ToD even with linear fog.
+    if (options.sceneFog && this.fog) {
+      const { color, near, far } = options.sceneFog;
+      const cur = this.fog.color.clone();
+      this.scene.fog = null;
+      this.fog = new THREE.Fog(color ?? '#cccccc', near ?? 200, far ?? 700);
+      this.scene.fog = this.fog;
+      // Prefer the just-applied preset color (warm-tinted at sun=0.4) over
+      // the scene-level static color when both are available — keeps
+      // atmospheric coherence with sky tone.
+      this.fog.color.copy(cur);
+    }
+    // Cycle 23 Phase A1: prime fog color from horizon on first frame so the
+    // initial paint doesn't read 0xcccccc grey before the first update().
+    this.applyFogColor();
   }
 
   /**

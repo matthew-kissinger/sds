@@ -10,6 +10,13 @@ import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
 
+// GLSL-style smoothstep returning [0,1]. Cycle 23 Phase A1: drives the
+// pitch-aware desat falloff in updateGrassAnimation.
+function smoothstep01(edge0, edge1, x) {
+    const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+    return t * t * (3 - 2 * t);
+}
+
 // Phase A Unit B compressed all GLBs with Draco + Meshopt. Every GLTFLoader
 // in the codebase needs both decoders attached or those GLBs fail to parse
 // with "No DRACOLoader instance provided". Draco decoder is hosted by Google;
@@ -170,6 +177,16 @@ export class TerrainBuilder {
             uDesatEndM:     { value: 320 },
             uDesatStrength: { value: 0.6 },
         };
+        // Cycle 23 Phase A1: pitch-aware desat. Each frame, the live
+        // uDesatStrength is the configured base * smoothstep falloff in the
+        // 25°-50° pitch band. Below 25° pitch (Follow cam, ~26°) we want full
+        // desat to fight far-tree fog smear; above 50° pitch (Classic looking
+        // overhead) we want minimal desat so near trees keep saturation.
+        this._desatConfiguredStrength = 0.6;
+        // Cycle 23 Phase A1: floor multiplier — at max pitch, strength only
+        // drops to 20% of configured rather than 0% so far trees still desat
+        // a bit. Tunable knob.
+        this._desatHighPitchFloor = 0.2;
         // Set when each tree-type model is patched at load time. Per-tree-
         // type bbox bounds drive the leaf-vs-trunk weight in the shader.
         this._patchedTreeMaterials = new WeakSet();
@@ -2022,6 +2039,19 @@ export class TerrainBuilder {
             if (grassWind) {
                 this._treeWind.uWindDirection.value.copy(grassWind);
             }
+        }
+
+        // Cycle 23 Phase A1: pitch-aware desat strength. Read camera matrix
+        // directly to avoid plumbing the CameraController reference through
+        // updateGrassAnimation. m[9] is matrixWorld col2.y (camera back-Y);
+        // pitchDeg = asin(m[9]). 0 = horizon, +90 = straight down.
+        if (this._desat && camera?.matrixWorld) {
+            const my = camera.matrixWorld.elements[9];
+            const clamped = Math.max(-1, Math.min(1, my));
+            const pitchDeg = Math.asin(clamped) * (180 / Math.PI);
+            const t = smoothstep01(25, 50, Math.abs(pitchDeg));
+            const lerp = 1.0 + (this._desatHighPitchFloor - 1.0) * t;
+            this._desat.uDesatStrength.value = this._desatConfiguredStrength * lerp;
         }
     }
 
