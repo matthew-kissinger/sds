@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { loadShaderWithReplacements } from './shaders/ShaderLoader.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
+import { TIER_PRESETS } from './HardwareTier.js';
 
 // Shader cache for sync access after async load
 let grassDesktopVertexShader = null;
@@ -60,13 +61,20 @@ export class GrassSystem {
      * @param {import('../shared/scenes/types.js').GrassDef} [sceneGrass] Optional scene-sourced grass config; when present, its `clumpsPerChunk` wins over the default.
      * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} [heightfield] Optional heightfield; when present, clumps sit on the displaced terrain instead of y=0.
      * @param {import('../shared/scenes/types.js').BoundaryDef | null} [boundary] Optional scene boundary; for `kind:'island'` scenes, grass past `radius+falloff` is culled so clumps don't extend over the water.
+     * @param {{ tier?: 'low'|'med'|'high' }} [opts] Cycle 23 Phase D1 — hardware tier overrides isMobile-binary defaults.
      */
-    constructor(scene, isMobile = false, sceneGrass = null, heightfield = null, boundary = null) {
+    constructor(scene, isMobile = false, sceneGrass = null, heightfield = null, boundary = null, opts = {}) {
         this.scene = scene;
         this.isMobile = isMobile;
         this.sceneGrass = sceneGrass;
         this.heightfield = heightfield;
         this.boundary = boundary || null;
+        // Cycle 23 Phase D1: tier overrides the isMobile binary. 'low' inherits
+        // mobile-style defaults; 'med' / 'high' get desktop defaults with
+        // wind-octave and meadow-quad enable knobs differentiated.
+        this.tier = opts.tier ?? (isMobile ? 'low' : 'med');
+        const tierPreset = TIER_PRESETS[this.tier] ?? TIER_PRESETS.med;
+        this._tierPreset = tierPreset;
 
         const sceneClumps = sceneGrass?.clumpsPerChunk;
         const clumpsPerChunk = sceneClumps
@@ -130,7 +138,10 @@ export class GrassSystem {
 
             // Grass density per chunk - MUCH denser
             clumpsPerChunk,
-            bladesPerClump: isMobile ? 5 : 7,
+            // Cycle 23 Phase D1: blades per clump from tier preset (low=5,
+            // med=7, high=7). Replaces isMobile-binary so the same low blade
+            // count lands on weaker desktop GPUs that fail vendor regex.
+            bladesPerClump: tierPreset.bladesPerClump,
 
             // Blade geometry - varied heights for lush look
             bladeWidth: 0.12,
@@ -927,6 +938,14 @@ export class GrassSystem {
             Math.round(clumpsPerChunk * clumpScale * this._autoLodFactor)
         );
 
+        // Cycle 23 Phase D2: meadow-quad LOD. Chunks whose center sits
+        // beyond MEADOW_QUAD_RADIUS_M from origin render as a single
+        // textured plane instead of clump-instancing thousands of blades.
+        // Static decision at build time (not camera-relative). Disabled on
+        // 'low' tier (mobile-class) which already runs reduced clump density.
+        const meadowQuadEnabled = this._tierPreset.meadowQuadEnabled === true;
+        const MEADOW_QUAD_RADIUS_M = 260;
+
         for (let cx = 0; cx < chunksPerSide; cx++) {
             for (let cz = 0; cz < chunksPerSide; cz++) {
                 const chunkMinX = -halfWorld + cx * chunkSize;
@@ -939,6 +958,20 @@ export class GrassSystem {
                 // Skip chunks that are too far from center (create circular field)
                 const distFromCenter = Math.sqrt(chunkCenterX * chunkCenterX + chunkCenterZ * chunkCenterZ);
                 if (distFromCenter > cullDistance) continue;
+
+                // Cycle 23 Phase D2: far-ring meadow-quad path. Chunks within
+                // [MEADOW_QUAD_RADIUS_M, cullDistance] become single textured
+                // planes; near chunks keep clump instancing.
+                if (meadowQuadEnabled && distFromCenter > MEADOW_QUAD_RADIUS_M) {
+                    const quadChunk = this.createMeadowQuadChunk(
+                        cx, cz, chunkMinX, chunkMinZ, chunkMaxX, chunkMaxZ
+                    );
+                    if (quadChunk) {
+                        const key = `${cx}_${cz}`;
+                        this.chunks.set(key, quadChunk);
+                    }
+                    continue;
+                }
 
                 // Create chunk
                 const chunk = this.createChunk(
@@ -1058,6 +1091,119 @@ export class GrassSystem {
         this.stats.totalClumps += validPositions.length;
 
         return chunk;
+    }
+
+    /**
+     * Cycle 23 Phase D2 — far-ring meadow-quad chunk. Single 40m × 40m plane
+     * laid flat at the chunk's terrain-Y, colored from the scene's grass.mid
+     * with a procedural noise mix toward grass.tip. Replaces ~67k tris of
+     * clump instancing with 2 tris per chunk where the camera can't tell.
+     *
+     * @param {number} cx
+     * @param {number} cz
+     * @param {number} minX
+     * @param {number} minZ
+     * @param {number} maxX
+     * @param {number} maxZ
+     */
+    createMeadowQuadChunk(cx, cz, minX, minZ, maxX, maxZ) {
+        const centerX = (minX + maxX) / 2;
+        const centerZ = (minZ + maxZ) / 2;
+
+        // Skip if outside boundary (matches isExcluded for clump chunks).
+        if (this.isExcluded(centerX, centerZ)) return null;
+
+        let centerY = this.heightfield ? this.heightfield.meshSampleY(centerX, centerZ) : 0;
+        if (!Number.isFinite(centerY) || centerY > 50 || centerY < -10) centerY = 0;
+        // Skip quads that would sit below the shoreline (water-merge strip).
+        if (centerY < SHORELINE_Y_MIN) return null;
+
+        const size = maxX - minX;
+        // Lazy-init the shared geometry + material so cost is paid once.
+        if (!this._meadowQuadGeo) {
+            this._meadowQuadGeo = new THREE.PlaneGeometry(size, size, 1, 1);
+        }
+        if (!this._meadowQuadMaterial) {
+            this._meadowQuadMaterial = this.createMeadowQuadMaterial();
+        }
+
+        const mesh = new THREE.Mesh(this._meadowQuadGeo, this._meadowQuadMaterial);
+        mesh.rotation.x = -Math.PI / 2;
+        // Slight Y lift to clear the terrain mesh and avoid z-fighting with
+        // the displaced ground.
+        mesh.position.set(centerX, centerY + 0.05, centerZ);
+        mesh.receiveShadow = true;
+        mesh.frustumCulled = false; // Per-chunk culling handled by GrassSystem.
+
+        const radius = Math.sqrt(2) * (maxX - minX) / 2;
+        const chunk = {
+            mesh,
+            cx, cz,
+            bounds: { minX, minZ, maxX, maxZ },
+            center: new THREE.Vector3(centerX, centerY + 0.05, centerZ),
+            radius,
+            clumpCount: 0,
+            fullCount: 0,
+            visible: true,
+            lodLevel: 4, // T4 marker
+            isMeadowQuad: true,
+        };
+
+        this.scene.add(mesh);
+        return chunk;
+    }
+
+    /**
+     * Cycle 23 Phase D2 — shared procedural-meadow material. MeshLambert
+     * (cheap, shadowable) tinted by scene.grass.mid with a stable per-uv
+     * noise variance so the far-ring doesn't read as flat carpet. Same
+     * fog include as the rest of the scene so atmospheric desat tracks.
+     */
+    createMeadowQuadMaterial() {
+        const baseColor = this.config.baseColor.clone();
+        const midColor = this.config.midColor.clone();
+        const tipColor = this.config.tipColor.clone();
+        const mat = new THREE.MeshLambertMaterial({
+            color: midColor,
+            side: THREE.DoubleSide,
+            fog: true,
+            flatShading: false,
+        });
+        mat.onBeforeCompile = (shader) => {
+            shader.uniforms.uMeadowBase = { value: baseColor };
+            shader.uniforms.uMeadowMid  = { value: midColor };
+            shader.uniforms.uMeadowTip  = { value: tipColor };
+            // Inject a per-fragment hash mix so neighbour quads don't all
+            // read identical. Keyed off mesh-local UV scaled to ~5 cells per
+            // 40m chunk so the pattern reads at far-ring scale (50-80m
+            // perceived feature size from a 250m-far camera).
+            shader.fragmentShader = shader.fragmentShader
+                .replace(
+                    '#include <common>',
+                    [
+                        '#include <common>',
+                        'uniform vec3 uMeadowBase;',
+                        'uniform vec3 uMeadowMid;',
+                        'uniform vec3 uMeadowTip;',
+                        'float meadowHash(vec2 v) {',
+                        '  return fract(sin(dot(v, vec2(127.1, 311.7))) * 43758.5453);',
+                        '}'
+                    ].join('\n')
+                )
+                .replace(
+                    '#include <map_fragment>',
+                    [
+                        '#include <map_fragment>',
+                        'vec2 muv = vUv * 5.0;',
+                        'float n1 = meadowHash(floor(muv));',
+                        'float n2 = meadowHash(floor(muv * 2.0));',
+                        'float blend = mix(n1, n2, 0.5);',
+                        'vec3 meadowCol = mix(mix(uMeadowBase, uMeadowMid, blend), uMeadowTip, smoothstep(0.6, 0.95, blend));',
+                        'diffuseColor.rgb = meadowCol;'
+                    ].join('\n')
+                );
+        };
+        return mat;
     }
 
     /**
@@ -1314,7 +1460,10 @@ export class GrassSystem {
 
             if (isVisible) {
                 this.stats.chunksVisible++;
-                this.stats.visibleClumps += chunk.mesh.count;
+                // Cycle 23 Phase D2: meadow-quad meshes don't have a `.count`
+                // (they're Mesh, not InstancedMesh). Their visible-clump
+                // contribution is conceptually 0 — they're at LOD4.
+                this.stats.visibleClumps += chunk.mesh.count ?? 0;
             }
         }
     }
@@ -1329,6 +1478,9 @@ export class GrassSystem {
 
         for (const [, chunk] of this.chunks) {
             if (!chunk.visible) continue;
+            // Cycle 23 Phase D2: meadow-quad chunks are LOD4 — fixed, don't
+            // step. Skip the LOD walker for them.
+            if (chunk.isMeadowQuad) continue;
 
             const dx = chunk.center.x - anchorPosition.x;
             const dz = chunk.center.z - anchorPosition.z;
@@ -1417,7 +1569,12 @@ export class GrassSystem {
     dispose() {
         for (const [key, chunk] of this.chunks) {
             this.scene.remove(chunk.mesh);
-            chunk.mesh.geometry.dispose();
+            // Cycle 23 Phase D2: meadow-quad chunks share geometry + material
+            // across all far-ring chunks; don't dispose per-chunk or we'd
+            // disposeOnce-many-times. Standalone disposal at the bottom.
+            if (!chunk.isMeadowQuad && chunk.mesh.geometry) {
+                chunk.mesh.geometry.dispose();
+            }
         }
 
         this.chunks.clear();
@@ -1432,6 +1589,15 @@ export class GrassSystem {
 
         if (this.clumpGeometry) {
             this.clumpGeometry.dispose();
+        }
+
+        if (this._meadowQuadGeo) {
+            this._meadowQuadGeo.dispose();
+            this._meadowQuadGeo = null;
+        }
+        if (this._meadowQuadMaterial) {
+            this._meadowQuadMaterial.dispose();
+            this._meadowQuadMaterial = null;
         }
     }
 }

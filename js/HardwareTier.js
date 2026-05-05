@@ -1,0 +1,98 @@
+/**
+ * Cycle 23 Phase D1 — Hardware tier detection.
+ *
+ * Inspect WebGL capability + GPU vendor/renderer string to classify the
+ * current device into one of three tiers. Used by GrassSystem (and
+ * eventually TerrainBuilder) to dial per-tier presets — clumps per
+ * chunk, blades per clump, fade-distance, wind-octave count.
+ *
+ * Heuristic (Q3 resolution):
+ *   - MAX_VERTEX_UNIFORM_VECTORS < 256
+ *     OR vendor regex /Adreno [3-5]\d\d|Mali-[GT]\d\d|PowerVR/i
+ *     → 'low'
+ *   - Discrete desktop GPU strings (NVIDIA / AMD / Intel Arc / Intel UHD / Iris)
+ *     → 'high'
+ *   - Otherwise → 'med'
+ *
+ * Set ONCE at SceneManager init; pass into subsystems via constructor.
+ * No per-frame cost.
+ */
+
+const LOW_TIER_VENDOR_RE = /Adreno [3-5]\d\d|Mali-[GT]\d\d|PowerVR/i;
+const HIGH_TIER_VENDOR_RE = /NVIDIA|GeForce|Quadro|Radeon|AMD|Intel\(R\) Arc|Intel\(R\) UHD|Iris/i;
+
+/**
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {{ isMobile?: boolean, debugForceTier?: 'low'|'med'|'high' }} [opts]
+ * @returns {'low'|'med'|'high'}
+ */
+export function detectTier(renderer, opts = {}) {
+    if (opts.debugForceTier === 'low' || opts.debugForceTier === 'med' || opts.debugForceTier === 'high') {
+        return opts.debugForceTier;
+    }
+
+    if (!renderer || typeof renderer.getContext !== 'function') {
+        return opts.isMobile ? 'low' : 'med';
+    }
+
+    let gl;
+    try {
+        gl = renderer.getContext();
+    } catch (_) {
+        return opts.isMobile ? 'low' : 'med';
+    }
+
+    if (!gl) return opts.isMobile ? 'low' : 'med';
+
+    let maxVertexUniforms = 256;
+    try {
+        maxVertexUniforms = gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS) ?? 256;
+    } catch (_) { /* default */ }
+
+    let rendererStr = '';
+    try {
+        // WEBGL_debug_renderer_info gives the unmasked vendor/renderer (Chrome
+        // hides them by default for fingerprinting reasons but the extension
+        // is still exposed).
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        if (ext) {
+            rendererStr = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) ?? '');
+        }
+        if (!rendererStr) {
+            rendererStr = String(gl.getParameter(gl.RENDERER) ?? '');
+        }
+    } catch (_) { /* default empty */ }
+
+    if (maxVertexUniforms < 256) return 'low';
+    if (LOW_TIER_VENDOR_RE.test(rendererStr)) return 'low';
+    if (HIGH_TIER_VENDOR_RE.test(rendererStr) && !opts.isMobile) return 'high';
+    return opts.isMobile ? 'low' : 'med';
+}
+
+/**
+ * Per-tier preset numbers used by subsystems. Numbers picked to roughly
+ * preserve v1.3.0 desktop behavior at 'med' (was the implicit default
+ * desktop path), drop to the v1.3.0 mobile path at 'low', and earn a
+ * ~15% perf headroom at 'high' by uncapping a few knobs.
+ */
+export const TIER_PRESETS = {
+    low: {
+        // Mirror existing isMobile=true defaults.
+        clumpsPerChunkScale: 1.0, // applied to scene's mobile value
+        bladesPerClump:      5,
+        windOctaves:         1,
+        meadowQuadEnabled:   false, // Q3: low-tier skips T4 meadow-quad
+    },
+    med: {
+        clumpsPerChunkScale: 1.0, // applied to scene's desktop value
+        bladesPerClump:      7,
+        windOctaves:         2,
+        meadowQuadEnabled:   true,
+    },
+    high: {
+        clumpsPerChunkScale: 1.0,
+        bladesPerClump:      7,
+        windOctaves:         3,
+        meadowQuadEnabled:   true,
+    },
+};

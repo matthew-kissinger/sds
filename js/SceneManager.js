@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CameraController } from './CameraController.js';
+import { detectTier } from './HardwareTier.js';
 import { initGlProbe, captureContext, captureFramebufferSample } from './diagnostics/glProbe.js';
 
 /**
@@ -65,6 +66,18 @@ export class SceneManager {
         }
         console.log('[WEBGL] Version:', gl.getParameter(gl.VERSION));
         console.log('[WEBGL] Max Vertex Uniforms:', gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS));
+
+        // Cycle 23 Phase D1: classify hardware tier once per session.
+        // Drives per-tier presets in GrassSystem (clumps, blade count, fade)
+        // and is available to other subsystems via SceneManager.getTier().
+        const debugForceTier = (typeof location !== 'undefined' &&
+            new URLSearchParams(location.search).get('tier')) || null;
+        this.tier = detectTier(this.renderer, {
+            isMobile: this.isMobile,
+            debugForceTier: ['low','med','high'].includes(debugForceTier) ? debugForceTier : undefined,
+        });
+        console.log(`[TIER] Hardware tier detected: ${this.tier}${debugForceTier ? ' (forced via ?tier=)' : ''}`);
+
         console.log('[WEBGL] Max Fragment Uniforms:', gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
         console.log('[WEBGL] Max Texture Size:', gl.getParameter(gl.MAX_TEXTURE_SIZE));
         console.log('[WEBGL] isIOS:', isIOS);
@@ -157,7 +170,16 @@ export class SceneManager {
     getCameraController() {
         return this.cameraController;
     }
-    
+
+    /**
+     * Cycle 23 Phase D1: hardware tier set once at construction, immutable
+     * for the session. Subsystems read via this getter to dial presets.
+     * @returns {'low'|'med'|'high'}
+     */
+    getTier() {
+        return this.tier ?? (this.isMobile ? 'low' : 'med');
+    }
+
     /**
      * Detect if the current device is mobile for camera optimization
      * @returns {boolean} True if mobile device detected

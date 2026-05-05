@@ -1201,7 +1201,10 @@ export class TerrainBuilder {
     
     async createGrass() {
         // Use new advanced grass system
-        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield, this.sceneDef?.boundary ?? null);
+        // Cycle 23 Phase D1: hardware tier passed through to GrassSystem
+        // for per-tier presets (blade count, meadow-quad enable, wind octaves).
+        const tier = getSceneManager()?.getTier?.() ?? (this.isMobile ? 'low' : 'med');
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield, this.sceneDef?.boundary ?? null, { tier });
 
         // Add exclusion zone for farm house — only if the scene actually
         // has one (Field has farmHouse; RH/OC don't).
@@ -2735,7 +2738,10 @@ export class TerrainBuilder {
         }
 
         // Create new grass system
-        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield, this.sceneDef?.boundary ?? null);
+        // Cycle 23 Phase D1: hardware tier passed through to GrassSystem
+        // for per-tier presets (blade count, meadow-quad enable, wind octaves).
+        const tier = getSceneManager()?.getTier?.() ?? (this.isMobile ? 'low' : 'med');
+        this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield, this.sceneDef?.boundary ?? null, { tier });
 
         // Add farmhouse exclusion zone
         this.grassSystem.addExclusionZone(
