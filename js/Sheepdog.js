@@ -235,6 +235,15 @@ export class Sheepdog {
         this.stamina = this.maxStamina;
         this.minStaminaToSprint = 10;
         this.isSprinting = false;
+        // Cycle 23 Phase B: re-add the release-shift lock removed in Cycle 8.
+        // v1.3.0 playtest found Cycle 8's auto-resume produced ~0.83s
+        // stutter cycles (0.33s sprint / 0.5s walk) that visually read as
+        // "sprint continues until input stops" — exactly what Cycle 8
+        // simplification was trying to avoid. Lock is set when stamina
+        // depletes mid-sprint; cleared when wantsSprint becomes false
+        // (player releases Shift). canStartSprint vs canContinueSprint
+        // remain separate gates per Cycle 7 settled decision.
+        this._sprintLockOut = false;
         // Smoothed speed cap. Tracks `currentMaxSpeed` (sprint vs walk) but
         // eases on the way DOWN with τ≈0.2s so the velocity clamp doesn't
         // pop velocity 25→15 in one frame on sprint exhaustion. Snaps on the
@@ -918,22 +927,30 @@ export class Sheepdog {
     /**
      * Update stamina system.
      *
-     * Cycle 8 simplification: a single threshold gates re-engagement.
-     * Sprint stops automatically when stamina hits 0. Holding shift past
-     * exhaustion does NOT keep sprinting — the dog drops to walk, regen
-     * runs, and sprint resumes the moment stamina passes
-     * `minStaminaToSprint`. The Cycle 7 release-shift lock created two
-     * gates stacked (threshold + release-and-press) which made the
-     * mechanic feel like "I just sprint forever until I let go": there
-     * was no perceptible cliff when stamina hit 0 and re-engagement
-     * required a deliberate release the player rarely triggered.
-     * One gate, with the bar pulsing red while empty, is the clearer
-     * mechanic.
+     * Cycle 23 Phase B: re-add the release-shift lock removed in Cycle 8.
+     * Cycle 8 attempted to simplify by removing the lock — auto-resume
+     * once stamina passed the threshold — but the v1.3.0 playtest found
+     * the resulting ~0.83s stutter cycle (0.33s sprint / 0.5s walk)
+     * visually reads as continuous sprint, defeating the depletion gate.
+     *
+     * The two-gate design (per Cycle 7 settled decision):
+     *   - canStartSprint:    requires stamina >= minStaminaToSprint
+     *   - canContinueSprint: only valid mid-sprint, drops at stamina <= 0
+     *
+     * Plus a third condition: after a depletion exit, sprint is locked
+     * out until the player releases Shift. The lock-out is the cliff
+     * Cycle 8 was missing — it converts depletion into a deliberate
+     * "you must let go and let it recover, then re-engage" mechanic.
      */
     updateStamina(wantsSprint, deltaTime) {
         const isMoving = this.velocity.magnitude() > 0.1;
 
-        const canStartSprint = this.stamina >= this.minStaminaToSprint;
+        // Release-shift unlock — clear the lock-out the moment Shift comes up.
+        if (!wantsSprint) {
+            this._sprintLockOut = false;
+        }
+
+        const canStartSprint = this.stamina >= this.minStaminaToSprint && !this._sprintLockOut;
         const canContinueSprint = this.isSprinting && this.stamina > 0;
         const sprintActive = wantsSprint && isMoving && (canStartSprint || canContinueSprint);
 
@@ -942,6 +959,8 @@ export class Sheepdog {
             this.stamina = Math.max(0, this.stamina - this.staminaDrainRate * deltaTime);
             if (this.stamina <= 0) {
                 this.isSprinting = false;
+                // Latch the lock so re-engagement requires Shift release.
+                this._sprintLockOut = true;
             }
         } else {
             this.isSprinting = false;
