@@ -208,6 +208,7 @@ uniform float uSubsurfaceLift;   // chromatic floor magnitude (0..0.5, foliage-t
 uniform float uFresnelStrength;  // Schlick rim term magnitude (0 = disabled; 0.04 ≈ MeshStandard metalness=0)
 uniform vec3 uMatchBoost;        // Cycle 21 Phase 2 calibration vec — per-channel multiplier; (1,1,1) = no-op
 uniform float uAlphaTest;
+uniform float uAlphaHashScale;      // Cycle 22 Phase B; 0 = disabled, 1 = full dither
 uniform float uParallaxScale;       // 0 = disabled (v1 default)
 uniform float uDepthDiscardThr;     // 1 = disabled (v1 default; tune to ~0.15 to enable)
 
@@ -225,6 +226,24 @@ varying vec3 vViewDirObj;
 // by Three WebGLProgram when toneMapped:true + the renderer outputColorSpace
 // requires conversion. Including them manually here caused duplicate
 // function definitions on compile (Cycle 20 v2 finding 2026-05-04).
+
+// Cycle 22 Phase B: screen-space hashed alpha test. Mirrors the trick Three's
+// built-in alphahash chunk uses (3D screen-space hash → per-fragment threshold)
+// but written inline since this is a custom ShaderMaterial without Three's
+// auto chunk injection. The result is a dithered crossfade band over the
+// alpha-edge taper of the impostor billboard, matching alphaHash on the LOD0
+// + LOD1 leaf MeshStandardMaterials so the LOD0→LOD1→impostor handoff reads
+// uniformly stochastic. uAlphaHashScale=0 falls back to hard alphaTest.
+float kilnHash2D(vec2 v) {
+  return fract(1.0e4 * sin(17.0 * v.x + 0.1 * v.y) * (0.1 + abs(sin(13.0 * v.y + v.x))));
+}
+float kilnAlphaThreshold(vec3 viewPos) {
+  // Drive the threshold from screen-space derivative of the view-space
+  // position, so the dither pattern stays roughly stable in pixel-space
+  // (no shimmer when camera moves slowly through near-equal alpha).
+  float h = kilnHash2D(floor(gl_FragCoord.xy));
+  return clamp(uAlphaTest + (h - 0.5) * uAlphaHashScale, 0.001, 0.999);
+}
 
 const float TILES_X = ${TILES_X.toFixed(1)};
 const float TILES_Y = ${TILES_Y.toFixed(1)};
@@ -348,7 +367,12 @@ void main() {
 
   // Premultiplied-alpha blend (avoids dark fringes at alpha cutoffs).
   float aBlended = s0.alpha * w0 + s1.alpha * w1 + s2.alpha * w2;
-  if (aBlended < uAlphaTest) discard;
+  // Cycle 22 Phase B: screen-space hashed alpha test (dithered crossfade
+  // band) when uAlphaHashScale > 0; hard alphaTest when 0.
+  float kilnThr = uAlphaHashScale > 0.0
+    ? kilnAlphaThreshold(vec3(0.0))
+    : uAlphaTest;
+  if (aBlended < kilnThr) discard;
 
   vec3 albedoPremulBlended = s0.albedoPremul * w0 + s1.albedoPremul * w1 + s2.albedoPremul * w2;
   vec3 albedoBlended = albedoPremulBlended / max(aBlended, 1e-4);
@@ -549,6 +573,12 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
       // neighbours by Pixel Forge so a lower test pulls in the soft fringe,
       // closing the "snappy" silhouette gap vs LOD0 geometric edges.
       uAlphaTest:       { value: 0.3 },
+      // Cycle 22 Phase B: dithered alphaTest band. 0 disables; 0.30 typical
+      // (threshold jitter +/-0.15 around uAlphaTest 0.3, well within the
+      // 0.30-band the impostor's bleed-padded alpha taper covers). Pairs
+      // with material.alphaHash=true on LOD0+LOD1 leaf MeshStandardMaterials
+      // so all three LOD tiers crossfade with matching dither pattern.
+      uAlphaHashScale:  { value: 0.30 },
       // v1 defaults: parallax + depth-discard scaffolded but disabled.
       // Tune via TerrainBuilder.setKilnImpostorTunables() per Layer F.
       uParallaxScale:   { value: 0.0 },

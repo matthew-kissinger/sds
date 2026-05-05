@@ -588,6 +588,17 @@ export class TerrainBuilder {
         if (!material || this._patchedTreeMaterials.has(material)) return;
         this._patchedTreeMaterials.add(material);
 
+        // Cycle 22 Phase B: alphaHash stochastic transparency. Kills the
+        // hard alphaTest cutoff edge that snaps leaves on/off as alpha
+        // ramps near the test threshold — the noise pattern dithers the
+        // transition over a screen-space scale so LOD0/LOD1 swap and
+        // distance fade read as smooth crossfades. alphaHash overrides
+        // alphaTest when supported (Three r154+, shadow-fix r176). Three
+        // r184 (this project's pinned version) ships both.
+        if (material.transparent !== true) {
+            material.alphaHash = true;
+        }
+
         const uTime = this._treeWind.uTime;
         const uWindStrength = this._treeWind.uWindStrength;
         const uWindDirection = this._treeWind.uWindDirection;
