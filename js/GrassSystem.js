@@ -211,12 +211,31 @@ export class GrassSystem {
         this.frustum = new THREE.Frustum();
         this.frustumMatrix = new THREE.Matrix4();
 
+        // Cycle 22 Phase D: grass auto-LOD. Tracks recent frame times in a
+        // ring buffer; if the rolling average exceeds the high-water mark
+        // (18ms ≈ < 56fps) we scale per-chunk clump density down at the next
+        // chunk rebuild, and back up if the average is comfortably under
+        // the low-water mark (14ms ≈ > 71fps). Floor at 0.5 so extreme
+        // perf trouble can't collapse grass entirely. Acts on chunk
+        // (re)creation only — no live geometry mutation per frame, so the
+        // factor change costs nothing until the next scene-swap or first
+        // chunk-paint after init.
+        this._frameTimes = new Float32Array(60);
+        this._frameTimeIdx = 0;
+        this._frameTimeCount = 0;
+        this._autoLodFactor = 1.0;
+        this._autoLodHi = 18; // ms rolling avg → scale down
+        this._autoLodLo = 14; // ms rolling avg → scale up
+        this._autoLodFloor = 0.5;
+
         // Performance stats
         this.stats = {
             totalClumps: 0,
             visibleClumps: 0,
             chunksVisible: 0,
-            lastUpdateTime: 0
+            lastUpdateTime: 0,
+            autoLodFactor: 1.0,
+            avgFrameMs: 0,
         };
 
         // Exclusion zones (farm house, pasture, etc.)
@@ -898,7 +917,15 @@ export class GrassSystem {
         const clumpScale = hasExplicitGrassRadius
             ? Math.min(1, defaultRadius / grassRadius)
             : 1;
-        const adjustedClumpsPerChunk = Math.max(1, Math.round(clumpsPerChunk * clumpScale));
+        // Cycle 22 Phase D: apply auto-LOD multiplier. _autoLodFactor sits
+        // at 1.0 until update() observes sustained frame-time pressure; when
+        // it dips, chunk rebuilds (scene swap, first build) materialize at
+        // the lower density. Floored at _autoLodFloor (0.5) so the player
+        // never sees totally bare ground.
+        const adjustedClumpsPerChunk = Math.max(
+            1,
+            Math.round(clumpsPerChunk * clumpScale * this._autoLodFactor)
+        );
 
         for (let cx = 0; cx < chunksPerSide; cx++) {
             for (let cz = 0; cz < chunksPerSide; cz++) {
@@ -1195,6 +1222,33 @@ export class GrassSystem {
         }
 
         this.time += deltaTime;
+
+        // Cycle 22 Phase D: tick rolling frame-time avg + adjust _autoLodFactor.
+        // 60-sample ring (~1s at 60fps); we only act once we have at least 30
+        // samples to avoid the warm-up burst dragging us down on first paint.
+        // Step size 0.05/sec, framed in deltaTime so it's smooth on slow clocks
+        // and snappy when frames stretch. Result: at sustained 18ms+ avg the
+        // factor decays to 0.5 over ~10 seconds; recovery to 1.0 takes the
+        // same. No clamps added to grass logic — Hard Stop #8 stays clean.
+        const dtMs = deltaTime * 1000;
+        if (dtMs > 0 && dtMs < 200) {
+            this._frameTimes[this._frameTimeIdx] = dtMs;
+            this._frameTimeIdx = (this._frameTimeIdx + 1) % this._frameTimes.length;
+            if (this._frameTimeCount < this._frameTimes.length) this._frameTimeCount++;
+        }
+        if (this._frameTimeCount >= 30) {
+            let sum = 0;
+            for (let i = 0; i < this._frameTimeCount; i++) sum += this._frameTimes[i];
+            const avg = sum / this._frameTimeCount;
+            this.stats.avgFrameMs = avg;
+            const step = Math.min(deltaTime, 0.1) * 0.5; // up to 0.05/frame at 60fps
+            if (avg > this._autoLodHi) {
+                this._autoLodFactor = Math.max(this._autoLodFloor, this._autoLodFactor - step);
+            } else if (avg < this._autoLodLo) {
+                this._autoLodFactor = Math.min(1.0, this._autoLodFactor + step);
+            }
+            this.stats.autoLodFactor = this._autoLodFactor;
+        }
 
         // Update time uniform
         if (this.grassMaterial) {
