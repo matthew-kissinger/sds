@@ -67,7 +67,10 @@ export const field = {
     },
 
     sky: { preset: 'pastoral-noon' },
-    fog: { color: '#cfd9e8', near: 220, far: 700 },
+    // Cycle 25 Phase B: fog retuned from "structural mask" to "horizon
+    // haze only". near 220 -> 350 / far 700 -> 900 lifts the mid-distance
+    // fog veil that was compensating for LOD1 silhouette drift.
+    fog: { color: '#cfd9e8', near: 350, far: 900 },
 
     // --- Gameplay ---
     allowedModes: ['cooperative', 'competitive', 'timed'],

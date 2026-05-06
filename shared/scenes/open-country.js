@@ -120,7 +120,10 @@ export const openCountry = {
     // visible-from-shore mountain ring. Color tracks horizon LUT each
     // frame; near 220m so the desat (start 100m) and fog (near 220m)
     // layer cleanly.
-    fog: { color: '#b8c8d8', near: 220, far: 800 },
+    // Cycle 25 Phase B: lift fog further out — OC's mountain ring is the
+    // intentional far-horizon mark, fog should haze it rather than wall
+    // it off. near 220 -> 350, far 800 -> 900.
+    fog: { color: '#b8c8d8', near: 350, far: 900 },
 
     // Cycle 6 Phase 5: starting-point boid override for the 380m radius
     // island (~4.5× Rolling Hills meadow area). Without re-tuning, cohesion

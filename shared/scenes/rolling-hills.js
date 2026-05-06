@@ -76,7 +76,10 @@ export const rollingHills = {
     // 380m island shore so off-island horizon reads as a soft fade
     // instead of crisp ocean line. Color is lifted toward sky horizon
     // each frame in Atmosphere.applyFogColor().
-    fog: { color: '#d4c4a8', near: 200, far: 650 },
+    // Cycle 25 Phase B: lift fog further out so RH's island horizon reads
+    // as soft haze rather than a structural fog wall. near 200 -> 350,
+    // far 650 -> 900.
+    fog: { color: '#d4c4a8', near: 350, far: 900 },
 
     allowedModes: ['cooperative', 'competitive', 'timed'],
     defaultMode: 'cooperative',

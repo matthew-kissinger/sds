@@ -82,17 +82,31 @@ export const TIER_PRESETS = {
         bladesPerClump:      5,
         windOctaves:         1,
         meadowQuadEnabled:   false, // Q3: low-tier skips T4 meadow-quad
+        // Cycle 25 Phase B: low-tier devices keep the meshopt LOD1 chain
+        // (perf headroom matters more than silhouette fidelity here).
+        usesLod1ForFoliage:  true,
+        // [start, end] crossfade band for LOD0->LOD2 alphaHash. Mobile-low
+        // pushes the band closer (80-100m) so geometry budget stays low.
+        lod0CrossfadeBand:   [80, 100],
     },
     med: {
         clumpsPerChunkScale: 1.0, // applied to scene's desktop value
         bladesPerClump:      7,
         windOctaves:         2,
         meadowQuadEnabled:   true,
+        // Cycle 25 Phase B: drop LOD1 on med + high desktop. The mid-band
+        // mesh's silhouette mismatch with LOD0 is what
+        // AtmosphericDesatPatch was hiding; replacing the seam with a
+        // 20m alphaHash crossfade (180-200m) eliminates the pop entirely.
+        usesLod1ForFoliage:  false,
+        lod0CrossfadeBand:   [180, 200],
     },
     high: {
         clumpsPerChunkScale: 1.0,
         bladesPerClump:      7,
         windOctaves:         3,
         meadowQuadEnabled:   true,
+        usesLod1ForFoliage:  false,
+        lod0CrossfadeBand:   [180, 200],
     },
 };

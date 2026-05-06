@@ -10,6 +10,7 @@ import { getOccluderUniforms, patchMaterialOccluder } from './shaders/OccluderFa
 import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
+import { TIER_PRESETS } from './HardwareTier.js';
 
 // GLSL-style smoothstep returning [0,1]. Cycle 23 Phase A1: drives the
 // pitch-aware desat falloff in updateGrassAnimation.
@@ -168,22 +169,22 @@ export class TerrainBuilder {
         };
         // Cycle 22 Phase C: shared atmospheric-desat uniforms. Same set is
         // attached to every patched leaf MeshStandardMaterial AND propagated
-        // into the kiln impostor (`setKilnImpostorTunables`) so all three
-        // LOD tiers desaturate in lock-step. Defaults sized for the
-        // 0-320m typical play viewport: <60m unchanged, 200m+ near full
-        // desat (impostors take over there). uDesatStrength can be retuned
-        // per scene preset via Atmosphere.applyPreset.
+        // into the kiln impostor (`setKilnImpostorTunables`).
+        // Cycle 25 Phase B: strength forced to 0 — the desat patch was
+        // hiding the LOD1 silhouette mismatch with LOD0. With LOD1 dropped
+        // on desktop med/high the mismatch is gone, and the desat
+        // composition was washing distant trees toward fog-grey beyond
+        // what the new aerial-perspective LUT (Phase C) does naturally.
+        // Uniforms preserved for back-compat with the kiln impostor +
+        // mobile-low LOD1 path; the patch becomes a per-fragment no-op.
         this._desat = {
             uDesatStartM:   { value: 100 },
             uDesatEndM:     { value: 320 },
-            uDesatStrength: { value: 0.6 },
+            uDesatStrength: { value: 0 },
         };
-        // Cycle 23 Phase A1: pitch-aware desat. Each frame, the live
-        // uDesatStrength is the configured base * smoothstep falloff in the
-        // 25°-50° pitch band. Below 25° pitch (Follow cam, ~26°) we want full
-        // desat to fight far-tree fog smear; above 50° pitch (Classic looking
-        // overhead) we want minimal desat so near trees keep saturation.
-        this._desatConfiguredStrength = 0.6;
+        // Cycle 23 Phase A1 / 25 Phase B: pitch-aware desat retained as
+        // identity (configured = 0). Per-frame update keeps strength = 0.
+        this._desatConfiguredStrength = 0;
         // Cycle 23 Phase A1: floor multiplier — at max pitch, strength only
         // drops to 20% of configured rather than 0% so far trees still desat
         // a bit. Tunable knob.
@@ -1309,6 +1310,11 @@ export class TerrainBuilder {
         const renderer = getSceneManager()?.getRenderer();
         const instancedMeshes = [];
 
+        // Cycle 25 Phase B: hardware tier gates the LOD1 mid-band on the
+        // tree InstancedMeshes. Resolved once per createTrees() pass since
+        // tier doesn't change at runtime.
+        const hwTier = getSceneManager()?.getTier?.() ?? (this.isMobile ? 'low' : 'med');
+
         // Cycle 17 follow-up: reset the per-swap impostor-material list so
         // setImpostorTint() doesn't hold stale refs from the prior scene's
         // billboards (which are removed from scene + may be disposed in
@@ -1505,20 +1511,18 @@ export class TerrainBuilder {
                 // on the next swap (the dominant ~41% drift class).
                 im.userData.sharedFromGlbCache = true;
 
-                // Cycle 22 Phase A (2026-05-05): LOD1 80m band re-enabled
-                // with meshopt-baked geometry (same leaf count as LOD0; ~38%
-                // tree1 / ~45% tree2 vert reduction). Replaces the Cycle 16
-                // leaf-count-halved LOD1 that produced the Cycle 17 visual
-                // rejection. LOD chain:
-                //   LOD0 (full geo)  0-80m
-                //   LOD1 (meshopt)   80-200m
-                //   LOD2 (impostor)  200m+ for leaves; trunk → empty quad
-                //
-                // LOD1 attaches per matching child mesh name (trunk paired
-                // with trunk, leaves with leaves). lod1Child may be null
-                // for unmatched children — fall back to LOD0-only band
-                // until impostor takeover.
-                if (lod1Child?.geometry && lod1Child?.material) {
+                // Cycle 22 Phase A: LOD1 80m band with meshopt-baked
+                // geometry (~38-45% vert reduction).
+                // Cycle 25 Phase B: tier-gated. Desktop med/high drops the
+                // mid-band entirely so the LOD0 silhouette holds out to
+                // 200m where the impostor takes over. Mobile-low keeps
+                // the chain because perf budget matters more than
+                // silhouette fidelity. The seam between LOD0 and impostor
+                // is now bridged by the alphaHash crossfade band defined
+                // on `tierPreset.lod0CrossfadeBand`.
+                const tierPreset = TIER_PRESETS[hwTier] ?? TIER_PRESETS.med;
+                const usesLod1 = tierPreset.usesLod1ForFoliage;
+                if (usesLod1 && lod1Child?.geometry && lod1Child?.material) {
                     im.addLOD(lod1Child.geometry, lod1Child.material, 80);
                 }
 
