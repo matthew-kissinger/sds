@@ -80,6 +80,13 @@ export class RoomDO {
   private cleanupTimeout: ReturnType<typeof setTimeout> | null = null;
   private restored = false;
 
+  // Cycle 24 Phase 3: 15s reconnect grace for in-game disconnects. Per
+  // playerId we keep the timeout handle + the wall-clock when the grace
+  // started — bindSocket clears the handle if the player rebinds in time.
+  // Lobby-state disconnects evict immediately (no grace).
+  private graceTimeouts = new Map<string, { handle: ReturnType<typeof setTimeout>; startedAt: number }>();
+  private static readonly RECONNECT_GRACE_MS = 15_000;
+
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
@@ -323,6 +330,17 @@ export class RoomDO {
       this.cleanupTimeout = null;
     }
 
+    // Cycle 24 Phase 3: cancel any pending reconnect-grace timeout. Player
+    // came back within the grace window — sheepdog stayed in-world the
+    // whole time, just stops being orphaned now.
+    const grace = this.graceTimeouts.get(playerId);
+    if (grace) {
+      clearTimeout(grace.handle);
+      this.graceTimeouts.delete(playerId);
+      const elapsed = Date.now() - grace.startedAt;
+      console.log(`[RoomDO ${this.meta?.roomCode}] reconnect within grace (${elapsed}ms) for ${playerId}`);
+    }
+
     ws.addEventListener('message', async (evt) => {
       try {
         const raw = evt.data;
@@ -532,9 +550,29 @@ export class RoomDO {
   }
 
   private handlePlayerDisconnect(playerId: string): void {
-    // Simple strategy: treat WS close as leave. No grace window for now (keep it simple,
-    // matches droplet behavior).
-    this.handlePlayerLeave(playerId);
+    if (!this.meta) return;
+    // Cycle 24 Phase 3: grace window applies only to in-game disconnects.
+    // Lobby-state disconnects evict immediately (pre-game disconnect =
+    // explicit leave, no point sitting on a phantom sheepdog).
+    if (this.meta.state !== 'in-game') {
+      this.handlePlayerLeave(playerId);
+      return;
+    }
+    // Already grace-pending? Nothing to do — the previous timeout is still
+    // counting down. (Can happen if a player toggles connectivity rapidly.)
+    if (this.graceTimeouts.has(playerId)) return;
+    // Schedule the eviction. If the player rebinds before the timeout
+    // fires, bindSocket cancels it.
+    const handle = setTimeout(() => {
+      this.graceTimeouts.delete(playerId);
+      // Re-check state — room may have been torn down or the player may
+      // have already left explicitly while we were waiting.
+      if (!this.meta || !this.players.has(playerId)) return;
+      console.log(`[RoomDO ${this.meta.roomCode}] grace timeout fired for ${playerId} — evicting`);
+      this.handlePlayerLeave(playerId);
+    }, RoomDO.RECONNECT_GRACE_MS);
+    this.graceTimeouts.set(playerId, { handle, startedAt: Date.now() });
+    console.log(`[RoomDO ${this.meta.roomCode}] in-game disconnect — ${RoomDO.RECONNECT_GRACE_MS}ms grace for ${playerId}`);
   }
 
   private handlePlayerLeave(playerId: string): void {

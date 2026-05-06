@@ -1024,6 +1024,24 @@ class SheepDogSimulation {
     _installMpProbe() {
         if (typeof window === 'undefined' || window.__sdsMpProbe) return;
         const self = this;
+        // Cycle 24 Phase 3: test-only action surface for the reconnect-grace
+        // spec. Specs need to drop + rebind the WS without leaving React
+        // state; both helpers are no-ops in production (the probe is gated
+        // on ?mpProbe=1 / ?perfMode=1).
+        window.__sdsMpDrop = () => {
+            const nm = self.networkManager;
+            if (nm?.ws) {
+                try { nm.ws.close(4000, 'mpProbe drop'); } catch {}
+            }
+        };
+        window.__sdsMpReconnect = async () => {
+            const nm = self.networkManager;
+            if (!nm?.currentRoom?.roomCode || !nm?.playerId) {
+                throw new Error('mpReconnect: no currentRoom/playerId');
+            }
+            await nm._openRoomSocket(nm.currentRoom.roomCode, nm.playerId);
+            nm.connected = true;
+        };
         // Cycle 24 Phase 1: read-only multiplayer state probe. Specs assert on
         // the returned shape; refactors that change semantics need to update
         // both this surface and the spec call sites.
