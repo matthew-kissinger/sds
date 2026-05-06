@@ -112,18 +112,16 @@ export class CameraController {
         this.distance = 80;
 
         // Cycle 25 Phase E: per-mode zoom ranges + persistence.
-        // Cycle 25 Phase E hotfix (2026-05-06): Follow defaults to 22
-        // (matching legacy FOLLOW_DISTANCE const so post-fix behaviour is
-        // visually identical to pre-Phase-E at default zoom). Mobile floor
-        // was 35 — too tight for Follow which sits much closer than
-        // Classic; relaxed to 18 so mobile pinch can zoom in legibly.
-        // Range resolution happens inside setZoom/handleWheel via
-        // _zoomRangeForMode(). Persistence keys are
-        // `sds.cameraZoom.<mode>` in localStorage.
+        // Cycle 25 v2.0.1 hotfix-2 (2026-05-06): zoom-in floor lowered for
+        // Follow + Free so the player can actually get close to the dog.
+        // Previous floors (12 desktop, 18 mobile on Follow) clamped before
+        // the rig got near; new floors are tight enough for over-the-shoulder
+        // framing. Persistence keys are `sds.cameraZoom.<mode>` in
+        // localStorage.
         this._zoomRangeByMode = {
             classic: { min: isMobile ? 35 : 20, max: 150 },
-            follow:  { min: isMobile ? 18 : 12, max: 40 },
-            free:    { min: isMobile ? 24 : 15, max: 60 },
+            follow:  { min: isMobile ? 10 : 6,  max: 45 },
+            free:    { min: isMobile ? 14 : 10, max: 70 },
         };
         this._zoomByMode = {
             classic: 80,
@@ -301,6 +299,20 @@ export class CameraController {
     }
 
     getZoom() { return this.distance; }
+
+    /**
+     * Public read for UI components — returns { mode, distance, min, max }
+     * for the active mode. Updates on every mode-change / setZoom call.
+     */
+    getZoomState() {
+        const r = this._zoomRangeForMode(this.mode);
+        return {
+            mode: this.mode,
+            distance: this.distance,
+            min: r.min,
+            max: r.max,
+        };
+    }
 
     setCompetitiveDirection(direction) {
         this.competitiveDirection = direction || null;

@@ -4,6 +4,39 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.0.2] — 2026-05-06 (post-v2.0.1 patch — closer zoom-in + zoom-bar fix + scene-picker rev2)
+
+### Fixed
+- **Mobile zoom bar didn't track the active camera mode.**
+  `MobileControls` had a hardcoded 20-150 percentage formula and
+  20-150 clamp on its onZoom handler — fine for Classic, broken for
+  Follow's 6-45 / Free's 10-70 ranges (the bar saturated at the top
+  before the rig hit its actual minimum). Now reads
+  `cameraController.getZoomState()` per requestAnimationFrame so the
+  bar fill, the clamp, and the step-size all match the active mode's
+  range exactly.
+- **Follow + Free zoom-in floor too high.** Players couldn't get
+  close to the dog. Floors lowered:
+    Follow:  desktop 12 → 6, mobile 18 → 10
+    Free:    desktop 15 → 10, mobile 24 → 14
+  Max distances raised slightly so the cinematic-pull-out range
+  doesn't feel cramped:
+    Follow:  40 → 45
+    Free:    60 → 70
+
+### Changed
+- **ScenePicker collapsed to a single hero card.** The 3-card grid in
+  v2.0.1 was just bigger 3-button-strip energy. Single component now:
+  one hero card, prev/next chevrons inside, dot indicators below,
+  arrow-key flip, touch-swipe (40px threshold or fast flick),
+  cross-fade between scenes, slide-in on direction. Tap the body to
+  load when the visible scene differs from the active one; "Current"
+  pill replaces the "Tap to load" hint when active.
+
+### Validation
+- vitest 188/188.
+- build clean — 836.98 KB main / 250.20 KB gzip (≈ flat vs v2.0.1).
+
 ## [2.0.1] — 2026-05-06 (post-v2.0.0 patch — camera + scene picker)
 
 User-reported regressions on the v2.0.0 deploy + scene-picker UX

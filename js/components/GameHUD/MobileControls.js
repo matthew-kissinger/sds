@@ -5,7 +5,7 @@
  */
 import React, { createElement, useState, useEffect, useRef } from 'react';
 import nipplejs from 'nipplejs';
-import { getMobileControls } from '../../GameBridge.js';
+import { getMobileControls, getSceneManager } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 
 // Sprint icon
@@ -20,13 +20,29 @@ const SprintIcon = ({ size = 24, color = 'currentColor' }) => createElement('svg
     strokeLinejoin: 'round'
 }, createElement('polygon', { points: '13 2 3 14 12 14 11 22 21 10 12 10 13 2' }));
 
+// Read the active camera-mode zoom state from the controller. Falls back
+// to the legacy 20-150 Classic range if the controller isn't ready yet
+// (e.g. during initial paint).
+function readZoomState() {
+    const cc = getSceneManager()?.cameraController;
+    if (cc?.getZoomState) {
+        try { return cc.getZoomState(); } catch { /* ignore */ }
+    }
+    return { mode: 'classic', distance: 80, min: 20, max: 150 };
+}
+
 export function MobileControls() {
     const [joystickManager, setJoystickManager] = useState(null);
     const [isSprinting, setIsSprinting] = useState(false);
-    const [zoomLevel, setZoomLevel] = useState(80);
+    // Cycle 25 v2.0.1 hotfix-2: zoomLevel is derived from
+    // cameraController per-frame so the on-screen bar tracks the active
+    // mode's range (Classic 20-150, Follow 6-45, Free 10-70 desktop —
+    // mobile floors are higher). Polled at rAF; cheap.
+    const [zoomState, setZoomState] = useState(() => readZoomState());
     const [isZooming, setIsZooming] = useState(null);
     const joystickRef = useRef(null);
     const zoomIntervalRef = useRef(null);
+    const rafRef = useRef(null);
 
     const { isLandscapeMobile } = useResponsive();
 
@@ -83,6 +99,20 @@ export function MobileControls() {
         };
     }, []);
 
+    // Poll camera state at requestAnimationFrame so the bar tracks
+    // mode changes + sprint dolly + external setZoom calls.
+    useEffect(() => {
+        let last = '';
+        const tick = () => {
+            const s = readZoomState();
+            const key = `${s.mode}:${s.distance.toFixed(2)}:${s.min}:${s.max}`;
+            if (key !== last) { last = key; setZoomState(s); }
+            rafRef.current = requestAnimationFrame(tick);
+        };
+        rafRef.current = requestAnimationFrame(tick);
+        return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    }, []);
+
     const handleSprintStart = () => {
         setIsSprinting(true);
         const mobileControls = getMobileControls();
@@ -96,19 +126,26 @@ export function MobileControls() {
     };
 
     const handleZoomChange = (delta) => {
-        setZoomLevel(prev => {
-            const newZoom = Math.max(20, Math.min(150, prev + delta));
-            const mobileControls = getMobileControls();
-            if (mobileControls?.onZoomChange) mobileControls.onZoomChange(newZoom);
-            return newZoom;
-        });
+        const cur = readZoomState();
+        const newZoom = Math.max(cur.min, Math.min(cur.max, cur.distance + delta));
+        const mobileControls = getMobileControls();
+        if (mobileControls?.onZoomChange) mobileControls.onZoomChange(newZoom);
+        // Optimistically update local state so the bar fills before the
+        // next rAF poll.
+        setZoomState({ ...cur, distance: newZoom });
     };
 
     const startZoom = (direction) => {
         setIsZooming(direction);
-        handleZoomChange(direction === 'in' ? -5 : 5);
+        // Step size scales with the active range so Follow's tight 6-45
+        // band steps in finer increments than Classic's 20-150.
+        const cur = readZoomState();
+        const range = cur.max - cur.min;
+        const initialStep = Math.max(2, range * 0.04);
+        const continuousStep = Math.max(1, range * 0.025);
+        handleZoomChange(direction === 'in' ? -initialStep : initialStep);
         zoomIntervalRef.current = setInterval(() => {
-            handleZoomChange(direction === 'in' ? -3 : 3);
+            handleZoomChange(direction === 'in' ? -continuousStep : continuousStep);
         }, 50);
     };
 
@@ -120,7 +157,12 @@ export function MobileControls() {
         }
     };
 
-    const zoomPercentage = ((150 - zoomLevel) / (150 - 20)) * 100;
+    // Bar fills 0% (max distance, fully zoomed out) → 100% (min distance,
+    // fully zoomed in). Range comes from the active camera mode.
+    const range = Math.max(1, zoomState.max - zoomState.min);
+    const zoomPercentage = Math.max(0, Math.min(100,
+        ((zoomState.max - zoomState.distance) / range) * 100,
+    ));
 
     // Zoom button style generator
     const zoomButtonStyle = (isActive, isIn) => ({
