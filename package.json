@@ -34,6 +34,11 @@
     "gen:integrate": "node tools/asset-gen/integrate.mjs",
     "perf:baseline": "node tools/perf-harness.mjs --baseline",
     "perf:check": "node tools/perf-harness.mjs --check",
+    "validation:lod": "node tools/validation/lod-compare.mjs",
+    "validation:screenshots": "node tools/validation/screenshot-golden.mjs",
+    "validation:latency": "node tools/validation/input-latency.mjs",
+    "validation:perf": "node tools/validation/frame-time-histogram.mjs",
+    "validation:all": "npm run validation:lod && npm run validation:screenshots -- --capture && npm run validation:latency && npm run validation:perf",
     "bake-heightmaps": "node scripts/bake-heightmap.mjs --scene rolling-hills --peakHeight 6 --seed 1 --out public/terrain/rolling-hills.r32f && node scripts/bake-heightmap.mjs --scene field --peakHeight 0 --seed 0 --out public/terrain/field.r32f && node scripts/bake-heightmap.mjs --scene open-country --peakHeight 5 --seed 42 --out public/terrain/open-country.r32f"
   },
   "keywords": [
