@@ -43,6 +43,11 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      // Cycle 24 Phase 1: MP specs run under their own `mp-*` projects to
+      // keep the cross-context boot pattern (host + guest in separate
+      // BrowserContexts) from showing up under the smoke-test browser
+      // projects. Same browser engine, different test bucket.
+      testIgnore: '**/mp/*.spec.ts',
     },
     // Cycle 9 Phase 3: Firefox + WebKit projects so we catch a class of
     // bugs that Chromium-only smoke misses. WebKit is NOT macOS Safari
@@ -52,10 +57,32 @@ export default defineConfig({
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      testIgnore: '**/mp/*.spec.ts',
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      testIgnore: '**/mp/*.spec.ts',
+    },
+    // Cycle 24 Phase 1: dedicated MP projects. Each spec opens host +
+    // guest contexts via tests/e2e/mp/_helpers.ts; they assert against
+    // window.__sdsMpProbe (installed when ?mpProbe=1 is in the URL).
+    // CI runs only `mp` (chromium) by default — local cross-engine runs
+    // use `--project=mp` `--project=mp-firefox` `--project=mp-webkit`.
+    {
+      name: 'mp',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: '**/mp/*.spec.ts',
+    },
+    {
+      name: 'mp-firefox',
+      use: { ...devices['Desktop Firefox'] },
+      testMatch: '**/mp/*.spec.ts',
+    },
+    {
+      name: 'mp-webkit',
+      use: { ...devices['Desktop Safari'] },
+      testMatch: '**/mp/*.spec.ts',
     },
   ],
 

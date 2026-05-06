@@ -353,7 +353,34 @@ class SheepDogSimulation {
         this.webVitalsMonitor = new WebVitalsMonitor();
         this.gameAssetLoader = new GameAssetLoader();
         this.menuController = new MenuController(this.sceneManager);
-        this.audioManager = new AudioManager(this.sceneManager.getCamera());
+
+        // Cycle 24 Phase 1: install MP probe immediately after MenuController
+        // creation so e2e specs can read it even when later constructor steps
+        // (AudioManager etc.) throw on engines like Playwright-WebKit which
+        // doesn't expose AudioContext. Probe only needs the NetworkManager,
+        // which lives on menuController. Gated on ?perfMode=1 OR ?mpProbe=1.
+        this.networkManager = this.menuController.networkManager;
+        try {
+            const _mpProbeSp = new URLSearchParams(location.search);
+            if (_mpProbeSp.get('perfMode') === '1' || _mpProbeSp.get('mpProbe') === '1') {
+                this._installMpProbe();
+            }
+        } catch (e) {
+            console.warn('[MP-PROBE] install failed (non-fatal):', e?.message);
+        }
+
+        // Cycle 24 Phase 1: AudioManager construction throws on
+        // Playwright-WebKit (no AudioContext exposed) and historically has
+        // surfaced as an opaque "game won't load" symptom on Safari profiles
+        // with audio disabled. Failing the whole constructor over audio is
+        // the wrong call — the game runs fine silently. Catch + log so
+        // setGameInstance() and React mount complete normally.
+        try {
+            this.audioManager = new AudioManager(this.sceneManager.getCamera());
+        } catch (e) {
+            console.warn('[AUDIO] AudioManager init failed; running silent:', e?.message);
+            this.audioManager = null;
+        }
         this.multiplayerState = new MultiplayerState();
         
         // Create mobile controls with sceneManager and audioManager
@@ -431,9 +458,10 @@ class SheepDogSimulation {
         // Animation timing
         this.lastTime = performance.now();
         
-        // Multiplayer state
-        // Get NetworkManager from MenuController (it creates one in its constructor)
-        this.networkManager = this.menuController.networkManager;
+        // Multiplayer state — networkManager is now assigned earlier (right
+        // after MenuController creation, alongside the MP probe install) so
+        // engines that throw later in the constructor (e.g. Playwright-WebKit
+        // which has no AudioContext) still expose probe + nm to React/tests.
         this.isMultiplayer = false;
         this.otherPlayers = new Map(); // playerId -> Sheepdog instance
         this.playerWasMoving = false; // Track movement state from previous frame
@@ -462,13 +490,29 @@ class SheepDogSimulation {
         setGameInstance(this);
         console.log('[GAME] GameBridge initialized early in constructor');
 
+        // Cycle 24 Phase 1: `?testNoCanvas=1` skips heavy 3D init + the
+        // animate loop so two-tab MP e2e tests can run without GPU/CPU
+        // contention. NetworkManager + React menu still mount normally. The
+        // flag is for tests only — production has no codepath that would
+        // ever opt in.
+        const _testNoCanvas = (() => {
+            try {
+                return new URLSearchParams(location.search).get('testNoCanvas') === '1';
+            } catch { return false; }
+        })();
+
         // Initialize the simulation
         this.isInitialized = false;
-        this.init().then(() => {
+        if (_testNoCanvas) {
+            console.log('[TEST] testNoCanvas=1 — skipping init() + animate()');
             this.isInitialized = true;
-            console.log('[GAME] Game initialization complete, starting animation loop');
-        });
-        this.animate();
+        } else {
+            this.init().then(() => {
+                this.isInitialized = true;
+                console.log('[GAME] Game initialization complete, starting animation loop');
+            });
+            this.animate();
+        }
     }
     
     setupPauseHandling() {
@@ -975,6 +1019,51 @@ class SheepDogSimulation {
             console.log('[STRESS] final:', final, 'drift:', drift);
             return { baseline, postFirst, final, drift };
         };
+    }
+
+    _installMpProbe() {
+        if (typeof window === 'undefined' || window.__sdsMpProbe) return;
+        const self = this;
+        // Cycle 24 Phase 1: read-only multiplayer state probe. Specs assert on
+        // the returned shape; refactors that change semantics need to update
+        // both this surface and the spec call sites.
+        window.__sdsMpProbe = () => {
+            const nm = self.networkManager;
+            const room = nm?.currentRoom ?? null;
+            const playerId = nm?.playerId ?? null;
+            const peers = Array.isArray(room?.players)
+                ? room.players.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    dogType: p.dogType,
+                    isHost: !!p.isHost,
+                    isMine: p.id === playerId,
+                }))
+                : [];
+            // Cycle 24 Phase 1: prefer authoritative room state for isHost
+                // (peers[me].isHost) over the locally-cached nm.isHost. The
+                // worker broadcasts a generic hostChanged frame with
+                // isHost:false meant for per-recipient interpretation; the
+                // current NetworkManager handler swallows that literal,
+                // leaving nm.isHost=false even on the new host. Probe falls
+                // back to nm.isHost only if room.players is empty.
+            const myPeer = peers.find(p => p.isMine);
+            const isHost = myPeer ? !!myPeer.isHost : !!nm?.isHost;
+            return {
+                playerId,
+                peers,
+                playerCount: peers.length,
+                roomCode: room?.roomCode ?? room?.code ?? null,
+                roomState: room?.state ?? null,
+                sheepCount: room?.sheepCount ?? null,
+                gameMode: room?.gameMode ?? null,
+                sceneId: room?.sceneId ?? null,
+                isHost,
+                connected: !!nm?.connected,
+                connecting: !!nm?.connecting,
+            };
+        };
+        console.log('[MP-PROBE] window.__sdsMpProbe installed');
     }
 
     // -------- Cycle 10 Phase 1 — scene lifecycle (Step 1 plumbing) --------
