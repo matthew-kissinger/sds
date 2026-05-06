@@ -82,8 +82,28 @@ export async function bootApp(page: Page, opts: { extraQuery?: string; hash?: st
   }).toPass({ timeout: 90_000 });
 }
 
-/** Navigate main menu → Multiplayer mode → confirm dog → MP options screen. */
-export async function navigateToMultiplayer(page: Page): Promise<void> {
+// Dog name → en locale label used in DogSelection card <h3>. Matches the
+// translation in js/locales/en/index.js. The DogSelection card button has
+// no aria-label, so tests find it by the visible <h3> name.
+const DOG_DISPLAY_NAMES: Record<string, RegExp> = {
+  jep: /^Jep\b/,
+  pip: /^Pip\b/,
+  sally: /^Sally\b/,
+  shiloh: /^Shiloh\b/,
+  george_washington: /^George Washington\b/,
+};
+
+/**
+ * Navigate main menu → Multiplayer mode → optionally pick a specific dog
+ * → confirm → MP options screen.
+ *
+ * Cycle 24 Phase 4: optional `pickDog` arg drives the dog-selection step
+ * so two-tab specs can assert each player's dogType propagates correctly.
+ */
+export async function navigateToMultiplayer(
+  page: Page,
+  opts: { pickDog?: 'jep' | 'pip' | 'sally' | 'shiloh' | 'george_washington' } = {},
+): Promise<void> {
   // Main menu has the "Multiplayer" mode button. MenuOption renders the
   // button with label + description as concatenated text content, so the
   // accessible name is "Multiplayer Compete or cooperate online" (label +
@@ -92,9 +112,24 @@ export async function navigateToMultiplayer(page: Page): Promise<void> {
   await expect(mpButton).toBeVisible({ timeout: 60_000 });
   await mpButton.dispatchEvent('click');
 
-  // Dog selection screen — confirm whichever dog is default.
+  // Dog selection screen.
   const confirm = page.getByRole('button', { name: /Confirm Selection/i });
   await expect(confirm).toBeVisible({ timeout: 30_000 });
+
+  if (opts.pickDog) {
+    const namePattern = DOG_DISPLAY_NAMES[opts.pickDog];
+    if (!namePattern) throw new Error(`navigateToMultiplayer: unknown dog ${opts.pickDog}`);
+    // The DogSelection card button has the dog name in an inner <h3>. The
+    // accessible name of the parent <button> picks that up. Stat labels
+    // (Speed/Stamina/Control) are inside StatBar, also inside the button,
+    // so the accessible name is e.g. "Pip Australian Shepherd Speed Stamina
+    // Control ...". Anchor on the dog name at the start of the name to
+    // avoid matching another card's description.
+    const card = page.getByRole('button', { name: namePattern });
+    await expect(card.first()).toBeVisible({ timeout: 15_000 });
+    await card.first().dispatchEvent('click');
+  }
+
   await confirm.dispatchEvent('click');
 
   // MultiplayerOptions screen has the Create Room / Join Room / Quick Match
