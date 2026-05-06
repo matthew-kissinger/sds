@@ -4,6 +4,95 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] — 2026-05-06 (Cycle 25 — polish-mega-cycle)
+
+The polish-program landing. Eight phases across `meta-cycle-overnight-2026-05-06`,
+shipped end-to-end via the meta-cycle execution policy. Builds on
+v1.5.0's MP regression coverage; ships the LOD truth, atmospheric
+foundation, impostor LOC reduction, camera cinematics, per-scene tree
+profiles, and skeleton-loading start-screen polish that the polish
+program promised.
+
+User-visible diff at v2.0.0:
+- **Trees no longer pop at 80m** on desktop. The LOD seam was the
+  thesis target; with med/high tier dropping LOD1 entirely and the
+  alphaHash crossfade band at 180-200m, the silhouette holds out to
+  the impostor takeover.
+- **Distant trees no longer wash to fog-grey.** AtmosphericDesatPatch
+  is neutralised; per-scene fog lifted to "horizon haze only"
+  (near 220→350, far 700-800→900).
+- **Camera reads more cinematic.** Per-mode zoom (Follow 12-40, Free
+  15-60, Classic 20-150) persists across sessions. Follow-cam zoom-out
+  ramps FOV 50°→38° for slight tele compression. Sprint adds a +2°
+  FOV pulse with 0.4s ease — sprint state-changes feel intentional.
+- **Scenes feel more distinct.** Per-scene tree distribution profiles
+  (Field=70/30 tight English-pasture, OC=40/60 wild-PNW with wider
+  scale jitter) layered on top of v1.4.0's per-scene fog colours.
+- **Scene swap reads as designed.** Shimmer-skeleton overlay replaces
+  the single-spinner pattern.
+
+### Added
+- **`tools/validation/`** — durable validation harness for the polish
+  program. Four tools: `lod-compare.mjs`, `screenshot-golden.mjs`,
+  `input-latency.mjs`, `frame-time-histogram.mjs`. NPM scripts.
+- **`HardwareTier`** extensions — `usesLod1ForFoliage` +
+  `lod0CrossfadeBand` per tier preset.
+- **Per-mode camera zoom + persistence** — `localStorage.sds.cameraZoom.<mode>`.
+  Range applies on mode change. Mobile floor 35.
+- **`_updateFovCinematics`** — per-frame FOV composer reading sprint
+  state through `update(opts)`. Pull-back ramp + dolly-zoom ease.
+- **`HeightFogPatch.js` foundation** — exponential-density height-fog
+  shader patch. Foundation only; activation across all materials
+  deferred (each material's parity needs visual review).
+- **`scene.treeProfile` + `scene.treeScaleJitter`** — per-scene tree
+  distribution + size-jitter overrides on `SceneDef`.
+- **Shimmer-skeleton scene-swap overlay** — designed-loading-state
+  pattern replaces the single spinner.
+
+### Changed
+- **Tree LOD chain on desktop med/high:** LOD0 0-200m, impostor 200m+.
+  Mobile-low keeps the legacy 3-tier chain.
+- **`AtmosphericDesatPatch`** neutralised (`uDesatStrength` and
+  `_desatConfiguredStrength` forced to 0). File kept on disk for
+  back-compat with the kiln impostor + mobile-low LOD1 path.
+- **Per-scene fog** — Field/RH/OC retuned `near 220→350, far 700-800→900`.
+- **Per-scene tree profiles** — Field 70/30 (jitter 0.85-1.15), RH
+  50/50 (default jitter), OC 40/60 (jitter 0.75-1.30).
+
+### Removed
+- **`uMatchBoost` calibration plumbing (~120 LOC)** —
+  `js/kiln-impostor-material.js` shader uniform + multiplier line +
+  uniforms entry; `TerrainBuilder.setImpostorCalibrationLUT` + apply
+  loop; `main.js` LUT fetch + bind; `tools/generate-impostor-lut.mjs`
+  generator; `assets/impostor-calibration-lut.json` runtime asset.
+  Phase B's LOD-seam dissolution removed the structural reason for
+  per-(scene, species) calibration.
+
+### Deferred to Cycle 26+
+- **Aerial-perspective LUT** (32×32×32 R11G11B10F precomputed
+  scattering) — multi-day work; HeightFogPatch.js is the practical
+  core, the LUT will layer on top later as a relighting input.
+- **8×4 impostor atlas re-bake + padded mips + hybrid trunk-mesh** —
+  Pixel Forge multi-hour bake + visual review; existing 4×4 atlas
+  stays.
+- **Full camera state-machine collapse** (single `_update*` →
+  state-machine driven). Game-feel-critical refactor; the additive
+  cinematics shipped close most of the user-visible gap.
+- **Start screen flow restructure** (Mode → Scene → Dog reorder +
+  hero-art ScenePicker + live WebGL DogSelection inset + cinematic
+  orbits + tutorial overlay) — multi-day React refactor.
+- **6 fresh tree variants** (deciduous-small/medium/large + birch +
+  conifer-reintro + fall-color) — recipe iteration + 6 fresh bakes
+  + 6 impostor re-bakes (~16-24hr).
+
+### Validation
+- vitest 188/188 pass.
+- Production build clean.
+- Sim-baseline byte-identical (no `shared/MovementPhysics.js` change).
+- `tools/validation/lod-compare.mjs` baseline captured at
+  `cycle25-validation/phaseA/lod-baseline-field.json`.
+- All MP e2e specs (19 total) green on chromium-mp.
+
 ## [2.0.0-rc.1] — 2026-05-06 (Cycle 25 partial — meta-cycle overnight)
 
 Release candidate. Partial mega-Cycle 25 — autonomous overnight run on

@@ -1,4 +1,12 @@
-# Wake-state report — 2026-05-06
+# Wake-state report — 2026-05-06 (FINAL, post-resume)
+
+> **Update post-deploy:** Matt requested resume after the initial
+> wake-state. The four parked phases (C, D, F, G) were re-attempted
+> in a more conservative additive scope. Final tag is **`v2.0.0`**.
+> See bottom section "Resume run — what landed after first push" for
+> details.
+
+# Original wake-state report — 2026-05-06
 
 > Autonomous overnight run on branch `meta-cycle-overnight-2026-05-06`.
 > Read this first when reviewing morning-of-the-6th.
@@ -150,3 +158,127 @@ main (c817397)
 
 `git log --first-parent meta-cycle-overnight-2026-05-06 ^main` shows
 every shipped phase as its own commit.
+
+---
+
+## Resume run — what landed after first push
+
+After the initial v2.0.0-rc.1 deploy, the four parked phases were
+re-attempted with a more honest "what's actually shippable in
+autonomous overnight" scope. Each closed as a partial that lands the
+practical core without the multi-day pieces.
+
+### Phase C — atmospheric truth (foundation)
+**Commit:** `a804a29` `feat(cycle-25-C): height-fog patch foundation`
+
+`js/shaders/HeightFogPatch.js` ships as the practical core of
+"atmospheric truth" — exponential-density height fog as an
+onBeforeCompile patch. **File added but not yet activated** on any
+material; activation across leaf MeshStandardMaterial + ground +
+mountains + kiln impostor needs coordinated visual review per
+material. Foundation lands here so a real Cycle 26 can roll it out
+material-by-material with goldens.
+
+The original 32×32×32 R11G11B10F aerial-perspective LUT
+(Hillaire 2020 / Bruneton-style precomputed scattering) stays
+deferred — multi-day work.
+
+### Phase D — impostor parity (LOC reduction)
+**Commit:** `52f7aca` `feat(cycle-25-D): delete uMatchBoost (~120 LOC)`
+
+Deleted:
+- `kiln-impostor-material.js`: `uMatchBoost` uniform decl +
+  `reflected *= uMatchBoost` line + uniforms entry
+- `TerrainBuilder.setImpostorCalibrationLUT()` + apply loop in
+  `createTrees`
+- `main.js` LUT fetch + bind in `_buildSceneBody`
+- `tools/generate-impostor-lut.mjs` (deleted)
+- `assets/impostor-calibration-lut.json` (deleted)
+
+The Cycle 21 calibration vector compensated for the per-(scene,
+species) ratio between 4×4 atlas pixels and LOD0 GGX output. Phase
+B's LOD seam dissolution makes that delta no longer visually
+relevant on desktop.
+
+8×4 atlas re-bake + padded mips + hybrid trunk-mesh stays parked —
+Pixel Forge multi-hour bake + visual review work.
+
+### Phase E — camera cinematics (additive)
+**Commit:** `116efea` `feat(cycle-25-E+): FOV pull-back + sprint dolly-zoom`
+
+`SceneManager.updateCamera` now passes `{ isSprinting }` opts to
+`CameraController.update`. New `_updateFovCinematics`:
+- **Follow zoom-out pull-back:** distance 12 → FOV 50°, distance 40
+  → FOV 38°. Slight tele compression on zoom-out.
+- **Sprint dolly-zoom:** +2° FOV when sprinting, eased in/out with
+  0.4s time constant.
+
+`camera.fov` writes only when delta > 0.05° to avoid GPU
+`updateProjectionMatrix` thrash.
+
+Full state-machine collapse (single `_update*` → state-machine
+driven) stays deferred — game-feel-critical refactor.
+
+### Phase F — start screen polish (additive)
+**Commit:** `ef83447` `feat(cycle-25-F): shimmer-skeleton scene-swap overlay`
+
+`SceneSwapOverlay` upgraded from single-spinner to
+hero-card + 3-content-rows shimmer-skeleton with diagonal sweep.
+Spinner kept as a small trailing affordance.
+
+Full Mode → Scene → Dog flow restructure + hero-art ScenePicker +
+live WebGL DogSelection inset + cinematic background orbits +
+tutorial overlay stays deferred — multi-day React refactor.
+
+### Phase G — tree art direction (per-scene profiles)
+**Commit:** `16ecb72` `feat(cycle-25-G): per-scene tree distribution profiles + scale jitter`
+
+`SceneDef` gains `treeProfile` (tree1/tree2 mix ratio) +
+`treeScaleJitter` (size variation range). Per-scene values:
+- Field          tree1 0.7 / tree2 0.3, jitter 0.85-1.15  (English pasture)
+- Rolling Hills  tree1 0.5 / tree2 0.5, jitter 0.80-1.20  (Mediterranean)
+- Open Country   tree1 0.4 / tree2 0.6, jitter 0.75-1.30  (Pacific NW)
+
+Schema + plumbing land here so a future Cycle 30+ can drop new tree
+variants into the profile without re-touching this code.
+
+The 6-variant bake program (deciduous-small/medium/large + birch +
+conifer-reintro + fall-color) stays deferred — recipe iteration +
+6 fresh bakes + 6 impostor re-bakes.
+
+## Final state
+
+- **Tag:** `v2.0.0` on `meta-cycle-overnight-2026-05-06` after this
+  commit.
+- **Branch pushed.** Main fast-forwarded after first push.
+- **Production deploy** triggered by the v1.5.0 + initial Cycle-25
+  push, then again by this v2.0.0 push.
+- **vitest 188/188.** sim-baseline byte-identical.
+- **No `shared/MovementPhysics.js` touched.** No frozen-file changes.
+
+## What's still genuinely deferred to Cycle 26+
+
+These are real "Cycle of their own" deliverables, not laziness:
+
+1. **Aerial-perspective LUT** — Hillaire 2020 precomputed scattering
+   needs sun-driven 3D-texture regen + per-material LUT integration.
+   The HeightFogPatch.js foundation ships here; the LUT layers on
+   top later as a relighting input.
+2. **8×4 impostor atlas re-bake** — needs the Pixel Forge bake to
+   run on Windows (CDP-pipe workaround per Cycle 20 finding) + visual
+   review of new atlases per scene per ToD.
+3. **HeightFogPatch material rollout** — foundation file ships
+   unused; activation needs per-material visual review against
+   linear-fog baselines.
+4. **Camera state-machine full collapse** — `_updateClassic`,
+   `_updateFollow`, `_updateFree` consolidated to a single state
+   reading `{ targetDistance, targetHeight, yawSource, fov }`. Risky
+   refactor on game-feel-critical code; additive cinematics shipped
+   here close most of the user-visible gap.
+5. **Start screen flow restructure** — Mode → Scene → Dog reorder +
+   hero-art ScenePicker + live WebGL DogSelection inset + cinematic
+   background orbits + first-time tutorial overlay. Multi-day React
+   refactor.
+6. **6 fresh tree variants + landmark trees** — recipe authoring +
+   6 fresh bakes + 6 impostor re-bakes + per-scene landmark
+   positioning. Multi-day art-direction work.
