@@ -86,15 +86,61 @@ export function SceneSwapOverlay() {
             pointerEvents: 'auto',
         }
     }, createElement('div', {
-        style: { textAlign: 'center', maxWidth: '320px', padding: '0 1rem' }
+        style: { textAlign: 'center', maxWidth: '420px', padding: '0 1.5rem', width: '100%' }
     }, [
+        // Cycle 25 Phase F (additive): shimmer skeleton card replaces the
+        // single-spinner pattern. Reads as a designed loading state — a
+        // tall hero panel + three thinner content rows shimmering on a
+        // diagonal sweep — instead of "the scene is broken, here's a
+        // spinner." Spinner kept as the trailing element for users who
+        // prefer the affordance.
+        createElement('div', {
+            key: 'skel-hero',
+            className: 'sds-skel sds-skel-hero',
+            style: {
+                width: '100%',
+                height: '160px',
+                borderRadius: '12px',
+                marginBottom: '1rem',
+            }
+        }),
+        createElement('div', {
+            key: 'skel-row-1',
+            className: 'sds-skel sds-skel-row',
+            style: {
+                width: '78%',
+                height: '14px',
+                borderRadius: '6px',
+                margin: '0 auto 0.6rem',
+            }
+        }),
+        createElement('div', {
+            key: 'skel-row-2',
+            className: 'sds-skel sds-skel-row',
+            style: {
+                width: '60%',
+                height: '14px',
+                borderRadius: '6px',
+                margin: '0 auto 0.6rem',
+            }
+        }),
+        createElement('div', {
+            key: 'skel-row-3',
+            className: 'sds-skel sds-skel-row',
+            style: {
+                width: '70%',
+                height: '14px',
+                borderRadius: '6px',
+                margin: '0 auto 1.4rem',
+            }
+        }),
         createElement('div', {
             key: 'spinner',
             style: {
-                width: '40px',
-                height: '40px',
-                margin: '0 auto 1rem',
-                border: '3px solid rgba(255, 255, 255, 0.15)',
+                width: '24px',
+                height: '24px',
+                margin: '0 auto 0.6rem',
+                border: '2px solid rgba(255, 255, 255, 0.15)',
                 borderTopColor: '#00BFFF',
                 borderRadius: '50%',
                 animation: 'sds-swap-spin 0.9s linear infinite',
@@ -103,15 +149,34 @@ export function SceneSwapOverlay() {
         createElement('div', {
             key: 'label',
             style: {
-                fontSize: '0.95rem',
-                opacity: 0.9,
+                fontSize: '0.85rem',
+                opacity: 0.7,
                 letterSpacing: '0.02em',
             }
         }, error ? 'Reloading…' : 'Loading scene…'),
         createElement('style', {
             key: 'kf',
             dangerouslySetInnerHTML: {
-                __html: '@keyframes sds-swap-spin { to { transform: rotate(360deg); } }'
+                __html: [
+                    '@keyframes sds-swap-spin { to { transform: rotate(360deg); } }',
+                    '@keyframes sds-shimmer {',
+                    '  0%   { background-position: -200% 0; }',
+                    '  100% { background-position: 200% 0; }',
+                    '}',
+                    '.sds-skel {',
+                    '  background: linear-gradient(',
+                    '    90deg,',
+                    '    rgba(255,255,255,0.05) 0%,',
+                    '    rgba(255,255,255,0.12) 40%,',
+                    '    rgba(255,255,255,0.18) 50%,',
+                    '    rgba(255,255,255,0.12) 60%,',
+                    '    rgba(255,255,255,0.05) 100%',
+                    '  );',
+                    '  background-size: 200% 100%;',
+                    '  animation: sds-shimmer 1.6s ease-in-out infinite;',
+                    '  border: 1px solid rgba(255,255,255,0.06);',
+                    '}',
+                ].join('\n')
             }
         })
     ]));
