@@ -111,6 +111,34 @@ export class CameraController {
         this.maxDistance = 150;
         this.distance = 80;
 
+        // Cycle 25 Phase E (minimal): per-mode zoom ranges + persistence.
+        // The full state-machine collapse is parked, but per-mode zoom is
+        // a clean additive change. Range resolution happens inside
+        // setZoom/handleWheel via _zoomRangeForMode(). Persistence keys
+        // are `sds.cameraZoom.<mode>` in localStorage.
+        // Mobile floor stays 35 across all modes — touch zoom precision
+        // collapses below that.
+        this._zoomRangeByMode = {
+            classic: { min: isMobile ? 35 : 20, max: 150 },
+            follow:  { min: isMobile ? 35 : 12, max: 40 },
+            free:    { min: isMobile ? 35 : 15, max: 60 },
+        };
+        this._zoomByMode = {
+            classic: 80,
+            follow:  25,
+            free:    35,
+        };
+        try {
+            for (const m of ['classic', 'follow', 'free']) {
+                const raw = (typeof localStorage !== 'undefined') && localStorage.getItem(`sds.cameraZoom.${m}`);
+                const v = raw == null ? NaN : parseFloat(raw);
+                if (Number.isFinite(v)) {
+                    const r = this._zoomRangeByMode[m];
+                    this._zoomByMode[m] = Math.max(r.min, Math.min(r.max, v));
+                }
+            }
+        } catch { /* localStorage unavailable; keep defaults */ }
+
         // Competitive gate orientation (Classic mode).
         this.competitiveDirection = null;
 
@@ -211,6 +239,21 @@ export class CameraController {
         }
 
         this.mode = mode;
+
+        // Cycle 25 Phase E (minimal): on mode change restore the per-mode
+        // zoom + bring legacy minDistance/maxDistance fields in line with
+        // the new range.
+        if (this._zoomByMode) {
+            const r = this._zoomRangeForMode(mode);
+            this.minDistance = r.min;
+            this.maxDistance = r.max;
+            const stored = this._zoomByMode[mode];
+            if (typeof stored === 'number') {
+                this.distance = Math.max(r.min, Math.min(r.max, stored));
+            } else {
+                this.distance = Math.max(r.min, Math.min(r.max, this.distance));
+            }
+        }
     }
 
     cycleMode() {
@@ -228,8 +271,31 @@ export class CameraController {
         else if (this.freeYaw < -Math.PI) this.freeYaw += 2 * Math.PI;
     }
 
+    /**
+     * Cycle 25 Phase E (minimal): zoom range resolves per-mode rather than
+     * from the legacy single (minDistance, maxDistance) pair. The legacy
+     * fields are still updated so any external readers stay consistent
+     * with the active mode.
+     */
+    _zoomRangeForMode(mode) {
+        return this._zoomRangeByMode?.[mode] ?? { min: this.minDistance, max: this.maxDistance };
+    }
+
     setZoom(distance) {
-        this.distance = Math.max(this.minDistance, Math.min(this.maxDistance, distance));
+        const r = this._zoomRangeForMode(this.mode);
+        this.distance = Math.max(r.min, Math.min(r.max, distance));
+        if (this._zoomByMode) {
+            this._zoomByMode[this.mode] = this.distance;
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem(`sds.cameraZoom.${this.mode}`, String(this.distance));
+                }
+            } catch { /* ignore */ }
+        }
+        // Keep legacy fields aligned with active mode so external code
+        // that reads minDistance/maxDistance sees the live range.
+        this.minDistance = r.min;
+        this.maxDistance = r.max;
     }
 
     getZoom() { return this.distance; }
