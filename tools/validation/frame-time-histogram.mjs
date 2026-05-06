@@ -50,14 +50,14 @@ async function run() {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
 
   // Wait for __perfHarness install (gated on perfMode=1) AND ready state
-  // (perfMon.isEnabled + sheep populated + frameCount > 30).
+  // (perfMon.isEnabled + sheep populated + frameCount > 30). __perfHarness
+  // can transiently disappear during scene swap; merge the predicate so
+  // a single missed tick doesn't reject.
   await page.waitForFunction(
-    () => !!window.__perfHarness && typeof window.__perfHarness.isReady === 'function',
-    null,
-    { timeout: 60_000 },
-  );
-  await page.waitForFunction(
-    () => window.__perfHarness.isReady(),
+    () => {
+      const ph = window.__perfHarness;
+      return !!ph && typeof ph.isReady === 'function' && ph.isReady();
+    },
     null,
     { timeout: 90_000 },
   );
