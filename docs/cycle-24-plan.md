@@ -107,19 +107,16 @@ Per Matt's mid-cycle directive: ensure each player sees the correct dog mesh for
 ### Hard stop
 - Real wiring bug surfaces (dog type doesn't propagate, asset 404 crashes the page) → escalate to Matt before fixing in this phase.
 
-## Phase 5 — Optional spikes (parallel-safe)
+## Phase 5 — DEFERRED to polish program
 
-### Phase 5a — Render-texture grass-trample (~6hr, optional)
+**Cycle 24 rev 2 (2026-05-06):** the original Phase 5a (grass-trample spike) and Phase 5b (WebGPU spike) are deferred into the **polish program** ([`polish-program.md`](polish-program.md)) rather than landing in Cycle 24. Reason: Cycle 24's scope is MP testing + reconnect grace + dog wiring; the foliage/renderer spikes don't compose with that scope and dilute the cycle. The polish program (Cycles 25-30) absorbs them as Cycle 26+ candidates after the LOD truth + atmospheric truth foundations land.
 
-Per [`cycle-24-research-foliage.md`](cycle-24-research-foliage.md): complement, not replace, the 220-cap uniform path. AC Shadows + Ghost of Yōtei pattern. 64×64 RGBA float texture (WebGL2-compatible, no compute required) tracking dynamic interactor positions; grass shader samples for per-fragment displacement.
+Specifically:
 
-Acceptance: prototype branch only. Capture before/after capture-velocity dog-circle test. Compare visual quality + perf delta vs uniform path. **Don't ship to main**; commit as `cycle-24-spike-grass-trample` branch for Cycle 25 evaluation.
+- **Render-texture grass-trample** — re-evaluated as Cycle 26+ candidate after the aerial-perspective LUT lands (the trample displacement composes with the LUT's height-fog density output for proper dust-kick atmospherics). See [`cycle-24-research-foliage.md`](cycle-24-research-foliage.md).
+- **WebGPU spike** — re-evaluated as Cycle 27+ candidate after the impostor 8×4 re-bake lands (some BatchedMesh-on-WebGPU patterns assume per-instance LOD which the new impostor approach makes optional). See [`cycle-24-research-batched-webgpu.md`](cycle-24-research-batched-webgpu.md).
 
-### Phase 5b — `?renderer=webgpu` spike (~3hr, optional)
-
-Per [`cycle-24-research-batched-webgpu.md`](cycle-24-research-batched-webgpu.md): cheap insurance. URL flag swaps `WebGLRenderer` for `WebGPURenderer` (Three.js zero-config since r171). Verify scene loads, no shader compilation errors, basic gameplay works.
-
-Acceptance: green/red signal. If green, commit feature flag with `?renderer=webgpu` documented in NEXT_SESSION.md tunable knobs. If red, save error log to `cycle24-validation/phase5b/` and document in BACKLOG for Cycle 26+ when WebGPU coverage clears 95%.
+Cycle 24 Phase 5 is intentionally empty. Phase 6 (ship `v1.5.0`) is the next phase after Phase 4.
 
 ## Phase 6 — Adversarial regression gates + ship v1.5.0 (~3hr)
 
@@ -147,15 +144,14 @@ Acceptance: green/red signal. If green, commit feature flag with `?renderer=webg
 ## Dependencies
 
 ```
-Phase 1 (lobby) ──→ Phase 2 (in-game + swap) ──→ Phase 6 (ship)
+Phase 1 (lobby) ──→ Phase 2 (in-game + swap) ──→ Phase 6 (ship v1.5.0)
                 ├─→ Phase 3 (reconnect grace)
                 └─→ Phase 4 (MP dog wiring)
 
-Phase 5a (trample spike)  ─── parallel, optional
-Phase 5b (webgpu spike)   ─── parallel, optional
+Phase 5  ── DEFERRED to polish program (Cycles 25-30)
 ```
 
-Phase 1's helpers gate 2/3/4. 5a + 5b are independent and can run any time. Phase 6 closes once 1+2+3 (and 4 if shipped) are green.
+Phase 1's helpers gate 2/3/4. Phase 6 closes once 1+2+3 (and 4 if shipped) are green. Polish program ([`polish-program.md`](polish-program.md)) kicks off at Cycle 25 after `v1.5.0` ships.
 
 ## Frozen files (cycle-specific additions)
 
@@ -170,7 +166,7 @@ All [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) entries apply.
 2. Sim-baseline byte drift from any MP test.
 3. Reconnect grace timer leak (timeout fires after DO is destroyed).
 4. Dog-asset 404 in MP that isn't already a known issue — surface before patching.
-5. Phase 5 spike accidentally landing on `main` instead of its branch.
+5. ~~Phase 5 spike accidentally landing on `main`~~ — Phase 5 deferred to polish program; this hard-stop no longer applies.
 
 ## What NOT to do during this cycle
 
