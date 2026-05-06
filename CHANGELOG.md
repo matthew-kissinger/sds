@@ -4,6 +4,77 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.0.0-rc.1] — 2026-05-06 (Cycle 25 partial — meta-cycle overnight)
+
+Release candidate. Partial mega-Cycle 25 — autonomous overnight run on
+branch `meta-cycle-overnight-2026-05-06`. Three phases shipped (A, B,
+E-minimal), four phases parked with `cycle25-validation/phase{C,D,F,G}/HARDSTOP.md`
+each. **Not pushed to origin or production**; gated on Matt's morning
+review per [`docs/meta-cycle-execution.md`](docs/meta-cycle-execution.md).
+
+See [`docs/wake-state-2026-05-06.md`](docs/wake-state-2026-05-06.md) for
+the full wake-state report enumerating shipped/parked/recommended-next.
+
+### Added
+- **`tools/validation/`** — durable validation harness for the polish
+  program. Four tools: `lod-compare.mjs` (silhouette IoU + dE2000 +
+  luma delta), `screenshot-golden.mjs` (12-cell SSIM matrix with
+  --capture/--diff/--baseline modes), `input-latency.mjs`
+  (synthesised keypress → next-paint), `frame-time-histogram.mjs`
+  (drives `__perfHarness.startSampling`). NPM scripts
+  `validation:lod / :screenshots / :latency / :perf / :all`.
+- **HardwareTier extensions** — `usesLod1ForFoliage` + `lod0CrossfadeBand`
+  per tier preset. Mobile-low keeps the meshopt LOD1 chain (perf
+  headroom); desktop med/high drops it (silhouette truth).
+- **Per-mode camera zoom + persistence** — Follow 12-40, Free 15-60,
+  Classic 20-150 (mobile floor 35). `localStorage.sds.cameraZoom.<mode>`
+  persists the per-mode value across sessions. Active range applies
+  on mode change.
+
+### Changed
+- **Tree LOD chain** on desktop med/high tiers: LOD0 0-200m, impostor
+  200m+. The 80m LOD1 mid-band is gone. Mobile-low keeps the existing
+  3-tier chain.
+- **`AtmosphericDesatPatch`** neutralised: `uDesatStrength` forced to 0,
+  `_desatConfiguredStrength` forced to 0. The patch was masking the
+  LOD1 silhouette mismatch we just removed. File stays on disk for
+  back-compat with the kiln impostor + mobile-low LOD1 path; it's a
+  per-fragment no-op now. Full file delete deferred until Phase C
+  aerial-LUT lands and the kiln impostor stops referencing the
+  uniforms.
+- **Per-scene fog retuned** from "structural mask" to "horizon haze
+  only": near 220→350, far 700-800→900 across field / rolling-hills /
+  open-country.
+
+### Parked (HARDSTOP.md per phase)
+- **Phase C — atmospheric truth** (aerial-perspective LUT + height-fog
+  density patch + THREE.Fog replacement). Scope-too-large for
+  autonomous overnight — multi-day-class work.
+- **Phase D — impostor parity** (8×4 atlas re-bake + padded mips +
+  hybrid trunk-mesh + `uMatchBoost` deletion). Pixel Forge re-bake on
+  Windows + visual review is multi-hour work; sky-LUT-coupled
+  relighting depends on Phase C.
+- **Phase F — start screen UX** (Mode→Scene→Dog flow restructure +
+  hero-art ScenePicker + live WebGL DogSelection + scripted background
+  orbits + tutorial overlay). Multi-day React refactor; depends on
+  Phase E full state machine.
+- **Phase G — tree art direction** (6 tree variants + per-scene
+  distribution profiles + landmark trees + embedded wind in impostor
+  bake). Depends on Phase D atlas pipeline; recipe authoring is
+  multi-day.
+
+### Validation
+- vitest 188/188 pass.
+- Production build clean: 835.92 KB main / 250 KB gzip (+1 KB vs
+  v1.5.0 — Phase E per-mode zoom plumbing).
+- Sim-baseline byte-identical (no `shared/` core change).
+
+### Tag
+- `v2.0.0-rc.1` on `meta-cycle-overnight-2026-05-06` (NOT pushed).
+- Phase tags `cycle-25-phase{A,B,E}-complete` on the same branch.
+- Matt's morning review decides: merge to main + push tag → triggers
+  GH Actions deploy, OR cherry-pick subset → drop the rest.
+
 ## [1.5.0] — 2026-05-06 (Cycle 24 — mp-audit-and-test-coverage)
 
 This release codifies the Cycle 23 multiplayer cheap-wins under a Playwright two-tab regression suite, adds a real 15-second reconnect grace window so MP guests can background their phone in an elevator without losing the session, and locks down each player's dog-mesh selection across the full host↔guest path.
