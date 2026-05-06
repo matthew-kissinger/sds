@@ -373,19 +373,69 @@ export class CameraController {
      * Drive the camera per-frame. `dogPosition` is a Vector2D (x,z); facing
      * is the dog's velocity vector (Vector2D, may be zero).
      */
-    update(dogPosition, dogFacing, deltaTime = 1 / 60) {
+    update(dogPosition, dogFacing, deltaTime = 1 / 60, opts = {}) {
         if (!dogPosition) return;
 
         switch (this.mode) {
             case CameraMode.FOLLOW:
                 this._updateFollow(dogPosition, dogFacing, deltaTime);
-                return;
+                break;
             case CameraMode.FREE:
                 this._updateFree(dogPosition, deltaTime);
-                return;
+                break;
             case CameraMode.CLASSIC:
             default:
                 this._updateClassic(dogPosition, deltaTime);
+        }
+
+        // Cycle 25 Phase E: FOV cinematics. Composes per-frame on top of
+        // whatever the per-mode update wrote. Two effects:
+        //   1. FOV-driven pull-back (Follow only): distance ∈ [12, 40]
+        //      ramps FOV 50° → 38° (slight tele) for cinematic compression
+        //      on zoom-out. Slows the parallax for far framings without
+        //      moving the camera further out.
+        //   2. Sprint dolly-zoom: +2° FOV when isSprinting, eased in/out
+        //      with a 0.4s time constant. Reads as a tiny FOV pulse on
+        //      sprint enter/exit.
+        this._updateFovCinematics(deltaTime, !!opts.isSprinting);
+    }
+
+    /**
+     * Cycle 25 Phase E. Compose FOV from base mode-FOV + zoom pull-back +
+     * sprint dolly-zoom. Direct camera.fov writes only commit when the
+     * value changes by > 0.05° to avoid GPU updateProjectionMatrix
+     * spinning every frame.
+     */
+    _updateFovCinematics(deltaTime, isSprinting) {
+        if (!this.camera) return;
+        if (!this._fovState) {
+            this._fovState = {
+                baseFov: this.camera.fov || 75,
+                sprintBlend: 0,
+            };
+        }
+        const s = this._fovState;
+        // Sprint blend eases toward 1 when sprinting, 0 otherwise. 0.4s
+        // time constant: dt-aware exponential approach.
+        const target = isSprinting ? 1 : 0;
+        const tau = 0.4;
+        const k = 1 - Math.exp(-Math.max(0, deltaTime) / tau);
+        s.sprintBlend += (target - s.sprintBlend) * k;
+
+        let fov = s.baseFov;
+        if (this.mode === CameraMode.FOLLOW) {
+            // Pull-back ramp: distance 12 → 50°, distance 40 → 38°.
+            const r = this._zoomRangeForMode('follow');
+            const tNorm = (this.distance - r.min) / Math.max(1, r.max - r.min);
+            const tClamped = Math.min(1, Math.max(0, tNorm));
+            fov = 50 - (50 - 38) * tClamped;
+        }
+        // Sprint dolly: +2° FOV at full blend.
+        fov += 2 * s.sprintBlend;
+
+        if (Math.abs(this.camera.fov - fov) > 0.05) {
+            this.camera.fov = fov;
+            this.camera.updateProjectionMatrix();
         }
     }
 

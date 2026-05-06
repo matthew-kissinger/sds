@@ -249,7 +249,9 @@ export class SceneManager {
         // so OrbitControls can pose the camera for hero-shot framing while
         // the simulation keeps running (sheep stay mid-flock).
         if (typeof window !== 'undefined' && window.__sdsCinema?.freeFlyActive) return;
-        this.cameraController.update(sheepdog.position, sheepdog.velocity, deltaTime);
+        this.cameraController.update(sheepdog.position, sheepdog.velocity, deltaTime, {
+            isSprinting: !!sheepdog.isSprinting,
+        });
     }
 
     setMobileControls(mobileControls) {
