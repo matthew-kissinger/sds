@@ -111,21 +111,23 @@ export class CameraController {
         this.maxDistance = 150;
         this.distance = 80;
 
-        // Cycle 25 Phase E (minimal): per-mode zoom ranges + persistence.
-        // The full state-machine collapse is parked, but per-mode zoom is
-        // a clean additive change. Range resolution happens inside
-        // setZoom/handleWheel via _zoomRangeForMode(). Persistence keys
-        // are `sds.cameraZoom.<mode>` in localStorage.
-        // Mobile floor stays 35 across all modes — touch zoom precision
-        // collapses below that.
+        // Cycle 25 Phase E: per-mode zoom ranges + persistence.
+        // Cycle 25 Phase E hotfix (2026-05-06): Follow defaults to 22
+        // (matching legacy FOLLOW_DISTANCE const so post-fix behaviour is
+        // visually identical to pre-Phase-E at default zoom). Mobile floor
+        // was 35 — too tight for Follow which sits much closer than
+        // Classic; relaxed to 18 so mobile pinch can zoom in legibly.
+        // Range resolution happens inside setZoom/handleWheel via
+        // _zoomRangeForMode(). Persistence keys are
+        // `sds.cameraZoom.<mode>` in localStorage.
         this._zoomRangeByMode = {
             classic: { min: isMobile ? 35 : 20, max: 150 },
-            follow:  { min: isMobile ? 35 : 12, max: 40 },
-            free:    { min: isMobile ? 35 : 15, max: 60 },
+            follow:  { min: isMobile ? 18 : 12, max: 40 },
+            free:    { min: isMobile ? 24 : 15, max: 60 },
         };
         this._zoomByMode = {
             classic: 80,
-            follow:  25,
+            follow:  22,  // matches legacy FOLLOW_DISTANCE const
             free:    35,
         };
         try {
@@ -422,14 +424,15 @@ export class CameraController {
         const k = 1 - Math.exp(-Math.max(0, deltaTime) / tau);
         s.sprintBlend += (target - s.sprintBlend) * k;
 
+        // Cycle 25 Phase E hotfix (2026-05-06): FOV pull-back removed from
+        // Follow mode. The original ramp (50° at d=12 → 38° at d=40) was
+        // ~30° of tele compared to the legacy 75° base, which read as a
+        // major angle/scale change rather than the intended subtle
+        // cinematic compression. Follow now stays at base FOV (75°) and
+        // changes the rig distance instead. The sprint dolly-zoom pulse
+        // (+2° transient) is small enough to feel intentional without
+        // destabilising the silhouette.
         let fov = s.baseFov;
-        if (this.mode === CameraMode.FOLLOW) {
-            // Pull-back ramp: distance 12 → 50°, distance 40 → 38°.
-            const r = this._zoomRangeForMode('follow');
-            const tNorm = (this.distance - r.min) / Math.max(1, r.max - r.min);
-            const tClamped = Math.min(1, Math.max(0, tNorm));
-            fov = 50 - (50 - 38) * tClamped;
-        }
         // Sprint dolly: +2° FOV at full blend.
         fov += 2 * s.sprintBlend;
 
@@ -529,11 +532,20 @@ export class CameraController {
         }
 
         // Camera sits behind the dog (opposite the facing dir).
-        const camOffsetX = -Math.sin(this.followYaw) * FOLLOW_DISTANCE;
-        const camOffsetZ = -Math.cos(this.followYaw) * FOLLOW_DISTANCE;
+        // Cycle 25 Phase E hotfix: read this.distance so wheel/pinch zoom
+        // actually changes the rig. Falls back to FOLLOW_DISTANCE legacy
+        // const if the per-mode zoom hasn't been initialised yet.
+        // Height scales mildly with distance so zoom-out doesn't fly the
+        // camera flat into the ground.
+        const followRigDist = (this._zoomByMode && typeof this.distance === 'number')
+            ? this.distance
+            : FOLLOW_DISTANCE;
+        const followHeight = FOLLOW_HEIGHT * (followRigDist / FOLLOW_DISTANCE);
+        const camOffsetX = -Math.sin(this.followYaw) * followRigDist;
+        const camOffsetZ = -Math.cos(this.followYaw) * followRigDist;
         this._tmpTarget.set(
             dogPosition.x + camOffsetX,
-            dogTerrainY + FOLLOW_HEIGHT,
+            dogTerrainY + followHeight,
             dogPosition.z + camOffsetZ
         );
 
@@ -631,9 +643,19 @@ export class CameraController {
             ? this.heightfield.sample(dogPosition.x, dogPosition.z)
             : 0;
 
-        const camOffsetX = -Math.sin(this.freeYaw) * FOLLOW_DISTANCE;
-        const camOffsetZ = -Math.cos(this.freeYaw) * FOLLOW_DISTANCE;
-        let camY = dogTerrainY + FOLLOW_HEIGHT;
+        // Cycle 25 Phase E hotfix: Free reads this.distance for rig
+        // distance so wheel/pinch zoom controls camera distance like
+        // Classic (and now Follow). Falls back to FOLLOW_DISTANCE if the
+        // per-mode zoom hasn't been initialised yet.
+        const freeRigDist = (this._zoomByMode && typeof this.distance === 'number')
+            ? this.distance
+            : FOLLOW_DISTANCE;
+        // Camera height scales mildly with distance so zoom-out doesn't
+        // fly the camera flat into the ground.
+        const heightFactor = freeRigDist / FOLLOW_DISTANCE;
+        const camOffsetX = -Math.sin(this.freeYaw) * freeRigDist;
+        const camOffsetZ = -Math.cos(this.freeYaw) * freeRigDist;
+        let camY = dogTerrainY + FOLLOW_HEIGHT * heightFactor;
         const camX = dogPosition.x + camOffsetX;
         const camZ = dogPosition.z + camOffsetZ;
         if (this.heightfield) {

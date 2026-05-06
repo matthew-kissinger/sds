@@ -4,6 +4,56 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.0.1] — 2026-05-06 (post-v2.0.0 patch — camera + scene picker)
+
+User-reported regressions on the v2.0.0 deploy + scene-picker UX
+upgrade.
+
+### Fixed
+- **Follow / Free wheel + pinch zoom did nothing.** Pre-Phase-E both
+  modes used a hardcoded `FOLLOW_DISTANCE = 22` const for the rig
+  distance and ignored `this.distance`. Phase E's per-mode zoom
+  ranges + setZoom only updated `this.distance`, so the wheel still
+  did nothing visually — but the FOV pull-back ramp DID read
+  `this.distance`, ramping FOV 50°→38° on Follow which read as a
+  major scale + angle shift. Both `_updateFollow` and `_updateFree`
+  now read `this.distance` for the rig distance (with mild height
+  scaling so zoom-out doesn't fly the camera flat into the ground)
+  and the FOV pull-back has been removed from Follow entirely.
+  Sprint dolly-zoom (+2°, 0.4s ease) is retained.
+- **Mobile Follow zoom floor too tight.** Phase E set the mobile
+  floor at 35 across all modes, but Follow defaults to 22 — the
+  mobile floor was clamping Follow zoom to 35 minimum and Free zoom
+  to 35 minimum. Mobile floors relaxed: Follow 18, Free 24, Classic
+  35 (legacy classic floor preserved).
+
+### Changed
+- **Default scene shifted from Home Field to Sheep Dog Island**
+  (formerly "Rolling Hills"). The new landing-page scene is the
+  island-with-corral that players can also see in MP rooms;
+  Home Field stays in the registry as the legacy classic.
+  `DEFAULT_SCENE_ID` in `shared/scenes/index.js` updated; sim-baseline
+  harness pinned to `sceneId: 'field'` so its gated-pasture fixtures
+  stay byte-identical.
+- **Rolling Hills renamed to Sheep Dog Island.** Display name only —
+  scene id stays `rolling-hills` so existing invite links and
+  bookmarks continue to resolve. Description rewritten to lead with
+  the island identity.
+- **ScenePicker rewritten as a scene-postcard row.** Three hero
+  cards (Sheep Dog Island first, then Open Country, then Home Field)
+  with scene-specific gradients, custom SVG silhouettes (island /
+  mountain ring / farmhouse), NEW badges on Sheep Dog Island + Open
+  Country, "Current" pill on the active scene, "Choose your home"
+  uppercase header. Single-column stack on mobile, 3-up grid on
+  desktop. Replaces the 3-button strip that visually clashed with
+  ModeSelection's button grid.
+
+### Validation
+- vitest 188/188 (sim-baseline byte-identical thanks to harness pin).
+- build clean — 836.86 KB main / 250.17 KB gzip (+0.94 KB vs v2.0.0
+  for the new ScenePicker chrome — gradients, SVG silhouettes,
+  per-scene metadata).
+
 ## [2.0.0] — 2026-05-06 (Cycle 25 — polish-mega-cycle)
 
 The polish-program landing. Eight phases across `meta-cycle-overnight-2026-05-06`,

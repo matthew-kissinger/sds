@@ -17,7 +17,10 @@ const SCENES = {
     'open-country': openCountry
 };
 
-export const DEFAULT_SCENE_ID = 'field';
+// Cycle 25 Phase F (2026-05-06 follow-up): default scene shifted from
+// the flat "Home Field" to the island scene (Sheep Dog Island, formerly
+// Rolling Hills). Field stays in the registry as the legacy classic scene.
+export const DEFAULT_SCENE_ID = 'rolling-hills';
 
 /**
  * @param {string} [id] Scene id; defaults to DEFAULT_SCENE_ID.

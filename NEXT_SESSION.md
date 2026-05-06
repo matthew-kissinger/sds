@@ -1,6 +1,60 @@
-# Next Session — Cycle 24 (mp-audit-and-test-coverage)
+# Next Session — post-Cycle-25 (v2.0.1 shipped)
 
-> Updated 2026-05-06 (Cycle 24 Phase 1 closed; Phase 5 spikes deferred to polish program; **polish program drafted as Cycles 25-30**). Phase 1 shipped: `window.__sdsMpProbe()` test global + `?testNoCanvas=1` skip-3D-init flag + `tests/e2e/mp/_helpers.ts` two-context harness + 4 spec files (10 tests) covering lobby create/join/leave/migration/teardown, invite-hash routing, sheep-cap allow-list (3000+5000 + amber warning), and cinematic-flag strip. **30/30 specs green across Chromium + Firefox + WebKit locally** (3.1 min). Two production-relevant findings: (a) [`js/NetworkManager.js:213`](js/NetworkManager.js) `hostChanged` handler reads a hardcoded `false` from broadcast — every client thinks `nm.isHost === false` after host migration, including the new host. Probe routes around it; handler still needs fixing. (b) `AudioManager` constructor was crashing the whole game on Playwright-WebKit (no `AudioContext`) — wrapped in try/catch, defends real Safari profiles too. Cycle 23 still on `main` plus 8 phase tags + `v1.4.0`. **Active plan: [`docs/cycle-24-plan.md`](docs/cycle-24-plan.md).** Four phases remaining: in-game + scene-swap MP coverage (Phase 2), 15s reconnect grace window (Phase 3), MP dog selection wiring + display verification (Phase 4), ship `v1.5.0` (Phase 6). Phase 5 spikes (grass-trample, WebGPU) deferred into the polish program. Five v1.4.0 playtest items deferred to cycle close. Research docs at [`docs/cycle-24-research-mp-testing.md`](docs/cycle-24-research-mp-testing.md), [`docs/cycle-24-research-foliage.md`](docs/cycle-24-research-foliage.md), [`docs/cycle-24-research-batched-webgpu.md`](docs/cycle-24-research-batched-webgpu.md).
+> **Updated 2026-05-06 post-deploy.** Cycle 24 closed as `v1.5.0` and Cycle 25
+> closed as `v2.0.0` in a single autonomous run on branch
+> `meta-cycle-overnight-2026-05-06`. Both pushed to origin + deployed to
+> prod via GH Actions. Patch `v2.0.1` followed: camera regression fix
+> (Follow + Free now read `this.distance` so wheel/pinch zoom works;
+> over-aggressive FOV pull-back removed) + ScenePicker overhaul
+> (Sheep Dog Island as the new default + NEW badges + hero-postcard
+> visual rewrite). All on `main`.
+
+## What just shipped
+
+- **`v1.5.0`** — Cycle 24 close. MP regression specs (in-game state +
+  reconnect grace + dog-wiring) + 15s reconnect grace window in
+  RoomDO + dog-selection wiring docs + 9 net-new e2e specs.
+- **`v2.0.0`** — Cycle 25 polish-mega-cycle close. Eight phases:
+  validation infra; LOD truth (drop LOD1 desktop med/high, neutralise
+  AtmosphericDesatPatch, lift fog 220→350 / 700-800→900); HeightFogPatch
+  foundation; uMatchBoost LOC reduction (~120 LOC + asset + generator);
+  per-mode camera zoom + persistence; per-scene tree distribution
+  profiles; shimmer-skeleton scene-swap overlay; ship.
+- **`v2.0.1`** — post-deploy patch. Camera Follow/Free wheel/pinch zoom
+  fix (was non-functional pre-Phase-E and got worse post-Phase-E
+  because FOV pull-back read the dead `this.distance`); ScenePicker
+  rewrite to scene-postcard layout (3 hero cards, NEW badges on
+  Sheep Dog Island + Open Country, "Choose your home" header, scene-
+  specific gradients + custom SVG silhouettes); default scene shifted
+  from Home Field to Sheep Dog Island; sim-baseline harness pinned to
+  `sceneId: 'field'` so the shift doesn't break the gated-pasture
+  fixtures.
+
+## What's still genuinely deferred to Cycle 26+
+
+These are real "Cycle of their own" deliverables; see CHANGELOG `[2.0.0]`:
+
+1. **Aerial-perspective LUT** — Hillaire 2020 precomputed scattering. The
+   `js/shaders/HeightFogPatch.js` foundation shipped as a no-op file;
+   activation across all materials needs per-material visual review.
+2. **8×4 impostor atlas re-bake + padded mips + hybrid trunk-mesh** —
+   Pixel Forge multi-hour bake + visual review.
+3. **Camera state-machine full collapse** — `_updateClassic /
+   _updateFollow / _updateFree` consolidated to a single state
+   reading `{ targetDistance, targetHeight, yawSource, fov }`.
+4. **Start screen flow restructure** — Mode → Scene → Dog reorder +
+   live WebGL DogSelection inset + cinematic background orbits +
+   first-time tutorial overlay.
+5. **6 fresh tree variants + landmark trees** — recipe authoring +
+   6 fresh bakes + 6 impostor re-bakes.
+
+Cycle 26 plan stub: [`docs/cycle-26-plan.md`](docs/cycle-26-plan.md).
+
+---
+
+## Earlier context (Cycle 24, pre-resume)
+
+> Cycle 24 Phase 1 closed; Phase 5 spikes deferred to polish program; **polish program drafted as Cycles 25-30**. Phase 1 shipped: `window.__sdsMpProbe()` test global + `?testNoCanvas=1` skip-3D-init flag + `tests/e2e/mp/_helpers.ts` two-context harness + 4 spec files (10 tests) covering lobby create/join/leave/migration/teardown, invite-hash routing, sheep-cap allow-list (3000+5000 + amber warning), and cinematic-flag strip. **30/30 specs green across Chromium + Firefox + WebKit locally** (3.1 min). Two production-relevant findings: (a) [`js/NetworkManager.js:213`](js/NetworkManager.js) `hostChanged` handler reads a hardcoded `false` from broadcast — every client thinks `nm.isHost === false` after host migration, including the new host. Probe routes around it; handler still needs fixing. (b) `AudioManager` constructor was crashing the whole game on Playwright-WebKit (no `AudioContext`) — wrapped in try/catch, defends real Safari profiles too. Research docs at [`docs/cycle-24-research-mp-testing.md`](docs/cycle-24-research-mp-testing.md), [`docs/cycle-24-research-foliage.md`](docs/cycle-24-research-foliage.md), [`docs/cycle-24-research-batched-webgpu.md`](docs/cycle-24-research-batched-webgpu.md).
 
 ## Mega-Cycle 25 — autonomous overnight, ships v2.0.0
 

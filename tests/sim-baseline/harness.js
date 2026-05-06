@@ -133,7 +133,12 @@ export function makeSheepdog(id, x, z, overrides = {}) {
 }
 
 export function makeCoopGameState() {
+    // Cycle 25 follow-up: pin sceneId to 'field' explicitly. Sim baselines
+    // exercise the gated-pasture coop case; relying on DEFAULT_SCENE_ID
+    // would couple the fixtures to whatever scene is currently the
+    // landing-page default (now 'rolling-hills' which is gateless island).
     return createGameState({
+        sceneId: 'field',
         totalSheep: 200,
         bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 }
     });

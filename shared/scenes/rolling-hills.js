@@ -7,9 +7,13 @@
  * @type {import('./types.js').SceneDef}
  */
 export const rollingHills = {
+    // Cycle 25 follow-up: scene id stays 'rolling-hills' for URL
+    // back-compat (existing invite links + bookmarks). Display name
+    // upgraded to "Sheep Dog Island" — better captures the island
+    // identity that's been the scene's character since Cycle 5.
     id: 'rolling-hills',
-    name: 'Rolling Hills',
-    description: 'Find the corral on the island. Drive the flock home before they wander into the water.',
+    name: 'Sheep Dog Island',
+    description: 'An island home with rolling hills and a hidden corral. Find it. Drive the flock home before they wander into the water.',
 
     // Sim — Cycle 5 island. Centre at origin, 90m radius, 15m falloff into sea.
     boundary: {
