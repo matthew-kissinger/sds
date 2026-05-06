@@ -66,6 +66,13 @@ export const field = {
         exclusionArea: { minX: 140, maxX: 220, minZ: 120, maxZ: 200 }
     },
 
+    // Cycle 25 Phase G: per-scene tree distribution profile + scale jitter.
+    // Field reads as English-pasture: tree1-leaning mix + tighter scale
+    // variation for a more manicured silhouette. Profile probabilities
+    // sum to 1.
+    treeProfile: { tree1: 0.7, tree2: 0.3 },
+    treeScaleJitter: { min: 0.85, max: 1.15 },
+
     sky: { preset: 'pastoral-noon' },
     // Cycle 25 Phase B: fog retuned from "structural mask" to "horizon
     // haze only". near 220 -> 350 / far 700 -> 900 lifts the mid-distance

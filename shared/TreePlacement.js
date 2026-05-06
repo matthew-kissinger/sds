@@ -277,7 +277,15 @@ export function generateTrees(scene, rng, opts = {}) {
         for (const p of points) {
             const biome = getBiome(p.x, p.z);
             let type;
-            if (biome === 'deciduous') {
+            // Cycle 25 Phase G: per-scene tree distribution profile +
+            // scaleVariation override. Falls back to legacy 60/40 +
+            // 50/50 mix if profile not supplied.
+            const profile = scene?.treeProfile;
+            if (profile && typeof profile === 'object') {
+                // profile is { tree1: p1, tree2: p2 } summing to ~1.
+                const r = rng();
+                type = r < (profile.tree1 ?? 0.5) ? 'tree1' : 'tree2';
+            } else if (biome === 'deciduous') {
                 type = rng() < 0.6 ? 'tree1' : 'tree2';
             } else {
                 // mixed: 50/50 — Cycle 22 pine removal collapsed the
@@ -288,7 +296,11 @@ export function generateTrees(scene, rng, opts = {}) {
             // 0.7-1.3 → 0.80-1.20. Pairs with the wider WOODS_INSIDE_FACTOR
             // to reduce towering-vs-tiny outliers that read as
             // unintentional asymmetry from chase-cam classic.
-            const scaleVariation = 0.80 + rng() * 0.40;
+            // Cycle 25 Phase G: per-scene scaleJitter override. Field
+            // gets 0.85-1.15 (manicured pasture); OC gets 0.75-1.30
+            // (wild forest); RH stays at 0.80-1.20 (default).
+            const jitter = scene?.treeScaleJitter ?? { min: 0.80, max: 1.20 };
+            const scaleVariation = jitter.min + rng() * (jitter.max - jitter.min);
             const finalScale = z.scale * scaleVariation;
             const rotationY = rng() * Math.PI * 2;
             out.push({

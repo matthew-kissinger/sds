@@ -70,6 +70,10 @@ export const rollingHills = {
     // water with the new boundary. If we want set-dressing later it should
     // move inside the island disc.
 
+    // Cycle 25 Phase G: Mediterranean profile — even mix, default jitter.
+    treeProfile: { tree1: 0.5, tree2: 0.5 },
+    treeScaleJitter: { min: 0.80, max: 1.20 },
+
     sky: { preset: 'dusk' },
     // Cycle 23 Phase A1: warm dusk-tinted linear fog. near 200m matches
     // the Cycle 22 atmospheric desat start; far 650m is just past the

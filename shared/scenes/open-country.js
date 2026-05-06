@@ -114,6 +114,11 @@ export const openCountry = {
         holdRequired: 2.0
     },
 
+    // Cycle 25 Phase G: Pacific Northwest profile — tree2-leaning mix +
+    // wider scale variation for wild-forest silhouette diversity.
+    treeProfile: { tree1: 0.4, tree2: 0.6 },
+    treeScaleJitter: { min: 0.75, max: 1.30 },
+
     sky: { preset: 'golden-hour' },
     // Cycle 23 Phase A1: cooler open-horizon linear fog. far 800m clears
     // the 380m island radius + 70m falloff with headroom for the
