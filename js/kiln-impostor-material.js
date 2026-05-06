@@ -213,7 +213,6 @@ uniform vec3 uGroundBounceColor; // ground-bounce ambient tint, pre-multiplied
 uniform float uWrapPow;          // half-Lambert wrap exponent (1.0 = standard, 1.5 = more contrast)
 uniform float uSubsurfaceLift;   // chromatic floor magnitude (0..0.5, foliage-typical 0.10-0.20)
 uniform float uFresnelStrength;  // Schlick rim term magnitude (0 = disabled; 0.04 ≈ MeshStandard metalness=0)
-uniform vec3 uMatchBoost;        // Cycle 21 Phase 2 calibration vec — per-channel multiplier; (1,1,1) = no-op
 uniform float uAlphaTest;
 uniform float uAlphaHashScale;      // Cycle 22 Phase B; 0 = disabled, 1 = full dither
 uniform float uDesatStartM;         // Cycle 22 Phase C; view-space distance where desat begins
@@ -463,14 +462,13 @@ void main() {
   float fresnel = pow(1.0 - dotNV, 5.0) * uFresnelStrength;
   reflected += fresnel * uSunColor;
 
-  // Cycle 21 Phase 2 (2026-05-04): per-(scene, species) calibration boost.
-  // Phase 1 sandbox measured per-channel ratio impostor/LOD0; the LUT
-  // generator (tools/generate-impostor-lut.mjs) inverts those ratios to
-  // produce a multiplier that pulls impostor pixel toward LOD0 magnitude.
-  // Defaults to (1,1,1) so a missing-LUT load is a no-op. Applied AFTER
-  // fresnel so the rim isn't double-tinted, BEFORE tonemapping so the
-  // boost lives in linear-irradiance space (where the ratio was measured).
-  reflected *= uMatchBoost;
+  // Cycle 25 Phase D (2026-05-06): the per-species uMatchBoost calibration
+  // vector was deleted. Phase 21's calibration LUT compensated for the
+  // 4x4 atlas's sampling/bake-property delta against LOD0; with Phase B's
+  // LOD seam dissolved (LOD0 holds 0-200m on desktop, alphaHash crossfade
+  // 180-200m), the boost was correcting a delta that no longer biases the
+  // visible silhouette. Atlas re-bake (8x4 + padded mips) deferred to a
+  // real Cycle 26 — the existing 4x4 atlas stays.
 
   // Cycle 22 Phase C (2026-05-05): atmospheric desat unified with LOD0+LOD1
   // leaves via shared uniforms uDesatStartM / uDesatEndM / uDesatStrength.
@@ -574,11 +572,6 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
       // adding the cool-shifted edge highlight LOD0 had via Three's
       // PBR pipeline. 0 disables.
       uFresnelStrength: { value: 0.04 },
-      // Cycle 21 Phase 2 (2026-05-04): match-boost multiplier per
-      // species. Loader sets this from assets/impostor-calibration-lut.json
-      // at scene init via TerrainBuilder.setImpostorMatchBoost. Default
-      // (1,1,1) = no-op (LUT missing or species not in LUT).
-      uMatchBoost:      { value: new THREE.Vector3(1, 1, 1) },
       // 0.30 instead of 0.40: alpha is bleed-padded 2px into transparent
       // neighbours by Pixel Forge so a lower test pulls in the soft fringe,
       // closing the "snappy" silhouette gap vs LOD0 geometric edges.

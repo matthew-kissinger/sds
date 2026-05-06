@@ -851,37 +851,10 @@ export class TerrainBuilder {
      * @param {number} [sunIntensity=1]      Pre-multiplied into uSunColor for kiln impostors
      * @param {number} [ambientIntensity=1]  Pre-multiplied into uAmbientColor for kiln impostors
      */
-    /**
-     * Cycle 21 Phase 2 (2026-05-04): bind the impostor calibration LUT
-     * loaded from `assets/impostor-calibration-lut.json`. Called once at
-     * scene init by main.js after fetch. The LUT's per-species boost
-     * vector gets written into each kiln material's `uMatchBoost`
-     * uniform when materials are created in createTrees(). Storing the
-     * LUT reference (not the resolved values) means a hot-reload of the
-     * LUT JSON during dev would re-apply on next scene load.
-     *
-     * @param {object} lut Parsed impostor-calibration-lut.json (v1
-     *   schema: { version, boost: { species: [r,g,b] } }).
-     */
-    setImpostorCalibrationLUT(lut) {
-        this._impostorMatchLUT = lut;
-        // If kiln materials are already alive (LUT loaded after createTrees
-        // ran), retroactively apply. Phase 2 v1: createTrees runs after
-        // main.js's await fetch, so this branch is unused, but it's cheap
-        // insurance against future load-order changes.
-        if (this._impostorMaterials && lut?.boost) {
-            for (const mat of this._impostorMaterials) {
-                if (!mat.userData?.isKilnImpostor) continue;
-                const species = mat.userData?.species;
-                const boost = species ? lut.boost[species] : null;
-                if (boost && mat.uniforms.uMatchBoost) {
-                    mat.uniforms.uMatchBoost.value.set(
-                        boost[0] ?? 1, boost[1] ?? 1, boost[2] ?? 1,
-                    );
-                }
-            }
-        }
-    }
+    // Cycle 25 Phase D: setImpostorCalibrationLUT removed alongside the
+    // uMatchBoost shader uniform. With Phase B's LOD seam dissolved on
+    // desktop, the per-species calibration ratio is no longer
+    // structurally needed.
 
     setImpostorTint(sunColor, sunDirWorld = null, ambientColor = null, sunIntensity = 1, ambientIntensity = 1) {
         if (!sunColor || !this._impostorMaterials) return;
@@ -1378,22 +1351,7 @@ export class TerrainBuilder {
             const triple = kilnLoadResults[i];
             if (!triple) continue;
             kilnImpostorByType.set(kilnTreeTypes[i], triple);
-            // Tag the material with its species so setImpostorCalibrationLUT
-            // can retroactively apply boost on hot-LUT reload.
-            if (triple.material?.userData) {
-                triple.material.userData.species = kilnTreeTypes[i];
-            }
-            // Cycle 21 Phase 2 (2026-05-04): apply per-species calibration
-            // boost from impostor-calibration-lut.json. Set once at material
-            // creation — no per-frame update needed since the boost is
-            // sampling/bake-property correction, not lighting state. Defaults
-            // to (1,1,1) when LUT is missing or species absent.
-            const boost = this._impostorMatchLUT?.boost?.[kilnTreeTypes[i]];
-            if (boost && triple.material?.uniforms?.uMatchBoost) {
-                triple.material.uniforms.uMatchBoost.value.set(
-                    boost[0] ?? 1, boost[1] ?? 1, boost[2] ?? 1,
-                );
-            }
+            // Cycle 25 Phase D: uMatchBoost calibration LUT removed.
             // Cycle 22 Phase C: rebind kiln-impostor desat uniforms to the
             // shared TerrainBuilder set so LOD0+LOD1 leaves and the impostor
             // billboard stay in lock-step on tweaks. Must happen after the

@@ -621,27 +621,10 @@ class SheepDogSimulation {
             logStep('Loading 3D models');
             await this.terrainBuilder.loadModels();
 
-            // Cycle 21 Phase 2 (2026-05-04): fetch the impostor calibration
-            // LUT and bind it to TerrainBuilder so the kiln materials' per-
-            // species `uMatchBoost` uniform gets set when createTrees runs.
-            // Cached on the simulation instance — survives scene swaps.
-            // Failure to fetch is non-fatal; impostors fall back to (1,1,1)
-            // boost (no-op).
-            if (!this._impostorLUT) {
-                try {
-                    const res = await fetch('assets/impostor-calibration-lut.json');
-                    if (res.ok) {
-                        this._impostorLUT = await res.json();
-                        logStep('Impostor calibration LUT loaded',
-                            `version=${this._impostorLUT.version} species=${Object.keys(this._impostorLUT.boost || {}).join(',')}`);
-                    }
-                } catch (e) {
-                    console.warn('[main] impostor LUT fetch failed; falling back to identity boost', e);
-                }
-            }
-            if (this._impostorLUT) {
-                this.terrainBuilder.setImpostorCalibrationLUT(this._impostorLUT);
-            }
+            // Cycle 25 Phase D: impostor calibration LUT fetch + bind
+            // removed alongside uMatchBoost. The asset file
+            // assets/impostor-calibration-lut.json may still exist on
+            // disk; nothing references it.
 
             // Verify critical models loaded (especially on iOS)
             const animalModels = Object.keys(this.terrainBuilder.models.animals || {})
