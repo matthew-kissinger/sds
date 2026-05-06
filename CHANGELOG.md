@@ -4,6 +4,31 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] — 2026-05-06 (Cycle 24 — mp-audit-and-test-coverage)
+
+This release codifies the Cycle 23 multiplayer cheap-wins under a Playwright two-tab regression suite, adds a real 15-second reconnect grace window so MP guests can background their phone in an elevator without losing the session, and locks down each player's dog-mesh selection across the full host↔guest path.
+
+### Added
+- **15-second reconnect grace** for in-game disconnects. `RoomDO.handlePlayerDisconnect` schedules a per-playerId timeout when the room is in-game; if the player rebinds via `bindSocket` before the timeout fires, the timeout cancels and the sheepdog stays in-world the whole time. Lobby-state disconnects continue to evict immediately. Every grace activation + cancellation logs to RoomDO console for production audit.
+- **`window.__sdsMpDrop` + `window.__sdsMpReconnect`** test-only globals. Sibling to `__sdsMpProbe`, gated on `?mpProbe=1` / `?perfMode=1`. Drives the reconnect-grace specs without coupling to the mid-cycle React lobby reflow.
+- **Multiplayer dog-selection contract doc** at [`docs/multiplayer-dog-selection.md`](docs/multiplayer-dog-selection.md). Traces the dogType propagation path across the 11 hops UI → REST `/api/rooms` → `RoomDO` `/init` → WS `setDogType` → broadcast → peer render. Names every field name + every silent-coercion point.
+- **6 new MP e2e specs** across 3 files: `tests/e2e/mp/in-game-state.spec.ts` (host-start propagates state, sheepCount, gameMode), `tests/e2e/mp/reconnect-grace.spec.ts` (within-grace retention + reconnect-cancels-eviction), `tests/e2e/mp/dog-selection.spec.ts` (host=pip+guest=sally, default fallback to jep, three-player permutation). All green on chromium-mp; runnable cross-engine via `--project=mp-firefox` / `--project=mp-webkit`.
+
+### Changed
+- **`navigateToMultiplayer(page, opts)`** in `tests/e2e/mp/_helpers.ts` accepts an optional `pickDog` arg so two-tab specs can drive the DogSelection screen with a specific id instead of the default-jep pass-through.
+
+### Validation
+- vitest 188/188 pass (no delta from v1.4.0 — this cycle is purely additive: new e2e specs + new server behaviour, no `shared/` core change).
+- 19 MP e2e specs total green on chromium (10 from Cycle 24 Phase 1 + 9 net-new this cycle), 0 regressed.
+- Production build clean.
+- Sim-baseline byte-identical (no `shared/MovementPhysics.js` change).
+
+### Deferred to Cycle 25 (polish program)
+- Render-texture grass-trample spike — re-evaluate after the aerial-perspective LUT lands so trample displacement composes with height-fog density output.
+- WebGPU `?renderer=webgpu` spike — re-evaluate after the impostor 8×4 atlas re-bake; some BatchedMesh-on-WebGPU patterns assume per-instance LOD which the new impostor pipeline makes optional.
+- Mid-game scene-swap MP regression spec — `sceneId` is fixed at room creation per `worker/src/RoomDO.ts:188`; in-MP scene swap requires either a dedicated worker route or a host-leaves-and-recreates flow, neither in this cycle's scope.
+- Sim-baseline cross-check across two tabs — needs full canvas + input simulation; deferred until Phase A validation infra (Cycle 25) gives us a shared driver pattern.
+
 ## [1.4.0] — 2026-05-05 (Cycle 23 — overhead-polish-grass-LOD-and-mp-cap-fix)
 
 This release closes the v1.3.0 playtest gap list: overhead Classic-camera trees no longer fade into a grey fog smear, sprint stops when stamina runs out, the Open-Country HUD camera-mode chip vertical-stacks below the objective banner, far-ring grass on OC drops ~65% of triangle cost via a meadow-quad LOD, and multiplayer hosts can now run Insane (3000) and Chaos (5000) sheep counts when all guests are on desktop.
