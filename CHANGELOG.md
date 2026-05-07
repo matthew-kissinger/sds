@@ -4,6 +4,39 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.0.3] — 2026-05-07 (post-v2.0.2 patch — Mac white-hue fix)
+
+Mac users (M-series + recent macOS, all browsers) reported that
+loading a scene showed grass-green correctly, then a white hue was
+layered over the whole frame as gameplay started. Symptom shape was
+the fogged-horizon ACES wash, not the cycle-12 white-terrain class
+documented in `docs/mac-bug-research.md`.
+
+### Fixed
+- **Mac scenes washed white at gameplay start.** ACES Filmic tone
+  mapping pushes cool blues — the sky-blue `0x87CEEB` fog color used
+  by every scene — toward white on macOS Metal-ANGLE + extended-sRGB
+  display output. Once cycle-25-B raised fog far to 900m and
+  neutralized `AtmosphericDesatPatch`, distant terrain blended fully
+  toward fog color and the camera framing pulled the wash into ~80%
+  of vertical pixels once gameplay started. Now: Mac platforms (any
+  macOS, all browsers since they all use Metal-ANGLE) get
+  `THREE.NeutralToneMapping` (Khronos PBR Neutral, r162+) which
+  preserves color identity through the same dynamic range. Non-Mac
+  platforms (Windows / Linux / mobile) keep ACES Filmic exactly as
+  before.
+
+### Added
+- **`?tonemap=aces|neutral|linear|none` URL override** for A/B
+  testing. Forces or bypasses the platform branch without a rebuild.
+- **`[TONEMAP] platform — curve` console log** at SceneManager init
+  so the active tone mapping is visible for diagnosis on any device.
+
+### Validation
+- vitest 188/188.
+- build clean — 837.40 KB main / 250.33 KB gzip (+0.6 KB for the
+  platform-detect logic and override parsing).
+
 ## [2.0.2] — 2026-05-06 (post-v2.0.1 patch — closer zoom-in + zoom-bar fix + scene-picker rev2)
 
 ### Fixed

@@ -1,19 +1,18 @@
 # Next Session — Cycle 26 (player-facing layer)
 
-> **Updated 2026-05-07** after Mac white-hue fix landed on `main`
-> ([`b5ff6ef`](https://github.com/matthew-kissinger/sds/commit/b5ff6ef)
-> — ACES → Neutral tone mapping on Mac platforms only). Cycle 25
-> closed as `v2.0.0`; patches `v2.0.1` (camera + ScenePicker) and
-> `v2.0.2` (closer zoom-in floors + zoom-bar tracks active mode)
-> shipped on main. Cycle 26 deliberately pivots away from
-> world-rendering and toward the **player-facing layer** — UX/UI,
-> design, engagement, marketing, SEO, images & clips, community,
-> plus polish/fixes/perf. Scope is intentionally soft until Matt
-> locks it down at `/cycle-start`.
+> **Updated 2026-05-07** with `v2.0.3` released for the Mac
+> white-hue fix (ACES → Neutral on Mac platforms only). Cycle 25
+> closed as `v2.0.0`; patches `v2.0.1` (camera + ScenePicker),
+> `v2.0.2` (closer zoom-in floors + zoom-bar tracks active mode),
+> and `v2.0.3` (Mac fix) shipped on main. Cycle 26 deliberately
+> pivots away from world-rendering and toward the **player-facing
+> layer** — UX/UI, design, engagement, marketing, SEO, images &
+> clips, community, plus polish/fixes/perf. Scope is intentionally
+> soft until Matt locks it down at `/cycle-start`.
 
 ## What just shipped
 
-- **Mac white-hue fix** (post-v2.0.2) —
+- **`v2.0.3`** — Mac white-hue fix.
   [`SceneManager.js`](js/SceneManager.js): on Mac platforms, swap
   `THREE.ACESFilmicToneMapping` → `THREE.NeutralToneMapping`. ACES
   was pushing the sky-blue fog (`0x87CEEB`) toward white on macOS
@@ -46,9 +45,11 @@ try, share, and remember**.
 
 Areas of focus (menu, not phases — Matt picks at `/cycle-start`):
 
-1. **UX/UI** — onboarding tutorial, HUD review across resolutions,
-   settings panel polish, mobile gesture feel, loading-state polish,
-   MP reconnect surface in UI.
+1. **UX/UI** — Practice Paddock / Open Meadow no-pressure mode (4th
+   tile, ~30 sheep, no timer, hint layer that auto-dismisses; name
+   TBD); lightweight start-screen pointer-tour; HUD review across
+   resolutions; settings panel polish; mobile gesture feel;
+   loading-state polish; MP reconnect surface in UI.
 2. **Visual design** — title-screen identity, scene-postcard audit,
    design-system tokens (CSS vars), favicons + OG refresh, in-game
    icon pass.
@@ -57,7 +58,13 @@ Areas of focus (menu, not phases — Matt picks at `/cycle-start`):
    round-end.
 4. **Marketing assets** — 30s hero trailer, 3-5 short-form vertical
    clips (TikTok/Reels/Shorts), animated GIFs, PRESSKIT refresh,
-   capsule-art draft.
+   capsule-art draft. **Working agreement for the capture session:**
+   Claude prepares the shot manifest (scene + ToD + sun + camera
+   mode + framing intent + filename + aspect ratio + purpose) BEFORE
+   pairing the browser. Matt drives camera + dog placement and
+   "snap" / "record" cues; Claude pre-decides creative direction so
+   Matt isn't making in-session calls. See cycle-26-plan.md §4
+   "Working agreement for the media session" for the full split.
 5. **SEO** — per-route titles + meta + OG/Twitter cards, structured
    data (`schema.org/VideoGame`), sitemap, Lighthouse audit, LCP +
    bundle-split investigation.

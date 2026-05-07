@@ -27,9 +27,20 @@ sized to a few hours / a day; the cycle bundles whichever set lands.
 
 ### 1. UX / UI
 
-- Onboarding: first-run tutorial overlay, gentle pointer-guided
-  walkthrough of mode → scene → dog → play. Skip-able. localStorage
-  gates re-show.
+- **Practice Paddock / Open Meadow (no-pressure entry mode).** A
+  fourth tile alongside Classic / Extreme / Insane / Chaos (or under
+  a "Just play" header above them). ~30 sheep, no timer, no fail
+  state. A toggleable hint layer (W/A/S/D · Shift · S to whistle)
+  that auto-dismisses after 8s OR first whistle. Never modal, never
+  blocking. localStorage `sds:hasPlayed` flag so first-time visitors
+  see a "New here? Try [name] →" suggestion that stays out of the
+  way of anyone clicking another mode. Full atmosphere on — it's
+  the best ad the game has. Name TBD.
+- Onboarding: lightweight first-run pointer-tour overlay, gentle
+  pointer-guided walkthrough of mode → scene → dog → play.
+  Skip-able. localStorage gates re-show. Distinct from Practice
+  Paddock above — this is the start-screen tour; that is the
+  no-pressure play mode. They complement.
 - HUD review pass: stamina bar, sheep counter, objective banner,
   camera mode chip — read each on three scenes × three resolutions
   (mobile portrait, tablet, desktop) and fix what overlaps or fights
@@ -79,6 +90,35 @@ sized to a few hours / a day; the cycle bundles whichever set lands.
   v2.0+ feature list, and the new ScenePicker hero stills.
 - Steam-style capsule art draft (even if no Steam release planned —
   the format forces decisive composition).
+
+#### Working agreement for the media session
+
+Division of labor when we run the actual capture session:
+
+- **Claude prepares before the session.** Researched shot manifest
+  with: shot ID + filename, scene + time-of-day + sun position,
+  camera mode (Follow/Free/Classic) + suggested distance/yaw, dog
+  pose intent, sheep state (paused / herding / scattered), aspect
+  ratio (16:9 still, 9:16 vertical, 1:1 square, 1200×630 OG), what
+  the shot is for (hero trailer beat / Reddit GIF / OG card / Steam
+  capsule / SEO meta). All in a `cycle26-validation/shot-list.md`
+  before pairing the browser.
+- **Matt drives the browser.** Click into scene, free-fly camera to
+  the framing Claude described, position the dog, say "snap" or
+  "start recording" / "stop." Doesn't do creative decision-making
+  during the session — Claude already chose ToD / sun / framing
+  intent.
+- **Captures save to `assets/marketing/captures/cycle26/raw/`** with
+  the filename Claude pre-defined.
+- **Reviewed end-of-session.** Walk the manifest together, mark
+  each as `kept` / `redo` / `skip`. Re-shoot the redos in a second
+  pass.
+- **Editing pass after.** Trailers + vertical clips need a real
+  NLE (DaVinci Resolve, CapCut, etc.) — those are Matt's job. GIF
+  output from the recorder is final-form for Reddit/Discord drops.
+- **Cinematic-runner fix is parallel work.** If the runner is fixed
+  during the cycle, automated batch capture takes over from the
+  manual session for the OG-card refresh.
 
 ### 5. SEO
 
