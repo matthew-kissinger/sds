@@ -4,6 +4,38 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.0.4] — 2026-05-07 (post-v2.0.3 patch — extend Apple tone-mapping branch to iOS)
+
+iPhone playtest surfaced a bright-white sheen layered over the water
+surface on Field / RH / OC. Same Metal-ANGLE + extended-sRGB pipeline
+underneath WebKit as macOS, but the v2.0.3 platform branch only
+matched `/Mac/` — and `navigator.platform === 'iPhone'` doesn't.
+iPhone was running ACES Filmic, the same curve that washed the Mac.
+
+### Fixed
+- **iPhone water sheen at gameplay start.** Extend the Apple-platform
+  detection in [`js/SceneManager.js`](js/SceneManager.js) from `/Mac/`
+  to `/Mac|iPhone|iPad|iPod/`. iPhone + iPad now get
+  `THREE.NeutralToneMapping` like macOS does, eliminating the wash on
+  the water's foam, sun-glint, and sparkle terms. Non-Apple platforms
+  (Windows / Linux / Android) unchanged.
+
+### Notes
+- iPad on iOS 13+ in desktop-site mode reports `navigator.platform`
+  as `MacIntel`, so it was already covered by v2.0.3's `/Mac/` branch.
+  The new regex covers iPad in mobile-site mode too (belt and braces).
+- AnimeWater bypasses the tonemap pipeline entirely (writes
+  `gl_FragColor` raw, no `<tonemapping_fragment>` chunk). If the
+  Neutral curve isn't enough on iPhone, the structural fix is to plumb
+  AnimeWater through the same pipeline — tracked as v2.0.5 contingent
+  on Matt's iPhone verification.
+- `?tonemap=neutral` URL override already provided per-device A/B
+  diagnostic before this patch shipped.
+
+### Validation
+- vitest 188/188.
+- build clean — 837.43 KB main / 250.34 KB gzip (flat with v2.0.3).
+
 ## [2.0.3] — 2026-05-07 (post-v2.0.2 patch — Mac white-hue fix)
 
 Mac users (M-series + recent macOS, all browsers) reported that
