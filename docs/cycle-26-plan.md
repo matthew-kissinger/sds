@@ -1,113 +1,195 @@
-# Cycle 26 — STUB (post-v2.0.1)
+# Cycle 26 — Player-facing layer (UX / design / engagement / marketing / community)
 
-> Drafted 2026-05-06 after the v2.0.0 polish-mega-cycle close + v2.0.1
-> camera/scene-picker patch. This is a stub for the next focused cycle.
-> Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md)
-> first, then [`cycle-25-plan.md`](cycle-25-plan.md) for the
-> polish-program context, then this doc.
+> Drafted 2026-05-07 after Mac white-hue fix landed on `main`
+> ([`b5ff6ef`](https://github.com/matthew-kissinger/sds/commit/b5ff6ef) —
+> ACES → Neutral tone mapping on Mac platforms). This cycle deliberately
+> pivots away from the rendering / foliage / atmosphere depth-stack the
+> Cycles 18-25 polish program lived in, and toward the **player-facing
+> layer**: how the game looks the first 30 seconds, how easy it is to
+> share, and how anyone outside the dev loop finds it.
+>
+> **Scope is intentionally soft.** Locked down at `/cycle-start` with
+> Matt — until then, this doc is a menu of areas, not a phase plan.
 
 ## Goal
 
-Pick **one** of the deferred-from-Cycle-25 deliverables and ship it
-clean. None of these have been started — each is a "Cycle of its own"
-sized between 4 and 8 days.
+Stop building more world-rendering tech. Start making the game easier
+to **find, try, share, and remember**.
 
-## Candidates
+The atmospheric LUT, 8×4 impostor re-bake, and camera state-machine
+collapse remain in BACKLOG and will not be picked up here unless Matt
+explicitly redirects.
 
-Picked at `/cycle-start` based on playtest signal + which gap is
-loudest after a week with v2.0.0 in the wild:
+## Areas of focus (menu — not phases)
 
-### Candidate A — Aerial-perspective LUT (atmospheric truth full)
+Pick from these at `/cycle-start`. Each is independently shippable and
+sized to a few hours / a day; the cycle bundles whichever set lands.
 
-**Builds on:** `js/shaders/HeightFogPatch.js` foundation (shipped
-v2.0.0 unused).
+### 1. UX / UI
 
-Hillaire 2020 / Bruneton-style precomputed scattering 3D texture
-(32×32×32 R11G11B10F, ~196 KB) regenerated when sun moves > 2°.
-Replace `THREE.Fog` entirely — every patched material samples the LUT
-for fog tint instead of the static `fogColor`. Closes the
-"atmospheric truth" half of the polish-program thesis.
+- Onboarding: first-run tutorial overlay, gentle pointer-guided
+  walkthrough of mode → scene → dog → play. Skip-able. localStorage
+  gates re-show.
+- HUD review pass: stamina bar, sheep counter, objective banner,
+  camera mode chip — read each on three scenes × three resolutions
+  (mobile portrait, tablet, desktop) and fix what overlaps or fights
+  for the same edge.
+- Settings panel polish: group, label, default-explanation tooltips.
+- Mobile gestures: pinch-zoom feel, tap-vs-drag thresholds,
+  bottom-bar reachability.
+- Loading-state polish: the shimmer-skeleton overlay (cycle-25-F)
+  is a starting point, not a finish line.
+- Error / disconnect toasts: MP reconnect grace already exists
+  (cycle-24); surface its state to the player.
 
-### Candidate B — 8×4 impostor atlas re-bake + padded mips
+### 2. Visual design
 
-`tools/bake-tree-impostors.mjs` extends with `--azimuths=8
---elevations=4 --tileSize=256`. Output 2048×1024 atlas. 16px tile
-padding for proper mipmaps (Halen 2022 / HPG technique). Hybrid
-trunk-mesh for 180-200m band (Cycle 21 Phase 4 deferred). Sky-LUT
-relighting only if Candidate A landed first.
+- Title screen identity: logo lockup, type pairing, motion title.
+  Currently the start screen reads as "engineer's prototype." Aim
+  for "this is a real game."
+- Scene postcards (shipped v2.0.1) audit — do all three read as
+  *places* a player wants to visit?
+- Color / type / spacing tokens: pin a small design-system in CSS
+  vars so future screens ship coherent.
+- Favicons + OG image refresh.
+- In-game UI illustration pass (icons, buttons, mode pills).
 
-Note: Pixel Forge CLI on Windows still has the bun→tsx workaround
-documented in NEXT_SESSION.md standing risks. Bake time per tree is
-~30+ minutes.
+### 3. User engagement
 
-### Candidate C — Camera state-machine collapse
+- Daily / weekly micro-challenge surface (e.g. "today's seed: corral
+  500 in 90s"). Doesn't require backend changes — seedable from a
+  date hash.
+- Dog progression / collection cosmetic loop. Lightweight — name
+  history, scene history, time-played counters that feel earned.
+- Replays: capture the last successful run as a 10-second WebM the
+  player can save / share.
+- Share-card on round-end: SVG composited "I just corraled X sheep
+  in Y seconds on Z scene" image to download / share.
 
-`_updateClassic / _updateFollow / _updateFree` consolidated to a
-single state reading `{ targetDistance, targetHeight, yawSource,
-fov }` per-mode-derived. ~170 LOC of duplicate camera math
-collapses to ~70. Risky refactor on game-feel-critical code; the
-v2.0.0 + v2.0.1 additive cinematics already close most of the
-user-visible gap, so this is "cleanup" more than "new value."
+### 4. Marketing assets
 
-### Candidate D — Start-screen flow restructure
+- 30-second hero trailer. Capture via the existing cinema runner
+  (note: cinema runner has the deferred 30s font-wait timeout — fix
+  *or* keep using Playwright MCP for one-offs).
+- 3–5 short-form clips (15s / 9:16 vertical) tuned for TikTok /
+  Reels / Shorts: dog-running-into-flock, sprint dolly-zoom, scene
+  swap, golden-hour OC pan.
+- Animated GIFs (lossy) for Reddit / forum posts — keep under 5 MB.
+- Press kit: refresh `PRESSKIT.md` with the current screenshots,
+  v2.0+ feature list, and the new ScenePicker hero stills.
+- Steam-style capsule art draft (even if no Steam release planned —
+  the format forces decisive composition).
 
-Mode → Scene → Dog flow with hero-art ScenePicker (already shipped
-v2.0.1!), live WebGL DogSelection inset, scripted background-scene
-orbit per selected scene, first-time tutorial overlay. Multi-day
-React refactor; depends on Candidate C (the cinematic orbits use the
-new state machine).
+### 5. SEO
 
-### Candidate E — 6 fresh tree variants + landmark trees
+- `<title>` and meta tags per route / scene-deeplink.
+- Open Graph + Twitter card per scene + per shared replay.
+- Structured data (`schema.org/VideoGame`) on the landing page.
+- `sitemap.xml` + `robots.txt` review (currently default).
+- Lighthouse SEO audit + fix the obvious wins.
+- Page-load perf: Largest Contentful Paint of the start screen on
+  cold load (currently main bundle 837 KB / 250 KB gzip — investigate
+  splitting the React overlay from the Three.js bundle).
+- Canonical URLs for shared invite-room links.
 
-`tools/bake-trees.mjs` extends with `tree-deciduous-small`,
-`tree-deciduous-large`, `tree-birch`, `tree-conifer-reintro`,
-`tree-fall-color`. Per-scene profile lookups already shipped v2.0.0
-(`shared/TreePlacement.js` reads `scene.treeProfile`); just plug new
-variants in. Authored landmark trees per scene (4-6 per).
+### 6. Community building
 
-Best paired with Candidate B (re-bake new variants under the new 8×4
-pipeline at the same time).
+- Devlog channel: pick a venue (a `/devlog` route on the site, or a
+  Substack, or just a `DEVLOG.md` updated weekly + linked from the
+  start screen). Make the work visible.
+- One-time launch posts to: r/threejs, r/webgames, r/IndieDev, HN
+  Show. Each needs its own framing.
+- Discord or community-tab embed on the site.
+- Feedback funnel: in-game "send feedback" button → form → inbox or
+  Linear / GitHub issues.
+- Streamer / YouTuber outreach list — small creators who play
+  weird-web-game content.
 
-## Open questions
+### 7. Polishes / fixes / perf
 
-Resolved at `/cycle-start`. Until then:
+This is the catch-all for things that don't belong in a feature
+cycle. Each is independently triagable:
 
-1. **Which candidate?** Likely B + E together (impostor + tree art is
-   one art-direction story), OR A alone (atmospheric is one shader
-   story). Don't bundle A with B — both have heavy review demands.
-2. **Push cadence?** v2.0.0 was a single autonomous overnight that
-   shipped to prod next morning. Cycle 26 may want a per-phase push
-   so each landing gets its own playtest window before the next phase
-   builds on it.
-3. **HeightFogPatch activation?** If picking Candidate A, does the
-   new aerial-LUT replace HeightFogPatch or layer on top? Author
-   lean: layer — height-fog density is the per-fragment shape, the
-   LUT is the per-fragment tint.
+- **Mac white-hue fix verification.** Shipped 2026-05-07. Confirm with
+  Matt's actual M4 Max + macOS Tahoe device after deploy.
+- The five v1.4.0 playtest items still un-revisited (Classic-overhead
+  trees, sprint exit, OC HUD, MP modes, tree tris).
+- Heightfield amplitude bug — still standing across ~14 cycles.
+- Cinema runner `page.screenshot` 30s font-wait timeout.
+- Audio: the `AudioManager` try/catch wrap from Cycle 24 was a
+  defense; investigate whether real Safari now gets footstep sound.
+- Bundle-size investigation: `main` is 837 KB gzipped 250 KB — what
+  splits cleanly?
+- Any small bug surfaced by Mac-fix playtest or in-the-wild reports.
+
+### 8. (Possible) WebGPU / new tech
+
+Stays parked unless Matt explicitly opts in. The point of this cycle
+is the player-facing layer; tech spikes belong in a different cycle
+shape.
+
+## What's NOT in scope
+
+Everything in BACKLOG that's not in the list above stays parked. In
+particular:
+
+- Aerial-perspective LUT / atmospheric truth (parked from cycle-25).
+- 8×4 impostor atlas re-bake + padded mips.
+- Camera state-machine collapse.
+- 6 fresh tree variants + landmark trees.
+- Heightfield amplitude root fix (touches sim-baseline).
+
+These are real "Cycle of their own" deliverables. They are not
+abandoned — they're waiting for a cycle that's about world-rendering,
+not the player-facing layer.
+
+## Open questions (resolve at /cycle-start)
+
+1. **Which areas?** Likely a mix from §1 + §4 + §5 + §7 — UX polish
+   + marketing assets + SEO + lingering fixes. Matt picks at
+   `/cycle-start`.
+2. **Ship cadence?** Per-area push (lots of small `v2.x.y` bumps)
+   vs single end-of-cycle ship. v2.0.1 pattern (ship as you finish
+   each independent thing) probably right for this cycle's shape.
+3. **Devlog venue?** On-site `/devlog`, Substack, or just a
+   `DEVLOG.md`. Pick one before doing the §6 launch posts so they
+   can link to it.
+4. **Community ToS / moderation?** If Discord, who moderates?
+   Defer §6 community-tab work if the answer is unclear.
 
 ## Frozen files
 
-All [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) entries apply.
+All [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) entries apply. In
+addition, this cycle should not touch:
+
+- `js/SceneManager.js` tone-mapping branch (just shipped — verify
+  before iterating).
+- `shared/*` boid-sim path (no sim-baseline regen).
+- `js/shaders/HeightFogPatch.js` (the no-op foundation stays a
+  no-op until a future world-rendering cycle picks it up).
 
 ## What NOT to do
 
-- **Don't reintroduce the LOD1 mid-band on desktop med/high.** Phase B
-  killed it deliberately; the alphaHash crossfade band 180-200m is
-  the new seam.
-- **Don't reintroduce `uMatchBoost`.** Phase D killed the per-species
-  calibration LUT; if Candidate B re-bakes the atlas, the new bake
-  should match LOD0 closely enough that no matchBoost is needed.
-- **Don't fix the heightfield amplitude bug.** Standing carryover
-  across 14+ cycles; visual character of game depends on the
-  amplified state.
-- **Don't auto-deploy without playtesting.** v2.0.1 caught a Phase E
-  regression (Follow/Free zoom dead) post-deploy because the
-  autonomous run didn't have a real-GPU manual smoke. Future
-  candidate cycles should bake in a manual smoke gate before each
-  push to main.
+- Don't turn this into "Cycle 25 part 2." The polish program is
+  closed; new world-rendering work belongs in its own cycle.
+- Don't build a CMS / blog engine for the devlog. A markdown file
+  served as a route is fine for n=10 posts.
+- Don't auto-deploy marketing / outreach pushes — those are
+  irreversible. Matt sends.
+- Don't add analytics tracking that wasn't there. If we need
+  metrics, propose a privacy-respecting plan first.
+- Don't bloat the bundle chasing UI polish. Bundle-size delta is a
+  validation criterion for every UI change in this cycle.
 
 ## References
 
-- [`docs/cycle-25-plan.md`](cycle-25-plan.md) — predecessor (polish-mega-cycle)
-- [`docs/wake-state-2026-05-06.md`](wake-state-2026-05-06.md) — what landed v2.0.0
-- [`CHANGELOG.md`](../CHANGELOG.md) `[2.0.0]` + `[2.0.1]` — deferred items list
-- [`docs/polish-program.md`](polish-program.md) — original 6-cycle program (mostly absorbed into v2.0.0)
+- [`docs/cycle-25-plan.md`](cycle-25-plan.md) — predecessor (closed
+  as v2.0.0)
+- [`docs/wake-state-2026-05-06.md`](wake-state-2026-05-06.md) —
+  what landed v2.0.0
+- [`CHANGELOG.md`](../CHANGELOG.md) — `[2.0.0]` + `[2.0.1]` +
+  `[2.0.2]` deferred items
+- [`docs/polish-program.md`](polish-program.md) — original 6-cycle
+  polish program (mostly absorbed into v2.0.0)
+- [`docs/BACKLOG.md`](BACKLOG.md) — full deferred list
+- [`PRESSKIT.md`](../PRESSKIT.md) — current marketing kit baseline

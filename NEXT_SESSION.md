@@ -1,54 +1,98 @@
-# Next Session — post-Cycle-25 (v2.0.1 shipped)
+# Next Session — Cycle 26 (player-facing layer)
 
-> **Updated 2026-05-06 post-deploy.** Cycle 24 closed as `v1.5.0` and Cycle 25
-> closed as `v2.0.0` in a single autonomous run on branch
-> `meta-cycle-overnight-2026-05-06`. Both pushed to origin + deployed to
-> prod via GH Actions. Patch `v2.0.1` followed: camera regression fix
-> (Follow + Free now read `this.distance` so wheel/pinch zoom works;
-> over-aggressive FOV pull-back removed) + ScenePicker overhaul
-> (Sheep Dog Island as the new default + NEW badges + hero-postcard
-> visual rewrite). All on `main`.
+> **Updated 2026-05-07** after Mac white-hue fix landed on `main`
+> ([`b5ff6ef`](https://github.com/matthew-kissinger/sds/commit/b5ff6ef)
+> — ACES → Neutral tone mapping on Mac platforms only). Cycle 25
+> closed as `v2.0.0`; patches `v2.0.1` (camera + ScenePicker) and
+> `v2.0.2` (closer zoom-in floors + zoom-bar tracks active mode)
+> shipped on main. Cycle 26 deliberately pivots away from
+> world-rendering and toward the **player-facing layer** — UX/UI,
+> design, engagement, marketing, SEO, images & clips, community,
+> plus polish/fixes/perf. Scope is intentionally soft until Matt
+> locks it down at `/cycle-start`.
 
 ## What just shipped
 
-- **`v1.5.0`** — Cycle 24 close. MP regression specs (in-game state +
-  reconnect grace + dog-wiring) + 15s reconnect grace window in
-  RoomDO + dog-selection wiring docs + 9 net-new e2e specs.
+- **Mac white-hue fix** (post-v2.0.2) —
+  [`SceneManager.js`](js/SceneManager.js): on Mac platforms, swap
+  `THREE.ACESFilmicToneMapping` → `THREE.NeutralToneMapping`. ACES
+  was pushing the sky-blue fog (`0x87CEEB`) toward white on macOS
+  Metal-ANGLE + extended-sRGB output, washing the whole frame after
+  the camera framed the fogged horizon. Neutral preserves color
+  identity through the same dynamic range. Mac-only branch; non-Mac
+  unchanged. `?tonemap=aces|neutral|linear|none` URL override for A/B.
+  Logs `[TONEMAP] platform — curve` in console for diagnosis.
+- **`v2.0.2`** — closer zoom-in floors per mode + zoom-bar tracks
+  active mode.
+- **`v2.0.1`** — camera Follow/Free wheel/pinch zoom fix +
+  ScenePicker scene-postcard rewrite (Sheep Dog Island default + NEW
+  badges + custom SVG silhouettes) + sim-baseline harness pinned to
+  `sceneId: 'field'`.
 - **`v2.0.0`** — Cycle 25 polish-mega-cycle close. Eight phases:
   validation infra; LOD truth (drop LOD1 desktop med/high, neutralise
   AtmosphericDesatPatch, lift fog 220→350 / 700-800→900); HeightFogPatch
   foundation; uMatchBoost LOC reduction (~120 LOC + asset + generator);
   per-mode camera zoom + persistence; per-scene tree distribution
   profiles; shimmer-skeleton scene-swap overlay; ship.
-- **`v2.0.1`** — post-deploy patch. Camera Follow/Free wheel/pinch zoom
-  fix (was non-functional pre-Phase-E and got worse post-Phase-E
-  because FOV pull-back read the dead `this.distance`); ScenePicker
-  rewrite to scene-postcard layout (3 hero cards, NEW badges on
-  Sheep Dog Island + Open Country, "Choose your home" header, scene-
-  specific gradients + custom SVG silhouettes); default scene shifted
-  from Home Field to Sheep Dog Island; sim-baseline harness pinned to
-  `sceneId: 'field'` so the shift doesn't break the gated-pasture
-  fixtures.
+- **`v1.5.0`** — Cycle 24 close. MP regression specs (in-game state
+  + reconnect grace + dog-wiring) + 15s reconnect grace window in
+  RoomDO + dog-selection wiring docs + 9 net-new e2e specs.
 
-## What's still genuinely deferred to Cycle 26+
+## Cycle 26 — player-facing layer (active)
 
-These are real "Cycle of their own" deliverables; see CHANGELOG `[2.0.0]`:
+Plan: [`docs/cycle-26-plan.md`](docs/cycle-26-plan.md). Stop adding
+more world-rendering tech. Start making the game easier to **find,
+try, share, and remember**.
 
-1. **Aerial-perspective LUT** — Hillaire 2020 precomputed scattering. The
-   `js/shaders/HeightFogPatch.js` foundation shipped as a no-op file;
-   activation across all materials needs per-material visual review.
+Areas of focus (menu, not phases — Matt picks at `/cycle-start`):
+
+1. **UX/UI** — onboarding tutorial, HUD review across resolutions,
+   settings panel polish, mobile gesture feel, loading-state polish,
+   MP reconnect surface in UI.
+2. **Visual design** — title-screen identity, scene-postcard audit,
+   design-system tokens (CSS vars), favicons + OG refresh, in-game
+   icon pass.
+3. **User engagement** — daily/weekly micro-challenges (date-hash
+   seed), dog cosmetic loop, run replays, share-card image on
+   round-end.
+4. **Marketing assets** — 30s hero trailer, 3-5 short-form vertical
+   clips (TikTok/Reels/Shorts), animated GIFs, PRESSKIT refresh,
+   capsule-art draft.
+5. **SEO** — per-route titles + meta + OG/Twitter cards, structured
+   data (`schema.org/VideoGame`), sitemap, Lighthouse audit, LCP +
+   bundle-split investigation.
+6. **Community** — devlog venue (on-site `/devlog` vs Substack vs
+   `DEVLOG.md`), launch posts (r/threejs, r/webgames, r/IndieDev,
+   HN), Discord/community-tab, in-game feedback funnel, streamer
+   outreach.
+7. **Polish / fixes / perf** — Mac fix verification, the five v1.4.0
+   playtest items, audio path on Safari, bundle-size investigation,
+   anything surfaced in the wild. **Heightfield amplitude bug stays
+   parked** (touches sim-baseline; not Cycle 26 scope).
+
+## What's parked (NOT Cycle 26 scope)
+
+These are real "Cycle of their own" deliverables; tracked in BACKLOG.
+Will not be picked up here unless Matt explicitly redirects:
+
+1. **Aerial-perspective LUT** — Hillaire 2020 precomputed scattering;
+   activates `js/shaders/HeightFogPatch.js` foundation across all
+   patched materials.
 2. **8×4 impostor atlas re-bake + padded mips + hybrid trunk-mesh** —
    Pixel Forge multi-hour bake + visual review.
 3. **Camera state-machine full collapse** — `_updateClassic /
    _updateFollow / _updateFree` consolidated to a single state
    reading `{ targetDistance, targetHeight, yawSource, fov }`.
-4. **Start screen flow restructure** — Mode → Scene → Dog reorder +
+4. **Start-screen flow restructure** — Mode → Scene → Dog reorder +
    live WebGL DogSelection inset + cinematic background orbits +
-   first-time tutorial overlay.
+   full first-time tutorial overlay (Cycle 26 §1 covers a thinner
+   tutorial; the full WebGL inset stays parked).
 5. **6 fresh tree variants + landmark trees** — recipe authoring +
    6 fresh bakes + 6 impostor re-bakes.
-
-Cycle 26 plan stub: [`docs/cycle-26-plan.md`](docs/cycle-26-plan.md).
+6. **Heightfield amplitude bug** — root fix in `Heightfield.sample()`
+   / `scripts/bake-heightmap.mjs`. Visual character of the game has
+   depended on the amplified state for ~14 cycles.
+7. **WebGPU/TSL spike** — feature-flagged `?renderer=webgpu`.
 
 ---
 
