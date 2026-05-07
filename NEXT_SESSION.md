@@ -65,6 +65,14 @@ Areas of focus (menu, not phases — Matt picks at `/cycle-start`):
    "snap" / "record" cues; Claude pre-decides creative direction so
    Matt isn't making in-session calls. See cycle-26-plan.md §4
    "Working agreement for the media session" for the full split.
+   **Shot manifest already drafted** at
+   [`cycle26-validation/shot-list.md`](cycle26-validation/shot-list.md)
+   — Tier 1 (must-haves: 3 OG cards refresh + 3 start-screen
+   stills + 3 trailer beats + 3 GIFs ≈ 12 shots, 2-3hr session),
+   Tier 2 (verticals + Steam capsule + MP + mobile + ToD timelapse
+   ≈ 10 shots, +1-2hr), Tier 3 (speculative including the
+   pre-Mac-fix meta diptych and Practice-Paddock-blocked items).
+   Open questions for /cycle-start at the bottom of the manifest.
 5. **SEO** — per-route titles + meta + OG/Twitter cards, structured
    data (`schema.org/VideoGame`), sitemap, Lighthouse audit, LCP +
    bundle-split investigation.
