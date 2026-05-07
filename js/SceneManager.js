@@ -116,29 +116,31 @@ export class SceneManager {
         // tonemapping the shader output ends up near-black. ACES Filmic is the
         // de-facto-standard pick; it brightens midtones and rolls off highlights.
         //
-        // Mac caveat: ACES pushes cool blues (sky-blue fog 0x87CEEB at distance)
-        // toward white on macOS Metal-ANGLE + extended-sRGB display output, so
-        // the foggy horizon reads as a near-white wash. Neutral (Khronos PBR
-        // Neutral, r162+) preserves color identity through the same dynamic
-        // range, fixing the wash without affecting non-Mac platforms.
-        // Override with ?tonemap=aces|neutral|linear|none for A/B testing.
+        // Apple caveat: ACES pushes cool blues (sky-blue fog 0x87CEEB at distance)
+        // toward white on Apple Metal-ANGLE + extended-sRGB display output, so
+        // the foggy horizon reads as a near-white wash. v2.0.3 covered Mac;
+        // v2.0.4 extends to iPhone/iPad after Matt observed the same wash on
+        // iPhone water (foam + sun-glint terms, same Metal-ANGLE pipeline).
+        // Neutral (Khronos PBR Neutral, r162+) preserves color identity through
+        // the same dynamic range, fixing the wash without affecting non-Apple
+        // platforms. Override with ?tonemap=aces|neutral|linear|none for A/B.
         const toneOverride = (typeof location !== 'undefined' &&
             new URLSearchParams(location.search).get('tonemap')) || null;
-        const isMacPlatform = typeof navigator !== 'undefined' &&
-            /Mac/.test(navigator.platform || navigator.userAgent || '');
+        const isApplePlatform = typeof navigator !== 'undefined' &&
+            /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '');
         let chosenToneMapping;
         if (toneOverride === 'aces') chosenToneMapping = THREE.ACESFilmicToneMapping;
         else if (toneOverride === 'neutral') chosenToneMapping = THREE.NeutralToneMapping;
         else if (toneOverride === 'linear') chosenToneMapping = THREE.LinearToneMapping;
         else if (toneOverride === 'none') chosenToneMapping = THREE.NoToneMapping;
-        else chosenToneMapping = isMacPlatform ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+        else chosenToneMapping = isApplePlatform ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
         this.renderer.toneMapping = chosenToneMapping;
         this.renderer.toneMappingExposure = 1.0;
         const toneName = chosenToneMapping === THREE.NeutralToneMapping ? 'Neutral'
             : chosenToneMapping === THREE.ACESFilmicToneMapping ? 'ACESFilmic'
             : chosenToneMapping === THREE.LinearToneMapping ? 'Linear'
             : 'None';
-        console.log(`[TONEMAP] ${isMacPlatform ? 'Mac' : 'non-Mac'} platform — ${toneName}${toneOverride ? ` (override=${toneOverride})` : ''}`);
+        console.log(`[TONEMAP] ${isApplePlatform ? 'Apple' : 'non-Apple'} platform — ${toneName}${toneOverride ? ` (override=${toneOverride})` : ''}`);
 
         // Enable frustum culling and other optimizations
         this.renderer.sortObjects = true;
