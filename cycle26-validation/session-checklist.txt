@@ -1,0 +1,75 @@
+CYCLE 26 — MEDIA SHOOT  (just-enough refresh, ~40 min, 6 shots)
+========================================================================
+
+WHERE YOU SIT
+- Display 1 (gaming monitor):  Chrome in F11 fullscreen — the scene loads here, you watch this
+- Display 2 (other monitor):   Notepad (this checklist) + File Explorer to ~/Downloads
+                               Newest captures appear at top with thumbnails — verify each shot
+
+WHAT YOU SAY (and what I do in response)
+- "snap"            -> I run __sdsShoot('shot-name'), PNG drops to ~/Downloads
+- "record"          -> I run __sdsRecStart(), recording begins (60fps webm)
+- "stop"            -> I run __sdsRecStop('shot-name'), webm drops to ~/Downloads
+- "redo"            -> I retry the same shot (overwrites with -v2 suffix)
+- "next"            -> move to next shot in the queue
+- "free fly"        -> I call __sdsCinema.freeFly() — you mouse-drag/scroll to reframe
+- "lock"            -> I call __sdsCinema.lockFly() — restore gameplay camera
+- "pose"            -> I call __sdsCinema.snapshotPose() — log new coords for the manifest
+
+WHERE IMAGES LAND
+1. ~/Downloads/<name>.png  or .webm           <- browser auto-download (you see it pop up)
+2. assets/marketing/captures/cycle26/raw/     <- I move PNGs here
+3. assets/marketing/captures/cycle26/clips/   <- I move webms here
+4. assets/marketing/og/og-{field,rh-sunset,open-country}.webp  <- final cropped 1200x630 (replaces old)
+
+FINAL OUTPUT (where the public sees these)
+- og-*.webp           -> Open Graph tags in index.html — when anyone shares the URL on
+                         Twitter/Facebook/Slack/Discord, this is the preview card
+- hero-mode-select    -> PRESSKIT.md + landing page above-the-fold
+- practice-paddock    -> "Just Play" landing tile + onboarding marketing
+- gif-chaos-5000      -> Reddit + Twitter posts ("5000 sheep in your browser")
+
+
+===========================================
+THE SHOOT (in order)
+===========================================
+
+[ ] 1. og-rh-sunset-v2          PRIMARY OG (the big one — replaces og-rh-sunset.webp)
+       scene=rolling-hills  mode=extreme(1000 sheep)  sun=0.06 dusk  dog=jep
+       sim: LIVE — flock dispersed across hills IS the composition
+       I'll set scene+sun+sheep+pose. You verify framing in browser, say "snap"
+
+[ ] 2. og-field-v2              replaces og-field.webp
+       scene=field  mode=classic(200)  sun=0.50 noon  dog=jep
+       sim: PAUSED for clean static composition
+       Behind-dog overlook with fence + farmhouse mid-frame
+
+[ ] 3. og-open-country-v2       replaces og-open-country.webp
+       scene=open-country  mode=classic(200)  sun=0.45 mid-afternoon  dog=jep
+       sim: PAUSED
+       Elevated wide showing portal at z=295 + south-spawn cluster
+
+[ ] 4. hero-mode-select-first-visit    NEW (v2.1.0 — Practice tile pulse)
+       URL: https://sheepdogsim.com/   (no cinematic)
+       Pre: I clear localStorage so Practice tile pulses cyan
+       You: click into Mode picker, watch tile pulse, "snap" mid-pulse (~50% glow)
+
+[ ] 5. practice-paddock-hero    NEW (Just-Play landing tile)
+       scene=rolling-hills  mode=practice(30)  sun=0.20 golden  dog=jep
+       sim: LIVE; dog mid-meadow with 30 sheep dispersed across hills
+       Generous negative space — feels calm
+
+[ ] 6. gif-chaos-5000-loop      one social clip
+       scene=field  mode=chaos(5000)  sun=0.50 noon  dog=jep
+       sim: LIVE — let boid swarm carry the visual
+       You: "record" -> wait ~4s -> "stop"
+       I'll convert webm -> 5MB GIF after the shoot
+
+
+===========================================
+START
+===========================================
+1. Drag this Notepad and File Explorer to display 2
+2. Drag Chrome to display 1, hit F11
+3. Open File Explorer to "%USERPROFILE%\Downloads" (large icons or tile view)
+4. Tell me "ready" — I'll load shot 1 and you'll see it on display 1

@@ -8,6 +8,22 @@
 > diff below before pairing the browser. Tier 1/2 shot definitions
 > below are unchanged unless explicitly listed here.
 
+## Session results — 2026-05-08 live shoot (shipped as v2.1.1)
+
+| Shot | Status | Notes |
+|---|---|---|
+| `og-rh-sunset-v2` | ✅ shipped → `assets/marketing/og/og-rh-sunset.webp` | Behind-Jep cliff overlook, dusk (sun=0.06), tree framing left, flock along cliff edge, sun cresting horizon. 117 KB. |
+| `og-field-v2` | ✅ shipped → `assets/marketing/og/og-field.webp` | Behind-Jep on Home Field, noon (sun=0.50), fence on left, farmhouse + trees mid-frame, ~3000-sheep arc. 192 KB. |
+| `og-open-country-v2` | ⏭️ skipped this session | Existing `og-open-country.webp` from prior cycle retained. Re-shoot deferred. |
+| `hero-mode-select-first-visit` | ⏭️ deferred | Practice tile pulse capture — bundle into a future shoot. |
+| `practice-paddock-hero` | ⏭️ deferred | Just-Play landing tile — bundle into a future shoot. |
+| `vert-4-just-play-onboarding` | ⏭️ deferred | Vertical onboarding clip — needs NLE pass anyway. |
+| Trailer beats + GIFs | ⏭️ deferred | All video work deferred — Matt called the session "stills only" mid-shoot. |
+
+Source 1920×1080 PNGs archived at
+[`assets/marketing/captures/cycle26/raw/`](../assets/marketing/captures/cycle26/raw/)
+for re-cropping or alt-aspect derivation.
+
 ## What changed since the v1 draft
 
 | Slice | Effect on shoot |

@@ -1,17 +1,29 @@
 # Next Session — Cycle 26 (player-facing layer)
 
 > **Updated 2026-05-08** — autonomous Cycle 26 work shipped through
-> v2.1.0. Three patches landed in the run: `v2.0.4` (extend Apple
-> tone-mapping branch to iPhone/iPad), `v2.0.5` (delete dead
-> AtmosphericDesatPatch machinery — final piece of the polish-program
-> cleanup), and `v2.1.0` (Practice Paddock + per-scene SEO metadata).
-> Cycle 26 plan called for a menu of areas; the autonomous run took
-> the polish foundation + headline feature + SEO and shipped them.
-> What's left is the live media-capture session (Matt-driven), the
-> Lighthouse audit + cheap wins, and the post-shoot community kickoff.
+> v2.1.0, then a live media-capture session refreshed 2 of 3 OG cards
+> as `v2.1.1`. Patches in this cycle: `v2.0.4` (Apple tone-mapping to
+> iPhone/iPad), `v2.0.5` (delete dead AtmosphericDesatPatch — final
+> polish-program cleanup), `v2.1.0` (Practice Paddock + per-scene SEO),
+> `v2.1.1` (OG card refresh — Rolling Hills dusk + Field farmhouse).
+> What's left: open-country OG card (skipped this session, can refresh
+> later), Twitter/Facebook scraper re-fetch via debuggers post-deploy,
+> and post-shoot community kickoff.
 
 ## What just shipped
 
+- **`v2.1.1`** — OG card refresh. 2 of 3 social-card images replaced
+  with v2.1.0-era captures so shared links on Twitter / Facebook /
+  Slack / Discord show the current art. New `og-rh-sunset.webp` is a
+  behind-Jep cliff overlook on Rolling Hills at dusk (sun=0.06) with
+  flock dispersed and tree framing left (117 KB, was 181 KB, -35%).
+  New `og-field.webp` is behind-Jep on Home Field at noon with fence,
+  farmhouse, and ~3000-sheep arc (192 KB). Open-country OG retained
+  from prior cycle. Added `public/_headers` setting `Cache-Control:
+  max-age=300, must-revalidate` on `/assets/marketing/og/*` so future
+  refreshes propagate fast at the CF edge. Source 1920×1080 PNGs
+  archived under `assets/marketing/captures/cycle26/raw/` for
+  re-cropping.
 - **`v2.1.0`** — Cycle 26 first minor: Practice Paddock + per-scene
   SEO. New "Just Play" mode tile at position 0 (cyan-500, 30 sheep,
   no timer, no leaderboard) with a first-visit pulsing-glow nudge
