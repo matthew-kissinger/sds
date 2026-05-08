@@ -1,17 +1,40 @@
 # Next Session — Cycle 26 (player-facing layer)
 
-> **Updated 2026-05-07** with `v2.0.3` released for the Mac
-> white-hue fix (ACES → Neutral on Mac platforms only). Cycle 25
-> closed as `v2.0.0`; patches `v2.0.1` (camera + ScenePicker),
-> `v2.0.2` (closer zoom-in floors + zoom-bar tracks active mode),
-> and `v2.0.3` (Mac fix) shipped on main. Cycle 26 deliberately
-> pivots away from world-rendering and toward the **player-facing
-> layer** — UX/UI, design, engagement, marketing, SEO, images &
-> clips, community, plus polish/fixes/perf. Scope is intentionally
-> soft until Matt locks it down at `/cycle-start`.
+> **Updated 2026-05-08** — autonomous Cycle 26 work shipped through
+> v2.1.0. Three patches landed in the run: `v2.0.4` (extend Apple
+> tone-mapping branch to iPhone/iPad), `v2.0.5` (delete dead
+> AtmosphericDesatPatch machinery — final piece of the polish-program
+> cleanup), and `v2.1.0` (Practice Paddock + per-scene SEO metadata).
+> Cycle 26 plan called for a menu of areas; the autonomous run took
+> the polish foundation + headline feature + SEO and shipped them.
+> What's left is the live media-capture session (Matt-driven), the
+> Lighthouse audit + cheap wins, and the post-shoot community kickoff.
 
 ## What just shipped
 
+- **`v2.1.0`** — Cycle 26 first minor: Practice Paddock + per-scene
+  SEO. New "Just Play" mode tile at position 0 (cyan-500, 30 sheep,
+  no timer, no leaderboard) with a first-visit pulsing-glow nudge
+  driven by `sds.has-played` localStorage flag. Net-new
+  [`PracticeHint`](js/components/GameHUD/PracticeHint.js) bottom-
+  center fade overlay (8s OR first-input dismiss). Per-scene SEO via
+  new [`js/utils/seo.js`](js/utils/seo.js) — updates document.title +
+  full og:* + twitter:* on scene load and scene swap, using
+  `shared/scenes/*` name+description + existing `og-*.webp`.
+  vitest 201/201 (+13 new). Build 835.48 KB / 250.04 KB gzip.
+- **`v2.0.5`** — delete dead AtmosphericDesatPatch machinery.
+  127-LOC module deleted + plumbing in TerrainBuilder.js + kiln
+  impostor uniforms removed. Was a no-op since v2.0.0 (Cycle 25
+  Phase B forced strength to 0). Build -2.64 KB main / -0.48 KB gzip.
+  Closes the polish-program cleanup queue.
+- **`v2.0.4`** — extend Apple tone-mapping branch to iPhone/iPad.
+  iPhone playtest surfaced the same Mac white-hue wash on water
+  (foam + sun-glint terms). v2.0.3's `/Mac/` regex missed
+  `navigator.platform === 'iPhone'`. Extended to
+  `/Mac|iPhone|iPad|iPod/`. Non-Apple unchanged. Build flat.
+  **Verification still pending** Matt's iPhone test; if sheen
+  persists, escalation is the [`AnimeWater`](js/water/AnimeWater.js)
+  shader rework (add `<tonemapping_fragment>` chunk).
 - **`v2.0.3`** — Mac white-hue fix.
   [`SceneManager.js`](js/SceneManager.js): on Mac platforms, swap
   `THREE.ACESFilmicToneMapping` → `THREE.NeutralToneMapping`. ACES
@@ -37,53 +60,51 @@
   + reconnect grace + dog-wiring) + 15s reconnect grace window in
   RoomDO + dog-selection wiring docs + 9 net-new e2e specs.
 
-## Cycle 26 — player-facing layer (active)
+## Cycle 26 — player-facing layer (mid-cycle)
 
-Plan: [`docs/cycle-26-plan.md`](docs/cycle-26-plan.md). Stop adding
-more world-rendering tech. Start making the game easier to **find,
-try, share, and remember**.
+Plan: [`docs/cycle-26-plan.md`](docs/cycle-26-plan.md). Autonomous
+implementation plan: [`~/.claude/plans/make-plan-to-implement-linear-porcupine.md`].
+Wake-state: [`docs/cycle-26-autonomous-wake-state.md`](docs/cycle-26-autonomous-wake-state.md).
 
-Areas of focus (menu, not phases — Matt picks at `/cycle-start`):
+Status, ordered by what's next:
 
-1. **UX/UI** — Practice Paddock / Open Meadow no-pressure mode (4th
-   tile, ~30 sheep, no timer, hint layer that auto-dismisses; name
-   TBD); lightweight start-screen pointer-tour; HUD review across
-   resolutions; settings panel polish; mobile gesture feel;
-   loading-state polish; MP reconnect surface in UI.
-2. **Visual design** — title-screen identity, scene-postcard audit,
-   design-system tokens (CSS vars), favicons + OG refresh, in-game
-   icon pass.
-3. **User engagement** — daily/weekly micro-challenges (date-hash
-   seed), dog cosmetic loop, run replays, share-card image on
-   round-end.
-4. **Marketing assets** — 30s hero trailer, 3-5 short-form vertical
-   clips (TikTok/Reels/Shorts), animated GIFs, PRESSKIT refresh,
-   capsule-art draft. **Working agreement for the capture session:**
-   Claude prepares the shot manifest (scene + ToD + sun + camera
-   mode + framing intent + filename + aspect ratio + purpose) BEFORE
-   pairing the browser. Matt drives camera + dog placement and
-   "snap" / "record" cues; Claude pre-decides creative direction so
-   Matt isn't making in-session calls. See cycle-26-plan.md §4
-   "Working agreement for the media session" for the full split.
-   **Shot manifest already drafted** at
-   [`cycle26-validation/shot-list.md`](cycle26-validation/shot-list.md)
-   — Tier 1 (must-haves: 3 OG cards refresh + 3 start-screen
-   stills + 3 trailer beats + 3 GIFs ≈ 12 shots, 2-3hr session),
-   Tier 2 (verticals + Steam capsule + MP + mobile + ToD timelapse
-   ≈ 10 shots, +1-2hr), Tier 3 (speculative including the
-   pre-Mac-fix meta diptych and Practice-Paddock-blocked items).
-   Open questions for /cycle-start at the bottom of the manifest.
-5. **SEO** — per-route titles + meta + OG/Twitter cards, structured
-   data (`schema.org/VideoGame`), sitemap, Lighthouse audit, LCP +
-   bundle-split investigation.
-6. **Community** — devlog venue (on-site `/devlog` vs Substack vs
-   `DEVLOG.md`), launch posts (r/threejs, r/webgames, r/IndieDev,
-   HN), Discord/community-tab, in-game feedback funnel, streamer
-   outreach.
-7. **Polish / fixes / perf** — Mac fix verification, the five v1.4.0
-   playtest items, audio path on Safari, bundle-size investigation,
-   anything surfaced in the wild. **Heightfield amplitude bug stays
-   parked** (touches sim-baseline; not Cycle 26 scope).
+1. **Pending Matt-side verification** — iPhone water sheen on v2.0.4
+   (and Mac re-verification for v2.0.5 sanity). Both fold into the
+   media session. Contingent v2.0.5+ AnimeWater shader rework only
+   if iPhone Neutral tone-map didn't kill the sheen.
+2. **Lighthouse audit** — runs against production after v2.1.0
+   deploy lands. Apply 1-2 cheap wins if SEO < 95.
+3. **Media-capture session (live, Matt-driven)** — refreshed shot
+   manifest at
+   [`cycle26-validation/shot-list-v2.md`](cycle26-validation/shot-list-v2.md);
+   apply on top of [`cycle26-validation/shot-list.md`](cycle26-validation/shot-list.md).
+   Pulse-on-first-visit Practice tile is now an unblocked Tier 1
+   candidate (was Tier 3 / blocked).
+4. **Post-shoot — community kickoff** — devlog venue (recommend
+   `DEVLOG.md` route — lowest overhead, no CMS), launch posts
+   (r/threejs, r/webgames, r/IndieDev, HN). Defer until assets
+   exist from the shoot.
+
+Areas the autonomous run **deliberately did NOT touch** (revisit
+later or in Matt's session):
+
+- **Visual design pass** (title-screen identity, design-tokens
+  refactor) — too taste-dependent for autonomous shipping.
+- **User engagement** (daily/weekly seeds, dog cosmetic loop,
+  replays, share-card image-gen) — separate cycle scope.
+- **Settings panel polish, mobile gesture feel, MP reconnect UI** —
+  not surfaced as concrete bugs in playtest yet.
+- **Cinema runner font-wait timeout** — workaround (manual capture
+  via Playwright MCP) is fine; root fix isn't urgent.
+- **Bundle-size split beyond what's already manualChunks-split** —
+  no obvious quick wins; bundle is 835 KB / 250 KB gzip.
+
+The **five v1.4.0 playtest items** turned out to mostly already be
+shipped — exploration during plan phase confirmed sprint-exit, OC
+HUD overlap, MP cheap wins, and trees-tris counter all landed in
+Cycle 23/24/25. AudioManager Safari path stays parked (needs real
+device). Classic-overhead trees pitch-aware desat machinery turned
+out to be dead code (multiplied by 0); deleted in v2.0.5.
 
 ## What's parked (NOT Cycle 26 scope)
 
