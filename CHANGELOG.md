@@ -4,6 +4,37 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.0.5] — 2026-05-07 (post-v2.0.4 patch — delete dead AtmosphericDesatPatch)
+
+`AtmosphericDesatPatch` was scheduled for deletion in
+[`docs/polish-program.md`](docs/polish-program.md) but only got
+neutralized in Cycle 25 Phase B (`uDesatStrength` forced to 0). The
+pitch ramp at `js/TerrainBuilder.js` was multiplying the per-frame
+strength by `_desatConfiguredStrength = 0` — net behavior identical to
+"the patch isn't there." Mobile-low LOD1 + the kiln impostor received
+the same zeroed uniforms, so all three tiers were paying for dead code.
+
+### Removed
+- **`js/shaders/AtmosphericDesatPatch.js`** — entire 127-line module
+  deleted. Was a no-op since v2.0.0.
+- **`js/TerrainBuilder.js`** desat plumbing: `_desat` uniform block,
+  `_desatConfiguredStrength`, `_desatHighPitchFloor`, the per-frame
+  pitch math, the kiln-impostor uniform sync, the `patchMaterialDesat`
+  call in `_patchTreeWindMaterial`, the orphaned `smoothstep01` helper,
+  and the import line.
+- **`js/kiln-impostor-material.js`** desat shader path: three uniform
+  declarations, the fragment-shader desat math, three default uniform
+  values. Material gets simpler; no behavior change (the math
+  multiplied by zero).
+
+### Validation
+- vitest 188/188.
+- build clean — **834.79 KB main / 249.86 KB gzip** (-2.64 KB main /
+  -0.48 KB gzip vs v2.0.4).
+- Spot-checked Field + Rolling Hills + Open Country in `npm run dev`:
+  no visual change at horizon-level OR overhead camera (the patch was
+  doing nothing on desktop, exactly as expected).
+
 ## [2.0.4] — 2026-05-07 (post-v2.0.3 patch — extend Apple tone-mapping branch to iOS)
 
 iPhone playtest surfaced a bright-white sheen layered over the water

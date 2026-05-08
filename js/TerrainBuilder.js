@@ -5,19 +5,11 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { GrassSystem } from './GrassSystem.js';
 import { loadKilnImpostor } from './kiln-impostor-material.js';
-import { patchMaterialDesat } from './shaders/AtmosphericDesatPatch.js';
 import { getOccluderUniforms, patchMaterialOccluder } from './shaders/OccluderFadePatch.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
 import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
 import { TIER_PRESETS } from './HardwareTier.js';
-
-// GLSL-style smoothstep returning [0,1]. Cycle 23 Phase A1: drives the
-// pitch-aware desat falloff in updateGrassAnimation.
-function smoothstep01(edge0, edge1, x) {
-    const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
-    return t * t * (3 - 2 * t);
-}
 
 // Phase A Unit B compressed all GLBs with Draco + Meshopt. Every GLTFLoader
 // in the codebase needs both decoders attached or those GLBs fail to parse
@@ -167,29 +159,6 @@ export class TerrainBuilder {
             uWindStrength: { value: this.isMobile ? 0 : 0.6 },
             uWindDirection: { value: new THREE.Vector2(0.7, 0.7) }
         };
-        // Cycle 22 Phase C: shared atmospheric-desat uniforms. Same set is
-        // attached to every patched leaf MeshStandardMaterial AND propagated
-        // into the kiln impostor (`setKilnImpostorTunables`).
-        // Cycle 25 Phase B: strength forced to 0 — the desat patch was
-        // hiding the LOD1 silhouette mismatch with LOD0. With LOD1 dropped
-        // on desktop med/high the mismatch is gone, and the desat
-        // composition was washing distant trees toward fog-grey beyond
-        // what the new aerial-perspective LUT (Phase C) does naturally.
-        // Uniforms preserved for back-compat with the kiln impostor +
-        // mobile-low LOD1 path; the patch becomes a per-fragment no-op.
-        this._desat = {
-            uDesatStartM:   { value: 100 },
-            uDesatEndM:     { value: 320 },
-            uDesatStrength: { value: 0 },
-        };
-        // Cycle 23 Phase A1 / 25 Phase B: pitch-aware desat retained as
-        // identity (configured = 0). Per-frame update keeps strength = 0.
-        this._desatConfiguredStrength = 0;
-        // Cycle 23 Phase A1: floor multiplier — at max pitch, strength only
-        // drops to 20% of configured rather than 0% so far trees still desat
-        // a bit. Tunable knob.
-        this._desatHighPitchFloor = 0.2;
-
         // Cycle 23 Phase A2: camera-to-dog occluder fade. Shared uniform set
         // attached to every leaf MeshStandardMaterial AND propagated into
         // the kiln impostor. Each frame, uOccluderDogVS gets the dog world
@@ -641,12 +610,6 @@ export class TerrainBuilder {
         if (material.transparent !== true) {
             material.alphaHash = true;
         }
-
-        // Cycle 22 Phase C: atmospheric desaturation toward fog. Composes
-        // with the wind onBeforeCompile chained below — patchMaterialDesat
-        // wraps whatever onBeforeCompile is currently set, so the order
-        // (desat first, wind appended below) means both patches run.
-        patchMaterialDesat(material, this._desat);
 
         // Cycle 23 Phase A2: camera-to-dog occluder fade. Same chained-patch
         // pattern as desat. The fragment hash-discards leaf pixels inside a
@@ -1352,16 +1315,8 @@ export class TerrainBuilder {
             if (!triple) continue;
             kilnImpostorByType.set(kilnTreeTypes[i], triple);
             // Cycle 25 Phase D: uMatchBoost calibration LUT removed.
-            // Cycle 22 Phase C: rebind kiln-impostor desat uniforms to the
-            // shared TerrainBuilder set so LOD0+LOD1 leaves and the impostor
-            // billboard stay in lock-step on tweaks. Must happen after the
-            // material is fully constructed but before first render.
-            const kmat = triple?.material;
-            if (kmat?.uniforms) {
-                kmat.uniforms.uDesatStartM   = this._desat.uDesatStartM;
-                kmat.uniforms.uDesatEndM     = this._desat.uDesatEndM;
-                kmat.uniforms.uDesatStrength = this._desat.uDesatStrength;
-            }
+            // Cycle 26 v2.0.5: AtmosphericDesatPatch deleted (was a no-op
+            // since Cycle 25 Phase B forced uDesatStrength to 0).
         }
 
         Object.entries(treeInstances).forEach(([treeType, instances]) => {
@@ -2023,19 +1978,6 @@ export class TerrainBuilder {
             if (grassWind) {
                 this._treeWind.uWindDirection.value.copy(grassWind);
             }
-        }
-
-        // Cycle 23 Phase A1: pitch-aware desat strength. Read camera matrix
-        // directly to avoid plumbing the CameraController reference through
-        // updateGrassAnimation. m[9] is matrixWorld col2.y (camera back-Y);
-        // pitchDeg = asin(m[9]). 0 = horizon, +90 = straight down.
-        if (this._desat && camera?.matrixWorld) {
-            const my = camera.matrixWorld.elements[9];
-            const clamped = Math.max(-1, Math.min(1, my));
-            const pitchDeg = Math.asin(clamped) * (180 / Math.PI);
-            const t = smoothstep01(25, 50, Math.abs(pitchDeg));
-            const lerp = 1.0 + (this._desatHighPitchFloor - 1.0) * t;
-            this._desat.uDesatStrength.value = this._desatConfiguredStrength * lerp;
         }
 
         // Cycle 23 Phase A2: occluder fade — transform dog world pos into
