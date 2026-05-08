@@ -1,0 +1,59 @@
+{
+  "cycle": 27,
+  "phase": "C",
+  "task": "Lazy-load React overlay split from Three.js init",
+  "measured_at": "2026-05-08",
+  "measurement_environment": {
+    "host_machine": "Windows 11 Pro, RTX 3070, 32GB RAM (Matt's MKPC)",
+    "vite_version": "7.3.2",
+    "build_target": "production (gh-pages)",
+    "note": "FCP-on-Slow-3G measurement requires real browser harness; deferred to Matt's pickup. Bundle-size deltas captured below as the load-bearing acceptance signal."
+  },
+  "before": {
+    "main_js_bytes": 857354,
+    "main_js_kb": 837.26,
+    "main_js_gzip_kb": 250.46,
+    "three_js_kb": 617.80,
+    "i18n_js_kb": 62.15,
+    "react_in_main": true,
+    "app_js_in_main": true,
+    "critical_path_kb": "main 837.26 + three 617.80 = 1455.06"
+  },
+  "after": {
+    "main_js_bytes": 601371,
+    "main_js_kb": 587.28,
+    "main_js_gzip_kb": 170.26,
+    "three_js_kb": 617.80,
+    "i18n_js_kb": 62.55,
+    "react_in_main": false,
+    "app_js_in_main": false,
+    "lazy_chunks": [
+      { "name": "App-*.js", "kb": 68.91, "gzip_kb": 23.40, "load_trigger": "setTimeout(0) after main.js settles" },
+      { "name": "client-*.js (react-dom)", "kb": 180.81, "gzip_kb": 56.89, "load_trigger": "Promise.all(import) on game-complete or App.js mount" }
+    ],
+    "critical_path_kb": "main 587.28 + three 617.80 = 1205.08"
+  },
+  "delta": {
+    "main_js_kb": -249.98,
+    "main_js_gzip_kb": -80.20,
+    "main_js_pct": -29.86,
+    "critical_path_kb": -249.98,
+    "target_main_kb_le": 760,
+    "target_met": true
+  },
+  "implementation": {
+    "files_changed": [
+      "js/components/index.js — bootReactUI() does setTimeout(0) → import('./App.js')",
+      "js/main.js — onGameComplete() does Promise.all(import('react'), import('react-dom/client'))"
+    ],
+    "rationale": "components/index.js used to statically import App.js, which dragged App + its sync deps (i18n init, SceneSwapOverlay, GameBridge tree) into main. main.js separately statically imported react + react-dom for the completion overlay. Both deferred to runtime now.",
+    "false_start": "First cut used requestIdleCallback({ timeout: 1500 }). Smoke test failed because Chromium starves idle callbacks while WebGL boot keeps the main thread busy — even with the timeout flag. Switched to setTimeout(0) which is reliable."
+  },
+  "tests": {
+    "vitest": "208 pass (was 201 pre-Phase B; +7 cinema-runner specs from Phase B)",
+    "playwright_smoke": "2/2 pass (launches start screen + solo classic game canvas renders)"
+  },
+  "follow_ups_for_matt": {
+    "fcp_slow_3g_measurement": "DevTools Performance tab against deployed sheepdogsim.com with Slow 3G throttling — record TTFB → FCP → first frame painted on the lazy-load build vs the v2.1.2 baseline. Target -800ms minimum to claim a perf win on top of the bundle-delta win already in this commit."
+  }
+}

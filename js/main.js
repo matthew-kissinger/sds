@@ -1,6 +1,9 @@
 import * as THREE from 'three';
-import React, { createElement } from 'react';
-import { createRoot } from 'react-dom/client';
+// Cycle 27 Phase C: React imports moved to a runtime dynamic import in
+// onGameComplete (the only main.js code path that touches React). Static
+// imports kept React + react-dom in the critical-path bundle even though
+// they're only needed at game-end. Lazy now → smaller main.js, React
+// loads in parallel with App.js's lazy chunk.
 import { SceneManager } from './SceneManager.js';
 import { GameState } from './GameState.js';
 import { GameTimer } from './GameTimer.js';
@@ -3296,19 +3299,22 @@ class SheepDogSimulation {
                 }));
             }
 
-            // Render React component
-            const root = createRoot(container);
-            root.render(createElement(window.CompletionScreen, {
-                mode: mode,
-                data: screenData,
-                // Cycle 10 Phase 1 + 2: route through restartToMenu so future
-                // cycles can flip to in-process menu return without re-touching
-                // the completion screen.
-                onPlayAgain: () => this.restartToMenu(),
-                onMainMenu: () => this.restartToMenu()
-            }));
-
-            console.log('[GAME] React completion overlay rendered!');
+            // Render React component (React pulled in lazily — see Phase C note above).
+            Promise.all([import('react'), import('react-dom/client')]).then(
+                ([{ createElement }, { createRoot }]) => {
+                    const root = createRoot(container);
+                    root.render(createElement(window.CompletionScreen, {
+                        mode: mode,
+                        data: screenData,
+                        // Cycle 10 Phase 1 + 2: route through restartToMenu so future
+                        // cycles can flip to in-process menu return without re-touching
+                        // the completion screen.
+                        onPlayAgain: () => this.restartToMenu(),
+                        onMainMenu: () => this.restartToMenu()
+                    }));
+                    console.log('[GAME] React completion overlay rendered!');
+                },
+            );
         } else {
             // Fallback to simple overlay if React not available
             console.log('[GAME] React not available, using fallback overlay');

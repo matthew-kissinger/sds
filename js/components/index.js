@@ -1,8 +1,9 @@
 /**
  * UI Components Entry Point
  *
- * This is the main entry point for all game UI components.
- * It initializes the React overlay and mounts the App component.
+ * Cycle 27 Phase C: lazy-load App.js out of the critical-path bundle.
+ * Three.js + WebGL bootstrap is the user-perceivable cold-start; the
+ * React overlay can mount one idle tick later without anyone noticing.
  *
  * Directory Structure:
  * - hooks/       - Custom React hooks (usePlatform, useGameState)
@@ -10,20 +11,26 @@
  * - StartScreen/ - Start screen components (ModeSelection, DogSelection, etc.)
  * - GameHUD/     - In-game HUD components (GameTimer, SheepCounter, MobileHUD, etc.)
  * - Multiplayer/ - Multiplayer UI (Lobby, Leaderboard, Scoreboard, etc.)
- * - App.js       - Main App component that orchestrates everything
+ * - App.js       - Main App component (now in its own lazy chunk).
  */
 
-import { initReactUI } from './App.js';
+// requestIdleCallback was the first cut, but Chromium can starve idle
+// callbacks when the WebGL boot keeps the main thread busy — even with
+// a timeout — so the React overlay never mounted in headless smoke
+// runs. setTimeout(0) is the reliable path: yields one task to let
+// main.js's imports settle, then loads the App chunk.
+function bootReactUI() {
+    import('./App.js')
+        .then(({ initReactUI }) => initReactUI())
+        .catch((err) => {
+            console.error('[UI] Failed to load React overlay:', err);
+        });
+}
 
-// Export the initialization function
-export { initReactUI };
-
-// Auto-initialize when DOM is ready (if this script is loaded directly)
 if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initReactUI);
+        document.addEventListener('DOMContentLoaded', () => setTimeout(bootReactUI, 0));
     } else {
-        // DOM already loaded, initialize immediately
-        initReactUI();
+        setTimeout(bootReactUI, 0);
     }
 }
