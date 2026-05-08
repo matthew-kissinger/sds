@@ -215,9 +215,6 @@ uniform float uSubsurfaceLift;   // chromatic floor magnitude (0..0.5, foliage-t
 uniform float uFresnelStrength;  // Schlick rim term magnitude (0 = disabled; 0.04 ≈ MeshStandard metalness=0)
 uniform float uAlphaTest;
 uniform float uAlphaHashScale;      // Cycle 22 Phase B; 0 = disabled, 1 = full dither
-uniform float uDesatStartM;         // Cycle 22 Phase C; view-space distance where desat begins
-uniform float uDesatEndM;           // Cycle 22 Phase C; view-space distance where desat fully on
-uniform float uDesatStrength;       // Cycle 22 Phase C; mix amount toward (luma + fogColor)
 uniform float uParallaxScale;       // 0 = disabled (v1 default)
 uniform float uDepthDiscardThr;     // 1 = disabled (v1 default; tune to ~0.15 to enable)
 
@@ -470,20 +467,11 @@ void main() {
   // visible silhouette. Atlas re-bake (8x4 + padded mips) deferred to a
   // real Cycle 26 — the existing 4x4 atlas stays.
 
-  // Cycle 22 Phase C (2026-05-05): atmospheric desat unified with LOD0+LOD1
-  // leaves via shared uniforms uDesatStartM / uDesatEndM / uDesatStrength.
-  // Same math pattern as js/shaders/AtmosphericDesatPatch.js (different
-  // shader so the formula is duplicated — keep them in sync). vFogDepth
-  // is the impostor's view-space distance varying. Mixes toward
-  // (luma + fogColor) so far impostors read as colorless silhouettes
-  // against the sky, not faded color cards.
-  float dt = smoothstep(uDesatStartM, uDesatEndM, vFogDepth);
-  if (dt > 0.0) {
-    float lum = dot(reflected, vec3(0.2126, 0.7152, 0.0722));
-    vec3 luma = vec3(lum);
-    vec3 fogTint = mix(luma, fogColor, 0.4);
-    reflected = mix(reflected, fogTint, dt * uDesatStrength);
-  }
+  // Cycle 26 v2.0.5: atmospheric desat removed. Was a no-op since Cycle 25
+  // Phase B forced uDesatStrength to 0 (the desat was hiding the LOD1
+  // silhouette mismatch with LOD0; with LOD1 dropped on desktop med/high
+  // the mismatch is gone). Mobile-low LOD1 unaffected — the patch had
+  // already been zeroed for them too.
 
   gl_FragColor = vec4(reflected, aBlended);
   #include <fog_fragment>
@@ -582,13 +570,6 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
       // with material.alphaHash=true on LOD0+LOD1 leaf MeshStandardMaterials
       // so all three LOD tiers crossfade with matching dither pattern.
       uAlphaHashScale:  { value: 0.30 },
-      // Cycle 22 Phase C: atmospheric desat. Defaults overwritten by
-      // TerrainBuilder.setKilnImpostorDesat to share the same uniform set
-      // with LOD0+LOD1 leaves; the values here are sane fallbacks for the
-      // standalone sandbox + impostor inspector pages.
-      uDesatStartM:     { value: 100 },
-      uDesatEndM:       { value: 320 },
-      uDesatStrength:   { value: 0.6 },
       // v1 defaults: parallax + depth-discard scaffolded but disabled.
       // Tune via TerrainBuilder.setKilnImpostorTunables() per Layer F.
       uParallaxScale:   { value: 0.0 },
