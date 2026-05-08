@@ -2,13 +2,60 @@
 
 > **Updated 2026-05-08** — autonomous Cycle 26 work shipped through
 > v2.1.0, then a live media-capture session refreshed 2 of 3 OG cards
-> as `v2.1.1`. Patches in this cycle: `v2.0.4` (Apple tone-mapping to
-> iPhone/iPad), `v2.0.5` (delete dead AtmosphericDesatPatch — final
-> polish-program cleanup), `v2.1.0` (Practice Paddock + per-scene SEO),
-> `v2.1.1` (OG card refresh — Rolling Hills dusk + Field farmhouse).
-> What's left: open-country OG card (skipped this session, can refresh
-> later), Twitter/Facebook scraper re-fetch via debuggers post-deploy,
+> as `v2.1.1`, then a heightfield-fix attempt as `v2.1.2`. Patches in
+> this cycle: `v2.0.4` (Apple tone-mapping to iPhone/iPad), `v2.0.5`
+> (delete dead AtmosphericDesatPatch — final polish-program cleanup),
+> `v2.1.0` (Practice Paddock + per-scene SEO), `v2.1.1` (OG card
+> refresh — Rolling Hills dusk + Field farmhouse), `v2.1.2` (heightfield
+> .r32f → .bin rename to dodge itch.io's CDN extension blocklist).
+> What's left: **itch.io heightfield bug NOT FULLY RESOLVED** by the
+> .bin rename — see "Known issues" below. Plus: open-country OG card
+> refresh, Twitter/Facebook scraper re-fetch via debuggers post-deploy,
 > and post-shoot community kickoff.
+
+## Known issues — pick up next cycle
+
+- **itch.io heightfield still broken after `v2.1.2` rename attempt.**
+  The hypothesis was: `html-classic.itch.zone` returns 403 on `.r32f`
+  files because the extension isn't on their allowlist; renaming to
+  `.bin` (which is on every CDN's default allowlist) should serve.
+  The `.bin` files DO serve correctly on `sheepdogsim.com` (CF Pages
+  confirmed 4 MiB content-length response), and the build pushed via
+  `butler push dist/` includes them. But Matt's verification on the
+  itch deploy showed the dark-blue mid-distance terrain band (the
+  visible symptom of "heightfield failed to load → flat terrain →
+  AnimeWater bleeds through") is **still present**.
+
+  Possible causes still to investigate:
+  - itch's CDN may also strip files inside `terrain/` directory by
+    rule, regardless of extension. Try moving heightfield bytes to a
+    different path (`/assets/heightmaps/`?) or root-level paths.
+  - itch may have an aggressive build-time content filter that strips
+    files matching certain MIME types or magic bytes regardless of
+    extension. Could test by inspecting what's actually in the
+    deployed itch zip via `butler fetch mkvision0/sheep-dog-sim:html5
+    --target-version=2.1.2`.
+  - The bug may be entirely separate from the heightfield 403 —
+    perhaps the `.bin` file does load but a different code path
+    (water mesh size? scene boundary?) misbehaves under itch's
+    iframe-sandboxed canvas size or DPR. The earlier console output
+    Matt pasted shows `[INIT] Loading heightfield: /terrain/rolling-hills.r32f`
+    explicitly logged BEFORE the .bin rename, so we know the failure
+    was at the heightfield fetch in v2.1.0/2.1.1. After v2.1.2 deploy
+    the user would need to capture a fresh devtools console output to
+    confirm whether the `.bin` fetch succeeded.
+  - Worst-case fallback: embed the heightfield bytes as base64 inline
+    in the JS bundle (no fetch, no CDN, no extension filter). Adds
+    ~16 MB to the bundle but bypasses the itch CDN entirely.
+
+  **First action next cycle:** ask Matt to load the itch deploy with
+  devtools open, take a fresh console screenshot, and check whether
+  the Loading heightfield log says `.bin` and whether it succeeds or
+  still falls back to flat terrain. The diagnosis path branches from
+  there.
+
+- **`og-open-country.webp`** still serves the pre-Cycle-26 art.
+  v2.1.1 capture session ran out of patience; re-shoot deferred.
 
 ## What just shipped
 

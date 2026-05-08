@@ -4,7 +4,19 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
-## [2.1.2] — 2026-05-08 (Cycle 26 — itch.io heightfield fix)
+## [2.1.2] — 2026-05-08 (Cycle 26 — itch.io heightfield fix attempt — INCOMPLETE)
+
+> **Note added 2026-05-08 post-deploy:** Matt's verification on the live
+> itch deploy showed the visible symptom (dark-blue mid-distance terrain
+> band on Rolling Hills + Open Country) is **still present** after the
+> .bin rename. The .bin file serves correctly on sheepdogsim.com and the
+> rename did dodge the original `.r32f` 403, but the bug isn't resolved.
+> See [`NEXT_SESSION.md`](NEXT_SESSION.md) "Known issues" for the
+> follow-up investigation paths. Leaving v2.1.2 shipped because it's a
+> sensible incremental change either way (some CDN somewhere is fussy
+> about `.r32f`); just doesn't close the user-visible bug yet.
+
+
 
 Bug fix: heightfield files were failing to load on itch.io's HTML5 host
 (`html-classic.itch.zone`) with a 403 because `.r32f` is not on their
