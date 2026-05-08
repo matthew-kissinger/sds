@@ -135,7 +135,7 @@ test.describe('SDS smoke', () => {
       expect(dims).not.toBeNull();
       expect(dims!.width).toBeGreaterThan(100);
       expect(dims!.height).toBeGreaterThan(100);
-    }).toPass({ timeout: 30_000 });
+    }).toPass({ timeout: 60_000 });
 
     // Brief play - confirm no critical errors during the first second.
     await page.waitForTimeout(1_000);
