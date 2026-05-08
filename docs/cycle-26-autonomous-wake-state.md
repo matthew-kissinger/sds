@@ -10,9 +10,10 @@
 
 | Ship | Status | Verification |
 |---|---|---|
-| **`v2.0.4`** — iOS tone-mapping branch | Deployed (Pages + Worker + Test + E2E green; perf-check noise) | **Needs iPhone test** — does the water sheen disappear? |
-| **`v2.0.5`** — delete dead AtmosphericDesatPatch | Deployed (in-progress at write time) | Spot-check Field/RH/OC look identical to v2.0.4. No visible change expected. |
-| **`v2.1.0`** — Practice Paddock + per-scene SEO | Pending in queue (deploy fires after v2.0.5) | Practice tile pulses on first visit; no leaderboard submission; per-scene OG cards distinct |
+| **`v2.0.4`** — iOS tone-mapping branch | Deployed | **Needs iPhone test** — does the water sheen disappear? |
+| **`v2.0.5`** — delete dead AtmosphericDesatPatch | Deployed | Spot-check Field/RH/OC look identical to v2.0.4. No visible change expected. |
+| **`v2.1.0`** — Practice Paddock + per-scene SEO | Deployed | Practice tile pulses on first visit; no leaderboard submission; per-scene OG cards distinct |
+| **`v2.1.1`** — OG card refresh (RH dusk + Field farmhouse) | Pending push at write time | Twitter / Facebook re-scrape via debuggers post-deploy. Open-country OG retained from prior cycle. |
 
 vitest 188 → 201 (+13). Build 837.43 KB → 835.48 KB main / 250.34 KB → 250.04 KB gzip (net -1.95 KB / -0.30 KB across the cycle).
 

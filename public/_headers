@@ -1,0 +1,7 @@
+# Cloudflare Pages headers — cache-control overrides
+# Reference: https://developers.cloudflare.com/pages/configuration/headers/
+
+# OG / social-card assets — short edge TTL so refreshes propagate fast
+# (social scrapers cache independently; this only affects browser + CF edge)
+/assets/marketing/og/*
+  Cache-Control: public, max-age=300, s-maxage=300, must-revalidate

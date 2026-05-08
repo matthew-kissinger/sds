@@ -4,6 +4,51 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] — 2026-05-08 (Cycle 26 — OG card refresh)
+
+Patch ship: refreshes 2 of 3 social-card images with v2.1.0-era captures
+so shared links on Twitter / Facebook / Slack / Discord show the current
+art (post-Mac-fix tone mapping, post-Cycle-25 foliage density, post-v2.1.0
+per-scene SEO wiring). Open-country card retained from prior cycle.
+
+### Changed
+- `assets/marketing/og/og-rh-sunset.webp` — refreshed. New shot: behind-Jep
+  cliff overlook on Rolling Hills at dusk (`sun=0.06`), tree framing left,
+  flock dispersed along the cliff edge, sun cresting horizon over the
+  water. **117 KB** (was 181 KB, -35%). 1200×630.
+- `assets/marketing/og/og-field.webp` — refreshed. New shot: behind-Jep
+  on Home Field at noon (`sun=0.50`), fence on the left, farmhouse +
+  trees mid-frame, ~3000-sheep flock arcing around the dog. **192 KB**.
+  1200×630.
+- `og-open-country.webp` left untouched — capture session ran out of
+  patience, existing Cycle 19 art still serves the deeplink correctly.
+
+### Added
+- `public/_headers` — Cloudflare Pages directive setting `Cache-Control:
+  public, max-age=300, must-revalidate` on `/assets/marketing/og/*`. Five
+  minute edge TTL so future OG refreshes propagate fast (social scrapers
+  cache independently — they need explicit re-scrape via
+  Twitter/Facebook validators).
+- `assets/marketing/captures/cycle26/raw/` — 1920×1080 source PNGs for
+  the new cards, kept for re-cropping or alt-aspect derivation.
+
+### Validation
+- vitest 201/201 (SEO existence specs still green).
+- File sizes within OG-friendly ranges (Twitter 5MB cap, Facebook 8MB).
+- OG metadata already pointed at these filenames in
+  [`index.html`](index.html) + [`js/utils/seo.js`](js/utils/seo.js) — no
+  code changes required, byte-level swap only.
+
+### Post-deploy steps (do not skip)
+- **Cloudflare cache purge** — `wrangler pages deployments list
+  --project-name=sheepdogsim` then purge OG paths via CF dashboard, OR
+  rely on the new 5-min `_headers` TTL to roll forward naturally.
+- **Twitter Card Validator** — paste `https://sheepdogsim.com/?scene=field`
+  + `?scene=rolling-hills` at https://cards-dev.twitter.com/validator and
+  click "Preview card" so Twitter re-scrapes.
+- **Facebook Sharing Debugger** — paste same URLs at
+  https://developers.facebook.com/tools/debug/ and click "Scrape Again".
+
 ## [2.1.0] — 2026-05-08 (Cycle 26 — Practice Paddock + per-scene SEO)
 
 First Cycle-26 minor release: pivots away from world-rendering tech and
