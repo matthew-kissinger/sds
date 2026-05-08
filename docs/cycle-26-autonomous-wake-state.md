@@ -64,7 +64,7 @@ Per the plan agent's pushback (and Matt's autonomous instruction), these items d
 
 - **Phase 3 visual design pass** (CSS-vars refactor, title-screen motion). Both are taste-dependent — better to land alongside Matt's media-session sync.
 - **AudioManager Safari verification.** Try/catch silently swallows AudioContext failures. Real Safari device test bundles into the media session.
-- **Lighthouse audit.** Runs against production once v2.1.0 deploy lands. Cheap wins applied if SEO < 95.
+- ~~**Lighthouse audit.**~~ Ran against production: **SEO score 100** — no audits failing, no cheap wins to apply. Artifact: [`cycle26-validation/lighthouse-seo.json`](cycle26-validation/lighthouse-seo.json).
 - **Bundle-size split beyond manualChunks.** Investigation surfaced no obvious wins (react/three/i18n already split, @msgpack runtime-required, locale split would save <30KB).
 - **iPhone water-sheen verification.** v2.0.4 hypothesis is Apple-platform-detection extension. Needs Matt's iPhone to confirm.
 
@@ -78,7 +78,7 @@ Per the plan agent's pushback (and Matt's autonomous instruction), these items d
    - PracticeHint fades in bottom-center, dismisses on movement or after 8s
    - Reload — pulse is GONE (the flag persisted)
 4. **Per-scene SEO verification** — load `?scene=field`, `?scene=rolling-hills`, `?scene=open-country`. In each, F12 → check `document.title` and `<meta property="og:image">` are distinct.
-5. **Lighthouse audit** — `npx lighthouse https://sheepdogsim.com/ --only-categories=seo,performance --output=json`. Apply 1-2 cheap wins if SEO < 95.
+5. ~~**Lighthouse audit**~~ — already done. SEO 100. Skip.
 6. **Schedule the media session** — refreshed manifest at [cycle26-validation/shot-list-v2.md](cycle26-validation/shot-list-v2.md). Two newly-unblocked shots worth promoting to Tier 1: `practice-paddock-hero` and `vert-4-just-play-onboarding`. Pre-shoot: `localStorage.clear()` so the first-visit pulse captures cleanly.
 
 ## Cycle 26 status after this run
@@ -93,7 +93,7 @@ Per the plan agent's pushback (and Matt's autonomous instruction), these items d
 | 3. User engagement — daily seeds, replays, share-card | ❌ deferred (separate cycle scope) |
 | 4. Marketing media session | 🟡 prep done — refresh manifest at `shot-list-v2.md`; Matt-side capture pending |
 | 5. SEO — per-scene meta | ✅ shipped (v2.1.0) |
-| 5. SEO — Lighthouse audit | 🟡 pending post-deploy |
+| 5. SEO — Lighthouse audit | ✅ ran post-deploy — SEO 100 (no cheap wins to apply) |
 | 6. Community — devlog venue + launch posts | 🟡 deferred until post-shoot (assets needed) |
 | 7. Polish — Mac fix verification | 🟡 pending Matt's M4 |
 | 7. Polish — v1.4.0 playtest items | ✅ already shipped (Cycle 23/24/25) |
