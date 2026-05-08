@@ -78,9 +78,16 @@ export default {
         }
     },
 
+    // Practice Paddock (Cycle 26 v2.1.0)
+    practice: {
+        hint: 'WASD or arrow keys to move · Shift to sprint'
+    },
+
     // Game modes
     modes: {
         title: 'Choose Game Mode',
+        practice: 'Just Play',
+        practiceDesc: 'No timer. Just 30 sheep. Take your time.',
         classic: 'Classic Mode',
         classicDesc: 'Herd all 200 sheep to the pasture',
         extreme: 'Extreme Mode',

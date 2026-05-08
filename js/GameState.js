@@ -819,6 +819,7 @@ export class GameState {
         // no longer authoritative for `totalSheep`. Multiplayer reads the
         // host-configured count from the room (server authoritative).
         const SOLO_MODE_SHEEP_COUNT = {
+            practice: 30,
             classic: 200,
             extreme: 1000,
             insane: 3000,
@@ -827,6 +828,11 @@ export class GameState {
         if (mode === 'solo') {
             this.totalSheep = SOLO_MODE_SHEEP_COUNT[singlePlayerMode] ?? 200;
             console.log(`Game started in ${singlePlayerMode} mode with ${this.totalSheep} sheep`);
+            // Cycle 26 v2.1.0: first-visit flag drives the pulsing-glow
+            // hint on the Practice tile in SinglePlayerModes. Set on any
+            // solo start (not just practice) so the hint stops pulsing
+            // once the player engages with any mode.
+            try { localStorage.setItem('sds.has-played', '1'); } catch {}
         } else {
             const room = getCurrentRoom();
             const roomSheepCount = room?.sheepCount;
@@ -1215,6 +1221,12 @@ export class GameState {
         // IMPORTANT: Never submit sandbox scores to leaderboard
         if (this.gameMode === 'sandbox') {
             console.log('[GAME] Sandbox mode - score submission blocked');
+            return;
+        }
+        // Cycle 26 v2.1.0: Practice Paddock is a no-pressure mode — never
+        // submit to leaderboard regardless of the score path that calls in.
+        if (this.singlePlayerMode === 'practice') {
+            console.log('[GAME] Practice mode - score submission blocked');
             return;
         }
 
