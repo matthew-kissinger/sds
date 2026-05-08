@@ -1,32 +1,34 @@
 # Sheep Dog Sim — Press Kit
 
-A free, browser-based herding game where you guide your sheepdog through peaceful meadows. Zen, satisfying, no microtransactions, no signup.
+A free, browser-based herding game where you guide your sheepdog across three biomes — flat pasture, rolling sunset hills, and a wild island with a magical portal. Zen, satisfying, no microtransactions, no signup.
 
 ## Tagline
 
-**Herd sheep. Find calm. Free in your browser.**
+**Herd 5,000 sheep in your browser. No install. Free. MIT-licensed.**
 
 ## Headline features
 
-- **Three biomes:** open pasture, rolling hills with heightmapped terrain, an island with a magical portal corral.
-- **Five solo modes:** Classic, Timed, Extreme (1000 sheep), Insane (3000), Chaos (5000).
-- **Multiplayer:** real-time co-op herding, create-room or quick-match.
-- **18 languages:** auto-detected, full UI + leaderboard.
-- **Mobile-ready:** touch controls, responsive HUD, installable as a PWA.
-- **Cinematic visuals:** procedural sky, day-night cycle, anime-style water, terrain-conformed grass.
+- **Three biomes:** Home Field (flat starter pasture), Rolling Hills (180 m sunset island with corral), Open Country (380 m island with multi-stage gather→drive→portal objective).
+- **Six modes:** Practice (30 sheep, no timer), Classic (200), Extreme (1,000), Insane (3,000), Chaos (5,000), plus 2–4 player multiplayer co-op + competitive + timed.
+- **Authoritative 60 Hz multiplayer:** Cloudflare Workers + Durable Objects + D1, MessagePack-over-WebSocket state frames, adaptive jitter buffer.
+- **5 languages:** auto-detected via i18next — English, Spanish, Portuguese, Japanese, Simplified Chinese. (Community PRs welcome for more.)
+- **Mobile-ready:** touch joystick, responsive HUD, gamepad support, installable as a PWA.
+- **Cinematic visuals:** Hosek-Wilkie analytic sky with day/night presets, parallax cloud layer, anime-style water with sun-glint, hundreds of thousands of grass blades with directional wind, real obstacle-aware boid flocking.
 
 ## Why it exists
 
-A relaxed, no-stakes corner of the modern web. Most casual games push notifications, ads, energy meters. Sheep Dog Sim has none of that — open the URL, herd some sheep, close the tab.
+A relaxed, no-stakes corner of the modern web. Most casual games push notifications, ads, or energy meters — Sheep Dog Sim has none of that. Open the URL, herd some sheep, close the tab.
+
+The codebase is also deliberately easy to read — ~10k lines of vanilla JavaScript on the client, ~600-line TypeScript Cloudflare Worker on the server, deterministic boid + physics modules shared byte-identically by both. Forkable in an afternoon.
 
 ## Quick facts
 
 - **Studio:** solo developer, Matthew Kissinger.
-- **Engine:** TypeScript + Three.js, no game engine.
+- **Engine:** vanilla JavaScript + Three.js 0.184 (no game engine, no JSX, no codegen, no wasm).
 - **Backend:** Cloudflare Pages + Worker + Durable Objects + D1.
-- **License:** proprietary, free to play.
-- **Platforms:** Web (any modern browser), PWA-installable on mobile.
-- **Languages:** English, Spanish, Portuguese, Japanese, German, French, Chinese (Simplified), Korean, Russian, Italian, Turkish, Polish, Dutch, Arabic, Indonesian, Hindi, Thai, Filipino.
+- **License:** [MIT](LICENSE) — free to play, free to fork, free to teach with. Credit appreciated.
+- **Platforms:** Web (any modern browser), PWA-installable on mobile, full gamepad support on desktop.
+- **Languages:** English, Spanish, Portuguese, Japanese, Simplified Chinese.
 
 ## URLs
 
@@ -34,16 +36,23 @@ A relaxed, no-stakes corner of the modern web. Most casual games push notificati
 - **About:** [sheepdogsim.com/about.html](https://sheepdogsim.com/about.html)
 - **Source / contact:** [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds)
 
-## Screenshots
+## Screenshots & social cards
 
-Currently in the repo at `assets/images/`:
+Headline social cards (1200×630, refreshed 2026-05-08):
 
+- [`assets/marketing/og/og-rh-sunset.webp`](assets/marketing/og/og-rh-sunset.webp) — Rolling Hills hero (sunset, dog + flock + tree framing). Default OG card.
+- [`assets/marketing/og/og-field.webp`](assets/marketing/og/og-field.webp) — Home Field (noon, dog + farmhouse + 3,000 sheep arc).
+- [`assets/marketing/og/og-open-country.webp`](assets/marketing/og/og-open-country.webp) — Open Country wide.
+
+Source 1920×1080 captures + raw PNGs under [`assets/marketing/captures/cycle26/raw/`](assets/marketing/captures/cycle26/raw/).
+
+Legacy in-game screenshots also still in [`assets/images/`](assets/images/):
 - `sds-zoomedout.png` — overhead pasture shot
 - `sds-zoomedin-play.png` — gameplay, sheep + dog mid-herd
 - `sds-menu.png` — start screen with biome picker
 - `sds-dog-selection.png` — dog breed select
 
-(Cycle 10 cinematic capture pipeline produces fresh shots; see `assets/marketing/` after the next filming run.)
+Reuse policy: screenshots, video captures, and excerpts from this press kit may be used in articles, reviews, social posts, and academic discussion under fair-use conventions. Please credit "Sheep Dog Sim by Matthew Kissinger" with a link to [sheepdogsim.com](https://sheepdogsim.com).
 
 ## Creator bio
 
@@ -51,10 +60,4 @@ Matt Kissinger — solo developer building games and tools at the intersection o
 
 ## Press contact
 
-Email: [matt.m.kissinger@gmail.com](mailto:matt.m.kissinger@gmail.com)
-
-Response time: usually within 48h.
-
-## License & usage
-
-The game itself is free to play. Screenshots, video captures, and excerpts from this press kit may be used in articles, reviews, social posts, and academic discussion under fair-use conventions. Please credit "Sheep Dog Sim by Matthew Kissinger" with a link to [sheepdogsim.com](https://sheepdogsim.com).
+Email: [matt.m.kissinger@gmail.com](mailto:matt.m.kissinger@gmail.com) — usually within 48h.
