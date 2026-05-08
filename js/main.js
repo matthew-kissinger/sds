@@ -645,7 +645,23 @@ class SheepDogSimulation {
 
             // Load heightfield (if scene declares one) BEFORE building terrain so
             // displacement and downstream y-clamps share the same instance.
-            const heightmapUrl = this.currentScene.terrain?.heightmapUrl;
+            //
+            // Cycle 27 Phase G — Scene defs declare absolute-root paths
+            // ('/terrain/<id>.bin'). That works on sheepdogsim.com (root-served)
+            // but breaks on itch.io's html-classic.itch.zone CDN where the
+            // game runs from `/html/<build-id>/index.html` — the absolute
+            // path resolves to the CDN root, not the build root, returning
+            // 404. Resolve through Vite's BASE_URL so it picks up `./` on
+            // itch builds (`BUILD_TARGET=itchio`) and `/` on Cloudflare
+            // Pages. v2.1.2's `.r32f → .bin` rename addressed the wrong
+            // failure (CDN allowlist); the actual bug is path resolution.
+            const rawHeightmapUrl = this.currentScene.terrain?.heightmapUrl;
+            const baseUrl = import.meta.env?.BASE_URL ?? '/';
+            const heightmapUrl = rawHeightmapUrl
+                ? rawHeightmapUrl.startsWith('/')
+                    ? baseUrl + rawHeightmapUrl.slice(1)
+                    : rawHeightmapUrl
+                : null;
             if (heightmapUrl) {
                 logStep('Loading heightfield', heightmapUrl);
                 try {
