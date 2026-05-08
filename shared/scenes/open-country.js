@@ -68,7 +68,7 @@ export const openCountry = {
     terrain: {
         seed: 42,
         heightScale: 5,
-        heightmapUrl: '/terrain/open-country.r32f',
+        heightmapUrl: '/terrain/open-country.bin',
         version: 1,
         zones: {
             playArea: { minX: -380, maxX: 380, minZ: -380, maxZ: 380 },
