@@ -15,7 +15,10 @@
  *   --seaLevel <m>        Height outside the falloff zone (default -2)
  *   --centerX <m>         Island centre X (default 0)
  *   --centerZ <m>         Island centre Z (default 0)
- *   --out <path>          Output .r32f path (required). A sibling .json manifest
+ *   --out <path>          Output binary path (required, conventionally `.bin`).
+ *                         Format is still raw R32F floats; the `.bin` extension
+ *                         is used so itch.io's CDN doesn't 403 on unrecognised
+ *                         extensions like `.r32f`. A sibling `.json` manifest
  *                         is written next to it with shape
  *                         { width, height, worldSize, peakHeight, version, scene, seed,
  *                           boundary?: { kind, ... } }.

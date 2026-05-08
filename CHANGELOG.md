@@ -4,6 +4,36 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.2] — 2026-05-08 (Cycle 26 — itch.io heightfield fix)
+
+Bug fix: heightfield files were failing to load on itch.io's HTML5 host
+(`html-classic.itch.zone`) with a 403 because `.r32f` is not on their
+allowed-extension list. The game fell back to flat terrain while the
+water plane stayed at `y=-0.05`, so the AnimeWater shader rendered over
+the now-flat terrain wherever the camera saw past the bounded scene
+disc — the visible symptom was a saturated dark-blue band of "terrain"
+in mid-distance on Rolling Hills + Open Country. sheepdogsim.com served
+the file fine; only the itch deploy was broken.
+
+### Changed
+- Renamed binary heightfield files from `.r32f` → `.bin` (file format is
+  unchanged — still raw R32F floats — only the extension differs):
+  - `public/terrain/{field,rolling-hills,open-country}.r32f` → `.bin`
+  - `public/terrain/{field,rolling-hills,open-country}.r32f.json` → `.bin.json`
+- Updated `heightmapUrl` in `shared/scenes/rolling-hills.js` and
+  `shared/scenes/open-country.js` to point at the new `.bin` paths.
+- Updated `npm run bake-heightmaps` script in `package.json` and the
+  bake-script docstring in `scripts/bake-heightmap.mjs` to default to
+  `.bin` output.
+- Doc note in `shared/terrain/Heightfield.js` clarifying the extension
+  history + reason.
+
+### Validation
+- vitest still 201/201.
+- sheepdogsim.com loads the renamed file correctly (CF Pages serves any
+  extension).
+- itch.io console no longer 403s on heightfield fetch.
+
 ## [2.1.1] — 2026-05-08 (Cycle 26 — OG card refresh)
 
 Patch ship: refreshes 2 of 3 social-card images with v2.1.0-era captures

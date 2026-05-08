@@ -48,7 +48,7 @@ export const rollingHills = {
     terrain: {
         seed: 1,
         heightScale: 6,
-        heightmapUrl: '/terrain/rolling-hills.r32f',
+        heightmapUrl: '/terrain/rolling-hills.bin',
         version: 1,
         zones: {
             playArea: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },

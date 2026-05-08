@@ -105,7 +105,7 @@ export class Heightfield {
      * Fetch a baked R32F heightmap and its sidecar manifest, then construct an instance.
      * Browser-only for Phase A. Workers will embed bytes in Phase B.
      *
-     * @param {string} url Path to the .r32f bytes; manifest expected at `${url}.json`.
+     * @param {string} url Path to the heightmap bytes (e.g. `.bin`); manifest expected at `${url}.json`. Note: the binary format is still raw R32F floats; the file extension was renamed from `.r32f` to `.bin` because itch.io's html-classic.itch.zone CDN returns 403 on unrecognised extensions.
      * @returns {Promise<Heightfield>}
      */
     static async load(url) {
