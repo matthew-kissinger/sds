@@ -60,6 +60,7 @@ export async function initReactUI() {
             { CameraModeIndicator },
             { CorralCompass },
             { ObjectiveBanner },
+            { PracticeHint },
             { MobileHUD },
             { MobileControls },
             { ExtremeTuningPanel },
@@ -95,6 +96,7 @@ export async function initReactUI() {
             import('./GameHUD/CameraModeIndicator.js'),
             import('./GameHUD/CorralCompass.js'),
             import('./GameHUD/ObjectiveBanner.js'),
+            import('./GameHUD/PracticeHint.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
             import('./GameHUD/ExtremeTuningPanel.js'),
@@ -1016,6 +1018,12 @@ export async function initReactUI() {
                 // Cycle 8: ObjectiveBanner renders on scenes with a multi-stage
                 // objective (currently OC). Auto-hides on Field/RH.
                 createElement(ObjectiveBanner, { key: 'objective-banner' }),
+                // Cycle 26 v2.1.0: Practice Paddock onboarding hint. 8s
+                // auto-dismiss OR first input event. Self-unmounts.
+                createElement(PracticeHint, {
+                    key: 'practice-hint',
+                    active: !isMultiplayer && gameData.singlePlayerMode === 'practice'
+                }),
                 platform === 'desktop' && [
                     createElement(GameTimer, { key: 'timer', gameTime: gameData.gameTime, timeLimit: gameData.timeLimit }),
                     createElement(CameraModeIndicator, { key: 'camera-mode', mode: gameData.cameraMode, platform }),

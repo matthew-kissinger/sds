@@ -4,6 +4,65 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] — 2026-05-08 (Cycle 26 — Practice Paddock + per-scene SEO)
+
+First Cycle-26 minor release: pivots away from world-rendering tech and
+toward the player-facing layer. Two slices bundled:
+
+### Added
+- **Practice Paddock — "Just Play" mode.** New no-pressure entry tile,
+  position 0 in the mode picker (before Classic). 30 sheep, no timer
+  pressure, no leaderboard submission, no fail state. Cyan-500 accent
+  (`#06b6d4`) — distinct from Classic's emerald. Picks up the
+  fourth-tile slot the cycle plan called out as the headline.
+- **First-visit pulsing-glow on the Practice tile.** Subtle cyan
+  box-shadow keyframe (`practicePulse`, 2.4s ease-in-out infinite) wraps
+  the Practice MenuOption when `localStorage.getItem('sds.has-played')`
+  is unset. Zero layout shift, zero new strings, points new players
+  exactly where to start. Pulse stops the moment the player launches
+  any solo run (any mode sets the flag).
+- **PracticeHint overlay.** Bottom-center fade-in shown only in
+  Practice mode (mounted in `js/components/App.js` HUD). Auto-dismisses
+  after 8s OR on first keyboard / pointer / touch input — whichever
+  comes first. Self-unmounts after fade-out. Text reflects actual
+  controls: "WASD or arrow keys to move · Shift to sprint" (the cycle
+  plan's "S to whistle" wording was speculative — no whistle mechanic
+  exists in this codebase).
+- **Per-scene SEO metadata.** New
+  [`js/utils/seo.js`](js/utils/seo.js): `updateSceneMetadata(sceneId)`
+  updates `document.title`, `og:title`, `og:description`, `og:image`,
+  `og:image:alt`, `twitter:title`, `twitter:description`,
+  `twitter:image`, `twitter:image:alt`, and `meta[name=description]`
+  using the per-scene `name` + `description` from `shared/scenes/*.js`
+  and the existing `og-{field|rh-sunset|open-country}.webp` cards
+  under `assets/marketing/og/`. Wired into `main.js` initial scene
+  load AND scene-swap path. Canonical URL stays `/` (SPA — no sitemap
+  fragmentation).
+
+### Changed
+- `js/GameState.js` `SOLO_MODE_SHEEP_COUNT` adds `practice: 30`.
+- `js/GameState.js` `submitScoreToLeaderboard` blocks practice mode
+  alongside the existing sandbox guard.
+- `js/main.js` `showCompletionOverlay` skips score submission when
+  `singlePlayerMode === 'practice'`.
+
+### Validation
+- vitest 201/201 (was 188; +8 practice-mode contract specs +5
+  SEO-meta specs).
+- build clean — 835.48 KB main / 250.04 KB gzip (+0.69 KB main /
+  +0.18 KB gzip vs v2.0.5).
+- Tile order, accent color, localStorage key shape all locked by
+  contract tests in `tests/practice-mode.spec.js`.
+- Per-scene OG-image existence locked by contract test in
+  `tests/seo.spec.js`.
+
+### Notes
+- Phase 3 visual design pass deferred per cycle plan (taste calls land
+  wrong without sync).
+- Lighthouse audit pending post-deploy.
+- Visual design pass + community kickoff sequenced after media-session
+  shoot.
+
 ## [2.0.5] — 2026-05-07 (post-v2.0.4 patch — delete dead AtmosphericDesatPatch)
 
 `AtmosphericDesatPatch` was scheduled for deletion in

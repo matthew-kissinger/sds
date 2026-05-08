@@ -22,6 +22,7 @@ import { Heightfield } from '../shared/terrain/Heightfield.js';
 import { Atmosphere } from './atmosphere/index.js';
 import { SunBillboard } from './effects/SunBillboard.js';
 import { screenshotCapture } from './utils/ScreenshotCapture.js';
+import { updateSceneMetadata } from './utils/seo.js';
 // Cycle 17 Phase 7: local-multiplayer modules dynamic-imported in
 // startLocalGame() so they only ship when the user actually picks Local Mode.
 // Keeps ~860 LoC out of the main bundle for the 99% of users who never use it.
@@ -205,6 +206,10 @@ class SheepDogSimulation {
         // leaderboard submission path can include it as a partition key.
         this.gameState.sceneId = activeSceneId;
         if (typeof window !== 'undefined') window.__currentSceneId = activeSceneId;
+        // Cycle 26 v2.1.0: per-scene SEO meta (title + OG + Twitter) for
+        // deep-link sharing previews. index.html ships rolling-hills as
+        // default; this updates if the URL requested a different scene.
+        updateSceneMetadata(activeSceneId);
         // Cycle 5+: propagate discriminated boundary if the scene declares one.
         // Field stays on legacy bounds; Rolling Hills + Open Country migrate
         // to island in Phases 2/3.
@@ -1339,6 +1344,8 @@ class SheepDogSimulation {
         this.currentScene = sceneDef;
         this.gameState.sceneId = sceneDef.id;
         if (typeof window !== 'undefined') window.__currentSceneId = sceneDef.id;
+        // Cycle 26 v2.1.0: refresh per-scene SEO meta on swap.
+        updateSceneMetadata(sceneDef.id);
         if (sceneDef.boundary) this.gameState.setBoundary(sceneDef.boundary);
         if (sceneDef.flocking) this.gameState.setFlockingOverride(sceneDef.flocking);
         if (sceneDef.corral) this.gameState.setCorral(sceneDef.corral);
@@ -3245,14 +3252,17 @@ class SheepDogSimulation {
         const existing = document.getElementById('game-completion-overlay');
         if (existing) existing.remove();
 
-        // Submit score to leaderboard for all single-player solo modes (classic/extreme/insane/chaos), NOT sandbox.
+        // Submit score to leaderboard for all single-player solo modes (classic/extreme/insane/chaos), NOT sandbox or practice.
         // Cycle 8 Phase 2b: lookup table inside submitScoreToLeaderboard handles
         // the mode→leaderboard mapping; this callsite just forwards the time.
-        if (mode === 'single' && data.finalTime && this.gameMode !== 'sandbox' && this.singlePlayerMode !== 'sandbox') {
+        // Cycle 26 v2.1.0: Practice Paddock is no-pressure → no leaderboard.
+        if (mode === 'single' && data.finalTime && this.gameMode !== 'sandbox' && this.singlePlayerMode !== 'sandbox' && this.singlePlayerMode !== 'practice') {
             console.log(`[GAME] Submitting score to leaderboard: ${data.finalTime} seconds (mode=${this.singlePlayerMode})`);
             this.gameState.submitScoreToLeaderboard(data.finalTime);
         } else if (mode === 'single' && this.gameMode === 'sandbox') {
             console.log('[GAME] Sandbox mode - score not submitted to leaderboard');
+        } else if (mode === 'single' && this.singlePlayerMode === 'practice') {
+            console.log('[GAME] Practice mode - score not submitted to leaderboard');
         }
 
         // Check if React CompletionScreen is available

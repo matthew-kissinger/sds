@@ -46,6 +46,20 @@
   to { transform: rotate(360deg); }
 }
 
+/* Cycle 26 v2.1.0: first-visit Practice tile recommendation pulse.
+   Wraps the MenuOption when localStorage 'sds.has-played' is unset; the
+   subtle cyan glow says "start here" without modal blocking. Uses
+   box-shadow only — zero layout shift. */
+@keyframes practicePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.45), 0 0 24px 4px rgba(6, 182, 212, 0.0); }
+  50%      { box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.18), 0 0 24px 4px rgba(6, 182, 212, 0.32); }
+}
+
+.practice-pulse-wrapper {
+  border-radius: 1rem;
+  animation: practicePulse 2.4s ease-in-out infinite;
+}
+
 /* Cycle 8: exhausted-stamina pulse. Bar shifts between full red and a
    brighter red-orange while stamina is at 0 so the player perceives the
    exhaustion event clearly (the dog's velocity easing back to walk speed
