@@ -27,12 +27,17 @@ export type GameMode =
   | 'soloChaos'
   | 'timed'
   | 'competitive'
-  | 'cooperative';
+  | 'cooperative'
+  // Cycle 27 Phase D: per-day challenge partition. The literal here is the
+  // template; the actual stored value is `daily-${YYYY-MM-DD}`. Validation
+  // accepts the templated form via isDailyMode + isValidGameMode below.
+  | `daily-${string}`;
 
 // Cycle 8 Phase 3: known scenes for leaderboard partitioning. 'any' is a
 // pseudo-key the API accepts on read paths; never stored.
 export type SceneId = 'field' | 'rolling-hills' | 'open-country';
 
+// The fixed enum members. `daily-*` is dynamic and validated separately.
 export const ALL_GAME_MODES: GameMode[] = [
   'soloClassic',
   'soloExtreme',
@@ -45,8 +50,16 @@ export const ALL_GAME_MODES: GameMode[] = [
 
 const ALL_GAME_MODES_SET: ReadonlySet<string> = new Set(ALL_GAME_MODES);
 
+// `daily-YYYY-MM-DD` is the per-day partition key. UTC-rooted; the
+// client (js/utils/dailySeed.js) constructs the same string off `new Date()`.
+const DAILY_MODE_REGEX = /^daily-\d{4}-\d{2}-\d{2}$/;
+
+export function isDailyMode(mode: unknown): mode is `daily-${string}` {
+  return typeof mode === 'string' && DAILY_MODE_REGEX.test(mode);
+}
+
 export function isValidGameMode(mode: unknown): mode is GameMode {
-  return typeof mode === 'string' && ALL_GAME_MODES_SET.has(mode);
+  return typeof mode === 'string' && (ALL_GAME_MODES_SET.has(mode) || isDailyMode(mode));
 }
 
 // Cycle 12 Phase 6: every materialized-best column on `players` was written
@@ -55,8 +68,9 @@ export function isValidGameMode(mode: unknown): mode is GameMode {
 // sparse for them and the slow path returns []. When a partitioned query
 // targets a mode's NATURAL partition and finds no rows, we fall through to
 // the fast path so old data stays visible. `null` means "no natural partition"
-// (competitive/cooperative are MP and legitimately partition by either dim).
-const MODE_NATURAL_PARTITION: Record<GameMode, { sceneId: string; sheepCount: number } | null> = {
+// (competitive/cooperative are MP and legitimately partition by either dim;
+// daily-* varies per day so no single natural pair exists).
+const MODE_NATURAL_PARTITION: Record<Exclude<GameMode, `daily-${string}`>, { sceneId: string; sheepCount: number } | null> = {
   soloClassic: { sceneId: 'field', sheepCount: 200 },
   soloExtreme: { sceneId: 'field', sheepCount: 1000 },
   soloInsane: { sceneId: 'field', sheepCount: 3000 },
@@ -67,7 +81,8 @@ const MODE_NATURAL_PARTITION: Record<GameMode, { sceneId: string; sheepCount: nu
 };
 
 export function isNaturalPartition(mode: GameMode, filters: LeaderboardFilters): boolean {
-  const natural = MODE_NATURAL_PARTITION[mode];
+  if (isDailyMode(mode)) return false;
+  const natural = MODE_NATURAL_PARTITION[mode as Exclude<GameMode, `daily-${string}`>];
   if (!natural) return false;
   const sceneOk = !filters.sceneId || filters.sceneId === 'any' || filters.sceneId === natural.sceneId;
   const sheepOk = !filters.sheepCount || filters.sheepCount === natural.sheepCount;
@@ -187,16 +202,25 @@ export interface SubmitScoreResult {
 // Cycle 8 Phase 3: time-modes vs win-mode for submission/leaderboard direction.
 // Time-modes (lower = better) match by score < best; competitive accumulates.
 // Insane and Chaos use the same time-based scoring as Classic and Extreme.
-const TIME_MODES: GameMode[] = [
+// Cycle 27 Phase D: daily-* is a time mode (lower-better duration).
+const FIXED_TIME_MODES: GameMode[] = [
   'soloClassic',
   'soloExtreme',
   'soloInsane',
   'soloChaos',
   'cooperative',
 ];
+const FIXED_TIME_MODES_SET: ReadonlySet<string> = new Set(FIXED_TIME_MODES);
+
+export function isTimeMode(mode: GameMode): boolean {
+  return FIXED_TIME_MODES_SET.has(mode) || isDailyMode(mode);
+}
+
+// Back-compat alias used heavily inside the file.
+const TIME_MODES = { includes: (mode: GameMode) => isTimeMode(mode) };
 
 export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean {
-  if (TIME_MODES.includes(mode)) return score >= 30 && score <= 3600;
+  if (isTimeMode(mode)) return score >= 30 && score <= 3600;
   if (mode === 'timed') return Number.isInteger(score) && score >= 0 && score <= 500;
   if (mode === 'competitive') return score === 0 || score === 1;
   return false;
@@ -205,7 +229,10 @@ export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean 
 // Cycle 10 Phase 6: cross-field plausibility. Allowed (mode, sheep_count)
 // pairings — anything outside this set is hard-rejected at the worker
 // boundary alongside out-of-bounds scores.
-const ALLOWED_MODE_SHEEPCOUNT: Record<GameMode, number[] | 'any'> = {
+// Cycle 27 Phase D: daily-* uses a numeric range matching the
+// dailySeed.js [50, 200] sheep window. Any count in that band is
+// accepted; outside it is hard-rejected.
+const ALLOWED_MODE_SHEEPCOUNT: Record<Exclude<GameMode, `daily-${string}`>, number[] | 'any'> = {
   soloClassic: [200],
   soloExtreme: [1000],
   soloInsane: [3000],
@@ -215,8 +242,14 @@ const ALLOWED_MODE_SHEEPCOUNT: Record<GameMode, number[] | 'any'> = {
   cooperative: 'any',
 };
 
+const DAILY_SHEEP_MIN = 50;
+const DAILY_SHEEP_MAX = 200;
+
 export function modeSheepCountOk(mode: GameMode, sheepCount: number): boolean {
-  const allowed = ALLOWED_MODE_SHEEPCOUNT[mode];
+  if (isDailyMode(mode)) {
+    return sheepCount >= DAILY_SHEEP_MIN && sheepCount <= DAILY_SHEEP_MAX;
+  }
+  const allowed = ALLOWED_MODE_SHEEPCOUNT[mode as Exclude<GameMode, `daily-${string}`>];
   if (allowed === 'any') return true;
   return allowed.includes(sheepCount);
 }

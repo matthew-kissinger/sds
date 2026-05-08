@@ -267,6 +267,17 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
         setTimeout(() => setIsVisible(true), 50);
     }, []);
 
+    // Cycle 27 Phase E: revoke the replay blob URL when the screen
+    // unmounts so we don't leak the WebM bytes after the player picks
+    // Play Again or Main Menu.
+    useEffect(() => {
+        const url = data?.replayBlobUrl;
+        if (!url) return;
+        return () => { try { URL.revokeObjectURL(url); } catch {} };
+    }, [data?.replayBlobUrl]);
+
+    const replayDownloadName = `sheepdogsim-${mode}-${Date.now()}.webm`;
+
     // Format time helper
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
@@ -595,7 +606,39 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }) {
                 }, [
                     Icons.home(20, '#fff'),
                     t('pause.mainMenu')
-                ])
+                ]),
+
+                // Cycle 27 Phase E: download the rolling-tail clip if
+                // the recorder produced one (browsers without
+                // MediaRecorder + canvas.captureStream skip this).
+                data?.replayBlobUrl && createElement('a', {
+                    key: 'saveClip',
+                    href: data.replayBlobUrl,
+                    download: replayDownloadName,
+                    style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '14px 28px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        color: '#fff',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
+                        textDecoration: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                    },
+                    onMouseEnter: (e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                    },
+                    onMouseLeave: (e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                    },
+                }, t('completion.saveClip', 'Save clip')),
             ])
         ])
     ]);

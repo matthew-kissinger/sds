@@ -132,6 +132,19 @@ async function canvasShot(page) {
     return Buffer.from(dataUrl.slice('data:image/png;base64,'.length), 'base64');
 }
 
+// Boot the shot's page: viewport → navigate → wait for the cinematic
+// API → wait for assets → settle. Every capture function does this
+// before its kind-specific work; consolidating here keeps the timing
+// constants in one place and the call sites readable.
+async function bootShotPage(page, shot, viewport) {
+    await page.setViewportSize(viewport);
+    console.log(`[CINEMA] [${shot.id}] navigating…`);
+    await page.goto(shotUrl(shot, BASE_URL), { waitUntil: 'load', timeout: 60000 });
+    await page.waitForFunction(() => !!window.__sdsCinema, { timeout: 30000 });
+    await page.evaluate(() => window.__sdsCinema.waitReady());
+    await page.waitForTimeout(1500);
+}
+
 // ------------------------- url helper -------------------------
 
 function shotUrl(shot, baseUrl) {
@@ -153,12 +166,7 @@ async function captureVideo(page, shot) {
         if (f.endsWith('.png')) unlinkSync(join(frameDir, f));
     }
 
-    await page.setViewportSize({ width: 1920, height: 1080 });
-    console.log(`[CINEMA] [${shot.id}] navigating…`);
-    await page.goto(shotUrl(shot, BASE_URL), { waitUntil: 'load', timeout: 60000 });
-    await page.waitForFunction(() => !!window.__sdsCinema, { timeout: 30000 });
-    await page.evaluate(() => window.__sdsCinema.waitReady());
-    await page.waitForTimeout(1500);
+    await bootShotPage(page, shot, { width: 1920, height: 1080 });
 
     // Drive shot setup.
     await page.evaluate((s) => {
@@ -223,12 +231,7 @@ function muxVideo(shot, frameDir) {
 }
 
 async function captureStatic(page, shot) {
-    await page.setViewportSize({ width: shot.size.width, height: shot.size.height });
-    console.log(`[CINEMA] [${shot.id}] navigating…`);
-    await page.goto(shotUrl(shot, BASE_URL), { waitUntil: 'load', timeout: 60000 });
-    await page.waitForFunction(() => !!window.__sdsCinema, { timeout: 30000 });
-    await page.evaluate(() => window.__sdsCinema.waitReady());
-    await page.waitForTimeout(1500);
+    await bootShotPage(page, shot, shot.size);
 
     // Cycle 12 (post-close): live-action static path. When `mode` is set
     // we kick off the gameplay (so e.g. Solo Extreme spawns 1000 sheep);
@@ -291,12 +294,7 @@ async function captureStatic(page, shot) {
 }
 
 async function captureDog(page, shot) {
-    await page.setViewportSize({ width: shot.size.width, height: shot.size.height });
-    console.log(`[CINEMA] [${shot.id}] navigating…`);
-    await page.goto(shotUrl(shot, BASE_URL), { waitUntil: 'load', timeout: 60000 });
-    await page.waitForFunction(() => !!window.__sdsCinema, { timeout: 30000 });
-    await page.evaluate(() => window.__sdsCinema.waitReady());
-    await page.waitForTimeout(1500);
+    await bootShotPage(page, shot, shot.size);
 
     await page.evaluate(async (id) => {
         await window.__sdsCinema.mountDogShowcase(id);
@@ -314,12 +312,7 @@ async function captureDog(page, shot) {
 }
 
 async function capturePwaIcon(page, shot) {
-    await page.setViewportSize({ width: shot.size.width, height: shot.size.height });
-    console.log(`[CINEMA] [${shot.id}] navigating…`);
-    await page.goto(shotUrl(shot, BASE_URL), { waitUntil: 'load', timeout: 60000 });
-    await page.waitForFunction(() => !!window.__sdsCinema, { timeout: 30000 });
-    await page.evaluate(() => window.__sdsCinema.waitReady());
-    await page.waitForTimeout(1500);
+    await bootShotPage(page, shot, shot.size);
 
     await page.evaluate(async (id) => {
         await window.__sdsCinema.mountDogShowcase(id);

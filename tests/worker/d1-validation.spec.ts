@@ -19,6 +19,8 @@
 import { describe, it, expect } from 'vitest';
 import {
     isValidGameMode,
+    isDailyMode,
+    isTimeMode,
     modeSheepCountOk,
     submissionScoreBoundsOk,
     durationFloorForCount,
@@ -158,6 +160,53 @@ describe('detectScoreAnomalies', () => {
             serverNow: 1_061_000,
         });
         expect(anomalies.find((a) => a.tag === 'fast_for_count')).toBeTruthy();
+    });
+});
+
+describe('daily-mode validation (Cycle 27 Phase D)', () => {
+    it('isDailyMode accepts daily-YYYY-MM-DD', () => {
+        expect(isDailyMode('daily-2026-05-08')).toBe(true);
+        expect(isDailyMode('daily-2026-12-31')).toBe(true);
+    });
+
+    it('isDailyMode rejects malformed daily strings', () => {
+        expect(isDailyMode('daily')).toBe(false);
+        expect(isDailyMode('daily-')).toBe(false);
+        expect(isDailyMode('daily-2026')).toBe(false);
+        expect(isDailyMode('daily-2026-5-8')).toBe(false);
+        expect(isDailyMode('Daily-2026-05-08')).toBe(false);
+        expect(isDailyMode('daily-2026-05-08-extra')).toBe(false);
+    });
+
+    it('isValidGameMode accepts daily-* alongside fixed enum members', () => {
+        expect(isValidGameMode('daily-2026-05-08')).toBe(true);
+        expect(isValidGameMode('soloClassic')).toBe(true);
+        expect(isValidGameMode('daily-bogus')).toBe(false);
+    });
+
+    it('isTimeMode classifies daily-* as time-based (lower-better)', () => {
+        expect(isTimeMode('daily-2026-05-08' as GameMode)).toBe(true);
+        expect(isTimeMode('competitive')).toBe(false);
+    });
+
+    it('submissionScoreBoundsOk uses time-mode bounds for daily', () => {
+        expect(submissionScoreBoundsOk('daily-2026-05-08' as GameMode, 60)).toBe(true);
+        expect(submissionScoreBoundsOk('daily-2026-05-08' as GameMode, 29)).toBe(false);
+        expect(submissionScoreBoundsOk('daily-2026-05-08' as GameMode, 3601)).toBe(false);
+    });
+
+    it('modeSheepCountOk accepts daily counts in the seed range [50, 200]', () => {
+        expect(modeSheepCountOk('daily-2026-05-08' as GameMode, 50)).toBe(true);
+        expect(modeSheepCountOk('daily-2026-05-08' as GameMode, 125)).toBe(true);
+        expect(modeSheepCountOk('daily-2026-05-08' as GameMode, 200)).toBe(true);
+        expect(modeSheepCountOk('daily-2026-05-08' as GameMode, 49)).toBe(false);
+        expect(modeSheepCountOk('daily-2026-05-08' as GameMode, 201)).toBe(false);
+    });
+
+    it('isNaturalPartition returns false for daily-* (each day differs)', () => {
+        expect(
+            isNaturalPartition('daily-2026-05-08' as GameMode, { sceneId: 'field', sheepCount: 200 }),
+        ).toBe(false);
     });
 });
 

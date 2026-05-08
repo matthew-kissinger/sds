@@ -31,6 +31,8 @@ import { updateSceneMetadata } from './utils/seo.js';
 // Keeps ~860 LoC out of the main bundle for the 99% of users who never use it.
 import { captureFramebufferSample, isProbeEnabled, log as probeLog, drainGlErrors } from './diagnostics/glProbe.js';
 import { isCinematicMode, isUiHidden, getRequestedSun } from './cinematic-url.js';
+import { resolveAssetUrl } from './utils/assetUrl.js';
+import { ReplayRecorder, isReplaySupported } from './utils/ReplayRecorder.js';
 // installCinemaApi (three.js-dependent) is dynamic-imported only when
 // `?cinematic=1` is set, keeping it out of the main bundle.
 
@@ -195,6 +197,12 @@ class SheepDogSimulation {
         this.sceneManager = new SceneManager();
         this.gameState = new GameState();
         this.gameTimer = new GameTimer();
+        // Cycle 27 Phase E: rolling 10-second WebM tail of gameplay.
+        // Started in startGame, stopped in showCompletionOverlay so the
+        // completion screen can offer a Save-clip download. Browsers
+        // without MediaRecorder + canvas.captureStream get null and
+        // the completion screen falls back to share-card-only.
+        this.replayRecorder = null;
         // Scene selection: ?scene=<id> URL param (pre-UI). Invalid ids fall back to default.
         const requestedSceneId = new URLSearchParams(location.search).get('scene');
         const validSceneIds = listScenes().map(s => s.id);
@@ -645,23 +653,11 @@ class SheepDogSimulation {
 
             // Load heightfield (if scene declares one) BEFORE building terrain so
             // displacement and downstream y-clamps share the same instance.
-            //
-            // Cycle 27 Phase G — Scene defs declare absolute-root paths
-            // ('/terrain/<id>.bin'). That works on sheepdogsim.com (root-served)
-            // but breaks on itch.io's html-classic.itch.zone CDN where the
-            // game runs from `/html/<build-id>/index.html` — the absolute
-            // path resolves to the CDN root, not the build root, returning
-            // 404. Resolve through Vite's BASE_URL so it picks up `./` on
-            // itch builds (`BUILD_TARGET=itchio`) and `/` on Cloudflare
-            // Pages. v2.1.2's `.r32f → .bin` rename addressed the wrong
-            // failure (CDN allowlist); the actual bug is path resolution.
-            const rawHeightmapUrl = this.currentScene.terrain?.heightmapUrl;
-            const baseUrl = import.meta.env?.BASE_URL ?? '/';
-            const heightmapUrl = rawHeightmapUrl
-                ? rawHeightmapUrl.startsWith('/')
-                    ? baseUrl + rawHeightmapUrl.slice(1)
-                    : rawHeightmapUrl
-                : null;
+            // Scene defs use absolute-root paths; resolveAssetUrl rebases
+            // them under Vite's BASE_URL so itch.io builds (where the game
+            // runs from a /html/<build-id>/ subpath) fetch from the build
+            // root instead of the CDN root.
+            const heightmapUrl = resolveAssetUrl(this.currentScene.terrain?.heightmapUrl);
             if (heightmapUrl) {
                 logStep('Loading heightfield', heightmapUrl);
                 try {
@@ -1580,7 +1576,10 @@ class SheepDogSimulation {
         if (this.audioManager.isMusicReady()) {
             this.audioManager.playGameplayMusic();
         }
-        
+
+        // Start the rolling replay tail (Phase E).
+        this._startReplay();
+
         // Initialize multiplayer if needed
         if (mode === 'multiplayer' && roomData) {
             console.log(`Multiplayer room: ${roomData.roomCode || roomData.code || 'unknown'} with ${roomData.players?.length || 0} players`);
@@ -1796,6 +1795,9 @@ class SheepDogSimulation {
             }, 900);
         }
 
+        // Start the rolling replay tail (Phase E).
+        this._startReplay();
+
         console.log('[SANDBOX] Game started successfully');
     }
 
@@ -1956,6 +1958,9 @@ class SheepDogSimulation {
                 }
             }, 900);
         }
+
+        // Start the rolling replay tail (Phase E).
+        this._startReplay();
 
         console.log('[LOCAL] Game started successfully');
     }
@@ -3263,13 +3268,57 @@ class SheepDogSimulation {
     
 
     
+    // Cycle 27 Phase E — start a fresh ReplayRecorder bound to the
+    // WebGL canvas. Idempotent (drops any prior recorder first); safe
+    // to call from every game-start path. No-op when the browser
+    // can't record (mobile Safari < 14.5, etc.); the completion screen
+    // falls back to share-card-only on those.
+    _startReplay() {
+        if (this.replayRecorder) {
+            try { this.replayRecorder.stop(); } catch {}
+            this.replayRecorder = null;
+        }
+        if (!isReplaySupported()) return;
+        const canvas = this.sceneManager?.renderer?.domElement;
+        if (!canvas) return;
+        try {
+            this.replayRecorder = new ReplayRecorder(canvas, { durationSec: 10 });
+            this.replayRecorder.start();
+        } catch (err) {
+            console.warn('[REPLAY] Failed to start recorder:', err);
+            this.replayRecorder = null;
+        }
+    }
+
+    // Stop the recorder if running and return an objectURL for the
+    // last 10s of WebM, or null if unsupported / failed. The URL
+    // owner is the caller — revoke when done with it.
+    async _stopReplay() {
+        const rec = this.replayRecorder;
+        this.replayRecorder = null;
+        if (!rec) return null;
+        try {
+            const blob = await rec.stop();
+            if (!blob || blob.size === 0) return null;
+            return URL.createObjectURL(blob);
+        } catch (err) {
+            console.warn('[REPLAY] Recorder stop failed:', err);
+            return null;
+        }
+    }
+
     // Universal completion overlay that works for all game modes
-    showCompletionOverlay(mode, data = {}) {
+    async showCompletionOverlay(mode, data = {}) {
         console.log('[GAME] Creating completion overlay for mode:', mode, data);
 
         // Remove any existing overlay
         const existing = document.getElementById('game-completion-overlay');
         if (existing) existing.remove();
+
+        // Cycle 27 Phase E: capture the rolling-tail clip BEFORE the React
+        // render so the completion screen can render the Save-clip
+        // download in its first paint.
+        const replayBlobUrl = await this._stopReplay();
 
         // Submit score to leaderboard for all single-player solo modes (classic/extreme/insane/chaos), NOT sandbox or practice.
         // Cycle 8 Phase 2b: lookup table inside submitScoreToLeaderboard handles
@@ -3301,7 +3350,8 @@ class SheepDogSimulation {
                 winnerName: data.competitive?.winner ? `Player ${data.competitive.winner}` : null,
                 isNewBest: mode === 'timed' ? (this.loadBestScore() === null || data.myScore > this.loadBestScore()) : false,
                 sheepCount: data.sheepCount || this.gameState?.sheepInPenCount || 0,
-                scores: []
+                scores: [],
+                replayBlobUrl,
             };
 
             // Build scores array for multiplayer modes

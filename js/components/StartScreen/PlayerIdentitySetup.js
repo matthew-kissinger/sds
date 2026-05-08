@@ -1,6 +1,9 @@
 /**
- * PlayerIdentitySetup Component
- * Initial player name setup flow
+ * PlayerIdentitySetup — first-visit name flow.
+ *
+ * Three identity options (custom / random / anonymous) collapse into
+ * a single IdentityOption renderer. No decorative emoji; type +
+ * accent-color carry the visual hierarchy.
  */
 import React, { createElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +14,90 @@ import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 import { LanguageSelector } from '../ui/LanguageSelector.js';
 
+const ACCENT_RGB = {
+    blue: { r: 59, g: 130, b: 246 },
+    green: { r: 34, g: 197, b: 94 },
+    gray: { r: 107, g: 114, b: 128 },
+};
+
+// Best-effort server registration. Failure paths log + return null so
+// the caller falls back to an offline identity. Same shape for all
+// three identity types — the only difference is the (displayName,
+// nameType) tuple sent to the server.
+async function registerWithServer(persistentId, displayName, nameType) {
+    const nm = getNetworkManager();
+    if (!nm) return null;
+    try {
+        await nm.connect();
+        const response = await nm.registerPlayer(persistentId, displayName, nameType);
+        console.log(`[PLAYER] ${nameType} player registered with server:`, response);
+        return response;
+    } catch (err) {
+        console.warn('[PLAYER] Server registration failed, proceeding offline:', err);
+        return null;
+    }
+}
+
+// Build the persisted identity record. Server-supplied fields win;
+// `fallbackName` covers the offline path.
+function buildIdentity({ persistentId, nameType, fallbackName, serverResponse }) {
+    const profile = serverResponse?.playerProfile ?? serverResponse ?? {};
+    return {
+        persistentId,
+        displayName: profile.displayName || fallbackName || 'Player',
+        fullName: profile.fullName || fallbackName || 'Player#0001',
+        discriminator: profile.discriminator || '0001',
+        nameType,
+        createdAt: Date.now(),
+        isRegistered: !!serverResponse,
+    };
+}
+
+function IdentityOption({
+    nameType,
+    selected,
+    accentColor,
+    title,
+    description,
+    onSelect,
+    isCompact,
+    children,
+}) {
+    const c = ACCENT_RGB[accentColor] ?? ACCENT_RGB.blue;
+    const style = {
+        padding: isCompact ? '0.75rem' : '1rem',
+        borderRadius: '0.75rem',
+        cursor: 'pointer',
+        transition: 'all 0.3s',
+        background: selected
+            ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.2)`
+            : 'rgba(255, 255, 255, 0.05)',
+        border: selected
+            ? `1px solid rgba(${c.r}, ${c.g}, ${c.b}, 0.5)`
+            : '1px solid rgba(255, 255, 255, 0.1)',
+        width: '100%',
+        textAlign: 'left',
+    };
+    // 'custom' uses div+onClick because it nests an input that owns
+    // its own focus + Enter key; the others are real buttons.
+    const tag = nameType === 'custom' ? 'div' : 'button';
+    return createElement(tag, { style, onClick: onSelect, type: tag === 'button' ? 'button' : undefined }, [
+        createElement('span', {
+            key: 'title',
+            style: { color: 'white', fontWeight: 600, display: 'block', marginBottom: '0.4rem' },
+        }, title),
+        createElement('p', {
+            key: 'desc',
+            style: {
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: isCompact ? '0.75rem' : '0.875rem',
+                margin: 0,
+            },
+        }, description),
+        children,
+    ]);
+}
+
 export function PlayerIdentitySetup({ onComplete }) {
     const { t } = useTranslation();
     const [displayName, setDisplayName] = useState('');
@@ -19,182 +106,43 @@ export function PlayerIdentitySetup({ onComplete }) {
     const [error, setError] = useState('');
     const { isCompact } = useResponsive();
 
-    const handleGenerateRandom = async () => {
-        // Auto-proceed when Random Name is selected
+    // Single completion path — every option (custom submit, random,
+    // anonymous) funnels through `complete()` so the persisted-identity
+    // shape is built in exactly one place.
+    const complete = async ({ type, fallbackName, registerName }) => {
+        setIsSubmitting(true);
+        setError('');
+        try {
+            const persistentId = generatePersistentId();
+            const serverResponse = await registerWithServer(persistentId, registerName, type);
+            const identity = buildIdentity({ persistentId, nameType: type, fallbackName, serverResponse });
+            savePlayerIdentity(identity);
+            console.log(`[PLAYER] ${type} identity created:`, identity);
+            onComplete(identity);
+        } catch (err) {
+            console.error(`[PLAYER] Error creating ${type} identity:`, err);
+            setError(t('identity.errorFailed'));
+            setIsSubmitting(false);
+        }
+    };
+
+    const selectRandom = () => {
         setNameType('random');
         setDisplayName('Random Name');
-        setIsSubmitting(true);
-        setError('');
-
-        try {
-            const persistentId = generatePersistentId();
-
-            // Register with server if connected (server will generate random name)
-            let serverResponse = null;
-            const nm = getNetworkManager();
-            if (nm) {
-                try {
-                    await nm.connect();
-                    serverResponse = await nm.registerPlayer(persistentId, '', 'random');
-                    console.log('[PLAYER] Random name player registered with server:', serverResponse);
-                } catch (networkError) {
-                    console.warn('[PLAYER] Server registration failed, proceeding offline:', networkError);
-                }
-            }
-
-            // Create player identity
-            const identity = {
-                persistentId: persistentId,
-                displayName: serverResponse?.playerProfile?.displayName || serverResponse?.displayName || 'Player',
-                fullName: serverResponse?.playerProfile?.fullName || serverResponse?.fullName || 'Player#0001',
-                discriminator: serverResponse?.playerProfile?.discriminator || serverResponse?.discriminator || '0001',
-                nameType: 'random',
-                createdAt: Date.now(),
-                isRegistered: !!serverResponse
-            };
-
-            savePlayerIdentity(identity);
-            console.log('[PLAYER] Random name identity created:', identity);
-            onComplete(identity);
-
-        } catch (err) {
-            console.error('[PLAYER] Error creating random name identity:', err);
-            setError(t('identity.errorFailed'));
-            setIsSubmitting(false);
-        }
+        complete({ type: 'random', fallbackName: 'Player', registerName: '' });
     };
 
-    const handleStayAnonymous = async () => {
-        // Auto-proceed when Anonymous is selected
+    const selectAnonymous = () => {
         setNameType('anonymous');
         setDisplayName('Player');
-        setIsSubmitting(true);
-        setError('');
-
-        try {
-            const persistentId = generatePersistentId();
-
-            // Register with server if connected
-            let serverResponse = null;
-            const nm = getNetworkManager();
-            if (nm) {
-                try {
-                    await nm.connect();
-                    serverResponse = await nm.registerPlayer(persistentId, 'Player', 'anonymous');
-                    console.log('[PLAYER] Anonymous player registered with server:', serverResponse);
-                } catch (networkError) {
-                    console.warn('[PLAYER] Server registration failed, proceeding offline:', networkError);
-                }
-            }
-
-            // Create player identity
-            const identity = {
-                persistentId: persistentId,
-                displayName: serverResponse?.playerProfile?.displayName || serverResponse?.displayName || 'Player',
-                fullName: serverResponse?.playerProfile?.fullName || serverResponse?.fullName || 'Player#0001',
-                discriminator: serverResponse?.playerProfile?.discriminator || serverResponse?.discriminator || '0001',
-                nameType: 'anonymous',
-                createdAt: Date.now(),
-                isRegistered: !!serverResponse
-            };
-
-            savePlayerIdentity(identity);
-            console.log('[PLAYER] Anonymous identity created:', identity);
-            onComplete(identity);
-
-        } catch (err) {
-            console.error('[PLAYER] Error creating anonymous identity:', err);
-            setError(t('identity.errorFailed'));
-            setIsSubmitting(false);
-        }
+        complete({ type: 'anonymous', fallbackName: 'Player', registerName: 'Player' });
     };
 
-    const handleCustomName = () => {
-        setNameType('custom');
-        setDisplayName('');
-    };
-
-    const handleSubmit = async () => {
-        if (nameType === 'custom' && (!displayName || displayName.trim().length === 0)) {
-            setError(t('identity.errorEmpty'));
-            return;
-        }
-
-        if (nameType === 'custom' && displayName.trim().length > 20) {
-            setError(t('identity.errorTooLong'));
-            return;
-        }
-
-        setIsSubmitting(true);
-        setError('');
-
-        try {
-            const persistentId = generatePersistentId();
-            const finalDisplayName = nameType === 'custom' ? displayName.trim() :
-                                   nameType === 'random' ? '' : displayName;
-
-            // Register with server if connected
-            let serverResponse = null;
-            const nm = getNetworkManager();
-            if (nm) {
-                try {
-                    await nm.connect();
-                    serverResponse = await nm.registerPlayer(
-                        persistentId,
-                        finalDisplayName,
-                        nameType
-                    );
-                    console.log('[PLAYER] Player registered with server:', serverResponse);
-                } catch (networkError) {
-                    console.warn('[PLAYER] Server registration failed, proceeding offline:', networkError);
-                }
-            }
-
-            // Create player identity
-            const identity = {
-                persistentId: persistentId,
-                displayName: serverResponse?.playerProfile?.displayName || serverResponse?.displayName || finalDisplayName || 'Player',
-                fullName: serverResponse?.playerProfile?.fullName || serverResponse?.fullName || finalDisplayName || 'Player#0001',
-                discriminator: serverResponse?.playerProfile?.discriminator || serverResponse?.discriminator || '0001',
-                nameType: nameType,
-                createdAt: Date.now(),
-                isRegistered: !!serverResponse
-            };
-
-            savePlayerIdentity(identity);
-            console.log('[PLAYER] Player identity created:', identity);
-            onComplete(identity);
-
-        } catch (err) {
-            console.error('[PLAYER] Error creating player identity:', err);
-            setError(t('identity.errorFailed'));
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const getOptionStyle = (isSelected, color = 'blue') => {
-        const colors = {
-            blue: { r: 59, g: 130, b: 246 },
-            green: { r: 34, g: 197, b: 94 },
-            gray: { r: 107, g: 114, b: 128 }
-        };
-        const c = colors[color] || colors.blue;
-
-        return {
-            padding: isCompact ? '0.75rem' : '1rem',
-            borderRadius: '0.75rem',
-            cursor: 'pointer',
-            transition: 'all 0.3s',
-            background: isSelected
-                ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.2)`
-                : 'rgba(255, 255, 255, 0.05)',
-            border: isSelected
-                ? `1px solid rgba(${c.r}, ${c.g}, ${c.b}, 0.5)`
-                : '1px solid rgba(255, 255, 255, 0.1)',
-            width: '100%',
-            textAlign: 'left'
-        };
+    const submitCustom = () => {
+        const trimmed = displayName.trim();
+        if (nameType === 'custom' && trimmed.length === 0) return setError(t('identity.errorEmpty'));
+        if (nameType === 'custom' && trimmed.length > 20) return setError(t('identity.errorTooLong'));
+        complete({ type: nameType, fallbackName: trimmed, registerName: trimmed });
     };
 
     const inputStyle = {
@@ -208,7 +156,8 @@ export function PlayerIdentitySetup({ onComplete }) {
         fontSize: '1rem',
         transition: 'all 0.3s',
         outline: 'none',
-        width: '100%'
+        width: '100%',
+        marginTop: '0.75rem',
     };
 
     return createElement('div', {
@@ -219,25 +168,24 @@ export function PlayerIdentitySetup({ onComplete }) {
             alignItems: 'center',
             width: '100%',
             height: '100%',
-            position: 'relative'
-        }
+            position: 'relative',
+        },
     }, [
-        // Language selector in top-right corner
         createElement('div', {
             key: 'lang-selector',
             style: {
                 position: 'absolute',
                 top: isCompact ? '0.5rem' : '1rem',
                 right: isCompact ? '0.5rem' : '1rem',
-                zIndex: 100
-            }
+                zIndex: 100,
+            },
         }, createElement(LanguageSelector, { variant: 'icon' })),
 
         createElement(Panel, {
             key: 'panel',
             size: 'lg',
             maxWidth: '28rem',
-            style: { animation: 'slideUp 0.8s ease-out' }
+            style: { animation: 'slideUp 0.8s ease-out' },
         }, [
             createElement(PanelTitle, { key: 'title' }, t('identity.welcome')),
 
@@ -247,8 +195,8 @@ export function PlayerIdentitySetup({ onComplete }) {
                     color: 'rgba(255, 255, 255, 0.7)',
                     textAlign: 'center',
                     marginBottom: isCompact ? '1rem' : '2rem',
-                    fontSize: isCompact ? '0.8rem' : '0.875rem'
-                }
+                    fontSize: isCompact ? '0.8rem' : '0.875rem',
+                },
             }, t('identity.chooseIdentity')),
 
             createElement('div', {
@@ -256,120 +204,50 @@ export function PlayerIdentitySetup({ onComplete }) {
                 style: {
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: isCompact ? '0.5rem' : '1rem'
-                }
+                    gap: isCompact ? '0.5rem' : '1rem',
+                },
             }, [
-                // Custom name option
-                createElement('div', {
+                createElement(IdentityOption, {
                     key: 'custom',
-                    style: getOptionStyle(nameType === 'custom', 'blue'),
-                    onClick: handleCustomName
-                }, [
-                    createElement('div', {
-                        key: 'header',
-                        style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            marginBottom: '0.5rem'
-                        }
-                    }, [
-                        createElement('span', {
-                            key: 'icon',
-                            style: { fontSize: isCompact ? '1rem' : '1.25rem' }
-                        }, '✏️'),
-                        createElement('span', {
-                            key: 'title',
-                            style: { color: 'white', fontWeight: 600 }
-                        }, t('identity.customName'))
-                    ]),
-                    createElement('p', {
-                        key: 'desc',
-                        style: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            fontSize: isCompact ? '0.75rem' : '0.875rem',
-                            marginBottom: nameType === 'custom' ? '0.75rem' : 0
-                        }
-                    }, t('identity.customNameDesc')),
-                    nameType === 'custom' && createElement('input', {
-                        key: 'input',
-                        type: 'text',
-                        style: inputStyle,
-                        placeholder: t('identity.enterName'),
-                        value: displayName,
-                        maxLength: 20,
-                        onChange: (e) => setDisplayName(e.target.value),
-                        onKeyPress: (e) => { if (e.key === 'Enter') handleSubmit(); },
-                        onFocus: () => window.isTypingInInput = true,
-                        onBlur: () => window.isTypingInInput = false
-                    })
-                ]),
-
-                // Random name option
-                createElement('button', {
+                    nameType: 'custom',
+                    selected: nameType === 'custom',
+                    accentColor: 'blue',
+                    title: t('identity.customName'),
+                    description: t('identity.customNameDesc'),
+                    onSelect: () => { setNameType('custom'); setDisplayName(''); },
+                    isCompact,
+                }, nameType === 'custom' && createElement('input', {
+                    key: 'input',
+                    type: 'text',
+                    style: inputStyle,
+                    placeholder: t('identity.enterName'),
+                    value: displayName,
+                    maxLength: 20,
+                    onChange: (e) => setDisplayName(e.target.value),
+                    onKeyPress: (e) => { if (e.key === 'Enter') submitCustom(); },
+                    onFocus: () => { window.isTypingInInput = true; },
+                    onBlur: () => { window.isTypingInInput = false; },
+                })),
+                createElement(IdentityOption, {
                     key: 'random',
-                    style: getOptionStyle(nameType === 'random', 'green'),
-                    onClick: handleGenerateRandom
-                }, [
-                    createElement('div', {
-                        key: 'header',
-                        style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            marginBottom: '0.25rem'
-                        }
-                    }, [
-                        createElement('span', {
-                            key: 'icon',
-                            style: { fontSize: isCompact ? '1rem' : '1.25rem' }
-                        }, '🎲'),
-                        createElement('span', {
-                            key: 'title',
-                            style: { color: 'white', fontWeight: 600 }
-                        }, t('identity.randomName'))
-                    ]),
-                    createElement('p', {
-                        key: 'desc',
-                        style: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            fontSize: isCompact ? '0.75rem' : '0.875rem'
-                        }
-                    }, t('identity.randomNameDesc'))
-                ]),
-
-                // Anonymous option
-                createElement('button', {
+                    nameType: 'random',
+                    selected: nameType === 'random',
+                    accentColor: 'green',
+                    title: t('identity.randomName'),
+                    description: t('identity.randomNameDesc'),
+                    onSelect: selectRandom,
+                    isCompact,
+                }),
+                createElement(IdentityOption, {
                     key: 'anonymous',
-                    style: getOptionStyle(nameType === 'anonymous', 'gray'),
-                    onClick: handleStayAnonymous
-                }, [
-                    createElement('div', {
-                        key: 'header',
-                        style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            marginBottom: '0.25rem'
-                        }
-                    }, [
-                        createElement('span', {
-                            key: 'icon',
-                            style: { fontSize: isCompact ? '1rem' : '1.25rem' }
-                        }, '👤'),
-                        createElement('span', {
-                            key: 'title',
-                            style: { color: 'white', fontWeight: 600 }
-                        }, t('identity.anonymous'))
-                    ]),
-                    createElement('p', {
-                        key: 'desc',
-                        style: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            fontSize: isCompact ? '0.75rem' : '0.875rem'
-                        }
-                    }, t('identity.anonymousDesc'))
-                ])
+                    nameType: 'anonymous',
+                    selected: nameType === 'anonymous',
+                    accentColor: 'gray',
+                    title: t('identity.anonymous'),
+                    description: t('identity.anonymousDesc'),
+                    onSelect: selectAnonymous,
+                    isCompact,
+                }),
             ]),
 
             error && createElement('p', {
@@ -378,21 +256,21 @@ export function PlayerIdentitySetup({ onComplete }) {
                     color: '#f87171',
                     fontSize: '0.875rem',
                     textAlign: 'center',
-                    marginTop: '1rem'
-                }
+                    marginTop: '1rem',
+                },
             }, error),
 
             createElement('div', {
                 key: 'submit',
-                style: { marginTop: isCompact ? '1rem' : '1.5rem' }
+                style: { marginTop: isCompact ? '1rem' : '1.5rem' },
             },
                 createElement(Button, {
                     variant: 'primary',
                     fullWidth: true,
-                    onClick: handleSubmit,
-                    disabled: isSubmitting
-                }, isSubmitting ? t('identity.settingUp') : t('identity.continue'))
-            )
-        ])
+                    onClick: submitCustom,
+                    disabled: isSubmitting,
+                }, isSubmitting ? t('identity.settingUp') : t('identity.continue')),
+            ),
+        ]),
     ]);
 }

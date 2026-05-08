@@ -47,6 +47,7 @@ export async function initReactUI() {
             { loadSettings, saveSettings, applySettingsToGame },
             { ModeSelection },
             { ScenePicker },
+            { PointerTour },
             { DogSelection },
             { PlayerIdentitySetup },
             { SinglePlayerModes },
@@ -83,6 +84,7 @@ export async function initReactUI() {
             import('./shared/settings.js'),
             import('./StartScreen/ModeSelection.js'),
             import('./StartScreen/ScenePicker.js'),
+            import('./StartScreen/PointerTour.js'),
             import('./StartScreen/DogSelection.js'),
             import('./StartScreen/PlayerIdentitySetup.js'),
             import('./StartScreen/SinglePlayerModes.js'),
@@ -604,7 +606,8 @@ export async function initReactUI() {
                                     }
                                 }, `Welcome back, ${playerIdentity.displayName}!`),
                                 createElement(ScenePicker, { key: 'scenes' }),
-                                createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect })
+                                createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect }),
+                                createElement(PointerTour, { key: 'tour', isMobile: platform.isMobile })
                             ]),
                             // Credits footer — flows at the bottom of the column, no fixed positioning.
                             // Cycle 16 mobile fix: explicit padding-top guards a buffer between
