@@ -1,20 +1,20 @@
 /**
  * ScenePicker — single-card scene selector with prev/next + swipe.
  *
- * Cycle 25 follow-up rev 2 (2026-05-06): collapses the 3-card row down
- * to one hero card. Players flip through scenes via the chevrons,
- * keyboard arrows, or a touch swipe. Title + description + silhouette
- * cross-fade on switch; the gradient slides under the new content for
- * a "thumbing through postcards" feel.
+ * Auto-load model (cycle 26): picking a scene IS loading it. After the
+ * user's last interaction (chevron, swipe, dot, arrow-key) settles for
+ * COMMIT_DEBOUNCE_MS, the visible scene swaps in. Rapid flicks reset
+ * the timer so only the final pick fires — no wasted disposes/rebuilds
+ * on slow devices.
  *
- * Click anywhere on the card body to confirm-and-load the visible
- * scene (only fires when the visible card differs from the active
- * scene). Active scene shows a "Current" pill in place of "Tap to
- * load."
+ * Latest-wins coalescing: if the debounce fires while a swap is already
+ * running, the new target stashes in pendingTargetRef. On scene-swap-end
+ * we check it — if it differs from the now-active scene, we kick the
+ * next swap immediately. If the user flipped and came back to the
+ * just-loaded scene, the pending entry drops.
  *
  * Keyboard:
- *   ArrowLeft / ArrowRight  — flip
- *   Enter / Space           — load visible
+ *   ArrowLeft / ArrowRight  — flip (debounced auto-load)
  */
 
 import React, { createElement, useState, useEffect, useCallback, useRef } from 'react';
@@ -25,6 +25,10 @@ import { useResponsive } from '../hooks/usePlatform.js';
 const ACCENT = '#10b981';
 const ORDER = ['rolling-hills', 'open-country', 'field'];
 const TRANSITION_MS = 320;
+// Idle time after the last flip before the visible scene actually loads.
+// Long enough to coalesce rapid flicks; short enough to feel instant on
+// a single tap.
+const COMMIT_DEBOUNCE_MS = 300;
 
 // Per-scene visual chrome — gradient + accent + NEW badge + SVG.
 const SCENE_CHROME = {
@@ -111,7 +115,41 @@ function switchScene(sceneId) {
 
 export function ScenePicker() {
     const [, force] = useState(0);
-    useEffect(() => subscribeGameEvent('scene-swap-end', () => force((n) => n + 1)), []);
+
+    // Swap-flow refs (don't need to trigger renders — they coordinate
+    // async work).
+    const swapInFlightRef = useRef(false);
+    const pendingTargetRef = useRef(null);
+    const commitTimer = useRef(null);
+    // Set true when we dispatch a queued swap from the swap-end handler;
+    // the next activeIndex sync useEffect skips one tick so it doesn't
+    // yank visibleIndex back to the just-loaded (now stale) scene.
+    const skipNextActiveSync = useRef(false);
+
+    useEffect(() => {
+        const unsubStart = subscribeGameEvent('scene-swap-start', () => {
+            swapInFlightRef.current = true;
+        });
+        const unsubEnd = subscribeGameEvent('scene-swap-end', () => {
+            swapInFlightRef.current = false;
+            const target = pendingTargetRef.current;
+            pendingTargetRef.current = null;
+            if (target && target !== currentSceneId()) {
+                skipNextActiveSync.current = true;
+                switchScene(target);
+            }
+            force((n) => n + 1);
+        });
+        const unsubError = subscribeGameEvent('scene-swap-error', () => {
+            swapInFlightRef.current = false;
+            pendingTargetRef.current = null;
+            force((n) => n + 1);
+        });
+        return () => { unsubStart?.(); unsubEnd?.(); unsubError?.(); };
+    }, []);
+
+    // Cleanup the debounce timer on unmount so no orphan swap fires.
+    useEffect(() => () => clearTimeout(commitTimer.current), []);
 
     const allScenes = listScenes();
     if (allScenes.length <= 1) return null;
@@ -125,19 +163,38 @@ export function ScenePicker() {
     const activeIndex = Math.max(0, scenes.findIndex((s) => s.id === activeId));
 
     // Visible index = which card the player is browsing right now (may
-    // differ from activeIndex while they flip through). Confirm via tap
-    // on body or Enter to actually load.
+    // differ from activeIndex briefly while a swap is mid-flight).
     const [visibleIndex, setVisibleIndex] = useState(activeIndex);
     const [slideDir, setSlideDir] = useState(0); // -1 = slide left, +1 = slide right, 0 = no anim
     const [anim, setAnim] = useState(false);
     const animTimer = useRef(null);
 
     // Keep visibleIndex aligned when active scene changes externally
-    // (URL param, scene-swap-end event).
+    // (URL param, programmatic). Skipped after a coalesced queued-swap
+    // dispatch so the user's latest pick stays visible during the
+    // chained second swap.
     useEffect(() => {
+        if (skipNextActiveSync.current) {
+            skipNextActiveSync.current = false;
+            return;
+        }
         setVisibleIndex(activeIndex);
-        // Don't trigger slide animation on external sync.
     }, [activeIndex]);
+
+    // Schedule a debounced commit. Called from every navigation gesture.
+    const scheduleCommit = useCallback((targetId) => {
+        clearTimeout(commitTimer.current);
+        commitTimer.current = setTimeout(() => {
+            if (!targetId || targetId === currentSceneId()) return;
+            if (swapInFlightRef.current) {
+                // Latest-wins: don't fire a concurrent swap; queue and
+                // let scene-swap-end pick it up.
+                pendingTargetRef.current = targetId;
+            } else {
+                switchScene(targetId);
+            }
+        }, COMMIT_DEBOUNCE_MS);
+    }, []);
 
     const flip = useCallback((delta) => {
         const next = (visibleIndex + delta + scenes.length) % scenes.length;
@@ -147,9 +204,10 @@ export function ScenePicker() {
         setVisibleIndex(next);
         clearTimeout(animTimer.current);
         animTimer.current = setTimeout(() => setAnim(false), TRANSITION_MS);
-    }, [visibleIndex, scenes.length]);
+        scheduleCommit(scenes[next].id);
+    }, [visibleIndex, scenes, scheduleCommit]);
 
-    // Keyboard: ←/→ flip, Enter/Space load.
+    // Keyboard: ←/→ flip (auto-load via debounced scheduleCommit).
     const containerRef = useRef(null);
     useEffect(() => {
         const onKey = (e) => {
@@ -360,24 +418,7 @@ export function ScenePicker() {
                     }, visibleScene.description),
                 ]),
             ]),
-            // Tap-to-load overlay (only when visible != active).
-            !isVisibleActive && createElement('button', {
-                key: 'load',
-                type: 'button',
-                onClick: () => switchScene(visibleScene.id),
-                style: {
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: 'transparent',
-                    fontSize: 0,
-                    zIndex: 1,
-                },
-                'aria-label': `Load ${visibleScene.name}`
-            }, 'Load'),
-            // Prev / next chevrons (above the load overlay so clicks work).
+            // Prev / next chevrons.
             createElement('button', {
                 key: 'prev',
                 type: 'button',
@@ -392,27 +433,6 @@ export function ScenePicker() {
                 'aria-label': 'Next scene',
                 style: chevronStyle('right', compact),
             }, chevronSvg('right', compact)),
-            // "Tap to load" hint when visible != active. Sits on top of
-            // the overlay-button so it's visually anchored to the card.
-            !isVisibleActive && createElement('div', {
-                key: 'hint',
-                style: {
-                    position: 'absolute',
-                    bottom: '0.5rem',
-                    right: '0.75rem',
-                    fontSize: '0.65rem',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    fontWeight: 600,
-                    color: '#fff',
-                    background: 'rgba(0,0,0,0.35)',
-                    padding: '3px 9px',
-                    borderRadius: '9999px',
-                    pointerEvents: 'none',
-                    zIndex: 2,
-                    backdropFilter: 'blur(4px)',
-                }
-            }, 'Tap to load'),
         ]),
         // Indicator dots.
         createElement('div', {
@@ -433,6 +453,7 @@ export function ScenePicker() {
                 setVisibleIndex(i);
                 clearTimeout(animTimer.current);
                 animTimer.current = setTimeout(() => setAnim(false), TRANSITION_MS);
+                scheduleCommit(s.id);
             },
             'aria-label': `Show ${s.name}`,
             style: {
