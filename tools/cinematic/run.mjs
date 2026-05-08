@@ -29,7 +29,7 @@
 import { chromium } from 'playwright';
 import sharp from 'sharp';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, rmSync, existsSync, readdirSync, unlinkSync, statSync } from 'node:fs';
+import { mkdirSync, rmSync, existsSync, readdirSync, unlinkSync, statSync, writeFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -115,6 +115,23 @@ async function ensureVite(baseUrl) {
     throw new Error('Vite start timeout (60s)');
 }
 
+// ------------------------- canvas capture -------------------------
+
+// Cycle 27 Phase B: page.screenshot() hangs indefinitely on Windows
+// headless Chromium with swiftshader after "fonts loaded" — Playwright's
+// post-fonts CDP screenshot path deadlocks against rAF on the WebGL
+// canvas. canvas.toDataURL() bypasses Playwright's screenshot machinery
+// entirely and works reliably (preserveDrawingBuffer is already on in
+// cinematic mode per js/cinematic.js).
+async function canvasShot(page) {
+    const dataUrl = await page.evaluate(() => {
+        const canvas = document.querySelector('#canvas-container canvas');
+        if (!canvas) throw new Error('canvas not found in #canvas-container');
+        return canvas.toDataURL('image/png');
+    });
+    return Buffer.from(dataUrl.slice('data:image/png;base64,'.length), 'base64');
+}
+
 // ------------------------- url helper -------------------------
 
 function shotUrl(shot, baseUrl) {
@@ -170,10 +187,8 @@ async function captureVideo(page, shot) {
             const due = (c.__lightningSchedule || []).filter(l => l.ms <= tMs && !l.fired);
             for (const l of due) { c.triggerLightning(l.pos); l.fired = true; }
         }, targetMs);
-        await page.screenshot({
-            path: join(frameDir, `${String(i).padStart(4, '0')}.png`),
-            type: 'png',
-        });
+        const framePng = await canvasShot(page);
+        writeFileSync(join(frameDir, `${String(i).padStart(4, '0')}.png`), framePng);
         const remain = interval - 5;
         if (remain > 0) await page.waitForTimeout(remain);
     }
@@ -261,7 +276,7 @@ async function captureStatic(page, shot) {
         await page.waitForTimeout(50);
     }
 
-    const pngBuf = await page.screenshot({ type: 'png' });
+    const pngBuf = await canvasShot(page);
     mkdirSync(OG_OUT, { recursive: true });
     const outPath = join(OG_OUT, `${shot.id}.webp`);
     await sharp(pngBuf)
@@ -288,7 +303,7 @@ async function captureDog(page, shot) {
     }, shot.dogId);
     await page.waitForTimeout(800);
 
-    const pngBuf = await page.screenshot({ type: 'png' });
+    const pngBuf = await canvasShot(page);
     mkdirSync(DOG_OUT, { recursive: true });
     const sz = shot.output ?? { width: 512, height: 512 };
     const webpPath = join(DOG_OUT, `${shot.dogId}.webp`);
@@ -311,7 +326,7 @@ async function capturePwaIcon(page, shot) {
     }, shot.dogId);
     await page.waitForTimeout(800);
 
-    const pngBuf = await page.screenshot({ type: 'png' });
+    const pngBuf = await canvasShot(page);
     mkdirSync(ICON_OUT, { recursive: true });
     // Generate three sizes. Maskable variant adds 20% safe-area padding inside the
     // theme color (manifest theme_color = #00BFFF; background_color = #0c1c2c).
