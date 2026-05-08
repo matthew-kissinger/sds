@@ -4,6 +4,56 @@
 
 ## Recently Completed
 
+### Cycle 26 — `player-facing-layer` (closed 2026-05-08, multi-version `v2.0.3` → `v2.1.2` + scene-picker auto-load)
+
+Plan from [`docs/archive/cycles/cycle-26-plan.md`](archive/cycles/cycle-26-plan.md). Started as a deliberately soft-scoped "menu" cycle pivoting away from the rendering/foliage/atmosphere stack toward the player-facing layer (UX, marketing, SEO, community, polish). Shipped via per-area `v2.x.y` bumps rather than a single end-of-cycle release. Wake-state from autonomous run: [`docs/archive/cycles/cycle-26-autonomous-wake-state.md`](archive/cycles/cycle-26-autonomous-wake-state.md).
+
+**Shipped:**
+
+- **`v2.0.3`** — Mac white-hue fix. [`SceneManager.js`](../js/SceneManager.js) swaps `THREE.ACESFilmicToneMapping` → `THREE.NeutralToneMapping` on Mac platforms. ACES was pushing sky-blue fog (`0x87CEEB`) toward white on macOS Metal-ANGLE + extended-sRGB output. Mac-only branch; non-Mac unchanged. `?tonemap=aces|neutral|linear|none` URL override for A/B.
+- **`v2.0.4`** — extend Apple tone-mapping branch to iPhone/iPad. iPhone playtest surfaced the same Mac white-hue wash on water; v2.0.3's `/Mac/` regex missed `navigator.platform === 'iPhone'`. Extended to `/Mac|iPhone|iPad|iPod/`. Verification still pending Matt's iPhone test (carryover to Cycle 27 Phase K).
+- **`v2.0.5`** — delete dead `AtmosphericDesatPatch.js` machinery. 127-LOC module deleted + plumbing in [`TerrainBuilder.js`](../js/TerrainBuilder.js) + kiln impostor uniforms removed. Was a no-op since v2.0.0 (Cycle 25 Phase B forced strength to 0). Build -2.64 KB main / -0.48 KB gzip. Closes the polish-program cleanup queue.
+- **`v2.1.0`** — Practice Paddock + per-scene SEO. New "Just Play" mode tile at position 0 (cyan-500, 30 sheep, no timer, no leaderboard) with a first-visit pulsing-glow nudge driven by `sds.has-played` localStorage flag. Net-new [`PracticeHint`](../js/components/GameHUD/PracticeHint.js) bottom-center fade overlay (8s OR first-input dismiss). Per-scene SEO via new [`js/utils/seo.js`](../js/utils/seo.js) — updates `document.title` + full og:* + twitter:* on scene load and scene swap. vitest 201/201 (+13 new).
+- **Lighthouse SEO 100** — production audit against `https://sheepdogsim.com/` post-v2.1.0 deploy. No failing audits, no cheap wins needed. Audit JSON committed for reproducibility.
+- **`v2.1.1`** — OG card refresh (2 of 3). Refreshed `og-rh-sunset.webp` (behind-Jep cliff overlook, dusk; 117 KB, was 181 KB, -35%) and `og-field.webp` (behind-Jep on Home Field, noon, fence + farmhouse + ~3000-sheep arc; 192 KB). `og-open-country.webp` retained from prior cycle — re-shoot deferred to Cycle 27 Phase J. Added [`public/_headers`](../public/_headers) `Cache-Control: max-age=300, must-revalidate` on `/assets/marketing/og/*` so future refreshes propagate fast at the CF edge.
+- **`v2.1.2`** — itch.io heightfield fix attempt. Renamed `.r32f` → `.bin` to dodge `html-classic.itch.zone`'s extension blocklist. `.bin` files serve correctly on `sheepdogsim.com` (CF Pages) but Matt's verification on the itch deploy showed the dark-blue mid-distance terrain band **still present**. **NOT FULLY RESOLVED** — carries to Cycle 27 Phase G for diagnosis (likely directory-rule, MIME-filter, or alternate root cause; worst-case fallback is base64-inline embed).
+- **Scene-picker auto-load (post-v2.1.2)** — collapses the two-step "browse then commit" model to single-step. Chevron / swipe / dot / arrow auto-loads the visible scene after 300ms idle (`COMMIT_DEBOUNCE_MS`). Latest-wins coalescing: if a swap is already running, the new target stashes in `pendingTargetRef` and fires on `scene-swap-end` — protects slow devices from rapid-flip thrash. Removed click-to-load button + "Tap to load" hint pill (now redundant). Existing `SceneSwapOverlay` still handles in-flight visual feedback. Build flat at 837.26 KB / 250.46 KB gzip.
+
+**Validation:**
+
+- vitest: 201/201 pass + 7 skipped (Cycle 26 entry baseline 188; +13 in v2.1.0 SEO + practice-mode specs).
+- Production build: 837.26 KB main / 250.46 KB gzip — flat with v2.1.0 baseline despite the scene-picker auto-load addition.
+- Sim-baseline byte-identical (no boid-sim changes).
+- Live on `sheepdogsim.com` via GH Actions; itch deploy via `butler push`.
+- Cloudflare CDN edge confirmed serving `.bin` heightmaps with correct content-length on production hostname.
+
+**Carryover deferred to Cycle 27 (`engagement-loop-and-perf`):**
+
+This is the bulk of cycle 27's plan — Cycle 26 was scoped as a menu, with most areas explicitly deferred per Matt's "ship what's shippable autonomously, defer the rest" directive at the close-time deep-analysis pass.
+
+- **itch.io heightfield bug** — NOT RESOLVED post-v2.1.2 `.bin` rename. Root cause unknown; needs console verification + diagnosis. Cycle 27 Phase G.
+- **`og-open-country.webp` refresh** — only OG card not refreshed in v2.1.1. Cycle 27 Phase J (paired Matt session).
+- **iPhone tone-mapping verification (v2.0.4)** — never confirmed on Matt's actual iPhone. Cycle 27 Phase K.
+- **Cloudflare Web Analytics beacon** — never instrumented. Cycle 27 Phase A (first phase — instrument before further changes).
+- **Cinema runner `page.screenshot` 30s font-wait timeout** — root fix deferred from Cycle 21. Cycle 27 Phase B.
+- **Bundle split: lazy-load React overlay from Three.js init** — first-30-seconds perf win, expected -60–80 KB off critical-path JS. Cycle 27 Phase C.
+- **Daily-seed micro-challenge** — engagement loop's centerpiece. Date-hash → seeded scene/mode → `daily-{date}` leaderboard partition. Cycle 27 Phase D.
+- **10s WebM replay capture + share-card on round-end** — `MediaRecorder` over `canvas.captureStream()` + 1200×630 SVG composite. Cycle 27 Phase E.
+- **First-30-seconds onboarding pointer-tour overlay** — 5s auto-fade, localStorage-gated. Cycle 27 Phase F.
+- **Camera state-machine collapse** — `_updateClassic / _updateFollow / _updateFree` → unified state reader. Refactor, no behavior change. Cycle 27 Phase H.
+- **Test coverage backfill: GameState, Sheepdog, NetworkManager, RoomDO** — load-bearing untested classes. Target ≥30 new specs. Cycle 27 Phase I.
+- **Title-screen identity pass** — wordmark + animated hero + type pairing. Design taste; Matt-gated. Cycle 27 Phase L.
+- **Heightfield amplitude bug — fix or codify** — 16+ cycles of workarounds masking the 2× peakHeight bug. Visual character now depends on it. Cycle 27 Phase M; needs Matt's strategic call.
+- **Devlog cadence + venue pick** — DEVLOG.md route vs Substack. Cycle 27 Phase N.
+
+**Still parked (NOT Cycle 27 scope; need their own world-rendering cycle):**
+
+- Aerial-perspective LUT (Hillaire 2020 precomputed scattering) — foundation wired in [`HeightFogPatch.js`](../js/shaders/HeightFogPatch.js), no-op until activated.
+- 8×4 impostor atlas re-bake + padded mips + hybrid trunk-mesh (Cycle 20 Q2 escalation).
+- 6 fresh tree variants + landmark trees per scene (Cycle 25 G+ extension).
+- WebGPU/TSL spike under `?renderer=webgpu`.
+- Start-screen full Mode→Scene→Dog reorder + live WebGL DogSelection inset (Cycle 25 F was thin tutorial; full restructure stays parked).
+
 ### Cycle 23 — `overhead-polish-grass-LOD-and-mp-cap-fix` (closed as `v1.4.0`, 2026-05-05, autonomous overnight run)
 
 Plan from [`docs/archive/cycles/cycle-23-plan.md`](archive/cycles/cycle-23-plan.md) shipped end-to-end in a single autonomous "implement until complete and i'll review when complete" pass. Six phases plus a Phase A1/A2 split (decided at /cycle-start when Matt reshaped Q6 — keep Classic but demote to third option, add a novel game-dev trick for tree-occlusion line-of-sight). Mid-cycle absorbed Matt's "make sure MP sheep counts are labelled and mapped correctly" directive — verified four-layer agreement across worker validation, host UI, leaderboard filter, and solo-mode roster.

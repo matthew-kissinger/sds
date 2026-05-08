@@ -1,389 +1,135 @@
-# Next Session — Cycle 26 (player-facing layer)
+# Next Session — Cycle 27 (`engagement-loop-and-perf`)
 
-> **Updated 2026-05-08** — autonomous Cycle 26 work shipped through
-> v2.1.0, then a live media-capture session refreshed 2 of 3 OG cards
-> as `v2.1.1`, then a heightfield-fix attempt as `v2.1.2`. Patches in
-> this cycle: `v2.0.4` (Apple tone-mapping to iPhone/iPad), `v2.0.5`
-> (delete dead AtmosphericDesatPatch — final polish-program cleanup),
-> `v2.1.0` (Practice Paddock + per-scene SEO), `v2.1.1` (OG card
-> refresh — Rolling Hills dusk + Field farmhouse), `v2.1.2` (heightfield
-> .r32f → .bin rename to dodge itch.io's CDN extension blocklist).
-> What's left: **itch.io heightfield bug NOT FULLY RESOLVED** by the
-> .bin rename — see "Known issues" below. Plus: open-country OG card
-> refresh, Twitter/Facebook scraper re-fetch via debuggers post-deploy,
-> and post-shoot community kickoff.
+> **Updated 2026-05-08** — Cycle 26 closed today after shipping `v2.0.3` →
+> `v2.1.2` plus the scene-picker auto-load post-patch. The cycle was a
+> deliberately soft-scoped "menu" pivoting toward the player-facing
+> layer; ~30% of the menu landed autonomously, the rest deferred to
+> Cycle 27 in an explicit autonomy-sequenced plan.
+>
+> Cycle 27 plan: [`docs/cycle-27-plan.md`](docs/cycle-27-plan.md).
+>
+> **Sequencing principle:** Phases A–I autonomous (Claude ships without
+> check-ins), Phase I → J is the **Matt pickup point**, Phases J–N
+> require Matt (paired session, real device, design taste, or strategic
+> call). Run `/cycle-start` when ready to begin Phase A.
 
-## Known issues — pick up next cycle
+## Where to start
 
-- **itch.io heightfield still broken after `v2.1.2` rename attempt.**
-  The hypothesis was: `html-classic.itch.zone` returns 403 on `.r32f`
-  files because the extension isn't on their allowlist; renaming to
-  `.bin` (which is on every CDN's default allowlist) should serve.
-  The `.bin` files DO serve correctly on `sheepdogsim.com` (CF Pages
-  confirmed 4 MiB content-length response), and the build pushed via
-  `butler push dist/` includes them. But Matt's verification on the
-  itch deploy showed the dark-blue mid-distance terrain band (the
-  visible symptom of "heightfield failed to load → flat terrain →
-  AnimeWater bleeds through") is **still present**.
+**Phase A — Cloudflare Web Analytics beacon (~10min).** Has to land
+first so the rest of Cycle 27 can be A/B'd against analytics signal.
+Generate beacon token from Cloudflare dashboard, add async `<script>`
+to [`index.html`](index.html) `<head>`, verify pageview in dashboard
+within 1hr.
 
-  Possible causes still to investigate:
-  - itch's CDN may also strip files inside `terrain/` directory by
-    rule, regardless of extension. Try moving heightfield bytes to a
-    different path (`/assets/heightmaps/`?) or root-level paths.
-  - itch may have an aggressive build-time content filter that strips
-    files matching certain MIME types or magic bytes regardless of
-    extension. Could test by inspecting what's actually in the
-    deployed itch zip via `butler fetch mkvision0/sheep-dog-sim:html5
-    --target-version=2.1.2`.
-  - The bug may be entirely separate from the heightfield 403 —
-    perhaps the `.bin` file does load but a different code path
-    (water mesh size? scene boundary?) misbehaves under itch's
-    iframe-sandboxed canvas size or DPR. The earlier console output
-    Matt pasted shows `[INIT] Loading heightfield: /terrain/rolling-hills.r32f`
-    explicitly logged BEFORE the .bin rename, so we know the failure
-    was at the heightfield fetch in v2.1.0/2.1.1. After v2.1.2 deploy
-    the user would need to capture a fresh devtools console output to
-    confirm whether the `.bin` fetch succeeded.
-  - Worst-case fallback: embed the heightfield bytes as base64 inline
-    in the JS bundle (no fetch, no CDN, no extension filter). Adds
-    ~16 MB to the bundle but bypasses the itch CDN entirely.
+After A lands: continue through Phases B–I in any order (most can run
+in parallel after A). Surface a status summary after Phase I and
+**wait for Matt** before continuing into J–N.
 
-  **First action next cycle:** ask Matt to load the itch deploy with
-  devtools open, take a fresh console screenshot, and check whether
-  the Loading heightfield log says `.bin` and whether it succeeds or
-  still falls back to flat terrain. The diagnosis path branches from
-  there.
+## Cycle 27 phase ladder (autonomy-sequenced)
 
-- **`og-open-country.webp`** still serves the pre-Cycle-26 art.
-  v2.1.1 capture session ran out of patience; re-shoot deferred.
+| # | Phase | Hours | Depends on | Autonomous? |
+|---|---|---|---|---|
+| A | Cloudflare Web Analytics beacon | ~10min | nothing | ✓ |
+| B | Cinema runner 30s font-wait timeout fix | ~2hr | nothing | ✓ |
+| C | Lazy-load React overlay split | ~2-3hr | nothing | ✓ |
+| D | Daily-seed micro-challenge | ~3-4hr | Q2 resolved | ✓ |
+| E | 10s WebM replay capture + share-card | ~3-4hr | Q3 resolved | ✓ |
+| F | First-30s onboarding pointer-tour | ~2hr | nothing | ✓ |
+| G | itch.io heightfield diagnosis + fix | ~2hr | nothing | ✓ |
+| H | Camera state-machine collapse | ~3hr | nothing | ✓ |
+| I | Test coverage backfill (GameState / Sheepdog / NetworkManager / RoomDO) | ~4-5hr | A–H stable | ✓ |
+| **— Matt pickup point —** | | | | |
+| J | `og-open-country.webp` refresh | ~30min | Matt + ideally B | needs Matt |
+| K | iPhone tone-mapping verification (v2.0.4) | ~30min | Matt's iPhone | needs Matt |
+| L | Title-screen identity pass | ~1day | Matt's taste | needs Matt |
+| M | Heightfield amplitude bug — fix or codify | Matt's call | strategic call | needs Matt |
+| N | Devlog cadence + venue pick | ~1hr Matt + ~1hr Claude | Matt's choice | needs Matt |
 
-## What just shipped
+Plan detail: [`docs/cycle-27-plan.md`](docs/cycle-27-plan.md).
 
-- **`v2.1.1`** — OG card refresh. 2 of 3 social-card images replaced
-  with v2.1.0-era captures so shared links on Twitter / Facebook /
-  Slack / Discord show the current art. New `og-rh-sunset.webp` is a
-  behind-Jep cliff overlook on Rolling Hills at dusk (sun=0.06) with
-  flock dispersed and tree framing left (117 KB, was 181 KB, -35%).
-  New `og-field.webp` is behind-Jep on Home Field at noon with fence,
-  farmhouse, and ~3000-sheep arc (192 KB). Open-country OG retained
-  from prior cycle. Added `public/_headers` setting `Cache-Control:
-  max-age=300, must-revalidate` on `/assets/marketing/og/*` so future
-  refreshes propagate fast at the CF edge. Source 1920×1080 PNGs
-  archived under `assets/marketing/captures/cycle26/raw/` for
-  re-cropping.
-- **`v2.1.0`** — Cycle 26 first minor: Practice Paddock + per-scene
-  SEO. New "Just Play" mode tile at position 0 (cyan-500, 30 sheep,
-  no timer, no leaderboard) with a first-visit pulsing-glow nudge
-  driven by `sds.has-played` localStorage flag. Net-new
-  [`PracticeHint`](js/components/GameHUD/PracticeHint.js) bottom-
-  center fade overlay (8s OR first-input dismiss). Per-scene SEO via
-  new [`js/utils/seo.js`](js/utils/seo.js) — updates document.title +
-  full og:* + twitter:* on scene load and scene swap, using
-  `shared/scenes/*` name+description + existing `og-*.webp`.
-  vitest 201/201 (+13 new). Build 835.48 KB / 250.04 KB gzip.
-- **`v2.0.5`** — delete dead AtmosphericDesatPatch machinery.
-  127-LOC module deleted + plumbing in TerrainBuilder.js + kiln
-  impostor uniforms removed. Was a no-op since v2.0.0 (Cycle 25
-  Phase B forced strength to 0). Build -2.64 KB main / -0.48 KB gzip.
-  Closes the polish-program cleanup queue.
-- **`v2.0.4`** — extend Apple tone-mapping branch to iPhone/iPad.
-  iPhone playtest surfaced the same Mac white-hue wash on water
-  (foam + sun-glint terms). v2.0.3's `/Mac/` regex missed
-  `navigator.platform === 'iPhone'`. Extended to
-  `/Mac|iPhone|iPad|iPod/`. Non-Apple unchanged. Build flat.
-  **Verification still pending** Matt's iPhone test; if sheen
-  persists, escalation is the [`AnimeWater`](js/water/AnimeWater.js)
-  shader rework (add `<tonemapping_fragment>` chunk).
-- **`v2.0.3`** — Mac white-hue fix.
-  [`SceneManager.js`](js/SceneManager.js): on Mac platforms, swap
-  `THREE.ACESFilmicToneMapping` → `THREE.NeutralToneMapping`. ACES
-  was pushing the sky-blue fog (`0x87CEEB`) toward white on macOS
-  Metal-ANGLE + extended-sRGB output, washing the whole frame after
-  the camera framed the fogged horizon. Neutral preserves color
-  identity through the same dynamic range. Mac-only branch; non-Mac
-  unchanged. `?tonemap=aces|neutral|linear|none` URL override for A/B.
-  Logs `[TONEMAP] platform — curve` in console for diagnosis.
-- **`v2.0.2`** — closer zoom-in floors per mode + zoom-bar tracks
-  active mode.
-- **`v2.0.1`** — camera Follow/Free wheel/pinch zoom fix +
-  ScenePicker scene-postcard rewrite (Sheep Dog Island default + NEW
-  badges + custom SVG silhouettes) + sim-baseline harness pinned to
-  `sceneId: 'field'`.
-- **`v2.0.0`** — Cycle 25 polish-mega-cycle close. Eight phases:
-  validation infra; LOD truth (drop LOD1 desktop med/high, neutralise
-  AtmosphericDesatPatch, lift fog 220→350 / 700-800→900); HeightFogPatch
-  foundation; uMatchBoost LOC reduction (~120 LOC + asset + generator);
-  per-mode camera zoom + persistence; per-scene tree distribution
-  profiles; shimmer-skeleton scene-swap overlay; ship.
-- **`v1.5.0`** — Cycle 24 close. MP regression specs (in-game state
-  + reconnect grace + dog-wiring) + 15s reconnect grace window in
-  RoomDO + dog-selection wiring docs + 9 net-new e2e specs.
+## Open questions (resolve before code)
 
-## Cycle 26 — player-facing layer (mid-cycle)
+These are repeated from the cycle plan for cold-start orientation:
 
-Plan: [`docs/cycle-26-plan.md`](docs/cycle-26-plan.md). Autonomous
-implementation plan: [`~/.claude/plans/make-plan-to-implement-linear-porcupine.md`].
-Wake-state: [`docs/cycle-26-autonomous-wake-state.md`](docs/cycle-26-autonomous-wake-state.md).
+1. **Q1: Per-phase ship cadence vs single end-of-cycle ship?** Lean: per-phase v2.2.x bumps (matches Cycle 26's pattern), single v2.3.0 at end of Matt-pickup tail.
+2. **Q2: Daily-seed leaderboard — separate partition or tag?** Lean: separate partition. Worker `RoomDO` already supports mode-partition; add `daily-{YYYY-MM-DD}` mode key. Resolve before Phase D's leaderboard write.
+3. **Q3: Replay capture — `MediaRecorder` over `canvas.captureStream()` or deterministic state-log replay?** Lean: MediaRecorder. WebM out, ~3-5 MB, 10× simpler than deterministic replay. Resolve before Phase E.
+4. **Q4: Devlog venue (Phase N)?** Lean: `DEVLOG.md` route on the site. Lowest overhead, no CMS.
+5. **Q5: Heightfield amplitude — fix at root or codify as design (Phase M)?** Lean: codify as design in [`DECISIONS.md`](DECISIONS.md). Visual character has shipped on the doubled state for 16+ cycles; fix risk vs. benefit unfavorable. Needs Matt's explicit call.
 
-Status, ordered by what's next:
+Q1 doesn't block Phase A. Q2 must resolve before Phase D. Q3 must resolve before Phase E. Q4–Q5 resolve in their own phases.
 
-1. **Pending Matt-side verification** — iPhone water sheen on v2.0.4
-   (and Mac re-verification for v2.0.5 sanity). Both fold into the
-   media session. Contingent v2.0.5+ AnimeWater shader rework only
-   if iPhone Neutral tone-map didn't kill the sheen.
-2. **Lighthouse audit** — runs against production after v2.1.0
-   deploy lands. Apply 1-2 cheap wins if SEO < 95.
-3. **Media-capture session (live, Matt-driven)** — refreshed shot
-   manifest at
-   [`cycle26-validation/shot-list-v2.md`](cycle26-validation/shot-list-v2.md);
-   apply on top of [`cycle26-validation/shot-list.md`](cycle26-validation/shot-list.md).
-   Pulse-on-first-visit Practice tile is now an unblocked Tier 1
-   candidate (was Tier 3 / blocked).
-4. **Post-shoot — community kickoff** — devlog venue (recommend
-   `DEVLOG.md` route — lowest overhead, no CMS), launch posts
-   (r/threejs, r/webgames, r/IndieDev, HN). Defer until assets
-   exist from the shoot.
+## What just shipped (Cycle 26 — closed today)
 
-Areas the autonomous run **deliberately did NOT touch** (revisit
-later or in Matt's session):
+Per-version bumps from `v2.0.3` through `v2.1.2` plus a scene-picker auto-load post-patch:
 
-- **Visual design pass** (title-screen identity, design-tokens
-  refactor) — too taste-dependent for autonomous shipping.
-- **User engagement** (daily/weekly seeds, dog cosmetic loop,
-  replays, share-card image-gen) — separate cycle scope.
-- **Settings panel polish, mobile gesture feel, MP reconnect UI** —
-  not surfaced as concrete bugs in playtest yet.
-- **Cinema runner font-wait timeout** — workaround (manual capture
-  via Playwright MCP) is fine; root fix isn't urgent.
-- **Bundle-size split beyond what's already manualChunks-split** —
-  no obvious quick wins; bundle is 835 KB / 250 KB gzip.
+- **`v2.0.3`** — Mac white-hue fix. ACES → Neutral on Mac platforms.
+- **`v2.0.4`** — extend Apple tone-mapping branch to iPhone/iPad. Verification pending Matt's device test (Cycle 27 Phase K).
+- **`v2.0.5`** — delete dead AtmosphericDesatPatch (127 LOC). Polish-program cleanup queue closed.
+- **`v2.1.0`** — Practice Paddock + per-scene SEO. Lighthouse SEO 100 confirmed post-deploy.
+- **`v2.1.1`** — OG card refresh (RH dusk + Field farmhouse). 2-of-3 cards updated; OC card carryover (Cycle 27 Phase J).
+- **`v2.1.2`** — itch.io heightfield `.r32f` → `.bin` rename. **NOT RESOLVED** — Cycle 27 Phase G.
+- **Scene-picker auto-load** — flip card → 300ms idle → auto-load. Latest-wins coalescing if swap is in flight. Removes the click-to-load button + "Tap to load" hint pill.
 
-The **five v1.4.0 playtest items** turned out to mostly already be
-shipped — exploration during plan phase confirmed sprint-exit, OC
-HUD overlap, MP cheap wins, and trees-tris counter all landed in
-Cycle 23/24/25. AudioManager Safari path stays parked (needs real
-device). Classic-overhead trees pitch-aware desat machinery turned
-out to be dead code (multiplied by 0); deleted in v2.0.5.
+201 vitest pass. Production build 837.26 KB / 250.46 KB gzip — flat with v2.1.0. Sim-baseline byte-identical.
 
-## What's parked (NOT Cycle 26 scope)
+Full closed-cycle entry in [`docs/BACKLOG.md`](docs/BACKLOG.md) under "Cycle 26."
 
-These are real "Cycle of their own" deliverables; tracked in BACKLOG.
-Will not be picked up here unless Matt explicitly redirects:
+## What's parked (NOT Cycle 27 scope)
 
-1. **Aerial-perspective LUT** — Hillaire 2020 precomputed scattering;
-   activates `js/shaders/HeightFogPatch.js` foundation across all
-   patched materials.
-2. **8×4 impostor atlas re-bake + padded mips + hybrid trunk-mesh** —
-   Pixel Forge multi-hour bake + visual review.
-3. **Camera state-machine full collapse** — `_updateClassic /
-   _updateFollow / _updateFree` consolidated to a single state
-   reading `{ targetDistance, targetHeight, yawSource, fov }`.
-4. **Start-screen flow restructure** — Mode → Scene → Dog reorder +
-   live WebGL DogSelection inset + cinematic background orbits +
-   full first-time tutorial overlay (Cycle 26 §1 covers a thinner
-   tutorial; the full WebGL inset stays parked).
-5. **6 fresh tree variants + landmark trees** — recipe authoring +
-   6 fresh bakes + 6 impostor re-bakes.
-6. **Heightfield amplitude bug** — root fix in `Heightfield.sample()`
-   / `scripts/bake-heightmap.mjs`. Visual character of the game has
-   depended on the amplified state for ~14 cycles.
-7. **WebGPU/TSL spike** — feature-flagged `?renderer=webgpu`.
+These are real "Cycle of their own" deliverables. They are not abandoned — they are waiting for a cycle that's about world-rendering, not the player-facing layer.
 
----
+- **Aerial-perspective LUT** (Hillaire 2020 precomputed scattering). Foundation wired in [`js/shaders/HeightFogPatch.js`](js/shaders/HeightFogPatch.js); no-op until activated across patched materials.
+- **8×4 impostor atlas re-bake** + padded mips (Halen 2022) + hybrid trunk-mesh + impostor canopy (Cycle 20 Q2 escalation).
+- **6 fresh tree variants + landmark trees per scene** (recipe authoring + 6 fresh bakes + 6 impostor re-bakes).
+- **Start-screen full restructure** — Mode → Scene → Dog reorder + live WebGL DogSelection inset + cinematic background orbits. Cycle 25 F shipped a thinner tutorial; full restructure stays parked.
+- **WebGPU/TSL spike** under `?renderer=webgpu` feature flag.
 
-## Earlier context (Cycle 24, pre-resume)
+## Frozen files (cycle-specific)
 
-> Cycle 24 Phase 1 closed; Phase 5 spikes deferred to polish program; **polish program drafted as Cycles 25-30**. Phase 1 shipped: `window.__sdsMpProbe()` test global + `?testNoCanvas=1` skip-3D-init flag + `tests/e2e/mp/_helpers.ts` two-context harness + 4 spec files (10 tests) covering lobby create/join/leave/migration/teardown, invite-hash routing, sheep-cap allow-list (3000+5000 + amber warning), and cinematic-flag strip. **30/30 specs green across Chromium + Firefox + WebKit locally** (3.1 min). Two production-relevant findings: (a) [`js/NetworkManager.js:213`](js/NetworkManager.js) `hostChanged` handler reads a hardcoded `false` from broadcast — every client thinks `nm.isHost === false` after host migration, including the new host. Probe routes around it; handler still needs fixing. (b) `AudioManager` constructor was crashing the whole game on Playwright-WebKit (no `AudioContext`) — wrapped in try/catch, defends real Safari profiles too. Research docs at [`docs/cycle-24-research-mp-testing.md`](docs/cycle-24-research-mp-testing.md), [`docs/cycle-24-research-foliage.md`](docs/cycle-24-research-foliage.md), [`docs/cycle-24-research-batched-webgpu.md`](docs/cycle-24-research-batched-webgpu.md).
+Plus the durable [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) list:
 
-## Mega-Cycle 25 — autonomous overnight, ships v2.0.0
+- **`js/SceneManager.js` tone-mapping branch** — just shipped (v2.0.3 + v2.0.4); Phase K may escalate but no other phase touches it.
+- **`shared/MovementPhysics.js`** — sim-baseline lock; Phase I writes test specs that read from it but doesn't modify.
+- **`tests/sim-baseline/*.json`** — Phase M (heightfield amplitude) is the only phase allowed to regenerate these, and only on Matt's go-ahead.
 
-**Drafted 2026-05-06 mid-Cycle-24. Collapses the original 6-cycle polish program (Cycles 25-30) into a single autonomous overnight mega-cycle** per Matt's "definitely do it all in one cycle" directive. Plan: [`docs/cycle-25-plan.md`](docs/cycle-25-plan.md). Execution policy: [`docs/meta-cycle-execution.md`](docs/meta-cycle-execution.md). All work on branch `meta-cycle-overnight-2026-05-06` — no push to main, no tag push, no production deploy until Matt's morning review.
+## Hard stops (Cycle 27)
 
-Phases A-H (critical path A → B → C → D → G → H, with E + F parallel after B):
+Surface to the user, do not proceed:
 
-- **A — Validation infrastructure (~3hr).** `tools/validation/` (lod-compare silhouette IoU + dE2000, screenshot-golden 108-capture matrix + SSIM, input-latency, frame-time histogram).
-- **B — LOD truth (~3hr).** Drop desktop LOD1 + 20m alphaHash crossfade 180-200m. Preserve meshopt LOD1 for `HardwareTier === 'low'` mobile. Delete `AtmosphericDesatPatch.js` + plumbing (~180 LOC). Retune fog (`near 220→350`, `far 700→900`). `?debug=lodmatch` overlay.
-- **C — Atmospheric truth (~4hr).** 32×32×32 R11G11B10F aerial-perspective LUT regenerated when sun moves > 2°. Height-fog density patch replaces `THREE.Fog` + `<fog_fragment>`. Per-scene fog config simplifies to ground albedo + horizon hue.
-- **D — Impostor parity (~4hr).** Re-bake atlases at 8×4 × 256px (Cycle 20 Q2 escalation). Padded mips (Halen 2022). Hybrid trunk-mesh + impostor canopy. Sky-LUT-coupled relighting. Delete `uMatchBoost` (~190 LOC).
-- **E — Camera + game-feel (~3hr).** Single state machine. Per-mode zoom (Follow 12-40, Free 15-60, Classic 20-150). FOV-driven pull-back (50°→38°). Sprint dolly-zoom. Velocity-quadratic touch sensitivity. Optional gyro. Segmented-control mode UI.
-- **F — Start screen UX (~3hr).** Restructured Mode→Scene→Dog→Settings flow. Hero-art ScenePicker. Live WebGL DogSelection. Outcome-art ModeSelection. Skeleton loading. Scripted background orbits per scene. First-time tutorial overlay.
-- **G — Tree art direction (~4hr).** 6 variants (3 deciduous size grades, 1 birch, conifer reintro, fall-color). Per-scene profiles (Field=English pasture, RH=Mediterranean, OC=Pacific Northwest). Authored landmark trees. Embedded wind in impostor bake.
-- **H — Ship v2.0.0 (~1hr).** CHANGELOG + version bumps + tag (NOT pushed). Wake-state report `docs/wake-state-2026-05-06.md`.
-
-**Total ~25hr autonomous work.** Each phase commits to its own sub-branch + merges --no-ff back to meta-cycle branch + tags `cycle-25-phaseX-complete`. Hard stops park-and-continue (revert phase commit, write `cycle25-validation/<phase>/HARDSTOP.md`, dependent phases skip with SKIPPED.md). Validation infrastructure (Phase A) is the gate for every subsequent phase. Net code change ~590 LOC removed / ~250 LOC added = ~340 LOC net-negative across the cycle.
-
-**Wake-state morning review:** Matt reads `docs/wake-state-2026-05-06.md` first; it enumerates shipped phases, parked phases (with HARDSTOP.md links), validation summary, and recommended morning actions (review goldens, merge to main, push tag).
-
-## Polish program (original 6-cycle plan) — superseded
-
-Spans **5 polish cycles + tree-art-direction close** (~38 dev-days, ~7-8 weeks at current cadence). Ships as `v2.0.0`. Umbrella doc: **[`docs/polish-program.md`](docs/polish-program.md)**. Lead-off cycle: **[`docs/cycle-25-plan.md`](docs/cycle-25-plan.md)**.
-
-**The thesis:** the desat / fog / matchBoost / fresnel / occluder-fade patches accumulated since Cycle 18 all mask one foundational mismatch — **LOD1 (the 80-200m mid-distance tree mesh) doesn't match LOD0's silhouette**. Cycle 16 tried halving leaves (rejected as "less leaves does not look good"); Cycle 22 tried meshopt simplification (current — silhouette warps at leaf-card UV edges). Both fail because alpha-tested foliage cards can't lose detail without losing silhouette. Polish program drops LOD1 on desktop entirely, preserves meshopt LOD1 only as a `HardwareTier === 'low'` mobile fallback, then **deletes ~590 LOC of compensating patches** across cycles 25-28.
-
-**Cycle 25 (LOD truth + validation infra, 6 days, v1.6.0):** Phase A builds programmatic + screenshot validation harness ([`tools/validation/`](tools/validation/) — silhouette IoU, dE2000, SSIM screenshot golden suite, input-latency probe, frame-time histograms — used by every subsequent cycle). Phase B drops desktop LOD1 with 20m alphaHash crossfade band 180-200m. Phase C deletes [`js/shaders/AtmosphericDesatPatch.js`](js/shaders/AtmosphericDesatPatch.js) + all desat plumbing. Phase D retunes fog from "structural mask" to "horizon haze only" (near 220→350, far 700→900). Phase E ships `?debug=lodmatch` overlay. Phase F ships `v1.6.0`.
-
-**Cycle 26 (atmospheric truth, 7 days, v1.7.0):** aerial-perspective LUT (32×32×32 R11G11B10F, ~196 KB) sampled from existing sky shader, height-fog `density(y) = ρ₀ * exp(-(y - y₀) / H)` replacing linear `THREE.Fog`, all materials sample LUT in `onBeforeCompile`. Per-scene authoring drops to ground albedo + horizon hue.
-
-**Cycle 27 (impostor parity, 6 days, v1.8.0):** 8×4 atlas re-bake (Cycle 20 Q2 escalation), padded mips (Halen 2022), hybrid trunk-mesh + impostor canopy (Cycle 21 Phase 4 deferred), sky-LUT-coupled relighting. Deletes `uMatchBoost` calibration LUT entirely.
-
-**Cycle 28 (camera + game-feel, 6 days, v1.9.0):** one state machine for all 3 modes, per-mode zoom (Follow 12-40, Free 15-60, Classic unchanged), FOV-driven pull-back (50°→38°), sprint dolly-zoom, velocity-quadratic touch sensitivity, optional gyro on mobile, segmented-control mode UI with sliding indicator + live preview thumbnails.
-
-**Cycle 29 (start screen + scene selection UX, 5 days, v1.10.0):** restructure flow Mode→Scene→Dog→Settings, hero-art ScenePicker for whole start screen, live WebGL DogSelection preview, outcome-art ModeSelection, skeleton loading states, scripted background-scene orbit per selected scene, first-time-visit tutorial overlay, transitions + audio cues.
-
-**Cycle 30 (tree art direction + ship v2.0.0, 8 days):** 8-10 tree variants (3 deciduous size grades, 2 birch, 2 conifer reintroduction, 1 dead/leafless, 1 fall-color), per-scene distribution profiles (Field=English pasture, RH=Mediterranean, OC=Pacific Northwest), embedded wind in impostor bake, authored landmark trees per scene, final QA + `v2.0.0` tag.
-
-**Validation infrastructure (cross-cycle, [`tools/validation/`](tools/validation/)):** built Cycle 25 Phase A. `lod-compare.mjs` (silhouette IoU + dE2000 + luma delta), `screenshot-golden.mjs` (108-capture matrix, SSIM diff), `input-latency.mjs` (synthetic input → frame-paint round-trip), `frame-time-histogram.mjs` (p99/p99.9). Goldens commit to `tools/validation/golden/` after Matt review. Each polish cycle validates itself against this harness.
-
-**Net code change across program:** ~590 LOC removed (desat patch + match LUT + camera mode divergence + per-scene fog triples), ~250 LOC added (validation harness + height-fog patch + per-mode zoom state). **~340 LOC net-negative**.
-
-## What landed in Cycle 22 (closed as `v1.3.0`)
-
-Six phases all shipped on `main` plus two Phase C variant branches:
-
-- **Phase A — meshopt-baked LOD1 + pine removal.** [`tools/bake-tree-lod1.mjs`](tools/bake-tree-lod1.mjs) wraps `@gltf-transform/functions.simplify()` with `MeshoptSimplifier`. Four variants (aggressive/default/conservative/pristine) saved under `cycle22-validation/phaseA/variants/`. Default lands at `_originals/<name>_lod1.glb` — tree1 -38.2%, tree2 -45.4% bytes. LOD chain re-enabled at 80m. Pine deleted across `TreePlacement` (mixed becomes 50/50 tree1+tree2), all bake scripts, asset specs, impostor LUT, asset-gallery picks, dev sandboxes. Pine assets archived under `cycle22-validation/phaseA/removed-pine/`.
-- **Phase B — alphaHash stochastic LOD crossfade.** `material.alphaHash = true` on every leaf MeshStandardMaterial via `_patchTreeWindMaterial`. Kiln impostor (custom ShaderMaterial) gets a screen-space hashed alpha threshold inline (`uAlphaHashScale = 0.30`).
-- **Phase C — atmospheric desaturation.** New [`js/shaders/AtmosphericDesatPatch.js`](js/shaders/AtmosphericDesatPatch.js) module. Single shared `{ uDesatStartM, uDesatEndM, uDesatStrength }` uniform set drives LOD0+LOD1 leaves AND the kiln impostor. Defaults 100m / 320m / 0.6. Variants `cycle-22-phaseC-strength-0.4` and `cycle-22-phaseC-strength-0.8` committed as branches.
-- **Phase D — grass auto-LOD.** GrassSystem ticks 60-sample frame-time ring buffer; `_autoLodFactor` scales `clumpsPerChunk` toward 0.5 at 0.05/sec when avg > 18ms. Recovery toward 1.0 under 14ms. Floor 0.5. Stats added: `stats.autoLodFactor`, `stats.avgFrameMs`. No new clamps (Hard-Stop #8 stays clean).
-- **Phase E — BatchedMesh research doc.** [`docs/cycle-22-batchedmesh-research.md`](docs/cycle-22-batchedmesh-research.md). Recommendation: **defer to Cycle 24+**. Three.js r184 BatchedMesh has no native per-instance LOD; community workaround requires shared vertex arrays — incompatible with Phase A's meshopt simplify pipeline.
-- **Phase F — ship `v1.3.0`.** vitest 179/179, build 825.62 KB / 246.99 KB gzip (+13 KB), perf:check `field-extreme` -26.7%.
-
-Iteration artifacts saved per "branch-back" directive: tags `cycle-22-base`, `cycle-22-phase{A,B,C,D}-default`, `v1.3.0`; branches `cycle-22-phaseC-strength-{0.4,0.8}`; LOD1 variants under `cycle22-validation/phaseA/variants/`; pine archive under `cycle22-validation/phaseA/removed-pine/`.
+1. Phase A's Cloudflare beacon shows zero pageviews after 1hr live.
+2. Phase C's lazy-load split causes a visible flash-of-blank-canvas on broadband.
+3. Phase E's `MediaRecorder` regresses frame time > 5%.
+4. Phase G's itch heightfield diagnosis surfaces a CDN config change requiring itch support.
+5. Phase I uncovers an actual bug in `GameState` / `Sheepdog` / `NetworkManager` / `RoomDO` (separate hotfix, not in-line scope creep).
+6. Phase M's "fix at root" path produces a visibly worse-looking game per Matt's playtest.
 
 ## Where the project stands
 
-180+ vitest pass. Production build clean (825.62 KB / 246.99 KB gzip). Cycle 22 closed the kiln-impostor / LOD-pop / grass-perf risks. Standing risks (heightfield amplitude, mac-white-ground, cinema runner timeout, sim-baseline care) all unchanged from Cycle 21.
+Cycle 26 closed today. 201 vitest pass. Production build 837.26 KB / 250.46 KB gzip. `sheepdogsim.com` live with auto-load scene-picker; itch.io deploy still has the heightfield bug (Cycle 27 Phase G is the diagnosis).
 
-## Cycle 23 phases (locked plan)
+Standing risks (carried forward, prioritized for Cycle 27):
 
-See [`docs/cycle-23-plan.md`](docs/cycle-23-plan.md):
-
-- **Phase A — overhead atmospheric polish (~6hr).** Pitch-aware desat strength (drop above 30°), prime fog color from sky on first frame, wire dead scene-level fog defs, finally land impostor pitch-tilt (Cycle 19.5 carryover #2(b)). Closes the "trees look terrible from overhead" playtest finding without removing Classic camera.
-- **Phase B — stamina sprint-exit fix (~2hr).** `canContinueSprint` gate isn't firing mid-sprint; trace + fix + new vitest spec.
-- **Phase C — OC HUD overlap (~1–2hr).** Camera-mode indicator + sheep-in-circle objective overlap on desktop + mobile; vertical-stack layout fix.
-- **Phase D — grass T4 meadow-quad LOD + hardware tiering (~1–1.5d).** Far-ring (>260m) renders as single textured quad per chunk instead of clumps (~50–60% tri reduction on OC-Extreme); HardwareTier service reads `MAX_VERTEX_UNIFORM_VECTORS` + GPU vendor → low/med/high preset; auto-LOD extends to blade count.
-- **Phase E — MP cheap wins (~3–4hr).** Extend `RoomDO.ALLOWED_SHEEP_COUNTS` to include 3000/5000 + UI gate "all guests desktop"; cinematic-flag URL strip on `joinRoomByInvite`; pine 404 sweep across worker/client/shared. Full MP audit + test suite → Cycle 24.
-- **Phase F — misc + ship `v1.4.0` (~3hr).** Trees triangle-counter unwired in stats panel; CHANGELOG + version bumps + tag.
-
-## What landed in Cycle 20 (Phase 0 + 1 + 2 v1, closed early into Cycle 21)
-
-- **Phase 0 — recon + Q2 verdict.** Pixel Forge CLI verified (with two install fixes: bun→Node tsx on Windows, bake from `_originals/` not Draco-compressed runtime). 6-bug audit complete. Q2 locked at 16 hemi-y via 2D barycentric simulation + AAA shipping precedent (Ghost of Tsushima 4×4+parallax, Horizon FW 3×3+parallax+dither, Far Cry 6 5×5 with depth-essential).
-- **Phase 1 — bake pipeline.** [`tools/bake-tree-impostors.mjs`](tools/bake-tree-impostors.mjs) wraps Pixel Forge CLI; `npm run bake-tree-impostors` regenerates 12 production atlas files. Inspector HTML + 6 vitest specs pinning the schema.
-- **Phase 2 v1 — runtime shader rewrite.** [`js/kiln-impostor-material.js`](js/kiln-impostor-material.js) ships with 3-tile barycentric blend, per-fragment relighting via decoded capture-view normals, anchor via sidecar `worldSize` + `bbox`. Parallax + depth-discard ghost suppression scaffolded but disabled. Octahedral runtime baker deleted.
-
-Validation at Cycle 20 pause: 186/186 vitest, prod build 812.28 KB / 242.09 KB gzip (flat with v1.1.0). Phases 3-5 (per-scene matrix, perf, ship) absorb into Cycle 21 Phase 5.
-
-## Where we are visually (and why Cycle 21 exists)
-
-The kiln impostors **render** end-to-end but the visual gap with LOD0 surfaced multiple structural issues that incremental tuning can't close:
-
-- **Lighting model gap.** LOD0 uses MeshStandardMaterial (full PBR — Schlick fresnel + GGX + IBL); impostor is half-Lambert + hemi only. Missing rim is the dominant single visible defect (reads warm-biased).
-- **Texture sampling gap.** 512px tiles → 5-15 screen pixels at distance: glint without mips, cross-tile bleed with mips. Current half-texel UV clamp + aniso=8 is a compromise, not a fix.
-- **Aspen recipe undercut.** `tree1` (Aspen Medium, leaves=30, branches[0]=8) reads as a tall broomstick.
-- **Open Country canopy clumping.** `WOODS_INSIDE_FACTOR = 0.85` still sometimes overlaps canopies.
-
-A 6-agent parallel research pass produced a layered fix sequence — shipped as the [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md) phases below.
-
-## Cycle 21 phases (active plan)
-
-Plan: [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md). 6 phases, mostly serial, Phase 6 optional.
-
-0. **Quick wins (~3hr)** — Aspen re-tune (leaves 30→42, branches 8→10), placement diff (WOODS_INSIDE_FACTOR 0.85→0.92, scaleVariation 0.7-1.3 → 0.80-1.20), Schlick fresnel rim (~10 LOC), tree-pipeline.md seed doc fix. Independently shippable.
-1. **Sandbox v2 + first measurement (~1 day)** — standalone `tools/lod-sandbox-v2.html`, 5×5 grid sampling, dE2000/dRGB/dLuma per cell, 12-cell smoke matrix baseline.
-2. **Calibration LUT (~2 days)** — full 80-cell matrix, generate `(scene, ToD) → vec3 boost` JSON, ship as `uMatchBoost` uniform. Target post-LUT mean dE2000 < 5.
-3. **Padded-atlas mipmaps (~1.5 wk)** — re-bake atlases with N=16-32px tile padding, re-enable mipmaps in shader, kill the glint without cross-tile bleed. Halen et al. HPG 2022 approach.
-4. **Hybrid trunk-mesh closest band (~1 wk)** — bake trunk-only GLB per tree, render `(trunk-mesh + impostor-canopy)` at 100-150m. Trunk inherits LOD0 MeshStandardMaterial → pixel-perfect anchor.
-5. **Per-scene verification + perf + ship (~1 day)** — 12 captures vs v1.1.0, perf delta, sim-baseline byte equality, tag v1.2.0.
-6. **Structural escalation (OPTIONAL)** — only if Phase 5 mean dE2000 > 5. Options: MeshStandard.onBeforeCompile extension, RiLoD geometry-image impostor, 2D LUT.
-
-**Closes** Cycle 19.5 carryover impostor-quality items #1, #2 (partial), #3, #4. Drops the standing impostor-quality risk.
-
-## Explicitly DEFERRED out of Cycle 21 (carry forward)
-
-Per Matt's "push back other objectives" directive, these stay in BACKLOG and do NOT land in Cycle 21:
-
-- **Heightfield amplitude bug** (root fix in `Heightfield.sample()` / `scripts/bake-heightmap.mjs`). Cycle 19 hotfix worked around the symptom by relaxing the GrassSystem clamp. RH/OC terrain shipped at peakHeight² metres for ~14 cycles; visual character of the game depends on the amplified state now. Fix is its own cycle.
-- **Cinema runner `page.screenshot` font-wait timeout.** Workaround (Playwright MCP for one-off captures) is fine for Cycle 21 Phase 5.
-- **4 cinematic videos** (`dog-into-sunset`, `lightning-strike`, `chaos-5000`, `oc-portal`) — depend on cinema runner fix and heightfield decision.
-- **WebGPU/TSL spike, grass render-texture trample, procedural-instanced-forest eval, mac-white-ground-bug** — standing alternatives, not Cycle 21 scope.
-
-## Where the project stands (Cycle 19 close)
-
-Cycle 19 ran end-to-end autonomous from a single "run whole cycle - i'll review when complete" prompt. Started as a visual verification pass on Cycle 18; mid-cycle, Phase 1.B's grass screenshot surfaced a **separate, longstanding regression masking** Cycle 18 Phase 1's acceptance — RH/OC grass was rendering at sea level, not on terrain. Diagnosed root cause, shipped a hotfix, then completed Phase 1 verification + Phase 3 OG cards + `v1.1.0` tag.
-
-Headlines from Cycle 19:
-
-- **Phase 1.A — grass-Y heightfield clamp regression ✅ HOTFIX** (commit `0790333`). `js/GrassSystem.js` had a Cycle 17 Phase 3 clamp `baseY > 10 → 0` with the comment "heightScale tops out at 6". In practice the displaced terrain mesh peaks at ~25m on OC and ~36m on RH (a longstanding `Heightfield.sample()` double-amplification bug from Cycle 4/5 — bake script writes pre-multiplied metres while sample() multiplies by peakHeight again). All legit terrain Y was being snapped to 0, dropping grass to water level. Reverted clamp to `> 50`. Verified post-fix: OC inner-chunk grass at meanY=21 (matches displaced terrain), RH at meanY=20-30, Field byte-identical.
-- **Phase 1.B/C/D/E ✅** All Cycle 18 phases verified post-grass-fix. Octahedral impostor brightness parity holds at noon + dawn (no visible cliff at 100m boundary). No visible azimuth-step. Scene-swap OC→RH preserves grass-on-terrain. OC-Extreme on RTX 3070 = 73 fps avg (Q2 settled — no clumpsPerChunk reduction needed).
-- **Phase 2 — octahedral polish SKIPPED.** No defects surfaced.
-- **Phase 3.A ✅** 3 OG cards refreshed (commit `897ce29`): og-field, og-rh-sunset (Solo Extreme + 1000 sheep), og-open-country. All under 200 KB. Captured directly via Playwright MCP because the cinema runner has a separate `page.screenshot` 30s timeout issue.
-- **Phase 3.B — 4 cinematic videos DEFERRED** to Cycle 20. Cinema runner timeout blocks; needs debug pass.
-- **Phase 3.C — `v1.1.0` tagged + pushed ✅** (commit `d0fcb66`). CHANGELOG.md updated, worker/package.json bumped 0.1.0 → 1.1.0.
-
-180/180 vitest pass. Production build clean (812.80 KB main / 241.46 KB gzip — flat with v1.0.0 baseline).
+- **itch.io heightfield bug** (Cycle 27 Phase G) — distribution channel partially broken.
+- **iPhone tone-mapping verification** (Cycle 27 Phase K) — silent failure possible for ~30% of mobile traffic.
+- **Heightfield amplitude bug** (Cycle 27 Phase M) — 16+ cycles of accumulated workarounds; needs Matt's strategic call to fix or codify.
+- **No analytics signal** (Cycle 27 Phase A) — every feature ship is uninstrumented; Cycle 27 Phase A fixes first.
+- **Test coverage gaps in load-bearing classes** (Cycle 27 Phase I) — `GameState`, `Sheepdog`, `NetworkManager`, `RoomDO` effectively untested.
 
 ## CI quirks worth knowing
 
 - **macOS Safari Smoke** is the standing mac-white-ground bug, environmental (not on CI Safari, only Matt's Mac). Documented in BACKLOG standing risks.
-- **Cinema runner timeout** — `page.screenshot: Timeout 30000ms exceeded - waiting for fonts to load... fonts loaded` then hang. Affects all shots. **Deferred** out of Cycle 21; workaround for Phase 5 captures is direct Playwright MCP.
-
-## Tuning knobs (1-line tweaks)
-
-| Looks off? | Knob | File | Default |
-| --- | --- | --- | --- |
-| Grass Y clamp catching legit terrain | `baseY > 50 \|\| baseY < -10` in createChunk | [`js/GrassSystem.js`](js/GrassSystem.js) | > 50 (Cycle 19 hotfix; revert to > 10 once heightfield amplitude is fixed) |
-| RH grass too tight to inner area | `grassRadius` in [`shared/scenes/rolling-hills.js`](shared/scenes/rolling-hills.js) | scene config | 172m |
-| OC grass not reaching shore | `grassRadius` in [`shared/scenes/open-country.js`](shared/scenes/open-country.js) | scene config | 372m |
-| Kiln LOD2 azimuth step visible | enable parallax: `uParallaxScale` default in [`js/kiln-impostor-material.js`](js/kiln-impostor-material.js) — try 0.04. If still bad, escalate to 32 hemi-y in [`tools/bake-tree-impostors.mjs`](tools/bake-tree-impostors.mjs) `--angles` flag and re-bake. | shader uniform / bake | 0 / 16 hemi-y |
-| LOD1 dither too noisy at <40m | reduce `material.alphaHash` impact via `alphaTest` lift in [`js/TerrainBuilder.js`](js/TerrainBuilder.js) `_patchTreeWindMaterial` (raise EZ-Tree leaf material alphaTest 0.5 → 0.6); for kiln, lower `uAlphaHashScale` toward 0 (hard alphaTest fallback) | leaf MeshStandardMaterial / kiln uniform | 0.5 / 0.30 |
-| Grass collapses density when frames spike | raise `_autoLodHi` (default 18ms) in [`js/GrassSystem.js`](js/GrassSystem.js) — auto-LOD trips later. Raise `_autoLodFloor` (default 0.5) to bound how far density can drop. | constructor field | 18ms / 0.5 |
-| Kiln LOD2 ghost / double-image during blend | `uDepthDiscardThr` in [`js/kiln-impostor-material.js`](js/kiln-impostor-material.js) — try 0.15 | shader uniform | 1.0 (disabled) |
-| Kiln LOD2 too dim at noon | `uAmbientColor` write in `setImpostorTint`, [`js/TerrainBuilder.js`](js/TerrainBuilder.js) — atmosphere ambient may need a `uAmbientBoost` multiplier | runtime uniform | atmosphere `ambientLight.color` (or 0.35-grey fallback) |
-| Cross-billboard fallback sun-tint blend | `BLEND` in `setImpostorTint` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.35 (only fires if kiln load fails) |
-| Cross-billboard fallback sun-luma boost | inline `0.20 * lum` factor in `setImpostorTint` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.20 |
-| LOD0→impostor pop visible at 100m | `addLOD(billboardGeo, mat, 100)` distance | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 100m camera distance |
-| Trees rattle too much / too still | `_treeWind.uWindStrength` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.6 desktop / 0 mobile |
-| Tree bark color wrong | `BARK_TINTS[species][scale]` | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | per-species 0x4a-0x8c brown |
-| Single-leaf canopy too sparse | `baseSize` per species + single boost | [`tools/bake-trees.mjs`](tools/bake-trees.mjs) | 1.6 deciduous / 1.2 pine; ×1.25 single |
-| Rocks too big / too small | `ROCK_NATIVE_HEIGHT` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.2m |
-| Rocks float / sink | `ROCK_Y_SCALE` | [`js/TerrainBuilder.js`](js/TerrainBuilder.js) | 0.7 |
-
-Re-baking trees: edit recipes/seeds in [`tools/bake-trees.mjs`](tools/bake-trees.mjs), then `rm assets/_originals/models/trees/*.glb && npm run bake-trees && npm run compress-glbs`. The `_originals/` rm is required to invalidate the compress-glbs backup cache (Cycle 14 finding, commit `39f44fb`).
-
-Re-baking heightmaps: `npm run bake-heightmaps` regenerates all three. **Cycle 20 Phase 1 will likely re-bake to fix the amplitude bug.**
-
-## Standing risks (carried forward)
-
-- **Heightfield amplitude bug.** `Heightfield.sample()` multiplies stored data by `peakHeight` while `scripts/bake-heightmap.mjs` already writes pre-multiplied metres. Net: terrain mesh has shipped at peakHeight² metres for ~14 cycles (RH 36m peaks instead of 6m, OC 25m instead of 5m). Cycle 19 hotfix worked around the symptom by relaxing the GrassSystem clamp; Cycle 20 Phase 1 fixes at root. Until then, expect RH/OC terrain to feel taller-than-design.
-- **Sim-baseline fixtures one-way.** Don't regenerate without understanding the diff. Cycles 5-19 left them bit-identical.
-- **`?cinematic=1` flips `preserveDrawingBuffer`.** Documented perf hit. Any change letting the flag affect normal play is a Hard Stop.
-- **GLB shared-material trap (Cycle 11+12 finding).** Any new code creating an `InstancedMesh` from a cached GLB's `child.geometry` + `child.material` must tag with `userData.sharedFromGlbCache = true` and rely on remove-from-scene only.
-- **InstancedMesh2 entity API.** Entities in `addInstances` callback use `quaternion` (not Euler `rotation`). Cycle 14 hotfix `a41f9a6` documented this.
-- **Cycle 18 finding — InstancedMesh2 + custom ShaderMaterial.** Custom shaders that need per-instance matrix MUST `#include <batching_pars_vertex>` + `#include <batching_vertex>` so `getInstancedMatrix()` + `matricesTexture` get declared inside `USE_INSTANCING_INDIRECT`. Cycle 20 Phase 2's [`js/kiln-impostor-material.js`](js/kiln-impostor-material.js) inherits this requirement.
-- **Cycle 20 finding — Pixel Forge CLI install on Windows.** `bun run` of pixelforge hangs on Playwright CDP-pipe handshake (Chromium subprocess spawns but launch never returns within 180s). Workaround in [`tools/bake-tree-impostors.mjs`](tools/bake-tree-impostors.mjs): invoke through Pixel Forge's `node_modules/.bin/tsx.exe` (Node) instead of bun. Re-baking impostors `npm run bake-tree-impostors` works; running `pixelforge ...` directly from a Windows shell does not.
-- **Cycle 20 finding — bake from `_originals/`, not Draco-compressed runtime.** Pixel Forge's bake harness has no `DRACOLoader`. The bake script reads `assets/_originals/models/trees/*.glb` (uncompressed canonical sources) by design.
-- **`scripts/compress-glbs.mjs` reads from `assets/_originals/` backup.** Re-baking GLBs requires `rm assets/_originals/models/trees/*.glb` first.
-- **EZ-Tree billboard string casing.** `leaves.billboard` expects lowercase `'single'` / `'double'`; capital-case is silently ignored. Codified in `tools/bake-trees.mjs` JSDoc.
-- **CI worker scripts depend on `npx wrangler`** (Cycle 16 `be09eb7`). The root `dev:setup` / `dev:worker` npm scripts use bare `wrangler` after `cd worker` which loses the bin-PATH in CI environments. The deploy.yml workflow calls `npx wrangler` directly to bypass.
-- **Mac white-ground bug.** Reproduces on Matt's specific Mac, not on GH `macos-latest` Safari. Environmental. Investigation pending Matt's `__sdsDiag` capture.
-- **perf-check noise on swiftshader extreme.** ~4-second-per-frame baseline with ~2 sample frames per measure window. Single-run failures may be noise; check whether the next push reproduces.
+- **Cinema runner timeout** — `page.screenshot: Timeout 30000ms exceeded - waiting for fonts to load... fonts loaded` then hang. Cycle 27 Phase B fixes.
+- **perf-check noise on swiftshader extreme** — ~4-second-per-frame baseline with ~2 sample frames per measure window. Single-run failures may be noise.
 - **scene-swap-stability spec is `@local-only`.** Run locally after touching scene-swap or flock-recreation code: `npm run test:e2e -- scene-swap-stability`.
-- **Cinema runner has a `page.screenshot` 30s font-wait timeout.** Cycle 20 Phase 2 fixes. Workaround until then: use Playwright MCP directly for one-off captures.
 
 ## How to read the rest of the repo
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-23-plan.md`](docs/cycle-23-plan.md) — STUB; direction not chosen |
-| Latest closed cycle | [`docs/cycle-22-plan.md`](docs/cycle-22-plan.md) — `stylized-lod-pivot-and-grass-perf` shipped as `v1.3.0` 2026-05-05 |
-| Cycle 22 research | [`docs/cycle-22-batchedmesh-research.md`](docs/cycle-22-batchedmesh-research.md) — BatchedMesh defer-to-24+ recommendation |
-| Cycle 21 (closed) | [`docs/cycle-21-plan.md`](docs/cycle-21-plan.md) — `tree-impostor-pixel-match-and-foliage-polish` (pivoted mid-cycle) |
-| Cycle 20 (closed early into 21) | [`docs/cycle-20-plan.md`](docs/cycle-20-plan.md) + [`docs/cycle-20-impostor-color-handoff.md`](docs/cycle-20-impostor-color-handoff.md) |
-| Older closed | [`docs/archive/cycles/cycle-19-plan.md`](docs/archive/cycles/cycle-19-plan.md) |
-| Cycle 18 (also closed) | [`docs/archive/cycles/cycle-18-plan.md`](docs/archive/cycles/cycle-18-plan.md) |
-| Cycle 17 | [`docs/archive/cycles/cycle-17-plan.md`](docs/archive/cycles/cycle-17-plan.md) + [`docs/archive/cycles/cycle-17-research.md`](docs/archive/cycles/cycle-17-research.md) |
-| Cycle 16 — tree research + gallery review + Phase 6 prep | [`docs/cycle-16-tree-research.md`](docs/cycle-16-tree-research.md), [`docs/cycle-16-tree-gallery-review.md`](docs/cycle-16-tree-gallery-review.md), [`docs/cycle-16-phase-6-prep.md`](docs/cycle-16-phase-6-prep.md) |
-| Prior closed cycles | [`docs/archive/cycles/cycle-16-plan.md`](docs/archive/cycles/cycle-16-plan.md), [`docs/archive/cycles/cycle-15-plan.md`](docs/archive/cycles/cycle-15-plan.md), [`docs/archive/cycles/cycle-14-plan.md`](docs/archive/cycles/cycle-14-plan.md), [`docs/archive/cycles/cycle-12-plan.md`](docs/archive/cycles/cycle-12-plan.md), [`docs/archive/cycles/cycle-11-plan.md`](docs/archive/cycles/cycle-11-plan.md) |
-| Older cycles | All under [`docs/archive/cycles/`](docs/archive/cycles/) — `cycle-2-{todo,report}`, `cycle-3-{plan,cleanup,scene-arch,ui-ux}`, `cycle-4-{plan,phase-b,hardening}`, `cycle-5-plan`, `cycle-6-plan`, `cycle-7-plan` … `cycle-19-plan` |
+| Active cycle | [`docs/cycle-27-plan.md`](docs/cycle-27-plan.md) — `engagement-loop-and-perf` |
+| Latest closed cycle | [`docs/archive/cycles/cycle-26-plan.md`](docs/archive/cycles/cycle-26-plan.md) — closed as `v2.1.2` series 2026-05-08 |
+| Older closed | [`docs/archive/cycles/`](docs/archive/cycles/) |
 | Cycle stub template | [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) |
 | Frozen files / fence rules | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Closed cycles + deferred items | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
@@ -411,21 +157,30 @@ Every session after that:
 npm run dev    # starts Vite (:3000) + wrangler (:8787) together
 ```
 
-URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl` (probe), `?cinematic=1` (filming infra), `?ui=off` (hide React overlay), `?sun=0.5` (sun position), `?perfMode=1` (`__perfHarness` global for the perf harness driver).
+URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl` (probe), `?cinematic=1` (filming infra), `?ui=off` (hide React overlay), `?sun=0.5` (sun position), `?perfMode=1` (`__perfHarness` global for perf harness driver), `?tier=low|med|high` (HardwareTier override), `?tonemap=aces|neutral|linear|none` (tone-mapping A/B).
 
-## What NOT to do
+## What NOT to do during Cycle 27
+
+- **Don't pick up parked world-rendering work.** Aerial-perspective LUT, 8×4 impostor re-bake, tree variants — all stay in BACKLOG.
+- **Don't expand analytics beyond Cloudflare's privacy-respecting beacon.** No GA, no fingerprinting, no per-user tracking.
+- **Don't pre-deploy Phase L's title-screen change.** Design taste is Matt-gated.
+- **Don't auto-post Phase N's first devlog.** Marketing/community pushes are Matt-sent.
+- **Don't bloat the bundle.** Cycle 27 should *shrink* `main` (Phase C). Every phase has a bundle-delta validation criterion.
+- **Don't regenerate sim-baseline fixtures.** Phase M is the only entry point and only with Matt's call.
+- **Don't replace `MediaRecorder` with deterministic-replay state-log architecture.** Q3 settled; that's Cycle 30+ scope if it ever comes up.
+
+## What NOT to do (durable)
 
 - Don't rearchitect multiplayer. It works.
 - Don't reintroduce procedural mountains. The right path is a height-displaced skirt.
 - Don't add new scenes. Three is the right number.
-- Don't touch `shared/MovementPhysics.js`'s `updateMovement` for obstacle composition — Cycle 6 deliberately put obstacle-force composition at the call site.
+- Don't touch `shared/MovementPhysics.js`'s `updateMovement` for obstacle composition.
 - Don't blow up `main.js` in one PR. Shrink one responsibility at a time.
 - Don't regenerate `tests/sim-baseline/` fixtures unless you understand exactly what changed and why.
 - Don't hardcode grass-exclusion zones for non-Field scenes. Gate on `sceneDef?.farmHouse` and `sceneDef?.pasture`.
 - Don't gate sprint *continuation* on `stamina >= minStaminaToSprint` — only sprint *start*.
-- Don't traverse-and-dispose materials on GLB clones (SkeletonUtils.clone, .clone()) — they share materials with the cache. Tag with `userData.sharedFromGlbCache = true` and remove-from-scene only.
+- Don't traverse-and-dispose materials on GLB clones (SkeletonUtils.clone, .clone()) — they share materials with the cache.
 - Don't let `?cinematic=1` flip `preserveDrawingBuffer` on the normal-play codepath.
-- Don't re-trigger the cinema runner without `--shot=<id>` during regular dev — committed OG/dog/PWA assets re-render with sub-pixel-different WebP encoding and create diff noise.
-- Don't pass capital-case `'Single'` / `'Double'` strings to EZ-Tree's `leaves.billboard` — they're silently ignored. Use lowercase.
+- Don't pass capital-case `'Single'` / `'Double'` strings to EZ-Tree's `leaves.billboard` — silently ignored.
 - Don't replace EZ-Tree with the Procedural Instanced Forest unless `InstancedMesh2.addLOD` demonstrably misses the perf budget.
-- Don't add new clamp logic to `js/GrassSystem.js` to mask future regressions — fix at the heightfield root.
+- Don't add new clamp logic to `js/GrassSystem.js` to mask future regressions — fix at the heightfield root (or codify per Cycle 27 Phase M).
