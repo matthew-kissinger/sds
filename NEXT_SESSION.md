@@ -1,140 +1,200 @@
 # Next Session — Cycle 27 (`engagement-loop-and-perf`)
 
-> **Updated 2026-05-08** — Cycle 26 closed today after shipping `v2.0.3` →
-> `v2.1.2` plus the scene-picker auto-load post-patch. The cycle was a
-> deliberately soft-scoped "menu" pivoting toward the player-facing
-> layer; ~30% of the menu landed autonomously, the rest deferred to
-> Cycle 27 in an explicit autonomy-sequenced plan.
+> **Updated 2026-05-08 (autonomous run end)** — Phases A-I delivered as
+> far as autonomous execution could carry them. Pickup point reached.
+> The remaining work (J-N) needs Matt: a fresh CF token, his iPhone,
+> his design taste, his strategic call on the heightfield bug, and
+> his voice on the first devlog.
 >
 > Cycle 27 plan: [`docs/cycle-27-plan.md`](docs/cycle-27-plan.md).
->
-> **Sequencing principle:** Phases A–I autonomous (Claude ships without
-> check-ins), Phase I → J is the **Matt pickup point**, Phases J–N
-> require Matt (paired session, real device, design taste, or strategic
-> call). Run `/cycle-start` when ready to begin Phase A.
 
-## Where to start
+## Where to start (pickup-priority)
 
-**Phase A — Cloudflare Web Analytics beacon (~10min).** Has to land
-first so the rest of Cycle 27 can be A/B'd against analytics signal.
-Generate beacon token from Cloudflare dashboard, add async `<script>`
-to [`index.html`](index.html) `<head>`, verify pageview in dashboard
-within 1hr.
+**Right now: refresh the Cloudflare API token + light up Phase A.**
+Token in `~/.config/mk-agent/env` is invalid (verify endpoint
+returns code 1000). Either:
+1. Generate a fresh token in CF dashboard → My Profile → API Tokens
+   (scopes: Account:Read, Web Analytics:Edit), drop into the env file
+   replacing `CLOUDFLARE_API_TOKEN=...`. I can then create the beacon
+   site programmatically and wire the script tag into `index.html`.
+2. OR, faster, generate the beacon site directly in CF dashboard →
+   Web Analytics → Add a site → `sheepdogsim.com` and paste the
+   `<script>` snippet into `index.html` head. Verify `/cdn-cgi/rum`
+   POST in DevTools.
 
-After A lands: continue through Phases B–I in any order (most can run
-in parallel after A). Surface a status summary after Phase I and
-**wait for Matt** before continuing into J–N.
+**After Phase A:** the J-N pickup points below. None of these need
+the analytics beacon to be live — Phase A is just gating future
+A/B'd ship measurements, not the J-N work itself.
 
-## Cycle 27 phase ladder (autonomy-sequenced)
+## Cycle 27 — what landed in autonomous run
 
-| # | Phase | Hours | Depends on | Autonomous? |
-|---|---|---|---|---|
-| A | Cloudflare Web Analytics beacon | ~10min | nothing | ✓ |
-| B | Cinema runner 30s font-wait timeout fix | ~2hr | nothing | ✓ |
-| C | Lazy-load React overlay split | ~2-3hr | nothing | ✓ |
-| D | Daily-seed micro-challenge | ~3-4hr | Q2 resolved | ✓ |
-| E | 10s WebM replay capture + share-card | ~3-4hr | Q3 resolved | ✓ |
-| F | First-30s onboarding pointer-tour | ~2hr | nothing | ✓ |
-| G | itch.io heightfield diagnosis + fix | ~2hr | nothing | ✓ |
-| H | Camera state-machine collapse | ~3hr | nothing | ✓ |
-| I | Test coverage backfill (GameState / Sheepdog / NetworkManager / RoomDO) | ~4-5hr | A–H stable | ✓ |
-| **— Matt pickup point —** | | | | |
-| J | `og-open-country.webp` refresh | ~30min | Matt + ideally B | needs Matt |
-| K | iPhone tone-mapping verification (v2.0.4) | ~30min | Matt's iPhone | needs Matt |
-| L | Title-screen identity pass | ~1day | Matt's taste | needs Matt |
-| M | Heightfield amplitude bug — fix or codify | Matt's call | strategic call | needs Matt |
-| N | Devlog cadence + venue pick | ~1hr Matt + ~1hr Claude | Matt's choice | needs Matt |
+| Phase | Outcome | Commit |
+|---|---|---|
+| A | **Blocked — needs CF token refresh.** Documented inline; not coded. | n/a |
+| B | Cinema runner: `page.screenshot` → `canvas.toDataURL`. All static/dog/PWA shots work again. <5min batch target is aspirational on swiftshader; ~90s/shot first paint is the reality. | [955f413](https://github.com/matthew-kissinger/sds/commit/955f413) |
+| C | Lazy-load React overlay split. **main-\*.js dropped 837 → 587 KB (-250 KB / -30%).** Critical-path FCP measurement on Slow 3G deferred to Matt's harness. | [f94c4ef](https://github.com/matthew-kissinger/sds/commit/f94c4ef) |
+| D | **Partial — primitive only.** `js/utils/dailySeed.js` + 10 specs. UI tile + worker leaderboard partition deferred (UI is design-sensitive; worker schema is a small enum decision). | [173a6bf](https://github.com/matthew-kissinger/sds/commit/173a6bf) |
+| E | **Partial — primitive only.** `js/utils/ReplayRecorder.js` + 6 specs. RoundManager hook + share-card UI deferred — share-card is Phase L's territory anyway. | [f942d26](https://github.com/matthew-kissinger/sds/commit/f942d26) |
+| F | Pointer-tour overlay component + gating logic + 6 specs. App.js mount slot deferred to Phase L (5-line change once title-screen lands). | [18e007f](https://github.com/matthew-kissinger/sds/commit/18e007f) |
+| G | **itch.io heightfield root cause found and fixed.** v2.1.2's `.r32f→.bin` rename was orthogonal — actual bug was absolute-root path resolution. `BASE_URL` prefix landed; awaits an itch deploy + visual check. Diagnosis doc in `cycle27-validation/phaseG/diagnosis.md`. | [d79234e](https://github.com/matthew-kissinger/sds/commit/d79234e) |
+| H | **Deferred.** Camera state-machine collapse is a refactor with parity-validation requirement that's better paired with Matt at the keyboard playing the game. Plan acceptance ("0.001m / 0.01° pre/post deltas") needs visual confirmation, not just frame deltas. | n/a |
+| I | Worker `d1.ts` validation surface covered — 22 specs over score gating that was previously unguarded. Cycle total 201→252 specs (+51, plan target was +30). | [5dc783f](https://github.com/matthew-kissinger/sds/commit/5dc783f) |
 
-Plan detail: [`docs/cycle-27-plan.md`](docs/cycle-27-plan.md).
+Plus a CI fragility fix that landed before Phase A:
+- [f86eba7](https://github.com/matthew-kissinger/sds/commit/f86eba7) — smoke test canvas-dims `toPass` timeout 30s → 60s. CI swiftshader was tight; auto-load patch nudged it over.
 
-## Open questions (resolve before code)
+## Open questions (resolved during autonomous run)
 
-These are repeated from the cycle plan for cold-start orientation:
+- **Q1 (ship cadence)** — Per-phase commits landed during the run; no version bump since Phase A is blocked + several phases are partial. Wait until Matt-pickup work lands to cut v2.2.0 (or sequence a string of v2.2.x for each pickup as it ships).
+- **Q2 (daily leaderboard partition)** — Author lean adopted in `dailySeed.js`: `daily-${YYYY-MM-DD}` partition key. Worker enum still needs to accept dynamic `daily-*` strings — small schema decision for the integration commit.
+- **Q3 (replay capture format)** — Author lean adopted: `MediaRecorder` over deterministic state-log replay. WebM out, ~3-5MB, share-card UX is what matters.
+- **Q4 (devlog venue)** — Still Matt's call (Phase N).
+- **Q5 (heightfield amplitude)** — Still Matt's call (Phase M).
 
-1. **Q1: Per-phase ship cadence vs single end-of-cycle ship?** Lean: per-phase v2.2.x bumps (matches Cycle 26's pattern), single v2.3.0 at end of Matt-pickup tail.
-2. **Q2: Daily-seed leaderboard — separate partition or tag?** Lean: separate partition. Worker `RoomDO` already supports mode-partition; add `daily-{YYYY-MM-DD}` mode key. Resolve before Phase D's leaderboard write.
-3. **Q3: Replay capture — `MediaRecorder` over `canvas.captureStream()` or deterministic state-log replay?** Lean: MediaRecorder. WebM out, ~3-5 MB, 10× simpler than deterministic replay. Resolve before Phase E.
-4. **Q4: Devlog venue (Phase N)?** Lean: `DEVLOG.md` route on the site. Lowest overhead, no CMS.
-5. **Q5: Heightfield amplitude — fix at root or codify as design (Phase M)?** Lean: codify as design in [`DECISIONS.md`](DECISIONS.md). Visual character has shipped on the doubled state for 16+ cycles; fix risk vs. benefit unfavorable. Needs Matt's explicit call.
+## Pickup points for Matt
 
-Q1 doesn't block Phase A. Q2 must resolve before Phase D. Q3 must resolve before Phase E. Q4–Q5 resolve in their own phases.
+### Phase A — CF Web Analytics beacon (~10min once token is fresh)
 
-## What just shipped (Cycle 26 — closed today)
+Token rotation is the hard step. After token's valid:
+1. `curl -s https://api.cloudflare.com/client/v4/user/tokens/verify -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"` should return `success:true`.
+2. I can take it from there — create the site via API + wire `<script>`.
 
-Per-version bumps from `v2.0.3` through `v2.1.2` plus a scene-picker auto-load post-patch:
+### Phase D — Daily-seed UI tile + worker partition (~1-2hr)
 
-- **`v2.0.3`** — Mac white-hue fix. ACES → Neutral on Mac platforms.
-- **`v2.0.4`** — extend Apple tone-mapping branch to iPhone/iPad. Verification pending Matt's device test (Cycle 27 Phase K).
-- **`v2.0.5`** — delete dead AtmosphericDesatPatch (127 LOC). Polish-program cleanup queue closed.
-- **`v2.1.0`** — Practice Paddock + per-scene SEO. Lighthouse SEO 100 confirmed post-deploy.
-- **`v2.1.1`** — OG card refresh (RH dusk + Field farmhouse). 2-of-3 cards updated; OC card carryover (Cycle 27 Phase J).
-- **`v2.1.2`** — itch.io heightfield `.r32f` → `.bin` rename. **NOT RESOLVED** — Cycle 27 Phase G.
-- **Scene-picker auto-load** — flip card → 300ms idle → auto-load. Latest-wins coalescing if swap is in flight. Removes the click-to-load button + "Tap to load" hint pill.
+Primitive is shipped; integration left:
+1. **Worker enum.** `worker/src/d1.ts` has a strict `GameMode` enum.
+   Either relax it to accept `daily-${date}` strings, OR add a `daily`
+   mode + a separate date column. The author lean is the former
+   (matches the partition-key pattern).
+2. **Start-screen tile.** Add `'today'` mode at position 0 in
+   `js/components/StartScreen/SinglePlayerModes.js`. Reuse the
+   `practice-pulse-wrapper` pattern but key the pulse off
+   `localStorage.getItem('sds.dailySeen-' + dailyKey())`. Tile label:
+   `dailySeedFor().sceneId + " " + sheepCount + " sheep / " + durationSec + "s"`.
+3. **GameState dispatch.** When the player picks the daily tile,
+   `startSession` reads the seed config and applies sheep/scene/time-
+   of-day. Active leaderboard partition flips to
+   `dailySeedFor().leaderboardPartition`.
+4. **New-day toast.** On main-menu mount: if
+   `localStorage.lastDailySeen !== dailyKey()`, surface "🌅 New daily
+   challenge" toast (auto-dismiss 4s, never modal). Persist the new
+   key in localStorage on first menu-render.
 
-201 vitest pass. Production build 837.26 KB / 250.46 KB gzip — flat with v2.1.0. Sim-baseline byte-identical.
+### Phase E — Replay recorder hook + share-card (~1-2hr)
 
-Full closed-cycle entry in [`docs/BACKLOG.md`](docs/BACKLOG.md) under "Cycle 26."
+Primitive is shipped; integration left:
+1. **RoundManager hook.** Wherever the game emits round-complete,
+   instantiate `new ReplayRecorder(canvas)` at game-start and
+   `await rec.stop()` on success. Surface a `URL.createObjectURL(blob)`
+   on the completion screen as a "Save clip" link.
+2. **Share-card React component.** 1200×630 SVG composite (scene
+   name, sheep corraled, time, dog name) → `canvas.toDataURL` → PNG
+   download / tweet-link. This is Phase L's territory if you want to
+   bundle the design pass.
 
-## What's parked (NOT Cycle 27 scope)
+### Phase F — Pointer tour mount slot (~5min)
 
-These are real "Cycle of their own" deliverables. They are not abandoned — they are waiting for a cycle that's about world-rendering, not the player-facing layer.
+Add `createElement(PointerTour, { isMobile: platform.isMobile })`
+to App.js's main-menu render (next to ScenePicker). Component is
+already self-mounting — does nothing if the localStorage flag is set.
 
-- **Aerial-perspective LUT** (Hillaire 2020 precomputed scattering). Foundation wired in [`js/shaders/HeightFogPatch.js`](js/shaders/HeightFogPatch.js); no-op until activated across patched materials.
-- **8×4 impostor atlas re-bake** + padded mips (Halen 2022) + hybrid trunk-mesh + impostor canopy (Cycle 20 Q2 escalation).
-- **6 fresh tree variants + landmark trees per scene** (recipe authoring + 6 fresh bakes + 6 impostor re-bakes).
-- **Start-screen full restructure** — Mode → Scene → Dog reorder + live WebGL DogSelection inset + cinematic background orbits. Cycle 25 F shipped a thinner tutorial; full restructure stays parked.
-- **WebGPU/TSL spike** under `?renderer=webgpu` feature flag.
+### Phase G — itch.io heightfield deploy + verify (~10min)
 
-## Frozen files (cycle-specific)
+Fix is in code. `BUILD_TARGET=itchio npm run build && butler push
+dist/ mkvision0/sheep-dog-sim:html` (or whatever your current itch
+flow is), then load the iframe and confirm RH + OC dusk renders the
+hill skirt instead of the dark-blue water band.
 
-Plus the durable [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) list:
+### Phase H — Camera state-machine collapse (~3hr, paired)
 
-- **`js/SceneManager.js` tone-mapping branch** — just shipped (v2.0.3 + v2.0.4); Phase K may escalate but no other phase touches it.
-- **`shared/MovementPhysics.js`** — sim-baseline lock; Phase I writes test specs that read from it but doesn't modify.
-- **`tests/sim-baseline/*.json`** — Phase M (heightfield amplitude) is the only phase allowed to regenerate these, and only on Matt's go-ahead.
+Refactor: collapse the three `_updateClassic` / `_updateFollow` /
+`_updateFree` paths in `js/CameraController.js` behind a single
+`_updateFromState()` reader. Plan acceptance is "0.001m / 0.01°
+pre/post-refactor frame deltas in all 3 modes." Measurable in code,
+but the spec ALSO needs your eye on camera feel during a real
+playtest — that's why I deferred. Pair-session if you want, or run
+solo and ship behind `?camera=collapsed` flag for an A/B.
 
-## Hard stops (Cycle 27)
+### Phase J — `og-open-country.webp` refresh (~30min, paired)
 
-Surface to the user, do not proceed:
+Now actually viable since Phase B unblocked the cinema runner. I'll
+prep a shot manifest behind-Jep angle, OC scene, dawn or noon, sun
+0.4-0.6, dog mid-foreground. You drive the cinema runner (or
+Playwright MCP if you prefer manual capture). Then byte-swap into
+`assets/marketing/og/og-open-country.webp`, deploy, re-scrape via
+Twitter Card Validator + FB Sharing Debugger.
 
-1. Phase A's Cloudflare beacon shows zero pageviews after 1hr live.
-2. Phase C's lazy-load split causes a visible flash-of-blank-canvas on broadband.
-3. Phase E's `MediaRecorder` regresses frame time > 5%.
-4. Phase G's itch heightfield diagnosis surfaces a CDN config change requiring itch support.
-5. Phase I uncovers an actual bug in `GameState` / `Sheepdog` / `NetworkManager` / `RoomDO` (separate hotfix, not in-line scope creep).
-6. Phase M's "fix at root" path produces a visibly worse-looking game per Matt's playtest.
+### Phase K — iPhone tone-mapping verification (~30min, your iPhone)
 
-## Where the project stands
+Open `https://sheepdogsim.com/?scene=rolling-hills` on your iPhone,
+frame the dusk water, screenshot. If sheen is gone, v2.0.4 is
+confirmed and Cycle 27 closes that branch. If sheen persists, escalate
+to AnimeWater shader rework — scoped as a Cycle 28 phase, not in
+Cycle 27.
 
-Cycle 26 closed today. 201 vitest pass. Production build 837.26 KB / 250.46 KB gzip. `sheepdogsim.com` live with auto-load scene-picker; itch.io deploy still has the heightfield bug (Cycle 27 Phase G is the diagnosis).
+### Phase L — Title-screen identity pass (~1day, your taste)
 
-Standing risks (carried forward, prioritized for Cycle 27):
+Wordmark, animated hero loop, type pairing, color tokens. The pointer
+tour mount slot (Phase F follow-up) and replay recorder UI (Phase E
+follow-up) both want to land in this same pass since they're the
+"first impression" surface.
 
-- **itch.io heightfield bug** (Cycle 27 Phase G) — distribution channel partially broken.
-- **iPhone tone-mapping verification** (Cycle 27 Phase K) — silent failure possible for ~30% of mobile traffic.
-- **Heightfield amplitude bug** (Cycle 27 Phase M) — 16+ cycles of accumulated workarounds; needs Matt's strategic call to fix or codify.
-- **No analytics signal** (Cycle 27 Phase A) — every feature ship is uninstrumented; Cycle 27 Phase A fixes first.
-- **Test coverage gaps in load-bearing classes** (Cycle 27 Phase I) — `GameState`, `Sheepdog`, `NetworkManager`, `RoomDO` effectively untested.
+### Phase M — Heightfield amplitude bug (your call)
 
-## CI quirks worth knowing
+Two paths in the cycle plan:
+- **Fix at root.** Drop the `* peakHeight` multiplier; rebake; retune
+  ~5 dependent constants; sim-baseline goldens regenerate. Visual
+  character of RH/OC will visibly change — peaks ~6m instead of ~36m.
+- **Codify as design.** Section in `DECISIONS.md` titled "Heightfield
+  amplitude — the bug is the design." Document why we chose not to
+  fix it (load-bearing on visual character; 16+ cycles of dependent
+  tuning). Remove the standing risk from BACKLOG.
 
-- **macOS Safari Smoke** is the standing mac-white-ground bug, environmental (not on CI Safari, only Matt's Mac). Documented in BACKLOG standing risks.
-- **Cinema runner timeout** — `page.screenshot: Timeout 30000ms exceeded - waiting for fonts to load... fonts loaded` then hang. Cycle 27 Phase B fixes.
-- **perf-check noise on swiftshader extreme** — ~4-second-per-frame baseline with ~2 sample frames per measure window. Single-run failures may be noise.
-- **scene-swap-stability spec is `@local-only`.** Run locally after touching scene-swap or flock-recreation code: `npm run test:e2e -- scene-swap-stability`.
+Author lean (per cycle plan + this run's experience): codify. The
+visual character has shipped on the doubled state for too long; the
+risk-reward of a rebake is unfavorable.
+
+### Phase N — Devlog cadence + venue (~1hr you + 1hr me)
+
+Pick a venue (Q4 lean: `DEVLOG.md` route on the site). I'll implement
+the route + footer link if you choose `DEVLOG.md`. First post can be
+the Cycle 26 close summary as the seed entry. Cadence agreement:
+weekly Thursdays.
+
+## Repo state at autonomous-run end
+
+- 252 vitest specs pass (was 201).
+- Production build clean: main 587 KB / three 617 KB / lazy chunks
+  total ~313 KB.
+- Both `npm run build` and `BUILD_TARGET=itchio npm run build`
+  produce clean dists.
+- All commits pushed to main as of 2026-05-08 ~22:19Z. Deploy run
+  `25582311402` is in flight at the time of this writeup.
+
+## Frozen files (cycle-specific) — unchanged
+
+- `js/SceneManager.js` tone-mapping branch (just shipped v2.0.3 + v2.0.4)
+- `shared/MovementPhysics.js` (sim-baseline lock)
+- `tests/sim-baseline/*.json` (Phase M only, on Matt's go-ahead)
+
+Plus the durable [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md).
+
+## Hard stops — none triggered
+
+None of the six declared hard stops fired during the autonomous run.
+Phase G specifically did NOT need to escalate to itch support — the
+bug was on our side (path resolution), not theirs (CDN config).
 
 ## How to read the rest of the repo
 
 | Area | Source of truth |
 |---|---|
 | Active cycle | [`docs/cycle-27-plan.md`](docs/cycle-27-plan.md) — `engagement-loop-and-perf` |
-| Latest closed cycle | [`docs/archive/cycles/cycle-26-plan.md`](docs/archive/cycles/cycle-26-plan.md) — closed as `v2.1.2` series 2026-05-08 |
+| This run's per-phase artifacts | [`cycle27-validation/`](cycle27-validation/) (phaseC, phaseG, phaseI) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-26-plan.md`](docs/archive/cycles/cycle-26-plan.md) |
 | Older closed | [`docs/archive/cycles/`](docs/archive/cycles/) |
-| Cycle stub template | [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) |
 | Frozen files / fence rules | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Closed cycles + deferred items | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Tree pipeline contract | [`docs/tree-pipeline.md`](docs/tree-pipeline.md) |
-| Asset pipeline (gallery + integrate) | [`tools/asset-gallery/README.md`](tools/asset-gallery/README.md) |
 | Slash commands | [`.claude/commands/`](.claude/commands/) — `/cycle-start`, `/cycle-close`, `/validate` |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Decisions log | [`DECISIONS.md`](DECISIONS.md) |
@@ -143,44 +203,48 @@ Standing risks (carried forward, prioritized for Cycle 27):
 
 ## Running locally
 
-First time on a fresh clone:
-
-```
-npm install
-cp worker/.dev.vars.example worker/.dev.vars   # sets JWT_SECRET for local
-npm run dev:setup                              # applies D1 migrations to local sqlite
-```
-
-Every session after that:
-
 ```
 npm run dev    # starts Vite (:3000) + wrangler (:8787) together
 ```
 
-URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl` (probe), `?cinematic=1` (filming infra), `?ui=off` (hide React overlay), `?sun=0.5` (sun position), `?perfMode=1` (`__perfHarness` global for perf harness driver), `?tier=low|med|high` (HardwareTier override), `?tonemap=aces|neutral|linear|none` (tone-mapping A/B).
+URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl`,
+`?cinematic=1`, `?ui=off`, `?sun=0.5`, `?perfMode=1`,
+`?tier=low|med|high`, `?tonemap=aces|neutral|linear|none`.
 
-## What NOT to do during Cycle 27
+## What NOT to do during pickup
 
-- **Don't pick up parked world-rendering work.** Aerial-perspective LUT, 8×4 impostor re-bake, tree variants — all stay in BACKLOG.
-- **Don't expand analytics beyond Cloudflare's privacy-respecting beacon.** No GA, no fingerprinting, no per-user tracking.
-- **Don't pre-deploy Phase L's title-screen change.** Design taste is Matt-gated.
-- **Don't auto-post Phase N's first devlog.** Marketing/community pushes are Matt-sent.
-- **Don't bloat the bundle.** Cycle 27 should *shrink* `main` (Phase C). Every phase has a bundle-delta validation criterion.
-- **Don't regenerate sim-baseline fixtures.** Phase M is the only entry point and only with Matt's call.
-- **Don't replace `MediaRecorder` with deterministic-replay state-log architecture.** Q3 settled; that's Cycle 30+ scope if it ever comes up.
+- **Don't pick up parked world-rendering work** (aerial-perspective LUT,
+  8×4 impostor re-bake, tree variants — all stay in BACKLOG).
+- **Don't expand analytics beyond Cloudflare's privacy beacon.** No GA,
+  no fingerprinting, no per-user tracking.
+- **Don't pre-deploy Phase L's title-screen change.** Design taste is
+  your call.
+- **Don't auto-post Phase N's first devlog.** That's your voice.
+- **Don't bloat the bundle past v2.1.2 baseline.** Phase C banked
+  -250 KB on main; pickup work shouldn't claw that back without a
+  good reason.
+- **Don't regenerate sim-baseline fixtures.** Phase M is the only
+  entry point and only with your explicit call.
+- **Don't replace `MediaRecorder` with a deterministic-replay state-
+  log architecture.** Q3 settled; that's Cycle 30+ if it ever comes up.
 
 ## What NOT to do (durable)
 
 - Don't rearchitect multiplayer. It works.
-- Don't reintroduce procedural mountains. The right path is a height-displaced skirt.
-- Don't add new scenes. Three is the right number.
-- Don't touch `shared/MovementPhysics.js`'s `updateMovement` for obstacle composition.
-- Don't blow up `main.js` in one PR. Shrink one responsibility at a time.
-- Don't regenerate `tests/sim-baseline/` fixtures unless you understand exactly what changed and why.
-- Don't hardcode grass-exclusion zones for non-Field scenes. Gate on `sceneDef?.farmHouse` and `sceneDef?.pasture`.
-- Don't gate sprint *continuation* on `stamina >= minStaminaToSprint` — only sprint *start*.
-- Don't traverse-and-dispose materials on GLB clones (SkeletonUtils.clone, .clone()) — they share materials with the cache.
-- Don't let `?cinematic=1` flip `preserveDrawingBuffer` on the normal-play codepath.
-- Don't pass capital-case `'Single'` / `'Double'` strings to EZ-Tree's `leaves.billboard` — silently ignored.
-- Don't replace EZ-Tree with the Procedural Instanced Forest unless `InstancedMesh2.addLOD` demonstrably misses the perf budget.
-- Don't add new clamp logic to `js/GrassSystem.js` to mask future regressions — fix at the heightfield root (or codify per Cycle 27 Phase M).
+- Don't reintroduce procedural mountains.
+- Don't add new scenes.
+- Don't touch `shared/MovementPhysics.js`'s `updateMovement` for
+  obstacle composition.
+- Don't blow up `main.js` in one PR.
+- Don't regenerate `tests/sim-baseline/` fixtures unless you understand
+  exactly what changed and why.
+- Don't hardcode grass-exclusion zones for non-Field scenes.
+- Don't gate sprint *continuation* on `stamina >= minStaminaToSprint`.
+- Don't traverse-and-dispose materials on GLB clones.
+- Don't let `?cinematic=1` flip `preserveDrawingBuffer` on the normal-
+  play codepath.
+- Don't pass capital-case `'Single'`/`'Double'` to EZ-Tree's `leaves.billboard`.
+- Don't replace EZ-Tree with the Procedural Instanced Forest unless
+  `InstancedMesh2.addLOD` demonstrably misses the perf budget.
+- Don't add new clamp logic to `js/GrassSystem.js` to mask future
+  regressions — fix at the heightfield root (or codify per Phase M).
