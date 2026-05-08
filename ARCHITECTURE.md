@@ -21,7 +21,7 @@ A real-time 3D herding game with GPU-accelerated rendering, edge-hosted multipla
 | React | 19.2 | UI (uses `React.createElement`, no JSX) |
 | Vite | 7.3 | Build tooling |
 | Tailwind CSS | 4.1 | Styling |
-| i18next | 25 | 18 localized languages |
+| i18next | 25 | 5 localized languages (en, es, ja, pt, zh-CN) |
 | @msgpack/msgpack | 3 | WS wire format |
 | lz-string | 1.5 | Sandbox share-URL compression |
 | nipple.js | 0.10 | Mobile joystick |
