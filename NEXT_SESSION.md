@@ -1,103 +1,85 @@
-# Next Session — Cycle 28 (`alignment`)
+# Next Session — Cycle 29 (`gamestate-decomp`)
 
 > **Updated:** 2026-05-09  
-> **For:** Cycle 28  
-> **Pickup priority:** Stream A1 — archive [`docs/archive/polish-program.md`](docs/archive/polish-program.md) and pull its thesis into [`DECISIONS.md`](DECISIONS.md). Lowest-risk warmup; unblocks A2/A3 doc consolidation.
+> **For:** Cycle 29  
+> **Pickup priority:** Cycle 29 plan is scaffolded as a stub at [`docs/cycle-29-plan.md`](docs/cycle-29-plan.md). It needs **Goal + Phases** filled in before code starts. Author hint: this is the `GameState.js` decomposition deferred from Cycle 28 B4 — target ≤ 800 LOC, follow the [`tests/refactor-baseline/`](tests/refactor-baseline/) characterization-harness pattern from Cycle 28 B0 before extracting.
 
-Cycle 28 plan: [`docs/cycle-28-plan.md`](docs/cycle-28-plan.md). Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then the cycle plan top-to-bottom.
+Cycle 29 plan: [`docs/cycle-29-plan.md`](docs/cycle-29-plan.md). Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then the cycle plan top-to-bottom.
 
 ## Goal
 
-Close out the doc / code / process drift accumulated through Cycle 27. **No new gameplay, perf, or visual scope** — this is a closeout cycle for the cycle methodology itself. Internal-only; no version bump.
+Decompose [`js/GameState.js`](js/GameState.js) (1,313 LOC) under a refactor-baseline characterization harness. Mode dispatch is currently a switch chain that could become data-driven (mode → config object, replacing per-mode branches in `setGameMode` / `getBounds` / objective wiring). Acceptance bar from BACKLOG: `wc -l js/GameState.js` ≤ 800.
 
-## Streams (all autonomous)
+The carryover from Cycle 28 was zero — every Cycle 28 phase shipped. The deferred GameState work is the *one* thing in BACKLOG "Deferred" tagged as a Cycle 29 candidate; flesh out that scope into ≤ 8 phases with EARS acceptance lines, then run `/cycle-start`.
 
-| Stream | Scope | Phases |
+## Streams (proposed — needs your input)
+
+| Stream | Scope | Phase target |
 |---|---|---|
-| **A** doc alignment | archive `polish-program.md` (now [`docs/archive/polish-program.md`](docs/archive/polish-program.md)), split rules into `.claude/rules/`, consolidate research, NEXT_SESSION contract, `docs/README.md` navigation index | A1-A5 |
-| **B** god-module decomp | characterization tests under goldens → `main.js` ≤ 2,200 LOC + `TerrainBuilder.js` ≤ 1,400 LOC via Stillwater 9-phase playbook + `shared/` ESLint boundary | B0-B5 |
-| **C** agent ergonomics | EARS in `CYCLE_TEMPLATE.md`, ≤ 8 phase rule, `EMERGENCY_STOPS.md`, `cycle-doc-dream` skill, `AGENTS.md` + `CLAUDE.md` (already landed) | C1-C5 |
-| **D** hook enforcement | extend Stop hook + `/cycle-close` reconciliation + `/cycle-start` freshness check | D1-D3 |
+| **A** characterize | refactor-baseline goldens for mode dispatch + win-condition output across all modes | A0 (1-2 phases) |
+| **B** decompose | extract mode config to data-driven map, extract win-condition resolver, extract objective state machine | B1-B3 (3 phases) |
+| **C** integration | wire MultiplayerState mode-shape coordination to the new GameState contract; verify 2p-local + competitive + timed paths | C1 (1 phase) |
 
-19 phases total but each is small (≤ 4 hours). The whole cycle fits one overnight run if streams parallelize across worktrees.
+Total proposed: **5 phases**. Comfortably under the ≤ 8 rule. Adjust before /cycle-start.
 
-## Already in place (alignment foundation, just landed in close commit)
+## Already in place (alignment foundation from Cycle 28)
 
-- [`AGENTS.md`](AGENTS.md) — portable agent baseline (Codex / Cursor / Aider compat)
-- [`CLAUDE.md`](CLAUDE.md) — Claude-specific overlay (cycle methodology, slash commands, hooks)
-- [`docs/cycle-28-plan.md`](docs/cycle-28-plan.md) — full plan with EARS-format acceptance criteria
-- [`.claude/settings.json`](.claude/settings.json) — Stop hook config (committed, shared)
-- [`.claude/hooks/check-acceptance.mjs`](.claude/hooks/check-acceptance.mjs) — Stop hook (informational, never blocks)
-- `.gitignore` inverted — `.claude/` is shared by default; only `settings.local.json`, `worktrees/`, `projects/` are personal
+- [`tests/refactor-baseline/`](tests/refactor-baseline/) characterization-test harness pattern (mesh-hash + scatter-positions + bundle-sizes goldens). Use the same structure for Cycle 29 mode-dispatch goldens.
+- [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) mandates EARS-format Acceptance + ≤ 8 phase rule + references to [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md).
+- [`.claude/hooks/cycle-close-reconcile.mjs`](.claude/hooks/cycle-close-reconcile.mjs) auto-evaluates testable predicates at cycle close — write Acceptance lines so the hook can grep them (e.g. `When B2 ships, then `wc -l js/GameState.js` shall return ≤ 800`).
+- [`.claude/skills/cycle-doc-dream/SKILL.md`](.claude/skills/cycle-doc-dream/SKILL.md) on hand if doc drift accumulates mid-cycle.
 
-## Sequencing for the autonomous overnight run
+## Hard stops (cycle-specific — full durable list at [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md))
 
-```
-A1 → A2 → A3 → A4 → A5            (doc alignment)
-                ↓
-              B0                  (characterization tests — safety harness)
-                ↓
-              B1 + B2 in parallel (main.js + TerrainBuilder.js extraction under goldens)
-                ↓
-              B3 + B4 + B5        (codification + deferral + ESLint)
-                ↓
-              C1 → C2 → C3 → C4 → C5  (ergonomics; C1 already landed)
-                ↓
-              D1 → D2 → D3        (hooks; D1 prototype already landed)
-                ↓
-              Cycle close (manual review next morning)
-```
+To draft once Phases are scoped. Likely additions:
 
-A1-A5 and C streams have no shared code surface; safe to parallelize. **B0 is non-negotiable** — every B phase depends on the goldens being committed first. B1 and B2 can run in separate worktrees against the same goldens.
-
-## Hard stops (cycle-specific — see [`docs/cycle-28-plan.md`](docs/cycle-28-plan.md) for full list)
-
-Surface to the user, do not proceed:
-
-1. Sim-baseline goldens drift in Stream B (even one float ULP). Revert and re-think.
-2. Refactor-baseline goldens drift in Stream B. Same posture.
-3. Visual e2e SSIM regression > existing tolerance in Stream B.
-4. Bundle size regression in Stream B. The refactor is supposed to be flat or smaller.
-5. Any new gameplay / perf / visual scope proposed mid-cycle. This cycle is "no new features." Surface and defer.
-6. Frozen-file change beyond the explicit cycle-28 authorization list (in the plan's `## Frozen files` section).
+1. Sim-baseline goldens drift in Stream B (mode dispatch is sim-adjacent — touching `setGameMode` could affect spawn count or boundary).
+2. New refactor-baseline mode-dispatch goldens drift mid-extraction (same posture as B0 from Cycle 28).
+3. MultiplayerState contract change without paired update — surface and pause; Cycle 29 isn't authorized to touch the wire protocol.
 
 ## Durable rules
 
-See [`.claude/rules/`](.claude/rules/) for durable project rules. Cycle-28-specific scope guards live in [`docs/cycle-28-plan.md`](docs/cycle-28-plan.md)'s "What NOT to do" section.
+See [`.claude/rules/`](.claude/rules/) for durable project rules. Cycle-29-specific scope guards live in [`docs/cycle-29-plan.md`](docs/cycle-29-plan.md)'s "What NOT to do" section once it's drafted.
 
 ## Repo state at handoff
 
-- 264/271 vitest specs pass (7 skipped). Up from 252.
-- Production build clean: `main-*.js` 590 KB / 171 KB gzip (was 837 KB pre-Cycle-27; -247 KB).
-- Last deploy on `main`: success.
-- Working tree: clean after the close commit lands.
+- Cycle 28 closed clean (commit `<close-sha>` — see git log).
+- 272/271 vitest specs pass (7 skipped).
+- Production build: `main-*.js` 575 KB / `three-*.js` 603 KB. Both ≤ pre-Cycle-28 baseline.
+- Last deploy on `main`: success (run from cycle-28 close commit).
+- `npx eslint shared/` zero errors.
+- Working tree clean after the close commit lands.
 
-## Cycle 27 carryover (parked, not Cycle 28 scope)
+## Cycle 28 carryover (none)
 
-See [`docs/BACKLOG.md`](docs/BACKLOG.md) Cycle 27 entry for the full list. Headlines: CF analytics token, daily-seed UI integration, replay UI integration, pointer-tour mount slot, itch deploy verify, camera state-machine collapse, OG card refresh, iPhone verify, title-screen identity pass, heightfield amplitude decision, devlog cadence.
+All 19 Cycle 28 phases shipped end-to-end. The cycle plan resolved Q1-Q5 (Cycle 27 closed before 28; no version tag; GameState deferred to 29; no MADR; no chained-handoff). Wake-state runbook archived at [`docs/archive/wake-states/wake-state-2026-05-09-cycle-28.md`](docs/archive/wake-states/wake-state-2026-05-09-cycle-28.md).
 
 ## Reference table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-28-plan.md`](docs/cycle-28-plan.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-27-plan.md`](docs/archive/cycles/cycle-27-plan.md) |
+| Active cycle | [`docs/cycle-29-plan.md`](docs/cycle-29-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-28-plan.md`](docs/archive/cycles/cycle-28-plan.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
+| Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
 | Closed cycles + deferred | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Slash commands | [`.claude/commands/`](.claude/commands/) — `/cycle-start`, `/cycle-close`, `/validate` |
-| Hooks | [`.claude/hooks/`](.claude/hooks/) — `check-acceptance.mjs` (Stop) |
+| Hooks | [`.claude/hooks/`](.claude/hooks/) — `check-acceptance.mjs` (Stop) + `cycle-close-reconcile.mjs` |
+| Skills | [`.claude/skills/`](.claude/skills/) — `cycle-doc-dream` |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Decisions log | [`DECISIONS.md`](DECISIONS.md) |
 | Player CHANGELOG | [`CHANGELOG.md`](CHANGELOG.md) |
 | Press kit | [`PRESSKIT.md`](PRESSKIT.md) |
 | Portable agent context | [`AGENTS.md`](AGENTS.md) |
 | Claude overlay | [`CLAUDE.md`](CLAUDE.md) |
+| NEXT_SESSION contract | [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md) |
 
 ## Running locally
 
 ```
 npm run dev    # Vite (:3000) + wrangler (:8787)
-npm test       # vitest, ~2.6s full run
+npm test       # vitest, ~1.5s full run (272 specs)
+npm run lint   # ESLint on shared/ (deterministic boundary)
 npm run build  # production build
 ```
 

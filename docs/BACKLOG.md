@@ -4,6 +4,48 @@
 
 ## Recently Completed
 
+### Cycle 28 — `alignment` (closed 2026-05-09, autonomous overnight run)
+
+Plan archived at [`docs/archive/cycles/cycle-28-plan.md`](archive/cycles/cycle-28-plan.md). Closeout cycle for the cycle methodology itself — no new gameplay, perf, or visual scope. All 19 phases shipped end-to-end across 13 commits on `main` (11 stream + 1 wake-state runbook + 1 doc-alignment polish + 1 close). Tests 272 pass (was 264 — +8 from the refactor-baseline characterization harness), build clean (588.97 kB main / 617.80 kB three; both ≤ pre-cycle baseline), `npx eslint shared/` zero errors. Internal-only — no version bump.
+
+**Stream A — doc alignment (5 phases):**
+
+- **A1 — polish-program archived** (commit [`8b26aa8`](https://github.com/matthew-kissinger/sds/commit/8b26aa8)). Durable thesis pulled into [`DECISIONS.md`](../DECISIONS.md) "Polish program — thesis and outcomes (2026-05)"; 188-line umbrella moved to [`docs/archive/polish-program.md`](archive/polish-program.md).
+- **A2 — `.claude/rules/` split + INTERFACE_FENCE slim** (commit [`5b92c03`](https://github.com/matthew-kissinger/sds/commit/5b92c03)). 4 domain-scoped rule files: [`shared-sim`](../.claude/rules/shared-sim.md), [`scene-and-render`](../.claude/rules/scene-and-render.md), [`cycle-process`](../.claude/rules/cycle-process.md), [`multiplayer`](../.claude/rules/multiplayer.md). [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) lists which files are frozen; rule files explain why. NEXT_SESSION durable section collapsed to one line.
+- **A3 — research consolidation** (commit [`a4900ca`](https://github.com/matthew-kissinger/sds/commit/a4900ca)). 17 research dossiers + 1 wake-state archived under `docs/archive/research/` and `docs/archive/wake-states/`. 5 closed cycle plans (20 / 21 / 22 / 24 / 25) moved to `docs/archive/cycles/`. 14 durable-summary entries appended to DECISIONS.md. `ls docs/*.md | wc -l` 32 → 11.
+- **A4 — [`docs/NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md)** (commit [`87830bb`](https://github.com/matthew-kissinger/sds/commit/87830bb)). 84-line contract: NEXT_SESSION is current-only, rewritten on cycle-close, required Updated/For/Pickup-priority header, wake-states under archive.
+- **A5 — [`docs/README.md`](README.md) navigation index** (commit [`ebe5a9e`](https://github.com/matthew-kissinger/sds/commit/ebe5a9e)). Two reading paths (cold-start agent vs cold-reading developer) + Diátaxis-quadrant table for every top-level doc. Linked from root README Contributing section.
+
+**Stream B — god-module decomp (6 phases):**
+
+- **B0 — refactor-baseline harness** (commit [`8c56ba0`](https://github.com/matthew-kissinger/sds/commit/8c56ba0)). 3 golden fixtures (`terrain-mesh-hash.json`, `scatter-positions.json`, `bundle-sizes.json`) + 8 vitest specs across 3 scenes. FNV-1a32 hashing at 6dp precision so cross-engine ULP wobble doesn't false-positive.
+- **B1 — `main.js` boot extraction** (commit [`a072084`](https://github.com/matthew-kissinger/sds/commit/a072084)). 3,529 → 2,188 LOC (-1,341, -38%). 8 new files: [`js/boot/`](../js/boot/) (`WebVitalsMonitor`, `debugProbes`, `initNetwork`, `initWorld`, `loadScene`, `completionOverlay`) + `js/utils/` (`replay`, `scoreStorage`). Per-frame loop, animate, mode dispatch retained on `main.js`.
+- **B2 — `TerrainBuilder.js` decomposition** (commit [`bb9f2f2`](https://github.com/matthew-kissinger/sds/commit/bb9f2f2)). 2,785 → 1,387 LOC (-1,398, -50%). 4 new files: [`js/world/`](../js/world/) (`RockPlacement`, `TreePlacement`, `shaderPatches`, `sandbox`). Also deleted ~140 LOC of unreachable mountain-placement legacy under the early return in `addMountains()`.
+- **B3 — OptimizedSheep + GrassSystem cohesion codified** in DECISIONS.md (commit [`795d674`](https://github.com/matthew-kissinger/sds/commit/795d674)). Both modules large but internally cohesive (single InstancedMesh + custom shader + per-instance attribute system + state machine); rule revisitable only with a deliberate cohesion-vs-size argument.
+- **B4 — GameState.js decomposition deferred** to Cycle 29. Entry in BACKLOG "Deferred" with target ≤ 800 LOC.
+- **B5 — `shared/` ESLint boundary** (same commit). [`eslint.config.js`](../eslint.config.js) with `no-restricted-imports` banning three / three/* / js/** + `no-undef` catching DOM globals. ESLint installed as devDep; `npm run lint` script.
+
+**Stream C — agent ergonomics (4 phases beyond C1, which landed in close-cycle-27):**
+
+- **C2 — EARS in [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md)** (commit [`186bba1`](https://github.com/matthew-kissinger/sds/commit/186bba1)). New "Acceptance criteria — EARS format" section + Phase stubs use `Acceptance (EARS):` label. /cycle-close.md grep step for shall/when/while keywords.
+- **C3 — ≤ 8 phase rule** (same commit). New "Phase shape rules" section: ≤ 8 phases, fully autonomous OR fully paired, one sharp goal, ≤ 4 hours each. /cycle-start warning lands in D3.
+- **C4 — [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md)** (same commit). 7 durable stops: sim-baseline drift, refactor-baseline drift, frozen-file change without auth, visual regression, bundle-size regression, MP desync, CI deploy red. Promotion rule: a cycle-specific stop that recurs across two cycles earns durable status.
+- **C5 — `cycle-doc-dream` skill** (commit [`fbd01b8`](https://github.com/matthew-kissinger/sds/commit/fbd01b8)). [`.claude/skills/cycle-doc-dream/SKILL.md`](../.claude/skills/cycle-doc-dream/SKILL.md). Manual-invocation only. Steps: inventory → tag each doc → propose moves → cross-ref audit → surface → execute on approval.
+
+**Stream D — hook enforcement (3 phases beyond D1, which landed in close-cycle-27):**
+
+- **D1 — Stop hook prototype** (already shipped at end of Cycle 27 in `.claude/hooks/check-acceptance.mjs`).
+- **D2 — `cycle-close-reconcile.mjs`** (commit [`fbd01b8`](https://github.com/matthew-kissinger/sds/commit/fbd01b8)). Walks the active plan's Success/Acceptance section, parses each `- [ ]` line as EARS, auto-evaluates testable predicates (`wc -l`, `ls + wc -l`, file existence, `npm test`, `npm run build`, `npx eslint`), prints a structured `[OK]` / `[FAIL]` / `[?]` / `[manual]` table. /cycle-close gains step 2.5 to invoke it before walking the [manual] items in step 3.
+- **D3 — /cycle-start freshness + phase-shape warnings** (same commit). NEXT_SESSION's `Updated:` parsed; warns if > 7 days. `## Phase N — ` headings counted; warns if > 8.
+
+**Public state of the art:** the cycle-close reconciliation hook is, as far as we can tell, novel. Spec Kit's `/speckit.analyze` runs PRE-implementation against artifact consistency; Auto Dream is between-session memory consolidation. This is the first cross-artifact-consistency check that runs AT cycle close against shipped state.
+
+**PRs:** 13 commits direct on `main`, no batched PRs (autonomous-cycle policy).
+
+**Carryover:** none.
+
+**Notes:** First autonomous run since Cycle 25 that closed without operator intervention. The 3 god-modules → 4 + 6 + 4 = 14 modules pattern (`main.js` → `boot/`, `TerrainBuilder.js` → `world/`, `GameState.js` → Cycle 29) settled into a stable shape; the cohesion exception (OptimizedSheep + GrassSystem) was codified in DECISIONS to head off future misapplication. The reconcile hook auto-confirmed 4 of 21 acceptance lines on first run; the remaining 17 walked clean against pre-verified state in the wake-state runbook.
+
 ### Cycle 27 — `engagement-loop-and-perf` (closed 2026-05-09, partial — primitives shipped, integrations parked)
 
 Plan archived at [`docs/archive/cycles/cycle-27-plan.md`](archive/cycles/cycle-27-plan.md). Drafted as a 14-phase autonomy-sequenced cycle (A-I autonomous, J-N Matt pickup). Shipped 5/14 fully + 2/14 partial; remaining 7 phases parked. Closeout learning: 14 phases is not a cycle, it's a season — Cycle 28's phase-shape rule (≤ 8 phases, fully-autonomous or fully-paired, no mixing) codifies this.
