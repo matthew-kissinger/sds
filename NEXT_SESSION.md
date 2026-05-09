@@ -1,8 +1,8 @@
 # Next Session — Cycle 32 (`mp-island-scenes` placeholder)
 
-> **Updated:** 2026-05-09
+> **Updated:** 2026-05-09 (refreshed after post-cycle-31 hotfixes + Cloudflare audit + Search Console actions same day)
 > **For:** Cycle 32
-> **Pickup priority:** Cycle 32 plan is **scaffolded only** at [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md). Goal + phases need to be filled in. Top candidate is `mp-island-scenes` (Rolling Hills + Open Country in multiplayer; sim-deterministic; needs sim-baseline regen story) — rename the slug if Matt picks a different scope. Run `/cycle-start` once the plan is fleshed out.
+> **Pickup priority:** Cycle 32 plan at [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) now has **carryover + open questions populated** but the **Goal paragraph + phases still need to be filled in** before `/cycle-start`. Top candidate is `mp-island-scenes` (Rolling Hills + Open Country in multiplayer); two alternatives are flagged in the plan if MP is too large or gets blocked. Read the cycle-32 plan's "Carryover from Cycle 31" section for research notes.
 
 Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then the cycle plan top-to-bottom. The Cycle 31 close notes in [`docs/BACKLOG.md`](docs/BACKLOG.md) document the Matt-pickup items waiting on the just-shipped public-surface deploy.
 
@@ -23,6 +23,24 @@ All 6 phases shipped end-to-end across 8 commits on `main` (1 doc-patch + 6 phas
 
 Net change: site has real semantic body content for crawlers (sr-only `<main id="seo-content">` block + `<noscript>` fallback), three new per-scene landing pages with scene-scoped JSON-LD VideoGame schemas, two devlog seed entries with `Article` schemas, fixed sitemap (root → `public/`, 2 → 8 URLs), visible internal-link footer on the homepage, and a refreshed GitHub repo topics list. Player-visible delta → bumped `2.1.2 → 2.1.3`.
 
+## Post-cycle-31 work (same day, 2026-05-09)
+
+Hotfixes after Search Console crawl surfaced two issues + Cloudflare dashboard audit + Search Console actions:
+
+| Commit | What |
+|---|---|
+| [`0c0d618`](https://github.com/matthew-kissinger/sds/commit/0c0d618) | JSON-LD trailing comma fix in `index.html` `WebApplication` block (pre-existing bug surfaced by Search Console) |
+| [`64506ac`](https://github.com/matthew-kissinger/sds/commit/64506ac) | Canonical-URL alignment — Cloudflare Pages auto-strips `.html` and 308-redirects; Cycle 31 shipped `.html` URLs everywhere. Fixed across 9 files (sitemap + about + 3 scenes + devlog index + 2 entries + homepage). |
+| [`f0a8822`](https://github.com/matthew-kissinger/sds/commit/f0a8822) | `public/llms.txt` (LLM/AI crawler manifest) + `public/.well-known/security.txt` (RFC 9116) |
+
+**Cloudflare dashboard changes** (out-of-band, not in repo): Crawler Hints + Always Online + 0-RTT + Speed Brain + Cloudflare Fonts + Early Hints all enabled. Verified-good: SSL/TLS Full, HTTP/2 + HTTP/3, no AI bots blocked (Googlebot 352 reqs / ClaudeBot 15 reqs healthy), Bot Fight Mode off (intentional — would break MP), AI Labyrinth off (intentional — we want AI training).
+
+**Search Console actions** (driven via Claude in Chrome MCP): sitemap re-submitted (Couldn't-fetch → Success, 8 pages discovered), "Validate fix" triggered on the JSON-LD parsing error, "Request indexing" sent for all 8 URLs.
+
+**New skill:** [`.claude/skills/cloudflare-management/SKILL.md`](.claude/skills/cloudflare-management/SKILL.md) captures the dashboard navigation patterns + viewport-scale gotcha + the don't-touch list, so future agents can pick up CF audits without re-discovering.
+
+**Live verification (post all fixes):** all 11 URLs return HTTP 200, all 3 homepage JSON-LD blocks parse cleanly, no `.html` 308 redirects.
+
 ## Validation gates at close
 
 - `npm test` — **297 / 304 pass** (7 skipped are e2e/flow). Flat vs Cycle 30 baseline; no sim-touched code.
@@ -31,21 +49,29 @@ Net change: site has real semantic body content for crawlers (sr-only `<main id=
 - `gh api repos/matthew-kissinger/sds/topics --jq '.names | length'` returns 20; includes all 5 acceptance-required (`webgl`, `threejs`, `multiplayer`, `simulation`, `cloudflare-workers`).
 - Cycle-close reconcile hook hit the same regex collision as Cycle 29 + 30 (the "## Acceptance criteria — EARS format" template explainer header parses before the actual Success criteria block); walked acceptance manually.
 
-## Matt-pickup waiting on the v2.1.3 deploy
+## Matt-pickup status
 
-Both items defer to Matt; not in scope for any autonomous Cycle 32 work:
+1. ~~**Submit to Google Search Console for re-indexing.**~~ ✓ DONE same day via Claude in Chrome (sitemap re-submitted, "Validate fix" triggered, "Request indexing" for all 8 URLs). Now passive — Google will recrawl over 1-7 days; "Fix validated" email when the JSON-LD warning clears.
+2. **Paste itch.io description copy** from [`docs/itch-description/sheep-dog-sim.md`](docs/itch-description/sheep-dog-sim.md) into the itch project page's Description + Short Description fields. Optional devlog post body is in the same file. **Still Matt-pickup.**
 
-1. **Submit to Google Search Console for re-indexing.** Once the `2.1.3` deploy is live, request indexing for `/`, `/about.html`, `/scenes/home-field.html`, `/scenes/rolling-hills.html`, `/scenes/open-country.html`, `/devlog/`, `/devlog/cycle-30-heightfield-unify.html`, `/devlog/cycle-29-gamestate-decomp.html`. Forces a recrawl + cache refresh; the stale cached title clears within 1–7 days typically.
-2. **Paste itch.io description copy** from [`docs/itch-description/sheep-dog-sim.md`](docs/itch-description/sheep-dog-sim.md) into the itch project page's Description + Short Description fields. Optional devlog post body is in the same file.
+## What to watch for in the next 1-7 days
+
+These are passive signals from Google's recrawl. No action required unless something looks off:
+
+- **Search Console → Page Indexing** — new URLs (`/scenes/*`, `/devlog/*`, `/about`) flip from "Discovered – currently not indexed" → "Indexed."
+- **Search Console → Sitemaps** — discovered count stays at 8; status stays "Success."
+- **Search Console → Unparsable structured data** — the issue clears + you get a "Fix validated" email.
+- **Snippet for `sheep dog sim` in incognito search** — should stop showing the welcome modal text and start showing the meta description copy. **If it doesn't change by ~2 weeks post-recrawl, the next move is the modal-copy rewrite (Cycle 32 carryover #2).**
+- **`site:sheepdogsim.com`** — should grow from 1 result (homepage only) to 8 (all sitemap entries).
 
 ## Carryover candidates for Cycle 32
 
-In rough priority order — Matt picks at `/cycle-start`:
+Full research notes + open questions are in [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) "Carryover from Cycle 31" section. Summary in rough priority order — Matt picks at `/cycle-start`:
 
-- **MP island scenes** (Rolling Hills + Open Country in multiplayer; sim-deterministic; needs sim-baseline regen story). Top candidate; placeholder slug already set.
-- **Modal copy rewrite** — if post-deploy the Google snippet *still* substitutes the modal text after recrawl (1-7 days typical), rewrite [`js/locales/en/index.js:388-389`](js/locales/en/index.js) (`identity.welcome` + `identity.chooseIdentity`) so they don't read as "page content." UX-touching change, low-risk, ~30m of work. Defer until the recrawl signal is in.
-- **`CYCLE_TEMPLATE.md` regex-collision fix** — `/cycle-close` reconcile hook hits the "## Acceptance criteria — EARS format" template explainer first and can't parse the actual Success criteria block. Cycle 29, 30, 31 all logged the manual workaround. Small fence-touched cleanup that could attach as Phase 0 of any cycle.
-- **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake into [`scripts/bake-heightmap.mjs`](scripts/bake-heightmap.mjs)**.
+1. **MP island scenes** *(leading, ~1 cycle)* — RH + OC in multiplayer. Sim-deterministic; needs sim-baseline regen story. Worker DO needs heightfield + objective state machine. Wire-format implications need an audit before phase 1.
+2. **Modal-copy rewrite** *(small, ~30m, defer until recrawl signal)* — only if Google's snippet still substitutes the welcome modal text after Cycle 31's recrawl finishes.
+3. **`CYCLE_TEMPLATE.md` regex-collision fix** *(tiny, ~15m, fence-touched)* — Cycle 29/30/31 all manual-walked acceptance because of this. Could attach as Phase 0 of any cycle.
+4. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** — see plan for size/shape per item.
 
 ## Already in place (alignment foundation through Cycle 31)
 

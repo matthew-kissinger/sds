@@ -56,6 +56,59 @@ and discoverability surface around it is now real.
   boot. The current `setTimeout(0)` defer is the working pattern;
   the new `<main>` crawler block carries the SEO load on its own.
 
+### Post-deploy hotfixes (same day, after Search Console crawl surfaced two issues)
+
+- **JSON-LD trailing comma** — pre-existing syntax error in the `WebApplication`
+  block of `index.html` (a stray `,` after the `offers` object's closing brace).
+  Strict JSON parsers reject it; Google's structured-data parser does the same.
+  Surfaced by Search Console as "Unparsable structured data — Parsing error:
+  Missing '}' or object member name." Fix in commit
+  [`0c0d618`](https://github.com/matthew-kissinger/sds/commit/0c0d618). Also
+  verified all 5 new JSON-LD blocks shipped this cycle (3 scenes + 2 devlog
+  entries) parse cleanly.
+
+- **Canonical-URL alignment with Cloudflare Pages's `.html`-stripping behaviour** —
+  Pages auto-strips `.html` extensions and 308-redirects every `.html` URL to its
+  no-extension canonical form. The cycle shipped every canonical / og:url /
+  JSON-LD `@id` / sitemap entry / internal anchor pointing at the `.html` form
+  → mismatch with the actually-served URL → Search Console would have flagged
+  the mismatch on every per-scene + devlog page once it crawled them. Fixed
+  before the bad URLs got indexed. Files updated: `public/sitemap.xml` (6 URL
+  rewrites), `index.html` + `about.html` (canonical + internal links),
+  `public/scenes/*.html` ×3 + `public/devlog/*.html` ×3 (canonical + og:url +
+  JSON-LD `@id` + cross-links). Fix in commit
+  [`64506ac`](https://github.com/matthew-kissinger/sds/commit/64506ac).
+
+### Public-surface follow-ups (also same day)
+
+- **`/llms.txt`** added at `public/llms.txt` — emerging convention for LLM/AI
+  crawlers (Claude, GPT, Gemini, Perplexity). Curated Markdown manifest of
+  load-bearing URLs with prose summaries. Per CF AI Crawl Control, ClaudeBot is
+  already crawling sheepdogsim.com (15 successful requests / 737 KB transferred);
+  this gives it a curated index instead of crawl-discovery.
+
+- **`/.well-known/security.txt`** added per RFC 9116. Cloudflare Security
+  Overview surfaced this as a low-severity recommendation. Points security
+  researchers at the existing `SECURITY.md` policy. Both in commit
+  [`f0a8822`](https://github.com/matthew-kissinger/sds/commit/f0a8822).
+
+- **Cloudflare dashboard changes** (out-of-band, not in this repo): enabled
+  Crawler Hints (auto-IndexNow on content changes), Always Online (Wayback
+  fallback), 0-RTT Connection Resumption, Speed Brain (predictive prefetch via
+  Speculation Rules API), Cloudflare Fonts (proxied Google Fonts), Early Hints
+  (HTTP 103). Verified-good (no change needed): SSL/TLS Full, HTTP/2 + HTTP/3,
+  no AI bots blocked, Bot Fight Mode off (intentional — would break MP
+  WebSocket upgrades), AI Labyrinth off (intentional — we want AI training).
+
+### Search Console actions (same day)
+
+- Submitted the new sitemap. Status flipped from "Couldn't fetch" → **Success**
+  with **8 discovered pages**.
+- "Validate fix" triggered on the structured-data error → Google queued recrawl;
+  email confirmation pending.
+- "Request indexing" submitted for all 8 URLs (homepage + about + 3 scenes +
+  devlog index + 2 entries). All accepted into the priority crawl queue.
+
 ## [2.1.2] — 2026-05-08 (Cycle 26 — itch.io heightfield fix attempt — INCOMPLETE)
 
 > **Note added 2026-05-08 post-deploy:** Matt's verification on the live

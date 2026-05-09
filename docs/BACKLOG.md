@@ -25,8 +25,17 @@ All 6 phases shipped end-to-end across 8 commits on `main` (1 doc-patch + 6 phas
 
 **Carryover:** none from Cycle 31 itself. Two items the plan deliberately deferred for Matt-pickup post-deploy:
 
-- **Submit to Google Search Console for re-indexing.** Force a recrawl + cache refresh; the stale cached title clears within 1–7 days typically. URLs to request: `/`, `/about.html`, `/scenes/*` (3), `/devlog/*` (3).
-- **Paste itch.io description copy** from [`docs/itch-description/sheep-dog-sim.md`](itch-description/sheep-dog-sim.md) into the itch project page's Description + Short Description fields.
+- **Submit to Google Search Console for re-indexing.** ✓ DONE same day via Claude in Chrome — sitemap re-submitted (Couldn't-fetch → Success, 8 pages discovered), "Validate fix" triggered on the JSON-LD parsing error, "Request indexing" sent for all 8 URLs (homepage + about + 3 scenes + devlog index + 2 entries).
+- **Paste itch.io description copy** from [`docs/itch-description/sheep-dog-sim.md`](itch-description/sheep-dog-sim.md) into the itch project page's Description + Short Description fields. Still Matt-pickup.
+
+**Post-close hotfixes + audit (same day):**
+
+- **JSON-LD trailing comma fix** ([`0c0d618`](https://github.com/matthew-kissinger/sds/commit/0c0d618)) — Search Console flagged "Unparsable structured data" on the homepage. Pre-existing syntax error in the `WebApplication` block (stray `,` after the `offers` object's closing brace). Not introduced by Cycle 31 — the cycle's audit + Search Console submission surfaced it.
+- **Canonical-URL alignment** ([`64506ac`](https://github.com/matthew-kissinger/sds/commit/64506ac)) — Cloudflare Pages auto-strips `.html` and 308-redirects every `.html` URL to its no-extension form. Cycle 31 shipped every canonical / og:url / JSON-LD `@id` / sitemap entry / internal anchor pointing at the `.html` form, mismatching the actually-served URL. Fixed across 9 files (sitemap + about + 3 scenes + devlog index + 2 entries + homepage) before the bad URLs got indexed.
+- **`public/llms.txt`** ([`f0a8822`](https://github.com/matthew-kissinger/sds/commit/f0a8822)) — emerging convention for LLM/AI crawlers (Claude, GPT, Gemini, Perplexity). Per CF AI Crawl Control, ClaudeBot is already crawling sheepdogsim.com (15 successful requests / 737 KB); this gives it a curated index.
+- **`public/.well-known/security.txt`** (same commit) — RFC 9116 standard. Closes the Cloudflare Security Overview recommendation. Points researchers at `SECURITY.md`.
+- **Cloudflare dashboard audit** (out-of-band, not in repo): enabled Crawler Hints (auto-IndexNow on content changes), Always Online (Wayback fallback), 0-RTT Connection Resumption, Speed Brain (Speculation Rules prefetch), Cloudflare Fonts (proxied Google Fonts), Early Hints (HTTP 103). Verified-good (no change): SSL/TLS Full, HTTP/2 + HTTP/3, no AI bots blocked, Bot Fight Mode off (intentional — would break MP WS), AI Labyrinth off (intentional — we want AI training).
+- **`.claude/skills/cloudflare-management/SKILL.md`** added — captures the Cloudflare dashboard navigation patterns + viewport-scale gotcha + the don't-touch list (Bot Fight Mode, AI Labyrinth, Rocket Loader) + the API token location, so a future agent can pick up CF audits without re-discovering the constraints.
 
 Larger deferred items teed up in the original Cycle 31 scope discussion that did NOT make this scope (still candidates for Cycle 32 or later):
 
