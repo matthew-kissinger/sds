@@ -4,6 +4,40 @@
 
 ## Recently Completed
 
+### Cycle 29 — `gamestate-decomp` (closed 2026-05-09, autonomous overnight run)
+
+Plan archived at [`docs/archive/cycles/cycle-29-plan.md`](archive/cycles/cycle-29-plan.md). Decomposed `js/GameState.js` from 1,313 LOC to 745 LOC (-568 / -43%) by extracting six cohesive sub-modules into a new [`js/gamestate/`](../js/gamestate/) package, under a refactor-baseline characterization harness captured before any extraction. Mode dispatch — formerly an `if (this.gameMode === 'competitive')` chain across seven call sites — is now a single `MODE_CAPABILITIES` table consulted by name; adding a new mode is a one-row table edit.
+
+All 8 phases shipped end-to-end across 9 commits on `main` (1 plan + 8 phase commits). Tests 290 pass (was 272 — +18 from gamestate-mode-dispatch goldens + gamestate-mp-contract integration spec, +5 net after cycle-28's harness was extended). Build clean (588 KB main / 617 KB three; bundle-sizes fixture stable, main slightly improved 576→575 KiB). `npx eslint shared/` zero errors. Internal-only — no version bump.
+
+**Stream A — refactor-baseline goldens (1 phase):**
+
+- **A0 — gamestate-mode-dispatch harness** (commit [`d15233a`](https://github.com/matthew-kissinger/sds/commit/d15233a)). Mirrors the Cycle 28 B0 pattern. New [`tests/refactor-baseline/gamestate-harness.js`](../tests/refactor-baseline/gamestate-harness.js) + [`gamestate-mode-dispatch.spec.ts`](../tests/refactor-baseline/gamestate-mode-dispatch.spec.ts) capture every `(mode, singlePlayerMode)` startGame combo, setObjective shapes across totalSheep, the 'roundup' → 'drive' tick transition, competitive completion at 2p/3p/4p × score boundaries, and sandbox completion across {none, all, percentage}. Vitest `vi.mock` stubs `OptimizedSheep` (Three.js puller) so GameState constructs cleanly under node.
+
+**Stream B — sub-module extraction (6 phases):**
+
+- **B1 — [`js/gamestate/modes.js`](../js/gamestate/modes.js)** (commit [`1def95d`](https://github.com/matthew-kissinger/sds/commit/1def95d)). `MODE_CAPABILITIES` table + `SOLO_MODE_SHEEP_COUNT` + `SOLO_MODE_TO_LEADERBOARD` + `EXTREME_BOID_SOLO_MODES`. `this.gameMode === 'competitive'` branch count: 5 → 0. LOC: 1,313 → 1,292 (-21).
+- **B2 — [`js/gamestate/polygonSpawn.js`](../js/gamestate/polygonSpawn.js)** (commit [`681bda8`](https://github.com/matthew-kissinger/sds/commit/681bda8)). Pure-function `calculatePolygonSpawnConfig` + `pointToSegmentDistance` + `isPointInPolygon`. LOC: 1,292 → 1,167 (-125).
+- **B3 — [`js/gamestate/winConditions.js`](../js/gamestate/winConditions.js)** (commit [`90ca26d`](https://github.com/matthew-kissinger/sds/commit/90ca26d)). `isSoloComplete` + `isSandboxComplete` + `resolveCompetitiveCompletion` (wraps shared/GameStateValidation). LOC: 1,167 → 1,117 (-50).
+- **B4 — [`js/gamestate/objective.js`](../js/gamestate/objective.js)** (commit [`0e536d2`](https://github.com/matthew-kissinger/sds/commit/0e536d2)). `createObjective` + `refreshObjective` + `tickObjective` + `isCorralOpen`. The `roundup` → `drive` state machine and the per-frame tick block from `updateSheepBehaviors` extracted whole. LOC: 1,117 → 1,066 (-51).
+- **B5 — [`js/gamestate/completion.js`](../js/gamestate/completion.js)** (commit [`b692ae0`](https://github.com/matthew-kissinger/sds/commit/b692ae0)). `formatTime` + `submitScoreToLeaderboard` + `processCompetitiveCompletion` + `showCompletionMessage`. The 75-LOC submitScore body + the React-stub UI variants collapsed; `updateUI` becomes a single guard since the per-mode variants computed-and-discarded. LOC: 1,066 → 892 (-174).
+- **B6 — [`js/gamestate/sandboxStart.js`](../js/gamestate/sandboxStart.js)** (commit [`5e31791`](https://github.com/matthew-kissinger/sds/commit/5e31791)). `applySandboxConfig(state, sandboxConfig)` mutates state in place. The 152-LOC `startSandboxGame` body extracted whole, with `computeSandboxSpawnConfig` factoring out the polygon-vs-rect spawn-config branch. Unused imports tightened. LOC: 892 → 745 (-147; cycle target ≤ 800 hit with 55-LOC headroom).
+
+**Stream C — integration (1 phase):**
+
+- **C1 — [`tests/integration/gamestate-mp-contract.spec.ts`](../tests/integration/gamestate-mp-contract.spec.ts)** (commit [`6222c99`](https://github.com/matthew-kissinger/sds/commit/6222c99)). 13 specs locking the cross-vocabulary mapping: MP `cooperative` ⇄ GameState `multiplayer`, MP `racing` ⇄ GameState `competitive`, MP `timed` ⇄ GameState `timed` (only mode where strings match); GameState `solo` and `sandbox` have no MP counterpart. Future contributors who add a new mode will see this spec fail until they register on both sides.
+
+**PRs:** 9 commits direct on `main` (autonomous-cycle policy).
+
+**Carryover:** none. The plan's 8 acceptance lines all resolve clean — 5/6 success-criteria boxes auto-checked at close, 1 (deploy success) gated on Matt's manual push.
+
+**Notes:**
+
+- The "data-driven" thesis carried: `MODE_CAPABILITIES` collapsed seven call-site branches to one table read. `usesCompetitiveGates`, `tracksPlayerScores`, `submitsToLeaderboard`, `uiVariant` are the four capability axes — the C1 spec asserts every entry stays consistent.
+- The cross-vocabulary mapping (multiplayer↔cooperative, competitive↔racing) was previously tribal-knowledge buried in the worker DO + the React HUD. C1's spec surfaces it; new modes that don't register on both sides fail the test.
+- `shared/GameStateValidation.js` was consumed by import only (never modified) — fence-frozen contract preserved. The Worker DO uses the same `checkCompetitiveCompletion` function authoritatively, so client + server now agree on competitive completion by construction.
+- The cycle-close reconcile hook surfaced a regex-collision bug between "Acceptance criteria — EARS format" (template explainer) and "Success criteria (cycle close)" (the actual checklist) — fixed locally by renaming the explainer to "EARS notation conventions". A template-side fix remains for future cycles (see Deferred).
+
 ### Cycle 28 — `alignment` (closed 2026-05-09, autonomous overnight run)
 
 Plan archived at [`docs/archive/cycles/cycle-28-plan.md`](archive/cycles/cycle-28-plan.md). Closeout cycle for the cycle methodology itself — no new gameplay, perf, or visual scope. All 19 phases shipped end-to-end across 13 commits on `main` (11 stream + 1 wake-state runbook + 1 doc-alignment polish + 1 close). Tests 272 pass (was 264 — +8 from the refactor-baseline characterization harness), build clean (588.97 kB main / 617.80 kB three; both ≤ pre-cycle baseline), `npx eslint shared/` zero errors. Internal-only — no version bump.
@@ -665,7 +699,8 @@ For prior cycle history before this file existed, see:
 
 Items deferred from prior cycles that haven't been picked up. Move to a future cycle plan's Phase N when work starts.
 
-- **`GameState.js` decomposition (Cycle 29 candidate).** 1,313 LOC; mode dispatch is a switch chain that could become data-driven (mode → config object, replacing the per-mode branches in `setGameMode` / `getBounds` / objective wiring). Cycle 28 Stream B targeted [`main.js`](../js/main.js) (3,529 → 2,188) and [`TerrainBuilder.js`](../js/TerrainBuilder.js) (2,785 → 1,387) — two god-modules in one cycle is enough risk; GameState is the third-largest and least urgent. Pick up in Cycle 29 with a similar refactor-baseline characterization harness around mode dispatch + win-condition logic. Acceptance bar: `wc -l js/GameState.js` ≤ 800.
+- **`docs/CYCLE_TEMPLATE.md` cycle-close-reconcile collision.** The template ships a "## Acceptance criteria — EARS format" section as an explainer block; the reconcile hook's regex `^##+\s+(?:Success|Acceptance) criteria` matches that explainer first instead of the actual "## Success criteria (cycle close)" checklist. Cycle 29 close fixed this locally by renaming its explainer to "## EARS notation conventions". Roll the same rename into the template so future cycles don't hit it. Trivial — one Edit + a one-line note in CYCLE_TEMPLATE.md's commit message.
+- **Cross-module polygon-spawn dedup.** Cycle 29 B2 extracted `pointToSegmentDistance` + `isPointInPolygon` to [`js/gamestate/polygonSpawn.js`](../js/gamestate/polygonSpawn.js) but only updated GameState's callers. Three other files keep their own copies: [`js/OptimizedSheep.js`](../js/OptimizedSheep.js), [`js/SandboxConfig.js`](../js/SandboxConfig.js), [`js/StructureBuilder.js`](../js/StructureBuilder.js). Out of scope for Cycle 29 (the cycle's goal was GameState decomp, not cross-module dedup). Pick up in a future "duplication-cleanup" pass alongside any other ripple-of-helpers.
 - **Bespoke pixel-forge rock assets (Q3 author lean from Cycle 6).** Cycle 6 shipped the fallback (`scale ≥ 0.8` filter on existing cluster rocks → colliders with `finalScale * 0.55` radius). The cleaner long-term path is to author 2-3 purpose-made rock GLBs in [`pixel-forge`](file:///C:/Users/Mattm/X/games-3d/pixel-forge) at obstacle-readable sizes and replace the cluster system. Pick up when next OC playtest flags rock collision as awkward.
 - **MP island scenes (Rolling Hills + Open Country in multiplayer).** Cycle 6 Phase 1's `TreePlacement` lift means MP island scenes are now feasible — Worker can call `generateTrees(scene, mulberry32(seed))` and produce identical positions to the client. The remaining work is wiring the obstacle bundle into Worker GameSim init + applying `obstacleAvoidance` in the shared sheep/dog tick. Solo Phase 2 wiring is the template.
 
