@@ -4,6 +4,47 @@
 
 ## Recently Completed
 
+### Cycle 27 — `engagement-loop-and-perf` (closed 2026-05-09, partial — primitives shipped, integrations parked)
+
+Plan archived at [`docs/archive/cycles/cycle-27-plan.md`](archive/cycles/cycle-27-plan.md). Drafted as a 14-phase autonomy-sequenced cycle (A-I autonomous, J-N Matt pickup). Shipped 5/14 fully + 2/14 partial; remaining 7 phases parked. Closeout learning: 14 phases is not a cycle, it's a season — Cycle 28's phase-shape rule (≤ 8 phases, fully-autonomous or fully-paired, no mixing) codifies this.
+
+**Shipped fully:**
+
+- **Phase B — cinema runner fix** (commit [955f413](https://github.com/matthew-kissinger/sds/commit/955f413)). `page.screenshot` → `canvas.toDataURL`. Static/dog/PWA shots work again.
+- **Phase C — lazy-load React overlay split** (commit [f94c4ef](https://github.com/matthew-kissinger/sds/commit/f94c4ef)). `main-*.js` 837 → 590 KB (-247 KB / -30%).
+- **Phase I — worker D1 test backfill** (commit [5dc783f](https://github.com/matthew-kissinger/sds/commit/5dc783f)). +22 specs over score-gating. Vitest 201 → 264 passing (271 total). Target was +30; delivered +63.
+- **Gates** — 264 specs pass, build clean (590 KB main / 171 KB gzip), last `main` deploy success.
+
+**Shipped partially:**
+
+- **Phase G — itch.io heightfield root cause + fix in code** (commit [d79234e](https://github.com/matthew-kissinger/sds/commit/d79234e)). Real bug was `BASE_URL` path resolution; v2.1.2's `.r32f → .bin` rename was orthogonal. Diagnosis at [`cycle27-validation/phaseG/diagnosis.md`](../cycle27-validation/phaseG/diagnosis.md). Awaits itch deploy + visual verify.
+- **Phase D — daily-seed primitive** (commit [173a6bf](https://github.com/matthew-kissinger/sds/commit/173a6bf)). `js/utils/dailySeed.js` + 10 specs. UI tile + worker `daily-*` partition deferred.
+- **Phase E — replay recorder primitive** (commit [f942d26](https://github.com/matthew-kissinger/sds/commit/f942d26)). `js/utils/ReplayRecorder.js` + 6 specs. RoundManager hook + share-card UI deferred.
+- **Phase F — pointer-tour component** (commit [18e007f](https://github.com/matthew-kissinger/sds/commit/18e007f)). Component + gating + 6 specs. `App.js` mount slot deferred.
+
+**Carryover (parked, NOT Cycle 28 scope per alignment plan's "no gameplay/perf/visual" rule):**
+
+- **Phase A** — Cloudflare Web Analytics beacon. Blocked on token rotation; never coded.
+- **Phase D integration** — UI tile + worker `daily-{YYYY-MM-DD}` partition (worker enum needs dynamic prefix support).
+- **Phase E integration** — RoundManager hook + share-card React component (1200×630 SVG composite, MediaRecorder over `canvas.captureStream(60)`, WebM out).
+- **Phase F integration** — `App.js` mount slot for PointerTour (5-line change, naturally bundles with Phase L title-screen).
+- **Phase G deploy verify** — itch deploy + visual check (RH/OC dusk hill skirt vs dark-blue water band).
+- **Phase H** — CameraController state-machine collapse. Refactor needs paired-with-Matt parity validation.
+- **Phase J** — `og-open-country.webp` refresh (Matt paired, now viable post-Phase B).
+- **Phase K** — iPhone tone-mapping verification (Matt's iPhone, not simulator).
+- **Phase L** — Title-screen identity pass (~1 day Matt design taste).
+- **Phase M** — Heightfield amplitude bug. Author lean: codify as design in [`DECISIONS.md`](../DECISIONS.md). 16+ cycles of dependent tuning; rebake risk unfavorable.
+- **Phase N** — Devlog cadence + venue. Author lean: `DEVLOG.md` route. Seed entry: Cycle 26 close summary.
+
+**PRs:** per-phase commits on `main` (no batched PRs). 9 commits across 5 days.
+
+**Notes:**
+
+- Cycle was too large because the autonomous-vs-paired split was at phase level, not cycle level. Cycle 28 enforces ≤ 8 phases per cycle and "fully autonomous or fully paired, no mixing."
+- Phase I overshot test target (+63 vs +30) because uncovered worker `d1.ts` surface was larger than estimated.
+- Bundle -247 KB on `main-*.js` is the cycle's clearest win and is locked in as a Cycle 28 acceptance floor.
+- Mid-cycle alignment audit produced [`AGENTS.md`](../AGENTS.md), [`CLAUDE.md`](../CLAUDE.md), [`docs/cycle-28-plan.md`](cycle-28-plan.md), `.claude/settings.json` Stop hook, and `.gitignore` inversion as the foundation for Cycle 28's autonomous overnight run.
+
 ### Cycle 26 — `player-facing-layer` (closed 2026-05-08, multi-version `v2.0.3` → `v2.1.2` + scene-picker auto-load)
 
 Plan from [`docs/archive/cycles/cycle-26-plan.md`](archive/cycles/cycle-26-plan.md). Started as a deliberately soft-scoped "menu" cycle pivoting away from the rendering/foliage/atmosphere stack toward the player-facing layer (UX, marketing, SEO, community, polish). Shipped via per-area `v2.x.y` bumps rather than a single end-of-cycle release. Wake-state from autonomous run: [`docs/archive/cycles/cycle-26-autonomous-wake-state.md`](archive/cycles/cycle-26-autonomous-wake-state.md).

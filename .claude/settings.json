@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Committed Claude Code config for the sds repo. Personal permissions live in settings.local.json (gitignored). Hooks here are shared across all collaborators / agents.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/check-acceptance.mjs"
+          }
+        ]
+      }
+    ]
+  }
+}

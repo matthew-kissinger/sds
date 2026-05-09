@@ -73,10 +73,10 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp 
-# Claude Code local settings — ignore children, but re-include shared slash commands so they ship with the repo
-.claude/*
-!.claude/commands/
-!.claude/commands/**
+# Claude Code: shared agent infrastructure (commands, hooks, rules, skills, settings.json) commits with the repo. Only personal/local state stays out.
+.claude/settings.local.json
+.claude/worktrees/
+.claude/projects/
 
 # Playwright MCP artifacts
 .playwright-mcp/
