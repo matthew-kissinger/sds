@@ -229,3 +229,69 @@ The 5-cycle program collapsed into Cycles 25 + 26 + 27 (~3 mega-cycles). LOD1 wa
 - **Mobile keeps `HardwareTier === 'low'` meshopt LOD1** at 80m. Removing it requires re-validating mid-tier mobile perf.
 - **Per-tier branching is acceptable** when geometry constraints diverge across hardware classes. Don't collapse to a single LOD ladder for cleanliness if it forces a foundational mismatch.
 - **Track net-negative LOC across cycles** when the program is "remove a foundational mismatch." Patch-deletion is the success signal; if patches are still landing, the seam isn't gone.
+
+---
+
+## Research findings — durable summaries (2026-05, Cycle 28 Stream A3)
+
+Compact summaries of research dossiers archived to [`docs/archive/research/`](docs/archive/research/) during Stream A3. Each entry: what we considered, what we picked, why. Originals preserved for future agents to revisit.
+
+### Grass rendering ([archive/research/research-grass-2026-05.md](docs/archive/research/research-grass-2026-05.md))
+
+Considered: single-noise wind, multi-octave layered wind, GPU-driven TSL pipeline, render-texture trample. **Picked:** three rotated noise octaves at different scales averaged to a 0.35–0.65 modulation envelope, plus oriented rounded-rectangle SDF interaction in the entity's local frame. Reason: single-noise reads as a coherent wavefront; three rotations break the front. Render-texture trample deferred (cost/benefit not justified at our blade count; uniform-array interactor scales to the per-frame interactor count we actually have).
+
+### Rocks + ground scatter ([archive/research/research-rocks-and-scatter-2026-05.md](docs/archive/research/research-rocks-and-scatter-2026-05.md))
+
+Considered: Quaternius/Kenney/KayKit CC0 packs, runtime procedural rock generation (icosa + noise displacement), bake-once GLBs. **Picked:** in-repo bake (`scripts/bake-rocks.mjs` icosa+noise) with 6–8 variants exported as GLBs at build time. Reason: keeps collision/heightfield logic deterministic; no per-frame CPU; Pixel-Forge-quality silhouettes via parameter tuning. CC0 packs noted as fallback if commission timeline slips.
+
+### Tree rendering survey ([archive/research/research-trees-2026-05.md](docs/archive/research/research-trees-2026-05.md))
+
+Considered: CC0 GLB libraries (Quaternius, Kenney, Poly Pizza), Genshin/BotW cross-quad leaves, EZ-Tree procedural, FloraSynth, BatchedMesh vs InstancedMesh2. **Picked:** EZ-Tree procedural bake (`bake-trees.mjs`) + `@three.ez/instanced-mesh` `addLOD` chain. Reason: native LOD support kills the impostor hand-off seam and reuses kdbush colliders; CC0 packs flagged as backup if EZ-Tree silhouette doesn't read.
+
+### Cycle 16 tree-foliage decision ([archive/research/cycle-16-tree-research.md](docs/archive/research/cycle-16-tree-research.md), [archive/research/cycle-16-tree-gallery-review.md](docs/archive/research/cycle-16-tree-gallery-review.md), [archive/research/cycle-16-phase-6-prep.md](docs/archive/research/cycle-16-phase-6-prep.md))
+
+Considered: PIF vertex-shader leaf cull, octahedral impostors, recipe re-tune, `addLOD` chain, billboard count tweaks. **Picked:** A+B+E (recipe re-tune + `addLOD` chain + 3-quad cross-billboard migrated into `addLOD` LOD2). Reason: combines three free wins (no new deps), preserves existing cross-billboard work, and gives per-instance per-frame distance test instead of scene-load decision. **Cycle 17 result:** halved-leaves LOD1 was rejected as "less leaves does not look good" — see polish-program thesis.
+
+### Cycle 20 kiln impostor color handoff ([archive/research/cycle-20-impostor-color-handoff.md](docs/archive/research/cycle-20-impostor-color-handoff.md))
+
+Considered: per-(scene, ToD) calibration LUT, Schlick fresnel + GGX lobe on impostor, half-Lambert wrap + albedo-tinted hemi ambient, padded-mip pre-filter, optical sandbox v2. **Picked:** the calibration LUT (uMatchBoost) as the v1 fix, padded mips deferred to Cycle 21. Reason: bridges hue + brightness gap quickly; LUT is small (~196 KB). **Cycle 25 outcome:** uMatchBoost was deleted as the polish-program thesis predicted — masking the LOD1 silhouette gap rather than fixing it.
+
+### Cycle 21 tree impostor research ([archive/research/cycle-21-tree-impostor-research.md](docs/archive/research/cycle-21-tree-impostor-research.md))
+
+Considered: NeRF/splats, hybrid mesh-canopy + impostor-trunk, RiLoD, padded-atlas pre-filtered radiance, octahedral parametrization. **Picked:** padded-atlas mipmaps + Schlick fresnel + per-(scene, ToD) calibration LUT (the convergent recommendation from 6 parallel research agents). Reason: highest-leverage path that didn't require a forklift architecture change. **Cycle 22+ outcome:** still wasn't enough; polish-program thesis identified LOD1 silhouette as the real root cause.
+
+### Cycle 22 stylized-tree implementation ([archive/research/cycle-22-stylized-tree-research.md](docs/archive/research/cycle-22-stylized-tree-research.md))
+
+Considered: 6-game survey (Tiny Glade, Sable, A Short Hike, Lil Gator, Among Trees, Townscaper). **Headline finding:** zero of the 6 reference indie games use impostors. **Picked:** Sable's inverted-hull outline fade + two-color near/far fog as the right stylization direction; defer impostor rework until LOD1 mismatch is solved. Reason: at our poly counts, an instanced mesh is cheaper than the impostor + bake pipeline + atlas streaming + the eternal "doesn't match LOD0" tax.
+
+### Cycle 22 BatchedMesh migration ([archive/research/cycle-22-batchedmesh-research.md](docs/archive/research/cycle-22-batchedmesh-research.md))
+
+Considered: BatchedMesh (Three.js core r184), `@three.ez/batched-mesh-extensions`, sticking with InstancedMesh2. **Picked:** stay on InstancedMesh2. Reason: BatchedMesh has no native per-instance LOD; the extensions package requires LODs to share vertex arrays (rules out our `@gltf-transform` meshopt simplify pipeline). Revisit only if Three.js core lands `addGeometryLOD` or we exceed ~1M instances.
+
+### Cycle 24 BatchedMesh + WebGPU rescope ([archive/research/cycle-24-research-batched-webgpu.md](docs/archive/research/cycle-24-research-batched-webgpu.md))
+
+Considered: re-evaluating BatchedMesh post-r184, WebGPU/TSL pivot now that Safari 26 ships WebGPU. **Picked:** stay on InstancedMesh2 + meshopt LOD + kiln impostor + meadow-quad. Reason: nothing structural shifted; BatchedMesh per-instance LOD still absent; WebGPU readiness is necessary-but-not-sufficient (TSL foliage shaders are not yet a clear net win for our scene complexity). 1-phase WebGPU spike behind a feature flag is defensible if a future cycle has slack.
+
+### Cycle 24 foliage rendering SOTA ([archive/research/cycle-24-research-foliage.md](docs/archive/research/cycle-24-research-foliage.md))
+
+Considered: agargaro hemi-octahedral impostor, RiLoD (EGSR 2025), Ghost of Yōtei cut-buffer, AC Shadows Atmos system, render-texture trample. **Picked:** keep kiln stack; defer hemi-octahedral spike until Cycle 23 v1.4 visual ships clean; no skeleton-per-tree wind. Reason: octahedral gives ~2× tile efficiency vs lat-lon but at architectural cost; RiLoD is academic SOTA but not browser-tractable in 2026.
+
+### Cycle 24 MP testing ([archive/research/cycle-24-research-mp-testing.md](docs/archive/research/cycle-24-research-mp-testing.md))
+
+Considered: Browserbase, Playwright with two pages, Playwright with two contexts, multi-tab. **Picked:** Playwright with two `browser.newContext()` per test (host + N guests). Reason: two pages in the same context share storage/cookies/BroadcastChannel — silent test breakage. Two contexts give clean isolation. Backend uses `wrangler dev` (Miniflare under the hood) — same code path as production. Reconnect grace: 15s in-game, 0s in lobby.
+
+### Electron readiness ([archive/research/electron-readiness.md](docs/archive/research/electron-readiness.md))
+
+Considered: Electron, Tauri, Capacitor, NW.js, native packagers. Research-only — no implementation. **Punted.** Conclusion: introduce build-time `SDS_WORKER_BASE` env so the same source compiles to relative URLs (web) or absolute (desktop). Solo modes already degrade gracefully when worker is unreachable. Revisit when there's a market signal for a downloadable.
+
+### Mac rendering bug ([archive/research/mac-bug-research.md](docs/archive/research/mac-bug-research.md))
+
+Two distinct issues conflated as "the Mac bug": white-ground (terrain shader on Matt's specific Safari) and rainbow horizon-band (sky shader precision). **Picked:** `precision highp float` + `precision highp int` on sky/cloud/grass shaders + 1/255 hash dither at sky's final write. Rainbow band fixed; white-ground reproduces only on Matt's hardware (not GH macOS runner) — unresolved, hardware-specific.
+
+### Multiplayer dog selection ([archive/research/multiplayer-dog-selection.md](docs/archive/research/multiplayer-dog-selection.md))
+
+Reference doc: dog-id contract (`jep`, `pip`, `sally`, `shiloh`, `george_washington`) is the source of truth across `DogSelection.js` UI list and `RoomDO.ts` `DOG_TYPES` allowlist. Adding/removing requires both files; mismatches surface as silent worker coercion. Anchors regression specs in `tests/e2e/mp/dog-selection.spec.ts`.
+
+### Meta-cycle execution policy ([archive/research/meta-cycle-execution.md](docs/archive/research/meta-cycle-execution.md))
+
+Considered: how to run an autonomous overnight cycle when Matt is asleep. **Picked:** branch-only commits, no tag push, no production deploy, no destructive shared-state ops, no interactive prompts, no PII in logs. Hard-stop matrix: surface to wake-state report, don't fail forward. **Cycle 25 outcome:** policy was applied; mega-cycle landed end-to-end with one parked phase. Cycle 28's autonomous-cycle execution model is the descendant of this policy.

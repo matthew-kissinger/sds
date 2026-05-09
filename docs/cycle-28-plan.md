@@ -78,7 +78,7 @@ The doc describes Cycles 25–30 as separate; reality collapsed them into mega-C
 
 ## Phase A3 — consolidate research docs
 
-Top-level `docs/` has ~10 cycle-specific research docs ([`research-grass-2026-05.md`](research-grass-2026-05.md), [`cycle-16-tree-research.md`](cycle-16-tree-research.md), [`cycle-22-batchedmesh-research.md`](cycle-22-batchedmesh-research.md), etc.). Each has a corresponding outcome already in DECISIONS.md or BACKLOG.md or both.
+Top-level `docs/` has ~10 cycle-specific research docs ([`research-grass-2026-05.md`](archive/research/research-grass-2026-05.md), [`cycle-16-tree-research.md`](archive/research/cycle-16-tree-research.md), [`cycle-22-batchedmesh-research.md`](archive/research/cycle-22-batchedmesh-research.md), etc.). Each has a corresponding outcome already in DECISIONS.md or BACKLOG.md or both.
 
 1. **For each research doc**, write a 2-3 line summary entry in [`DECISIONS.md`](../DECISIONS.md) ("we considered X, picked Y because Z") if not already present.
 2. **Move originals** to `docs/archive/research/` (preserved, not deleted).

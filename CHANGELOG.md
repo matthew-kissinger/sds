@@ -219,7 +219,7 @@ Mac users (M-series + recent macOS, all browsers) reported that
 loading a scene showed grass-green correctly, then a white hue was
 layered over the whole frame as gameplay started. Symptom shape was
 the fogged-horizon ACES wash, not the cycle-12 white-terrain class
-documented in `docs/mac-bug-research.md`.
+documented in `docs/archive/research/mac-bug-research.md`.
 
 ### Fixed
 - **Mac scenes washed white at gameplay start.** ACES Filmic tone
@@ -424,9 +424,9 @@ Release candidate. Partial mega-Cycle 25 — autonomous overnight run on
 branch `meta-cycle-overnight-2026-05-06`. Three phases shipped (A, B,
 E-minimal), four phases parked with `cycle25-validation/phase{C,D,F,G}/HARDSTOP.md`
 each. **Not pushed to origin or production**; gated on Matt's morning
-review per [`docs/meta-cycle-execution.md`](docs/meta-cycle-execution.md).
+review per [`docs/archive/research/meta-cycle-execution.md`](docs/archive/research/meta-cycle-execution.md).
 
-See [`docs/wake-state-2026-05-06.md`](docs/wake-state-2026-05-06.md) for
+See [`docs/archive/wake-states/wake-state-2026-05-06.md`](docs/archive/wake-states/wake-state-2026-05-06.md) for
 the full wake-state report enumerating shipped/parked/recommended-next.
 
 ### Added
@@ -496,7 +496,7 @@ This release codifies the Cycle 23 multiplayer cheap-wins under a Playwright two
 ### Added
 - **15-second reconnect grace** for in-game disconnects. `RoomDO.handlePlayerDisconnect` schedules a per-playerId timeout when the room is in-game; if the player rebinds via `bindSocket` before the timeout fires, the timeout cancels and the sheepdog stays in-world the whole time. Lobby-state disconnects continue to evict immediately. Every grace activation + cancellation logs to RoomDO console for production audit.
 - **`window.__sdsMpDrop` + `window.__sdsMpReconnect`** test-only globals. Sibling to `__sdsMpProbe`, gated on `?mpProbe=1` / `?perfMode=1`. Drives the reconnect-grace specs without coupling to the mid-cycle React lobby reflow.
-- **Multiplayer dog-selection contract doc** at [`docs/multiplayer-dog-selection.md`](docs/multiplayer-dog-selection.md). Traces the dogType propagation path across the 11 hops UI → REST `/api/rooms` → `RoomDO` `/init` → WS `setDogType` → broadcast → peer render. Names every field name + every silent-coercion point.
+- **Multiplayer dog-selection contract doc** at [`docs/archive/research/multiplayer-dog-selection.md`](docs/archive/research/multiplayer-dog-selection.md). Traces the dogType propagation path across the 11 hops UI → REST `/api/rooms` → `RoomDO` `/init` → WS `setDogType` → broadcast → peer render. Names every field name + every silent-coercion point.
 - **6 new MP e2e specs** across 3 files: `tests/e2e/mp/in-game-state.spec.ts` (host-start propagates state, sheepCount, gameMode), `tests/e2e/mp/reconnect-grace.spec.ts` (within-grace retention + reconnect-cancels-eviction), `tests/e2e/mp/dog-selection.spec.ts` (host=pip+guest=sally, default fallback to jep, three-player permutation). All green on chromium-mp; runnable cross-engine via `--project=mp-firefox` / `--project=mp-webkit`.
 
 ### Changed
@@ -558,7 +558,7 @@ This release ships Cycle 22's stylized-LOD pivot plus a long-deferred species cu
 - **alphaHash stochastic LOD crossfade.** `material.alphaHash = true` on every LOD0+LOD1 leaf MeshStandardMaterial; equivalent screen-space-hashed alpha threshold inline in the kiln impostor (custom ShaderMaterial gets its own dither since Three's auto chunk injection only applies to `MeshStandardMaterial`). Result: LOD0→LOD1 (80m) and LOD1→impostor (200m) handoffs read as smooth density gradients, not hard pop bands.
 - **Atmospheric desaturation toward fog.** New `js/shaders/AtmosphericDesatPatch.js` exports a composable `onBeforeCompile` that mixes `gl_FragColor` toward `(luma + 40% fogColor)` over `[uDesatStartM, uDesatEndM]` at `uDesatStrength` weight. Defaults 100m / 320m / 0.6. Single shared uniform set drives LOD0+LOD1 leaves AND the kiln impostor — all three tiers desaturate in lock-step.
 - **Grass auto-LOD.** GrassSystem ticks a 60-sample frame-time ring buffer; if the rolling average crosses 18ms, per-chunk clump density scales toward 0.5×. Recovers toward 1.0× under 14ms. Applied at chunk-rebuild time only — no live geometry mutation. Floor 0.5 keeps grass visible under sustained perf trouble.
-- **BatchedMesh research doc.** [`docs/cycle-22-batchedmesh-research.md`](docs/cycle-22-batchedmesh-research.md) — Cycle 23+ migration evaluation. Recommendation: defer (no native per-instance LOD in Three r184; community workaround requires shared vertex arrays, blocking our meshopt simplify pipeline).
+- **BatchedMesh research doc.** [`docs/archive/research/cycle-22-batchedmesh-research.md`](docs/archive/research/cycle-22-batchedmesh-research.md) — Cycle 23+ migration evaluation. Recommendation: defer (no native per-instance LOD in Three r184; community workaround requires shared vertex arrays, blocking our meshopt simplify pipeline).
 
 ### Changed
 - **Pine species removed.** Per Matt's directive ("remove pine altogether i dont like it"). Dropped from `TreePlacement` biomes (mixed becomes 50/50 tree1+tree2; the outer pine ring collapses into mixed), all bake scripts, asset specs, the impostor LUT, the asset-gallery pick list, and the dev sandboxes (`lod-sandbox-v2`, `lod-color-match`, `impostor-inspector`). `pine.glb` + `pine_lod1.glb` + `pine.imposter.{png,depth.png,normal.png,json}` archived under `cycle22-validation/phaseA/removed-pine/` then deleted from runtime + originals. Sim-baseline byte-identical (trees are visual-only).
