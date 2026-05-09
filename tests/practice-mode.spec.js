@@ -74,9 +74,12 @@ describe('Practice Paddock contract', () => {
         );
     });
 
-    it('main.js completion overlay skips score submission for practice', () => {
-        const src = readSource('js/main.js');
-        expect(src).toMatch(/this\.singlePlayerMode\s*!==\s*['"]practice['"]/);
+    it('completion overlay skips score submission for practice', () => {
+        // Cycle 28 Stream B1: showCompletionOverlay body extracted from
+        // main.js to js/boot/completionOverlay.js. The practice-mode guard
+        // lives there now; main.js method is a thin shim.
+        const src = readSource('js/boot/completionOverlay.js');
+        expect(src).toMatch(/game\.singlePlayerMode\s*!==\s*['"]practice['"]/);
     });
 
     it('PracticeHint component exists and is exported from GameHUD index', () => {
