@@ -4,6 +4,44 @@
 
 ## Recently Completed
 
+### Cycle 31 — `public-surface` (closed 2026-05-09, autonomous run, v2.1.3)
+
+Plan archived at [`docs/archive/cycles/cycle-31-plan.md`](archive/cycles/cycle-31-plan.md). Public-facing surface pass after a 2026-05-09 audit found the Google snippet for `sheep dog sim` was leaking the welcome modal text, the production sitemap was 404-as-HTML (file lived in repo root, never reached `dist/`), only the homepage was indexed, and the cached title was stale. Cycle fixes the **mechanical SEO surface**: real semantic body content for crawlers, three per-scene landing pages, two devlog seed entries, sitemap relocation + expansion, visible internal-link footer, GitHub topic refresh.
+
+All 6 phases shipped end-to-end across 8 commits on `main` (1 doc-patch + 6 phase commits + 1 version bump). Tests 297 pass (304 with skips — flat vs Cycle 30 baseline; no sim-touched code). Build clean (mainKB ≈ 589 / threeKB ≈ 617). `npx eslint shared/` zero errors. Player-visible delta (per-scene pages discoverable, devlog accessible, footer visible on desktop) → bumped `2.1.2 → 2.1.3`.
+
+**Phases:**
+
+- **0 — plan patch after research spike** (commit [`879409c`](https://github.com/matthew-kissinger/sds/commit/879409c)). Pre-execution probe found the original Phase-1 step-3 modal-defer was a documented regression ([`js/components/index.js:17-22`](../js/components/index.js)) and 4× references to nonexistent `public/about.html` (file is at repo root + Vite multi-page input). Doc reflects the corrections.
+- **1 — Crawler-content `<main>` + sr-only CSS** (commit [`f540941`](https://github.com/matthew-kissinger/sds/commit/f540941)). New `<main id="seo-content" class="seo-only">` block at the top of [`index.html`](../index.html) `<body>`: H1, prose, biome list with internal links to per-scene pages, mode list, footer link row. New `<noscript>` block with visible fallback prose. New `.seo-only` class in [`css/main.css`](../css/main.css) (standard a11y clip-path pattern). Modal-defer step deliberately dropped.
+- **2 — Drop multilingual meta-keywords stuffing** (commit [`61cd8db`](https://github.com/matthew-kissinger/sds/commit/61cd8db)). 18-language `<meta name="keywords">` line removed; replaced with an explanatory comment.
+- **3 — Per-scene static landing pages** (commit [`68fe4d9`](https://github.com/matthew-kissinger/sds/commit/68fe4d9)). [`public/scenes/home-field.html`](../public/scenes/home-field.html), [`public/scenes/rolling-hills.html`](../public/scenes/rolling-hills.html), [`public/scenes/open-country.html`](../public/scenes/open-country.html) — 150–168 LOC each. Mirror [`about.html`](../about.html) inline-CSS pattern. Scene-scoped JSON-LD `VideoGame` schema with `mainEntityOfPage` pointing back at homepage. `<a href="/?scene=<id>">` play CTAs hand the user into the SPA on the right scene. Footer cross-links between all three.
+- **5 — Devlog scaffold + 2 seed entries** (commit [`44e3cd4`](https://github.com/matthew-kissinger/sds/commit/44e3cd4)). [`public/devlog/index.html`](../public/devlog/index.html) reverse-chronological list. Two entries — Cycle 30 ("the terrain math gets one home") + Cycle 29 ("reorganising the game-mode plumbing") — rewritten in player voice (no EARS / Phase / BACKLOG / cycle-N-plan references in visible prose). Each entry has its own JSON-LD `Article` schema.
+- **4 — Sitemap fix + expansion** (commit [`1125062`](https://github.com/matthew-kissinger/sds/commit/1125062)). [`sitemap.xml`](../sitemap.xml) → [`public/sitemap.xml`](../public/sitemap.xml) so Vite copies it into `dist/`. Pre-fix Cloudflare Pages was serving the SPA shell with `Content-Type: text/html` for `/sitemap.xml`. Sitemap expanded 2 → 8 URLs; all `lastmod` set to 2026-05-09.
+- **6 — Visible footer + GitHub topics** (commit [`65a36a9`](https://github.com/matthew-kissinger/sds/commit/65a36a9)). New `<footer id="site-footer">` at bottom-center (z=5 above canvas, below React overlay z=1000), 24px tall, fades in 1.2s after page load. Hidden on mobile via `@media (max-width: 768px)` to avoid joystick conflict. GitHub topics: swapped `durable-objects` (subsumed by `cloudflare-workers`) and `messagepack` (internal protocol detail) for `multiplayer` and `simulation`; all 5 acceptance-required topics present.
+- **CHANGELOG + version bump** (commit [`27f8bd7`](https://github.com/matthew-kissinger/sds/commit/27f8bd7)). `package.json` `2.1.2 → 2.1.3` + new `[2.1.3] — 2026-05-09 (Cycle 31)` section in [`CHANGELOG.md`](../CHANGELOG.md).
+
+**PRs:** 8 commits direct on `main` (autonomous-cycle policy).
+
+**Carryover:** none from Cycle 31 itself. Two items the plan deliberately deferred for Matt-pickup post-deploy:
+
+- **Submit to Google Search Console for re-indexing.** Force a recrawl + cache refresh; the stale cached title clears within 1–7 days typically. URLs to request: `/`, `/about.html`, `/scenes/*` (3), `/devlog/*` (3).
+- **Paste itch.io description copy** from [`docs/itch-description/sheep-dog-sim.md`](itch-description/sheep-dog-sim.md) into the itch project page's Description + Short Description fields.
+
+Larger deferred items teed up in the original Cycle 31 scope discussion that did NOT make this scope (still candidates for Cycle 32 or later):
+
+- **MP island scenes** (Rolling Hills + Open Country in multiplayer; sim-deterministic; needs sim-baseline regen story). Top candidate for Cycle 32.
+- **`CYCLE_TEMPLATE.md` regex-collision fix** — `/cycle-close` reconcile hook hits the "## Acceptance criteria — EARS format" template explainer first and can't parse the actual Success criteria block. Cycle 29, 30, 31 all logged the manual workaround. Small fence-touched cleanup that could attach as Phase 0 of any cycle.
+- **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**.
+
+**Notes:**
+
+- Pre-execution research spike was load-bearing: caught the broken `requestIdleCallback` defer step + the `public/about.html` path errors before any code shipped. Trimmed Phase 1 from ~45m to ~25m.
+- Voice-sensitive prose (per-scene pages + devlog seed entries) shipped in the same cycle as the SEO-mechanical fixes; Matt approved at close.
+- Modal text in [`js/locales/en/index.js:388-389`](../js/locales/en/index.js) (`identity.welcome` + `identity.chooseIdentity`) was identified as the load-bearing source of the snippet leak. Not changed in this cycle. If post-deploy the Google snippet still substitutes the modal text after recrawl (1-7 days typical), the next move is to rewrite those strings so they don't read as "page content" — UX-touching change for Cycle 32 carryover.
+- Last deploy on `main` (cycle-30 close commit) showed `failure` in `gh run list` but only the E2E (Chromium) Playwright job failed — Pages + Worker + Test + Perf all green. Pre-existing carryover; cycle-31 plan explicitly accepts this in its Success criteria.
+- Reconcile hook regex collision against the EARS-format explainer header still open. Walked acceptance manually for the third cycle in a row.
+
 ### Cycle 30 — `heightfield-unify` (closed 2026-05-09, autonomous run)
 
 Plan archived at [`docs/archive/cycles/cycle-30-plan.md`](archive/cycles/cycle-30-plan.md). Collapsed the visible-terrain-Y contract to a single source: triangle-interp against a `displacedHeights` grid bound on [`Heightfield`](../shared/terrain/Heightfield.js). The per-vertex sample + smoothstep-falloff displacement loop now lives on `Heightfield.bakeMeshGrid` (one home, not two parallel loops); [`TerrainBuilder.createTerrain`](../js/TerrainBuilder.js) is the renderer, not the algorithm owner. Cycle 9 Phase 5's `+ 0.05m` defensive fallback in `meshSampleY` is gone — calling `meshSampleY` without a bound grid now throws a remediation-named error rather than returning a bilinear-with-an-offset guess.
