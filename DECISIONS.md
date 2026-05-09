@@ -295,3 +295,33 @@ Reference doc: dog-id contract (`jep`, `pip`, `sally`, `shiloh`, `george_washing
 ### Meta-cycle execution policy ([archive/research/meta-cycle-execution.md](docs/archive/research/meta-cycle-execution.md))
 
 Considered: how to run an autonomous overnight cycle when Matt is asleep. **Picked:** branch-only commits, no tag push, no production deploy, no destructive shared-state ops, no interactive prompts, no PII in logs. Hard-stop matrix: surface to wake-state report, don't fail forward. **Cycle 25 outcome:** policy was applied; mega-cycle landed end-to-end with one parked phase. Cycle 28's autonomous-cycle execution model is the descendant of this policy.
+
+---
+
+## OptimizedSheep + GrassSystem are large-and-cohesive by design (2026-05-09, Cycle 28 Stream B3)
+
+[`OptimizedSheep.js`](js/OptimizedSheep.js) (2,107 LOC) and [`GrassSystem.js`](js/GrassSystem.js) (1,603 LOC) are large, but **internally cohesive**. Stream B's decomposition pass leaves them untouched. Codifying the rule so future cycles don't repeat the question.
+
+### Why not decompose
+
+Both modules are a single InstancedMesh + custom shader + per-instance attribute system + per-instance state machine. The pieces are coupled by:
+
+- **Shared shader-attribute schema.** Each `OptimizedSheep` instance has per-instance attributes (state, retirement timer, facing direction, animation phase, gate-passed flag) that the vertex/fragment shader reads. Splitting "state machine" from "shader update" would force every state mutation to also mutate a separate attribute buffer at a precise point in the frame. The current single-file pattern keeps that coupling local.
+- **Tight per-frame ordering.** Sheep flocking → boundary collision → state-machine tick → attribute-buffer write → render must happen in a specific order each frame. Cross-file boundaries here introduce reordering risk for no readability win.
+- **Shader patch points.** GrassSystem has multiple `onBeforeCompile` injections (wind octaves, density dither, oriented-rectangle SDF interaction, clump-density AO). Splitting them into per-feature files duplicates the uniform binding ceremony in each.
+
+A god-module test fails on these (LOC, method count) but a cohesion test passes. The Stillwater playbook's stop-condition — "if extracting forces you to thread the same coupling through a new boundary, the boundary is wrong" — applies.
+
+### When to revisit
+
+This rule **is** revisitable, but only with a deliberate cohesion-vs-size tradeoff argument. Acceptable triggers:
+
+- A new feature legitimately needs only a *subset* of the system's state (e.g. a sheep-only AI experiment that doesn't need the InstancedMesh path) → that subset extracts cleanly.
+- Profiling identifies a hot path where the current organization causes a measurable cache miss / shader recompile / memory-bandwidth hit.
+- A decomposed alternative passes the existing visual + sim goldens AND the bundle-size + perf budgets, AND has a Matt-readable rationale for why the new boundary is right.
+
+Without one of those, **don't decompose**. Adding files isn't a refactor; it's churn.
+
+### What B1/B2 did instead
+
+Stream B's god-module pass targeted [`main.js`](js/main.js) (3,529 → 2,188 LOC) and [`TerrainBuilder.js`](js/TerrainBuilder.js) (2,785 → 1,387 LOC) — two modules where the coupling argument *didn't* hold. The extracted pieces (boot sequence, scene-swap teardown, MP event handlers, completion overlays, rock placement, tree placement, shader patches, sandbox rebuild) all had clean boundaries: no shared attribute buffers, no per-frame ordering constraints across the seam, no shader-patch-point sprawl.
