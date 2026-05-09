@@ -4,7 +4,7 @@
 
 ## Project summary
 
-Production 3D web game shipped at [sheepdogsim.com](https://sheepdogsim.com). Three.js + React 19 (createElement, no JSX) + Vite 7 + Tailwind 4 client. Cloudflare Worker + Durable Objects + D1 backend. Shared deterministic boid + obstacle modules in [`shared/`](shared/) imported byte-identically by both runtimes. Vitest 4 (250+ specs) + Playwright e2e + sim-baseline goldens. MIT-licensed.
+Production 3D web game shipped at [sheepdogsim.com](https://sheepdogsim.com). Three.js + React 19 (createElement, no JSX) + Vite 7 + Tailwind 4 client. Cloudflare Worker + Durable Objects + D1 backend. Shared deterministic boid + obstacle modules in [`shared/`](shared/) imported byte-identically by both runtimes. Vitest 4 (272 specs) + Playwright e2e + sim-baseline goldens + refactor-baseline characterization goldens + ESLint boundary on `shared/`. MIT-licensed.
 
 ## Quick commands
 
@@ -17,9 +17,10 @@ npm run dev:client         # Vite only (no multiplayer)
 npm run dev:worker         # wrangler only
 npm run dev:lan            # vite --host + wrangler (LAN, mobile testing)
 
-npm test                   # vitest, ~1.5s full run
+npm test                   # vitest, ~1.5s full run (272 specs)
 npm run test:integration   # WebSocket two-client harness
 npm run test:e2e           # Playwright browser smoke
+npm run lint               # ESLint on shared/ (deterministic boundary)
 
 npm run build              # production output to dist/
 BUILD_TARGET=itchio npm run build   # itch.io variant
@@ -71,25 +72,31 @@ Files under fence (write-locked without explicit cycle-plan authorization):
 ## Repo layout
 
 ```
-js/                client (vanilla JS + React.createElement)
-  components/      React UI
-  boot/            module init (forthcoming, Cycle 28)
-  world/           terrain, scatterers (forthcoming, Cycle 28)
-  atmosphere/      Hosek-Wilkie sky
-  effects/         portal, corral zap
-  utils/           helpers, dailySeed, ReplayRecorder, telemetry
-worker/            Cloudflare Worker
-  src/             RoomDO, LobbyDO, GameSim, d1, jwt, index
-  migrations/      D1 migrations (append-only)
-shared/            deterministic sim, imported by both runtimes
-  scenes/          scene-as-data registry
-  terrain/         heightfield runtime module
-tests/             vitest specs + sim-baseline goldens
-  sim-baseline/    captured 60 Hz traces (do not regenerate casually)
-  e2e/             Playwright smoke
-  integration/     WebSocket two-client harness
-docs/              cycle plans, decisions, backlog, architecture deep-dives
-.claude/           agent-specific (commands, hooks, rules, skills)
+js/                  client (vanilla JS + React.createElement)
+  components/        React UI
+  boot/              module init: scene-body, scene-swap teardown, MP handlers, WebVitals, completion overlay, debug probes
+  world/             terrain placement: RockPlacement, TreePlacement, shaderPatches, sandbox-rebuild
+  atmosphere/        Hosek-Wilkie sky
+  effects/           portal, corral zap
+  utils/             helpers, dailySeed, ReplayRecorder, replay, scoreStorage, telemetry
+worker/              Cloudflare Worker
+  src/               RoomDO, LobbyDO, GameSim, d1, jwt, index
+  migrations/        D1 migrations (append-only)
+shared/              deterministic sim, imported by both runtimes
+  scenes/            scene-as-data registry
+  terrain/           heightfield runtime module
+tests/               vitest specs
+  sim-baseline/      captured 60 Hz traces (do not regenerate casually)
+  refactor-baseline/ characterization goldens for god-module refactors
+  e2e/               Playwright smoke
+  integration/       WebSocket two-client harness
+docs/                cycle plans, decisions, backlog, architecture deep-dives
+  archive/           closed cycle plans, archived research, wake-state reports
+.claude/             agent-specific
+  commands/          slash commands (cycle-start, cycle-close, validate)
+  hooks/             check-acceptance, cycle-close-reconcile
+  rules/             durable rules (shared-sim, scene-and-render, cycle-process, multiplayer)
+  skills/            on-demand skills (cycle-doc-dream)
 ```
 
 ## Testing posture
@@ -111,11 +118,15 @@ docs/              cycle plans, decisions, backlog, architecture deep-dives
 | Doc | Purpose |
 |---|---|
 | [`README.md`](README.md) | Public-facing overview, contributor pitch |
+| [`docs/README.md`](docs/README.md) | Doc-tree navigation index (Diátaxis-tagged) |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Module map, render pipeline, network protocol |
 | [`DECISIONS.md`](DECISIONS.md) | Chronological decisions log (the "why") |
 | [`docs/BACKLOG.md`](docs/BACKLOG.md) | Closed cycles + deferred items |
-| [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) | Frozen-file rules + authorization protocol |
+| [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) | Frozen-file list + authorization protocol |
+| [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) | Durable hard-stop conditions |
+| [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md) | NEXT_SESSION current-only contract |
 | [`docs/cycle-N-plan.md`](docs/) | Active cycle plan (N changes per cycle) |
+| [`.claude/rules/`](.claude/rules/) | Durable rule files explaining *why* the fence categories exist |
 | [`NEXT_SESSION.md`](NEXT_SESSION.md) | Current pickup state — read first if you're picking up cold |
 | [`CHANGELOG.md`](CHANGELOG.md) | Player-facing release log |
 

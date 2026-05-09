@@ -98,12 +98,23 @@ See [docs/cycle-2-report.md](docs/cycle-2-report.md) for the full cutover record
 ### Client
 
 #### main.js — Game orchestrator
-Central coordination hub (Mediator pattern).
-- Module lifecycle (init → start → update → cleanup)
+Central coordination hub (Mediator pattern). Cycle 28 Stream B1 trimmed `main.js` from 3,529 → 2,188 LOC by extracting one-time module wiring and post-game UI to [`js/boot/`](js/boot/) + [`js/utils/`](js/utils/). Class methods on `SheepDogSimulation` remain as thin shims so the public API binding (React, ScenePicker, cinematic API, e2e specs) stays byte-identical.
+- Module lifecycle (init → start → update → cleanup) — boot sequence in [`js/boot/initWorld.js`](js/boot/initWorld.js)
 - Mode detection (single-player vs. multiplayer)
-- Fixed-timestep physics with interpolated rendering
+- Fixed-timestep physics with interpolated rendering — *retained on `main.js`*
+- Per-frame `update()` + `animate()` loops — *retained on `main.js`*
 - Pause system with state propagation
 - Remote dog update: drives `updateAnimationSystem(deltaTime)` for every `otherPlayer` so skeletal animations play
+
+Extracted helpers under [`js/boot/`](js/boot/):
+- `WebVitalsMonitor.js` — Core Web Vitals observer
+- `debugProbes.js` — `__sdsStressTestSwaps` + `__sdsMpProbe` (test-only `window` surfaces)
+- `initNetwork.js` — `installMpEventHandlers` + per-broadcast `handleMultiplayerGameState`
+- `initWorld.js` — scene-body construction (heightfield → terrain → grass → trees → rocks → mountains → farmHouse → structures → effects → water → sheepdog → sheep)
+- `loadScene.js` — `disposeScene` (full teardown ordering)
+- `completionOverlay.js` — `showCompletionOverlay` + `showLocalCompletionOverlay`
+- `js/utils/replay.js` — `startReplay` + `stopReplay` (rolling-tail clip)
+- `js/utils/scoreStorage.js` — `formatTime` + best-score localStorage helpers
 
 #### SceneManager.js — Scene + renderer (camera delegated)
 - Three.js scene + WebGL renderer + lighting setup
@@ -161,6 +172,17 @@ Pattern ported from `terror-in-the-jungle/src/systems/terrain/BakedHeightProvide
 - **Body-shaped interaction.** Each entity reports a facing direction (`updateInteractors` reads dog's `currentRotation`, sheep's `renderFacingDirection`); shader transforms blade-to-entity delta into entity-local frame and computes a rounded-rectangle SDF against body half-extents. Dog 1.6m × 0.6m elongated body, 1.4m falloff ring. Sheep 0.6m × 0.5m near-square, 0.9m falloff. The clearing now turns with the entity instead of being world-axis-locked. Same SDF in mobile (single-interactor cap).
 
 #### TerrainBuilder.js — Environment
+
+Cycle 28 Stream B2 trimmed `TerrainBuilder.js` from 2,785 → 1,387 LOC by extracting placement + shader-patch helpers to [`js/world/`](js/world/). Class methods remain as thin shims so the public API (`createTerrain`, `createGrass`, `createTrees`, `addEnvironmentDetails`, `addMountains`, `addFarmHouse`, `setDynamicBounds`, `setRockRimColor`, `setImpostorTint`, etc.) stays byte-identical.
+
+Extracted to [`js/world/`](js/world/):
+- `RockPlacement.js` — `placeEnvironmentDetails` (Math.random()-driven Poisson formations + InstancedMesh2 + BVH)
+- `TreePlacement.js` — `placeTrees` + `bakeTreeImpostor` + `createCrossBillboardGeometry` (per-instance LOD chain, Pixel Forge Kiln impostor preference, cross-billboard fallback)
+- `shaderPatches.js` — `patchTreeWindMaterial` + `setupTreeWind` + `patchRockMaterial` + `setupRockShader` + `setRockRimColor` + `setImpostorTint`
+- `sandbox.js` — `setDynamicBounds` + `updateFarmhousePosition` + `rebuildEnvironment` + `regenerateGrass` (sandbox-mode rebuild on play-area resize)
+
+What `TerrainBuilder` retains: terrain mesh construction, heightfield displacement, fog binding, scene-defaulted zone reading, and the public API the rest of the codebase calls.
+
 - **4000m × 4000m desktop / 3200m × 3200m mobile** terrain plane (1000m pre-hardening; 2400/1600 mid-hardening; 4000/3200 round 2 because the previous edge was still visible as a faint line at max zoom-out). 384 segments desktop / 256 segments mobile (~10.4m / 12.5m per quad). Heightfield content is unchanged at ±200m; the larger plane just adds more flat skirt that fades into the existing fog before reaching the camera far plane.
 - Heightfield-displaced (`heightfield.sample(worldX, worldZ)` per vertex) when the scene declares a `heightmapUrl`; flat fallback otherwise. Heightfield content is multiplied by a smoothstep falloff over the last 20m of its `worldSize` so the play-area "island" blends smoothly into a flat skirt extending to the fog horizon.
 - **`_groundY(x, z)` helper** mirrors that same falloff for entity placement. `Heightfield.sample()` clamps to edge values past `worldSize`, but the terrain mesh applies the falloff — so trees in the outer zones (up to ±800m) and rocks in the same zones would otherwise sample the clamped edge height and float above the flat skirt. `_groundY` returns the same Y the visible terrain has at that (x,z): full-strength sample inside ±180m, smoothstep ramp 180–200m, y=0 past 200m.

@@ -2,7 +2,7 @@
 
 [![Play now](https://img.shields.io/badge/play-sheepdogsim.com-2563eb?style=for-the-badge)](https://sheepdogsim.com) &nbsp; [![MIT License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](LICENSE) &nbsp; [![Star on GitHub](https://img.shields.io/github/stars/matthew-kissinger/sds?style=for-the-badge&logo=github&color=eab308)](https://github.com/matthew-kissinger/sds)
 
-[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 201](https://img.shields.io/badge/tests-201%20passing-22c55e)](tests/)
+[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 272](https://img.shields.io/badge/tests-272%20passing-22c55e)](tests/)
 
 **Herd up to 5,000 sheep across three biomes in your browser, on your phone, with friends, at 60fps.** No install, no signup, no ads. Free. MIT-licensed. Built to be forked.
 
@@ -21,7 +21,7 @@ The whole stack:
 - **Client engine:** ~10k lines of vanilla JavaScript (no JSX, no codegen, no wasm)
 - **Server:** ~600-line TypeScript Cloudflare Worker with Durable Objects and D1
 - **Shared sim:** deterministic boid + obstacle modules imported byte-identically by both
-- **Tests:** 201 specs (Vitest 4) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, integration harness, practice-mode, SEO
+- **Tests:** 272 specs (Vitest 4) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode, SEO
 
 If you're learning 3D web games, real-time multiplayer on edge compute, or large-scale boid simulation, this codebase is a rare opportunity to read a complete shipped product instead of yet another minimal example.
 
@@ -94,7 +94,7 @@ npm run dev:client     # just Vite (no multiplayer worker)
 npm run dev:worker     # just wrangler
 npm run dev:lan        # vite --host + wrangler (LAN-accessible — for mobile testing)
 
-npm test               # Vitest — 201 specs in ~1.5s
+npm test               # Vitest — 272 specs in ~1.5s
 npm run build          # production output to dist/
 ```
 
@@ -177,7 +177,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 **Shared:** `shared/` deterministic boid + physics + obstacle modules, imported by both runtimes
 
-**Testing:** Vitest 4.1 (201 specs · 17 files · ~1.5 s full run) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, integration harness, practice-mode contracts, SEO. Playwright for browser smoke + perf-baseline harness.
+**Testing:** Vitest 4.1 (272 specs · 25 files · ~1.5 s full run) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode contracts, SEO. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright for browser smoke + perf-baseline harness.
 
 ---
 
