@@ -4,7 +4,6 @@ import { FieldConfig, FIELD_SIZES, GATE_DEFAULTS, PASTURE_DEFAULTS } from './Fie
 import { getFenceCollisionSystem, resetFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { getExtremeBoidSystem, resetExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { emptyObstacles } from '../shared/SceneObstacles.js';
-import { getRequiredSheep } from '../shared/ObjectiveLogic.js';
 import { getCurrentRoom } from './GameBridge.js';
 import {
     SOLO_MODE_SHEEP_COUNT,
@@ -14,6 +13,7 @@ import {
 } from './gamestate/modes.js';
 import { calculatePolygonSpawnConfig } from './gamestate/polygonSpawn.js';
 import { isSoloComplete, isSandboxComplete, resolveCompetitiveCompletion } from './gamestate/winConditions.js';
+import { createObjective, refreshObjective, tickObjective, isCorralOpen } from './gamestate/objective.js';
 
 /**
  * GameState - Handles game configuration, boundaries, and state management
@@ -48,18 +48,9 @@ export class GameState {
         /** @type {import('../shared/scenes/types.js').CorralDef | null} */
         this.corral = null;
 
-        // Cycle 7 Phase 3: multi-stage objective state. Null on scenes
-        // without an `objective` def (RH, Field) — those skip the gate.
-        // When set, retirement is gated until `stage === 'drive'`.
-        /** @type {{
-         *   stage: 'roundup' | 'drive',
-         *   roundupZone: {x: number, z: number, radius: number},
-         *   requiredSheep: number,
-         *   holdRequired: number,
-         *   sheepInZone: number,
-         *   holdTimer: number
-         * } | null}
-         */
+        // Multi-stage objective state. Null on scenes without an `objective`
+        // def (RH, Field). Shape + transitions live in js/gamestate/objective.js.
+        /** @type {import('./gamestate/objective.js').ObjectiveState | null} */
         this.objective = null;
 
         // Cycle 6 Phase 2: scene obstacles (trees + rocks + buildings) for
@@ -267,35 +258,14 @@ export class GameState {
             this.gameActive ? this.sheepdog2 : null // Second sheepdog for local 2-player
         );
         
-        // Cycle 7 Phase 3: tick the multi-stage objective. Counts sheep
-        // inside the round-up zone, accumulates the hold timer, and flips
-        // stage 'roundup' → 'drive' once the threshold is met. RH/Field
-        // skip this entirely (no objective set).
-        if (this.gameActive && this.objective && this.objective.stage === 'roundup') {
-            const zone = this.objective.roundupZone;
-            const rSq = zone.radius * zone.radius;
-            let count = 0;
-            for (const s of this.sheep) {
-                if (s.hasPassedGate || s.isRetiring) continue;
-                const dx = s.position.x - zone.x;
-                const dz = s.position.z - zone.z;
-                if (dx * dx + dz * dz <= rSq) count++;
-            }
-            this.objective.sheepInZone = count;
-            if (count >= this.objective.requiredSheep) {
-                this.objective.holdTimer += deltaTime;
-                if (this.objective.holdTimer >= this.objective.holdRequired) {
-                    this.objective.stage = 'drive';
-                    window.dispatchEvent(new CustomEvent('objective-stage-changed', {
-                        detail: { stage: 'drive' }
-                    }));
-                }
-            } else {
-                // Hold broken — reset the timer. Encourages keeping the flock
-                // together through the full hold rather than tagging the
-                // threshold for an instant.
-                this.objective.holdTimer = 0;
-            }
+        // Cycle 7 Phase 3 / Cycle 29 B4: tick the multi-stage objective
+        // state machine. Implementation lives in js/gamestate/objective.js.
+        if (this.gameActive) {
+            tickObjective(this.objective, this.sheep, deltaTime, () => {
+                window.dispatchEvent(new CustomEvent('objective-stage-changed', {
+                    detail: { stage: 'drive' }
+                }));
+            });
         }
 
         // Only count retired sheep if game is active
@@ -304,11 +274,11 @@ export class GameState {
             if (this.gameMode !== 'multiplayer') {
                 this.sheepRetired = 0;
 
-                // Cycle 7 Phase 3: corral retirement is gated on the
-                // multi-stage objective. While stage === 'roundup', sheep
-                // entering the portal radius do NOT retire — they walk
-                // through. Once stage flips to 'drive', the gate opens.
-                const corralOpen = !this.objective || this.objective.stage === 'drive';
+                // Corral retirement is gated on the multi-stage objective:
+                // while stage === 'roundup', sheep entering the portal
+                // radius walk through; once stage flips to 'drive', the
+                // gate opens. RH/Field have no objective — always open.
+                const corralOpen = isCorralOpen(this.objective);
 
                 // Count retired sheep
                 for (let sheep of this.sheep) {
@@ -553,40 +523,19 @@ export class GameState {
     }
 
     /**
-     * Cycle 7 Phase 3: set the multi-stage objective definition. Pass null on
-     * scenes without an objective; the retirement path then runs unchanged.
+     * Set the multi-stage objective. Stash the def so startGame's
+     * _refreshObjective can recompute requiredSheep against the per-mode
+     * totalSheep once it's set. Pass null on scenes without an objective
+     * (RH/Field) — the retirement path then runs unchanged.
      * @param {import('../shared/scenes/types.js').ObjectiveDef | null} objective
      */
     setObjective(objective) {
-        if (!objective) {
-            this.objective = null;
-            this._objectiveDef = null;
-            return;
-        }
-        // Cycle 17 Phase 6: stash the def so startGame can recompute the
-        // required-sheep count once totalSheep is set per the chosen mode.
-        // The initial value uses whatever totalSheep is at this moment
-        // (likely 200 default before mode-pick); _refreshObjective() runs
-        // again at startGame to reconcile against the actual mode.
-        this._objectiveDef = objective;
-        this.objective = {
-            stage: 'roundup',
-            roundupZone: { x: objective.roundupZone.x, z: objective.roundupZone.z, radius: objective.roundupZone.radius },
-            requiredSheep: getRequiredSheep(objective, this.totalSheep),
-            holdRequired: objective.holdRequired,
-            sheepInZone: 0,
-            holdTimer: 0
-        };
+        this._objectiveDef = objective || null;
+        this.objective = createObjective(objective, this.totalSheep);
     }
 
-    /**
-     * Cycle 17 Phase 6: recompute objective.requiredSheep against the
-     * current totalSheep. Called after startGame sets the per-mode count.
-     * No-op when there's no objective.
-     */
     _refreshObjective() {
-        if (!this.objective || !this._objectiveDef) return;
-        this.objective.requiredSheep = getRequiredSheep(this._objectiveDef, this.totalSheep);
+        refreshObjective(this.objective, this._objectiveDef, this.totalSheep);
     }
     
     getGate() {
