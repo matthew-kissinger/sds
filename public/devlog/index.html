@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devlog — Sheep Dog Sim</title>
+    <meta name="description" content="Behind-the-scenes notes on Sheep Dog Sim — what's changed, what broke, what got fixed. Written in plain language by the developer.">
+    <meta name="author" content="Matthew Kissinger">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://sheepdogsim.com/devlog/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Devlog — Sheep Dog Sim">
+    <meta property="og:description" content="Behind-the-scenes notes on Sheep Dog Sim — what's changed, what broke, what got fixed.">
+    <meta property="og:url" content="https://sheepdogsim.com/devlog/">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/marketing/og/og-rh-sunset.webp">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/marketing/og/og-rh-sunset.webp">
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1a2e1a 0%, #0f1a0f 100%);
+            color: #e8f5e8;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
+        h1 { font-size: 2rem; font-weight: 600; margin-bottom: 0.5rem; color: #a7f3d0; }
+        .tagline { color: #6ee7b7; font-size: 1.1rem; margin-bottom: 2.5rem; }
+        a { color: #34d399; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .entry {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #2d4a2d;
+        }
+        .entry:last-of-type { border-bottom: none; }
+        .entry-date {
+            font-size: 0.85rem;
+            color: #6ee7b7;
+            margin-bottom: 0.4rem;
+        }
+        .entry-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+            color: #a7f3d0;
+        }
+        .entry-title a { color: inherit; }
+        .entry-teaser { color: #d1fae5; }
+        .back { display: inline-block; margin-top: 2rem; color: #6ee7b7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Devlog</h1>
+        <p class="tagline">Notes on what's changed under the hood.</p>
+
+        <div class="entry">
+            <div class="entry-date">2026-05-09</div>
+            <div class="entry-title">
+                <a href="/devlog/cycle-30-heightfield-unify.html">Polish under the hood: the terrain math gets one home</a>
+            </div>
+            <div class="entry-teaser">
+                A small floating-point quirk that could let the dog appear to hover a
+                few centimetres above the ground in specific edge cases has been fixed
+                by giving the terrain Y math one source of truth.
+            </div>
+        </div>
+
+        <div class="entry">
+            <div class="entry-date">2026-05-09</div>
+            <div class="entry-title">
+                <a href="/devlog/cycle-29-gamestate-decomp.html">Reorganising the game-mode plumbing</a>
+            </div>
+            <div class="entry-teaser">
+                The internal logic that runs every mode (Just Play, Solo Classic,
+                Multiplayer, etc.) used to be one large file with a lot of branching.
+                It's now six smaller files. No visible change in-game; the next new
+                mode lands faster.
+            </div>
+        </div>
+
+        <a href="/" class="back">← Back to game</a>
+    </div>
+</body>
+</html>

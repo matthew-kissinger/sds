@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reorganising the game-mode plumbing — Sheep Dog Sim Devlog</title>
+    <meta name="description" content="The internal logic that runs every game mode used to be one large file with a lot of branching. It's now six smaller files. No visible change in-game; the next new mode lands faster.">
+    <meta name="author" content="Matthew Kissinger">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://sheepdogsim.com/devlog/cycle-29-gamestate-decomp.html">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Reorganising the game-mode plumbing">
+    <meta property="og:description" content="The internal logic that runs every game mode used to be one large file. It's now six smaller files. The next new mode lands faster.">
+    <meta property="og:url" content="https://sheepdogsim.com/devlog/cycle-29-gamestate-decomp.html">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/marketing/og/og-field.webp">
+    <meta property="article:published_time" content="2026-05-09">
+    <meta property="article:author" content="Matthew Kissinger">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Reorganising the game-mode plumbing">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/marketing/og/og-field.webp">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Reorganising the game-mode plumbing",
+        "description": "The internal logic that runs every game mode used to be one large file with a lot of branching. It's now six smaller files. The next new mode lands faster.",
+        "author": {
+            "@type": "Person",
+            "name": "Matthew Kissinger"
+        },
+        "datePublished": "2026-05-09",
+        "image": "https://sheepdogsim.com/assets/marketing/og/og-field.webp",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https://sheepdogsim.com/devlog/cycle-29-gamestate-decomp.html"
+        },
+        "publisher": {
+            "@type": "Person",
+            "name": "Matthew Kissinger"
+        }
+    }
+    </script>
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1a2e1a 0%, #0f1a0f 100%);
+            color: #e8f5e8;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
+        h1 { font-size: 1.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #a7f3d0; }
+        .meta { color: #6ee7b7; font-size: 0.95rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 0.75rem; color: #86efac; }
+        p { margin-bottom: 1rem; color: #d1fae5; }
+        a { color: #34d399; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-top: 2.5rem; color: #6ee7b7; }
+        .footer-nav {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #2d4a2d;
+            font-size: 0.95rem;
+        }
+        .footer-nav a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Reorganising the game-mode plumbing</h1>
+        <div class="meta">May 9, 2026 — by Matthew Kissinger</div>
+
+        <p>
+            Sheep Dog Sim has six game modes today: Just Play, Solo Classic, Solo
+            Extreme, Solo Insane, Solo Chaos, and Multiplayer (which itself splits
+            into co-op, competitive, and timed). Each mode has slightly different
+            rules — different sheep counts, different scoring, different win
+            conditions, different camera behaviour. For a long time, the code that
+            handled "what should this mode do here?" lived in one large central
+            file, with a lot of small branching scattered through it.
+        </p>
+
+        <p>
+            That file had grown to about 1,300 lines, and it was getting hard to add
+            new modes without breaking old ones. So this round of work pulled it
+            apart into six smaller files, each focused on one concern.
+        </p>
+
+        <h2>The six pieces</h2>
+
+        <p>
+            One file now owns the mode definitions themselves — a single table that
+            says, for each mode, how many sheep, what counts as a win, whether a
+            timer runs, whether scores get submitted to the leaderboard. Adding a
+            new mode is now a one-row edit to that table instead of half a dozen
+            scattered if-statements.
+        </p>
+
+        <p>
+            One file owns the polygon-spawn calculations (where the sheep get
+            placed at the start of a round, given a fenced shape). One owns the
+            win-condition checks. One owns the round objective state machine — the
+            part that knows about gather zones, drive phases, and corral-vs-portal
+            scoring. One owns the round-completion flow (formatting times, posting
+            to leaderboards, showing the completion screen). One owns the sandbox
+            startup path (the "build your own scene" mode editor).
+        </p>
+
+        <h2>Why it matters for players</h2>
+        <p>
+            Honestly, in this update? It doesn't, directly. The game does the same
+            thing it did before. There's no new mode, no new feature, no rebalance.
+        </p>
+
+        <p>
+            What it matters for is the next round of new things. If I want to add a
+            "no-dog" mode, or a "sheep run from you" mode, or a multiplayer-Chaos
+            tier, that's now a small, contained change. The cost of trying out new
+            modes — and shipping the good ones — drops. The cost of leaving the
+            bad ones unshipped also drops. That's the whole goal.
+        </p>
+
+        <p>
+            There was also a hidden net win: the new layout meant a few duplicated
+            chunks of logic could be deleted, and the file shrunk by about 43% even
+            with all the structural overhead.
+        </p>
+
+        <h2>Test coverage</h2>
+        <p>
+            All of this was done under a new safety net — a set of tests that
+            captured exactly what the original code did for every mode and combination
+            of inputs, and ran on every change. Any time the new code produced a
+            different answer than the old code for the same input, the tests went
+            red and I had to either accept the change deliberately or fix it. Most
+            of the time it was a fix.
+        </p>
+
+        <p>
+            <a href="/">Play Sheep Dog Sim →</a>
+        </p>
+
+        <div class="footer-nav">
+            <a href="/devlog/">All devlog entries</a>
+            <a href="/about.html">About</a>
+            <a href="https://github.com/matthew-kissinger/sds">Source</a>
+        </div>
+
+        <a href="/" class="back">← Back to game</a>
+    </div>
+</body>
+</html>
