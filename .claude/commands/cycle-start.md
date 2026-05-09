@@ -8,7 +8,11 @@ You are starting work on the active development cycle. **Don't write code yet** 
 
 1. **Find the active plan.** Read [`NEXT_SESSION.md`](NEXT_SESSION.md) and extract the path to the active cycle plan (the link near the top, typically `docs/cycle-N-plan.md`).
 
+   **Freshness check (Cycle 28 Stream D3).** Parse NEXT_SESSION.md's `Updated:` line. Compute days-since today. **If `Updated:` is older than 7 days, surface a warning** to the user before continuing: "NEXT_SESSION is N days old. The pickup priority may be stale — confirm direction before starting work." Don't block; just surface.
+
 2. **Load the plan.** Read the full active-plan doc.
+
+   **Phase-shape check (Cycle 28 Stream C3).** Count the `## Phase ` and `## Phase N — ` headings in the active plan (excluding the `## Phase shape rules` template section if present). **If the count exceeds 8, surface a warning** to the user: "This plan has N phases (rule says ≤ 8). Likely two cycles, not one. Confirm scope before starting." Don't block; just surface.
 
 3. **Repo state — run in parallel** (single message, multiple tool calls):
    - `git status --short` + `git log --oneline -5`
@@ -20,8 +24,9 @@ You are starting work on the active development cycle. **Don't write code yet** 
    - **Phases** with hour estimates and dependency ordering (e.g. `Phase 1 → 1.5 → 2 + 3 (parallel) → 4`)
    - **Open questions** still pending — just the prompts, not the author leans
    - **Frozen files** to be aware of (see [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md))
-   - **Hard stops** declared in the plan
+   - **Hard stops** declared in the plan + the durable stops in [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md)
    - **Repo state** in one line: clean/dirty, ahead/behind, last deploy result, test status if relevant
+   - Any **freshness or phase-shape warnings** raised in steps 1–2.
 
 5. **Ask the user where to start.** Phrase it as a choice: a phase number, an open question to resolve first, a research spike, or "something else." Don't pick for them.
 

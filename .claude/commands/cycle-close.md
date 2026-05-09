@@ -20,13 +20,25 @@ Read [`NEXT_SESSION.md`](NEXT_SESSION.md). Extract the active-plan path. Extract
 
 If any of these fail: **STOP**. Report what failed. Do not proceed with close.
 
+### 2.5. Reconciliation pass
+
+Run the reconciliation script to surface obvious passes/fails before walking the user through each item:
+
+```
+node .claude/hooks/cycle-close-reconcile.mjs
+```
+
+The script reads the active plan's Success/Acceptance section and parses each `- [ ]` line as EARS. For testable predicates (wc -l ≤ N, file exists, file does not exist, npm test, npx eslint, etc.) it auto-evaluates and prints `[OK]` / `[FAIL]` / `[?]`. For prose predicates it prints `[manual]` so step 3 can walk them with the user.
+
+If any `[FAIL]` rows appear, **STOP**. Surface to the user, fix the underlying state, re-run reconciliation. Don't proceed with close.
+
 ### 3. Walk the active plan's "Success criteria" / "Acceptance criteria" section
 
 Read the active plan. Confirm the Acceptance lines use EARS notation:
 
 - `grep -E "shall|when|while" docs/cycle-N-plan.md | wc -l` should return ≥ the number of `- [ ]` items in the Success criteria section. If lines are checked off but don't grep as EARS, surface to the user — pre-EARS phrasing is OK to grandfather but new lines should be EARS-form.
 
-For each checkbox item, ask the user "is this done?" If any are not done:
+For each `[manual]` checkbox item from step 2.5, ask the user "is this done?" If any are not done:
 
 - Offer to defer to next cycle (will be recorded in `BACKLOG.md` carryover).
 - Or block close until the user resolves it.
