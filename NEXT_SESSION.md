@@ -61,15 +61,9 @@ Surface to the user, do not proceed:
 5. Any new gameplay / perf / visual scope proposed mid-cycle. This cycle is "no new features." Surface and defer.
 6. Frozen-file change beyond the explicit cycle-28 authorization list (in the plan's `## Frozen files` section).
 
-## What NOT to do
+## Durable rules
 
-- **Don't** pick up Cycle 27 carryover phases (A, D-integration, E-integration, F-integration, G-verify, H, J, K, L, M, N). They're parked in [`docs/BACKLOG.md`](docs/BACKLOG.md), not Cycle 28 scope.
-- **Don't** bump version. Internal-only cycle.
-- **Don't** touch [`shared/`](shared/) deterministic kernels. Sim-baseline lock holds.
-- **Don't** decompose [`OptimizedSheep.js`](js/OptimizedSheep.js) or [`GrassSystem.js`](js/GrassSystem.js) — Stream B3 codifies "leave alone" (cohesive by design).
-- **Don't** rewrite [`main.js`](js/main.js)'s update loop or mode dispatch. Boot-sequence extraction only.
-- **Don't** delete archived research docs. Move, don't delete.
-- **Don't** adopt full ECS migration or full Kiro / Spec Kit toolchains. Cycle 28 plan's "What NOT to do" section enumerates why.
+See [`.claude/rules/`](.claude/rules/) for durable project rules. Cycle-28-specific scope guards live in [`docs/cycle-28-plan.md`](docs/cycle-28-plan.md)'s "What NOT to do" section.
 
 ## Repo state at handoff
 

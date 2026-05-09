@@ -45,7 +45,7 @@ Domain-scoped durable rules live in [`.claude/rules/`](.claude/rules/) and are l
 | `cycle-process.md` | Cycle methodology guardrails |
 | `multiplayer.md` | Worker / DO contract rules |
 
-(These files are written as part of Cycle 28 Stream A2; until then, equivalent durable rules live in [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) and [`NEXT_SESSION.md`](NEXT_SESSION.md).)
+[`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) lists **which files are frozen**; the rule files above explain **why**.
 
 ## NEXT_SESSION contract
 
