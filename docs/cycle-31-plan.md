@@ -79,7 +79,7 @@ Each line should be **grep-testable** — the response should be something a scr
    }
    ```
    Apply to `<main id="seo-content" class="seo-only">`. Do NOT use `display: none` (Google penalizes).
-3. **Defer welcome modal mount** in [`js/components/index.js`](../js/components/index.js) (or the React mount entry — confirm path). Wrap the initial mount in `requestIdleCallback` (with `setTimeout(fn, 100)` fallback) so the modal isn't the first DOM Googlebot's renderer captures. The crawler-content block above remains the first visible text in the rendered DOM for the first ~100ms.
+3. **~~Defer welcome modal mount~~** — **dropped after 2026-05-09 spike.** The original plan proposed wrapping the React mount in `requestIdleCallback`, but [`js/components/index.js:17-22`](../js/components/index.js) explicitly documents that `requestIdleCallback` was tried and abandoned because Chromium starves idle callbacks during the WebGL boot — the mount silently never fired in headless smoke runs. The current `setTimeout(0)` defer is the working pattern; reintroducing `requestIdleCallback` would be a documented regression. Separately: Google's renderer waits ~5s for the page to settle before snapshotting, so a 100ms defer wouldn't change what gets indexed anyway. The `<main id="seo-content">` block is the load-bearing fix; the defer step was speculative belt-and-suspenders. **Do not modify `js/components/index.js` in this phase.** If the snippet still leaks modal copy post-deploy, the next move is to rewrite the modal `welcome` / `chooseIdentity` strings in [`js/locales/en/index.js`](../js/locales/en/index.js) — a UX-touching change deferred to Cycle 32 carryover.
 
 **Acceptance (EARS):**
 
@@ -109,7 +109,7 @@ Each line should be **grep-testable** — the response should be something a scr
    - `public/scenes/home-field.html`
    - `public/scenes/rolling-hills.html`
    - `public/scenes/open-country.html`
-2. **Each file's structure** (mirror [`public/about.html`](../public/about.html) pattern — inline `<style>` reusing the green Inter theme, single `<main>`, no JS dependency on the SPA):
+2. **Each file's structure** (mirror [`about.html`](../about.html) pattern — inline `<style>` reusing the green Inter theme, single `<main>`, no JS dependency on the SPA):
    - `<title>` — e.g. `Rolling Hills — Sheep Dog Sim` (≤ 60 chars).
    - `<meta name="description">` — scene-specific, ~150 chars (e.g. "Herd up to 5,000 sheep across a 180-metre sunset island. Free, browser-based, no install. Three modes plus multiplayer.").
    - `<link rel="canonical">` to the page itself.
@@ -117,7 +117,7 @@ Each line should be **grep-testable** — the response should be something a scr
    - One `<h1>` with the scene name, one tagline subhead, ~250–400 words of scene prose drawn from [`PRESSKIT.md`](../PRESSKIT.md) + [`README.md`](../README.md).
    - **`<a class="play-cta" href="/?scene=<id>">Play <Scene></a>`** — the load-bearing CTA. Hands the user into the SPA on the right scene.
    - Footer link back to `/` and `/about.html`.
-3. **Add a small visible `<footer>` block** to [`/about.html`](../public/about.html) AND to each new scene page that lists "Other biomes" with cross-links so crawlers can discover all three pages from any one. Visual style minimal — single line of text with three links.
+3. **Add a small visible `<footer>` block** to each new scene page that lists "Other biomes" with cross-links so crawlers can discover all three pages from any one. Visual style minimal — single line of text with three links. (Skip [`about.html`](../about.html) — it already has its own bottom-of-page links section; adding scene cross-links there is scope creep for this cycle.)
 
 **Acceptance (EARS):**
 
