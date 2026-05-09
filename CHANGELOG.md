@@ -4,6 +4,58 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.3] — 2026-05-09 (Cycle 31 — public-surface)
+
+Public-facing surface pass. The site is the same game; the search-engine
+and discoverability surface around it is now real.
+
+### Added
+
+- Three per-scene landing pages: [`/scenes/home-field.html`](public/scenes/home-field.html),
+  [`/scenes/rolling-hills.html`](public/scenes/rolling-hills.html),
+  [`/scenes/open-country.html`](public/scenes/open-country.html).
+  Plain HTML, scene-scoped JSON-LD VideoGame schema, "Play this scene"
+  CTAs that hand the user back into the SPA on the right scene.
+- Devlog scaffold at [`/devlog/`](public/devlog/) + two seed entries
+  written in player voice (Cycle 30 + Cycle 29 close summaries).
+  Each entry has its own JSON-LD `Article` schema.
+- Visible bottom-center footer on the homepage with internal links to
+  About / Scenes / Devlog / Source / Press kit. Hidden on mobile to
+  avoid competing with the joystick.
+- `<main id="seo-content">` crawler-content block in `index.html`,
+  visually hidden via standard sr-only clip pattern. Gives crawlers
+  real semantic body content so the Google snippet stops substituting
+  the welcome modal text.
+- `<noscript>` fallback block with prose + about/source links.
+
+### Changed
+
+- Sitemap moved from repo root to [`public/sitemap.xml`](public/sitemap.xml)
+  so Vite copies it into `dist/`. Production was previously serving
+  the SPA shell with `Content-Type: text/html` for `/sitemap.xml`
+  because the file never reached the deployed bundle. Sitemap also
+  expanded from 2 → 8 URLs (homepage + about + 3 scenes + devlog index
+  + 2 entries), all `lastmod`'d to 2026-05-09.
+- GitHub repository topics: dropped `durable-objects` (subsumed by
+  `cloudflare-workers`) and `messagepack` (internal protocol detail);
+  added `multiplayer` and `simulation` for higher discoverability.
+
+### Removed
+
+- 18-language `<meta name="keywords">` stuffing. Google ignores meta
+  keywords entirely; the multilingual cram looked low-quality in
+  view-source. Keyword discovery flows through the JSON-LD schemas +
+  the new crawler-content block.
+
+### Notes
+
+- Internal: `js/components/index.js` modal-mount defer was deliberately
+  NOT touched. The original Cycle 31 plan proposed wrapping the React
+  mount in `requestIdleCallback`, but that path was tried in Cycle 27
+  and abandoned because Chromium starves idle callbacks during WebGL
+  boot. The current `setTimeout(0)` defer is the working pattern;
+  the new `<main>` crawler block carries the SEO load on its own.
+
 ## [2.1.2] — 2026-05-08 (Cycle 26 — itch.io heightfield fix attempt — INCOMPLETE)
 
 > **Note added 2026-05-08 post-deploy:** Matt's verification on the live
