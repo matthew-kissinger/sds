@@ -254,7 +254,9 @@ export const FIELD_SHAPES = {
         id: 'custom',
         label: 'Custom',
         description: 'Draw your own shape',
-        icon: '✏️',
+        // No icon - typography carries the affordance. The other shapes
+        // use a literal Unicode glyph as a shape preview; "custom" has
+        // no preset shape to preview.
         // Custom shapes use user-drawn border points stored in config
         getBorderPoints: (bounds, customPoints) => {
             // If custom points provided, use them; otherwise fall back to square

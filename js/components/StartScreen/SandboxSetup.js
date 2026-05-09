@@ -34,19 +34,16 @@ const SCENE_OPTIONS = [
     {
         id: 'field',
         label: 'Home Field',
-        icon: '\u{1F33E}',
         description: 'Flat fenced pasture - full sandbox controls'
     },
     {
         id: 'rolling-hills',
         label: 'Rolling Hills',
-        icon: '\u{1F30A}',
         description: 'Island with corral - 180m radius'
     },
     {
         id: 'open-country',
         label: 'Open Country',
-        icon: '\u{1F332}',
         description: 'Big island with woods + portal - 380m radius'
     }
 ];
@@ -262,16 +259,15 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         createElement('button', {
                             key: scene.id,
                             onClick: () => updateConfig('sceneId', scene.id),
-                            className: `p-2 rounded-lg transition-all flex flex-col items-center justify-center text-center ${
+                            className: `px-2 py-3 rounded-lg transition-all flex items-center justify-center text-center ${
                                 (config.sceneId || 'field') === scene.id
                                     ? 'bg-emerald-500 text-white ring-2 ring-emerald-400'
                                     : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
                             }`,
                             title: scene.description
-                        }, [
-                            createElement('span', { key: 'icon', className: 'text-2xl mb-1' }, scene.icon),
-                            createElement('span', { key: 'label', className: 'text-[10px] font-medium' }, scene.label)
-                        ])
+                        }, createElement('span', {
+                            className: 'text-xs font-medium'
+                        }, scene.label))
                     )),
                     isIslandScene && createElement('div', {
                         key: 'island-notice',
@@ -313,7 +309,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                             }`,
                             title: shape.description
                         }, [
-                            createElement('span', { key: 'icon', className: 'text-2xl mb-1' }, shape.icon),
+                            shape.icon && createElement('span', { key: 'icon', className: 'text-2xl mb-1' }, shape.icon),
                             createElement('span', { key: 'label', className: 'text-[10px] font-medium' }, t(shape.labelKey))
                         ])
                     )),
