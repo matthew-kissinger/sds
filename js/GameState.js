@@ -12,6 +12,7 @@ import {
     isExtremeBoidMode,
     getModeCapabilities,
 } from './gamestate/modes.js';
+import { calculatePolygonSpawnConfig } from './gamestate/polygonSpawn.js';
 
 /**
  * GameState - Handles game configuration, boundaries, and state management
@@ -138,7 +139,11 @@ export class GameState {
 
         if (this.borderPoints && this.borderPoints.length >= 3 && this.gameMode === 'sandbox') {
             // Polygon shape - calculate centroid and use polygon-aware spawning
-            spawnConfig = this.calculatePolygonSpawnConfig();
+            spawnConfig = calculatePolygonSpawnConfig({
+                borderPoints: this.borderPoints,
+                bounds: this.bounds,
+                gate: this.gate,
+            });
             console.log(`[SHEEP] Polygon spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}`);
         } else if (this.sceneSpawnDef) {
             // Cycle 7: scene-provided spawn def (centerX/centerZ/spreadRadius
@@ -217,140 +222,6 @@ export class GameState {
         return null; // No individual meshes to return
     }
 
-    /**
-     * Calculate spawn configuration for polygon-shaped fields
-     * Uses the polygon centroid and calculates safe spawn radius
-     * Handles concave polygons (like L-shape) by validating spawn center is inside
-     */
-    calculatePolygonSpawnConfig() {
-        const points = this.borderPoints;
-
-        // Calculate centroid of polygon
-        let centroidX = 0;
-        let centroidZ = 0;
-        for (const point of points) {
-            centroidX += point.x;
-            centroidZ += point.z;
-        }
-        centroidX /= points.length;
-        centroidZ /= points.length;
-
-        // Move spawn center slightly away from gate (toward south)
-        const gateZ = this.gate?.position?.z || this.bounds.maxZ;
-        let spawnCenterX = centroidX;
-        let spawnCenterZ = centroidZ - (gateZ - centroidZ) * 0.3; // Move 30% away from gate
-
-        // For concave polygons, the centroid or adjusted position might be outside
-        // Validate and find a valid spawn center if needed
-        if (!this.isPointInPolygon(spawnCenterX, spawnCenterZ, points)) {
-            console.log(`[SPAWN] Initial spawn center (${spawnCenterX.toFixed(1)}, ${spawnCenterZ.toFixed(1)}) is outside polygon, searching for valid point...`);
-
-            // Try the raw centroid first
-            if (this.isPointInPolygon(centroidX, centroidZ, points)) {
-                spawnCenterX = centroidX;
-                spawnCenterZ = centroidZ;
-            } else {
-                // Search for a valid point using a grid search within bounds
-                const gridSize = 10;
-                const stepX = (this.bounds.maxX - this.bounds.minX) / gridSize;
-                const stepZ = (this.bounds.maxZ - this.bounds.minZ) / gridSize;
-                let bestPoint = null;
-                let bestDistFromEdges = 0;
-
-                for (let gx = 1; gx < gridSize; gx++) {
-                    for (let gz = 1; gz < gridSize; gz++) {
-                        const testX = this.bounds.minX + gx * stepX;
-                        const testZ = this.bounds.minZ + gz * stepZ;
-
-                        if (this.isPointInPolygon(testX, testZ, points)) {
-                            // Calculate minimum distance to any edge
-                            let minDist = Infinity;
-                            for (let i = 0; i < points.length; i++) {
-                                const start = points[i];
-                                const end = points[(i + 1) % points.length];
-                                const dist = this.pointToSegmentDistance(testX, testZ, start, end);
-                                minDist = Math.min(minDist, dist);
-                            }
-
-                            // Prefer points further from edges (more "inside")
-                            if (minDist > bestDistFromEdges) {
-                                bestDistFromEdges = minDist;
-                                bestPoint = { x: testX, z: testZ };
-                            }
-                        }
-                    }
-                }
-
-                if (bestPoint) {
-                    spawnCenterX = bestPoint.x;
-                    spawnCenterZ = bestPoint.z;
-                    console.log(`[SPAWN] Found valid spawn center at (${spawnCenterX.toFixed(1)}, ${spawnCenterZ.toFixed(1)}), dist from edge: ${bestDistFromEdges.toFixed(1)}`);
-                }
-            }
-        }
-
-        // Calculate safe spawn radius (distance to nearest edge from spawn center)
-        let minDistToEdge = Infinity;
-        for (let i = 0; i < points.length; i++) {
-            const start = points[i];
-            const end = points[(i + 1) % points.length];
-            const dist = this.pointToSegmentDistance(spawnCenterX, spawnCenterZ, start, end);
-            minDistToEdge = Math.min(minDistToEdge, dist);
-        }
-
-        // Use 60% of the distance to edge as spawn radius for safety margin
-        const spreadRadius = minDistToEdge * 0.6;
-
-        return {
-            centerX: spawnCenterX,
-            centerZ: spawnCenterZ,
-            spreadRadius: Math.max(spreadRadius, 10) // Minimum 10 units
-        };
-    }
-
-    /**
-     * Calculate distance from a point to a line segment
-     */
-    pointToSegmentDistance(px, pz, start, end) {
-        const dx = end.x - start.x;
-        const dz = end.z - start.z;
-        const length = Math.sqrt(dx * dx + dz * dz);
-
-        if (length === 0) {
-            return Math.sqrt(Math.pow(px - start.x, 2) + Math.pow(pz - start.z, 2));
-        }
-
-        const t = Math.max(0, Math.min(1,
-            ((px - start.x) * dx + (pz - start.z) * dz) / (length * length)
-        ));
-
-        const closestX = start.x + t * dx;
-        const closestZ = start.z + t * dz;
-
-        return Math.sqrt(Math.pow(px - closestX, 2) + Math.pow(pz - closestZ, 2));
-    }
-
-    /**
-     * Check if a point is inside the polygon defined by borderPoints
-     * Uses ray casting algorithm
-     */
-    isPointInPolygon(x, z, points = null) {
-        const polygon = points || this.borderPoints;
-        if (!polygon || polygon.length < 3) return true; // No polygon, assume inside
-
-        let inside = false;
-        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-            const xi = polygon[i].x, zi = polygon[i].z;
-            const xj = polygon[j].x, zj = polygon[j].z;
-
-            if (((zi > z) !== (zj > z)) &&
-                (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) {
-                inside = !inside;
-            }
-        }
-        return inside;
-    }
-    
     // Helper method to recreate sheep flock when count changes
     recreateSheepFlock(scene) {
         // Remove old sheep system from scene if it exists
@@ -992,7 +863,11 @@ export class GameState {
         let spawnConfig;
         if (this.borderPoints && this.borderPoints.length >= 3) {
             // Polygon shape - calculate centroid and use polygon-aware spawning
-            spawnConfig = this.calculatePolygonSpawnConfig();
+            spawnConfig = calculatePolygonSpawnConfig({
+                borderPoints: this.borderPoints,
+                bounds: this.bounds,
+                gate: this.gate,
+            });
             spawnConfig.borderPoints = this.borderPoints;
             console.log(`[SANDBOX] Polygon spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}, points=${this.borderPoints.length}`);
         } else {
