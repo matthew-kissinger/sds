@@ -1,0 +1,17 @@
+{
+  "field": {
+    "hash": "4c11fd1f",
+    "count": 2341,
+    "seed": 3109
+  },
+  "rolling-hills": {
+    "hash": "393ccdb8",
+    "count": 174,
+    "seed": 3109
+  },
+  "open-country": {
+    "hash": "7921d4af",
+    "count": 461,
+    "seed": 3109
+  }
+}

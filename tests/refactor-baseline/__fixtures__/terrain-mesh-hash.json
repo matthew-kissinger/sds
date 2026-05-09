@@ -1,0 +1,20 @@
+{
+  "field": {
+    "hash": "44dc9dc5",
+    "gridSize": 64,
+    "sampleSpan": 200,
+    "sampleCount": 4096
+  },
+  "rolling-hills": {
+    "hash": "e1ba5da0",
+    "gridSize": 64,
+    "sampleSpan": 200,
+    "sampleCount": 4096
+  },
+  "open-country": {
+    "hash": "ba4879a7",
+    "gridSize": 64,
+    "sampleSpan": 200,
+    "sampleCount": 4096
+  }
+}
