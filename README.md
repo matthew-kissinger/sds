@@ -216,8 +216,9 @@ This codebase is **deliberately easy to read**. Whether you want to mod the game
 1. [ARCHITECTURE.md](ARCHITECTURE.md) — module map, render pipeline, network protocol
 2. [DEVELOPMENT.md](DEVELOPMENT.md) — local setup, dev servers, mobile testing, mp testing
 3. [DECISIONS.md](DECISIONS.md) — chronological "why we made the calls we did"
-4. [docs/BACKLOG.md](docs/BACKLOG.md) — per-cycle "what shipped" headlines (cycles 1–26)
+4. [docs/BACKLOG.md](docs/BACKLOG.md) — per-cycle "what shipped" headlines
 5. [docs/INTERFACE_FENCE.md](docs/INTERFACE_FENCE.md) — files where stability matters more than ergonomics
+6. [docs/README.md](docs/README.md) — full doc navigation index (Diátaxis-tagged) — start here if you want a full map of the docs tree
 
 ### Good first issues — concrete things a PR could fix
 
