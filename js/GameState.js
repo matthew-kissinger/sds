@@ -6,6 +6,12 @@ import { getExtremeBoidSystem, resetExtremeBoidSystem } from './ExtremeBoidSyste
 import { emptyObstacles } from '../shared/SceneObstacles.js';
 import { getRequiredSheep } from '../shared/ObjectiveLogic.js';
 import { getCurrentRoom } from './GameBridge.js';
+import {
+    SOLO_MODE_SHEEP_COUNT,
+    SOLO_MODE_TO_LEADERBOARD,
+    isExtremeBoidMode,
+    getModeCapabilities,
+} from './gamestate/modes.js';
 
 /**
  * GameState - Handles game configuration, boundaries, and state management
@@ -180,10 +186,7 @@ export class GameState {
         }
 
         // Enable extreme boid optimization for extreme/insane/chaos mode or sandbox with useExtremeBoids flag
-        const useExtremeBoids = this.singlePlayerMode === 'extreme'
-            || this.singlePlayerMode === 'insane'
-            || this.singlePlayerMode === 'chaos'
-            || this.useExtremeBoids === true;
+        const useExtremeBoids = isExtremeBoidMode(this.singlePlayerMode) || this.useExtremeBoids === true;
 
         this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig, useExtremeBoids);
         if (this.heightfield) {
@@ -486,14 +489,11 @@ export class GameState {
     updateUI() {
         // Only update UI if game is active and not paused
         if (!this.gameActive || this.isPaused) return;
-        
-        if (this.gameMode === 'competitive') {
-            this.updateCompetitiveUI();
-        } else if (this.gameMode === 'timed') {
-            this.updateTimedUI();
-        } else {
-            this.updateCooperativeUI();
-        }
+
+        const variant = getModeCapabilities(this.gameMode).uiVariant;
+        if (variant === 'competitive') this.updateCompetitiveUI();
+        else if (variant === 'timed') this.updateTimedUI();
+        else this.updateCooperativeUI();
     }
     
     updateCooperativeUI() {
@@ -717,15 +717,15 @@ export class GameState {
     
     getGate() {
         // For competitive mode, return all gates; for cooperative, return single gate
-        if (this.gameMode === 'competitive' && this.competitiveGates.length > 0) {
+        if (getModeCapabilities(this.gameMode).usesCompetitiveGates && this.competitiveGates.length > 0) {
             return this.competitiveGates;
         }
         return this.gate;
     }
-    
+
     getPasture() {
         // For competitive mode, return all pastures; for cooperative, return single pasture
-        if (this.gameMode === 'competitive' && this.competitiveGates.length > 0) {
+        if (getModeCapabilities(this.gameMode).usesCompetitiveGates && this.competitiveGates.length > 0) {
             return this.competitiveGates.map(gate => gate.pasture);
         }
         return this.pasture;
@@ -743,16 +743,16 @@ export class GameState {
     // Support both single gate (cooperative) and multiple gates (competitive)
     getGateForSheepBehavior() {
         // For sheep behavior, we need to determine the closest gate
-        if (this.gameMode === 'competitive' && this.competitiveGates.length > 0) {
+        if (getModeCapabilities(this.gameMode).usesCompetitiveGates && this.competitiveGates.length > 0) {
             // Return all competitive gates - sheep will use closest gate logic
             return this.competitiveGates;
         }
         return this.gate;
     }
-    
+
     getPastureForSheepBehavior() {
         // For sheep behavior, we need to determine appropriate pasture
-        if (this.gameMode === 'competitive' && this.competitiveGates.length > 0) {
+        if (getModeCapabilities(this.gameMode).usesCompetitiveGates && this.competitiveGates.length > 0) {
             // Return all competitive pastures - sheep will use appropriate pasture based on gate
             return this.competitiveGates.map(gate => gate.pasture);
         }
@@ -812,19 +812,12 @@ export class GameState {
         // Store previous sheep count to check if we need to recreate the flock
         const previousSheepCount = this.totalSheep;
 
-        // Cycle 9 Phase 1: solo sheep count is owned by mode, not scene def.
-        // Classic=200 / Extreme=1000 / Insane=3000 / Chaos=5000 unconditionally.
-        // Scene defs may keep `sheepSpawn.count` only as a density hint
-        // (forwarded via spawnConfig.defaultCount for radius scaling); it is
-        // no longer authoritative for `totalSheep`. Multiplayer reads the
-        // host-configured count from the room (server authoritative).
-        const SOLO_MODE_SHEEP_COUNT = {
-            practice: 30,
-            classic: 200,
-            extreme: 1000,
-            insane: 3000,
-            chaos: 5000,
-        };
+        // Cycle 9 Phase 1: solo sheep count is owned by mode, not scene def
+        // (table lives in js/gamestate/modes.js). Classic=200, Extreme=1000,
+        // Insane=3000, Chaos=5000, Practice=30. Scene defs keep
+        // `sheepSpawn.count` only as a density hint forwarded via
+        // spawnConfig.defaultCount for radius scaling. Multiplayer reads
+        // the host-configured count from the room (server authoritative).
         if (mode === 'solo') {
             this.totalSheep = SOLO_MODE_SHEEP_COUNT[singlePlayerMode] ?? 200;
             console.log(`Game started in ${singlePlayerMode} mode with ${this.totalSheep} sheep`);
@@ -872,9 +865,8 @@ export class GameState {
         this.borderPoints = null;
         this.customFences = [];
 
-        // Set extreme boids optimization based on mode
-        // Extreme, insane, and chaos modes use spatial hash optimization, classic mode does not
-        this.useExtremeBoids = (singlePlayerMode === 'extreme' || singlePlayerMode === 'insane' || singlePlayerMode === 'chaos');
+        // Set extreme boids optimization based on mode (table in js/gamestate/modes.js)
+        this.useExtremeBoids = isExtremeBoidMode(singlePlayerMode);
 
         // Clear fence collision system (remove any sandbox fences from previous game)
         resetFenceCollisionSystem();
@@ -1098,7 +1090,6 @@ export class GameState {
         return false;
     }
     
-    // Initialize competitive mode with gates and player scores
     initializeCompetitiveMode(competitiveData) {
         const { competitiveGates, playerScores } = competitiveData;
         
@@ -1116,30 +1107,27 @@ export class GameState {
         console.log(`Competitive mode initialized with ${competitiveGates.length} gates and ${Object.keys(playerScores).length} players`);
     }
     
-    // Update player score in competitive mode
     updatePlayerScore(playerId, increment = 1) {
-        if (this.gameMode !== 'competitive' && this.gameMode !== 'timed') {
-            console.warn('updatePlayerScore called in non-competitive/timed mode');
+        if (!getModeCapabilities(this.gameMode).tracksPlayerScores) {
+            console.warn('updatePlayerScore called in non-score-tracking mode');
             return;
         }
-        
+
         if (!this.playerScores.hasOwnProperty(playerId)) {
             console.warn(`Player ${playerId} not found in player scores`);
             return;
         }
-        
+
         this.playerScores[playerId] += increment;
-        
+
         // Update total retired count
         this.sheepRetired = Object.values(this.playerScores).reduce((sum, score) => sum + score, 0);
     }
-    
-    // Get player's score in competitive mode
+
     getPlayerScore(playerId) {
-        if (this.gameMode !== 'competitive' && this.gameMode !== 'timed') {
+        if (!getModeCapabilities(this.gameMode).tracksPlayerScores) {
             return 0;
         }
-        
         return this.playerScores[playerId] || 0;
     }
     
@@ -1206,21 +1194,12 @@ export class GameState {
         console.log(`GameState mode set to: ${mode}`);
     }
     
-    // Cycle 8 Phase 2b: lookup table replaces the prior `extreme ? 'soloExtreme' : 'soloClassic'`
-    // ternary that silently dumped insane (3000) and chaos (5000) runs into the
-    // soloClassic leaderboard. Each solo difficulty now has its own leaderboard.
-    static SOLO_MODE_TO_LEADERBOARD = {
-        classic: 'soloClassic',
-        extreme: 'soloExtreme',
-        insane:  'soloInsane',
-        chaos:   'soloChaos',
-    };
-
-    // Submit score to leaderboard system
+    // Submit score to leaderboard system. The MODE_CAPABILITIES table in
+    // js/gamestate/modes.js gates sandbox out via submitsToLeaderboard:false;
+    // practice is gated separately because it's a singlePlayerMode under solo.
     submitScoreToLeaderboard(score, gameMode = null) {
-        // IMPORTANT: Never submit sandbox scores to leaderboard
-        if (this.gameMode === 'sandbox') {
-            console.log('[GAME] Sandbox mode - score submission blocked');
+        if (!getModeCapabilities(this.gameMode).submitsToLeaderboard) {
+            console.log(`[GAME] ${this.gameMode} mode does not submit to leaderboard - blocked`);
             return;
         }
         // Cycle 26 v2.1.0: Practice Paddock is a no-pressure mode — never
@@ -1234,7 +1213,7 @@ export class GameState {
         let leaderboardMode = gameMode;
         if (!leaderboardMode) {
             if (this.gameMode === 'solo') {
-                leaderboardMode = GameState.SOLO_MODE_TO_LEADERBOARD[this.singlePlayerMode]
+                leaderboardMode = SOLO_MODE_TO_LEADERBOARD[this.singlePlayerMode]
                     || 'soloClassic';
             } else if (this.gameMode === 'multiplayer') {
                 leaderboardMode = 'cooperative';

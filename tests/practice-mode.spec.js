@@ -59,8 +59,11 @@ describe('Practice Paddock contract', () => {
     });
 
     it('SOLO_MODE_SHEEP_COUNT registers practice: 30', () => {
-        const src = readSource('js/GameState.js');
-        const block = src.match(/SOLO_MODE_SHEEP_COUNT\s*=\s*\{([^}]+)\}/);
+        // Cycle 29 B1: SOLO_MODE_SHEEP_COUNT was extracted from GameState.js
+        // to js/gamestate/modes.js as part of the data-driven mode-config
+        // table. Practice's 30-sheep contract is now asserted there.
+        const src = readSource('js/gamestate/modes.js');
+        const block = src.match(/SOLO_MODE_SHEEP_COUNT\s*=\s*Object\.freeze\(\{([^}]+)\}\)/);
         expect(block).not.toBeNull();
         expect(block[1]).toMatch(/practice:\s*30/);
     });
