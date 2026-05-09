@@ -1,10 +1,10 @@
-# Next Session — Cycle 31 (`tbd`)
+# Next Session — Cycle 31 (`public-surface`)
 
 > **Updated:** 2026-05-09
 > **For:** Cycle 31
-> **Pickup priority:** Cycle 30 (`heightfield-unify`) closed end-to-end on the autonomous run. Cycle 31 plan is scaffolded as a stub at [`docs/cycle-31-plan.md`](docs/cycle-31-plan.md) **with placeholder slug `tbd`**. Pick a slug, fill in Goal + Phases, then run `/cycle-start`. Author hint inside the stub points at the carryover candidates from Cycle 30: **MP island scenes** (Worker + obstacleAvoidance) is the freshest ready-to-pick scope, with Cycle 30's heightfield-Y unification removing one source of silent Worker/client disagreement.
+> **Pickup priority:** Cycle 31 scope locked: **`public-surface`** — fix the broken Google snippet (player-name modal leaks through as the search description), the broken production sitemap (file lives in repo root not `public/`, served as SPA fallback), and the empty-body crawler problem (`<body>` is two `<div>`s + scripts so Googlebot's renderer sees the modal first). Six autonomous phases. Audit findings + 30-day Cloudflare RUM data + per-query search ranking pulled 2026-05-09 are folded into [`docs/cycle-31-plan.md`](docs/cycle-31-plan.md). Voice-sensitive prose drafts (per-scene pages + devlog seed entries) land in cycle and Matt reviews at close.
 
-Cycle 31 plan: [`docs/cycle-31-plan.md`](docs/cycle-31-plan.md). Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then the cycle plan top-to-bottom.
+Cycle 31 plan: [`docs/cycle-31-plan.md`](docs/cycle-31-plan.md). Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then the cycle plan top-to-bottom — the **Audit findings** section in the plan is the load-bearing context.
 
 ## Cycle 30 close summary (autonomous run, 2026-05-09)
 
@@ -28,14 +28,29 @@ Net change: visible-terrain-Y math has one home (`Heightfield.bakeMeshGrid`); Cy
 
 ## Pickup priority for Cycle 31
 
-The Cycle 31 plan is a stub. Pick scope first, then run `/cycle-start`.
+Scope is **`public-surface`** — locked after a 2026-05-09 audit run. Plan at [`docs/cycle-31-plan.md`](docs/cycle-31-plan.md). Highlights:
 
-**Author hint inside the stub:**
+- **Phase 1** — Crawler-content block + modal-mount defer in [`index.html`](index.html). The load-bearing fix; ships first so the rest compounds on a clean snippet.
+- **Phase 2** — Drop the 18-language `<meta name="keywords">` stuffing.
+- **Phase 3** — Three per-scene static landing pages under `public/scenes/` — voice-sensitive prose, Matt reviews at close.
+- **Phase 4** — Move [`sitemap.xml`](sitemap.xml) from repo root to `public/`, expand with new URLs.
+- **Phase 5** — `public/devlog/` scaffold + two seed entries (Cycle 30 + Cycle 29 rewritten in player voice). Voice-sensitive.
+- **Phase 6** — Visible homepage `<footer>` with internal links + GitHub repo topics.
 
-1. **MP island scenes** — Rolling Hills + Open Country in multiplayer. Cycle 6's `TreePlacement` lift made this feasible; Cycle 30's heightfield unification removes one source of silent Worker/client disagreement. Remaining work: wire obstacle bundle into Worker `GameSim` init + `obstacleAvoidance` in shared sheep/dog tick. Solo Phase 2 wiring is the template. **Sim-deterministic** — needs careful sim-baseline regen story.
-2. **`CYCLE_TEMPLATE.md` regex-collision fix** — the reconcile-hook regex hits the EARS-explainer header before the actual Success criteria block (Cycle 29 + 30 both worked around it manually). Touches a fence file. Small scope; could be a Phase 0 attached to whatever the main cycle scope is.
+Total ~4hr autonomous. Player-visible delta warrants `v2.1.3` bump at close (matches the userversion already shipped to itch on 2026-05-09).
 
-Other Deferred candidates (less ready): bespoke pixel-forge rocks, octahedral impostors v2, cross-module polygon-spawn dedup ripple from Cycle 29 B2, build-time `displacedHeights` bake (deferred from Cycle 30).
+**Audit numbers (2026-05-09 pulse):**
+
+- Cloudflare RUM last 30d: 330 page loads, 0 external referrers, ~11/day. US 290 / SG 30 / DE 10. GitHub: 4★ / 1 fork.
+- Search: `sheep dog sim` ranks #4 (behind Come Bye Steam + 2 itch listings). `site:sheepdogsim.com` returns only the homepage.
+- Snippet on Google: still leaking the welcome modal text + showing the OLD cached title.
+- `https://sheepdogsim.com/sitemap.xml` returns the SPA's index.html instead of XML.
+
+Carried-over Cycle-31 candidates that did NOT make this scope (deferred to Cycle 32 or later):
+
+- **MP island scenes** (Rolling Hills + Open Country in multiplayer; sim-deterministic; needs sim-baseline regen story). Top candidate for Cycle 32.
+- **`CYCLE_TEMPLATE.md` regex-collision fix** — small fence-touched cleanup that could attach as Phase 0 of any cycle. Cycle-29 + 30 + 31 all log a manual workaround.
+- **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**.
 
 ## Already in place (alignment foundation through Cycle 30)
 
@@ -47,10 +62,13 @@ Other Deferred candidates (less ready): bespoke pixel-forge rocks, octahedral im
 
 ## Hard stops (cycle-specific — full durable list at [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md))
 
-To draft once Phases are scoped. Likely additions (depending on chosen scope):
+Drawn from [`docs/cycle-31-plan.md`](docs/cycle-31-plan.md):
 
-- **MP island scenes path:** sim-baseline drift (Worker + client must produce identical traces); `MultiplayerState` contract change without paired update; wire-protocol change without authorization in the active phase scope.
-- **`CYCLE_TEMPLATE.md` fix path:** template change without explicit fence authorization in the active cycle plan; reconcile-hook regression on cycles 29 + 30 (both pinned manually) reverting their carryover entries.
+1. **Visible UI regression on the canvas / mobile joystick / first-frame load.** This cycle is "make Google see the page differently"; if a sighted player notices a difference (other than the optional Phase 6 footer), abort the offending phase. The sr-only block must stay invisible to non-crawlers.
+2. **Modal-defer breaks first-visit name flow.** Phase 1's `requestIdleCallback` wrap on the welcome modal must not leave first-visit users staring at a blank canvas for >500ms.
+3. **Cloudflare Pages deploy serving SPA fallback for `/sitemap.xml` post-Phase-4.** Means the file move didn't take. Re-verify it's at `public/sitemap.xml`, not `public/sitemap.xml/index.html` or similar.
+4. **Voice rejection at cycle-close.** If Matt rejects a draft scene/devlog page's prose at close, the page does NOT ship — defer to Cycle 32 carryover.
+5. **Sim or render code touched.** Public-surface only. Any commit touching [`shared/`](shared/) or [`js/main.js`](js/main.js) per-frame loop is a cycle-31 hard stop.
 
 ## Durable rules
 
@@ -78,7 +96,7 @@ Both filed in [`docs/BACKLOG.md`](docs/BACKLOG.md) Cycle 30 entry under "Carryov
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-31-plan.md`](docs/cycle-31-plan.md) (stub — needs Goal + Phases) |
+| Active cycle | [`docs/cycle-31-plan.md`](docs/cycle-31-plan.md) — `public-surface` (6 phases, ~4hr autonomous, voice-sensitive prose reviewed at close) |
 | Latest closed cycle | [`docs/archive/cycles/cycle-30-plan.md`](docs/archive/cycles/cycle-30-plan.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
