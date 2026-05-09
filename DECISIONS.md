@@ -325,3 +325,23 @@ Without one of those, **don't decompose**. Adding files isn't a refactor; it's c
 ### What B1/B2 did instead
 
 Stream B's god-module pass targeted [`main.js`](js/main.js) (3,529 → 2,188 LOC) and [`TerrainBuilder.js`](js/TerrainBuilder.js) (2,785 → 1,387 LOC) — two modules where the coupling argument *didn't* hold. The extracted pieces (boot sequence, scene-swap teardown, MP event handlers, completion overlays, rock placement, tree placement, shader patches, sandbox rebuild) all had clean boundaries: no shared attribute buffers, no per-frame ordering constraints across the seam, no shader-patch-point sprawl.
+
+---
+
+## Heightfield visual-Y has one home (2026-05-09 · Cycle 30)
+
+The visible terrain Y at world (x, z) is owned by [`Heightfield.meshSampleY`](shared/terrain/Heightfield.js), which triangle-interps against a `displacedHeights` grid bound via [`Heightfield.bakeMeshGrid`](shared/terrain/Heightfield.js) (or the lower-level `setMeshGrid`). The displacement algorithm — per-vertex `sample()` + square-radial smoothstep falloff over the last 20m of `worldSize` — lives on `Heightfield`, not [`TerrainBuilder`](js/TerrainBuilder.js). `TerrainBuilder.createTerrain` calls `bakeMeshGrid` and writes the returned array onto its `PlaneGeometry`.
+
+### What's gone (do not reintroduce)
+
+- **The `+ 0.05m` defensive lift** in `meshSampleY` / `surfaceY` (Cycle 9 Phase 5, carried through Cycle 14). The bilinear-vs-mesh gap that motivated it is closed by the triangle-interp path; outside the runtime path (worker, tests), the answer to "what visual Y does (x, z) have?" with no bound mesh is `undefined`, not `sample() + 0.05`. The API throws to surface this clearly.
+- **Two parallel displacement loops.** `TerrainBuilder` no longer carries an inline `for (let i = 0; i < positions.count; i++) { sample / smoothstep / write }` loop alongside `Heightfield`'s `bakeMeshGrid`. There's one algorithm to read and one place to test it.
+
+### What stays
+
+- **Sim/physics keep using raw `sample(x, z)`.** The split between sim-Y (`sample()`, deterministic across worker + client) and visual-Y (`meshSampleY()`, render-mesh-aligned) is the whole point of the `meshSampleY` / `sample` distinction. Sim is decoupled from any render-time mesh resampling; that decoupling stays.
+- **`TerrainBuilder._groundY(x, z)`** as the named entry point for "place visible geometry on the ground." It's a one-liner today, but [`.claude/rules/scene-and-render.md`](.claude/rules/scene-and-render.md) treats `_groundY` as the seam everything visible routes through — inlining it is a separate decision.
+
+### Failure mode if reintroduced
+
+If a future change adds back a `sample(x, z) + offset` fallback to "be defensive" against an unbound grid: it papers over the real bug (grid not bound) with a wrong-by-an-offset answer. The throw makes the missing bind loud. Don't add it back.

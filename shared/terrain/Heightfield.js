@@ -246,14 +246,11 @@ export class Heightfield {
      * captured terrain-mesh vertex grid so consumers see *exactly* the Y
      * the renderer draws. Eliminates the bilinear-vs-mesh divergence that
      * makes grass / trees / rocks float intermittently inside any 10m quad
-     * on a slope (Cycle 14 Phase 1).
+     * on a slope.
      *
-     * Falls back to `sample(x, z) + 0.05` when no mesh grid has been set
-     * (worker, tests). The 0.05 lift is the Cycle 9 Phase 5 mitigation —
-     * still useful as a defensive default.
-     *
-     * Use for visual placement only. Sim/physics keep using raw `sample()`
-     * so behaviour stays decoupled from any render-time mesh resampling.
+     * Requires a mesh grid bound via `bakeMeshGrid` or `setMeshGrid` first.
+     * Throws if no grid is bound — visual-Y has no meaningful fallback. If
+     * you want raw heightfield Y (sim/physics), call `sample()` directly.
      *
      * @param {number} x World X
      * @param {number} z World Z
@@ -261,7 +258,11 @@ export class Heightfield {
      */
     meshSampleY(x, z) {
         const grid = this.displacedHeights;
-        if (!grid) return this.sample(x, z) + 0.05;
+        if (!grid) {
+            throw new Error(
+                'Heightfield.meshSampleY: no mesh grid bound. Call setMeshGrid or bakeMeshGrid before asking for visual Y.'
+            );
+        }
 
         const segs = this.meshSegments;
         const size = this.meshSize;
@@ -306,10 +307,8 @@ export class Heightfield {
     }
 
     /**
-     * Visual surface Y for entity placement — thin wrapper around
-     * `meshSampleY` for backward compat. Pre-Cycle 14 this added a fixed
-     * 0.05 lift to mask the bilinear-vs-mesh gap; that gap is now closed
-     * directly so the lift is gone.
+     * Visual surface Y for entity placement — thin alias of `meshSampleY`.
+     * Requires a bound mesh grid; throws otherwise.
      *
      * @param {number} x World X
      * @param {number} z World Z

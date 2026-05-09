@@ -161,19 +161,31 @@ describe('Heightfield.meshSampleY — vertex agreement', () => {
         expect(field.meshSampleY(-2, 1000)).toBeCloseTo(30, 6);
     });
 
-    it('falls back to sample(x, z) + 0.05 when no mesh grid is set (worker / tests)', () => {
-        // No setMeshGrid call -> falls back to bilinear sample with the
-        // historical 0.05 lift. surfaceY() must agree.
-        // 2x2 texel grid over worldSize=4 has texel centres at (-2,-2), (2,-2),
-        // (-2,2), (2,2); world (-1,-1) is the bilinear midpoint between all
-        // four. data = [N=0, NE=0, S=1, SE=1] -> bilinear midpoint = 0.5.
+    it('throws when meshSampleY is called with no mesh grid bound (Cycle 30)', () => {
+        // Cycle 9 Phase 5's defensive `sample(x, z) + 0.05` fallback was
+        // removed in Cycle 30. Visual-Y has no meaningful fallback path:
+        // either you have a captured terrain mesh to triangle-interp against,
+        // or you should be calling `sample()` directly for sim/physics Y.
         const data = new Float32Array([0, 0, 1, 1]);
         const field = new Heightfield({ data, width: 2, height: 2, worldSize: 4, peakHeight: 10 });
 
-        // Bilinear midpoint = 0.5 * 10 = 5; +0.05 lift.
-        expect(field.meshSampleY(-1, -1)).toBeCloseTo(5.05, 6);
-        // surfaceY() is the same wrapper.
-        expect(field.surfaceY(-1, -1)).toBeCloseTo(5.05, 6);
+        expect(() => field.meshSampleY(-1, -1)).toThrow(/no mesh grid bound/);
+        expect(() => field.surfaceY(-1, -1)).toThrow(/no mesh grid bound/);
+        // Error message names the remediation so callers know which API to use.
+        expect(() => field.meshSampleY(0, 0)).toThrow(/setMeshGrid|bakeMeshGrid/);
+
+        // Once a grid is bound (here via bakeMeshGrid), meshSampleY works.
+        // Use a worldSize large enough that the centre vertex isn't in the
+        // smoothstep fade band.
+        const big = new Heightfield({
+            data: new Float32Array(4).fill(0.5),
+            width: 2,
+            height: 2,
+            worldSize: 200,
+            peakHeight: 10
+        });
+        big.bakeMeshGrid({ segments: 2, size: 100 });
+        expect(big.meshSampleY(0, 0)).toBeCloseTo(5, 6); // 0.5 * 10, no lift
     });
 
     it('surfaceY delegates to meshSampleY when grid is set (no extra lift)', () => {
@@ -273,18 +285,16 @@ describe('Heightfield.bakeMeshGrid — algorithm', () => {
         expect(grid[1 * stride + 1]).toBeCloseTo(0.5, 6);
     });
 
-    it('binds the grid so meshSampleY uses triangle-interp instead of the bilinear fallback', () => {
+    it('binds the grid so meshSampleY switches from throwing to triangle-interp', () => {
         // worldSize=200 keeps the centre vertex out of the smoothstep zone
         // so we can compare visual Y vs raw sample() cleanly.
-        // Before bakeMeshGrid: meshSampleY falls through to sample()+0.05.
-        // After bakeMeshGrid: meshSampleY triangle-interps against the bound grid.
+        // Pre-bake (Cycle 30): meshSampleY throws because no grid is bound.
+        // Post-bake: meshSampleY triangle-interps against the bound grid.
         const field = constantField(1, 1, 200);
-        // Pre-bake: fallback path. (Phase 3 will change this to throw.)
-        const preY = field.meshSampleY(0, 0);
-        expect(preY).toBeCloseTo(1.05, 6); // sample()=1, +0.05 lift
+        expect(() => field.meshSampleY(0, 0)).toThrow(/no mesh grid bound/);
 
         field.bakeMeshGrid({ segments: 2, size: 100 });
-        // Post-bake: triangle-interp returns the captured Y (no lift).
+        // Post-bake: triangle-interp returns the captured Y (no defensive lift).
         const postY = field.meshSampleY(0, 0);
         expect(postY).toBeCloseTo(1, 6);
     });
