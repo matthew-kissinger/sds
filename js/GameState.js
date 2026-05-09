@@ -13,6 +13,7 @@ import {
     getModeCapabilities,
 } from './gamestate/modes.js';
 import { calculatePolygonSpawnConfig } from './gamestate/polygonSpawn.js';
+import { isSoloComplete, isSandboxComplete, resolveCompetitiveCompletion } from './gamestate/winConditions.js';
 
 /**
  * GameState - Handles game configuration, boundaries, and state management
@@ -348,8 +349,10 @@ export class GameState {
     }
     
     checkCompletion() {
-        // Universal completion check for all modes
-        if (this.sheepRetired >= this.sheep.length && !this.gameCompleted) {
+        // Universal completion check for all modes. Delegates the predicate
+        // to js/gamestate/winConditions.js; the gameCompleted single-shot
+        // mutation stays here.
+        if (isSoloComplete(this) && !this.gameCompleted) {
             this.gameCompleted = true;
             console.log('[GAME] GAME COMPLETED! Triggering completion flow...');
             return true;
@@ -937,32 +940,16 @@ export class GameState {
     }
 
     /**
-     * Check if sandbox win condition is met
+     * Check if sandbox win condition is met. Falls through to the
+     * gameCompleted-mutating checkCompletion path for non-sandbox or
+     * rules-less states; otherwise the pure predicate in winConditions.js
+     * decides.
      */
     checkSandboxCompletion() {
         if (!this.sandboxRules || this.gameMode !== 'sandbox') {
             return this.checkCompletion();
         }
-
-        const rules = this.sandboxRules;
-
-        // Free play mode - no win condition
-        if (rules.winCondition === 'none') {
-            return false;
-        }
-
-        // All sheep mode
-        if (rules.winCondition === 'all') {
-            return this.sheepRetired >= this.totalSheep;
-        }
-
-        // Percentage mode
-        if (rules.winCondition === 'percentage') {
-            const targetCount = Math.ceil(this.totalSheep * (rules.winPercentage / 100));
-            return this.sheepRetired >= targetCount;
-        }
-
-        return false;
+        return isSandboxComplete(this);
     }
     
     initializeCompetitiveMode(competitiveData) {
@@ -1006,49 +993,12 @@ export class GameState {
         return this.playerScores[playerId] || 0;
     }
     
-    // Check if competitive mode win conditions are met
+    // Check if competitive mode win conditions are met. Delegates to
+    // shared/GameStateValidation via the winConditions resolver — the
+    // Worker DO uses the same pure function authoritatively, so client
+    // and server agree by construction.
     checkCompetitiveCompletion() {
-        if (this.gameMode !== 'competitive') {
-            return { isComplete: false };
-        }
-        
-        const playerCount = Object.keys(this.playerScores).length;
-        const scores = Object.values(this.playerScores);
-        const maxScore = Math.max(...scores);
-        const totalRetired = scores.reduce((sum, score) => sum + score, 0);
-        
-        // 2 players: First to 101 sheep wins (or 50.5% of total)
-        if (playerCount === 2) {
-            const winThreshold = Math.ceil(this.totalSheep / 2); // 101 for 200 sheep
-            if (maxScore >= winThreshold) {
-                const winner = Object.keys(this.playerScores).find(playerId => this.playerScores[playerId] === maxScore);
-                return {
-                    isComplete: true,
-                    winner,
-                    winType: 'race',
-                    finalScores: { ...this.playerScores }
-                };
-            }
-        }
-        
-        // 3-4 players: Highest score when all sheep collected
-        if (playerCount >= 3) {
-            if (totalRetired >= this.totalSheep) {
-                const winner = Object.keys(this.playerScores).find(playerId => this.playerScores[playerId] === maxScore);
-                return {
-                    isComplete: true,
-                    winner,
-                    winType: 'highest_score',
-                    finalScores: { ...this.playerScores }
-                };
-            }
-        }
-        
-        return {
-            isComplete: false,
-            winner: null,
-            winType: null
-        };
+        return resolveCompetitiveCompletion(this);
     }
     
     isGameActive() {
