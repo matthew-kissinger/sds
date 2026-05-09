@@ -4,6 +4,31 @@
 
 ## Recently Completed
 
+### Cycle 30 — `heightfield-unify` (closed 2026-05-09, autonomous run)
+
+Plan archived at [`docs/archive/cycles/cycle-30-plan.md`](archive/cycles/cycle-30-plan.md). Collapsed the visible-terrain-Y contract to a single source: triangle-interp against a `displacedHeights` grid bound on [`Heightfield`](../shared/terrain/Heightfield.js). The per-vertex sample + smoothstep-falloff displacement loop now lives on `Heightfield.bakeMeshGrid` (one home, not two parallel loops); [`TerrainBuilder.createTerrain`](../js/TerrainBuilder.js) is the renderer, not the algorithm owner. Cycle 9 Phase 5's `+ 0.05m` defensive fallback in `meshSampleY` is gone — calling `meshSampleY` without a bound grid now throws a remediation-named error rather than returning a bilinear-with-an-offset guess.
+
+All 3 phases shipped serially across 4 commits on `main` (1 plan + 3 phase commits). Tests 297 pass (was 290 — +7 specs under `Heightfield.bakeMeshGrid — algorithm` covering shape, no-falloff identity, smoothstep falloff band, square-radial vs Euclidean, fallback→throw migration, byte-identical mirror, RangeError on invalid args). Build clean (mainKB=575 / threeKB=603, refactor-baseline bundle-sizes fixture flat). `npx eslint shared/` zero errors. Internal-only — no player-visible change, no version bump.
+
+**Phases:**
+
+- **1 — [`Heightfield.bakeMeshGrid`](../shared/terrain/Heightfield.js)** (commit [`83cb451`](https://github.com/matthew-kissinger/sds/commit/83cb451)). New instance method `bakeMeshGrid({ segments, size })` returns a `Float32Array` of length `(segments+1)²` and binds it via `setMeshGrid`. Algorithm matches PlaneGeometry vertex order after the canonical `-PI/2` rotation about X (ix east, iy south, index `iy * stride + ix`); square-radial smoothstep over the last 20m of `worldSize` matches the visible terrain mesh's falloff. 7 vitest specs added under "Heightfield.bakeMeshGrid — algorithm". Existing `+ 0.05m` fallback intact through this phase.
+- **2 — TerrainBuilder consumes `bakeMeshGrid`** (commit [`37e5c54`](https://github.com/matthew-kissinger/sds/commit/37e5c54)). `createTerrain` replaces the inline displacement loop with `bakeMeshGrid` + a thin write-back loop (`positions.setZ(i, displacedHeights[i])`). PlaneGeometry's row-major vertex order matches `bakeMeshGrid`'s index space, so the change is byte-identical at the mesh level — refactor-baseline `terrain-mesh-hash` for all 3 scenes is unchanged. `js/TerrainBuilder.js`: 1,387 → 1,362 LOC (-25).
+- **3 — Delete `+ 0.05m` defensive lift + codify** (commit [`a19a8e3`](https://github.com/matthew-kissinger/sds/commit/a19a8e3)). `Heightfield.meshSampleY` / `surfaceY` now throw if no grid is bound. Migrated the one fallback-using spec in [`tests/heightfield-mesh-y.spec.js`](../tests/heightfield-mesh-y.spec.js) to assert the new throw + a sibling positive case binding via `bakeMeshGrid`. Updated JSDoc on both methods to drop references to the lift. New entry in [`DECISIONS.md`](../DECISIONS.md): "Heightfield visual-Y has one home (2026-05-09 · Cycle 30)" — codifies the new contract and explicitly rejects reintroducing a `sample(x, z) + offset` fallback (papers over the missing-bind bug with a wrong-by-an-offset answer).
+
+**PRs:** 4 commits direct on `main` (autonomous-cycle policy).
+
+**Carryover:** none. The plan's 3-phase acceptance ladder resolved clean. Two cycle-specific items the plan deliberately deferred to a future cycle:
+
+- **Build-time `displacedHeights` bake into [`scripts/bake-heightmap.mjs`](../scripts/bake-heightmap.mjs).** Tempting (would let the Worker pre-load the mesh grid without recomputing) but speculative — the Worker doesn't read heightfield Y today. Revisit when MP island scenes (Cycle 31 candidate) lands.
+- **Inline / delete [`TerrainBuilder._groundY`](../js/TerrainBuilder.js).** It's a one-liner now. [`.claude/rules/scene-and-render.md`](../.claude/rules/scene-and-render.md) treats `_groundY` as the named entry point for visible-geometry ground placement; inlining is a separate decision.
+
+**Notes:**
+
+- Cycle 30's "MP island scenes" candidate (the other ready BACKLOG item picked over) saved cleanly for Cycle 31 — Heightfield's contract clarification removes one source of silent disagreement between Worker and client when MP island scenes lands.
+- The reconcile hook ([`.claude/hooks/cycle-close-reconcile.mjs`](../.claude/hooks/cycle-close-reconcile.mjs)) hit the "## Acceptance criteria — EARS format" template explainer first and could not parse the actual Success criteria block — same regex collision Cycle 29 logged. Walked acceptance manually instead. Renaming the template explainer to "## Acceptance criteria notation" or similar is still a deferred item against [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) (frozen file).
+- Last deploy on `main` (cycle-29 close commit) shows `failure` in `gh run list`, but only the E2E (Chromium) Playwright job failed — Worker + Pages both deployed successfully and the site is live. Pre-existing carryover from cycle-29 close, not introduced by Cycle 30. Cycle 30's close commit will trigger a new run.
+
 ### Cycle 29 — `gamestate-decomp` (closed 2026-05-09, autonomous overnight run)
 
 Plan archived at [`docs/archive/cycles/cycle-29-plan.md`](archive/cycles/cycle-29-plan.md). Decomposed `js/GameState.js` from 1,313 LOC to 745 LOC (-568 / -43%) by extracting six cohesive sub-modules into a new [`js/gamestate/`](../js/gamestate/) package, under a refactor-baseline characterization harness captured before any extraction. Mode dispatch — formerly an `if (this.gameMode === 'competitive')` chain across seven call sites — is now a single `MODE_CAPABILITIES` table consulted by name; adding a new mode is a one-row table edit.
