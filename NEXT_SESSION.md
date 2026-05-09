@@ -1,8 +1,8 @@
-# Next Session — Cycle 30 (`tbd`)
+# Next Session — Cycle 30 (`heightfield-unify`)
 
 > **Updated:** 2026-05-09
 > **For:** Cycle 30
-> **Pickup priority:** Cycle 29 closed end-to-end on the autonomous overnight run; Cycle 30 plan is scaffolded as a stub at [`docs/cycle-30-plan.md`](docs/cycle-30-plan.md) **with placeholder slug `tbd`**. Pick a slug, rename the file, fill in Goal + Phases, then run `/cycle-start`. Author hint inside the stub points at two ready candidates from BACKLOG: **MP island scenes** (Worker + obstacleAvoidance) and **Heightfield Y full unification** (mesh-aligned bake replacing the +0.05m defensive lift).
+> **Pickup priority:** Cycle 30 scope picked: **`heightfield-unify`** — collapse the visible-terrain-Y contract to a single source (the captured mesh vertex grid), eliminate the +0.05m defensive fallback in `Heightfield.meshSampleY` (Cycle 9 Phase 5 carryover), move the per-vertex displacement-loop algorithm into `Heightfield.bakeMeshGrid`. Three phases, all autonomous, no fence-file edits (Heightfield.js isn't fenced; sim doesn't read heightfield Y). Plan at [`docs/cycle-30-plan.md`](docs/cycle-30-plan.md).
 
 Cycle 30 plan: [`docs/cycle-30-plan.md`](docs/cycle-30-plan.md). Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then the cycle plan top-to-bottom.
 
