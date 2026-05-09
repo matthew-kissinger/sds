@@ -1,8 +1,8 @@
 import { Vector2D } from './Vector2D.js';
 import { OptimizedSheepSystem } from './OptimizedSheep.js';
-import { FieldConfig, FIELD_SIZES, GATE_DEFAULTS, PASTURE_DEFAULTS } from './FieldConfig.js';
-import { getFenceCollisionSystem, resetFenceCollisionSystem } from './FenceCollisionSystem.js';
-import { getExtremeBoidSystem, resetExtremeBoidSystem } from './ExtremeBoidSystem.js';
+import { FieldConfig } from './FieldConfig.js';
+import { resetFenceCollisionSystem } from './FenceCollisionSystem.js';
+import { resetExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { emptyObstacles } from '../shared/SceneObstacles.js';
 import { getCurrentRoom } from './GameBridge.js';
 import {
@@ -11,6 +11,7 @@ import {
     getModeCapabilities,
 } from './gamestate/modes.js';
 import { calculatePolygonSpawnConfig } from './gamestate/polygonSpawn.js';
+import { applySandboxConfig } from './gamestate/sandboxStart.js';
 import { isSoloComplete, isSandboxComplete, resolveCompetitiveCompletion } from './gamestate/winConditions.js';
 import { createObjective, refreshObjective, tickObjective, isCorralOpen } from './gamestate/objective.js';
 import {
@@ -623,160 +624,12 @@ export class GameState {
     }
 
     /**
-     * Start a sandbox game with custom configuration
+     * Start a sandbox game with custom configuration. Body lives in
+     * js/gamestate/sandboxStart.js so this orchestrator stays slim.
      * @param {Object} sandboxConfig - The sandbox configuration object
      */
     startSandboxGame(sandboxConfig) {
-        this.gameMode = 'sandbox';
-        this.singlePlayerMode = 'sandbox';
-        this.gameActive = true;
-        this.gameCompleted = false;
-        this.sheepRetired = 0;
-        this.isPaused = false;
-
-        // Store sandbox config for reference
-        this.sandboxConfig = sandboxConfig;
-
-        // Cycle 8 Phase 4: island-scene sandbox path. When sandbox runs on
-        // Rolling Hills or Open Country, the scene's heightfield + island
-        // boundary are authoritative — we don't rebuild bounds, fences, or
-        // gate. Just override sheep count and behavior params, then recreate
-        // the flock if needed. Custom fences are intentionally not supported
-        // on island heightfields in this cycle (Q3 carry-over).
-        const islandScene = sandboxConfig.sceneId && sandboxConfig.sceneId !== 'field';
-        if (islandScene) {
-            const previousSheepCount = this.totalSheep;
-            this.totalSheep = sandboxConfig.sheep?.count ?? this.totalSheep;
-            this.params = sandboxConfig.sheep?.behavior || this.params;
-            this.useExtremeBoids = sandboxConfig.useExtremeBoids === true;
-            this.sandboxRules = {
-                timerEnabled: sandboxConfig.rules?.timerEnabled ?? false,
-                timerMode: sandboxConfig.rules?.timerMode || 'countup',
-                timeLimit: sandboxConfig.rules?.timeLimit || 180,
-                winCondition: sandboxConfig.rules?.winCondition || 'all',
-                winPercentage: sandboxConfig.rules?.winPercentage || 100,
-                trackBestTime: sandboxConfig.rules?.trackBestTime ?? true,
-            };
-            this.customFences = [];
-            // Force recreation if count changed; the scene-driven sceneSpawnDef
-            // (already wired via setSheepSpawn at scene init) is the spawn
-            // source. recreateSheepFlock will pull it through createSheepFlock.
-            if (previousSheepCount !== this.totalSheep && this.optimizedSheepSystem) {
-                this.needsFlockRecreation = true;
-            }
-            // Don't touch bounds, gate, pasture, fences, or borderPoints — the
-            // scene owns those.
-            console.log(`[SANDBOX] Island scene ${sandboxConfig.sceneId}: ${this.totalSheep} sheep, extremeBoids=${this.useExtremeBoids}, rules=`, this.sandboxRules);
-            return;
-        }
-
-        // Apply sandbox configuration
-        const gameStateConfig = sandboxConfig.toGameStateFormat();
-
-        // Update bounds from sandbox config
-        this.bounds = gameStateConfig.bounds;
-        this.fieldShape = gameStateConfig.fieldShape || 'square';
-        this.borderPoints = gameStateConfig.borderPoints || null;
-
-        // Update gate configuration
-        this.gate = gameStateConfig.gate;
-
-        // Update pasture configuration
-        this.pasture = gameStateConfig.pasture;
-
-        // Sync FieldConfig so other components get notified
-        FieldConfig.setBounds(this.bounds, this.gate, this.pasture);
-
-        // Update sheep count
-        const previousSheepCount = this.totalSheep;
-        this.totalSheep = gameStateConfig.totalSheep;
-
-        // Update behavior params
-        this.params = gameStateConfig.params;
-
-        // Store custom fences for structure builder
-        this.customFences = gameStateConfig.customFences || [];
-
-        // Store rules
-        this.sandboxRules = gameStateConfig.rules;
-
-        // Check if sandbox wants to use extreme boid optimization
-        this.useExtremeBoids = sandboxConfig.useExtremeBoids === true;
-
-        // Check if we need to recreate sheep flock
-        if (previousSheepCount !== this.totalSheep && this.optimizedSheepSystem) {
-            console.log(`[SANDBOX] Sheep count changed from ${previousSheepCount} to ${this.totalSheep} - needs recreation`);
-            this.needsFlockRecreation = true;
-        }
-
-        // Calculate spawn config for the new field shape BEFORE resetting sheep
-        let spawnConfig;
-        if (this.borderPoints && this.borderPoints.length >= 3) {
-            // Polygon shape - calculate centroid and use polygon-aware spawning
-            spawnConfig = calculatePolygonSpawnConfig({
-                borderPoints: this.borderPoints,
-                bounds: this.bounds,
-                gate: this.gate,
-            });
-            spawnConfig.borderPoints = this.borderPoints;
-            console.log(`[SANDBOX] Polygon spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}, points=${this.borderPoints.length}`);
-        } else {
-            // Rectangular bounds - use standard spawning
-            const fieldCenterX = (this.bounds.minX + this.bounds.maxX) / 2;
-            const fieldCenterZ = (this.bounds.minZ + this.bounds.maxZ) / 2;
-            const spawnCenterZ = fieldCenterZ - (this.bounds.maxZ - this.bounds.minZ) * 0.15;
-            const fieldWidth = this.bounds.maxX - this.bounds.minX;
-            const fieldHeight = this.bounds.maxZ - this.bounds.minZ;
-            const spreadRadius = Math.min(fieldWidth, fieldHeight) * 0.2;
-
-            spawnConfig = {
-                centerX: fieldCenterX,
-                centerZ: spawnCenterZ,
-                spreadRadius: spreadRadius
-            };
-            console.log(`[SANDBOX] Rect spawn config: center(${spawnConfig.centerX.toFixed(1)}, ${spawnConfig.centerZ.toFixed(1)}), radius=${spawnConfig.spreadRadius.toFixed(1)}`);
-        }
-
-        // Reset all sheep with the updated spawn config
-        if (this.optimizedSheepSystem) {
-            // Update spawn config BEFORE resetting sheep positions
-            this.optimizedSheepSystem.setSpawnConfig(spawnConfig);
-            this.optimizedSheepSystem.resetAllSheep();
-            // Update bounds and borderPoints for all sheep to match new field
-            this.sheep.forEach(sheep => {
-                sheep.setBounds(this.bounds);
-                if (this.boundary) {
-                    sheep.setBoundary(this.boundary);
-                }
-                if (this.borderPoints && this.borderPoints.length >= 3) {
-                    sheep.setBorderPoints(this.borderPoints);
-                }
-            });
-
-            // Enable/disable extreme boid system based on sandbox config
-            this.optimizedSheepSystem.setUseExtremeBoids(this.useExtremeBoids, this.bounds);
-        }
-
-        // Initialize fence collision system for sandbox mode
-        const fenceSystem = resetFenceCollisionSystem();
-        // Add border fences - use polygon if available, otherwise rectangular
-        if (this.borderPoints && this.borderPoints.length >= 3) {
-            fenceSystem.addPolygonBorder(this.borderPoints, this.gate);
-        } else {
-            fenceSystem.addBorderFences(this.bounds, this.gate);
-        }
-        // Add custom internal fences
-        if (this.customFences && this.customFences.length > 0) {
-            fenceSystem.addCustomFences(this.customFences);
-        }
-        console.log(`[SANDBOX] Fence collision system (shape: ${this.fieldShape}):`, fenceSystem.getStats());
-
-        console.log(`[SANDBOX] Game started with ${this.totalSheep} sheep`);
-        console.log(`[SANDBOX] Bounds:`, this.bounds);
-        console.log(`[SANDBOX] Gate:`, { position: this.gate.position, width: this.gate.width, passageZone: this.gate.passageZone });
-        console.log(`[SANDBOX] Pasture:`, this.pasture);
-        console.log(`[SANDBOX] Custom fences: ${this.customFences.length}, Rules:`, this.sandboxRules);
-        console.log(`[SANDBOX] Extreme boid optimization: ${this.useExtremeBoids ? 'ENABLED' : 'disabled'}`);
+        applySandboxConfig(this, sandboxConfig);
     }
 
     /**
