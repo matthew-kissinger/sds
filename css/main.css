@@ -129,6 +129,23 @@
   ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+  /* Cycle 31 Phase 1: sr-only-style hidden block for the crawler-content
+     <main id="seo-content"> in index.html. Standard a11y-hidden pattern
+     (clip + 1px box) — Google indexes the content normally and Mueller's
+     stance is this is not cloaking when the content describes the same
+     thing the page is. display:none would be penalized; this is not. */
+  .seo-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
 /* ==================== COMPONENTS LAYER ==================== */
