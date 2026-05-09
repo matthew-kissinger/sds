@@ -1,18 +1,57 @@
-# Cycle 32 - mp-island-scenes (placeholder)
+# Cycle 32 - apple-platform-validation (leading) | mp-island-scenes (alternative)
 
-> Drafted 2026-05-09 after Cycle 31 closed; **expanded same day** with carryover + research notes from the post-deploy work. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
+> Drafted 2026-05-09 after Cycle 31 closed; **expanded same day** with carryover + research notes; **re-prioritized 2026-05-09** when an iPhone water-render bug surfaced and the work pulled forward. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
 >
-> **Status:** carryover + open questions populated; **Goal paragraph + phases still need to be filled in** before `/cycle-start`. Slug `mp-island-scenes` is the leading candidate but Matt re-confirms scope at start.
+> **Status:** **Apple-platform validation elevated to leading candidate** for Cycle 32 (see "Priority elevation" section directly below). `mp-island-scenes` demoted to alternative-if-blocked. Goal paragraph + phases still need to be filled in before `/cycle-start`; the elevation section gives a concrete starting shape.
 >
-> **Slug rationale:** `mp-island-scenes` is the top BACKLOG candidate per Cycle 31 close notes (Rolling Hills + Open Country in multiplayer; sim-deterministic; needs sim-baseline regen story). Two alternative scopes worth flagging at start: (a) **modal-copy + visibility polish** if Cycle 31's Search Console signal arrives showing the snippet still leaks (1-7 days post-2026-05-09); (b) **`CYCLE_TEMPLATE.md` regex fix + small sim-perf wins** if MP island scenes feels too large to ship clean in one cycle.
+> **Slug rationale:** `apple-platform-validation` is the new leading slug. It addresses an active player-visible Apple-platform bug + a structural validation gap that has accumulated across Cycles 9, 12, 26, and post-cycle-31 hotfixes without being closed. Alternative slugs flagged at start: (a) **`mp-island-scenes`** (was leading; deferred unless Apple-validation phase 0 lands fast enough that there's bandwidth) | (b) **modal-copy + visibility polish** if Cycle 31's Search Console signal still shows snippet leak | (c) **`CYCLE_TEMPLATE.md` regex fix + small sim-perf wins** if anything else feels too large.
+
+## Priority elevation (2026-05-09): Apple-platform validation harness
+
+**Trigger:** the user shared an iPhone screenshot ([`../cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg`](../cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg)) showing the Rolling Hills water rendering as solid `#eaf6ff` off-white. Same bug class previously hit Mac Safari + iPhone Safari and has been narrowing across cycles via reactive single-device patches. Android + Windows render correctly.
+
+**Full analysis:** [`apple-water-bug-research-2026-05-09.md`](apple-water-bug-research-2026-05-09.md). Companion to [`cross-platform-testing.md`](cross-platform-testing.md) (living tooling matrix, updated same day) and [`archive/research/mac-bug-research.md`](archive/research/mac-bug-research.md) (Cycle 12 prior chapter).
+
+**Root-cause hypothesis (high confidence pending device capture):** [`js/water/DepthPrePass.js:75-83`](../js/water/DepthPrePass.js) silently swallows render failures on Apple Metal-ANGLE. When the depth-stencil texture sampling returns `1.0` (depth-far) on the failed frame, [`js/water/AnimeWater.js:127`](../js/water/AnimeWater.js) computes `foamMask = 1.0 - step(threshold, 0) = 1.0`, mixing the entire water surface to `uFoamColor = #eaf6ff`. Three external Three.js issues confirm WebKit ships WebGL regressions across major iOS releases, and Apple has stated 32-bit float render targets are not supported on any iOS device with no fix planned (three.js #25741, kkinnunen-apple confirmation June 2024).
+
+**Why prior cycles didn't catch this:**
+
+- Cycle 9 stood up macOS Safari smoke (no iOS coverage; VM-provisioned Mac hardware hides Apple Silicon Metal quirks)
+- Cycle 12 fixed sky precision + dither (banding regression; orthogonal to depth-pre-pass)
+- Cycle 26 swapped ACES → Neutral tonemap on Apple (white-hue regression on terrain; orthogonal to depth-pre-pass)
+- v2.0.4 extended the Cycle 26 fix to iPhone/iPad
+- None of the above add real-device iOS CI, shader-output unit tests, or per-frame health checks for the depth pre-pass
+
+**Engineering direction (no patchwork):** the user explicitly called for proper engineering, not workaround. Two intertwined tracks:
+
+- **Track A (architecture):** rearchitect water to remove the per-frame depth-pre-pass dependency. Lean toward A1 (replace per-frame scene-depth sampling with a scene-load shoreline distance field) over A2 (keep depth pre-pass + add startup capability check + graceful degradation). A1 deletes [`js/water/DepthPrePass.js`](../js/water/DepthPrePass.js), saves ~10-15% of mobile frame budget, removes the entire bug class. Trade-off: loses depth-aware foam against opaque-objects-in-water (no current consumer in SDS). A2 is the smaller change and keeps the option of depth-aware features.
+- **Track B (validation):** real iOS Safari in CI via LambdaTest ($15/mo Lite, free 60min/mo trial), per-shader unit tests via `headless-gl` (free, open-source), frame-end pixel sampling gate extending the existing [`glProbe`](../js/diagnostics/glProbe.js), and a local iOS device for live debug (user is currently charging an old iPhone SE; if it boots, paired with [Inspect.dev](https://inspect.dev) at $50/yr it gives Windows-side Safari Web Inspector access).
+
+**Phase shape (proposed, not finalized; Matt confirms at `/cycle-start`):**
+
+1. **Phase 0 (~30m):** capture `__sdsDiag` from a real iPhone while the bug is live. Path A: iPhone SE boots → Inspect.dev → grab diag. Path B: SE doesn't boot → LambdaTest free 60min → connect Web Inspector → grab diag. Output to `cycle32-validation/iphone-screenshots/diag-<ts>.json`. **This phase decides what the rest of the cycle does** (Track A1 vs A2, and whether anything else needs to land in the same cycle).
+2. **Phase 1 (~2hr):** add `headless-gl` per-shader unit tests. Includes the canary: AnimeWater fragment with `uDepthTex = solid 1.0` shall NOT output within ε of `uFoamColor`. Catches our exact failure mode in CI on every PR, no LambdaTest needed.
+3. **Phase 2 (~half-day):** wire LambdaTest into CI for a real iOS Safari screenshot test. One scene, one camera, one assertion (water region pixel-mean is not within ε of `#eaf6ff`).
+4. **Phase 3 (~1 day):** ship the Track A architecture change. A1 by default; A2 only if Phase 0 reveals A1 breaks something we haven't anticipated.
+5. **Phase 4 (~1hr):** extend `glProbe` for runtime frame-end pixel sampling gate. Players become an opt-in test farm via Sentry-grade alarms.
+6. **Phase 5 (~30m):** doc updates. New rule entry in [`scene-and-render.md`](../.claude/rules/scene-and-render.md) (or new `apple-platform.md`) codifying "no per-frame RTT in shader paths without a capability check." Update [`cross-platform-testing.md`](cross-platform-testing.md) with the shipped tooling.
+
+**Open questions for `/cycle-start` (carry into Goal paragraph):**
+
+1. Is `apple-platform-validation` Cycle 32's primary goal, or does it run alongside `mp-island-scenes`?
+2. Did the iPhone SE boot? Routes Phase 0 to local-debug or LambdaTest-only.
+3. LambdaTest plan: free tier first (60 min) for the spike, then Lite ($15/mo) for ongoing? User has signaled willingness to pay.
+4. Track A1 vs A2: ship A1 (shoreline distance field, remove DepthPrePass) in Cycle 32, or scope it as a follow-up cycle and ship A2 (capability check + degrade) now?
 
 ## Goal
 
 One paragraph. What's this cycle for? What's the **user-visible** difference between "before" and "after"? If you can't write this paragraph clearly, the cycle isn't ready to start.
 
-**Leading candidate (mp-island-scenes):** Today, multiplayer rooms only run on Home Field. Players can pick Rolling Hills or Open Country in solo modes but multiplayer is locked to the flat starter pasture, which is the least cinematic and least interesting biome. This cycle would lift that restriction so multiplayer can run on any of the three biomes, while keeping the deterministic-sim contract intact (Worker DO + every connected client step the same shared sim against the same scene def, byte-identically).
+**Leading candidate (apple-platform-validation):** Today, the SDS render pipeline ships an Apple-platform regression class roughly once per cycle, the user discovers it on his own iPhone or Mac, and we patch it reactively against a single device. After this cycle, real iOS Safari runs in CI on every PR (LambdaTest), every shader has an executable unit test in CI that catches NaN / saturation regressions deterministically (`headless-gl`), the water render path no longer depends on a fragile per-frame depth pre-pass that Apple Metal-ANGLE silently fails on, and a runtime pixel-sampling gate alarms when player frames go solid foam-white. The user-visible difference: water renders correctly on iPhone Safari (the immediate bug), AND the next Apple regression gets caught in CI before Matt sees it on his phone.
 
-**Alternative scope candidates (if mp-island-scenes is too large or gets blocked):** see "Carryover from Cycle 31" below.
+**Alternative candidate (mp-island-scenes):** previously leading; demoted on 2026-05-09. Today, multiplayer rooms only run on Home Field. Players can pick Rolling Hills or Open Country in solo modes but multiplayer is locked to the flat starter pasture, which is the least cinematic and least interesting biome. This cycle would lift that restriction so multiplayer can run on any of the three biomes, while keeping the deterministic-sim contract intact (Worker DO + every connected client step the same shared sim against the same scene def, byte-identically).
+
+**Other alternative scope candidates:** see "Carryover from Cycle 31" below.
 
 ## How to read this plan
 

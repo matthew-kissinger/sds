@@ -1,8 +1,12 @@
 # Cross-platform testing
 
-Living doc for the SDS test matrix. Updated 2026-04-27 (Cycle 9 Phase 3).
+Living doc for the SDS test matrix. Updated 2026-05-09 (Cycle 32 priority elevation: Apple-platform validation harness).
 
-## What runs where
+## Current state vs target state
+
+The matrix below is **what we have today**. The Apple-platform-validation work elevated for Cycle 32 (see [`apple-water-bug-research-2026-05-09.md`](apple-water-bug-research-2026-05-09.md)) adds three rows: real iOS Safari via LambdaTest, per-shader unit tests via `headless-gl`, and a frame-end pixel-sampling gate.
+
+## What runs where (today)
 
 | Layer | Browsers | OS | Trigger | Workflow |
 |---|---|---|---|---|
@@ -11,6 +15,27 @@ Living doc for the SDS test matrix. Updated 2026-04-27 (Cycle 9 Phase 3).
 | Real macOS Safari smoke | Safari (real) | macOS-latest | nightly + `workflow_dispatch` | `macos-safari.yml` |
 
 `webkit` is Playwright's bundled WebKit binary. It's not the same as macOS Safari (different JS engine wrapper, no Metal/ANGLE backend). Real Safari + Metal is the unique surface that the macOS workflow covers.
+
+**The gap:** real **iOS** Safari has no coverage, the existing Safari smoke harness asserts no JS errors but does not pixel-diff the output, and there are no shader-output unit tests. The 2026-05-09 iPhone water-render bug ([`apple-water-bug-research-2026-05-09.md`](apple-water-bug-research-2026-05-09.md)) sat undetected because all three of those gaps applied at once.
+
+## Planned additions (Cycle 32)
+
+| Layer | Browsers | OS | Trigger | Status |
+|---|---|---|---|---|
+| Real iOS Safari screenshot test (LambdaTest) | Safari (real iPhone) | iOS via LambdaTest cloud | every PR + nightly | **Planned, Cycle 32 Phase 2** |
+| `headless-gl` per-shader unit tests | n/a (Node) | Ubuntu | every push | **Planned, Cycle 32 Phase 1** |
+| Frame-end pixel-sampling gate (extends `glProbe`) | runtime, all players | all | runtime, opt-in | **Planned, Cycle 32 Phase 4** |
+
+## Running locally
+
+```bash
+npm test                            # vitest only
+npx playwright install --with-deps  # one-time
+npm run test:e2e                    # all three browsers
+npx playwright test --project=chromium  # one browser
+npx playwright test --project=webkit    # webkit only
+node tests/safari-smoke/run.mjs     # only does anything on macOS
+```
 
 ## Running locally
 
@@ -43,20 +68,24 @@ Most cross-browser bugs are not regressions in the project itself — they're sh
    - Sky shader (`js/atmosphere/skyShader.glsl.js`) — usually cloud FBM or sun disc.
    - Water (`js/water/DepthPrePass.js`) — render-target alloc, depth-stencil format support.
 
-## Tooling notes (2026-04 reference)
+## Tooling notes (2026-05-09 update)
 
-| Tool | Use case | Cost |
-|---|---|---|
-| GitHub Actions `macos-latest` + `safaridriver` | Real macOS Safari in CI | Free for public repos |
-| Playwright (Chromium / Firefox / WebKit) | Cross-engine smoke + headless | Free |
-| Playwright trace viewer | Post-mortem on flaky runs | Free |
-| BrowserStack Live | Manual sessions on real iOS / Android Safari, old versions | ~$29/mo |
-| LambdaTest | Same as BrowserStack, sometimes cheaper | ~$15/mo |
-| Argos / Chromatic / Percy | PR visual diffs as a service | Free tier → paid |
-| Sentry | Production runtime errors per browser/OS | Free tier (5k events/mo) |
-| Cloudflare RUM | Web Vitals per browser/OS in production | Free with Pages |
+| Tool | Use case | Cost | Status |
+|---|---|---|---|
+| GitHub Actions `macos-latest` + `safaridriver` | Real macOS Safari in CI | Free for public repos | In use (Cycle 9) |
+| Playwright (Chromium / Firefox / WebKit) | Cross-engine smoke + headless | Free | In use |
+| Playwright trace viewer | Post-mortem on flaky runs | Free | In use |
+| **LambdaTest Lite** | Real iOS Safari screenshot test in CI + manual sessions | **Free 60min/mo, $15/mo Lite** | **Adopting Cycle 32** |
+| BrowserStack Live | Same coverage as LambdaTest, more expensive | ~$39/mo | Skip in favour of LambdaTest |
+| **`headless-gl`** (npm) | Per-shader unit tests with synthetic uniforms in Node | Free, open-source | **Adopting Cycle 32** |
+| **Inspect.dev** | iOS Safari Web Inspector from Windows over USB | $50/yr personal | **Adopting Cycle 32 if iPhone SE boots** |
+| `remotedebug-ios-webkit-adapter` | Free predecessor to Inspect.dev | Free, archived 2020 | Try first; brittle on iOS 16+ |
+| Argos / Chromatic / Percy | PR visual diffs as a service | Free tier → paid | Defer; LambdaTest screenshot test covers the immediate need |
+| Sentry | Production runtime errors per browser/OS | Free tier (5k events/mo) | Not yet wired |
+| Cloudflare RUM | Web Vitals per browser/OS in production | Free with Pages | In use |
+| Used iPhone SE + lightning cable | Permanent local test device | Free if user has one | **Currently charging an old SE** to confirm boot |
 
-We're using GH Actions + Playwright + safaridriver today. iOS Safari is the next-largest gap; defer to BrowserStack ad-hoc until traffic justifies a subscription.
+**2026-05-09 reversal:** the previous note on this page said "defer to BrowserStack ad-hoc until traffic justifies a subscription." The water-render bug photographed on the user's iPhone (see [`apple-water-bug-research-2026-05-09.md`](apple-water-bug-research-2026-05-09.md)) shows that "wait for traffic" is the wrong frame. The bug is reproducible **today** and the fix has a known engineering shape (rearchitect the depth pre-pass dependency); what was missing was the validation surface to catch it in CI. Cycle 32 elevates LambdaTest + `headless-gl` + a local iOS device above the prior "defer" posture.
 
 ## Adding a new check
 

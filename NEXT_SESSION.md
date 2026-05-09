@@ -1,8 +1,8 @@
-# Next Session - Cycle 32 (`mp-island-scenes` placeholder)
+# Next Session - Cycle 32 (`apple-platform-validation` leading | `mp-island-scenes` alternative)
 
-> **Updated:** 2026-05-09 (refreshed after post-cycle-31 hotfixes + Cloudflare audit + Search Console actions same day)
+> **Updated:** 2026-05-09 (Apple-platform-validation work elevated above prior `mp-island-scenes` lead after iPhone water-render bug surfaced)
 > **For:** Cycle 32
-> **Pickup priority:** Cycle 32 plan at [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) now has **carryover + open questions populated** but the **Goal paragraph + phases still need to be filled in** before `/cycle-start`. Top candidate is `mp-island-scenes` (Rolling Hills + Open Country in multiplayer); two alternatives are flagged in the plan if MP is too large or gets blocked. Read the cycle-32 plan's "Carryover from Cycle 31" section for research notes.
+> **Pickup priority:** **Apple-platform validation harness has been elevated as Cycle 32's leading candidate.** An iPhone screenshot landed showing Rolling Hills water rendering as solid `#eaf6ff` off-white. Same bug class hit Mac Safari + iPhone in prior cycles; reactive single-device patches narrowed it to water-only but didn't close the structural gap. User explicitly called for proper engineering, not patchwork. Full analysis at [`docs/apple-water-bug-research-2026-05-09.md`](docs/apple-water-bug-research-2026-05-09.md). Cycle-32 plan ([`docs/cycle-32-plan.md`](docs/cycle-32-plan.md)) has a new "Priority elevation" section near the top with proposed phase shape (~2-3 day cycle). At `/cycle-start`, confirm Goal paragraph, decide if `apple-platform-validation` is the cycle's primary or runs alongside `mp-island-scenes`, route Phase 0 (iPhone SE if it boots, else LambdaTest free 60min), and pick Track A1 (rearchitect water without depth pre-pass) vs A2 (capability check + degrade).
 
 Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then the cycle plan top-to-bottom. The Cycle 31 close notes in [`docs/BACKLOG.md`](docs/BACKLOG.md) document the Matt-pickup items waiting on the just-shipped public-surface deploy.
 
@@ -66,9 +66,10 @@ These are passive signals from Google's recrawl. No action required unless somet
 
 ## Carryover candidates for Cycle 32
 
-Full research notes + open questions are in [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) "Carryover from Cycle 31" section. Summary in rough priority order - Matt picks at `/cycle-start`:
+Full research notes + open questions are in [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) "Priority elevation" + "Carryover from Cycle 31" sections. Summary in rough priority order - Matt picks at `/cycle-start`:
 
-1. **MP island scenes** *(leading, ~1 cycle)* - RH + OC in multiplayer. Sim-deterministic; needs sim-baseline regen story. Worker DO needs heightfield + objective state machine. Wire-format implications need an audit before phase 1.
+0. **Apple-platform validation harness** *(elevated 2026-05-09, leading, ~2-3 day cycle)* - rearchitect AnimeWater off the per-frame depth pre-pass dependency that Apple Metal-ANGLE silently fails on, plus stand up real iOS Safari CI via LambdaTest, per-shader unit tests via `headless-gl`, runtime pixel-sampling gate, and a local iPhone SE for live debug if it boots. Full analysis: [`docs/apple-water-bug-research-2026-05-09.md`](docs/apple-water-bug-research-2026-05-09.md). User confirmed: proper engineering, not patchwork.
+1. **MP island scenes** *(was leading, demoted to alternative-if-blocked, ~1 cycle)* - RH + OC in multiplayer. Sim-deterministic; needs sim-baseline regen story. Worker DO needs heightfield + objective state machine. Wire-format implications need an audit before phase 1.
 2. **Modal-copy rewrite** *(small, ~30m, defer until recrawl signal)* - only if Google's snippet still substitutes the welcome modal text after Cycle 31's recrawl finishes.
 3. **`CYCLE_TEMPLATE.md` regex-collision fix** *(tiny, ~15m, fence-touched)* - Cycle 29/30/31 all manual-walked acceptance because of this. Could attach as Phase 0 of any cycle.
 4. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** - see plan for size/shape per item.
@@ -102,7 +103,9 @@ See [`.claude/rules/`](.claude/rules/) for durable project rules. Cycle-32-speci
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) - `mp-island-scenes` placeholder (scaffold only; needs Goal + Phases filled in) |
+| Active cycle | [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) - `apple-platform-validation` leading (elevated 2026-05-09); `mp-island-scenes` alternative |
+| Apple water-bug research | [`docs/apple-water-bug-research-2026-05-09.md`](docs/apple-water-bug-research-2026-05-09.md) - bug analysis + proposed engineering fix + tooling decisions |
+| Cross-platform tooling matrix | [`docs/cross-platform-testing.md`](docs/cross-platform-testing.md) - updated 2026-05-09 with LambdaTest + `headless-gl` + iPhone SE plans |
 | Latest closed cycle | [`docs/archive/cycles/cycle-31-plan.md`](docs/archive/cycles/cycle-31-plan.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
