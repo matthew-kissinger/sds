@@ -49,6 +49,17 @@ Items deferred at Cycle 31 close + items that surfaced post-deploy. Roughly prio
 
 8. **Inline / delete [`TerrainBuilder._groundY`](../js/TerrainBuilder.js)** *(tiny cleanup, ~10m)*. It's a one-liner since Cycle 30; [`scene-and-render.md`](../.claude/rules/scene-and-render.md) treats it as a named entry point. Inlining is a separate decision codifying that the entry-point semantic is no longer load-bearing.
 
+9. **Research: stochastic indecisiveness as a control primitive** *(reading list, not a phase)*. Science Advances March 2026 paper [Controlling noisy herds: Temporal network restructuring improves control of indecisive collectives](https://www.science.org/doi/10.1126/sciadv.adx6791) (DOI 10.1126/sciadv.adx6791). Studies how trained sheepdogs **exploit** sheep indecisiveness (the unpredictable flee/follow switching) as a control mechanism rather than fighting it. Models sheep as a stochastic temporal network. Generalizes from shepherding to swarm robotics.
+
+   Where it could inform SDS:
+   - **Smarter sheep model.** Today [`shared/FlockingAlgorithms.js`](../shared/FlockingAlgorithms.js) uses pure force-based separation/cohesion/alignment with no indecisiveness term. A stochastic flee/follow switch with probability dependent on dog angle + relative speed (not just distance) could read as more realistic sheep behaviour. Sim-deterministic implementation needs a seeded PRNG branch (mulberry32 already in `shared/`).
+   - **NPC dog AI.** A learned policy or heuristic dog that exploits the indecision pattern instead of pure pursuit. Useful for: a solo training mode that demos "good" herding lines, a multiplayer bot opponent, an in-game tutorial dog.
+   - **Splitting mechanic.** The paper notes that exploiting indecision enables both herding AND splitting noisy groups. A future game mode where you separate one flock into two corrals would be a direct application.
+
+   Adjacent reading already surfaced: "Automated Herding of Sheep Using Artificial Neural Networks" (academia), "Learning to Herd Agents Amongst Obstacles" ([arxiv 2005.09476](https://arxiv.org/abs/2005.09476)), "Solving the Shepherding Problem: Heuristics for Herding Autonomous, Interacting Agents" (researchgate).
+
+   This is **inspiration / future direction**, not an actionable phase. Slack-time pickup: a 1-page summary doc in [`docs/research/`](research/) (new dir) noting takeaways + which game systems each finding could touch. Useful before any cycle that touches sheep-AI or adds NPC dogs.
+
 ## Open questions to resolve before writing code
 
 If MP island scenes is picked:

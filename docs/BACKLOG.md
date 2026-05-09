@@ -799,6 +799,7 @@ Items deferred from prior cycles that haven't been picked up. Move to a future c
 
 Speculative — don't act on these without explicit user direction.
 
+- **NN-trained sheepdogs / stochastic-indecision sheep model.** Science Advances Mar 2026 paper [Controlling noisy herds: Temporal network restructuring improves control of indecisive collectives](https://www.science.org/doi/10.1126/sciadv.adx6791) (DOI 10.1126/sciadv.adx6791) studies how trained dogs exploit sheep indecisiveness (unpredictable flee/follow switching) as a control mechanism. Three threads it could unlock: (a) a smarter stochastic sheep AI on top of the existing force-based boids in [`shared/FlockingAlgorithms.js`](../shared/FlockingAlgorithms.js); (b) NPC dog opponents (solo training mode demo dog, MP bot, tutorial guide) that exploit indecision instead of pursuing; (c) a "splitting" game mode where you separate one flock into two corrals. Reading list, not a commitment. Full notes in [`docs/cycle-32-plan.md`](cycle-32-plan.md) carryover item 9.
 - **New scenes beyond Field / Rolling Hills / Open Country.** Three is the right number until those have differentiated game loops.
 - **Mod-friendly scene format** extending the sandbox URL encoding (lz-string) into full scene descriptions (terrain + props + rules), letting a biome ship as a single link.
 - **Competitive seasons + tournaments** once the leaderboard has enough history to make them meaningful.
