@@ -143,16 +143,20 @@ Analytic atmospheric scattering ported from sibling repo Terror in the Jungle (`
 
 Wired into `main.js` and the scene-load path in Cycle 4 Phase B (PR #42 + tonemap fix). SceneManager no longer references `scene.background` or `scene.fog`; Atmosphere is the single source of truth.
 
-#### shared/terrain/Heightfield.js — Bilinear height-sampled module (Cycle 4)
-Pure ES module + JSDoc, importable from both client (`js/`) and worker (`worker/src/`) since it lives in `shared/`. Loads a baked R32F heightmap and exposes O(1) sampling.
+#### shared/terrain/Heightfield.js — Height-sampled module (Cycle 4 + Cycle 14 + Cycle 30)
+Pure ES module + JSDoc, importable from both client (`js/`) and worker (`worker/src/`) since it lives in `shared/`. Loads a baked R32F heightmap and exposes two distinct sampling paths: **sim-Y** (raw bilinear, deterministic) and **visual-Y** (triangle-interp against the captured terrain mesh vertex grid, render-aligned).
 
 Public API:
-- `static async load(url, manifest) → Heightfield` — fetches `public/terrain/<scene>.r32f` (1024×1024 floats) and the matching `.json` manifest (bounds, version).
-- `sample(x, z) → number` — bilinear interpolation; returns terrain height in metres.
+- `static async load(url) → Heightfield` — fetches `public/terrain/<scene>.bin` (1024×1024 R32F floats; renamed from `.r32f` in Cycle 26 to dodge itch.io's CDN extension blocklist) and the sibling `.bin.json` manifest (width, height, worldSize, peakHeight, optional boundary).
+- `sample(x, z) → number` — bilinear interpolation; returns raw heightfield Y in metres. **Used by sim/physics** so behaviour stays decoupled from any render-time mesh resampling.
 - `normal(x, z) → {x, y, z}` — finite-difference normal (ε=1m) for slope queries.
+- `bakeMeshGrid({ segments, size }) → Float32Array` *(Cycle 30)* — returns a `(segments+1)²` displaced-heights grid built by sampling per-vertex with the same square-radial smoothstep falloff over the last 20m of `worldSize` that the visible terrain mesh uses; binds the result via `setMeshGrid`. One algorithm, one home.
+- `setMeshGrid({ displacedHeights, segments, size })` — lower-level entry point for callers that already have a displaced array (e.g. `TerrainBuilder` writing it onto `PlaneGeometry`).
+- `meshSampleY(x, z) → number` *(Cycle 14)* — visual surface Y, triangle-interp against the bound mesh grid. **Throws if no grid is bound** (Cycle 30 removed the `+ 0.05m` defensive fallback). Use for visual entity placement (grass, trees, rocks, dog, sheep).
+- `surfaceY(x, z) → number` — thin alias of `meshSampleY` retained as the named seam in [`.claude/rules/scene-and-render.md`](.claude/rules/scene-and-render.md).
 - `getRawArray()` — exposes the underlying Float32Array for advanced consumers.
 
-Pattern ported from `terror-in-the-jungle/src/systems/terrain/BakedHeightProvider.ts`. Used by the client (`TerrainBuilder` displacement, `GrassSystem` y-sample, `OptimizedSheep` + `Sheepdog` y-clamp, `CameraController` y-clamp) and by the shared sim (`MovementPhysics` slope-modulated sheep speed) — all wired in Phase B.
+Pattern ported from `terror-in-the-jungle/src/systems/terrain/BakedHeightProvider.ts`. Used by the client only today: `TerrainBuilder` for displacement (calls `bakeMeshGrid` then writes the returned array onto its `PlaneGeometry`), and `GrassSystem` / `OptimizedSheep` / `Sheepdog` / `CameraController` for visual y-clamp via `meshSampleY` / `surfaceY`. The Worker sim does **not** read heightfield Y today — it could in the future (slope-modulated sheep speed has been considered), at which point sim would call `sample()` (deterministic), not `meshSampleY()`.
 
 #### OptimizedSheep.js — GPU-instanced sheep
 - Single `InstancedMesh` for all 200 sheep (1 draw call)
