@@ -7,13 +7,17 @@ import { emptyObstacles } from '../shared/SceneObstacles.js';
 import { getCurrentRoom } from './GameBridge.js';
 import {
     SOLO_MODE_SHEEP_COUNT,
-    SOLO_MODE_TO_LEADERBOARD,
     isExtremeBoidMode,
     getModeCapabilities,
 } from './gamestate/modes.js';
 import { calculatePolygonSpawnConfig } from './gamestate/polygonSpawn.js';
 import { isSoloComplete, isSandboxComplete, resolveCompetitiveCompletion } from './gamestate/winConditions.js';
 import { createObjective, refreshObjective, tickObjective, isCorralOpen } from './gamestate/objective.js';
+import {
+    formatTime as formatTimeImpl,
+    submitScoreToLeaderboard as submitScoreToLeaderboardImpl,
+    showCompletionMessage as showCompletionMessageImpl,
+} from './gamestate/completion.js';
 
 /**
  * GameState - Handles game configuration, boundaries, and state management
@@ -331,134 +335,28 @@ export class GameState {
     }
     
     updateUI() {
-        // Only update UI if game is active and not paused
+        // UI is owned by React (since Cycle 3+); main.js calls this from
+        // animate() and expects a safe no-op. The Cycle 28 per-mode dispatch
+        // had three variant methods that all computed-and-discarded values;
+        // Cycle 29 B5 collapsed them to this single guard.
         if (!this.gameActive || this.isPaused) return;
+    }
 
-        const variant = getModeCapabilities(this.gameMode).uiVariant;
-        if (variant === 'competitive') this.updateCompetitiveUI();
-        else if (variant === 'timed') this.updateTimedUI();
-        else this.updateCooperativeUI();
-    }
-    
-    updateCooperativeUI() {
-        // UI updates now handled by React components
-        // This method preserved for backward compatibility
-        return;
-    }
-    
-    updateCompetitiveUI() {
-        // UI updates now handled by React components
-        // Game state data is still tracked for React to access
-        const myPlayerId = this.getCurrentPlayerId();
-        const myScore = this.getPlayerScore(myPlayerId) || 0;
-        const totalRetired = Object.values(this.playerScores).reduce((sum, score) => sum + score, 0);
-        
-        // Data is available for React components to access via game state
-        return;
-    }
-    
-    updateTimedUI() {
-        // UI updates now handled by React components
-        // Game state data is still tracked for React to access
-        const myPlayerId = this.getCurrentPlayerId();
-        const myScore = this.getPlayerScore(myPlayerId) || 0;
-        
-        // Data is available for React components to access via game state
-        return;
-    }
-    
     // Helper method to get current player ID (used by multiplayer UI)
     getCurrentPlayerId() {
-        // This should be set by the multiplayer system
         return this.currentPlayerId || null;
     }
-    
+
     setCurrentPlayerId(playerId) {
         this.currentPlayerId = playerId;
     }
-    
+
     showCompletionMessage(finalTime, isNewRecord, competitiveData = null) {
-        console.log('showCompletionMessage called with:', {
-            gameMode: this.gameMode,
-            hasCompetitiveData: !!competitiveData,
-            competitiveData: competitiveData
-        });
-        
-        // Use server data to determine completion type, fallback to client gameMode
-        if (competitiveData && (competitiveData.isComplete || competitiveData.winner)) {
-            this.showCompetitiveCompletionMessage(competitiveData, finalTime);
-        } else {
-            this.showCooperativeCompletionMessage(finalTime, isNewRecord);
-        }
+        showCompletionMessageImpl(this, finalTime, isNewRecord, competitiveData);
     }
-    
-    showCooperativeCompletionMessage(finalTime, isNewRecord) {
-        // Completion messages now handled by React components and main.js showCompletionOverlay
-        // This method preserved for backward compatibility
-        console.log('[UI] showCooperativeCompletionMessage called - delegating to React UI:', {
-            finalTime: finalTime,
-            isNewRecord: isNewRecord
-        });
-        
-        // Submit score to leaderboard
-        this.submitScoreToLeaderboard(finalTime);
-        
-        // Data is tracked here for React components to access if needed
-        return;
-    }
-    
-    showCompetitiveCompletionMessage(competitiveData, finalTime = null) {
-        // Completion messages now handled by React components and main.js showCompletionOverlay
-        // This method preserved for backward compatibility
-        console.log('[UI] showCompetitiveCompletionMessage called - delegating to React UI:', {
-            competitiveData: competitiveData,
-            finalTime: finalTime
-        });
-        
-        // Best score tracking logic is preserved for data consistency
-        const { winner, winType, finalScores, isComplete } = competitiveData;
-        
-        if (!isComplete) {
-            console.warn('showCompetitiveCompletionMessage called but game not complete');
-            return;
-        }
-        
-        const myPlayerId = this.getCurrentPlayerId();
-        const myScore = finalScores[myPlayerId] || 0;
-        const isTimedMode = winType === 'timeout' || winType === 'timed';
-        
-        // Submit score to leaderboard
-        if (isTimedMode) {
-            this.submitScoreToLeaderboard(myScore, 'timed');
-        } else if (winner === myPlayerId) {
-            // Player won a competitive match
-            this.submitScoreToLeaderboard(1, 'competitive');
-        }
-        
-        // Preserve best score tracking for timed mode
-        if (isTimedMode) {
-            try {
-                const previousBest = localStorage.getItem('timedModeBestScore');
-                const prevBestNum = previousBest ? parseInt(previousBest) : 0;
-                const isNewBestScore = myScore > prevBestNum;
-                
-                if (isNewBestScore) {
-                    localStorage.setItem('timedModeBestScore', myScore.toString());
-                    console.log('[GAME] New best score saved:', myScore);
-                }
-            } catch (e) {
-                console.warn('Could not check best score:', e);
-            }
-        }
-        
-        // Data is tracked here for React components to access if needed
-        return;
-    }
-    
+
     formatTime(timeInSeconds) {
-        const minutes = Math.floor(timeInSeconds / 60);
-        const seconds = Math.floor(timeInSeconds % 60);
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        return formatTimeImpl(timeInSeconds);
     }
     
     // Getters
@@ -968,80 +866,8 @@ export class GameState {
         console.log(`GameState mode set to: ${mode}`);
     }
     
-    // Submit score to leaderboard system. The MODE_CAPABILITIES table in
-    // js/gamestate/modes.js gates sandbox out via submitsToLeaderboard:false;
-    // practice is gated separately because it's a singlePlayerMode under solo.
     submitScoreToLeaderboard(score, gameMode = null) {
-        if (!getModeCapabilities(this.gameMode).submitsToLeaderboard) {
-            console.log(`[GAME] ${this.gameMode} mode does not submit to leaderboard - blocked`);
-            return;
-        }
-        // Cycle 26 v2.1.0: Practice Paddock is a no-pressure mode — never
-        // submit to leaderboard regardless of the score path that calls in.
-        if (this.singlePlayerMode === 'practice') {
-            console.log('[GAME] Practice mode - score submission blocked');
-            return;
-        }
-
-        // Determine game mode if not provided
-        let leaderboardMode = gameMode;
-        if (!leaderboardMode) {
-            if (this.gameMode === 'solo') {
-                leaderboardMode = SOLO_MODE_TO_LEADERBOARD[this.singlePlayerMode]
-                    || 'soloClassic';
-            } else if (this.gameMode === 'multiplayer') {
-                leaderboardMode = 'cooperative';
-            } else {
-                leaderboardMode = this.gameMode; // competitive, timed, etc.
-            }
-        }
-
-        // Additional safety check - block any sandbox-related modes
-        if (leaderboardMode === 'sandbox' || leaderboardMode?.includes?.('sandbox')) {
-            console.log('[GAME] Sandbox mode detected in leaderboardMode - score submission blocked');
-            return;
-        }
-
-        // Cycle 8 Phase 3: include sceneId + sheepCount so the worker can lift
-        // them into score_submissions columns for partitioned leaderboards.
-        const sceneId = this.sceneId
-            || this.sceneSpawnDef?.sceneId
-            || (typeof window !== 'undefined' && window.__currentSceneId)
-            || 'field';
-
-        console.log(`[GAME] Submitting score to leaderboard: ${score} for mode: ${leaderboardMode}, scene: ${sceneId}, sheep: ${this.totalSheep}`);
-
-        // Call the global score submission function
-        if (window.submitGameScore) {
-            window.submitGameScore(leaderboardMode, score, {
-                gameMode: this.gameMode,
-                singlePlayerMode: this.singlePlayerMode,
-                sceneId,
-                sheepCount: this.totalSheep,
-                totalSheep: this.totalSheep,
-                timestamp: Date.now(),
-                // Cycle 10 Phase 6: client wall-clock window. Worker compares
-                // (clientFinishedAt - clientStartedAt) against the claimed
-                // score (= duration in seconds for time modes); >10s skew
-                // flags a score_anomalies row.
-                clientStartedAt: this._clientStartedAt || null,
-                clientFinishedAt: Date.now()
-            });
-        } else {
-            console.warn('Score submission function not available');
-        }
-
-        // Cycle 11 Phase 5: telemetry — fire-and-forget, never blocks UX.
-        try {
-            import('./telemetry.js').then(({ emitEvent }) => {
-                emitEvent('game_completed', {
-                    mode: leaderboardMode,
-                    sceneId,
-                    sheepCount: this.totalSheep,
-                    score: typeof score === 'number' ? Math.round(score * 100) / 100 : 0,
-                });
-            });
-        } catch {}
+        submitScoreToLeaderboardImpl(this, score, gameMode);
     }
     
     reset() {

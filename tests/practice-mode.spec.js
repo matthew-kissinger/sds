@@ -69,11 +69,13 @@ describe('Practice Paddock contract', () => {
     });
 
     it('submitScoreToLeaderboard blocks practice mode', () => {
-        const src = readSource('js/GameState.js');
-        // Look for a guard like singlePlayerMode === 'practice' returning
-        // before the score submission. Cycle 26 v2.1.0 contract.
+        // Cycle 29 B5: submitScoreToLeaderboard's body was extracted to
+        // js/gamestate/completion.js. The Cycle 26 practice-mode guard
+        // (return early when singlePlayerMode === 'practice') now lives
+        // there; GameState's method is a thin delegator.
+        const src = readSource('js/gamestate/completion.js');
         expect(src).toMatch(
-            /this\.singlePlayerMode\s*===\s*['"]practice['"][\s\S]{0,200}return/
+            /state\.singlePlayerMode\s*===\s*['"]practice['"][\s\S]{0,200}return/
         );
     });
 
