@@ -177,3 +177,55 @@ Full detail in [`docs/archive/cycles/cycle-7-plan.md`](docs/archive/cycles/cycle
 - **OC sheep spawn: 5 cluster centers across the southern + central island.** Was a single tight cluster at (0, -150) radius 160m — players saw the entire flock at spawn and never had a "find them" phase. Now spread across 5 centers with 90m per-cluster radius. Solo client previously ignored `scene.sheepSpawn` overrides for centerX/Z/spreadRadius (used bounds-derived defaults); added `setSheepSpawn()` on GameState to wire through.
 - **Round-up zone decal is terrain-conformed.** Initial flat-Y `RingGeometry` got eaten by terrain at radius 30m on OC (back of the ring sank below ground). Replaced with a 96-segment custom `BufferGeometry` where each vertex pair (inner/outer) samples heightfield Y independently. Conforms to ground contour at any radius.
 - **SunBillboard halo doesn't terminate at quad boundary.** Initial halo used `smoothstep(0, 0.95, r)` with `discard` at alpha < 0.001 — the 0.95→1.0 boundary band created a visible soft ring under additive blending. Now `smoothstep(0, 1.0, r)` and alpha further multiplied by `haloFalloff` so it fades to zero at the quad edge naturally. Discard threshold lowered to 0.0005.
+
+---
+
+## Polish program — thesis and outcomes (2026-05)
+
+Drafted 2026-05-06 mid-Cycle-24 as a 5-cycle program (Cycles 25–30, ~38 dev-days) shipping `v2.0.0`. Collapsed 2026-05-06 into a single autonomous overnight mega-cycle (Cycle 25, Phases A–H). Original umbrella doc archived at [`docs/archive/polish-program.md`](docs/archive/polish-program.md). This entry preserves the durable thesis so future cycles can reason about it without rehydrating the original execution doc.
+
+### The thesis: stacked patches mask LOD1 silhouette mismatch
+
+Cycles 16–23 added one compensating layer per cycle to mask a foundational mismatch — **LOD1 (the 80–200m mid-distance tree mesh) does not match LOD0's silhouette**. Each layer makes the seam less visible at one camera angle and reveals new mismatches at others.
+
+| Cycle | Patch | What it actually masks |
+|---|---|---|
+| 16 | First LOD1 with halved leaves | (failed — Cycle 17 rejected as "less leaves does not look good") |
+| 18 | AlphaHash on LOD0 + impostor | LOD seam alpha-edge pop |
+| 20 | uMatchBoost calibration LUT | LOD0↔impostor color drift |
+| 21 | Schlick fresnel on impostor | LOD0↔impostor warm-bias hue gap |
+| 22A | Meshopt-baked LOD1 | (current — silhouette warps at leaf-card UV edges) |
+| 22B | AlphaHash on LOD1 leaves | LOD1↔LOD0 transition pop (masking 22A's silhouette warp) |
+| 22C | Atmospheric desaturation | Overall LOD0↔LOD1↔impostor color contrast at the seam distance |
+| 23A1 | Pitch-aware desat ramp | Desat over-applies when overhead camera shows the masking |
+| 23A2 | Camera-to-dog occluder fade | Adjacent problem domain, similar layer-on-layer pattern |
+
+Each row is "make the prior row's tell less visible." The pattern stops only when **the seam itself stops existing** — drop LOD1 from the desktop pipeline entirely. Once the seam is gone, the masking patches lose their primary justification and **delete cleanly**.
+
+### Why "no LOD1" is the right answer for foliage
+
+LOD1 is a hard problem specifically for *alpha-tested foliage cards*:
+
+1. **The silhouette IS the alpha edge.** Cards are 2 triangles each; "simplifying" them means deleting cards or warping their UVs, both of which mutate silhouette directly.
+2. **Halving the card count was tried (Cycle 16) and rejected (Cycle 17)** — silhouette read as sparse, individual missing leaves stood out.
+3. **Meshopt-simplifying card mesh (Cycle 22)** preserves card count but warps card edges, producing the "looks weird at 80m" tell.
+
+Both approaches fail because LOD1 is being asked to do something foliage geometry can't do gracefully: lose detail without losing silhouette. The clean answer is to skip LOD1 on platforms with the perf headroom and keep LOD0 active until the impostor takes over with a long alphaHash crossfade band.
+
+- **Desktop (RTX 3070-class):** LOD0 (0–200m) → kiln impostor (180m+) with 20m alphaHash crossfade.
+- **Mobile (Adreno 730-class):** keep meshopt LOD1 at 80m as a `HardwareTier === 'low'` branch. Phone pixel density absorbs ~40% of the silhouette warp.
+
+### Net-negative LOC tracking
+
+The program is **net-negative LOC** despite adding sophisticated systems. Cycles 25-27 expected to delete: `AtmosphericDesatPatch.js` (~130 LOC), `_desat*` fields in `TerrainBuilder` (~30 LOC), `setKilnImpostorDesat` plumbing (~20 LOC), `tools/generate-impostor-lut.mjs` (~120 LOC), `uMatchBoost` uniform plumbing (~40 LOC). Targeted ~590 LOC out, ~250 LOC in → **~340 LOC net-negative**.
+
+### Outcome (post-collapse)
+
+The 5-cycle program collapsed into Cycles 25 + 26 + 27 (~3 mega-cycles). LOD1 was dropped from the desktop pipeline; AlphaHash crossfade band was extended; the masking-patch deletion cascade played out across those three cycles. Polish program goal — `v2.0.0` ship — landed inside Cycle 27's window. Per-tier divergence (desktop drops LOD1, mobile keeps meshopt LOD1) was preserved via the `HardwareTier` service shipped Cycle 23 Phase D for grass.
+
+### Decisions to preserve forward
+
+- **Desktop LOD path is LOD0 → kiln impostor.** Do not re-introduce a desktop LOD1 mid-tier without a silhouette-IoU regression budget.
+- **Mobile keeps `HardwareTier === 'low'` meshopt LOD1** at 80m. Removing it requires re-validating mid-tier mobile perf.
+- **Per-tier branching is acceptable** when geometry constraints diverge across hardware classes. Don't collapse to a single LOD ladder for cleanliness if it forces a foundational mismatch.
+- **Track net-negative LOC across cycles** when the program is "remove a foundational mismatch." Patch-deletion is the success signal; if patches are still landing, the seam isn't gone.

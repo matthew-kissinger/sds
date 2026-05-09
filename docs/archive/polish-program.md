@@ -1,3 +1,7 @@
+> Archived 2026-05-09 (Cycle 28 Stream A1). Durable thesis preserved in [`DECISIONS.md`](../../DECISIONS.md) under "Polish program — thesis and outcomes (2026-05)." This file is preserved for historical accuracy; do not edit. New decisions about LOD strategy belong in DECISIONS.md.
+
+---
+
 # Polish Program — collapsed into mega-Cycle 25
 
 > Drafted 2026-05-06 mid-Cycle-24. **Originally scoped as 5 cycles + 1 hardening (Cycles 25-30, ~38 dev-days). Collapsed 2026-05-06 into a single autonomous overnight mega-cycle (Cycle 25, Phases A-H)** per Matt's "definitely do it all in one cycle" directive. Active plan: [`cycle-25-plan.md`](cycle-25-plan.md). Execution policy: [`meta-cycle-execution.md`](meta-cycle-execution.md). User-visible target: ship `v2.0.0` at mega-Cycle 25 close.
@@ -47,13 +51,13 @@ Both approaches fail because LOD1 is being asked to do something foliage geometr
 
 **Mobile (Adreno 730-class):** keep meshopt LOD1 at 80m as a `HardwareTier === 'low'` branch. The seam exists but mobile pixel density (~400 PPI on a phone vs ~100 PPI on a desktop monitor) absorbs ~40% of the silhouette warp — the seam is roughly invisible at phone viewing distance even without desat.
 
-This per-tier divergence is supported by the existing `HardwareTier` service ([js/HardwareTier.js](../js/HardwareTier.js)) shipped Cycle 23 Phase D for grass.
+This per-tier divergence is supported by the existing `HardwareTier` service ([js/HardwareTier.js](../../js/HardwareTier.js)) shipped Cycle 23 Phase D for grass.
 
 ## The cycles
 
 ### Cycle 25 — LOD truth + validation infra (~6 days, ships `v1.6.0`)
 
-**[`docs/cycle-25-plan.md`](cycle-25-plan.md)** — leads off the program.
+**[`docs/cycle-25-plan.md`](../cycle-25-plan.md)** — leads off the program.
 
 - Phase A: validation infra (silhouette IoU, dE2000, screenshot golden suite, game-feel telemetry)
 - Phase B: drop LOD1 desktop / preserve mobile-tier; extend LOD0 alphaHash crossfade band
@@ -132,7 +136,7 @@ What it earns: scenes feel like distinct places. Players remember the "ancient o
 
 ## Validation infrastructure (cross-cycle)
 
-Built in Cycle 25 Phase A, reused across 26-30. Lives at [`tools/validation/`](../tools/validation/) (new directory).
+Built in Cycle 25 Phase A, reused across 26-30. Lives at [`tools/validation/`](../../tools/validation/) (new directory).
 
 **Programmatic — silhouette + look match:**
 - `tools/validation/lod-compare.mjs` — render LOD0/LOD1/LOD2 of same tree at same camera offset to off-screen render targets. Compute alpha-channel IoU (silhouette match), per-pixel dE2000 mean (color match), luminance-difference mean (look match). Output JSON to `cycleN-validation/phaseN/lod-match.json`.
@@ -179,10 +183,10 @@ Cycle 24's MP testing scope ships as planned for `v1.5.0`. Polish program kicks 
 
 ## References
 
-- [`docs/cycle-25-plan.md`](cycle-25-plan.md) — Cycle 25, the lead-off
-- [`docs/cycle-24-plan.md`](cycle-24-plan.md) — Cycle 24 (in-flight, MP scope)
-- [`docs/INTERFACE_FENCE.md`](INTERFACE_FENCE.md) — durable frozen files
-- [`docs/BACKLOG.md`](BACKLOG.md) — closed cycles + deferred items
-- [`tools/validation/`](../tools/validation/) — programmatic harnesses (created Cycle 25 Phase A)
+- [`docs/cycle-25-plan.md`](../cycle-25-plan.md) — Cycle 25, the lead-off
+- [`docs/cycle-24-plan.md`](../cycle-24-plan.md) — Cycle 24 (in-flight, MP scope)
+- [`docs/INTERFACE_FENCE.md`](../INTERFACE_FENCE.md) — durable frozen files
+- [`docs/BACKLOG.md`](../BACKLOG.md) — closed cycles + deferred items
+- [`tools/validation/`](../../tools/validation/) — programmatic harnesses (created Cycle 25 Phase A)
 - Halen et al., HPG 2022 — padded-atlas mipmap technique (Cycle 27 Phase A reference)
 - Bruneton & Hillaire — aerial-perspective precomputed LUT (Cycle 26 reference)

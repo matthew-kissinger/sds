@@ -1,6 +1,6 @@
 # Cycle 25 — polish-mega-cycle (autonomous overnight, ships v2.0.0)
 
-> Drafted 2026-05-06. **Collapses the original 5-cycle polish program (Cycles 25-30) into a single mega-cycle for autonomous overnight execution.** Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md), then [`polish-program.md`](polish-program.md) (umbrella thesis), then [`meta-cycle-execution.md`](meta-cycle-execution.md) (autonomous policy), then this doc top-to-bottom.
+> Drafted 2026-05-06. **Collapses the original 5-cycle polish program (Cycles 25-30) into a single mega-cycle for autonomous overnight execution.** Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md), then [`archive/polish-program.md`](archive/polish-program.md) (umbrella thesis, archived 2026-05-09), then [`meta-cycle-execution.md`](meta-cycle-execution.md) (autonomous policy), then this doc top-to-bottom.
 
 ## Goal
 
@@ -284,7 +284,7 @@ Single state object `{ targetDistance, targetHeight, yawSource, fov }` consumed 
 1. **CHANGELOG.md `[2.0.0]`** — describe the polish program landing as one cycle. Mention LOD truth, atmospheric truth, impostor parity, camera, UX, art direction in player-facing language.
 2. **Version bumps** root + worker `package.json` 1.5.0 → 2.0.0.
 3. **Tag `v2.0.0`** on the meta-cycle branch (do NOT push tag yet — gated on Matt review).
-4. **Update [polish-program.md](polish-program.md)** — mark all 6 cycles shipped as one.
+4. **Update [polish-program.md](archive/polish-program.md)** — mark all 6 cycles shipped as one.
 5. **Stub `docs/cycle-26-plan.md`** — empty next-cycle scaffold (`/cycle-close` style).
 6. **Update [NEXT_SESSION.md](../NEXT_SESSION.md)** — meta-cycle close; Cycle 26 starts post-merge.
 7. **Wake-state report** — final commit `chore(meta-cycle): wake-state report`. Single file `docs/wake-state-2026-05-06.md` summarizing what shipped, what parked, what needs Matt's review.
@@ -361,7 +361,7 @@ Hard-stop triggers:
 
 ## References
 
-- [`docs/polish-program.md`](polish-program.md) — umbrella thesis (6-cycle program collapsed here)
+- [`docs/archive/polish-program.md`](archive/polish-program.md) — umbrella thesis (6-cycle program collapsed here; archived 2026-05-09)
 - [`docs/meta-cycle-execution.md`](meta-cycle-execution.md) — autonomous policy (this cycle)
 - [`docs/cycle-24-plan.md`](cycle-24-plan.md) — predecessor (MP testing, `v1.5.0`)
 - [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) — template source

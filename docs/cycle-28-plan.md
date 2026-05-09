@@ -4,7 +4,7 @@
 
 ## Goal
 
-Cycle 27 introduced three drift symptoms simultaneously: plan-to-ship drift (phases shipping primitives without integration), doc-to-reality drift ([`polish-program.md`](polish-program.md) describing 5 cycles after collapsing into Cycle 25, ~50 docs at `docs/` root with no archive policy, accumulating guard text in [`NEXT_SESSION.md`](../NEXT_SESSION.md)), and code-mass drift ([`main.js`](../js/main.js) 3,529 LOC, [`TerrainBuilder.js`](../js/TerrainBuilder.js) 2,785 LOC).
+Cycle 27 introduced three drift symptoms simultaneously: plan-to-ship drift (phases shipping primitives without integration), doc-to-reality drift ([`polish-program.md`](archive/polish-program.md) describing 5 cycles after collapsing into Cycle 25, ~50 docs at `docs/` root with no archive policy, accumulating guard text in [`NEXT_SESSION.md`](../NEXT_SESSION.md)), and code-mass drift ([`main.js`](../js/main.js) 3,529 LOC, [`TerrainBuilder.js`](../js/TerrainBuilder.js) 2,785 LOC).
 
 Cycle 28 closes those drift sources and adopts a small set of 2025-2026 conventions ([AGENTS.md](https://agents.md/), EARS-format acceptance criteria, hook-enforced cycle-close reconciliation) that the public state of the art has converged on. **No new gameplay, perf, or visual scope.** This is a closeout cycle for the cycle methodology itself.
 
@@ -45,7 +45,7 @@ No shared schema or primitive changes this cycle. Each stream touches a distinct
 
 # Stream A — doc alignment (~2 days, autonomous)
 
-## Phase A1 — reconcile [`polish-program.md`](polish-program.md)
+## Phase A1 — reconcile [`polish-program.md`](archive/polish-program.md)
 
 The doc describes Cycles 25–30 as separate; reality collapsed them into mega-Cycle 25 + 26 + 27.
 

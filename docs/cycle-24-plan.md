@@ -151,7 +151,7 @@ Phase 1 (lobby) ──→ Phase 2 (in-game + swap) ──→ Phase 6 (ship v1.5.
 Phase 5  ── DEFERRED to polish program (Cycles 25-30)
 ```
 
-Phase 1's helpers gate 2/3/4. Phase 6 closes once 1+2+3 (and 4 if shipped) are green. Polish program ([`polish-program.md`](polish-program.md)) kicks off at Cycle 25 after `v1.5.0` ships.
+Phase 1's helpers gate 2/3/4. Phase 6 closes once 1+2+3 (and 4 if shipped) are green. Polish program ([`archive/polish-program.md`](archive/polish-program.md)) kicks off at Cycle 25 after `v1.5.0` ships.
 
 ## Frozen files (cycle-specific additions)
 

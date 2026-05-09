@@ -2,7 +2,7 @@
 
 > **Updated:** 2026-05-09  
 > **For:** Cycle 28  
-> **Pickup priority:** Stream A1 — archive [`docs/polish-program.md`](docs/polish-program.md) and pull its thesis into [`DECISIONS.md`](DECISIONS.md). Lowest-risk warmup; unblocks A2/A3 doc consolidation.
+> **Pickup priority:** Stream A1 — archive [`docs/archive/polish-program.md`](docs/archive/polish-program.md) and pull its thesis into [`DECISIONS.md`](DECISIONS.md). Lowest-risk warmup; unblocks A2/A3 doc consolidation.
 
 Cycle 28 plan: [`docs/cycle-28-plan.md`](docs/cycle-28-plan.md). Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then the cycle plan top-to-bottom.
 
@@ -14,7 +14,7 @@ Close out the doc / code / process drift accumulated through Cycle 27. **No new 
 
 | Stream | Scope | Phases |
 |---|---|---|
-| **A** doc alignment | archive `polish-program.md`, split rules into `.claude/rules/`, consolidate research, NEXT_SESSION contract, `docs/README.md` navigation index | A1-A5 |
+| **A** doc alignment | archive `polish-program.md` (now [`docs/archive/polish-program.md`](docs/archive/polish-program.md)), split rules into `.claude/rules/`, consolidate research, NEXT_SESSION contract, `docs/README.md` navigation index | A1-A5 |
 | **B** god-module decomp | characterization tests under goldens → `main.js` ≤ 2,200 LOC + `TerrainBuilder.js` ≤ 1,400 LOC via Stillwater 9-phase playbook + `shared/` ESLint boundary | B0-B5 |
 | **C** agent ergonomics | EARS in `CYCLE_TEMPLATE.md`, ≤ 8 phase rule, `EMERGENCY_STOPS.md`, `cycle-doc-dream` skill, `AGENTS.md` + `CLAUDE.md` (already landed) | C1-C5 |
 | **D** hook enforcement | extend Stop hook + `/cycle-close` reconciliation + `/cycle-start` freshness check | D1-D3 |

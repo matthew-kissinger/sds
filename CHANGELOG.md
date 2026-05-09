@@ -153,7 +153,7 @@ toward the player-facing layer. Two slices bundled:
 ## [2.0.5] — 2026-05-07 (post-v2.0.4 patch — delete dead AtmosphericDesatPatch)
 
 `AtmosphericDesatPatch` was scheduled for deletion in
-[`docs/polish-program.md`](docs/polish-program.md) but only got
+[`docs/archive/polish-program.md`](docs/archive/polish-program.md) but only got
 neutralized in Cycle 25 Phase B (`uDesatStrength` forced to 0). The
 pitch ramp at `js/TerrainBuilder.js` was multiplying the per-frame
 strength by `_desatConfiguredStrength = 0` — net behavior identical to
