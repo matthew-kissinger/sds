@@ -1,4 +1,4 @@
-# Next Session — Cycle 32 (`mp-island-scenes` placeholder)
+# Next Session - Cycle 32 (`mp-island-scenes` placeholder)
 
 > **Updated:** 2026-05-09 (refreshed after post-cycle-31 hotfixes + Cloudflare audit + Search Console actions same day)
 > **For:** Cycle 32
@@ -8,17 +8,17 @@ Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE
 
 ## Cycle 31 close summary (autonomous run, 2026-05-09)
 
-All 6 phases shipped end-to-end across 8 commits on `main` (1 doc-patch + 6 phase commits + 1 version bump). Pre-execution research spike caught two plan errors (broken `requestIdleCallback` modal-defer step + nonexistent `public/about.html` references) before any code shipped — Phase 1 trimmed from ~45m to ~25m as a result.
+All 6 phases shipped end-to-end across 8 commits on `main` (1 doc-patch + 6 phase commits + 1 version bump). Pre-execution research spike caught two plan errors (broken `requestIdleCallback` modal-defer step + nonexistent `public/about.html` references) before any code shipped - Phase 1 trimmed from ~45m to ~25m as a result.
 
 | Phase | Commit | Module |
 |---|---|---|
-| 0 — plan patch after spike | [`879409c`](https://github.com/matthew-kissinger/sds/commit/879409c) | [`docs/archive/cycles/cycle-31-plan.md`](docs/archive/cycles/cycle-31-plan.md) |
-| 1 — crawler-content `<main>` + sr-only CSS | [`f540941`](https://github.com/matthew-kissinger/sds/commit/f540941) | [`index.html`](index.html), [`css/main.css`](css/main.css) |
-| 2 — drop multilingual meta-keywords | [`61cd8db`](https://github.com/matthew-kissinger/sds/commit/61cd8db) | [`index.html`](index.html) |
-| 3 — per-scene static landing pages | [`68fe4d9`](https://github.com/matthew-kissinger/sds/commit/68fe4d9) | [`public/scenes/`](public/scenes/) ×3 |
-| 5 — devlog scaffold + 2 seed entries | [`44e3cd4`](https://github.com/matthew-kissinger/sds/commit/44e3cd4) | [`public/devlog/`](public/devlog/) ×3 |
-| 4 — sitemap fix + expansion | [`1125062`](https://github.com/matthew-kissinger/sds/commit/1125062) | [`public/sitemap.xml`](public/sitemap.xml) |
-| 6 — visible footer + GitHub topics | [`65a36a9`](https://github.com/matthew-kissinger/sds/commit/65a36a9) | [`index.html`](index.html), [`css/main.css`](css/main.css), GitHub repo topics |
+| 0 - plan patch after spike | [`879409c`](https://github.com/matthew-kissinger/sds/commit/879409c) | [`docs/archive/cycles/cycle-31-plan.md`](docs/archive/cycles/cycle-31-plan.md) |
+| 1 - crawler-content `<main>` + sr-only CSS | [`f540941`](https://github.com/matthew-kissinger/sds/commit/f540941) | [`index.html`](index.html), [`css/main.css`](css/main.css) |
+| 2 - drop multilingual meta-keywords | [`61cd8db`](https://github.com/matthew-kissinger/sds/commit/61cd8db) | [`index.html`](index.html) |
+| 3 - per-scene static landing pages | [`68fe4d9`](https://github.com/matthew-kissinger/sds/commit/68fe4d9) | [`public/scenes/`](public/scenes/) ×3 |
+| 5 - devlog scaffold + 2 seed entries | [`44e3cd4`](https://github.com/matthew-kissinger/sds/commit/44e3cd4) | [`public/devlog/`](public/devlog/) ×3 |
+| 4 - sitemap fix + expansion | [`1125062`](https://github.com/matthew-kissinger/sds/commit/1125062) | [`public/sitemap.xml`](public/sitemap.xml) |
+| 6 - visible footer + GitHub topics | [`65a36a9`](https://github.com/matthew-kissinger/sds/commit/65a36a9) | [`index.html`](index.html), [`css/main.css`](css/main.css), GitHub repo topics |
 | version bump + CHANGELOG | [`27f8bd7`](https://github.com/matthew-kissinger/sds/commit/27f8bd7) | [`package.json`](package.json), [`CHANGELOG.md`](CHANGELOG.md) |
 
 Net change: site has real semantic body content for crawlers (sr-only `<main id="seo-content">` block + `<noscript>` fallback), three new per-scene landing pages with scene-scoped JSON-LD VideoGame schemas, two devlog seed entries with `Article` schemas, fixed sitemap (root → `public/`, 2 → 8 URLs), visible internal-link footer on the homepage, and a refreshed GitHub repo topics list. Player-visible delta → bumped `2.1.2 → 2.1.3`.
@@ -30,10 +30,10 @@ Hotfixes after Search Console crawl surfaced two issues + Cloudflare dashboard a
 | Commit | What |
 |---|---|
 | [`0c0d618`](https://github.com/matthew-kissinger/sds/commit/0c0d618) | JSON-LD trailing comma fix in `index.html` `WebApplication` block (pre-existing bug surfaced by Search Console) |
-| [`64506ac`](https://github.com/matthew-kissinger/sds/commit/64506ac) | Canonical-URL alignment — Cloudflare Pages auto-strips `.html` and 308-redirects; Cycle 31 shipped `.html` URLs everywhere. Fixed across 9 files (sitemap + about + 3 scenes + devlog index + 2 entries + homepage). |
+| [`64506ac`](https://github.com/matthew-kissinger/sds/commit/64506ac) | Canonical-URL alignment - Cloudflare Pages auto-strips `.html` and 308-redirects; Cycle 31 shipped `.html` URLs everywhere. Fixed across 9 files (sitemap + about + 3 scenes + devlog index + 2 entries + homepage). |
 | [`f0a8822`](https://github.com/matthew-kissinger/sds/commit/f0a8822) | `public/llms.txt` (LLM/AI crawler manifest) + `public/.well-known/security.txt` (RFC 9116) |
 
-**Cloudflare dashboard changes** (out-of-band, not in repo): Crawler Hints + Always Online + 0-RTT + Speed Brain + Cloudflare Fonts + Early Hints all enabled. Verified-good: SSL/TLS Full, HTTP/2 + HTTP/3, no AI bots blocked (Googlebot 352 reqs / ClaudeBot 15 reqs healthy), Bot Fight Mode off (intentional — would break MP), AI Labyrinth off (intentional — we want AI training).
+**Cloudflare dashboard changes** (out-of-band, not in repo): Crawler Hints + Always Online + 0-RTT + Speed Brain + Cloudflare Fonts + Early Hints all enabled. Verified-good: SSL/TLS Full, HTTP/2 + HTTP/3, no AI bots blocked (Googlebot 352 reqs / ClaudeBot 15 reqs healthy), Bot Fight Mode off (intentional - would break MP), AI Labyrinth off (intentional - we want AI training).
 
 **Search Console actions** (driven via Claude in Chrome MCP): sitemap re-submitted (Couldn't-fetch → Success, 8 pages discovered), "Validate fix" triggered on the JSON-LD parsing error, "Request indexing" sent for all 8 URLs.
 
@@ -43,35 +43,35 @@ Hotfixes after Search Console crawl surfaced two issues + Cloudflare dashboard a
 
 ## Validation gates at close
 
-- `npm test` — **297 / 304 pass** (7 skipped are e2e/flow). Flat vs Cycle 30 baseline; no sim-touched code.
-- `npm run build` — clean, ~4.1s. `mainKB ≈ 589` / `threeKB ≈ 617`. CSS gained ~1KB from the `.seo-only` and `#site-footer` rules.
-- `npx eslint shared/` — exit 0.
+- `npm test` - **297 / 304 pass** (7 skipped are e2e/flow). Flat vs Cycle 30 baseline; no sim-touched code.
+- `npm run build` - clean, ~4.1s. `mainKB ≈ 589` / `threeKB ≈ 617`. CSS gained ~1KB from the `.seo-only` and `#site-footer` rules.
+- `npx eslint shared/` - exit 0.
 - `gh api repos/matthew-kissinger/sds/topics --jq '.names | length'` returns 20; includes all 5 acceptance-required (`webgl`, `threejs`, `multiplayer`, `simulation`, `cloudflare-workers`).
-- Cycle-close reconcile hook hit the same regex collision as Cycle 29 + 30 (the "## Acceptance criteria — EARS format" template explainer header parses before the actual Success criteria block); walked acceptance manually.
+- Cycle-close reconcile hook hit the same regex collision as Cycle 29 + 30 (the "## Acceptance criteria - EARS format" template explainer header parses before the actual Success criteria block); walked acceptance manually.
 
 ## Matt-pickup status
 
-1. ~~**Submit to Google Search Console for re-indexing.**~~ ✓ DONE same day via Claude in Chrome (sitemap re-submitted, "Validate fix" triggered, "Request indexing" for all 8 URLs). Now passive — Google will recrawl over 1-7 days; "Fix validated" email when the JSON-LD warning clears.
+1. ~~**Submit to Google Search Console for re-indexing.**~~ ✓ DONE same day via Claude in Chrome (sitemap re-submitted, "Validate fix" triggered, "Request indexing" for all 8 URLs). Now passive - Google will recrawl over 1-7 days; "Fix validated" email when the JSON-LD warning clears.
 2. **Paste itch.io description copy** from [`docs/itch-description/sheep-dog-sim.md`](docs/itch-description/sheep-dog-sim.md) into the itch project page's Description + Short Description fields. Optional devlog post body is in the same file. **Still Matt-pickup.**
 
 ## What to watch for in the next 1-7 days
 
 These are passive signals from Google's recrawl. No action required unless something looks off:
 
-- **Search Console → Page Indexing** — new URLs (`/scenes/*`, `/devlog/*`, `/about`) flip from "Discovered – currently not indexed" → "Indexed."
-- **Search Console → Sitemaps** — discovered count stays at 8; status stays "Success."
-- **Search Console → Unparsable structured data** — the issue clears + you get a "Fix validated" email.
-- **Snippet for `sheep dog sim` in incognito search** — should stop showing the welcome modal text and start showing the meta description copy. **If it doesn't change by ~2 weeks post-recrawl, the next move is the modal-copy rewrite (Cycle 32 carryover #2).**
-- **`site:sheepdogsim.com`** — should grow from 1 result (homepage only) to 8 (all sitemap entries).
+- **Search Console → Page Indexing** - new URLs (`/scenes/*`, `/devlog/*`, `/about`) flip from "Discovered – currently not indexed" → "Indexed."
+- **Search Console → Sitemaps** - discovered count stays at 8; status stays "Success."
+- **Search Console → Unparsable structured data** - the issue clears + you get a "Fix validated" email.
+- **Snippet for `sheep dog sim` in incognito search** - should stop showing the welcome modal text and start showing the meta description copy. **If it doesn't change by ~2 weeks post-recrawl, the next move is the modal-copy rewrite (Cycle 32 carryover #2).**
+- **`site:sheepdogsim.com`** - should grow from 1 result (homepage only) to 8 (all sitemap entries).
 
 ## Carryover candidates for Cycle 32
 
-Full research notes + open questions are in [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) "Carryover from Cycle 31" section. Summary in rough priority order — Matt picks at `/cycle-start`:
+Full research notes + open questions are in [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) "Carryover from Cycle 31" section. Summary in rough priority order - Matt picks at `/cycle-start`:
 
-1. **MP island scenes** *(leading, ~1 cycle)* — RH + OC in multiplayer. Sim-deterministic; needs sim-baseline regen story. Worker DO needs heightfield + objective state machine. Wire-format implications need an audit before phase 1.
-2. **Modal-copy rewrite** *(small, ~30m, defer until recrawl signal)* — only if Google's snippet still substitutes the welcome modal text after Cycle 31's recrawl finishes.
-3. **`CYCLE_TEMPLATE.md` regex-collision fix** *(tiny, ~15m, fence-touched)* — Cycle 29/30/31 all manual-walked acceptance because of this. Could attach as Phase 0 of any cycle.
-4. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** — see plan for size/shape per item.
+1. **MP island scenes** *(leading, ~1 cycle)* - RH + OC in multiplayer. Sim-deterministic; needs sim-baseline regen story. Worker DO needs heightfield + objective state machine. Wire-format implications need an audit before phase 1.
+2. **Modal-copy rewrite** *(small, ~30m, defer until recrawl signal)* - only if Google's snippet still substitutes the welcome modal text after Cycle 31's recrawl finishes.
+3. **`CYCLE_TEMPLATE.md` regex-collision fix** *(tiny, ~15m, fence-touched)* - Cycle 29/30/31 all manual-walked acceptance because of this. Could attach as Phase 0 of any cycle.
+4. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** - see plan for size/shape per item.
 
 ## Already in place (alignment foundation through Cycle 31)
 
@@ -80,7 +80,7 @@ Full research notes + open questions are in [`docs/cycle-32-plan.md`](docs/cycle
 - [`.claude/hooks/cycle-close-reconcile.mjs`](.claude/hooks/cycle-close-reconcile.mjs) auto-evaluates testable predicates at cycle close (when its regex matches).
 - [`.claude/skills/cycle-doc-dream/SKILL.md`](.claude/skills/cycle-doc-dream/SKILL.md) on hand if doc drift accumulates mid-cycle.
 - [`shared/terrain/Heightfield.js`](shared/terrain/Heightfield.js) `bakeMeshGrid` (Cycle 30): callable from any consumer that has a heightfield + wants a triangle-interp-ready mesh grid (TerrainBuilder, tests, future Worker that loads scenes).
-- Public-surface foundation (Cycle 31): `<main id="seo-content">` + `.seo-only` CSS class + `<noscript>` block in [`index.html`](index.html); per-scene + devlog static-page pattern under [`public/scenes/`](public/scenes/) and [`public/devlog/`](public/devlog/) — adding new entries is a single new HTML file + a sitemap line.
+- Public-surface foundation (Cycle 31): `<main id="seo-content">` + `.seo-only` CSS class + `<noscript>` block in [`index.html`](index.html); per-scene + devlog static-page pattern under [`public/scenes/`](public/scenes/) and [`public/devlog/`](public/devlog/) - adding new entries is a single new HTML file + a sitemap line.
 
 ## Hard stops
 
@@ -96,20 +96,20 @@ See [`.claude/rules/`](.claude/rules/) for durable project rules. Cycle-32-speci
 - 297/304 vitest specs pass (7 skipped).
 - Production build: `mainKB ≈ 589` / `threeKB ≈ 617`.
 - Working tree clean after the close commit.
-- Last deploy on `main` (cycle-30 close commit) shows `failure` only because of the E2E (Chromium) Playwright job — Test + Pages + Worker + Perf all green. Pre-existing carryover from Cycle 29, accepted at Cycle 31 close. The cycle-31 close commit will trigger a fresh deploy run.
+- Last deploy on `main` (cycle-30 close commit) shows `failure` only because of the E2E (Chromium) Playwright job - Test + Pages + Worker + Perf all green. Pre-existing carryover from Cycle 29, accepted at Cycle 31 close. The cycle-31 close commit will trigger a fresh deploy run.
 
 ## Reference table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) — `mp-island-scenes` placeholder (scaffold only; needs Goal + Phases filled in) |
+| Active cycle | [`docs/cycle-32-plan.md`](docs/cycle-32-plan.md) - `mp-island-scenes` placeholder (scaffold only; needs Goal + Phases filled in) |
 | Latest closed cycle | [`docs/archive/cycles/cycle-31-plan.md`](docs/archive/cycles/cycle-31-plan.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
 | Closed cycles + deferred | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Slash commands | [`.claude/commands/`](.claude/commands/) — `/cycle-start`, `/cycle-close`, `/validate` |
-| Hooks | [`.claude/hooks/`](.claude/hooks/) — `check-acceptance.mjs` (Stop) + `cycle-close-reconcile.mjs` |
-| Skills | [`.claude/skills/`](.claude/skills/) — `cycle-doc-dream` |
+| Slash commands | [`.claude/commands/`](.claude/commands/) - `/cycle-start`, `/cycle-close`, `/validate` |
+| Hooks | [`.claude/hooks/`](.claude/hooks/) - `check-acceptance.mjs` (Stop) + `cycle-close-reconcile.mjs` |
+| Skills | [`.claude/skills/`](.claude/skills/) - `cycle-doc-dream` |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Decisions log | [`DECISIONS.md`](DECISIONS.md) |
 | Player CHANGELOG | [`CHANGELOG.md`](CHANGELOG.md) |

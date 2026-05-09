@@ -4,7 +4,7 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
-## [2.1.3] — 2026-05-09 (Cycle 31 — public-surface)
+## [2.1.3] - 2026-05-09 (Cycle 31 - public-surface)
 
 Public-facing surface pass. The site is the same game; the search-engine
 and discoverability surface around it is now real.
@@ -58,16 +58,16 @@ and discoverability surface around it is now real.
 
 ### Post-deploy hotfixes (same day, after Search Console crawl surfaced two issues)
 
-- **JSON-LD trailing comma** — pre-existing syntax error in the `WebApplication`
+- **JSON-LD trailing comma** - pre-existing syntax error in the `WebApplication`
   block of `index.html` (a stray `,` after the `offers` object's closing brace).
   Strict JSON parsers reject it; Google's structured-data parser does the same.
-  Surfaced by Search Console as "Unparsable structured data — Parsing error:
+  Surfaced by Search Console as "Unparsable structured data - Parsing error:
   Missing '}' or object member name." Fix in commit
   [`0c0d618`](https://github.com/matthew-kissinger/sds/commit/0c0d618). Also
   verified all 5 new JSON-LD blocks shipped this cycle (3 scenes + 2 devlog
   entries) parse cleanly.
 
-- **Canonical-URL alignment with Cloudflare Pages's `.html`-stripping behaviour** —
+- **Canonical-URL alignment with Cloudflare Pages's `.html`-stripping behaviour** -
   Pages auto-strips `.html` extensions and 308-redirects every `.html` URL to its
   no-extension canonical form. The cycle shipped every canonical / og:url /
   JSON-LD `@id` / sitemap entry / internal anchor pointing at the `.html` form
@@ -81,7 +81,7 @@ and discoverability surface around it is now real.
 
 ### Public-surface follow-ups (also same day)
 
-- **`/llms.txt`** added at `public/llms.txt` — emerging convention for LLM/AI
+- **`/llms.txt`** added at `public/llms.txt` - emerging convention for LLM/AI
   crawlers (Claude, GPT, Gemini, Perplexity). Curated Markdown manifest of
   load-bearing URLs with prose summaries. Per CF AI Crawl Control, ClaudeBot is
   already crawling sheepdogsim.com (15 successful requests / 737 KB transferred);
@@ -97,8 +97,8 @@ and discoverability surface around it is now real.
   fallback), 0-RTT Connection Resumption, Speed Brain (predictive prefetch via
   Speculation Rules API), Cloudflare Fonts (proxied Google Fonts), Early Hints
   (HTTP 103). Verified-good (no change needed): SSL/TLS Full, HTTP/2 + HTTP/3,
-  no AI bots blocked, Bot Fight Mode off (intentional — would break MP
-  WebSocket upgrades), AI Labyrinth off (intentional — we want AI training).
+  no AI bots blocked, Bot Fight Mode off (intentional - would break MP
+  WebSocket upgrades), AI Labyrinth off (intentional - we want AI training).
 
 ### Search Console actions (same day)
 

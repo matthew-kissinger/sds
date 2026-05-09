@@ -1,6 +1,6 @@
 # Sheep Dog Sim
 
-> A free, browser-based herding game where you guide your sheepdog across three hand-built biomes — flat starter pasture, rolling sunset hills, and a wild island with a magical portal. MIT-licensed, no signup, no microtransactions.
+> A free, browser-based herding game where you guide your sheepdog across one fenced pasture and two hand-built islands. MIT-licensed, no signup, no microtransactions.
 
 The site is the game. Open the URL, herd some sheep, close the tab. Single-player and 2-4 player real-time multiplayer. Built on Three.js + WebGL with a Cloudflare Workers + Durable Objects + D1 backend. The full source is open on GitHub and forkable in an afternoon.
 

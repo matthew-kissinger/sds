@@ -1,5 +1,5 @@
 ---
-description: Audit + adjust Cloudflare zone settings for sheepdogsim.com (or any zone with the same Pages-fronted shape) — Crawler Hints, Speed optimizations, Bot/AI controls, sitemap submission, SSL/TLS posture. Drives the dashboard via Claude in Chrome MCP, or the API via the token in ~/.config/mk-agent/env. Use when the user asks "anything to do in Cloudflare" or after major content changes that benefit from cache/crawler signals.
+description: Audit + adjust Cloudflare zone settings for sheepdogsim.com (or any zone with the same Pages-fronted shape) - Crawler Hints, Speed optimizations, Bot/AI controls, sitemap submission, SSL/TLS posture. Drives the dashboard via Claude in Chrome MCP, or the API via the token in ~/.config/mk-agent/env. Use when the user asks "anything to do in Cloudflare" or after major content changes that benefit from cache/crawler signals.
 ---
 
 # cloudflare-management
@@ -19,9 +19,9 @@ Manage Cloudflare for the sheepdogsim.com zone (zone id `08f6aca2579390fc14be2cf
 
 ### Path A: Dashboard via Claude in Chrome MCP (visual audit, settings toggles)
 
-1. **Check browser connection** with `list_connected_browsers`. If empty, ask the user to install + connect the Claude in Chrome extension. Don't fall through to computer-use (Chrome is granted at "read" tier — clicks are blocked).
+1. **Check browser connection** with `list_connected_browsers`. If empty, ask the user to install + connect the Claude in Chrome extension. Don't fall through to computer-use (Chrome is granted at "read" tier - clicks are blocked).
 2. Navigate to `https://dash.cloudflare.com/`. If the user is signed into Google in this Chrome, Cloudflare's Google SSO will auto-resume; you'll land on the account home (`/<account_id>/home/overview`).
-3. Watch for the **viewport-scale gotcha** — Chrome reports a 1920×855 viewport but screenshots arrive at 1568×744. Click coordinates are screenshot-based. Multiply DOM coords by `1568/1920 = 0.8167` to get screen coords. Reliable pattern:
+3. Watch for the **viewport-scale gotcha** - Chrome reports a 1920×855 viewport but screenshots arrive at 1568×744. Click coordinates are screenshot-based. Multiply DOM coords by `1568/1920 = 0.8167` to get screen coords. Reliable pattern:
    ```javascript
    // via mcp__Claude_in_Chrome__javascript_tool
    const r = element.getBoundingClientRect();
@@ -46,7 +46,7 @@ curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   "https://api.cloudflare.com/client/v4/zones?name=sheepdogsim.com"
 ```
 
-The current token's scope is **limited** — the verify endpoint returns null and zone-settings reads return 9109 "Unauthorized to access requested resource". Useful for Pages + Workers + R2 + D1 + a few other things, **not** for zone-level toggles. For toggle work, use Path A.
+The current token's scope is **limited** - the verify endpoint returns null and zone-settings reads return 9109 "Unauthorized to access requested resource". Useful for Pages + Workers + R2 + D1 + a few other things, **not** for zone-level toggles. For toggle work, use Path A.
 
 If the user wants API-only future workflows, ask them to mint a new token with `Zone:Settings:Edit` + `Zone:Cache Purge:Edit` scopes.
 
@@ -101,13 +101,13 @@ All Pro-only (Polish, Mirage). Skip.
 
 ### 6. Security → Overview
 
-CF surfaces **recommendations**. Triage by category — most should be dismissed for an OSS public game:
+CF surfaces **recommendations**. Triage by category - most should be dismissed for an OSS public game:
 
 | Recommendation | Take | Rationale |
 |---|---|---|
 | Block AI bots from accessing your assets | **Dismiss** | We **want** AI crawlers indexing OSS content (Claude/GPT/Perplexity will cite + answer questions about the game). |
 | Detect and mitigate automated traffic with Bot Fight Mode | **Dismiss** | Would soft-block legit MP WebSocket upgrades + mobile traffic with unusual fingerprints. |
-| Disrupt unwanted AI crawlers with AI Labyrinth | **Dismiss** | Same reason as the AI bot block — we want the content in AI training. |
+| Disrupt unwanted AI crawlers with AI Labyrinth | **Dismiss** | Same reason as the AI bot block - we want the content in AI training. |
 | Configure your website's Security.txt | **Adopt** | RFC 9116 standard. Already shipped at `public/.well-known/security.txt` (commit `f0a8822`). |
 
 ### 7. Security → AI Crawl Control → Crawlers
@@ -115,17 +115,17 @@ CF surfaces **recommendations**. Triage by category — most should be dismissed
 This page shows per-bot crawl stats (last 24h). All bots should be in the **Allow** action state. Confirm:
 
 - **Googlebot** is healthy (allowed > 0, unsuccessful = 0).
-- **ClaudeBot** + **Claude-User** + **GPTBot** + **PerplexityBot** + **Meta-ExternalAgent** + **Applebot** are allowed (even if 0 requests — keeps the door open).
+- **ClaudeBot** + **Claude-User** + **GPTBot** + **PerplexityBot** + **Meta-ExternalAgent** + **Applebot** are allowed (even if 0 requests - keeps the door open).
 - **Inactive crawlers** (0 bytes transferred) are fine to leave allowed; blocking them costs nothing but provides no benefit.
 
-If any "Unsuccessful" count > 0 for Googlebot, investigate immediately — that's a deploy + crawl regression.
+If any "Unsuccessful" count > 0 for Googlebot, investigate immediately - that's a deploy + crawl regression.
 
 ### 8. Sitemap submission (in Search Console, not CF dashboard)
 
 Not strictly a CF action, but bundle it with the audit since they're related:
 
 - After enabling Crawler Hints, the sitemap auto-pings on content updates. But Google + Bing also need to know the sitemap URL.
-- In Search Console (`https://search.google.com/search-console?resource_id=sc-domain:sheepdogsim.com`) → Sitemaps → submit `https://sheepdogsim.com/sitemap.xml` (full URL — domain properties require the full URL, not just `sitemap.xml`).
+- In Search Console (`https://search.google.com/search-console?resource_id=sc-domain:sheepdogsim.com`) → Sitemaps → submit `https://sheepdogsim.com/sitemap.xml` (full URL - domain properties require the full URL, not just `sitemap.xml`).
 - Status should flip to **Success** within minutes; "Discovered pages" should match the `<loc>` count in the sitemap.
 
 ## Don't-touch list

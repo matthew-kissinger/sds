@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reorganising the game-mode plumbing — Sheep Dog Sim Devlog</title>
+    <title>Reorganising the game-mode plumbing - Sheep Dog Sim Devlog</title>
     <meta name="description" content="The internal logic that runs every game mode used to be one large file with a lot of branching. It's now six smaller files. No visible change in-game; the next new mode lands faster.">
     <meta name="author" content="Matthew Kissinger">
     <meta name="robots" content="index, follow">
@@ -78,13 +78,13 @@
 <body>
     <div class="container">
         <h1>Reorganising the game-mode plumbing</h1>
-        <div class="meta">May 9, 2026 — by Matthew Kissinger</div>
+        <div class="meta">May 9, 2026 - by Matthew Kissinger</div>
 
         <p>
             Sheep Dog Sim has six game modes today: Just Play, Solo Classic, Solo
             Extreme, Solo Insane, Solo Chaos, and Multiplayer (which itself splits
             into co-op, competitive, and timed). Each mode has slightly different
-            rules — different sheep counts, different scoring, different win
+            rules - different sheep counts, different scoring, different win
             conditions, different camera behaviour. For a long time, the code that
             handled "what should this mode do here?" lived in one large central
             file, with a lot of small branching scattered through it.
@@ -99,7 +99,7 @@
         <h2>The six pieces</h2>
 
         <p>
-            One file now owns the mode definitions themselves — a single table that
+            One file now owns the mode definitions themselves - a single table that
             says, for each mode, how many sheep, what counts as a win, whether a
             timer runs, whether scores get submitted to the leaderboard. Adding a
             new mode is now a one-row edit to that table instead of half a dozen
@@ -109,7 +109,7 @@
         <p>
             One file owns the polygon-spawn calculations (where the sheep get
             placed at the start of a round, given a fenced shape). One owns the
-            win-condition checks. One owns the round objective state machine — the
+            win-condition checks. One owns the round objective state machine - the
             part that knows about gather zones, drive phases, and corral-vs-portal
             scoring. One owns the round-completion flow (formatting times, posting
             to leaderboards, showing the completion screen). One owns the sandbox
@@ -126,7 +126,7 @@
             What it matters for is the next round of new things. If I want to add a
             "no-dog" mode, or a "sheep run from you" mode, or a multiplayer-Chaos
             tier, that's now a small, contained change. The cost of trying out new
-            modes — and shipping the good ones — drops. The cost of leaving the
+            modes - and shipping the good ones - drops. The cost of leaving the
             bad ones unshipped also drops. That's the whole goal.
         </p>
 
@@ -138,7 +138,7 @@
 
         <h2>Test coverage</h2>
         <p>
-            All of this was done under a new safety net — a set of tests that
+            All of this was done under a new safety net - a set of tests that
             captured exactly what the original code did for every mode and combination
             of inputs, and ran on every change. Any time the new code produced a
             different answer than the old code for the same input, the tests went

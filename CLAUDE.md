@@ -44,6 +44,7 @@ Domain-scoped durable rules live in [`.claude/rules/`](.claude/rules/) and are l
 | `scene-and-render.md` | Atmosphere, grass, heightfield, scene-loading rules |
 | `cycle-process.md` | Cycle methodology guardrails |
 | `multiplayer.md` | Worker / DO contract rules |
+| `prose-and-voice.md` | Player-facing prose: no em-dashes, "one pasture and two islands" framing, Matt's voice cues |
 
 [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) lists **which files are frozen**; the rule files above explain **why**.
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polish under the hood: the terrain math gets one home — Sheep Dog Sim Devlog</title>
+    <title>Polish under the hood: the terrain math gets one home - Sheep Dog Sim Devlog</title>
     <meta name="description" content="A small floating-point quirk that could let the dog appear to hover a few centimetres above the ground has been fixed by giving the terrain Y math one source of truth.">
     <meta name="author" content="Matthew Kissinger">
     <meta name="robots" content="index, follow">
@@ -78,7 +78,7 @@
 <body>
     <div class="container">
         <h1>Polish under the hood: the terrain math gets one home</h1>
-        <div class="meta">May 9, 2026 — by Matthew Kissinger</div>
+        <div class="meta">May 9, 2026 - by Matthew Kissinger</div>
 
         <p>
             This one isn't a feature. It's a fix for a tiny rendering quirk that has
@@ -88,10 +88,10 @@
 
         <h2>The bug</h2>
         <p>
-            The terrain in Sheep Dog Sim is a heightfield — a grid of height samples
+            The terrain in Sheep Dog Sim is a heightfield - a grid of height samples
             that defines how high the ground is at every (x, z) point on the map.
-            Everything that "sits on the ground" — the dog, the sheep, the trees, the
-            rocks, the camera — needs to ask the heightfield "what's the Y here?" and
+            Everything that "sits on the ground" - the dog, the sheep, the trees, the
+            rocks, the camera - needs to ask the heightfield "what's the Y here?" and
             place itself accordingly.
         </p>
 
@@ -101,15 +101,15 @@
             that everything else used. The two answers agreed almost everywhere, except
             in a small set of edge-case pixels where they could disagree by a few
             centimetres. To compensate, an old workaround added a defensive 5-centimetre
-            lift to one of the paths. It mostly worked — you'd only ever notice it if
+            lift to one of the paths. It mostly worked - you'd only ever notice it if
             you put the camera very close to a sheep on a particular slope at a
             particular angle.
         </p>
 
         <p>
             But "mostly works" is the kind of phrase that ends up costing time later. If
-            you're trying to add a new on-ground system — a fence editor, a new prop
-            type, an objective marker — and you can't predict whether the ground is
+            you're trying to add a new on-ground system - a fence editor, a new prop
+            type, an objective marker - and you can't predict whether the ground is
             actually at Y or Y + 0.05, every new feature inherits the ambiguity.
         </p>
 
@@ -122,8 +122,8 @@
         </p>
 
         <p>
-            The deterministic simulation — the part of the code that runs both on the
-            server and on every connected client to keep multiplayer in sync — still
+            The deterministic simulation - the part of the code that runs both on the
+            server and on every connected client to keep multiplayer in sync - still
             uses the raw heightfield, not the mesh-aligned one. That separation is
             intentional. The simulation cares about being identical across machines,
             byte for byte; the renderer cares about looking right. They're allowed to
@@ -136,7 +136,7 @@
             Honestly? Probably nothing. If you spent a lot of time in close-up Follow
             camera mode chasing a sheep across uneven terrain, there's a chance you'll
             notice that contact looks a touch tighter. Otherwise this is invisible
-            polish — the kind of cleanup that doesn't sell screenshots but makes the
+            polish - the kind of cleanup that doesn't sell screenshots but makes the
             next few feature cycles ship faster and with fewer "wait, why does this
             float" bugs along the way.
         </p>
