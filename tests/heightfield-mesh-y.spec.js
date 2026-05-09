@@ -201,3 +201,140 @@ describe('Heightfield.meshSampleY — vertex agreement', () => {
         ).toThrow(TypeError);
     });
 });
+
+describe('Heightfield.bakeMeshGrid — algorithm', () => {
+    /** Minimal 4-texel field: data[iz*W + ix] over W=H=2 covering worldSize=4. */
+    function constantField(value, peakHeight = 1, worldSize = 4) {
+        const data = new Float32Array(4).fill(value);
+        return new Heightfield({ data, width: 2, height: 2, worldSize, peakHeight });
+    }
+
+    it('returns a Float32Array of length (segments+1)² and binds it via setMeshGrid', () => {
+        const field = constantField(0.5, 10, 4);
+        const grid = field.bakeMeshGrid({ segments: 4, size: 4 });
+        expect(grid).toBeInstanceOf(Float32Array);
+        expect(grid.length).toBe((4 + 1) * (4 + 1));
+        // setMeshGrid was called: displacedHeights handle === returned grid.
+        expect(field.displacedHeights).toBe(grid);
+        expect(field.meshSegments).toBe(4);
+        expect(field.meshSize).toBe(4);
+    });
+
+    it('reproduces sample(x, z) at every vertex when no falloff is needed', () => {
+        // worldSize=200 → fadeStart=80, fadeEnd=100. mesh size=100 →
+        // max radial=50 < fadeStart, so falloff stays 1 for every vertex.
+        // peakHeight=10, all data = 0.7 → sample() returns 7.
+        const field = constantField(0.7, 10, 200);
+        const grid = field.bakeMeshGrid({ segments: 4, size: 100 });
+        // 5×5 grid, every cell should be 7 (no falloff fires).
+        for (let i = 0; i < grid.length; i++) {
+            expect(grid[i]).toBeCloseTo(7, 6);
+        }
+    });
+
+    it('applies the smoothstep falloff over the last 20m of worldSize', () => {
+        // worldSize=80 → fadeStart=20, fadeEnd=40. Mesh size=80 to expose
+        // the full radial range, segments=8 → step=10, so vertices land at
+        // worldX/Z ∈ {-40,-30,-20,-10,0,10,20,30,40}. Constant data=1,
+        // peakHeight=1 → sample()=1 everywhere; the only thing varying is
+        // the falloff multiplier.
+        const field = constantField(1, 1, 80);
+        const grid = field.bakeMeshGrid({ segments: 8, size: 80 });
+        const stride = 9;
+
+        // Centre vertex (radial=0) → falloff=1.
+        expect(grid[4 * stride + 4]).toBeCloseTo(1, 6);
+        // Edge vertex (radial=40 = fadeEnd) → falloff=0.
+        expect(grid[0]).toBeCloseTo(0, 6);
+        expect(grid[8]).toBeCloseTo(0, 6);
+        expect(grid[8 * stride]).toBeCloseTo(0, 6);
+        expect(grid[8 * stride + 8]).toBeCloseTo(0, 6);
+        // Vertex at radial=fadeStart (20) → falloff=1 (boundary, smoothstep at 0).
+        // (ix=2, iy=4) → worldX=-20, worldZ=0, radial=20. fadeStart=20, so
+        // radial > fadeStart is false (strict >); falloff stays 1.
+        expect(grid[4 * stride + 2]).toBeCloseTo(1, 6);
+        // Vertex at radial=30 (fadeStart+10, halfway through fade) →
+        // t = (30-20)/20 = 0.5; smoothstep(0.5) = 0.5; falloff = 1 - 0.5 = 0.5.
+        // (ix=1, iy=4) → worldX=-30, worldZ=0, radial=30.
+        expect(grid[4 * stride + 1]).toBeCloseTo(0.5, 6);
+    });
+
+    it('uses square-radial (Chebyshev) distance, not Euclidean, for the falloff', () => {
+        // A vertex at (worldX=-30, worldZ=-30) has Euclidean ~42.4 but
+        // square-radial 30. The square-radial path matches the visible
+        // terrain mesh's smoothstep, which is what TerrainBuilder draws.
+        // worldSize=80 → fadeStart=20, fadeEnd=40.
+        const field = constantField(1, 1, 80);
+        const grid = field.bakeMeshGrid({ segments: 8, size: 80 });
+        const stride = 9;
+        // Corner vertex at (ix=1, iy=1) → worldX=-30, worldZ=-30, square
+        // radial = 30 → falloff = 0.5 (same as the on-axis radial=30 case).
+        // Euclidean would have given radial ~42.4 → falloff = 0 (clamped).
+        expect(grid[1 * stride + 1]).toBeCloseTo(0.5, 6);
+    });
+
+    it('binds the grid so meshSampleY uses triangle-interp instead of the bilinear fallback', () => {
+        // worldSize=200 keeps the centre vertex out of the smoothstep zone
+        // so we can compare visual Y vs raw sample() cleanly.
+        // Before bakeMeshGrid: meshSampleY falls through to sample()+0.05.
+        // After bakeMeshGrid: meshSampleY triangle-interps against the bound grid.
+        const field = constantField(1, 1, 200);
+        // Pre-bake: fallback path. (Phase 3 will change this to throw.)
+        const preY = field.meshSampleY(0, 0);
+        expect(preY).toBeCloseTo(1.05, 6); // sample()=1, +0.05 lift
+
+        field.bakeMeshGrid({ segments: 2, size: 100 });
+        // Post-bake: triangle-interp returns the captured Y (no lift).
+        const postY = field.meshSampleY(0, 0);
+        expect(postY).toBeCloseTo(1, 6);
+    });
+
+    it('agrees byte-for-byte with a hand-rolled mirror of the same algorithm', () => {
+        // Pin equivalence to the inline TerrainBuilder.createTerrain loop
+        // so the Phase 2 refactor is byte-identical.
+        const data = new Float32Array(16);
+        for (let i = 0; i < data.length; i++) data[i] = (i * 0.13) % 1;
+        const field = new Heightfield({ data, width: 4, height: 4, worldSize: 80, peakHeight: 5 });
+
+        const segments = 16;
+        const size = 100; // mesh extends past worldSize, exposes the falloff
+        const grid = field.bakeMeshGrid({ segments, size });
+
+        // Hand-rolled reference (identical to the algorithm TerrainBuilder
+        // had inline before Phase 2).
+        const stride = segments + 1;
+        const ref = new Float32Array(stride * stride);
+        const half = size * 0.5;
+        const hfHalf = field.worldSize * 0.5;
+        const fadeStart = hfHalf - 20;
+        const fadeEnd = hfHalf;
+        for (let iy = 0; iy < stride; iy++) {
+            const worldZ = iy * (size / segments) - half;
+            for (let ix = 0; ix < stride; ix++) {
+                const worldX = ix * (size / segments) - half;
+                const h = field.sample(worldX, worldZ);
+                const radial = Math.max(Math.abs(worldX), Math.abs(worldZ));
+                let falloff = 1;
+                if (radial > fadeStart) {
+                    const t = Math.min(1, (radial - fadeStart) / (fadeEnd - fadeStart));
+                    falloff = 1 - t * t * (3 - 2 * t);
+                }
+                ref[iy * stride + ix] = h * falloff;
+            }
+        }
+
+        for (let i = 0; i < ref.length; i++) {
+            expect(grid[i]).toBe(ref[i]);
+        }
+    });
+
+    it('rejects invalid segments / size with RangeError', () => {
+        const field = constantField(0.5, 1, 4);
+        expect(() => field.bakeMeshGrid({ segments: 0, size: 4 })).toThrow(RangeError);
+        expect(() => field.bakeMeshGrid({ segments: -1, size: 4 })).toThrow(RangeError);
+        expect(() => field.bakeMeshGrid({ segments: 2.5, size: 4 })).toThrow(RangeError);
+        expect(() => field.bakeMeshGrid({ segments: 2, size: 0 })).toThrow(RangeError);
+        expect(() => field.bakeMeshGrid({ segments: 2, size: -1 })).toThrow(RangeError);
+        expect(() => field.bakeMeshGrid({ segments: 2, size: Infinity })).toThrow(RangeError);
+    });
+});

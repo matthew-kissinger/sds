@@ -78,11 +78,80 @@ export class Heightfield {
     }
 
     /**
+     * Build a `(segments+1)²` displaced-heights grid by sampling this
+     * heightfield at every mesh vertex over `size × size` centred on origin,
+     * applying the same square-radial smoothstep falloff over the last 20m
+     * of `worldSize` that the visible terrain mesh uses, and bind the result
+     * via `setMeshGrid`.
+     *
+     * Lifts the displacement-loop algorithm out of `TerrainBuilder.createTerrain`
+     * so visible-Y math has one home. Callers (TerrainBuilder, tests, future
+     * Worker consumers) read back the returned `Float32Array` to apply the
+     * same Ys to their own mesh / data structure.
+     *
+     * Algorithm matches PlaneGeometry vertex order after the canonical
+     * `-PI/2` rotation about X:
+     * - `ix` walks east (`worldX = ix * size/segments - size/2`).
+     * - `iy` walks south (`worldZ = iy * size/segments - size/2`).
+     * - Index = `iy * (segments+1) + ix`.
+     *
+     * @param {{ segments: number, size: number }} grid
+     * @returns {Float32Array} The bound `displacedHeights` array.
+     */
+    bakeMeshGrid({ segments, size }) {
+        if (!Number.isInteger(segments) || segments < 1) {
+            throw new RangeError(
+                `Heightfield.bakeMeshGrid: segments must be a positive integer, got ${segments}`
+            );
+        }
+        if (!Number.isFinite(size) || size <= 0) {
+            throw new RangeError(
+                `Heightfield.bakeMeshGrid: size must be a positive finite number, got ${size}`
+            );
+        }
+
+        const stride = segments + 1;
+        const displacedHeights = new Float32Array(stride * stride);
+        const half = size * 0.5;
+        const step = size / segments;
+
+        const hfHalf = this.worldSize * 0.5;
+        const fadeStart = hfHalf - 20;
+        const fadeEnd = hfHalf;
+        const fadeWidth = fadeEnd - fadeStart;
+
+        for (let iy = 0; iy < stride; iy++) {
+            const worldZ = iy * step - half;
+            for (let ix = 0; ix < stride; ix++) {
+                const worldX = ix * step - half;
+                const h = this.sample(worldX, worldZ);
+                const radial = Math.abs(worldX) > Math.abs(worldZ)
+                    ? Math.abs(worldX)
+                    : Math.abs(worldZ);
+                let falloff = 1;
+                if (radial > fadeStart) {
+                    const t = radial >= fadeEnd ? 1 : (radial - fadeStart) / fadeWidth;
+                    falloff = 1 - t * t * (3 - 2 * t);
+                }
+                displacedHeights[iy * stride + ix] = h * falloff;
+            }
+        }
+
+        this.setMeshGrid({ displacedHeights, segments, size });
+        return displacedHeights;
+    }
+
+    /**
      * Hand the captured visible-mesh heights to the heightfield so visual
      * consumers can query the same Y the renderer draws. `displacedHeights`
      * MUST have length `(segments + 1)²` and be in PlaneGeometry vertex
      * order (`iy * (segments+1) + ix`, with ix east, iy south after the
      * canonical `-PI/2` rotation about X).
+     *
+     * Most callers should use `bakeMeshGrid` instead — it builds the grid
+     * with the canonical algorithm. `setMeshGrid` is the lower-level entry
+     * point for callers that already have the array (e.g. a Three.js
+     * `PlaneGeometry` whose vertices were displaced inline).
      *
      * @param {{ displacedHeights: Float32Array, segments: number, size: number }} grid
      */
