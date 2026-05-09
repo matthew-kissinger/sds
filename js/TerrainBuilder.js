@@ -643,45 +643,20 @@ export class TerrainBuilder {
         // Geometry is built in the XY plane; after the mesh is rotated -PI/2
         // around X, local (a, b, c) maps to world (a, c, -b). So local Z
         // displacement becomes world Y, and world (X, Z) maps to local (a, -b).
+        // Heightfield owns the displacement algorithm (Cycle 30): bakeMeshGrid
+        // returns a (segs+1)² array indexed iy*stride+ix in PlaneGeometry's
+        // native row-major vertex order, so we just stream it onto the mesh.
         if (this.heightfield) {
-            // Smooth radial falloff: heightfield content fades to 0 over the
-            // last few metres of its worldSize so the plane outside the
-            // heightfield extends as a flat skirt to the horizon (instead of
-            // an abrupt plateau at the edge texel value).
-            const hfHalf = this.heightfield.worldSize * 0.5;
-            const fadeStart = hfHalf - 20;
-            const fadeEnd = hfHalf;
             const positions = terrainGeometry.attributes.position;
-            // Capture post-displacement Ys into a (segs+1)² grid so visual
-            // consumers (grass, trees, rocks, sheep, dog) can triangle-
-            // interpolate against exactly the geometry the renderer draws.
-            // PlaneGeometry vertex order: ix walks east (+X), iy walks south
-            // (+Z after rotation), index = iy * (segs+1) + ix.
-            const stride = terrainSegments + 1;
-            const displacedHeights = new Float32Array(stride * stride);
-            for (let i = 0; i < positions.count; i++) {
-                const a = positions.getX(i);
-                const b = positions.getY(i);
-                const worldX = a;
-                const worldZ = -b;
-                const h = this.heightfield.sample(worldX, worldZ);
-                const radial = Math.max(Math.abs(worldX), Math.abs(worldZ));
-                let falloff = 1;
-                if (radial > fadeStart) {
-                    const t = Math.min(1, (radial - fadeStart) / (fadeEnd - fadeStart));
-                    falloff = 1 - t * t * (3 - 2 * t); // smoothstep, inverted
-                }
-                const y = h * falloff;
-                positions.setZ(i, y);
-                displacedHeights[i] = y;
-            }
-            positions.needsUpdate = true;
-            terrainGeometry.computeVertexNormals();
-            this.heightfield.setMeshGrid({
-                displacedHeights,
+            const displacedHeights = this.heightfield.bakeMeshGrid({
                 segments: terrainSegments,
                 size: terrainSize
             });
+            for (let i = 0; i < positions.count; i++) {
+                positions.setZ(i, displacedHeights[i]);
+            }
+            positions.needsUpdate = true;
+            terrainGeometry.computeVertexNormals();
             console.log(`[TERRAIN] Heightfield-displaced terrain (${positions.count} verts, plane=${terrainSize}m)`);
         }
 
