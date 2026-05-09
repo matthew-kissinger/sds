@@ -1,0 +1,31 @@
+# Sheep Dog Sim
+
+> A free, browser-based herding game where you guide your sheepdog across three hand-built biomes — flat starter pasture, rolling sunset hills, and a wild island with a magical portal. MIT-licensed, no signup, no microtransactions.
+
+The site is the game. Open the URL, herd some sheep, close the tab. Single-player and 2-4 player real-time multiplayer. Built on Three.js + WebGL with a Cloudflare Workers + Durable Objects + D1 backend. The full source is open on GitHub and forkable in an afternoon.
+
+## Game
+
+- [Play Sheep Dog Sim](https://sheepdogsim.com/): the game. Three.js + WebGL canvas; mobile + desktop; gamepad supported.
+- [About](https://sheepdogsim.com/about): solo developer Matthew Kissinger, the why-it-exists, the tech stack.
+
+## Biomes
+
+- [Home Field](https://sheepdogsim.com/scenes/home-field): flat fenced pasture with a single perimeter pen. The starter biome.
+- [Rolling Hills](https://sheepdogsim.com/scenes/rolling-hills): 180-metre sunset island with rolling heightfield and a lightning-zap corral.
+- [Open Country](https://sheepdogsim.com/scenes/open-country): 380-metre wild island with a multi-stage gather-and-portal objective.
+
+## Devlog
+
+- [Devlog index](https://sheepdogsim.com/devlog/): plain-language behind-the-scenes notes on what's changing under the hood.
+- [Polish under the hood: the terrain math gets one home](https://sheepdogsim.com/devlog/cycle-30-heightfield-unify): Cycle 30, May 2026. A floating-point quirk fix.
+- [Reorganising the game-mode plumbing](https://sheepdogsim.com/devlog/cycle-29-gamestate-decomp): Cycle 29, May 2026. Internal refactor.
+
+## Source and reuse
+
+- [GitHub repository](https://github.com/matthew-kissinger/sds): MIT-licensed source. ~10k lines of vanilla JavaScript on the client, ~600-line TypeScript Cloudflare Worker on the server, deterministic boid + physics modules shared byte-identically by both.
+- [Press kit](https://github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md): screenshots, social cards, taglines, creator bio. Reuse permitted under fair use; please credit "Sheep Dog Sim by Matthew Kissinger" with a link to sheepdogsim.com.
+
+## Contact
+
+- Email: matt.m.kissinger@gmail.com
