@@ -29,6 +29,26 @@ These don't block scaffolding (Phase 1) but should be resolved before scene-spec
 
 (If the cycle introduces a primitive or schema change shared across phases, describe it here. Otherwise delete this section.)
 
+## Phase shape rules
+
+A cycle has **≤ 8 phases**. If you find yourself drafting a 9th, the work is two cycles, not one.
+
+Each phase is either **fully autonomous** (the agent ships without Matt's pairing) or **fully paired** (Matt's hands on the keyboard for it). **Don't mix modes within a phase** — "I'll do steps 1–3 autonomously and pause for Matt at step 4" produces stale handoffs and partial commits. "Matt pickup" work (taste, real-device, design, marketing voice) scopes as a paired-track cycle, not appended to an autonomous cycle.
+
+A phase has a **single sharp goal** (one new file, one extraction, one decision codified) and **≤ 4 hours** of work. Larger means split.
+
+## Acceptance criteria — EARS format
+
+Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/specs/) so the lines are testable by construction:
+
+- **Event-driven**: `When [trigger], the [system] shall [response].`
+- **State-driven**: `While [precondition], the [system] shall [response].`
+- **Unwanted-event**: `If [unwanted], then the [system] shall [response].`
+
+Each line should be **grep-testable** — the response should be something a script can verify (`wc -l`, `grep`, `npm test`, a build artifact's existence). The `/cycle-close` reconciliation hook walks every Acceptance line and tries to grep its predicate against shipped commits + test output.
+
+Example: `When Stream B1 ships, then `wc -l js/main.js` shall return ≤ 2,200.`
+
 ## Phase 1 — <name> (~Xhr)
 
 **Independently testable.** <Why this phase comes first.>
@@ -36,7 +56,10 @@ These don't block scaffolding (Phase 1) but should be resolved before scene-spec
 1. **Step.** Description + [`file path`](path).
 2. **Step.** Description.
 
-**Acceptance:** <concrete checks — tests pass, manual verify shape, etc.>
+**Acceptance (EARS):**
+
+- When Phase 1 ships, then `<system>` shall `<response>`.
+- While `<precondition>`, the `<system>` shall `<response>`.
 
 ## Phase 2 — <name> (~Xhr)
 
@@ -44,7 +67,7 @@ These don't block scaffolding (Phase 1) but should be resolved before scene-spec
 
 1. ...
 
-**Acceptance:** ...
+**Acceptance (EARS):** ...
 
 ## Phase N — Polish (optional, ~Xhr)
 
@@ -68,12 +91,10 @@ These files require explicit task-brief authorization to modify within this cycl
 
 ## Hard stops
 
-Surface to the user, do not proceed:
+Durable hard stops apply on every cycle — see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md). The list below adds **cycle-specific** stops that aren't covered by the durable list:
 
-1. Frozen-file change without scope authorization — see [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md).
-2. Sim-baseline test failure that you don't understand — don't regenerate fixtures, escalate.
-3. Visual regression on a previously-passing scene — fix or revert before adding new scope.
-4. (Cycle-specific additions.)
+1. (Cycle-specific addition — e.g. "Phase A beacon shows zero pageviews after 1hr — pull the hook.")
+2. (Cycle-specific addition.)
 
 ## What NOT to do during this cycle
 
@@ -81,17 +102,20 @@ Surface to the user, do not proceed:
 
 ## Success criteria (cycle close)
 
-`/cycle-close` reads this section and asks the user to confirm each item. Don't pre-check.
+`/cycle-close` reads this section and asks the user to confirm each item. Don't pre-check. Each item should be EARS-form so the cycle-close reconciliation hook can grep its predicate against shipped commits + test output.
 
-- [ ] All phases shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
-- [ ] All vitest specs pass.
-- [ ] Production build clean.
-- [ ] Live on sheepdogsim.com via GH Actions.
-- [ ] (Cycle-specific qualitative criteria — e.g. "Rolling Hills feels meaningfully different from Field per playtest.")
+- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
+- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
+- [ ] When `npm run build` runs at cycle close, production build shall be clean.
+- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
+- [ ] (Cycle-specific qualitative criteria — e.g. "When Cycle 5 closes, Rolling Hills shall feel meaningfully different from Field per playtest.")
 
 ## References
 
 - [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) — this template
 - [`docs/INTERFACE_FENCE.md`](INTERFACE_FENCE.md) — durable frozen files
+- [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) — durable hard-stop list
+- [`docs/NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md) — pickup-state contract
 - [`docs/BACKLOG.md`](BACKLOG.md) — closed cycles + deferred items
 - [`docs/archive/cycles/`](archive/cycles/) — past cycle plans
+- [EARS notation](https://kiro.dev/docs/specs/) — testable acceptance lines
