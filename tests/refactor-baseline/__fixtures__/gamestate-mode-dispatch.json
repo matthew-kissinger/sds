@@ -1,0 +1,422 @@
+{
+  "startGameMatrix": {
+    "solo+practice": {
+      "gameMode": "solo",
+      "singlePlayerMode": "practice",
+      "totalSheep": 30,
+      "useExtremeBoids": false,
+      "gameActive": true,
+      "gameCompleted": false,
+      "sheepRetired": 0,
+      "isPaused": false,
+      "params": {
+        "speed": 0.1,
+        "cohesion": 0.1,
+        "separationDistance": 2,
+        "perception": 5,
+        "separationWeight": 1.6,
+        "alignmentWeight": 1.6,
+        "fleeMultiplier": 4,
+        "fleeRadius": 8,
+        "gateAttraction": 2,
+        "maxForce": 0.02,
+        "edgeMargin": 2.5,
+        "edgeTurnForce": 0.05
+      },
+      "competitiveGates": 0,
+      "playerScoresCount": 0,
+      "needsFlockRecreation": null
+    },
+    "solo+classic": {
+      "gameMode": "solo",
+      "singlePlayerMode": "classic",
+      "totalSheep": 200,
+      "useExtremeBoids": false,
+      "gameActive": true,
+      "gameCompleted": false,
+      "sheepRetired": 0,
+      "isPaused": false,
+      "params": {
+        "speed": 0.1,
+        "cohesion": 0.1,
+        "separationDistance": 2,
+        "perception": 5,
+        "separationWeight": 1.6,
+        "alignmentWeight": 1.6,
+        "fleeMultiplier": 4,
+        "fleeRadius": 8,
+        "gateAttraction": 2,
+        "maxForce": 0.02,
+        "edgeMargin": 2.5,
+        "edgeTurnForce": 0.05
+      },
+      "competitiveGates": 0,
+      "playerScoresCount": 0,
+      "needsFlockRecreation": null
+    },
+    "solo+extreme": {
+      "gameMode": "solo",
+      "singlePlayerMode": "extreme",
+      "totalSheep": 1000,
+      "useExtremeBoids": true,
+      "gameActive": true,
+      "gameCompleted": false,
+      "sheepRetired": 0,
+      "isPaused": false,
+      "params": {
+        "speed": 0.1,
+        "cohesion": 0.1,
+        "separationDistance": 2,
+        "perception": 5,
+        "separationWeight": 1.6,
+        "alignmentWeight": 1.6,
+        "fleeMultiplier": 4,
+        "fleeRadius": 8,
+        "gateAttraction": 2,
+        "maxForce": 0.02,
+        "edgeMargin": 2.5,
+        "edgeTurnForce": 0.05
+      },
+      "competitiveGates": 0,
+      "playerScoresCount": 0,
+      "needsFlockRecreation": null
+    },
+    "solo+insane": {
+      "gameMode": "solo",
+      "singlePlayerMode": "insane",
+      "totalSheep": 3000,
+      "useExtremeBoids": true,
+      "gameActive": true,
+      "gameCompleted": false,
+      "sheepRetired": 0,
+      "isPaused": false,
+      "params": {
+        "speed": 0.1,
+        "cohesion": 0.1,
+        "separationDistance": 2,
+        "perception": 5,
+        "separationWeight": 1.6,
+        "alignmentWeight": 1.6,
+        "fleeMultiplier": 4,
+        "fleeRadius": 8,
+        "gateAttraction": 2,
+        "maxForce": 0.02,
+        "edgeMargin": 2.5,
+        "edgeTurnForce": 0.05
+      },
+      "competitiveGates": 0,
+      "playerScoresCount": 0,
+      "needsFlockRecreation": null
+    },
+    "solo+chaos": {
+      "gameMode": "solo",
+      "singlePlayerMode": "chaos",
+      "totalSheep": 5000,
+      "useExtremeBoids": true,
+      "gameActive": true,
+      "gameCompleted": false,
+      "sheepRetired": 0,
+      "isPaused": false,
+      "params": {
+        "speed": 0.1,
+        "cohesion": 0.1,
+        "separationDistance": 2,
+        "perception": 5,
+        "separationWeight": 1.6,
+        "alignmentWeight": 1.6,
+        "fleeMultiplier": 4,
+        "fleeRadius": 8,
+        "gateAttraction": 2,
+        "maxForce": 0.02,
+        "edgeMargin": 2.5,
+        "edgeTurnForce": 0.05
+      },
+      "competitiveGates": 0,
+      "playerScoresCount": 0,
+      "needsFlockRecreation": null
+    },
+    "multiplayer+classic": {
+      "gameMode": "multiplayer",
+      "singlePlayerMode": "classic",
+      "totalSheep": 200,
+      "useExtremeBoids": false,
+      "gameActive": true,
+      "gameCompleted": false,
+      "sheepRetired": 0,
+      "isPaused": false,
+      "params": {
+        "speed": 0.1,
+        "cohesion": 0.1,
+        "separationDistance": 2,
+        "perception": 5,
+        "separationWeight": 1.6,
+        "alignmentWeight": 1.6,
+        "fleeMultiplier": 4,
+        "fleeRadius": 8,
+        "gateAttraction": 2,
+        "maxForce": 0.02,
+        "edgeMargin": 2.5,
+        "edgeTurnForce": 0.05
+      },
+      "competitiveGates": 0,
+      "playerScoresCount": 0,
+      "needsFlockRecreation": null
+    },
+    "competitive+classic": {
+      "gameMode": "competitive",
+      "singlePlayerMode": "classic",
+      "totalSheep": 200,
+      "useExtremeBoids": false,
+      "gameActive": true,
+      "gameCompleted": false,
+      "sheepRetired": 0,
+      "isPaused": false,
+      "params": {
+        "speed": 0.1,
+        "cohesion": 0.1,
+        "separationDistance": 2,
+        "perception": 5,
+        "separationWeight": 1.6,
+        "alignmentWeight": 1.6,
+        "fleeMultiplier": 4,
+        "fleeRadius": 8,
+        "gateAttraction": 2,
+        "maxForce": 0.02,
+        "edgeMargin": 2.5,
+        "edgeTurnForce": 0.05
+      },
+      "competitiveGates": 2,
+      "playerScoresCount": 2,
+      "needsFlockRecreation": null
+    },
+    "timed+classic": {
+      "gameMode": "timed",
+      "singlePlayerMode": "classic",
+      "totalSheep": 200,
+      "useExtremeBoids": false,
+      "gameActive": true,
+      "gameCompleted": false,
+      "sheepRetired": 0,
+      "isPaused": false,
+      "params": {
+        "speed": 0.1,
+        "cohesion": 0.1,
+        "separationDistance": 2,
+        "perception": 5,
+        "separationWeight": 1.6,
+        "alignmentWeight": 1.6,
+        "fleeMultiplier": 4,
+        "fleeRadius": 8,
+        "gateAttraction": 2,
+        "maxForce": 0.02,
+        "edgeMargin": 2.5,
+        "edgeTurnForce": 0.05
+      },
+      "competitiveGates": 0,
+      "playerScoresCount": 0,
+      "needsFlockRecreation": null
+    }
+  },
+  "objectiveSetup": {
+    "null@200": null,
+    "ocStyle@200": {
+      "stage": "roundup",
+      "roundupZone": {
+        "x": 0,
+        "z": 0,
+        "radius": 30
+      },
+      "requiredSheep": 80,
+      "holdRequired": 2,
+      "sheepInZone": 0,
+      "holdTimer": 0
+    },
+    "ocStyle@1000": {
+      "stage": "roundup",
+      "roundupZone": {
+        "x": 0,
+        "z": 0,
+        "radius": 30
+      },
+      "requiredSheep": 400,
+      "holdRequired": 2,
+      "sheepInZone": 0,
+      "holdTimer": 0
+    },
+    "ocStyle@3000": {
+      "stage": "roundup",
+      "roundupZone": {
+        "x": 0,
+        "z": 0,
+        "radius": 30
+      },
+      "requiredSheep": 1200,
+      "holdRequired": 2,
+      "sheepInZone": 0,
+      "holdTimer": 0
+    },
+    "ocStyle@5000": {
+      "stage": "roundup",
+      "roundupZone": {
+        "x": 0,
+        "z": 0,
+        "radius": 30
+      },
+      "requiredSheep": 2000,
+      "holdRequired": 2,
+      "sheepInZone": 0,
+      "holdTimer": 0
+    },
+    "explicit@200": {
+      "stage": "roundup",
+      "roundupZone": {
+        "x": 5,
+        "z": -5,
+        "radius": 25
+      },
+      "requiredSheep": 50,
+      "holdRequired": 3,
+      "sheepInZone": 0,
+      "holdTimer": 0
+    },
+    "explicit@1000": {
+      "stage": "roundup",
+      "roundupZone": {
+        "x": 5,
+        "z": -5,
+        "radius": 25
+      },
+      "requiredSheep": 50,
+      "holdRequired": 3,
+      "sheepInZone": 0,
+      "holdTimer": 0
+    },
+    "tinyMin@5": {
+      "stage": "roundup",
+      "roundupZone": {
+        "x": 0,
+        "z": 0,
+        "radius": 30
+      },
+      "requiredSheep": 10,
+      "holdRequired": 1,
+      "sheepInZone": 0,
+      "holdTimer": 0
+    },
+    "ocStyle_refresh_200_to_1000": {
+      "stage": "roundup",
+      "roundupZone": {
+        "x": 0,
+        "z": 0,
+        "radius": 30
+      },
+      "requiredSheep": 400,
+      "holdRequired": 2,
+      "sheepInZone": 0,
+      "holdTimer": 0
+    }
+  },
+  "objectiveTick": {
+    "below_threshold_dt=1": {
+      "stage": "roundup",
+      "sheepInZone": 3,
+      "holdTimer": 0
+    },
+    "at_threshold_dt=1": {
+      "stage": "roundup",
+      "sheepInZone": 5,
+      "holdTimer": 1
+    },
+    "at_threshold_two_ticks": {
+      "stage": "drive",
+      "sheepInZone": 5,
+      "holdTimer": 2
+    },
+    "over_threshold_dt=2.5": {
+      "stage": "drive",
+      "sheepInZone": 8,
+      "holdTimer": 2.5
+    },
+    "hold_broken": {
+      "stage": "roundup",
+      "sheepInZone": 0,
+      "holdTimer": 0
+    }
+  },
+  "competitiveCompletion": {
+    "2p@99-99": {
+      "isComplete": false,
+      "winner": null,
+      "winType": null
+    },
+    "2p@100-50": {
+      "isComplete": true,
+      "winner": "p1",
+      "winType": "race"
+    },
+    "2p@99-101": {
+      "isComplete": true,
+      "winner": "p2",
+      "winType": "race"
+    },
+    "2p@100-100": {
+      "isComplete": true,
+      "winner": "p1",
+      "winType": "race"
+    },
+    "2p@200-0": {
+      "isComplete": true,
+      "winner": "p1",
+      "winType": "race"
+    },
+    "3p@30-30-30": {
+      "isComplete": false,
+      "winner": null,
+      "winType": null
+    },
+    "3p@67-67-66": {
+      "isComplete": true,
+      "winner": "p1",
+      "winType": "highest_score"
+    },
+    "3p@100-50-50": {
+      "isComplete": true,
+      "winner": "p1",
+      "winType": "highest_score"
+    },
+    "4p@49-49-49-49": {
+      "isComplete": false,
+      "winner": null,
+      "winType": null
+    },
+    "4p@50-50-50-50": {
+      "isComplete": true,
+      "winner": "p1",
+      "winType": "highest_score"
+    },
+    "4p@200-0-0-0": {
+      "isComplete": true,
+      "winner": "p1",
+      "winType": "highest_score"
+    },
+    "wrongMode": {
+      "isComplete": false,
+      "winner": null,
+      "winType": null
+    }
+  },
+  "sandboxCompletion": {
+    "none@0-of-200": false,
+    "none@200-of-200": false,
+    "all@199-of-200": false,
+    "all@200-of-200": true,
+    "all@201-of-200": true,
+    "percentage50@99-of-200": false,
+    "percentage50@100-of-200": true,
+    "percentage100@199-of-200": false,
+    "percentage100@200-of-200": true,
+    "percentage75@749-of-1000": false,
+    "percentage75@750-of-1000": true,
+    "fallthrough_solo@10-of-10": true
+  }
+}
