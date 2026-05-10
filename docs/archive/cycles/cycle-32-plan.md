@@ -17,6 +17,7 @@ Cycle 32 shipped as `v2.1.4`.
 - The canary stays manual while the account is free. Push gating waits until the BrowserStack path proves stable enough to justify paid Automate minutes.
 - BrowserStack Local on the Windows workstation hit an `EBUSY` lock opening `C:\Users\Mattm\.browserstack\BrowserStackLocal.exe`. Public URL mode passed. Use the GitHub workflow / Linux runner for the next local-build tunnel proof.
 - MP island scenes stayed out of scope. No shared sim files, worker objective code, wire format, or sim-baseline goldens changed.
+- Post-push deploy run [`25618264492`](https://github.com/matthew-kissinger/sds/actions/runs/25618264492) published Worker and Pages, and production served the expected Cycle 32 asset hashes. The run remains red because Linux Chromium E2E cannot start the worker side of `npm run dev` (`wrangler: not found`) before the Solo Classic canvas smoke times out. That is parked as CI/dev-server dependency drift for the next pass.
 
 ## Implementation Changes
 
@@ -82,6 +83,7 @@ Closeout validation:
 - `npm run build` - clean production build.
 - `npm run test:e2e -- --project=chromium --grep-invert @local-only` - 6 passed.
 - `IOS_WATER_BASE_URL=https://sheepdogsim.com npm run test:ios-water` - passed on real iOS Safari; latest sampled average RGB `[26, 44, 11]`, `nearFoamWhite: false`.
+- GitHub Actions Worker + Pages deploy jobs - passed for run `25618264492`; Linux Chromium E2E remains red due `wrangler: not found` in CI startup.
 
 ## Hard Stops
 

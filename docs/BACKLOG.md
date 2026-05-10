@@ -10,6 +10,8 @@ Plan archived at [`docs/archive/cycles/cycle-32-plan.md`](archive/cycles/cycle-3
 
 All 6 phases shipped in one closeout commit on `main`. Tests 300 pass (307 with skips). Build clean (mainKB ≈ 589.60 / threeKB ≈ 617.77). BrowserStack public URL canary passed on `iPhone 15 Pro Max / iOS 17 / Safari` with sampled average RGB `[26, 44, 11]`, `nearFoamWhite: false`. Player-visible delta → bumped `2.1.3 → 2.1.4`.
 
+Post-push deploy truth: commit `b1abe2531e4a1a4fe428d15c089efca59016fa33` and tag `v2.1.4` were pushed. GitHub Actions run [`25618264492`](https://github.com/matthew-kissinger/sds/actions/runs/25618264492) deployed Worker and Pages successfully, and production `https://sheepdogsim.com/` served the expected Cycle 32 asset hashes (`main-COqIprCT.js`, `three-CknJ8WuT.js`). The same run's Linux `E2E (Chromium)` job is red after retry; logs show `wrangler: not found` during the CI `npm run dev` web-server startup before the Solo Classic canvas smoke timed out. Treat that as CI/dev-server dependency drift to inspect next, not as a confirmed water regression.
+
 **What changed:**
 
 - **Removed the fragile render path.** `js/water/DepthPrePass.js` is deleted and [`SceneManager`](../js/SceneManager.js) no longer renders scene depth before water every frame.
@@ -25,11 +27,13 @@ All 6 phases shipped in one closeout commit on `main`. Tests 300 pass (307 with 
 - `npm run build` - clean production build.
 - `npm run test:e2e -- --project=chromium --grep-invert @local-only` - 6 passed.
 - `IOS_WATER_BASE_URL=https://sheepdogsim.com npm run test:ios-water` - passed on BrowserStack iOS Safari.
+- Deploy workflow Worker + Pages jobs - passed for run `25618264492`; Linux Chromium E2E job still needs CI dependency follow-up.
 - No shared deterministic sim files, sim baselines, `.claude/rules/*`, or `docs/CYCLE_TEMPLATE.md` touched.
 
 **Carryover:**
 
 - BrowserStack Local on the Windows workstation hit `EBUSY` opening `C:\Users\Mattm\.browserstack\BrowserStackLocal.exe`. Public URL mode works. Before paying for BrowserStack or making the canary push-gated, prove the local tunnel through the manual GitHub workflow / Linux runner.
+- Fix the GitHub Actions E2E startup drift where `wrangler` is unavailable to `npm run dev` in the Linux runner. Start from run `25618264492` artifacts/logs and keep this separate from the water shader change unless artifact evidence says otherwise.
 - MP island scenes remain deferred to Cycle 33 and require an explicit shared-sim / worker / wire-format / sim-baseline plan before implementation.
 
 ### Cycle 31 - `public-surface` (closed 2026-05-09, autonomous run, v2.1.3)

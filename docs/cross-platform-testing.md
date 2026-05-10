@@ -74,6 +74,8 @@ npm run test:ios-water
 
 The raw Chromium project includes `@local-only` perf probes that are hardware/noise sensitive and not part of the normal release smoke. CI and release validation use the grep-inverted command above.
 
+Current CI caveat from the Cycle 32 deploy: GitHub Actions run `25618264492` failed the Linux `E2E (Chromium)` job because `npm run dev` could not find `wrangler` while starting the worker, then the Solo Classic canvas smoke timed out. Local grep-inverted Chromium E2E passed. Fix the CI web-server dependency path before treating that job as release-green again.
+
 `tests/safari-smoke/run.mjs` only does useful work on macOS with Safari automation enabled.
 
 ## Triage Rules
