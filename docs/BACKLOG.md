@@ -4,6 +4,39 @@
 
 ## Recently Completed
 
+### Cycle 34 - `mp-island-scenes` (closed 2026-05-10, no version bump)
+
+Plan archived at [`docs/archive/cycles/cycle-34-plan.md`](archive/cycles/cycle-34-plan.md). Cycle 34 made `?scene=rolling-hills` and `?scene=open-country` first-class in multiplayer rooms: net-additive sim-baseline coverage for the island boundary and corral retirement code paths, server-authoritative Open Country objective state machine (`roundup` → `drive`) ported into `shared/objective.js`, optional additive wire-format `objective` block on `gameStateUpdate` snapshots, defensive `allowedModes` guard at `RoomDO.initRoom`, and a host scene picker in the lobby UI that filters the mode dropdown by the selected scene's allowed modes. No `package.json` version bump — manual playtest deferred to post-deploy verification.
+
+All 5 phases shipped autonomously. Tests 315 pass / 7 skipped (was 300/7 at Cycle 33 close, +15 from cycle-34 specs). Build clean (mainKB 590.06 vs 589.60 baseline, +0.46KB total cycle-34 client delta). `npm run lint` clean. Pre-existing sim-baseline fixtures byte-identical (`git diff --stat tests/sim-baseline/__fixtures__/sheep-60hz-20s.json dog-rotation-60hz.json reconcile-interp-60hz.json stamina-curve-60hz.json` returns nothing).
+
+**Phases:**
+
+- **1 — Sim-baseline coverage for island scenes (~1.5hr).** Added `tests/sim-baseline/__fixtures__/island-boundary-rh-60hz.json`, `corral-retirement-rh-60hz.json`, `island-boundary-oc-60hz.json` (net-additive 60Hz traces, 50/30/50 sheep, 60/120/60 ticks). Extended [`tests/sim-baseline/harness.js`](../tests/sim-baseline/harness.js) with `makeIslandGameState`, `makeIslandSheepConfig`, `tickSheepIslandCoop`. Fixed `round4` to collapse `-0` to `0` for stable JSON round-trip (z-axis sheep produced `-0` from velocity damping; fixture serialised `0`). Three new `it()` blocks in [`tests/sim-baseline/baseline.spec.ts`](../tests/sim-baseline/baseline.spec.ts).
+- **2 — OC objective state machine in shared/ + worker (~3hr).** Promoted [`js/gamestate/objective.js`](../js/gamestate/objective.js) to [`shared/objective.js`](../shared/objective.js) so the Worker authoritative sim runs the byte-identical state transitions the client predictor runs. The js-side path became a one-line re-export shim. [`worker/src/GameSim.js`](../worker/src/GameSim.js) creates the objective at construction, calls `tickObjective` each tick, and gates `updateSheepCorralRetirements` on `isCorralOpen(this.objective)`. RH/Field paths byte-identical (no objective → `isCorralOpen(null) === true`). Added `oc-objective-stage-60hz.json` capturing the `roundup → drive` flip at tick 121 (2.0s holdRequired at 60Hz).
+- **3 — Wire format additions for objective stage (~1.5hr).** `createGameStateSnapshot()` emits an optional `objective` block when `this.objective != null` — shape mirrors the local `ObjectiveState` (`{stage, sheepInZone, requiredSheep, holdTimer, holdRequired}`) so the client mirrors directly into `game.gameState.objective`. Pre-Cycle-34 clients ignore the field (legacy "drive to portal" prompt); pre-Cycle-34 workers send no field. No protocol-version handshake. [`js/boot/initNetwork.js`](../js/boot/initNetwork.js) writes `serverState.objective` into `game.gameState.objective` and dispatches `objective-stage-changed` on stage flip so the existing CorralCompass + portal-effect listeners fire identically to solo. New [`tests/worker-objective-snapshot.spec.js`](../tests/worker-objective-snapshot.spec.js) (5 specs) asserts: OC snapshot includes objective in roundup at start, reflects forced drive stage, and field/RH snapshots omit the field entirely.
+- **4 — `allowedModes` enforcement at room init (~30min).** [`worker/src/RoomDO.ts`](../worker/src/RoomDO.ts) cross-checks the requested `gameMode` against the resolved scene's `allowedModes` array before persisting room meta. A host attempting to create an OC room in `competitive` mode now receives HTTP 400 with `{error: 'mode_not_allowed_on_scene', sceneId, gameMode, allowedModes}`. Six new unit tests in [`tests/worker-allowed-modes.spec.js`](../tests/worker-allowed-modes.spec.js) cover OC × {coop, comp, timed}, RH × {coop, comp}, Field × {coop, comp, timed}.
+- **5 — Lobby UI surfaces scene + allowed modes (~1hr).** [`js/components/Multiplayer/RoomCreation.js`](../js/components/Multiplayer/RoomCreation.js) gained a scene `<select>` (Sheep Dog Island / Open Country / Field per the solo ScenePicker order). The mode dropdown filters by the selected scene's `allowedModes`; when the selected mode becomes invalid after a scene change, snaps to the scene's `defaultMode`. [`js/components/App.js`](../js/components/App.js) threads `settings.sceneId` through `nm.createRoom` (NetworkManager already forwards it). [`js/components/Multiplayer/PublicLobbyList.js`](../js/components/Multiplayer/PublicLobbyList.js) renders the scene's display name as a chip next to the mode chip; `loadScene` wrapped in try/catch defends against persisted rooms with stale sceneIds.
+
+**Validation:**
+
+- `npm test` — 315 passed / 7 skipped (was 300/7 at Cycle 33 close, +15 from cycle-34 specs).
+- `npm run lint` — clean (eslint shared/).
+- `npm run build` — clean, mainKB 590.06 / threeKB 617.77 (+0.46KB cycle-34 delta vs Cycle 33 close).
+- `npm run test:integration` — 39 passed / 7 skipped (`tests/integration/flow.spec.ts` skips remain pre-existing).
+- `git diff --stat tests/sim-baseline/__fixtures__/sheep-60hz-20s.json dog-rotation-60hz.json reconcile-interp-60hz.json stamina-curve-60hz.json` — zero output (existing fixtures byte-identical).
+- `shared/scenes/types.js` — untouched (verified no SceneDef schema change required, per design doc).
+- `worker/migrations/` — untouched (no D1 schema change required; objective state lives in DO memory).
+
+**PRs:** 5 commits on `main` ([`318a346`](https://github.com/matthew-kissinger/sds/commit/318a346), [`d3a31de`](https://github.com/matthew-kissinger/sds/commit/d3a31de), [`0caddea`](https://github.com/matthew-kissinger/sds/commit/0caddea), [`93e7e70`](https://github.com/matthew-kissinger/sds/commit/93e7e70), close commit pending).
+
+**Carryover:**
+
+- **Manual playtest of OC multiplayer.** Boot `npm run dev`, open two browser tabs, host an OC room as scene=open-country, drive sheep into the round-up zone, confirm the stage flips to `drive` server-side and the portal opens. Same pattern as Cycle 32/33 post-deploy verification — autonomous run cannot pair the browser. Goal: confirm the round-up gate feels right at MP cadence (60Hz authoritative + client prediction) and the lobby UI surfaces all scenes correctly.
+- **Promote `worker-objective-snapshot.spec.js` into the WS two-client harness.** The Phase 3 acceptance line targeted the `tests/integration/flow.spec.ts` WS harness, but the harness is fully skipped today. Promoting requires unskipping flow.spec.ts and standing up a real worker fixture — out of cycle-34 scope. The unit-level spec covers the contract; the harness coverage is a backlog item.
+- **OC objective HUD polish.** The `gather → drive` UX was solo-only before; MP just inherits the same ObjectiveBanner via the snapshot mirror. After playtest, may want MP-specific copy (e.g. "Group up — 20 sheep needed") or per-player progress indicators.
+- **Cycle 33 carryovers still open.** Local-tunnel BrowserStack canary on Ubuntu (manual `gh workflow run browserstack-ios-water.yml` with empty `base_url`); Node 20 annotation re-check on next Deploy run.
+
 ### Cycle 33 - `operational-hardening` (closed 2026-05-10, no version bump)
 
 Plan archived at [`docs/archive/cycles/cycle-33-plan.md`](archive/cycles/cycle-33-plan.md). Cycle 33 cleared four operational carryovers from Cycle 32 (deprecated GHA actions, BrowserStack-Local-on-Ubuntu gap, two open Dependabot alerts, long-standing reconcile-hook regex collision) and shipped an MP-island-scenes design doc to prime Cycle 34. No player-visible delta; no `package.json` version bump.
