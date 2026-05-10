@@ -387,7 +387,11 @@ export async function initReactUI() {
                         maxPlayers: settings.maxPlayers,
                         isPublic: true,
                         gameMode: settings.gameMode,
-                        sheepCount: settings.sheepCount
+                        sheepCount: settings.sheepCount,
+                        // Cycle 34 Phase 5: thread the host-selected scene
+                        // through to the worker. Falls through to DEFAULT_SCENE_ID
+                        // if undefined (legacy code paths).
+                        sceneId: settings.sceneId
                     }, selectedDog);
 
                     // Cycle 11 Phase 5: telemetry.

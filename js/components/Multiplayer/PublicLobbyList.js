@@ -8,12 +8,25 @@ import { getNetworkManager } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button, BackButton } from '../ui/Button.js';
+import { loadScene } from '../../../shared/scenes/index.js';
 
 const MODE_LABELS = {
     cooperative: 'Cooperative',
     competitive: 'Competitive',
     timed: 'Timed'
 };
+
+// Cycle 34 Phase 5: resolve a sceneId to its human display name. loadScene
+// throws on unknown ids so the wrapper falls back gracefully — defends
+// against persisted rooms with stale or renamed sceneIds.
+function sceneLabel(sceneId) {
+    if (!sceneId) return null;
+    try {
+        return loadScene(sceneId).name;
+    } catch {
+        return sceneId;
+    }
+}
 
 export function PublicLobbyList({ onBack, onJoinRoom }) {
     const { t } = useTranslation();
@@ -162,6 +175,21 @@ export function PublicLobbyList({ onBack, onJoinRoom }) {
                                 padding: '0.125rem 0.5rem'
                             }
                         }, MODE_LABELS[lobby.gameMode] || lobby.gameMode),
+                        // Cycle 34 Phase 5: surface the scene's display name
+                        // so players can pick rooms by biome ("Sheep Dog
+                        // Island", "Open Country", "Field") instead of mode
+                        // alone.
+                        sceneLabel(lobby.sceneId) && createElement('span', {
+                            key: 'scene',
+                            style: {
+                                fontSize: '0.75rem',
+                                color: '#a5b4fc',
+                                background: 'rgba(165, 180, 252, 0.1)',
+                                border: '1px solid rgba(165, 180, 252, 0.3)',
+                                borderRadius: '0.375rem',
+                                padding: '0.125rem 0.5rem'
+                            }
+                        }, sceneLabel(lobby.sceneId)),
                         createElement('span', {
                             key: 'players',
                             style: {

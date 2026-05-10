@@ -2,17 +2,25 @@
  * RoomCreation Component
  * Create a new multiplayer room with settings
  */
-import React, { createElement, useState } from 'react';
+import React, { createElement, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
+import { listScenes, loadScene, DEFAULT_SCENE_ID } from '../../../shared/scenes/index.js';
 
 const gameModeDescriptions = {
     cooperative: 'multiplayer.cooperativeDesc',
     competitive: 'multiplayer.competitiveDesc',
     timed: 'multiplayer.timedDesc'
 };
+
+// Cycle 34 Phase 5: scene picker for the host. Mode dropdown filters by
+// the selected scene's `allowedModes` so the host can't trip the worker's
+// 400 mode_not_allowed_on_scene guard from Phase 4. Scene order matches
+// the solo ScenePicker (RH first, OC second, Field last).
+const SCENE_ORDER = ['rolling-hills', 'open-country', 'field'];
+const ALL_MODES = ['cooperative', 'competitive', 'timed'];
 
 // Cycle 8 Phase 5: room-level sheep count picker.
 // Cycle 23 Phase E (Q5): extended to include Insane (3000) + Chaos (5000)
@@ -39,9 +47,39 @@ export function RoomCreation({ onBack, onCreate }) {
     const [settings, setSettings] = useState({
         maxPlayers: 4,
         gameMode: 'cooperative',
-        sheepCount: 200
+        sheepCount: 200,
+        sceneId: DEFAULT_SCENE_ID
     });
     const { isCompact } = useResponsive();
+
+    // Resolve the selected scene's display name + allowed modes for the
+    // mode dropdown filter. listScenes() is small (3 entries today) and
+    // the cost is negligible per render.
+    const sceneOptions = useMemo(() => {
+        const all = listScenes();
+        return SCENE_ORDER
+            .map(id => all.find(s => s.id === id))
+            .filter(Boolean);
+    }, []);
+    const selectedScene = useMemo(
+        () => loadScene(settings.sceneId),
+        [settings.sceneId]
+    );
+    const availableModes = selectedScene.allowedModes && selectedScene.allowedModes.length > 0
+        ? selectedScene.allowedModes
+        : ALL_MODES;
+
+    // If the currently-selected mode is no longer valid for the scene,
+    // snap to the scene's defaultMode (or the first allowed mode).
+    if (!availableModes.includes(settings.gameMode)) {
+        const fallback = selectedScene.defaultMode && availableModes.includes(selectedScene.defaultMode)
+            ? selectedScene.defaultMode
+            : availableModes[0];
+        // Defer the state update to avoid a setState-during-render warning.
+        Promise.resolve().then(() => {
+            setSettings(prev => ({ ...prev, gameMode: fallback }));
+        });
+    }
 
     const selectStyle = {
         width: '100%',
@@ -102,7 +140,21 @@ export function RoomCreation({ onBack, onCreate }) {
                     ))
                 ]),
 
-                // Game Mode
+                // Cycle 34 Phase 5: Scene picker. Drives the mode-dropdown
+                // filter below.
+                createElement('div', { key: 'scene' }, [
+                    createElement('label', { key: 'label', style: labelStyle }, 'Scene'),
+                    createElement('select', {
+                        key: 'select',
+                        style: selectStyle,
+                        value: settings.sceneId,
+                        onChange: (e) => setSettings({ ...settings, sceneId: e.target.value })
+                    }, sceneOptions.map(sc =>
+                        createElement('option', { key: sc.id, value: sc.id }, sc.name)
+                    ))
+                ]),
+
+                // Game Mode (filtered by selected scene's allowedModes)
                 createElement('div', { key: 'game-mode' }, [
                     createElement('label', { key: 'label', style: labelStyle }, t('multiplayer.gameMode')),
                     createElement('select', {
@@ -110,11 +162,9 @@ export function RoomCreation({ onBack, onCreate }) {
                         style: selectStyle,
                         value: settings.gameMode,
                         onChange: (e) => setSettings({ ...settings, gameMode: e.target.value })
-                    }, [
-                        createElement('option', { key: 'cooperative', value: 'cooperative' }, t('multiplayer.cooperative')),
-                        createElement('option', { key: 'competitive', value: 'competitive' }, t('multiplayer.competitive')),
-                        createElement('option', { key: 'timed', value: 'timed' }, t('multiplayer.timed'))
-                    ])
+                    }, availableModes.map(mode =>
+                        createElement('option', { key: mode, value: mode }, t(`multiplayer.${mode}`))
+                    ))
                 ]),
 
                 // Sheep count (Cycle 8 Phase 5; Cycle 23 Phase E added Insane/Chaos)
