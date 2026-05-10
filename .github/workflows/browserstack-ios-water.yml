@@ -1,17 +1,30 @@
 name: BrowserStack iOS Water
 
+# Real iOS Safari water canary on BrowserStack. Two modes:
+#
+#   1. Public-URL mode (release smoke). Pass an `https://...` URL in the
+#      `base_url` input. The runner skips the local server step and points
+#      BrowserStack directly at the public origin.
+#
+#   2. Local-tunnel mode (pre-release verification of unmerged changes).
+#      Leave `base_url` empty. The runner builds `dist/`, serves it on
+#      port 3000 via http-server, and BrowserStack Local tunnels into the
+#      runner so iOS Safari hits the staged build. The water canary does
+#      not need the worker (no D1, no DO), so a static dist serve is
+#      enough.
+
 on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: Optional public URL to test instead of the local Vite server
+        description: Optional public URL to test instead of building + serving dist
         required: false
         default: ''
 
 jobs:
   ios-water:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
 
@@ -21,6 +34,35 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Echo run mode
+        run: |
+          if [ -z "${{ github.event.inputs.base_url }}" ]; then
+            echo "Run mode: local-tunnel (build dist + serve on :3000 + BrowserStack Local)"
+          else
+            echo "Run mode: public-URL (${{ github.event.inputs.base_url }})"
+          fi
+
+      - name: Build dist (local-tunnel mode only)
+        if: ${{ github.event.inputs.base_url == '' }}
+        run: npm run build
+
+      - name: Serve dist on :3000 (local-tunnel mode only)
+        if: ${{ github.event.inputs.base_url == '' }}
+        run: npx --yes http-server dist -p 3000 -s &
+
+      - name: Wait for static server (local-tunnel mode only)
+        if: ${{ github.event.inputs.base_url == '' }}
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sSf http://localhost:3000/ > /dev/null; then
+              echo "Static server ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Static server did not come up"
+          exit 1
 
       - name: Run real iOS water canary
         run: npm run test:ios-water
