@@ -173,9 +173,9 @@ The durable hard stops in [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) apply.
 - [x] When `npm test` runs at cycle close, all vitest specs shall pass.
 - [x] When `npm run build` runs at cycle close, production build shall be clean.
 - [x] When `npm run test:e2e -- --project=chromium --grep-invert @local-only` runs at cycle close, all chromium e2e specs shall pass.
-- [ ] When the close commit lands on `main`, sheepdogsim.com Deploy workflow shall succeed.
-- [ ] When the close commit lands on `main`, the next Deploy run shall not emit Node 20 deprecation annotations.
-- [ ] When the close commit lands on `main`, GitHub Dependabot alert count shall be 0 or 1 (alert #20 dismissed; alert #21 auto-resolved by override).
+- [x] When the close commit lands on `main`, sheepdogsim.com Deploy workflow shall succeed. ([run 25620763332](https://github.com/matthew-kissinger/sds/actions/runs/25620763332))
+- [x] When the close commit lands on `main`, the next Deploy run shall not emit Node 20 deprecation annotations. (Verified: log search returned only inert npm-dep warnings, no actions-runtime deprecation.)
+- [x] When the close commit lands on `main`, GitHub Dependabot alert count shall be 0 or 1 (alert #20 dismissed; alert #21 auto-resolved by override). (Verified: 0 open alerts post-push.)
 - [x] When the close commit lands on `main`, [`docs/mp-island-scenes-design.md`](mp-island-scenes-design.md) shall exist.
 - [x] When the close commit lands on `main`, [`docs/security-acceptance.md`](security-acceptance.md) shall exist.
 - [x] When the close commit lands on `main`, `git diff --name-only HEAD~10 HEAD -- shared/ worker/src/ js/network/ tests/sim-baseline/ worker/migrations/ docs/CYCLE_TEMPLATE.md .claude/rules/ .claude/commands/` shall return zero entries.

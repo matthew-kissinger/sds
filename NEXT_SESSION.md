@@ -27,9 +27,10 @@ Cycle 33 closed the operational backlog before the next architecture lift. Five 
 
 ## Operational Notes
 
-- The cycle 33 branch is `cycle-33-ops-hardening`. After push it should be merged to `main` for the deploy and the action-version annotation to confirm clean.
-- Phase 2's local-tunnel canary path needs a manual `gh workflow run browserstack-ios-water.yml` dispatch on Ubuntu after merge to confirm BrowserStack Local works end-to-end (was the original "prove BrowserStack Local on Linux before paying for Automate" gate from Cycle 32). Public-URL mode was already validated in Cycle 32; the local-tunnel path is the new Phase 2 surface area.
-- The "next Deploy run shall not emit Node 20 deprecation annotations" success-criteria item is a post-merge check; flag it when the next push lands.
+- Cycle 33 merged to `main` and pushed at commit `ec36e82` (close commit) on top of the 5 phase commits. Deploy run [`25620763332`](https://github.com/matthew-kissinger/sds/actions/runs/25620763332) passed end to end (Test, E2E Chromium, Pages, Worker, Perf check). Production `https://sheepdogsim.com/` continues to serve `main-COqIprCT.js` + `three-CknJ8WuT.js` (byte-identical to Cycle 32; cycle 33 had zero JS-bundle delta).
+- Node 20 deprecation annotations are gone from the Deploy run logs (only inert npm-dep warnings remain).
+- Dependabot alerts on default branch are at 0 (alert #20 aws-sdk@2 dismissed with `tolerable_risk` rationale, alert #21 @tootallnate/once auto-resolved by the package-overrides bump).
+- **Outstanding operational verification:** Phase 2's local-tunnel canary path needs a manual `gh workflow run browserstack-ios-water.yml` dispatch (no `base_url` input) on the Ubuntu runner to confirm the new self-sufficient build + http-server path works end-to-end. This is the gate to flip Cycle 32's "prove BrowserStack Local on Linux before paying for Automate" carryover. Skipped from cycle-33 close to avoid burning the limited free-tier session minutes during the autonomous run.
 
 ## Carryover Candidates For Cycle 34
 
