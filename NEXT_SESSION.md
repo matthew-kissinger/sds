@@ -1,10 +1,10 @@
-# Next Session - Cycle 33 Selection
+# Next Session - Cycle 33 (`operational-hardening`)
 
-> **Updated:** 2026-05-10 after Cycle 32 (`apple-platform-validation`) closeout.
-> **For:** Cycle 33 planning.
-> **Pickup priority:** Cycle 32 is closed as `v2.1.4`. Start by choosing the next cycle goal. The leading candidate is `mp-island-scenes`; the main parked operational item is proving BrowserStack Local through GitHub Actions / Linux before making the real-iOS canary push-gated or paying for Automate.
+> **Updated:** 2026-05-10 — Cycle 33 plan drafted and active.
+> **For:** Cycle 33 (`operational-hardening`).
+> **Pickup priority:** Execute the active plan at [`docs/cycle-33-plan.md`](docs/cycle-33-plan.md). 5 phases — GHA `@v4 → @v5` bump, BrowserStack workflow self-sufficiency on Linux, Dependabot/security hygiene, reconcile-hook regex fix, and an MP-island-scenes design doc that primes Cycle 34. No version bump, no player-visible delta.
 
-Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file. Cycle 32's closed plan is archived at [`docs/archive/cycles/cycle-32-plan.md`](docs/archive/cycles/cycle-32-plan.md). No `docs/cycle-33-plan.md` exists yet; draft it only after Matt picks the next goal.
+Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/cycle-33-plan.md`](docs/cycle-33-plan.md). Cycle 32's closed plan is archived at [`docs/archive/cycles/cycle-32-plan.md`](docs/archive/cycles/cycle-32-plan.md).
 
 ## Cycle 32 Close Summary
 
