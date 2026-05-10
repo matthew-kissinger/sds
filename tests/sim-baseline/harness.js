@@ -29,10 +29,12 @@ import {
     updateStamina,
     calculateBoundaryAvoidanceWithGate,
     applyHardBoundaryConstraints,
+    updateSheepCorralRetirements,
     validateEntityState,
     createGameState,
     createBoidConfig,
-    createMovementConfig
+    createMovementConfig,
+    loadScene
 } from '../../shared/index.js';
 
 /**
@@ -142,6 +144,131 @@ export function makeCoopGameState() {
         totalSheep: 200,
         bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 }
     });
+}
+
+/**
+ * Cycle 34 Phase 1: build a sim state from an island scene def. Uses the
+ * scene's boundary (kind: 'island') and corral verbatim. No gate or pasture
+ * (islands use corral retirement instead). Used by the island-boundary and
+ * corral-retirement baseline fixtures.
+ *
+ * @param {string} sceneId  'rolling-hills' or 'open-country'
+ * @param {number} totalSheep  Sheep count for sim state
+ */
+export function makeIslandGameState(sceneId, totalSheep = 50) {
+    const scene = loadScene(sceneId);
+    return createGameState({
+        sceneId,
+        totalSheep
+    });
+}
+
+/**
+ * Cycle 34 Phase 1: per-scene boid config. Mirrors `GameSim.js:96-102` —
+ * the multiplayer baseline merged with the scene's `flocking` override.
+ * OC declares `perceptionRadius: 9`; RH and Field use the baseline.
+ */
+export function makeIslandSheepConfig(sceneId) {
+    const scene = loadScene(sceneId);
+    return createBoidConfig({
+        maxSpeed: 0.24,
+        maxForce: 0.05,
+        perceptionRadius: 6,
+        separationDistance: 2.5,
+        ...(scene.flocking || {})
+    });
+}
+
+/**
+ * Cycle 34 Phase 1: one tick of sheep update for an island/corral scene.
+ * Mirrors `GameSimulation.updateSheep` for the corral-retirement path
+ * (Rolling Hills, Open Country) without an `objective` gate. Phase 2 adds
+ * the objective gate; this function deliberately runs unconditional corral
+ * retirement so it stays a pure regression net for the boundary path.
+ */
+export function tickSheepIslandCoop(sheepArray, sheepdogs, gameState, deltaTime, sheepConfig) {
+    const cfg = sheepConfig;
+    const activeSheep = sheepArray.filter(s => s.state === 0);
+
+    for (const sheep of sheepArray) {
+        if (sheep.state === 1 || sheep.state === 2) {
+            sheep.velocity.set(0, 0);
+            sheep.acceleration.set(0, 0);
+            continue;
+        }
+
+        const neighbors = getNeighbors(sheep, activeSheep, cfg.perceptionRadius);
+        const flockingForce = calculateFlockingForce(sheep, neighbors, cfg);
+        sheep.acceleration.add(flockingForce);
+
+        for (const dog of sheepdogs) {
+            const fleeForce = calculateFlee(
+                sheep,
+                dog.position,
+                sheep.fleeRadius,
+                cfg.maxSpeed,
+                cfg.maxForce
+            );
+            if (fleeForce.magnitude() > 0) {
+                fleeForce.multiply(1.2);
+                sheep.acceleration.add(fleeForce);
+            }
+        }
+
+        // Island scenes have no gate, so always run boundary avoidance.
+        const boundaryForce = calculateBoundaryAvoidanceWithGate(
+            sheep,
+            gameState.boundary || gameState.bounds,
+            null,
+            { margin: 4, maxSpeed: cfg.maxSpeed, maxForce: cfg.maxForce }
+        );
+        sheep.acceleration.add(boundaryForce);
+
+        // === updateSheepMovementClientStyle inlined (same as tickSheepCoop) ===
+        const dampingFactor = 0.98;
+        const velocitySmoothing = 0.85;
+        const minMovementThreshold = 0.001;
+
+        const previousVelocity = sheep.velocity.clone();
+
+        sheep.velocity.add(sheep.acceleration);
+        sheep.velocity.limit(cfg.maxSpeed);
+        sheep.velocity.multiply(dampingFactor);
+
+        const smoothedVelocity = previousVelocity
+            .multiply(velocitySmoothing)
+            .add(sheep.velocity.clone().multiply(1 - velocitySmoothing));
+
+        if (smoothedVelocity.magnitude() > minMovementThreshold) {
+            sheep.velocity = smoothedVelocity;
+            sheep.position.add(sheep.velocity.clone().multiply(deltaTime * 60));
+        } else {
+            sheep.velocity.multiply(0);
+        }
+        sheep.acceleration.multiply(0);
+
+        if (!sheep.hasPassedGate && !sheep.isRetiring) {
+            sheep.position = applyHardBoundaryConstraints(
+                sheep,
+                gameState.boundary || gameState.bounds,
+                null,
+                { margin: 0.5 }
+            );
+        }
+
+        if (sheep.velocity.magnitude() > 0.001) {
+            sheep.facingDirection = sheep.velocity.angle();
+        }
+
+        validateEntityState(sheep, new Vector2D(0, 0));
+    }
+
+    // Corral retirement (RH, OC). updateSheepCorralRetirements flips
+    // hasPassedGate + isRetiring inline; the trace records the resulting
+    // state per tick.
+    if (gameState.corral) {
+        updateSheepCorralRetirements(sheepArray, gameState.corral);
+    }
 }
 
 export const SHEEP_CONFIG = createBoidConfig({
@@ -385,5 +512,9 @@ export function tickSheepdogClientInterp(dog, deltaTime) {
  * speed - way below anything a player could perceive.
  */
 export function round4(n) {
-    return Math.round(n * 10000) / 10000;
+    // Cycle 34 Phase 1: `+ 0` collapses -0 to 0 so JSON serialisation and
+    // `toEqual` round-trips agree. Without it, sheep on the z=0 axis can
+    // produce -0 from velocity damping (e.g. `-0.0000001 * 0.85`) and the
+    // fixture (which serialises to `0`) won't match the next run's `-0`.
+    return Math.round(n * 10000) / 10000 + 0;
 }

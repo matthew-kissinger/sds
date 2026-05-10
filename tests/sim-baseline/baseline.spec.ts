@@ -28,10 +28,14 @@ import {
     makeDeterministicFlock,
     makeSheepdog,
     makeCoopGameState,
+    makeIslandGameState,
+    makeIslandSheepConfig,
     tickSheepCoop,
+    tickSheepIslandCoop,
     tickSheepdog,
     tickSheepdogClientInterp,
     applyInput,
+    withSeededRandom,
     round4
 } from './harness.js';
 
@@ -253,6 +257,187 @@ describe('60Hz simulation baseline', () => {
         // Convergence is expected well within 120 ticks.
         expect(dog.isInterpolatingToClient).toBe(false);
         expect(trace[1].factor).toBeCloseTo(0.1333, 3);
+
+        expect(trace).toEqual(expected);
+    });
+
+    // Cycle 34 Phase 1: island-scene baselines. Net-additive coverage for
+    // calculateIslandAvoidance + updateSheepCorralRetirements + the OC
+    // perceptionRadius=9 override. Pre-existing fixtures untouched.
+
+    it('island boundary RH: 50 sheep in falloff zone drift inward', () => {
+        // Rolling Hills: boundary.radius=180, falloff=40 → safeRadius=140.
+        // Cluster at (150, 0) is 10m into the falloff zone, so every sheep
+        // feels an inward steer force. Dog placed at (-50, -50) outside the
+        // 8m fleeRadius so flocking + boundary forces dominate.
+        const sheep = makeDeterministicFlock(50, 150, 0, 1.5);
+        const dog = makeSheepdog('p1', -50, -50);
+        const state = makeIslandGameState('rolling-hills', 50);
+        const config = makeIslandSheepConfig('rolling-hills');
+
+        const trace: Array<{
+            tick: number;
+            sheep: Array<{ id: number; x: number; z: number; state: number }>;
+        }> = [];
+
+        trace.push({
+            tick: 0,
+            sheep: sheep.map(s => ({
+                id: s.id,
+                x: round4(s.position.x),
+                z: round4(s.position.z),
+                state: s.state
+            }))
+        });
+
+        for (let t = 1; t <= 60; t++) {
+            tickSheepIslandCoop(sheep, [dog], state, DT, config);
+            trace.push({
+                tick: t,
+                sheep: sheep.map(s => ({
+                    id: s.id,
+                    x: round4(s.position.x),
+                    z: round4(s.position.z),
+                    state: s.state
+                }))
+            });
+        }
+
+        const expected = loadOrWriteFixture('island-boundary-rh-60hz.json', trace) as typeof trace;
+
+        expect(trace).toHaveLength(61);
+        expect(trace[0].sheep).toHaveLength(50);
+        // Sanity: the cluster mean-x should drift inward (toward 0) over 60
+        // ticks. Anything else means the island avoidance is broken.
+        const meanXStart = trace[0].sheep.reduce((a, s) => a + s.x, 0) / 50;
+        const meanXEnd = trace[60].sheep.reduce((a, s) => a + s.x, 0) / 50;
+        expect(meanXEnd).toBeLessThan(meanXStart);
+
+        expect(trace).toEqual(expected);
+    });
+
+    it('corral retirement RH: 30 sheep adjacent to corral retire over 120 ticks', () => {
+        // Rolling Hills corral: (110, 60) radius 8. Cluster at (114, 60)
+        // straddles the corral disc — some sheep start inside and retire
+        // immediately, others drift in via flocking + flee from the dog.
+        // Dog at (122, 60), east of cluster, pushes flock west into corral.
+        // updateSheepCorralRetirements uses Math.random() for the retirement
+        // target inside the corral disc — wrap in withSeededRandom for a
+        // reproducible trace.
+        const seed = 0xC34F1E12;
+        const result = withSeededRandom(seed, () => {
+            const sheep = makeDeterministicFlock(30, 114, 60, 1.0);
+            const dog = makeSheepdog('p1', 122, 60);
+            const state = makeIslandGameState('rolling-hills', 30);
+            const config = makeIslandSheepConfig('rolling-hills');
+
+            const trace: Array<{
+                tick: number;
+                retired: number;
+                inCorral: number;
+                sample: Array<{ id: number; x: number; z: number; state: number; retired: boolean }>;
+            }> = [];
+
+            const sampleIds = [0, 5, 10, 15, 20, 25, 29];
+            const cx = state.corral.center.x;
+            const cz = state.corral.center.z;
+            const rSq = state.corral.radius * state.corral.radius;
+
+            const snap = (tick: number) => {
+                let retired = 0;
+                let inCorral = 0;
+                for (const s of sheep) {
+                    if (s.hasPassedGate || s.isRetiring) retired++;
+                    const dx = s.position.x - cx;
+                    const dz = s.position.z - cz;
+                    if (dx * dx + dz * dz <= rSq) inCorral++;
+                }
+                trace.push({
+                    tick,
+                    retired,
+                    inCorral,
+                    sample: sampleIds.map(id => {
+                        const s = sheep[id];
+                        return {
+                            id,
+                            x: round4(s.position.x),
+                            z: round4(s.position.z),
+                            state: s.state,
+                            retired: !!(s.hasPassedGate || s.isRetiring)
+                        };
+                    })
+                });
+            };
+
+            snap(0);
+            for (let t = 1; t <= 120; t++) {
+                tickSheepIslandCoop(sheep, [dog], state, DT, config);
+                snap(t);
+            }
+            return trace;
+        });
+
+        const expected = loadOrWriteFixture('corral-retirement-rh-60hz.json', result) as typeof result;
+
+        expect(result).toHaveLength(121);
+        // Sanity: retired count must be monotonically non-decreasing.
+        for (let i = 1; i < result.length; i++) {
+            expect(result[i].retired).toBeGreaterThanOrEqual(result[i - 1].retired);
+        }
+        // Sanity: at least one sheep must retire by end of trace.
+        expect(result[result.length - 1].retired).toBeGreaterThan(0);
+
+        expect(result).toEqual(expected);
+    });
+
+    it('island boundary OC: 50 sheep in falloff zone with perceptionRadius=9 override', () => {
+        // Open Country: boundary.radius=380, falloff=70 → safeRadius=310.
+        // Cluster at (350, 0) is 40m into the falloff zone. Dog far enough
+        // away to not engage flee. Verifies the bigger-island avoidance
+        // path AND the scene's flocking.perceptionRadius=9 override (vs
+        // the multiplayer default of 6).
+        const sheep = makeDeterministicFlock(50, 350, 0, 1.5);
+        const dog = makeSheepdog('p1', -200, -200);
+        const state = makeIslandGameState('open-country', 50);
+        const config = makeIslandSheepConfig('open-country');
+
+        // Sanity: confirm OC's perception override survived merge.
+        expect(config.perceptionRadius).toBe(9);
+
+        const trace: Array<{
+            tick: number;
+            sheep: Array<{ id: number; x: number; z: number; state: number }>;
+        }> = [];
+
+        trace.push({
+            tick: 0,
+            sheep: sheep.map(s => ({
+                id: s.id,
+                x: round4(s.position.x),
+                z: round4(s.position.z),
+                state: s.state
+            }))
+        });
+
+        for (let t = 1; t <= 60; t++) {
+            tickSheepIslandCoop(sheep, [dog], state, DT, config);
+            trace.push({
+                tick: t,
+                sheep: sheep.map(s => ({
+                    id: s.id,
+                    x: round4(s.position.x),
+                    z: round4(s.position.z),
+                    state: s.state
+                }))
+            });
+        }
+
+        const expected = loadOrWriteFixture('island-boundary-oc-60hz.json', trace) as typeof trace;
+
+        expect(trace).toHaveLength(61);
+        const meanXStart = trace[0].sheep.reduce((a, s) => a + s.x, 0) / 50;
+        const meanXEnd = trace[60].sheep.reduce((a, s) => a + s.x, 0) / 50;
+        expect(meanXEnd).toBeLessThan(meanXStart);
 
         expect(trace).toEqual(expected);
     });

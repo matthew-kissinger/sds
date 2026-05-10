@@ -1,0 +1,6778 @@
+[
+  {
+    "tick": 0,
+    "retired": 0,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 111,
+        "z": 57,
+        "state": 0,
+        "retired": false
+      },
+      {
+        "id": 5,
+        "x": 116,
+        "z": 57,
+        "state": 0,
+        "retired": false
+      },
+      {
+        "id": 10,
+        "x": 115,
+        "z": 58,
+        "state": 0,
+        "retired": false
+      },
+      {
+        "id": 15,
+        "x": 114,
+        "z": 59,
+        "state": 0,
+        "retired": false
+      },
+      {
+        "id": 20,
+        "x": 113,
+        "z": 60,
+        "state": 0,
+        "retired": false
+      },
+      {
+        "id": 25,
+        "x": 112,
+        "z": 61,
+        "state": 0,
+        "retired": false
+      },
+      {
+        "id": 29,
+        "x": 116,
+        "z": 61,
+        "state": 0,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 1,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.9979,
+        "z": 56.9968,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.983,
+        "z": 56.9823,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 114.981,
+        "z": 57.9851,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.9898,
+        "z": 59.0051,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.9978,
+        "z": 59.9994,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.9957,
+        "z": 61.0004,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 115.9784,
+        "z": 61.0022,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 2,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.987,
+        "z": 56.9872,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.9462,
+        "z": 56.9514,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 114.9387,
+        "z": 57.9581,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.9584,
+        "z": 58.9989,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.9868,
+        "z": 59.9981,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.9865,
+        "z": 61.0023,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 115.936,
+        "z": 61.0062,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 3,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.9669,
+        "z": 56.9719,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.8903,
+        "z": 56.9098,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 114.8745,
+        "z": 57.9216,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.9054,
+        "z": 58.9826,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.9669,
+        "z": 59.9967,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.9723,
+        "z": 61.0061,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 115.8735,
+        "z": 61.0113,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 4,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.9377,
+        "z": 56.9512,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.8162,
+        "z": 56.8594,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 114.79,
+        "z": 57.8782,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.8305,
+        "z": 58.9576,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.9383,
+        "z": 59.9955,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.9533,
+        "z": 61.012,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 115.7919,
+        "z": 61.0167,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 5,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.8992,
+        "z": 56.9254,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.7251,
+        "z": 56.8017,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 114.6864,
+        "z": 57.8299,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.7332,
+        "z": 58.9257,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.9008,
+        "z": 59.9945,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.9296,
+        "z": 61.0201,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 115.6923,
+        "z": 61.0219,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 6,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.8521,
+        "z": 56.8943,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.6177,
+        "z": 56.7384,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 114.565,
+        "z": 57.7773,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.6172,
+        "z": 58.8871,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.8511,
+        "z": 59.9907,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.9013,
+        "z": 61.0304,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 115.5757,
+        "z": 61.0264,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 7,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.7964,
+        "z": 56.858,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.4951,
+        "z": 56.6702,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 114.4282,
+        "z": 57.7219,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.4849,
+        "z": 58.8435,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.7895,
+        "z": 59.9844,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.8686,
+        "z": 61.0429,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 115.4431,
+        "z": 61.03,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 8,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.7324,
+        "z": 56.8167,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.3586,
+        "z": 56.5981,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 114.2781,
+        "z": 57.6648,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.3387,
+        "z": 58.7963,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.7161,
+        "z": 59.9758,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.8316,
+        "z": 61.0575,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 115.2962,
+        "z": 61.0322,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 9,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.6602,
+        "z": 56.7703,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.2112,
+        "z": 56.524,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 114.13,
+        "z": 57.6087,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.1805,
+        "z": 58.7465,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.6313,
+        "z": 59.965,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.7876,
+        "z": 61.0732,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 115.1369,
+        "z": 61.033,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 10,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.58,
+        "z": 56.719,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 115.0554,
+        "z": 56.4491,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 113.9842,
+        "z": 57.5538,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 113.0121,
+        "z": 58.6947,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.5329,
+        "z": 59.9468,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.7356,
+        "z": 61.0895,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 114.9685,
+        "z": 61.0315,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 11,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.4921,
+        "z": 56.663,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 114.8932,
+        "z": 56.3742,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 113.842,
+        "z": 57.5033,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 112.8345,
+        "z": 58.6425,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.4213,
+        "z": 59.9224,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.6761,
+        "z": 61.1064,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 114.7933,
+        "z": 61.0277,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 12,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.3967,
+        "z": 56.6024,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 114.7261,
+        "z": 56.2997,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 113.7033,
+        "z": 57.4567,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 112.6496,
+        "z": 58.589,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.2975,
+        "z": 59.8944,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.6094,
+        "z": 61.124,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 114.6133,
+        "z": 61.0215,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 13,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.2943,
+        "z": 56.5372,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 114.5635,
+        "z": 56.2318,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 113.5681,
+        "z": 57.4141,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 112.4581,
+        "z": 58.5517,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.1608,
+        "z": 59.8604,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.5359,
+        "z": 61.1424,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 114.4294,
+        "z": 61.0132,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 14,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.1852,
+        "z": 56.4677,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 114.4052,
+        "z": 56.17,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 113.4362,
+        "z": 57.3752,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 112.2697,
+        "z": 58.5277,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 112.0117,
+        "z": 59.8221,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.4563,
+        "z": 61.1618,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 114.2426,
+        "z": 61.0031,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 15,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 110.0698,
+        "z": 56.3943,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 114.2511,
+        "z": 56.1136,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 113.3076,
+        "z": 57.3396,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 112.0904,
+        "z": 58.5103,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 111.8508,
+        "z": 59.7811,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.3709,
+        "z": 61.1822,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 114.0536,
+        "z": 60.9914,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 16,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 109.9521,
+        "z": 56.3162,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 114.1011,
+        "z": 56.0629,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 113.1819,
+        "z": 57.307,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 111.9208,
+        "z": 58.4988,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 111.6794,
+        "z": 59.7391,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.2805,
+        "z": 61.2036,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 113.8715,
+        "z": 60.971,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 17,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 109.8324,
+        "z": 56.234,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 113.9553,
+        "z": 56.0175,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 113.0587,
+        "z": 57.2767,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 111.7608,
+        "z": 58.4934,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 111.4989,
+        "z": 59.6976,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.1854,
+        "z": 61.2261,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 113.6952,
+        "z": 60.9433,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 18,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 109.7112,
+        "z": 56.1481,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 113.8134,
+        "z": 55.977,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 112.9378,
+        "z": 57.2479,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 111.6112,
+        "z": 58.4928,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 111.3106,
+        "z": 59.6571,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 111.0863,
+        "z": 61.2495,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 113.524,
+        "z": 60.9094,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 19,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 109.5852,
+        "z": 56.0594,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 113.6754,
+        "z": 55.9411,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 112.8185,
+        "z": 57.2199,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 111.4549,
+        "z": 58.4838,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 111.1155,
+        "z": 59.6183,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 110.9825,
+        "z": 61.2735,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 113.3574,
+        "z": 60.8703,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 20,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 109.4555,
+        "z": 55.9679,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 113.5413,
+        "z": 55.9095,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 112.7003,
+        "z": 57.1917,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 111.2888,
+        "z": 58.4706,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 110.9147,
+        "z": 59.5813,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 110.8743,
+        "z": 61.2981,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 113.1952,
+        "z": 60.8265,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 21,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 109.3229,
+        "z": 55.8737,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 113.4108,
+        "z": 55.8818,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 112.5823,
+        "z": 57.1624,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 111.1128,
+        "z": 58.4564,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 110.7089,
+        "z": 59.5464,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 110.7609,
+        "z": 61.3228,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 113.0371,
+        "z": 60.7782,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 22,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 109.1859,
+        "z": 55.7774,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 113.284,
+        "z": 55.8578,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 112.4618,
+        "z": 57.1296,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 110.928,
+        "z": 58.4437,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 110.4994,
+        "z": 59.5138,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 110.6423,
+        "z": 61.3476,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 112.8829,
+        "z": 60.7261,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 23,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 109.0455,
+        "z": 55.6792,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 113.1607,
+        "z": 55.8373,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 112.3384,
+        "z": 57.0933,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 110.7367,
+        "z": 58.4339,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 110.2875,
+        "z": 59.4839,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 110.5191,
+        "z": 61.3724,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 112.7322,
+        "z": 60.6706,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 24,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 108.9026,
+        "z": 55.5788,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 113.0407,
+        "z": 55.8205,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 112.212,
+        "z": 57.0538,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 110.5411,
+        "z": 58.4274,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 110.074,
+        "z": 59.4566,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 110.3923,
+        "z": 61.3976,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 112.5848,
+        "z": 60.6121,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 25,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 108.7579,
+        "z": 55.4763,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 112.9238,
+        "z": 55.8071,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 112.083,
+        "z": 57.0114,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 110.3429,
+        "z": 58.4239,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 109.8596,
+        "z": 59.4317,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 110.2621,
+        "z": 61.4232,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 112.4402,
+        "z": 60.5509,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 26,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 108.6121,
+        "z": 55.3718,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 112.8098,
+        "z": 55.7971,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 111.9509,
+        "z": 56.966,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 110.1431,
+        "z": 58.4229,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 109.6449,
+        "z": 59.4092,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 110.1291,
+        "z": 61.4492,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 112.2983,
+        "z": 60.4874,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 27,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 108.4658,
+        "z": 55.2654,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 112.6983,
+        "z": 55.7908,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 111.8146,
+        "z": 56.9173,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 109.9408,
+        "z": 58.4234,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 109.429,
+        "z": 59.3814,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 109.9937,
+        "z": 61.4757,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 112.1582,
+        "z": 60.4224,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 28,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 108.3196,
+        "z": 55.1573,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 112.5892,
+        "z": 55.7878,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 111.6755,
+        "z": 56.8663,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 109.7351,
+        "z": 58.4238,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 109.2156,
+        "z": 59.3575,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 109.8541,
+        "z": 61.5024,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 112.02,
+        "z": 60.3562,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 29,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 108.1738,
+        "z": 55.0478,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 112.4822,
+        "z": 55.7879,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 111.5345,
+        "z": 56.8137,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 109.5266,
+        "z": 58.4215,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 109.0041,
+        "z": 59.3367,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 109.7113,
+        "z": 61.5291,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 111.883,
+        "z": 60.2891,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 30,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 108.0286,
+        "z": 54.9372,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 112.3772,
+        "z": 55.791,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 111.3913,
+        "z": 56.7592,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 109.3159,
+        "z": 58.4146,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 108.797,
+        "z": 59.3188,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 109.5669,
+        "z": 61.5558,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 111.7469,
+        "z": 60.2215,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 31,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 107.8843,
+        "z": 54.8255,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 112.2741,
+        "z": 55.7966,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 111.2467,
+        "z": 56.7035,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 109.112,
+        "z": 58.3882,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 108.5906,
+        "z": 59.3026,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 109.4223,
+        "z": 61.5822,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 111.6114,
+        "z": 60.1536,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 32,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 107.7408,
+        "z": 54.7127,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 112.1725,
+        "z": 55.8044,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 111.1014,
+        "z": 56.6472,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 108.9125,
+        "z": 58.3449,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 108.3845,
+        "z": 59.2876,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 109.2747,
+        "z": 61.6082,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 111.4759,
+        "z": 60.0857,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 33,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 107.5982,
+        "z": 54.5991,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 112.0723,
+        "z": 55.8143,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 108.7154,
+        "z": 58.2873,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 108.1782,
+        "z": 59.2735,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 109.1249,
+        "z": 61.6338,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 111.3401,
+        "z": 60.0177,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 34,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 107.4566,
+        "z": 54.4847,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.9729,
+        "z": 55.8285,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 108.5184,
+        "z": 58.2191,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 107.9779,
+        "z": 59.2608,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 108.973,
+        "z": 61.659,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 111.2035,
+        "z": 59.9504,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 35,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 107.3078,
+        "z": 54.3711,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.874,
+        "z": 55.8468,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 108.3194,
+        "z": 58.1457,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 107.7824,
+        "z": 59.2497,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 108.8199,
+        "z": 61.6838,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 111.0657,
+        "z": 59.8837,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 36,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 107.1537,
+        "z": 54.2576,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.7759,
+        "z": 55.8688,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 108.118,
+        "z": 58.072,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 107.5911,
+        "z": 59.2405,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 108.6659,
+        "z": 61.7082,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 110.9261,
+        "z": 59.8186,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 37,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 106.9958,
+        "z": 54.1439,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.6782,
+        "z": 55.894,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 107.9144,
+        "z": 58.0006,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 107.404,
+        "z": 59.2333,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 108.5113,
+        "z": 61.7323,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 110.7841,
+        "z": 59.7557,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 38,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 106.8353,
+        "z": 54.0297,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.5808,
+        "z": 55.9207,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 107.7087,
+        "z": 57.9323,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 107.2205,
+        "z": 59.2282,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 108.3566,
+        "z": 61.7558,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 110.6403,
+        "z": 59.6944,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 39,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 106.6728,
+        "z": 53.9148,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.4834,
+        "z": 55.9482,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 107.5015,
+        "z": 57.8671,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 107.0321,
+        "z": 59.2228,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 108.2022,
+        "z": 61.779,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 110.4946,
+        "z": 59.6346,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 40,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 106.5064,
+        "z": 53.7998,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.3858,
+        "z": 55.976,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 107.2986,
+        "z": 57.7934,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 106.8387,
+        "z": 59.2165,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 108.0481,
+        "z": 61.8016,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 110.347,
+        "z": 59.576,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 41,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 106.3376,
+        "z": 53.6846,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.2876,
+        "z": 56.0036,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 107.0968,
+        "z": 57.7163,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 106.6401,
+        "z": 59.2092,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 107.8945,
+        "z": 61.8237,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 110.1975,
+        "z": 59.5185,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 42,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 106.1671,
+        "z": 53.5692,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.1888,
+        "z": 56.0306,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 106.8942,
+        "z": 57.6399,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 106.4363,
+        "z": 59.1997,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 107.7416,
+        "z": 61.8453,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 110.046,
+        "z": 59.4622,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 43,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 105.9955,
+        "z": 53.4532,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 111.0891,
+        "z": 56.0569,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 106.6904,
+        "z": 57.5661,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 106.2286,
+        "z": 59.1836,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 107.5847,
+        "z": 61.8664,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.8927,
+        "z": 59.4069,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 44,
+    "retired": 30,
+    "inCorral": 30,
+    "sample": [
+      {
+        "id": 0,
+        "x": 105.8233,
+        "z": 53.3363,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.9884,
+        "z": 56.0822,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 106.485,
+        "z": 57.4956,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 106.02,
+        "z": 59.1553,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 107.4245,
+        "z": 61.8871,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.7375,
+        "z": 59.3525,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 45,
+    "retired": 30,
+    "inCorral": 29,
+    "sample": [
+      {
+        "id": 0,
+        "x": 105.6508,
+        "z": 53.2188,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.8869,
+        "z": 56.1076,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 106.2784,
+        "z": 57.4283,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 105.8134,
+        "z": 59.1117,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 107.2619,
+        "z": 61.9075,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.5804,
+        "z": 59.2988,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 46,
+    "retired": 30,
+    "inCorral": 29,
+    "sample": [
+      {
+        "id": 0,
+        "x": 105.4783,
+        "z": 53.1006,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.7844,
+        "z": 56.1327,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 106.0709,
+        "z": 57.3756,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 105.6108,
+        "z": 59.0573,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 107.0974,
+        "z": 61.9274,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.4213,
+        "z": 59.2461,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 47,
+    "retired": 30,
+    "inCorral": 29,
+    "sample": [
+      {
+        "id": 0,
+        "x": 105.3055,
+        "z": 52.9818,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.6809,
+        "z": 56.1576,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 105.8618,
+        "z": 57.3344,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 105.4126,
+        "z": 58.9941,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 106.9348,
+        "z": 61.9465,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.2591,
+        "z": 59.1957,
+        "state": 0,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 48,
+    "retired": 30,
+    "inCorral": 29,
+    "sample": [
+      {
+        "id": 0,
+        "x": 105.133,
+        "z": 52.8623,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.5761,
+        "z": 56.1822,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 105.65,
+        "z": 57.3006,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 105.2179,
+        "z": 58.9238,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 106.7741,
+        "z": 61.9649,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 49,
+    "retired": 30,
+    "inCorral": 29,
+    "sample": [
+      {
+        "id": 0,
+        "x": 104.9608,
+        "z": 52.7421,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.4697,
+        "z": 56.2054,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 105.4368,
+        "z": 57.2692,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 105.0256,
+        "z": 58.8473,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 106.6147,
+        "z": 61.983,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 50,
+    "retired": 30,
+    "inCorral": 29,
+    "sample": [
+      {
+        "id": 0,
+        "x": 104.7821,
+        "z": 52.6415,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.3614,
+        "z": 56.2237,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 105.2228,
+        "z": 57.2372,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 104.8338,
+        "z": 58.7653,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 106.4571,
+        "z": 62.0008,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 51,
+    "retired": 30,
+    "inCorral": 29,
+    "sample": [
+      {
+        "id": 0,
+        "x": 104.5958,
+        "z": 52.5585,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.2516,
+        "z": 56.2384,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 105.0085,
+        "z": 57.2029,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 104.6407,
+        "z": 58.682,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 106.3014,
+        "z": 62.0185,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 52,
+    "retired": 30,
+    "inCorral": 27,
+    "sample": [
+      {
+        "id": 0,
+        "x": 104.4026,
+        "z": 52.4903,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.14,
+        "z": 56.2499,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 104.7992,
+        "z": 57.1561,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 104.446,
+        "z": 58.6152,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 106.1477,
+        "z": 62.0359,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 53,
+    "retired": 30,
+    "inCorral": 26,
+    "sample": [
+      {
+        "id": 0,
+        "x": 104.2036,
+        "z": 52.4338,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 110.0269,
+        "z": 56.2584,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 104.5886,
+        "z": 57.1089,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 104.2483,
+        "z": 58.5631,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 105.9957,
+        "z": 62.0534,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 54,
+    "retired": 30,
+    "inCorral": 26,
+    "sample": [
+      {
+        "id": 0,
+        "x": 104.0103,
+        "z": 52.3677,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 109.9113,
+        "z": 56.2608,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 104.3832,
+        "z": 57.0516,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 104.0478,
+        "z": 58.5229,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 105.8458,
+        "z": 62.0706,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 55,
+    "retired": 30,
+    "inCorral": 26,
+    "sample": [
+      {
+        "id": 0,
+        "x": 103.8217,
+        "z": 52.2929,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 109.794,
+        "z": 56.2593,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 104.1815,
+        "z": 56.9863,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 103.8444,
+        "z": 58.4918,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 105.6979,
+        "z": 62.0875,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 56,
+    "retired": 30,
+    "inCorral": 26,
+    "sample": [
+      {
+        "id": 0,
+        "x": 103.637,
+        "z": 52.2106,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 109.6748,
+        "z": 56.2546,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 103.9824,
+        "z": 56.9146,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 103.6378,
+        "z": 58.4677,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 105.5521,
+        "z": 62.104,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 57,
+    "retired": 30,
+    "inCorral": 25,
+    "sample": [
+      {
+        "id": 0,
+        "x": 103.4554,
+        "z": 52.1221,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 109.5538,
+        "z": 56.2468,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 103.785,
+        "z": 56.8375,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 103.4277,
+        "z": 58.4482,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 105.4084,
+        "z": 62.12,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 58,
+    "retired": 30,
+    "inCorral": 25,
+    "sample": [
+      {
+        "id": 0,
+        "x": 103.2763,
+        "z": 52.0279,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 109.4311,
+        "z": 56.2364,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 103.5884,
+        "z": 56.7559,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 103.2153,
+        "z": 58.4292,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 105.2669,
+        "z": 62.1356,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 59,
+    "retired": 30,
+    "inCorral": 25,
+    "sample": [
+      {
+        "id": 0,
+        "x": 103.0992,
+        "z": 51.929,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 109.3065,
+        "z": 56.2235,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 103.3921,
+        "z": 56.6714,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 103.0015,
+        "z": 58.4077,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 105.1274,
+        "z": 62.1505,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 60,
+    "retired": 30,
+    "inCorral": 25,
+    "sample": [
+      {
+        "id": 0,
+        "x": 102.9237,
+        "z": 51.8258,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 109.1801,
+        "z": 56.2085,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 103.196,
+        "z": 56.5849,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 102.7871,
+        "z": 58.3825,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 104.9901,
+        "z": 62.1649,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 61,
+    "retired": 30,
+    "inCorral": 25,
+    "sample": [
+      {
+        "id": 0,
+        "x": 102.7494,
+        "z": 51.7185,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 109.0524,
+        "z": 56.1934,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 103.0003,
+        "z": 56.4969,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 102.5721,
+        "z": 58.3617,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 104.8542,
+        "z": 62.1792,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 62,
+    "retired": 30,
+    "inCorral": 23,
+    "sample": [
+      {
+        "id": 0,
+        "x": 102.5762,
+        "z": 51.6074,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 108.9235,
+        "z": 56.1784,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 102.8049,
+        "z": 56.4074,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 102.3569,
+        "z": 58.3398,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 104.7199,
+        "z": 62.1931,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 63,
+    "retired": 30,
+    "inCorral": 22,
+    "sample": [
+      {
+        "id": 0,
+        "x": 102.3961,
+        "z": 51.513,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 108.7934,
+        "z": 56.1637,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 102.6104,
+        "z": 56.315,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 102.1417,
+        "z": 58.3146,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 104.587,
+        "z": 62.2066,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 64,
+    "retired": 30,
+    "inCorral": 22,
+    "sample": [
+      {
+        "id": 0,
+        "x": 102.2189,
+        "z": 51.4118,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 108.6565,
+        "z": 56.1585,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 102.4174,
+        "z": 56.2184,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 101.9267,
+        "z": 58.2861,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 104.4555,
+        "z": 62.2195,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 65,
+    "retired": 30,
+    "inCorral": 20,
+    "sample": [
+      {
+        "id": 0,
+        "x": 102.0441,
+        "z": 51.3046,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 108.5134,
+        "z": 56.1614,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 102.2255,
+        "z": 56.1187,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 101.7119,
+        "z": 58.2556,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 104.3251,
+        "z": 62.232,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 66,
+    "retired": 30,
+    "inCorral": 20,
+    "sample": [
+      {
+        "id": 0,
+        "x": 101.8714,
+        "z": 51.1917,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 108.3645,
+        "z": 56.1713,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 102.0347,
+        "z": 56.0164,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 101.4973,
+        "z": 58.2241,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 104.1956,
+        "z": 62.244,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 67,
+    "retired": 30,
+    "inCorral": 20,
+    "sample": [
+      {
+        "id": 0,
+        "x": 101.7004,
+        "z": 51.0739,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 108.21,
+        "z": 56.1869,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 101.8449,
+        "z": 55.9122,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 101.2828,
+        "z": 58.1929,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 104.0669,
+        "z": 62.2557,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 68,
+    "retired": 30,
+    "inCorral": 19,
+    "sample": [
+      {
+        "id": 0,
+        "x": 101.5228,
+        "z": 50.9719,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 108.0442,
+        "z": 56.198,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 101.6558,
+        "z": 55.8067,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 101.0683,
+        "z": 58.1629,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 103.9388,
+        "z": 62.267,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 69,
+    "retired": 30,
+    "inCorral": 19,
+    "sample": [
+      {
+        "id": 0,
+        "x": 101.3495,
+        "z": 50.862,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 107.8681,
+        "z": 56.2044,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 101.4746,
+        "z": 55.698,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 100.8539,
+        "z": 58.1343,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 103.8115,
+        "z": 62.2777,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 70,
+    "retired": 30,
+    "inCorral": 19,
+    "sample": [
+      {
+        "id": 0,
+        "x": 101.1801,
+        "z": 50.7452,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 107.6834,
+        "z": 56.2061,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 101.2855,
+        "z": 55.6017,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 100.6451,
+        "z": 58.0887,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 103.6739,
+        "z": 62.2869,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 71,
+    "retired": 30,
+    "inCorral": 19,
+    "sample": [
+      {
+        "id": 0,
+        "x": 101.0135,
+        "z": 50.6233,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 107.4913,
+        "z": 56.2035,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 101.0908,
+        "z": 55.5125,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 100.4391,
+        "z": 58.0291,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 103.5271,
+        "z": 62.2949,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 72,
+    "retired": 30,
+    "inCorral": 17,
+    "sample": [
+      {
+        "id": 0,
+        "x": 100.849,
+        "z": 50.4975,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 107.2931,
+        "z": 56.1966,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 100.8927,
+        "z": 55.4277,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 100.2343,
+        "z": 57.9613,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 103.3724,
+        "z": 62.3019,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 73,
+    "retired": 30,
+    "inCorral": 17,
+    "sample": [
+      {
+        "id": 0,
+        "x": 100.6862,
+        "z": 50.3691,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 107.0897,
+        "z": 56.1856,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 100.6924,
+        "z": 55.3457,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 100.0299,
+        "z": 57.8893,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 103.2108,
+        "z": 62.3077,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 74,
+    "retired": 30,
+    "inCorral": 17,
+    "sample": [
+      {
+        "id": 0,
+        "x": 100.5151,
+        "z": 50.2576,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 106.882,
+        "z": 56.1702,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 100.4905,
+        "z": 55.2659,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 99.8264,
+        "z": 57.828,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 103.0435,
+        "z": 62.3124,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 75,
+    "retired": 30,
+    "inCorral": 17,
+    "sample": [
+      {
+        "id": 0,
+        "x": 100.3354,
+        "z": 50.1605,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 106.6708,
+        "z": 56.1506,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 100.2872,
+        "z": 55.1888,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 99.6235,
+        "z": 57.7752,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 102.8714,
+        "z": 62.3161,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 76,
+    "retired": 30,
+    "inCorral": 17,
+    "sample": [
+      {
+        "id": 0,
+        "x": 100.1479,
+        "z": 50.0746,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 106.4606,
+        "z": 56.1355,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 100.0826,
+        "z": 55.1146,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 99.4208,
+        "z": 57.7298,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 102.6973,
+        "z": 62.3079,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 77,
+    "retired": 30,
+    "inCorral": 16,
+    "sample": [
+      {
+        "id": 0,
+        "x": 99.9535,
+        "z": 49.9977,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 106.2511,
+        "z": 56.1237,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 99.8767,
+        "z": 55.0442,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 99.2179,
+        "z": 57.6904,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 102.5211,
+        "z": 62.2887,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 78,
+    "retired": 30,
+    "inCorral": 16,
+    "sample": [
+      {
+        "id": 0,
+        "x": 99.7666,
+        "z": 49.9122,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 106.0421,
+        "z": 56.1141,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 99.6694,
+        "z": 54.9776,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 99.0145,
+        "z": 57.656,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 102.3422,
+        "z": 62.2596,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 79,
+    "retired": 30,
+    "inCorral": 14,
+    "sample": [
+      {
+        "id": 0,
+        "x": 99.5726,
+        "z": 49.8363,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 105.8333,
+        "z": 56.1057,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 99.4607,
+        "z": 54.9156,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 98.8104,
+        "z": 57.6262,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 102.1604,
+        "z": 62.2219,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 80,
+    "retired": 30,
+    "inCorral": 14,
+    "sample": [
+      {
+        "id": 0,
+        "x": 99.3854,
+        "z": 49.7532,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 105.6294,
+        "z": 56.0911,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 99.2507,
+        "z": 54.858,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 98.6053,
+        "z": 57.6004,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 101.9758,
+        "z": 62.1769,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 81,
+    "retired": 30,
+    "inCorral": 14,
+    "sample": [
+      {
+        "id": 0,
+        "x": 99.1988,
+        "z": 49.6749,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 105.4287,
+        "z": 56.0705,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 99.0397,
+        "z": 54.8044,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 98.3991,
+        "z": 57.5785,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 101.797,
+        "z": 62.1327,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 82,
+    "retired": 30,
+    "inCorral": 13,
+    "sample": [
+      {
+        "id": 0,
+        "x": 99.0125,
+        "z": 49.601,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 105.2302,
+        "z": 56.0445,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 98.8278,
+        "z": 54.7543,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 98.1916,
+        "z": 57.5601,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 101.6238,
+        "z": 62.0888,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 83,
+    "retired": 30,
+    "inCorral": 12,
+    "sample": [
+      {
+        "id": 0,
+        "x": 98.8264,
+        "z": 49.5315,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 105.0331,
+        "z": 56.0134,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 98.6152,
+        "z": 54.7075,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 97.9827,
+        "z": 57.5447,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 101.4562,
+        "z": 62.0452,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 84,
+    "retired": 30,
+    "inCorral": 12,
+    "sample": [
+      {
+        "id": 0,
+        "x": 98.6403,
+        "z": 49.4658,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 104.8368,
+        "z": 55.9777,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 98.402,
+        "z": 54.6633,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 97.7726,
+        "z": 57.532,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 101.2938,
+        "z": 62.0014,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 85,
+    "retired": 30,
+    "inCorral": 12,
+    "sample": [
+      {
+        "id": 0,
+        "x": 98.4541,
+        "z": 49.4038,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 104.6411,
+        "z": 55.9381,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 98.1884,
+        "z": 54.6215,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 97.5611,
+        "z": 57.5216,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 101.1365,
+        "z": 61.9573,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 86,
+    "retired": 30,
+    "inCorral": 12,
+    "sample": [
+      {
+        "id": 0,
+        "x": 98.268,
+        "z": 49.3447,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 104.4459,
+        "z": 55.8955,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 97.9742,
+        "z": 54.583,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 97.3484,
+        "z": 57.514,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 100.984,
+        "z": 61.9131,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 87,
+    "retired": 30,
+    "inCorral": 11,
+    "sample": [
+      {
+        "id": 0,
+        "x": 98.0816,
+        "z": 49.2891,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 104.2509,
+        "z": 55.8506,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 97.7593,
+        "z": 54.5477,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 97.1348,
+        "z": 57.5083,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 100.8276,
+        "z": 61.8614,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 88,
+    "retired": 30,
+    "inCorral": 11,
+    "sample": [
+      {
+        "id": 0,
+        "x": 97.8949,
+        "z": 49.2371,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 104.0561,
+        "z": 55.8038,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 97.5442,
+        "z": 54.5143,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 96.9207,
+        "z": 57.5036,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 100.6675,
+        "z": 61.8029,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 89,
+    "retired": 30,
+    "inCorral": 11,
+    "sample": [
+      {
+        "id": 0,
+        "x": 97.7078,
+        "z": 49.1883,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 103.8615,
+        "z": 55.7549,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 97.341,
+        "z": 54.4708,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 96.7067,
+        "z": 57.4998,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 100.5037,
+        "z": 61.7381,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 90,
+    "retired": 30,
+    "inCorral": 11,
+    "sample": [
+      {
+        "id": 0,
+        "x": 97.5205,
+        "z": 49.1419,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 103.6669,
+        "z": 55.704,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 97.1477,
+        "z": 54.4186,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 96.493,
+        "z": 57.4972,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 100.3366,
+        "z": 61.6676,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 91,
+    "retired": 30,
+    "inCorral": 11,
+    "sample": [
+      {
+        "id": 0,
+        "x": 97.3332,
+        "z": 49.0972,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 103.4724,
+        "z": 55.6511,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 96.9482,
+        "z": 54.374,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 96.2798,
+        "z": 57.4963,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 100.1663,
+        "z": 61.5922,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 92,
+    "retired": 30,
+    "inCorral": 9,
+    "sample": [
+      {
+        "id": 0,
+        "x": 97.1459,
+        "z": 49.0538,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 103.278,
+        "z": 55.5957,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 96.7433,
+        "z": 54.3342,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 96.067,
+        "z": 57.4973,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 99.9931,
+        "z": 61.5127,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 93,
+    "retired": 30,
+    "inCorral": 9,
+    "sample": [
+      {
+        "id": 0,
+        "x": 96.9586,
+        "z": 49.0116,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 103.0836,
+        "z": 55.5379,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 96.5345,
+        "z": 54.2978,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 95.8631,
+        "z": 57.4802,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 99.8173,
+        "z": 61.4293,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 94,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 96.7713,
+        "z": 48.9706,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 102.8891,
+        "z": 55.4776,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 96.3231,
+        "z": 54.2639,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 95.6661,
+        "z": 57.4462,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 99.6389,
+        "z": 61.3424,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 95,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 96.5839,
+        "z": 48.9305,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 102.6944,
+        "z": 55.415,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 96.1102,
+        "z": 54.2317,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 95.4748,
+        "z": 57.3982,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 99.4583,
+        "z": 61.252,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 96,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 96.3968,
+        "z": 48.8911,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 102.4996,
+        "z": 55.3496,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 95.8964,
+        "z": 54.2008,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 95.2883,
+        "z": 57.3376,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 99.2756,
+        "z": 61.1585,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 97,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 96.2098,
+        "z": 48.8524,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 102.305,
+        "z": 55.2892,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 95.6821,
+        "z": 54.1709,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 95.1055,
+        "z": 57.2663,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 99.0911,
+        "z": 61.0621,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 98,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 96.0231,
+        "z": 48.8143,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 102.111,
+        "z": 55.2316,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 95.4677,
+        "z": 54.1421,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 94.9196,
+        "z": 57.2065,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 98.9054,
+        "z": 60.9624,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 99,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 95.8365,
+        "z": 48.7768,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 101.9174,
+        "z": 55.1751,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 95.2532,
+        "z": 54.1145,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 94.7313,
+        "z": 57.1553,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 98.7191,
+        "z": 60.8594,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 100,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 95.6505,
+        "z": 48.7396,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 101.7246,
+        "z": 55.1185,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 95.0389,
+        "z": 54.0879,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 94.5412,
+        "z": 57.1109,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 98.5325,
+        "z": 60.7533,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 101,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 95.465,
+        "z": 48.7023,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 101.531,
+        "z": 55.0515,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 94.837,
+        "z": 54.0464,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 94.3504,
+        "z": 57.0712,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 98.346,
+        "z": 60.6436,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 102,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 95.2806,
+        "z": 48.6646,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 101.3391,
+        "z": 54.985,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 94.6458,
+        "z": 53.991,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 94.1605,
+        "z": 57.0353,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 98.16,
+        "z": 60.5305,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 103,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 95.098,
+        "z": 48.6258,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 101.1467,
+        "z": 54.9089,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 94.4514,
+        "z": 53.942,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 93.9719,
+        "z": 57.0028,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 97.9747,
+        "z": 60.414,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 104,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 94.9168,
+        "z": 48.586,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 100.9558,
+        "z": 54.8353,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 94.2548,
+        "z": 53.8981,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 93.7892,
+        "z": 56.9522,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 97.79,
+        "z": 60.2947,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 105,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 94.7369,
+        "z": 48.5455,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 100.764,
+        "z": 54.7532,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 94.0571,
+        "z": 53.8594,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 93.6104,
+        "z": 56.8847,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 97.6061,
+        "z": 60.1728,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 106,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 94.5586,
+        "z": 48.504,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 100.574,
+        "z": 54.6744,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 93.8643,
+        "z": 53.816,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 93.4336,
+        "z": 56.8128,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 97.4228,
+        "z": 60.0486,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 107,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 94.3818,
+        "z": 48.4616,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 100.3853,
+        "z": 54.5974,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 93.6758,
+        "z": 53.768,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 93.2577,
+        "z": 56.7274,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 97.2402,
+        "z": 59.9223,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 108,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 94.2064,
+        "z": 48.4184,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 100.1976,
+        "z": 54.5215,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 93.491,
+        "z": 53.7161,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 93.0823,
+        "z": 56.6309,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 97.0583,
+        "z": 59.794,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 109,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 94.0324,
+        "z": 48.3743,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 100.0092,
+        "z": 54.4367,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 93.3093,
+        "z": 53.6604,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 92.9005,
+        "z": 56.5427,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 96.8769,
+        "z": 59.6642,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 110,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 93.8597,
+        "z": 48.3294,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 99.8196,
+        "z": 54.3451,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 93.1301,
+        "z": 53.6016,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 92.7131,
+        "z": 56.4618,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 96.6959,
+        "z": 59.5334,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 111,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 93.6886,
+        "z": 48.2836,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 99.6316,
+        "z": 54.2586,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 92.953,
+        "z": 53.5403,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 92.5209,
+        "z": 56.3863,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 96.5153,
+        "z": 59.4012,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 112,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 93.5187,
+        "z": 48.2371,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 99.4443,
+        "z": 54.1758,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 92.7776,
+        "z": 53.4767,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 92.3249,
+        "z": 56.3147,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 96.3405,
+        "z": 59.2783,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 113,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 93.3503,
+        "z": 48.1897,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 99.2602,
+        "z": 54.0981,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 92.5991,
+        "z": 53.4206,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 92.1348,
+        "z": 56.2276,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 96.1705,
+        "z": 59.1623,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 114,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 93.1832,
+        "z": 48.1414,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 99.0785,
+        "z": 54.0241,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 92.419,
+        "z": 53.3708,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 91.9493,
+        "z": 56.1276,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 96.0046,
+        "z": 59.0516,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 115,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 93.0174,
+        "z": 48.0925,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 98.8947,
+        "z": 53.9418,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 92.2379,
+        "z": 53.3272,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 91.7665,
+        "z": 56.0178,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 95.8419,
+        "z": 58.9449,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 116,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 92.8526,
+        "z": 48.0431,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 98.7098,
+        "z": 53.8531,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 92.0513,
+        "z": 53.2767,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 91.585,
+        "z": 55.9018,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 95.6818,
+        "z": 58.8414,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 117,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 92.6887,
+        "z": 47.9933,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 98.5245,
+        "z": 53.7593,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 91.8597,
+        "z": 53.2212,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 91.4004,
+        "z": 55.7974,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 95.5239,
+        "z": 58.7408,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 118,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 92.5259,
+        "z": 47.9429,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 98.3423,
+        "z": 53.6719,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 91.6637,
+        "z": 53.1621,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 91.2127,
+        "z": 55.7028,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 95.3681,
+        "z": 58.6431,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 119,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 92.3641,
+        "z": 47.8922,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 98.1625,
+        "z": 53.5895,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 91.4635,
+        "z": 53.1011,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 91.0215,
+        "z": 55.6168,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 95.2143,
+        "z": 58.5483,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 120,
+    "retired": 30,
+    "inCorral": 8,
+    "sample": [
+      {
+        "id": 0,
+        "x": 92.2031,
+        "z": 47.8412,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 5,
+        "x": 97.9843,
+        "z": 53.511,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 10,
+        "x": 110.9558,
+        "z": 56.5906,
+        "state": 2,
+        "retired": true
+      },
+      {
+        "id": 15,
+        "x": 91.2703,
+        "z": 53.0261,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 20,
+        "x": 90.827,
+        "z": 55.5379,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 25,
+        "x": 95.0622,
+        "z": 58.4561,
+        "state": 0,
+        "retired": true
+      },
+      {
+        "id": 29,
+        "x": 109.0941,
+        "z": 59.1474,
+        "state": 2,
+        "retired": true
+      }
+    ]
+  }
+]
