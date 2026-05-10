@@ -33,6 +33,8 @@ Post-push deploy truth: release tag `v2.1.4` points at commit `b1abe2531e4a1a4fe
 **Carryover:**
 
 - BrowserStack Local on the Windows workstation hit `EBUSY` opening `C:\Users\Mattm\.browserstack\BrowserStackLocal.exe`. Public URL mode works. Before paying for BrowserStack or making the canary push-gated, prove the local tunnel through the manual GitHub workflow / Linux runner.
+- GitHub Actions run `25619016791` is green but emitted the platform annotation that Node.js 20 actions are deprecated and will default to Node 24 on 2026-06-02. Review workflow action compatibility before that date.
+- GitHub reported 2 low Dependabot vulnerabilities on the default branch after push. Review separately from the water cycle unless a fix is trivial and low-risk.
 - MP island scenes remain deferred to Cycle 33 and require an explicit shared-sim / worker / wire-format / sim-baseline plan before implementation.
 
 ### Cycle 31 - `public-surface` (closed 2026-05-09, autonomous run, v2.1.3)

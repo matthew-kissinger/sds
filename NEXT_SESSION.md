@@ -49,9 +49,11 @@ Post-push deployment status:
 
 1. **MP island scenes** - Rolling Hills and Open Country in multiplayer. This is now the leading architecture candidate. It needs a proper shared-sim / worker / wire-format plan and an explicit sim-baseline regeneration decision before any frozen file changes.
 2. **BrowserStack Local hardening** - run `.github/workflows/browserstack-ios-water.yml` manually on Ubuntu with the release branch/base URL. If it proves stable, decide whether the canary becomes a required manual release gate or a paid push gate.
-3. **Modal-copy rewrite** - only if Google's recrawl still substitutes welcome-modal copy in the snippet after the Cycle 31 public-surface changes settle.
-4. **`CYCLE_TEMPLATE.md` regex-collision fix** - small but fence-touched; Cycle 29/30/31 acceptance reconciliation hit the same template-header collision.
-5. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** - still deferred; size and risk vary by topic.
+3. **GitHub Actions maintenance** - deploy run `25619016791` is green but warns that Node.js 20 actions are deprecated and will default to Node 24 on 2026-06-02. Review `actions/checkout@v4`, `actions/setup-node@v4`, and related workflow compatibility before that cutoff.
+4. **Dependabot/security review** - GitHub reports 2 low vulnerabilities on the default branch after push. Review Dependabot before the next release cycle if the fixes are low-risk.
+5. **Modal-copy rewrite** - only if Google's recrawl still substitutes welcome-modal copy in the snippet after the Cycle 31 public-surface changes settle.
+6. **`CYCLE_TEMPLATE.md` regex-collision fix** - small but fence-touched; Cycle 29/30/31 acceptance reconciliation hit the same template-header collision.
+7. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** - still deferred; size and risk vary by topic.
 
 ## Reference Table
 
