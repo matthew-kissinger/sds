@@ -21,7 +21,7 @@ The whole stack:
 - **Client engine:** ~10k lines of vanilla JavaScript (no JSX, no codegen, no wasm)
 - **Server:** ~600-line TypeScript Cloudflare Worker with Durable Objects and D1
 - **Shared sim:** deterministic boid + obstacle modules imported byte-identically by both
-- **Tests:** 300 specs (Vitest 4) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode, SEO, and water shoreline math
+- **Tests:** 315 specs (Vitest 4) covering atmosphere, heightfield, scene-obstacles, island-boundary (incl. island sim-baselines + corral retirement + OC objective stage), tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation + objective snapshot contract + allowedModes enforcement, integration harness, practice-mode, SEO, and water shoreline math
 
 If you're learning 3D web games, real-time multiplayer on edge compute, or large-scale boid simulation, this codebase is a rare opportunity to read a complete shipped product instead of yet another minimal example.
 
@@ -164,7 +164,7 @@ Camera modes: **Classic** (high-isometric, world-axis WASD), **Follow** (close c
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-The `shared/` modules import byte-identically into both client (Vite) and worker (esbuild) — flocking, obstacle queries, boundary collision, tree placement, and scene definitions all live there so solo and multiplayer agree on physics. The sim-baseline test pins a deterministic Field run to JSON fixtures and has stayed bit-identical across cycles 5–26.
+The `shared/` modules import byte-identically into both client (Vite) and worker (esbuild) — flocking, obstacle queries, boundary collision, tree placement, the multi-stage objective state machine (round-up → drive on Open Country), and scene definitions all live there so solo and multiplayer agree on physics. The sim-baseline tests pin deterministic Field + island-boundary + corral-retirement + objective-stage runs to JSON fixtures and have stayed bit-identical across cycles 5–34.
 
 Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -178,7 +178,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 **Shared:** `shared/` deterministic boid + physics + obstacle modules, imported by both runtimes
 
-**Testing:** Vitest 4.1 (300 specs · 27 files · ~2 s full run) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode contracts, SEO, and water shoreline math. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright for browser smoke + perf-baseline harness, plus BrowserStack for the real iOS Safari water canary.
+**Testing:** Vitest 4.1 (315 specs · 30 files · ~2 s full run) covering atmosphere, heightfield, scene-obstacles, island-boundary (incl. island sim-baselines + corral retirement + OC objective stage), tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation + objective snapshot contract + allowedModes enforcement, integration harness, practice-mode contracts, SEO, and water shoreline math. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright for browser smoke + perf-baseline harness, plus BrowserStack for the real iOS Safari water canary.
 
 ---
 

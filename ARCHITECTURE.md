@@ -89,6 +89,8 @@ See [docs/cycle-2-report.md](docs/cycle-2-report.md) for the full cutover record
 │      ├── FlockingAlgorithms.js                                               │
 │      ├── GameStateValidation.js                                              │
 │      ├── MovementPhysics.js                                                  │
+│      ├── ObjectiveLogic.js                                                   │
+│      ├── objective.js          (Cycle 34 — multi-stage objective state)     │
 │      └── Vector2D.js                                                         │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -254,6 +256,8 @@ What `TerrainBuilder` retains: terrain mesh construction, heightfield displaceme
 Direct port of `server/GameSimulation.js`. Runs inside RoomDO.
 - 60 Hz tick via `setInterval(tick, 16.67ms)` (user preference — 20 Hz felt chunky in Cycle 1).
 - State broadcast: sheep (id, x, z, vx, vz, state, facing, hasPassedGate, isRetiring, assignedGate, targetX, targetZ) + sheepdogs (playerId, dogType, x, z, vx, vz, rotation, stamina, sprinting, sequence, interpolatingToClient) + mode-specific fields (sheepRetired, competitive.{playerScores,gates,winCondition}, timedMode.{timeRemaining,gameDuration}).
+- **Cycle 34 Phase 2-3** — when the resolved scene declares an `objective` (Open Country today), the sim instantiates the multi-stage state machine via `createObjective(scene.objective, totalSheep)`, advances it each tick via `tickObjective(...)`, and gates `updateSheepCorralRetirements` on `isCorralOpen(this.objective)`. The snapshot includes an optional `objective: {stage, sheepInZone, requiredSheep, holdTimer, holdRequired}` block when `this.objective != null`; scenes without an objective (Field, Rolling Hills) emit byte-identical snapshots to pre-Cycle-34 (no `objective` key at all). See [DECISIONS.md](DECISIONS.md) "Multi-stage objective lives in `shared/`" + "Wire-format additions are net-additive optional fields, no version handshake" for rationale.
+- **Cycle 34 Phase 4** — `RoomDO.initRoom` cross-checks `gameMode` against `scene.allowedModes` before calling into `GameSim`. A host can't open a competitive room on Open Country; the worker returns 400 `mode_not_allowed_on_scene`.
 - Shared sim code (`shared/`) imported directly; wrangler bundles it.
 
 #### worker/src/d1.ts — Leaderboard
@@ -299,12 +303,12 @@ Every frame is MessagePack-encoded with a `t` (type) discriminator:
 **Server → Client**
 - `roomUpdated`, `playerJoined`, `playerLeft`, `hostChanged`, `modeLockChanged`
 - `gameStarted` — `{room, gameState}`
-- `gameStateUpdate` — the sim snapshot described in `GameSim.js createGameStateSnapshot`
+- `gameStateUpdate` — the sim snapshot described in `GameSim.js createGameStateSnapshot`. Optional `objective` block on Open Country rooms (Cycle 34 Phase 3); absent on Field / Rolling Hills.
 - `gameComplete` — mode-specific completion payload
 - `pong` — `{id, timestamp}`
 - `roomError`, `error`
 
-The server-to-client state snapshot is the same shape the legacy Geckos server used, so the client's `handleMultiplayerGameState` path is unchanged apart from message transport.
+The server-to-client state snapshot is the same shape the legacy Geckos server used, so the client's `handleMultiplayerGameState` path is unchanged apart from message transport. Wire-format extensions are net-additive optional fields per [DECISIONS.md](DECISIONS.md); pre-cycle clients ignore unknown fields and post-cycle clients fall back to legacy behavior when the field is absent.
 
 ### Client-side interpolation
 

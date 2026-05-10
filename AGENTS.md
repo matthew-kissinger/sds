@@ -56,6 +56,8 @@ Files under fence (write-locked without explicit cycle-plan authorization):
 - [`shared/FlockingAlgorithms.js`](shared/FlockingAlgorithms.js)
 - [`shared/GameStateValidation.js`](shared/GameStateValidation.js)
 - [`shared/Vector2D.js`](shared/Vector2D.js)
+- [`shared/ObjectiveLogic.js`](shared/ObjectiveLogic.js)
+- [`shared/objective.js`](shared/objective.js) *(Cycle 34 — multi-stage objective state machine; client + worker run byte-identical transitions)*
 - [`shared/scenes/types.js`](shared/scenes/types.js)
 - [`shared/terrain/Heightfield.js`](shared/terrain/Heightfield.js)
 

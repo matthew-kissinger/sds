@@ -363,3 +363,61 @@ Do not add a per-frame render-to-texture shader dependency on an Apple-facing re
 ### Gate
 
 `npm run test:ios-water` drives BrowserStack Automate on `iPhone 15 Pro Max / iOS 17 / Safari`, samples water pixels, attaches screenshot + JSON artifacts, and fails if the sampled region is near solid `#eaf6ff`. The GitHub workflow is manual while the account is on the free proof tier.
+
+---
+
+## Multi-stage objective lives in `shared/`, not `js/` (2026-05-10 · Cycle 34 Phase 2)
+
+The Open Country gather → drive → portal state machine ([`shared/objective.js`](shared/objective.js)) is the **single source of truth** for both the client predictor and the Worker authoritative sim. The js-side path at [`js/gamestate/objective.js`](js/gamestate/objective.js) is a one-line re-export shim that exists only so existing `js/` callers keep importing from the same path.
+
+### Why
+
+Cycle 29 Stream B4 extracted the state machine from `GameState` into `js/gamestate/objective.js`. At the time, the multi-stage objective was solo-only (the Worker `GameSim.js` ignored `scene.objective`), so a client-side home was sufficient. Cycle 34 made `?scene=open-country` first-class in multiplayer rooms; the worker now needs to authoritatively advance `roundup → drive` and gate corral retirement on `isCorralOpen(this.objective)`. Two divergent implementations would desync MP within a few seconds of stage-transition time. Promoting the module into `shared/` enforces byte-identical transitions by construction.
+
+### Rule
+
+The objective state machine — `createObjective`, `refreshObjective`, `tickObjective`, `isCorralOpen` — has **one home**: [`shared/objective.js`](shared/objective.js). Don't fork. Don't add a Worker-only or client-only branch. Per-mode count scaling delegates to [`shared/ObjectiveLogic.js`](shared/ObjectiveLogic.js) `getRequiredSheep`; it stays out of `objective.js` so the formula has its own pure-function home.
+
+### Failure mode if forked
+
+A "tiny" fork (e.g. "the client predictor wants to ramp `holdTimer` smoothly while the server stair-steps it") would desync MP rooms whenever the threshold-met edge ticks: client predicts stage flip at tick N, server actually flips at tick N+1, the snapshot mirror overwrites the predicted stage on the next 60Hz broadcast and the portal flickers visibly. The whole reason the state machine is small enough to live in one place is that the latency bound on stage transitions is generous (`holdRequired = 2.0s`); there is no value in predicting it harder than the server does.
+
+---
+
+## Wire-format additions are net-additive optional fields, no version handshake (2026-05-10 · Cycle 34 Phase 3)
+
+When a cycle phase adds a new field to a `gameStateUpdate` snapshot, the field is **optional** and the omission case is the legacy behavior. Pre-cycle clients ignore the unknown field; post-cycle clients connecting to a pre-cycle worker receive no field and fall back to the legacy code path. No protocol-version handshake. No DO migration.
+
+### Why
+
+The `.claude/rules/multiplayer.md` "When wire-protocol changes" rule lists four fence-required pieces for a wire change: scope, migration story, consumer list, version-tag confirmation. Cycle 34's optional `objective` block on snapshots passes the four checks **without** needing a version tag — the migration story is "missing field = legacy prompt; present field = stage-aware HUD" and the consumer list is `worker/src/GameSim.js` (emit) + `js/boot/initNetwork.js` (mirror into `gameState.objective`). Because both directions of mismatch are safe, no version handshake is required. This is the cheapest viable wire-format extension and should be the default shape for additions.
+
+### Rule
+
+When adding a snapshot field:
+
+1. **Make it optional in both directions.** Worker omits the field when not applicable (e.g. scenes without `objective`); client treats absence as legacy behavior.
+2. **Mirror the local state shape, not a translated wire shape.** Cycle 34's snapshot uses `{stage, sheepInZone, requiredSheep, holdTimer, holdRequired}` matching the local `ObjectiveState` so the client mirrors directly into `game.gameState.objective` with no translation layer. Translation layers rot.
+3. **Confirm both directions of mismatch.** Spec it explicitly in the cycle plan: "old client + new worker = X; new client + old worker = Y." If either case requires action (re-render, error, soft-degrade), the rule above doesn't apply and you need a version tag.
+
+### Failure mode if you skip the additive contract
+
+A wire-format change shaped as a *replacement* (e.g. renaming `sheepInZone` to `inZone` to save bytes) breaks every pre-cycle client mid-game. The cost-benefit on bytes is almost never worth it; MessagePack already collapses repeated keys in the room snapshot.
+
+---
+
+## `allowedModes` enforcement at room init (2026-05-10 · Cycle 34 Phase 4)
+
+[`worker/src/RoomDO.ts`](worker/src/RoomDO.ts) `initRoom` cross-checks the requested `gameMode` against the resolved scene's `allowedModes` array. A host attempting to create an Open Country room in `competitive` mode (OC declares `allowedModes: ['cooperative', 'timed']`) gets HTTP 400 `mode_not_allowed_on_scene`.
+
+### Why
+
+Pre-Cycle-34, the worker validated `gameMode` against the legacy `['cooperative', 'competitive', 'timed']` list and ignored `scene.allowedModes`. A host could open OC + competitive and the worker would happily start a competitive sim that's never been tuned for the island shape (no four-gate competitive-gate layout fits the OC island, no playtest budget had been spent on it). The defensive guard fails fast with a clear error message instead of silently producing a busted game.
+
+### Rule
+
+When a scene declares `allowedModes`, the worker is the source of truth for enforcement. The client lobby UI (Cycle 34 Phase 5) filters the mode dropdown by the same array as a UX courtesy, but the worker check is the durable guarantee — a malicious or stale client can't bypass it.
+
+### Future-proofing
+
+The check short-circuits when `scene.allowedModes` is absent, so adding new scenes that opt out of the constraint is zero-cost. If a future cycle wants per-mode-class restrictions (e.g. `solo.allowedModes` separate from `mp.allowedModes`), the existing field can split without breaking pre-split scene defs.

@@ -37,6 +37,9 @@ This file lists **which files are frozen**. The rule files explain **why**.
 - **[`shared/FlockingAlgorithms.js`](../shared/FlockingAlgorithms.js)**
 - **[`shared/GameStateValidation.js`](../shared/GameStateValidation.js)**
 - **[`shared/Vector2D.js`](../shared/Vector2D.js)**
+- **[`shared/ObjectiveLogic.js`](../shared/ObjectiveLogic.js)** — `getRequiredSheep` formula (per-mode count scaling).
+- **[`shared/objective.js`](../shared/objective.js)** *(Cycle 34 Phase 2)* — multi-stage objective state machine (`createObjective` / `refreshObjective` / `tickObjective` / `isCorralOpen`). Worker + client run byte-identical transitions; the `js/gamestate/objective.js` file is now a thin re-export shim and stays in sync only by depending on this module.
+- **[`shared/terrain/Heightfield.js`](../shared/terrain/Heightfield.js)** — heightfield single source of truth (`sample`, `meshSampleY`).
 
 Changes to any of these require sim-baseline regeneration with **explicit acceptance recorded in the cycle plan**. See [`.claude/rules/shared-sim.md`](../.claude/rules/shared-sim.md) for the full discipline.
 

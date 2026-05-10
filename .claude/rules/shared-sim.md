@@ -18,8 +18,11 @@ The boundary is enforced by import discipline, not by language tooling alone:
 - [`shared/MovementPhysics.js`](../../shared/MovementPhysics.js) — sheep + dog movement, boundary forces, slope-modulated speed.
 - [`shared/BoundaryCollision.js`](../../shared/BoundaryCollision.js) — boundary avoidance.
 - [`shared/FlockingAlgorithms.js`](../../shared/FlockingAlgorithms.js) — boid separation/cohesion/alignment.
-- [`shared/GameStateValidation.js`](../../shared/GameStateValidation.js) — win-condition logic.
+- [`shared/GameStateValidation.js`](../../shared/GameStateValidation.js) — win-condition logic + corral retirement.
 - [`shared/Vector2D.js`](../../shared/Vector2D.js) — primitive math, depended on by everything above.
+- [`shared/ObjectiveLogic.js`](../../shared/ObjectiveLogic.js) — `getRequiredSheep` formula (per-mode count scaling).
+- [`shared/objective.js`](../../shared/objective.js) *(Cycle 34 Phase 2)* — multi-stage objective state machine (`roundup → drive`). The Worker authoritative sim and the client predictor both call `tickObjective` against this module byte-identically; [`js/gamestate/objective.js`](../../js/gamestate/objective.js) is a one-line re-export shim that exists only so existing client imports keep working unchanged.
+- [`shared/terrain/Heightfield.js`](../../shared/terrain/Heightfield.js) — heightfield single source of truth.
 
 Each is listed in [`docs/INTERFACE_FENCE.md`](../../docs/INTERFACE_FENCE.md) with the same lockdown discipline.
 
