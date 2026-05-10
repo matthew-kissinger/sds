@@ -38,6 +38,8 @@ import {
     withSeededRandom,
     round4
 } from './harness.js';
+// @ts-expect-error - shared module, no types
+import { loadScene, createObjective, tickObjective, isCorralOpen } from '../../shared/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = resolve(__dirname, '__fixtures__');
@@ -388,6 +390,61 @@ describe('60Hz simulation baseline', () => {
         expect(result[result.length - 1].retired).toBeGreaterThan(0);
 
         expect(result).toEqual(expected);
+    });
+
+    it('OC objective stage: roundup → drive after holdRequired with sheep in zone', () => {
+        // Open Country: objective.roundupZone (0, 50, r=30), holdRequired=2.0s.
+        // 50 sheep clustered at (0, 50) all start inside the zone. With 50
+        // total, requiredSheep = max(10, floor(50*0.40)) = 20. Count stays
+        // at 50 (well above 20) so holdTimer accumulates linearly until
+        // the stage flips at tick 120 (2.0s at 60Hz).
+        const scene = loadScene('open-country');
+        const objective = createObjective(scene.objective, 50);
+        const sheep = makeDeterministicFlock(50, 0, 50, 1.5);
+
+        const trace: Array<{
+            tick: number;
+            stage: string;
+            sheepInZone: number;
+            holdTimer: number;
+            corralOpen: boolean;
+        }> = [];
+
+        const snap = (tick: number) => {
+            trace.push({
+                tick,
+                stage: objective.stage,
+                sheepInZone: objective.sheepInZone,
+                holdTimer: round4(objective.holdTimer),
+                corralOpen: isCorralOpen(objective)
+            });
+        };
+
+        snap(0);
+        // Run 130 ticks. 120 = 2.0s holdRequired. Stage should flip at
+        // tick 120 (or 121 depending on >= comparison). Sample beyond to
+        // confirm 'drive' stays sticky.
+        for (let t = 1; t <= 130; t++) {
+            tickObjective(objective, sheep, DT, null);
+            snap(t);
+        }
+
+        const expected = loadOrWriteFixture('oc-objective-stage-60hz.json', trace) as typeof trace;
+
+        // Sanity: requiredSheep formula applied (max(10, floor(50*0.40))=20).
+        expect(objective.requiredSheep).toBe(20);
+        // Sanity: starts in roundup, ends in drive.
+        expect(trace[0].stage).toBe('roundup');
+        expect(trace[trace.length - 1].stage).toBe('drive');
+        // Sanity: stage transitions exactly once (no flapping).
+        const flips = trace.filter((row, i) => i > 0 && row.stage !== trace[i - 1].stage);
+        expect(flips).toHaveLength(1);
+        expect(flips[0].stage).toBe('drive');
+        // Sanity: corralOpen tracks the stage flip.
+        expect(trace[0].corralOpen).toBe(false);
+        expect(trace[trace.length - 1].corralOpen).toBe(true);
+
+        expect(trace).toEqual(expected);
     });
 
     it('island boundary OC: 50 sheep in falloff zone with perceptionRadius=9 override', () => {

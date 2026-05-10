@@ -34,7 +34,10 @@ import {
     createGameState,
     createBoidConfig,
     createMovementConfig,
-    loadScene
+    loadScene,
+    createObjective,
+    tickObjective,
+    isCorralOpen
 } from '../../shared/index.js';
 
 /**

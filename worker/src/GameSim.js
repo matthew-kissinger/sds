@@ -31,7 +31,10 @@ import {
     createCompetitiveGameState,
     checkGatePassage,
     loadScene,
-    DEFAULT_SCENE_ID
+    DEFAULT_SCENE_ID,
+    createObjective,
+    tickObjective,
+    isCorralOpen
 } from '../../shared/index.js';
 
 export class GameSimulation {
@@ -102,7 +105,14 @@ export class GameSimulation {
         });
         
         this.dogConfigs = new Map(); // playerId -> movement config
-        
+
+        // Cycle 34 Phase 2: multi-stage objective state machine for scenes
+        // that declare `objective` (Open Country today). Server-authoritative;
+        // host migration is a no-op for stage state because the DO owns it.
+        // RH/Field have no objective — `this.objective` stays null and the
+        // corral retirement path runs unchanged via `isCorralOpen(null) === true`.
+        this.objective = createObjective(this.scene.objective, roomSheepCount);
+
         // Game state broadcasting
         this.lastGameState = null;
         this.completionData = null;
@@ -265,12 +275,20 @@ export class GameSimulation {
         
         // Update sheep behavior and movement
         this.updateSheep();
-        
+
+        // Cycle 34 Phase 2: advance the multi-stage objective. No-op when
+        // there's no objective or stage is already 'drive'. Mutates
+        // this.objective in place — `createGameStateSnapshot` reads the
+        // post-tick state for the optional `objective` wire field.
+        if (this.objective) {
+            tickObjective(this.objective, this.gameState.sheep, this.deltaTime, null);
+        }
+
         // Update timed mode specific logic
         if (this.isTimedMode) {
             this.updateTimedMode(currentTime);
         }
-        
+
         // Check game completion
         this.checkGameCompletion();
         
@@ -616,11 +634,18 @@ export class GameSimulation {
             // Cycle 5+: corral-based retirement (Rolling Hills). Sheep are
             // retired when they enter the corral radius instead of crossing
             // a gate. No pasture rect — random target inside the corral disc.
-            const retirementResult = updateSheepCorralRetirements(
-                this.gameState.sheep,
-                this.gameState.corral
-            );
-            this.gameState.sheepRetired = retirementResult.totalRetired;
+            //
+            // Cycle 34 Phase 2: gate retirement on `isCorralOpen(this.objective)`.
+            // Scenes without an objective (RH, Field) get `true` unconditionally
+            // — byte-identical to pre-Phase-2 behavior. Scenes with an objective
+            // (OC) only retire sheep once the round-up → drive transition fires.
+            if (isCorralOpen(this.objective)) {
+                const retirementResult = updateSheepCorralRetirements(
+                    this.gameState.sheep,
+                    this.gameState.corral
+                );
+                this.gameState.sheepRetired = retirementResult.totalRetired;
+            }
         } else {
             // Use cooperative retirement logic
             const retirementResult = updateSheepRetirements(
@@ -994,6 +1019,14 @@ export class GameSimulation {
     }
     
     createGameStateSnapshot() {
+        // Cycle 34 Phase 3: snapshot includes an optional `objective` block
+        // when the scene declares a multi-stage objective (Open Country
+        // today). The field is purely additive — pre-Cycle-34 clients ignore
+        // it and fall back to the legacy "drive to portal" prompt; post-
+        // Cycle-34 clients connecting to a pre-Cycle-34 worker receive no
+        // field and do the same. No protocol-version handshake. See
+        // docs/cycle-34-plan.md and .claude/rules/multiplayer.md.
+        //
         // Create a lightweight state snapshot for network transmission
         const snapshot = {
             timestamp: Date.now(),
@@ -1075,10 +1108,26 @@ export class GameSimulation {
                 };
             }
         }
-        
+
+        // Cycle 34 Phase 3: optional objective stage block. Omitted entirely
+        // when this.objective is null (RH, Field) so msgpack output is byte-
+        // identical to pre-Phase-3 for those scenes. The shape mirrors the
+        // client's local ObjectiveState (shared/objective.js) so the
+        // ObjectiveBanner UI consumes the snapshot field directly without
+        // a translation layer.
+        if (this.objective) {
+            snapshot.objective = {
+                stage: this.objective.stage,
+                sheepInZone: this.objective.sheepInZone,
+                requiredSheep: this.objective.requiredSheep,
+                holdTimer: Math.round(this.objective.holdTimer * 100) / 100,
+                holdRequired: this.objective.holdRequired
+            };
+        }
+
         return snapshot;
     }
-    
+
     calculateWinProgress() {
         if (!this.isCompetitive) return null;
         

@@ -16,6 +16,15 @@ export { Vector2D } from './Vector2D.js';
 // Scene registry (data-driven biomes)
 export { loadScene, listScenes, DEFAULT_SCENE_ID } from './scenes/index.js';
 
+// Cycle 34 Phase 2: multi-stage objective state machine (round-up → drive),
+// authoritative in the Worker, mirrored client-side via the re-export shim
+// at js/gamestate/objective.js.
+export { createObjective, refreshObjective, tickObjective, isCorralOpen } from './objective.js';
+
+// getRequiredSheep helper kept exported so the Worker's snapshot code can
+// resolve per-mode counts without re-importing from ObjectiveLogic.
+export { getRequiredSheep } from './ObjectiveLogic.js';
+
 // Flocking behavior algorithms
 export {
     calculateFlockingForce,

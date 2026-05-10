@@ -377,4 +377,34 @@ export function handleMultiplayerGameState(game, serverState) {
             game.endgameMusicPlaying = true;
         }
     }
+
+    // Cycle 34 Phase 3: mirror the server's optional objective block into
+    // game.gameState.objective so ObjectiveBanner reads the same shape as
+    // solo. Stage flips dispatch 'objective-stage-changed' so the existing
+    // CorralCompass + portal-effect listeners fire identically to solo.
+    if (serverState.objective) {
+        const prev = game.gameState.objective;
+        const next = serverState.objective;
+        // Mirror the server snapshot (already shaped to match the local
+        // ObjectiveState — see worker/src/GameSim.js createGameStateSnapshot).
+        game.gameState.objective = {
+            stage: next.stage,
+            sheepInZone: next.sheepInZone,
+            requiredSheep: next.requiredSheep,
+            holdTimer: next.holdTimer,
+            holdRequired: next.holdRequired,
+            roundupZone: prev?.roundupZone ?? null
+        };
+        if (prev && prev.stage !== next.stage && next.stage === 'drive') {
+            window.dispatchEvent(new CustomEvent('objective-stage-changed', {
+                detail: { stage: 'drive' }
+            }));
+        }
+    } else if (game.gameState.objective && !game.gameState._objectiveDef) {
+        // No server objective + no scene-side def — clear the local mirror
+        // so a stale OC objective from a prior game doesn't bleed into a
+        // Field/RH room. Solo runs preserve their own _objectiveDef so
+        // their `gameState.objective` stays untouched here.
+        game.gameState.objective = null;
+    }
 }
