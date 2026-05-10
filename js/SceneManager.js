@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CameraController } from './CameraController.js';
 import { detectTier } from './HardwareTier.js';
-import { initGlProbe, captureContext, captureFramebufferSample } from './diagnostics/glProbe.js';
+import { initGlProbe, captureContext, captureFramebufferSample, captureWaterSample } from './diagnostics/glProbe.js';
 
 /**
  * SceneManager - Three.js scene/lighting/renderer lifecycle plus competitive
@@ -161,7 +161,11 @@ export class SceneManager {
             window.__sdsCaptureSample = (label = 'manual') => {
                 try {
                     captureFramebufferSample(renderer, label);
-                    return window.__sdsDiag?.framebufferSample ?? null;
+                    captureWaterSample(renderer, label);
+                    return {
+                        framebufferSample: window.__sdsDiag?.framebufferSample ?? null,
+                        waterSample: window.__sdsDiag?.waterSample ?? null,
+                    };
                 } catch (err) {
                     return { error: String(err?.message || err) };
                 }
@@ -328,22 +332,16 @@ export class SceneManager {
     }
     
     /**
-     * Cycle 5+: optionally bind an anime water + depth pre-pass.
-     * When set, render() runs the depth pre-pass (with water hidden) before
-     * the main render so the water shader can sample scene depth for
-     * shoreline foam.
+     * Cycle 5+: optionally bind anime water for island scenes.
      *
-     * @param {{mesh: import('three').Mesh, depthPrePass: import('./water/DepthPrePass.js').DepthPrePass, water: {mesh: import('three').Mesh, update: (t: number, sun?: import('three').Vector3) => void, resize: (w: number, h: number) => void, dispose: () => void}}} bundle
+     * @param {{mesh: import('three').Mesh, water: {mesh: import('three').Mesh, update: (t: number, sun?: import('three').Vector3) => void, resize: (w?: number, h?: number) => void, dispose: () => void}}} bundle
      */
     setWater(bundle) {
         this.waterBundle = bundle || null;
     }
 
     /**
-     * Tear down the active water bundle (Cycle 11 Phase 1). Disposes the
-     * depth pre-pass render target first to release the depth-stencil
-     * texture before atmosphere disposal — the dispose-order coupling is
-     * the Mac/Safari WebGL crash class flagged in cycle-11-plan.md.
+     * Tear down the active water bundle.
      */
     disposeWater() {
         if (!this.waterBundle) return;
@@ -351,7 +349,6 @@ export class SceneManager {
         try {
             if (bundle.mesh && bundle.mesh.parent) bundle.mesh.parent.remove(bundle.mesh);
             bundle.water?.dispose?.();
-            bundle.depthPrePass?.dispose?.();
         } catch (err) {
             console.warn('[SCENE] disposeWater threw:', err);
         }
@@ -359,13 +356,6 @@ export class SceneManager {
     }
 
     render() {
-        const water = this.waterBundle;
-        if (water && water.depthPrePass && water.mesh) {
-            // Render scene-without-water into the depth target
-            water.mesh.visible = false;
-            water.depthPrePass.render();
-            water.mesh.visible = true;
-        }
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -374,9 +364,7 @@ export class SceneManager {
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         if (this.waterBundle) {
-            this.waterBundle.depthPrePass.resize();
-            const dpr = this.renderer.getDrawingBufferSize(new THREE.Vector2());
-            this.waterBundle.water.resize(dpr.x, dpr.y);
+            this.waterBundle.water.resize();
         }
     }
     

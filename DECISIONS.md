@@ -345,3 +345,21 @@ The visible terrain Y at world (x, z) is owned by [`Heightfield.meshSampleY`](sh
 ### Failure mode if reintroduced
 
 If a future change adds back a `sample(x, z) + offset` fallback to "be defensive" against an unbound grid: it papers over the real bug (grid not bound) with a wrong-by-an-offset answer. The throw makes the missing bind loud. Don't add it back.
+
+---
+
+## Apple-facing water avoids per-frame depth RTT (2026-05-10 · Cycle 32, [research](docs/archive/research/apple-water-bug-research-2026-05-09.md))
+
+The SDS island water shader no longer depends on a per-frame scene-depth render target. `AnimeWater` derives foam and shallow/deep color from scene boundary geometry: `boundary.radius` defines the shoreline and `boundary.falloff` defines the shallow/deep transition band. This replaced the deleted `js/water/DepthPrePass.js` path.
+
+### Why
+
+The iPhone Safari water failure was a real Apple/WebGL path bug: the visible water could collapse toward a solid foam-white surface while desktop Chromium/WebKit stayed green. The depth pre-pass made water correctness depend on render-target support, depth texture behavior, camera near/far packing, and per-frame render-to-texture state on the most fragile target. The scene already owns an explicit island boundary, so the shoreline should be driven by that source of truth instead of by a screen-depth reconstruction.
+
+### Rule
+
+Do not add a per-frame render-to-texture shader dependency on an Apple-facing render path unless there is a real-device gate for that exact path. Playwright WebKit is useful smoke coverage, but it is not a substitute for real Safari on Apple hardware.
+
+### Gate
+
+`npm run test:ios-water` drives BrowserStack Automate on `iPhone 15 Pro Max / iOS 17 / Safari`, samples water pixels, attaches screenshot + JSON artifacts, and fails if the sampled region is near solid `#eaf6ff`. The GitHub workflow is manual while the account is on the free proof tier.

@@ -1,0 +1,18 @@
+framework: playwright
+projectName: Sheep Dog Simulator
+buildName: cycle-32-ios-water
+buildIdentifier: '#${BUILD_NUMBER}'
+
+platforms:
+  - browserName: safari
+    osVersion: 17
+    deviceName: iPhone 15 Pro Max
+
+parallelsPerPlatform: 1
+browserstackLocal: true
+
+debug: true
+video: true
+networkLogs: false
+consoleLogs: errors
+testReporting: true

@@ -9,7 +9,7 @@
 You're a fresh agent (Claude / Codex / Cursor / etc.) on this repo with no session context. Read in this order:
 
 1. **[`../NEXT_SESSION.md`](../NEXT_SESSION.md)** — current pickup state. Tells you which cycle is active, when the snapshot was taken, and where to start.
-2. **The active cycle plan** — path is in NEXT_SESSION's "Cycle N plan:" line, typically [`cycle-N-plan.md`](.). Top-to-bottom. EARS-format Acceptance lines tell you what "done" means.
+2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open, typically [`cycle-N-plan.md`](.). If NEXT_SESSION says the next cycle is not drafted yet, pick the goal with Matt before creating it. Top-to-bottom. EARS-format Acceptance lines tell you what "done" means.
 3. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
 4. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
 5. **[`../.claude/rules/`](../.claude/rules/)** — durable project rules (deterministic-sim boundary, scene/render rules, cycle process, multiplayer contract).

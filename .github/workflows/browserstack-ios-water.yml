@@ -1,0 +1,40 @@
+name: BrowserStack iOS Water
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Optional public URL to test instead of the local Vite server
+        required: false
+        default: ''
+
+jobs:
+  ios-water:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run real iOS water canary
+        run: npm run test:ios-water
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          IOS_WATER_BASE_URL: ${{ github.event.inputs.base_url }}
+
+      - name: Upload BrowserStack iOS artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: browserstack-ios-water
+          path: |
+            browserstack-artifacts/ios-water
+            browserstack-artifacts/ios-water-report
+          if-no-files-found: ignore

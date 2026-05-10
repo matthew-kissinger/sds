@@ -91,7 +91,7 @@ export function captureContext(renderer) {
 
 /**
  * Note when a render-target allocation fails or returns an unexpected
- * texture. Called from DepthPrePass / water init paths.
+ * texture.
  */
 export function reportRenderTarget(name, target, error) {
     if (!installed) return;
@@ -124,6 +124,19 @@ const GL_ERROR_NAMES = {
     0x0506: 'INVALID_FRAMEBUFFER_OPERATION',
     0x0507: 'CONTEXT_LOST_WEBGL',
 };
+
+const FOAM_WHITE_RGB = [0xea, 0xf6, 0xff];
+
+function averageRgb(samples) {
+    if (samples.length === 0) return null;
+    return samples
+        .reduce((acc, s) => [acc[0] + s[0], acc[1] + s[1], acc[2] + s[2]], [0, 0, 0])
+        .map((v) => Math.round(v / samples.length));
+}
+
+function isNearFoamWhite(rgb, tolerance = 14) {
+    return !!rgb && FOAM_WHITE_RGB.every((channel, index) => Math.abs(rgb[index] - channel) <= tolerance);
+}
 
 /**
  * Pull any pending WebGL errors. Errors from previous frames are sticky
@@ -211,9 +224,7 @@ export function captureFramebufferSample(renderer, label = 'default') {
             .map((s) => s.rgba);
         const avg = groundSamples.length === 0
             ? null
-            : groundSamples
-                .reduce((acc, s) => [acc[0] + s[0], acc[1] + s[1], acc[2] + s[2]], [0, 0, 0])
-                .map((v) => Math.round(v / groundSamples.length));
+            : averageRgb(groundSamples);
         const isNearWhite = avg && avg.every((c) => c >= 230);
         const isNearBlack = avg && avg.every((c) => c <= 16);
         const flag = isNearWhite ? 'near-white' : isNearBlack ? 'near-black' : 'ok';
@@ -222,7 +233,60 @@ export function captureFramebufferSample(renderer, label = 'default') {
         window.__sdsDiag.framebufferSamples = window.__sdsDiag.framebufferSamples || [];
         window.__sdsDiag.framebufferSamples.push(entry);
         log('framebuffer.sampled', { label, avg, flag });
+        return entry;
     } catch (err) {
         log('framebuffer.error', { error: String(err?.message || err) });
+        return null;
+    }
+}
+
+export function captureWaterSample(renderer, label = 'water') {
+    if (!installed) return null;
+    try {
+        const canvas = renderer.domElement;
+        const gl = renderer.getContext();
+        if (!gl || !canvas) return null;
+        const w = canvas.width;
+        const h = canvas.height;
+        if (!w || !h) return null;
+
+        const screenPoints = [
+            { region: 'water-center-lower', x: 0.50, y: 0.70 },
+            { region: 'water-center-near', x: 0.50, y: 0.82 },
+            { region: 'water-left-near', x: 0.34, y: 0.78 },
+            { region: 'water-right-near', x: 0.66, y: 0.78 },
+        ];
+
+        const px = new Uint8Array(4);
+        const samples = screenPoints.map(({ region, x, y }) => {
+            const pxX = Math.floor(w * x);
+            const pxY = Math.floor(h * (1 - y));
+            try {
+                gl.readPixels(pxX, pxY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+                return { region, x: pxX, y: pxY, rgba: [px[0], px[1], px[2], px[3]] };
+            } catch (err) {
+                return { region, x: pxX, y: pxY, error: String(err?.message || err) };
+            }
+        });
+
+        const waterPixels = samples
+            .filter((s) => s.rgba)
+            .map((s) => s.rgba);
+        const avg = averageRgb(waterPixels);
+        const entry = {
+            label,
+            samples,
+            avg,
+            nearFoamWhite: isNearFoamWhite(avg),
+            foamWhiteRgb: FOAM_WHITE_RGB,
+        };
+        window.__sdsDiag.waterSample = entry;
+        window.__sdsDiag.waterSamples = window.__sdsDiag.waterSamples || [];
+        window.__sdsDiag.waterSamples.push(entry);
+        log('water.sampled', { label, avg, nearFoamWhite: entry.nearFoamWhite });
+        return entry;
+    } catch (err) {
+        log('water.error', { error: String(err?.message || err) });
+        return null;
     }
 }

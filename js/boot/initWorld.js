@@ -242,28 +242,16 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             }
         }
 
-        // Cycle 5+: anime water + depth pre-pass for island scenes.
-        // Built after structures so the depth target sees the same
-        // geometry the main pass will. Hidden in non-island scenes.
+        // Cycle 5+: anime water for island scenes.
+        // Built after structures and hidden in non-island scenes.
         if (game.currentScene.boundary?.kind === 'island') {
             logStep('Building anime water');
             try {
-                const { DepthPrePass } = await import('../water/DepthPrePass.js');
                 const { createAnimeWater } = await import('../water/AnimeWater.js');
-                const renderer = game.sceneManager.getRenderer();
-                const camera = game.sceneManager.getCamera();
                 const scene = game.sceneManager.getScene();
 
-                const depthPrePass = new DepthPrePass({
-                    renderer,
-                    scene,
-                    camera,
-                    isMobile: game.sceneManager.isMobile,
-                });
                 const water = createAnimeWater({
-                    renderer,
-                    camera,
-                    depthTexture: depthPrePass.texture,
+                    boundary: game.currentScene.boundary,
                     size: game.sceneManager.isMobile ? 3200 : 4000,
                     y: -0.05,
                     segments: game.sceneManager.isMobile ? 32 : 64,
@@ -271,20 +259,16 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 scene.add(water.mesh);
                 game.sceneManager.setWater({
                     mesh: water.mesh,
-                    depthPrePass,
                     water,
                 });
                 game._animeWater = water;  // for per-frame uTime updates
                 probeLog('water.created', {
                     size: game.sceneManager.isMobile ? 3200 : 4000,
                     segments: game.sceneManager.isMobile ? 32 : 64,
+                    boundaryRadius: game.currentScene.boundary.radius,
+                    boundaryFalloff: game.currentScene.boundary.falloff,
                 });
             } catch (err) {
-                // Cycle 9 Phase 4: water requires render-to-texture +
-                // depth-stencil format support that Safari/Metal has
-                // historically been flaky about. If anything throws
-                // here, the island stays dry rather than crashing the
-                // whole game.
                 console.error('[WATER] Init failed; island will render without water.', err);
                 probeLog('water.failed', { error: String(err?.message || err) });
             }

@@ -2,7 +2,7 @@
 
 [![Play now](https://img.shields.io/badge/play-sheepdogsim.com-2563eb?style=for-the-badge)](https://sheepdogsim.com) &nbsp; [![MIT License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](LICENSE) &nbsp; [![Star on GitHub](https://img.shields.io/github/stars/matthew-kissinger/sds?style=for-the-badge&logo=github&color=eab308)](https://github.com/matthew-kissinger/sds)
 
-[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 272](https://img.shields.io/badge/tests-272%20passing-22c55e)](tests/)
+[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 300](https://img.shields.io/badge/tests-300%20passing-22c55e)](tests/)
 
 **Herd up to 5,000 sheep across three biomes in your browser, on your phone, with friends, at 60fps.** No install, no signup, no ads. Free. MIT-licensed. Built to be forked.
 
@@ -21,7 +21,7 @@ The whole stack:
 - **Client engine:** ~10k lines of vanilla JavaScript (no JSX, no codegen, no wasm)
 - **Server:** ~600-line TypeScript Cloudflare Worker with Durable Objects and D1
 - **Shared sim:** deterministic boid + obstacle modules imported byte-identically by both
-- **Tests:** 272 specs (Vitest 4) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode, SEO
+- **Tests:** 300 specs (Vitest 4) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode, SEO, and water shoreline math
 
 If you're learning 3D web games, real-time multiplayer on edge compute, or large-scale boid simulation, this codebase is a rare opportunity to read a complete shipped product instead of yet another minimal example.
 
@@ -56,7 +56,7 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - Reconnect grace window — drop a tab and rejoin within 15 s without losing your run
 
 ### 🎨 Cinematic visual layer
-- **Hosek-Wilkie analytic sky** with day/night presets, parallax cloud layer, water with sun-glint, billboarded sun disc
+- **Hosek-Wilkie analytic sky** with day/night presets, parallax cloud layer, shoreline-aware water with sun-glint, billboarded sun disc
 - **Hundreds of thousands of grass blades** with directional wind shader, dog-bends-grass-along-its-facing interaction, per-scene density tuning, stochastic-dither LOD
 - **Apple-correct tone mapping** — Mac/iPhone/iPad use Neutral instead of ACES so the sky doesn't wash white on Metal-ANGLE
 - Per-scene tree LOD + impostor atlases (Mediterranean / Pacific-NW species mix)
@@ -94,7 +94,8 @@ npm run dev:client     # just Vite (no multiplayer worker)
 npm run dev:worker     # just wrangler
 npm run dev:lan        # vite --host + wrangler (LAN-accessible — for mobile testing)
 
-npm test               # Vitest — 272 specs in ~1.5s
+npm test               # Vitest — 300 specs in ~2s
+npm run test:ios-water # BrowserStack real iOS Safari water canary
 npm run build          # production output to dist/
 ```
 
@@ -177,7 +178,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 **Shared:** `shared/` deterministic boid + physics + obstacle modules, imported by both runtimes
 
-**Testing:** Vitest 4.1 (272 specs · 25 files · ~1.5 s full run) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode contracts, SEO. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright for browser smoke + perf-baseline harness.
+**Testing:** Vitest 4.1 (300 specs · 27 files · ~2 s full run) covering atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode contracts, SEO, and water shoreline math. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright for browser smoke + perf-baseline harness, plus BrowserStack for the real iOS Safari water canary.
 
 ---
 
@@ -185,6 +186,8 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 We work in numbered cycles; each ship is a `vN.N.N` tag with a CHANGELOG entry. The last twelve cycles delivered everything you see today; here's where the surface is moving right now:
 
+- **`v2.1.4`** (2026-05-10) — real iOS Safari water validation via BrowserStack + shoreline-based water shader, removing the fragile depth pre-pass.
+- **`v2.1.3`** (2026-05-09) — public-surface pass: crawler body content, per-scene landing pages, devlog scaffold, sitemap fix, footer links, and repo topic refresh.
 - **`v2.1.1`** (2026-05-08) — OG card refresh: new Rolling Hills dusk + Field farmhouse social-share images. `_headers` cache TTL added so future asset refreshes propagate fast at the CF edge.
 - **`v2.1.0`** (2026-05-08) — **Practice Paddock** (30-sheep no-pressure mode at position 0 of the mode picker, with first-visit pulsing-glow nudge gated by `localStorage`) + **per-scene SEO** (`document.title` + full `og:*` + `twitter:*` switch on every scene change).
 - **`v2.0.5`** — deleted dead `AtmosphericDesatPatch` machinery (~190 LOC) — final piece of the Cycle 25 polish-program cleanup.

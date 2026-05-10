@@ -4,6 +4,60 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.4] - 2026-05-10 (Cycle 32 - Apple platform water validation)
+
+Player-visible fix for iPhone Safari water rendering. Rolling Hills and Open
+Country water no longer depend on a per-frame depth pre-pass that could collapse
+into a solid foam-white surface on Apple/WebGL paths.
+
+### Added
+
+- BrowserStack Automate real-device water canary:
+  `npm run test:ios-water` drives Safari on `iPhone 15 Pro Max / iOS 17`,
+  starts Rolling Hills Solo Classic, captures `ios-water.png`, writes
+  `ios-water-sample.json`, and fails if sampled water pixels are near
+  `#eaf6ff`.
+- Manual GitHub workflow `.github/workflows/browserstack-ios-water.yml` for the
+  same canary. It stays `workflow_dispatch` while the BrowserStack account is on
+  the free proof tier.
+- Water shoreline unit tests covering foam at the shoreline, non-foam water past
+  the foam band, and deep-water color trend.
+- `glProbe` water sampling under `?debug=gl` via
+  `window.__sdsDiag.waterSample` / `waterSamples[]`.
+
+### Changed
+
+- `AnimeWater` now derives shoreline foam and shallow/deep color from the
+  scene's circular `boundary` and `boundary.falloff`, not screen depth.
+- WebGL extension smoke now checks the actual remaining water requirement
+  (`OES_texture_float_linear`) instead of depth-pre-pass-only float render-target
+  assumptions.
+- Cross-platform testing docs now treat real iOS Safari as the water-regression
+  gate; Playwright WebKit remains useful but is not a real-device substitute.
+
+### Removed
+
+- `js/water/DepthPrePass.js` and the SceneManager render-loop depth pre-pass.
+  Water no longer samples `uDepthTex`, `uResolution`, `uCameraNear`, or
+  `uCameraFar`.
+
+### Validation
+
+- `npm test` - 300 passed / 7 skipped.
+- `npm run build` - clean production build.
+- `npm run test:e2e -- --project=chromium --grep-invert @local-only` - 6 passed.
+- `IOS_WATER_BASE_URL=https://sheepdogsim.com npm run test:ios-water` - passed
+  on BrowserStack iPhone 15 Pro Max / iOS 17 / Safari with sampled average
+  RGB `[26, 44, 11]`, `nearFoamWhite: false`.
+
+### Notes
+
+- BrowserStack Local on this Windows workstation hit an `EBUSY` lock opening
+  `C:\Users\Mattm\.browserstack\BrowserStackLocal.exe`. Public URL mode works
+  cleanly; use the GitHub workflow / Linux runner for the next local-build
+  tunnel proof before paying for an Automate plan.
+- No shared deterministic sim files or sim-baseline goldens changed.
+
 ## [2.1.3] - 2026-05-09 (Cycle 31 - public-surface)
 
 Public-facing surface pass. The site is the same game; the search-engine

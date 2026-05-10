@@ -1,27 +1,71 @@
 /**
- * AnimeWater — cel/anime-shaded water surface.
+ * AnimeWater - cel/anime-shaded water surface.
  *
- * Single ShaderMaterial. No Reflector pass. Reads a scene depth texture
- * (provided by DepthPrePass) for shoreline foam + two-band depth color.
+ * Single ShaderMaterial. Shoreline foam and two-band water color come from
+ * scene boundary data instead of a per-frame depth render target.
  *
  * Stack:
- *  - Two-band depth gradient (shallow → deep) via depth-diff
- *  - Sharp shoreline foam via depth-diff + step() (anime hard-edge,
- *    NOT smoothstep), modulated by scrolling voronoi so foam breathes
+ *  - Two-band shoreline gradient from island boundary radius/falloff
+ *  - Sharp shoreline foam from distance-to-shore + step()
  *  - Painted ripples: 2 octaves animated simplex noise, step()-quantized
  *  - Cel sparkles: quantized Blinn step() masked by high-freq simplex
  *  - Fog match: <fog_pars_fragment>/<fog_fragment> chunks, atmosphere-driven
- *  - highp depth sampler for iOS precision parity
  *
- * Pure ShaderMaterial — skip <colorspace_fragment>, author colors in
+ * Pure ShaderMaterial - skip <colorspace_fragment>, author colors in
  * linear, write gl_FragColor raw to avoid tonemap double-apply.
  */
 import * as THREE from 'three';
 
+export const WATER_PALETTE_RGB = Object.freeze({
+    shallow: [0x6f, 0xd7, 0xd2],
+    deep: [0x10, 0x36, 0x62],
+    foam: [0xea, 0xf6, 0xff],
+});
+
+export const DEFAULT_FOAM_THICKNESS = 2.5;
+
+function clamp01(value) {
+    return Math.min(1, Math.max(0, value));
+}
+
+export function computeShorelineMetrics({
+    x,
+    z,
+    centerX = 0,
+    centerZ = 0,
+    boundaryRadius,
+    boundaryFalloff,
+    foamThickness = DEFAULT_FOAM_THICKNESS,
+}) {
+    const falloff = Math.max(boundaryFalloff, 0.001);
+    const radialDistance = Math.hypot(x - centerX, z - centerZ);
+    const distanceFromShore = Math.abs(radialDistance - boundaryRadius);
+    const depthT = clamp01(distanceFromShore / falloff);
+    const foamMask = distanceFromShore < foamThickness ? 1 : 0;
+
+    return {
+        radialDistance,
+        distanceFromShore,
+        depthT,
+        foamMask,
+    };
+}
+
+export function mixWaterBaseColor(depthT) {
+    const t = clamp01(depthT);
+    return WATER_PALETTE_RGB.shallow.map((channel, index) => {
+        const deep = WATER_PALETTE_RGB.deep[index];
+        return Math.round(channel + (deep - channel) * t);
+    });
+}
+
+export function isNearFoamWhiteRgb(rgb, tolerance = 14) {
+    return WATER_PALETTE_RGB.foam.every((channel, index) => Math.abs(rgb[index] - channel) <= tolerance);
+}
+
 const VERT = /* glsl */ `
   varying vec2 vUv;
   varying vec3 vWorldPos;
-  varying float vViewZ;
 
   #include <fog_pars_vertex>
 
@@ -29,9 +73,7 @@ const VERT = /* glsl */ `
     vUv = uv;
     vec4 worldPos = modelMatrix * vec4(position, 1.0);
     vWorldPos = worldPos.xyz;
-    // The fog chunk references \`mvPosition\` by name — give it that.
     vec4 mvPosition = viewMatrix * worldPos;
-    vViewZ = mvPosition.z;
     gl_Position = projectionMatrix * mvPosition;
 
     #include <fog_vertex>
@@ -43,26 +85,22 @@ const FRAG = /* glsl */ `
 
   varying vec2 vUv;
   varying vec3 vWorldPos;
-  varying float vViewZ;
 
-  uniform highp sampler2D uDepthTex;
-  uniform vec2 uResolution;
-  uniform float uCameraNear;
-  uniform float uCameraFar;
+  uniform vec2 uShoreCenter;
+  uniform float uShoreRadius;
+  uniform float uShoreFalloff;
   uniform float uTime;
 
-  uniform vec3 uShallowColor;     // turquoise
-  uniform vec3 uDeepColor;        // deep navy
-  uniform vec3 uFoamColor;        // near-white
-  uniform float uDepthFalloff;    // metres of depth that maps shallow→deep
-  uniform float uFoamThickness;   // metres of depth diff that reads as foam
-  uniform float uRippleStrength;  // 0..1 banding contrast
-  uniform float uSparkleStrength; // 0..1
+  uniform vec3 uShallowColor;
+  uniform vec3 uDeepColor;
+  uniform vec3 uFoamColor;
+  uniform float uFoamThickness;
+  uniform float uRippleStrength;
+  uniform float uSparkleStrength;
 
-  uniform vec3 uSunDirection;     // world space, normalized
-  uniform float uSunSpecularIntensity; // 0..1 — Cycle 7 Phase 2d sun-glint scale
+  uniform vec3 uSunDirection;
+  uniform float uSunSpecularIntensity;
 
-  #include <packing>
   #include <fog_pars_fragment>
 
   // Ashima Arts 2D simplex noise (public domain).
@@ -94,103 +132,77 @@ const FRAG = /* glsl */ `
   }
 
   void main() {
-    // Sample scene depth at fragment screen position.
-    vec2 screenUv = gl_FragCoord.xy / uResolution;
-    float fragDepth = texture2D(uDepthTex, screenUv).x;
+    float shoreFalloff = max(uShoreFalloff, 0.001);
+    float radialDistance = length(vWorldPos.xz - uShoreCenter);
+    float distanceFromShore = abs(radialDistance - uShoreRadius);
 
-    // Convert to view-space Z (negative — camera looks down -Z).
-    float sceneViewZ = perspectiveDepthToViewZ(fragDepth, uCameraNear, uCameraFar);
-    float waterViewZ = vViewZ;
-
-    // Positive when scene is BEHIND water (terrain underneath water surface).
-    float diff = max(0.0, sceneViewZ - waterViewZ);
-
-    // Two-band depth color
-    float depthT = clamp(diff / uDepthFalloff, 0.0, 1.0);
+    float depthT = clamp(distanceFromShore / shoreFalloff, 0.0, 1.0);
     vec3 baseColor = mix(uShallowColor, uDeepColor, depthT);
 
-    // Painted ripples — 2 octaves simplex, banded
     vec2 rippleUv = vWorldPos.xz * 0.05 + vec2(uTime * 0.05, uTime * 0.03);
     float r1 = snoise(rippleUv);
     float r2 = snoise(rippleUv * 2.7 + vec2(uTime * 0.07, -uTime * 0.04));
     float ripple = (r1 * 0.65 + r2 * 0.35);
-    // Quantize into 3 bands for the painted look
     float rippleBanded = step(0.15, ripple) * 0.5 + step(0.55, ripple) * 0.5;
     baseColor += vec3(rippleBanded * uRippleStrength * 0.08);
 
-    // Sharp shoreline foam — voronoi-modulated threshold for breathing edge
-    // Use a different scale for the foam mask noise so it doesn't align with ripples
     vec2 foamNoiseUv = vWorldPos.xz * 0.18 + vec2(uTime * 0.04, uTime * 0.02);
     float foamNoise = snoise(foamNoiseUv);
     float foamThreshold = uFoamThickness * (1.0 + foamNoise * 0.25);
-    // ANIME HARD-EDGE — step(), not smoothstep. Foam where depth diff is shallow.
-    float foamMask = 1.0 - step(foamThreshold, diff);
+    float foamMask = 1.0 - step(foamThreshold, distanceFromShore);
 
-    // Cel sparkles — quantized specular masked by high-freq simplex
     vec3 viewDir = normalize(cameraPosition - vWorldPos);
-    vec3 N = vec3(0.0, 1.0, 0.0); // flat plane normal in world space
+    vec3 N = vec3(0.0, 1.0, 0.0);
     vec3 H = normalize(uSunDirection + viewDir);
     float NdotH = max(dot(N, H), 0.0);
     float spec = pow(NdotH, 64.0);
     float sparkleMask = snoise(vWorldPos.xz * 0.8 + vec2(uTime * 0.15));
     float sparkles = step(0.85, spec) * step(0.55, sparkleMask) * uSparkleStrength;
 
-    // Cycle 7 Phase 2d: smooth sun-glint alongside the cel sparkles. Exponent
-    // 8 gives a wider, coherent reflection path along the sun's screen
-    // direction (vs the sparkles' exponent 64 which produces discrete
-    // flecks). Reads as "sun on water" rather than ambient shimmer.
     float sunGlint = pow(NdotH, 8.0) * uSunSpecularIntensity;
-    vec3 sunGlintColor = vec3(1.0, 0.95, 0.82); // warm-white — tune in playtest
+    vec3 sunGlintColor = vec3(1.0, 0.95, 0.82);
 
     vec3 color = baseColor + vec3(sparkles) + sunGlintColor * sunGlint;
     color = mix(color, uFoamColor, foamMask);
 
     gl_FragColor = vec4(color, 1.0);
 
-    // Fog match — matches the atmosphere preset's horizon at distance
     #include <fog_fragment>
   }
 `;
 
-/**
- * Build the AnimeWater material. Caller supplies the renderer (for
- * drawing-buffer dimensions), the camera (for near/far + aspect), and
- * a depth texture from a previously-rendered scene-without-water pass.
- *
- * @param {Object} input
- * @param {THREE.WebGLRenderer} input.renderer
- * @param {THREE.PerspectiveCamera} input.camera
- * @param {THREE.Texture} input.depthTexture
- * @returns {THREE.ShaderMaterial}
- */
-export function createAnimeWaterMaterial({ renderer, camera, depthTexture }) {
-    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+function getBoundaryUniforms(boundary) {
+    return {
+        center: new THREE.Vector2(boundary.center?.x ?? 0, boundary.center?.z ?? 0),
+        radius: boundary.radius,
+        falloff: boundary.falloff,
+    };
+}
 
+export function createAnimeWaterMaterial({ boundary }) {
+    const shoreline = getBoundaryUniforms(boundary);
     const uniforms = THREE.UniformsUtils.merge([
         THREE.UniformsLib.fog,
         {
-            uDepthTex:        { value: depthTexture },
-            uResolution:      { value: new THREE.Vector2(size.x, size.y) },
-            uCameraNear:      { value: camera.near },
-            uCameraFar:       { value: camera.far },
-            uTime:            { value: 0 },
+            uShoreCenter: { value: shoreline.center },
+            uShoreRadius: { value: shoreline.radius },
+            uShoreFalloff: { value: shoreline.falloff },
+            uTime: { value: 0 },
 
-            // Anime palette — turquoise shallow, navy deep, near-white foam
-            uShallowColor:    { value: new THREE.Color(0x6fd7d2) },
-            uDeepColor:       { value: new THREE.Color(0x103662) },
-            uFoamColor:       { value: new THREE.Color(0xeaf6ff) },
+            uShallowColor: { value: new THREE.Color(0x6fd7d2) },
+            uDeepColor: { value: new THREE.Color(0x103662) },
+            uFoamColor: { value: new THREE.Color(0xeaf6ff) },
 
-            uDepthFalloff:    { value: 4.0 },     // metres
-            uFoamThickness:   { value: 0.6 },     // metres
-            uRippleStrength:  { value: 1.0 },
+            uFoamThickness: { value: DEFAULT_FOAM_THICKNESS },
+            uRippleStrength: { value: 1.0 },
             uSparkleStrength: { value: 0.7 },
 
-            uSunDirection:    { value: new THREE.Vector3(0.4, 0.6, 0.7).normalize() },
+            uSunDirection: { value: new THREE.Vector3(0.4, 0.6, 0.7).normalize() },
             uSunSpecularIntensity: { value: 0.6 },
         }
     ]);
 
-    const material = new THREE.ShaderMaterial({
+    return new THREE.ShaderMaterial({
         uniforms,
         vertexShader: VERT,
         fragmentShader: FRAG,
@@ -199,28 +211,13 @@ export function createAnimeWaterMaterial({ renderer, camera, depthTexture }) {
         depthWrite: true,
         side: THREE.FrontSide,
     });
-
-    return material;
 }
 
-/**
- * Convenience helper: create a flat water-plane mesh under a scene.
- * Caller is responsible for adding to the THREE.Scene and calling update().
- *
- * @param {Object} input
- * @param {THREE.WebGLRenderer} input.renderer
- * @param {THREE.PerspectiveCamera} input.camera
- * @param {THREE.Texture} input.depthTexture
- * @param {number} [input.size=4000]
- * @param {number} [input.y=-0.05]   y-offset to avoid z-fighting with terrain at sea level
- * @param {number} [input.segments=64]
- * @returns {{mesh: THREE.Mesh, material: THREE.ShaderMaterial, update: (timeSec: number, sunDirection?: THREE.Vector3) => void, resize: (w: number, h: number) => void, dispose: () => void}}
- */
-export function createAnimeWater({ renderer, camera, depthTexture, size = 4000, y = -0.05, segments = 64 }) {
-    const material = createAnimeWaterMaterial({ renderer, camera, depthTexture });
+export function createAnimeWater({ boundary, size = 4000, y = -0.05, segments = 64 }) {
+    const material = createAnimeWaterMaterial({ boundary });
 
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
-    geometry.rotateX(-Math.PI / 2); // face up
+    geometry.rotateX(-Math.PI / 2);
 
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.y = y;
@@ -230,23 +227,13 @@ export function createAnimeWater({ renderer, camera, depthTexture, size = 4000, 
     return {
         mesh,
         material,
-        /**
-         * Call once per frame.
-         * @param {number} timeSec - elapsed time, seconds (uniform-driven animation)
-         * @param {THREE.Vector3} [sunDirection] - world-space sun direction; pass from atmosphere
-         */
         update(timeSec, sunDirection) {
             material.uniforms.uTime.value = timeSec;
             if (sunDirection) {
                 material.uniforms.uSunDirection.value.copy(sunDirection);
             }
-            // Camera near/far may change at runtime; keep uniforms in sync.
-            material.uniforms.uCameraNear.value = camera.near;
-            material.uniforms.uCameraFar.value = camera.far;
         },
-        resize(w, h) {
-            material.uniforms.uResolution.value.set(w, h);
-        },
+        resize() {},
         dispose() {
             geometry.dispose();
             material.dispose();

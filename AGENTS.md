@@ -4,7 +4,7 @@
 
 ## Project summary
 
-Production 3D web game shipped at [sheepdogsim.com](https://sheepdogsim.com). Three.js + React 19 (createElement, no JSX) + Vite 7 + Tailwind 4 client. Cloudflare Worker + Durable Objects + D1 backend. Shared deterministic boid + obstacle modules in [`shared/`](shared/) imported byte-identically by both runtimes. Vitest 4 (272 specs) + Playwright e2e + sim-baseline goldens + refactor-baseline characterization goldens + ESLint boundary on `shared/`. MIT-licensed.
+Production 3D web game shipped at [sheepdogsim.com](https://sheepdogsim.com). Three.js + React 19 (createElement, no JSX) + Vite 7 + Tailwind 4 client. Cloudflare Worker + Durable Objects + D1 backend. Shared deterministic boid + obstacle modules in [`shared/`](shared/) imported byte-identically by both runtimes. Vitest 4 (300 specs) + Playwright e2e + sim-baseline goldens + refactor-baseline characterization goldens + ESLint boundary on `shared/`. MIT-licensed.
 
 ## Quick commands
 
@@ -17,9 +17,10 @@ npm run dev:client         # Vite only (no multiplayer)
 npm run dev:worker         # wrangler only
 npm run dev:lan            # vite --host + wrangler (LAN, mobile testing)
 
-npm test                   # vitest, ~1.5s full run (272 specs)
+npm test                   # vitest, ~2s full run (300 specs)
 npm run test:integration   # WebSocket two-client harness
 npm run test:e2e           # Playwright browser smoke
+npm run test:ios-water     # BrowserStack real iOS Safari water canary
 npm run lint               # ESLint on shared/ (deterministic boundary)
 
 npm run build              # production output to dist/

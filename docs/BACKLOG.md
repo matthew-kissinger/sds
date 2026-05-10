@@ -4,6 +4,34 @@
 
 ## Recently Completed
 
+### Cycle 32 - `apple-platform-validation` (closed 2026-05-10, v2.1.4)
+
+Plan archived at [`docs/archive/cycles/cycle-32-plan.md`](archive/cycles/cycle-32-plan.md). Cycle 32 fixed the iPhone Safari water failure structurally: the water shader no longer depends on a per-frame depth pre-pass, and a real iOS Safari BrowserStack canary now catches solid foam-white regressions before release.
+
+All 6 phases shipped in one closeout commit on `main`. Tests 300 pass (307 with skips). Build clean (mainKB ≈ 589.60 / threeKB ≈ 617.77). BrowserStack public URL canary passed on `iPhone 15 Pro Max / iOS 17 / Safari` with sampled average RGB `[26, 44, 11]`, `nearFoamWhite: false`. Player-visible delta → bumped `2.1.3 → 2.1.4`.
+
+**What changed:**
+
+- **Removed the fragile render path.** `js/water/DepthPrePass.js` is deleted and [`SceneManager`](../js/SceneManager.js) no longer renders scene depth before water every frame.
+- **Rebuilt water around scene geometry.** [`AnimeWater`](../js/water/AnimeWater.js) uses island `boundary.radius` and `boundary.falloff` for foam and shallow/deep color. Ripples, sparkles, fog, sun-glint, palette, and mobile segment counts remain.
+- **Added real-device gate.** `browserstack-node-sdk`, `browserstack.yml`, [`playwright.browserstack.config.ts`](../playwright.browserstack.config.ts), [`tools/browserstack/run-ios-water.mjs`](../tools/browserstack/run-ios-water.mjs), and [`tests/browserstack/ios-water.spec.ts`](../tests/browserstack/ios-water.spec.ts) provide `npm run test:ios-water`.
+- **Added manual CI workflow.** [`.github/workflows/browserstack-ios-water.yml`](../.github/workflows/browserstack-ios-water.yml) runs the same canary by manual dispatch while the BrowserStack account is on the free proof tier.
+- **Extended diagnostics.** [`glProbe`](../js/diagnostics/glProbe.js) records `window.__sdsDiag.waterSample` and `waterSamples[]` under `?debug=gl`.
+- **Updated acceptance docs.** [`docs/cross-platform-testing.md`](cross-platform-testing.md), [`CHANGELOG.md`](../CHANGELOG.md), [`NEXT_SESSION.md`](../NEXT_SESSION.md), and this backlog entry now describe the real state.
+
+**Validation:**
+
+- `npm test` - 300 passed / 7 skipped.
+- `npm run build` - clean production build.
+- `npm run test:e2e -- --project=chromium --grep-invert @local-only` - 6 passed.
+- `IOS_WATER_BASE_URL=https://sheepdogsim.com npm run test:ios-water` - passed on BrowserStack iOS Safari.
+- No shared deterministic sim files, sim baselines, `.claude/rules/*`, or `docs/CYCLE_TEMPLATE.md` touched.
+
+**Carryover:**
+
+- BrowserStack Local on the Windows workstation hit `EBUSY` opening `C:\Users\Mattm\.browserstack\BrowserStackLocal.exe`. Public URL mode works. Before paying for BrowserStack or making the canary push-gated, prove the local tunnel through the manual GitHub workflow / Linux runner.
+- MP island scenes remain deferred to Cycle 33 and require an explicit shared-sim / worker / wire-format / sim-baseline plan before implementation.
+
 ### Cycle 31 - `public-surface` (closed 2026-05-09, autonomous run, v2.1.3)
 
 Plan archived at [`docs/archive/cycles/cycle-31-plan.md`](archive/cycles/cycle-31-plan.md). Public-facing surface pass after a 2026-05-09 audit found the Google snippet for `sheep dog sim` was leaking the welcome modal text, the production sitemap was 404-as-HTML (file lived in repo root, never reached `dist/`), only the homepage was indexed, and the cached title was stale. Cycle fixes the **mechanical SEO surface**: real semantic body content for crawlers, three per-scene landing pages, two devlog seed entries, sitemap relocation + expansion, visible internal-link footer, GitHub topic refresh.
@@ -783,7 +811,7 @@ Items deferred from prior cycles that haven't been picked up. Move to a future c
 - **Cycle 3 Track 2 follow-through** (UI/UX polish): scene-first state machine in `App.js`, mode-shaped HUD profile, onboarding overlay, real dog PNG thumbnails, MP-joiner renderer reactivity. See [`cycle-3-ui-ux.md`](cycle-3-ui-ux.md).
 - **Cycle 3 Track 1 polish:** JSX flip (mechanical codemod), boid consolidation (needs architectural decision). See [`cycle-3-cleanup.md`](cycle-3-cleanup.md) § Remaining.
 - **Heightfield Y full unification (mesh-aligned bake).** Cycle 9 Phase 5 shipped a defensive [`Heightfield.surfaceY`](../shared/terrain/Heightfield.js) that adds a small upward lift to entity placement to compensate for the bilinear-vs-triangle-interp mismatch. The complete fix is to bake a `displacedHeights: Float32Array` mirroring the terrain mesh vertex grid (post-displacement, post-falloff), then have all consumers (mesh, grass, sim, camera) read the same array. Triangle interpolation is what the renderer uses, so the right algorithm is: find the cell in the grid, find which triangle the point lies in (Three.js `PlaneGeometry` splits each quad along the NW-SE diagonal), compute barycentric coords against the three vertex Ys. Pick up when the +0.05m lift no longer hides the artefact (e.g., after a heightfield re-bake with steeper ridges).
-- **`ARCHITECTURE.md` Cycle 5 sections** — the doc has no entries for `Boundary` (rect/island discriminated schema), `SceneObstacles` (kdbush proxy collider), `AnimeWater` (depth-pre-pass shader), or `Random` (`mulberry32` shared PRNG). All four are load-bearing primitives shipped Cycle 5. Add when next pass through ARCHITECTURE.md is warranted; not blocking Cycle 6.
+- **`ARCHITECTURE.md` Cycle 5 sections** — the doc has no entries for `Boundary` (rect/island discriminated schema), `SceneObstacles` (kdbush proxy collider), `AnimeWater` (now shoreline-boundary shader after Cycle 32), or `Random` (`mulberry32` shared PRNG). All four are load-bearing primitives. Add when next pass through ARCHITECTURE.md is warranted.
 - **Cycle 19.5 audit — expensive / unoptimized / load-bearing assumptions worth investigating.** Quick survey 2026-05-04 while addressing the impostor + culling fixes. Each is a candidate for a future investigation; none are blocking right now.
   - **Heightfield `sample()` double-amplification** — already on Cycle 20 plan. Terrain mesh ships at `peakHeight²` metres because `bake-heightmap.mjs` writes pre-multiplied data while `sample()` multiplies again. Visual character of all 3 scenes has been built around the amplified state for ~14 cycles; honoring the documented contract means a 5× height collapse.
   - **GrassSystem 336 chunks per scene** — each chunk is its own `InstancedMesh` with per-frame distance test in `updateGrassChunks`. Per-instance frustum cull via `InstancedMesh2` BVH on the chunked grass might consolidate. Trade-off: chunked invalidation is currently the visibility primitive; switching to instance-level culling means the chunks themselves become an unused abstraction.
@@ -799,7 +827,7 @@ Items deferred from prior cycles that haven't been picked up. Move to a future c
 
 Speculative — don't act on these without explicit user direction.
 
-- **NN-trained sheepdogs / stochastic-indecision sheep model.** Science Advances Mar 2026 paper [Controlling noisy herds: Temporal network restructuring improves control of indecisive collectives](https://www.science.org/doi/10.1126/sciadv.adx6791) (DOI 10.1126/sciadv.adx6791) studies how trained dogs exploit sheep indecisiveness (unpredictable flee/follow switching) as a control mechanism. Three threads it could unlock: (a) a smarter stochastic sheep AI on top of the existing force-based boids in [`shared/FlockingAlgorithms.js`](../shared/FlockingAlgorithms.js); (b) NPC dog opponents (solo training mode demo dog, MP bot, tutorial guide) that exploit indecision instead of pursuing; (c) a "splitting" game mode where you separate one flock into two corrals. Reading list, not a commitment. Full notes in [`docs/cycle-32-plan.md`](cycle-32-plan.md) carryover item 9.
+- **NN-trained sheepdogs / stochastic-indecision sheep model.** Science Advances Mar 2026 paper [Controlling noisy herds: Temporal network restructuring improves control of indecisive collectives](https://www.science.org/doi/10.1126/sciadv.adx6791) (DOI 10.1126/sciadv.adx6791) studies how trained dogs exploit sheep indecisiveness (unpredictable flee/follow switching) as a control mechanism. Three threads it could unlock: (a) a smarter stochastic sheep AI on top of the existing force-based boids in [`shared/FlockingAlgorithms.js`](../shared/FlockingAlgorithms.js); (b) NPC dog opponents (solo training mode demo dog, MP bot, tutorial guide) that exploit indecision instead of pursuing; (c) a "splitting" game mode where you separate one flock into two corrals. Reading list, not a commitment. Full notes were captured in the Cycle 32 planning discussion; redraft into a future cycle plan before acting.
 - **New scenes beyond Field / Rolling Hills / Open Country.** Three is the right number until those have differentiated game loops.
 - **Mod-friendly scene format** extending the sandbox URL encoding (lz-string) into full scene descriptions (terrain + props + rules), letting a biome ship as a single link.
 - **Competitive seasons + tournaments** once the leaderboard has enough history to make them meaningful.

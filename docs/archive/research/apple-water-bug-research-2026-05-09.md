@@ -1,8 +1,10 @@
 # Apple-platform water-render bug + validation gap
 
-> Research note for Cycle 32. Authored 2026-05-09 from a single iPhone screenshot ([`cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg`](../cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg)) plus code archaeology + external evidence pull. Companion to [`cross-platform-testing.md`](cross-platform-testing.md) (the living doc) and [`archive/research/mac-bug-research.md`](archive/research/mac-bug-research.md) (the prior chapter, Cycle 12).
+> Research note for Cycle 32. Authored 2026-05-09 from a single iPhone screenshot ([`cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg`](../../cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg)) plus code archaeology + external evidence pull. Companion to [`cross-platform-testing.md`](../../cross-platform-testing.md) (the living doc) and [`mac-bug-research.md`](mac-bug-research.md) (the prior chapter, Cycle 12).
 >
 > The user's framing on this work: **proper engineering fix, not patchwork.** Whatever Cycle 32 ships here should rearchitect the fragile path, not paper over the symptom.
+>
+> Cycle 32 outcome note: BrowserStack Automate was selected over LambdaTest, A1 was selected over A2, and `js/water/DepthPrePass.js` was removed from the runtime path. The analysis below records the pre-Cycle-32 failure investigation.
 
 ## Symptom (2026-05-09)
 
@@ -22,16 +24,16 @@ Full map produced 2026-05-09 by an Explore agent. Key parts:
 
 | Surface | File | Notes |
 |---|---|---|
-| Water material | [`js/water/AnimeWater.js`](../js/water/AnimeWater.js) | Custom `ShaderMaterial`. Two-band depth gradient + voronoi-modulated foam + cel sparkles + sun glint. `precision highp float;` declared. `uniform highp sampler2D uDepthTex;`. Fog chunks wired in. |
-| Depth pre-pass | [`js/water/DepthPrePass.js`](../js/water/DepthPrePass.js) | One `WebGLRenderTarget` with `DepthTexture` (`UnsignedInt248Type` + `DepthStencilFormat`). Half-res on mobile. **`render()` is wrapped in try/catch that silently swallows Safari/Metal failures (lines 75-83).** Logs to [`js/diagnostics/glProbe.js`](../js/diagnostics/glProbe.js) but never alarms. |
-| Atmosphere | [`js/atmosphere/Atmosphere.js`](../js/atmosphere/Atmosphere.js) | Drives `scene.fog.color` per-frame from sky horizon LUT. Both terrain + water inherit via `<fog_fragment>` chunks. |
-| Sky | [`js/atmosphere/HosekWilkieSky.js`](../js/atmosphere/HosekWilkieSky.js) + [`skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js) | `precision highp float; precision highp int;` + 1/255 dither. Cycle 12 Phase 4 fix. |
-| Renderer | [`js/SceneManager.js`](../js/SceneManager.js) | `antialias: !isIOS`. `NeutralToneMapping` on Mac/iPhone/iPad (Cycle 26 → v2.0.4 commit `0e686fa`). |
-| Validation | [`tests/shader-precision.spec.js`](../tests/shader-precision.spec.js), [`tests/safari-smoke/run.mjs`](../tests/safari-smoke/run.mjs), [`js/diagnostics/glProbe.js`](../js/diagnostics/glProbe.js) | Static-parse precision guard, macOS Safari smoke (no iOS), `?debug=gl` runtime probe. |
+| Water material | [`js/water/AnimeWater.js`](../../js/water/AnimeWater.js) | Custom `ShaderMaterial`. Two-band depth gradient + voronoi-modulated foam + cel sparkles + sun glint. `precision highp float;` declared. `uniform highp sampler2D uDepthTex;`. Fog chunks wired in. |
+| Depth pre-pass | `js/water/DepthPrePass.js` (deleted in Cycle 32) | One `WebGLRenderTarget` with `DepthTexture` (`UnsignedInt248Type` + `DepthStencilFormat`). Half-res on mobile. **`render()` is wrapped in try/catch that silently swallows Safari/Metal failures (lines 75-83).** Logs to [`js/diagnostics/glProbe.js`](../../js/diagnostics/glProbe.js) but never alarms. |
+| Atmosphere | [`js/atmosphere/Atmosphere.js`](../../js/atmosphere/Atmosphere.js) | Drives `scene.fog.color` per-frame from sky horizon LUT. Both terrain + water inherit via `<fog_fragment>` chunks. |
+| Sky | [`js/atmosphere/HosekWilkieSky.js`](../../js/atmosphere/HosekWilkieSky.js) + [`skyShader.glsl.js`](../../js/atmosphere/skyShader.glsl.js) | `precision highp float; precision highp int;` + 1/255 dither. Cycle 12 Phase 4 fix. |
+| Renderer | [`js/SceneManager.js`](../../js/SceneManager.js) | `antialias: !isIOS`. `NeutralToneMapping` on Mac/iPhone/iPad (Cycle 26 → v2.0.4 commit `0e686fa`). |
+| Validation | [`tests/shader-precision.spec.js`](../../tests/shader-precision.spec.js), [`tests/safari-smoke/run.mjs`](../../tests/safari-smoke/run.mjs), [`js/diagnostics/glProbe.js`](../../js/diagnostics/glProbe.js) | Static-parse precision guard, macOS Safari smoke (no iOS), `?debug=gl` runtime probe. |
 
 ## Root-cause hypothesis (high confidence pending device capture)
 
-Trace what happens in [`AnimeWater.js:97-148`](../js/water/AnimeWater.js#L97-L148) when `texture2D(uDepthTex, screenUv).x` returns `1.0` (the depth-far value, which is what you get when the depth-stencil texture sampling fails on Apple Metal-ANGLE):
+Trace what happens in [`AnimeWater.js:97-148`](../../js/water/AnimeWater.js#L97-L148) when `texture2D(uDepthTex, screenUv).x` returns `1.0` (the depth-far value, which is what you get when the depth-stencil texture sampling fails on Apple Metal-ANGLE):
 
 ```glsl
 fragDepth  = 1.0
@@ -68,13 +70,13 @@ The current Apple-bug loop has been:
 
 That loop:
 
-- Has no real iOS device in CI ([`cross-platform-testing.md`](cross-platform-testing.md) explicitly defers BrowserStack until traffic justifies it; today's matrix is GH `macos-latest` Safari + Playwright WebKit).
+- Has no real iOS device in CI ([`cross-platform-testing.md`](../../cross-platform-testing.md) explicitly defers BrowserStack until traffic justifies it; today's matrix is GH `macos-latest` Safari + Playwright WebKit).
 - Has no per-frame health check that the depth pre-pass actually rendered (the existing `try/catch` swallows the failure).
-- Has no shader-output unit test (the existing [`tests/shader-precision.spec.js`](../tests/shader-precision.spec.js) statically asserts `precision highp` is declared; it never executes the shader against synthetic inputs).
+- Has no shader-output unit test (the existing [`tests/shader-precision.spec.js`](../../tests/shader-precision.spec.js) statically asserts `precision highp` is declared; it never executes the shader against synthetic inputs).
 - Has no visual-regression baseline diff per platform.
 - Surfaces every Apple bug **after** Matt sees it, not in CI.
 
-Playwright's WebKit binary is not real iOS Safari and does not use Apple's Metal-ANGLE backend. It will not reproduce this class of bug. The macOS Safari smoke harness ([`tests/safari-smoke/run.mjs`](../tests/safari-smoke/run.mjs)) runs on GH `macos-latest` VMs, which use VM-provisioned hardware that hides Apple-Silicon-specific Metal quirks (this caveat already documented in [`mac-bug-research.md`](archive/research/mac-bug-research.md)).
+Playwright's WebKit binary is not real iOS Safari and does not use Apple's Metal-ANGLE backend. It will not reproduce this class of bug. The macOS Safari smoke harness ([`tests/safari-smoke/run.mjs`](../../tests/safari-smoke/run.mjs)) runs on GH `macos-latest` VMs, which use VM-provisioned hardware that hides Apple-Silicon-specific Metal quirks (this caveat already documented in [`mac-bug-research.md`](mac-bug-research.md)).
 
 That is the structural gap.
 
@@ -96,8 +98,8 @@ Trade-offs:
 - One-time scene-load cost (a 512×512 R16F or R8 texture, ~0.5 MB, computed once).
 - Depth gradient becomes a function of `(distance-from-shore, water-bottom-from-heightfield)` rather than `(scene-depth, water-view-Z)`. Same visual semantic, different math.
 - Loses the "depth-aware foam against any opaque object placed in water" property. No object in SDS currently uses it (no boats, no rocks-in-water, no sheep-in-water as a real case).
-- Removes [`js/water/DepthPrePass.js`](../js/water/DepthPrePass.js) entirely; AnimeWater no longer needs `uDepthTex`, `uCameraNear`, `uCameraFar`, `uResolution`.
-- Removes one full scene-render per frame on every platform (the depth pre-pass was ~10-15% of mobile frame budget per [`DepthPrePass.js:11`](../js/water/DepthPrePass.js)).
+- Removes `js/water/DepthPrePass.js` entirely; AnimeWater no longer needs `uDepthTex`, `uCameraNear`, `uCameraFar`, `uResolution`.
+- Removes one full scene-render per frame on every platform (the depth pre-pass was ~10-15% of mobile frame budget per the deleted `DepthPrePass.js`).
 
 This is the proper fix. The bug class disappears, perf improves, the code shrinks.
 
@@ -133,7 +135,7 @@ Independent of Track A, we need real Apple-device coverage so we don't relive th
 - Open source: [`stackgl/headless-gl`](https://github.com/stackgl/headless-gl).
 
 **B3. Frame-end pixel sampling gate** (extends existing `glProbe`).
-- The existing [`glProbe.js`](../js/diagnostics/glProbe.js) already samples an 8×8 framebuffer patch.
+- The existing [`glProbe.js`](../../js/diagnostics/glProbe.js) already samples an 8×8 framebuffer patch.
 - Run it once-per-N-seconds on player sessions; if pixel mean is within ε of `#eaf6ff` AND a water plane is in view, fire a Sentry-grade alarm.
 - Players become an opt-in test farm.
 
@@ -151,7 +153,7 @@ If Cycle 32 takes Apple-platform validation as its goal:
 3. **Phase 2 (~half-day)**: Wire LambdaTest into CI for real iOS Safari screenshot test. One scene, one camera, one assertion (water pixel-mean is not within ε of foam color).
 4. **Phase 3 (~1 day)**: Track A architecture change. Either A1 (shoreline distance field, remove DepthPrePass) or A2 (capability check + graceful degrade). Decision driven by Phase 0 diag + a research spike.
 5. **Phase 4 (~1hr)**: Extend `glProbe` for frame-end pixel sampling gate. Low-cost insurance.
-6. **Phase 5 (~30m)**: Doc updates. [`cross-platform-testing.md`](cross-platform-testing.md) gets the new tooling matrix. New rule file [`.claude/rules/apple-platform.md`](../.claude/rules/) (or a section in [`scene-and-render.md`](../.claude/rules/scene-and-render.md)) codifies "no per-frame RTT in shader paths without a capability check."
+6. **Phase 5 (~30m)**: Doc updates. [`cross-platform-testing.md`](../../cross-platform-testing.md) gets the new tooling matrix. New rule file [`.claude/rules/apple-platform.md`](../../.claude/rules/) (or a section in [`scene-and-render.md`](../../.claude/rules/scene-and-render.md)) codifies "no per-frame RTT in shader paths without a capability check."
 
 If Cycle 32's goal is `mp-island-scenes` instead, the validation work splits into a smaller cycle of its own; minimum scope is Phase 0 + Phase 1 + Phase 2 (real device + canary tests), deferring the architecture change to a later cycle.
 
@@ -165,7 +167,7 @@ If Cycle 32's goal is `mp-island-scenes` instead, the validation work splits int
 | TestingBot | Skip | Less polished UX than LambdaTest at similar price. |
 | Appetize.io | Skip | Simulator-only, doesn't reproduce GPU bugs. Good for layout only. |
 | iOS Simulator | Skip | Requires Mac. |
-| Playwright WebKit | Keep for what we already use it for | NOT real iOS Safari. Already in our matrix per [`cross-platform-testing.md`](cross-platform-testing.md). |
+| Playwright WebKit | Keep for what we already use it for | NOT real iOS Safari. Already in our matrix per [`cross-platform-testing.md`](../../cross-platform-testing.md). |
 | `headless-gl` | **Use, open-source** | Per-shader unit tests in CI on every PR. |
 | Inspect.dev | **Use IF iPhone SE boots** ($50/yr) | Windows-side iOS Safari Web Inspector. |
 | `remotedebug-ios-webkit-adapter` | Try first (free), fall back to Inspect.dev | Archived 2020, brittle on iOS 16+ but free. |
@@ -188,11 +190,11 @@ If Cycle 32's goal is `mp-island-scenes` instead, the validation work splits int
 
 ## References
 
-- [`cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg`](../cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg). The source artifact.
-- [`cross-platform-testing.md`](cross-platform-testing.md). Living doc; updated alongside this note with new tooling.
-- [`archive/research/mac-bug-research.md`](archive/research/mac-bug-research.md). Cycle 12 prior chapter on the white-ground bug.
-- [`js/water/AnimeWater.js`](../js/water/AnimeWater.js). The affected shader.
-- [`js/water/DepthPrePass.js`](../js/water/DepthPrePass.js). The fragile dependency.
+- [`cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg`](../../cycle32-validation/iphone-screenshots/iphone-rh-water-2026-05-09.jpg). The source artifact.
+- [`cross-platform-testing.md`](../../cross-platform-testing.md). Living doc; updated alongside this note with new tooling.
+- [`mac-bug-research.md`](mac-bug-research.md). Cycle 12 prior chapter on the white-ground bug.
+- [`js/water/AnimeWater.js`](../../js/water/AnimeWater.js). The affected shader.
+- `js/water/DepthPrePass.js` (deleted in Cycle 32). The fragile dependency.
 - [three.js #25741](https://github.com/mrdoob/three.js/issues/25741). iOS 16.4 / Apple no-fix.
 - [three.js #26829](https://github.com/mrdoob/three.js/issues/26829). iOS 17 white canvas.
 - [three.js #30767](https://github.com/mrdoob/three.js/issues/30767). M3/M4 + iOS 18.3+.

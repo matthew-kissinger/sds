@@ -609,9 +609,9 @@ class SheepDogSimulation {
 
     /**
      * Drain scene-coupled GPU + listener state. Cycle 11 Phase 1 fills out
-     * the full ordering: events → effects → actors → structures → water
-     * (before atmosphere — depth pre-pass coupling) → terrain → atmosphere
-     * → sun billboard → state drain → renderer cache. Each disposer wraps
+     * the full ordering: events -> effects -> actors -> structures -> water
+     * before atmosphere -> terrain -> atmosphere
+     * -> sun billboard -> state drain -> renderer cache. Each disposer wraps
      * in try/catch with warn logs so a single subsystem failure doesn't
      * abort the rest of the teardown.
      */

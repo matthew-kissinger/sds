@@ -1,94 +1,99 @@
 # Cross-platform testing
 
-Living doc for the SDS test matrix. Updated 2026-05-09 (Cycle 32 priority elevation: Apple-platform validation harness).
+Living doc for the SDS test matrix. Updated 2026-05-10 after Cycle 32 Apple-platform water validation shipped.
 
-## Current state vs target state
+## Current Matrix
 
-The matrix below is **what we have today**. The Apple-platform-validation work elevated for Cycle 32 (see [`apple-water-bug-research-2026-05-09.md`](apple-water-bug-research-2026-05-09.md)) adds three rows: real iOS Safari via LambdaTest, per-shader unit tests via `headless-gl`, and a frame-end pixel-sampling gate.
-
-## What runs where (today)
-
-| Layer | Browsers | OS | Trigger | Workflow |
+| Layer | Browsers | OS/device | Trigger | Command/workflow |
 |---|---|---|---|---|
-| Vitest unit + sim baseline | n/a | Ubuntu | every push | `deploy.yml` job `test` |
-| Playwright E2E + WebGL probe | Chromium, Firefox, WebKit | Ubuntu | every push (after `test`) | `deploy.yml` job `e2e` |
-| Real macOS Safari smoke | Safari (real) | macOS-latest | nightly + `workflow_dispatch` | `macos-safari.yml` |
+| Vitest unit + sim baseline | n/a | local/CI | every push | `npm test` |
+| Playwright E2E + WebGL probe | Chromium, Firefox, WebKit | Ubuntu/local | every push | `npm run test:e2e` |
+| Real macOS Safari smoke | Safari | macOS-latest | nightly + manual | `.github/workflows/macos-safari.yml` |
+| Real iOS Safari water canary | Safari | BrowserStack iPhone 15 Pro Max / iOS 17 | manual + release validation | `npm run test:ios-water` |
 
-`webkit` is Playwright's bundled WebKit binary. It's not the same as macOS Safari (different JS engine wrapper, no Metal/ANGLE backend). Real Safari + Metal is the unique surface that the macOS workflow covers.
+`webkit` is Playwright's bundled WebKit binary. It is useful, but it is not a substitute for real Safari on Apple hardware. Cycle 32 adds the real iOS row because the Rolling Hills water bug reproduced on an iPhone while desktop CI stayed green.
 
-**The gap:** real **iOS** Safari has no coverage, the existing Safari smoke harness asserts no JS errors but does not pixel-diff the output, and there are no shader-output unit tests. The 2026-05-09 iPhone water-render bug ([`apple-water-bug-research-2026-05-09.md`](apple-water-bug-research-2026-05-09.md)) sat undetected because all three of those gaps applied at once.
+## BrowserStack iOS Water Canary
 
-## Planned additions (Cycle 32)
+The committed config is secret-free:
 
-| Layer | Browsers | OS | Trigger | Status |
-|---|---|---|---|---|
-| Real iOS Safari screenshot test (LambdaTest) | Safari (real iPhone) | iOS via LambdaTest cloud | every PR + nightly | **Planned, Cycle 32 Phase 2** |
-| `headless-gl` per-shader unit tests | n/a (Node) | Ubuntu | every push | **Planned, Cycle 32 Phase 1** |
-| Frame-end pixel-sampling gate (extends `glProbe`) | runtime, all players | all | runtime, opt-in | **Planned, Cycle 32 Phase 4** |
+- `browserstack.yml` selects `iPhone 15 Pro Max / iOS 17 / Safari`.
+- `playwright.browserstack.config.ts` runs only `tests/browserstack/ios-water.spec.ts`.
+- `tools/browserstack/run-ios-water.mjs` loads credentials from `.env.local` locally or from `BROWSERSTACK_USERNAME` / `BROWSERSTACK_ACCESS_KEY` in CI.
+- `.github/workflows/browserstack-ios-water.yml` is `workflow_dispatch` only while the account is on the free proof tier.
 
-## Running locally
+Local run:
 
 ```bash
-npm test                            # vitest only
-npx playwright install --with-deps  # one-time
-npm run test:e2e                    # all three browsers
-npx playwright test --project=chromium  # one browser
-npx playwright test --project=webkit    # webkit only
-node tests/safari-smoke/run.mjs     # only does anything on macOS
+npm run test:ios-water
 ```
 
-## Running locally
+This default local mode starts BrowserStack Local so the real iPhone can reach the local Vite server. On the Windows workstation used for Cycle 32 closeout, BrowserStack Local failed with an `EBUSY` lock on `C:\Users\Mattm\.browserstack\BrowserStackLocal.exe`; public URL mode below still passed. If the lock repeats, use the GitHub workflow / Linux runner for the local-build tunnel proof instead of burning free minutes locally.
+
+Optional public URL run:
 
 ```bash
-npm test                            # vitest only
-npx playwright install --with-deps  # one-time
-npm run test:e2e                    # all three browsers
-npx playwright test --project=chromium  # one browser
-npx playwright test --project=webkit    # webkit only
-node tests/safari-smoke/run.mjs     # only does anything on macOS
+$env:IOS_WATER_BASE_URL='https://sheepdogsim.com'
+npm run test:ios-water
 ```
 
-## What a Safari-smoke run produces
+The canary opens `/?scene=rolling-hills&debug=gl&cinematic=1&ui=off&sun=0.55`, starts Solo Classic through the cinematic test API, frames the shoreline, and attaches:
 
-Per scene, `tests/safari-smoke/out/` will contain:
+- `ios-water.png`
+- `ios-water-sample.json`
 
-- `<scene>.png` — full-page screenshot
-- `summary.json` — for each scene: URL, status, GL renderer info, GL extensions list, and `window.__sdsDiag` (the in-page diagnostic probe; see Phase 9.4 work)
+Artifacts are written under `browserstack-artifacts/ios-water/` locally and uploaded by the manual GitHub workflow. The folder is gitignored because it is generated evidence, not source.
 
-Compare against a Chromium baseline (run the same probe locally with `?debug=gl` in Chrome devtools and dump `window.__sdsDiag`).
+The failure condition is a sampled water-region average near `#eaf6ff`, the solid foam-white failure seen on iPhone Safari.
 
-## When to lift cross-browser failures
+## Runtime GL Probe
 
-Most cross-browser bugs are not regressions in the project itself — they're shader/extension support gaps in a specific engine. Triage:
+`?debug=gl` installs `window.__sdsDiag` and `window.__sdsCaptureSample(label)`. Cycle 32 extended the sampler with:
 
-1. **Reproduce locally** by running `npm run test:e2e -- --project=<browser>`.
-2. **Check the GL snapshot** attached to the failing test (look for missing extensions, lower `MAX_FRAGMENT_UNIFORM_VECTORS`, vendor info).
-3. **Triage by surface area:**
-   - Terrain shader (`js/TerrainBuilder.js`) — usually FBM precision.
-   - Sky shader (`js/atmosphere/skyShader.glsl.js`) — usually cloud FBM or sun disc.
-   - Water (`js/water/DepthPrePass.js`) — render-target alloc, depth-stencil format support.
+- `window.__sdsDiag.waterSample`
+- `window.__sdsDiag.waterSamples[]`
+- `avg` RGB
+- `nearFoamWhite`
 
-## Tooling notes (2026-05-09 update)
+Use it in DevTools after a frame is visible:
 
-| Tool | Use case | Cost | Status |
-|---|---|---|---|
-| GitHub Actions `macos-latest` + `safaridriver` | Real macOS Safari in CI | Free for public repos | In use (Cycle 9) |
-| Playwright (Chromium / Firefox / WebKit) | Cross-engine smoke + headless | Free | In use |
-| Playwright trace viewer | Post-mortem on flaky runs | Free | In use |
-| **LambdaTest Lite** | Real iOS Safari screenshot test in CI + manual sessions | **Free 60min/mo, $15/mo Lite** | **Adopting Cycle 32** |
-| BrowserStack Live | Same coverage as LambdaTest, more expensive | ~$39/mo | Skip in favour of LambdaTest |
-| **`headless-gl`** (npm) | Per-shader unit tests with synthetic uniforms in Node | Free, open-source | **Adopting Cycle 32** |
-| **Inspect.dev** | iOS Safari Web Inspector from Windows over USB | $50/yr personal | **Adopting Cycle 32 if iPhone SE boots** |
-| `remotedebug-ios-webkit-adapter` | Free predecessor to Inspect.dev | Free, archived 2020 | Try first; brittle on iOS 16+ |
-| Argos / Chromatic / Percy | PR visual diffs as a service | Free tier → paid | Defer; LambdaTest screenshot test covers the immediate need |
-| Sentry | Production runtime errors per browser/OS | Free tier (5k events/mo) | Not yet wired |
-| Cloudflare RUM | Web Vitals per browser/OS in production | Free with Pages | In use |
-| Used iPhone SE + lightning cable | Permanent local test device | Free if user has one | **Currently charging an old SE** to confirm boot |
+```js
+window.__sdsCaptureSample('manual-water-check')
+window.__sdsDiag.waterSample
+```
 
-**2026-05-09 reversal:** the previous note on this page said "defer to BrowserStack ad-hoc until traffic justifies a subscription." The water-render bug photographed on the user's iPhone (see [`apple-water-bug-research-2026-05-09.md`](apple-water-bug-research-2026-05-09.md)) shows that "wait for traffic" is the wrong frame. The bug is reproducible **today** and the fix has a known engineering shape (rearchitect the depth pre-pass dependency); what was missing was the validation surface to catch it in CI. Cycle 32 elevates LambdaTest + `headless-gl` + a local iOS device above the prior "defer" posture.
+## Local Commands
 
-## Adding a new check
+```bash
+npm test
+npm run build
+npm run test:e2e -- --project=chromium --grep-invert @local-only
+node tests/safari-smoke/run.mjs
+npm run test:ios-water
+```
 
-- Add a Playwright spec under `tests/e2e/` — it runs on all three Playwright projects automatically.
-- Add a Safari-only check by extending `tests/safari-smoke/run.mjs`.
-- Add a vitest baseline if it's a sim-correctness invariant (no rendering involved).
+The raw Chromium project includes `@local-only` perf probes that are hardware/noise sensitive and not part of the normal release smoke. CI and release validation use the grep-inverted command above.
+
+`tests/safari-smoke/run.mjs` only does useful work on macOS with Safari automation enabled.
+
+## Triage Rules
+
+Most cross-browser rendering bugs are shader/driver support gaps, not game-logic failures. Triage in this order:
+
+1. Reproduce locally with `npm run test:e2e -- --project=<browser>`.
+2. Check the GL snapshot attached to the failing test.
+3. Run `?debug=gl` and capture `window.__sdsDiag`.
+4. For water regressions, run `npm run test:ios-water` before guessing from WebKit emulation.
+
+Apple-facing render paths must not add a per-frame render-to-texture shader dependency unless a real-device gate exists for that path. For Cycle 32, the rule is recorded here rather than in `.claude/rules/*` because those files are frozen without explicit authorization.
+
+## Tooling Notes
+
+| Tool | Use case | Status |
+|---|---|---|
+| GitHub Actions `macos-latest` + `safaridriver` | Real macOS Safari smoke | In use |
+| Playwright Chromium / Firefox / WebKit | Cross-engine desktop smoke | In use |
+| BrowserStack Automate Playwright iOS | Real iOS Safari canary | Added Cycle 32, manual dispatch while free |
+| `glProbe` water sample | Runtime pixel diagnostic | Added Cycle 32 |
+| Argos / Chromatic / Percy | Broad visual diff service | Deferred |
+| Sentry-style runtime error capture | Production browser/OS alarms | Deferred |

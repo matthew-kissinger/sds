@@ -2,8 +2,8 @@
  * Scene-swap helpers extracted from `main.js` in Cycle 28 Stream B1.
  *
  * `disposeScene(game)` drains scene-coupled GPU + listener state in the
- * Cycle 11 Phase 1 ordering: events → effects → actors → structures →
- * water (before atmosphere — depth pre-pass coupling) → terrain →
+ * Cycle 11 Phase 1 ordering: events -> effects -> actors -> structures ->
+ * water before atmosphere -> terrain ->
  * atmosphere → sun billboard → state drain → renderer cache. Each
  * disposer wraps in try/catch with warn logs so a single subsystem
  * failure doesn't abort the rest of the teardown.

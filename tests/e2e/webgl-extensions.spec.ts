@@ -9,18 +9,13 @@ import { test, expect, type Page } from '@playwright/test';
  * Three.js bump or browser update silently drops a needed extension and we
  * fall back to a degraded path without noticing.
  *
- * The expected list is derived from what TerrainBuilder, Atmosphere, and
- * water/DepthPrePass currently rely on. Update conservatively when the
- * shader stack changes.
+ * The expected list is derived from what TerrainBuilder and Atmosphere
+ * currently rely on. Update conservatively when the shader stack changes.
  */
 
 const REQUIRED_WEBGL2_EXTENSIONS: readonly string[] = [
-  // EXT_color_buffer_float backs HDR-ish water depth + atmosphere render
-  // targets on most browsers. Safari has historically been slow to ship it.
-  'EXT_color_buffer_float',
-  // OES_texture_float_linear + WEBGL_depth_texture come bundled in WebGL2
-  // but we still want to assert they're available since several scenes
-  // sample float textures without a fallback.
+  // OES_texture_float_linear comes bundled in WebGL2 on current targets, but
+  // several scenes sample float textures without a fallback.
   'OES_texture_float_linear',
 ];
 

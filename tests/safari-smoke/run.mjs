@@ -130,7 +130,7 @@ try {
 
       await driver.wait(until.elementLocated(By.css('canvas')), 30_000);
       // Wait for shaders/atmosphere/heightfield to bind. RH and OC's
-      // heightfield + DepthPrePass alloc takes longer than Field's flat
+      // heightfield + water init takes longer than Field's flat
       // setup; 8s is enough for both. (The first run showed OC's
       // terrain.created firing after the auto-sample at frame 240, which
       // means the auto-sample read sky pixels instead of ground.)
@@ -162,7 +162,7 @@ try {
       }
 
       // Wait for the game canvas to settle (sheep spawn, terrain bake,
-      // grass culling, water depth-prepass), then explicitly trigger the
+      // grass culling, water shader bind), then explicitly trigger the
       // inGame sample. Same reason as startScreen — the 240-frame
       // auto-sample timing isn't reliable under safaridriver.
       await driver.sleep(8_000);
