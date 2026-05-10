@@ -1,68 +1,54 @@
-# Next Session - Cycle 33 (`operational-hardening`)
+# Next Session - Cycle 34 (`mp-island-scenes`)
 
-> **Updated:** 2026-05-10 — Cycle 33 plan drafted and active.
-> **For:** Cycle 33 (`operational-hardening`).
-> **Pickup priority:** Execute the active plan at [`docs/cycle-33-plan.md`](docs/cycle-33-plan.md). 5 phases — GHA `@v4 → @v5` bump, BrowserStack workflow self-sufficiency on Linux, Dependabot/security hygiene, reconcile-hook regex fix, and an MP-island-scenes design doc that primes Cycle 34. No version bump, no player-visible delta.
+> **Updated:** 2026-05-10 after Cycle 33 (`operational-hardening`) closeout.
+> **For:** Cycle 34 (`mp-island-scenes`).
+> **Pickup priority:** Read [`docs/mp-island-scenes-design.md`](docs/mp-island-scenes-design.md) (shipped Cycle 33 Phase 5), then fill in [`docs/cycle-34-plan.md`](docs/cycle-34-plan.md) using the design doc's "Suggested Cycle 34 phase shape" as the starting frame. The plan stub already points at the design doc and notes the 5-phase / ~7.5hr engineering shape.
 
-Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/cycle-33-plan.md`](docs/cycle-33-plan.md). Cycle 32's closed plan is archived at [`docs/archive/cycles/cycle-32-plan.md`](docs/archive/cycles/cycle-32-plan.md).
+Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/mp-island-scenes-design.md`](docs/mp-island-scenes-design.md), then fill out [`docs/cycle-34-plan.md`](docs/cycle-34-plan.md). Cycle 33's closed plan is archived at [`docs/archive/cycles/cycle-33-plan.md`](docs/archive/cycles/cycle-33-plan.md).
 
-## Cycle 32 Close Summary
+## Cycle 33 Close Summary
 
-Cycle 32 fixed the iPhone Safari water failure structurally instead of adding a capability fallback:
+Cycle 33 closed the operational backlog before the next architecture lift. Five phases, all autonomous, no player-visible delta, no version bump.
 
-- Deleted `js/water/DepthPrePass.js`.
-- Removed the per-frame water depth render pass from `SceneManager`.
-- Rebuilt `js/water/AnimeWater.js` around scene-boundary shoreline math. Foam and shallow/deep color now derive from each island scene's circular `boundary` and `boundary.falloff`.
-- Added deterministic shoreline tests in `tests/water-shoreline.spec.js`.
-- Extended `glProbe` with `window.__sdsDiag.waterSample` and `waterSamples[]`.
-- Added BrowserStack Automate support with `browserstack-node-sdk`, a secret-free `browserstack.yml`, `npm run test:ios-water`, and a manual GitHub workflow for the real iOS Safari canary.
-- Kept multiplayer island scenes, shared sim files, worker objective code, wire format, and sim-baseline goldens untouched.
-
-Player-visible delta: Rolling Hills and Open Country water no longer rely on the fragile depth pre-pass that could render as solid foam-white on iPhone Safari. Version bumped `2.1.3 -> 2.1.4`; details are in [`CHANGELOG.md`](CHANGELOG.md).
+- **Phase 1 — GHA Node 20 deprecation bump.** `actions/checkout`, `actions/setup-node`, `actions/upload-artifact` from `@v4` to `@v5` across [`deploy.yml`](.github/workflows/deploy.yml) and [`macos-safari.yml`](.github/workflows/macos-safari.yml). [`browserstack-ios-water.yml`](.github/workflows/browserstack-ios-water.yml) was already on `@v5`. `cloudflare/wrangler-action@v3` left alone. Beats the 2026-06-02 forced-upgrade cutoff.
+- **Phase 2 — BrowserStack workflow self-sufficiency on Linux.** Reworked [`browserstack-ios-water.yml`](.github/workflows/browserstack-ios-water.yml) to support both modes from a single dispatch: public URL (release smoke, `base_url=https://...`) or local-tunnel (pre-release verification, empty `base_url` triggers `npm run build` + `http-server dist -p 3000`). Workflow now echoes its run mode for observability.
+- **Phase 3 — Dependabot/security hygiene.** Pinned `@tootallnate/once` to `^3.0.0` via `package.json` `overrides`, clearing alert #21 (was `2.0.1`, transitive of `browserstack-node-sdk → @google-cloud/compute`). Documented the remaining `aws-sdk@2` advisory (alert #20) as accepted risk in [`docs/security-acceptance.md`](docs/security-acceptance.md): no patched v2 exists, the only fix path is upstream BrowserStack migrating to v3, and we never import aws-sdk directly. Re-evaluation trigger: every BrowserStack SDK upgrade.
+- **Phase 4 — `cycle-close-reconcile` regex collision fix.** [`.claude/hooks/cycle-close-reconcile.mjs`](.claude/hooks/cycle-close-reconcile.mjs) now iterates over every `## (Success|Acceptance) criteria` heading and picks the first one containing `- [ ]` items, instead of falling on the explainer block that the template ships at the top. Verified against archived cycle-31 plan (returns 8 items, was 0). [`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) stayed untouched (fence-frozen and the heading is fine; the bug was in the hook).
+- **Phase 5 — MP island scenes design doc.** Shipped [`docs/mp-island-scenes-design.md`](docs/mp-island-scenes-design.md) (13 sections). Verified gaps against current code: OC's `objective` block is unused server-side, no sim-baseline coverage for island boundaries, wire format has no objective-stage fields, `RoomDO.initRoom` does not enforce `scene.allowedModes`. Suggested 5-phase Cycle 34 shape (~7.5hr engineering) with author leans on Q1–Q6. Zero implementation drift in `shared/`, `worker/src/`, or `js/network/`.
 
 ## Validation At Close
 
-- `npm test` - 300 passed / 7 skipped.
-- `npm run build` - clean production build.
-- `npm run test:e2e -- --project=chromium --grep-invert @local-only` - 6 passed.
-- `IOS_WATER_BASE_URL=https://sheepdogsim.com npm run test:ios-water` - passed on BrowserStack iPhone 15 Pro Max / iOS 17 / Safari. Latest sampled average RGB was `[26, 44, 11]`, `nearFoamWhite: false`.
-- `git diff --name-only` showed no shared sim files, sim baselines, `.claude/rules/*`, or `docs/CYCLE_TEMPLATE.md` touched.
-
-Known validation nuance: raw `npm run test:e2e -- --project=chromium` includes `@local-only` perf probes and failed on this workstation's noisy local perf path. CI/release smoke uses `--grep-invert @local-only`.
-
-Post-push deployment status:
-
-- Release tag `v2.1.4` points at the water-fix commit `b1abe2531e4a1a4fe428d15c089efca59016fa33`; current `main` adds docs alignment and the CI startup fix in `62f3efe54a6db6f215b63d64995fcdcd002c23df`.
-- GitHub Actions run [`25619016791`](https://github.com/matthew-kissinger/sds/actions/runs/25619016791) passed end to end: Test, Linux Chromium E2E, Worker deploy, Pages deploy, and perf check.
-- Production `https://sheepdogsim.com/` returned HTTP 200 and served the Cycle 32 build assets `/assets/main-COqIprCT.js` and `/assets/three-CknJ8WuT.js`.
-- The earlier deploy run [`25618264492`](https://github.com/matthew-kissinger/sds/actions/runs/25618264492) exposed a Linux CI startup issue (`wrangler: not found` when Playwright launched `npm run dev`). Commit `62f3efe` fixed the root `dev:worker` / `dev:setup` scripts to run `npx wrangler` from the worker package context.
+- `npm test` — 300 passed / 7 skipped (flat vs Cycle 32 close).
+- `npm run lint` — clean (eslint shared/).
+- `npm run build` — clean, mainKB 589.60 / threeKB 617.77 (byte-identical to Cycle 32 close `main-COqIprCT.js` + `three-CknJ8WuT.js`).
+- `npm run test:e2e -- --project=chromium --grep-invert @local-only` — 6 passed in 3.5m.
+- `npm audit` — 1 alert remaining (aws-sdk@2 v2, low, documented accepted-risk).
+- `git diff --name-only HEAD~10 HEAD -- shared/ worker/src/ js/network/ tests/sim-baseline/ worker/migrations/ docs/CYCLE_TEMPLATE.md .claude/rules/ .claude/commands/` — zero entries (no fence drift).
 
 ## Operational Notes
 
-- BrowserStack credentials are expected in local `.env.local` or in GitHub Actions secrets as `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY`.
-- Public URL mode works: set `IOS_WATER_BASE_URL=https://sheepdogsim.com` and run `npm run test:ios-water`.
-- Local tunnel mode on this Windows workstation hit `EBUSY` opening `C:\Users\Mattm\.browserstack\BrowserStackLocal.exe`. Do not buy a BrowserStack plan until the same canary runs reliably through the GitHub workflow / Linux runner or the Windows Local binary lock is resolved.
-- BrowserStack artifacts are generated under `browserstack-artifacts/ios-water/`; this directory is gitignored.
-- This site does not expose a useful `/asset-manifest.json`; verify live deploys from the latest GitHub Actions deploy run plus production HTML asset hashes.
+- The cycle 33 branch is `cycle-33-ops-hardening`. After push it should be merged to `main` for the deploy and the action-version annotation to confirm clean.
+- Phase 2's local-tunnel canary path needs a manual `gh workflow run browserstack-ios-water.yml` dispatch on Ubuntu after merge to confirm BrowserStack Local works end-to-end (was the original "prove BrowserStack Local on Linux before paying for Automate" gate from Cycle 32). Public-URL mode was already validated in Cycle 32; the local-tunnel path is the new Phase 2 surface area.
+- The "next Deploy run shall not emit Node 20 deprecation annotations" success-criteria item is a post-merge check; flag it when the next push lands.
 
-## Carryover Candidates For Cycle 33
+## Carryover Candidates For Cycle 34
 
-1. **MP island scenes** - Rolling Hills and Open Country in multiplayer. This is now the leading architecture candidate. It needs a proper shared-sim / worker / wire-format plan and an explicit sim-baseline regeneration decision before any frozen file changes.
-2. **BrowserStack Local hardening** - run `.github/workflows/browserstack-ios-water.yml` manually on Ubuntu with the release branch/base URL. If it proves stable, decide whether the canary becomes a required manual release gate or a paid push gate.
-3. **GitHub Actions maintenance** - deploy run `25619016791` is green but warns that Node.js 20 actions are deprecated and will default to Node 24 on 2026-06-02. Review `actions/checkout@v4`, `actions/setup-node@v4`, and related workflow compatibility before that cutoff.
-4. **Dependabot/security review** - GitHub reports 2 low vulnerabilities on the default branch after push. Review Dependabot before the next release cycle if the fixes are low-risk.
-5. **Modal-copy rewrite** - only if Google's recrawl still substitutes welcome-modal copy in the snippet after the Cycle 31 public-surface changes settle.
-6. **`CYCLE_TEMPLATE.md` regex-collision fix** - small but fence-touched; Cycle 29/30/31 acceptance reconciliation hit the same template-header collision.
-7. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** - still deferred; size and risk vary by topic.
+The leading and only foreground candidate is **MP island scenes**, scoped in [`docs/mp-island-scenes-design.md`](docs/mp-island-scenes-design.md). The design-doc author leans answer Q1–Q6; the cycle plan author should confirm or override before phase 1.
+
+Background candidates remaining in [`docs/BACKLOG.md`](docs/BACKLOG.md) (not in scope unless explicitly chosen):
+
+1. **Modal-copy rewrite** — only if Google's recrawl still substitutes welcome-modal copy in snippets after Cycle 31 settles further.
+2. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** — long-tail polish, all deferred since their respective cycles.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Latest closed cycle | [`docs/archive/cycles/cycle-32-plan.md`](docs/archive/cycles/cycle-32-plan.md) |
+| Active cycle plan | [`docs/cycle-34-plan.md`](docs/cycle-34-plan.md) (stub — fill from design doc) |
+| Cycle 34 design doc | [`docs/mp-island-scenes-design.md`](docs/mp-island-scenes-design.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-33-plan.md`](docs/archive/cycles/cycle-33-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Apple water-bug research | [`docs/archive/research/apple-water-bug-research-2026-05-09.md`](docs/archive/research/apple-water-bug-research-2026-05-09.md) |
-| Cross-platform tooling matrix | [`docs/cross-platform-testing.md`](docs/cross-platform-testing.md) |
+| Security advisory acceptance log | [`docs/security-acceptance.md`](docs/security-acceptance.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |

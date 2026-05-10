@@ -169,16 +169,16 @@ The durable hard stops in [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) apply.
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all 5 phases shall be shipped or explicitly deferred to next cycle's [`BACKLOG.md`](BACKLOG.md) carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, production build shall be clean.
-- [ ] When `npm run test:e2e -- --project=chromium --grep-invert @local-only` runs at cycle close, all chromium e2e specs shall pass.
+- [x] When the cycle closes, all 5 phases shall be shipped or explicitly deferred to next cycle's [`BACKLOG.md`](BACKLOG.md) carryover.
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass.
+- [x] When `npm run build` runs at cycle close, production build shall be clean.
+- [x] When `npm run test:e2e -- --project=chromium --grep-invert @local-only` runs at cycle close, all chromium e2e specs shall pass.
 - [ ] When the close commit lands on `main`, sheepdogsim.com Deploy workflow shall succeed.
 - [ ] When the close commit lands on `main`, the next Deploy run shall not emit Node 20 deprecation annotations.
 - [ ] When the close commit lands on `main`, GitHub Dependabot alert count shall be 0 or 1 (alert #20 dismissed; alert #21 auto-resolved by override).
-- [ ] When the close commit lands on `main`, [`docs/mp-island-scenes-design.md`](mp-island-scenes-design.md) shall exist.
-- [ ] When the close commit lands on `main`, [`docs/security-acceptance.md`](security-acceptance.md) shall exist.
-- [ ] When the close commit lands on `main`, `git diff --name-only HEAD~10 HEAD -- shared/ worker/src/ js/network/ tests/sim-baseline/ worker/migrations/ docs/CYCLE_TEMPLATE.md .claude/rules/ .claude/commands/` shall return zero entries.
+- [x] When the close commit lands on `main`, [`docs/mp-island-scenes-design.md`](mp-island-scenes-design.md) shall exist.
+- [x] When the close commit lands on `main`, [`docs/security-acceptance.md`](security-acceptance.md) shall exist.
+- [x] When the close commit lands on `main`, `git diff --name-only HEAD~10 HEAD -- shared/ worker/src/ js/network/ tests/sim-baseline/ worker/migrations/ docs/CYCLE_TEMPLATE.md .claude/rules/ .claude/commands/` shall return zero entries.
 
 ## References
 

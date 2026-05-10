@@ -4,6 +4,37 @@
 
 ## Recently Completed
 
+### Cycle 33 - `operational-hardening` (closed 2026-05-10, no version bump)
+
+Plan archived at [`docs/archive/cycles/cycle-33-plan.md`](archive/cycles/cycle-33-plan.md). Cycle 33 cleared four operational carryovers from Cycle 32 (deprecated GHA actions, BrowserStack-Local-on-Ubuntu gap, two open Dependabot alerts, long-standing reconcile-hook regex collision) and shipped an MP-island-scenes design doc to prime Cycle 34. No player-visible delta; no `package.json` version bump.
+
+All 5 phases shipped autonomously. Tests 300 pass / 7 skipped (flat vs Cycle 32 close). Build clean (mainKB 589.60 / threeKB 617.77, byte-identical to Cycle 32 — no bundle drift). E2E chromium 6 passed locally. `npm audit` reduced from 2 alerts to 1 (aws-sdk@2 documented as accepted risk).
+
+**Phases:**
+
+- **1 — GHA Node 20 deprecation bump.** `actions/checkout`, `actions/setup-node`, `actions/upload-artifact` from `@v4` to `@v5` across [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) and [`.github/workflows/macos-safari.yml`](../.github/workflows/macos-safari.yml). [`browserstack-ios-water.yml`](../.github/workflows/browserstack-ios-water.yml) was already on `@v5`. `cloudflare/wrangler-action@v3` left alone — separate vendor, v3 series remains current. Beats the 2026-06-02 forced-upgrade cutoff.
+- **2 — BrowserStack workflow self-sufficiency on Linux.** Reworked [`.github/workflows/browserstack-ios-water.yml`](../.github/workflows/browserstack-ios-water.yml) to run end-to-end on Ubuntu in both modes from a single dispatch: public URL (release smoke, `base_url=https://...`) or local-tunnel (pre-release verification of unmerged changes — empty `base_url` triggers `npm run build` + `npx http-server dist -p 3000` so BrowserStack Local has something to tunnel into). Workflow now echoes its run mode for observability. Public-URL was already validated in Cycle 32; local-tunnel is the post-merge canary surface to flip the Cycle-32 carryover gate.
+- **3 — Dependabot/security hygiene.** Added `"overrides": { "@tootallnate/once": "^3.0.0" }` to [`package.json`](../package.json), pinning the transitive `browserstack-node-sdk → @google-cloud/compute → google-gax → retry-request → teeny-request → http-proxy-agent → @tootallnate/once` chain to `3.0.1` (was `2.0.1`). Documented alert #20 (`aws-sdk@2`, low severity, no patched v2 version, transitive of BrowserStack SDK only) as accepted risk in new [`docs/security-acceptance.md`](security-acceptance.md). Re-evaluation trigger: every BrowserStack SDK upgrade. `package-lock.json` delta: 3 lines (well under 100KB hard-stop).
+- **4 — `cycle-close-reconcile` regex collision fix.** Rewrote `extractAcceptanceLines` in [`.claude/hooks/cycle-close-reconcile.mjs`](../.claude/hooks/cycle-close-reconcile.mjs) to iterate over every `## (Success|Acceptance) criteria` heading via `matchAll` and pick the first one containing `- [ ]` items. The previous `String.search`-based first-match approach silently no-oped on cycle plans because the template's `## Acceptance criteria — EARS format` explainer block (no checkboxes) appears before the actual `## Success criteria (cycle close)` checklist. Smoke-tested against archived cycle-31 plan (returns 8 items, was 0 before fix). [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) stayed untouched (fence-frozen and the heading is fine; the bug was in the hook).
+- **5 — MP island scenes design doc.** Shipped [`docs/mp-island-scenes-design.md`](mp-island-scenes-design.md) (13 sections). Verified four gaps against current code: OC's `objective` block is declared on the scene def but unused in `worker/src/GameSim.js`, no sim-baseline fixtures cover `boundary.kind === 'island'` or corral retirement, wire format has no objective-stage fields, `RoomDO.initRoom` does not enforce `scene.allowedModes`. Suggested 5-phase Cycle 34 shape (~7.5hr engineering) with author leans on Q1–Q6. Zero implementation drift in `shared/`, `worker/src/`, or `js/network/` (Phase 5 acceptance verified by `git diff --name-only`).
+
+**Validation:**
+
+- `npm test` — 300 pass / 7 skipped (flat vs Cycle 32 close).
+- `npm run lint` — clean (eslint shared/).
+- `npm run build` — clean, mainKB 589.60 / threeKB 617.77 (byte-identical to Cycle 32; no bundle drift).
+- `npm run test:e2e -- --project=chromium --grep-invert @local-only` — 6 passed in 3.5m.
+- `npm audit` — 2 → 1 (aws-sdk@2 documented).
+- `git diff --name-only HEAD~10 HEAD -- shared/ worker/src/ js/network/ tests/sim-baseline/ worker/migrations/ docs/CYCLE_TEMPLATE.md .claude/rules/ .claude/commands/` — zero entries.
+
+**PRs:** 5 commits on branch `cycle-33-ops-hardening` (autonomous-cycle policy, branch pushed; merge-to-main + deploy validation post-close).
+
+**Carryover:**
+
+- **MP island scenes** — sole foreground candidate for Cycle 34, scoped in [`docs/mp-island-scenes-design.md`](mp-island-scenes-design.md).
+- **Local-tunnel BrowserStack canary** — needs one manual `gh workflow run browserstack-ios-water.yml` (no `base_url` input) after the cycle-33 changes merge to `main`, to confirm the Phase 2 self-sufficient workflow boots `dist` + tunnels Safari into it. Documented in NEXT_SESSION operational notes.
+- **Node 20 annotation check** — confirm the next Deploy run on `main` no longer emits the deprecation annotation. Post-merge observation, not blocking.
+
 ### Cycle 32 - `apple-platform-validation` (closed 2026-05-10, v2.1.4)
 
 Plan archived at [`docs/archive/cycles/cycle-32-plan.md`](archive/cycles/cycle-32-plan.md). Cycle 32 fixed the iPhone Safari water failure structurally: the water shader no longer depends on a per-frame depth pre-pass, and a real iOS Safari BrowserStack canary now catches solid foam-white regressions before release.
