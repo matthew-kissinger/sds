@@ -27,9 +27,10 @@ Cycle 34 made `?scene=rolling-hills` and `?scene=open-country` first-class in mu
 
 ## Operational Notes
 
-- Cycle 34 commits (`318a346`, `d3a31de`, `0caddea`, `93e7e70`, plus the close commit) push to `main`. Deploy verification runs post-push.
+- Cycle 34 commits (`318a346`, `d3a31de`, `0caddea`, `93e7e70`, plus the close commit `2264216`) pushed to `main`. Deploy run [`25621497329`](https://github.com/matthew-kissinger/sds/actions/runs/25621497329): first attempt failed on E2E (Chromium) — smoke test "solo classic game starts and 3D canvas renders" timed out at 180s × 3 attempts. Confirmed locally the same test passes in 1.8m (close to the 180s CI budget). Cycle-34 code only touches the MP path + a byte-equivalent re-export shim for `js/gamestate/objective.js`, so the failure was a borderline CI flake. **Rerun succeeded end-to-end** (Test ✓ / Deploy Worker ✓ / Deploy Pages ✓ / E2E Chromium ✓ / Perf check ✓). Production live on `https://sheepdogsim.com/`.
 - **Outstanding manual playtest:** OC multiplayer end-to-end (host an OC room, two-tab session, drive sheep into round-up zone, confirm stage flip server-side). Same pattern as Cycle 32/33 post-deploy verification.
 - Cycle 33 carryovers still open: local-tunnel BrowserStack canary on Ubuntu, Node 20 annotation re-check on next Deploy run.
+- **Cycle 35 first-task hint:** the E2E smoke test is borderline-flaky on CI (180s budget, ~108s local, ~178s+ on slower runners). If it flakes again, candidate fixes: bump the test's `setTimeout` to 240s, raise the canvas-attach `toBeAttached` window above 60s, or split the boot-wait into checkpointed assertions. The Cycle 33 run passed the same test in time; Cycle 32 had a separate `wrangler: not found` failure. Track the pattern.
 
 ## Carryover Candidates For Cycle 35
 
