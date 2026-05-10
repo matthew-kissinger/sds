@@ -177,8 +177,26 @@ export class RoomDO {
     if (!['cooperative', 'competitive', 'timed'].includes(gameMode)) {
       return new Response(JSON.stringify({ error: 'invalid gameMode' }), { status: 400 });
     }
-    const validSceneIds = listScenes().map((sc: any) => sc.id);
+    const validScenes = listScenes() as Array<{ id: string; allowedModes?: string[] }>;
+    const validSceneIds = validScenes.map(sc => sc.id);
     const sceneId = s.sceneId && validSceneIds.includes(s.sceneId) ? s.sceneId : DEFAULT_SCENE_ID;
+    // Cycle 34 Phase 4: cross-check gameMode against scene.allowedModes.
+    // Defensive guard so a host can't open a competitive room on Open
+    // Country (which declares allowedModes: ['cooperative', 'timed']).
+    // Short-circuits when the scene didn't declare allowedModes (Field
+    // is missing the field today; Phase 4 is a no-op for it).
+    const sceneDef = validScenes.find(sc => sc.id === sceneId);
+    if (sceneDef?.allowedModes && !sceneDef.allowedModes.includes(gameMode)) {
+      return new Response(
+        JSON.stringify({
+          error: 'mode_not_allowed_on_scene',
+          sceneId,
+          gameMode,
+          allowedModes: sceneDef.allowedModes
+        }),
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
+    }
     const maxPlayers = Math.min(4, Math.max(2, s.maxPlayers || 4));
     // Cycle 8 Phase 5: validate sheepCount against allow-list.
     const sheepCount = (typeof s.sheepCount === 'number' && ALLOWED_SHEEP_COUNTS.has(s.sheepCount))
