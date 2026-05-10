@@ -38,22 +38,37 @@ function locateActivePlan() {
 }
 
 function extractAcceptanceLines(planText) {
-    const sectionRe = /^##+\s+(?:Success|Acceptance) criteria.*$/im;
-    const start = planText.search(sectionRe);
-    if (start === -1) return [];
-    const after = planText.slice(start);
-    const nextSectionIdx = after.slice(1).search(/\n##\s+\S/m);
-    const block = nextSectionIdx === -1 ? after : after.slice(0, nextSectionIdx + 1);
-    const items = [];
+    // Cycle 33 Phase 4: a cycle plan typically has TWO sections that
+    // match `## (Success|Acceptance) criteria` — the generic
+    // `## Acceptance criteria — EARS format` block (copied from
+    // CYCLE_TEMPLATE.md, no checkboxes) and the actual
+    // `## Success criteria (cycle close)` block (the real `- [ ]`
+    // list). The previous implementation used `String.search()` which
+    // returns the first match, so it parsed the explanation block,
+    // found zero items, and silently no-oped. Iterate over every
+    // match and pick the first one that contains `- [ ]` items.
+    const sectionRe = /^##+\s+(?:Success|Acceptance) criteria.*$/gim;
     const lineRe = /^\s*-\s\[(\s|x|X)\]\s+(.+?)$/gm;
-    let match;
-    while ((match = lineRe.exec(block)) !== null) {
-        items.push({
-            checked: match[1].toLowerCase() === 'x',
-            text: match[2].trim(),
-        });
+    const matches = [...planText.matchAll(sectionRe)];
+    if (matches.length === 0) return [];
+    for (const m of matches) {
+        const start = m.index ?? 0;
+        const after = planText.slice(start);
+        const nextSectionIdx = after.slice(1).search(/\n##\s+\S/m);
+        const block = nextSectionIdx === -1 ? after : after.slice(0, nextSectionIdx + 1);
+        const items = [];
+        let lineMatch;
+        // Reset state on each block so each section starts at zero.
+        lineRe.lastIndex = 0;
+        while ((lineMatch = lineRe.exec(block)) !== null) {
+            items.push({
+                checked: lineMatch[1].toLowerCase() === 'x',
+                text: lineMatch[2].trim(),
+            });
+        }
+        if (items.length > 0) return items;
     }
-    return items;
+    return [];
 }
 
 // Run a shell command, capture output, never throw. Used to probe repo
