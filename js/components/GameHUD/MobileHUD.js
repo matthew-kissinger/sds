@@ -64,21 +64,12 @@ export function MobileHUD({ gameData, stamina, onPause }) {
     const padding = isLandscapeMobile ? '0.25rem 0.5rem' : '0.5rem';
     const staminaHeight = isLandscapeMobile ? '3px' : '4px';
 
-    // Position: centered at top for both landscape and portrait
-    const containerStyle = isLandscapeMobile ? {
-        position: 'fixed',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        top: 'max(env(safe-area-inset-top, 4px), 4px)',
-        zIndex: 20,
-        animation: 'slideDown 0.5s ease-out'
-    } : {
-        position: 'fixed',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        top: 'max(env(safe-area-inset-top, 8px), 8px)',
-        zIndex: 20,
-        animation: 'slideDown 0.5s ease-out'
+    // Cycle 35 Phase 8: positioning moved to HudLayout's topCenter slot.
+    // The container now contributes only its slide-down animation; placement
+    // is owned by the layout container.
+    const containerStyle = {
+        animation: 'slideDown 0.5s ease-out',
+        pointerEvents: 'auto'
     };
 
     const panelStyle = {

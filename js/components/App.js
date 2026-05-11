@@ -64,6 +64,7 @@ export async function initReactUI() {
             { PracticeHint },
             { MobileHUD },
             { MobileControls },
+            { HudLayout },
             { ExtremeTuningPanel },
             { PauseMenu },
             { CompletionScreen },
@@ -101,6 +102,7 @@ export async function initReactUI() {
             import('./GameHUD/PracticeHint.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
+            import('./GameHUD/HudLayout.js'),
             import('./GameHUD/ExtremeTuningPanel.js'),
             import('./GameHUD/PauseMenu.js'),
             import('./GameHUD/CompletionScreen.js'),
@@ -1019,64 +1021,107 @@ export async function initReactUI() {
             // Show fullscreen option on mobile (except iOS)
             const showFullscreenOption = platform === 'mobile' && !(/iPad|iPhone|iPod/.test(navigator.userAgent));
 
-            return createElement('div', { className: 'game-hud fixed inset-0 pointer-events-none' }, [
-                // CorralCompass renders on both platforms; auto-hides when corral is on-screen
-                createElement(CorralCompass, { key: 'corral-compass', platform }),
-                // Cycle 8: ObjectiveBanner renders on scenes with a multi-stage
-                // objective (currently OC). Auto-hides on Field/RH.
+            // Cycle 35 Phase 8: HudLayout owns positioning via named slots.
+            // Each region is a flex-column stack so two cards in the same
+            // slot (e.g. score pill + objective banner on mobile top-center)
+            // layout without hand-tuned offsets. The prior pattern had each
+            // overlay declare its own position:fixed and dodge collisions
+            // with hardcoded pixel offsets (e.g. CameraModeIndicator's 88px
+            // ObjectiveBanner-aware drop) — that has been removed.
+            const isDesktop = platform === 'desktop';
+            const isMobilePlatform = platform === 'mobile';
+
+            // Desktop: counter top-left, score/objective/camera stack top-center, timer top-right.
+            // Mobile: score-pill + objective banner + camera-chip stack top-center; no top-left needed.
+            // The camera chip sits at the bottom of the top-center stack on
+            // both platforms so it never collides with the score pill on
+            // narrow viewports (e.g. iPhone SE portrait at 375px).
+            const topLeftSlot = [
+                isDesktop && !isMultiplayer && createElement(SheepCounter, {
+                    key: 'counter',
+                    sheepCount: gameData.sheepCount,
+                    totalSheep: gameData.totalSheep,
+                    stamina: staminaPercentage,
+                    onPause: handlePause
+                }),
+                isDesktop && isMultiplayer && createElement(MultiplayerScoreboard, {
+                    key: 'scoreboard',
+                    players: gameData.players,
+                    scores: gameData.scores,
+                    myPlayerId: gameData.myPlayerId,
+                    gameMode: gameData.gameMode,
+                    sheepCount: gameData.sheepCount,
+                    totalSheep: gameData.totalSheep,
+                    stamina: staminaPercentage
+                })
+            ].filter(Boolean);
+
+            const topCenterSlot = [
+                isMobilePlatform && createElement(MobileHUD, {
+                    key: 'mobile-hud',
+                    gameData,
+                    stamina: staminaPercentage,
+                    onPause: handlePause
+                }),
                 createElement(ObjectiveBanner, { key: 'objective-banner' }),
-                // Cycle 26 v2.1.0: Practice Paddock onboarding hint. 8s
-                // auto-dismiss OR first input event. Self-unmounts.
+                createElement(CameraModeIndicator, {
+                    key: 'camera-mode',
+                    mode: gameData.cameraMode,
+                    platform
+                })
+            ].filter(Boolean);
+
+            const topRightSlot = [
+                isDesktop && createElement(GameTimer, {
+                    key: 'timer',
+                    gameTime: gameData.gameTime,
+                    timeLimit: gameData.timeLimit
+                }),
+                isMobilePlatform && isMultiplayer && createElement(MultiplayerScoreboard, {
+                    key: 'scoreboard',
+                    players: gameData.players,
+                    scores: gameData.scores,
+                    myPlayerId: gameData.myPlayerId,
+                    gameMode: gameData.gameMode,
+                    sheepCount: gameData.sheepCount,
+                    totalSheep: gameData.totalSheep,
+                    stamina: staminaPercentage
+                })
+            ].filter(Boolean);
+
+            const edgeSlot = [
+                // CorralCompass self-positions via NDC projection; sits in
+                // the edge slot as a passthrough so it isn't constrained by
+                // the corner regions.
+                createElement(CorralCompass, { key: 'corral-compass', platform })
+            ];
+
+            const bottomSafeSlot = [
                 createElement(PracticeHint, {
                     key: 'practice-hint',
                     active: !isMultiplayer && gameData.singlePlayerMode === 'practice'
+                })
+            ];
+
+            const mobileControlsSlot = isMobilePlatform
+                ? createElement(MobileControls, { key: 'mobile-controls' })
+                : null;
+
+            return createElement('div', { className: 'game-hud fixed inset-0 pointer-events-none' }, [
+                createElement(HudLayout, {
+                    key: 'layout',
+                    topLeft: topLeftSlot,
+                    topCenter: topCenterSlot,
+                    topRight: topRightSlot,
+                    edge: edgeSlot,
+                    bottomSafe: bottomSafeSlot,
+                    mobileControls: mobileControlsSlot
                 }),
-                platform === 'desktop' && [
-                    createElement(GameTimer, { key: 'timer', gameTime: gameData.gameTime, timeLimit: gameData.timeLimit }),
-                    createElement(CameraModeIndicator, { key: 'camera-mode', mode: gameData.cameraMode, platform }),
-                    !isMultiplayer && createElement(SheepCounter, {
-                        key: 'counter',
-                        sheepCount: gameData.sheepCount,
-                        totalSheep: gameData.totalSheep,
-                        stamina: staminaPercentage,
-                        onPause: handlePause
-                    }),
-                    isMultiplayer && createElement(MultiplayerScoreboard, {
-                        key: 'scoreboard',
-                        players: gameData.players,
-                        scores: gameData.scores,
-                        myPlayerId: gameData.myPlayerId,
-                        gameMode: gameData.gameMode,
-                        sheepCount: gameData.sheepCount,
-                        totalSheep: gameData.totalSheep,
-                        stamina: staminaPercentage
-                    })
-                ],
-	                platform === 'mobile' && [
-	                    createElement(MobileHUD, {
-	                        key: 'mobile-hud',
-	                        gameData,
-	                        stamina: staminaPercentage,
-                        onPause: handlePause
-                    }),
-                    createElement(CameraModeIndicator, { key: 'camera-mode', mode: gameData.cameraMode, platform }),
-                    createElement(MobileControls, { key: 'mobile-controls' }),
-                    isMultiplayer && createElement(MultiplayerScoreboard, {
-                        key: 'scoreboard',
-                        players: gameData.players,
-                        scores: gameData.scores,
-                        myPlayerId: gameData.myPlayerId,
-                        gameMode: gameData.gameMode,
-                        sheepCount: gameData.sheepCount,
-                        totalSheep: gameData.totalSheep,
-	                        stamina: staminaPercentage
-	                    })
-	                ],
-	                // Tuning toggle removed for release
-	                // Pause menu (shown on all platforms when paused)
-	                createElement(PauseMenu, {
-	                    key: 'pause-menu',
-	                    isVisible: isPaused,
+                // Pause menu (shown on all platforms when paused). Full-screen
+                // overlay; sits outside HudLayout because it is its own modal.
+                createElement(PauseMenu, {
+                    key: 'pause-menu',
+                    isVisible: isPaused,
                     onResume: handleResume,
                     onRestart: handleRestart,
                     onMainMenu: handleMainMenu,

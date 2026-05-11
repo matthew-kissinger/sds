@@ -57,9 +57,9 @@ export function SheepCounter({ sheepCount, totalSheep, stamina, onPause }) {
         marginLeft: 'auto'
     };
 
+    // Cycle 35 Phase 8: positioning moved to HudLayout's topLeft slot.
     return createElement('div', {
-        className: 'fixed top-6 left-6 z-20 animate-slide-down',
-        style: { paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)' }
+        className: 'animate-slide-down'
     },
         createElement('div', {
             className: 'ui-panel p-4 min-w-[200px]'

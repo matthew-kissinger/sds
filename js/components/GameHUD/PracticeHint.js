@@ -53,14 +53,11 @@ export function PracticeHint({ active }) {
     const fontSize = isCompact ? '0.85rem' : '1rem';
     const padding = isCompact ? '0.5rem 0.9rem' : '0.7rem 1.2rem';
 
+    // Cycle 35 Phase 8: positioning moved to HudLayout's bottomSafe slot,
+    // which reserves clearance above the mobile-controls joystick.
     return createElement('div', {
         className: 'practice-hint',
         style: {
-            position: 'fixed',
-            left: '50%',
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)',
-            transform: 'translateX(-50%)',
-            zIndex: 30,
             padding,
             background: 'rgba(8, 47, 73, 0.72)',
             color: '#e0f2fe',

@@ -78,12 +78,10 @@ export function ObjectiveBanner() {
             : `${obj.sheepInZone} / ${obj.required} in the ring`)
         : null;
 
+    // Cycle 35 Phase 8: positioning moved to HudLayout's topCenter slot.
+    // Stacks below the score pill via the slot's flex-column gap.
     return createElement('div', {
-        className: 'fixed top-6 left-1/2 z-20 pointer-events-none animate-slide-down',
-        style: {
-            transform: 'translateX(-50%)',
-            paddingTop: 'env(safe-area-inset-top, 0px)',
-        }
+        className: 'animate-slide-down'
     },
         createElement('div', {
             className: 'ui-panel py-2 px-4 text-center'

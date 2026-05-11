@@ -15,9 +15,9 @@ export function GameTimer({ gameTime, timeLimit }) {
     const remainingSeconds = Math.floor(timeRemaining % 60);
     const isLowTime = isTimedMode && timeRemaining < 30;
 
+    // Cycle 35 Phase 8: positioning moved to HudLayout's topRight slot.
     return createElement('div', {
-        className: 'fixed top-6 right-6 z-20 animate-slide-down',
-        style: { paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)' }
+        className: 'animate-slide-down'
     },
         createElement('div', {
             className: `ui-panel py-2 px-4 ${isLowTime ? 'border-red-500/50' : ''}`
