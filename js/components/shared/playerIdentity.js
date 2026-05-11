@@ -92,6 +92,20 @@ export async function submitGameScore(gameMode, score, additionalData = {}) {
             playerName: identity.displayName,
             additionalData
         });
+
+        // Cycle 35 Phase 3: client-side telemetry on submission failure so
+        // the next regression shows up as data instead of silence. Mirrors
+        // the fire-and-forget pattern from gamestate/completion.js.
+        try {
+            import('../../telemetry.js').then(({ emitEvent }) => {
+                emitEvent('score_submission_failed', {
+                    reason: error?.message?.slice(0, 200) || 'unknown',
+                    gameMode,
+                    score: typeof score === 'number' ? Math.round(score * 100) / 100 : 0,
+                    sceneId: additionalData?.sceneId || null,
+                });
+            });
+        } catch {}
     }
 }
 

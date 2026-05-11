@@ -23,11 +23,11 @@ function isLocalDev() {
 }
 
 function getApiBase() {
-    // Only emit telemetry on prod (or whatever the user's deployment domain is).
-    // Local dev + e2e tests skip the network call entirely so the worker
-    // doesn't need to be up and the test runner doesn't see a phantom
-    // ERR_CONNECTION_REFUSED in the console.
-    return '';
+    // Local dev / e2e tests are short-circuited by isLocalDev() before this
+    // is reached, so prod is the only live path. Target the worker directly:
+    // sheepdogsim.com is Cloudflare Pages with no /api/* proxy, so a relative
+    // POST returns 405 and the event silently drops on the floor.
+    return 'https://sds-worker.matt-m-kissinger.workers.dev';
 }
 
 function getToken() {
