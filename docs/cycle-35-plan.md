@@ -149,11 +149,11 @@ Each phase's Acceptance lines use [EARS notation](https://kiro.dev/docs/specs/) 
 
 **Acceptance (EARS):**
 
-- [ ] When Phase 6 ships, `grep -n "uHeightTex" js/water/AnimeWater.js` shall return at least one match.
-- [ ] When the user loads `?scene=rolling-hills` and looks at the shore from the dog's perspective, foam shall sit at the visible water-terrain interface (not ~37m offshore at the geometric boundary). Verified by visual gallery capture saved to [`cycle35-validation/foam-rh-after.jpg`](../cycle35-validation/foam-rh-after.jpg).
-- [ ] When the user loads `?scene=open-country`, foam shall sit at the visible water-terrain interface (not ~64m offshore). Verified by [`cycle35-validation/foam-oc-after.jpg`](../cycle35-validation/foam-oc-after.jpg).
+- [x] When Phase 6 ships, `grep -n "uHeightTex" js/water/AnimeWater.js` shall return at least one match (5 matches).
+- [x] When the user loads `?scene=rolling-hills` and looks at the shore from the dog's perspective, foam shall sit at the visible water-terrain interface (not ~37m offshore at the geometric boundary). Verified by visual gallery capture saved to [`cycle35-validation/foam-rh-after.jpg`](../cycle35-validation/foam-rh-after.jpg).
+- [x] When the user loads `?scene=open-country`, foam shall sit at the visible water-terrain interface (not ~64m offshore). Verified by [`cycle35-validation/foam-oc-after.jpg`](../cycle35-validation/foam-oc-after.jpg).
 - [ ] When `npm run test:ios-water` runs against `https://sheepdogsim.com/` post-deploy, the sampled water RGB shall not be near-foam-white (regression gate from Cycle 32).
-- [ ] When the user loads `?scene=field`, no water shall render (heightfield is null, scene boundary is rect, the water-init guard at `initWorld.js:247` short-circuits unchanged).
+- [x] When the user loads `?scene=field`, no water shall render (heightfield is null, scene boundary is rect, the water-init guard at `initWorld.js:247` short-circuits unchanged). Verified live: Field scene has no waterBundle in sceneManager.
 
 ## Phase 7 - OC MP playtest + Cycle 34 carryover close (~30min paired)
 

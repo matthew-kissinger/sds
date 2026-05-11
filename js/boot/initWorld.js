@@ -252,6 +252,11 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
 
                 const water = createAnimeWater({
                     boundary: game.currentScene.boundary,
+                    // Cycle 35 Phase 6: bind the heightfield so foam tracks the
+                    // visible water-terrain interface instead of the geometric
+                    // outer boundary. Field's water-init guard short-circuits
+                    // before this point so the null case is non-island only.
+                    heightfield: game.heightfield || null,
                     size: game.sceneManager.isMobile ? 3200 : 4000,
                     y: -0.05,
                     segments: game.sceneManager.isMobile ? 32 : 64,

@@ -101,7 +101,29 @@ const FRAG = /* glsl */ `
   uniform vec3 uSunDirection;
   uniform float uSunSpecularIntensity;
 
+  // Cycle 35 Phase 6: heightfield-driven shoreline foam. When uHasHeight is
+  // 1 the shader samples the terrain heightfield to place foam at the
+  // visible water-terrain interface instead of the geometric boundary
+  // radius (which was 37m offshore on Sheep Dog Island and 64m on Open
+  // Country since the Cycle 32 depth-pre-pass removal).
+  uniform sampler2D uHeightTex;
+  uniform float uHeightWorldSize;
+  uniform float uHeightPeak;
+  uniform float uWaterY;
+  uniform float uHasHeight;
+
   #include <fog_pars_fragment>
+
+  // Sample heightfield at world (x, z) and return terrain Y in metres,
+  // matching Heightfield.sample() (raw texel * peakHeight). Clamp UV to
+  // edge so off-island queries return the baked seaLevel (~ -2 * peakHeight
+  // metres) rather than wrapping.
+  float sampleTerrainY(vec2 worldXZ) {
+    vec2 uv = worldXZ / uHeightWorldSize + 0.5;
+    uv = clamp(uv, 0.0, 1.0);
+    float texel = texture2D(uHeightTex, uv).r;
+    return texel * uHeightPeak;
+  }
 
   // Ashima Arts 2D simplex noise (public domain).
   // https://github.com/ashima/webgl-noise
@@ -149,7 +171,14 @@ const FRAG = /* glsl */ `
     vec2 foamNoiseUv = vWorldPos.xz * 0.18 + vec2(uTime * 0.04, uTime * 0.02);
     float foamNoise = snoise(foamNoiseUv);
     float foamThreshold = uFoamThickness * (1.0 + foamNoise * 0.25);
-    float foamMask = 1.0 - step(foamThreshold, distanceFromShore);
+    // Cycle 35 Phase 6: when a heightfield is bound, foam tracks the
+    // visible water-terrain interface. Past the heightfield extent the
+    // sampled value is the baked seaLevel (~-12m) so terrain_y << waterY
+    // and no foam appears — correct for the open ocean. Without a
+    // heightfield (Field has no water anyway), fall back to the original
+    // boundary-radius band.
+    float foamDist = mix(distanceFromShore, abs(sampleTerrainY(vWorldPos.xz) - uWaterY), uHasHeight);
+    float foamMask = 1.0 - step(foamThreshold, foamDist);
 
     vec3 viewDir = normalize(cameraPosition - vWorldPos);
     vec3 N = vec3(0.0, 1.0, 0.0);
@@ -179,8 +208,31 @@ function getBoundaryUniforms(boundary) {
     };
 }
 
-export function createAnimeWaterMaterial({ boundary }) {
+function makeHeightTexture(heightfield) {
+    // R32F: one float per texel, raw values straight out of Heightfield.data
+    // (already in metres × peakHeight per the Heightfield.sample contract).
+    // LinearFilter so per-fragment interpolation matches the CPU bilinear
+    // path; ClampToEdgeWrapping so off-island queries return the baked
+    // seaLevel rather than wrapping.
+    const tex = new THREE.DataTexture(
+        heightfield.getRawArray(),
+        heightfield.width,
+        heightfield.height,
+        THREE.RedFormat,
+        THREE.FloatType,
+    );
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearFilter;
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.generateMipmaps = false;
+    tex.needsUpdate = true;
+    return tex;
+}
+
+export function createAnimeWaterMaterial({ boundary, heightfield = null, waterY = -0.05 }) {
     const shoreline = getBoundaryUniforms(boundary);
+    const heightTex = heightfield ? makeHeightTexture(heightfield) : null;
     const uniforms = THREE.UniformsUtils.merge([
         THREE.UniformsLib.fog,
         {
@@ -199,10 +251,17 @@ export function createAnimeWaterMaterial({ boundary }) {
 
             uSunDirection: { value: new THREE.Vector3(0.4, 0.6, 0.7).normalize() },
             uSunSpecularIntensity: { value: 0.6 },
+
+            // Cycle 35 Phase 6 heightfield-driven foam.
+            uHeightTex: { value: heightTex },
+            uHeightWorldSize: { value: heightfield ? heightfield.worldSize : 1 },
+            uHeightPeak: { value: heightfield ? heightfield.peakHeight : 1 },
+            uWaterY: { value: waterY },
+            uHasHeight: { value: heightfield ? 1 : 0 },
         }
     ]);
 
-    return new THREE.ShaderMaterial({
+    const material = new THREE.ShaderMaterial({
         uniforms,
         vertexShader: VERT,
         fragmentShader: FRAG,
@@ -211,10 +270,18 @@ export function createAnimeWaterMaterial({ boundary }) {
         depthWrite: true,
         side: THREE.FrontSide,
     });
+    // THREE.UniformsUtils.merge clones uniform values, so the merged
+    // uHeightTex.value is a stale Texture clone with no source. Re-bind
+    // the real DataTexture so the GPU samples the heightfield data.
+    if (heightTex) {
+        material.uniforms.uHeightTex.value = heightTex;
+    }
+    material.userData.heightTexture = heightTex;
+    return material;
 }
 
-export function createAnimeWater({ boundary, size = 4000, y = -0.05, segments = 64 }) {
-    const material = createAnimeWaterMaterial({ boundary });
+export function createAnimeWater({ boundary, heightfield = null, size = 4000, y = -0.05, segments = 64 }) {
+    const material = createAnimeWaterMaterial({ boundary, heightfield, waterY: y });
 
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
     geometry.rotateX(-Math.PI / 2);
@@ -236,6 +303,8 @@ export function createAnimeWater({ boundary, size = 4000, y = -0.05, segments = 
         resize() {},
         dispose() {
             geometry.dispose();
+            const heightTex = material.userData?.heightTexture;
+            if (heightTex) heightTex.dispose();
             material.dispose();
         }
     };
