@@ -1168,6 +1168,14 @@ export class GrassSystem {
             side: THREE.DoubleSide,
             fog: true,
             flatShading: false,
+            // Cycle 35 Phase 9: the onBeforeCompile injection below reads
+            // `vUv` for procedural meadow tinting, but Three.js only declares
+            // the `vUv` varying when USE_UV is set (normally triggered by
+            // attaching a texture map). Without it the program failed to
+            // compile with "ERROR: 'vUv' : undeclared identifier" on every
+            // far-ring meadow quad. Defining USE_UV here makes Three.js emit
+            // the standard `varying vec2 vUv;` plumbing in both shaders.
+            defines: { USE_UV: '' },
         });
         mat.onBeforeCompile = (shader) => {
             shader.uniforms.uMeadowBase = { value: baseColor };
