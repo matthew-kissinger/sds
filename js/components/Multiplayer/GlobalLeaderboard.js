@@ -1,29 +1,38 @@
 /**
- * GlobalLeaderboard Component
- * View global rankings across all game modes
+ * GlobalLeaderboard - scene-first global rankings.
+ *
+ * Cycle 35 Phase 5 restructure: scene picker comes first, then the mode
+ * tabs filter by the selected scene's allowedModes (plus solo modes on
+ * Field, which is the historical solo home). The cross-scene "any" view
+ * is gone — Field's 56-second soloClassic record and Sheep Dog Island's
+ * 600-second run are different games with different time distributions.
+ *
+ * Scene selection persists in localStorage ('sds:leaderboardLastScene'),
+ * defaulting to the URL ?scene= param or 'field'. Unknown stored scenes
+ * fall back to 'field' so a stale value can't render an empty board.
  */
-import React, { createElement, useState, useEffect } from 'react';
+import React, { createElement, useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getNetworkManager } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
+import { listScenes, getSceneById } from '../../../shared/scenes/index.js';
 
-// Cycle 8 Phase 3: scene + sheep-count partition selectors.
-// Cycle 12 Phase 6: solo + timed modes have an intrinsic sheep count and
-// always take the worker fast path. The sheepCount dropdown is only
-// meaningful for cooperative/competitive (MP, variable count). Default both
-// filters to "any" on every tab so the panel renders cold without forcing
-// the worker into the slow path on pre-partition data.
-const SCENE_FILTER_OPTIONS = [
-    { id: 'any', label: 'Any scene' },
-    { id: 'field', label: 'Home Field' },
-    { id: 'rolling-hills', label: 'Rolling Hills' },
-    { id: 'open-country', label: 'Open Country' }
-];
-// Cycle 23 Phase E (Q5): leaderboard filter mirrors RoomCreation's
-// extended sheep-count list so cooperative/competitive boards at the new
-// Insane/Chaos counts are filterable.
+// Cycle 35 Phase 5: three concrete scenes. The 'any' option is gone with
+// the cross-scene mash-up.
+const SCENE_ORDER = ['field', 'rolling-hills', 'open-country'];
+const LAST_SCENE_KEY = 'sds:leaderboardLastScene';
+const FALLBACK_SCENE = 'field';
+
+// Solo modes are Field's historical home. The islands declare MP-only
+// `allowedModes`; surfacing solo tabs there would be misleading (no rows
+// will ever land in those partitions).
+const FIELD_SOLO_MODES = ['soloClassic', 'soloExtreme', 'soloInsane', 'soloChaos'];
+
+// Sheep-count filter is meaningful only on cooperative + competitive (the
+// MP modes that vary by sheep count). Solo + timed have a fixed count per
+// mode. Cycle 35 Phase 4 preserves this dropdown for MP boards.
 const SHEEP_FILTER_OPTIONS = [
     { value: 0, label: 'Any size' },
     { value: 200, label: '200 sheep — Classic' },
@@ -33,62 +42,92 @@ const SHEEP_FILTER_OPTIONS = [
     { value: 3000, label: '3000 sheep — Insane' },
     { value: 5000, label: '5000 sheep — Chaos' }
 ];
-// Solo tabs and `timed` are fixed at one sheep count by design — partition
-// filtering by sheepCount is meaningless for them. Tabs in this set hide
-// the sheepCount dropdown.
 const FIXED_COUNT_TABS = new Set(['soloClassic', 'soloExtreme', 'soloInsane', 'soloChaos', 'timed']);
+
+function leaderboardModesForScene(sceneId) {
+    const scene = getSceneById(sceneId);
+    if (!scene) return [];
+    const solo = sceneId === 'field' ? FIELD_SOLO_MODES : [];
+    const mp = Array.isArray(scene.allowedModes) ? scene.allowedModes : [];
+    return [...solo, ...mp];
+}
+
+function initialSceneId() {
+    if (typeof window === 'undefined') return FALLBACK_SCENE;
+    try {
+        const fromUrl = new URLSearchParams(window.location.search).get('scene');
+        if (fromUrl && getSceneById(fromUrl)) return fromUrl;
+    } catch {}
+    try {
+        const stored = localStorage.getItem(LAST_SCENE_KEY);
+        if (stored && getSceneById(stored)) return stored;
+    } catch {}
+    return FALLBACK_SCENE;
+}
 
 export function GlobalLeaderboard({ onBack, playerIdentity }) {
     const { t } = useTranslation();
-    const [activeTab, setActiveTab] = useState('soloClassic');
+    const [sceneId, setSceneId] = useState(initialSceneId);
     const [leaderboards, setLeaderboards] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [lastRefresh, setLastRefresh] = useState(null);
-    const [sceneFilter, setSceneFilter] = useState('any');
     const [sheepFilter, setSheepFilter] = useState(0);
-    const [filtersOpen, setFiltersOpen] = useState(false);
     const { isCompact, isMobile } = useResponsive();
 
-    const tabs = [
-        { id: 'soloClassic', labelKey: 'leaderboard.soloClassic' },
-        { id: 'soloExtreme', labelKey: 'leaderboard.soloExtreme' },
-        // Cycle 8 Phase 2b: Insane (3000 sheep) and Chaos (5000 sheep) get
-        // their own boards instead of polluting soloClassic.
-        { id: 'soloInsane', labelKey: 'leaderboard.soloInsane' },
-        { id: 'soloChaos', labelKey: 'leaderboard.soloChaos' },
-        { id: 'timed', labelKey: 'leaderboard.timed' },
-        { id: 'competitive', labelKey: 'leaderboard.competitive' },
-        { id: 'cooperative', labelKey: 'leaderboard.cooperative' }
-    ];
+    const sceneOptions = useMemo(() => {
+        const all = listScenes();
+        return SCENE_ORDER
+            .map(id => all.find(s => s.id === id))
+            .filter(Boolean);
+    }, []);
+
+    const visibleModes = useMemo(
+        () => leaderboardModesForScene(sceneId),
+        [sceneId]
+    );
+
+    const scene = getSceneById(sceneId);
+    const sceneDefaultMode = (scene && scene.defaultMode) || visibleModes[0] || 'cooperative';
+
+    const [activeTab, setActiveTab] = useState(() => {
+        const modes = leaderboardModesForScene(initialSceneId());
+        const initScene = getSceneById(initialSceneId());
+        if (initScene && modes.includes(initScene.defaultMode)) return initScene.defaultMode;
+        return modes[0] || 'cooperative';
+    });
+
+    // When the visible mode list changes (scene swap), snap activeTab to a
+    // valid choice. Prefer scene.defaultMode, then the first visible mode.
+    useEffect(() => {
+        if (!visibleModes.includes(activeTab)) {
+            setActiveTab(visibleModes.includes(sceneDefaultMode) ? sceneDefaultMode : visibleModes[0]);
+        }
+    }, [visibleModes, activeTab, sceneDefaultMode]);
+
+    // Persist scene selection across sessions.
+    useEffect(() => {
+        try { localStorage.setItem(LAST_SCENE_KEY, sceneId); } catch {}
+    }, [sceneId]);
 
     const loadLeaderboards = async () => {
         setLoading(true);
         setError('');
-
         try {
             const nm = getNetworkManager();
-            if (!nm) {
-                throw new Error('Network manager not available');
-            }
-
+            if (!nm) throw new Error('Network manager not available');
             if (!nm.isConnected()) {
-                console.log('[LEADERBOARD] Attempting to connect to server...');
+                console.log('[LEADERBOARD] Connecting to server...');
                 await nm.connect();
             }
-
             const data = await nm.getAllLeaderboards(10, {
-                sceneId: sceneFilter,
+                sceneId,
                 sheepCount: sheepFilter
             });
-            console.log('[LEADERBOARD] Raw data received:', data);
-
             setLeaderboards(data);
             setLastRefresh(new Date());
-
         } catch (err) {
             console.error('[LEADERBOARD] Failed to load:', err);
-
             if (err.message.includes('Failed to fetch') || err.message.includes('ERR_CONNECTION_REFUSED')) {
                 setError('serverOffline');
             } else {
@@ -102,29 +141,13 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
     useEffect(() => {
         loadLeaderboards();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sceneFilter, sheepFilter, activeTab]);
+    }, [sceneId, sheepFilter]);
 
-    // Cycle 12 Phase 6: solo + `timed` tabs are fixed-count. Switching tabs
-    // resets both filters to "any" so the worker takes the fast path by
-    // default. Users who want to filter open the disclosure explicitly.
     const isFixedCountTab = FIXED_COUNT_TABS.has(activeTab);
-    const handleTabChange = (tabId) => {
-        setActiveTab(tabId);
-        setSceneFilter('any');
-        setSheepFilter(0);
-        // MP tabs default-expand the filters disclosure since that's where
-        // partition filtering is meaningful; fixed-count tabs default-collapse.
-        setFiltersOpen(!FIXED_COUNT_TABS.has(tabId));
-    };
-    const hasActiveFilters = sceneFilter !== 'any' || sheepFilter > 0;
-    const clearFilters = () => {
-        setSceneFilter('any');
-        setSheepFilter(0);
-    };
+    const hasActiveSheepFilter = !isFixedCountTab && sheepFilter > 0;
 
     const renderLeaderboardTable = (gameMode) => {
         const data = leaderboards[gameMode] || [];
-
         if (data.length === 0) {
             return createElement('div', {
                 style: {
@@ -138,12 +161,9 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 }
             }, [
                 createElement('span', { key: 'msg' }, t('leaderboard.noScores')),
-                // Cycle 12 Phase 6: when an empty result is the consequence
-                // of a partition filter the user picked, give them a one-click
-                // way to clear it instead of leaving them stranded.
-                hasActiveFilters && createElement('button', {
+                hasActiveSheepFilter && createElement('button', {
                     key: 'clear',
-                    onClick: clearFilters,
+                    onClick: () => setSheepFilter(0),
                     style: {
                         background: 'rgba(96, 165, 250, 0.15)',
                         border: '1px solid rgba(96, 165, 250, 0.4)',
@@ -153,15 +173,13 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                         fontSize: '0.8rem',
                         cursor: 'pointer'
                     }
-                }, 'Clear filters')
+                }, 'Clear sheep filter')
             ]);
         }
-
         return createElement('div', {
             style: { display: 'flex', flexDirection: 'column', gap: '0.5rem' }
         }, data.map((entry, index) => {
             const isPlayer = playerIdentity && entry.fullName === playerIdentity.fullName;
-
             const getRankStyle = (rank) => {
                 const base = {
                     width: isCompact ? '28px' : '32px',
@@ -178,7 +196,6 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 if (rank === 3) return { ...base, background: '#d97706', color: 'white' };
                 return { ...base, background: 'rgba(255, 255, 255, 0.1)', color: 'white' };
             };
-
             return createElement('div', {
                 key: index,
                 style: {
@@ -196,10 +213,11 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     key: 'left',
                     style: { display: 'flex', alignItems: 'center', gap: isCompact ? '0.5rem' : '0.75rem' }
                 }, [
-                    createElement('div', {
-                        key: 'rank',
-                        style: getRankStyle(entry.rank)
-                    }, entry.rank <= 3 ? [t('leaderboard.ranks.first'), t('leaderboard.ranks.second'), t('leaderboard.ranks.third')][entry.rank - 1] : entry.rank),
+                    createElement('div', { key: 'rank', style: getRankStyle(entry.rank) },
+                        entry.rank <= 3
+                            ? [t('leaderboard.ranks.first'), t('leaderboard.ranks.second'), t('leaderboard.ranks.third')][entry.rank - 1]
+                            : entry.rank
+                    ),
                     createElement('div', { key: 'info' }, [
                         createElement('div', {
                             key: 'name',
@@ -211,10 +229,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                         }, entry.displayName + (isPlayer ? ` (${t('common.you')})` : '')),
                         !isCompact && createElement('div', {
                             key: 'full',
-                            style: {
-                                fontSize: '0.75rem',
-                                color: 'rgba(255, 255, 255, 0.5)'
-                            }
+                            style: { fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.5)' }
                         }, entry.fullName)
                     ])
                 ]),
@@ -243,6 +258,19 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
         background: isActive ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)',
         color: isActive ? 'white' : 'rgba(255, 255, 255, 0.7)'
     });
+
+    const labelKeyForMode = (mode) => {
+        const known = {
+            soloClassic: 'leaderboard.soloClassic',
+            soloExtreme: 'leaderboard.soloExtreme',
+            soloInsane: 'leaderboard.soloInsane',
+            soloChaos: 'leaderboard.soloChaos',
+            timed: 'leaderboard.timed',
+            competitive: 'leaderboard.competitive',
+            cooperative: 'leaderboard.cooperative'
+        };
+        return known[mode] || `leaderboard.${mode}`;
+    };
 
     return createElement('div', {
         style: {
@@ -276,24 +304,18 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     justifyContent: 'space-between',
                     flexDirection: isMobile ? 'column' : 'row',
                     gap: isMobile ? '0.75rem' : '0',
-                    marginBottom: isCompact ? '1rem' : '1.5rem',
+                    marginBottom: isCompact ? '0.75rem' : '1rem',
                     flexShrink: 0
                 }
             }, [
-                createElement(PanelTitle, {
-                    key: 'title',
-                    style: { marginBottom: 0 }
-                }, t('leaderboard.title')),
+                createElement(PanelTitle, { key: 'title', style: { marginBottom: 0 } }, t('leaderboard.title')),
                 createElement('div', {
                     key: 'controls',
                     style: { display: 'flex', alignItems: 'center', gap: '0.75rem' }
                 }, [
                     lastRefresh && createElement('span', {
                         key: 'time',
-                        style: {
-                            fontSize: '0.75rem',
-                            color: 'rgba(255, 255, 255, 0.6)'
-                        }
+                        style: { fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.6)' }
                     }, t('leaderboard.updated', { time: lastRefresh.toLocaleTimeString() })),
                     createElement(Button, {
                         key: 'refresh',
@@ -305,7 +327,52 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                 ])
             ]),
 
-            // Tab Navigation (fixed)
+            // Cycle 35 Phase 5: scene picker is the primary control, above
+            // the mode tabs. Mode tabs filter by getSceneById(sceneId).allowedModes
+            // (plus Field's solo modes); the cross-scene 'any' view is gone.
+            createElement('div', {
+                key: 'scene-picker',
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: isCompact ? '0.75rem' : '1rem',
+                    flexShrink: 0
+                }
+            }, [
+                createElement('span', {
+                    key: 'label',
+                    style: {
+                        fontSize: '0.7rem',
+                        color: 'rgba(255, 255, 255, 0.55)',
+                        fontWeight: 600,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase'
+                    }
+                }, 'Scene'),
+                createElement('select', {
+                    key: 'select',
+                    value: sceneId,
+                    onChange: (e) => setSceneId(e.target.value),
+                    style: {
+                        padding: '0.4rem 0.75rem',
+                        borderRadius: '0.5rem',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        color: 'white',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer'
+                    }
+                }, sceneOptions.map(opt =>
+                    createElement('option', {
+                        key: opt.id,
+                        value: opt.id,
+                        style: { background: '#1f2937' }
+                    }, opt.name || opt.id)
+                ))
+            ]),
+
+            // Mode tabs (filtered by the scene's available modes).
             createElement('div', {
                 key: 'tabs',
                 style: {
@@ -316,128 +383,52 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                     overflowX: 'auto',
                     flexShrink: 0
                 }
-            }, tabs.map(tab =>
+            }, visibleModes.map(mode =>
                 createElement('button', {
-                    key: tab.id,
-                    style: tabButtonStyle(activeTab === tab.id),
-                    onClick: () => handleTabChange(tab.id)
-                }, t(tab.labelKey))
+                    key: mode,
+                    style: tabButtonStyle(activeTab === mode),
+                    onClick: () => setActiveTab(mode)
+                }, t(labelKeyForMode(mode)))
             )),
 
-            // Cycle 12 Phase 6: collapsible filters. Default-collapsed on
-            // fixed-count tabs (solo + timed) since their sheep count is
-            // intrinsic and the worker takes the fast path. Default-expanded
-            // on cooperative/competitive where partition filtering is the
-            // whole point.
-            createElement('div', {
-                key: 'filters',
+            // Sheep-count filter, only meaningful on MP boards.
+            !isFixedCountTab && createElement('div', {
+                key: 'sheep',
                 style: {
                     display: 'flex',
-                    flexDirection: 'column',
+                    alignItems: 'center',
                     gap: '0.5rem',
                     marginBottom: isCompact ? '1rem' : '1.5rem',
                     flexShrink: 0
                 }
             }, [
-                createElement('button', {
-                    key: 'toggle',
-                    onClick: () => setFiltersOpen(o => !o),
+                createElement('span', {
+                    key: 'label',
+                    style: { fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)' }
+                }, 'Sheep count:'),
+                createElement('select', {
+                    key: 'select',
+                    value: sheepFilter,
+                    onChange: (e) => setSheepFilter(parseInt(e.target.value, 10) || 0),
                     style: {
-                        alignSelf: 'flex-start',
-                        background: 'transparent',
-                        border: 'none',
-                        padding: 0,
-                        color: hasActiveFilters ? '#93c5fd' : 'rgba(255, 255, 255, 0.55)',
-                        fontSize: '0.7rem',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        letterSpacing: '0.04em',
-                        textTransform: 'uppercase'
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.375rem',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer'
                     }
-                }, `${filtersOpen ? '▾' : '▸'} Filters${hasActiveFilters ? ' •' : ''}`),
-                filtersOpen && createElement('div', {
-                    key: 'controls',
-                    style: {
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '0.5rem'
-                    }
-                }, [
-                    createElement('label', {
-                        key: 'scene-label',
-                        style: {
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)'
-                        }
-                    }, [
-                        createElement('span', { key: 't' }, 'Scene:'),
-                        createElement('select', {
-                            key: 's',
-                            value: sceneFilter,
-                            onChange: (e) => setSceneFilter(e.target.value),
-                            style: {
-                                padding: '0.25rem 0.5rem',
-                                borderRadius: '0.375rem',
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                color: 'white',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                fontSize: '0.75rem',
-                                cursor: 'pointer'
-                            }
-                        }, SCENE_FILTER_OPTIONS.map(opt =>
-                            createElement('option', {
-                                key: opt.id,
-                                value: opt.id,
-                                style: { background: '#1f2937' }
-                            }, opt.label)
-                        ))
-                    ]),
-                    !isFixedCountTab && createElement('label', {
-                        key: 'sheep-label',
-                        style: {
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)'
-                        }
-                    }, [
-                        createElement('span', { key: 't' }, 'Sheep count:'),
-                        createElement('select', {
-                            key: 's',
-                            value: sheepFilter,
-                            onChange: (e) => setSheepFilter(parseInt(e.target.value, 10) || 0),
-                            style: {
-                                padding: '0.25rem 0.5rem',
-                                borderRadius: '0.375rem',
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                color: 'white',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                fontSize: '0.75rem',
-                                cursor: 'pointer'
-                            }
-                        }, SHEEP_FILTER_OPTIONS.map(opt =>
-                            createElement('option', {
-                                key: opt.value,
-                                value: opt.value,
-                                style: { background: '#1f2937' }
-                            }, opt.label)
-                        ))
-                    ]),
-                    hasActiveFilters && createElement('button', {
-                        key: 'clear',
-                        onClick: clearFilters,
-                        style: {
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid rgba(255, 255, 255, 0.15)',
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            borderRadius: '0.375rem',
-                            padding: '0.25rem 0.6rem',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer'
-                        }
-                    }, 'Clear')
-                ])
+                }, SHEEP_FILTER_OPTIONS.map(opt =>
+                    createElement('option', {
+                        key: opt.value,
+                        value: opt.value,
+                        style: { background: '#1f2937' }
+                    }, opt.label)
+                ))
             ]),
 
-            // Content Area (scrollable)
+            // Content area (scrollable).
             createElement('div', {
                 key: 'content',
                 style: {
@@ -461,7 +452,6 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                         style: { color: 'rgba(255, 255, 255, 0.8)' }
                     }, t('leaderboard.loading'))
                 ]),
-
                 error && createElement('div', {
                     key: 'error',
                     style: { textAlign: 'center', padding: '3rem 0' }
@@ -476,11 +466,9 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
                         onClick: loadLeaderboards
                     }, t('common.retry'))
                 ]),
-
                 !loading && !error && renderLeaderboardTable(activeTab)
             ]),
 
-            // Back Button (always visible)
             createElement(Button, {
                 key: 'back',
                 variant: 'secondary',

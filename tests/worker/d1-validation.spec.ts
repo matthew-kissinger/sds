@@ -14,7 +14,10 @@
  *   - durationFloorForCount: minimum-plausible-duration heuristic
  *   - plausibleScoreForCount: high-level wrap
  *   - detectScoreAnomalies: clock-skew + fast-for-count soft signals
- *   - isNaturalPartition: leaderboard partition fall-through gate
+ *
+ * Cycle 35 Phase 4: the natural-partition fast-path fallback was removed,
+ * along with its predicate helper; the cross-scene mash-up never composed.
+ * Tests for the dropped helper went with it.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -26,7 +29,6 @@ import {
     durationFloorForCount,
     plausibleScoreForCount,
     detectScoreAnomalies,
-    isNaturalPartition,
     ALL_GAME_MODES,
     type GameMode,
 } from '../../worker/src/d1.ts';
@@ -203,35 +205,4 @@ describe('daily-mode validation (Cycle 27 Phase D)', () => {
         expect(modeSheepCountOk('daily-2026-05-08' as GameMode, 201)).toBe(false);
     });
 
-    it('isNaturalPartition returns false for daily-* (each day differs)', () => {
-        expect(
-            isNaturalPartition('daily-2026-05-08' as GameMode, { sceneId: 'field', sheepCount: 200 }),
-        ).toBe(false);
-    });
-});
-
-describe('isNaturalPartition', () => {
-    it('soloClassic targeting field/200 is the natural partition', () => {
-        expect(
-            isNaturalPartition('soloClassic', { sceneId: 'field', sheepCount: 200 }),
-        ).toBe(true);
-    });
-
-    it('soloClassic targeting any-scene defaults to natural', () => {
-        expect(
-            isNaturalPartition('soloClassic', { sceneId: 'any', sheepCount: 200 }),
-        ).toBe(true);
-    });
-
-    it('soloClassic targeting non-canonical sheep count is NOT natural', () => {
-        expect(
-            isNaturalPartition('soloClassic', { sceneId: 'field', sheepCount: 999 }),
-        ).toBe(false);
-    });
-
-    it('competitive has no natural partition (always returns false)', () => {
-        expect(
-            isNaturalPartition('competitive', { sceneId: 'field', sheepCount: 200 }),
-        ).toBe(false);
-    });
 });

@@ -132,10 +132,10 @@ Each phase's Acceptance lines use [EARS notation](https://kiro.dev/docs/specs/) 
 
 **Acceptance (EARS):**
 
-- [ ] When the leaderboard tab opens, the UI shall render a scene picker before the mode tabs (verified by component layout review).
-- [ ] When the user selects `Open Country` in the scene picker, the mode tabs shall hide modes not in `open-country.allowedModes` (cooperative + timed; hides soloClassic/Extreme/Insane/Chaos/competitive).
-- [ ] When the user re-opens the leaderboard tab in a later session, the previously selected scene shall be re-applied from `localStorage.getItem('sds:leaderboardLastScene')`.
-- [ ] When `GlobalLeaderboard` mounts without a saved scene, the default scene shall be the URL `?scene=` param or `'field'` (verified by spec or inspection).
+- [x] When the leaderboard tab opens, the UI shall render a scene picker before the mode tabs (verified by component layout review: scene-picker JSX block precedes the tabs JSX block in `GlobalLeaderboard.js`).
+- [x] When the user selects `Open Country` in the scene picker, the mode tabs shall hide modes not in `open-country.allowedModes` (cooperative + timed; hides soloClassic/Extreme/Insane/Chaos/competitive). Field's leaderboard surfaces solo modes via the `leaderboardModesForScene` helper (Field-only).
+- [x] When the user re-opens the leaderboard tab in a later session, the previously selected scene shall be re-applied from `localStorage.getItem('sds:leaderboardLastScene')`.
+- [x] When `GlobalLeaderboard` mounts without a saved scene, the default scene shall be the URL `?scene=` param or `'field'` (verified by `initialSceneId()` precedence).
 
 ## Phase 6 - Shoreline foam: heightfield-driven waterline (~2.5hr)
 
