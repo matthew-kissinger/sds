@@ -40,3 +40,15 @@ export function loadScene(id = DEFAULT_SCENE_ID) {
 export function listScenes() {
     return Object.values(SCENES);
 }
+
+/**
+ * Non-throwing scene lookup. Returns the SceneDef when id is known,
+ * undefined otherwise. Use for input validation at API boundaries where
+ * an unknown id should produce a 400 rather than a 500.
+ *
+ * @param {string} id
+ * @returns {import('./types.js').SceneDef | undefined}
+ */
+export function getSceneById(id) {
+    return SCENES[id];
+}

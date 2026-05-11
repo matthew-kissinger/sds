@@ -13,6 +13,8 @@ import {
   isValidGameMode,
   type GameMode,
 } from './d1';
+// Cycle 35 Phase 4: scene-id validation at the API boundary.
+import { getSceneById } from '../../shared/scenes/index.js';
 
 export { RoomDO, LobbyDO };
 
@@ -395,8 +397,12 @@ export default {
         if (!isValidGameMode(modeRaw)) return err('invalid mode', 400, cors);
         const mode: GameMode = modeRaw;
         const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 10));
-        // Cycle 8 Phase 3: optional partition filters.
-        const sceneId = url.searchParams.get('scene') || undefined;
+        // Cycle 35 Phase 4: scene is required. Field's 56s soloClassic record
+        // and Sheep Dog Island's 600s run are different games; the cross-scene
+        // mash-up never composed. Missing or unknown scene returns 400.
+        const sceneId = url.searchParams.get('scene');
+        if (!sceneId) return err('scene_required', 400, cors);
+        if (!getSceneById(sceneId)) return err('unknown_scene', 400, cors);
         const sheepCountRaw = url.searchParams.get('sheepCount');
         const sheepCount = sheepCountRaw ? Number(sheepCountRaw) : undefined;
         const entries = await getLeaderboard(env.DB, mode, limit, {
@@ -408,7 +414,9 @@ export default {
 
       if (path === '/api/leaderboards' && method === 'GET') {
         const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 10));
-        const sceneId = url.searchParams.get('scene') || undefined;
+        const sceneId = url.searchParams.get('scene');
+        if (!sceneId) return err('scene_required', 400, cors);
+        if (!getSceneById(sceneId)) return err('unknown_scene', 400, cors);
         const sheepCountRaw = url.searchParams.get('sheepCount');
         const sheepCount = sheepCountRaw ? Number(sheepCountRaw) : undefined;
         const leaderboards = await getAllLeaderboards(env.DB, limit, {

@@ -301,17 +301,26 @@ export class NetworkManager {
         };
     }
 
+    // Cycle 35 Phase 4: sceneId is required. The worker returns 400 with
+    // {error:'scene_required'} when missing. Throw at the boundary so the
+    // caller can't silently regress to the cross-scene mash-up.
     async getLeaderboard(gameMode, limit = 10, filters = {}) {
-        const params = new URLSearchParams({ mode: gameMode, limit: String(limit) });
-        if (filters.sceneId && filters.sceneId !== 'any') params.set('scene', filters.sceneId);
+        const sceneId = filters.sceneId;
+        if (!sceneId || sceneId === 'any') {
+            throw new Error('getLeaderboard requires filters.sceneId (one of field, rolling-hills, open-country).');
+        }
+        const params = new URLSearchParams({ mode: gameMode, limit: String(limit), scene: sceneId });
         if (filters.sheepCount && filters.sheepCount > 0) params.set('sheepCount', String(filters.sheepCount));
         const data = await this._getJson(`/api/leaderboard?${params}`);
         return { success: true, gameMode, leaderboard: data.entries || [] };
     }
 
     async getAllLeaderboards(limit = 10, filters = {}) {
-        const params = new URLSearchParams({ limit: String(limit) });
-        if (filters.sceneId && filters.sceneId !== 'any') params.set('scene', filters.sceneId);
+        const sceneId = filters.sceneId;
+        if (!sceneId || sceneId === 'any') {
+            throw new Error('getAllLeaderboards requires filters.sceneId (one of field, rolling-hills, open-country).');
+        }
+        const params = new URLSearchParams({ limit: String(limit), scene: sceneId });
         if (filters.sheepCount && filters.sheepCount > 0) params.set('sheepCount', String(filters.sheepCount));
         const data = await this._getJson(`/api/leaderboards?${params}`);
         return data.leaderboards || {};

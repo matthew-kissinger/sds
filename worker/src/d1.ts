@@ -62,32 +62,20 @@ export function isValidGameMode(mode: unknown): mode is GameMode {
   return typeof mode === 'string' && (ALL_GAME_MODES_SET.has(mode) || isDailyMode(mode));
 }
 
-// Cycle 12 Phase 6: every materialized-best column on `players` was written
-// against a single natural (scene_id, sheep_count) pair. Pre-Cycle-8 entries
-// were submitted before partition columns existed, so `score_submissions` is
-// sparse for them and the slow path returns []. When a partitioned query
-// targets a mode's NATURAL partition and finds no rows, we fall through to
-// the fast path so old data stays visible. `null` means "no natural partition"
-// (competitive/cooperative are MP and legitimately partition by either dim;
-// daily-* varies per day so no single natural pair exists).
-const MODE_NATURAL_PARTITION: Record<Exclude<GameMode, `daily-${string}`>, { sceneId: string; sheepCount: number } | null> = {
-  soloClassic: { sceneId: 'field', sheepCount: 200 },
-  soloExtreme: { sceneId: 'field', sheepCount: 1000 },
-  soloInsane: { sceneId: 'field', sheepCount: 3000 },
-  soloChaos: { sceneId: 'field', sheepCount: 5000 },
-  timed: { sceneId: 'field', sheepCount: 200 },
-  competitive: null,
-  cooperative: null,
-};
-
-export function isNaturalPartition(mode: GameMode, filters: LeaderboardFilters): boolean {
-  if (isDailyMode(mode)) return false;
-  const natural = MODE_NATURAL_PARTITION[mode as Exclude<GameMode, `daily-${string}`>];
-  if (!natural) return false;
-  const sceneOk = !filters.sceneId || filters.sceneId === 'any' || filters.sceneId === natural.sceneId;
-  const sheepOk = !filters.sheepCount || filters.sheepCount === natural.sheepCount;
-  return sceneOk && sheepOk;
-}
+// Cycle 35 Phase 4: solo + timed modes have a fixed intrinsic sheep count
+// per mode (soloClassic = 200, soloExtreme = 1000, soloInsane = 3000,
+// soloChaos = 5000, timed = 200). Multiplayer modes (competitive,
+// cooperative) and daily-* legitimately vary by sheep count. The bulk
+// leaderboards endpoint suppresses the sheepCount filter for the fixed-
+// count modes so picking "250 sheep" in the dropdown does not blank every
+// solo board.
+const MODES_WITH_FIXED_SHEEP_COUNT: ReadonlySet<string> = new Set([
+  'soloClassic',
+  'soloExtreme',
+  'soloInsane',
+  'soloChaos',
+  'timed',
+]);
 
 const ADJECTIVES = [
   'Swift', 'Clever', 'Brave', 'Mighty', 'Gentle', 'Wise', 'Bold', 'Quick',
@@ -587,11 +575,12 @@ export interface LeaderboardFilters {
 }
 
 /**
- * Cycle 8 Phase 3: get leaderboard for a mode, optionally filtered by
- * (sceneId, sheepCount). When no filters are passed, the fast path queries
- * the materialized-best columns on `players`. When filters are passed, the
- * partitioned path queries `score_submissions` directly with GROUP BY,
- * yielding per-(mode, scene, sheepCount) rankings.
+ * Cycle 8 Phase 3 + Cycle 35 Phase 4: get leaderboard for a (mode, scene)
+ * pair. Scene is now required at the API boundary — Field, Sheep Dog
+ * Island, and Open Country have different geometry, navigation, and time
+ * distributions, so cross-scene boards never composed. Always queries
+ * `score_submissions` with GROUP BY; the materialized fast path (queried
+ * scene-blind on `players.*`) is gone.
  */
 export async function getLeaderboard(
   db: D1Database,
@@ -599,51 +588,6 @@ export async function getLeaderboard(
   limit = 10,
   filters: LeaderboardFilters = {},
 ): Promise<LeaderboardEntry[]> {
-  const hasFilters = (filters.sceneId && filters.sceneId !== 'any') ||
-    (typeof filters.sheepCount === 'number' && filters.sheepCount > 0);
-
-  // Fast path: no filters -> use materialized columns on players.
-  if (!hasFilters) {
-    let sql: string;
-    switch (mode) {
-      case 'soloClassic':
-        sql = 'SELECT * FROM players WHERE solo_classic_best IS NOT NULL ORDER BY solo_classic_best ASC LIMIT ?';
-        break;
-      case 'soloExtreme':
-        sql = 'SELECT * FROM players WHERE solo_extreme_best IS NOT NULL ORDER BY solo_extreme_best ASC LIMIT ?';
-        break;
-      case 'soloInsane':
-        sql = 'SELECT * FROM players WHERE solo_insane_best IS NOT NULL ORDER BY solo_insane_best ASC LIMIT ?';
-        break;
-      case 'soloChaos':
-        sql = 'SELECT * FROM players WHERE solo_chaos_best IS NOT NULL ORDER BY solo_chaos_best ASC LIMIT ?';
-        break;
-      case 'timed':
-        sql = 'SELECT * FROM players WHERE timed_best IS NOT NULL ORDER BY timed_best DESC LIMIT ?';
-        break;
-      case 'competitive':
-        sql = 'SELECT * FROM players WHERE competitive_wins > 0 ORDER BY competitive_wins DESC LIMIT ?';
-        break;
-      case 'cooperative':
-        sql = 'SELECT * FROM players WHERE cooperative_best IS NOT NULL ORDER BY cooperative_best ASC LIMIT ?';
-        break;
-    }
-    const { results } = await db.prepare(sql).bind(limit).all<PlayerRow>();
-    const col = scoreColumn(mode);
-    return (results || []).map((p, i) => {
-      const score = (p as any)[col] ?? 0;
-      return {
-        rank: i + 1,
-        displayName: p.display_name,
-        fullName: p.full_name,
-        score,
-        formattedScore: formatScore(mode, score),
-        persistent_id: p.persistent_id,
-        lastActive: p.last_active,
-      };
-    });
-  }
-
   // Partitioned path: filter score_submissions by (mode, scene, sheepCount)
   // and aggregate per player. For TIME_MODES we want MIN(score). For 'timed'
   // we want MAX(score). For 'competitive' we want COUNT of wins (score=1
@@ -688,15 +632,10 @@ export async function getLeaderboard(
     best_score: number;
   };
   const { results } = await db.prepare(sql).bind(...binds).all<Row>();
-  // Cycle 12 Phase 6: if the partitioned query is empty AND the requested
-  // (scene, sheepCount) is the mode's natural partition, fall through to the
-  // fast path. Pre-Cycle-8 submissions never wrote partition columns, so
-  // their best is materialized on `players.*_best` but absent from
-  // `score_submissions`. Without this, "soloClassic + scene=field" looks
-  // empty even though the all-time leaderboard is populated.
-  if ((!results || results.length === 0) && isNaturalPartition(mode, filters)) {
-    return getLeaderboard(db, mode, limit, {});
-  }
+  // Cycle 35 Phase 4: dropped the natural-partition fast-path fallback.
+  // Pre-Cycle-8 backfill is no longer load-bearing (~15 submission rows at
+  // cycle plan time), and the cross-scene mash-up was the bug we set out
+  // to fix. An empty partitioned query is now the truthful answer.
   return (results || []).map((p, i) => ({
     rank: i + 1,
     displayName: p.display_name,
@@ -713,14 +652,14 @@ export async function getAllLeaderboards(
   limit = 10,
   filters: LeaderboardFilters = {},
 ): Promise<Record<string, LeaderboardEntry[]>> {
-  // Cycle 12 Phase 6: per-mode filter dispatch. Solo + timed modes have a
-  // fixed intrinsic sheep count, so the leaderboards-panel sheepCount
-  // dropdown is meaningful only for competitive/cooperative. Drop it for the
-  // others — otherwise picking "250 sheep" in the dropdown blanks every solo
-  // board even though those modes never partition by that count.
+  // Cycle 12 Phase 6 + Cycle 35 Phase 4: per-mode filter dispatch. Solo +
+  // timed modes have a fixed intrinsic sheep count, so the dropdown is
+  // meaningful only for competitive/cooperative. Drop it for the others —
+  // otherwise picking "250 sheep" in the dropdown blanks every solo board
+  // even though those modes never partition by that count.
   const results = await Promise.all(
     ALL_GAME_MODES.map(m => {
-      const perMode: LeaderboardFilters = MODE_NATURAL_PARTITION[m]
+      const perMode: LeaderboardFilters = MODES_WITH_FIXED_SHEEP_COUNT.has(m)
         ? { sceneId: filters.sceneId }
         : filters;
       return getLeaderboard(db, m, limit, perMode);
