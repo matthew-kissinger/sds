@@ -1,55 +1,59 @@
-# Next Session - Cycle 35 (TBD)
+# Next Session - Cycle 36 (TBD)
 
-> **Updated:** 2026-05-10 after Cycle 34 (`mp-island-scenes`) closeout.
-> **For:** Cycle 35 (slug TBD).
-> **Pickup priority:** Manual playtest of OC multiplayer (Cycle 34 post-deploy verification): boot `npm run dev`, host an OC room as scene=open-country, drive sheep into the round-up zone, confirm the stage flips to `drive` server-side and the portal opens. Then decide Cycle 35 scope. Plan stub at [`docs/cycle-35-plan.md`](docs/cycle-35-plan.md) — needs Goal + Phases filled in. Run `/cycle-start` after that.
+> **Updated:** 2026-05-11 at Cycle 35 close.
+> **For:** Cycle 36 (slug TBD).
+> **Pickup priority:** Cycle 36 has not been scoped yet. Two post-deploy verification tasks from Cycle 35 are blocking inputs (paired OC MP playtest + iOS Safari foam canary against the deployed build). Resolve those first, then scope Cycle 36 against the carryover list below. Run `/cycle-start` to orient on whatever scope you land on.
 
-Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/cycle-35-plan.md`](docs/cycle-35-plan.md). Cycle 34's closed plan is archived at [`docs/archive/cycles/cycle-34-plan.md`](docs/archive/cycles/cycle-34-plan.md).
+Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
 
-## Cycle 34 Close Summary
+## Cycle 35 Outcome
 
-Cycle 34 made `?scene=rolling-hills` and `?scene=open-country` first-class in multiplayer rooms. Five phases, all autonomous, no `package.json` version bump (manual playtest deferred to post-deploy verification).
+Closed 2026-05-11, no version bump. Eight autonomous phases shipped. The original plan had seven phases; two more (HudLayout slot orchestrator + meadow shader compile fix) absorbed mid-cycle during a Matt review pass. Tests 304 pass / 7 skipped, build clean, lint clean, mainKB 590.33 (+0.27 vs Cycle 34's 590.06). Full per-phase summary in [`docs/BACKLOG.md`](docs/BACKLOG.md) Recently Completed → Cycle 35.
 
-- **Phase 1 — Sim-baseline coverage for islands.** Three net-additive 60Hz fixtures (`island-boundary-rh-60hz.json`, `corral-retirement-rh-60hz.json`, `island-boundary-oc-60hz.json`). Harness extended with `makeIslandGameState`, `makeIslandSheepConfig`, `tickSheepIslandCoop`. `round4` collapses `-0` to `0` for stable JSON round-trip. Pre-existing fixtures byte-identical.
-- **Phase 2 — OC objective state machine in shared/ + worker.** Promoted [`js/gamestate/objective.js`](js/gamestate/objective.js) to [`shared/objective.js`](shared/objective.js) so the Worker authoritative sim runs the byte-identical state transitions the client predictor runs. The js-side path is now a one-line re-export shim. `GameSim.js` creates the objective at construction, calls `tickObjective` each tick, and gates `updateSheepCorralRetirements` on `isCorralOpen`. Added `oc-objective-stage-60hz.json` capturing the stage flip at tick 121 (2.0s holdRequired at 60Hz).
-- **Phase 3 — Wire format additions for objective stage.** `createGameStateSnapshot()` emits an optional `objective` block when `this.objective != null` — shape mirrors the local `ObjectiveState` so the client mirrors directly into `game.gameState.objective`. Pre-Cycle-34 clients/workers fall back gracefully. Five new specs in [`tests/worker-objective-snapshot.spec.js`](tests/worker-objective-snapshot.spec.js).
-- **Phase 4 — `allowedModes` enforcement at room init.** `RoomDO.initRoom` returns 400 `mode_not_allowed_on_scene` when the requested `gameMode` is not in the scene's `allowedModes`. Six new specs in [`tests/worker-allowed-modes.spec.js`](tests/worker-allowed-modes.spec.js).
-- **Phase 5 — Lobby UI surfaces scene + allowed modes.** RoomCreation gained a scene picker; mode dropdown filters by selected scene's `allowedModes` with a snap-to-defaultMode fallback. PublicLobbyList renders the scene's display name as a chip. App.js threads `settings.sceneId` through `nm.createRoom`.
+The cycle delivered:
 
-## Validation At Close
+1. **Completion observability** end-to-end. Telemetry route fix in [`js/telemetry.js`](js/telemetry.js) (Pages → Worker URL), a new append-only `score_errors` D1 table that captures every `submitScore` throw before propagating, and a client-side `score_submission_failed` emit when `nm.submitScore` rejects. The next regression shows up as data instead of silence.
+2. **Leaderboard as `(scene × mode)` identity.** `/api/leaderboard` and `/api/leaderboards` now require a scene; missing returns 400 `{error: 'scene_required'}`. Dropped the cross-scene fast path on `players.*` and the `isNaturalPartition` fallback. Leaderboard UI restructured scene-first; persists last-scene in `localStorage`.
+3. **Shoreline foam tracks the visible waterline.** `AnimeWater` accepts a heightfield, samples it as an R32F DataTexture, and computes foam from `|terrain_y - waterY|`. Falls back to the boundary band when no heightfield (Field has no water anyway).
+4. **HudLayout (mid-cycle Phase 8).** Slot-based orchestrator deletes the prior pattern of per-component `position: fixed` with hand-tuned offsets. CameraModeIndicator alone lost ~40 lines of compensating positioning code.
+5. **Meadow shader compile fix (mid-cycle Phase 9).** Long-standing `vUv` undeclared error on every island scene boot. Fix: `defines: { USE_UV: '' }` on the MeshLambertMaterial.
 
-- `npm test` — 315 passed / 7 skipped (was 300/7 at Cycle 33 close, +15 cycle-34 specs).
-- `npm run lint` — clean (eslint shared/).
-- `npm run build` — clean, mainKB 590.06 / threeKB 617.77 (+0.46KB cycle-34 delta vs Cycle 33 close).
-- `npm run test:integration` — 39 passed / 7 skipped (`flow.spec.ts` skips remain pre-existing).
-- Pre-existing sim-baseline fixtures: byte-identical (verified via `git diff`).
-- `shared/scenes/types.js`, `worker/migrations/`: untouched (no schema changes required).
+## Pickup Priority
+
+Cycle 36 has **no agreed scope yet**. Three blocking inputs before scoping:
+
+1. **Phase 7 carryover from Cycle 35: paired OC MP playtest.** Matt at the keyboard, two browser tabs, host an OC cooperative room, drive sheep into the round-up zone at (0, 50), confirm `roundup → drive` flips server-side at hold=2.0s and the portal at z=295 opens. Cannot run autonomously.
+2. **iOS Safari foam canary post-deploy.** `npm run test:ios-water` against `https://sheepdogsim.com/` after the Cycle 35 deploy lands. Hard-stop gate from Cycle 32. If `nearFoamWhite: true`, revert Phase 6 and re-open as a paired investigation.
+3. **D1 verification post-deploy.** Confirm the first real `game_completed` lands in the `events` table after Cycle 35 telemetry deploys. Query `SELECT name, COUNT(*) FROM events GROUP BY name;` on remote D1. Flag inconclusive after 7 days if no completion event arrives.
+
+## Cycle 36 Candidates
+
+Once the post-deploy verifications clear, candidates remaining in [`docs/BACKLOG.md`](docs/BACKLOG.md):
+
+1. **OC objective HUD polish.** MP-specific copy or per-player progress indicators on the ObjectiveBanner. Decide after the Phase 7 playtest.
+2. **Promote `worker-objective-snapshot.spec.js` into the WS two-client harness.** Requires unskipping `tests/integration/flow.spec.ts`.
+3. **Mountains: real horizon ring** as height-displaced skirt that the play-area heightfield blends into.
+4. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** — long-tail polish.
+5. **Drop `players.solo_*_best` materialized columns** if a future cycle wants the destructive migration (deferred Q1 in Cycle 35).
+6. **Delete legacy `updateGrassLOD` + `updateTreeLOD`** in [`TerrainBuilder.js`](js/TerrainBuilder.js).
+7. **Cycle 33 carryovers** still open: local-tunnel BrowserStack canary on Ubuntu (manual `gh workflow run browserstack-ios-water.yml` with empty `base_url`); Node 20 GHA deprecation annotation re-check on next Deploy run.
+
+## Frozen Files (durable fence)
+
+Durable fence applies in full ([`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md)). No cycle-36-specific freezes yet.
 
 ## Operational Notes
 
-- Cycle 34 commits (`318a346`, `d3a31de`, `0caddea`, `93e7e70`, plus the close commit `2264216`) pushed to `main`. Deploy run [`25621497329`](https://github.com/matthew-kissinger/sds/actions/runs/25621497329): first attempt failed on E2E (Chromium) — smoke test "solo classic game starts and 3D canvas renders" timed out at 180s × 3 attempts. Confirmed locally the same test passes in 1.8m (close to the 180s CI budget). Cycle-34 code only touches the MP path + a byte-equivalent re-export shim for `js/gamestate/objective.js`, so the failure was a borderline CI flake. **Rerun succeeded end-to-end** (Test ✓ / Deploy Worker ✓ / Deploy Pages ✓ / E2E Chromium ✓ / Perf check ✓). Production live on `https://sheepdogsim.com/`.
-- **Outstanding manual playtest:** OC multiplayer end-to-end (host an OC room, two-tab session, drive sheep into round-up zone, confirm stage flip server-side). Same pattern as Cycle 32/33 post-deploy verification.
-- Cycle 33 carryovers still open: local-tunnel BrowserStack canary on Ubuntu, Node 20 annotation re-check on next Deploy run.
-- **Cycle 35 first-task hint:** the E2E smoke test is borderline-flaky on CI (180s budget, ~108s local, ~178s+ on slower runners). If it flakes again, candidate fixes: bump the test's `setTimeout` to 240s, raise the canvas-attach `toBeAttached` window above 60s, or split the boot-wait into checkpointed assertions. The Cycle 33 run passed the same test in time; Cycle 32 had a separate `wrangler: not found` failure. Track the pattern.
-
-## Carryover Candidates For Cycle 35
-
-The leading candidate is **post-deploy verification of MP island scenes** (manual playtest, then deciding whether OC needs HUD polish or whether to ship a different cycle).
-
-Background candidates remaining in [`docs/BACKLOG.md`](docs/BACKLOG.md) (not in scope unless explicitly chosen):
-
-1. **Promote `worker-objective-snapshot.spec.js` into the WS two-client harness** — requires unskipping `tests/integration/flow.spec.ts` and standing up a real worker fixture.
-2. **OC objective HUD polish** — MP-specific copy or per-player progress indicators on the ObjectiveBanner.
-3. **Modal-copy rewrite** — only if Google's recrawl still substitutes welcome-modal copy in snippets.
-4. **Bespoke pixel-forge rocks**, **octahedral impostors v2**, **cross-module polygon-spawn dedup**, **build-time `displacedHeights` bake**, **inline `_groundY`** — long-tail polish.
+- **Cloudflare creds**: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in `~/.config/mk-agent/env` (loaded via `set -a && source ~/.config/mk-agent/env && set +a` before any `wrangler d1` command).
+- **D1 queries**: use `npx wrangler d1 execute sds-db --remote --command "..." --json` for read-only inspection. Database id `513aa937-e60a-4fb6-b499-9f3814149e88`.
+- **D1 schema snapshot**: 6 applied migrations (0001-0006). `score_errors` table is the newest, added in Cycle 35 Phase 2.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan | [`docs/cycle-35-plan.md`](docs/cycle-35-plan.md) (stub — fill in Goal + Phases) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-34-plan.md`](docs/archive/cycles/cycle-34-plan.md) |
-| Cycle 34 design doc | [`docs/mp-island-scenes-design.md`](docs/mp-island-scenes-design.md) |
+| Active cycle plan | [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md) (scaffold only) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Security advisory acceptance log | [`docs/security-acceptance.md`](docs/security-acceptance.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
@@ -74,3 +78,12 @@ npm run test:integration
 ```
 
 Useful URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl`, `?cinematic=1`, `?ui=off`, `?sun=0.5`, `?perfMode=1`, `?tier=low|med|high`, `?tonemap=aces|neutral|linear|none`.
+
+D1 inspection:
+
+```bash
+set -a && source ~/.config/mk-agent/env && set +a
+npx wrangler d1 execute sds-db --remote --command "SELECT COUNT(*) FROM score_submissions;" --json
+npx wrangler d1 execute sds-db --remote --command "SELECT * FROM score_errors ORDER BY submitted_at DESC LIMIT 10;" --json
+npx wrangler d1 execute sds-db --remote --command "SELECT name, COUNT(*) FROM events GROUP BY name;" --json
+```

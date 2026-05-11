@@ -173,6 +173,31 @@ Each phase's Acceptance lines use [EARS notation](https://kiro.dev/docs/specs/) 
 - [ ] When the portal at OC's (0, 295) corral becomes active, sheep shall retire into it (verified visually).
 - [ ] When Phase 7 closes, [`docs/BACKLOG.md`](BACKLOG.md) shall be updated with the verification date and observed result.
 
+## Phase 8 - HudLayout slot orchestrator (mid-cycle, ~1.5hr)
+
+**Independently testable. Added mid-cycle 2026-05-11** after Matt reviewed the Phase 6 foam validation screenshots and flagged the OC ObjectiveBanner overlapping the score pill on mobile and the camera-mode chip overlapping mobile controls. Architected from first principles — root cause: every HUD overlay declared its own `position: fixed` inline and dodged collisions with hardcoded pixel offsets.
+
+1. **New file** [`js/components/GameHUD/HudLayout.js`](../js/components/GameHUD/HudLayout.js) — one orchestrator with five named slot regions: `topLeft`, `topCenter`, `topRight`, `edge`, `bottomSafe`, plus a `mobileControls` passthrough. Each region is a flex-column container with a fixed gap; children in the same slot stack naturally with no hand-tuned offsets. `bottomSafe` reserves clearance above mobile controls (140px portrait / 96px landscape / 16px desktop).
+2. **Refactor** MobileHUD, GameTimer, SheepCounter, ObjectiveBanner, CameraModeIndicator, PracticeHint to drop their outer `position: fixed` wrappers. CameraModeIndicator loses its 88px ObjectiveBanner-aware offset, the portrait/landscape branching, and the `hasObjective` subscription (~40 lines deleted).
+3. **App.js GameHUD** routes children into slots per platform via a single `<HudLayout>` element.
+
+**Acceptance (EARS):**
+
+- [x] When Phase 8 ships, every HUD overlay component shall have its outer `position: fixed` removed (verified by grep against MobileHUD, GameTimer, SheepCounter, ObjectiveBanner, CameraModeIndicator, PracticeHint).
+- [x] When the leaderboard tab opens on OC mobile, the score pill, ObjectiveBanner, and camera chip shall stack in `topCenter` with consistent gap and no overlap (verified live in preview at 375x812).
+- [x] When CameraModeIndicator renders, `grep -n "88px" js/components/GameHUD/CameraModeIndicator.js` shall return nothing (the legacy ObjectiveBanner-aware offset is gone).
+
+## Phase 9 - Meadow shader compile fix (mid-cycle, ~30min)
+
+**Independently testable. Added mid-cycle 2026-05-11** after preview-MCP validation surfaced a Three.js shader compile error per far-ring meadow quad on every island scene boot. Pre-existing bug; rolled in as a tag-along since the validation pass exposed it.
+
+1. **In [`js/GrassSystem.js createMeadowQuadMaterial`](../js/GrassSystem.js)**, add `defines: { USE_UV: '' }` to the `MeshLambertMaterial` constructor. The `onBeforeCompile` injection reads `vUv` but Three.js only emits the `vUv` varying when USE_UV is set (normally triggered by attaching a texture map). Without it, every far-ring meadow program failed to compile.
+
+**Acceptance (EARS):**
+
+- [x] When a scene with meadow quads boots (Field/RH/OC), `console.error` shall not log `"vUv" : undeclared identifier` (verified live on RH and OC).
+- [x] When the meadow material renders, the procedural noise tint shall be visible (variance across the far-ring carpet, not flat midColor) — verified visually in RH and OC validation screenshots.
+
 ## Dependencies
 
 ```
@@ -181,9 +206,11 @@ Phase 2 (independent)
 Phase 4 ──► Phase 5
 Phase 6 (independent)
 Phase 7 (paired, last)
+Phase 8 (mid-cycle, independent)
+Phase 9 (mid-cycle, independent)
 ```
 
-Phases 1, 2, 4, 6 can run in parallel. Phase 3 needs Phase 1's telemetry-route fix to actually reach the worker. Phase 5 needs Phase 4's `scene`-required API to consume.
+Phases 1, 2, 4, 6, 8, 9 can run in parallel. Phase 3 needs Phase 1's telemetry-route fix to actually reach the worker. Phase 5 needs Phase 4's `scene`-required API to consume.
 
 ## Frozen files (cycle-specific additions)
 
