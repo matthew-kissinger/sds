@@ -21,6 +21,9 @@ interface Env {
   LOBBY_DO: DurableObjectNamespace;
   DB: D1Database;
   JWT_SECRET: string;
+  // Cycle 35 Phase 2: optional admin secret for /api/score-errors readout.
+  // When unbound, the route 404s (no admin surface exposed).
+  SCORE_ADMIN_SECRET?: string;
 }
 
 const ALLOWED_ORIGINS = new Set([
@@ -413,6 +416,22 @@ export default {
           sheepCount: Number.isFinite(sheepCount) && (sheepCount as number) > 0 ? sheepCount : undefined,
         });
         return json({ leaderboards }, 200, cors);
+      }
+
+      // Cycle 35 Phase 2: admin read of recent score_errors. Gated on
+      // SCORE_ADMIN_SECRET so external callers see 404 (not 403) when
+      // the secret isn't bound. Same shape as a CLI session, just over
+      // HTTP for quick checks without dropping into wrangler d1.
+      if (path === '/api/score-errors' && method === 'GET') {
+        if (!env.SCORE_ADMIN_SECRET) return err('not found', 404, cors);
+        const auth = request.headers.get('authorization') || '';
+        const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+        if (token !== env.SCORE_ADMIN_SECRET) return err('not found', 404, cors);
+        const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit')) || 50));
+        const { results } = await env.DB.prepare(
+          'SELECT id, persistent_id, claimed_mode, claimed_score, claimed_sheep_count, claimed_scene_id, reason, submitted_at FROM score_errors ORDER BY submitted_at DESC LIMIT ?'
+        ).bind(limit).all();
+        return json({ errors: results || [] }, 200, cors);
       }
 
       // Cycle 11 Phase 5: lightweight client telemetry. Anonymous events

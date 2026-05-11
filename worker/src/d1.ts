@@ -349,7 +349,50 @@ export function detectScoreAnomalies(input: {
   return anomalies;
 }
 
+/**
+ * Cycle 35 Phase 2: public submitScore wrapper. Any throw from the inner
+ * implementation (validation reject, D1 batch failure, "player not found")
+ * lands one row in `score_errors` before re-throwing so the route handler
+ * still returns 4xx/5xx as today. The table is observability, not flow
+ * control — see hard stop #2 in cycle-35-plan.md.
+ */
 export async function submitScore(
+  db: D1Database,
+  persistentId: string,
+  gameMode: GameMode,
+  score: number,
+  additionalData: Record<string, unknown> = {},
+): Promise<SubmitScoreResult> {
+  try {
+    return await submitScoreInner(db, persistentId, gameMode, score, additionalData);
+  } catch (err: any) {
+    // Best-effort observability: capture context, then re-throw the
+    // original error so the route handler still returns 4xx/5xx.
+    try {
+      const claimedSheepCount = Number.isInteger(additionalData.sheepCount as number)
+        ? (additionalData.sheepCount as number)
+        : null;
+      const claimedSceneId = typeof additionalData.sceneId === 'string'
+        ? (additionalData.sceneId as string)
+        : null;
+      const reason = (err?.message || String(err) || 'unknown').slice(0, 500);
+      await db.prepare(
+        'INSERT INTO score_errors (persistent_id, claimed_mode, claimed_score, claimed_sheep_count, claimed_scene_id, reason, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      ).bind(
+        persistentId, gameMode, Number.isFinite(score) ? score : null,
+        claimedSheepCount, claimedSceneId, reason, Date.now(),
+      ).run();
+    } catch (logErr: any) {
+      // Don't double-throw if the score_errors insert itself fails (D1
+      // unavailable, table missing pre-migration). Log and let the
+      // original error propagate.
+      console.error('[score_errors] insert failed:', logErr?.message);
+    }
+    throw err;
+  }
+}
+
+async function submitScoreInner(
   db: D1Database,
   persistentId: string,
   gameMode: GameMode,
