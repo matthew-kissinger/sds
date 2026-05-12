@@ -421,3 +421,61 @@ When a scene declares `allowedModes`, the worker is the source of truth for enfo
 ### Future-proofing
 
 The check short-circuits when `scene.allowedModes` is absent, so adding new scenes that opt out of the constraint is zero-cost. If a future cycle wants per-mode-class restrictions (e.g. `solo.allowedModes` separate from `mp.allowedModes`), the existing field can split without breaking pre-split scene defs.
+
+---
+
+## Post-Cycle-35 ops hardening (2026-05-12 · between-cycles)
+
+Between-cycles hygiene pass on the Cloudflare zone, Web Analytics duplication, and one static-page SEO asymmetry. Triggered by a GSC audit that surfaced "Crawled - currently not indexed" on 5 content URLs.
+
+### Zone settings raised to standard
+
+- `min_tls_version`: 1.0 → 1.2. The 2026-04-24 Pages setup left it at the CF default of 1.0; 1.2 is the modern security floor.
+- `always_use_https`: off → on. The HTTP→HTTPS redirect was previously Pages-level only; the zone-wide setting closes the http:// surface area completely.
+
+Both via `PATCH /zones/{zone}/settings/...` with a scoped API token (`Zone Settings:Edit`). Live change. Verified: `curl -sI http://sheepdogsim.com/` returns 301 to https://.
+
+### Web Analytics dedup
+
+Two RUM `site_info` entries were active on the account, splitting metrics across two beacon tokens:
+
+- **Kept:** explicit Pages-injected entry from 2026-04-26, token `b5895c76...`, host filter `(sds-frontend.pages.dev|sheepdogsim.com)$`. This is the one referenced in [dist/index.html:410](dist/index.html) (auto-included by the Pages build).
+- **Deleted:** stale auto-install ruleset from 2025-07-06, token `20b970e6...`. Leftover from the pre-Pages stack; the auto-install ruleset was zone-level so the beacon was firing on every response regardless of build content.
+
+The `rum/site_info` API doesn't accept scoped tokens reliably (returns 10000 even with `Web Analytics:Edit` scope after multiple re-mint attempts). Deletion was done via the dashboard cookie session through Claude in Chrome, calling `DELETE /api/v4/accounts/{acct}/rum/site_info/{site_tag}` with the site_tag identified programmatically (auto_install:true).
+
+### Rule
+
+For Web Analytics / RUM lifecycle operations, the dashboard cookie session is the supported path; scoped API tokens are unreliable for the `rum/*` endpoints. Treat this as dashboard-only.
+
+### Crawler Hints + IndexNow
+
+Toggled ON in dashboard → Caching → Configuration. Auto-pings IndexNow on every content change. Bing/Yandex/Naver get crawl-time discovery without manual submission. Free.
+
+The CF API does not expose these as zone settings (`/settings/crawler_hints` and `/settings/index_now` both return "Undefined zone setting"; `/cache/crawler_hints` returns "No route for that URI"). Dashboard-only as of 2026-05.
+
+### about.html parity (not a CF change, but landed in the same pass)
+
+GSC reported 5 content pages "Crawled - currently not indexed": `/about`, `/scenes/home-field`, `/scenes/open-country`, `/devlog/cycle-29-gamestate-decomp`, `/devlog/cycle-30-heightfield-unify`. Root cause is site age + low authority on a 3-week-old domain (CF cutover 2026-04-24), not config — Google has crawled the pages and chosen not to index. Manual "Request Indexing" loops in GSC were rejected as patches.
+
+But `/about` had a real asymmetry vs the sibling pages in [public/scenes/](public/scenes/) and [public/devlog/](public/devlog/): no `<meta name="robots">`, no `og:image`, no Twitter card, no JSON-LD, no internal cross-links to other site pages. The other 4 stuck pages had all of these — only `/about` was structurally thin. Brought to parity:
+
+- `<meta name="robots" content="index, follow">` (default is index/follow anyway, but the asymmetry was a real signal worth removing)
+- og:image (reusing existing og-field.webp), og:image:width, og:image:height
+- Twitter card meta (card, title, description, image)
+- JSON-LD: `AboutPage` with `mainEntity: Person` (Matthew Kissinger), `sameAs` GitHub
+- Internal cross-links footer: three /scenes/* + /devlog/
+
+### Rule
+
+Static pages under public/* and at-root (about.html, etc.) must match the meta/JSON-LD/cross-link pattern of [public/scenes/home-field.html](public/scenes/home-field.html). Treat that file as the template.
+
+### Cycle 35 D1 telemetry carryover, closed
+
+The Cycle 35 post-deploy verification ("confirm the first real `game_completed` lands in the events table after the telemetry route fix") was verified via remote D1 query:
+
+- `mode_selected` event landed 2026-05-11 23:34:45 (after the 18:53 deploy), proving the `js/telemetry.js` POST to `https://sds-worker.matt-m-kissinger.workers.dev/api/event` flows through to the D1 `events` table.
+- `score_errors` table: 0 entries. No submission failures since the table was added in Cycle 35 Phase 2.
+- No `game_completed` events yet, but that's traffic, not a route bug. GSC reports 3 web search clicks in the same period.
+
+The Cycle 35 carryover is closed.

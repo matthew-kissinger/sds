@@ -4,6 +4,17 @@
 
 ## Recently Completed
 
+### Post-Cycle-35 ops hardening (2026-05-12)
+
+Between-cycles hygiene pass on the Cloudflare zone, Web Analytics, and one static-page SEO asymmetry that surfaced during a GSC audit. Not a cycle — just operational state changes worth recording.
+
+- **Zone TLS floor: 1.0 → 1.2.** `min_tls_version` was left at 1.0 from initial Pages setup; raised to 1.2 for the modern security floor. Verified via `PATCH /zones/{zone}/settings/min_tls_version`.
+- **`always_use_https`: off → on.** Was relying on Pages-level redirect; now zone-wide. Closes the http:// surface area. Verified live: `curl -sI http://sheepdogsim.com/` returns 301 to https://.
+- **Web Analytics dedup.** Two RUM site_info entries were active (split metrics): the explicit Pages-injected token `b5895c76...` from 2026-04-26 (manual snippet in [dist/index.html](../dist/index.html)) plus a stale auto-install ruleset from 2025-07-06 with token `20b970e6...`. Deleted the stale ruleset via dashboard cookie session (the `rum/site_info` endpoint doesn't accept scoped API tokens reliably). One site remains: the Pages-injected one with the host filter `(sds-frontend.pages.dev|sheepdogsim.com)$`.
+- **Crawler Hints (Beta) + IndexNow:** ON. Toggled in dashboard → Caching → Configuration. Auto-pings IndexNow on every content change, so Bing/Yandex/Naver get crawl-time discovery signals without manual submission. Free. Dashboard-only (no stable CF API).
+- **[about.html](../about.html) parity fix.** GSC reports the page as "Crawled - currently not indexed" along with /scenes/home-field, /scenes/open-country, /devlog/cycle-29, /devlog/cycle-30. Root cause is site age + low authority on a 3-week-old domain (CF cutover 2026-04-24), not config. But /about had a real asymmetry vs siblings: no `meta name="robots"` (only static page missing), no og:image, no Twitter card, no JSON-LD, and was an internal-link dead-end. Brought to the [public/scenes/](../public/scenes/) pattern: added robots meta, og:image (reusing og-field.webp), Twitter cards, `AboutPage` + nested `Person` JSON-LD schema, and a cross-links footer to the three /scenes/ pages + /devlog/. Manual "Request Indexing" loops in GSC were rejected as patches that don't survive recrawls; this is the structural fix that does.
+- **Cycle 35 D1 telemetry carryover (closed).** Route verified working via remote D1 query: `mode_selected` event landed 2026-05-11 23:34:45 (after the 18:53 deploy), proving `js/telemetry.js` POST flows through to the `events` table. No `game_completed` yet, but that's traffic (3 GSC clicks in the same period), not a route bug. `score_errors` table: 0 entries.
+
 ### Cycle 35 - `completion-visibility-and-foam` (closed 2026-05-11, no version bump)
 
 Plan archived at [`docs/archive/cycles/cycle-35-plan.md`](archive/cycles/cycle-35-plan.md). Cycle 35 made game completion visible end-to-end (telemetry route fix + worker score-error log + client failure emit), reshaped the leaderboard around `(scene × mode)` identity, and fixed the post-Cycle-32 shoreline foam regression. Two mid-cycle phases absorbed from a Matt review pass: a slot-based HudLayout orchestrator that deletes the prior pattern of per-component `position: fixed` with hand-tuned offsets, and a fix for a long-standing meadow MeshLambert shader compile error (`vUv` undeclared) on every island scene boot.

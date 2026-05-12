@@ -6,13 +6,48 @@
     <title>About - Sheep Dog Sim</title>
     <meta name="description" content="Sheep Dog Sim is a browser-based herding simulation by Matthew Kissinger, a solo developer from Virginia exploring simulations and emergent behavior.">
     <meta name="author" content="Matthew Kissinger">
+    <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://sheepdogsim.com/about">
 
     <!-- Open Graph -->
+    <meta property="og:type" content="website">
     <meta property="og:title" content="About Sheep Dog Sim">
     <meta property="og:description" content="A herding simulation by Matthew Kissinger, solo developer from Virginia.">
     <meta property="og:url" content="https://sheepdogsim.com/about">
-    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/marketing/og/og-field.webp">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="About Sheep Dog Sim">
+    <meta name="twitter:description" content="A herding simulation by Matthew Kissinger, solo developer from Virginia.">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/marketing/og/og-field.webp">
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        "url": "https://sheepdogsim.com/about",
+        "name": "About Sheep Dog Sim",
+        "description": "About page for Sheep Dog Sim, a browser-based herding simulation by Matthew Kissinger.",
+        "isPartOf": {
+            "@type": "WebSite",
+            "name": "Sheep Dog Sim",
+            "url": "https://sheepdogsim.com/"
+        },
+        "mainEntity": {
+            "@type": "Person",
+            "name": "Matthew Kissinger",
+            "jobTitle": "Independent game developer",
+            "url": "https://sheepdogsim.com/about",
+            "sameAs": [
+                "https://github.com/matthew-kissinger"
+            ]
+        }
+    }
+    </script>
 
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -106,6 +141,15 @@
             color: #9ca3af;
             margin-top: 2rem;
         }
+
+        .other-pages {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #2d4a2d;
+            font-size: 0.95rem;
+            color: #9ca3af;
+        }
+        .other-pages a { margin: 0 0.5rem; }
     </style>
 </head>
 <body>
@@ -165,6 +209,15 @@
         <p class="tech">
             Free and open source. MIT License.
         </p>
+
+        <div class="other-pages">
+            Biomes:
+            <a href="/scenes/home-field">Home Field</a> ·
+            <a href="/scenes/rolling-hills">Rolling Hills</a> ·
+            <a href="/scenes/open-country">Open Country</a>
+            <br>
+            <a href="/devlog/">Devlog</a>
+        </div>
     </div>
 </body>
 </html>

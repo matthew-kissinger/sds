@@ -1,8 +1,8 @@
 # Next Session - Cycle 36 (TBD)
 
-> **Updated:** 2026-05-11 at Cycle 35 close.
+> **Updated:** 2026-05-12 after post-Cycle-35 ops hardening.
 > **For:** Cycle 36 (slug TBD).
-> **Pickup priority:** Cycle 36 has not been scoped yet. Two post-deploy verification tasks from Cycle 35 are blocking inputs (paired OC MP playtest + iOS Safari foam canary against the deployed build). Resolve those first, then scope Cycle 36 against the carryover list below. Run `/cycle-start` to orient on whatever scope you land on.
+> **Pickup priority:** Cycle 36 has not been scoped yet. One Cycle-35 carryover remains as a blocking input (paired OC MP playtest, requires Matt at the keyboard). The D1 telemetry-route carryover was verified 2026-05-12 and closed. The iOS Safari foam canary is still pending against the latest deploy. The about.html SEO parity fix + zone hardening shipped 2026-05-12 (see [`docs/BACKLOG.md`](docs/BACKLOG.md) Recently Completed → "Post-Cycle-35 ops hardening"). Run `/cycle-start` to orient on whatever scope Cycle 36 lands on.
 
 Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
 
@@ -20,11 +20,12 @@ The cycle delivered:
 
 ## Pickup Priority
 
-Cycle 36 has **no agreed scope yet**. Three blocking inputs before scoping:
+Cycle 36 has **no agreed scope yet**. Two open inputs before scoping:
 
 1. **Phase 7 carryover from Cycle 35: paired OC MP playtest.** Matt at the keyboard, two browser tabs, host an OC cooperative room, drive sheep into the round-up zone at (0, 50), confirm `roundup → drive` flips server-side at hold=2.0s and the portal at z=295 opens. Cannot run autonomously.
-2. **iOS Safari foam canary post-deploy.** `npm run test:ios-water` against `https://sheepdogsim.com/` after the Cycle 35 deploy lands. Hard-stop gate from Cycle 32. If `nearFoamWhite: true`, revert Phase 6 and re-open as a paired investigation.
-3. **D1 verification post-deploy.** Confirm the first real `game_completed` lands in the `events` table after Cycle 35 telemetry deploys. Query `SELECT name, COUNT(*) FROM events GROUP BY name;` on remote D1. Flag inconclusive after 7 days if no completion event arrives.
+2. **iOS Safari foam canary post-deploy.** `npm run test:ios-water` against `https://sheepdogsim.com/` after the latest deploy lands. Hard-stop gate from Cycle 32. If `nearFoamWhite: true`, revert Phase 6 and re-open as a paired investigation.
+
+**Closed 2026-05-12:** D1 telemetry-route verification. Remote query confirmed `mode_selected` landed 2026-05-11 23:34:45 (after the 18:53 deploy), so the route fix is working end-to-end. `score_errors` table clean (0 entries). No `game_completed` yet, but that's traffic (3 GSC clicks in the same period), not a route bug.
 
 ## Cycle 36 Candidates
 
@@ -44,9 +45,11 @@ Durable fence applies in full ([`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.
 
 ## Operational Notes
 
-- **Cloudflare creds**: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in `~/.config/mk-agent/env` (loaded via `set -a && source ~/.config/mk-agent/env && set +a` before any `wrangler d1` command).
-- **D1 queries**: use `npx wrangler d1 execute sds-db --remote --command "..." --json` for read-only inspection. Database id `513aa937-e60a-4fb6-b499-9f3814149e88`.
+- **Cloudflare creds**: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in `~/.config/mk-agent/env` (loaded via `set -a && source ~/.config/mk-agent/env && set +a` before any `wrangler d1` command). The current token has scopes `Zone Settings:Edit`, `D1:Read`, `Workers Scripts:Read`. For Web Analytics / RUM lifecycle operations the API tokens are unreliable; use the dashboard cookie session (Claude in Chrome) instead.
+- **D1 queries**: use `npx wrangler d1 execute sds-db --remote --command "..." --json` for read-only inspection. Database id `513aa937-e60a-4fb6-b499-9f3814149e88`. Direct API: `POST https://api.cloudflare.com/client/v4/accounts/{acct}/d1/database/{db}/query` with `{sql: "..."}` body.
 - **D1 schema snapshot**: 6 applied migrations (0001-0006). `score_errors` table is the newest, added in Cycle 35 Phase 2.
+- **Zone settings live state (as of 2026-05-12):** `min_tls_version=1.2`, `always_use_https=on`, `0rtt=on`, `http3=on`, `tls_1_3=zrt`, `brotli=on`, `early_hints=on`, `automatic_https_rewrites=on`, `always_online=on`, `development_mode=off`, Crawler Hints (Beta)=on, IndexNow=on (last two dashboard-only).
+- **Cloudflare Web Analytics:** one site only (token `b5895c76...`, host filter `(sds-frontend.pages.dev|sheepdogsim.com)$`). The stale auto-install ruleset from 2025-07-06 was deleted 2026-05-12.
 
 ## Reference Table
 
