@@ -41,6 +41,8 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`adding-a-biome.md`](adding-a-biome.md) | How-to | Extending the scene registry with a new biome. |
 | [`tree-pipeline.md`](tree-pipeline.md) | How-to | Re-baking tree GLBs and impostor atlases. |
 | [`cross-platform-testing.md`](cross-platform-testing.md) | How-to | Running the macOS/Safari smoke suite, debugging hardware-specific bugs. |
+| [`content-campaign-2026-05.md`](content-campaign-2026-05.md) | How-to / Reference | May 2026 content pack, capture pipeline, publish caveats, and media validation gates. |
+| [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md) | How-to / Reference | Browser recording research, cloned OSS examples, Remotion assessment, and chosen capture architecture. |
 | [`multiplayer-ux.md`](multiplayer-ux.md) | How-to / Reference | Multiplayer UX flow + lobby state diagrams. |
 | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | Reference | Module map + render pipeline + network protocol. The "where does X live" doc. |
 | [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) | Reference | Which files are frozen + how authorization works. |
@@ -59,7 +61,7 @@ After Cycle 28 Stream A3's consolidation, the only files at `docs/` root are:
 - The **active cycle plan** (`cycle-N-plan.md`).
 - The **append-only [`BACKLOG.md`](BACKLOG.md)** — closed-cycle log + deferred items.
 - The **fence + template + contract triad**: [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md), [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md).
-- A small set of **stable how-tos**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`multiplayer-ux.md`](multiplayer-ux.md).
+- A small set of **stable how-tos**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md).
 - This index ([`README.md`](README.md)).
 
 Everything else lives under [`archive/`](archive/):

@@ -82,6 +82,6 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['three']
+    include: ['three', 'mediabunny']
   }
 })

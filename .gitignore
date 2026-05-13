@@ -77,8 +77,12 @@ Thumbs.db
 *.temp 
 # Claude Code: shared agent infrastructure (commands, hooks, rules, skills, settings.json) commits with the repo. Only personal/local state stays out.
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 .claude/worktrees/
 .claude/projects/
+
+# Codex local state
+.codex/
 
 # Playwright MCP artifacts
 .playwright-mcp/
@@ -96,6 +100,8 @@ tools/cinematic/output/
 tools/playtest/
 # Marketing video output (too large for git; ship via CDN if needed)
 assets/marketing/videos/
+assets/marketing/content/*/generated/
+examples/capture-spike/repos/
 
 # Build output
 dist/

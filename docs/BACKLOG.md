@@ -4,6 +4,10 @@
 
 ## Recently Completed
 
+### Post-Cycle-35 leaderboard solo-tab correction (2026-05-13)
+
+- **Scene leaderboards now show solo modes on every scene.** Cycle 35 correctly made leaderboards `(scene × mode)` partitions, but the UI kept a stale Field-only solo-tab rule. [`GlobalLeaderboard.js`](../js/components/Multiplayer/GlobalLeaderboard.js) now shows `soloClassic`, `soloExtreme`, `soloInsane`, and `soloChaos` for Home Field, Sheep Dog Island, and Open Country, while multiplayer tabs still honor each scene's `allowedModes` so Open Country does not expose unsupported competitive MP. Added [`tests/leaderboard-modes.spec.js`](../tests/leaderboard-modes.spec.js).
+
 ### Post-Cycle-35 ops hardening (2026-05-12)
 
 Between-cycles hygiene pass on the Cloudflare zone, Web Analytics, and one static-page SEO asymmetry that surfaced during a GSC audit. Not a cycle — just operational state changes worth recording.

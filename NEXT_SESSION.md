@@ -1,8 +1,8 @@
 # Next Session - Cycle 36 (TBD)
 
-> **Updated:** 2026-05-12 after post-Cycle-35 ops hardening.
+> **Updated:** 2026-05-13 after post-Cycle-35 content/leaderboard hardening.
 > **For:** Cycle 36 (slug TBD).
-> **Pickup priority:** Cycle 36 has not been scoped yet. One Cycle-35 carryover remains as a blocking input (paired OC MP playtest, requires Matt at the keyboard). The D1 telemetry-route carryover was verified 2026-05-12 and closed. The iOS Safari foam canary is still pending against the latest deploy. The about.html SEO parity fix + zone hardening shipped 2026-05-12 (see [`docs/BACKLOG.md`](docs/BACKLOG.md) Recently Completed → "Post-Cycle-35 ops hardening"). Run `/cycle-start` to orient on whatever scope Cycle 36 lands on.
+> **Pickup priority:** Cycle 36 has not been scoped yet. One Cycle-35 carryover remains as a blocking input (paired OC MP playtest, requires Matt at the keyboard). The D1 telemetry-route carryover was verified 2026-05-12 and closed. The iOS Safari foam canary is still pending against the latest deploy. Post-Cycle-35 ad-hoc work also corrected scene leaderboard solo tabs and added the May 2026 content/capture campaign docs. Run `/cycle-start` to orient on whatever scope Cycle 36 lands on.
 
 Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
 
@@ -26,6 +26,8 @@ Cycle 36 has **no agreed scope yet**. Two open inputs before scoping:
 2. **iOS Safari foam canary post-deploy.** `npm run test:ios-water` against `https://sheepdogsim.com/` after the latest deploy lands. Hard-stop gate from Cycle 32. If `nearFoamWhite: true`, revert Phase 6 and re-open as a paired investigation.
 
 **Closed 2026-05-12:** D1 telemetry-route verification. Remote query confirmed `mode_selected` landed 2026-05-11 23:34:45 (after the 18:53 deploy), so the route fix is working end-to-end. `score_errors` table clean (0 entries). No `game_completed` yet, but that's traffic (3 GSC clicks in the same period), not a route bug.
+
+**Closed 2026-05-13:** leaderboard solo-tab correction and content-campaign alignment. `GlobalLeaderboard` now shows solo modes for every concrete scene while multiplayer tabs still follow `scene.allowedModes`. The May 2026 Discord/devlog/capture docs live at [`docs/content-campaign-2026-05.md`](docs/content-campaign-2026-05.md), [`docs/capture-pipeline-spike-2026-05.md`](docs/capture-pipeline-spike-2026-05.md), and [`assets/marketing/content/2026-05-update/discord-threejs-update.md`](assets/marketing/content/2026-05-update/discord-threejs-update.md). Current Discord attachment image: [`assets/marketing/og/og-rh-sunset.webp`](assets/marketing/og/og-rh-sunset.webp). Generated MP4s are review-only; next capture pass should wait for the optimization/EZ-Tree/tree-spacing prep in [`docs/tree-pipeline.md`](docs/tree-pipeline.md).
 
 ## Cycle 36 Candidates
 

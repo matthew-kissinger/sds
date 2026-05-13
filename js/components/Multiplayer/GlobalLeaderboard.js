@@ -2,10 +2,10 @@
  * GlobalLeaderboard - scene-first global rankings.
  *
  * Cycle 35 Phase 5 restructure: scene picker comes first, then the mode
- * tabs filter by the selected scene's allowedModes (plus solo modes on
- * Field, which is the historical solo home). The cross-scene "any" view
- * is gone — Field's 56-second soloClassic record and Sheep Dog Island's
- * 600-second run are different games with different time distributions.
+ * tabs show solo modes for every scene plus the selected scene's allowed
+ * multiplayer modes. The cross-scene "any" view is gone — Field's
+ * 56-second soloClassic record and Sheep Dog Island's 600-second run are
+ * different games with different time distributions.
  *
  * Scene selection persists in localStorage ('sds:leaderboardLastScene'),
  * defaulting to the URL ?scene= param or 'field'. Unknown stored scenes
@@ -25,10 +25,10 @@ const SCENE_ORDER = ['field', 'rolling-hills', 'open-country'];
 const LAST_SCENE_KEY = 'sds:leaderboardLastScene';
 const FALLBACK_SCENE = 'field';
 
-// Solo modes are Field's historical home. The islands declare MP-only
-// `allowedModes`; surfacing solo tabs there would be misleading (no rows
-// will ever land in those partitions).
-const FIELD_SOLO_MODES = ['soloClassic', 'soloExtreme', 'soloInsane', 'soloChaos'];
+// Solo completions submit the active sceneId, so every scene has its own
+// solo partitions. Multiplayer tabs still come from scene.allowedModes so
+// Open Country does not expose competitive unless the scene supports it.
+const SOLO_LEADERBOARD_MODES = ['soloClassic', 'soloExtreme', 'soloInsane', 'soloChaos'];
 
 // Sheep-count filter is meaningful only on cooperative + competitive (the
 // MP modes that vary by sheep count). Solo + timed have a fixed count per
@@ -44,12 +44,11 @@ const SHEEP_FILTER_OPTIONS = [
 ];
 const FIXED_COUNT_TABS = new Set(['soloClassic', 'soloExtreme', 'soloInsane', 'soloChaos', 'timed']);
 
-function leaderboardModesForScene(sceneId) {
+export function leaderboardModesForScene(sceneId) {
     const scene = getSceneById(sceneId);
     if (!scene) return [];
-    const solo = sceneId === 'field' ? FIELD_SOLO_MODES : [];
     const mp = Array.isArray(scene.allowedModes) ? scene.allowedModes : [];
-    return [...solo, ...mp];
+    return [...SOLO_LEADERBOARD_MODES, ...mp];
 }
 
 function initialSceneId() {
@@ -328,8 +327,9 @@ export function GlobalLeaderboard({ onBack, playerIdentity }) {
             ]),
 
             // Cycle 35 Phase 5: scene picker is the primary control, above
-            // the mode tabs. Mode tabs filter by getSceneById(sceneId).allowedModes
-            // (plus Field's solo modes); the cross-scene 'any' view is gone.
+            // the mode tabs. Mode tabs show solo modes for every selected
+            // scene, then filter MP modes by getSceneById(sceneId).allowedModes.
+            // The cross-scene 'any' view is gone.
             createElement('div', {
                 key: 'scene-picker',
                 style: {

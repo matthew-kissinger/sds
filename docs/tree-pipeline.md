@@ -60,6 +60,16 @@ After re-baking:
 npm test -- tests/tree-assets.spec.js      # verify all 3 GLBs exist + non-empty + < 3 MB total
 ```
 
+## Marketing recapture prep
+
+Before the next screenshot/video capture pass, update tree assets as an intentional visual change rather than treating capture framing as the only problem:
+
+1. Check the current `@dgreenheck/ez-tree` release and adopt the latest acceptable update.
+2. Re-bake GLBs through the normal cache-invalidation flow above.
+3. Re-run impostor baking if the GLB silhouette, canopy density, trunk profile, or material output changes.
+4. Review Sheep Dog Island and Open Country from the main gameplay/capture cameras and verify trees do not read as too close together. No pair should visually merge into a single blob, hide the dog/sheep action, or block the hero camera path.
+5. If spacing changes are needed, make them in the deterministic placement path and verify with `npm test -- tests/tree-placement.spec.js` plus a browser screenshot review.
+
 ## Loader contract
 
 `js/GameAssetLoader.js` splits the three trees by load priority:
