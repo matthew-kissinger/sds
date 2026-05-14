@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T20:57:57.068Z",
+  "capturedAt": "2026-05-14T21:07:03.000Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -77,7 +77,8 @@
     "renderer": "webgpu",
     "islands": [
       "sun-billboard",
-      "portal-ring"
+      "portal-ring",
+      "meadow-quad"
     ],
     "frames": 2
   }

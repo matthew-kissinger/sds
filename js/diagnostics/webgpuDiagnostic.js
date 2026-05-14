@@ -50,13 +50,34 @@ function createPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending,
     return material;
 }
 
+function createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }) {
+    const { dot, floor, fract, mix, sin, smoothstep, uv, vec2, vec3 } = TSL;
+    const baseColor = vec3(0.176, 0.345, 0.118);
+    const midColor = vec3(0.318, 0.565, 0.188);
+    const tipColor = vec3(0.643, 0.792, 0.337);
+    const muv = uv().mul(5.0);
+    const hashVector = vec2(127.1, 311.7);
+    const n1 = fract(sin(dot(floor(muv), hashVector)).mul(43758.5453));
+    const n2 = fract(sin(dot(floor(muv.mul(2.0)), hashVector)).mul(43758.5453));
+    const blend = mix(n1, n2, 0.5);
+
+    const material = new MeshLambertNodeMaterial();
+    material.colorNode = mix(
+        mix(baseColor, midColor, blend),
+        tipColor,
+        smoothstep(0.6, 0.95, blend)
+    );
+    material.side = DoubleSide;
+    return material;
+}
+
 export async function bootWebGpuDiagnostic() {
     const state = window.__sdsWebGpuDiagnostic = {
         ...(window.__sdsWebGpuDiagnostic || {}),
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad'],
         frames: 0,
     };
 
@@ -98,7 +119,10 @@ export async function bootWebGpuDiagnostic() {
         RingGeometry,
         Mesh,
         MeshBasicNodeMaterial,
+        MeshLambertNodeMaterial,
         Color,
+        AmbientLight,
+        DirectionalLight,
         AdditiveBlending,
         DoubleSide,
         TSL,
@@ -113,6 +137,10 @@ export async function bootWebGpuDiagnostic() {
 
     const scene = new Scene();
     scene.background = new Color(0x10202a);
+    scene.add(new AmbientLight(0xffffff, 0.65));
+    const keyLight = new DirectionalLight(0xffffff, 1.2);
+    keyLight.position.set(1.5, 2.2, 3.0);
+    scene.add(keyLight);
 
     const camera = new PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0.2, 3);
@@ -137,6 +165,13 @@ export async function bootWebGpuDiagnostic() {
     );
     portal.position.set(-0.85, -0.75, 0.12);
     scene.add(portal);
+
+    const meadow = new Mesh(
+        new PlaneGeometry(1.45, 0.8, 1, 1),
+        createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL })
+    );
+    meadow.position.set(0.85, -0.75, 0.1);
+    scene.add(meadow);
 
     const resize = () => {
         const w = Math.max(1, window.innerWidth);
@@ -169,6 +204,8 @@ export async function bootWebGpuDiagnostic() {
         material.dispose();
         portal.geometry.dispose();
         portal.material.dispose();
+        meadow.geometry.dispose();
+        meadow.material.dispose();
         renderer.dispose();
         sun.geometry.dispose();
         sun.material.dispose();

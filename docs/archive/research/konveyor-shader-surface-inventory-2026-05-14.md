@@ -10,11 +10,11 @@ The current WebGL renderer path depends on ten active custom shader surfaces
 plus three patch chains that mutate Three's generated GLSL through
 `onBeforeCompile`.
 
-The safest first production-adjacent island is `SunBillboard`: it is small,
+The safest first production-adjacent island was `SunBillboard`: it is small,
 cosmetic, has no scene data dependency, and maps cleanly to a
-`MeshBasicNodeMaterial`/TSL expression. The sun billboard and portal ring
-formulas are now ported inside the diagnostic island only. Do not start
-production wiring with terrain, grass, water, sheep, or Kiln impostors.
+`MeshBasicNodeMaterial`/TSL expression. The sun billboard, portal ring, and
+meadow-quad formulas are now ported inside the diagnostic island only. Do not
+start production wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -36,8 +36,8 @@ production wiring with terrain, grass, water, sheep, or Kiln impostors.
 | Patch | File | Mutated material | Why it matters | WebGPU migration note |
 |---|---|---|---|---|
 | Tree wind plus occluder fade | `js/world/shaderPatches.js`, `js/shaders/OccluderFadePatch.js` | Tree GLB leaf `MeshStandardMaterial` instances. | Adds wind sway, alpha hash, and camera-to-dog dither fade. | Replace with NodeMaterial/TSL leaf material or a GLB material normalization pass. Cannot carry `onBeforeCompile` into WebGPU. |
-| Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Good later TSL island after sun/portal, because it is small but depends on GLB material ownership. |
-| Meadow quad tint | `js/GrassSystem.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Candidate before full blade grass; still needs fog and far-ring screenshots. |
+| Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Good later TSL island after sun/portal/meadow, because it is small but depends on GLB material ownership. |
+| Meadow quad tint | `js/GrassSystem.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists in the diagnostic TSL harness as `MeshLambertNodeMaterial`. Production wiring still needs fog and far-ring screenshots. |
 
 ## Dormant Or Supporting Surfaces
 
@@ -52,10 +52,10 @@ production wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Recommended Migration Order
 
-1. Prototype meadow-quad TSL as the first real production grass-adjacent
-   material. It is far cheaper than blade grass and exercises fog/scene color.
-2. Move to cloud layer and sky together only after fog/horizon color ownership
+1. Move to cloud layer and sky together only after fog/horizon color ownership
    is explicit.
+2. Prototype rock rim or tree-leaf wind only after GLB material ownership is
+   explicit; both depend on current `onBeforeCompile` patch chains.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the
    smaller islands have proved material ownership, bundle posture, and visual
    gates.
