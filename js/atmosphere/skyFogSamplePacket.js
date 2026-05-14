@@ -9,6 +9,10 @@ function colorArray(color) {
   return color.toArray().map((value) => Number(value.toFixed(4)));
 }
 
+function vectorArray(vector) {
+  return vector.toArray().map((value) => Number(value.toFixed(4)));
+}
+
 export function sampleSkyFogPacketFromSky({
   sky,
   presetName = DEFAULT_SKY_FOG_SAMPLE_PRESET,
@@ -25,6 +29,7 @@ export function sampleSkyFogPacketFromSky({
   const horizon = sky.getHorizon(new THREE.Color());
   const zenith = sky.getZenith(new THREE.Color());
   const sun = sky.getSun(new THREE.Color());
+  const sunDirection = vectorArray(sky.getSunDirection());
   const horizonColor = colorArray(horizon);
   const zenithColor = colorArray(zenith);
   const sunColor = colorArray(sun);
@@ -36,6 +41,7 @@ export function sampleSkyFogPacketFromSky({
     horizonColor,
     zenithColor,
     sunColor,
+    sunDirection,
     fogDarkenMultiplier,
     fogColor,
     fogNear,

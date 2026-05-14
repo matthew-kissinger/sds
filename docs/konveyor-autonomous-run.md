@@ -71,7 +71,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   records the default production-preview URL with `diagnostic: null`.
 - [`archive/research/konveyor-shader-surface-inventory-2026-05-14.md`](archive/research/konveyor-shader-surface-inventory-2026-05-14.md)
   ranks the current GLSL and `onBeforeCompile` migration surface. The sun
-  billboard, portal ring, meadow-quad, cloud-plane, and sky/fog formulas are
+  billboard, portal ring, meadow-quad, cloud-plane, sky/fog, and anime-water formulas are
   now ported inside the diagnostic island. The rock-rim fresnel formula is
   also ported as the first `onBeforeCompile` replacement island, and a
   diagnostic tree-leaf island now covers wind displacement, alpha-hash posture,
@@ -144,7 +144,9 @@ Recommended order:
 
 1. **Pick the next smallest production-adjacent material island.** The sky/fog
    diagnostic prototype now preserves a renderless CPU-accessible
-   horizon/sun/fog packet,
+   horizon/sun/fog packet, and the anime-water diagnostic island now covers
+   the production palette, shoreline bands, foam, ripples, sun glint, and
+   fog-color inputs while deferring heightfield texture sampling.
    the rock-rim TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof

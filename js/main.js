@@ -24,7 +24,6 @@ import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.
 import { Heightfield } from '../shared/terrain/Heightfield.js';
 import { Atmosphere } from './atmosphere/index.js';
 import { SunBillboard } from './effects/SunBillboard.js';
-import { screenshotCapture } from './utils/ScreenshotCapture.js';
 import { updateSceneMetadata } from './utils/seo.js';
 // Cycle 17 Phase 7: local-multiplayer modules dynamic-imported in
 // startLocalGame() so they only ship when the user actually picks Local Mode.
@@ -2139,6 +2138,9 @@ window.addEventListener('DOMContentLoaded', () => {
             .catch((err) => window.__sdsG.error = err?.message || err);
         return;
     }
+
+    import('./utils/ScreenshotCapture.js')
+        .catch((err) => console.warn('[SCREENSHOT] helper load failed:', err?.message || err));
 
     const gameInstance = new SheepDogSimulation();
 

@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T23:41:35.167Z",
+  "capturedAt": "2026-05-14T23:56:14.955Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -84,6 +84,7 @@
       "sky-fog",
       "rock-rim",
       "tree-leaf",
+      "anime-water",
       "glb-material-replacement",
       "runtime-glb-material-proof",
       "runtime-glb-rendered-clones",
@@ -108,6 +109,11 @@
         1,
         0.3055,
         0.0242
+      ],
+      "sunDirection": [
+        -0.9418,
+        0.1392,
+        -0.306
       ],
       "fogDarkenMultiplier": 0.82,
       "fogColor": [
@@ -138,6 +144,52 @@
       "rimStrength": 0.48,
       "rimPower": 2,
       "sunColorSource": "skyFog.sunColor"
+    },
+    "animeWater": {
+      "shallowColor": [
+        0.4353,
+        0.8431,
+        0.8235
+      ],
+      "deepColor": [
+        0.0627,
+        0.2118,
+        0.3843
+      ],
+      "foamColor": [
+        0.9176,
+        0.9647,
+        1
+      ],
+      "nearShoreColor": [
+        0.4353,
+        0.8431,
+        0.8235
+      ],
+      "farWaterColor": [
+        0.0627,
+        0.2118,
+        0.3843
+      ],
+      "fogColor": [
+        0.2933,
+        0.1629,
+        0.1348
+      ],
+      "sunColor": [
+        1,
+        0.3055,
+        0.0242
+      ],
+      "sunDirection": [
+        -0.9418,
+        0.1392,
+        -0.306
+      ],
+      "foamThickness": 2.5,
+      "rippleStrength": 1,
+      "sparkleStrength": 0.7,
+      "heightfieldSampling": "deferred"
     },
     "treeLeaf": {
       "baseColor": [

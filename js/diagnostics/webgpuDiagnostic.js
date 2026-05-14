@@ -6,6 +6,49 @@ import { createSkyFogSamplePacket } from '../atmosphere/skyFogSamplePacket.js';
 import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
 import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 
+const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
+    shallow: [0x6f, 0xd7, 0xd2],
+    deep: [0x10, 0x36, 0x62],
+    foam: [0xea, 0xf6, 0xff],
+});
+
+const DIAGNOSTIC_FOAM_THICKNESS = 2.5;
+
+function clamp01(value) {
+    return Math.min(1, Math.max(0, value));
+}
+
+function computeDiagnosticShorelineMetrics({
+    x,
+    z,
+    centerX = 0,
+    centerZ = 0,
+    boundaryRadius,
+    boundaryFalloff,
+    foamThickness = DIAGNOSTIC_FOAM_THICKNESS,
+}) {
+    const falloff = Math.max(boundaryFalloff, 0.001);
+    const radialDistance = Math.hypot(x - centerX, z - centerZ);
+    const distanceFromShore = Math.abs(radialDistance - boundaryRadius);
+    const depthT = clamp01(distanceFromShore / falloff);
+    const foamMask = distanceFromShore < foamThickness ? 1 : 0;
+
+    return {
+        radialDistance,
+        distanceFromShore,
+        depthT,
+        foamMask,
+    };
+}
+
+function mixDiagnosticWaterBaseColor(depthT) {
+    const t = clamp01(depthT);
+    return DIAGNOSTIC_WATER_PALETTE_RGB.shallow.map((channel, index) => {
+        const deep = DIAGNOSTIC_WATER_PALETTE_RGB.deep[index];
+        return Math.round(channel + (deep - channel) * t);
+    });
+}
+
 async function loadWebGpuThree() {
     const webGpuModulePath = './vendor/three/three.webgpu.min.js';
     return import(/* @vite-ignore */ new URL(webGpuModulePath, import.meta.url).href);
@@ -149,6 +192,42 @@ export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticStat
     };
 }
 
+function normalizedRgb(rgb) {
+    return rgb.map((channel) => Number((channel / 255).toFixed(4)));
+}
+
+export function createAnimeWaterDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
+    const nearShoreMetrics = computeDiagnosticShorelineMetrics({
+        x: 0,
+        z: 0,
+        boundaryRadius: 0,
+        boundaryFalloff: 12,
+        foamThickness: DIAGNOSTIC_FOAM_THICKNESS,
+    });
+    const farWaterMetrics = computeDiagnosticShorelineMetrics({
+        x: 12,
+        z: 0,
+        boundaryRadius: 0,
+        boundaryFalloff: 12,
+        foamThickness: DIAGNOSTIC_FOAM_THICKNESS,
+    });
+
+    return {
+        shallowColor: normalizedRgb(DIAGNOSTIC_WATER_PALETTE_RGB.shallow),
+        deepColor: normalizedRgb(DIAGNOSTIC_WATER_PALETTE_RGB.deep),
+        foamColor: normalizedRgb(DIAGNOSTIC_WATER_PALETTE_RGB.foam),
+        nearShoreColor: normalizedRgb(mixDiagnosticWaterBaseColor(nearShoreMetrics.depthT)),
+        farWaterColor: normalizedRgb(mixDiagnosticWaterBaseColor(farWaterMetrics.depthT)),
+        fogColor: skyFog.fogColor,
+        sunColor: skyFog.sunColor,
+        sunDirection: skyFog.sunDirection,
+        foamThickness: DIAGNOSTIC_FOAM_THICKNESS,
+        rippleStrength: 1.0,
+        sparkleStrength: 0.7,
+        heightfieldSampling: 'deferred',
+    };
+}
+
 export function createTreeLeafDiagnosticState() {
     return {
         baseColor: [0.18, 0.34, 0.12],
@@ -163,6 +242,53 @@ export function createTreeLeafDiagnosticState() {
         occluderPeak: 0.62,
         occluderUv: [0.5, 0.42],
     };
+}
+
+function createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, water) {
+    const { dot, float, floor, fract, length, mix, pow, sin, smoothstep, time, uv, vec2, vec3 } = TSL;
+    const hash21 = (p) => {
+        const q = fract(p.mul(vec2(123.34, 456.21)));
+        const r = q.add(dot(q, q.add(45.32)));
+        return fract(r.x.mul(r.y));
+    };
+    const valueNoise = (p) => {
+        const i = floor(p);
+        const f = fract(p);
+        const a = hash21(i);
+        const b = hash21(i.add(vec2(1.0, 0.0)));
+        const c = hash21(i.add(vec2(0.0, 1.0)));
+        const d = hash21(i.add(vec2(1.0, 1.0)));
+        const u = f.mul(f).mul(vec2(3.0, 3.0).sub(f.mul(2.0)));
+        return mix(a, b, u.x)
+            .add(c.sub(a).mul(u.y).mul(u.x.oneMinus()))
+            .add(d.sub(b).mul(u.x).mul(u.y));
+    };
+
+    const waterUv = uv();
+    const depthT = smoothstep(0.18, 0.92, waterUv.y);
+    const rippleUv = waterUv.mul(vec2(7.5, 3.8)).add(vec2(time.mul(0.08), time.mul(0.04)));
+    const rippleA = valueNoise(rippleUv);
+    const rippleB = valueNoise(rippleUv.mul(2.35).add(vec2(time.mul(0.05), time.mul(-0.03))));
+    const ripple = smoothstep(0.56, 0.66, rippleA.mul(0.68).add(rippleB.mul(0.32)))
+        .mul(water.rippleStrength * 0.08);
+    const foamNoise = valueNoise(waterUv.mul(vec2(18.0, 3.0)).add(vec2(time.mul(0.07), 0.0)));
+    const foamBand = float(1.0).sub(smoothstep(0.10, 0.22, waterUv.y.add(foamNoise.mul(0.04))));
+    const glintDelta = waterUv.sub(vec2(0.72, 0.64));
+    const glint = pow(float(1.0).sub(smoothstep(0.0, 0.42, length(glintDelta))), 4.0)
+        .mul(water.sparkleStrength);
+    const fogBlend = smoothstep(0.56, 1.0, waterUv.y).mul(0.36);
+    const baseColor = mix(vec3(...water.shallowColor), vec3(...water.deepColor), depthT)
+        .add(vec3(ripple, ripple, ripple))
+        .add(vec3(...water.sunColor).mul(glint.mul(0.35)));
+    const colorWithFoam = mix(baseColor, vec3(...water.foamColor), foamBand);
+
+    const material = new MeshBasicNodeMaterial();
+    material.name = 'konveyor-node-anime-water';
+    material.colorNode = mix(colorWithFoam, vec3(...water.fogColor), fogBlend);
+    material.side = DoubleSide;
+    material.depthWrite = true;
+    material.depthTest = true;
+    return material;
 }
 
 function createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog) {
@@ -263,6 +389,7 @@ function createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }) {
 export async function bootWebGpuDiagnostic() {
     const skyFog = createSkyFogDiagnosticState();
     const rockRim = createRockRimDiagnosticState(skyFog);
+    const animeWater = createAnimeWaterDiagnosticState(skyFog);
     const treeLeaf = createTreeLeafDiagnosticState();
     const state = window.__sdsG = {
         ...(window.__sdsG || {}),
@@ -270,9 +397,10 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'anime-water', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
         skyFog,
         rockRim,
+        animeWater,
         treeLeaf,
         materialReplacement: null,
         runtimeGlbReplacement: null,
@@ -462,6 +590,13 @@ export async function bootWebGpuDiagnostic() {
     meadow.position.set(0.85, -0.75, 0.1);
     scene.add(meadow);
 
+    const water = new Mesh(
+        new PlaneGeometry(2.0, 0.62, 1, 1),
+        createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, animeWater)
+    );
+    water.position.set(0.0, -1.16, 0.09);
+    scene.add(water);
+
     const cloudPlane = new Mesh(
         new PlaneGeometry(2.4, 0.65, 1, 1),
         createCloudPlaneNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL })
@@ -508,6 +643,8 @@ export async function bootWebGpuDiagnostic() {
         portal.material.dispose();
         meadow.geometry.dispose();
         meadow.material.dispose();
+        water.geometry.dispose();
+        water.material.dispose();
         cloudPlane.geometry.dispose();
         cloudPlane.material.dispose();
         renderer.dispose();

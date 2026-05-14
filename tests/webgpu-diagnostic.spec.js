@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 
 import {
+  createAnimeWaterDiagnosticState,
   createRockRimDiagnosticState,
   createSkyFogDiagnosticState,
   createTreeLeafDiagnosticState,
@@ -18,6 +19,7 @@ import {
 } from '../js/diagnostics/webgpuGlbMaterialProof.js';
 import { RUNTIME_GLB_RENDER_PREVIEW_ASSETS } from '../js/diagnostics/webgpuRuntimeGlbPreview.js';
 import { createSkyFogSamplePacket } from '../js/atmosphere/skyFogSamplePacket.js';
+import { WATER_PALETTE_RGB, mixWaterBaseColor } from '../js/water/AnimeWater.js';
 import { createProductionTreePlacementPlan } from '../js/diagnostics/webgpuProductionPlacementPlan.js';
 import { createDiagnosticRockPlacementPlan } from '../js/diagnostics/webgpuRockPlacementPlan.js';
 import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
@@ -45,6 +47,7 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(state.cpuVisible).toBe(true);
     expect(state.horizonColor).toHaveLength(3);
     expect(state.sunColor).toHaveLength(3);
+    expect(state.sunDirection).toHaveLength(3);
     expect(state.fogColor).toEqual(
       state.horizonColor.map((v) => Number((v * state.fogDarkenMultiplier).toFixed(4)))
     );
@@ -82,6 +85,22 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(rockRim.sunColorSource).toBe('skyFog.sunColor');
     expect(rockRim.rimStrength).toBeGreaterThan(0);
     expect(rockRim.rimPower).toBeGreaterThan(1);
+  });
+
+  it('keeps anime water diagnostic inputs tied to production palette and atmosphere packet', () => {
+    const skyFog = createSkyFogDiagnosticState();
+    const water = createAnimeWaterDiagnosticState(skyFog);
+    const normalize = (rgb) => rgb.map((channel) => Number((channel / 255).toFixed(4)));
+
+    expect(water.shallowColor).toEqual(normalize(WATER_PALETTE_RGB.shallow));
+    expect(water.deepColor).toEqual(normalize(WATER_PALETTE_RGB.deep));
+    expect(water.foamColor).toEqual(normalize(WATER_PALETTE_RGB.foam));
+    expect(water.nearShoreColor).toEqual(normalize(mixWaterBaseColor(0)));
+    expect(water.farWaterColor).toEqual(normalize(mixWaterBaseColor(1)));
+    expect(water.fogColor).toBe(skyFog.fogColor);
+    expect(water.sunColor).toBe(skyFog.sunColor);
+    expect(water.sunDirection).toBe(skyFog.sunDirection);
+    expect(water.heightfieldSampling).toBe('deferred');
   });
 
   it('keeps the tree leaf diagnostic scoped to wind and occluder inputs', () => {
