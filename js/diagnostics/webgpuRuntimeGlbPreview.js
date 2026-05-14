@@ -1,13 +1,11 @@
-import {
-    replaceRockMaterialsByTraversal,
-    replaceTreeMaterialsByName,
-} from './webgpuMaterialReplacement.js';
+import { applyKonveyorTreeRockMaterials } from '../world/konveyorMaterialAdapter.js';
 
 const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/v1/decoders/';
 
 export const RUNTIME_GLB_RENDER_PREVIEW_ASSETS = [
     {
         key: 'tree1-lod0',
+        group: 'tree-lod0',
         role: 'tree',
         path: 'assets/models/trees/tree1.glb',
         targetHeight: 0.52,
@@ -16,6 +14,7 @@ export const RUNTIME_GLB_RENDER_PREVIEW_ASSETS = [
     },
     {
         key: 'tree2-lod0',
+        group: 'tree-lod0',
         role: 'tree',
         path: 'assets/models/trees/tree2.glb',
         targetHeight: 0.52,
@@ -24,6 +23,7 @@ export const RUNTIME_GLB_RENDER_PREVIEW_ASSETS = [
     },
     {
         key: 'tree1-lod1',
+        group: 'tree-lod1',
         role: 'tree',
         path: 'assets/models/trees/tree1_lod1.glb',
         targetHeight: 0.44,
@@ -32,6 +32,7 @@ export const RUNTIME_GLB_RENDER_PREVIEW_ASSETS = [
     },
     {
         key: 'tree2-lod1',
+        group: 'tree-lod1',
         role: 'tree',
         path: 'assets/models/trees/tree2_lod1.glb',
         targetHeight: 0.44,
@@ -40,6 +41,7 @@ export const RUNTIME_GLB_RENDER_PREVIEW_ASSETS = [
     },
     {
         key: 'rock1-lod0',
+        group: 'rock-lod0',
         role: 'rock',
         path: 'assets/models/rocks/rock1.glb',
         targetHeight: 0.34,
@@ -48,6 +50,7 @@ export const RUNTIME_GLB_RENDER_PREVIEW_ASSETS = [
     },
     {
         key: 'rock2-lod0',
+        group: 'rock-lod0',
         role: 'rock',
         path: 'assets/models/rocks/rock2.glb',
         targetHeight: 0.34,
@@ -56,6 +59,7 @@ export const RUNTIME_GLB_RENDER_PREVIEW_ASSETS = [
     },
     {
         key: 'rock3-lod0',
+        group: 'rock-lod0',
         role: 'rock',
         path: 'assets/models/rocks/rock3.glb',
         targetHeight: 0.34,
@@ -144,23 +148,45 @@ export async function createRuntimeGlbPreview({
 }) {
     const loaderModules = await loadGltfLoaderModules();
     const { loader, dracoLoader } = createGltfLoader(loaderModules);
-    const roots = [];
+    const loadedAssets = [];
     const rendered = [];
+    let adapter = null;
 
     try {
         for (const asset of RUNTIME_GLB_RENDER_PREVIEW_ASSETS) {
             const root = await loadScene(loader, asset.path);
-            const replacement = asset.role === 'tree'
-                ? replaceTreeMaterialsByName(root, {
-                    branches: createTreeBranchMaterial,
-                    leaves: createTreeLeafMaterial,
-                })
-                : replaceRockMaterialsByTraversal(root, createRockMaterial);
+            loadedAssets.push({ asset, root });
+        }
+
+        const trees = {};
+        const treesLod1 = {};
+        const rocks = {};
+        for (const { asset, root } of loadedAssets) {
+            if (asset.group === 'tree-lod0') trees[asset.key] = root;
+            else if (asset.group === 'tree-lod1') treesLod1[asset.key] = root;
+            else if (asset.group === 'rock-lod0') rocks[asset.key] = root;
+        }
+
+        adapter = applyKonveyorTreeRockMaterials({
+            trees,
+            treesLod1,
+            rocks,
+            createTreeBranchMaterial,
+            createTreeLeafMaterial,
+            createRockMaterial,
+        });
+        const replacementByAsset = new Map([
+            ...adapter.treeResults,
+            ...adapter.rockResults,
+        ].map((result) => [`${result.group}:${result.key}`, result]));
+
+        for (const { asset, root } of loadedAssets) {
+            const replacement = replacementByAsset.get(`${asset.group}:${asset.key}`);
             const bounds = fitAsset(asset, root, three);
             scene.add(root);
-            roots.push(root);
             rendered.push({
                 key: asset.key,
+                group: asset.group,
                 role: asset.role,
                 path: asset.path,
                 replacement,
@@ -168,7 +194,7 @@ export async function createRuntimeGlbPreview({
             });
         }
     } catch (err) {
-        roots.forEach((root) => {
+        loadedAssets.forEach(({ root }) => {
             scene.remove(root);
             disposeLoadedScene(root);
         });
@@ -182,9 +208,14 @@ export async function createRuntimeGlbPreview({
             ? item.replacement.missingTargets.length === 0
             : item.replacement.replacedMaterials > 0),
         assets: RUNTIME_GLB_RENDER_PREVIEW_ASSETS.length,
+        adapter: adapter ? {
+            ok: adapter.ok,
+            treeReplacedMaterials: adapter.treeReplacedMaterials,
+            rockReplacedMaterials: adapter.rockReplacedMaterials,
+        } : null,
         rendered,
         dispose() {
-            roots.forEach(disposeLoadedScene);
+            loadedAssets.forEach(({ root }) => disposeLoadedScene(root));
         },
     };
 }

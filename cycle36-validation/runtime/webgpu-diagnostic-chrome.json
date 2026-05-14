@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T22:30:41.430Z",
+  "capturedAt": "2026-05-14T22:34:24.531Z",
   "url": "http://127.0.0.1:3000/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -370,12 +370,20 @@
     "runtimeGlbPreview": {
       "ok": true,
       "assets": 7,
+      "adapter": {
+        "ok": true,
+        "treeReplacedMaterials": 8,
+        "rockReplacedMaterials": 3
+      },
       "rendered": [
         {
           "key": "tree1-lod0",
+          "group": "tree-lod0",
           "role": "tree",
           "path": "assets/models/trees/tree1.glb",
           "replacement": {
+            "group": "tree-lod0",
+            "key": "tree1-lod0",
             "strategy": "material-name",
             "targetNames": [
               "branches",
@@ -398,9 +406,12 @@
         },
         {
           "key": "tree2-lod0",
+          "group": "tree-lod0",
           "role": "tree",
           "path": "assets/models/trees/tree2.glb",
           "replacement": {
+            "group": "tree-lod0",
+            "key": "tree2-lod0",
             "strategy": "material-name",
             "targetNames": [
               "branches",
@@ -423,9 +434,12 @@
         },
         {
           "key": "tree1-lod1",
+          "group": "tree-lod1",
           "role": "tree",
           "path": "assets/models/trees/tree1_lod1.glb",
           "replacement": {
+            "group": "tree-lod1",
+            "key": "tree1-lod1",
             "strategy": "material-name",
             "targetNames": [
               "branches",
@@ -448,9 +462,12 @@
         },
         {
           "key": "tree2-lod1",
+          "group": "tree-lod1",
           "role": "tree",
           "path": "assets/models/trees/tree2_lod1.glb",
           "replacement": {
+            "group": "tree-lod1",
+            "key": "tree2-lod1",
             "strategy": "material-name",
             "targetNames": [
               "branches",
@@ -473,9 +490,12 @@
         },
         {
           "key": "rock1-lod0",
+          "group": "rock-lod0",
           "role": "rock",
           "path": "assets/models/rocks/rock1.glb",
           "replacement": {
+            "group": "rock-lod0",
+            "key": "rock1-lod0",
             "strategy": "asset-class-traversal",
             "visitedMeshes": 1,
             "replacedMaterials": 1,
@@ -492,9 +512,12 @@
         },
         {
           "key": "rock2-lod0",
+          "group": "rock-lod0",
           "role": "rock",
           "path": "assets/models/rocks/rock2.glb",
           "replacement": {
+            "group": "rock-lod0",
+            "key": "rock2-lod0",
             "strategy": "asset-class-traversal",
             "visitedMeshes": 1,
             "replacedMaterials": 1,
@@ -511,9 +534,12 @@
         },
         {
           "key": "rock3-lod0",
+          "group": "rock-lod0",
           "role": "rock",
           "path": "assets/models/rocks/rock3.glb",
           "replacement": {
+            "group": "rock-lod0",
+            "key": "rock3-lod0",
             "strategy": "asset-class-traversal",
             "visitedMeshes": 1,
             "replacedMaterials": 1,

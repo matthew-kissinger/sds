@@ -60,7 +60,8 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   diagnostic now fetches all seven shipped tree and rock GLBs to prove the same
   primitive/material replacement contracts. The diagnostic also renders all
   seven GLBs with WebGPU node-material replacements through the production
-  GLTF/Draco/Meshopt loader path without changing production runtime wiring.
+  GLTF/Draco/Meshopt loader path and production-side material adapter without
+  changing production runtime wiring.
   A production-facing material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
   factories, so cached production tree/rock GLB roots can be replaced without

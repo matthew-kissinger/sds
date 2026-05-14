@@ -179,6 +179,7 @@ describe('webgpu runtime glb material proof', () => {
 
     expect(RUNTIME_GLB_RENDER_PREVIEW_ASSETS).toHaveLength(RUNTIME_GLB_MATERIAL_PROOF_ASSETS.length);
     expect([...new Set(RUNTIME_GLB_RENDER_PREVIEW_ASSETS.map((asset) => asset.role).sort())]).toEqual(['rock', 'tree']);
+    expect([...new Set(RUNTIME_GLB_RENDER_PREVIEW_ASSETS.map((asset) => asset.group).sort())]).toEqual(['rock-lod0', 'tree-lod0', 'tree-lod1']);
     expect(RUNTIME_GLB_RENDER_PREVIEW_ASSETS.every((asset) => proofPaths.has(asset.path))).toBe(true);
   });
 });

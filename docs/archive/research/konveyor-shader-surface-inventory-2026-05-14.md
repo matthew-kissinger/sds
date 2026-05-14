@@ -95,8 +95,8 @@ comments:
   `runtimeGlbReplacement.summary.ok: true`, with 8 tree materials and 3 rock
   materials replaced through the expected strategies.
 - The rendered-clone island now loads the same seven GLBs through `GLTFLoader`,
-  `DRACOLoader`, and `MeshoptDecoder`, replaces their materials with the same
-  WebGPU node-material strategy, and records `runtimeGlbPreview.ok: true` with
+  `DRACOLoader`, and `MeshoptDecoder`, routes them through the production-side
+  Konveyor material adapter, and records `runtimeGlbPreview.ok: true` with
   bounded clone dimensions in the Chrome diagnostic artifact. These loader
   modules are copied to the diagnostic static vendor path and imported by URL to
   avoid exporting them from the default `main` chunk.

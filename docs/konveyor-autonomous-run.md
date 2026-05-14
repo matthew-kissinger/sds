@@ -95,9 +95,10 @@ WebGPU now has a diagnostic island, not a production renderer:
 - The same diagnostic artifact now records `runtime-glb-rendered-clones`: the
   browser loads all seven shipped tree and rock GLBs through the production
   GLTF/Draco/Meshopt loader stack, renders them in the WebGPU scene with node
-  material replacements, and reports `runtimeGlbPreview.ok: true`. The loader
-  modules are served through the diagnostic static vendor path so the default
-  `main` bundle stays inside the refactor-baseline ratchet.
+  material replacements through the production-side Konveyor adapter, and
+  reports `runtimeGlbPreview.ok: true`. The loader modules are served through
+  the diagnostic static vendor path so the default `main` bundle stays inside
+  the refactor-baseline ratchet.
 - A production-facing tree/rock material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` and explicit WebGPU material factories.
   It reuses the proved tree material-name and rock traversal strategies against
