@@ -10,12 +10,15 @@ You're a fresh agent (Claude / Codex / Cursor / etc.) on this repo with no sessi
 
 1. **[`../NEXT_SESSION.md`](../NEXT_SESSION.md)** — current pickup state. Tells you which cycle is active, when the snapshot was taken, and where to start.
 2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open, typically [`cycle-N-plan.md`](.). If NEXT_SESSION says the next cycle is not drafted yet, pick the goal with Matt before creating it. Top-to-bottom. EARS-format Acceptance lines tell you what "done" means.
-3. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
-4. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
-5. **[`../.claude/rules/`](../.claude/rules/)** — durable project rules (deterministic-sim boundary, scene/render rules, cycle process, multiplayer contract).
-6. **[`INTERFACE_FENCE.md`](INTERFACE_FENCE.md)** — only if you need to touch one of the frozen files.
+3. **[`konveyor-autonomous-run.md`](konveyor-autonomous-run.md)** — active brief when working on `exp/konveyor-webgpu-migration`.
+4. **[`konveyor-sds.md`](konveyor-sds.md)** — required when the active scope is the WebGPU / native-shipping campaign.
+5. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
+6. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
+7. **[`../.claude/rules/`](../.claude/rules/)** — durable project rules (deterministic-sim boundary, scene/render rules, cycle process, multiplayer contract).
+8. **[`INTERFACE_FENCE.md`](INTERFACE_FENCE.md)** — only if you need to touch one of the frozen files.
 
-Don't write code until you've confirmed direction with the user (or, in autonomous mode, until the active cycle plan directs you).
+Don't write code until you've confirmed direction with the user or until the
+active cycle plan / autonomous handoff directs you.
 
 ### Path 2 — Developer reading cold
 
@@ -44,6 +47,8 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`content-campaign-2026-05.md`](content-campaign-2026-05.md) | How-to / Reference | May 2026 content pack, capture pipeline, publish caveats, and media validation gates. |
 | [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md) | How-to / Reference | Browser recording research, cloned OSS examples, Remotion assessment, and chosen capture architecture. |
 | [`multiplayer-ux.md`](multiplayer-ux.md) | How-to / Reference | Multiplayer UX flow + lobby state diagrams. |
+| [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) | Reference / Explanation | Active experimental-branch handoff for the full autonomous Konveyor campaign. |
+| [`konveyor-sds.md`](konveyor-sds.md) | Reference / Explanation | WebGPU, optimization, and native-shipping campaign doctrine. Read before any Konveyor cycle. |
 | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | Reference | Module map + render pipeline + network protocol. The "where does X live" doc. |
 | [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) | Reference | Which files are frozen + how authorization works. |
 | [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) | Reference | Cycle plan stub. New cycle plans inherit from this. |
@@ -58,10 +63,11 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 
 After Cycle 28 Stream A3's consolidation, the only files at `docs/` root are:
 
-- The **active cycle plan** (`cycle-N-plan.md`).
+- The **active cycle plan** (`cycle-N-plan.md`) and any active campaign handoff
+  such as [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md).
 - The **append-only [`BACKLOG.md`](BACKLOG.md)** — closed-cycle log + deferred items.
 - The **fence + template + contract triad**: [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md), [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md).
-- A small set of **stable how-tos**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md).
+- A small set of **stable how-tos and campaign references**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md), [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md), [`konveyor-sds.md`](konveyor-sds.md).
 - This index ([`README.md`](README.md)).
 
 Everything else lives under [`archive/`](archive/):
@@ -82,4 +88,6 @@ Everything else lives under [`archive/`](archive/):
 - **Explanations / decisions** → append to [`../DECISIONS.md`](../DECISIONS.md), don't create a new doc unless the explanation is large enough to need its own page.
 - **Durable rules** → [`../.claude/rules/`](../.claude/rules/), not here.
 
-If a doc's audience-need doesn't fit one of the four Diátaxis quadrants, it's probably scratch work that belongs in the active cycle plan or a wake-state report instead.
+If a doc's audience-need doesn't fit one of the four Diátaxis quadrants, it's
+probably scratch work that belongs in the active cycle plan, active autonomous
+handoff, or a wake-state report instead.

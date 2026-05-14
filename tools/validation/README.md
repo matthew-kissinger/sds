@@ -8,7 +8,7 @@
 |---|---|---|
 | `lod-compare.mjs` | LOD0/LOD1/LOD2 silhouette IoU + dE2000 + luma-delta at fixed camera offsets. JSON output. | `npm run validation:lod` |
 | `screenshot-golden.mjs` | Playwright matrix → SSIM diff vs `tools/validation/golden/`. Three modes: `--capture`, `--diff`, `--baseline`. | `npm run validation:screenshots` |
-| `input-latency.mjs` | Synthesised keypress → next-paint timestamp delta. Targets: < 33ms desktop, < 50ms phone. | `npm run validation:latency` |
+| `input-latency.mjs` | Synthesised keypress → next-paint timestamp delta. Enforces p99 <= 33ms desktop by default; `--profile=mobile` enforces p99 <= 50ms against the mobile browser profile. | `npm run validation:latency`, `npm run validation:latency:mobile` |
 | `frame-time-histogram.mjs` | 600-frame ring-buffer drain → p50/p95/p99/p99.9 histogram. Target: p99 ≤ 33ms desktop. | `npm run validation:perf` |
 
 `npm run validation:all` runs all four sequentially.
@@ -26,6 +26,7 @@ npm run validation:lod
 npm run validation:screenshots -- --baseline   # first run only
 npm run validation:screenshots -- --diff       # subsequent runs
 npm run validation:latency
+npm run validation:latency:mobile
 npm run validation:perf
 ```
 

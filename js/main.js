@@ -163,6 +163,7 @@ class SheepDogSimulation {
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();
+        const urlParams = new URLSearchParams(location.search);
 
         // Cycle 8 Phase C: perf harness hook. When `?perfMode=1` is set,
         // expose `window.__perfHarness` so Playwright (or a manual page
@@ -172,7 +173,7 @@ class SheepDogSimulation {
         // ready-check, current-metrics snapshot, fixed-window sampling.
         // Per-system breakdowns (obstacle-query timing, etc.) can be
         // layered on later by widening PerformanceMonitor.
-        if (new URLSearchParams(location.search).get('perfMode') === '1') {
+        if (urlParams.get('perfMode') === '1') {
             const perfMon = this.performanceMonitor;
             const gameStateRef = this.gameState;
             // Cycle 15 Phase 3: expose renderer so the perf harness can read
@@ -186,7 +187,7 @@ class SheepDogSimulation {
             window.__perfHarness = {
                 isReady: () => {
                     const sheep = gameStateRef.getSheep?.() || [];
-                    return perfMon.isEnabled && sheep.length > 0 && perfMon.frameCount > 30;
+                    return perfMon.isEnabled && sheep.length > 0 && perfMon.frameCount;
                 },
                 getMetrics: () => ({ ...perfMon.metrics, frameCount: perfMon.frameCount }),
                 startSampling(durationMs = 8000) {
@@ -232,7 +233,7 @@ class SheepDogSimulation {
         // window.__sds.cameraController + scene-manager so the harness
         // can max-zoom the classic camera and read render.info without
         // depending on `?cinematic=1` (which flips preserveDrawingBuffer).
-        if (new URLSearchParams(location.search).get('probeRender') === '1') {
+        if (urlParams.get('probeRender') === '1') {
             const sm = this.sceneManager;
             const cc = this.sceneManager.getCameraController?.();
             window.__sds = window.__sds || {};
@@ -260,8 +261,7 @@ class SheepDogSimulation {
         // which lives on menuController. Gated on ?perfMode=1 OR ?mpProbe=1.
         this.networkManager = this.menuController.networkManager;
         try {
-            const _mpProbeSp = new URLSearchParams(location.search);
-            if (_mpProbeSp.get('perfMode') === '1' || _mpProbeSp.get('mpProbe') === '1') {
+            if (urlParams.get('perfMode') === '1' || urlParams.get('mpProbe') === '1') {
                 installMpProbe(this);
             }
         } catch (e) {
@@ -394,11 +394,7 @@ class SheepDogSimulation {
         // contention. NetworkManager + React menu still mount normally. The
         // flag is for tests only — production has no codepath that would
         // ever opt in.
-        const _testNoCanvas = (() => {
-            try {
-                return new URLSearchParams(location.search).get('testNoCanvas') === '1';
-            } catch { return false; }
-        })();
+        const _testNoCanvas = urlParams.get('testNoCanvas') === '1';
 
         // Initialize the simulation
         this.isInitialized = false;
@@ -409,6 +405,9 @@ class SheepDogSimulation {
             this.init().then(() => {
                 this.isInitialized = true;
                 console.log('[GAME] Game initialization complete, starting animation loop');
+                if (urlParams.get('autostart') === '1') {
+                    this.menuController.selectSolo('jep', urlParams.get('mode') || 'classic');
+                }
             });
             this.animate();
         }

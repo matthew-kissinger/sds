@@ -479,3 +479,141 @@ The Cycle 35 post-deploy verification ("confirm the first real `game_completed` 
 - No `game_completed` events yet, but that's traffic, not a route bug. GSC reports 3 web search clicks in the same period.
 
 The Cycle 35 carryover is closed.
+
+---
+
+## Konveyor campaign supersedes WebGPU deferral (2026-05-14 · Cycle 36 scoping)
+
+[`docs/konveyor-sds.md`](docs/konveyor-sds.md) is now the campaign doctrine for
+the SDS WebGPU, optimization, and native-shipping push. This supersedes the
+Cycle 24 posture that treated `?renderer=webgpu` as a possible future spike but
+not a committed migration direction.
+
+### Why
+
+SDS has shipped enough surface area that optimization work should no longer be
+treated as incidental polish. The current game is still WebGL-first, and the
+existing perf baseline is not trustworthy enough to guide major renderer work.
+Konveyor makes measurement repair, WebGPU proof, and native runtime proof the
+first-class path before any tree, grass, sheep, or shader rewrite.
+
+### Corrections to the draft doctrine
+
+Native runtime guarantees must be precise:
+
+- Tauri 2 uses platform WebViews: WebView2 on Windows, WebKit on macOS, and
+  WebKitGTK on Linux. It does not bundle one pinned Chromium runtime across all
+  desktop platforms.
+- Electron remains the desktop fallback if SDS needs one bundled Chromium engine
+  across Windows, macOS, and Linux.
+- Capacitor uses WKWebView on iOS and Android WebView / Chrome-backed WebView on
+  Android. It does not pin WKWebView independently of the OS.
+- Safari 26 WebGPU support makes an iOS 26+ target plausible, but SDS still
+  needs WKWebView proof in the actual shell.
+
+### Rule
+
+Konveyor phases run through normal SDS cycle plans. Phase 0 is measurement and
+platform proof, not a renderer rewrite. Do not touch deterministic `shared/**`
+files, sim-baseline fixtures, or Worker migration history for Konveyor unless
+the active cycle explicitly authorizes that file and records the acceptance
+criteria.
+
+---
+
+## Konveyor runs on an experimental branch until objective or hard stop (2026-05-14 · post-foundation)
+
+Cycle 36 completed the foundation pass by documented hard stop: measurement
+repair, validation reconciliation, runtime proof, and a WebGPU hero-scene
+blocker report. Matt then redirected the campaign away from numbered cycle
+boundaries and into a full autonomous run on `exp/konveyor-webgpu-migration`.
+
+### Why
+
+The foundation pass proved that the next real work is not "one more cycle
+plan." SDS needs an experimental migration branch where agents can keep moving
+through ordinary implementation blockers, like the TIJ Konveyor campaign did,
+without repeatedly stopping at phase boundaries. The risk is managed by
+branch isolation, feature flags, validation gates, and durable hard stops rather
+than by keeping the work artificially small.
+
+### Rule
+
+For Konveyor autonomous work:
+
+- Work on `exp/konveyor-webgpu-migration`, not `main`.
+- Use [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md) as
+  the active handoff and [`docs/konveyor-sds.md`](docs/konveyor-sds.md) as the
+  campaign doctrine.
+- Treat [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md) as completed
+  foundation evidence, not the active stopping point.
+- Keep WebGL default until a fallback decision is recorded.
+- Keep WebGPU work diagnostic or feature-flagged until gates pass.
+- Stop only for documented hard stops: frozen-file authorization, unexpected
+  sim-baseline drift, broken measurement with no route around, contradicted
+  platform assumptions, destructive production changes, store/public release
+  decisions, or completion of the full objective.
+
+---
+
+## Native-readiness seam before native-shell dependency (2026-05-14 · Konveyor autonomous branch)
+
+Konveyor now has a code-level native-prep seam without choosing Tauri, Electron,
+or Capacitor yet.
+
+### Why
+
+The native path needs more than docs: native shells change asset base paths,
+service-worker behavior, worker origins, WebSocket origins, telemetry, and
+profiling assumptions. Those seams are useful before a shell dependency lands,
+and they let the autonomous branch compare web and native-shaped builds with
+the same validation language.
+
+### Rule
+
+- `BUILD_TARGET=native npm run build` creates a relative-asset build with
+  service-worker registration disabled.
+- `SDS_WORKER_BASE=<origin>` controls the Worker HTTP and WebSocket origin for
+  packaged builds.
+- `js/runtimeConfig.js` owns Worker API base, Worker WebSocket base,
+  local-runtime detection, and telemetry enablement.
+- `npm run native:check` runs the native build and `tools/native-preflight.mjs`
+  to verify generated bundle posture.
+- Tauri, Electron, and Capacitor dependencies are still deferred until a
+  scoped shell proof step.
+
+---
+
+## Cycle 36 runtime proof defers native shell choice (2026-05-14 · Cycle 36 Phase 3)
+
+[`docs/archive/research/cycle-36-konveyor-runtime-proof.md`](docs/archive/research/cycle-36-konveyor-runtime-proof.md)
+records the current official-source and local-probe evidence for the Konveyor
+runtime assumptions.
+
+### Decision
+
+Native desktop shell selection is explicitly deferred.
+
+Tauri remains a candidate because its Windows WebView2 path can plausibly use a
+modern WebGPU-capable runtime, and it is the lighter shell. Electron remains
+the fallback if SDS needs one pinned Chromium runtime across Windows, macOS,
+and Linux. The repo currently has no Tauri, Electron, or Capacitor dependency,
+and no native shell has booted SDS.
+
+### Evidence
+
+- Installed Chrome 148 on the Windows workstation creates a WebGPU adapter and
+  device with the RTX 3070 D3D11 GPU path.
+- Playwright's bundled Chromium 147 exposes `navigator.gpu` and an adapter, but
+  `requestDevice()` fails with a D3D12 `dxil.dll` load error. Therefore adapter
+  presence is not a sufficient gate.
+- Three r184 exposes `three/webgpu` and `WebGPURenderer`, but Rolling Hills is
+  built on custom GLSL `ShaderMaterial` and `onBeforeCompile` surfaces.
+
+### Rule
+
+WebGL remains the default renderer. WebGPU work stays opt-in and must prove
+adapter plus device creation in the actual runtime. Native packaging
+dependencies should not be added until a later cycle is specifically scoped to
+boot SDS in that shell and measure multiplayer, fullscreen, input, audio,
+visual, latency, and perf behavior there.

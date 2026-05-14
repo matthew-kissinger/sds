@@ -1,0 +1,348 @@
+# Konveyor for SDS
+
+> Campaign doctrine for the SDS WebGPU, optimization, and native-shipping push.
+> Read this at the start of every Konveyor run after `AGENTS.md`,
+> `NEXT_SESSION.md`, and the active handoff.
+
+This document is the campaign charter. It defines the destination, the gates,
+and the disciplines that hold across the run. The active autonomous handoff is
+[`konveyor-autonomous-run.md`](konveyor-autonomous-run.md). If a task brief tries
+to weaken this doctrine, stop and reconcile the brief first. If reality proves
+this doctrine wrong, update this document and `DECISIONS.md` before changing
+code around the new assumption.
+
+## Autonomous branch mode
+
+The full migration campaign runs on `exp/konveyor-webgpu-migration`. In that
+mode, numbered cycle plans are evidence and checkpoints, not stopping points.
+Agents should keep moving until the full objective is reached or a documented
+hard stop is hit. Use [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md)
+as the control surface for the next autonomous pass.
+
+## Current repo baseline
+
+As of 2026-05-14, SDS is not a WebGPU project yet.
+
+- The client renderer is WebGL-only: `js/SceneManager.js` constructs
+  `THREE.WebGLRenderer` directly.
+- The prior repo decision deferred a full WebGPU/TSL migration. Cycle 24 kept
+  `@three.ez/instanced-mesh`, meshopt LODs, Kiln impostors, and meadow quads,
+  with only a possible future `?renderer=webgpu` spike. This charter supersedes
+  that deferral as campaign direction, but it does not imply any renderer code
+  has shipped.
+- The tree pipeline is already optimized for the current WebGL stack: EZ-Tree
+  build-time GLBs, meshopt compression, InstancedMesh2 per-instance LOD, and
+  Kiln impostor sidecars.
+- Cycle 36 repaired the perf harness. `tests/perf-baseline/baseline.json`
+  currently records all six default configs with `ok: true` and 900 samples
+  each on the local Windows RTX 3070 workstation.
+- The screenshot validation tool enforces per-cell SSIM >= 0.95 across its
+  12-cell smoke matrix and fails if any expected golden is missing. The current
+  repo has no committed screenshot goldens, so the visual gate is blocked until
+  an explicit baseline-capture decision is made.
+- The latency tool enforces desktop p99 <= 33 ms and has a mobile-profile path
+  enforcing p99 <= 50 ms.
+- There is no Tauri, Electron, or Capacitor shell dependency in `package.json`,
+  but the repo now has native build-target plumbing: `BUILD_TARGET=native`,
+  `SDS_WORKER_BASE`, `js/runtimeConfig.js`, and `npm run native:check`.
+- The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
+  packaging, and performance campaign unless a cycle explicitly authorizes a
+  shared-sim change.
+
+Start every Konveyor run by refreshing this baseline. Do not assume a stale
+number, remote deploy state, browser feature, or package capability is still
+true.
+
+## Objective
+
+Migrate SDS from WebGL2-first rendering to WebGPU-first rendering where WebGPU
+is the primary surface, recover performance headroom across the actual device
+matrix, and package the same git tree for web, desktop, and mobile delivery.
+
+The destination is one codebase, one scene system, one deterministic sim, and
+multiple delivery surfaces:
+
+- Web at `sheepdogsim.com`.
+- Desktop through a native shell suitable for Steam.
+- Mobile through native app shells for iOS and Android.
+
+The campaign is not only a renderer swap. It is the forcing function to fix the
+measurement loop, retire avoidable GPU and CPU bottlenecks, prove native runtime
+assumptions, and keep game feel intact while the rendering surface changes.
+
+## Non-goals
+
+- Do not add new visual-fidelity goals as part of the migration. Atmosphere,
+  water, postprocessing, terrain mood, and sheepdog game feel hold their current
+  visual contract unless a cycle explicitly scopes a visual change.
+- Do not build a generic render-backend abstraction. WebGPU is the target
+  surface. WebGL compatibility is a transition or fallback decision, not a
+  reason to genericize the engine.
+- Do not rewrite the engine architecture. React UI with `createElement`,
+  vanilla Three.js scene code, GameBridge, the worker rooms model, and the
+  deterministic shared sim remain the shape.
+- Do not treat native packaging as a side quest. Native runtime proof affects
+  renderer assumptions, worker URLs, service workers, storage, fullscreen,
+  input, WebSocket behavior, and app-store constraints.
+- Do not regenerate baselines to hide regressions.
+
+## Runtime truth
+
+Native runtime claims must be proven, not inferred.
+
+- Tauri 2 uses platform WebViews: WebView2 on Windows, WebKit on macOS, and
+  WebKitGTK on Linux. It does not bundle one pinned Chromium runtime across all
+  desktop platforms.
+- WebView2 on Windows can use Evergreen or Fixed Version distribution. Fixed
+  Version is a Windows packaging decision, not a cross-platform Tauri guarantee.
+- Electron bundles Chromium and is the safer desktop fallback if SDS needs a
+  single pinned browser engine across Windows, macOS, and Linux.
+- Capacitor uses WKWebView on iOS and Android WebView or Chrome-backed WebView
+  on Android. It does not independently pin WKWebView; the iOS floor is an OS
+  floor.
+- Safari 26 includes WebGPU, so an iOS 26+ target is plausible, but SDS still
+  needs a real WKWebView proof before calling mobile WebGPU guaranteed.
+
+References:
+
+- Tauri WebView versions: https://v2.tauri.app/reference/webview-versions/
+- WebView2 distribution modes:
+  https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution
+- Capacitor iOS: https://capacitorjs.com/docs/ios
+- Capacitor Android: https://capacitorjs.com/docs/android
+- WebKit Safari 26 WebGPU:
+  https://webkit.org/blog/17333/webkit-features-in-safari-26-0/
+
+## Campaign gates
+
+Every Konveyor run must preserve these gates unless the active handoff
+explicitly records a narrower research-only scope.
+
+### Measurement gate
+
+If a phase is making performance claims, the harness must produce usable
+numbers first. A usable perf result has all configured scenes completing,
+stable sample counts, p50/p95/p99 frame timing, draw calls, triangle counts,
+and active-sheep counts. A timeout-heavy baseline is a blocker, not a baseline.
+
+### Visual gate
+
+The current repo gate is `npm run validation:screenshots -- --diff`, with every
+cell in the 12-cell smoke matrix present and at SSIM >= 0.95. A Konveyor cycle
+may change that rule only by editing the tool and documenting the new threshold
+in the active handoff or `DECISIONS.md`.
+
+Asset-regeneration phases may accept specific visual deltas, but acceptance
+must name the cell, attach artifacts, and explain the intended change. Silent
+golden rewrites are not acceptable.
+
+### Latency gate
+
+Game feel is a first-class budget:
+
+- Desktop input-to-paint p99 <= 33 ms.
+- Mobile input-to-paint p99 <= 50 ms.
+
+`npm run validation:latency` enforces the desktop side. `npm run
+validation:latency:mobile` enforces the mobile-profile side. Real-device
+mobile proof is still a higher confidence gate for native-mobile release work.
+
+### Determinism gate
+
+Multiplayer determinism is non-negotiable. `tests/sim-baseline/__fixtures__`
+are the committed 60 Hz traces. Regeneration uses
+`UPDATE_FIXTURES=true npm test -- tests/sim-baseline/baseline.spec.ts` only
+after the active handoff records explicit operator acceptance.
+
+Any unexpected sim-baseline diff is a hard stop.
+
+### Native proof gate
+
+Native packaging is not proven until SDS boots end-to-end in the selected
+desktop shell and mobile shells, uses WebGPU where claimed, connects to the
+live multiplayer worker, preserves fullscreen/input/audio behavior, and passes
+the visual, latency, and determinism gates appropriate to that target.
+
+## Operating doctrine
+
+### Bench before code
+
+No optimization phase starts from intuition. The first campaign task is to make
+measurement reliable. After that, each performance change must show before and
+after numbers on the target scene and target hardware tier.
+
+### One metric per phase
+
+Each phase names one keep-or-discard metric before implementation. Examples:
+
+- Foundation phases: all required surfaces boot and all gates pass.
+- Asset visual phases: every required SSIM cell passes or has explicit accepted
+  artifact deltas.
+- Perf phases: p99 frame time, median FPS, or a repo-defined composite. Do not
+  refer to an external `perf_score` until SDS defines it locally.
+- Native phases: target shell boots, WebGPU proof passes, worker connection
+  succeeds, and gates pass.
+- Native-prep phases: `npm run native:check` passes and records the generated
+  bundle's worker/service-worker posture.
+
+### Repo methodology applies
+
+Konveyor still uses SDS's discipline: EARS-style acceptance, durable fence
+rules, documented evidence, and explicit validation. The experimental
+autonomous branch does not stop at numbered cycle boundaries, but it must keep
+the same quality bar.
+
+### Frozen files stay frozen
+
+`docs/INTERFACE_FENCE.md` applies in full. In particular, do not touch
+`shared/**` deterministic modules to support a renderer migration unless the
+active handoff names the file, explains the deterministic impact, and records
+operator authorization.
+
+### Incremental, flag-gated, reversible
+
+No big-bang renderer rewrite. WebGPU starts behind `?renderer=webgpu`, and
+WebGL remains the default until Phase 8 makes a documented fallback decision.
+Tree, grass, sheep, and compute experiments remain feature-flagged until their
+gates pass.
+
+### Stop conditions
+
+Stop and surface if any of these occurs:
+
+- A proposed change requires a frozen file not authorized by the active cycle.
+- Sim-baseline output differs unexpectedly.
+- The perf, screenshot, or latency harness is broken in a way that blocks the
+  phase's acceptance.
+- Native runtime proof contradicts a packaging assumption in this document.
+- The campaign objective is actually complete.
+
+Normal implementation blockers are not stop conditions. Route around them,
+record the decision, and continue inside the active scope.
+
+### Game feel is sacred
+
+Camera response, input-to-paint timing, dog command response, animation timing,
+sprint feel, corral zap, and multiplayer prediction are part of the product.
+A renderer migration that makes the game feel worse has failed even if FPS
+improves.
+
+## Phase outline
+
+Phase boundaries can change as evidence accumulates. Do not skip the foundation
+work because later phases are more interesting.
+
+### Phase 0 - Measurement and platform proof
+
+Repair `tools/perf-harness.mjs` and `tests/perf-baseline/baseline.json` until
+all six local configs complete with usable samples. Reconcile screenshot and
+latency thresholds with the actual tools. Prove WebGPU availability in the
+browser and in candidate native shells before choosing Tauri, Electron,
+Capacitor, or a hybrid path. Define worker URL and service-worker assumptions
+for native packaging.
+
+Exit: the repo can measure itself, the native runtime assumptions are recorded
+in `DECISIONS.md`, and the first WebGPU renderer spike has a verified entry
+condition.
+
+### Phase 1 - WebGPU hero-scene boot
+
+Add `?renderer=webgpu` as a flag-gated path for a single hero scene. WebGL
+stays default. The first target is Rolling Hills unless the active cycle picks
+a different hero scene with a reason.
+
+Exit: both renderers boot the target scene, fail closed on unsupported devices,
+and pass the current visual, latency, test, lint, and build gates.
+
+### Phase 2 - Tree asset refresh and visual baseline
+
+Check the current `@dgreenheck/ez-tree` release, re-bake only if there is a
+clear output or performance reason, and re-run GLB compression plus Kiln
+impostor bakes when silhouettes or materials change.
+
+Exit: every accepted tree delta is artifact-backed, and tree goldens are updated
+only for named, intentional differences.
+
+### Phase 3 - Cosmetic shader WebGPU compatibility
+
+Inventory atmosphere, water, sun billboard, portal, mountains, meadow, grass,
+tree, sheep, and impostor shaders. Port low-risk cosmetic shaders first to
+learn the TSL/WebGPU constraints without touching the highest-risk performance
+systems.
+
+Exit: named shaders render on both active backends or have documented deferrals.
+
+### Phase 4 - Tree rendering optimization
+
+Optimize the tree path with evidence. Candidate work includes TSL tree shader
+work, better impostor parameterization, multi-species batching, alpha transition
+cleanup, or staying on the current Kiln/InstancedMesh2 stack if measurement
+says that is still the right call.
+
+Exit: tree-heavy scenes recover the target p99 frame budget on the measured
+mobile and desktop tiers without visual regressions.
+
+### Phase 5 - Grass optimization
+
+Optimize grass only after tree costs are understood. Candidate work includes
+TSL grass shaders, GPU chunk culling, per-blade LOD, or narrower WebGL-side
+fixes if profiling points there.
+
+Exit: dense-grass scenes hit their p99 budgets and mobile-low keeps a stable
+simple path.
+
+### Phase 6 - Sheep and high-count rendering
+
+Port or optimize `OptimizedSheep` only with before and after evidence. Preserve
+leg and head animation, selection readability, command feedback, and existing
+mode rules.
+
+Exit: high-count solo modes improve without multiplayer contract changes.
+
+### Phase 7 - Experimental compute mode
+
+If WebGPU compute is justified, implement it as single-player experimental
+content. It must be multiplayer-disabled, leaderboard-excluded, and isolated
+from `shared/` deterministic simulation unless a later cycle deliberately
+creates a new shared contract.
+
+Exit: the experiment refuses to activate in multiplayer, refuses leaderboard
+submission, and has clear performance artifacts.
+
+### Phase 8 - Native packaging
+
+Build the selected desktop and mobile shells. Do not assume the runtime proof
+from Phase 0 is enough; verify against built artifacts. Wire worker URLs,
+service-worker behavior, asset loading, storage, fullscreen, input, audio,
+updates, and crash reporting deliberately.
+
+Exit: native builds run end-to-end on the target OS matrix, use WebGPU where
+claimed, connect to live multiplayer, and pass gates.
+
+### Phase 9 - Web fallback decision and release prep
+
+Use Cloudflare Web Analytics and current browser support data to choose between
+a WebGL fallback and a WebGPU-required gate for `sheepdogsim.com`. Then prepare
+Steam and mobile release surfaces from the proven builds.
+
+Exit: fallback decision recorded in `DECISIONS.md`, code reflects it, and the
+release path is ready for external users.
+
+## Start-of-run checklist
+
+1. Read `AGENTS.md`, `NEXT_SESSION.md`, this document, and
+   `docs/konveyor-autonomous-run.md`.
+2. Refresh current WebGPU, Tauri, Electron, Capacitor, iOS, Android, and
+   Three.js facts from official docs.
+3. Run `git status --short --branch` and identify unrelated local changes.
+4. Run or repair the measurement gate before making performance claims.
+5. Confirm whether the active task is autonomous or paired.
+6. Do not touch `shared/**` or sim fixtures without explicit handoff scope.
+
+## Fresh-agent goal
+
+Use this goal when starting an autonomous Konveyor session:
+
+```text
+/goal On branch exp/konveyor-webgpu-migration, continue the SDS Konveyor autonomous campaign from docs/konveyor-autonomous-run.md and docs/konveyor-sds.md until the full objective is reached or a documented hard stop is hit. Treat docs/cycle-36-plan.md as completed foundation evidence, not the active stopping point. First stabilize and commit the foundation/native-readiness packet on the experimental branch while excluding unrelated .agents/skills folders and verifying npm test, npm run lint, npm run build, and npm run native:check. Then build a minimal WebGPU/TSL diagnostic boot path instead of forcing Rolling Hills through WebGPU, inventory and migrate shader/material systems incrementally, keep WebGL default and all WebGPU work flag-gated, preserve deterministic shared sim and multiplayer contracts, run the relevant perf/latency/visual/test/build/native gates before claiming progress, and keep moving through optimization, native packaging proof, and web fallback decisions without stopping at cycle boundaries.
+```

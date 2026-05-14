@@ -1,0 +1,22 @@
+{
+  "cells": 0,
+  "expectedCells": 12,
+  "mean": 0,
+  "fails": [],
+  "missing": [
+    "field__sun05__follow__zoom25",
+    "field__sun085__classic__zoom60",
+    "field__sun05__classic__zoom60",
+    "field__sun085__follow__zoom25",
+    "rolling-hills__sun05__follow__zoom25",
+    "rolling-hills__sun085__classic__zoom60",
+    "rolling-hills__sun05__classic__zoom60",
+    "rolling-hills__sun085__follow__zoom25",
+    "open-country__sun05__follow__zoom25",
+    "open-country__sun085__classic__zoom60",
+    "open-country__sun05__classic__zoom60",
+    "open-country__sun085__follow__zoom25"
+  ],
+  "results": [],
+  "capturedAt": "2026-05-14T19:43:07.266Z"
+}

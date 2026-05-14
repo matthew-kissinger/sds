@@ -1,5 +1,5 @@
 /**
- * SDS perf harness — Cycle 15 Phase 2 + 3.
+ * SDS perf harness - Cycle 15 Phase 2 + 3.
  *
  * Drives Playwright Chromium against the dev server, captures frametime
  * baselines for a fixed config matrix, and either:
@@ -10,7 +10,7 @@
  *   npm run perf:baseline                        # capture + commit
  *   npm run perf:check                           # compare current vs committed
  *   node tools/perf-harness.mjs --configs=oc-classic,field-extreme   # subset
- *   node tools/perf-harness.mjs --warmup=4 --measure=20             # ms tweaks
+ *   node tools/perf-harness.mjs --warmup=4 --measure=20             # seconds
  *
  * Why a fresh script and not extend `tests/e2e/oc-perf.spec.ts`? The
  * existing spec is a single-config gate; baselines need a structured
@@ -18,13 +18,13 @@
  * (menu nav, perfMode hook polling), but the orchestration differs.
  *
  * The harness ASSUMES the dev server is running (`npm run dev`) at
- * localhost:3000. Doesn't auto-start it — that's the user's call so
- * baselines aren't perturbed by cold-start.
+ * localhost:3000. It does not auto-start it, so baseline captures are not
+ * perturbed by dev-server cold start.
  *
  * Numbers absorb three layers of bias and that's OK as long as they're
  * consistent across runs:
  *   1. Headless Chromium adds ~5-8ms vs visible. Live with it.
- *   2. The driver runs Classic / Extreme menu paths via dispatchEvent;
+ *   2. The app enters the requested solo mode through the perf autostart URL;
  *      the menu transition itself doesn't pollute the measurement window.
  *   3. WebGLRenderer.info counters reset each frame; we read them
  *      mid-window so they reflect the rolling state, not the cold paint.
@@ -59,6 +59,9 @@ const HEADED = !!args.headed;
 const URL_BASE = args.url ?? 'http://localhost:3000';
 const REGRESSION_PCT = 5; // % over baseline avgFrameTime
 const REGRESSION_FLOOR_MS = 0.5; // absolute slack
+const CHROMIUM_GPU_ARGS = !args.software && process.platform === 'win32'
+    ? ['--use-angle=d3d11', '--enable-gpu']
+    : [];
 
 // Six-config default matrix. Per the cycle-15 plan: ≥6 configs, scenes
 // and sheep counts vary, sun=default to keep the matrix tight. Add more
@@ -93,25 +96,17 @@ async function seedIdentity(context) {
     });
 }
 
-async function navigateAndWait(page, sceneId) {
-    const url = `${URL_BASE}/?scene=${encodeURIComponent(sceneId)}&perfMode=1`;
+async function navigateAndWait(page, cfg) {
+    const url = `${URL_BASE}/?scene=${encodeURIComponent(cfg.scene)}&perfMode=1&autostart=1&mode=${encodeURIComponent(cfg.mode)}`;
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
 }
 
-async function startGame(page, mode) {
-    const soloPlay = page.getByRole('button', { name: /Solo Play/i });
-    await soloPlay.waitFor({ state: 'visible', timeout: 45_000 });
-    await soloPlay.dispatchEvent('click', undefined, { timeout: 30_000 });
-
-    const confirm = page.getByRole('button', { name: /Confirm Selection/i });
-    await confirm.waitFor({ state: 'visible', timeout: 45_000 });
-    await confirm.dispatchEvent('click', undefined, { timeout: 30_000 });
-
-    // Mode picker — pick the mode by accessible name.
-    const modeLabel = mode === 'extreme' ? /Extreme Mode/i : /Classic Mode/i;
-    const modeBtn = page.getByRole('button', { name: modeLabel });
-    await modeBtn.waitFor({ state: 'visible', timeout: 45_000 });
-    await modeBtn.dispatchEvent('click', undefined, { timeout: 30_000 });
+async function startGame(page) {
+    await page.waitForFunction(
+        () => Boolean(window.__perfHarness),
+        null,
+        { timeout: 60_000 }
+    );
 }
 
 async function waitReady(page, mode) {
@@ -161,8 +156,8 @@ async function runConfig(browser, cfg) {
     let warningStr = null;
 
     try {
-        await navigateAndWait(page, cfg.scene);
-        await startGame(page, cfg.mode);
+        await navigateAndWait(page, cfg);
+        await startGame(page);
         await waitReady(page, cfg.mode);
         await page.waitForTimeout(WARMUP_MS);
         rendererInfo = await captureRendererInfo(page);
@@ -246,8 +241,11 @@ async function main() {
     console.log(`[PERF] Mode: ${MODE_BASELINE ? 'BASELINE' : 'CHECK'}`);
     console.log(`[PERF] Configs (${configs.length}): ${configs.map((c) => c.id).join(', ')}`);
     console.log(`[PERF] Warmup ${WARMUP_MS / 1000}s · measure ${MEASURE_MS / 1000}s · target ${URL_BASE}`);
+    if (CHROMIUM_GPU_ARGS.length > 0) {
+        console.log(`[PERF] Chromium args: ${CHROMIUM_GPU_ARGS.join(' ')}`);
+    }
 
-    const browser = await chromium.launch({ headless: !HEADED });
+    const browser = await chromium.launch({ headless: !HEADED, args: CHROMIUM_GPU_ARGS });
     const results = [];
 
     try {

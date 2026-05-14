@@ -8,7 +8,7 @@
  * Usage:
  *   node tools/validation/frame-time-histogram.mjs                        # field-classic default
  *   node tools/validation/frame-time-histogram.mjs --scene=open-country
- *   node tools/validation/frame-time-histogram.mjs --frames=900 --out=cycle25-validation/phaseA/frame-hist.json
+ *   node tools/validation/frame-time-histogram.mjs --frames=900 --warmup=3000 --out=cycle25-validation/phaseA/frame-hist.json
  *
  * Assumes dev server is running on :3000.
  */
@@ -20,14 +20,24 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
+const CHROMIUM_GPU_ARGS = process.platform === 'win32'
+  ? ['--use-angle=d3d11', '--enable-gpu']
+  : [];
+const MODE_FOR_SHEEP_COUNT = {
+  30: 'practice',
+  200: 'classic',
+  1000: 'extreme',
+  3000: 'insane',
+  5000: 'chaos',
+};
 
 function parseArgs(argv) {
-  const args = { scene: 'field', frames: 600, out: null, sheepCount: 200 };
+  const args = { scene: 'field', frames: 600, out: null, sheepCount: 200, mode: null, warmup: 3000 };
   for (const a of argv.slice(2)) {
     const m = a.match(/^--(\w+)=(.*)$/);
     if (!m) continue;
     const [, k, v] = m;
-    if (k === 'frames' || k === 'sheepCount') args[k] = parseInt(v, 10);
+    if (k === 'frames' || k === 'sheepCount' || k === 'warmup') args[k] = parseInt(v, 10);
     else args[k] = v;
   }
   return args;
@@ -41,11 +51,12 @@ function percentile(sorted, p) {
 
 async function run() {
   const args = parseArgs(process.argv);
-  const browser = await chromium.launch();
+  const mode = args.mode ?? MODE_FOR_SHEEP_COUNT[args.sheepCount] ?? 'classic';
+  const browser = await chromium.launch({ args: CHROMIUM_GPU_ARGS });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
 
-  const url = `http://localhost:3000/?perfMode=1&scene=${args.scene}&autostart=1&sheep=${args.sheepCount}`;
+  const url = `http://localhost:3000/?perfMode=1&scene=${args.scene}&autostart=1&mode=${mode}`;
   console.log(`[FRAME-HIST] booting ${url}`);
   await page.goto(url, { waitUntil: 'domcontentloaded' });
 
@@ -62,6 +73,8 @@ async function run() {
     { timeout: 90_000 },
   );
 
+  await page.waitForTimeout(args.warmup);
+
   // Drive sampling for the requested duration (frames * ~16.7ms desktop).
   const durationMs = Math.max(2000, args.frames * 17);
   const driven = await page.evaluate((ms) => window.__perfHarness.startSampling(ms), durationMs);
@@ -71,6 +84,8 @@ async function run() {
   const result = {
     scene: args.scene,
     sheepCount: args.sheepCount,
+    mode,
+    warmupMs: args.warmup,
     requestedFrames: args.frames,
     sampleCount: summary?.sampleCount ?? 0,
     avgMs: summary?.avgFrameTime ?? null,
@@ -94,12 +109,9 @@ async function run() {
 
   await browser.close();
 
-  // Exit non-zero if p99 > 33ms (desktop target). Phase A baseline
-  // captures on swiftshader-headless will likely regress; surface but
-  // don't fail the run yet — the gate kicks in once Phase B+ have
-  // actual deltas to defend against.
+  // Exit non-zero if p99 > 33ms only after this tool becomes an enforced gate.
   if (typeof result.p99Ms === 'number' && result.p99Ms > 33) {
-    console.warn(`[FRAME-HIST] WARN: p99=${result.p99Ms.toFixed(2)}ms > 33ms desktop target (informational, swiftshader-headless biased)`);
+    console.warn(`[FRAME-HIST] WARN: p99=${result.p99Ms.toFixed(2)}ms > 33ms desktop target (informational)`);
   }
 }
 

@@ -31,6 +31,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
 const GOLDEN_DIR = resolve(__dirname, 'golden');
 const CAPTURE_DIR = resolve(ROOT, 'cycle25-validation', 'phaseA', 'screenshots');
+const CHROMIUM_GPU_ARGS = process.platform === 'win32'
+  ? ['--use-angle=d3d11', '--enable-gpu']
+  : [];
 
 // 12-cell smoke matrix. Expand by adding entries; cells are independent.
 const MATRIX = [
@@ -99,9 +102,9 @@ function ssimLuma(a, b, width, height) {
 }
 
 async function captureCell(page, cell) {
-  const url = `http://localhost:3000/?perfMode=1&scene=${cell.scene}&sun=${cell.sun}&autostart=1&ui=off`;
+  const url = `http://localhost:3000/?perfMode=1&scene=${cell.scene}&sun=${cell.sun}&autostart=1&mode=classic&ui=off`;
   await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => !!window.__perfHarness, null, { timeout: 60_000 });
+  await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 90_000 });
   // Camera + zoom apply via __sds (probeRender installs cameraController).
   await page.evaluate(({ camera, zoom }) => {
     const cc = window.__sds?.cameraController;
@@ -127,7 +130,7 @@ async function decodePngFromBuffer(buf) {
 
 async function modeCapture(targetDir) {
   await mkdir(targetDir, { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: CHROMIUM_GPU_ARGS });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
 
@@ -150,16 +153,18 @@ async function modeDiff() {
     process.exit(1);
   }
   await mkdir(CAPTURE_DIR, { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: CHROMIUM_GPU_ARGS });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
 
   const results = [];
+  const missing = [];
   for (const cell of MATRIX) {
     const id = cellId(cell);
     const goldenPath = resolve(GOLDEN_DIR, `${id}.png`);
     if (!existsSync(goldenPath)) {
       console.warn(`[GOLDEN] no golden for ${id}, skipping`);
+      missing.push(id);
       continue;
     }
     const png = await captureCell(page, cell);
@@ -179,13 +184,20 @@ async function modeDiff() {
 
   const summary = {
     cells: results.length,
+    expectedCells: MATRIX.length,
     mean: results.reduce((s, r) => s + (r.ssim || 0), 0) / Math.max(1, results.length),
     fails: results.filter((r) => (r.ssim || 0) < 0.95).map((r) => r.id),
+    missing,
     results,
     capturedAt: new Date().toISOString(),
   };
   console.log('[GOLDEN] summary:', JSON.stringify(summary, null, 2));
   await writeFile(resolve(CAPTURE_DIR, 'diff-summary.json'), JSON.stringify(summary, null, 2));
+
+  if (summary.missing.length > 0 || summary.cells !== summary.expectedCells) {
+    console.error(`[GOLDEN] FAIL: ${summary.missing.length}/${summary.expectedCells} goldens missing`);
+    process.exit(1);
+  }
 
   if (summary.fails.length > 0) {
     console.error(`[GOLDEN] FAIL: ${summary.fails.length}/${summary.cells} cells below 0.95 SSIM`);

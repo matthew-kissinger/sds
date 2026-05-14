@@ -342,11 +342,13 @@
 
     <!-- React is bundled by Vite from node_modules -->
 
-    <!-- Service Worker: register in prod, purge in dev -->
+    <!-- Service Worker: register in prod web builds, purge in dev/native shells -->
     <script>
         if ('serviceWorker' in navigator) {
+            const buildTarget = '__SDS_BUILD_TARGET__';
+            const serviceWorkerDisabledTargets = ['native', 'desktop', 'electron', 'tauri', 'capacitor', 'ios', 'android'];
             const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            if (isDev) {
+            if (isDev || serviceWorkerDisabledTargets.includes(buildTarget)) {
                 (async () => {
                     const regs = await navigator.serviceWorker.getRegistrations();
                     for (const r of regs) await r.unregister();
@@ -354,7 +356,7 @@
                         const names = await caches.keys();
                         for (const n of names) await caches.delete(n);
                     }
-                    if (regs.length > 0 && !sessionStorage.getItem('sw-dev-cleaned')) {
+                    if (isDev && regs.length > 0 && !sessionStorage.getItem('sw-dev-cleaned')) {
                         sessionStorage.setItem('sw-dev-cleaned', '1');
                         window.location.reload();
                     }

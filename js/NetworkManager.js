@@ -4,6 +4,7 @@
 // client-side prediction/jitter-buffer helpers are all unchanged.
 
 import { encode as msgpackEncode, decode as msgpackDecode } from '@msgpack/msgpack';
+import { getApiBase, getWsBase, isLocalRuntime } from './runtimeConfig.js';
 
 export class NetworkManager {
     constructor() {
@@ -17,23 +18,9 @@ export class NetworkManager {
         this.isHost = false;
         this.token = null;
 
-        const isLocal = typeof window !== 'undefined' && (
-            window.location.hostname === 'localhost' ||
-            window.location.hostname === '127.0.0.1' ||
-            window.location.hostname === ''
-        );
-
-        // Worker URLs. Pages Functions proxy `/api` to the worker when deployed,
-        // but we call the worker directly so the same code works from any origin.
-        if (isLocal) {
-            this.apiBase = 'http://localhost:8787';
-            this.wsBase = 'ws://localhost:8787';
-        } else {
-            this.apiBase = 'https://sds-worker.matt-m-kissinger.workers.dev';
-            this.wsBase = 'wss://sds-worker.matt-m-kissinger.workers.dev';
-        }
-
-        this.debugMode = isLocal;
+        this.apiBase = getApiBase();
+        this.wsBase = getWsBase();
+        this.debugMode = isLocalRuntime();
 
         // Callbacks
         this.onConnectionStateChange = null;

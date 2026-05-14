@@ -1,10 +1,14 @@
-# Next Session - Cycle 36 (TBD)
+# Next Session - Konveyor Autonomous Run
 
-> **Updated:** 2026-05-13 after post-Cycle-35 content/leaderboard hardening.
-> **For:** Cycle 36 (slug TBD).
-> **Pickup priority:** Cycle 36 has not been scoped yet. One Cycle-35 carryover remains as a blocking input (paired OC MP playtest, requires Matt at the keyboard). The D1 telemetry-route carryover was verified 2026-05-12 and closed. The iOS Safari foam canary is still pending against the latest deploy. Post-Cycle-35 ad-hoc work also corrected scene leaderboard solo tabs and added the May 2026 content/capture campaign docs. Run `/cycle-start` to orient on whatever scope Cycle 36 lands on.
+> **Updated:** 2026-05-14 after Cycle 36 foundation completed and Matt
+> redirected Konveyor into a full autonomous experimental-branch run.
+> **For:** `exp/konveyor-webgpu-migration`.
+> **Pickup priority:** continue the full SDS Konveyor campaign from
+> [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md). Do not
+> stop at numbered cycle boundaries. Treat Cycle 36 as completed foundation
+> evidence, not the active stopping point.
 
-Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
+Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completed foundation plan [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
 
 ## Cycle 35 Outcome
 
@@ -20,7 +24,29 @@ The cycle delivered:
 
 ## Pickup Priority
 
-Cycle 36 has **no agreed scope yet**. Two open inputs before scoping:
+Work on `exp/konveyor-webgpu-migration`. The next autonomous agent should first
+stabilize and commit the foundation packet on that branch, excluding unrelated
+`.agents/skills/*` folders. Then continue from
+[`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md): create a
+minimal WebGPU/TSL diagnostic boot path, inventory shader/material migration
+surfaces, migrate incrementally, keep WebGL default, and keep moving through
+optimization and native proof until a real hard stop.
+
+The branch now has native-readiness code before a shell dependency:
+`BUILD_TARGET=native`, `SDS_WORKER_BASE`, `js/runtimeConfig.js`, and
+`npm run native:check`. Use that path for native-shaped perf/profiling work
+without committing to Tauri, Electron, or Capacitor yet.
+
+Cycle 36 foundation evidence is complete. The perf harness has been repaired
+and `tests/perf-baseline/baseline.json` now has all six default configs passing
+with 900 samples each. Desktop and mobile-profile latency gates are executable.
+Screenshot diff enforcement now fails correctly, but the visual gate is blocked
+because all 12 screenshot goldens are missing. Runtime proof is recorded at
+[`docs/archive/research/cycle-36-konveyor-runtime-proof.md`](docs/archive/research/cycle-36-konveyor-runtime-proof.md),
+and the Rolling Hills WebGPU spike is blocked by broad GLSL shader surface at
+[`docs/archive/research/cycle-36-webgpu-hero-blocker.md`](docs/archive/research/cycle-36-webgpu-hero-blocker.md).
+
+Keep two carryovers visible:
 
 1. **Phase 7 carryover from Cycle 35: paired OC MP playtest.** Matt at the keyboard, two browser tabs, host an OC cooperative room, drive sheep into the round-up zone at (0, 50), confirm `roundup → drive` flips server-side at hold=2.0s and the portal at z=295 opens. Cannot run autonomously.
 2. **iOS Safari foam canary post-deploy.** `npm run test:ios-water` against `https://sheepdogsim.com/` after the latest deploy lands. Hard-stop gate from Cycle 32. If `nearFoamWhite: true`, revert Phase 6 and re-open as a paired investigation.
@@ -29,9 +55,11 @@ Cycle 36 has **no agreed scope yet**. Two open inputs before scoping:
 
 **Closed 2026-05-13:** leaderboard solo-tab correction and content-campaign alignment. `GlobalLeaderboard` now shows solo modes for every concrete scene while multiplayer tabs still follow `scene.allowedModes`. The May 2026 Discord/devlog/capture docs live at [`docs/content-campaign-2026-05.md`](docs/content-campaign-2026-05.md), [`docs/capture-pipeline-spike-2026-05.md`](docs/capture-pipeline-spike-2026-05.md), and [`assets/marketing/content/2026-05-update/discord-threejs-update.md`](assets/marketing/content/2026-05-update/discord-threejs-update.md). Current Discord attachment image: [`assets/marketing/og/og-rh-sunset.webp`](assets/marketing/og/og-rh-sunset.webp). Generated MP4s are review-only; next capture pass should wait for the optimization/EZ-Tree/tree-spacing prep in [`docs/tree-pipeline.md`](docs/tree-pipeline.md).
 
-## Cycle 36 Candidates
+## Backlog Deferred Behind Konveyor
 
-Once the post-deploy verifications clear, candidates remaining in [`docs/BACKLOG.md`](docs/BACKLOG.md):
+The prior candidate list remains valid backlog, but it is not the active
+autonomous branch objective unless Matt explicitly redirects away from
+Konveyor:
 
 1. **OC objective HUD polish.** MP-specific copy or per-player progress indicators on the ObjectiveBanner. Decide after the Phase 7 playtest.
 2. **Promote `worker-objective-snapshot.spec.js` into the WS two-client harness.** Requires unskipping `tests/integration/flow.spec.ts`.
@@ -57,7 +85,9 @@ Durable fence applies in full ([`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan | [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md) (scaffold only) |
+| Active autonomous brief | [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md) |
+| Foundation evidence | [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md) |
+| Konveyor campaign doctrine | [`docs/konveyor-sds.md`](docs/konveyor-sds.md) |
 | Latest closed cycle | [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Security advisory acceptance log | [`docs/security-acceptance.md`](docs/security-acceptance.md) |

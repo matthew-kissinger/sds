@@ -11,24 +11,11 @@
  */
 
 import { getNetworkManager } from './GameBridge.js';
+import { getApiBase, isTelemetryEnabled } from './runtimeConfig.js';
 
 let _disabled = false;
 let _inFlight = 0;
 const MAX_IN_FLIGHT = 4;
-
-function isLocalDev() {
-    if (typeof window === 'undefined') return false;
-    const h = window.location.hostname;
-    return h === 'localhost' || h === '127.0.0.1';
-}
-
-function getApiBase() {
-    // Local dev / e2e tests are short-circuited by isLocalDev() before this
-    // is reached, so prod is the only live path. Target the worker directly:
-    // sheepdogsim.com is Cloudflare Pages with no /api/* proxy, so a relative
-    // POST returns 405 and the event silently drops on the floor.
-    return 'https://sds-worker.matt-m-kissinger.workers.dev';
-}
 
 function getToken() {
     try {
@@ -49,8 +36,8 @@ function getToken() {
 export function emitEvent(name, props = {}) {
     if (_disabled || _inFlight >= MAX_IN_FLIGHT) return Promise.resolve(null);
     if (typeof fetch === 'undefined' || typeof window === 'undefined') return Promise.resolve(null);
-    // Skip in local dev / e2e test runs (no worker on :8787 in those environments).
-    if (isLocalDev()) return Promise.resolve(null);
+    // Local dev and e2e runs often have no worker on :8787.
+    if (!isTelemetryEnabled()) return Promise.resolve(null);
     _inFlight++;
     const token = getToken();
     return fetch(`${getApiBase()}/api/event`, {
