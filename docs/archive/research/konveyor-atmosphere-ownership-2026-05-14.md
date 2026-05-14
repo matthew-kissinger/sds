@@ -41,6 +41,7 @@ proves both pieces of the atmosphere handoff:
    or can expose an equivalent renderer-agnostic sample API for fog, cloud,
    sun billboard, rock rim, water, grass, and impostor tint consumers.
 
-The next code island should prefer a diagnostic cloud-plane TSL material. It is
-smaller than the full Hosek-Wilkie dome, but it must keep the fog/horizon
-contract visible in tests and docs.
+The diagnostic cloud-plane TSL island now proves the smaller cloud material
+inputs. The next code island should prefer a sky/fog diagnostic prototype. It
+must keep the fog/horizon contract visible in tests and docs before any
+production renderer wiring.

@@ -12,9 +12,10 @@ plus three patch chains that mutate Three's generated GLSL through
 
 The safest first production-adjacent island was `SunBillboard`: it is small,
 cosmetic, has no scene data dependency, and maps cleanly to a
-`MeshBasicNodeMaterial`/TSL expression. The sun billboard, portal ring, and
-meadow-quad formulas are now ported inside the diagnostic island only. Do not
-start production wiring with terrain, grass, water, sheep, or Kiln impostors.
+`MeshBasicNodeMaterial`/TSL expression. The sun billboard, portal ring,
+meadow-quad, and cloud-plane formulas are now ported inside the diagnostic
+island only. Do not start production wiring with terrain, grass, water, sheep,
+or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -22,7 +23,7 @@ start production wiring with terrain, grass, water, sheep, or Kiln impostors.
 |---:|---|---|---|---|---|---|
 | 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. | Diagnostic island screenshot/probe, then default smoke. |
 | 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. | Open Country objective visual screenshot plus completion smoke. |
-| 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | TSL fragment node on a plane, then compare sky preset screenshots. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
+| 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | Diagnostic cloud-plane TSL material now covers value-noise/fbm mask, sun tint, coverage, footprint fade, and time input. Production wiring still needs sky preset screenshots and fog/horizon integration. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
 | 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Keep WebGL until a TSL sky prototype matches horizon/ground colors. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
 | 5 | Anime water | `js/water/AnimeWater.js` | Shoreline foam, heightfield-driven foam, ripples, sun glint, fog. | High. Samples a generated heightfield `DataTexture` and drives a visible scene focal point. | TSL water node material after sky/fog inputs are stable. | Water shoreline specs, Rolling Hills/Open Country screenshots, latency. |
 | 6 | Terrain ground | `js/TerrainBuilder.js` | Heightfield-displaced terrain with procedural ground color and Three fog chunks. | High. It is the base surface of every production scene and uses fog chunks. | TSL ground material with shared fog/horizon input contract. | Refactor-baseline terrain hash untouched, screenshots, perf. |
@@ -52,8 +53,9 @@ start production wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Recommended Migration Order
 
-1. Move to a diagnostic cloud-plane TSL material now that fog/horizon color
-   ownership is explicit in `konveyor-atmosphere-ownership-2026-05-14.md`.
+1. Move toward a sky/fog diagnostic prototype that preserves the CPU-accessible
+   horizon/sun color contract documented in
+   `konveyor-atmosphere-ownership-2026-05-14.md`.
 2. Prototype rock rim or tree-leaf wind only after GLB material ownership is
    explicit; both depend on current `onBeforeCompile` patch chains.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

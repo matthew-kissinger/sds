@@ -71,8 +71,8 @@ WebGPU now has a diagnostic island, not a production renderer:
   records the default production-preview URL with `diagnostic: null`.
 - [`archive/research/konveyor-shader-surface-inventory-2026-05-14.md`](archive/research/konveyor-shader-surface-inventory-2026-05-14.md)
   ranks the current GLSL and `onBeforeCompile` migration surface. The sun
-  billboard, portal ring, and meadow-quad formulas are now ported inside the
-  diagnostic island.
+  billboard, portal ring, meadow-quad, and cloud-plane formulas are now ported
+  inside the diagnostic island.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
@@ -87,7 +87,7 @@ one material system at a time.
 Recommended order:
 
 1. **Pick the next smallest production-adjacent material island.** Prefer a
-   diagnostic cloud-plane TSL material now that fog/horizon ownership is pinned.
+   sky/fog diagnostic prototype that preserves CPU-accessible horizon/sun color.
    Do not start with terrain + grass + water + sky all at once.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
