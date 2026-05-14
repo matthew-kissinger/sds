@@ -144,6 +144,16 @@ export function createSkyFogDiagnosticState() {
     };
 }
 
+export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
+    return {
+        baseColor: [0.34, 0.32, 0.27],
+        rimColor: skyFog.sunColor,
+        rimStrength: 0.48,
+        rimPower: 2.0,
+        sunColorSource: 'skyFog.sunColor',
+    };
+}
+
 function createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog) {
     const { float, length, mix, pow, smoothstep, uv, vec2, vec3 } = TSL;
     const skyUv = uv();
@@ -168,15 +178,31 @@ function createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog) {
     return material;
 }
 
+function createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim) {
+    const { dot, float, max, normalize, normalView, positionView, pow, vec3 } = TSL;
+    const viewDir = normalize(positionView.negate());
+    const ndv = max(dot(viewDir, normalView), 0.0);
+    const rim = pow(float(1.0).sub(ndv), rockRim.rimPower).mul(rockRim.rimStrength);
+
+    const material = new MeshStandardNodeMaterial();
+    material.colorNode = vec3(...rockRim.baseColor);
+    material.emissiveNode = vec3(...rockRim.rimColor).mul(rim);
+    material.roughnessNode = float(0.86);
+    material.metalnessNode = float(0.0);
+    return material;
+}
+
 export async function bootWebGpuDiagnostic() {
     const skyFog = createSkyFogDiagnosticState();
+    const rockRim = createRockRimDiagnosticState(skyFog);
     const state = window.__sdsWebGpuDiagnostic = {
         ...(window.__sdsWebGpuDiagnostic || {}),
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim'],
         skyFog,
+        rockRim,
         frames: 0,
     };
 
@@ -216,9 +242,11 @@ export async function bootWebGpuDiagnostic() {
         BoxGeometry,
         PlaneGeometry,
         RingGeometry,
+        IcosahedronGeometry,
         Mesh,
         MeshBasicNodeMaterial,
         MeshLambertNodeMaterial,
+        MeshStandardNodeMaterial,
         Color,
         Fog,
         AmbientLight,
@@ -253,6 +281,14 @@ export async function bootWebGpuDiagnostic() {
     const cube = new Mesh(new BoxGeometry(1, 1, 1), material);
     cube.position.x = 0.55;
     scene.add(cube);
+
+    const rock = new Mesh(
+        new IcosahedronGeometry(0.42, 2),
+        createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim)
+    );
+    rock.position.set(1.45, 0.25, 0.05);
+    rock.rotation.set(0.25, 0.45, 0.1);
+    scene.add(rock);
 
     const skyFogBackdrop = new Mesh(
         new PlaneGeometry(7.5, 4.25, 1, 1),
@@ -305,6 +341,7 @@ export async function bootWebGpuDiagnostic() {
         if (!running) return;
         cube.rotation.x = t * 0.0006;
         cube.rotation.y = t * 0.0009;
+        rock.rotation.y = 0.45 + t * 0.00035;
         await renderer.renderAsync(scene, camera);
         state.frames += 1;
         if (state.frames === 1) {
@@ -319,6 +356,8 @@ export async function bootWebGpuDiagnostic() {
         window.removeEventListener('resize', resize);
         cube.geometry.dispose();
         material.dispose();
+        rock.geometry.dispose();
+        rock.material.dispose();
         skyFogBackdrop.geometry.dispose();
         skyFogBackdrop.material.dispose();
         portal.geometry.dispose();

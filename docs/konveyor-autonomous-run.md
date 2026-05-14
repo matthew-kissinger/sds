@@ -72,7 +72,8 @@ WebGPU now has a diagnostic island, not a production renderer:
 - [`archive/research/konveyor-shader-surface-inventory-2026-05-14.md`](archive/research/konveyor-shader-surface-inventory-2026-05-14.md)
   ranks the current GLSL and `onBeforeCompile` migration surface. The sun
   billboard, portal ring, meadow-quad, cloud-plane, and sky/fog formulas are
-  now ported inside the diagnostic island.
+  now ported inside the diagnostic island. The rock-rim fresnel formula is
+  also ported as the first `onBeforeCompile` replacement island.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
@@ -87,10 +88,11 @@ one material system at a time.
 Recommended order:
 
 1. **Pick the next smallest production-adjacent material island.** The sky/fog
-   diagnostic prototype now preserves a CPU-accessible horizon/sun/fog packet.
-   Prefer a rock-rim or tree-leaf ownership spike next; both are smaller than
-   terrain, water, blade grass, sheep, or Kiln impostors but still exercise the
-   `onBeforeCompile` replacement problem.
+   diagnostic prototype now preserves a CPU-accessible horizon/sun/fog packet,
+   and the rock-rim TSL prototype now covers the smallest
+   `onBeforeCompile` replacement formula. Prefer a tree-leaf ownership spike
+   next, because it combines GLB material ownership, wind displacement,
+   alpha-hash posture, and camera-to-dog occluder fade.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Advance through the Konveyor phase outline.** Keep moving from cosmetic

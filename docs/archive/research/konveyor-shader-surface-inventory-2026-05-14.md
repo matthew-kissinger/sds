@@ -14,8 +14,10 @@ The safest first production-adjacent island was `SunBillboard`: it is small,
 cosmetic, has no scene data dependency, and maps cleanly to a
 `MeshBasicNodeMaterial`/TSL expression. The sun billboard, portal ring,
 meadow-quad, cloud-plane, and sky/fog formulas are now ported inside the
-diagnostic island only. Do not start production wiring with terrain, grass,
-water, sheep, or Kiln impostors.
+diagnostic island only. The rock-rim fresnel formula is also ported as a
+diagnostic `MeshStandardNodeMaterial` island driven by the CPU sky/fog sun
+color packet. Do not start production wiring with terrain, grass, water, sheep,
+or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -37,7 +39,7 @@ water, sheep, or Kiln impostors.
 | Patch | File | Mutated material | Why it matters | WebGPU migration note |
 |---|---|---|---|---|
 | Tree wind plus occluder fade | `js/world/shaderPatches.js`, `js/shaders/OccluderFadePatch.js` | Tree GLB leaf `MeshStandardMaterial` instances. | Adds wind sway, alpha hash, and camera-to-dog dither fade. | Replace with NodeMaterial/TSL leaf material or a GLB material normalization pass. Cannot carry `onBeforeCompile` into WebGPU. |
-| Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Good later TSL island after sun/portal/meadow, because it is small but depends on GLB material ownership. |
+| Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Formula now exists in the diagnostic TSL harness as `MeshStandardNodeMaterial`; production wiring still needs GLB material ownership and replacement strategy for the current patch chain. |
 | Meadow quad tint | `js/GrassSystem.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists in the diagnostic TSL harness as `MeshLambertNodeMaterial`. Production wiring still needs fog and far-ring screenshots. |
 
 ## Dormant Or Supporting Surfaces
@@ -53,8 +55,9 @@ water, sheep, or Kiln impostors.
 
 ## Recommended Migration Order
 
-1. Prototype rock rim or tree-leaf wind only after GLB material ownership is
-   explicit; both depend on current `onBeforeCompile` patch chains.
+1. Prototype tree-leaf wind and occluder ownership only after GLB material
+   ownership is explicit; it depends on current `onBeforeCompile` patch chains
+   and is the next small island after rock rim.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

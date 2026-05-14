@@ -50,7 +50,7 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   copied Three WebGPU/Core browser modules after the query flag and leaves the
   normal WebGL bundle path as default. Current diagnostic islands cover the sun
   billboard, portal ring, meadow quad, cloud plane, and a sky/fog CPU sample
-  packet.
+  packet, plus the rock-rim fresnel formula.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.
