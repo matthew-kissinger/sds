@@ -12,6 +12,10 @@ const isNative = nativeTargets.has(buildTarget)
 const workerBase = (process.env.SDS_WORKER_BASE || 'https://sds-worker.matt-m-kissinger.workers.dev').replace(/\/+$/, '')
 const buildId = Date.now().toString()
 
+function patchThreeAddonImport(content) {
+  return content.replace(/from 'three';/g, "from '../../../three.core.min.js';")
+}
+
 // Cloudflare Pages has a 26MB per-file limit; .blend source files aren't needed at runtime.
 function excludeBlendFilesPlugin() {
   return {
@@ -66,7 +70,31 @@ export default defineConfig({
       targets: [
         { src: 'assets/*', dest: 'assets' },
         { src: 'node_modules/three/build/three.webgpu.min.js', dest: 'assets/vendor/three' },
-        { src: 'node_modules/three/build/three.core.min.js', dest: 'assets/vendor/three' }
+        { src: 'node_modules/three/build/three.core.min.js', dest: 'assets/vendor/three' },
+        {
+          src: 'node_modules/three/examples/jsm/loaders/GLTFLoader.js',
+          dest: 'assets/vendor/three/examples/jsm/loaders',
+          transform: { encoding: 'utf8', handler: patchThreeAddonImport }
+        },
+        {
+          src: 'node_modules/three/examples/jsm/loaders/DRACOLoader.js',
+          dest: 'assets/vendor/three/examples/jsm/loaders',
+          transform: { encoding: 'utf8', handler: patchThreeAddonImport }
+        },
+        {
+          src: 'node_modules/three/examples/jsm/utils/BufferGeometryUtils.js',
+          dest: 'assets/vendor/three/examples/jsm/utils',
+          transform: { encoding: 'utf8', handler: patchThreeAddonImport }
+        },
+        {
+          src: 'node_modules/three/examples/jsm/utils/SkeletonUtils.js',
+          dest: 'assets/vendor/three/examples/jsm/utils',
+          transform: { encoding: 'utf8', handler: patchThreeAddonImport }
+        },
+        {
+          src: 'node_modules/three/examples/jsm/libs/meshopt_decoder.module.js',
+          dest: 'assets/vendor/three/examples/jsm/libs'
+        }
       ]
     }),
     excludeBlendFilesPlugin(),

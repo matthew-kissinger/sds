@@ -15,6 +15,7 @@ import {
   parseGlbJson,
   RUNTIME_GLB_MATERIAL_PROOF_ASSETS,
 } from '../js/diagnostics/webgpuGlbMaterialProof.js';
+import { RUNTIME_GLB_RENDER_PREVIEW_ASSETS } from '../js/diagnostics/webgpuRuntimeGlbPreview.js';
 
 function createGlbBuffer(gltf) {
   const json = JSON.stringify(gltf);
@@ -171,5 +172,12 @@ describe('webgpu runtime glb material proof', () => {
       treeReplacementStrategy: 'material-name',
       rockReplacementStrategy: 'asset-class-traversal',
     });
+  });
+
+  it('renders only production GLBs covered by the runtime material proof', () => {
+    const proofPaths = new Set(RUNTIME_GLB_MATERIAL_PROOF_ASSETS.map((asset) => asset.path));
+
+    expect(RUNTIME_GLB_RENDER_PREVIEW_ASSETS.map((asset) => asset.role).sort()).toEqual(['rock', 'tree']);
+    expect(RUNTIME_GLB_RENDER_PREVIEW_ASSETS.every((asset) => proofPaths.has(asset.path))).toBe(true);
   });
 });

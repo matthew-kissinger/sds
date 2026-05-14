@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T22:01:31.974Z",
+  "capturedAt": "2026-05-14T22:12:03.986Z",
   "url": "http://127.0.0.1:3000/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -84,7 +84,8 @@
       "rock-rim",
       "tree-leaf",
       "glb-material-replacement",
-      "runtime-glb-material-proof"
+      "runtime-glb-material-proof",
+      "runtime-glb-rendered-clones"
     ],
     "skyFog": {
       "horizonColor": [
@@ -366,6 +367,56 @@
         "rockReplacementStrategy": "asset-class-traversal"
       }
     },
-    "frames": 2
+    "runtimeGlbPreview": {
+      "ok": true,
+      "assets": 2,
+      "rendered": [
+        {
+          "key": "tree1-lod0",
+          "role": "tree",
+          "path": "assets/models/trees/tree1.glb",
+          "replacement": {
+            "strategy": "material-name",
+            "targetNames": [
+              "branches",
+              "leaves"
+            ],
+            "seenNames": [
+              "branches",
+              "leaves"
+            ],
+            "missingTargets": [],
+            "visitedMeshes": 2,
+            "replacedMaterials": 2
+          },
+          "bounds": {
+            "scale": 0.72,
+            "width": 0.6092,
+            "height": 0.72,
+            "depth": 0.6208
+          }
+        },
+        {
+          "key": "rock1-lod0",
+          "role": "rock",
+          "path": "assets/models/rocks/rock1.glb",
+          "replacement": {
+            "strategy": "asset-class-traversal",
+            "visitedMeshes": 1,
+            "replacedMaterials": 1,
+            "previousMaterialNames": [
+              "(runtime-default)"
+            ]
+          },
+          "bounds": {
+            "scale": 2.815,
+            "width": 0.5466,
+            "height": 0.2815,
+            "depth": 0.5091
+          }
+        }
+      ]
+    },
+    "frames": 3
   }
 }

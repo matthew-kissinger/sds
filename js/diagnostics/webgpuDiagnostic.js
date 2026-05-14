@@ -3,6 +3,7 @@ import {
     replaceTreeMaterialsByName,
 } from './webgpuMaterialReplacement.js';
 import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
+import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 
 async function loadWebGpuThree() {
     const webGpuModulePath = './vendor/three/three.webgpu.min.js';
@@ -277,12 +278,13 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones'],
         skyFog,
         rockRim,
         treeLeaf,
         materialReplacement: null,
         runtimeGlbReplacement: null,
+        runtimeGlbPreview: null,
         frames: 0,
     };
 
@@ -334,6 +336,8 @@ export async function bootWebGpuDiagnostic() {
         AdditiveBlending,
         DoubleSide,
         Group,
+        Box3,
+        Vector3,
         TSL,
     } = await loadWebGpuThree();
 
@@ -422,6 +426,24 @@ export async function bootWebGpuDiagnostic() {
         };
         return fail(`runtime GLB material proof failed: ${state.runtimeGlbReplacement.error}`);
     }
+    try {
+        state.runtimeGlbPreview = await createRuntimeGlbPreview({
+            scene,
+            three: { Box3, Vector3 },
+            createTreeBranchMaterial: () => createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
+            createTreeLeafMaterial: () => createTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf),
+            createRockMaterial: () => createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim),
+        });
+        if (!state.runtimeGlbPreview.ok) {
+            return fail('runtime GLB rendered clone proof failed');
+        }
+    } catch (err) {
+        state.runtimeGlbPreview = {
+            ok: false,
+            error: String(err?.message || err),
+        };
+        return fail(`runtime GLB rendered clone proof failed: ${state.runtimeGlbPreview.error}`);
+    }
 
     const portal = new Mesh(
         new RingGeometry(0.62, 0.86, 80, 1),
@@ -494,6 +516,7 @@ export async function bootWebGpuDiagnostic() {
             const materials = Array.isArray(child.material) ? child.material : [child.material];
             materials.forEach((m) => m?.dispose?.());
         });
+        state.runtimeGlbPreview?.dispose?.();
         canvas.remove();
         status.remove();
     };

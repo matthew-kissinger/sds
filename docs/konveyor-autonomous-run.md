@@ -92,6 +92,12 @@ WebGPU now has a diagnostic island, not a production renderer:
   all seven shipped tree and rock GLBs, parses their primitive/material
   contracts, and proves 8 tree and 3 rock replacements through the expected
   strategies.
+- The same diagnostic artifact now records `runtime-glb-rendered-clones`: the
+  browser loads `tree1.glb` and `rock1.glb` through the production
+  GLTF/Draco/Meshopt loader stack, renders them in the WebGPU scene with node
+  material replacements, and reports `runtimeGlbPreview.ok: true`. The loader
+  modules are served through the diagnostic static vendor path so the default
+  `main` bundle stays inside the refactor-baseline ratchet.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
@@ -111,10 +117,11 @@ Recommended order:
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
    and a diagnostic replacement proof now exist, plus a GLB primitive-clone
-   proof and browser runtime fetch proof against the shipped compressed assets.
-   Prefer rendered runtime-loaded production GLB clone wiring next, using tree
-   material names for tree work and rock asset class or mesh traversal for rock
-   work.
+   proof, browser runtime fetch proof, and rendered production-GLB clone proof
+   against the shipped compressed assets. Prefer either expanding clone coverage
+   across the remaining tree/rock variants or promoting the tree/rock replacement
+   adapter toward feature-flagged production placement, using tree material
+   names for tree work and rock asset class or mesh traversal for rock work.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The
