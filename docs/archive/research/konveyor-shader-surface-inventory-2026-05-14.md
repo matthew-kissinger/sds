@@ -28,8 +28,11 @@ fetches all seven shipped tree and rock GLBs inside the diagnostic path and
 applies the same replacement strategy to their real primitive/material
 contracts. A rendered-clone diagnostic island now also loads all seven shipped
 tree and rock GLBs with the production GLTF/Draco/Meshopt path and renders them
-with WebGPU node-material replacements. Do not start production wiring with
-terrain, grass, water, sheep, or Kiln impostors.
+with WebGPU node-material replacements. A production-side tree/rock replacement
+adapter now exists behind `?renderer=webgpu&konveyorMaterials=1` and explicit
+WebGPU material factories; the default WebGL load still uses the current
+`onBeforeCompile` patches. Do not start production wiring with terrain, grass,
+water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -97,6 +100,11 @@ comments:
   bounded clone dimensions in the Chrome diagnostic artifact. These loader
   modules are copied to the diagnostic static vendor path and imported by URL to
   avoid exporting them from the default `main` chunk.
+- The production-side adapter in `js/world/konveyorMaterialAdapter.js` reuses
+  the same tree-name and rock-traversal replacement rules for cached GLB roots.
+  It only activates when `renderer=webgpu&konveyorMaterials=1` is present and
+  WebGPU material factories are explicitly supplied; otherwise production
+  materials stay untouched.
 
 ## Dormant Or Supporting Surfaces
 
@@ -117,9 +125,10 @@ comments:
    The diagnostic replacement island, GLB primitive-clone proof, and browser
    runtime GLB fetch proof cover both strategies. The rendered-clone island now
    proves all shipped tree and rock variants can load and render with WebGPU
-   node-material replacements. The next code island should promote the tree/rock
-   replacement adapter toward a feature-flagged production placement path while
-   keeping current WebGL `onBeforeCompile` patches as default.
+   node-material replacements. The feature-flagged production adapter now
+   exists; the next code island should bind it to the first real WebGPU
+   production-placement proof while keeping current WebGL `onBeforeCompile`
+   patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

@@ -61,6 +61,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   primitive/material replacement contracts. The diagnostic also renders all
   seven GLBs with WebGPU node-material replacements through the production
   GLTF/Draco/Meshopt loader path without changing production runtime wiring.
+  A production-facing material adapter now exists behind
+  `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
+  factories, so cached production tree/rock GLB roots can be replaced without
+  changing the default WebGL patch path.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.

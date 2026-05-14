@@ -98,6 +98,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   material replacements, and reports `runtimeGlbPreview.ok: true`. The loader
   modules are served through the diagnostic static vendor path so the default
   `main` bundle stays inside the refactor-baseline ratchet.
+- A production-facing tree/rock material adapter now exists behind
+  `?renderer=webgpu&konveyorMaterials=1` and explicit WebGPU material factories.
+  It reuses the proved tree material-name and rock traversal strategies against
+  cached production GLB roots, but leaves the default WebGL `onBeforeCompile`
+  patch path untouched when the flag or factories are absent.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
@@ -118,10 +123,10 @@ Recommended order:
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
    and a diagnostic replacement proof now exist, plus a GLB primitive-clone
    proof, browser runtime fetch proof, and rendered production-GLB clone proof
-   against all shipped compressed tree/rock assets. Promote the tree/rock
-   replacement adapter toward feature-flagged production placement next, using
-   tree material names for tree work and rock asset class or mesh traversal for
-   rock work.
+   against all shipped compressed tree/rock assets. The feature-flagged
+   production adapter seam now exists; bind it to the first real WebGPU
+   production-placement proof next, using tree material names for tree work and
+   rock asset class or mesh traversal for rock work.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The
