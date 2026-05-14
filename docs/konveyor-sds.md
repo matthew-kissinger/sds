@@ -67,7 +67,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   it does not instantiate production `TerrainBuilder` or change production
   WebGL startup. A second diagnostic island renders those samples through
   WebGPU `THREE.InstancedMesh` groups for trunks and leaves, proving LOD0
-  instancing compatibility without importing production `InstancedMesh2`.
+  instancing compatibility without importing production `InstancedMesh2`. That
+  proof now runs through a production-facing Konveyor instancing adapter seam;
+  package inspection keeps `InstancedMesh2` classified as WebGL-path until a
+  specific compatibility proof says otherwise.
   A production-facing material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
   factories, so cached production tree/rock GLB roots can be replaced without

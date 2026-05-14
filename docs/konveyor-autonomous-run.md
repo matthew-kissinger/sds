@@ -110,6 +110,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   production placement matrices and WebGPU node materials can survive a native
   Three instancing path. It is LOD0-only and explicitly does not import
   `@three.ez/instanced-mesh`/`InstancedMesh2` into the WebGPU diagnostic.
+- The native tree-instancing proof now runs through
+  `js/world/konveyorTreeInstancingAdapter.js`, a renderer-specific adapter seam
+  that can feed WebGPU `THREE.InstancedMesh` groups without importing
+  `InstancedMesh2`.
 - A production-facing tree/rock material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` and explicit WebGPU material factories.
   It reuses the proved tree material-name and rock traversal strategies against
@@ -140,10 +144,12 @@ Recommended order:
    proof now samples Rolling Hills production scene data through the shared
    tree placement generator, renders adapter-backed WebGPU tree GLB samples,
    and proves a LOD0-only WebGPU `THREE.InstancedMesh` path for the same
-   samples. Next, decide whether `InstancedMesh2` should remain a WebGL-only
-   optimization layer, be isolated behind a renderer-specific adapter, or be
-   bypassed by native `THREE.InstancedMesh` for WebGPU before moving to rock
-   placement or another smaller shader/material island.
+   samples through a production-facing adapter seam. Package inspection shows
+   `@three.ez/instanced-mesh` has WebGL-specific hooks, so the conservative
+   current decision is to keep `InstancedMesh2` on the WebGL path and continue
+   the WebGPU route with native `THREE.InstancedMesh` until a measured reason
+   says otherwise. Next move to rock placement or another smaller
+   shader/material island before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The

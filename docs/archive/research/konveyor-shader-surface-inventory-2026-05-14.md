@@ -36,7 +36,8 @@ adapter-backed tree GLB samples as a production-placement preview; the default
 WebGL load still uses the current `onBeforeCompile` patches. A follow-up
 diagnostic island renders the same samples through WebGPU `THREE.InstancedMesh`
 groups for trunks and leaves, proving LOD0 native Three instancing without
-pulling production `InstancedMesh2` into the WebGPU namespace. Do not start
+pulling production `InstancedMesh2` into the WebGPU namespace. That path now
+goes through `js/world/konveyorTreeInstancingAdapter.js`. Do not start
 production wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
@@ -116,6 +117,11 @@ comments:
   tree type. It records 16 instance matrices across the four groups and keeps
   the status of production `InstancedMesh2` explicit: not imported in the
   WebGPU diagnostic, LOD0-only, no BVH/LOD/impostor migration claimed.
+- `js/world/konveyorTreeInstancingAdapter.js` owns the native instancing seam
+  used by that diagnostic. Package inspection found WebGL-specific
+  `@three.ez/instanced-mesh` surfaces (`WebGLRenderer`,
+  `WebGL2RenderingContext`, `WebGLProperties`), so the current WebGPU route is
+  native `THREE.InstancedMesh` rather than direct `InstancedMesh2` reuse.
 - The production-side adapter in `js/world/konveyorMaterialAdapter.js` reuses
   the same tree-name and rock-traversal replacement rules for cached GLB roots.
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and
@@ -144,11 +150,10 @@ comments:
    node-material replacements. The feature-flagged production adapter now
    exists, and the first tree-placement proof samples real Rolling Hills scene
    data through the shared tree placement generator. The WebGPU diagnostic now
-   also proves a LOD0-only `THREE.InstancedMesh` tree path. The next code
-   island should decide whether production `InstancedMesh2` remains WebGL-only
-   behind an adapter, whether WebGPU should use native `THREE.InstancedMesh`,
-   or whether to move to rock-placement proof / another smaller material island
-   while keeping current WebGL `onBeforeCompile` patches as default.
+   also proves a LOD0-only `THREE.InstancedMesh` tree path through the
+   production-facing adapter seam. Keep production `InstancedMesh2` on the
+   WebGL path for now; move to rock-placement proof or another smaller material
+   island while keeping current WebGL `onBeforeCompile` patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the
