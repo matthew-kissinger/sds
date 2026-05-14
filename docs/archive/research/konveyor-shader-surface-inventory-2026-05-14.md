@@ -20,8 +20,11 @@ color packet. A diagnostic tree-leaf island now covers wind displacement,
 alpha-hash posture, and a local occluder fade proxy. GLB material ownership
 proof now shows that tree LOD0/LOD1 assets have stable `branches` and `leaves`
 materials, while rock assets currently expose runtime-default primitive
-materials and cannot be migrated by material name. Do not start production
-wiring with terrain, grass, water, sheep, or Kiln impostors.
+materials and cannot be migrated by material name. The diagnostic island now
+also includes a WebGPU material-replacement proof that exercises tree
+replacement by `branches`/`leaves` names and rock replacement by mesh traversal
+without loading production GLBs or touching the default WebGL path. Do not
+start production wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -63,6 +66,10 @@ comments:
 - Rock GLB primitives resolve through a runtime-default material target, so the
   rock-rim migration must replace by rock asset class or mesh traversal rather
   than by authored material name.
+- The WebGPU diagnostic `glb-material-replacement` island proves those two
+  replacement strategies in isolation: tree replacement by material name and
+  rock replacement by traversal. It is still diagnostic-only; real production
+  GLB wiring remains a separate gated step.
 
 ## Dormant Or Supporting Surfaces
 
@@ -80,8 +87,10 @@ comments:
 1. Use the captured GLB ownership proof before production tree or rock wiring:
    tree replacements may target `leaves` and `branches` by material name across
    LOD0/LOD1; rock replacements must use rock asset class or mesh traversal.
-   The next code island should prove one replacement path behind the WebGPU
-   flag while keeping the current WebGL `onBeforeCompile` patches as default.
+   The diagnostic replacement island proves both strategies in isolation; the
+   next code island should apply one strategy to loaded production GLB clones
+   behind the WebGPU flag while keeping the current WebGL `onBeforeCompile`
+   patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

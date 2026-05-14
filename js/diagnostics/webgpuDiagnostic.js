@@ -1,3 +1,8 @@
+import {
+    replaceRockMaterialsByTraversal,
+    replaceTreeMaterialsByName,
+} from './webgpuMaterialReplacement.js';
+
 async function loadWebGpuThree() {
     const webGpuModulePath = './vendor/three/three.webgpu.min.js';
     return import(/* @vite-ignore */ new URL(webGpuModulePath, import.meta.url).href);
@@ -253,6 +258,15 @@ function createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim) {
     return material;
 }
 
+function createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }) {
+    const { float, vec3 } = TSL;
+    const material = new MeshStandardNodeMaterial();
+    material.colorNode = vec3(0.20, 0.11, 0.055);
+    material.roughnessNode = float(0.94);
+    material.metalnessNode = float(0.0);
+    return material;
+}
+
 export async function bootWebGpuDiagnostic() {
     const skyFog = createSkyFogDiagnosticState();
     const rockRim = createRockRimDiagnosticState(skyFog);
@@ -262,10 +276,11 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement'],
         skyFog,
         rockRim,
         treeLeaf,
+        materialReplacement: null,
         frames: 0,
     };
 
@@ -316,6 +331,7 @@ export async function bootWebGpuDiagnostic() {
         DirectionalLight,
         AdditiveBlending,
         DoubleSide,
+        Group,
         TSL,
     } = await loadWebGpuThree();
 
@@ -345,12 +361,13 @@ export async function bootWebGpuDiagnostic() {
     cube.position.x = 0.55;
     scene.add(cube);
 
-    const rock = new Mesh(
-        new IcosahedronGeometry(0.42, 2),
-        createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim)
-    );
+    const rock = new Mesh(new IcosahedronGeometry(0.42, 2), new MeshStandardNodeMaterial());
     rock.position.set(1.45, 0.25, 0.05);
     rock.rotation.set(0.25, 0.45, 0.1);
+    const rockReplacement = replaceRockMaterialsByTraversal(
+        rock,
+        () => createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim)
+    );
     scene.add(rock);
 
     const skyFogBackdrop = new Mesh(
@@ -368,13 +385,29 @@ export async function bootWebGpuDiagnostic() {
     sun.position.set(-0.85, 0.35, 0.15);
     scene.add(sun);
 
-    const treeLeafMesh = new Mesh(
-        new PlaneGeometry(0.72, 1.05, 5, 8),
-        createTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf)
-    );
-    treeLeafMesh.position.set(-1.55, 0.55, 0.18);
+    const treeGroup = new Group();
+    const treeBranchSource = new MeshStandardNodeMaterial();
+    treeBranchSource.name = 'branches';
+    const treeBranchMesh = new Mesh(new BoxGeometry(0.1, 0.78, 0.1), treeBranchSource);
+    treeBranchMesh.position.set(0, -0.14, -0.01);
+    treeGroup.add(treeBranchMesh);
+
+    const treeLeafSource = new MeshStandardNodeMaterial();
+    treeLeafSource.name = 'leaves';
+    const treeLeafMesh = new Mesh(new PlaneGeometry(0.72, 1.05, 5, 8), treeLeafSource);
+    treeLeafMesh.position.set(0, 0.26, 0.02);
     treeLeafMesh.rotation.set(0.0, -0.18, -0.25);
-    scene.add(treeLeafMesh);
+    treeGroup.add(treeLeafMesh);
+    const treeReplacement = replaceTreeMaterialsByName(treeGroup, {
+        branches: () => createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
+        leaves: () => createTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf),
+    });
+    treeGroup.position.set(-1.55, 0.33, 0.18);
+    scene.add(treeGroup);
+    state.materialReplacement = {
+        rocks: rockReplacement,
+        trees: treeReplacement,
+    };
 
     const portal = new Mesh(
         new RingGeometry(0.62, 0.86, 80, 1),
@@ -413,7 +446,7 @@ export async function bootWebGpuDiagnostic() {
         cube.rotation.x = t * 0.0006;
         cube.rotation.y = t * 0.0009;
         rock.rotation.y = 0.45 + t * 0.00035;
-        treeLeafMesh.rotation.z = -0.25 + Math.sin(t * 0.0012) * 0.05;
+        treeGroup.rotation.z = Math.sin(t * 0.0012) * 0.035;
         await renderer.renderAsync(scene, camera);
         state.frames += 1;
         if (state.frames === 1) {
@@ -441,8 +474,12 @@ export async function bootWebGpuDiagnostic() {
         renderer.dispose();
         sun.geometry.dispose();
         sun.material.dispose();
-        treeLeafMesh.geometry.dispose();
-        treeLeafMesh.material.dispose();
+        treeGroup.traverse((child) => {
+            if (!child.isMesh) return;
+            child.geometry?.dispose();
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            materials.forEach((m) => m?.dispose?.());
+        });
         canvas.remove();
         status.remove();
     };

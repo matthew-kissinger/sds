@@ -75,7 +75,9 @@ WebGPU now has a diagnostic island, not a production renderer:
   now ported inside the diagnostic island. The rock-rim fresnel formula is
   also ported as the first `onBeforeCompile` replacement island, and a
   diagnostic tree-leaf island now covers wind displacement, alpha-hash posture,
-  and occluder fade inputs without touching production GLBs.
+  and occluder fade inputs without touching production GLBs. A diagnostic
+  `glb-material-replacement` island now proves tree material-name replacement
+  and rock traversal replacement in isolation.
 - [`../cycle36-validation/runtime/material-ownership.json`](../cycle36-validation/runtime/material-ownership.json)
   records GLB material ownership for production-adjacent tree and rock work.
   Tree LOD0/LOD1 assets have stable `branches` and `leaves` material names;
@@ -99,11 +101,20 @@ Recommended order:
    the rock-rim TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
-   now exists; prefer a flag-gated replacement proof next, using tree material
-   names for tree work and rock asset-class or mesh traversal for rock work.
+   and a diagnostic replacement proof now exist; prefer a loaded-production-GLB
+   clone proof next, using tree material names for tree work and rock asset
+   class or mesh traversal for rock work.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
-3. **Advance through the Konveyor phase outline.** Keep moving from cosmetic
+3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The
+   repo already resolves `@dgreenheck/ez-tree` 1.1.0, which is the current npm
+   latest as of 2026-05-14. Upstream `main` has unreleased tree-generation
+   changes around softer leaf normals, corrected growth force, and stratified
+   child branch/leaf placement
+   ([changelog](https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md)).
+   Evaluate those before Phase 2/4 tree rebakes, but only accept regenerated
+   GLBs with named visual and perf artifacts.
+4. **Advance through the Konveyor phase outline.** Keep moving from cosmetic
    shader compatibility to trees, grass, sheep/high-count rendering, compute
    experiments, native packaging, and web fallback/release decisions as
    evidence allows.

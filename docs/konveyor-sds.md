@@ -51,10 +51,11 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   normal WebGL bundle path as default. Current diagnostic islands cover the sun
   billboard, portal ring, meadow quad, cloud plane, and a sky/fog CPU sample
   packet, plus the rock-rim fresnel formula and a tree-leaf wind/alpha/occluder
-  proxy. GLB material ownership proof now shows that tree LOD0/LOD1 assets can
-  be addressed by stable `branches` and `leaves` material names, while rocks
-  require replacement by asset class or mesh traversal rather than material
-  name.
+  proxy. A diagnostic material-replacement island proves tree replacement by
+  `branches`/`leaves` material names and rock replacement by traversal. GLB
+  material ownership proof now shows that tree LOD0/LOD1 assets can be addressed
+  by stable material names, while rocks require replacement by asset class or
+  mesh traversal rather than material name.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.
@@ -271,6 +272,15 @@ behavior through the current visual, latency, test, lint, and build gates.
 Check the current `@dgreenheck/ez-tree` release, re-bake only if there is a
 clear output or performance reason, and re-run GLB compression plus Kiln
 impostor bakes when silhouettes or materials change.
+
+As of 2026-05-14, npm latest for `@dgreenheck/ez-tree` is 1.1.0 and SDS already
+resolves that version. Upstream `main` has unreleased changes for softer leaf
+normals, corrected growth force, and stratified branch/leaf placement
+([changelog](https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md)).
+That is a serious tree-refresh candidate for the WebGPU/native target, but it
+must run through the asset-gallery pick flow, GLB compression, Kiln impostor
+rebake where needed, material-ownership proof, visual review, and perf/latency
+gates before replacing shipped trees.
 
 Exit: every accepted tree delta is artifact-backed, and tree goldens are updated
 only for named, intentional differences.
