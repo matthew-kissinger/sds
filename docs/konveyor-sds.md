@@ -58,10 +58,9 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   mesh traversal rather than material name. A follow-up primitive-clone proof
   applies those strategies to the shipped compressed GLBs, and the browser
   diagnostic now fetches all seven shipped tree and rock GLBs to prove the same
-  primitive/material replacement contracts. The diagnostic also renders
-  `tree1.glb` and `rock1.glb` with WebGPU node-material replacements through
-  the production GLTF/Draco/Meshopt loader path without changing production
-  runtime wiring.
+  primitive/material replacement contracts. The diagnostic also renders all
+  seven GLBs with WebGPU node-material replacements through the production
+  GLTF/Draco/Meshopt loader path without changing production runtime wiring.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.

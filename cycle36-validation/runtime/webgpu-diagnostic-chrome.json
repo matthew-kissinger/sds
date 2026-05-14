@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T22:12:03.986Z",
+  "capturedAt": "2026-05-14T22:19:55.645Z",
   "url": "http://127.0.0.1:3000/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -369,7 +369,7 @@
     },
     "runtimeGlbPreview": {
       "ok": true,
-      "assets": 2,
+      "assets": 7,
       "rendered": [
         {
           "key": "tree1-lod0",
@@ -390,10 +390,85 @@
             "replacedMaterials": 2
           },
           "bounds": {
-            "scale": 0.72,
-            "width": 0.6092,
-            "height": 0.72,
-            "depth": 0.6208
+            "scale": 0.52,
+            "width": 0.44,
+            "height": 0.52,
+            "depth": 0.4484
+          }
+        },
+        {
+          "key": "tree2-lod0",
+          "role": "tree",
+          "path": "assets/models/trees/tree2.glb",
+          "replacement": {
+            "strategy": "material-name",
+            "targetNames": [
+              "branches",
+              "leaves"
+            ],
+            "seenNames": [
+              "branches",
+              "leaves"
+            ],
+            "missingTargets": [],
+            "visitedMeshes": 2,
+            "replacedMaterials": 2
+          },
+          "bounds": {
+            "scale": 0.52,
+            "width": 0.5028,
+            "height": 0.52,
+            "depth": 0.5015
+          }
+        },
+        {
+          "key": "tree1-lod1",
+          "role": "tree",
+          "path": "assets/models/trees/tree1_lod1.glb",
+          "replacement": {
+            "strategy": "material-name",
+            "targetNames": [
+              "branches",
+              "leaves"
+            ],
+            "seenNames": [
+              "branches",
+              "leaves"
+            ],
+            "missingTargets": [],
+            "visitedMeshes": 2,
+            "replacedMaterials": 2
+          },
+          "bounds": {
+            "scale": 0.44,
+            "width": 0.3408,
+            "height": 0.44,
+            "depth": 0.3502
+          }
+        },
+        {
+          "key": "tree2-lod1",
+          "role": "tree",
+          "path": "assets/models/trees/tree2_lod1.glb",
+          "replacement": {
+            "strategy": "material-name",
+            "targetNames": [
+              "branches",
+              "leaves"
+            ],
+            "seenNames": [
+              "branches",
+              "leaves"
+            ],
+            "missingTargets": [],
+            "visitedMeshes": 2,
+            "replacedMaterials": 2
+          },
+          "bounds": {
+            "scale": 0.44,
+            "width": 0.4626,
+            "height": 0.44,
+            "depth": 0.4618
           }
         },
         {
@@ -409,14 +484,52 @@
             ]
           },
           "bounds": {
-            "scale": 2.815,
-            "width": 0.5466,
-            "height": 0.2815,
-            "depth": 0.5091
+            "scale": 2.0807,
+            "width": 0.404,
+            "height": 0.2081,
+            "depth": 0.3763
+          }
+        },
+        {
+          "key": "rock2-lod0",
+          "role": "rock",
+          "path": "assets/models/rocks/rock2.glb",
+          "replacement": {
+            "strategy": "asset-class-traversal",
+            "visitedMeshes": 1,
+            "replacedMaterials": 1,
+            "previousMaterialNames": [
+              "(runtime-default)"
+            ]
+          },
+          "bounds": {
+            "scale": 0.8563,
+            "width": 0.3979,
+            "height": 0.2398,
+            "depth": 0.3525
+          }
+        },
+        {
+          "key": "rock3-lod0",
+          "role": "rock",
+          "path": "assets/models/rocks/rock3.glb",
+          "replacement": {
+            "strategy": "asset-class-traversal",
+            "visitedMeshes": 1,
+            "replacedMaterials": 1,
+            "previousMaterialNames": [
+              "(runtime-default)"
+            ]
+          },
+          "bounds": {
+            "scale": 0.68,
+            "width": 0.1395,
+            "height": 0.34,
+            "depth": 0.1404
           }
         }
       ]
     },
-    "frames": 3
+    "frames": 2
   }
 }

@@ -26,10 +26,10 @@ replacement by `branches`/`leaves` names and rock replacement by mesh traversal
 without touching the default WebGL path. A follow-up browser runtime proof now
 fetches all seven shipped tree and rock GLBs inside the diagnostic path and
 applies the same replacement strategy to their real primitive/material
-contracts. A rendered-clone diagnostic island now also loads `tree1.glb` and
-`rock1.glb` with the production GLTF/Draco/Meshopt path and renders them with
-WebGPU node-material replacements. Do not start production wiring with terrain,
-grass, water, sheep, or Kiln impostors.
+contracts. A rendered-clone diagnostic island now also loads all seven shipped
+tree and rock GLBs with the production GLTF/Draco/Meshopt path and renders them
+with WebGPU node-material replacements. Do not start production wiring with
+terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -90,16 +90,13 @@ comments:
 - The WebGPU runtime diagnostic now fetches the same seven shipped GLBs in the
   browser under `?renderer=webgpu&diagnostic=1` and records
   `runtimeGlbReplacement.summary.ok: true`, with 8 tree materials and 3 rock
-  materials replaced through the expected strategies. It is still
-  diagnostic-only; rendered production GLB clone wiring remains a separate
-  gated step.
-- The rendered-clone island now loads `tree1.glb` and `rock1.glb` through
-  `GLTFLoader`, `DRACOLoader`, and `MeshoptDecoder`, replaces their materials
-  with the same WebGPU node-material strategy, and records
-  `runtimeGlbPreview.ok: true` with bounded clone dimensions in the Chrome
-  diagnostic artifact. These loader modules are copied to the diagnostic static
-  vendor path and imported by URL to avoid exporting them from the default
-  `main` chunk.
+  materials replaced through the expected strategies.
+- The rendered-clone island now loads the same seven GLBs through `GLTFLoader`,
+  `DRACOLoader`, and `MeshoptDecoder`, replaces their materials with the same
+  WebGPU node-material strategy, and records `runtimeGlbPreview.ok: true` with
+  bounded clone dimensions in the Chrome diagnostic artifact. These loader
+  modules are copied to the diagnostic static vendor path and imported by URL to
+  avoid exporting them from the default `main` chunk.
 
 ## Dormant Or Supporting Surfaces
 
@@ -119,11 +116,10 @@ comments:
    LOD0/LOD1; rock replacements must use rock asset class or mesh traversal.
    The diagnostic replacement island, GLB primitive-clone proof, and browser
    runtime GLB fetch proof cover both strategies. The rendered-clone island now
-   proves a production tree and rock can load and render with WebGPU
-   node-material replacements. The next code island should choose whether to
-   expand the clone matrix across remaining LOD/species assets or promote the
-   tree/rock replacement adapter toward a feature-flagged production placement
-   path while keeping current WebGL `onBeforeCompile` patches as default.
+   proves all shipped tree and rock variants can load and render with WebGPU
+   node-material replacements. The next code island should promote the tree/rock
+   replacement adapter toward a feature-flagged production placement path while
+   keeping current WebGL `onBeforeCompile` patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

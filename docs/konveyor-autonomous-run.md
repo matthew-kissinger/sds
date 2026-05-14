@@ -93,7 +93,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   contracts, and proves 8 tree and 3 rock replacements through the expected
   strategies.
 - The same diagnostic artifact now records `runtime-glb-rendered-clones`: the
-  browser loads `tree1.glb` and `rock1.glb` through the production
+  browser loads all seven shipped tree and rock GLBs through the production
   GLTF/Draco/Meshopt loader stack, renders them in the WebGPU scene with node
   material replacements, and reports `runtimeGlbPreview.ok: true`. The loader
   modules are served through the diagnostic static vendor path so the default
@@ -118,10 +118,10 @@ Recommended order:
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
    and a diagnostic replacement proof now exist, plus a GLB primitive-clone
    proof, browser runtime fetch proof, and rendered production-GLB clone proof
-   against the shipped compressed assets. Prefer either expanding clone coverage
-   across the remaining tree/rock variants or promoting the tree/rock replacement
-   adapter toward feature-flagged production placement, using tree material
-   names for tree work and rock asset class or mesh traversal for rock work.
+   against all shipped compressed tree/rock assets. Promote the tree/rock
+   replacement adapter toward feature-flagged production placement next, using
+   tree material names for tree work and rock asset class or mesh traversal for
+   rock work.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The
