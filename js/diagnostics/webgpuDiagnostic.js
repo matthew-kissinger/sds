@@ -2,6 +2,7 @@ import {
     replaceRockMaterialsByTraversal,
     replaceTreeMaterialsByName,
 } from './webgpuMaterialReplacement.js';
+import { createSkyFogSamplePacket } from '../atmosphere/skyFogSamplePacket.js';
 import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
 import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 
@@ -135,20 +136,7 @@ function createCloudPlaneNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }
 }
 
 export function createSkyFogDiagnosticState() {
-    const horizonColor = [0.57, 0.70, 0.78];
-    const zenithColor = [0.13, 0.27, 0.46];
-    const sunColor = [1.0, 0.82, 0.52];
-    const fogDarkenMultiplier = 0.82;
-    return {
-        horizonColor,
-        zenithColor,
-        sunColor,
-        fogDarkenMultiplier,
-        fogColor: horizonColor.map((v) => Number((v * fogDarkenMultiplier).toFixed(4))),
-        fogNear: 18,
-        fogFar: 74,
-        sunPositionUv: [0.32, 0.72],
-    };
+    return createSkyFogSamplePacket();
 }
 
 export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticState()) {

@@ -127,6 +127,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   patch path untouched when the flag or factories are absent.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
+  The sky/fog packet now lives in `js/atmosphere/skyFogSamplePacket.js` and
+  samples a renderless `HosekWilkieSky({ createRenderable: false })`, so the
+  diagnostic path keeps CPU-visible horizon/sun/fog truth without allocating an
+  extra sky dome or making the WebGPU sky shader the authority.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
   is a Chrome 148 screenshot artifact for the diagnostic material islands.
 
@@ -139,7 +143,8 @@ one material system at a time.
 Recommended order:
 
 1. **Pick the next smallest production-adjacent material island.** The sky/fog
-   diagnostic prototype now preserves a CPU-accessible horizon/sun/fog packet,
+   diagnostic prototype now preserves a renderless CPU-accessible
+   horizon/sun/fog packet,
    the rock-rim TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof

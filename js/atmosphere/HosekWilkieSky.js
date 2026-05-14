@@ -38,7 +38,8 @@ const DEFAULT_CLOUD_WIND_DIR_Z = 0.7;
 const LUT_REBAKE_COS_THRESHOLD = Math.cos((0.5 * Math.PI) / 180);
 
 export class HosekWilkieSky {
-  constructor() {
+  constructor(options = {}) {
+    const createRenderable = options.createRenderable !== false;
     /** @private */
     this.sunDirection = new THREE.Vector3(0, 1, 0);
     /** @private */
@@ -84,42 +85,51 @@ export class HosekWilkieSky {
     /** @private */
     this.lastSunDir = new THREE.Vector3();
 
-    this.material = new THREE.ShaderMaterial({
-      name: 'HosekWilkieSky',
-      uniforms: {
-        uSunDirection: { value: this.sunDirection },
-        uTurbidity: { value: this.turbidity },
-        uRayleigh: { value: this.rayleigh },
-        uMieCoefficient: { value: this.mieCoefficient },
-        uMieDirectionalG: { value: this.mieDirectionalG },
-        uGroundAlbedo: { value: this.groundAlbedo },
-        uExposure: { value: this.exposure },
-        uCloudCoverage: { value: this.cloudCoverage },
-        uCloudNoiseScale: { value: this.cloudNoiseScale },
-        uCloudTimeSeconds: { value: this.cloudTimeSeconds },
-        uCloudWindDir: { value: this.cloudWindDir },
-      },
-      vertexShader: hosekWilkieVertexShader,
-      fragmentShader: hosekWilkieFragmentShader,
-      side: THREE.BackSide,
-      depthWrite: false,
-      depthTest: false,
-    });
+    this.material = null;
+    this.geometry = null;
+    this.mesh = null;
 
-    this.geometry = new THREE.SphereGeometry(
-      DOME_RADIUS,
-      DOME_WIDTH_SEGMENTS,
-      DOME_HEIGHT_SEGMENTS
-    );
-    this.mesh = new THREE.Mesh(this.geometry, this.material);
-    this.mesh.renderOrder = -1;
-    this.mesh.frustumCulled = false;
-    this.mesh.matrixAutoUpdate = true;
-    this.mesh.name = 'HosekWilkieSkyDome';
+    if (createRenderable) {
+      this.material = new THREE.ShaderMaterial({
+        name: 'HosekWilkieSky',
+        uniforms: {
+          uSunDirection: { value: this.sunDirection },
+          uTurbidity: { value: this.turbidity },
+          uRayleigh: { value: this.rayleigh },
+          uMieCoefficient: { value: this.mieCoefficient },
+          uMieDirectionalG: { value: this.mieDirectionalG },
+          uGroundAlbedo: { value: this.groundAlbedo },
+          uExposure: { value: this.exposure },
+          uCloudCoverage: { value: this.cloudCoverage },
+          uCloudNoiseScale: { value: this.cloudNoiseScale },
+          uCloudTimeSeconds: { value: this.cloudTimeSeconds },
+          uCloudWindDir: { value: this.cloudWindDir },
+        },
+        vertexShader: hosekWilkieVertexShader,
+        fragmentShader: hosekWilkieFragmentShader,
+        side: THREE.BackSide,
+        depthWrite: false,
+        depthTest: false,
+      });
+
+      this.geometry = new THREE.SphereGeometry(
+        DOME_RADIUS,
+        DOME_WIDTH_SEGMENTS,
+        DOME_HEIGHT_SEGMENTS
+      );
+      this.mesh = new THREE.Mesh(this.geometry, this.material);
+      this.mesh.renderOrder = -1;
+      this.mesh.frustumCulled = false;
+      this.mesh.matrixAutoUpdate = true;
+      this.mesh.name = 'HosekWilkieSkyDome';
+    }
   }
 
   /** @returns {THREE.Mesh} */
   getMesh() {
+    if (!this.mesh) {
+      throw new Error('HosekWilkieSky: render mesh was not created');
+    }
     return this.mesh;
   }
 
@@ -134,9 +144,11 @@ export class HosekWilkieSky {
     this.groundAlbedo.copy(preset.groundAlbedo);
     this.exposure = preset.exposure;
 
-    this.material.uniforms.uTurbidity.value = this.turbidity;
-    this.material.uniforms.uRayleigh.value = this.rayleigh;
-    this.material.uniforms.uExposure.value = this.exposure;
+    if (this.material) {
+      this.material.uniforms.uTurbidity.value = this.turbidity;
+      this.material.uniforms.uRayleigh.value = this.rayleigh;
+      this.material.uniforms.uExposure.value = this.exposure;
+    }
 
     this.lutDirty = true;
   }
@@ -173,14 +185,18 @@ export class HosekWilkieSky {
     this.setSunDirection(sunDirection);
     if (Number.isFinite(deltaTime) && deltaTime > 0) {
       this.cloudTimeSeconds += deltaTime;
-      this.material.uniforms.uCloudTimeSeconds.value = this.cloudTimeSeconds;
+      if (this.material) {
+        this.material.uniforms.uCloudTimeSeconds.value = this.cloudTimeSeconds;
+      }
     }
   }
 
   /** @param {number} value */
   setCloudCoverage(value) {
     this.cloudCoverage = Math.max(0, Math.min(1, value));
-    this.material.uniforms.uCloudCoverage.value = this.cloudCoverage;
+    if (this.material) {
+      this.material.uniforms.uCloudCoverage.value = this.cloudCoverage;
+    }
   }
 
   /** @param {number} metersPerFeature */
@@ -189,12 +205,16 @@ export class HosekWilkieSky {
       return;
     }
     this.cloudNoiseScale = 1 / metersPerFeature;
-    this.material.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
+    if (this.material) {
+      this.material.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
+    }
   }
 
   resetCloudFeatureScale() {
     this.cloudNoiseScale = DEFAULT_CLOUD_NOISE_SCALE;
-    this.material.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
+    if (this.material) {
+      this.material.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
+    }
   }
 
   /** @returns {number} */
@@ -212,15 +232,21 @@ export class HosekWilkieSky {
   setTunables(t) {
     if (t.turbidity !== undefined) {
       this.turbidity = t.turbidity;
-      this.material.uniforms.uTurbidity.value = t.turbidity;
+      if (this.material) {
+        this.material.uniforms.uTurbidity.value = t.turbidity;
+      }
     }
     if (t.rayleigh !== undefined) {
       this.rayleigh = t.rayleigh;
-      this.material.uniforms.uRayleigh.value = t.rayleigh;
+      if (this.material) {
+        this.material.uniforms.uRayleigh.value = t.rayleigh;
+      }
     }
     if (t.exposure !== undefined) {
       this.exposure = t.exposure;
-      this.material.uniforms.uExposure.value = t.exposure;
+      if (this.material) {
+        this.material.uniforms.uExposure.value = t.exposure;
+      }
     }
     if (t.groundAlbedo) {
       this.groundAlbedo.copy(t.groundAlbedo);
@@ -285,8 +311,8 @@ export class HosekWilkieSky {
   }
 
   dispose() {
-    this.material.dispose();
-    this.geometry.dispose();
+    this.material?.dispose();
+    this.geometry?.dispose();
   }
 
   /** @private */

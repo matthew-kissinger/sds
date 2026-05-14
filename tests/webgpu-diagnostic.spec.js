@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 
 import {
   createRockRimDiagnosticState,
@@ -16,8 +17,11 @@ import {
   RUNTIME_GLB_MATERIAL_PROOF_ASSETS,
 } from '../js/diagnostics/webgpuGlbMaterialProof.js';
 import { RUNTIME_GLB_RENDER_PREVIEW_ASSETS } from '../js/diagnostics/webgpuRuntimeGlbPreview.js';
+import { createSkyFogSamplePacket } from '../js/atmosphere/skyFogSamplePacket.js';
 import { createProductionTreePlacementPlan } from '../js/diagnostics/webgpuProductionPlacementPlan.js';
 import { createDiagnosticRockPlacementPlan } from '../js/diagnostics/webgpuRockPlacementPlan.js';
+import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
+import { SKY_PRESETS } from '../js/atmosphere/skyPresets.js';
 
 function createGlbBuffer(gltf) {
   const json = JSON.stringify(gltf);
@@ -36,12 +40,39 @@ function createGlbBuffer(gltf) {
 describe('webgpu diagnostic sky fog state', () => {
   it('keeps fog color derived from the CPU horizon sample', () => {
     const state = createSkyFogDiagnosticState();
+    expect(state.source).toBe('HosekWilkieSky.cpu-lut');
+    expect(state.presetName).toBe('dusk');
+    expect(state.cpuVisible).toBe(true);
     expect(state.horizonColor).toHaveLength(3);
     expect(state.sunColor).toHaveLength(3);
     expect(state.fogColor).toEqual(
       state.horizonColor.map((v) => Number((v * state.fogDarkenMultiplier).toFixed(4)))
     );
     expect(state.fogNear).toBeLessThan(state.fogFar);
+  });
+
+  it('samples diagnostic sky colors from the production Hosek-Wilkie LUT', () => {
+    const state = createSkyFogSamplePacket();
+    const sky = new HosekWilkieSky({ createRenderable: false });
+    try {
+      sky.applyPreset(SKY_PRESETS[state.presetName]);
+      sky.setCloudCoverage(SKY_PRESETS[state.presetName].cloudCoverageDefault ?? 0);
+      if (SKY_PRESETS[state.presetName].cloudScaleMetersPerFeature !== undefined) {
+        sky.setCloudFeatureScaleMeters(SKY_PRESETS[state.presetName].cloudScaleMetersPerFeature);
+      }
+      sky.update(0, sky.getSunDirection());
+      expect(state.horizonColor).toEqual(
+        sky.getHorizon(new THREE.Color()).toArray().map((value) => Number(value.toFixed(4)))
+      );
+      expect(state.zenithColor).toEqual(
+        sky.getZenith(new THREE.Color()).toArray().map((value) => Number(value.toFixed(4)))
+      );
+      expect(state.sunColor).toEqual(
+        sky.getSun(new THREE.Color()).toArray().map((value) => Number(value.toFixed(4)))
+      );
+    } finally {
+      sky.dispose();
+    }
   });
 
   it('drives the diagnostic rock rim from the CPU sun color packet', () => {

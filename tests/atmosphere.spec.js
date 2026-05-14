@@ -11,6 +11,8 @@ import * as THREE from 'three';
 import {
   Atmosphere,
   HosekWilkieSky,
+  createSkyFogSamplePacket,
+  sampleSkyFogPacketFromSky,
   CloudLayer,
   SunSystem,
   DayNightCycle,
@@ -153,6 +155,49 @@ describe('HosekWilkieSky', () => {
     sky.update(0, sunDirectionFromPreset(SKY_PRESETS.dusk));
     const sun = sky.getSun(new THREE.Color());
     expect(sun.r).toBeGreaterThan(sun.b);
+  });
+
+  it('can sample sky colors without allocating a render mesh', () => {
+    const sky = new HosekWilkieSky({ createRenderable: false });
+    sky.applyPreset(SKY_PRESETS.dusk);
+    sky.update(0, sunDirectionFromPreset(SKY_PRESETS.dusk));
+
+    const horizon = sky.getHorizon(new THREE.Color());
+    expect(horizon.r + horizon.g + horizon.b).toBeGreaterThan(0);
+    expect(() => sky.getMesh()).toThrow(/render mesh/);
+    expect(() => sky.dispose()).not.toThrow();
+  });
+
+  it('exports a CPU-visible sky/fog packet from an existing sky', () => {
+    const sky = new HosekWilkieSky({ createRenderable: false });
+    try {
+      sky.applyPreset(SKY_PRESETS.dusk);
+      sky.update(0, sunDirectionFromPreset(SKY_PRESETS.dusk));
+
+      const packet = sampleSkyFogPacketFromSky({
+        sky,
+        presetName: 'dusk',
+        fogDarkenMultiplier: 0.5,
+        cloudCoverage: SKY_PRESETS.dusk.cloudCoverageDefault ?? 0,
+      });
+
+      expect(packet.source).toBe('HosekWilkieSky.cpu-lut');
+      expect(packet.cpuVisible).toBe(true);
+      expect(packet.fogColor).toEqual(
+        packet.horizonColor.map((value) => Number((value * 0.5).toFixed(4)))
+      );
+    } finally {
+      sky.dispose();
+    }
+  });
+
+  it('creates a renderless CPU-visible sky/fog packet from a preset', () => {
+    const packet = createSkyFogSamplePacket({ presetName: 'dusk' });
+
+    expect(packet.source).toBe('HosekWilkieSky.cpu-lut');
+    expect(packet.cpuVisible).toBe(true);
+    expect(packet.presetName).toBe('dusk');
+    expect(packet.fogNear).toBeLessThan(packet.fogFar);
   });
 });
 

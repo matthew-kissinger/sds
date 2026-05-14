@@ -15,6 +15,11 @@
 
 export { Atmosphere } from './Atmosphere.js';
 export { HosekWilkieSky } from './HosekWilkieSky.js';
+export {
+  DEFAULT_SKY_FOG_SAMPLE_PRESET,
+  createSkyFogSamplePacket,
+  sampleSkyFogPacketFromSky,
+} from './skyFogSamplePacket.js';
 export { CloudLayer } from './CloudLayer.js';
 export { SunSystem } from './SunSystem.js';
 export { DayNightCycle } from './DayNightCycle.js';

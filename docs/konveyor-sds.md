@@ -49,9 +49,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   `?renderer=webgpu&diagnostic=1`. It is not a production renderer. It loads
   copied Three WebGPU/Core browser modules after the query flag and leaves the
   normal WebGL bundle path as default. Current diagnostic islands cover the sun
-  billboard, portal ring, meadow quad, cloud plane, and a sky/fog CPU sample
-  packet, plus the rock-rim fresnel formula and a tree-leaf wind/alpha/occluder
-  proxy. A diagnostic material-replacement island proves tree replacement by
+  billboard, portal ring, meadow quad, cloud plane, and a renderless sky/fog
+  CPU sample packet from `js/atmosphere/skyFogSamplePacket.js`, plus the
+  rock-rim fresnel formula and a tree-leaf wind/alpha/occluder proxy. A
+  diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed
   by stable material names, while rocks require replacement by asset class or

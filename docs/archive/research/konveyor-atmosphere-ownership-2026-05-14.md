@@ -9,6 +9,13 @@ diagnostic material islands.
 derived zenith, horizon, and sun colors. `Atmosphere` is the orchestrator that
 applies those derived values to the rest of the scene.
 
+The WebGPU diagnostic path now uses
+`js/atmosphere/skyFogSamplePacket.js` for the same contract. That helper can
+sample an existing `HosekWilkieSky` instance, or create a renderless
+`HosekWilkieSky({ createRenderable: false })` when a diagnostic needs a
+standalone packet. Do not move fog, sun, or ambient ownership into a GPU-only
+sky shader unless these CPU-visible packet values remain equivalent.
+
 Runtime ownership today:
 
 | Value | Owner | Consumers | WebGPU migration note |
@@ -28,10 +35,15 @@ Runtime ownership today:
 - Scene-level linear fog overrides keep their near/far distances while horizon
   color remains authoritative.
 - `CloudLayer` receives the sky-derived sun color during `Atmosphere.update()`.
+- `HosekWilkieSky({ createRenderable: false })` can sample horizon, zenith, and
+  sun colors without allocating a sky mesh or material.
+- `sampleSkyFogPacketFromSky()` and `createSkyFogSamplePacket()` emit a
+  CPU-visible packet with horizon, zenith, sun, fog, preset, and cloud values.
 
 `tests/webgpu-diagnostic.spec.js` asserts the diagnostic WebGPU sky/fog packet
-keeps fog color derived from the CPU horizon sample. The Chrome diagnostic probe
-now records `skyFog.horizonColor`, `skyFog.sunColor`, `skyFog.fogColor`, and
+keeps fog color derived from the CPU horizon sample and matches the production
+Hosek-Wilkie LUT. The Chrome diagnostic probe records
+`skyFog.horizonColor`, `skyFog.sunColor`, `skyFog.fogColor`, and
 `skyFog.fogNear/fogFar` in
 `cycle36-validation/runtime/webgpu-diagnostic-chrome.json`.
 
@@ -49,6 +61,6 @@ proves both pieces of the atmosphere handoff:
 
 The diagnostic cloud-plane TSL island now proves the smaller cloud material
 inputs, and the diagnostic sky/fog island proves a renderer-visible material can
-share a CPU-accessible horizon/sun/fog packet. Production sky, fog, terrain,
-water, grass, and impostor wiring still needs parity evidence before any default
-renderer path changes.
+share a renderless CPU-accessible horizon/sun/fog packet. Production sky, fog,
+terrain, water, grass, and impostor wiring still needs parity evidence before
+any default renderer path changes.
