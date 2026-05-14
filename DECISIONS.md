@@ -617,3 +617,29 @@ adapter plus device creation in the actual runtime. Native packaging
 dependencies should not be added until a later cycle is specifically scoped to
 boot SDS in that shell and measure multiplayer, fullscreen, input, audio,
 visual, latency, and perf behavior there.
+
+---
+
+## WebGPU diagnostic island stays outside the default bundle (2026-05-14 · Konveyor autonomous branch)
+
+SDS now has a minimal WebGPU/TSL diagnostic boot path, but it is intentionally
+not a production renderer path.
+
+### Why
+
+Directly bundling `three/webgpu` and `three/tsl` into the Vite graph pulled
+WebGPU and node-material internals into the default Three chunk, violating the
+existing refactor-baseline bundle ratchet. The diagnostic needs to prove
+renderer/device viability without making every normal WebGL player download the
+WebGPU renderer surface.
+
+### Rule
+
+- `?renderer=webgpu&diagnostic=1` is the only WebGPU boot path.
+- The default SDS runtime still constructs `THREE.WebGLRenderer`.
+- The diagnostic loads copied `three.webgpu.min.js` and `three.core.min.js`
+  vendor modules only after the diagnostic flag is present.
+- `three/webgpu` and `three/tsl` must not be statically imported by production
+  game modules until the active handoff records a bundle and fallback decision.
+- Runtime proof must record both the flagged WebGPU path and the default WebGL
+  path before claiming progress.

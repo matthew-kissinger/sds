@@ -42,6 +42,8 @@ control surface:
 - [`../tools/probe-webgpu-runtime.mjs`](../tools/probe-webgpu-runtime.mjs)
   probes browser WebGPU adapter/device creation.
 - [`../progress.md`](../progress.md) records the completed foundation steps.
+- Commit `2f9b846` stabilized the foundation/native-readiness packet on this
+  branch while leaving unrelated `.agents/skills/*` folders uncommitted.
 
 The important conclusion: installed Chrome 148 can create a WebGPU device on
 the current Windows machine, but Playwright's bundled Chromium 147 exposes
@@ -57,34 +59,38 @@ Native-readiness now has a code seam:
 - `npm run native:check` builds the native target and verifies the generated
   bundle with `tools/native-preflight.mjs`.
 
+WebGPU now has a diagnostic island, not a production renderer:
+
+- `?renderer=webgpu&diagnostic=1` boots a minimal WebGPU/TSL scene.
+- The diagnostic path loads copied Three WebGPU/Core browser modules only after
+  the query flag is present, so the default WebGL bundle and `three` chunk stay
+  inside existing refactor-baseline ratchets.
+- [`../cycle36-validation/runtime/webgpu-diagnostic-chrome.json`](../cycle36-validation/runtime/webgpu-diagnostic-chrome.json)
+  records installed Chrome 148 rendering diagnostic frames through WebGPU.
+- [`../cycle36-validation/runtime/webgl-default-chrome.json`](../cycle36-validation/runtime/webgl-default-chrome.json)
+  records the default production-preview URL with `diagnostic: null`.
+
 ## Next autonomous direction
 
-The next agent should not try to boot Rolling Hills through WebGPU first. The
-honest next step is to create a tiny, isolated WebGPU/TSL island that proves the
-renderer path, then expand compatibility one material system at a time.
+The next agent should not try to boot Rolling Hills through WebGPU wholesale.
+The diagnostic island exists; the honest next step is to inventory and migrate
+one material system at a time.
 
 Recommended order:
 
-1. **Commit the foundation and native-readiness packet on this experimental branch.** Review the
-   dirty worktree, keep unrelated `.agents/skills/*` folders out of the commit,
-   run the web and native checks, then commit the Cycle 36 proof, docs, and
-   native build seam so later agents have a stable base.
-2. **Establish a WebGPU diagnostic boot path.** Add a route or query-driven
-   diagnostic scene that renders a minimal WebGPU-compatible Three scene without
-   touching production Rolling Hills shaders. Keep WebGL default.
-3. **Build a shader-surface inventory.** Turn the blocker report into a
+1. **Build a shader-surface inventory.** Turn the blocker report into a
    migration map of every GLSL `ShaderMaterial`, `RawShaderMaterial`, and
    `onBeforeCompile` patch, with risk, dependencies, visual gate, and likely
    WebGPU/TSL replacement approach.
-4. **Pick the smallest production-adjacent material island.** Prefer cosmetic
+2. **Pick the smallest production-adjacent material island.** Prefer cosmetic
    or isolated systems first. Do not start with terrain + grass + water + sky
    all at once.
-5. **Keep measurement attached to every change.** Run the relevant perf,
+3. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
-6. **Advance through the Konveyor phase outline.** Keep moving from diagnostic
-   WebGPU to cosmetic shader compatibility, trees, grass, sheep/high-count
-   rendering, compute experiments, native packaging, and web fallback/release
-   decisions as evidence allows.
+4. **Advance through the Konveyor phase outline.** Keep moving from cosmetic
+   shader compatibility to trees, grass, sheep/high-count rendering, compute
+   experiments, native packaging, and web fallback/release decisions as
+   evidence allows.
 
 ## Hard stops
 

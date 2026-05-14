@@ -1,0 +1,75 @@
+{
+  "capturedAt": "2026-05-14T20:40:41.821Z",
+  "url": "http://127.0.0.1:4173/?scene=field&perfMode=1",
+  "platform": "win32",
+  "channel": "chrome",
+  "chromiumArgs": [
+    "--use-angle=d3d11",
+    "--enable-gpu"
+  ],
+  "threeRevision": "184",
+  "packageState": {
+    "three": "^0.184.0",
+    "tauri": null,
+    "electron": null,
+    "capacitor": null
+  },
+  "threeWebGpu": {
+    "ok": true,
+    "hasWebGpuRenderer": true,
+    "exportedRendererKeys": [
+      "RendererReferenceNode",
+      "RendererUtils",
+      "WebGPURenderer"
+    ]
+  },
+  "browser": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.0.0 Safari/537.36",
+    "secureContext": true,
+    "navigatorGpu": true,
+    "adapter": {
+      "ok": true,
+      "error": null,
+      "features": [
+        "bgra8unorm-storage",
+        "clip-distances",
+        "core-features-and-limits",
+        "depth-clip-control",
+        "depth32float-stencil8",
+        "dual-source-blending",
+        "float32-blendable",
+        "float32-filterable",
+        "indirect-first-instance",
+        "primitive-index",
+        "rg11b10ufloat-renderable",
+        "shader-f16",
+        "subgroups",
+        "texture-component-swizzle",
+        "texture-compression-bc",
+        "texture-compression-bc-sliced-3d",
+        "texture-formats-tier1",
+        "texture-formats-tier2",
+        "timestamp-query"
+      ],
+      "limits": {
+        "maxTextureDimension2D": 16384,
+        "maxBindGroups": 4,
+        "maxStorageBuffersPerShaderStage": 16
+      },
+      "info": {}
+    },
+    "device": {
+      "ok": true,
+      "error": null,
+      "features": [
+        "core-features-and-limits"
+      ]
+    },
+    "webgl": {
+      "vendor": "Google Inc. (NVIDIA)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 (0x00002484) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+    }
+  },
+  "diagnostic": null
+}

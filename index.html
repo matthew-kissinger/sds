@@ -402,6 +402,15 @@
         }
     </script>
 
+    <script>
+        (() => {
+            const params = new URLSearchParams(window.location.search);
+            window.__sdsWebGpuDiagnostic = {
+                requested: params.get('renderer') === 'webgpu' && params.get('diagnostic') === '1'
+            };
+        })();
+    </script>
+
     <!-- Main game entry - Vite handles Three.js bundling -->
     <script type="module" src="/js/main.js"></script>
 

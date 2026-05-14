@@ -2133,7 +2133,13 @@ class SheepDogSimulation {
 
 // Start simulation when page loads
 window.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded - Creating game instance...');
+    if (window.__sdsWebGpuDiagnostic?.requested) {
+        import('./diagnostics/webgpuDiagnostic.js')
+            .then((m) => m.bootWebGpuDiagnostic())
+            .catch((err) => window.__sdsWebGpuDiagnostic.error = err?.message || err);
+        return;
+    }
+
     const gameInstance = new SheepDogSimulation();
 
     // Delegate menu/network flows from gameInstance to menuController for GameBridge
@@ -2179,9 +2185,5 @@ window.addEventListener('DOMContentLoaded', () => {
         return gameInstance.menuController.isCurrentHost();
     };
 
-    // GameBridge already initialized in constructor (setGameInstance called there)
-    // This ensures Sheepdog can access terrainBuilder during init()
-    console.log('[GAME] GameBridge was initialized in constructor');
-
-    console.log('[GAME] Game instance created, NetworkManager available:', !!gameInstance.networkManager);
+    // GameBridge already initialized in constructor (setGameInstance called there).
 });

@@ -64,7 +64,9 @@ export default defineConfig({
     htmlRuntimeConfigPlugin(),
     viteStaticCopy({
       targets: [
-        { src: 'assets/*', dest: 'assets' }
+        { src: 'assets/*', dest: 'assets' },
+        { src: 'node_modules/three/build/three.webgpu.min.js', dest: 'assets/vendor/three' },
+        { src: 'node_modules/three/build/three.core.min.js', dest: 'assets/vendor/three' }
       ]
     }),
     excludeBlendFilesPlugin(),

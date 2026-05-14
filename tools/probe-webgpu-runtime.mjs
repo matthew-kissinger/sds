@@ -101,6 +101,23 @@ async function run() {
     };
   });
 
+  let diagnostic = null;
+  if (args.url.includes('diagnostic=1')) {
+    try {
+      await page.waitForFunction(() => {
+        const state = window.__sdsWebGpuDiagnostic;
+        return state && (state.ok || state.error);
+      }, null, { timeout: 20_000 });
+
+      diagnostic = await page.evaluate(() => {
+        const { dispose, ...state } = window.__sdsWebGpuDiagnostic || {};
+        return state;
+      });
+    } catch (err) {
+      diagnostic = { ok: false, error: `diagnostic wait failed: ${String(err?.message || err)}` };
+    }
+  }
+
   await browser.close();
 
   const result = {
@@ -113,6 +130,7 @@ async function run() {
     packageState: await loadPackageState(),
     threeWebGpu: await loadThreeWebGpuState(),
     browser: browserProbe,
+    diagnostic,
   };
 
   console.log(JSON.stringify(result, null, 2));

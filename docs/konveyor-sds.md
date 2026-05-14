@@ -45,6 +45,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
 - There is no Tauri, Electron, or Capacitor shell dependency in `package.json`,
   but the repo now has native build-target plumbing: `BUILD_TARGET=native`,
   `SDS_WORKER_BASE`, `js/runtimeConfig.js`, and `npm run native:check`.
+- There is a diagnostic-only WebGPU/TSL boot path at
+  `?renderer=webgpu&diagnostic=1`. It is not a production renderer. It loads
+  copied Three WebGPU/Core browser modules after the query flag and leaves the
+  normal WebGL bundle path as default.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.
