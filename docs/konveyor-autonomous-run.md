@@ -76,6 +76,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   also ported as the first `onBeforeCompile` replacement island, and a
   diagnostic tree-leaf island now covers wind displacement, alpha-hash posture,
   and occluder fade inputs without touching production GLBs.
+- [`../cycle36-validation/runtime/material-ownership.json`](../cycle36-validation/runtime/material-ownership.json)
+  records GLB material ownership for production-adjacent tree and rock work.
+  Tree LOD0/LOD1 assets have stable `branches` and `leaves` material names;
+  rock GLBs currently require asset-class or mesh-traversal replacement because
+  their primitives resolve through runtime-default material ownership.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
@@ -93,8 +98,9 @@ Recommended order:
    diagnostic prototype now preserves a CPU-accessible horizon/sun/fog packet,
    the rock-rim TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
-   alpha-hash posture, and occluder fade inputs. Prefer a real GLB material
-   ownership proof next before wiring production rock or tree materials.
+   alpha-hash posture, and occluder fade inputs. GLB material ownership proof
+   now exists; prefer a flag-gated replacement proof next, using tree material
+   names for tree work and rock asset-class or mesh traversal for rock work.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Advance through the Konveyor phase outline.** Keep moving from cosmetic

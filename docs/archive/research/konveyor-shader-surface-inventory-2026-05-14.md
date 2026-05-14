@@ -17,7 +17,10 @@ meadow-quad, cloud-plane, and sky/fog formulas are now ported inside the
 diagnostic island only. The rock-rim fresnel formula is also ported as a
 diagnostic `MeshStandardNodeMaterial` island driven by the CPU sky/fog sun
 color packet. A diagnostic tree-leaf island now covers wind displacement,
-alpha-hash posture, and a local occluder fade proxy. Do not start production
+alpha-hash posture, and a local occluder fade proxy. GLB material ownership
+proof now shows that tree LOD0/LOD1 assets have stable `branches` and `leaves`
+materials, while rock assets currently expose runtime-default primitive
+materials and cannot be migrated by material name. Do not start production
 wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
@@ -43,6 +46,24 @@ wiring with terrain, grass, water, sheep, or Kiln impostors.
 | Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Formula now exists in the diagnostic TSL harness as `MeshStandardNodeMaterial`; production wiring still needs GLB material ownership and replacement strategy for the current patch chain. |
 | Meadow quad tint | `js/GrassSystem.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists in the diagnostic TSL harness as `MeshLambertNodeMaterial`. Production wiring still needs fog and far-ring screenshots. |
 
+## GLB Material Ownership Evidence
+
+Captured artifact:
+`cycle36-validation/runtime/material-ownership.json`
+
+The ownership proof scans the shipped GLBs instead of trusting runtime
+comments:
+
+- Tree LOD0 and LOD1 assets each expose two named materials: `branches` and
+  `leaves`.
+- `leaves` is consistently `MASK` alpha with `doubleSided: true`, so tree
+  WebGPU replacement can target the material name while preserving LOD parity.
+- `branches` is consistently opaque and single-sided, so bark replacement can
+  stay separate from the leaf wind/alpha/occluder path.
+- Rock GLB primitives resolve through a runtime-default material target, so the
+  rock-rim migration must replace by rock asset class or mesh traversal rather
+  than by authored material name.
+
 ## Dormant Or Supporting Surfaces
 
 - `js/shaders/HeightFogPatch.js` has no active JS consumers. It is a future
@@ -56,10 +77,11 @@ wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Recommended Migration Order
 
-1. Prove real GLB material ownership before production tree or rock wiring:
-   decide whether to normalize loaded materials into NodeMaterials, clone
-   replacement materials per asset class, or keep the current WebGL path until
-   a broader renderer split is justified.
+1. Use the captured GLB ownership proof before production tree or rock wiring:
+   tree replacements may target `leaves` and `branches` by material name across
+   LOD0/LOD1; rock replacements must use rock asset class or mesh traversal.
+   The next code island should prove one replacement path behind the WebGPU
+   flag while keeping the current WebGL `onBeforeCompile` patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

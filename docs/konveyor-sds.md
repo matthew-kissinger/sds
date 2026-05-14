@@ -51,7 +51,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   normal WebGL bundle path as default. Current diagnostic islands cover the sun
   billboard, portal ring, meadow quad, cloud plane, and a sky/fog CPU sample
   packet, plus the rock-rim fresnel formula and a tree-leaf wind/alpha/occluder
-  proxy.
+  proxy. GLB material ownership proof now shows that tree LOD0/LOD1 assets can
+  be addressed by stable `branches` and `leaves` material names, while rocks
+  require replacement by asset class or mesh traversal rather than material
+  name.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.
