@@ -70,7 +70,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   instancing compatibility without importing production `InstancedMesh2`. That
   proof now runs through a production-facing Konveyor instancing adapter seam;
   package inspection keeps `InstancedMesh2` classified as WebGL-path until a
-  specific compatibility proof says otherwise.
+  specific compatibility proof says otherwise. A diagnostic rock-instancing
+  preview now renders fixed `RockPlacement`-shaped transform samples for all
+  three shipped rock GLBs through native `THREE.InstancedMesh`; it is not a
+  seeded rock-generation extraction and does not wire shared obstacle state.
   A production-facing material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
   factories, so cached production tree/rock GLB roots can be replaced without

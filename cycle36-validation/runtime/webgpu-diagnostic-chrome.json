@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T23:14:01.177Z",
+  "capturedAt": "2026-05-14T23:29:10.880Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -88,7 +88,8 @@
       "runtime-glb-material-proof",
       "runtime-glb-rendered-clones",
       "production-placement-preview",
-      "production-instanced-tree-preview"
+      "production-instanced-tree-preview",
+      "diagnostic-rock-instancing-preview"
     ],
     "skyFog": {
       "horizonColor": [
@@ -738,6 +739,163 @@
           }
         ]
       },
+      "diagnosticRockPlacementPreview": {
+        "ok": true,
+        "sceneId": "field",
+        "seed": 0,
+        "source": "diagnostic-rock-placement-transform-samples",
+        "productionReference": "js/world/RockPlacement.js rockInstances transform contract",
+        "obstacleContract": "recorded-only-not-wired-to-shared/SceneObstacles",
+        "generatedRocks": null,
+        "sampledRocks": 6,
+        "types": [
+          "rock1",
+          "rock2",
+          "rock3"
+        ],
+        "samples": [
+          {
+            "sourceIndex": 12,
+            "type": "rock1",
+            "production": {
+              "x": -172.5,
+              "z": -136.25,
+              "scale": 6.85,
+              "rotationX": 0.08,
+              "rotationY": 0.35,
+              "rotationZ": -0.04,
+              "scaleY": 0.7,
+              "scaleZ": 1.2,
+              "radius": 8.22,
+              "colliderRadius": 3.768,
+              "isObstacle": true
+            }
+          },
+          {
+            "sourceIndex": 31,
+            "type": "rock1",
+            "production": {
+              "x": -118.75,
+              "z": 154.5,
+              "scale": 8.2,
+              "rotationX": 0.16,
+              "rotationY": 2.1,
+              "rotationZ": 0.09,
+              "scaleY": 0.7,
+              "scaleZ": 1.2,
+              "radius": 9.84,
+              "colliderRadius": 4.51,
+              "isObstacle": true
+            }
+          },
+          {
+            "sourceIndex": 54,
+            "type": "rock2",
+            "production": {
+              "x": 158,
+              "z": -122,
+              "scale": 11.6,
+              "rotationX": 0.11,
+              "rotationY": 1.25,
+              "rotationZ": -0.13,
+              "scaleY": 0.7,
+              "scaleZ": 1.2,
+              "radius": 13.92,
+              "colliderRadius": 6.38,
+              "isObstacle": true
+            }
+          },
+          {
+            "sourceIndex": 77,
+            "type": "rock2",
+            "production": {
+              "x": 232.5,
+              "z": 206,
+              "scale": 14.4,
+              "rotationX": 0.22,
+              "rotationY": 3.62,
+              "rotationZ": 0.07,
+              "scaleY": 0.7,
+              "scaleZ": 1.2,
+              "radius": 17.28,
+              "colliderRadius": 7.92,
+              "isObstacle": true
+            }
+          },
+          {
+            "sourceIndex": 109,
+            "type": "rock3",
+            "production": {
+              "x": -344,
+              "z": 282.25,
+              "scale": 22.5,
+              "rotationX": 0.19,
+              "rotationY": 4.4,
+              "rotationZ": -0.16,
+              "scaleY": 0.7,
+              "scaleZ": 1.2,
+              "radius": 27,
+              "colliderRadius": 12.375,
+              "isObstacle": true
+            }
+          },
+          {
+            "sourceIndex": 144,
+            "type": "rock3",
+            "production": {
+              "x": 408.5,
+              "z": -318,
+              "scale": 31,
+              "rotationX": 0.27,
+              "rotationY": 5.55,
+              "rotationZ": 0.15,
+              "scaleY": 0.7,
+              "scaleZ": 1.2,
+              "radius": 37.2,
+              "colliderRadius": 17.05,
+              "isObstacle": true
+            }
+          }
+        ]
+      },
+      "diagnosticRockInstancingPreview": {
+        "ok": true,
+        "source": "THREE.InstancedMesh",
+        "productionReference": "RockPlacement InstancedMesh2.addInstances",
+        "instanceSource": "diagnostic-rock-placement-transform-samples",
+        "lod": "lod0-only",
+        "instancedMesh2Status": "not imported in WebGPU diagnostic",
+        "rockInstances": 6,
+        "instanceMatrices": 6,
+        "renderedInstanceMeshes": 3,
+        "missingTypes": [],
+        "groups": [
+          {
+            "type": "rock1",
+            "meshName": "rock",
+            "materialName": "konveyor-node-rock-rim",
+            "instances": 2,
+            "isInstancedMesh": true,
+            "vertexCount": 540
+          },
+          {
+            "type": "rock2",
+            "meshName": "rock",
+            "materialName": "konveyor-node-rock-rim",
+            "instances": 2,
+            "isInstancedMesh": true,
+            "vertexCount": 538
+          },
+          {
+            "type": "rock3",
+            "meshName": "rock",
+            "materialName": "konveyor-node-rock-rim",
+            "instances": 2,
+            "isInstancedMesh": true,
+            "vertexCount": 960
+          }
+        ]
+      },
       "rendered": [
         {
           "key": "tree1-lod0",
@@ -1276,6 +1434,163 @@
           "instances": 4,
           "isInstancedMesh": true,
           "vertexCount": 31968
+        }
+      ]
+    },
+    "diagnosticRockPlacementPreview": {
+      "ok": true,
+      "sceneId": "field",
+      "seed": 0,
+      "source": "diagnostic-rock-placement-transform-samples",
+      "productionReference": "js/world/RockPlacement.js rockInstances transform contract",
+      "obstacleContract": "recorded-only-not-wired-to-shared/SceneObstacles",
+      "generatedRocks": null,
+      "sampledRocks": 6,
+      "types": [
+        "rock1",
+        "rock2",
+        "rock3"
+      ],
+      "samples": [
+        {
+          "sourceIndex": 12,
+          "type": "rock1",
+          "production": {
+            "x": -172.5,
+            "z": -136.25,
+            "scale": 6.85,
+            "rotationX": 0.08,
+            "rotationY": 0.35,
+            "rotationZ": -0.04,
+            "scaleY": 0.7,
+            "scaleZ": 1.2,
+            "radius": 8.22,
+            "colliderRadius": 3.768,
+            "isObstacle": true
+          }
+        },
+        {
+          "sourceIndex": 31,
+          "type": "rock1",
+          "production": {
+            "x": -118.75,
+            "z": 154.5,
+            "scale": 8.2,
+            "rotationX": 0.16,
+            "rotationY": 2.1,
+            "rotationZ": 0.09,
+            "scaleY": 0.7,
+            "scaleZ": 1.2,
+            "radius": 9.84,
+            "colliderRadius": 4.51,
+            "isObstacle": true
+          }
+        },
+        {
+          "sourceIndex": 54,
+          "type": "rock2",
+          "production": {
+            "x": 158,
+            "z": -122,
+            "scale": 11.6,
+            "rotationX": 0.11,
+            "rotationY": 1.25,
+            "rotationZ": -0.13,
+            "scaleY": 0.7,
+            "scaleZ": 1.2,
+            "radius": 13.92,
+            "colliderRadius": 6.38,
+            "isObstacle": true
+          }
+        },
+        {
+          "sourceIndex": 77,
+          "type": "rock2",
+          "production": {
+            "x": 232.5,
+            "z": 206,
+            "scale": 14.4,
+            "rotationX": 0.22,
+            "rotationY": 3.62,
+            "rotationZ": 0.07,
+            "scaleY": 0.7,
+            "scaleZ": 1.2,
+            "radius": 17.28,
+            "colliderRadius": 7.92,
+            "isObstacle": true
+          }
+        },
+        {
+          "sourceIndex": 109,
+          "type": "rock3",
+          "production": {
+            "x": -344,
+            "z": 282.25,
+            "scale": 22.5,
+            "rotationX": 0.19,
+            "rotationY": 4.4,
+            "rotationZ": -0.16,
+            "scaleY": 0.7,
+            "scaleZ": 1.2,
+            "radius": 27,
+            "colliderRadius": 12.375,
+            "isObstacle": true
+          }
+        },
+        {
+          "sourceIndex": 144,
+          "type": "rock3",
+          "production": {
+            "x": 408.5,
+            "z": -318,
+            "scale": 31,
+            "rotationX": 0.27,
+            "rotationY": 5.55,
+            "rotationZ": 0.15,
+            "scaleY": 0.7,
+            "scaleZ": 1.2,
+            "radius": 37.2,
+            "colliderRadius": 17.05,
+            "isObstacle": true
+          }
+        }
+      ]
+    },
+    "diagnosticRockInstancingPreview": {
+      "ok": true,
+      "source": "THREE.InstancedMesh",
+      "productionReference": "RockPlacement InstancedMesh2.addInstances",
+      "instanceSource": "diagnostic-rock-placement-transform-samples",
+      "lod": "lod0-only",
+      "instancedMesh2Status": "not imported in WebGPU diagnostic",
+      "rockInstances": 6,
+      "instanceMatrices": 6,
+      "renderedInstanceMeshes": 3,
+      "missingTypes": [],
+      "groups": [
+        {
+          "type": "rock1",
+          "meshName": "rock",
+          "materialName": "konveyor-node-rock-rim",
+          "instances": 2,
+          "isInstancedMesh": true,
+          "vertexCount": 540
+        },
+        {
+          "type": "rock2",
+          "meshName": "rock",
+          "materialName": "konveyor-node-rock-rim",
+          "instances": 2,
+          "isInstancedMesh": true,
+          "vertexCount": 538
+        },
+        {
+          "type": "rock3",
+          "meshName": "rock",
+          "materialName": "konveyor-node-rock-rim",
+          "instances": 2,
+          "isInstancedMesh": true,
+          "vertexCount": 960
         }
       ]
     },

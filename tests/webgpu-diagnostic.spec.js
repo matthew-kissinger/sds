@@ -17,6 +17,7 @@ import {
 } from '../js/diagnostics/webgpuGlbMaterialProof.js';
 import { RUNTIME_GLB_RENDER_PREVIEW_ASSETS } from '../js/diagnostics/webgpuRuntimeGlbPreview.js';
 import { createProductionTreePlacementPlan } from '../js/diagnostics/webgpuProductionPlacementPlan.js';
+import { createDiagnosticRockPlacementPlan } from '../js/diagnostics/webgpuRockPlacementPlan.js';
 
 function createGlbBuffer(gltf) {
   const json = JSON.stringify(gltf);
@@ -204,5 +205,28 @@ describe('webgpu runtime glb material proof', () => {
     expect(plan.samples.every((sample) => Number.isFinite(sample.production.x))).toBe(true);
     expect(plan.samples.every((sample) => Number.isFinite(sample.production.z))).toBe(true);
     expect(plan.samples.every((sample) => sample.production.scale > 0)).toBe(true);
+  });
+
+  it('records deterministic diagnostic rock placement transforms for native instancing', () => {
+    const plan = createDiagnosticRockPlacementPlan();
+
+    expect(plan).toMatchObject({
+      ok: true,
+      sceneId: 'field',
+      source: 'diagnostic-rock-placement-transform-samples',
+      productionReference: 'js/world/RockPlacement.js rockInstances transform contract',
+      obstacleContract: 'recorded-only-not-wired-to-shared/SceneObstacles',
+      sampledRocks: 6,
+      types: ['rock1', 'rock2', 'rock3'],
+    });
+    const counts = plan.samples.reduce((acc, sample) => ({
+      ...acc,
+      [sample.type]: (acc[sample.type] ?? 0) + 1,
+    }), {});
+    expect(counts).toEqual({ rock1: 2, rock2: 2, rock3: 2 });
+    expect(plan.samples.every((sample) => Number.isFinite(sample.production.rotationY))).toBe(true);
+    expect(plan.samples.every((sample) => sample.production.scale > 0)).toBe(true);
+    expect(plan.samples.every((sample) => sample.production.scaleY === 0.7)).toBe(true);
+    expect(plan.samples.every((sample) => sample.production.scaleZ === 1.2)).toBe(true);
   });
 });

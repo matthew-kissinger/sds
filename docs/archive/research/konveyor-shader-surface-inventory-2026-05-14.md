@@ -37,8 +37,11 @@ WebGL load still uses the current `onBeforeCompile` patches. A follow-up
 diagnostic island renders the same samples through WebGPU `THREE.InstancedMesh`
 groups for trunks and leaves, proving LOD0 native Three instancing without
 pulling production `InstancedMesh2` into the WebGPU namespace. That path now
-goes through `js/world/konveyorTreeInstancingAdapter.js`. Do not start
-production wiring with terrain, grass, water, sheep, or Kiln impostors.
+goes through `js/world/konveyorNativeInstancingAdapter.js`. A rock transform
+diagnostic now renders fixed `RockPlacement`-shaped samples for all three rock
+GLBs through the same native instancing seam; it deliberately does not extract
+or claim seeded production rock generation. Do not start production wiring with
+terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -117,11 +120,17 @@ comments:
   tree type. It records 16 instance matrices across the four groups and keeps
   the status of production `InstancedMesh2` explicit: not imported in the
   WebGPU diagnostic, LOD0-only, no BVH/LOD/impostor migration claimed.
-- `js/world/konveyorTreeInstancingAdapter.js` owns the native instancing seam
+- `js/world/konveyorNativeInstancingAdapter.js` owns the native instancing seam
   used by that diagnostic. Package inspection found WebGL-specific
   `@three.ez/instanced-mesh` surfaces (`WebGLRenderer`,
   `WebGL2RenderingContext`, `WebGLProperties`), so the current WebGPU route is
   native `THREE.InstancedMesh` rather than direct `InstancedMesh2` reuse.
+- `diagnostic-rock-instancing-preview` records fixed transform samples shaped
+  like `js/world/RockPlacement.js` instance data, covers all three shipped rock
+  GLBs, renders them through native WebGPU `THREE.InstancedMesh`, and reports
+  the obstacle fields as recorded-only. Production rock placement still uses
+  client `Math.random()`, so seeded generation and shared obstacle wiring
+  remain separate work.
 - The production-side adapter in `js/world/konveyorMaterialAdapter.js` reuses
   the same tree-name and rock-traversal replacement rules for cached GLB roots.
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and
@@ -151,9 +160,11 @@ comments:
    exists, and the first tree-placement proof samples real Rolling Hills scene
    data through the shared tree placement generator. The WebGPU diagnostic now
    also proves a LOD0-only `THREE.InstancedMesh` tree path through the
-   production-facing adapter seam. Keep production `InstancedMesh2` on the
-   WebGL path for now; move to rock-placement proof or another smaller material
-   island while keeping current WebGL `onBeforeCompile` patches as default.
+   production-facing adapter seam. Rock placement now has a diagnostic
+   transform/instancing proof, but not a seeded production generator. Keep
+   production `InstancedMesh2` on the WebGL path for now; move to another
+   smaller material island or the measured rock-generation extraction while
+   keeping current WebGL `onBeforeCompile` patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

@@ -49,76 +49,79 @@ async function run() {
   const launchOptions = { args: CHROMIUM_GPU_ARGS };
   if (args.channel) launchOptions.channel = args.channel;
   const browser = await chromium.launch(launchOptions);
-  const page = await browser.newPage();
-  await page.goto(args.url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-
-  const browserProbe = await page.evaluate(async () => {
-    const canvas = document.querySelector('canvas') || document.createElement('canvas');
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
-    let adapter = null;
-    let adapterError = null;
-    let device = null;
-    let deviceError = null;
-
-    try {
-      adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
-    } catch (err) {
-      adapterError = String(err?.message || err);
-    }
-
-    try {
-      device = adapter ? await adapter.requestDevice() : null;
-    } catch (err) {
-      deviceError = String(err?.message || err);
-    }
-
-    return {
-      userAgent: navigator.userAgent,
-      secureContext: window.isSecureContext,
-      navigatorGpu: !!navigator.gpu,
-      adapter: {
-        ok: !!adapter,
-        error: adapterError,
-        features: adapter ? Array.from(adapter.features).sort() : [],
-        limits: adapter ? {
-          maxTextureDimension2D: adapter.limits.maxTextureDimension2D,
-          maxBindGroups: adapter.limits.maxBindGroups,
-          maxStorageBuffersPerShaderStage: adapter.limits.maxStorageBuffersPerShaderStage,
-        } : null,
-        info: adapter?.info ? { ...adapter.info } : null,
-      },
-      device: {
-        ok: !!device,
-        error: deviceError,
-        features: device ? Array.from(device.features).sort() : [],
-      },
-      webgl: {
-        vendor: ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : null,
-        renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : null,
-        version: gl ? gl.getParameter(gl.VERSION) : null,
-      },
-    };
-  });
-
+  let browserProbe;
   let diagnostic = null;
-  if (args.url.includes('diagnostic=1')) {
-    try {
-      await page.waitForFunction(() => {
-        const state = window.__sdsG;
-        return state && (state.ok || state.error);
-      }, null, { timeout: 20_000 });
+  try {
+    const page = await browser.newPage();
+    await page.goto(args.url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
-      diagnostic = await page.evaluate(() => {
-        const { dispose, ...state } = window.__sdsG || {};
-        return state;
-      });
-    } catch (err) {
-      diagnostic = { ok: false, error: `diagnostic wait failed: ${String(err?.message || err)}` };
+    browserProbe = await page.evaluate(async () => {
+      const canvas = document.querySelector('canvas') || document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+      let adapter = null;
+      let adapterError = null;
+      let device = null;
+      let deviceError = null;
+
+      try {
+        adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
+      } catch (err) {
+        adapterError = String(err?.message || err);
+      }
+
+      try {
+        device = adapter ? await adapter.requestDevice() : null;
+      } catch (err) {
+        deviceError = String(err?.message || err);
+      }
+
+      return {
+        userAgent: navigator.userAgent,
+        secureContext: window.isSecureContext,
+        navigatorGpu: !!navigator.gpu,
+        adapter: {
+          ok: !!adapter,
+          error: adapterError,
+          features: adapter ? Array.from(adapter.features).sort() : [],
+          limits: adapter ? {
+            maxTextureDimension2D: adapter.limits.maxTextureDimension2D,
+            maxBindGroups: adapter.limits.maxBindGroups,
+            maxStorageBuffersPerShaderStage: adapter.limits.maxStorageBuffersPerShaderStage,
+          } : null,
+          info: adapter?.info ? { ...adapter.info } : null,
+        },
+        device: {
+          ok: !!device,
+          error: deviceError,
+          features: device ? Array.from(device.features).sort() : [],
+        },
+        webgl: {
+          vendor: ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : null,
+          renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : null,
+          version: gl ? gl.getParameter(gl.VERSION) : null,
+        },
+      };
+    });
+
+    if (args.url.includes('diagnostic=1')) {
+      try {
+        await page.waitForFunction(() => {
+          const state = window.__sdsG;
+          return state && (state.ok || state.error);
+        }, null, { timeout: 20_000 });
+
+        diagnostic = await page.evaluate(() => {
+          const { dispose, ...state } = window.__sdsG || {};
+          return state;
+        });
+      } catch (err) {
+        diagnostic = { ok: false, error: `diagnostic wait failed: ${String(err?.message || err)}` };
+      }
     }
+  } finally {
+    await browser.close();
   }
-
-  await browser.close();
 
   const result = {
     capturedAt: new Date().toISOString(),

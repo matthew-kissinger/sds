@@ -1,5 +1,8 @@
 import { applyKonveyorTreeRockMaterials } from '../world/konveyorMaterialAdapter.js';
-import { createKonveyorNativeTreeInstancingPreview } from '../world/konveyorTreeInstancingAdapter.js';
+import {
+    createKonveyorNativeRockInstancingPreview,
+    createKonveyorNativeTreeInstancingPreview,
+} from '../world/konveyorNativeInstancingAdapter.js';
 
 const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/v1/decoders/';
 
@@ -157,6 +160,26 @@ function projectPlacementSample(sample, extents) {
     };
 }
 
+function projectRockPlacementSample(sample, extents) {
+    const lerp = (value, min, max, outMin, outMax) => {
+        const span = Math.max(max - min, 0.001);
+        return outMin + ((value - min) / span) * (outMax - outMin);
+    };
+    const productionScale = sample.production.scale;
+    const scale = Math.min(0.24, Math.max(0.12, productionScale / 110));
+    return {
+        x: lerp(sample.production.x, extents.minX, extents.maxX, 0.72, 1.68),
+        y: -0.7,
+        z: lerp(sample.production.z, extents.minZ, extents.maxZ, 0.42, 0.92),
+        rotationX: sample.production.rotationX,
+        rotationY: sample.production.rotationY,
+        rotationZ: sample.production.rotationZ,
+        scaleX: scale,
+        scaleY: scale * sample.production.scaleY,
+        scaleZ: scale * sample.production.scaleZ,
+    };
+}
+
 function placeCloneOnGround(clone, display, { Box3, Vector3 }) {
     clone.position.set(display.x, display.y, display.z);
     clone.rotation.y += display.rotationY;
@@ -185,6 +208,42 @@ function createProductionInstancingPreview({ scene, rootsByAsset, plan, extents,
         createDisplayTransform: (sample) => projectPlacementSample(sample, extents),
         three,
     });
+}
+
+async function createDiagnosticRockPlacementPreview({ scene, rootsByAsset, three }) {
+    const { createDiagnosticRockPlacementPlan } = await import('./webgpuRockPlacementPlan.js');
+    const plan = createDiagnosticRockPlacementPlan();
+    if (plan.samples.length === 0) {
+        return {
+            roots: [],
+            summary: {
+                ...plan,
+                ok: false,
+            },
+            instancing: {
+                ok: false,
+                reason: 'no-rock-placement-samples',
+            },
+        };
+    }
+
+    const extents = createPlacementExtents(plan.samples);
+    const instancing = createKonveyorNativeRockInstancingPreview({
+        scene,
+        rootsByAsset,
+        plan,
+        createDisplayTransform: (sample) => projectRockPlacementSample(sample, extents),
+        three,
+    });
+
+    return {
+        roots: instancing.roots,
+        summary: {
+            ...plan,
+            ok: plan.ok && instancing.summary.ok,
+        },
+        instancing: instancing.summary,
+    };
 }
 
 async function createProductionPlacementPreview({ scene, rootsByAsset, three }) {
@@ -268,6 +327,8 @@ export async function createRuntimeGlbPreview({
     let adapter = null;
     let productionPlacementPreview = null;
     let productionInstancingPreview = null;
+    let diagnosticRockPlacementPreview = null;
+    let diagnosticRockInstancingPreview = null;
 
     try {
         for (const asset of RUNTIME_GLB_RENDER_PREVIEW_ASSETS) {
@@ -317,6 +378,11 @@ export async function createRuntimeGlbPreview({
         productionPlacementRoots.push(...placement.roots);
         productionPlacementPreview = placement.summary;
         productionInstancingPreview = placement.instancing;
+
+        const rockPlacement = await createDiagnosticRockPlacementPreview({ scene, rootsByAsset, three });
+        productionPlacementRoots.push(...rockPlacement.roots);
+        diagnosticRockPlacementPreview = rockPlacement.summary;
+        diagnosticRockInstancingPreview = rockPlacement.instancing;
     } catch (err) {
         productionPlacementRoots.forEach((root) => scene.remove(root));
         loadedAssets.forEach(({ root }) => {
@@ -333,7 +399,9 @@ export async function createRuntimeGlbPreview({
             ? item.replacement.missingTargets.length === 0
             : item.replacement.replacedMaterials > 0)
             && productionPlacementPreview?.ok === true
-            && productionInstancingPreview?.ok === true,
+            && productionInstancingPreview?.ok === true
+            && diagnosticRockPlacementPreview?.ok === true
+            && diagnosticRockInstancingPreview?.ok === true,
         assets: RUNTIME_GLB_RENDER_PREVIEW_ASSETS.length,
         adapter: adapter ? {
             ok: adapter.ok,
@@ -342,6 +410,8 @@ export async function createRuntimeGlbPreview({
         } : null,
         productionPlacementPreview,
         productionInstancingPreview,
+        diagnosticRockPlacementPreview,
+        diagnosticRockInstancingPreview,
         rendered,
         dispose() {
             productionPlacementRoots.forEach((root) => scene.remove(root));

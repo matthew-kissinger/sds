@@ -111,9 +111,15 @@ WebGPU now has a diagnostic island, not a production renderer:
   Three instancing path. It is LOD0-only and explicitly does not import
   `@three.ez/instanced-mesh`/`InstancedMesh2` into the WebGPU diagnostic.
 - The native tree-instancing proof now runs through
-  `js/world/konveyorTreeInstancingAdapter.js`, a renderer-specific adapter seam
+  `js/world/konveyorNativeInstancingAdapter.js`, a renderer-specific adapter seam
   that can feed WebGPU `THREE.InstancedMesh` groups without importing
   `InstancedMesh2`.
+- The diagnostic now records `diagnostic-rock-instancing-preview`: fixed rock
+  transform samples shaped like `js/world/RockPlacement.js` instance data are
+  rendered from the shipped rock GLBs through native WebGPU
+  `THREE.InstancedMesh` groups. This is a renderer/material/transform proof
+  only; it does not extract seeded rock generation, does not wire
+  `shared/SceneObstacles`, and does not import production `InstancedMesh2`.
 - A production-facing tree/rock material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` and explicit WebGPU material factories.
   It reuses the proved tree material-name and rock traversal strategies against
@@ -144,12 +150,15 @@ Recommended order:
    proof now samples Rolling Hills production scene data through the shared
    tree placement generator, renders adapter-backed WebGPU tree GLB samples,
    and proves a LOD0-only WebGPU `THREE.InstancedMesh` path for the same
-   samples through a production-facing adapter seam. Package inspection shows
+   samples through a production-facing adapter seam. Rock placement now has a
+   diagnostic transform/instancing proof for all three rock GLBs, but
+   production rock generation still uses client `Math.random()` and remains a
+   separate extraction decision. Package inspection shows
    `@three.ez/instanced-mesh` has WebGL-specific hooks, so the conservative
    current decision is to keep `InstancedMesh2` on the WebGL path and continue
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
-   says otherwise. Next move to rock placement or another smaller
-   shader/material island before touching production boot.
+   says otherwise. Next move to a smaller shader/material island or the
+   measured rock-generation extraction before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The

@@ -282,7 +282,7 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
         skyFog,
         rockRim,
         treeLeaf,
@@ -291,6 +291,8 @@ export async function bootWebGpuDiagnostic() {
         runtimeGlbPreview: null,
         productionPlacementPreview: null,
         productionInstancingPreview: null,
+        diagnosticRockPlacementPreview: null,
+        diagnosticRockInstancingPreview: null,
         frames: 0,
     };
 
@@ -448,6 +450,8 @@ export async function bootWebGpuDiagnostic() {
         }
         state.productionPlacementPreview = state.runtimeGlbPreview.productionPlacementPreview;
         state.productionInstancingPreview = state.runtimeGlbPreview.productionInstancingPreview;
+        state.diagnosticRockPlacementPreview = state.runtimeGlbPreview.diagnosticRockPlacementPreview;
+        state.diagnosticRockInstancingPreview = state.runtimeGlbPreview.diagnosticRockInstancingPreview;
     } catch (err) {
         state.runtimeGlbPreview = {
             ok: false,

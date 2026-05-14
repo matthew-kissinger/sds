@@ -113,3 +113,86 @@ export function createKonveyorNativeTreeInstancingPreview({
         },
     };
 }
+
+export function createKonveyorNativeRockInstancingPreview({
+    scene,
+    rootsByAsset,
+    plan,
+    createDisplayTransform,
+    three,
+}) {
+    const { Box3, InstancedMesh, Matrix4, Object3D } = three;
+    if (typeof InstancedMesh !== 'function') {
+        return {
+            roots: [],
+            summary: {
+                ok: false,
+                reason: 'native-instanced-mesh-unavailable',
+            },
+        };
+    }
+
+    const roots = [];
+    const groups = [];
+    const missingTypes = [];
+    const dummy = new Object3D();
+
+    for (const type of plan.types) {
+        const samples = plan.samples.filter((sample) => sample.type === type);
+        const sourceRoot = rootsByAsset.get(`rock-lod0:${type}-lod0`);
+        if (!sourceRoot) {
+            missingTypes.push(type);
+            continue;
+        }
+
+        const baseYOffset = getRootBaseYOffset(sourceRoot, { Box3 });
+        const sources = collectInstancedMeshSources(sourceRoot, { Matrix4 });
+        for (const source of sources) {
+            const instancedMesh = new InstancedMesh(source.geometry, source.material, samples.length);
+            samples.forEach((sample, index) => {
+                const display = createDisplayTransform(sample);
+                dummy.position.set(
+                    display.x,
+                    display.y + baseYOffset * display.scaleY,
+                    display.z
+                );
+                dummy.rotation.set(display.rotationX, display.rotationY, display.rotationZ);
+                dummy.scale.set(display.scaleX, display.scaleY, display.scaleZ);
+                dummy.updateMatrix();
+                instancedMesh.setMatrixAt(index, dummy.matrix);
+            });
+            instancedMesh.instanceMatrix.needsUpdate = true;
+            instancedMesh.frustumCulled = false;
+            scene.add(instancedMesh);
+            roots.push(instancedMesh);
+            groups.push({
+                type,
+                meshName: source.meshName,
+                materialName: source.materialName,
+                instances: samples.length,
+                isInstancedMesh: instancedMesh.isInstancedMesh === true,
+                vertexCount: source.vertexCount,
+            });
+        }
+    }
+
+    const instanceMatrices = groups.reduce((sum, group) => sum + group.instances, 0);
+    return {
+        roots,
+        summary: {
+            ok: missingTypes.length === 0
+                && groups.length > 0
+                && groups.every((group) => group.isInstancedMesh && group.instances > 0 && group.vertexCount > 0),
+            source: 'THREE.InstancedMesh',
+            productionReference: 'RockPlacement InstancedMesh2.addInstances',
+            instanceSource: plan.source,
+            lod: 'lod0-only',
+            instancedMesh2Status: 'not imported in WebGPU diagnostic',
+            rockInstances: plan.samples.length,
+            instanceMatrices,
+            renderedInstanceMeshes: groups.length,
+            missingTypes,
+            groups,
+        },
+    };
+}
