@@ -29,6 +29,12 @@ Runtime ownership today:
   color remains authoritative.
 - `CloudLayer` receives the sky-derived sun color during `Atmosphere.update()`.
 
+`tests/webgpu-diagnostic.spec.js` asserts the diagnostic WebGPU sky/fog packet
+keeps fog color derived from the CPU horizon sample. The Chrome diagnostic probe
+now records `skyFog.horizonColor`, `skyFog.sunColor`, `skyFog.fogColor`, and
+`skyFog.fogNear/fogFar` in
+`cycle36-validation/runtime/webgpu-diagnostic-chrome.json`.
+
 ## Next Migration Shape
 
 Do not wire production WebGPU cloud or sky rendering until a diagnostic island
@@ -42,6 +48,7 @@ proves both pieces of the atmosphere handoff:
    sun billboard, rock rim, water, grass, and impostor tint consumers.
 
 The diagnostic cloud-plane TSL island now proves the smaller cloud material
-inputs. The next code island should prefer a sky/fog diagnostic prototype. It
-must keep the fog/horizon contract visible in tests and docs before any
-production renderer wiring.
+inputs, and the diagnostic sky/fog island proves a renderer-visible material can
+share a CPU-accessible horizon/sun/fog packet. Production sky, fog, terrain,
+water, grass, and impostor wiring still needs parity evidence before any default
+renderer path changes.

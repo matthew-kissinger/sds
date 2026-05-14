@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T21:14:46.971Z",
+  "capturedAt": "2026-05-14T21:21:37.694Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -79,8 +79,38 @@
       "sun-billboard",
       "portal-ring",
       "meadow-quad",
-      "cloud-plane"
+      "cloud-plane",
+      "sky-fog"
     ],
+    "skyFog": {
+      "horizonColor": [
+        0.57,
+        0.7,
+        0.78
+      ],
+      "zenithColor": [
+        0.13,
+        0.27,
+        0.46
+      ],
+      "sunColor": [
+        1,
+        0.82,
+        0.52
+      ],
+      "fogDarkenMultiplier": 0.82,
+      "fogColor": [
+        0.4674,
+        0.574,
+        0.6396
+      ],
+      "fogNear": 18,
+      "fogFar": 74,
+      "sunPositionUv": [
+        0.32,
+        0.72
+      ]
+    },
     "frames": 2
   }
 }

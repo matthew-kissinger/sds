@@ -127,13 +127,56 @@ function createCloudPlaneNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }
     return material;
 }
 
+export function createSkyFogDiagnosticState() {
+    const horizonColor = [0.57, 0.70, 0.78];
+    const zenithColor = [0.13, 0.27, 0.46];
+    const sunColor = [1.0, 0.82, 0.52];
+    const fogDarkenMultiplier = 0.82;
+    return {
+        horizonColor,
+        zenithColor,
+        sunColor,
+        fogDarkenMultiplier,
+        fogColor: horizonColor.map((v) => Number((v * fogDarkenMultiplier).toFixed(4))),
+        fogNear: 18,
+        fogFar: 74,
+        sunPositionUv: [0.32, 0.72],
+    };
+}
+
+function createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog) {
+    const { float, length, mix, pow, smoothstep, uv, vec2, vec3 } = TSL;
+    const skyUv = uv();
+    const horizon = vec3(...skyFog.horizonColor);
+    const zenith = vec3(...skyFog.zenithColor);
+    const sunColor = vec3(...skyFog.sunColor);
+    const fogColor = vec3(...skyFog.fogColor);
+    const vertical = smoothstep(0.02, 0.92, skyUv.y);
+    const sunDelta = skyUv.sub(vec2(...skyFog.sunPositionUv));
+    const sunDistance = length(sunDelta);
+    const sunDisc = float(1.0).sub(smoothstep(0.018, 0.052, sunDistance));
+    const sunGlow = pow(float(1.0).sub(smoothstep(0.0, 0.42, sunDistance)), 2.2);
+    const fogBand = float(1.0).sub(smoothstep(0.12, 0.48, skyUv.y));
+    const skyColor = mix(horizon, zenith, vertical)
+        .add(sunColor.mul(sunGlow.mul(0.42)))
+        .add(vec3(1.0, 0.95, 0.82).mul(sunDisc.mul(0.7)));
+
+    const material = new MeshBasicNodeMaterial();
+    material.colorNode = mix(skyColor, fogColor, fogBand.mul(0.58));
+    material.depthWrite = false;
+    material.depthTest = false;
+    return material;
+}
+
 export async function bootWebGpuDiagnostic() {
+    const skyFog = createSkyFogDiagnosticState();
     const state = window.__sdsWebGpuDiagnostic = {
         ...(window.__sdsWebGpuDiagnostic || {}),
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog'],
+        skyFog,
         frames: 0,
     };
 
@@ -177,6 +220,7 @@ export async function bootWebGpuDiagnostic() {
         MeshBasicNodeMaterial,
         MeshLambertNodeMaterial,
         Color,
+        Fog,
         AmbientLight,
         DirectionalLight,
         AdditiveBlending,
@@ -192,7 +236,9 @@ export async function bootWebGpuDiagnostic() {
     await renderer.init();
 
     const scene = new Scene();
-    scene.background = new Color(0x10202a);
+    const fogColor = new Color().setRGB(...skyFog.fogColor);
+    scene.background = fogColor.clone();
+    scene.fog = new Fog(fogColor, skyFog.fogNear, skyFog.fogFar);
     scene.add(new AmbientLight(0xffffff, 0.65));
     const keyLight = new DirectionalLight(0xffffff, 1.2);
     keyLight.position.set(1.5, 2.2, 3.0);
@@ -207,6 +253,14 @@ export async function bootWebGpuDiagnostic() {
     const cube = new Mesh(new BoxGeometry(1, 1, 1), material);
     cube.position.x = 0.55;
     scene.add(cube);
+
+    const skyFogBackdrop = new Mesh(
+        new PlaneGeometry(7.5, 4.25, 1, 1),
+        createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog)
+    );
+    skyFogBackdrop.position.set(0, 0.05, -1.65);
+    skyFogBackdrop.renderOrder = -10;
+    scene.add(skyFogBackdrop);
 
     const sun = new Mesh(
         new PlaneGeometry(1.45, 1.45),
@@ -265,6 +319,8 @@ export async function bootWebGpuDiagnostic() {
         window.removeEventListener('resize', resize);
         cube.geometry.dispose();
         material.dispose();
+        skyFogBackdrop.geometry.dispose();
+        skyFogBackdrop.material.dispose();
         portal.geometry.dispose();
         portal.material.dispose();
         meadow.geometry.dispose();

@@ -48,7 +48,9 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
 - There is a diagnostic-only WebGPU/TSL boot path at
   `?renderer=webgpu&diagnostic=1`. It is not a production renderer. It loads
   copied Three WebGPU/Core browser modules after the query flag and leaves the
-  normal WebGL bundle path as default.
+  normal WebGL bundle path as default. Current diagnostic islands cover the sun
+  billboard, portal ring, meadow quad, cloud plane, and a sky/fog CPU sample
+  packet.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.
@@ -249,14 +251,16 @@ Exit: the repo can measure itself, the native runtime assumptions are recorded
 in `DECISIONS.md`, and the first WebGPU renderer spike has a verified entry
 condition.
 
-### Phase 1 - WebGPU hero-scene boot
+### Phase 1 - WebGPU diagnostic renderer and material islands
 
-Add `?renderer=webgpu` as a flag-gated path for a single hero scene. WebGL
-stays default. The first target is Rolling Hills unless the active cycle picks
-a different hero scene with a reason.
+Add `?renderer=webgpu` as a flag-gated path, but do not force a production hero
+scene through WebGPU until the shader/material inventory proves the required
+surfaces. WebGL stays default. The current path is a diagnostic WebGPU/TSL boot
+with one material system migrated at a time.
 
-Exit: both renderers boot the target scene, fail closed on unsupported devices,
-and pass the current visual, latency, test, lint, and build gates.
+Exit: the diagnostic path proves the required production-adjacent material
+contracts, fails closed on unsupported devices, and preserves default WebGL
+behavior through the current visual, latency, test, lint, and build gates.
 
 ### Phase 2 - Tree asset refresh and visual baseline
 
