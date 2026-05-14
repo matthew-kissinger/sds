@@ -2133,10 +2133,10 @@ class SheepDogSimulation {
 
 // Start simulation when page loads
 window.addEventListener('DOMContentLoaded', () => {
-    if (window.__sdsWebGpuDiagnostic?.requested) {
+    if (window.__sdsG?.r) {
         import('./diagnostics/webgpuDiagnostic.js')
-            .then((m) => m.bootWebGpuDiagnostic())
-            .catch((err) => window.__sdsWebGpuDiagnostic.error = err?.message || err);
+            .then((m) => m.boot())
+            .catch((err) => window.__sdsG.error = err?.message || err);
         return;
     }
 

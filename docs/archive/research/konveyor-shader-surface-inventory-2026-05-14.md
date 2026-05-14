@@ -30,9 +30,11 @@ contracts. A rendered-clone diagnostic island now also loads all seven shipped
 tree and rock GLBs with the production GLTF/Draco/Meshopt path and renders them
 with WebGPU node-material replacements. A production-side tree/rock replacement
 adapter now exists behind `?renderer=webgpu&konveyorMaterials=1` and explicit
-WebGPU material factories; the default WebGL load still uses the current
-`onBeforeCompile` patches. Do not start production wiring with terrain, grass,
-water, sheep, or Kiln impostors.
+WebGPU material factories. The diagnostic now also samples Rolling Hills tree
+placements from `shared/TreePlacement.generateTrees` and renders eight
+adapter-backed tree GLB samples as a production-placement preview; the default
+WebGL load still uses the current `onBeforeCompile` patches. Do not start
+production wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -100,6 +102,12 @@ comments:
   bounded clone dimensions in the Chrome diagnostic artifact. These loader
   modules are copied to the diagnostic static vendor path and imported by URL to
   avoid exporting them from the default `main` chunk.
+- `production-placement-preview` samples Rolling Hills seed 1 through
+  `shared/TreePlacement.generateTrees`, records 147 generated trees, and
+  renders eight adapter-backed tree GLB samples in the WebGPU diagnostic. Rock
+  exclusions are intentionally empty in this proof because production rock
+  placement still uses client `Math.random()` and should be handled as a
+  separate placement/instancing decision.
 - The production-side adapter in `js/world/konveyorMaterialAdapter.js` reuses
   the same tree-name and rock-traversal replacement rules for cached GLB roots.
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and
@@ -126,9 +134,11 @@ comments:
    runtime GLB fetch proof cover both strategies. The rendered-clone island now
    proves all shipped tree and rock variants can load and render with WebGPU
    node-material replacements. The feature-flagged production adapter now
-   exists; the next code island should bind it to the first real WebGPU
-   production-placement proof while keeping current WebGL `onBeforeCompile`
-   patches as default.
+   exists, and the first tree-placement proof samples real Rolling Hills scene
+   data through the shared tree placement generator. The next code island
+   should decide whether to prove production instancing compatibility, add a
+   rock-placement proof, or continue with another smaller material island while
+   keeping current WebGL `onBeforeCompile` patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

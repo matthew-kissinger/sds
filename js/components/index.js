@@ -27,7 +27,7 @@ function bootReactUI() {
         });
 }
 
-if (typeof document !== 'undefined' && !window.__sdsWebGpuDiagnostic?.requested) {
+if (typeof document !== 'undefined' && !window.__sdsG?.r) {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => setTimeout(bootReactUI, 0));
     } else {

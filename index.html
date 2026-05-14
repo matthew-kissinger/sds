@@ -405,8 +405,8 @@
     <script>
         (() => {
             const params = new URLSearchParams(window.location.search);
-            window.__sdsWebGpuDiagnostic = {
-                requested: params.get('renderer') === 'webgpu' && params.get('diagnostic') === '1'
+            window.__sdsG = {
+                r: params.get('renderer') === 'webgpu' && params.get('diagnostic') === '1'
             };
         })();
     </script>

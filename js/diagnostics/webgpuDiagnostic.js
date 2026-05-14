@@ -273,18 +273,20 @@ export async function bootWebGpuDiagnostic() {
     const skyFog = createSkyFogDiagnosticState();
     const rockRim = createRockRimDiagnosticState(skyFog);
     const treeLeaf = createTreeLeafDiagnosticState();
-    const state = window.__sdsWebGpuDiagnostic = {
-        ...(window.__sdsWebGpuDiagnostic || {}),
+    const state = window.__sdsG = {
+        ...(window.__sdsG || {}),
+        r: true,
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview'],
         skyFog,
         rockRim,
         treeLeaf,
         materialReplacement: null,
         runtimeGlbReplacement: null,
         runtimeGlbPreview: null,
+        productionPlacementPreview: null,
         frames: 0,
     };
 
@@ -437,6 +439,7 @@ export async function bootWebGpuDiagnostic() {
         if (!state.runtimeGlbPreview.ok) {
             return fail('runtime GLB rendered clone proof failed');
         }
+        state.productionPlacementPreview = state.runtimeGlbPreview.productionPlacementPreview;
     } catch (err) {
         state.runtimeGlbPreview = {
             ok: false,
@@ -524,3 +527,5 @@ export async function bootWebGpuDiagnostic() {
     requestAnimationFrame(render);
     return state;
 }
+
+export { bootWebGpuDiagnostic as boot };

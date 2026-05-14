@@ -61,7 +61,11 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   primitive/material replacement contracts. The diagnostic also renders all
   seven GLBs with WebGPU node-material replacements through the production
   GLTF/Draco/Meshopt loader path and production-side material adapter without
-  changing production runtime wiring.
+  changing production runtime wiring. A production tree-placement preview now
+  samples Rolling Hills scene data through `shared/TreePlacement.generateTrees`
+  and renders eight adapter-backed tree GLB samples in the WebGPU diagnostic;
+  it does not instantiate production `TerrainBuilder`/`InstancedMesh2` or
+  change production WebGL startup.
   A production-facing material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
   factories, so cached production tree/rock GLB roots can be replaced without

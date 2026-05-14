@@ -105,12 +105,12 @@ async function run() {
   if (args.url.includes('diagnostic=1')) {
     try {
       await page.waitForFunction(() => {
-        const state = window.__sdsWebGpuDiagnostic;
+        const state = window.__sdsG;
         return state && (state.ok || state.error);
       }, null, { timeout: 20_000 });
 
       diagnostic = await page.evaluate(() => {
-        const { dispose, ...state } = window.__sdsWebGpuDiagnostic || {};
+        const { dispose, ...state } = window.__sdsG || {};
         return state;
       });
     } catch (err) {

@@ -130,6 +130,103 @@ function fitAsset(asset, root, { Box3, Vector3 }) {
     };
 }
 
+function createPlacementExtents(samples) {
+    const xs = samples.map((sample) => sample.production.x);
+    const zs = samples.map((sample) => sample.production.z);
+    return {
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs),
+        minZ: Math.min(...zs),
+        maxZ: Math.max(...zs),
+    };
+}
+
+function projectPlacementSample(sample, extents) {
+    const lerp = (value, min, max, outMin, outMax) => {
+        const span = Math.max(max - min, 0.001);
+        return outMin + ((value - min) / span) * (outMax - outMin);
+    };
+    const productionScale = sample.production.scale;
+    return {
+        x: lerp(sample.production.x, extents.minX, extents.maxX, -2.35, 2.35),
+        y: -0.68,
+        z: lerp(sample.production.z, extents.minZ, extents.maxZ, 0.72, 1.02),
+        scaleMultiplier: Math.min(0.52, Math.max(0.24, productionScale / 62)),
+        rotationY: sample.production.rotationY,
+    };
+}
+
+function placeCloneOnGround(clone, display, { Box3, Vector3 }) {
+    clone.position.set(display.x, display.y, display.z);
+    clone.rotation.y += display.rotationY;
+    clone.scale.multiplyScalar(display.scaleMultiplier);
+
+    const box = new Box3().setFromObject(clone);
+    clone.position.y += display.y - box.min.y;
+    const finalBox = new Box3().setFromObject(clone);
+    const finalSize = finalBox.getSize(new Vector3());
+    return {
+        x: Number(clone.position.x.toFixed(3)),
+        y: Number(clone.position.y.toFixed(3)),
+        z: Number(clone.position.z.toFixed(3)),
+        scaleMultiplier: Number(display.scaleMultiplier.toFixed(4)),
+        width: Number(finalSize.x.toFixed(4)),
+        height: Number(finalSize.y.toFixed(4)),
+        depth: Number(finalSize.z.toFixed(4)),
+    };
+}
+
+async function createProductionPlacementPreview({ scene, rootsByAsset, three }) {
+    const { createProductionTreePlacementPlan } = await import('./webgpuProductionPlacementPlan.js');
+    const plan = createProductionTreePlacementPlan();
+    if (plan.samples.length === 0) {
+        return {
+            roots: [],
+            summary: {
+                ...plan,
+                ok: false,
+                renderedTrees: 0,
+                rendered: [],
+            },
+        };
+    }
+
+    const extents = createPlacementExtents(plan.samples);
+    const roots = [];
+    const rendered = [];
+
+    for (const sample of plan.samples) {
+        const sourceRoot = rootsByAsset.get(`tree-lod0:${sample.type}-lod0`);
+        if (!sourceRoot) continue;
+
+        const clone = sourceRoot.clone(true);
+        const display = projectPlacementSample(sample, extents);
+        const bounds = placeCloneOnGround(clone, display, three);
+        scene.add(clone);
+        roots.push(clone);
+        rendered.push({
+            ...sample,
+            display: {
+                x: Number(display.x.toFixed(3)),
+                y: Number(display.y.toFixed(3)),
+                z: Number(display.z.toFixed(3)),
+                scaleMultiplier: Number(display.scaleMultiplier.toFixed(4)),
+            },
+            bounds,
+        });
+    }
+
+    return {
+        roots,
+        summary: {
+            ...plan,
+            ok: plan.ok && rendered.length === plan.samples.length,
+            renderedTrees: rendered.length,
+            rendered,
+        },
+    };
+}
+
 function disposeLoadedScene(root) {
     root.traverse((child) => {
         if (!child.isMesh) return;
@@ -150,7 +247,9 @@ export async function createRuntimeGlbPreview({
     const { loader, dracoLoader } = createGltfLoader(loaderModules);
     const loadedAssets = [];
     const rendered = [];
+    const productionPlacementRoots = [];
     let adapter = null;
+    let productionPlacementPreview = null;
 
     try {
         for (const asset of RUNTIME_GLB_RENDER_PREVIEW_ASSETS) {
@@ -179,10 +278,12 @@ export async function createRuntimeGlbPreview({
             ...adapter.treeResults,
             ...adapter.rockResults,
         ].map((result) => [`${result.group}:${result.key}`, result]));
+        const rootsByAsset = new Map();
 
         for (const { asset, root } of loadedAssets) {
             const replacement = replacementByAsset.get(`${asset.group}:${asset.key}`);
             const bounds = fitAsset(asset, root, three);
+            rootsByAsset.set(`${asset.group}:${asset.key}`, root);
             scene.add(root);
             rendered.push({
                 key: asset.key,
@@ -193,7 +294,12 @@ export async function createRuntimeGlbPreview({
                 bounds,
             });
         }
+
+        const placement = await createProductionPlacementPreview({ scene, rootsByAsset, three });
+        productionPlacementRoots.push(...placement.roots);
+        productionPlacementPreview = placement.summary;
     } catch (err) {
+        productionPlacementRoots.forEach((root) => scene.remove(root));
         loadedAssets.forEach(({ root }) => {
             scene.remove(root);
             disposeLoadedScene(root);
@@ -206,15 +312,18 @@ export async function createRuntimeGlbPreview({
     return {
         ok: rendered.every((item) => item.role === 'tree'
             ? item.replacement.missingTargets.length === 0
-            : item.replacement.replacedMaterials > 0),
+            : item.replacement.replacedMaterials > 0)
+            && productionPlacementPreview?.ok === true,
         assets: RUNTIME_GLB_RENDER_PREVIEW_ASSETS.length,
         adapter: adapter ? {
             ok: adapter.ok,
             treeReplacedMaterials: adapter.treeReplacedMaterials,
             rockReplacedMaterials: adapter.rockReplacedMaterials,
         } : null,
+        productionPlacementPreview,
         rendered,
         dispose() {
+            productionPlacementRoots.forEach((root) => scene.remove(root));
             loadedAssets.forEach(({ root }) => disposeLoadedScene(root));
         },
     };

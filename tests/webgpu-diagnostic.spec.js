@@ -16,6 +16,7 @@ import {
   RUNTIME_GLB_MATERIAL_PROOF_ASSETS,
 } from '../js/diagnostics/webgpuGlbMaterialProof.js';
 import { RUNTIME_GLB_RENDER_PREVIEW_ASSETS } from '../js/diagnostics/webgpuRuntimeGlbPreview.js';
+import { createProductionTreePlacementPlan } from '../js/diagnostics/webgpuProductionPlacementPlan.js';
 
 function createGlbBuffer(gltf) {
   const json = JSON.stringify(gltf);
@@ -181,5 +182,22 @@ describe('webgpu runtime glb material proof', () => {
     expect([...new Set(RUNTIME_GLB_RENDER_PREVIEW_ASSETS.map((asset) => asset.role).sort())]).toEqual(['rock', 'tree']);
     expect([...new Set(RUNTIME_GLB_RENDER_PREVIEW_ASSETS.map((asset) => asset.group).sort())]).toEqual(['rock-lod0', 'tree-lod0', 'tree-lod1']);
     expect(RUNTIME_GLB_RENDER_PREVIEW_ASSETS.every((asset) => proofPaths.has(asset.path))).toBe(true);
+  });
+
+  it('samples real scene tree placement data for the production placement preview', () => {
+    const plan = createProductionTreePlacementPlan();
+
+    expect(plan).toMatchObject({
+      ok: true,
+      sceneId: 'rolling-hills',
+      source: 'shared/TreePlacement.generateTrees',
+      rockExclusionMode: 'empty-rock-list',
+    });
+    expect(plan.generatedTrees).toBeGreaterThan(plan.sampledTrees);
+    expect(plan.sampledTrees).toBe(8);
+    expect(plan.types).toEqual(['tree1', 'tree2']);
+    expect(plan.samples.every((sample) => Number.isFinite(sample.production.x))).toBe(true);
+    expect(plan.samples.every((sample) => Number.isFinite(sample.production.z))).toBe(true);
+    expect(plan.samples.every((sample) => sample.production.scale > 0)).toBe(true);
   });
 });

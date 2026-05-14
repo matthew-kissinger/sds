@@ -99,6 +99,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   reports `runtimeGlbPreview.ok: true`. The loader modules are served through
   the diagnostic static vendor path so the default `main` bundle stays inside
   the refactor-baseline ratchet.
+- The diagnostic also records `production-placement-preview`: Rolling Hills
+  scene data is sampled through `shared/TreePlacement.generateTrees`, and eight
+  adapter-backed tree GLB samples are rendered in the WebGPU scene. This is a
+  tree-placement proof only; it does not boot the production renderer, does not
+  instantiate `TerrainBuilder`/`InstancedMesh2`, and does not change WebGL.
 - A production-facing tree/rock material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` and explicit WebGPU material factories.
   It reuses the proved tree material-name and rock traversal strategies against
@@ -125,9 +130,12 @@ Recommended order:
    and a diagnostic replacement proof now exist, plus a GLB primitive-clone
    proof, browser runtime fetch proof, and rendered production-GLB clone proof
    against all shipped compressed tree/rock assets. The feature-flagged
-   production adapter seam now exists; bind it to the first real WebGPU
-   production-placement proof next, using tree material names for tree work and
-   rock asset class or mesh traversal for rock work.
+   production adapter seam now exists. The first tree-placement diagnostic
+   proof now samples Rolling Hills production scene data through the shared
+   tree placement generator and renders adapter-backed WebGPU tree GLB samples.
+   Next, decide whether to prove production instancing compatibility, move to
+   rock placement, or keep migrating a smaller shader/material island before
+   touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The
