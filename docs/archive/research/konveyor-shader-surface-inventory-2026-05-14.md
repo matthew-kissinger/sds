@@ -23,8 +23,11 @@ materials, while rock assets currently expose runtime-default primitive
 materials and cannot be migrated by material name. The diagnostic island now
 also includes a WebGPU material-replacement proof that exercises tree
 replacement by `branches`/`leaves` names and rock replacement by mesh traversal
-without loading production GLBs or touching the default WebGL path. Do not
-start production wiring with terrain, grass, water, sheep, or Kiln impostors.
+without touching the default WebGL path. A follow-up browser runtime proof now
+fetches all seven shipped tree and rock GLBs inside the diagnostic path and
+applies the same replacement strategy to their real primitive/material
+contracts. Do not start production wiring with terrain, grass, water, sheep, or
+Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -57,6 +60,9 @@ Captured artifact:
 Replacement proof artifact:
 `cycle36-validation/runtime/material-replacement-proof.json`
 
+Runtime diagnostic proof artifact:
+`cycle36-validation/runtime/webgpu-diagnostic-chrome.json`
+
 The ownership proof scans the shipped GLBs instead of trusting runtime
 comments:
 
@@ -71,12 +77,17 @@ comments:
   than by authored material name.
 - The WebGPU diagnostic `glb-material-replacement` island proves those two
   replacement strategies in isolation: tree replacement by material name and
-  rock replacement by traversal. It is still diagnostic-only; real production
-  GLB wiring remains a separate gated step.
+  rock replacement by traversal.
 - The material-replacement proof applies the same strategies to primitive
   clones produced from the shipped compressed GLBs: all four tree LOD0/LOD1
   files resolve `branches` and `leaves`, and all three rock files replace by
   traversal from runtime-default material ownership.
+- The WebGPU runtime diagnostic now fetches the same seven shipped GLBs in the
+  browser under `?renderer=webgpu&diagnostic=1` and records
+  `runtimeGlbReplacement.summary.ok: true`, with 8 tree materials and 3 rock
+  materials replaced through the expected strategies. It is still
+  diagnostic-only; rendered production GLB clone wiring remains a separate
+  gated step.
 
 ## Dormant Or Supporting Surfaces
 
@@ -94,10 +105,10 @@ comments:
 1. Use the captured GLB ownership proof before production tree or rock wiring:
    tree replacements may target `leaves` and `branches` by material name across
    LOD0/LOD1; rock replacements must use rock asset class or mesh traversal.
-   The diagnostic replacement island and GLB primitive-clone proof cover both
-   strategies. The next code island should apply one strategy to runtime-loaded
-   production GLB clones behind the WebGPU flag while keeping the current WebGL
-   `onBeforeCompile` patches as default.
+   The diagnostic replacement island, GLB primitive-clone proof, and browser
+   runtime GLB fetch proof cover both strategies. The next code island should
+   render runtime-loaded production GLB clones behind the WebGPU flag while
+   keeping the current WebGL `onBeforeCompile` patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

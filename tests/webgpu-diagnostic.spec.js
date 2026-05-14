@@ -9,6 +9,26 @@ import {
   replaceRockMaterialsByTraversal,
   replaceTreeMaterialsByName,
 } from '../js/diagnostics/webgpuMaterialReplacement.js';
+import {
+  createGlbMaterialReplacementProof,
+  createRuntimeGlbMaterialReplacementProof,
+  parseGlbJson,
+  RUNTIME_GLB_MATERIAL_PROOF_ASSETS,
+} from '../js/diagnostics/webgpuGlbMaterialProof.js';
+
+function createGlbBuffer(gltf) {
+  const json = JSON.stringify(gltf);
+  const jsonBytes = new TextEncoder().encode(json.padEnd(Math.ceil(json.length / 4) * 4, ' '));
+  const buffer = new ArrayBuffer(12 + 8 + jsonBytes.byteLength);
+  const view = new DataView(buffer);
+  view.setUint32(0, 0x46546c67, true);
+  view.setUint32(4, 2, true);
+  view.setUint32(8, buffer.byteLength, true);
+  view.setUint32(12, jsonBytes.byteLength, true);
+  view.setUint32(16, 0x4e4f534a, true);
+  new Uint8Array(buffer, 20).set(jsonBytes);
+  return buffer;
+}
 
 describe('webgpu diagnostic sky fog state', () => {
   it('keeps fog color derived from the CPU horizon sample', () => {
@@ -86,6 +106,70 @@ describe('webgpu diagnostic material replacement strategy', () => {
       visitedMeshes: 1,
       replacedMaterials: 1,
       previousMaterialNames: ['(runtime-default)'],
+    });
+  });
+});
+
+describe('webgpu runtime glb material proof', () => {
+  it('parses the JSON chunk from a GLB payload', () => {
+    const buffer = createGlbBuffer({ asset: { version: '2.0' }, materials: [{ name: 'leaves' }] });
+
+    expect(parseGlbJson(buffer)).toEqual({
+      asset: { version: '2.0' },
+      materials: [{ name: 'leaves' }],
+    });
+  });
+
+  it('applies tree replacement to gltf primitive material names', () => {
+    const proof = createGlbMaterialReplacementProof(
+      { group: 'tree-lod0', role: 'tree', path: 'tree.glb' },
+      {
+        materials: [{ name: 'branches' }, { name: 'leaves' }],
+        meshes: [{ primitives: [{ material: 0 }, { material: 1 }] }],
+      }
+    );
+
+    expect(proof.replacement.missingTargets).toEqual([]);
+    expect(proof.afterMaterialNames).toEqual(['konveyor-node-branches', 'konveyor-node-leaves']);
+    expect(proof.nodeMaterialCount).toBe(2);
+  });
+
+  it('applies rock replacement when primitives have no material index', () => {
+    const proof = createGlbMaterialReplacementProof(
+      { group: 'rock-lod0', role: 'rock', path: 'rock.glb' },
+      { meshes: [{ primitives: [{}] }] }
+    );
+
+    expect(proof.beforeMaterialNames).toEqual(['(runtime-default)']);
+    expect(proof.afterMaterialNames).toEqual(['konveyor-node-rock-rim']);
+    expect(proof.nodeMaterialCount).toBe(1);
+  });
+
+  it('summarizes fetched runtime GLB material replacement contracts', async () => {
+    const payloads = new Map(RUNTIME_GLB_MATERIAL_PROOF_ASSETS.map((asset) => {
+      const gltf = asset.role === 'tree'
+        ? {
+          materials: [{ name: 'branches' }, { name: 'leaves' }],
+          meshes: [{ primitives: [{ material: 0 }, { material: 1 }] }],
+        }
+        : { meshes: [{ primitives: [{}] }] };
+      return [asset.path, createGlbBuffer(gltf)];
+    }));
+
+    const proof = await createRuntimeGlbMaterialReplacementProof(async (path) => ({
+      ok: payloads.has(path),
+      status: payloads.has(path) ? 200 : 404,
+      arrayBuffer: async () => payloads.get(path),
+    }));
+
+    expect(proof.assets).toBe(7);
+    expect(proof.summary).toMatchObject({
+      ok: true,
+      treeTargetsResolved: true,
+      treeReplacedMaterials: 8,
+      rockReplacedMaterials: 3,
+      treeReplacementStrategy: 'material-name',
+      rockReplacementStrategy: 'asset-class-traversal',
     });
   });
 });

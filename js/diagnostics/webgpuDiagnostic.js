@@ -2,6 +2,7 @@ import {
     replaceRockMaterialsByTraversal,
     replaceTreeMaterialsByName,
 } from './webgpuMaterialReplacement.js';
+import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
 
 async function loadWebGpuThree() {
     const webGpuModulePath = './vendor/three/three.webgpu.min.js';
@@ -276,11 +277,12 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof'],
         skyFog,
         rockRim,
         treeLeaf,
         materialReplacement: null,
+        runtimeGlbReplacement: null,
         frames: 0,
     };
 
@@ -408,6 +410,18 @@ export async function bootWebGpuDiagnostic() {
         rocks: rockReplacement,
         trees: treeReplacement,
     };
+    try {
+        state.runtimeGlbReplacement = await createRuntimeGlbMaterialReplacementProof();
+        if (!state.runtimeGlbReplacement.summary?.ok) {
+            return fail('runtime GLB material proof failed');
+        }
+    } catch (err) {
+        state.runtimeGlbReplacement = {
+            ok: false,
+            error: String(err?.message || err),
+        };
+        return fail(`runtime GLB material proof failed: ${state.runtimeGlbReplacement.error}`);
+    }
 
     const portal = new Mesh(
         new RingGeometry(0.62, 0.86, 80, 1),

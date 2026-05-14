@@ -56,8 +56,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed
   by stable material names, while rocks require replacement by asset class or
   mesh traversal rather than material name. A follow-up primitive-clone proof
-  applies those strategies to the shipped compressed GLBs without changing
-  production runtime wiring.
+  applies those strategies to the shipped compressed GLBs, and the browser
+  diagnostic now fetches all seven shipped tree and rock GLBs to prove the same
+  primitive/material replacement contracts without changing production runtime
+  wiring.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.
