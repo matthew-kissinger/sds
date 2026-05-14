@@ -12,9 +12,9 @@ plus three patch chains that mutate Three's generated GLSL through
 
 The safest first production-adjacent island is `SunBillboard`: it is small,
 cosmetic, has no scene data dependency, and maps cleanly to a
-`MeshBasicNodeMaterial`/TSL expression. That formula is now ported inside the
-diagnostic island only. Do not start production wiring with terrain, grass,
-water, sheep, or Kiln impostors.
+`MeshBasicNodeMaterial`/TSL expression. The sun billboard and portal ring
+formulas are now ported inside the diagnostic island only. Do not start
+production wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
 
@@ -52,13 +52,11 @@ water, sheep, or Kiln impostors.
 
 ## Recommended Migration Order
 
-1. Port the `PortalEffect` ring formula in the same diagnostic harness, then
-   compare against an Open Country portal screenshot before wiring anything.
-2. Prototype meadow-quad TSL as the first real production grass-adjacent
+1. Prototype meadow-quad TSL as the first real production grass-adjacent
    material. It is far cheaper than blade grass and exercises fog/scene color.
-3. Move to cloud layer and sky together only after fog/horizon color ownership
+2. Move to cloud layer and sky together only after fog/horizon color ownership
    is explicit.
-4. Defer terrain, water, blade grass, sheep, and Kiln impostors until the
+3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the
    smaller islands have proved material ownership, bundle posture, and visual
    gates.
 

@@ -71,9 +71,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   records the default production-preview URL with `diagnostic: null`.
 - [`archive/research/konveyor-shader-surface-inventory-2026-05-14.md`](archive/research/konveyor-shader-surface-inventory-2026-05-14.md)
   ranks the current GLSL and `onBeforeCompile` migration surface. The sun
-  billboard formula is now ported inside the diagnostic island.
-- [`../cycle36-validation/runtime/webgpu-diagnostic-sun-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-sun-chrome.png)
-  is a Chrome 148 screenshot artifact for the diagnostic sun-billboard island.
+  billboard and portal ring formulas are now ported inside the diagnostic
+  island.
+- [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
+  is a Chrome 148 screenshot artifact for the diagnostic material islands.
 
 ## Next autonomous direction
 
@@ -83,9 +84,8 @@ one material system at a time.
 
 Recommended order:
 
-1. **Pick the next smallest production-adjacent material island.** Prefer
-   portal ring or meadow quad. Do not start with terrain + grass + water + sky
-   all at once.
+1. **Pick the next smallest production-adjacent material island.** Prefer the
+   meadow quad. Do not start with terrain + grass + water + sky all at once.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Advance through the Konveyor phase outline.** Keep moving from cosmetic
