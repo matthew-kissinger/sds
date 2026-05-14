@@ -3,12 +3,36 @@ async function loadWebGpuThree() {
     return import(/* @vite-ignore */ new URL(webGpuModulePath, import.meta.url).href);
 }
 
+function createSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, TSL }) {
+    const { float, length, pow, smoothstep, uv, vec2, vec3 } = TSL;
+    const d = uv().sub(vec2(0.5, 0.5));
+    const r = length(d).mul(2.0);
+    const core = float(1.0).sub(smoothstep(0.12, 0.22, r));
+    const haloFalloff = float(1.0).sub(smoothstep(0.0, 1.0, r));
+    const halo = pow(haloFalloff, 2.5).mul(0.45);
+    const intensity = float(1.1);
+    const rgb = vec3(1.0, 0.97, 0.88).mul(core)
+        .add(vec3(1.0, 0.82, 0.55).mul(halo))
+        .mul(intensity);
+    const alpha = core.add(halo.mul(0.7)).mul(intensity).mul(haloFalloff);
+
+    const material = new MeshBasicNodeMaterial();
+    material.colorNode = rgb;
+    material.opacityNode = alpha;
+    material.transparent = true;
+    material.depthWrite = false;
+    material.depthTest = true;
+    material.blending = AdditiveBlending;
+    return material;
+}
+
 export async function bootWebGpuDiagnostic() {
     const state = window.__sdsWebGpuDiagnostic = {
         ...(window.__sdsWebGpuDiagnostic || {}),
         requested: true,
         ok: false,
         renderer: 'webgpu',
+        islands: ['sun-billboard'],
         frames: 0,
     };
 
@@ -46,9 +70,11 @@ export async function bootWebGpuDiagnostic() {
         Scene,
         PerspectiveCamera,
         BoxGeometry,
+        PlaneGeometry,
         Mesh,
         MeshBasicNodeMaterial,
         Color,
+        AdditiveBlending,
         TSL,
     } = await loadWebGpuThree();
 
@@ -69,7 +95,15 @@ export async function bootWebGpuDiagnostic() {
     material.colorNode = TSL.vec4(0.28, 0.78, 0.92, 1.0);
 
     const cube = new Mesh(new BoxGeometry(1, 1, 1), material);
+    cube.position.x = 0.55;
     scene.add(cube);
+
+    const sun = new Mesh(
+        new PlaneGeometry(1.45, 1.45),
+        createSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, TSL })
+    );
+    sun.position.set(-0.85, 0.35, 0.15);
+    scene.add(sun);
 
     const resize = () => {
         const w = Math.max(1, window.innerWidth);
@@ -101,6 +135,8 @@ export async function bootWebGpuDiagnostic() {
         cube.geometry.dispose();
         material.dispose();
         renderer.dispose();
+        sun.geometry.dispose();
+        sun.material.dispose();
         canvas.remove();
         status.remove();
     };

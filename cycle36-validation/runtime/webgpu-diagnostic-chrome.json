@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T20:40:12.269Z",
+  "capturedAt": "2026-05-14T20:53:32.358Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -75,6 +75,9 @@
     "requested": true,
     "ok": true,
     "renderer": "webgpu",
-    "frames": 3
+    "islands": [
+      "sun-billboard"
+    ],
+    "frames": 2
   }
 }

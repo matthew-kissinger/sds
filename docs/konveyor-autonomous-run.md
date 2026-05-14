@@ -69,6 +69,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   records installed Chrome 148 rendering diagnostic frames through WebGPU.
 - [`../cycle36-validation/runtime/webgl-default-chrome.json`](../cycle36-validation/runtime/webgl-default-chrome.json)
   records the default production-preview URL with `diagnostic: null`.
+- [`archive/research/konveyor-shader-surface-inventory-2026-05-14.md`](archive/research/konveyor-shader-surface-inventory-2026-05-14.md)
+  ranks the current GLSL and `onBeforeCompile` migration surface. The sun
+  billboard formula is now ported inside the diagnostic island.
+- [`../cycle36-validation/runtime/webgpu-diagnostic-sun-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-sun-chrome.png)
+  is a Chrome 148 screenshot artifact for the diagnostic sun-billboard island.
 
 ## Next autonomous direction
 
@@ -78,16 +83,12 @@ one material system at a time.
 
 Recommended order:
 
-1. **Build a shader-surface inventory.** Turn the blocker report into a
-   migration map of every GLSL `ShaderMaterial`, `RawShaderMaterial`, and
-   `onBeforeCompile` patch, with risk, dependencies, visual gate, and likely
-   WebGPU/TSL replacement approach.
-2. **Pick the smallest production-adjacent material island.** Prefer cosmetic
-   or isolated systems first. Do not start with terrain + grass + water + sky
+1. **Pick the next smallest production-adjacent material island.** Prefer
+   portal ring or meadow quad. Do not start with terrain + grass + water + sky
    all at once.
-3. **Keep measurement attached to every change.** Run the relevant perf,
+2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
-4. **Advance through the Konveyor phase outline.** Keep moving from cosmetic
+3. **Advance through the Konveyor phase outline.** Keep moving from cosmetic
    shader compatibility to trees, grass, sheep/high-count rendering, compute
    experiments, native packaging, and web fallback/release decisions as
    evidence allows.
