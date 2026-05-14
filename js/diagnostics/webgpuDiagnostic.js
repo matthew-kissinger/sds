@@ -154,6 +154,22 @@ export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticStat
     };
 }
 
+export function createTreeLeafDiagnosticState() {
+    return {
+        baseColor: [0.18, 0.34, 0.12],
+        tipColor: [0.50, 0.68, 0.24],
+        windDirection: [0.7, 0.7],
+        windStrength: 0.72,
+        treeBaseY: -0.525,
+        treeTopY: 0.525,
+        alphaHash: true,
+        alphaTest: 0.08,
+        occluderStrength: 0.55,
+        occluderPeak: 0.62,
+        occluderUv: [0.5, 0.42],
+    };
+}
+
 function createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog) {
     const { float, length, mix, pow, smoothstep, uv, vec2, vec3 } = TSL;
     const skyUv = uv();
@@ -178,6 +194,51 @@ function createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog) {
     return material;
 }
 
+function createTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf) {
+    const { abs, clamp, dot, float, floor, fract, length, mix, normalize, positionLocal, positionWorld, screenCoordinate, sin, smoothstep, time, uv, vec2, vec3 } = TSL;
+    const leafUv = uv();
+    const windDir = normalize(vec2(...treeLeaf.windDirection));
+    const windPerp = vec2(-treeLeaf.windDirection[1], treeLeaf.windDirection[0]);
+    const treeRange = Math.max(treeLeaf.treeTopY - treeLeaf.treeBaseY, 0.001);
+    const posY01 = clamp(positionLocal.y.sub(treeLeaf.treeBaseY).div(treeRange), 0.0, 1.0);
+    const windWeightBase = smoothstep(0.25, 1.0, posY01);
+    const windWeight = windWeightBase.mul(windWeightBase);
+    const worldX = positionWorld.x;
+    const worldZ = positionWorld.z;
+    const gustA = sin(worldX.mul(0.04).add(worldZ.mul(0.034)).sub(time.mul(0.84)));
+    const gustB = sin(worldX.mul(0.018).add(worldZ.mul(0.022)).add(1.4).sub(time.mul(0.62)));
+    const gustEnv = smoothstep(-0.2, 1.0, gustA.mul(0.6).add(gustB.mul(0.4)));
+    const sway1 = sin(worldX.mul(0.15).add(worldZ.mul(0.11)).add(time.mul(0.85)));
+    const sway2 = sin(worldX.mul(0.07).sub(worldZ.mul(0.13)).add(time.mul(0.55)));
+    const sway = sway1.mul(0.6).add(sway2.mul(0.4));
+    const carrier = sway.mul(float(0.4).add(gustEnv.mul(0.8)));
+    const flutter = sin(worldX.mul(0.6).add(worldZ.mul(0.5)).add(time.mul(4.5)));
+    const windDisp = windDir.mul(carrier.mul(treeLeaf.windStrength * 0.18).mul(windWeight))
+        .add(windPerp.mul(flutter.mul(0.05 * treeLeaf.windStrength).mul(windWeight)));
+    const leafCenter = leafUv.sub(vec2(0.5, 0.52));
+    const leafRadius = length(vec2(leafCenter.x.mul(1.28), leafCenter.y.mul(0.82)));
+    const leafShape = float(1.0).sub(smoothstep(0.42, 0.56, leafRadius));
+    const midrib = float(1.0).sub(smoothstep(0.25, 0.85, abs(leafUv.x.sub(0.5)).mul(2.0)));
+    const screenHash = fract(sin(dot(floor(screenCoordinate), vec2(17.0, 131.0))).mul(43758.5453));
+    const occluderFade = float(1.0)
+        .sub(smoothstep(0.16, 0.36, length(leafUv.sub(vec2(...treeLeaf.occluderUv)))))
+        .mul(treeLeaf.occluderStrength);
+    const alpha = leafShape
+        .mul(float(1.0).sub(occluderFade.mul(treeLeaf.occluderPeak).mul(mix(0.65, 1.0, screenHash))));
+
+    const material = new MeshStandardNodeMaterial();
+    material.colorNode = mix(vec3(...treeLeaf.baseColor), vec3(...treeLeaf.tipColor), posY01)
+        .mul(mix(0.72, 1.14, midrib));
+    material.opacityNode = alpha;
+    material.positionNode = positionLocal.add(vec3(windDisp.x, 0.0, windDisp.y));
+    material.roughnessNode = float(0.92);
+    material.metalnessNode = float(0.0);
+    material.alphaHash = treeLeaf.alphaHash;
+    material.alphaTest = treeLeaf.alphaTest;
+    material.side = DoubleSide;
+    return material;
+}
+
 function createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim) {
     const { dot, float, max, normalize, normalView, positionView, pow, vec3 } = TSL;
     const viewDir = normalize(positionView.negate());
@@ -195,14 +256,16 @@ function createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim) {
 export async function bootWebGpuDiagnostic() {
     const skyFog = createSkyFogDiagnosticState();
     const rockRim = createRockRimDiagnosticState(skyFog);
+    const treeLeaf = createTreeLeafDiagnosticState();
     const state = window.__sdsWebGpuDiagnostic = {
         ...(window.__sdsWebGpuDiagnostic || {}),
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf'],
         skyFog,
         rockRim,
+        treeLeaf,
         frames: 0,
     };
 
@@ -305,6 +368,14 @@ export async function bootWebGpuDiagnostic() {
     sun.position.set(-0.85, 0.35, 0.15);
     scene.add(sun);
 
+    const treeLeafMesh = new Mesh(
+        new PlaneGeometry(0.72, 1.05, 5, 8),
+        createTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf)
+    );
+    treeLeafMesh.position.set(-1.55, 0.55, 0.18);
+    treeLeafMesh.rotation.set(0.0, -0.18, -0.25);
+    scene.add(treeLeafMesh);
+
     const portal = new Mesh(
         new RingGeometry(0.62, 0.86, 80, 1),
         createPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL })
@@ -342,6 +413,7 @@ export async function bootWebGpuDiagnostic() {
         cube.rotation.x = t * 0.0006;
         cube.rotation.y = t * 0.0009;
         rock.rotation.y = 0.45 + t * 0.00035;
+        treeLeafMesh.rotation.z = -0.25 + Math.sin(t * 0.0012) * 0.05;
         await renderer.renderAsync(scene, camera);
         state.frames += 1;
         if (state.frames === 1) {
@@ -369,6 +441,8 @@ export async function bootWebGpuDiagnostic() {
         renderer.dispose();
         sun.geometry.dispose();
         sun.material.dispose();
+        treeLeafMesh.geometry.dispose();
+        treeLeafMesh.material.dispose();
         canvas.remove();
         status.remove();
     };

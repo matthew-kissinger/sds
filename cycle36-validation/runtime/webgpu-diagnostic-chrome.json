@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T21:27:04.552Z",
+  "capturedAt": "2026-05-14T21:32:37.694Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -81,7 +81,8 @@
       "meadow-quad",
       "cloud-plane",
       "sky-fog",
-      "rock-rim"
+      "rock-rim",
+      "tree-leaf"
     ],
     "skyFog": {
       "horizonColor": [
@@ -127,6 +128,33 @@
       "rimPower": 2,
       "sunColorSource": "skyFog.sunColor"
     },
-    "frames": 3
+    "treeLeaf": {
+      "baseColor": [
+        0.18,
+        0.34,
+        0.12
+      ],
+      "tipColor": [
+        0.5,
+        0.68,
+        0.24
+      ],
+      "windDirection": [
+        0.7,
+        0.7
+      ],
+      "windStrength": 0.72,
+      "treeBaseY": -0.525,
+      "treeTopY": 0.525,
+      "alphaHash": true,
+      "alphaTest": 0.08,
+      "occluderStrength": 0.55,
+      "occluderPeak": 0.62,
+      "occluderUv": [
+        0.5,
+        0.42
+      ]
+    },
+    "frames": 2
   }
 }
