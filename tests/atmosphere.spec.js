@@ -276,6 +276,53 @@ describe('Atmosphere orchestrator', () => {
     atmo.dispose();
   });
 
+  it('update drives fog color from the sky horizon with weather darkening applied', () => {
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, { initialPreset: 'dawn' });
+    const horizon = atmo.sky.getHorizon(new THREE.Color());
+
+    atmo.update(0);
+    expect(atmo.fog.color.r).toBeCloseTo(horizon.r, 5);
+    expect(atmo.fog.color.g).toBeCloseTo(horizon.g, 5);
+    expect(atmo.fog.color.b).toBeCloseTo(horizon.b, 5);
+
+    atmo.setWeather({ fogDarkenMultiplier: 0.5 });
+    atmo.update(0);
+    expect(atmo.fog.color.r).toBeCloseTo(horizon.r * 0.5, 5);
+    expect(atmo.fog.color.g).toBeCloseTo(horizon.g * 0.5, 5);
+    expect(atmo.fog.color.b).toBeCloseTo(horizon.b * 0.5, 5);
+    atmo.dispose();
+  });
+
+  it('scene fog overrides keep distance parameters while horizon owns fog color', () => {
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, {
+      initialPreset: 'golden-hour',
+      sceneFog: { color: '#123456', near: 40, far: 680 },
+    });
+    const horizon = atmo.sky.getHorizon(new THREE.Color());
+
+    expect(scene.fog.near).toBe(40);
+    expect(scene.fog.far).toBe(680);
+    expect(scene.fog.color.r).toBeCloseTo(horizon.r, 5);
+    expect(scene.fog.color.g).toBeCloseTo(horizon.g, 5);
+    expect(scene.fog.color.b).toBeCloseTo(horizon.b, 5);
+    atmo.dispose();
+  });
+
+  it('cloud layer consumes the sky-derived sun color during update', () => {
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, { initialPreset: 'dusk' });
+
+    atmo.update(0.016);
+    const skySun = atmo.sky.getSun(new THREE.Color());
+    const cloudSun = atmo.cloudLayer.material.uniforms.uSunColor.value;
+    expect(cloudSun.r).toBeCloseTo(skySun.r, 5);
+    expect(cloudSun.g).toBeCloseTo(skySun.g, 5);
+    expect(cloudSun.b).toBeCloseTo(skySun.b, 5);
+    atmo.dispose();
+  });
+
   it('startDayNightCycle advances the sun direction when update() is called', () => {
     const scene = new THREE.Scene();
     const atmo = new Atmosphere(scene, { initialPreset: 'pastoral-noon' });

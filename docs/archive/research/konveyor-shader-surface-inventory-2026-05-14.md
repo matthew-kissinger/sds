@@ -52,8 +52,8 @@ start production wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Recommended Migration Order
 
-1. Move to cloud layer and sky together only after fog/horizon color ownership
-   is explicit.
+1. Move to a diagnostic cloud-plane TSL material now that fog/horizon color
+   ownership is explicit in `konveyor-atmosphere-ownership-2026-05-14.md`.
 2. Prototype rock rim or tree-leaf wind only after GLB material ownership is
    explicit; both depend on current `onBeforeCompile` patch chains.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

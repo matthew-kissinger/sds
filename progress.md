@@ -21,3 +21,4 @@ Current prompt for the next autonomous run: /goal On branch exp/konveyor-webgpu-
 - 2026-05-14: Ported the sun billboard formula into the diagnostic WebGPU harness as a TSL `MeshBasicNodeMaterial`.
 - 2026-05-14: Ported the portal ring formula into the same diagnostic harness. Evidence now reports `islands: ["sun-billboard", "portal-ring"]`; refreshed screenshot artifact at `cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`.
 - 2026-05-14: Ported the meadow-quad UV hash/tint formula into the same diagnostic harness as `MeshLambertNodeMaterial`. Evidence now reports `islands: ["sun-billboard", "portal-ring", "meadow-quad"]`; default production-preview evidence still reports `diagnostic: null`.
+- 2026-05-14: Pinned atmosphere ownership before cloud/sky migration in `docs/archive/research/konveyor-atmosphere-ownership-2026-05-14.md` and added tests for horizon-driven fog color, scene fog distance preservation, and cloud sun-color handoff.
