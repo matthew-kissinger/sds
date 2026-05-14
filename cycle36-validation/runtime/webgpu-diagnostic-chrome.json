@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T22:54:12.736Z",
+  "capturedAt": "2026-05-14T23:08:33.335Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -87,7 +87,8 @@
       "glb-material-replacement",
       "runtime-glb-material-proof",
       "runtime-glb-rendered-clones",
-      "production-placement-preview"
+      "production-placement-preview",
+      "production-instanced-tree-preview"
     ],
     "skyFog": {
       "horizonColor": [
@@ -502,9 +503,9 @@
               "y": -0.68,
               "z": 0.928,
               "scaleMultiplier": 0.3046,
-              "width": 0.1469,
-              "height": 0.1584,
-              "depth": 0.1478
+              "width": 0.2828,
+              "height": 0.3046,
+              "depth": 0.2805
             }
           },
           {
@@ -528,9 +529,9 @@
               "y": -0.68,
               "z": 0.972,
               "scaleMultiplier": 0.3716,
-              "width": 0.1807,
-              "height": 0.1932,
-              "depth": 0.1814
+              "width": 0.3412,
+              "height": 0.3716,
+              "depth": 0.3377
             }
           },
           {
@@ -554,9 +555,9 @@
               "y": -0.68,
               "z": 0.72,
               "scaleMultiplier": 0.3357,
-              "width": 0.1491,
-              "height": 0.1745,
-              "depth": 0.1518
+              "width": 0.2237,
+              "height": 0.3357,
+              "depth": 0.2326
             }
           },
           {
@@ -580,9 +581,9 @@
               "y": -0.68,
               "z": 0.915,
               "scaleMultiplier": 0.2853,
-              "width": 0.1348,
-              "height": 0.1483,
-              "depth": 0.1362
+              "width": 0.2193,
+              "height": 0.2853,
+              "depth": 0.2254
             }
           },
           {
@@ -606,9 +607,9 @@
               "y": -0.68,
               "z": 1.007,
               "scaleMultiplier": 0.3206,
-              "width": 0.1622,
-              "height": 0.1667,
-              "depth": 0.1618
+              "width": 0.2657,
+              "height": 0.3206,
+              "depth": 0.2646
             }
           },
           {
@@ -632,9 +633,9 @@
               "y": -0.68,
               "z": 1.02,
               "scaleMultiplier": 0.2979,
-              "width": 0.1792,
-              "height": 0.1549,
-              "depth": 0.1792
+              "width": 0.3415,
+              "height": 0.2979,
+              "depth": 0.3413
             }
           },
           {
@@ -658,9 +659,9 @@
               "y": -0.68,
               "z": 0.95,
               "scaleMultiplier": 0.3224,
-              "width": 0.1896,
-              "height": 0.1676,
-              "depth": 0.1898
+              "width": 0.3413,
+              "height": 0.3224,
+              "depth": 0.3419
             }
           },
           {
@@ -684,10 +685,56 @@
               "y": -0.68,
               "z": 0.862,
               "scaleMultiplier": 0.3143,
-              "width": 0.1452,
-              "height": 0.1634,
-              "depth": 0.1447
+              "width": 0.3201,
+              "height": 0.3143,
+              "depth": 0.3194
             }
+          }
+        ]
+      },
+      "productionInstancingPreview": {
+        "ok": true,
+        "source": "THREE.InstancedMesh",
+        "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+        "instanceSource": "shared/TreePlacement.generateTrees samples",
+        "lod": "lod0-only",
+        "instancedMesh2Status": "not imported in WebGPU diagnostic",
+        "treeInstances": 8,
+        "instanceMatrices": 16,
+        "renderedInstanceMeshes": 4,
+        "missingTypes": [],
+        "groups": [
+          {
+            "type": "tree1",
+            "meshName": "trunk",
+            "materialName": "konveyor-node-branches",
+            "instances": 4,
+            "isInstancedMesh": true,
+            "vertexCount": 840
+          },
+          {
+            "type": "tree1",
+            "meshName": "leaves",
+            "materialName": "konveyor-node-leaves",
+            "instances": 4,
+            "isInstancedMesh": true,
+            "vertexCount": 9240
+          },
+          {
+            "type": "tree2",
+            "meshName": "trunk",
+            "materialName": "konveyor-node-branches",
+            "instances": 4,
+            "isInstancedMesh": true,
+            "vertexCount": 2283
+          },
+          {
+            "type": "tree2",
+            "meshName": "leaves",
+            "materialName": "konveyor-node-leaves",
+            "instances": 4,
+            "isInstancedMesh": true,
+            "vertexCount": 31968
           }
         ]
       },
@@ -997,9 +1044,9 @@
             "y": -0.68,
             "z": 0.928,
             "scaleMultiplier": 0.3046,
-            "width": 0.1469,
-            "height": 0.1584,
-            "depth": 0.1478
+            "width": 0.2828,
+            "height": 0.3046,
+            "depth": 0.2805
           }
         },
         {
@@ -1023,9 +1070,9 @@
             "y": -0.68,
             "z": 0.972,
             "scaleMultiplier": 0.3716,
-            "width": 0.1807,
-            "height": 0.1932,
-            "depth": 0.1814
+            "width": 0.3412,
+            "height": 0.3716,
+            "depth": 0.3377
           }
         },
         {
@@ -1049,9 +1096,9 @@
             "y": -0.68,
             "z": 0.72,
             "scaleMultiplier": 0.3357,
-            "width": 0.1491,
-            "height": 0.1745,
-            "depth": 0.1518
+            "width": 0.2237,
+            "height": 0.3357,
+            "depth": 0.2326
           }
         },
         {
@@ -1075,9 +1122,9 @@
             "y": -0.68,
             "z": 0.915,
             "scaleMultiplier": 0.2853,
-            "width": 0.1348,
-            "height": 0.1483,
-            "depth": 0.1362
+            "width": 0.2193,
+            "height": 0.2853,
+            "depth": 0.2254
           }
         },
         {
@@ -1101,9 +1148,9 @@
             "y": -0.68,
             "z": 1.007,
             "scaleMultiplier": 0.3206,
-            "width": 0.1622,
-            "height": 0.1667,
-            "depth": 0.1618
+            "width": 0.2657,
+            "height": 0.3206,
+            "depth": 0.2646
           }
         },
         {
@@ -1127,9 +1174,9 @@
             "y": -0.68,
             "z": 1.02,
             "scaleMultiplier": 0.2979,
-            "width": 0.1792,
-            "height": 0.1549,
-            "depth": 0.1792
+            "width": 0.3415,
+            "height": 0.2979,
+            "depth": 0.3413
           }
         },
         {
@@ -1153,9 +1200,9 @@
             "y": -0.68,
             "z": 0.95,
             "scaleMultiplier": 0.3224,
-            "width": 0.1896,
-            "height": 0.1676,
-            "depth": 0.1898
+            "width": 0.3413,
+            "height": 0.3224,
+            "depth": 0.3419
           }
         },
         {
@@ -1179,13 +1226,59 @@
             "y": -0.68,
             "z": 0.862,
             "scaleMultiplier": 0.3143,
-            "width": 0.1452,
-            "height": 0.1634,
-            "depth": 0.1447
+            "width": 0.3201,
+            "height": 0.3143,
+            "depth": 0.3194
           }
         }
       ]
     },
-    "frames": 3
+    "productionInstancingPreview": {
+      "ok": true,
+      "source": "THREE.InstancedMesh",
+      "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+      "instanceSource": "shared/TreePlacement.generateTrees samples",
+      "lod": "lod0-only",
+      "instancedMesh2Status": "not imported in WebGPU diagnostic",
+      "treeInstances": 8,
+      "instanceMatrices": 16,
+      "renderedInstanceMeshes": 4,
+      "missingTypes": [],
+      "groups": [
+        {
+          "type": "tree1",
+          "meshName": "trunk",
+          "materialName": "konveyor-node-branches",
+          "instances": 4,
+          "isInstancedMesh": true,
+          "vertexCount": 840
+        },
+        {
+          "type": "tree1",
+          "meshName": "leaves",
+          "materialName": "konveyor-node-leaves",
+          "instances": 4,
+          "isInstancedMesh": true,
+          "vertexCount": 9240
+        },
+        {
+          "type": "tree2",
+          "meshName": "trunk",
+          "materialName": "konveyor-node-branches",
+          "instances": 4,
+          "isInstancedMesh": true,
+          "vertexCount": 2283
+        },
+        {
+          "type": "tree2",
+          "meshName": "leaves",
+          "materialName": "konveyor-node-leaves",
+          "instances": 4,
+          "isInstancedMesh": true,
+          "vertexCount": 31968
+        }
+      ]
+    },
+    "frames": 2
   }
 }

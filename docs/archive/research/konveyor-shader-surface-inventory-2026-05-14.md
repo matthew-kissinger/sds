@@ -33,7 +33,10 @@ adapter now exists behind `?renderer=webgpu&konveyorMaterials=1` and explicit
 WebGPU material factories. The diagnostic now also samples Rolling Hills tree
 placements from `shared/TreePlacement.generateTrees` and renders eight
 adapter-backed tree GLB samples as a production-placement preview; the default
-WebGL load still uses the current `onBeforeCompile` patches. Do not start
+WebGL load still uses the current `onBeforeCompile` patches. A follow-up
+diagnostic island renders the same samples through WebGPU `THREE.InstancedMesh`
+groups for trunks and leaves, proving LOD0 native Three instancing without
+pulling production `InstancedMesh2` into the WebGPU namespace. Do not start
 production wiring with terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
@@ -108,6 +111,11 @@ comments:
   exclusions are intentionally empty in this proof because production rock
   placement still uses client `Math.random()` and should be handled as a
   separate placement/instancing decision.
+- `production-instanced-tree-preview` consumes the same eight samples and
+  renders four WebGPU `THREE.InstancedMesh` groups: trunk and leaves for each
+  tree type. It records 16 instance matrices across the four groups and keeps
+  the status of production `InstancedMesh2` explicit: not imported in the
+  WebGPU diagnostic, LOD0-only, no BVH/LOD/impostor migration claimed.
 - The production-side adapter in `js/world/konveyorMaterialAdapter.js` reuses
   the same tree-name and rock-traversal replacement rules for cached GLB roots.
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and
@@ -135,10 +143,12 @@ comments:
    proves all shipped tree and rock variants can load and render with WebGPU
    node-material replacements. The feature-flagged production adapter now
    exists, and the first tree-placement proof samples real Rolling Hills scene
-   data through the shared tree placement generator. The next code island
-   should decide whether to prove production instancing compatibility, add a
-   rock-placement proof, or continue with another smaller material island while
-   keeping current WebGL `onBeforeCompile` patches as default.
+   data through the shared tree placement generator. The WebGPU diagnostic now
+   also proves a LOD0-only `THREE.InstancedMesh` tree path. The next code
+   island should decide whether production `InstancedMesh2` remains WebGL-only
+   behind an adapter, whether WebGPU should use native `THREE.InstancedMesh`,
+   or whether to move to rock-placement proof / another smaller material island
+   while keeping current WebGL `onBeforeCompile` patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

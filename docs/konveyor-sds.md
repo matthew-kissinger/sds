@@ -64,8 +64,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   changing production runtime wiring. A production tree-placement preview now
   samples Rolling Hills scene data through `shared/TreePlacement.generateTrees`
   and renders eight adapter-backed tree GLB samples in the WebGPU diagnostic;
-  it does not instantiate production `TerrainBuilder`/`InstancedMesh2` or
-  change production WebGL startup.
+  it does not instantiate production `TerrainBuilder` or change production
+  WebGL startup. A second diagnostic island renders those samples through
+  WebGPU `THREE.InstancedMesh` groups for trunks and leaves, proving LOD0
+  instancing compatibility without importing production `InstancedMesh2`.
   A production-facing material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
   factories, so cached production tree/rock GLB roots can be replaced without

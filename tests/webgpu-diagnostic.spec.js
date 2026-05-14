@@ -196,6 +196,11 @@ describe('webgpu runtime glb material proof', () => {
     expect(plan.generatedTrees).toBeGreaterThan(plan.sampledTrees);
     expect(plan.sampledTrees).toBe(8);
     expect(plan.types).toEqual(['tree1', 'tree2']);
+    const counts = plan.samples.reduce((acc, sample) => ({
+      ...acc,
+      [sample.type]: (acc[sample.type] ?? 0) + 1,
+    }), {});
+    expect(counts).toEqual({ tree1: 4, tree2: 4 });
     expect(plan.samples.every((sample) => Number.isFinite(sample.production.x))).toBe(true);
     expect(plan.samples.every((sample) => Number.isFinite(sample.production.z))).toBe(true);
     expect(plan.samples.every((sample) => sample.production.scale > 0)).toBe(true);

@@ -234,6 +234,7 @@ function createTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL 
         .mul(float(1.0).sub(occluderFade.mul(treeLeaf.occluderPeak).mul(mix(0.65, 1.0, screenHash))));
 
     const material = new MeshStandardNodeMaterial();
+    material.name = 'konveyor-node-leaves';
     material.colorNode = mix(vec3(...treeLeaf.baseColor), vec3(...treeLeaf.tipColor), posY01)
         .mul(mix(0.72, 1.14, midrib));
     material.opacityNode = alpha;
@@ -253,6 +254,7 @@ function createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim) {
     const rim = pow(float(1.0).sub(ndv), rockRim.rimPower).mul(rockRim.rimStrength);
 
     const material = new MeshStandardNodeMaterial();
+    material.name = 'konveyor-node-rock-rim';
     material.colorNode = vec3(...rockRim.baseColor);
     material.emissiveNode = vec3(...rockRim.rimColor).mul(rim);
     material.roughnessNode = float(0.86);
@@ -263,6 +265,7 @@ function createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim) {
 function createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }) {
     const { float, vec3 } = TSL;
     const material = new MeshStandardNodeMaterial();
+    material.name = 'konveyor-node-branches';
     material.colorNode = vec3(0.20, 0.11, 0.055);
     material.roughnessNode = float(0.94);
     material.metalnessNode = float(0.0);
@@ -279,7 +282,7 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview'],
         skyFog,
         rockRim,
         treeLeaf,
@@ -287,6 +290,7 @@ export async function bootWebGpuDiagnostic() {
         runtimeGlbReplacement: null,
         runtimeGlbPreview: null,
         productionPlacementPreview: null,
+        productionInstancingPreview: null,
         frames: 0,
     };
 
@@ -339,6 +343,9 @@ export async function bootWebGpuDiagnostic() {
         DoubleSide,
         Group,
         Box3,
+        InstancedMesh,
+        Matrix4,
+        Object3D,
         Vector3,
         TSL,
     } = await loadWebGpuThree();
@@ -431,7 +438,7 @@ export async function bootWebGpuDiagnostic() {
     try {
         state.runtimeGlbPreview = await createRuntimeGlbPreview({
             scene,
-            three: { Box3, Vector3 },
+            three: { Box3, InstancedMesh, Matrix4, Object3D, Vector3 },
             createTreeBranchMaterial: () => createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
             createTreeLeafMaterial: () => createTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf),
             createRockMaterial: () => createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim),
@@ -440,6 +447,7 @@ export async function bootWebGpuDiagnostic() {
             return fail('runtime GLB rendered clone proof failed');
         }
         state.productionPlacementPreview = state.runtimeGlbPreview.productionPlacementPreview;
+        state.productionInstancingPreview = state.runtimeGlbPreview.productionInstancingPreview;
     } catch (err) {
         state.runtimeGlbPreview = {
             ok: false,
