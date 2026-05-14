@@ -54,6 +54,9 @@ start production wiring with terrain, grass, water, sheep, or Kiln impostors.
 Captured artifact:
 `cycle36-validation/runtime/material-ownership.json`
 
+Replacement proof artifact:
+`cycle36-validation/runtime/material-replacement-proof.json`
+
 The ownership proof scans the shipped GLBs instead of trusting runtime
 comments:
 
@@ -70,6 +73,10 @@ comments:
   replacement strategies in isolation: tree replacement by material name and
   rock replacement by traversal. It is still diagnostic-only; real production
   GLB wiring remains a separate gated step.
+- The material-replacement proof applies the same strategies to primitive
+  clones produced from the shipped compressed GLBs: all four tree LOD0/LOD1
+  files resolve `branches` and `leaves`, and all three rock files replace by
+  traversal from runtime-default material ownership.
 
 ## Dormant Or Supporting Surfaces
 
@@ -87,10 +94,10 @@ comments:
 1. Use the captured GLB ownership proof before production tree or rock wiring:
    tree replacements may target `leaves` and `branches` by material name across
    LOD0/LOD1; rock replacements must use rock asset class or mesh traversal.
-   The diagnostic replacement island proves both strategies in isolation; the
-   next code island should apply one strategy to loaded production GLB clones
-   behind the WebGPU flag while keeping the current WebGL `onBeforeCompile`
-   patches as default.
+   The diagnostic replacement island and GLB primitive-clone proof cover both
+   strategies. The next code island should apply one strategy to runtime-loaded
+   production GLB clones behind the WebGPU flag while keeping the current WebGL
+   `onBeforeCompile` patches as default.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Defer terrain, water, blade grass, sheep, and Kiln impostors until the

@@ -83,6 +83,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   Tree LOD0/LOD1 assets have stable `branches` and `leaves` material names;
   rock GLBs currently require asset-class or mesh-traversal replacement because
   their primitives resolve through runtime-default material ownership.
+- [`../cycle36-validation/runtime/material-replacement-proof.json`](../cycle36-validation/runtime/material-replacement-proof.json)
+  applies those replacement strategies to primitive clones from the shipped
+  compressed GLBs: tree LOD0/LOD1 replacements resolve by material name and rock
+  replacements resolve by traversal.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
@@ -101,9 +105,10 @@ Recommended order:
    the rock-rim TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
-   and a diagnostic replacement proof now exist; prefer a loaded-production-GLB
-   clone proof next, using tree material names for tree work and rock asset
-   class or mesh traversal for rock work.
+   and a diagnostic replacement proof now exist, plus a GLB primitive-clone
+   proof against the shipped compressed assets. Prefer runtime-loaded
+   production GLB clone wiring next, using tree material names for tree work and
+   rock asset class or mesh traversal for rock work.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The
