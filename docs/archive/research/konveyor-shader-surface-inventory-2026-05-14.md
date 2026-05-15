@@ -104,11 +104,13 @@ The rock-rim fresnel formula is also ported as a
 diagnostic `MeshStandardNodeMaterial` island driven by the CPU sky/fog sun
 color packet. A diagnostic tree-leaf island now covers wind displacement,
 alpha-hash posture, and a local occluder fade proxy. The reusable WebGPU
-tree branch and leaf node-material candidates now live in
-`js/world/konveyorTreeBranchNodeMaterial.js` and
-`js/world/konveyorTreeLeafNodeMaterial.js`, and the material adapter spec
-proves the flagged production seam can route `branches` and `leaves` through
-them while default WebGL tree wind and occluder patching remain untouched. A diagnostic anime-water
+rock-rim, tree branch, and tree leaf node-material candidates now live in
+`js/world/konveyorRockRimNodeMaterial.js`,
+`js/world/konveyorTreeBranchNodeMaterial.js`, and
+`js/world/konveyorTreeLeafNodeMaterial.js`, and the material adapter spec proves
+the flagged production seam can route rock traversal plus `branches` and
+`leaves` through them while default WebGL tree wind, occluder, and rock rim
+patching remain untouched. A diagnostic anime-water
 island now covers production palette handoff, shoreline color bands, foam,
 ripples, sun glint, fog-color input, and a non-filtered `DataTexture` sample
 loaded from the real Rolling Hills heightfield. The same texture now drives a
@@ -210,7 +212,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 | Patch | File | Mutated material | Why it matters | WebGPU migration note |
 |---|---|---|---|---|
 | Tree wind plus occluder fade | `js/world/shaderPatches.js`, `js/shaders/OccluderFadePatch.js` | Tree GLB leaf `MeshStandardMaterial` instances. | Adds wind sway, alpha hash, and camera-to-dog dither fade. | Diagnostic leaf TSL material now proves wind, alpha-hash posture, and occluder fade inputs. The reusable WebGPU tree branch and leaf node-material candidates now live in `js/world/konveyorTreeBranchNodeMaterial.js` and `js/world/konveyorTreeLeafNodeMaterial.js`, and the material adapter spec proves the flagged production seam can route `branches` and `leaves` through them. Default WebGL still uses the existing `onBeforeCompile` tree wind and occluder patch path. |
-| Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Formula now exists in the diagnostic TSL harness as `MeshStandardNodeMaterial`; production wiring still needs GLB material ownership and replacement strategy for the current patch chain. |
+| Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Formula now exists as a reusable `MeshStandardNodeMaterial` factory in `js/world/konveyorRockRimNodeMaterial.js`, and the material adapter spec proves the flagged production seam can route rock traversal through it. Default WebGL still uses the existing rock-rim `onBeforeCompile` patch path. |
 | Meadow quad tint | `js/GrassSystem.js`, `js/world/konveyorMeadowQuadNodeMaterial.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists as a reusable `MeshLambertNodeMaterial` factory using production default grass colors, the same 5-cell UV hash scale, and CPU sky/fog input. Production-facing material creation can now route through `?renderer=webgpu&konveyorGrass=1` with an explicit factory; default WebGL still uses the existing `MeshLambertMaterial` procedural tint path. Far-ring scene screenshots remain deferred. |
 
 ## GLB Material Ownership Evidence
@@ -287,12 +289,13 @@ comments:
   the same tree-name and rock-traversal replacement rules for cached GLB roots.
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and
   WebGPU material factories are explicitly supplied; otherwise production
-  materials stay untouched. The reusable WebGPU tree branch and leaf
-  node-material candidates now live in
-  `js/world/konveyorTreeBranchNodeMaterial.js` and
+  materials stay untouched. The reusable WebGPU rock-rim, tree branch, and
+  tree leaf node-material candidates now live in
+  `js/world/konveyorRockRimNodeMaterial.js`,
+  `js/world/konveyorTreeBranchNodeMaterial.js`, and
   `js/world/konveyorTreeLeafNodeMaterial.js`, and the adapter seam spec proves
-  the flagged `branches` and `leaves` factories can route through them while
-  default WebGL tree wind and occluder patching stay untouched.
+  the flagged rock, `branches`, and `leaves` factories can route through them
+  while default WebGL tree wind, occluder, and rock rim patching stay untouched.
 - The production-side adapter in `js/effects/konveyorEffectMaterialAdapter.js`
   covers sun billboard and portal ring material creation. It only activates
   when `renderer=webgpu&konveyorEffects=1` is present and explicit effect

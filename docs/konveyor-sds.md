@@ -264,11 +264,13 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   tree-wind and rock-rim WebGL patch chain. Cached production tree/rock GLB
   roots can be replaced only when the flag and factories are present; the
   default WebGL patch path remains unchanged otherwise. The reusable WebGPU
-  tree branch and leaf node-material candidates now live in
-  `js/world/konveyorTreeBranchNodeMaterial.js` and
+  rock-rim, tree branch, and tree leaf node-material candidates now live in
+  `js/world/konveyorRockRimNodeMaterial.js`,
+  `js/world/konveyorTreeBranchNodeMaterial.js`, and
   `js/world/konveyorTreeLeafNodeMaterial.js`, and the material adapter spec
-  proves the flagged production seam can route `branches` and `leaves` through
-  them while default WebGL tree wind and occluder patching remain untouched.
+  proves the flagged production seam can route rock traversal plus `branches`
+  and `leaves` through them while default WebGL tree wind, occluder, and rock
+  rim patching remain untouched.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.

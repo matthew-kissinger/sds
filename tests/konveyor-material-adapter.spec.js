@@ -8,6 +8,7 @@ import {
   shouldApplyKonveyorMaterials,
 } from '../js/world/konveyorMaterialAdapter.js';
 import { TerrainBuilder } from '../js/TerrainBuilder.js';
+import { createKonveyorRockRimNodeMaterial } from '../js/world/konveyorRockRimNodeMaterial.js';
 import { createKonveyorTreeBranchNodeMaterial } from '../js/world/konveyorTreeBranchNodeMaterial.js';
 import { createKonveyorTreeLeafNodeMaterial } from '../js/world/konveyorTreeLeafNodeMaterial.js';
 
@@ -98,7 +99,7 @@ describe('konveyor production material adapter', () => {
     expect(builder.models.rocks.rock1.children[0].material.name).toBe('konveyor-rock');
   });
 
-  it('can route tree branches and leaves through reusable WebGPU node material candidates', () => {
+  it('can route tree and rock replacements through reusable WebGPU node material candidates', () => {
     const branchMaterial = new THREE.MeshBasicMaterial({ name: 'branches' });
     const leafMaterial = new THREE.MeshBasicMaterial({ name: 'leaves' });
     const rockMaterial = new THREE.MeshBasicMaterial({ name: '' });
@@ -148,11 +149,26 @@ describe('konveyor production material adapter', () => {
           depthTest: previous.depthTest,
         }
       ),
-      createRockMaterial: () => new THREE.MeshBasicMaterial({ name: 'konveyor-rock' }),
+      createRockMaterial: ({ previous }) => createKonveyorRockRimNodeMaterial(
+        { MeshStandardNodeMaterial, TSL },
+        {
+          baseColor: [0.32, 0.29, 0.25],
+          rimColor: [0.7, 0.54, 0.36],
+          rimPower: 2.25,
+          rimStrength: 0.22,
+          roughness: 0.86,
+          metalness: 0.0,
+          side: previous.side,
+          transparent: previous.transparent,
+          depthWrite: previous.depthWrite,
+          depthTest: previous.depthTest,
+        }
+      ),
     });
 
     const branches = tree.children[0].material;
     const leaves = tree.children[1].material;
+    const rockRim = rock.children[0].material;
     try {
       expect(summary.ok).toBe(true);
       expect(branches.name).toBe('konveyor-node-branches');
@@ -176,6 +192,16 @@ describe('konveyor production material adapter', () => {
       expect(leaves.colorNode).toBeTruthy();
       expect(leaves.opacityNode).toBeTruthy();
       expect(leaves.positionNode).toBeTruthy();
+      expect(rockRim.name).toBe('konveyor-node-rock-rim');
+      expect(rockRim.isNodeMaterial).toBe(true);
+      expect(rockRim.isMeshStandardNodeMaterial).toBe(true);
+      expect(rockRim.colorNode).toBeTruthy();
+      expect(rockRim.emissiveNode).toBeTruthy();
+      expect(rockRim.roughnessNode).toBeTruthy();
+      expect(rockRim.metalnessNode).toBeTruthy();
+      expect(rockRim.transparent).toBe(false);
+      expect(rockRim.depthWrite).toBe(true);
+      expect(rockRim.depthTest).toBe(true);
     } finally {
       branchMaterial.dispose();
       leafMaterial.dispose();

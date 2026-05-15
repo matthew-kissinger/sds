@@ -17,6 +17,7 @@ import { createKonveyorSkyFogNodeMaterial } from '../atmosphere/konveyorSkyNodeM
 import { createKonveyorCloudLayerNodeMaterial } from '../atmosphere/konveyorCloudNodeMaterial.js';
 import { createKonveyorGrassBladeNodeMaterial } from '../world/konveyorGrassBladeNodeMaterial.js';
 import { createKonveyorMeadowQuadNodeMaterial } from '../world/konveyorMeadowQuadNodeMaterial.js';
+import { createKonveyorRockRimNodeMaterial } from '../world/konveyorRockRimNodeMaterial.js';
 import { createKonveyorTerrainHeightfieldNodeMaterial } from '../world/konveyorTerrainNodeMaterial.js';
 import { createKonveyorTreeBranchNodeMaterial } from '../world/konveyorTreeBranchNodeMaterial.js';
 import { createKonveyorTreeLeafNodeMaterial } from '../world/konveyorTreeLeafNodeMaterial.js';
@@ -560,21 +561,6 @@ function syncKilnImpostorState(target, sidecar) {
     target.tileBlendWeights = tileBlend.weights;
 }
 
-function createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim) {
-    const { dot, float, max, normalize, normalView, positionView, pow, vec3 } = TSL;
-    const viewDir = normalize(positionView.negate());
-    const ndv = max(dot(viewDir, normalView), 0.0);
-    const rim = pow(float(1.0).sub(ndv), rockRim.rimPower).mul(rockRim.rimStrength);
-
-    const material = new MeshStandardNodeMaterial();
-    material.name = 'konveyor-node-rock-rim';
-    material.colorNode = vec3(...rockRim.baseColor);
-    material.emissiveNode = vec3(...rockRim.rimColor).mul(rim);
-    material.roughnessNode = float(0.86);
-    material.metalnessNode = float(0.0);
-    return material;
-}
-
 export async function bootWebGpuDiagnostic() {
     const sceneBinding = resolveDiagnosticScene(window.location.search);
     const skyPreset = resolveDiagnosticSkyPreset(window.location.search, sceneBinding.skyPresetName);
@@ -719,7 +705,7 @@ export async function bootWebGpuDiagnostic() {
     rock.rotation.set(0.25, 0.45, 0.1);
     const rockReplacement = replaceRockMaterialsByTraversal(
         rock,
-        () => createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim)
+        () => createKonveyorRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim)
     );
     scene.add(rock);
 
@@ -783,7 +769,7 @@ export async function bootWebGpuDiagnostic() {
             three: { Box3, InstancedMesh, Matrix4, Object3D, Vector3 },
             createTreeBranchMaterial: () => createKonveyorTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
             createTreeLeafMaterial: () => createKonveyorTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf),
-            createRockMaterial: () => createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim),
+            createRockMaterial: () => createKonveyorRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim),
         });
         if (!state.runtimeGlbPreview.ok) {
             return fail('runtime GLB rendered clone proof failed');
