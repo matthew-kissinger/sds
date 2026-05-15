@@ -220,7 +220,8 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   injection, with the `USE_UV` shader define assigned on the material instance.
   The reusable meadow-quad WebGPU node-material candidate now lives in
   `js/world/konveyorMeadowQuadNodeMaterial.js` instead of only inside the
-  diagnostic harness.
+  diagnostic harness, and `tests/konveyor-grass-material-adapter.spec.js`
+  proves the flagged production seam can route through it.
   A production-facing sheep material adapter now exists behind
   `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory; default
   WebGL still uses the existing optimized sheep shader and instancing path.

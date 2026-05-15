@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { DoubleSide, MeshLambertNodeMaterial, TSL } from 'three/webgpu';
 
 import { GrassSystem } from '../js/GrassSystem.js';
+import { createKonveyorMeadowQuadNodeMaterial } from '../js/world/konveyorMeadowQuadNodeMaterial.js';
 import {
     createKonveyorGrassMaterial,
     shouldApplyKonveyorGrass,
@@ -95,6 +97,49 @@ describe('konveyor grass material adapter', () => {
             expect(contexts[0].uvCellsPerChunk).toBe(5);
             expect(contexts[0].noiseHashVector).toEqual([127.1, 311.7]);
             expect(contexts[0].noiseOctaves).toEqual([1, 2]);
+        } finally {
+            material.dispose();
+        }
+    });
+
+    it('can route the meadow quad through the reusable WebGPU node material candidate', () => {
+        const contexts = [];
+        const scene = new THREE.Scene();
+        const grass = new GrassSystem(scene, false, null, null, null, {
+            search: '?renderer=webgpu&konveyorGrass=1',
+            konveyorGrassFactories: {
+                createMeadowQuadMaterial: (context) => {
+                    contexts.push(context);
+                    return createKonveyorMeadowQuadNodeMaterial(
+                        { MeshLambertNodeMaterial, DoubleSide, TSL },
+                        {
+                            baseColor: context.baseColor.toArray(),
+                            midColor: context.midColor.toArray(),
+                            tipColor: context.tipColor.toArray(),
+                            uvCellsPerChunk: context.uvCellsPerChunk,
+                            noiseHashVector: context.noiseHashVector,
+                            fogColor: [0.2933, 0.1629, 0.1348],
+                            fogNear: 18,
+                            fogFar: 74,
+                            fogStrength: 0.55,
+                        }
+                    );
+                },
+            },
+        });
+
+        const material = grass.createMeadowQuadMaterial();
+        try {
+            expect(material.name).toBe('konveyor-node-meadow-quad');
+            expect(material.isMeshLambertNodeMaterial).toBe(true);
+            expect(material.isNodeMaterial).toBe(true);
+            expect(material.side).toBe(DoubleSide);
+            expect(material.colorNode).toBeTruthy();
+            expect(grass.konveyorMeadowQuadMaterialSummary).toMatchObject({
+                kind: 'meadow-quad',
+                applied: true,
+            });
+            expect(contexts).toHaveLength(1);
         } finally {
             material.dispose();
         }

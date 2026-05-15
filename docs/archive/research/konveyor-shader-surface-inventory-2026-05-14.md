@@ -58,10 +58,11 @@ behind `?renderer=webgpu&konveyorGrass=1` plus an explicit meadow factory.
 Default WebGL still uses the existing `MeshLambertMaterial` procedural tint
 path, with the `USE_UV` shader define assigned on the material instance before
 compile. The reusable WebGPU meadow-quad node-material candidate now lives in
-`js/world/konveyorMeadowQuadNodeMaterial.js`. The same grass adapter now covers
-grass-blade material creation behind an explicit `createGrassBladeMaterial`
-factory with optional controls for interactor, time, fog, wind, and
-sun-direction updates; default WebGL still uses the existing grass
+`js/world/konveyorMeadowQuadNodeMaterial.js`, and the grass adapter spec proves
+the flagged production seam can route through that candidate. The same grass
+adapter now covers grass-blade material creation behind an explicit
+`createGrassBladeMaterial` factory with optional controls for interactor, time,
+fog, wind, and sun-direction updates; default WebGL still uses the existing grass
 `ShaderMaterial`.
 Anime water now has a production-facing water material adapter behind
 `?renderer=webgpu&konveyorWater=1` plus an explicit factory. The seam can
