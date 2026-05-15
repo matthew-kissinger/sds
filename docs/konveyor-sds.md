@@ -134,6 +134,12 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   Open Country using `?renderer=webgpu&diagnostic=1&konveyorScene=...`; each
   scene reached `effective=webgpu-diagnostic`, bound the expected shipped scene
   sky/fog values, and recorded no console or page errors.
+  `cycle36-validation/runtime/scene-sky-visual-proof.json` now samples those
+  screenshots, verifies the captured scene set against the shipped scene
+  registry, matches each screenshot's sky/fog packet to the renderless
+  `Atmosphere` proof, checks stable scene-background pixels, confirms visible
+  cloud-band pixels, and confirms Rolling Hills stays visually darker than the
+  daytime scenes.
   `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
   across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
   full production-scene WebGPU visual parity remains a separate gate. A

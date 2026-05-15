@@ -317,6 +317,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   and linear fog range, included the sky/fog and cloud-plane islands, and
   recorded no console or page errors. This is scene-bound diagnostic evidence;
   full production-scene WebGPU renderer parity remains a separate gate.
+- [`../cycle36-validation/runtime/scene-sky-visual-proof.json`](../cycle36-validation/runtime/scene-sky-visual-proof.json)
+  samples the refreshed installed-Chrome scene screenshots with `sharp`. It
+  checks the screenshot scene set against the shipped scene registry, matches
+  captured sky/fog CPU packets to the renderless `Atmosphere` proof, verifies
+  stable scene-background pixels, confirms the cloud band is visually distinct
+  from the background, and confirms Rolling Hills remains darker than the
+  daytime scenes.
 - [`../cycle36-validation/runtime/sky-lut-profile.json`](../cycle36-validation/runtime/sky-lut-profile.json)
   profiles the same renderless Hosek-Wilkie CPU LUT for the five required
   presets. Current local evidence keeps the CPU-visible LUT as the atmosphere

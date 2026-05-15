@@ -158,7 +158,11 @@ preset-driven.
 installed-Chrome diagnostic WebGPU screenshots for Field, Rolling Hills, and
 Open Country through `?renderer=webgpu&diagnostic=1&konveyorScene=...`; each
 scene binds the expected scene sky preset and linear fog range with no console
-or page errors.
+or page errors. `cycle36-validation/runtime/scene-sky-visual-proof.json`
+samples those PNGs, confirms the screenshots cover the shipped scene registry,
+matches the captured sky/fog CPU packets to the renderless `Atmosphere` proof,
+and checks scene-background/cloud-band pixels so the atmosphere island has a
+pixel-level diagnostic visual gate.
 A diagnostic Kiln impostor island now fetches the committed `tree1` sidecar and
 albedo/normal atlases, derives a diagnostic view tile triad from the sidecar
 azimuth/elevation rows, blends those tiles with premultiplied alpha in the
