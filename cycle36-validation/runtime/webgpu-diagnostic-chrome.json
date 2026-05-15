@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:41:48.300Z",
+  "capturedAt": "2026-05-15T00:45:41.839Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -438,6 +438,8 @@
       "tileBlend": "view-derived-three-tile-premultiplied",
       "viewDrivenTileSelection": "cpu-diagnostic-sample",
       "relighting": "single-tile-normal-aux",
+      "depthAuxUse": "rgba-depth-sample-shading-proxy",
+      "depthAuxPacking": "RGBADepthPacking",
       "parallax": "deferred",
       "depthDiscard": "deferred",
       "productionLod": "deferred",
@@ -1875,6 +1877,6 @@
         }
       ]
     },
-    "frames": 2
+    "frames": 3
   }
 }

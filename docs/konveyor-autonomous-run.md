@@ -160,11 +160,12 @@ Recommended order:
    while explicitly deferring production `OptimizedSheep` instancing,
    animation attributes, terrain grounding, and high-count perf. The Kiln
    impostor diagnostic island now fetches the committed `tree1` sidecar plus
-   albedo/normal atlases, derives a diagnostic view tile triad from sidecar
-   angles, blends three atlas tiles with premultiplied alpha/fog in a WebGPU
-   node material, and relights from the normal aux layer. Per-frame production
-   tile selection, depth aux use, parallax, depth discard, production LOD
-   wiring, and LOD0 color parity remain deferred. The rock-rim
+   albedo/normal/depth atlases, derives a diagnostic view tile triad from
+   sidecar angles, blends three atlas tiles with premultiplied alpha/fog in a
+   WebGPU node material, relights from the normal aux layer, and samples the
+   depth aux atlas as a diagnostic shading proxy. Per-frame production tile
+   selection, parallax, depth discard, production LOD wiring, and LOD0 color
+   parity remain deferred. The rock-rim
    TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof

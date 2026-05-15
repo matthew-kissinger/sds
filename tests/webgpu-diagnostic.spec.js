@@ -224,6 +224,8 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(kiln.tileBlend).toBe('view-derived-three-tile-premultiplied');
     expect(kiln.viewDrivenTileSelection).toBe('cpu-diagnostic-sample');
     expect(kiln.relighting).toBe('single-tile-normal-aux');
+    expect(kiln.depthAuxUse).toBe('rgba-depth-sample-shading-proxy');
+    expect(kiln.depthAuxPacking).toBe('RGBADepthPacking');
     expect(kiln.parallax).toBe('deferred');
     expect(kiln.depthDiscard).toBe('deferred');
     expect(kiln.productionLod).toBe('deferred');

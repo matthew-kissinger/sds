@@ -420,6 +420,8 @@ export function createKilnImpostorDiagnosticState(skyFog = createSkyFogDiagnosti
         tileBlend: 'view-derived-three-tile-premultiplied',
         viewDrivenTileSelection: 'cpu-diagnostic-sample',
         relighting: 'single-tile-normal-aux',
+        depthAuxUse: 'rgba-depth-sample-shading-proxy',
+        depthAuxPacking: 'RGBADepthPacking',
         parallax: 'deferred',
         depthDiscard: 'deferred',
         productionLod: 'deferred',
@@ -600,8 +602,8 @@ function syncKilnImpostorState(target, sidecar) {
     target.tileBlendWeights = tileBlend.weights;
 }
 
-function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, albedoAtlas, normalAtlas) {
-    const { clamp, dot, length, max, mix, normalize, smoothstep, texture, uv, positionView, vec2, vec3 } = TSL;
+function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, albedoAtlas, normalAtlas, depthAtlas) {
+    const { clamp, dot, float, length, max, mix, normalize, smoothstep, texture, uv, positionView, vec2, vec3, vec4 } = TSL;
     const tileScale = vec2(1 / kilnImpostor.tilesX, 1 / kilnImpostor.tilesY);
     const tileInset = vec2(
         0.5 / kilnImpostor.atlasSize[0] / tileScale.x,
@@ -623,6 +625,17 @@ function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL
     const normal0 = texture(normalAtlas, tileUv(tile0)).rgb.mul(2.0).sub(vec3(1.0, 1.0, 1.0));
     const normal1 = texture(normalAtlas, tileUv(tile1)).rgb.mul(2.0).sub(vec3(1.0, 1.0, 1.0));
     const normal2 = texture(normalAtlas, tileUv(tile2)).rgb.mul(2.0).sub(vec3(1.0, 1.0, 1.0));
+    const depthUnpack = vec4(
+        255 / 256 / (256 * 256 * 256),
+        255 / 256 / (256 * 256),
+        255 / 256 / 256,
+        255 / 256
+    );
+    const depth0 = dot(texture(depthAtlas, tileUv(tile0)).rgba, depthUnpack);
+    const depth1 = dot(texture(depthAtlas, tileUv(tile1)).rgba, depthUnpack);
+    const depth2 = dot(texture(depthAtlas, tileUv(tile2)).rgba, depthUnpack);
+    const depthBlend = depth0.mul(w0).add(depth1.mul(w1)).add(depth2.mul(w2));
+    const depthShade = mix(float(0.98), float(1.02), smoothstep(0.05, 0.95, depthBlend));
     const relightNormal = normalize(normal0.mul(w0).add(normal1.mul(w1)).add(normal2.mul(w2)));
     const sunDirection = normalize(vec3(...kilnImpostor.sunDirection));
     const wrappedSun = max(dot(relightNormal, sunDirection), 0.0).mul(0.65).add(0.35);
@@ -634,7 +647,7 @@ function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL
 
     const material = new MeshBasicNodeMaterial();
     material.name = 'konveyor-node-kiln-impostor';
-    material.colorNode = mix(relitColor, vec3(...kilnImpostor.fogColor), fogBlend);
+    material.colorNode = mix(relitColor.mul(depthShade), vec3(...kilnImpostor.fogColor), fogBlend);
     material.opacityNode = alphaBlend;
     material.transparent = true;
     material.depthWrite = true;
@@ -1145,7 +1158,7 @@ export async function bootWebGpuDiagnostic() {
     syncKilnImpostorState(kilnImpostor, kilnAssets.sidecar);
     const kilnImpostorMesh = new Mesh(
         new PlaneGeometry(0.82, 0.82, 1, 1),
-        createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, kilnAssets.albedoAtlas, kilnAssets.normalAtlas)
+        createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, kilnAssets.albedoAtlas, kilnAssets.normalAtlas, kilnAssets.depthAtlas)
     );
     kilnImpostorMesh.position.set(-1.05, -1.16, 0.27);
     kilnImpostorMesh.rotation.set(0, 0.1, 0);
