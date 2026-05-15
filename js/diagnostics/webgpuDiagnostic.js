@@ -7,6 +7,10 @@ import {
     createSkyFogSamplePacket,
 } from '../atmosphere/skyFogSamplePacket.js';
 import { isKnownPreset } from '../atmosphere/skyPresets.js';
+import { Atmosphere } from '../atmosphere/Atmosphere.js';
+import {
+    createKonveyorAtmosphereMaterial,
+} from '../atmosphere/konveyorAtmosphereMaterialAdapter.js';
 import { DEFAULT_SCENE_ID, getSceneById } from '../../shared/scenes/index.js';
 import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
 import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
@@ -204,6 +208,128 @@ export function createSceneBoundSkyFogDiagnosticState(sceneBinding) {
         fogNear: sceneBinding.fog?.near ?? 18,
         fogFar: sceneBinding.fog?.far ?? 74,
     });
+}
+
+function roundedColorArray(color) {
+    if (!color?.toArray) return null;
+    return color.toArray().slice(0, 3).map((value) => Number(value.toFixed(4)));
+}
+
+function arraysNear(a, b, tolerance = 0.0003) {
+    return Array.isArray(a)
+        && Array.isArray(b)
+        && a.length === b.length
+        && a.every((value, index) => Math.abs(value - b[index]) <= tolerance);
+}
+
+function createFallbackNodeMaterial(webGpuModules, name, { side = null, transparent = false } = {}) {
+    const { MeshBasicNodeMaterial, TSL } = webGpuModules;
+    const material = new MeshBasicNodeMaterial();
+    material.name = name;
+    material.colorNode = TSL.vec4(0.08, 0.1, 0.12, transparent ? 0.45 : 1.0);
+    material.transparent = transparent;
+    material.depthWrite = !transparent;
+    if (side !== null) material.side = side;
+    return material;
+}
+
+export function createProductionAtmosphereAdapterDiagnosticProof({
+    scene,
+    camera,
+    sceneBinding,
+    skyFog,
+    atmosphereFactories,
+    webGpuModules,
+}) {
+    const summaries = {
+        sky: null,
+        cloud: null,
+    };
+    const search = '?renderer=webgpu&konveyorAtmosphere=1';
+    const atmosphere = new Atmosphere(scene, {
+        initialPreset: skyFog.presetName,
+        sceneFog: sceneBinding?.fog ?? null,
+        skyFactory: (context) => {
+            const result = createKonveyorAtmosphereMaterial('sky-dome', 'createSkyDomeMaterial', {
+                createDefaultMaterial: () => createFallbackNodeMaterial(
+                    webGpuModules,
+                    'konveyor-production-atmosphere-sky-fallback',
+                    { side: webGpuModules.BackSide }
+                ),
+                search,
+                factories: atmosphereFactories,
+                context,
+            });
+            summaries.sky = result.summary ?? null;
+            return result;
+        },
+        cloudFactory: (context) => {
+            const result = createKonveyorAtmosphereMaterial('cloud-layer', 'createCloudLayerMaterial', {
+                createDefaultMaterial: () => createFallbackNodeMaterial(
+                    webGpuModules,
+                    'konveyor-production-atmosphere-cloud-fallback',
+                    { side: webGpuModules.DoubleSide, transparent: true }
+                ),
+                search,
+                factories: atmosphereFactories,
+                context,
+            });
+            summaries.cloud = result.summary ?? null;
+            return result;
+        },
+    });
+
+    atmosphere.syncCamera(camera.position);
+    atmosphere.setTerrainYAtCamera(0);
+    atmosphere.update(1 / 60);
+
+    const skyMesh = atmosphere.sky.getMesh();
+    const cloudMesh = atmosphere.cloudLayer?.getMesh?.() ?? null;
+    const fogColor = roundedColorArray(atmosphere.fog?.color);
+    const checks = {
+        skyFactoryApplied: summaries.sky?.applied === true,
+        cloudFactoryApplied: summaries.cloud?.applied === true,
+        skyNodeMaterial: atmosphere.sky.material?.isNodeMaterial === true,
+        cloudNodeMaterial: atmosphere.cloudLayer?.material?.isNodeMaterial === true,
+        cloudControlsConnected: !!atmosphere.cloudLayer?.materialControls?.update,
+        sceneContainsSky: scene.children.includes(skyMesh),
+        sceneContainsCloud: !!cloudMesh && scene.children.includes(cloudMesh),
+        fogColorMatchesPacket: arraysNear(fogColor, skyFog.fogColor),
+        presetMatchesPacket: atmosphere.getCurrentPresetName() === skyFog.presetName,
+    };
+
+    return {
+        atmosphere,
+        proof: {
+            source: 'production-atmosphere-constructors-with-webgpu-node-factories',
+            sceneId: sceneBinding?.sceneId ?? null,
+            presetName: skyFog.presetName,
+            sky: {
+                meshName: skyMesh.name,
+                materialName: atmosphere.sky.material?.name ?? null,
+                isNodeMaterial: atmosphere.sky.material?.isNodeMaterial === true,
+                summary: summaries.sky,
+            },
+            cloud: {
+                meshName: cloudMesh?.name ?? null,
+                materialName: atmosphere.cloudLayer?.material?.name ?? null,
+                isNodeMaterial: atmosphere.cloudLayer?.material?.isNodeMaterial === true,
+                hasControls: !!atmosphere.cloudLayer?.materialControls,
+                coverage: atmosphere.cloudLayer?.getCoverage?.() ?? null,
+                visible: cloudMesh?.visible ?? null,
+                summary: summaries.cloud,
+            },
+            fog: {
+                kind: atmosphere.fog?.isFog ? 'Fog' : atmosphere.fog?.isFogExp2 ? 'FogExp2' : null,
+                color: fogColor,
+                near: atmosphere.fog?.near ?? null,
+                far: atmosphere.fog?.far ?? null,
+                density: atmosphere.fog?.density ?? null,
+            },
+            checks,
+            ok: Object.values(checks).every(Boolean),
+        },
+    };
 }
 
 export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
@@ -525,7 +651,7 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter', 'production-atmosphere-adapter'],
         sceneBinding,
         skyPreset,
         skyFog,
@@ -545,6 +671,7 @@ export async function bootWebGpuDiagnostic() {
         diagnosticRockPlacementPreview: null,
         diagnosticRockInstancingPreview: null,
         effectMaterialAdapter: null,
+        productionAtmosphereAdapter: null,
         factorySuite: null,
         frames: 0,
     };
@@ -673,6 +800,18 @@ export async function bootWebGpuDiagnostic() {
 
     const camera = new PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0.2, 3);
+    const productionAtmosphereProof = createProductionAtmosphereAdapterDiagnosticProof({
+        scene,
+        camera,
+        sceneBinding,
+        skyFog,
+        atmosphereFactories,
+        webGpuModules,
+    });
+    state.productionAtmosphereAdapter = productionAtmosphereProof.proof;
+    if (!state.productionAtmosphereAdapter.ok) {
+        return fail('production atmosphere adapter proof failed');
+    }
 
     const material = new MeshBasicNodeMaterial();
     material.colorNode = TSL.vec4(0.28, 0.78, 0.92, 1.0);
@@ -937,6 +1076,7 @@ export async function bootWebGpuDiagnostic() {
         waterHeightTexture.dispose();
         cloudPlane.geometry.dispose();
         cloudPlane.material.dispose();
+        productionAtmosphereProof.atmosphere.dispose();
         renderer.dispose();
         sun.geometry.dispose();
         sun.material.dispose();

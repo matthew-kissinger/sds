@@ -146,6 +146,14 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   cloud, meadow, anime water, terrain heightfield, grass blade, sheep wool,
   tree foliage, Kiln impostor, and rock-rim islands. This is diagnostic
   material-island visibility, not production WebGPU renderer parity.
+  `cycle36-validation/runtime/production-atmosphere-adapter-proof.json` now
+  verifies the real production `Atmosphere`, `HosekWilkieSky`, and `CloudLayer`
+  constructors inside the WebGPU diagnostic scene for Field, Rolling Hills, and
+  Open Country. Each scene routes sky and cloud materials through the explicit
+  `?renderer=webgpu&konveyorAtmosphere=1` factory path, preserves the shipped
+  linear fog near/far values, matches the CPU-visible sky/fog packet, and
+  renders cleanly in installed Chrome. This is production atmosphere constructor
+  proof, not default production WebGPU boot.
   `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
   across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
   full production-scene WebGPU visual parity remains a separate gate. A

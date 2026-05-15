@@ -338,6 +338,15 @@ WebGPU now has a diagnostic island, not a production renderer:
   meadow, anime water, terrain heightfield, grass blade, sheep wool, tree
   foliage, Kiln impostor, and rock-rim islands. This is still a diagnostic
   material-island gate, not production WebGPU scene parity.
+- [`../cycle36-validation/runtime/production-atmosphere-adapter-proof.json`](../cycle36-validation/runtime/production-atmosphere-adapter-proof.json)
+  verifies that the same scene-bound diagnostic WebGPU captures instantiate the
+  real production `Atmosphere`, `HosekWilkieSky`, and `CloudLayer` constructors
+  with explicit WebGPU node-material factories for all shipped scenes. Sky and
+  cloud materials route through the `?renderer=webgpu&konveyorAtmosphere=1`
+  factory path, shipped linear fog near/far values are preserved, and fog color
+  still matches the CPU-visible sky/fog packet. This is production atmosphere
+  constructor proof inside the diagnostic renderer, not default production
+  WebGPU boot.
 - [`../cycle36-validation/runtime/sky-lut-profile.json`](../cycle36-validation/runtime/sky-lut-profile.json)
   profiles the same renderless Hosek-Wilkie CPU LUT for the five required
   presets. Current local evidence keeps the CPU-visible LUT as the atmosphere

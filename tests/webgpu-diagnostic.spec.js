@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import * as WEBGPU from 'three/webgpu';
 
 import {
   computeKilnDiagnosticTileBlend,
@@ -7,6 +8,7 @@ import {
   createGrassBladeDiagnosticState,
   createKilnImpostorDiagnosticState,
   createMeadowQuadDiagnosticState,
+  createProductionAtmosphereAdapterDiagnosticProof,
   createRockRimDiagnosticState,
   createSceneBoundSkyFogDiagnosticState,
   createSheepWoolDiagnosticState,
@@ -33,6 +35,7 @@ import { createProductionTreePlacementPlan } from '../js/diagnostics/webgpuProdu
 import { createDiagnosticRockPlacementPlan } from '../js/diagnostics/webgpuRockPlacementPlan.js';
 import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
 import { SKY_PRESETS, getRequiredPresetNames } from '../js/atmosphere/skyPresets.js';
+import { createKonveyorNodeMaterialFactorySuite } from '../js/konveyorNodeMaterialFactorySuite.js';
 
 function createGlbBuffer(gltf) {
   const json = JSON.stringify(gltf);
@@ -140,6 +143,46 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(state.fogNear).toBe(350);
     expect(state.fogFar).toBe(900);
     expect(state.fogColor).toEqual(state.horizonColor);
+  });
+
+  it('routes production Atmosphere constructors through WebGPU node factories in the diagnostic proof', () => {
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=field');
+    const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
+    const webGpuModules = {
+      MeshBasicNodeMaterial: WEBGPU.MeshBasicNodeMaterial,
+      MeshLambertNodeMaterial: WEBGPU.MeshLambertNodeMaterial,
+      MeshStandardNodeMaterial: WEBGPU.MeshStandardNodeMaterial,
+      AdditiveBlending: WEBGPU.AdditiveBlending,
+      BackSide: WEBGPU.BackSide,
+      DoubleSide: WEBGPU.DoubleSide,
+      TSL: WEBGPU.TSL,
+    };
+    const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, { skyFog });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(0, 0.2, 3);
+    const { atmosphere, proof } = createProductionAtmosphereAdapterDiagnosticProof({
+      scene,
+      camera,
+      sceneBinding,
+      skyFog,
+      atmosphereFactories: suite.atmosphere,
+      webGpuModules,
+    });
+
+    try {
+      expect(proof.ok).toBe(true);
+      expect(proof.sky.materialName).toBe('konveyor-node-sky-dome');
+      expect(proof.cloud.materialName).toBe('konveyor-node-cloud-layer');
+      expect(proof.sky.summary).toMatchObject({ kind: 'sky-dome', applied: true });
+      expect(proof.cloud.summary).toMatchObject({ kind: 'cloud-layer', applied: true });
+      expect(proof.fog).toMatchObject({ kind: 'Fog', near: 350, far: 900 });
+      expect(proof.fog.color).toEqual(skyFog.fogColor);
+      expect(scene.children).toContain(atmosphere.sky.getMesh());
+      expect(scene.children).toContain(atmosphere.cloudLayer.getMesh());
+    } finally {
+      atmosphere.dispose();
+    }
   });
 
   it('falls back to the default scene for unknown diagnostic scene bindings', () => {
