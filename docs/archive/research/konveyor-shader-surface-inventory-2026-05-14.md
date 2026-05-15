@@ -49,9 +49,9 @@ reusable WebGPU cloud-layer node-material candidate shared by the diagnostic
 cloud plane and an explicit `CloudLayer` factory. The default cloud
 `ShaderMaterial` path remains untouched. Coverage, edge fade, feature scale,
 time, wind, sun direction, and sun color now flow into the node material through
-factory controls. Diagnostic sky-preset screenshots now exist, while
-scene-level fog/horizon integration and default production wiring remain
-deferred.
+factory controls. Diagnostic sky-preset screenshots and renderless scene
+fog/horizon proof now exist, while scene-bound WebGPU screenshots and default
+production wiring remain deferred.
 The far-ring meadow quad now has a production-facing grass material adapter
 behind `?renderer=webgpu&konveyorGrass=1` plus an explicit meadow factory.
 Default WebGL still uses the existing `MeshLambertMaterial` procedural tint
@@ -103,6 +103,11 @@ analytic preset-color evidence needed before any production sky/fog WebGPU
 wiring. `cycle36-validation/runtime/sky-preset-screenshots/manifest.json`
 now records Chrome WebGPU diagnostic screenshots for all five shipped sky
 presets with no console or page errors.
+`cycle36-validation/runtime/scene-fog-horizon-proof.json` now records
+renderless `Atmosphere` evidence for Field, Rolling Hills, and Open Country:
+the scene registry resolves the intended preset, keeps linear fog near/far, and
+derives fog color from the Hosek-Wilkie horizon while cloud coverage remains
+preset-driven.
 A diagnostic Kiln impostor island now fetches the committed `tree1` sidecar and
 albedo/normal atlases, derives a diagnostic view tile triad from the sidecar
 azimuth/elevation rows, blends those tiles with premultiplied alpha in the
@@ -152,8 +157,8 @@ terrain, grass, water, sheep, or Kiln impostors.
 |---:|---|---|---|---|---|---|
 | 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction; lazy-loaded as a scene-coupled production chunk. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. Production-facing material creation routes through the shared `?renderer=webgpu&konveyorEffects=1` adapter plus explicit factories; default WebGL still uses the existing `ShaderMaterial` after the scene-coupled dynamic import. | Diagnostic island screenshot/probe, then default smoke. |
 | 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. Production-facing ring, pad, and particle material creation can now route through the same effect adapter with explicit factories; default WebGL still uses the existing ring `ShaderMaterial`, pad `MeshBasicMaterial`, and particle `PointsMaterial`. | Open Country objective visual screenshot plus completion smoke. |
-| 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | Diagnostic cloud-plane TSL material now covers value-noise/fbm mask, sun tint, coverage, footprint fade, and time input, and the reusable WebGPU cloud-layer node-material candidate now lives outside the diagnostic file. Production-facing material creation can route through the shared `?renderer=webgpu&konveyorAtmosphere=1` adapter with explicit factories and update controls; the extracted node factory now consumes coverage, edge fade, feature scale, time, wind, sun direction, and sun color through node uniforms; default WebGL still uses the existing `ShaderMaterial`. Diagnostic sky-preset screenshots now exist; scene fog/horizon integration and default production wiring remain deferred before WebGPU cloud coverage is claimed. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
-| 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet. `Atmosphere` can forward an explicit sky factory to `HosekWilkieSky`, and `HosekWilkieSky` directly routes through `?renderer=webgpu&konveyorAtmosphere=1` when explicit factories are present. The reusable WebGPU sky/fog node-material candidate now lives outside the diagnostic file. Diagnostic preset screenshots and fog-consumer proof now exist, but production default wiring remains deferred before WebGPU sky coverage is claimed. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
+| 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | Diagnostic cloud-plane TSL material now covers value-noise/fbm mask, sun tint, coverage, footprint fade, and time input, and the reusable WebGPU cloud-layer node-material candidate now lives outside the diagnostic file. Production-facing material creation can route through the shared `?renderer=webgpu&konveyorAtmosphere=1` adapter with explicit factories and update controls; the extracted node factory now consumes coverage, edge fade, feature scale, time, wind, sun direction, and sun color through node uniforms; default WebGL still uses the existing `ShaderMaterial`. Diagnostic sky-preset screenshots and renderless scene fog/horizon proof now exist; scene-bound WebGPU screenshots and default production wiring remain deferred before WebGPU cloud coverage is claimed. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
+| 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet. `Atmosphere` can forward an explicit sky factory to `HosekWilkieSky`, and `HosekWilkieSky` directly routes through `?renderer=webgpu&konveyorAtmosphere=1` when explicit factories are present. The reusable WebGPU sky/fog node-material candidate now lives outside the diagnostic file. Diagnostic preset screenshots, fog-consumer proof, and renderless scene fog/horizon proof now exist, but production default wiring remains deferred before WebGPU sky coverage is claimed. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
 | 5 | Anime water | `js/water/AnimeWater.js` | Shoreline foam, heightfield-driven foam, ripples, sun glint, fog. | High. Samples a generated heightfield `DataTexture` and drives a visible scene focal point. | Diagnostic TSL island now covers production palette, shoreline bands, foam, ripples, sun glint, fog input, and a non-filtered `RedFormat`/`FloatType` sample loaded from `public/terrain/rolling-hills.bin`. Production-facing material creation can now route through `?renderer=webgpu&konveyorWater=1` with an explicit factory and update controls; default WebGL still uses the existing `ShaderMaterial`. Scene-bound Rolling Hills/Open Country screenshots remain required before replacing WebGL water. | Water shoreline specs, Rolling Hills/Open Country screenshots, latency. |
 | 6 | Terrain ground | `js/TerrainBuilder.js` | Heightfield-displaced terrain with procedural ground color and Three fog chunks. | High. It is the base surface of every production scene and uses fog chunks. | Diagnostic terrain-heightfield TSL island now samples the real Rolling Hills heightfield texture for height-based ground color and fog input. Production-facing material creation can now route through `?renderer=webgpu&konveyorTerrain=1` with an explicit factory; default WebGL still uses the existing terrain `ShaderMaterial`. Scene-bound Rolling Hills/Open Country screenshots remain required before replacing WebGL terrain. | Refactor-baseline terrain hash untouched, screenshots, perf. |
 | 7 | Grass blades | `js/GrassSystem.js`, `js/shaders/grass/*.glsl` | Instanced blade geometry, wind, interaction, LOD fade, fake SSS, manual fog. | Very high. It owns interaction feel and high-count perf. | Diagnostic grass-blade TSL material now covers production default gradient colors, analytic wind/gust/flutter displacement, alpha hash, sky/fog handoff, and a smooth opacity proxy using `grassFadeStart`/`grassFadeEnd`. Production-facing material creation can now route through `?renderer=webgpu&konveyorGrass=1` with an explicit blade factory and update controls; default WebGL still uses the existing grass `ShaderMaterial`. Production stochastic blade dither, production instancing, compute/trample experiments, and scene-level WebGPU grass parity remain deferred. | Perf, latency, visual, mobile profile, interaction smoke. |
@@ -313,11 +318,12 @@ comments:
    diagnostic records production default grass colors and CPU sky/fog input,
    and its production material creation path now has a flag-gated adapter seam,
    but it is not yet a production scene WebGPU boot.
-2. Keep sky/fog production wiring behind scene-level fog/horizon behavior.
-   The renderless preset-color matrix and diagnostic preset screenshots now
-   exist for all shipped sky presets, and `tests/webgpu-diagnostic.spec.js`
-   pins the diagnostic fog-consumer contract across rock rim, meadow, water,
-   terrain, grass, sheep, and Kiln states. The production-facing sky-dome
+2. Keep sky/fog production wiring behind scene-bound WebGPU screenshots.
+   The renderless preset-color matrix, diagnostic preset screenshots, and
+   renderless scene fog/horizon proof now exist for all shipped scene/preset
+   definitions, and `tests/webgpu-diagnostic.spec.js` pins the diagnostic
+   fog-consumer contract across rock rim, meadow, water, terrain, grass, sheep,
+   and Kiln states. The production-facing sky-dome
    factory seam now reaches `Atmosphere` and `HosekWilkieSky`, and the reusable
    sky/fog node-material candidate now lives outside the diagnostic harness.
    The same atmosphere seam now reaches production `CloudLayer` with update

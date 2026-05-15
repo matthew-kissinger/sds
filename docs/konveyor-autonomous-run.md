@@ -218,7 +218,8 @@ WebGPU now has a diagnostic island, not a production renderer:
   explicit `CloudLayer` factory can share, with coverage, edge fade, feature
   scale, time, wind, sun direction, and sun color driven through node uniform
   controls. Diagnostic sky-preset screenshots now exist; scene-level
-  fog/horizon integration and default production wiring remain deferred.
+  fog/horizon proof now exists; scene-bound WebGPU screenshots and default
+  production wiring remain deferred.
 - `tests/webgpu-diagnostic.spec.js` now pins the diagnostic fog-consumer
   contract: rock rim, meadow, anime water, terrain, grass, sheep, and Kiln
   diagnostic states all consume the same CPU-visible sky/fog packet. This is
@@ -238,6 +239,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   reached `effective=webgpu-diagnostic` for every preset, and recorded no
   console or page errors. This is diagnostic visual evidence only; production
   scene wiring remains a separate gate.
+- [`../cycle36-validation/runtime/scene-fog-horizon-proof.json`](../cycle36-validation/runtime/scene-fog-horizon-proof.json)
+  records a renderless `Atmosphere` proof across the three shipped
+  `shared/scenes` definitions. It confirms each scene resolves its intended sky
+  preset, preserves its linear fog near/far values, drives fog color from the
+  Hosek-Wilkie horizon, and carries preset cloud coverage into both the sky and
+  cloud layer. This is scene-definition evidence; scene-bound WebGPU screenshot
+  parity remains a separate gate.
 - [`../cycle36-validation/runtime/sky-lut-profile.json`](../cycle36-validation/runtime/sky-lut-profile.json)
   profiles the same renderless Hosek-Wilkie CPU LUT for the five required
   presets. Current local evidence keeps the CPU-visible LUT as the atmosphere
@@ -324,9 +332,9 @@ Recommended order:
    cloud-layer node materials are now extracted into reusable WebGPU factory
    candidates, and the cloud-layer candidate now consumes live `CloudLayer`
    state through node uniform controls. Diagnostic fog consumers are pinned by
-   `tests/webgpu-diagnostic.spec.js`; diagnostic preset screenshots are now
-   captured, while scene-level fog/horizon integration and default production
-   wiring remain deferred.
+   `tests/webgpu-diagnostic.spec.js`; diagnostic preset screenshots and
+   renderless scene fog/horizon proof are now captured, while scene-bound WebGPU
+   screenshots and default production wiring remain deferred.
    Production
    `SunBillboard` itself is now
    scene-coupled and lazy-loaded, which creates bundle room for the next seam
@@ -341,8 +349,9 @@ Recommended order:
    remain deferred. The Kiln path now has a production-facing material factory
    seam, but per-frame tile selection, LOD wiring, and LOD0 color parity remain
    deferred.
-   The sky path now has diagnostic preset screenshot parity but still needs
-   scene-level fog/horizon proof before any default production boot claim; next move to a
+   The sky path now has diagnostic preset screenshot parity and renderless
+   scene fog/horizon proof but still needs scene-bound WebGPU screenshot parity
+   before any default production boot claim; next move to a
    smaller shader/material island or the measured rock-generation extraction
    before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,

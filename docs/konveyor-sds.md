@@ -109,6 +109,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   presets using `?renderer=webgpu&diagnostic=1&konveyorSkyPreset=...`. Each
   capture reached `effective=webgpu-diagnostic` with no console or page
   errors.
+  `cycle36-validation/runtime/scene-fog-horizon-proof.json` now records a
+  renderless `Atmosphere` proof for Field, Rolling Hills, and Open Country:
+  each scene resolves its intended sky preset, preserves linear fog near/far,
+  drives fog color from the Hosek-Wilkie horizon, and carries preset cloud
+  coverage into both sky and cloud layer.
   `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
   across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
   scene-level fog/horizon visual parity remains a separate gate. A
@@ -130,8 +135,8 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   an explicit `CloudLayer` factory under the same fail-closed flag, with
   coverage, edge fade, feature scale, time, wind, sun direction, and sun color
   driven through node uniform controls. Diagnostic sky-preset screenshots are
-  captured; scene-level fog/horizon integration and default production wiring
-  remain deferred. A
+  captured and the renderless scene fog/horizon contract is pinned; scene-bound
+  WebGPU screenshots and default production wiring remain deferred. A
   production-facing anime-water material adapter now exists behind
   `?renderer=webgpu&konveyorWater=1` plus an explicit water factory. It can
   hand water update ownership to factory controls, while default WebGL still
