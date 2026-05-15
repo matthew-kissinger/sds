@@ -272,7 +272,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
   bundle-size fixture. Current production build evidence: `mainKB=569`,
-  `threeKB=618`, `webgpuDiagnostic=66 KB`,
+  `threeKB=618`, `webgpuDiagnostic=68 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`, `AnimeWater=9 KB`,
   `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
@@ -386,6 +386,18 @@ WebGPU now has a diagnostic island, not a production renderer:
   contract. This is production grass constructor proof inside the diagnostic
   renderer; full production grass-field generation and scene parity remain
   separate gates.
+- [`../cycle36-validation/runtime/production-sheep-adapter-proof.json`](../cycle36-validation/runtime/production-sheep-adapter-proof.json)
+  verifies that the same scene-bound diagnostic WebGPU captures instantiate
+  real production `OptimizedSheepSystem` merged geometry, material creation,
+  instance attributes, and a representative 3-sheep `InstancedMesh` with
+  explicit WebGPU node-material factories for all shipped diagnostic scenes.
+  The proof records `konveyor-node-sheep-wool`, the
+  `?renderer=webgpu&konveyorSheep=1` factory summary, `547` merged-geometry
+  vertices, `544` triangles, `color`/`vertexId`/`instanceData`/
+  `instanceAnimation` attributes, and initialized sheep data. This is
+  production sheep constructor proof inside the diagnostic renderer; terrain
+  grounding, multiplayer-safe scene parity, and high-count perf remain separate
+  gates.
 - [`../cycle36-validation/runtime/sky-lut-profile.json`](../cycle36-validation/runtime/sky-lut-profile.json)
   profiles the same renderless Hosek-Wilkie CPU LUT for the five required
   presets. Current local evidence keeps the CPU-visible LUT as the atmosphere
@@ -507,8 +519,9 @@ Recommended order:
    water, terrain, grass, sheep, tree, rock, impostor, meadow, sun, and cloud
    signatures, and constructor proofs now cover production `Atmosphere`,
    `AnimeWater`, `TerrainBuilder.createTerrain()`, and representative
-   `GrassSystem` material/chunk construction inside the diagnostic renderer.
-   The next production-adjacent move should keep
+   `GrassSystem` material/chunk construction plus `OptimizedSheepSystem`
+   merged-geometry/instancing construction inside the diagnostic renderer. The
+   next production-adjacent move should keep
    `?renderer=webgpu` fail-closed without `diagnostic=1` while moving one
    island from diagnostic visibility toward measured production-scene parity.
    The sky path now has diagnostic preset screenshot parity, renderless scene

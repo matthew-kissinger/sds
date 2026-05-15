@@ -20,10 +20,12 @@ import {
 import { TerrainBuilder } from '../TerrainBuilder.js';
 import { createAnimeWater } from '../water/AnimeWater.js';
 import { GrassSystem } from '../GrassSystem.js';
+import { OptimizedSheepSystem } from '../OptimizedSheep.js';
 import {
     createKonveyorNodeMaterialFactorySuite,
     summarizeKonveyorNodeMaterialFactorySuite,
 } from '../konveyorNodeMaterialFactorySuite.js';
+import { geometryTriangleCount } from '../utils/TriangleCount.js';
 import { Heightfield } from '../../shared/terrain/Heightfield.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
@@ -644,6 +646,78 @@ export function createProductionGrassAdapterDiagnosticProof({
     };
 }
 
+export function createProductionSheepAdapterDiagnosticProof({
+    scene,
+    sceneBinding,
+    sheepFactories,
+}) {
+    const sheep = new OptimizedSheepSystem(scene, 3, {
+        centerX: 0,
+        centerZ: 0,
+        spreadRadius: 1.2,
+        defaultCount: 3,
+    }, false, {
+        search: '?renderer=webgpu&konveyorSheep=1',
+        konveyorSheepFactories: sheepFactories,
+    });
+
+    if (sheep.instancedMesh) {
+        sheep.instancedMesh.position.set(-1.52, -1.16, 0.54);
+        sheep.instancedMesh.scale.setScalar(0.18);
+        sheep.instancedMesh.frustumCulled = false;
+        sheep.instancedMesh.renderOrder = 4;
+    }
+
+    const summary = sheep.konveyorSheepMaterialSummary ?? sheep.material?.userData?.konveyorSheepMaterialSummary ?? null;
+    const attributes = Object.keys(sheep.mergedGeometry?.attributes ?? {});
+    const checks = {
+        factoryApplied: summary?.applied === true,
+        nodeMaterial: sheep.material?.name === 'konveyor-node-sheep-wool'
+            && sheep.material?.isNodeMaterial === true,
+        instancedMeshPresent: sheep.instancedMesh?.isInstancedMesh === true
+            && sheep.instancedMesh.count === 3
+            && scene.children.includes(sheep.instancedMesh),
+        geometryMerged: (sheep.mergedGeometry?.attributes?.position?.count ?? 0) > 0
+            && geometryTriangleCount(sheep.mergedGeometry) > 0,
+        vertexColorContract: sheep.material?.vertexColors === true
+            && attributes.includes('color')
+            && attributes.includes('vertexId'),
+        instanceAttributeContract: attributes.includes('instanceData')
+            && attributes.includes('instanceAnimation'),
+        sheepDataInitialized: sheep.sheep?.length === 3,
+        disposeCallable: typeof sheep.dispose === 'function',
+    };
+
+    return {
+        sheep,
+        proof: {
+            source: 'production-optimizedsheepsystem-constructor-with-webgpu-node-factory',
+            sceneId: sceneBinding?.sceneId ?? null,
+            materialName: sheep.material?.name ?? null,
+            isNodeMaterial: sheep.material?.isNodeMaterial === true,
+            summary,
+            mesh: {
+                isInstancedMesh: sheep.instancedMesh?.isInstancedMesh === true,
+                count: sheep.instancedMesh?.count ?? null,
+                frustumCulled: sheep.instancedMesh?.frustumCulled ?? null,
+                scale: sheep.instancedMesh?.scale?.x ?? null,
+            },
+            geometry: {
+                vertices: sheep.mergedGeometry?.attributes?.position?.count ?? null,
+                triangles: sheep.mergedGeometry ? geometryTriangleCount(sheep.mergedGeometry) : null,
+                attributes,
+            },
+            sheepData: {
+                count: sheep.sheep?.length ?? null,
+                spawnRadius: sheep.spawnConfig?.spreadRadius ?? null,
+                useExtremeBoids: sheep.useExtremeBoids === true,
+            },
+            checks,
+            ok: Object.values(checks).every(Boolean),
+        },
+    };
+}
+
 export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
     return {
         baseColor: [0.34, 0.32, 0.27],
@@ -963,7 +1037,7 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter', 'production-atmosphere-adapter', 'production-water-adapter', 'production-terrain-adapter', 'production-grass-adapter'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter', 'production-atmosphere-adapter', 'production-water-adapter', 'production-terrain-adapter', 'production-grass-adapter', 'production-sheep-adapter'],
         sceneBinding,
         skyPreset,
         skyFog,
@@ -987,6 +1061,7 @@ export async function bootWebGpuDiagnostic() {
         productionWaterAdapter: null,
         productionTerrainAdapter: null,
         productionGrassAdapter: null,
+        productionSheepAdapter: null,
         factorySuite: null,
         frames: 0,
     };
@@ -1277,6 +1352,15 @@ export async function bootWebGpuDiagnostic() {
     if (!state.productionGrassAdapter.ok) {
         return fail('production grass adapter proof failed');
     }
+    const productionSheepProof = createProductionSheepAdapterDiagnosticProof({
+        scene,
+        sceneBinding,
+        sheepFactories,
+    });
+    state.productionSheepAdapter = productionSheepProof.proof;
+    if (!state.productionSheepAdapter.ok) {
+        return fail('production sheep adapter proof failed');
+    }
     const water = new Mesh(
         new PlaneGeometry(2.0, 0.62, 1, 1),
         waterFactories.createAnimeWaterMaterial({
@@ -1426,6 +1510,7 @@ export async function bootWebGpuDiagnostic() {
         productionWaterProof.water.dispose();
         productionTerrainProof.builder.dispose();
         productionGrassProof.dispose();
+        productionSheepProof.sheep.dispose();
         renderer.dispose();
         sun.geometry.dispose();
         sun.material.dispose();

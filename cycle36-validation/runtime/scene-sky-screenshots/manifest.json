@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T09:39:34.697Z",
+  "capturedAt": "2026-05-15T09:48:42.702Z",
   "baseUrl": "http://127.0.0.1:4173/",
   "channel": "chrome",
   "chromiumArgs": [
@@ -295,8 +295,55 @@
         },
         "ok": true
       },
+      "productionSheepAdapter": {
+        "source": "production-optimizedsheepsystem-constructor-with-webgpu-node-factory",
+        "sceneId": "field",
+        "materialName": "konveyor-node-sheep-wool",
+        "isNodeMaterial": true,
+        "summary": {
+          "kind": "sheep-wool",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "mesh": {
+          "isInstancedMesh": true,
+          "count": 3,
+          "frustumCulled": false,
+          "scale": 0.18
+        },
+        "geometry": {
+          "vertices": 547,
+          "triangles": 544,
+          "attributes": [
+            "position",
+            "normal",
+            "uv",
+            "color",
+            "vertexId",
+            "instanceData",
+            "instanceAnimation"
+          ]
+        },
+        "sheepData": {
+          "count": 3,
+          "spawnRadius": 1.2,
+          "useExtremeBoids": false
+        },
+        "checks": {
+          "factoryApplied": true,
+          "nodeMaterial": true,
+          "instancedMeshPresent": true,
+          "geometryMerged": true,
+          "vertexColorContract": true,
+          "instanceAttributeContract": true,
+          "sheepDataInitialized": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
       "frames": 3,
-      "islandCount": 23,
+      "islandCount": 24,
       "islands": [
         "sun-billboard",
         "portal-ring",
@@ -320,7 +367,8 @@
         "production-atmosphere-adapter",
         "production-water-adapter",
         "production-terrain-adapter",
-        "production-grass-adapter"
+        "production-grass-adapter",
+        "production-sheep-adapter"
       ],
       "hasSkyFog": true,
       "hasCloudPlane": true,
@@ -610,8 +658,55 @@
         },
         "ok": true
       },
+      "productionSheepAdapter": {
+        "source": "production-optimizedsheepsystem-constructor-with-webgpu-node-factory",
+        "sceneId": "rolling-hills",
+        "materialName": "konveyor-node-sheep-wool",
+        "isNodeMaterial": true,
+        "summary": {
+          "kind": "sheep-wool",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "mesh": {
+          "isInstancedMesh": true,
+          "count": 3,
+          "frustumCulled": false,
+          "scale": 0.18
+        },
+        "geometry": {
+          "vertices": 547,
+          "triangles": 544,
+          "attributes": [
+            "position",
+            "normal",
+            "uv",
+            "color",
+            "vertexId",
+            "instanceData",
+            "instanceAnimation"
+          ]
+        },
+        "sheepData": {
+          "count": 3,
+          "spawnRadius": 1.2,
+          "useExtremeBoids": false
+        },
+        "checks": {
+          "factoryApplied": true,
+          "nodeMaterial": true,
+          "instancedMeshPresent": true,
+          "geometryMerged": true,
+          "vertexColorContract": true,
+          "instanceAttributeContract": true,
+          "sheepDataInitialized": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
       "frames": 3,
-      "islandCount": 23,
+      "islandCount": 24,
       "islands": [
         "sun-billboard",
         "portal-ring",
@@ -635,7 +730,8 @@
         "production-atmosphere-adapter",
         "production-water-adapter",
         "production-terrain-adapter",
-        "production-grass-adapter"
+        "production-grass-adapter",
+        "production-sheep-adapter"
       ],
       "hasSkyFog": true,
       "hasCloudPlane": true,
@@ -925,8 +1021,55 @@
         },
         "ok": true
       },
+      "productionSheepAdapter": {
+        "source": "production-optimizedsheepsystem-constructor-with-webgpu-node-factory",
+        "sceneId": "open-country",
+        "materialName": "konveyor-node-sheep-wool",
+        "isNodeMaterial": true,
+        "summary": {
+          "kind": "sheep-wool",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "mesh": {
+          "isInstancedMesh": true,
+          "count": 3,
+          "frustumCulled": false,
+          "scale": 0.18
+        },
+        "geometry": {
+          "vertices": 547,
+          "triangles": 544,
+          "attributes": [
+            "position",
+            "normal",
+            "uv",
+            "color",
+            "vertexId",
+            "instanceData",
+            "instanceAnimation"
+          ]
+        },
+        "sheepData": {
+          "count": 3,
+          "spawnRadius": 1.2,
+          "useExtremeBoids": false
+        },
+        "checks": {
+          "factoryApplied": true,
+          "nodeMaterial": true,
+          "instancedMeshPresent": true,
+          "geometryMerged": true,
+          "vertexColorContract": true,
+          "instanceAttributeContract": true,
+          "sheepDataInitialized": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
       "frames": 3,
-      "islandCount": 23,
+      "islandCount": 24,
       "islands": [
         "sun-billboard",
         "portal-ring",
@@ -950,7 +1093,8 @@
         "production-atmosphere-adapter",
         "production-water-adapter",
         "production-terrain-adapter",
-        "production-grass-adapter"
+        "production-grass-adapter",
+        "production-sheep-adapter"
       ],
       "hasSkyFog": true,
       "hasCloudPlane": true,

@@ -10,6 +10,7 @@ import {
   createMeadowQuadDiagnosticState,
   createProductionAtmosphereAdapterDiagnosticProof,
   createProductionGrassAdapterDiagnosticProof,
+  createProductionSheepAdapterDiagnosticProof,
   createProductionTerrainAdapterDiagnosticProof,
   createProductionWaterAdapterDiagnosticProof,
   createRockRimDiagnosticState,
@@ -407,6 +408,59 @@ describe('webgpu diagnostic sky fog state', () => {
     } finally {
       dispose();
       heightTexture.dispose();
+    }
+  });
+
+  it('routes production OptimizedSheep construction through WebGPU node factories in the diagnostic proof', () => {
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills');
+    const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
+    const webGpuModules = {
+      MeshBasicNodeMaterial: WEBGPU.MeshBasicNodeMaterial,
+      MeshLambertNodeMaterial: WEBGPU.MeshLambertNodeMaterial,
+      MeshStandardNodeMaterial: WEBGPU.MeshStandardNodeMaterial,
+      AdditiveBlending: WEBGPU.AdditiveBlending,
+      BackSide: WEBGPU.BackSide,
+      DoubleSide: WEBGPU.DoubleSide,
+      TSL: WEBGPU.TSL,
+    };
+    const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+      skyFog,
+      sheep: {
+        fogColor: skyFog.fogColor,
+        fogNear: skyFog.fogNear,
+        fogFar: skyFog.fogFar,
+      },
+    });
+    const scene = new THREE.Scene();
+    const { sheep, proof } = createProductionSheepAdapterDiagnosticProof({
+      scene,
+      sceneBinding,
+      sheepFactories: suite.sheep,
+    });
+
+    try {
+      expect(proof.ok).toBe(true);
+      expect(proof.materialName).toBe('konveyor-node-sheep-wool');
+      expect(proof.isNodeMaterial).toBe(true);
+      expect(proof.summary).toMatchObject({ kind: 'sheep-wool', applied: true });
+      expect(proof.mesh).toMatchObject({
+        isInstancedMesh: true,
+        count: 3,
+        frustumCulled: false,
+      });
+      expect(proof.geometry.vertices).toBeGreaterThan(0);
+      expect(proof.geometry.triangles).toBeGreaterThan(0);
+      expect(proof.geometry.attributes).toEqual(
+        expect.arrayContaining(['position', 'normal', 'uv', 'color', 'vertexId', 'instanceData', 'instanceAnimation'])
+      );
+      expect(proof.sheepData).toMatchObject({
+        count: 3,
+        spawnRadius: 1.2,
+        useExtremeBoids: false,
+      });
+      expect(scene.children).toContain(sheep.instancedMesh);
+    } finally {
+      sheep.dispose();
     }
   });
 
