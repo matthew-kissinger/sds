@@ -2,7 +2,11 @@ import {
     replaceRockMaterialsByTraversal,
     replaceTreeMaterialsByName,
 } from './webgpuMaterialReplacement.js';
-import { createSkyFogSamplePacket } from '../atmosphere/skyFogSamplePacket.js';
+import {
+    DEFAULT_SKY_FOG_SAMPLE_PRESET,
+    createSkyFogSamplePacket,
+} from '../atmosphere/skyFogSamplePacket.js';
+import { isKnownPreset } from '../atmosphere/skyPresets.js';
 import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
 import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 import {
@@ -207,8 +211,27 @@ function createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL
     return material;
 }
 
-export function createSkyFogDiagnosticState() {
-    return createSkyFogSamplePacket();
+export function resolveDiagnosticSkyPreset(search = '') {
+    const params = new URLSearchParams(search || '');
+    const requestedPresetName = params.get('konveyorSkyPreset') || DEFAULT_SKY_FOG_SAMPLE_PRESET;
+
+    if (isKnownPreset(requestedPresetName)) {
+        return {
+            requestedPresetName,
+            presetName: requestedPresetName,
+            fallbackReason: null,
+        };
+    }
+
+    return {
+        requestedPresetName,
+        presetName: DEFAULT_SKY_FOG_SAMPLE_PRESET,
+        fallbackReason: 'unknown-preset',
+    };
+}
+
+export function createSkyFogDiagnosticState(options = {}) {
+    return createSkyFogSamplePacket(options);
 }
 
 export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
@@ -580,10 +603,12 @@ function syncKilnImpostorState(target, sidecar) {
 
 function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, albedoAtlas, normalAtlas, depthAtlas) {
     const { clamp, dot, float, length, max, mix, normalize, smoothstep, texture, uv, positionView, vec2, vec3, vec4 } = TSL;
-    const tileScale = vec2(1 / kilnImpostor.tilesX, 1 / kilnImpostor.tilesY);
+    const tileScaleX = 1 / kilnImpostor.tilesX;
+    const tileScaleY = 1 / kilnImpostor.tilesY;
+    const tileScale = vec2(tileScaleX, tileScaleY);
     const tileInset = vec2(
-        0.5 / kilnImpostor.atlasSize[0] / tileScale.x,
-        0.5 / kilnImpostor.atlasSize[1] / tileScale.y
+        0.5 / kilnImpostor.atlasSize[0] / tileScaleX,
+        0.5 / kilnImpostor.atlasSize[1] / tileScaleY
     );
     const tileLocalUv = clamp(uv(), tileInset, vec2(1.0, 1.0).sub(tileInset));
     const tileUv = ([azIdx, elIdx]) => tileLocalUv.mul(tileScale)
@@ -822,7 +847,8 @@ function createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }) {
 }
 
 export async function bootWebGpuDiagnostic() {
-    const skyFog = createSkyFogDiagnosticState();
+    const skyPreset = resolveDiagnosticSkyPreset(window.location.search);
+    const skyFog = createSkyFogDiagnosticState({ presetName: skyPreset.presetName });
     const rockRim = createRockRimDiagnosticState(skyFog);
     const meadowQuad = createMeadowQuadDiagnosticState(skyFog);
     const animeWater = createAnimeWaterDiagnosticState(skyFog);
@@ -838,6 +864,7 @@ export async function bootWebGpuDiagnostic() {
         ok: false,
         renderer: 'webgpu',
         islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter'],
+        skyPreset,
         skyFog,
         rockRim,
         meadowQuad,

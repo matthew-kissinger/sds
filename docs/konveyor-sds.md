@@ -88,7 +88,9 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   diagnostic view tile triad from sidecar angles, blends three atlas tiles with
   premultiplied alpha/fog in a WebGPU node material, relights from the normal
   aux layer, and samples the depth aux atlas as a diagnostic shading proxy. A
-  production-facing Kiln impostor material seam now exists behind
+  numeric tile-scale fix in that diagnostic node material removes the invalid
+  WebGPU shader-module error found during sky-preset capture.
+  A production-facing Kiln impostor material seam now exists behind
   `?renderer=webgpu&konveyorImpostors=1` plus an explicit impostor factory and
   optional tint controls, while default WebGL keeps the existing
   `ShaderMaterial`. Per-frame production tile selection, parallax, depth
@@ -102,6 +104,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   renderless Hosek-Wilkie CPU LUT cost. Current local evidence keeps that LUT
   as the CPU-visible atmosphere contract, not a measured bottleneck; a GPU LUT
   remains a production-profile-driven candidate.
+  `cycle36-validation/runtime/sky-preset-screenshots/manifest.json` now
+  records Chrome WebGPU diagnostic screenshots for all five shipped sky
+  presets using `?renderer=webgpu&diagnostic=1&konveyorSkyPreset=...`. Each
+  capture reached `effective=webgpu-diagnostic` with no console or page
+  errors.
   `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
   across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
   scene-level fog/horizon visual parity remains a separate gate. A
@@ -122,8 +129,9 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   cloud-layer node-material candidate used by the diagnostic cloud plane and by
   an explicit `CloudLayer` factory under the same fail-closed flag, with
   coverage, edge fade, feature scale, time, wind, sun direction, and sun color
-  driven through node uniform controls. Sky-preset screenshots, fog/horizon
-  integration, and default production wiring remain deferred. A
+  driven through node uniform controls. Diagnostic sky-preset screenshots are
+  captured; scene-level fog/horizon integration and default production wiring
+  remain deferred. A
   production-facing anime-water material adapter now exists behind
   `?renderer=webgpu&konveyorWater=1` plus an explicit water factory. It can
   hand water update ownership to factory controls, while default WebGL still

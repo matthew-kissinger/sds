@@ -217,8 +217,8 @@ WebGPU now has a diagnostic island, not a production renderer:
   cloud-layer node-material candidate that the diagnostic cloud plane and an
   explicit `CloudLayer` factory can share, with coverage, edge fade, feature
   scale, time, wind, sun direction, and sun color driven through node uniform
-  controls. Sky-preset screenshots, fog/horizon integration, and default
-  production wiring remain deferred.
+  controls. Diagnostic sky-preset screenshots now exist; scene-level
+  fog/horizon integration and default production wiring remain deferred.
 - `tests/webgpu-diagnostic.spec.js` now pins the diagnostic fog-consumer
   contract: rock rim, meadow, anime water, terrain, grass, sheep, and Kiln
   diagnostic states all consume the same CPU-visible sky/fog packet. This is
@@ -231,8 +231,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   extra sky dome or making the WebGPU sky shader the authority.
 - [`../cycle36-validation/runtime/sky-fog-preset-matrix.json`](../cycle36-validation/runtime/sky-fog-preset-matrix.json)
   records renderless CPU sky/fog packets for all five shipped sky presets.
-  This covers analytic preset-color parity; preset screenshots and production
-  wiring remain separate gates.
+  This covers analytic preset-color parity.
+- [`../cycle36-validation/runtime/sky-preset-screenshots/manifest.json`](../cycle36-validation/runtime/sky-preset-screenshots/manifest.json)
+  records Chrome WebGPU diagnostic screenshots for all five shipped sky
+  presets. The capture used `?renderer=webgpu&diagnostic=1&konveyorSkyPreset=...`,
+  reached `effective=webgpu-diagnostic` for every preset, and recorded no
+  console or page errors. This is diagnostic visual evidence only; production
+  scene wiring remains a separate gate.
 - [`../cycle36-validation/runtime/sky-lut-profile.json`](../cycle36-validation/runtime/sky-lut-profile.json)
   profiles the same renderless Hosek-Wilkie CPU LUT for the five required
   presets. Current local evidence keeps the CPU-visible LUT as the atmosphere
@@ -283,7 +288,10 @@ Recommended order:
    depth aux atlas as a diagnostic shading proxy. Production Kiln material
    creation now has a flag-gated explicit factory seam with tint controls, but
    per-frame production tile selection, parallax, depth discard, production LOD
-   wiring, and LOD0 color parity remain deferred. The rock-rim
+   wiring, and LOD0 color parity remain deferred. The diagnostic WebGPU Kiln
+   material now uses numeric atlas tile-scale constants for tile inset math; the
+   sky-preset screenshot matrix confirmed no WebGPU shader-module console errors.
+   The rock-rim
    TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
@@ -316,8 +324,9 @@ Recommended order:
    cloud-layer node materials are now extracted into reusable WebGPU factory
    candidates, and the cloud-layer candidate now consumes live `CloudLayer`
    state through node uniform controls. Diagnostic fog consumers are pinned by
-   `tests/webgpu-diagnostic.spec.js`; preset screenshots, scene-level
-   fog/horizon integration, and default production wiring remain deferred.
+   `tests/webgpu-diagnostic.spec.js`; diagnostic preset screenshots are now
+   captured, while scene-level fog/horizon integration and default production
+   wiring remain deferred.
    Production
    `SunBillboard` itself is now
    scene-coupled and lazy-loaded, which creates bundle room for the next seam
@@ -332,8 +341,8 @@ Recommended order:
    remain deferred. The Kiln path now has a production-facing material factory
    seam, but per-frame tile selection, LOD wiring, and LOD0 color parity remain
    deferred.
-   The sky path still needs preset screenshot parity and scene-level
-   fog/horizon proof before any default production boot claim; next move to a
+   The sky path now has diagnostic preset screenshot parity but still needs
+   scene-level fog/horizon proof before any default production boot claim; next move to a
    smaller shader/material island or the measured rock-generation extraction
    before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,

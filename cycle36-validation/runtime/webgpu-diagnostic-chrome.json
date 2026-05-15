@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T02:55:31.085Z",
+  "capturedAt": "2026-05-15T05:27:12.177Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -103,6 +103,11 @@
       "diagnostic-rock-instancing-preview",
       "production-effect-adapter"
     ],
+    "skyPreset": {
+      "requestedPresetName": "dusk",
+      "presetName": "dusk",
+      "fallbackReason": null
+    },
     "skyFog": {
       "source": "HosekWilkieSky.cpu-lut",
       "presetName": "dusk",

@@ -12,6 +12,7 @@ import {
   createSkyFogDiagnosticState,
   createTerrainHeightfieldDiagnosticState,
   createTreeLeafDiagnosticState,
+  resolveDiagnosticSkyPreset,
 } from '../js/diagnostics/webgpuDiagnostic.js';
 import {
   replaceRockMaterialsByTraversal,
@@ -29,7 +30,7 @@ import { WATER_PALETTE_RGB, mixWaterBaseColor } from '../js/water/AnimeWater.js'
 import { createProductionTreePlacementPlan } from '../js/diagnostics/webgpuProductionPlacementPlan.js';
 import { createDiagnosticRockPlacementPlan } from '../js/diagnostics/webgpuRockPlacementPlan.js';
 import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
-import { SKY_PRESETS } from '../js/atmosphere/skyPresets.js';
+import { SKY_PRESETS, getRequiredPresetNames } from '../js/atmosphere/skyPresets.js';
 
 function createGlbBuffer(gltf) {
   const json = JSON.stringify(gltf);
@@ -82,6 +83,34 @@ describe('webgpu diagnostic sky fog state', () => {
     } finally {
       sky.dispose();
     }
+  });
+
+  it('resolves every shipped preset for the WebGPU diagnostic sky matrix', () => {
+    for (const presetName of getRequiredPresetNames()) {
+      const resolved = resolveDiagnosticSkyPreset(`?renderer=webgpu&diagnostic=1&konveyorSkyPreset=${presetName}`);
+      const state = createSkyFogDiagnosticState({ presetName: resolved.presetName });
+
+      expect(resolved).toEqual({
+        requestedPresetName: presetName,
+        presetName,
+        fallbackReason: null,
+      });
+      expect(state.presetName).toBe(presetName);
+      expect(state.source).toBe('HosekWilkieSky.cpu-lut');
+      expect(state.fogNear).toBeLessThan(state.fogFar);
+    }
+  });
+
+  it('falls back to dusk for unknown diagnostic sky presets', () => {
+    const resolved = resolveDiagnosticSkyPreset('?renderer=webgpu&diagnostic=1&konveyorSkyPreset=not-a-sky');
+    const state = createSkyFogDiagnosticState({ presetName: resolved.presetName });
+
+    expect(resolved).toEqual({
+      requestedPresetName: 'not-a-sky',
+      presetName: 'dusk',
+      fallbackReason: 'unknown-preset',
+    });
+    expect(state.presetName).toBe('dusk');
   });
 
   it('drives the diagnostic rock rim from the CPU sun color packet', () => {
