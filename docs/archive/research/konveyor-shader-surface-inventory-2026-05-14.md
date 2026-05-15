@@ -31,13 +31,15 @@ Reusable WebGPU factory-supply helpers now live beside the material islands:
 tree/rock, effects, grass, water, terrain, sheep, and Kiln impostor seams each
 have a dedicated `konveyor*NodeMaterialFactories.js` helper. They accept the
 already loaded WebGPU/TSL module object instead of importing `three/webgpu`,
-and the diagnostic harness now consumes them for material proofs instead of
-carrying that factory glue inline.
+and `js/konveyorNodeMaterialFactorySuite.js` now assembles them with atmosphere
+and sheep-part factories into one grouped factory surface. The diagnostic
+harness now consumes that suite for material proofs instead of carrying that
+factory glue inline.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, and
 `GrassSystem` is now loaded by the async grass creation paths. The default
 WebGL sun/grass behavior remains intact while the critical `main` bundle has
 headroom for later seams (`mainKB=569`, `threeKB=618`,
-`webgpuDiagnostic=53 KB`, `konveyorMaterialAdapter=3 KB`,
+`webgpuDiagnostic=54 KB`, `konveyorMaterialAdapter=3 KB`,
 `GrassSystem=35 KB`, `AnimeWater=9 KB`, `PortalEffect=5 KB`,
 `CorralZapEffect=5 KB`) without regenerating the
 refactor-baseline bundle ratchet.

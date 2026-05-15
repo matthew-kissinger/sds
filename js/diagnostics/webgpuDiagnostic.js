@@ -13,18 +13,7 @@ import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 import {
     createKonveyorEffectMaterial,
 } from '../effects/konveyorEffectMaterialAdapter.js';
-import { createKonveyorEffectNodeMaterialFactories } from '../effects/konveyorEffectNodeMaterialFactories.js';
-import { createKonveyorSkyFogNodeMaterial } from '../atmosphere/konveyorSkyNodeMaterial.js';
-import { createKonveyorCloudLayerNodeMaterial } from '../atmosphere/konveyorCloudNodeMaterial.js';
-import { createKonveyorGrassNodeMaterialFactories } from '../world/konveyorGrassNodeMaterialFactories.js';
-import { createKonveyorTerrainNodeMaterialFactories } from '../world/konveyorTerrainNodeMaterialFactories.js';
-import { createKonveyorTreeRockNodeMaterialFactories } from '../world/konveyorTreeRockNodeMaterialFactories.js';
-import { createKonveyorWaterNodeMaterialFactories } from '../water/konveyorWaterNodeMaterialFactories.js';
-import {
-    createKonveyorSheepPartNodeMaterial,
-} from '../konveyorSheepNodeMaterial.js';
-import { createKonveyorSheepNodeMaterialFactories } from '../konveyorSheepNodeMaterialFactories.js';
-import { createKonveyorImpostorNodeMaterialFactories } from '../konveyorImpostorNodeMaterialFactories.js';
+import { createKonveyorNodeMaterialFactorySuite } from '../konveyorNodeMaterialFactorySuite.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -604,6 +593,7 @@ export async function bootWebGpuDiagnostic() {
         AmbientLight,
         DirectionalLight,
         AdditiveBlending,
+        BackSide,
         DoubleSide,
         Group,
         Box3,
@@ -627,27 +617,38 @@ export async function bootWebGpuDiagnostic() {
         MeshLambertNodeMaterial,
         MeshStandardNodeMaterial,
         AdditiveBlending,
+        BackSide,
         DoubleSide,
         TSL,
     };
-    const effectFactories = createKonveyorEffectNodeMaterialFactories(webGpuModules);
-    const treeRockFactories = createKonveyorTreeRockNodeMaterialFactories(webGpuModules, {
-        treeLeaf,
-        rockRim,
+    const nodeMaterialFactories = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+        skyFog,
+        treeRock: {
+            treeLeaf,
+            rockRim,
+        },
+        grass: {
+            meadowQuad,
+            grassBlade,
+        },
+        water: {
+            fogColor: skyFog.fogColor,
+            sunColor: skyFog.sunColor,
+        },
+        terrain: {
+            fogColor: skyFog.fogColor,
+        },
     });
-    const grassFactories = createKonveyorGrassNodeMaterialFactories(webGpuModules, {
-        meadowQuad,
-        grassBlade,
-    });
-    const waterFactories = createKonveyorWaterNodeMaterialFactories(webGpuModules, {
-        fogColor: skyFog.fogColor,
-        sunColor: skyFog.sunColor,
-    });
-    const terrainFactories = createKonveyorTerrainNodeMaterialFactories(webGpuModules, {
-        fogColor: skyFog.fogColor,
-    });
-    const sheepFactories = createKonveyorSheepNodeMaterialFactories(webGpuModules);
-    const impostorFactories = createKonveyorImpostorNodeMaterialFactories(webGpuModules);
+    const {
+        atmosphere: atmosphereFactories,
+        effects: effectFactories,
+        treeRock: treeRockFactories,
+        grass: grassFactories,
+        water: waterFactories,
+        terrain: terrainFactories,
+        sheep: sheepFactories,
+        impostor: impostorFactories,
+    } = nodeMaterialFactories;
 
     const canvas = document.createElement('canvas');
     container.appendChild(canvas);
@@ -686,7 +687,7 @@ export async function bootWebGpuDiagnostic() {
 
     const skyFogBackdrop = new Mesh(
         new PlaneGeometry(7.5, 4.25, 1, 1),
-        createKonveyorSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog)
+        atmosphereFactories.createSkyDomeMaterial().material
     );
     skyFogBackdrop.position.set(0, 0.05, -1.65);
     skyFogBackdrop.renderOrder = -10;
@@ -818,8 +819,8 @@ export async function bootWebGpuDiagnostic() {
 
     const sheepGroup = new Group();
     const sheepWoolMaterial = sheepFactories.createSheepMaterial(sheepWool);
-    const sheepFaceMaterial = createKonveyorSheepPartNodeMaterial({ MeshStandardNodeMaterial, TSL }, 'konveyor-node-sheep-face', sheepWool.faceColor);
-    const sheepHoofMaterial = createKonveyorSheepPartNodeMaterial({ MeshStandardNodeMaterial, TSL }, 'konveyor-node-sheep-hoof', sheepWool.hoofColor);
+    const sheepFaceMaterial = sheepFactories.createSheepPartMaterial('konveyor-node-sheep-face', sheepWool.faceColor);
+    const sheepHoofMaterial = sheepFactories.createSheepPartMaterial('konveyor-node-sheep-hoof', sheepWool.hoofColor);
     const sheepBody = new Mesh(new SphereGeometry(0.36, 18, 12), sheepWoolMaterial);
     sheepBody.scale.set(1.2, 0.82, 1.35);
     sheepBody.position.set(0, 0.22, 0);
@@ -866,7 +867,7 @@ export async function bootWebGpuDiagnostic() {
 
     const cloudPlane = new Mesh(
         new PlaneGeometry(2.4, 0.65, 1, 1),
-        createKonveyorCloudLayerNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL })
+        atmosphereFactories.createCloudLayerMaterial().material
     );
     cloudPlane.position.set(0.15, 1.05, 0.05);
     scene.add(cloudPlane);

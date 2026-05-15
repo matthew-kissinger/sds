@@ -235,9 +235,12 @@ WebGPU now has a diagnostic island, not a production renderer:
   `three/webgpu` into the default production bundle. Tree/rock, effects,
   grass, water, terrain, sheep, and Kiln impostor factory glue live in
   dedicated `konveyor*NodeMaterialFactories.js` modules that accept an
-  already-loaded WebGPU/TSL module object. The diagnostic harness now consumes
-  those helpers instead of owning the material mapping inline, while the
-  fail-closed adapter flags still require explicit factories.
+  already-loaded WebGPU/TSL module object. `js/konveyorNodeMaterialFactorySuite.js`
+  now assembles those helpers plus atmosphere and sheep-part factories from the
+  supplied module object; the suite does not statically import `three/webgpu`.
+  The diagnostic harness now consumes that suite instead of owning the material
+  mapping inline, while the fail-closed adapter flags still require explicit
+  factories.
 - The production `SunBillboard` implementation is now lazy-loaded as a
   scene-coupled chunk before normal scene body construction and scene swaps.
   This preserves the default WebGL sun disc while recovering main-bundle
@@ -246,7 +249,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
   bundle-size fixture. Current production build evidence: `mainKB=569`,
-  `threeKB=618`, `webgpuDiagnostic=53 KB`,
+  `threeKB=618`, `webgpuDiagnostic=54 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`, `AnimeWater=9 KB`,
   `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
@@ -416,6 +419,11 @@ Recommended order:
    remain deferred. The Kiln path now has a production-facing material factory
    seam, but per-frame tile selection, LOD wiring, and LOD0 color parity remain
    deferred.
+   The reusable WebGPU factory-suite proof now exists and the diagnostic boot
+   path consumes it. The next production-adjacent move should either supply that
+   suite through a controlled scene-bound proof while keeping `?renderer=webgpu`
+   fail-closed without `diagnostic=1`, or continue with the remaining visual
+   parity/perf gates for one material island.
    The sky path now has diagnostic preset screenshot parity, renderless scene
    fog/horizon proof, and scene-bound diagnostic WebGPU screenshots, but still
    needs full production-scene WebGPU screenshot parity before any default

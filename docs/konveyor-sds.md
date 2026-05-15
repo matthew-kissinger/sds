@@ -202,15 +202,19 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   for tree/rock, effects, grass, water, terrain, sheep, and Kiln impostors is
   now reusable through dedicated `konveyor*NodeMaterialFactories.js` helpers.
   Each helper accepts an already-loaded WebGPU/TSL module object, so none of
-  them statically import `three/webgpu` into the default production graph. The
-  diagnostic harness now consumes those helpers for its material proofs instead
+  them statically import `three/webgpu` into the default production graph.
+  `js/konveyorNodeMaterialFactorySuite.js` now assembles those helpers plus
+  atmosphere and sheep-part factories from a supplied module object, and
+  `tests/konveyor-node-material-factory-suite.spec.js` proves the grouped
+  factory surface without requiring the suite itself to import `three/webgpu`.
+  The diagnostic harness now consumes the suite for its material proofs instead
   of carrying local factory glue.
   Production
   `SunBillboard` is now a scene-coupled
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=53 KB`,
+  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=54 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
   `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`) for later
   production seams without regenerating the refactor-baseline bundle ratchet. A
