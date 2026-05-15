@@ -18,6 +18,9 @@ and the meadow-quad island now uses the production grass default colors,
 far-ring UV hash scale, and CPU sky/fog packet. Sun/portal now have a
 production-facing effect material adapter behind
 `?renderer=webgpu&konveyorEffects=1` plus explicit factories.
+Production `SunBillboard` is also scene-coupled and lazy-loaded, so the default
+WebGL sun disc remains intact while the critical `main` bundle has headroom for
+later seams (`mainKB=574`, `threeKB=603`).
 A production-facing sky-dome atmosphere seam now exists: `HosekWilkieSky` can
 receive an injected material factory, and the adapter keeps that factory behind
 `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit sky factory. The
@@ -86,7 +89,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 
 | Order | Surface | File | Current role | WebGPU risk | Migration shape | Gate |
 |---:|---|---|---|---|---|---|
-| 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. Production-facing material creation can now route through `?renderer=webgpu&konveyorEffects=1` plus explicit factories; default WebGL still uses the existing `ShaderMaterial`. | Diagnostic island screenshot/probe, then default smoke. |
+| 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction; lazy-loaded as a scene-coupled production chunk. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. Production-facing material creation can now route through `?renderer=webgpu&konveyorEffects=1` plus explicit factories; default WebGL still uses the existing `ShaderMaterial` after the scene-coupled dynamic import. | Diagnostic island screenshot/probe, then default smoke. |
 | 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. Production-facing ring material creation can now route through the same effect adapter with explicit factories; default WebGL still uses the existing `ShaderMaterial`. | Open Country objective visual screenshot plus completion smoke. |
 | 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | Diagnostic cloud-plane TSL material now covers value-noise/fbm mask, sun tint, coverage, footprint fade, and time input. Production wiring still needs sky preset screenshots and fog/horizon integration. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
 | 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet. `HosekWilkieSky` can receive an injected material factory, and the adapter can route that factory through `?renderer=webgpu&konveyorAtmosphere=1`, but it still needs a real TSL sky material, analytic parity, preset screenshots, and fog-consumer proof before production WebGPU sky coverage is claimed. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
@@ -95,7 +98,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 | 7 | Grass blades | `js/GrassSystem.js`, `js/shaders/grass/*.glsl` | Instanced blade geometry, wind, interaction, LOD fade, fake SSS, manual fog. | Very high. It owns interaction feel and high-count perf. | Diagnostic grass-blade TSL material now covers production default gradient colors, analytic wind/gust/flutter displacement, alpha hash, sky/fog handoff, and a smooth opacity proxy using `grassFadeStart`/`grassFadeEnd`. Production stochastic blade dither, interaction bending, instancing, and compute/trample experiments remain deferred. | Perf, latency, visual, mobile profile, interaction smoke. |
 | 8 | Sheep instancing | `js/OptimizedSheep.js`, `js/shaders/sheep/*.glsl` | Instanced sheep geometry, animation attributes, vertex colors, manual fog. | Very high. It touches core gameplay scale and animation feel. | Diagnostic sheep-wool TSL material now covers toon/wool colors, procedural wool displacement, rim/SSS terms, and sky/fog handoff. Production `InstancedMesh`, `instanceData`, `instanceAnimation`, `vertexId`, terrain grounding, and high-count animation remain deferred. | Sim fixtures unchanged, smoke, perf high-count modes. |
 | 9 | Kiln tree impostors | `js/kiln-impostor-material.js` | Atlas-sampled tree impostors with relighting, alpha hash, fog, parallax/depth scaffolding. | Very high. It is asset-pipeline coupled and must match LOD0 color. | Diagnostic one-species TSL island now fetches the `tree1` sidecar plus albedo/normal/depth atlases, derives a diagnostic view tile triad from sidecar angles, blends three atlas tiles with premultiplied alpha, relights from the normal aux layer, and samples the depth aux layer as a diagnostic shading proxy. Per-frame production tile selection, parallax, depth discard, production LOD, and LOD color matching remain deferred. | LOD color-match artifacts, tree visibility, perf, screenshots. |
-| 10 | Procedural mountains | `js/ProceduralMountains.js`, `js/shaders/proceduralMountainsShader.js` | Inactive standalone horizon ring. `TerrainBuilder.addMountains()` returns no meshes. | Low as a blocker, but misleading as migration scope. | Do not port now. Delete or re-scope when a real horizon ring is approved. | None until reactivated. |
+| 10 | Procedural mountains | `js/ProceduralMountains.js`, `js/shaders/proceduralMountainsShader.js` | Inactive standalone horizon ring. `TerrainBuilder.addMountains()` returns no meshes and no longer imports this class. | Low as a blocker, but misleading as migration scope. | Do not port now. Delete or re-scope when a real horizon ring is approved. | None until reactivated. |
 
 ## Active onBeforeCompile Patch Chains
 
@@ -181,6 +184,10 @@ comments:
   when `renderer=webgpu&konveyorEffects=1` is present and explicit effect
   factories are supplied; otherwise the existing WebGL `ShaderMaterial` paths
   stay untouched.
+- `SunBillboard` itself is now loaded through a scene-coupled dynamic import.
+  The default WebGL effect remains present before normal scene body construction
+  and after scene swaps, while the build emits a separate sun-billboard chunk
+  and keeps the current default bundle at `mainKB=574` / `threeKB=603`.
 
 ## Dormant Or Supporting Surfaces
 
@@ -192,6 +199,9 @@ comments:
 - `tools/bake-trees/bake.html` strips EZ-Tree runtime `onBeforeCompile`
   callbacks before export. That is asset-pipeline hygiene, not a runtime
   WebGPU surface.
+- `js/ProceduralMountains.js` is still dormant and is no longer imported by
+  `TerrainBuilder`; removing that import is scope cleanup, not bundle-headroom
+  evidence.
 
 ## Recommended Migration Order
 

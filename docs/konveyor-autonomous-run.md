@@ -141,6 +141,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   routes the already-proved diagnostic sun billboard and portal ring node
   materials through the same fail-closed pattern while leaving default WebGL
   `ShaderMaterial` creation untouched.
+- The production `SunBillboard` implementation is now lazy-loaded as a
+  scene-coupled chunk before normal scene body construction and scene swaps.
+  This preserves the default WebGL sun disc while recovering main-bundle
+  headroom for later production seams. Current production build evidence:
+  `mainKB=574`, `threeKB=603`.
 - A production-facing sky-dome atmosphere material seam now exists:
   `HosekWilkieSky` can receive an injected material factory, and
   `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory
@@ -226,9 +231,11 @@ Recommended order:
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
    says otherwise. The sun/portal effect material adapter and sky-dome
    atmosphere material seam are now production-facing hooks, but both are still
-   flag-gated and factory supplied. The sky path still needs a real TSL sky
-   material plus preset screenshot parity before any default production boot
-   claim; next move to a smaller shader/material island or the measured
+   flag-gated and factory supplied. Production `SunBillboard` itself is now
+   scene-coupled and lazy-loaded, which creates bundle room for the next seam
+   without changing default WebGL behavior. The sky path still needs a real TSL
+   sky material plus preset screenshot parity before any default production
+   boot claim; next move to a smaller shader/material island or the measured
    rock-generation extraction before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.

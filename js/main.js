@@ -23,7 +23,6 @@ import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
 import { Heightfield } from '../shared/terrain/Heightfield.js';
 import { Atmosphere } from './atmosphere/index.js';
-import { SunBillboard } from './effects/SunBillboard.js';
 import { updateSceneMetadata } from './utils/seo.js';
 // Cycle 17 Phase 7: local-multiplayer modules dynamic-imported in
 // startLocalGame() so they only ship when the user actually picks Local Mode.
@@ -152,11 +151,7 @@ class SheepDogSimulation {
         });
         this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
 
-        // Cycle 7 Phase 2e: visible sun disc anchors the water sun-glint
-        // perceptually. Position + color are driven from the atmosphere each
-        // frame in animate().
-        this._sunBillboard = new SunBillboard(this.sceneManager.getScene());
-        probeLog('sunBillboard.created', { initialPreset });
+        this._sunBillboard = null;
 
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile, this.currentScene);
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
@@ -460,6 +455,7 @@ class SheepDogSimulation {
 
             // Per-scene construction. Cycle 11 Phase 1 extracted this body into
             // buildSceneBody so rebuildScene() can reuse it.
+            await this.createSunBillboard(this.currentScene.sky?.preset ?? 'pastoral-noon');
             await buildSceneBody(this, logStep);
 
             // First-run-only: setup persistent input listeners (mouse wheel).
@@ -654,7 +650,7 @@ class SheepDogSimulation {
         });
         this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
 
-        this._sunBillboard = new SunBillboard(this.sceneManager.getScene());
+        await this.createSunBillboard(initialPreset);
 
         // 3. Repoint terrainBuilder at the new sceneDef. The instance persists
         //    so its GLB models cache (modelsLoaded) is preserved.
@@ -677,6 +673,12 @@ class SheepDogSimulation {
         }
 
         this._sceneRebuilding = false;
+    }
+
+    async createSunBillboard(initialPreset) {
+        const { SunBillboard } = await import('./effects/SunBillboard.js');
+        this._sunBillboard = new SunBillboard(this.sceneManager.getScene());
+        probeLog('sunBillboard.created', { initialPreset });
     }
 
     /**

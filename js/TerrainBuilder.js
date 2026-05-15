@@ -7,7 +7,6 @@ import { GrassSystem } from './GrassSystem.js';
 import { loadKilnImpostor } from './kiln-impostor-material.js';
 import { getOccluderUniforms, patchMaterialOccluder } from './shaders/OccluderFadePatch.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
-import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
 import { TIER_PRESETS } from './HardwareTier.js';
 
