@@ -91,10 +91,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   renderless Hosek-Wilkie CPU LUT cost. Current local evidence keeps that LUT
   as the CPU-visible atmosphere contract, not a measured bottleneck; a GPU LUT
   remains a production-profile-driven candidate. A production-facing
-  sky-dome atmosphere material seam now exists: `HosekWilkieSky` can receive
-  an injected material factory, and the Konveyor adapter keeps that factory
-  behind `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit WebGPU sky
-  factory. Default `HosekWilkieSky` still creates the existing WebGL
+  sky-dome atmosphere material seam now exists: `Atmosphere` can forward an
+  explicit `skyFactory` to `HosekWilkieSky`, and the Konveyor adapter keeps
+  that factory behind `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit
+  WebGPU sky factory. Default `HosekWilkieSky` still creates the existing WebGL
   `ShaderMaterial`, and the CPU LUT plus sky/fog packet stay authoritative. A
   production-facing
   sun/portal effect material adapter now exists behind

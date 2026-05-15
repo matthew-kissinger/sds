@@ -149,7 +149,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   headroom for later production seams. Current production build evidence:
   `mainKB=574`, `threeKB=603`.
 - A production-facing sky-dome atmosphere material seam now exists:
-  `HosekWilkieSky` can receive an injected material factory, and
+  `Atmosphere` can forward an explicit `skyFactory` to `HosekWilkieSky`, and
   `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory
   behind `?renderer=webgpu&konveyorAtmosphere=1`. The default
   `HosekWilkieSky` path still creates the existing WebGL `ShaderMaterial`, and
@@ -233,7 +233,10 @@ Recommended order:
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
    says otherwise. The sun/portal effect material adapter and sky-dome
    atmosphere material seam are now production-facing hooks, but both are still
-   flag-gated and factory supplied. Production `SunBillboard` itself is now
+   flag-gated and factory supplied. The atmosphere seam now reaches the
+   `Atmosphere` orchestrator through an explicit `skyFactory`; it still does
+   not provide a real TSL sky material or alter default WebGL. Production
+   `SunBillboard` itself is now
    scene-coupled and lazy-loaded, which creates bundle room for the next seam
    without changing default WebGL behavior. The sky path still needs a real TSL
    sky material plus preset screenshot parity before any default production

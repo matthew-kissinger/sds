@@ -50,6 +50,7 @@ export class Atmosphere {
    * @param {boolean} [options.attachSunLight=false] Add directional light to scene.
    * @param {boolean} [options.attachFog=true]    Set scene.fog.
    * @param {Object} [options.sunOptions]         Forwarded to SunSystem.
+   * @param {Function} [options.skyFactory]       Forwarded to HosekWilkieSky.
    */
   constructor(scene, options = {}) {
     if (!scene) {
@@ -64,7 +65,9 @@ export class Atmosphere {
     const attachSunLight = options.attachSunLight === true;
     const attachFog = options.attachFog !== false;
 
-    this.sky = new HosekWilkieSky();
+    this.sky = new HosekWilkieSky({
+      factory: options.skyFactory,
+    });
     if (attachSky) {
       scene.add(this.sky.getMesh());
     }

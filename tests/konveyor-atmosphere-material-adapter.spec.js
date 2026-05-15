@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 
+import { Atmosphere } from '../js/atmosphere/Atmosphere.js';
 import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
 import { SKY_PRESETS } from '../js/atmosphere/skyPresets.js';
 import {
@@ -74,6 +76,36 @@ describe('konveyor atmosphere material adapter', () => {
       expect(sky.uniforms.uTurbidity.value).toBe(SKY_PRESETS.dusk.turbidity);
     } finally {
       sky.dispose();
+    }
+  });
+
+  it('lets Atmosphere forward an explicit sky material factory without changing defaults', () => {
+    const contexts = [];
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, {
+      enableClouds: false,
+      attachFog: false,
+      skyFactory: (context) =>
+        createKonveyorAtmosphereMaterial('sky-dome', 'createSkyDomeMaterial', {
+          createDefaultMaterial: () => defaultMaterial('default-sky'),
+          search: '?renderer=webgpu&konveyorAtmosphere=1',
+          factories: {
+            createSkyDomeMaterial: (factoryContext) => {
+              contexts.push(factoryContext);
+              return defaultMaterial('konveyor-atmosphere-sky');
+            },
+          },
+          context,
+        }),
+    });
+
+    try {
+      expect(atmo.sky.material.name).toBe('konveyor-atmosphere-sky');
+      expect(contexts).toHaveLength(1);
+      expect(contexts[0].uniforms).toBe(atmo.sky.uniforms);
+      expect(scene.children).toContain(atmo.sky.getMesh());
+    } finally {
+      atmo.dispose();
     }
   });
 
