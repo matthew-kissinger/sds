@@ -52,8 +52,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   `window.__sdsRendererMode`: `?renderer=webgpu` without `diagnostic=1` remains
   effective WebGL with `fallbackReason: "diagnostic-flag-required"`. Current
   diagnostic islands cover the sun
-  billboard, portal ring, meadow quad, cloud plane, and a renderless sky/fog
-  CPU sample packet from `js/atmosphere/skyFogSamplePacket.js`, plus the
+  billboard, portal ring, cloud plane, and a renderless sky/fog
+  CPU sample packet from `js/atmosphere/skyFogSamplePacket.js`. The meadow
+  quad diagnostic now uses production default grass colors, the far-ring UV
+  hash scale, and the same CPU sky/fog input. The diagnostic also covers the
   rock-rim fresnel formula, a tree-leaf wind/alpha/occluder proxy, and a
   diagnostic anime-water material covering palette, shoreline bands, foam,
   ripples, sun glint, fog input, and a non-filtered float texture loaded from

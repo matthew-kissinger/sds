@@ -13,9 +13,11 @@ plus three patch chains that mutate Three's generated GLSL through
 The safest first production-adjacent island was `SunBillboard`: it is small,
 cosmetic, has no scene data dependency, and maps cleanly to a
 `MeshBasicNodeMaterial`/TSL expression. The sun billboard, portal ring,
-meadow-quad, cloud-plane, and sky/fog formulas are now ported inside the
-diagnostic island, and sun/portal now have a production-facing effect material
-adapter behind `?renderer=webgpu&konveyorEffects=1` plus explicit factories.
+cloud-plane, and sky/fog formulas are now ported inside the diagnostic island,
+and the meadow-quad island now uses the production grass default colors,
+far-ring UV hash scale, and CPU sky/fog packet. Sun/portal now have a
+production-facing effect material adapter behind
+`?renderer=webgpu&konveyorEffects=1` plus explicit factories.
 The rock-rim fresnel formula is also ported as a
 diagnostic `MeshStandardNodeMaterial` island driven by the CPU sky/fog sun
 color packet. A diagnostic tree-leaf island now covers wind displacement,
@@ -90,7 +92,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 |---|---|---|---|---|
 | Tree wind plus occluder fade | `js/world/shaderPatches.js`, `js/shaders/OccluderFadePatch.js` | Tree GLB leaf `MeshStandardMaterial` instances. | Adds wind sway, alpha hash, and camera-to-dog dither fade. | Diagnostic leaf TSL material now proves wind, alpha-hash posture, and occluder fade inputs. Production replacement still needs GLB material ownership or a normalization pass. Cannot carry `onBeforeCompile` into WebGPU. |
 | Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Formula now exists in the diagnostic TSL harness as `MeshStandardNodeMaterial`; production wiring still needs GLB material ownership and replacement strategy for the current patch chain. |
-| Meadow quad tint | `js/GrassSystem.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists in the diagnostic TSL harness as `MeshLambertNodeMaterial`. Production wiring still needs fog and far-ring screenshots. |
+| Meadow quad tint | `js/GrassSystem.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists in the diagnostic TSL harness as `MeshLambertNodeMaterial` using production default grass colors, the same 5-cell UV hash scale, and CPU sky/fog input. Production wiring and far-ring scene screenshots remain deferred. |
 
 ## GLB Material Ownership Evidence
 
@@ -197,9 +199,11 @@ comments:
    production generator. Keep
    production `InstancedMesh2` on the WebGL path for now; move to another
    smaller material island or the measured rock-generation extraction while
-   keeping current WebGL `onBeforeCompile` patches as default. The sun/portal
-   effect adapter is now available for the lowest-risk production-adjacent
-   wiring proof, but it is not yet a production scene WebGPU boot.
+   keeping current WebGL `onBeforeCompile` patches as default. The meadow-quad
+   diagnostic now records production default grass colors and CPU sky/fog input,
+   but it is still diagnostic-only. The sun/portal effect adapter is now
+   available for the lowest-risk production-adjacent wiring proof, but it is
+   not yet a production scene WebGPU boot.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Keep water production wiring deferred until the diagnostic heightfield

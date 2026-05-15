@@ -6,6 +6,7 @@ import {
   createAnimeWaterDiagnosticState,
   createGrassBladeDiagnosticState,
   createKilnImpostorDiagnosticState,
+  createMeadowQuadDiagnosticState,
   createRockRimDiagnosticState,
   createSheepWoolDiagnosticState,
   createSkyFogDiagnosticState,
@@ -90,6 +91,23 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(rockRim.sunColorSource).toBe('skyFog.sunColor');
     expect(rockRim.rimStrength).toBeGreaterThan(0);
     expect(rockRim.rimPower).toBeGreaterThan(1);
+  });
+
+  it('keeps the meadow quad diagnostic tied to production far-ring color and fog inputs', () => {
+    const skyFog = createSkyFogDiagnosticState();
+    const meadowQuad = createMeadowQuadDiagnosticState(skyFog);
+
+    expect(meadowQuad.source).toBe('GrassSystem.createMeadowQuadMaterial');
+    expect(meadowQuad.baseColor).toEqual([0.08, 0.28, 0.04]);
+    expect(meadowQuad.midColor).toEqual([0.18, 0.48, 0.12]);
+    expect(meadowQuad.tipColor).toEqual([0.55, 0.82, 0.30]);
+    expect(meadowQuad.uvCellsPerChunk).toBe(5.0);
+    expect(meadowQuad.noiseHashVector).toEqual([127.1, 311.7]);
+    expect(meadowQuad.noiseOctaves).toEqual([1, 2]);
+    expect(meadowQuad.fogColor).toBe(skyFog.fogColor);
+    expect(meadowQuad.fogNear).toBe(skyFog.fogNear);
+    expect(meadowQuad.fogFar).toBe(skyFog.fogFar);
+    expect(meadowQuad.farRingLod).toBe('meadow-quad');
   });
 
   it('keeps anime water diagnostic inputs tied to production palette and atmosphere packet', () => {

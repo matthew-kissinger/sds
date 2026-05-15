@@ -180,23 +180,27 @@ function createPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending,
     return material;
 }
 
-function createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }) {
-    const { dot, floor, fract, mix, sin, smoothstep, uv, vec2, vec3 } = TSL;
-    const baseColor = vec3(0.176, 0.345, 0.118);
-    const midColor = vec3(0.318, 0.565, 0.188);
-    const tipColor = vec3(0.643, 0.792, 0.337);
-    const muv = uv().mul(5.0);
-    const hashVector = vec2(127.1, 311.7);
+function createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, meadowQuad) {
+    const { dot, floor, fract, length, mix, positionView, sin, smoothstep, uv, vec2, vec3 } = TSL;
+    const baseColor = vec3(...meadowQuad.baseColor);
+    const midColor = vec3(...meadowQuad.midColor);
+    const tipColor = vec3(...meadowQuad.tipColor);
+    const muv = uv().mul(meadowQuad.uvCellsPerChunk);
+    const hashVector = vec2(...meadowQuad.noiseHashVector);
     const n1 = fract(sin(dot(floor(muv), hashVector)).mul(43758.5453));
     const n2 = fract(sin(dot(floor(muv.mul(2.0)), hashVector)).mul(43758.5453));
     const blend = mix(n1, n2, 0.5);
-
-    const material = new MeshLambertNodeMaterial();
-    material.colorNode = mix(
+    const meadowColor = mix(
         mix(baseColor, midColor, blend),
         tipColor,
         smoothstep(0.6, 0.95, blend)
     );
+    const fogBlend = smoothstep(meadowQuad.fogNear, meadowQuad.fogFar, length(positionView))
+        .mul(meadowQuad.fogStrength);
+
+    const material = new MeshLambertNodeMaterial();
+    material.name = 'konveyor-node-meadow-quad';
+    material.colorNode = mix(meadowColor, vec3(...meadowQuad.fogColor), fogBlend);
     material.side = DoubleSide;
     return material;
 }
@@ -268,6 +272,23 @@ export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticStat
         rimStrength: 0.48,
         rimPower: 2.0,
         sunColorSource: 'skyFog.sunColor',
+    };
+}
+
+export function createMeadowQuadDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
+    return {
+        source: 'GrassSystem.createMeadowQuadMaterial',
+        baseColor: [0.08, 0.28, 0.04],
+        midColor: [0.18, 0.48, 0.12],
+        tipColor: [0.55, 0.82, 0.30],
+        uvCellsPerChunk: 5.0,
+        noiseHashVector: [127.1, 311.7],
+        noiseOctaves: [1, 2],
+        fogColor: skyFog.fogColor,
+        fogNear: skyFog.fogNear,
+        fogFar: skyFog.fogFar,
+        fogStrength: 0.55,
+        farRingLod: 'meadow-quad',
     };
 }
 
@@ -873,6 +894,7 @@ function createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }) {
 export async function bootWebGpuDiagnostic() {
     const skyFog = createSkyFogDiagnosticState();
     const rockRim = createRockRimDiagnosticState(skyFog);
+    const meadowQuad = createMeadowQuadDiagnosticState(skyFog);
     const animeWater = createAnimeWaterDiagnosticState(skyFog);
     const terrainHeightfield = createTerrainHeightfieldDiagnosticState(skyFog);
     const treeLeaf = createTreeLeafDiagnosticState();
@@ -888,6 +910,7 @@ export async function bootWebGpuDiagnostic() {
         islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter'],
         skyFog,
         rockRim,
+        meadowQuad,
         animeWater,
         terrainHeightfield,
         treeLeaf,
@@ -1101,7 +1124,7 @@ export async function bootWebGpuDiagnostic() {
 
     const meadow = new Mesh(
         new PlaneGeometry(1.45, 0.8, 1, 1),
-        createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL })
+        createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, meadowQuad)
     );
     meadow.position.set(0.85, -0.75, 0.1);
     scene.add(meadow);

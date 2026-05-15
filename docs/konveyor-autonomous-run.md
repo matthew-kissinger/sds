@@ -75,8 +75,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   `fallbackReason: "diagnostic-flag-required"`.
 - [`archive/research/konveyor-shader-surface-inventory-2026-05-14.md`](archive/research/konveyor-shader-surface-inventory-2026-05-14.md)
   ranks the current GLSL and `onBeforeCompile` migration surface. The sun
-  billboard, portal ring, meadow-quad, cloud-plane, sky/fog, and anime-water formulas are
-  now ported inside the diagnostic island. A terrain-heightfield diagnostic
+  billboard, portal ring, cloud-plane, sky/fog, and anime-water formulas are
+  now ported inside the diagnostic island. The meadow-quad diagnostic now uses
+  production default grass colors, the far-ring UV hash scale, and CPU sky/fog
+  input. A terrain-heightfield diagnostic
   island now samples the real Rolling Hills heightfield texture for
   height-based ground color and fog input. The rock-rim fresnel formula is
   also ported as the first `onBeforeCompile` replacement island, and a
@@ -161,7 +163,10 @@ Recommended order:
    fog-color inputs, and a non-filtered float texture loaded from the real
    Rolling Hills heightfield. The terrain-heightfield diagnostic island reuses
    that texture for height-based ground color and fog input while deferring
-   production scene replacement. The grass-blade diagnostic island now covers
+   production scene replacement. The meadow-quad diagnostic now records the
+   production far-ring default colors, UV hash scale, and CPU sky/fog input
+   while leaving production far-ring wiring and scene screenshots deferred. The
+   grass-blade diagnostic island now covers
    production default gradient colors, analytic wind/gust/flutter displacement,
    alpha-hash posture, and sky/fog handoff while explicitly deferring
    interaction bending, distance fade, production instancing, and compute
