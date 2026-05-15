@@ -282,6 +282,26 @@ export class OptimizedSheepSystem {
                 vertexShader,
                 fragmentShader,
                 uniforms,
+                colors: {
+                    body: new THREE.Color(0xffffff),
+                    face: new THREE.Color(0.22, 0.20, 0.18),
+                    hoof: new THREE.Color(0.16, 0.16, 0.16),
+                },
+                lighting: {
+                    direction: new THREE.Vector3(0.3, 1.0, 0.5),
+                    rimColor: new THREE.Color(1.0, 1.0, 1.0),
+                    sssColor: new THREE.Color(1.0, 1.0, 0.98),
+                },
+                wool: {
+                    noiseScale: 0.62,
+                    displacementStrength: 0.045,
+                    breathingStrength: 0.012,
+                },
+                fog: {
+                    color: uniforms.fogColor.value.clone(),
+                    near: 18,
+                    far: 92,
+                },
                 material: {
                     vertexColors: true,
                     fog: false,

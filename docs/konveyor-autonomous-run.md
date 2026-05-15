@@ -193,10 +193,14 @@ WebGPU now has a diagnostic island, not a production renderer:
 - A production-facing `OptimizedSheep` material adapter now exists behind
   `?renderer=webgpu&konveyorSheep=1` and an explicit sheep material factory.
   It covers only `OptimizedSheepSystem.createOptimizedMaterial()` material
-  creation and lets a supplied factory own time/fog update controls. Default
-  WebGL sheep still uses the existing custom `ShaderMaterial` on the
-  production `InstancedMesh`; production instancing parity, animation
-  attributes, terrain grounding, multiplayer-safe visual parity, and high-count
+  creation and lets a supplied factory own time/fog update controls. The
+  reusable WebGPU sheep-wool node-material candidate now lives in
+  `js/konveyorSheepNodeMaterial.js`, and the adapter spec proves the flagged
+  production seam can route through it with sheep color, lighting, wool, fog,
+  material, and merged-geometry metadata. Default WebGL sheep still uses the
+  existing custom `ShaderMaterial` on the production `InstancedMesh`;
+  production instancing parity, animation attributes, full vertex-color part
+  parity, terrain grounding, multiplayer-safe visual parity, and high-count
   perf remain deferred.
 - A production-facing Kiln impostor material adapter now exists behind
   `?renderer=webgpu&konveyorImpostors=1` and an explicit impostor factory. It

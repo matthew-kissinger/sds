@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { MeshStandardNodeMaterial, TSL } from 'three/webgpu';
 
 import { OptimizedSheepSystem } from '../js/OptimizedSheep.js';
+import { createKonveyorSheepWoolNodeMaterial } from '../js/konveyorSheepNodeMaterial.js';
 import {
     createKonveyorSheepMaterial,
     shouldApplyKonveyorSheep,
@@ -68,6 +70,20 @@ describe('konveyor sheep material adapter', () => {
             expect(contexts[0].fragmentShader).toContain('vColor');
             expect(contexts[0].uniforms.time.value).toBe(0);
             expect(contexts[0].uniforms.globalAnimSpeed.value).toBe(1);
+            expect(contexts[0].colors.body.getHex()).toBe(0xffffff);
+            expect(contexts[0].colors.face.toArray()).toEqual([0.22, 0.20, 0.18]);
+            expect(contexts[0].colors.hoof.toArray()).toEqual([0.16, 0.16, 0.16]);
+            expect(contexts[0].lighting.direction.toArray()).toEqual([0.3, 1.0, 0.5]);
+            expect(contexts[0].lighting.rimColor.toArray()).toEqual([1.0, 1.0, 1.0]);
+            expect(contexts[0].lighting.sssColor.toArray()).toEqual([1.0, 1.0, 0.98]);
+            expect(contexts[0].wool).toEqual({
+                noiseScale: 0.62,
+                displacementStrength: 0.045,
+                breathingStrength: 0.012,
+            });
+            expect(contexts[0].fog.color.getHex()).toBe(0xcccccc);
+            expect(contexts[0].fog.near).toBe(18);
+            expect(contexts[0].fog.far).toBe(92);
             expect(contexts[0].material).toEqual({ vertexColors: true, fog: false });
             expect(contexts[0].geometry.vertexCount).toBeGreaterThan(0);
             expect(contexts[0].geometry.triangleCount).toBeGreaterThan(0);
@@ -75,6 +91,54 @@ describe('konveyor sheep material adapter', () => {
                 expect.arrayContaining(['position', 'normal', 'uv', 'color', 'vertexId'])
             );
             expect(contexts[0].geometry.instanceAttributes).toEqual(['instanceData', 'instanceAnimation']);
+        } finally {
+            sheep.dispose();
+        }
+    });
+
+    it('can route optimized sheep through the reusable WebGPU wool node material candidate', () => {
+        const contexts = [];
+        const scene = new THREE.Scene();
+        const sheep = new OptimizedSheepSystem(scene, 1, null, false, {
+            search: '?renderer=webgpu&konveyorSheep=1',
+            konveyorSheepFactories: {
+                createSheepMaterial: (context) => {
+                    contexts.push(context);
+                    return createKonveyorSheepWoolNodeMaterial(
+                        { MeshStandardNodeMaterial, TSL },
+                        {
+                            bodyColor: context.colors.body.toArray(),
+                            lightDirection: context.lighting.direction.toArray(),
+                            rimColor: context.lighting.rimColor.toArray(),
+                            sssColor: context.lighting.sssColor.toArray(),
+                            fogColor: context.fog.color.toArray(),
+                            fogNear: context.fog.near,
+                            fogFar: context.fog.far,
+                            woolNoiseScale: context.wool.noiseScale,
+                            woolDisplacementStrength: context.wool.displacementStrength,
+                            breathingStrength: context.wool.breathingStrength,
+                            vertexColors: context.material.vertexColors,
+                            fog: context.material.fog,
+                        }
+                    );
+                },
+            },
+        });
+
+        try {
+            expect(sheep.material.name).toBe('konveyor-node-sheep-wool');
+            expect(sheep.material.isMeshStandardNodeMaterial).toBe(true);
+            expect(sheep.material.isNodeMaterial).toBe(true);
+            expect(sheep.material.vertexColors).toBe(true);
+            expect(sheep.material.fog).toBe(false);
+            expect(sheep.material.colorNode).toBeTruthy();
+            expect(sheep.material.positionNode).toBeTruthy();
+            expect(sheep.instancedMesh.material).toBe(sheep.material);
+            expect(sheep.konveyorSheepMaterialSummary).toMatchObject({
+                kind: 'sheep-wool',
+                applied: true,
+            });
+            expect(contexts).toHaveLength(1);
         } finally {
             sheep.dispose();
         }

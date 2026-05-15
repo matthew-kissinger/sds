@@ -87,10 +87,14 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   terms, and sky/fog handoff. A production-facing `OptimizedSheep` material
   seam now exists behind `?renderer=webgpu&konveyorSheep=1` plus an explicit
   `createSheepMaterial` factory and optional update controls for time/fog
-  state, while default WebGL keeps the existing sheep `ShaderMaterial`.
-  Production sheep instancing parity, animation-attribute parity, terrain
-  grounding, multiplayer-safe visual parity, and high-count perf remain
-  deferred. A one-species Kiln impostor diagnostic material fetches the
+  state. The reusable WebGPU sheep-wool node-material candidate now lives in
+  `js/konveyorSheepNodeMaterial.js`, and the adapter spec proves the flagged
+  production seam can route through it with sheep color, lighting, wool, fog,
+  material, and merged-geometry metadata, while default WebGL keeps the
+  existing sheep `ShaderMaterial`. Production sheep instancing parity,
+  animation-attribute parity, full vertex-color part parity, terrain grounding,
+  multiplayer-safe visual parity, and high-count perf remain deferred. A
+  one-species Kiln impostor diagnostic material fetches the
   committed `tree1` sidecar plus albedo/normal/depth atlases, derives a
   diagnostic view tile triad from sidecar angles, blends three atlas tiles with
   premultiplied alpha/fog in a WebGPU node material, relights from the normal
@@ -168,8 +172,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   Default WebGL still uses the existing terrain `ShaderMaterial`. A
   production-facing `OptimizedSheep` material adapter now exists behind
   `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory. It can
-  hand time/fog update ownership to factory controls, while default WebGL
-  still uses the existing instanced sheep `ShaderMaterial`. A production-facing
+  hand time/fog update ownership to factory controls. The reusable WebGPU
+  sheep-wool node-material candidate now lives in
+  `js/konveyorSheepNodeMaterial.js`, and the adapter spec proves the flagged
+  production seam can route through it, while default WebGL still uses the
+  existing instanced sheep `ShaderMaterial`. A production-facing
   Kiln impostor material adapter now exists behind
   `?renderer=webgpu&konveyorImpostors=1` plus an explicit impostor factory. It
   can hand sun/ambient tint ownership to factory controls, while default WebGL
@@ -239,7 +246,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   existing grass `ShaderMaterial`.
   A production-facing sheep material adapter now exists behind
   `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory; default
-  WebGL still uses the existing optimized sheep shader and instancing path.
+  WebGL still uses the existing optimized sheep shader and instancing path. The
+  reusable sheep-wool WebGPU node-material candidate now lives in
+  `js/konveyorSheepNodeMaterial.js`, and the adapter spec proves the flagged
+  factory seam can route through it while full instancing and vertex-color part
+  parity remain deferred.
   A production-facing material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
   factories, and `TerrainBuilder.loadModels()` now invokes it after the default
