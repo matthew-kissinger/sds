@@ -25,8 +25,71 @@ const DIAGNOSTIC_KILN_IMPOSTOR_SOURCE = Object.freeze({
     basePath: '/assets/models/trees/tree1.imposter',
 });
 
+const DIAGNOSTIC_KILN_VIEW_DIRECTION = Object.freeze([1, 0.3, 1]);
+const DEFAULT_KILN_AZIMUTHS = Object.freeze([0, Math.PI * 0.5, Math.PI, Math.PI * 1.5]);
+const DEFAULT_KILN_ELEVATIONS = Object.freeze([
+    85 * Math.PI / 180,
+    60 * Math.PI / 180,
+    30 * Math.PI / 180,
+    5 * Math.PI / 180,
+]);
+
 function clamp01(value) {
     return Math.min(1, Math.max(0, value));
+}
+
+function normalizeVector3([x, y, z]) {
+    const length = Math.hypot(x, y, z);
+    if (length < 0.0001) return [1, 0, 0];
+    return [x / length, y / length, z / length];
+}
+
+function roundBlendWeight(value) {
+    return Number(value.toFixed(4));
+}
+
+export function computeKilnDiagnosticTileBlend(sidecar = {}, viewDirection = DIAGNOSTIC_KILN_VIEW_DIRECTION) {
+    const azimuths = sidecar.azimuths ?? DEFAULT_KILN_AZIMUTHS;
+    const tilesX = sidecar.tilesX ?? azimuths.length;
+    const elevations = sidecar.elevations ?? DEFAULT_KILN_ELEVATIONS;
+    const [x, y, z] = normalizeVector3(viewDirection);
+    const twoPi = Math.PI * 2;
+    let azimuth = Math.atan2(z, x);
+    if (azimuth < 0) azimuth += twoPi;
+    const elevation = Math.max(0, Math.min(Math.PI * 0.5, Math.asin(Math.max(-1, Math.min(1, y)))));
+    const azStep = twoPi / tilesX;
+    const azFloat = azimuth / azStep;
+    const azI = Math.floor(azFloat) % tilesX;
+    const azI2 = (azI + 1) % tilesX;
+    const u = azFloat - Math.floor(azFloat);
+
+    let elJ = 2;
+    let v = 1;
+    if (elevation >= elevations[0]) {
+        elJ = 0;
+        v = 0;
+    } else if (elevation >= elevations[1]) {
+        elJ = 0;
+        v = (elevations[0] - elevation) / (elevations[0] - elevations[1]);
+    } else if (elevation >= elevations[2]) {
+        elJ = 1;
+        v = (elevations[1] - elevation) / (elevations[1] - elevations[2]);
+    } else if (elevation >= elevations[3]) {
+        elJ = 2;
+        v = (elevations[2] - elevation) / (elevations[2] - elevations[3]);
+    }
+
+    if (u + v < 1) {
+        return {
+            tiles: [[azI, elJ], [azI2, elJ], [azI, elJ + 1]],
+            weights: [roundBlendWeight(1 - u - v), roundBlendWeight(u), roundBlendWeight(v)],
+        };
+    }
+
+    return {
+        tiles: [[azI2, elJ], [azI2, elJ + 1], [azI, elJ + 1]],
+        weights: [roundBlendWeight(1 - v), roundBlendWeight(u + v - 1), roundBlendWeight(1 - u)],
+    };
 }
 
 function computeDiagnosticShorelineMetrics({
@@ -324,6 +387,7 @@ export function createSheepWoolDiagnosticState(skyFog = createSkyFogDiagnosticSt
 }
 
 export function createKilnImpostorDiagnosticState(skyFog = createSkyFogDiagnosticState(), sidecar = null) {
+    const tileBlend = computeKilnDiagnosticTileBlend(sidecar ?? {});
     return {
         treeType: DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.treeType,
         basePath: DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath,
@@ -346,14 +410,15 @@ export function createKilnImpostorDiagnosticState(skyFog = createSkyFogDiagnosti
         sunColor: skyFog.sunColor,
         sunDirection: skyFog.sunDirection,
         ambientColor: [0.55, 0.55, 0.58],
-        tileBlendTiles: [[0, 0], [1, 0], [0, 1]],
-        tileBlendWeights: [0.58, 0.27, 0.15],
+        diagnosticViewDirection: [...DIAGNOSTIC_KILN_VIEW_DIRECTION],
+        tileBlendTiles: tileBlend.tiles,
+        tileBlendWeights: tileBlend.weights,
         fogColor: skyFog.fogColor,
         fogNear: skyFog.fogNear,
         fogFar: skyFog.fogFar,
         atlasSampling: 'three-tile-albedo-normal',
-        tileBlend: 'static-three-tile-premultiplied',
-        viewDrivenTileSelection: 'deferred',
+        tileBlend: 'view-derived-three-tile-premultiplied',
+        viewDrivenTileSelection: 'cpu-diagnostic-sample',
         relighting: 'single-tile-normal-aux',
         parallax: 'deferred',
         depthDiscard: 'deferred',
@@ -520,6 +585,7 @@ function syncDiagnosticHeightfieldState(target, heightfield) {
 }
 
 function syncKilnImpostorState(target, sidecar) {
+    const tileBlend = computeKilnDiagnosticTileBlend(sidecar, target.diagnosticViewDirection);
     target.tilesX = sidecar.tilesX;
     target.tilesY = sidecar.tilesY;
     target.tileSize = sidecar.tileSize;
@@ -530,6 +596,8 @@ function syncKilnImpostorState(target, sidecar) {
     target.normalSpace = sidecar.normalSpace;
     target.auxLayers = sidecar.auxLayers;
     target.edgeBleedPx = sidecar.edgeBleedPx;
+    target.tileBlendTiles = tileBlend.tiles;
+    target.tileBlendWeights = tileBlend.weights;
 }
 
 function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, albedoAtlas, normalAtlas) {

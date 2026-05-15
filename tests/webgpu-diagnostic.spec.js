@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 
 import {
+  computeKilnDiagnosticTileBlend,
   createAnimeWaterDiagnosticState,
   createGrassBladeDiagnosticState,
   createKilnImpostorDiagnosticState,
@@ -197,8 +198,11 @@ describe('webgpu diagnostic sky fog state', () => {
       normalSpace: 'capture-view',
       auxLayers: ['albedo', 'normal', 'depth'],
       edgeBleedPx: 2,
+      azimuths: [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5],
+      elevations: [85 * Math.PI / 180, 60 * Math.PI / 180, 30 * Math.PI / 180, 5 * Math.PI / 180],
     };
     const kiln = createKilnImpostorDiagnosticState(skyFog, sidecar);
+    const expectedBlend = computeKilnDiagnosticTileBlend(sidecar);
 
     expect(kiln.source).toBe('Kiln.impostor-sidecar-contract');
     expect(kiln.treeType).toBe('tree1');
@@ -213,16 +217,29 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(kiln.sunColor).toBe(skyFog.sunColor);
     expect(kiln.sunDirection).toBe(skyFog.sunDirection);
     expect(kiln.ambientColor).toHaveLength(3);
-    expect(kiln.tileBlendTiles).toEqual([[0, 0], [1, 0], [0, 1]]);
-    expect(kiln.tileBlendWeights).toEqual([0.58, 0.27, 0.15]);
+    expect(kiln.tileBlendTiles).toEqual(expectedBlend.tiles);
+    expect(kiln.tileBlendWeights).toEqual(expectedBlend.weights);
     expect(kiln.fogColor).toBe(skyFog.fogColor);
     expect(kiln.atlasSampling).toBe('three-tile-albedo-normal');
-    expect(kiln.tileBlend).toBe('static-three-tile-premultiplied');
-    expect(kiln.viewDrivenTileSelection).toBe('deferred');
+    expect(kiln.tileBlend).toBe('view-derived-three-tile-premultiplied');
+    expect(kiln.viewDrivenTileSelection).toBe('cpu-diagnostic-sample');
     expect(kiln.relighting).toBe('single-tile-normal-aux');
     expect(kiln.parallax).toBe('deferred');
     expect(kiln.depthDiscard).toBe('deferred');
     expect(kiln.productionLod).toBe('deferred');
+  });
+
+  it('derives the diagnostic kiln tile triad from sidecar azimuth and elevation rows', () => {
+    const blend = computeKilnDiagnosticTileBlend({
+      tilesX: 4,
+      elevations: [85 * Math.PI / 180, 60 * Math.PI / 180, 30 * Math.PI / 180, 5 * Math.PI / 180],
+    }, [1, 0.3, 1]);
+
+    expect(blend.tiles).toEqual([[1, 2], [1, 3], [0, 3]]);
+    expect(blend.weights[0]).toBeCloseTo(0.2791, 4);
+    expect(blend.weights[1]).toBeCloseTo(0.2209, 4);
+    expect(blend.weights[2]).toBe(0.5);
+    expect(blend.weights.reduce((sum, weight) => sum + weight, 0)).toBeCloseTo(1, 4);
   });
 });
 
