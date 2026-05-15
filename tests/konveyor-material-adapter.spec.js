@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { DoubleSide, MeshStandardNodeMaterial, TSL } from 'three/webgpu';
 
 import {
   applyKonveyorTreeRockMaterials,
@@ -7,6 +8,7 @@ import {
   shouldApplyKonveyorMaterials,
 } from '../js/world/konveyorMaterialAdapter.js';
 import { TerrainBuilder } from '../js/TerrainBuilder.js';
+import { createKonveyorTreeLeafNodeMaterial } from '../js/world/konveyorTreeLeafNodeMaterial.js';
 
 function mesh(materialName) {
   return {
@@ -93,6 +95,72 @@ describe('konveyor production material adapter', () => {
     expect(summary.ok).toBe(true);
     expect(builder.models.trees.tree1.children[0].material.name).toBe('konveyor-branches');
     expect(builder.models.rocks.rock1.children[0].material.name).toBe('konveyor-rock');
+  });
+
+  it('can route tree leaves through the reusable WebGPU node material candidate', () => {
+    const branchMaterial = new THREE.MeshBasicMaterial({ name: 'branches' });
+    const leafMaterial = new THREE.MeshBasicMaterial({ name: 'leaves' });
+    const rockMaterial = new THREE.MeshBasicMaterial({ name: '' });
+    leafMaterial.side = THREE.DoubleSide;
+    leafMaterial.transparent = false;
+    leafMaterial.depthWrite = true;
+    leafMaterial.depthTest = true;
+    leafMaterial.alphaHash = true;
+    leafMaterial.alphaTest = 0.08;
+
+    const tree = root({ isMesh: true, material: branchMaterial }, { isMesh: true, material: leafMaterial });
+    const rock = root({ isMesh: true, material: rockMaterial });
+
+    const summary = applyKonveyorTreeRockMaterials({
+      trees: { tree1: tree },
+      treesLod1: {},
+      rocks: { rock1: rock },
+      createTreeBranchMaterial: ({ previous }) => new THREE.MeshBasicMaterial({ name: `konveyor-${previous.name}` }),
+      createTreeLeafMaterial: ({ previous }) => createKonveyorTreeLeafNodeMaterial(
+        { MeshStandardNodeMaterial, DoubleSide, TSL },
+        {
+          baseColor: [0.18, 0.34, 0.12],
+          tipColor: [0.5, 0.68, 0.24],
+          windDirection: [0.7, 0.7],
+          windStrength: 0.72,
+          treeBaseY: -0.525,
+          treeTopY: 0.525,
+          occluderStrength: 0.55,
+          occluderPeak: 0.62,
+          occluderUv: [0.5, 0.42],
+          alphaHash: previous.alphaHash,
+          alphaTest: previous.alphaTest,
+          side: previous.side,
+          transparent: previous.transparent,
+          depthWrite: previous.depthWrite,
+          depthTest: previous.depthTest,
+        }
+      ),
+      createRockMaterial: () => new THREE.MeshBasicMaterial({ name: 'konveyor-rock' }),
+    });
+
+    const leaves = tree.children[1].material;
+    try {
+      expect(summary.ok).toBe(true);
+      expect(leaves.name).toBe('konveyor-node-leaves');
+      expect(leaves.isNodeMaterial).toBe(true);
+      expect(leaves.isMeshStandardNodeMaterial).toBe(true);
+      expect(leaves.side).toBe(THREE.DoubleSide);
+      expect(leaves.transparent).toBe(false);
+      expect(leaves.depthWrite).toBe(true);
+      expect(leaves.depthTest).toBe(true);
+      expect(leaves.alphaHash).toBe(true);
+      expect(leaves.alphaTest).toBe(0.08);
+      expect(leaves.colorNode).toBeTruthy();
+      expect(leaves.opacityNode).toBeTruthy();
+      expect(leaves.positionNode).toBeTruthy();
+    } finally {
+      branchMaterial.dispose();
+      leafMaterial.dispose();
+      rockMaterial.dispose();
+      tree.children.forEach((child) => child.material?.dispose?.());
+      rock.children.forEach((child) => child.material?.dispose?.());
+    }
   });
 
   it('wires TerrainBuilder model caches through the fail-closed material seam', async () => {
