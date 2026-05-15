@@ -35,6 +35,10 @@ diagnostic sheep-wool island now covers the production sheep
 toon/wool color contract, procedural wool noise displacement, rim/SSS lighting
 terms, and sky/fog handoff while recording `instanceData`,
 `instanceAnimation`, and `vertexId` as deferred production instancing inputs.
+`cycle36-validation/runtime/sky-fog-preset-matrix.json` now records a
+renderless CPU sky/fog packet for every shipped sky preset, which completes the
+analytic preset-color evidence needed before any production sky/fog WebGPU
+wiring. Preset screenshots remain a separate visual parity gate.
 A diagnostic Kiln impostor island now fetches the committed `tree1` sidecar and
 albedo/normal atlases, derives a diagnostic view tile triad from the sidecar
 azimuth/elevation rows, blends those tiles with premultiplied alpha in the
@@ -206,8 +210,9 @@ comments:
    but it is still diagnostic-only. The sun/portal effect adapter is now
    available for the lowest-risk production-adjacent wiring proof, but it is
    not yet a production scene WebGPU boot.
-2. Keep sky/fog production wiring behind parity evidence for analytic colors,
-   preset screenshots, and fog consumers.
+2. Keep sky/fog production wiring behind parity evidence for preset screenshots
+   and fog consumers. The renderless preset-color matrix now exists for all
+   shipped sky presets.
 3. Keep water production wiring deferred until the diagnostic heightfield
    `DataTexture` proof is expanded beyond Rolling Hills, then backed by
    Rolling Hills/Open Country scene screenshots.

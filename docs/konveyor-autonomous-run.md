@@ -145,6 +145,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   samples a renderless `HosekWilkieSky({ createRenderable: false })`, so the
   diagnostic path keeps CPU-visible horizon/sun/fog truth without allocating an
   extra sky dome or making the WebGPU sky shader the authority.
+- [`../cycle36-validation/runtime/sky-fog-preset-matrix.json`](../cycle36-validation/runtime/sky-fog-preset-matrix.json)
+  records renderless CPU sky/fog packets for all five shipped sky presets.
+  This covers analytic preset-color parity; preset screenshots and production
+  wiring remain separate gates.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
   is a Chrome 148 screenshot artifact for the diagnostic material islands.
 

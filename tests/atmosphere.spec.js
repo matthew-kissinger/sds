@@ -199,6 +199,23 @@ describe('HosekWilkieSky', () => {
     expect(packet.presetName).toBe('dusk');
     expect(packet.fogNear).toBeLessThan(packet.fogFar);
   });
+
+  it('creates renderless CPU-visible sky/fog packets for every required preset', () => {
+    for (const presetName of getRequiredPresetNames()) {
+      const packet = createSkyFogSamplePacket({ presetName });
+
+      expect(packet.source).toBe('HosekWilkieSky.cpu-lut');
+      expect(packet.cpuVisible).toBe(true);
+      expect(packet.presetName).toBe(presetName);
+      expect(packet.horizonColor).toHaveLength(3);
+      expect(packet.zenithColor).toHaveLength(3);
+      expect(packet.sunColor).toHaveLength(3);
+      expect(packet.sunDirection).toHaveLength(3);
+      expect(packet.fogColor).toEqual(
+        packet.horizonColor.map((value) => Number((value * packet.fogDarkenMultiplier).toFixed(4)))
+      );
+    }
+  });
 });
 
 describe('DayNightCycle', () => {

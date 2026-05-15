@@ -47,6 +47,13 @@ Hosek-Wilkie LUT. The Chrome diagnostic probe records
 `skyFog.fogNear/fogFar` in
 `cycle36-validation/runtime/webgpu-diagnostic-chrome.json`.
 
+`cycle36-validation/runtime/sky-fog-preset-matrix.json` records the same
+renderless packet for every required sky preset (`pastoral-noon`, `dusk`,
+`overcast`, `dawn`, and `golden-hour`) using
+`tools/konveyor-sky-fog-matrix.mjs`. This is analytic color parity evidence
+only; preset screenshots and production renderer wiring are still separate
+gates.
+
 ## Next Migration Shape
 
 Do not wire production WebGPU cloud or sky rendering until a diagnostic island
