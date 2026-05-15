@@ -79,6 +79,27 @@ describe('konveyor atmosphere material adapter', () => {
     }
   });
 
+  it('routes HosekWilkieSky through the shared atmosphere adapter when no override factory is supplied', () => {
+    const contexts = [];
+    const sky = new HosekWilkieSky({
+      search: '?renderer=webgpu&konveyorAtmosphere=1',
+      konveyorAtmosphereFactories: {
+        createSkyDomeMaterial: (factoryContext) => {
+          contexts.push(factoryContext);
+          return defaultMaterial('konveyor-direct-sky');
+        },
+      },
+    });
+
+    try {
+      expect(sky.material.name).toBe('konveyor-direct-sky');
+      expect(contexts).toHaveLength(1);
+      expect(contexts[0].uniforms).toBe(sky.uniforms);
+    } finally {
+      sky.dispose();
+    }
+  });
+
   it('lets Atmosphere forward an explicit sky material factory without changing defaults', () => {
     const contexts = [];
     const scene = new THREE.Scene();

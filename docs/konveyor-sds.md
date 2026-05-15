@@ -104,7 +104,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   still construct their existing WebGL `ShaderMaterial`s. Production
   `SunBillboard` is now a scene-coupled
   lazy chunk, preserving the default WebGL sun disc while recovering main
-  bundle headroom (`mainKB=574`, `threeKB=603`) for later production seams. A
+  bundle headroom (`mainKB=575`, `threeKB=603`) for later production seams. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed

@@ -4,6 +4,7 @@ import {
   hosekWilkieVertexShader,
 } from './skyShader.glsl.js';
 import { sunDirectionFromPreset } from './skyPresets.js';
+import { createKonveyorAtmosphereMaterial } from './konveyorAtmosphereMaterialAdapter.js';
 
 /**
  * Analytic sky-dome backend ported from Terror in the Jungle's
@@ -116,7 +117,12 @@ export class HosekWilkieSky {
         ? options.factory({
             uniforms: this.uniforms,
           })
-        : null;
+        : createKonveyorAtmosphereMaterial('sky-dome', 'createSkyDomeMaterial', {
+            createDefaultMaterial,
+            search: options.search,
+            factories: options.konveyorAtmosphereFactories,
+            context: { uniforms: this.uniforms },
+          });
       this.material = materialResult?.material ?? materialResult ?? createDefaultMaterial();
 
       this.geometry = new THREE.SphereGeometry(
