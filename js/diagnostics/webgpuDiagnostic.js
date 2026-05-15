@@ -15,6 +15,7 @@ import {
 } from '../effects/konveyorEffectMaterialAdapter.js';
 import { createKonveyorSkyFogNodeMaterial } from '../atmosphere/konveyorSkyNodeMaterial.js';
 import { createKonveyorCloudLayerNodeMaterial } from '../atmosphere/konveyorCloudNodeMaterial.js';
+import { createKonveyorMeadowQuadNodeMaterial } from '../world/konveyorMeadowQuadNodeMaterial.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -184,31 +185,6 @@ function createPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending,
     material.depthTest = true;
     material.side = DoubleSide;
     material.blending = AdditiveBlending;
-    return material;
-}
-
-function createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, meadowQuad) {
-    const { dot, floor, fract, length, mix, positionView, sin, smoothstep, uv, vec2, vec3 } = TSL;
-    const baseColor = vec3(...meadowQuad.baseColor);
-    const midColor = vec3(...meadowQuad.midColor);
-    const tipColor = vec3(...meadowQuad.tipColor);
-    const muv = uv().mul(meadowQuad.uvCellsPerChunk);
-    const hashVector = vec2(...meadowQuad.noiseHashVector);
-    const n1 = fract(sin(dot(floor(muv), hashVector)).mul(43758.5453));
-    const n2 = fract(sin(dot(floor(muv.mul(2.0)), hashVector)).mul(43758.5453));
-    const blend = mix(n1, n2, 0.5);
-    const meadowColor = mix(
-        mix(baseColor, midColor, blend),
-        tipColor,
-        smoothstep(0.6, 0.95, blend)
-    );
-    const fogBlend = smoothstep(meadowQuad.fogNear, meadowQuad.fogFar, length(positionView))
-        .mul(meadowQuad.fogStrength);
-
-    const material = new MeshLambertNodeMaterial();
-    material.name = 'konveyor-node-meadow-quad';
-    material.colorNode = mix(meadowColor, vec3(...meadowQuad.fogColor), fogBlend);
-    material.side = DoubleSide;
     return material;
 }
 
@@ -1132,7 +1108,7 @@ export async function bootWebGpuDiagnostic() {
 
     const meadow = new Mesh(
         new PlaneGeometry(1.45, 0.8, 1, 1),
-        createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, meadowQuad)
+        createKonveyorMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, meadowQuad)
     );
     meadow.position.set(0.85, -0.75, 0.1);
     scene.add(meadow);

@@ -57,10 +57,12 @@ The far-ring meadow quad now has a production-facing grass material adapter
 behind `?renderer=webgpu&konveyorGrass=1` plus an explicit meadow factory.
 Default WebGL still uses the existing `MeshLambertMaterial` procedural tint
 path, with the `USE_UV` shader define assigned on the material instance before
-compile. The same grass adapter now covers grass-blade material creation
-behind an explicit `createGrassBladeMaterial` factory with optional controls
-for interactor, time, fog, wind, and sun-direction updates; default WebGL still
-uses the existing grass `ShaderMaterial`.
+compile. The reusable WebGPU meadow-quad node-material candidate now lives in
+`js/world/konveyorMeadowQuadNodeMaterial.js`. The same grass adapter now covers
+grass-blade material creation behind an explicit `createGrassBladeMaterial`
+factory with optional controls for interactor, time, fog, wind, and
+sun-direction updates; default WebGL still uses the existing grass
+`ShaderMaterial`.
 Anime water now has a production-facing water material adapter behind
 `?renderer=webgpu&konveyorWater=1` plus an explicit factory. The seam can
 delegate time/sun updates to factory controls; default WebGL still uses the
@@ -187,7 +189,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 |---|---|---|---|---|
 | Tree wind plus occluder fade | `js/world/shaderPatches.js`, `js/shaders/OccluderFadePatch.js` | Tree GLB leaf `MeshStandardMaterial` instances. | Adds wind sway, alpha hash, and camera-to-dog dither fade. | Diagnostic leaf TSL material now proves wind, alpha-hash posture, and occluder fade inputs. Production replacement still needs GLB material ownership or a normalization pass. Cannot carry `onBeforeCompile` into WebGPU. |
 | Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Formula now exists in the diagnostic TSL harness as `MeshStandardNodeMaterial`; production wiring still needs GLB material ownership and replacement strategy for the current patch chain. |
-| Meadow quad tint | `js/GrassSystem.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists in the diagnostic TSL harness as `MeshLambertNodeMaterial` using production default grass colors, the same 5-cell UV hash scale, and CPU sky/fog input. Production-facing material creation can now route through `?renderer=webgpu&konveyorGrass=1` with an explicit factory; default WebGL still uses the existing `MeshLambertMaterial` procedural tint path. Far-ring scene screenshots remain deferred. |
+| Meadow quad tint | `js/GrassSystem.js`, `js/world/konveyorMeadowQuadNodeMaterial.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists as a reusable `MeshLambertNodeMaterial` factory using production default grass colors, the same 5-cell UV hash scale, and CPU sky/fog input. Production-facing material creation can now route through `?renderer=webgpu&konveyorGrass=1` with an explicit factory; default WebGL still uses the existing `MeshLambertMaterial` procedural tint path. Far-ring scene screenshots remain deferred. |
 
 ## GLB Material Ownership Evidence
 
