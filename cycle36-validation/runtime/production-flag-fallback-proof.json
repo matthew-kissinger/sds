@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T08:50:23.285Z",
+  "capturedAt": "2026-05-15T10:02:52.658Z",
   "contract": "konveyor-production-flag-fallback-proof",
   "baseUrl": "http://127.0.0.1:4173/",
   "screenshotDir": "cycle36-validation/runtime/production-flag-fallback-screenshots",
@@ -31,13 +31,13 @@
           "height": 720
         },
         "averageRgb": [
-          43.68,
-          51.15,
-          49.24
+          43.92,
+          51.49,
+          49.01
         ],
-        "averageLuma": 49.42,
-        "lumaRange": 135.43,
-        "coarseColorBuckets": 44,
+        "averageLuma": 49.7,
+        "lumaRange": 135.5,
+        "coarseColorBuckets": 42,
         "nonBlank": true
       },
       "rendererMode": {
@@ -53,7 +53,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 116,
-        "triangles": 4175206
+        "triangles": 4168570
       },
       "summaries": {
         "treeRockMaterial": {
@@ -103,13 +103,13 @@
           "height": 720
         },
         "averageRgb": [
-          43.54,
-          44.6,
-          42.68
+          43.37,
+          44.51,
+          42.66
         ],
-        "averageLuma": 44.24,
+        "averageLuma": 44.13,
         "lumaRange": 115.71,
-        "coarseColorBuckets": 70,
+        "coarseColorBuckets": 69,
         "nonBlank": true
       },
       "rendererMode": {
@@ -125,7 +125,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 91,
-        "triangles": 3756496
+        "triangles": 3764168
       },
       "summaries": {
         "treeRockMaterial": {
@@ -179,12 +179,12 @@
           "height": 720
         },
         "averageRgb": [
-          49.4,
-          53.65,
-          50.42
+          49.96,
+          54.13,
+          50.62
         ],
-        "averageLuma": 52.51,
-        "lumaRange": 127.64,
+        "averageLuma": 52.99,
+        "lumaRange": 128.43,
         "coarseColorBuckets": 59,
         "nonBlank": true
       },
@@ -201,7 +201,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 157,
-        "triangles": 3617283
+        "triangles": 3617395
       },
       "summaries": {
         "treeRockMaterial": {

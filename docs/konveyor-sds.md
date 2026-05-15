@@ -146,6 +146,15 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `Atmosphere` proof, checks stable scene-background pixels, confirms visible
   cloud-band pixels, and confirms Rolling Hills stays visually darker than the
   daytime scenes.
+  `cycle36-validation/runtime/production-atmosphere-parity-proof.json` now
+  captures real production WebGL scene screenshots for the same three scenes
+  and compares their atmosphere contract against the diagnostic WebGPU
+  screenshots. It proves production still uses default `HosekWilkieSky` and
+  `CloudLayer` shader materials, matches the shipped sky preset, linear fog
+  near/far, fog color, and cloud coverage, keeps clean console/page state, and
+  keeps upper-sky normalized RGB chroma within the diagnostic WebGPU capture
+  tolerance. This is production-scene atmosphere parity evidence for the shared
+  sky/fog contract, not a production WebGPU renderer boot claim.
   `cycle36-validation/runtime/material-island-visual-proof.json` now samples
   the same installed-Chrome scene screenshots, verifies the required diagnostic
   material-island list per scene, and checks visible color signatures for sun,
@@ -225,10 +234,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   an explicit `CloudLayer` factory under the same fail-closed flag, with
   coverage, edge fade, feature scale, time, wind, sun direction, and sun color
   driven through node uniform controls. Diagnostic sky-preset screenshots are
-  captured, the renderless scene fog/horizon contract is pinned, and
+  captured, the renderless scene fog/horizon contract is pinned,
   scene-bound diagnostic WebGPU screenshots plus material-island visual samples
-  now exist; full production-scene WebGPU screenshots and default production
-  wiring remain deferred. A
+  now exist, and production WebGL scene atmosphere chroma/fog parity is
+  artifact-backed; true production-scene WebGPU screenshots and default
+  production wiring remain deferred. A
   production-facing anime-water material adapter now exists behind
   `?renderer=webgpu&konveyorWater=1` plus an explicit water factory. It can
   hand water update ownership to factory controls, and the reusable

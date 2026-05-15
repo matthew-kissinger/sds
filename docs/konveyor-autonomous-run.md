@@ -338,6 +338,16 @@ WebGPU now has a diagnostic island, not a production renderer:
   stable scene-background pixels, confirms the cloud band is visually distinct
   from the background, and confirms Rolling Hills remains darker than the
   daytime scenes.
+- [`../cycle36-validation/runtime/production-atmosphere-parity-proof.json`](../cycle36-validation/runtime/production-atmosphere-parity-proof.json)
+  captures real production WebGL scene screenshots for Field, Rolling Hills,
+  and Open Country and compares them against the scene-bound diagnostic WebGPU
+  atmosphere screenshots. The proof checks production WebGL renderer identity,
+  default `HosekWilkieSky`/`CloudLayer` shader-material ownership, matching
+  shipped sky preset, linear fog near/far, fog color, cloud coverage, clean
+  console/page state, nonblank screenshots, and upper-sky normalized RGB
+  chroma against the diagnostic WebGPU capture. This is atmosphere
+  production-scene parity evidence for the shared sky/fog contract; it is not a
+  WebGPU production renderer boot claim.
 - [`../cycle36-validation/runtime/material-island-visual-proof.json`](../cycle36-validation/runtime/material-island-visual-proof.json)
   samples the same installed-Chrome scene screenshots with `sharp`. It verifies
   Field, Rolling Hills, and Open Country all reached the required diagnostic
@@ -525,9 +535,10 @@ Recommended order:
    `?renderer=webgpu` fail-closed without `diagnostic=1` while moving one
    island from diagnostic visibility toward measured production-scene parity.
    The sky path now has diagnostic preset screenshot parity, renderless scene
-   fog/horizon proof, and scene-bound diagnostic WebGPU screenshots, but still
-   needs full production-scene WebGPU screenshot parity before any default
-   production boot claim; next move to a
+   fog/horizon proof, scene-bound diagnostic WebGPU screenshots, and production
+   WebGL scene atmosphere chroma/fog parity against those diagnostic captures,
+   but still needs true production-scene WebGPU screenshot parity before any
+   default production boot claim; next move to a
    smaller shader/material island or the measured rock-generation extraction
    before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
