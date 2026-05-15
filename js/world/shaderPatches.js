@@ -240,6 +240,23 @@ export function setImpostorTint(builder, sunColor, sunDirWorld = null, ambientCo
 
     for (const mat of builder._impostorMaterials) {
         if (mat.userData?.isKilnImpostor) {
+            const controls = mat.userData?.konveyorImpostorMaterialControls;
+            if (controls?.setTint) {
+                controls.setTint({
+                    sunColor,
+                    sunDirWorld,
+                    ambientColor,
+                    sunIntensity,
+                    ambientIntensity,
+                    groundBounceTilt: GROUND_BOUNCE_TILT,
+                    groundBounceScale: GROUND_BOUNCE_SCALE,
+                    material: mat,
+                });
+                continue;
+            }
+            if (!mat.uniforms?.uSunColor || !mat.uniforms?.uSunDirWorld || !mat.uniforms?.uAmbientColor || !mat.uniforms?.uGroundBounceColor) {
+                continue;
+            }
             mat.uniforms.uSunColor.value
                 .copy(sunColor)
                 .multiplyScalar(sunIntensity);

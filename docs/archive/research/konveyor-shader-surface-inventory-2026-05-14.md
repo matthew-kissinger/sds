@@ -23,7 +23,7 @@ shared fail-closed seam.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, and
 `GrassSystem` is now loaded by the async grass creation paths. The default
 WebGL sun/grass behavior remains intact while the critical `main` bundle has
-headroom for later seams (`mainKB=550`, `threeKB=603`, `GrassSystem=35 KB`)
+headroom for later seams (`mainKB=552`, `threeKB=603`, `GrassSystem=35 KB`)
 without regenerating the refactor-baseline bundle ratchet.
 A production-facing sky-dome atmosphere seam now exists: `Atmosphere` can
 forward an explicit `skyFactory` to `HosekWilkieSky`, and the adapter keeps
@@ -57,6 +57,12 @@ Optimized sheep now has a production-facing material adapter behind
 shader sources, uniforms, material flags, merged geometry metadata, and the
 required instance-attribute names to the factory; default WebGL still uses the
 existing instanced sheep `ShaderMaterial`.
+Kiln impostors now have a production-facing material adapter behind
+`?renderer=webgpu&konveyorImpostors=1` plus an explicit factory. The seam
+carries atlas textures, sidecar layout/origin data, shader sources, material
+flags, and tunables to the factory, and `setImpostorTint()` can delegate
+sun/ambient updates to factory controls. Default WebGL still uses the existing
+atlas-sampled impostor `ShaderMaterial` plus uniform tint updates.
 The rock-rim fresnel formula is also ported as a
 diagnostic `MeshStandardNodeMaterial` island driven by the CPU sky/fog sun
 color packet. A diagnostic tree-leaf island now covers wind displacement,
@@ -128,7 +134,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 | 6 | Terrain ground | `js/TerrainBuilder.js` | Heightfield-displaced terrain with procedural ground color and Three fog chunks. | High. It is the base surface of every production scene and uses fog chunks. | Diagnostic terrain-heightfield TSL island now samples the real Rolling Hills heightfield texture for height-based ground color and fog input. Production-facing material creation can now route through `?renderer=webgpu&konveyorTerrain=1` with an explicit factory; default WebGL still uses the existing terrain `ShaderMaterial`. Scene-bound Rolling Hills/Open Country screenshots remain required before replacing WebGL terrain. | Refactor-baseline terrain hash untouched, screenshots, perf. |
 | 7 | Grass blades | `js/GrassSystem.js`, `js/shaders/grass/*.glsl` | Instanced blade geometry, wind, interaction, LOD fade, fake SSS, manual fog. | Very high. It owns interaction feel and high-count perf. | Diagnostic grass-blade TSL material now covers production default gradient colors, analytic wind/gust/flutter displacement, alpha hash, sky/fog handoff, and a smooth opacity proxy using `grassFadeStart`/`grassFadeEnd`. Production-facing material creation can now route through `?renderer=webgpu&konveyorGrass=1` with an explicit blade factory and update controls; default WebGL still uses the existing grass `ShaderMaterial`. Production stochastic blade dither, production instancing, compute/trample experiments, and scene-level WebGPU grass parity remain deferred. | Perf, latency, visual, mobile profile, interaction smoke. |
 | 8 | Sheep instancing | `js/OptimizedSheep.js`, `js/shaders/sheep/*.glsl` | Instanced sheep geometry, animation attributes, vertex colors, manual fog. | Very high. It touches core gameplay scale and animation feel. | Diagnostic sheep-wool TSL material now covers toon/wool colors, procedural wool displacement, rim/SSS terms, and sky/fog handoff. Production-facing material creation can now route through `?renderer=webgpu&konveyorSheep=1` with an explicit sheep factory and update controls; default WebGL still uses the existing instanced sheep `ShaderMaterial`. Production instancing parity, `instanceData`/`instanceAnimation`/`vertexId` parity, terrain grounding, multiplayer-safe visual parity, and high-count animation remain deferred. | Sim fixtures unchanged, smoke, perf high-count modes. |
-| 9 | Kiln tree impostors | `js/kiln-impostor-material.js` | Atlas-sampled tree impostors with relighting, alpha hash, fog, parallax/depth scaffolding. | Very high. It is asset-pipeline coupled and must match LOD0 color. | Diagnostic one-species TSL island now fetches the `tree1` sidecar plus albedo/normal/depth atlases, derives a diagnostic view tile triad from sidecar angles, blends three atlas tiles with premultiplied alpha, relights from the normal aux layer, and samples the depth aux layer as a diagnostic shading proxy. Per-frame production tile selection, parallax, depth discard, production LOD, and LOD color matching remain deferred. | LOD color-match artifacts, tree visibility, perf, screenshots. |
+| 9 | Kiln tree impostors | `js/kiln-impostor-material.js` | Atlas-sampled tree impostors with relighting, alpha hash, fog, parallax/depth scaffolding. | Very high. It is asset-pipeline coupled and must match LOD0 color. | Diagnostic one-species TSL island now fetches the `tree1` sidecar plus albedo/normal/depth atlases, derives a diagnostic view tile triad from sidecar angles, blends three atlas tiles with premultiplied alpha, relights from the normal aux layer, and samples the depth aux layer as a diagnostic shading proxy. Production-facing material creation can now route through `?renderer=webgpu&konveyorImpostors=1` with an explicit impostor factory and tint controls; default WebGL still uses the existing impostor `ShaderMaterial`. Per-frame production tile selection, parallax, depth discard, production LOD, and LOD color matching remain deferred. | LOD color-match artifacts, tree visibility, perf, screenshots. |
 | 10 | Procedural mountains | `js/ProceduralMountains.js`, `js/shaders/proceduralMountainsShader.js` | Inactive standalone horizon ring. `TerrainBuilder.addMountains()` returns no meshes and no longer imports this class. | Low as a blocker, but misleading as migration scope. | Do not port now. Delete or re-scope when a real horizon ring is approved. | None until reactivated. |
 
 ## Active onBeforeCompile Patch Chains
@@ -233,10 +239,15 @@ comments:
   `renderer=webgpu&konveyorSheep=1` is present and a sheep factory is supplied;
   otherwise the existing sheep `ShaderMaterial` plus time/fog uniform update
   path stays untouched.
+- The production-side adapter in `js/konveyorImpostorMaterialAdapter.js` covers
+  Kiln impostor material creation only. It activates when
+  `renderer=webgpu&konveyorImpostors=1` is present and an impostor factory is
+  supplied; otherwise the existing impostor `ShaderMaterial` plus tint uniform
+  update path stays untouched.
 - `SunBillboard` itself is now loaded through a scene-coupled dynamic import.
   The default WebGL effect remains present before normal scene body construction
   and after scene swaps, while the build emits a separate sun-billboard chunk
-  and keeps the current default bundle at `mainKB=550` / `threeKB=603`.
+  and keeps the current default bundle at `mainKB=552` / `threeKB=603`.
 - `GrassSystem` is now a separate async chunk loaded from production grass
   creation paths. This recovered the bundle budget after the water seam and
   left the committed refactor-baseline fixture unchanged.
@@ -296,13 +307,13 @@ comments:
    high-count grass performance. The sheep-wool island and material factory
    seam are likewise material evidence only; they do not yet prove production
    `OptimizedSheep` instancing parity, animation attributes, terrain grounding,
-   multiplayer-safe visual parity, or high-count perf. The Kiln
-   island proves sidecar/atlas fetch, WebGPU texture sampling, normal-aux
-   relighting, sidecar-derived diagnostic tile selection, and three-tile
-   premultiplied blending plus a diagnostic RGBADepthPacking sample only; it
-   does not yet prove per-frame production tile selection, parallax,
-   depth-discard ghost suppression, production LOD wiring, or color parity
-   against LOD0.
+   multiplayer-safe visual parity, or high-count perf. The Kiln island and
+   material factory seam prove sidecar/atlas handoff, WebGPU texture sampling,
+   normal-aux relighting, sidecar-derived diagnostic tile selection, three-tile
+   premultiplied blending, a diagnostic RGBADepthPacking sample, and tint
+   update delegation only; they do not yet prove per-frame production tile
+   selection, parallax, depth-discard ghost suppression, production LOD wiring,
+   or color parity against LOD0.
 
 ## Acceptance For The Next Code Island
 

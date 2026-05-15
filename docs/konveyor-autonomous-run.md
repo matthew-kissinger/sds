@@ -167,6 +167,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   production `InstancedMesh`; production instancing parity, animation
   attributes, terrain grounding, multiplayer-safe visual parity, and high-count
   perf remain deferred.
+- A production-facing Kiln impostor material adapter now exists behind
+  `?renderer=webgpu&konveyorImpostors=1` and an explicit impostor factory. It
+  covers only `createKilnImpostorMaterial()` material creation and lets a
+  supplied factory own the sun/ambient tint update from `setImpostorTint()`.
+  Default WebGL impostors still use the existing atlas-sampled
+  `ShaderMaterial`; production tile selection, parallax, depth discard,
+  production LOD wiring, and LOD0 color parity remain deferred.
 - A production-facing sun/portal effect material adapter now exists behind
   `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect factories. It
   routes the already-proved diagnostic sun billboard and portal ring node
@@ -181,7 +188,7 @@ WebGPU now has a diagnostic island, not a production renderer:
 - `GrassSystem` is now loaded only by the async production grass creation
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
-  bundle-size fixture. Current production build evidence: `mainKB=550`,
+  bundle-size fixture. Current production build evidence: `mainKB=552`,
   `threeKB=603`, `GrassSystem=35 KB`, `AnimeWater=9 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
   `Atmosphere` can forward an explicit `skyFactory` to `HosekWilkieSky`, and
@@ -253,9 +260,10 @@ Recommended order:
    albedo/normal/depth atlases, derives a diagnostic view tile triad from
    sidecar angles, blends three atlas tiles with premultiplied alpha/fog in a
    WebGPU node material, relights from the normal aux layer, and samples the
-   depth aux atlas as a diagnostic shading proxy. Per-frame production tile
-   selection, parallax, depth discard, production LOD wiring, and LOD0 color
-   parity remain deferred. The rock-rim
+   depth aux atlas as a diagnostic shading proxy. Production Kiln material
+   creation now has a flag-gated explicit factory seam with tint controls, but
+   per-frame production tile selection, parallax, depth discard, production LOD
+   wiring, and LOD0 color parity remain deferred. The rock-rim
    TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
@@ -277,9 +285,9 @@ Recommended order:
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
    says otherwise. The sun/portal effect material adapter, sky-dome
    atmosphere material seam, far-ring meadow material seam, grass-blade
-   material seam, anime-water material seam, terrain-ground material seam, and
-   sheep material seam are now production-facing hooks, but all are still
-   flag-gated and factory supplied.
+   material seam, anime-water material seam, terrain-ground material seam,
+   sheep material seam, and Kiln impostor material seam are now
+   production-facing hooks, but all are still flag-gated and factory supplied.
    The atmosphere seam now reaches the
    `Atmosphere` orchestrator through an explicit `skyFactory` and reaches
    `HosekWilkieSky` directly through the same fail-closed adapter; the same
@@ -296,7 +304,9 @@ Recommended order:
    scene-bound Rolling Hills/Open Country terrain parity remains deferred. The
    sheep path now has a production-facing material factory seam, but high-count
    animation, terrain-grounded visual parity, and multiplayer-safe scene proof
-   remain deferred.
+   remain deferred. The Kiln path now has a production-facing material factory
+   seam, but per-frame tile selection, LOD wiring, and LOD0 color parity remain
+   deferred.
    The sky path still needs a real TSL
    sky material plus preset screenshot parity before any default production
    boot claim; next move to a smaller shader/material island or the measured
