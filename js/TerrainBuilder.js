@@ -63,7 +63,7 @@ export class TerrainBuilder {
      * @param {THREE.Scene} scene
      * @param {boolean} [isMobile=false]
      * @param {import('../shared/scenes/types.js').SceneDef} [sceneDef]
-     * @param {{ search?: string, konveyorTerrainFactories?: object }} [options]
+     * @param {{ search?: string, konveyorTerrainFactories?: object, konveyorMaterialFactories?: object }} [options]
      */
     constructor(scene, isMobile = false, sceneDef = null, options = {}) {
         this.scene = scene;
@@ -72,6 +72,9 @@ export class TerrainBuilder {
         this.konveyorTerrainSearch = options.search;
         this.konveyorTerrainFactories = options.konveyorTerrainFactories;
         this.konveyorTerrainMaterialSummary = null;
+        this.konveyorMaterialSearch = options.search;
+        this.konveyorMaterialFactories = options.konveyorMaterialFactories;
+        this.konveyorTreeRockMaterialSummary = null;
         this.grassMaterial = null;
         this.grassInstanceCount = 0;
         this.grassInstancedMesh = null;
@@ -565,6 +568,7 @@ export class TerrainBuilder {
         this._setupTreeWind();
         // Cycle 14 Phase 4: patch rock materials with fresnel rim-light.
         this._setupRockShader();
+        await this._applyKonveyorTreeRockMaterials();
 
         // Report loading results
         const loadedAnimals = Object.keys(this.models.animals).filter(k => !k.endsWith('_animations'));
@@ -582,6 +586,48 @@ export class TerrainBuilder {
         }
 
         console.log('[ASSET] All critical models loaded successfully!');
+    }
+
+    _getKonveyorMaterialSearch() {
+        if (this.konveyorMaterialSearch !== undefined) return this.konveyorMaterialSearch;
+        if (typeof window === 'undefined') return '';
+        return window.location?.search ?? '';
+    }
+
+    _getKonveyorMaterialFactories() {
+        if (this.konveyorMaterialFactories !== undefined) return this.konveyorMaterialFactories;
+        if (typeof window === 'undefined') return null;
+        return window.__sdsKonveyorMaterialFactories ?? null;
+    }
+
+    _setKonveyorTreeRockMaterialSummary(summary) {
+        this.konveyorTreeRockMaterialSummary = summary;
+        if (typeof window !== 'undefined') {
+            window.__sdsKonveyorMaterialAdapter = summary;
+        }
+        return this.konveyorTreeRockMaterialSummary;
+    }
+
+    async _applyKonveyorTreeRockMaterials() {
+        const search = this._getKonveyorMaterialSearch();
+        const params = new URLSearchParams(search);
+        if (params.get('renderer') !== 'webgpu' || params.get('konveyorMaterials') !== '1') {
+            return this._setKonveyorTreeRockMaterialSummary({ applied: false, reason: 'flag-disabled' });
+        }
+
+        const factories = this._getKonveyorMaterialFactories();
+        const hasFactories = typeof factories?.createTreeBranchMaterial === 'function'
+            && typeof factories?.createTreeLeafMaterial === 'function'
+            && typeof factories?.createRockMaterial === 'function';
+        if (!hasFactories) {
+            return this._setKonveyorTreeRockMaterialSummary({ applied: false, reason: 'missing-factories' });
+        }
+
+        const { maybeApplyKonveyorTreeRockMaterials } = await import('./world/konveyorMaterialAdapter.js');
+        return this._setKonveyorTreeRockMaterialSummary(maybeApplyKonveyorTreeRockMaterials(this, {
+            search,
+            factories,
+        }));
     }
     
     isInZone(x, z, zone) {

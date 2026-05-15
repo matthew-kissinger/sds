@@ -132,9 +132,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   diagnostic does not import production `InstancedMesh2`.
 - A production-facing tree/rock material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` and explicit WebGPU material factories.
-  It reuses the proved tree material-name and rock traversal strategies against
-  cached production GLB roots, but leaves the default WebGL `onBeforeCompile`
-  patch path untouched when the flag or factories are absent.
+  `TerrainBuilder.loadModels()` now invokes it after the default WebGL
+  tree-wind and rock-rim patch chain, reusing the proved tree material-name and
+  rock traversal strategies against cached production GLB roots. It still
+  leaves the default WebGL `onBeforeCompile` patch path untouched when the flag
+  or factories are absent.
 - A production-facing far-ring meadow material adapter now exists behind
   `?renderer=webgpu&konveyorGrass=1` and an explicit meadow material factory.
   It covers `GrassSystem.createMeadowQuadMaterial`; blade grass material
@@ -189,9 +191,9 @@ WebGPU now has a diagnostic island, not a production renderer:
 - `GrassSystem` is now loaded only by the async production grass creation
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
-  bundle-size fixture. Current production build evidence: `mainKB=552`,
-  `threeKB=603`, `GrassSystem=35 KB`, `AnimeWater=9 KB`, `PortalEffect=5 KB`,
-  `CorralZapEffect=5 KB`.
+  bundle-size fixture. Current production build evidence: `mainKB=553`,
+  `threeKB=603`, `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
+  `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
   `Atmosphere` can forward an explicit `skyFactory` to `HosekWilkieSky`, and
   `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory

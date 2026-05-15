@@ -24,7 +24,8 @@ seam.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, and
 `GrassSystem` is now loaded by the async grass creation paths. The default
 WebGL sun/grass behavior remains intact while the critical `main` bundle has
-headroom for later seams (`mainKB=552`, `threeKB=603`, `GrassSystem=35 KB`,
+headroom for later seams (`mainKB=553`, `threeKB=603`,
+`konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`, `AnimeWater=9 KB`,
 `PortalEffect=5 KB`, `CorralZapEffect=5 KB`) without regenerating the
 refactor-baseline bundle ratchet.
 A production-facing sky-dome atmosphere seam now exists: `Atmosphere` can
@@ -109,10 +110,13 @@ contracts. A rendered-clone diagnostic island now also loads all seven shipped
 tree and rock GLBs with the production GLTF/Draco/Meshopt path and renders them
 with WebGPU node-material replacements. A production-side tree/rock replacement
 adapter now exists behind `?renderer=webgpu&konveyorMaterials=1` and explicit
-WebGPU material factories. The diagnostic now also samples Rolling Hills tree
-placements from `shared/TreePlacement.generateTrees` and renders eight
-adapter-backed tree GLB samples as a production-placement preview; the default
-WebGL load still uses the current `onBeforeCompile` patches. A follow-up
+WebGPU material factories. `TerrainBuilder.loadModels()` now calls the adapter
+after the default WebGL tree/rock patch chain, so the shipped cached GLB roots
+can be replaced only under the explicit flag/factory contract; the default
+WebGL load still uses the current `onBeforeCompile` patches. The diagnostic now
+also samples Rolling Hills tree placements from `shared/TreePlacement.generateTrees`
+and renders eight adapter-backed tree GLB samples as a production-placement
+preview. A follow-up
 diagnostic island renders the same samples through WebGPU `THREE.InstancedMesh`
 groups for trunks and leaves, proving LOD0 native Three instancing without
 pulling production `InstancedMesh2` into the WebGPU namespace. That path now
@@ -249,7 +253,8 @@ comments:
 - `SunBillboard` itself is now loaded through a scene-coupled dynamic import.
   The default WebGL effect remains present before normal scene body construction
   and after scene swaps, while the build emits a separate sun-billboard chunk
-  and keeps the current default bundle at `mainKB=552` / `threeKB=603`.
+  and keeps the current default bundle at `mainKB=553` / `threeKB=603`, with
+  the tree/rock material adapter emitted as a separate 3 KB lazy chunk.
 - `GrassSystem` is now a separate async chunk loaded from production grass
   creation paths. This recovered the bundle budget after the water seam and
   left the committed refactor-baseline fixture unchanged.

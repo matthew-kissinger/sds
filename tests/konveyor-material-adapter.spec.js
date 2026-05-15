@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 
 import {
   applyKonveyorTreeRockMaterials,
   maybeApplyKonveyorTreeRockMaterials,
   shouldApplyKonveyorMaterials,
 } from '../js/world/konveyorMaterialAdapter.js';
+import { TerrainBuilder } from '../js/TerrainBuilder.js';
 
 function mesh(materialName) {
   return {
@@ -90,6 +92,33 @@ describe('konveyor production material adapter', () => {
     expect(summary.applied).toBe(true);
     expect(summary.ok).toBe(true);
     expect(builder.models.trees.tree1.children[0].material.name).toBe('konveyor-branches');
+    expect(builder.models.rocks.rock1.children[0].material.name).toBe('konveyor-rock');
+  });
+
+  it('wires TerrainBuilder model caches through the fail-closed material seam', async () => {
+    const builder = new TerrainBuilder(new THREE.Scene(), false, null, {
+      search: '?renderer=webgpu&konveyorMaterials=1',
+      konveyorMaterialFactories: factories,
+    });
+    builder.models = {
+      trees: { tree1: root(mesh('branches'), mesh('leaves')) },
+      treesLod1: { tree1: root(mesh('branches'), mesh('leaves')) },
+      rocks: { rock1: root(mesh('')) },
+      mountains: {},
+      buildings: {},
+      animals: {},
+    };
+
+    const summary = await builder._applyKonveyorTreeRockMaterials();
+
+    expect(summary).toBe(builder.konveyorTreeRockMaterialSummary);
+    expect(summary.applied).toBe(true);
+    expect(summary.treeReplacedMaterials).toBe(4);
+    expect(summary.rockReplacedMaterials).toBe(1);
+    expect(builder.models.trees.tree1.children.map((child) => child.material.name)).toEqual([
+      'konveyor-branches',
+      'konveyor-leaves',
+    ]);
     expect(builder.models.rocks.rock1.children[0].material.name).toBe('konveyor-rock');
   });
 });

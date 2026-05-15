@@ -140,7 +140,8 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=552`, `threeKB=603`, `GrassSystem=35 KB`, `PortalEffect=5 KB`,
+  (`mainKB=553`, `threeKB=603`, `konveyorMaterialAdapter=3 KB`,
+  `GrassSystem=35 KB`, `AnimeWater=9 KB`, `PortalEffect=5 KB`,
   `CorralZapEffect=5 KB`) for later production seams without regenerating the
   refactor-baseline bundle ratchet. A
   diagnostic material-replacement island proves tree replacement by
@@ -177,8 +178,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   WebGL still uses the existing optimized sheep shader and instancing path.
   A production-facing material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
-  factories, so cached production tree/rock GLB roots can be replaced without
-  changing the default WebGL patch path.
+  factories, and `TerrainBuilder.loadModels()` now invokes it after the default
+  tree-wind and rock-rim WebGL patch chain. Cached production tree/rock GLB
+  roots can be replaced only when the flag and factories are present; the
+  default WebGL patch path remains unchanged otherwise.
 - The deterministic `shared/` boundary is unchanged. Konveyor is a rendering,
   packaging, and performance campaign unless a cycle explicitly authorizes a
   shared-sim change.
