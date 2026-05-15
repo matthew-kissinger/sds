@@ -37,7 +37,9 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `cycle36-validation/runtime/tree-refresh-baseline.json`: active `tree1` and
   `tree2` picks, runtime/original GLB bytes, Kiln impostor sidecar and atlas
   contracts, material replacement evidence, and the current EZ-Tree upstream
-  candidate status before any asset rebake.
+  candidate status before any asset rebake. The baseline tool can refresh live
+  npm and GitHub changelog evidence with
+  `node tools/konveyor-tree-refresh-baseline.mjs --refresh-upstream`.
 - Cycle 36 repaired the perf harness. `tests/perf-baseline/baseline.json`
   currently records all six default configs with `ok: true` and 900 samples
   each on the local Windows RTX 3070 workstation.
@@ -215,6 +217,29 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
 Start every Konveyor run by refreshing this baseline. Do not assume a stale
 number, remote deploy state, browser feature, or package capability is still
 true.
+
+## Current external-doc alignment
+
+As of 2026-05-15, current upstream docs support the SDS direction rather than
+contradicting it:
+
+- Three's WebGPU guide says `WebGPURenderer` can use WebGPU and fall back to a
+  WebGL2 backend, but `ShaderMaterial`, `RawShaderMaterial`, and
+  `onBeforeCompile()` customizations must be ported to node materials and TSL
+  before they are WebGPU-compatible
+  ([Three WebGPURenderer guide](https://threejs.org/manual/en/webgpurenderer)).
+  That matches the current material-island strategy.
+- Three's TSL docs position TSL as renderer-agnostic shader logic that can emit
+  WGSL or GLSL and stay modular/tree-shakable
+  ([Three TSL specification](https://threejs.org/docs/TSL.html)). That matches
+  SDS's isolated node-material factories and fail-closed flags.
+- MDN still marks WebGPU as limited availability and secure-context-only, with
+  explicit `navigator.gpu.requestAdapter()` / `adapter.requestDevice()` checks
+  required before claiming support
+  ([MDN WebGPU API](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API),
+  [MDN requestAdapter](https://developer.mozilla.org/docs/Web/API/GPU/requestAdapter)).
+  That matches the repo's explicit probe artifacts and the decision to keep
+  WebGL default until production evidence exists.
 
 ## Objective
 
@@ -426,17 +451,19 @@ Check the current `@dgreenheck/ez-tree` release, re-bake only if there is a
 clear output or performance reason, and re-run GLB compression plus Kiln
 impostor bakes when silhouettes or materials change.
 
-As of 2026-05-15, npm latest for `@dgreenheck/ez-tree` is still 1.1.0 and SDS
-already resolves that version. Upstream `main` has unreleased changes for
-softer leaf normals, corrected growth force, stratified branch/leaf placement,
-and externalized texture assets
-([changelog](https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md)).
-That is a serious tree-refresh candidate for the WebGPU/native target, but it
-must run through the asset-gallery pick flow, GLB compression, Kiln impostor
-rebake where needed, material-ownership proof, visual review, and perf/latency
-gates before replacing shipped trees. Use
-`node tools/konveyor-tree-refresh-baseline.mjs` before and after candidate
-rebakes so accepted tree deltas compare against the same evidence surface.
+As of the 2026-05-15 live refresh, npm latest for `@dgreenheck/ez-tree` is still
+1.1.0 and SDS already resolves that version. Upstream `main` has unreleased
+tree-refresh candidates for softer leaf normals, corrected growth force, and
+stratified branch/leaf placement
+([npm](https://www.npmjs.com/package/@dgreenheck/ez-tree),
+[changelog](https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md)).
+That is serious WebGPU/native-target input, but it is not a reason to replace
+shipped trees by side edit. It must run through the asset-gallery pick flow, GLB
+compression, Kiln impostor rebake where needed, material-ownership proof,
+visual review, and perf/latency gates before replacing shipped trees. Use
+`node tools/konveyor-tree-refresh-baseline.mjs --refresh-upstream` before and
+after candidate rebakes when network is available so accepted tree deltas
+compare against the same evidence surface.
 
 Exit: every accepted tree delta is artifact-backed, and tree goldens are updated
 only for named, intentional differences.

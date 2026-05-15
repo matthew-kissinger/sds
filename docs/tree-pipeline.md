@@ -62,19 +62,30 @@ After re-baking:
 
 ```bash
 npm test -- tests/tree-assets.spec.js      # verify active LOD0/LOD1 GLBs exist, are non-empty, and fit the size ceiling
-node tools/konveyor-tree-refresh-baseline.mjs
+node tools/konveyor-tree-refresh-baseline.mjs --refresh-upstream
 ```
+
+The `--refresh-upstream` flag records live npm and GitHub changelog evidence in
+the Konveyor baseline. If network is unavailable, run the tool without the flag
+and treat the upstream fields as the last static observation, not current truth.
 
 ## Marketing recapture prep
 
 Before the next screenshot/video capture pass, update tree assets as an intentional visual change rather than treating capture framing as the only problem:
 
 1. Check the current `@dgreenheck/ez-tree` release and adopt the latest acceptable update.
-2. Capture the current asset contract with `node tools/konveyor-tree-refresh-baseline.mjs`; the committed Konveyor packet lives at [`cycle36-validation/runtime/tree-refresh-baseline.json`](../cycle36-validation/runtime/tree-refresh-baseline.json).
+2. Capture the current asset contract with `node tools/konveyor-tree-refresh-baseline.mjs --refresh-upstream`; the committed Konveyor packet lives at [`cycle36-validation/runtime/tree-refresh-baseline.json`](../cycle36-validation/runtime/tree-refresh-baseline.json).
 3. Re-bake GLBs through the normal cache-invalidation flow above.
 4. Re-run impostor baking if the GLB silhouette, canopy density, trunk profile, or material output changes.
 5. Review Sheep Dog Island and Open Country from the main gameplay/capture cameras and verify trees do not read as too close together. No pair should visually merge into a single blob, hide the dog/sheep action, or block the hero camera path.
 6. If spacing changes are needed, make them in the deterministic placement path and verify with `npm test -- tests/tree-placement.spec.js` plus a browser screenshot review.
+
+As of the 2026-05-15 live refresh, SDS already resolves the npm latest
+`@dgreenheck/ez-tree` 1.1.0. Upstream `main` has unreleased tree-output
+candidates for softer leaf normals, corrected growth force, and stratified
+branch/leaf placement. Do not chase unreleased `main` by hand in production
+assets; either wait for a package release or create a deliberate, commit-pinned
+candidate bake with gallery, material, impostor, visual, perf, and native gates.
 
 ## Loader contract
 

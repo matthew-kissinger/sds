@@ -255,7 +255,9 @@ WebGPU now has a diagnostic island, not a production renderer:
   records the current tree-refresh input contract before any EZ-Tree rebake:
   active `tree1`/`tree2` picks, compressed/original GLB bytes, Kiln impostor
   sidecar and atlas bytes, material-name replacement proof, and the current
-  upstream EZ-Tree candidate status.
+  upstream EZ-Tree candidate status. The baseline can now refresh live npm and
+  GitHub changelog evidence with
+  `node tools/konveyor-tree-refresh-baseline.mjs --refresh-upstream`.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
   is a Chrome 148 screenshot artifact for the diagnostic material islands.
 
@@ -361,13 +363,15 @@ Recommended order:
    profiling shows cost or parity drift.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The
    repo already resolves `@dgreenheck/ez-tree` 1.1.0, which is still the
-   current npm latest as of 2026-05-15. Upstream `main` has unreleased
-   tree-generation changes around softer leaf normals, corrected growth force,
-   stratified child branch/leaf placement, and externalized texture assets
-   ([changelog](https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md)).
+   current npm latest as of the 2026-05-15 live refresh. Upstream `main` has
+   unreleased tree-generation candidates around softer leaf normals, corrected
+   growth force, and stratified child branch/leaf placement
+   ([npm](https://www.npmjs.com/package/@dgreenheck/ez-tree),
+   [changelog](https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md)).
    The baseline packet now captures the current shipped tree contract before
-   any rebake. Evaluate upstream output before Phase 2/4 tree replacement, but
-   only accept regenerated GLBs with named visual and perf artifacts.
+   any rebake and records the live upstream evidence source. Evaluate upstream
+   output before Phase 2/4 tree replacement, but only accept regenerated GLBs
+   with named visual and perf artifacts.
 4. **Advance through the Konveyor phase outline.** Keep moving from cosmetic
    shader compatibility to trees, grass, sheep/high-count rendering, compute
    experiments, native packaging, and web fallback/release decisions as

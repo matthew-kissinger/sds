@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T01:35:23.614Z",
+  "capturedAt": "2026-05-15T05:41:25.317Z",
   "contract": "konveyor-tree-refresh-baseline",
   "sourceOfTruth": {
     "picksPath": "tools/asset-gallery/picks.json",
@@ -16,15 +16,28 @@
     "peerThree": ">=0.167",
     "upstream": {
       "npmLatestObserved": "1.1.0",
-      "npmObservedAt": "2026-05-15",
+      "npmObservedAt": "2026-05-15T05:41:25.104Z",
       "mainPackageVersionObserved": "1.1.0",
       "changelogUrl": "https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md",
       "npmUrl": "https://www.npmjs.com/package/@dgreenheck/ez-tree",
       "unreleasedCandidateChanges": [
-        "custom rounded normals for softer leaf shading",
-        "corrected branch growth force direction",
-        "stratified child branch and leaf placement to reduce spirals and clumping"
-      ]
+        "Use custom rounded normals for leaves for softer shading (#43).",
+        "The growth force was not being applied correctly. Branches should now grow uniformly in the same world direction.",
+        "Child branches and leaves are now placed with stratified sampling (with a permuted slot assignment) instead of fixed angular spacing, eliminating visible spirals and one-sided clumping."
+      ],
+      "observedFrom": "live-npm-and-github-changelog",
+      "sourceUrls": {
+        "npmLatest": "https://registry.npmjs.org/@dgreenheck%2Fez-tree/latest",
+        "mainPackage": "https://raw.githubusercontent.com/dgreenheck/ez-tree/main/package.json",
+        "changelogRaw": "https://raw.githubusercontent.com/dgreenheck/ez-tree/main/CHANGELOG.md"
+      },
+      "unreleasedChanges": [
+        "Updated Dockerfile to Node 24 and removed the obsolete `version` attribute from `docker-compose.yml`.",
+        "Use custom rounded normals for leaves for softer shading (#43).",
+        "The growth force was not being applied correctly. Branches should now grow uniformly in the same world direction.",
+        "Child branches and leaves are now placed with stratified sampling (with a permuted slot assignment) instead of fixed angular spacing, eliminating visible spirals and one-sided clumping."
+      ],
+      "fallbackStaticObservedAt": "2026-05-15"
     }
   },
   "currentDecision": {
