@@ -63,8 +63,12 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   diagnostic material covers production toon/wool color, procedural wool
   displacement, rim/SSS lighting terms, and sky/fog handoff while explicitly
   deferring production `OptimizedSheep` instancing, animation attributes,
-  terrain grounding, and high-count perf. Production Rolling Hills/Open Country
-  replacement remains deferred before water/terrain/grass/sheep
+  terrain grounding, and high-count perf. A one-species Kiln impostor
+  diagnostic material fetches the committed `tree1` sidecar and albedo atlas,
+  samples one tile with alpha/fog in a WebGPU node material, and explicitly
+  defers barycentric tile blending, normal/depth relighting, parallax, depth
+  discard, production LOD wiring, and LOD0 color parity. Production Rolling
+  Hills/Open Country replacement remains deferred before water/terrain/grass/sheep/Kiln
   wiring. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB

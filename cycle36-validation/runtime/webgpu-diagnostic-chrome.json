@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:18:55.400Z",
+  "capturedAt": "2026-05-15T00:23:50.948Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -86,6 +86,7 @@
       "tree-leaf",
       "grass-blade",
       "sheep-wool",
+      "kiln-impostor",
       "anime-water",
       "terrain-heightfield",
       "glb-material-replacement",
@@ -360,6 +361,47 @@
         "vertexId"
       ],
       "source": "OptimizedSheep.shader-contract"
+    },
+    "kilnImpostor": {
+      "treeType": "tree1",
+      "basePath": "/assets/models/trees/tree1.imposter",
+      "atlas": "/assets/models/trees/tree1.imposter.png",
+      "normal": "/assets/models/trees/tree1.imposter.normal.png",
+      "depth": "/assets/models/trees/tree1.imposter.depth.png",
+      "sidecar": "/assets/models/trees/tree1.imposter.json",
+      "tilesX": 4,
+      "tilesY": 4,
+      "tileSize": 512,
+      "atlasSize": [
+        2048,
+        2048
+      ],
+      "worldSize": 1,
+      "yOffset": 0.5,
+      "colorLayer": "baseColor",
+      "normalSpace": "capture-view",
+      "auxLayers": [
+        "albedo",
+        "normal",
+        "depth"
+      ],
+      "edgeBleedPx": 2,
+      "alphaTest": 0.3,
+      "alphaHashScale": 0.3,
+      "fogColor": [
+        0.2933,
+        0.1629,
+        0.1348
+      ],
+      "fogNear": 18,
+      "fogFar": 74,
+      "atlasSampling": "single-tile-albedo",
+      "tileBlend": "deferred",
+      "relighting": "deferred",
+      "parallax": "deferred",
+      "depthDiscard": "deferred",
+      "productionLod": "deferred",
+      "source": "Kiln.impostor-sidecar-contract"
     },
     "materialReplacement": {
       "rocks": {

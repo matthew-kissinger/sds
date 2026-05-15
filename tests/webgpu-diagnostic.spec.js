@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {
   createAnimeWaterDiagnosticState,
   createGrassBladeDiagnosticState,
+  createKilnImpostorDiagnosticState,
   createRockRimDiagnosticState,
   createSheepWoolDiagnosticState,
   createSkyFogDiagnosticState,
@@ -180,6 +181,42 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(sheepWool.fogFar).toBe(skyFog.fogFar);
     expect(sheepWool.instancing).toBe('deferred');
     expect(sheepWool.animationAttributes).toEqual(['instanceData', 'instanceAnimation', 'vertexId']);
+  });
+
+  it('keeps the kiln impostor diagnostic tied to the sidecar atlas contract', () => {
+    const skyFog = createSkyFogDiagnosticState();
+    const sidecar = {
+      tilesX: 4,
+      tilesY: 4,
+      tileSize: 512,
+      atlasWidth: 2048,
+      atlasHeight: 2048,
+      worldSize: 1,
+      yOffset: 0.5,
+      colorLayer: 'baseColor',
+      normalSpace: 'capture-view',
+      auxLayers: ['albedo', 'normal', 'depth'],
+      edgeBleedPx: 2,
+    };
+    const kiln = createKilnImpostorDiagnosticState(skyFog, sidecar);
+
+    expect(kiln.source).toBe('Kiln.impostor-sidecar-contract');
+    expect(kiln.treeType).toBe('tree1');
+    expect(kiln.tilesX).toBe(4);
+    expect(kiln.tilesY).toBe(4);
+    expect(kiln.tileSize).toBe(512);
+    expect(kiln.atlasSize).toEqual([2048, 2048]);
+    expect(kiln.colorLayer).toBe('baseColor');
+    expect(kiln.normalSpace).toBe('capture-view');
+    expect(kiln.auxLayers).toEqual(['albedo', 'normal', 'depth']);
+    expect(kiln.edgeBleedPx).toBe(2);
+    expect(kiln.fogColor).toBe(skyFog.fogColor);
+    expect(kiln.atlasSampling).toBe('single-tile-albedo');
+    expect(kiln.tileBlend).toBe('deferred');
+    expect(kiln.relighting).toBe('deferred');
+    expect(kiln.parallax).toBe('deferred');
+    expect(kiln.depthDiscard).toBe('deferred');
+    expect(kiln.productionLod).toBe('deferred');
   });
 });
 

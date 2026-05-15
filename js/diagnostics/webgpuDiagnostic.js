@@ -20,6 +20,11 @@ const DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE = Object.freeze({
     waterY: -0.05,
 });
 
+const DIAGNOSTIC_KILN_IMPOSTOR_SOURCE = Object.freeze({
+    treeType: 'tree1',
+    basePath: '/assets/models/trees/tree1.imposter',
+});
+
 function clamp01(value) {
     return Math.min(1, Math.max(0, value));
 }
@@ -318,6 +323,39 @@ export function createSheepWoolDiagnosticState(skyFog = createSkyFogDiagnosticSt
     };
 }
 
+export function createKilnImpostorDiagnosticState(skyFog = createSkyFogDiagnosticState(), sidecar = null) {
+    return {
+        treeType: DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.treeType,
+        basePath: DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath,
+        atlas: `${DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath}.png`,
+        normal: `${DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath}.normal.png`,
+        depth: `${DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath}.depth.png`,
+        sidecar: `${DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath}.json`,
+        tilesX: sidecar?.tilesX ?? 4,
+        tilesY: sidecar?.tilesY ?? 4,
+        tileSize: sidecar?.tileSize ?? 512,
+        atlasSize: [sidecar?.atlasWidth ?? 2048, sidecar?.atlasHeight ?? 2048],
+        worldSize: sidecar?.worldSize ?? 1,
+        yOffset: sidecar?.yOffset ?? 0.5,
+        colorLayer: sidecar?.colorLayer ?? 'baseColor',
+        normalSpace: sidecar?.normalSpace ?? 'capture-view',
+        auxLayers: sidecar?.auxLayers ?? ['albedo', 'normal', 'depth'],
+        edgeBleedPx: sidecar?.edgeBleedPx ?? 2,
+        alphaTest: 0.3,
+        alphaHashScale: 0.3,
+        fogColor: skyFog.fogColor,
+        fogNear: skyFog.fogNear,
+        fogFar: skyFog.fogFar,
+        atlasSampling: 'single-tile-albedo',
+        tileBlend: 'deferred',
+        relighting: 'deferred',
+        parallax: 'deferred',
+        depthDiscard: 'deferred',
+        productionLod: 'deferred',
+        source: 'Kiln.impostor-sidecar-contract',
+    };
+}
+
 async function createDiagnosticHeightTexture({
     DataTexture,
     RedFormat,
@@ -356,6 +394,44 @@ async function createDiagnosticHeightTexture({
         waterY: DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.waterY,
     };
     return texture;
+}
+
+async function createDiagnosticKilnImpostorAssets({
+    TextureLoader,
+    LinearFilter,
+    ClampToEdgeWrapping,
+    SRGBColorSpace,
+    NoColorSpace,
+}) {
+    const sidecarResponse = await fetch(`${DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath}.json`);
+    if (!sidecarResponse.ok) {
+        throw new Error('diagnostic kiln impostor sidecar fetch failed');
+    }
+    const sidecar = await sidecarResponse.json();
+    const loader = new TextureLoader();
+    const loadTexture = (url, colorSpace) => new Promise((resolve, reject) => {
+        loader.load(
+            url,
+            (texture) => {
+                texture.colorSpace = colorSpace;
+                texture.minFilter = LinearFilter;
+                texture.magFilter = LinearFilter;
+                texture.wrapS = ClampToEdgeWrapping;
+                texture.wrapT = ClampToEdgeWrapping;
+                texture.generateMipmaps = false;
+                texture.needsUpdate = true;
+                resolve(texture);
+            },
+            undefined,
+            reject
+        );
+    });
+    const [albedoAtlas, normalAtlas, depthAtlas] = await Promise.all([
+        loadTexture(`${DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath}.png`, SRGBColorSpace),
+        loadTexture(`${DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath}.normal.png`, NoColorSpace),
+        loadTexture(`${DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath}.depth.png`, NoColorSpace),
+    ]);
+    return { sidecar, albedoAtlas, normalAtlas, depthAtlas };
 }
 
 function createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, water, heightTexture) {
@@ -435,6 +511,40 @@ function syncDiagnosticHeightfieldState(target, heightfield) {
     target.size = heightfield.size;
     target.worldSize = heightfield.worldSize;
     target.peakHeight = heightfield.peakHeight;
+}
+
+function syncKilnImpostorState(target, sidecar) {
+    target.tilesX = sidecar.tilesX;
+    target.tilesY = sidecar.tilesY;
+    target.tileSize = sidecar.tileSize;
+    target.atlasSize = [sidecar.atlasWidth, sidecar.atlasHeight];
+    target.worldSize = sidecar.worldSize;
+    target.yOffset = sidecar.yOffset;
+    target.colorLayer = sidecar.colorLayer;
+    target.normalSpace = sidecar.normalSpace;
+    target.auxLayers = sidecar.auxLayers;
+    target.edgeBleedPx = sidecar.edgeBleedPx;
+}
+
+function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, albedoAtlas) {
+    const { length, mix, smoothstep, texture, uv, positionView, vec2, vec3 } = TSL;
+    const tileUv = uv().mul(vec2(1 / kilnImpostor.tilesX, 1 / kilnImpostor.tilesY))
+        .add(vec2(0, (kilnImpostor.tilesY - 1) / kilnImpostor.tilesY));
+    const atlasSample = texture(albedoAtlas, tileUv);
+    const viewDistance = length(positionView);
+    const fogBlend = smoothstep(kilnImpostor.fogNear, kilnImpostor.fogFar, viewDistance).mul(0.62);
+
+    const material = new MeshBasicNodeMaterial();
+    material.name = 'konveyor-node-kiln-impostor';
+    material.colorNode = mix(atlasSample.rgb, vec3(...kilnImpostor.fogColor), fogBlend);
+    material.opacityNode = atlasSample.a;
+    material.transparent = true;
+    material.depthWrite = true;
+    material.depthTest = true;
+    material.side = DoubleSide;
+    material.alphaHash = true;
+    material.alphaTest = kilnImpostor.alphaTest;
+    return material;
 }
 
 function createGrassBladeNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, grassBlade) {
@@ -652,13 +762,14 @@ export async function bootWebGpuDiagnostic() {
     const treeLeaf = createTreeLeafDiagnosticState();
     const grassBlade = createGrassBladeDiagnosticState(skyFog);
     const sheepWool = createSheepWoolDiagnosticState(skyFog);
+    const kilnImpostor = createKilnImpostorDiagnosticState(skyFog);
     const state = window.__sdsG = {
         ...(window.__sdsG || {}),
         r: true,
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
         skyFog,
         rockRim,
         animeWater,
@@ -666,6 +777,7 @@ export async function bootWebGpuDiagnostic() {
         treeLeaf,
         grassBlade,
         sheepWool,
+        kilnImpostor,
         materialReplacement: null,
         runtimeGlbReplacement: null,
         runtimeGlbPreview: null,
@@ -732,10 +844,14 @@ export async function bootWebGpuDiagnostic() {
         Object3D,
         Vector3,
         DataTexture,
+        TextureLoader,
         RedFormat,
         FloatType,
+        LinearFilter,
         NearestFilter,
         ClampToEdgeWrapping,
+        SRGBColorSpace,
+        NoColorSpace,
         TSL,
     } = await loadWebGpuThree();
 
@@ -921,6 +1037,22 @@ export async function bootWebGpuDiagnostic() {
     sheepGroup.rotation.set(0, 0.16, 0);
     scene.add(sheepGroup);
 
+    const kilnAssets = await createDiagnosticKilnImpostorAssets({
+        TextureLoader,
+        LinearFilter,
+        ClampToEdgeWrapping,
+        SRGBColorSpace,
+        NoColorSpace,
+    });
+    syncKilnImpostorState(kilnImpostor, kilnAssets.sidecar);
+    const kilnImpostorMesh = new Mesh(
+        new PlaneGeometry(0.82, 0.82, 1, 1),
+        createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, kilnAssets.albedoAtlas)
+    );
+    kilnImpostorMesh.position.set(-1.05, -1.16, 0.27);
+    kilnImpostorMesh.rotation.set(0, 0.1, 0);
+    scene.add(kilnImpostorMesh);
+
     const cloudPlane = new Mesh(
         new PlaneGeometry(2.4, 0.65, 1, 1),
         createCloudPlaneNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL })
@@ -980,6 +1112,11 @@ export async function bootWebGpuDiagnostic() {
         sheepWoolMaterial.dispose();
         sheepFaceMaterial.dispose();
         sheepHoofMaterial.dispose();
+        kilnImpostorMesh.geometry.dispose();
+        kilnImpostorMesh.material.dispose();
+        kilnAssets.albedoAtlas.dispose();
+        kilnAssets.normalAtlas.dispose();
+        kilnAssets.depthAtlas.dispose();
         waterHeightTexture.dispose();
         cloudPlane.geometry.dispose();
         cloudPlane.material.dispose();
