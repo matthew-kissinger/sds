@@ -206,9 +206,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   `?renderer=webgpu&konveyorImpostors=1` and an explicit impostor factory. It
   covers only `createKilnImpostorMaterial()` material creation and lets a
   supplied factory own the sun/ambient tint update from `setImpostorTint()`.
-  Default WebGL impostors still use the existing atlas-sampled
-  `ShaderMaterial`; production tile selection, parallax, depth discard,
-  production LOD wiring, and LOD0 color parity remain deferred.
+  The reusable WebGPU Kiln impostor node-material candidate now lives in
+  `js/konveyorKilnImpostorNodeMaterial.js`, and the adapter spec proves the
+  flagged production seam can route through it with atlas textures, sidecar
+  layout, lighting, fog, tunables, and material posture. Default WebGL
+  impostors still use the existing atlas-sampled `ShaderMaterial`; production
+  per-frame tile selection, parallax, depth discard, production LOD wiring, and
+  LOD0 color parity remain deferred.
 - A production-facing sun/portal/transient effect material adapter now exists
   behind `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect
   factories. It routes the already-proved diagnostic sun billboard and portal

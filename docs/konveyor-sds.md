@@ -103,9 +103,13 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   WebGPU shader-module error found during sky-preset capture.
   A production-facing Kiln impostor material seam now exists behind
   `?renderer=webgpu&konveyorImpostors=1` plus an explicit impostor factory and
-  optional tint controls, while default WebGL keeps the existing
-  `ShaderMaterial`. Per-frame production tile selection, parallax, depth
-  discard, production LOD wiring, and LOD0 color parity remain deferred.
+  optional tint controls. The reusable WebGPU Kiln impostor node-material
+  candidate now lives in `js/konveyorKilnImpostorNodeMaterial.js`, and the
+  adapter spec proves the flagged production seam can route through it with
+  atlas textures, sidecar layout, lighting, fog, tunables, and material
+  posture, while default WebGL keeps the existing `ShaderMaterial`. Per-frame
+  production tile selection, parallax, depth discard, production LOD wiring,
+  and LOD0 color parity remain deferred.
   Production Rolling
   Hills/Open Country replacement remains deferred before terrain/grass/sheep/Kiln
   wiring. `cycle36-validation/runtime/sky-fog-preset-matrix.json` now records
@@ -179,8 +183,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   existing instanced sheep `ShaderMaterial`. A production-facing
   Kiln impostor material adapter now exists behind
   `?renderer=webgpu&konveyorImpostors=1` plus an explicit impostor factory. It
-  can hand sun/ambient tint ownership to factory controls, while default WebGL
-  still uses the existing atlas-sampled impostor `ShaderMaterial`. A
+  can hand sun/ambient tint ownership to factory controls. The reusable WebGPU
+  Kiln impostor node-material candidate now lives in
+  `js/konveyorKilnImpostorNodeMaterial.js`, and the adapter spec proves the
+  flagged production seam can route through it, while default WebGL still uses
+  the existing atlas-sampled impostor `ShaderMaterial`. A
   production-facing sun/portal/transient effect material adapter now exists
   behind `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories.
   `SunBillboard`, `PortalEffect` ring/pad/particle materials, and

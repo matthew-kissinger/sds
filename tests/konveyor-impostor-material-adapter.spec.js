@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { DoubleSide, MeshBasicNodeMaterial, TSL } from 'three/webgpu';
 
 import { createKilnImpostorMaterial } from '../js/kiln-impostor-material.js';
+import { createKonveyorKilnImpostorNodeMaterial } from '../js/konveyorKilnImpostorNodeMaterial.js';
 import {
   createKonveyorImpostorMaterial,
   shouldApplyKonveyorImpostors,
@@ -20,6 +22,9 @@ function createSidecar() {
     tilesY: 4,
     azimuths: [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5],
     elevations: [Math.PI * 0.35, Math.PI * 0.2, Math.PI * 0.05, -Math.PI * 0.1],
+    tileSize: 512,
+    atlasWidth: 2048,
+    atlasHeight: 2048,
     bbox: {
       min: [-0.1, 0, -0.2],
       max: [0.3, 1.2, 0.4],
@@ -110,9 +115,18 @@ describe('konveyor impostor material adapter', () => {
         tilesY: 4,
         sidecarTilesX: 4,
         sidecarTilesY: 4,
+        tileSize: 512,
+        atlasSize: [2048, 2048],
       });
       expect(contexts[0].layout.azimuths).toHaveLength(4);
       expect(contexts[0].layout.elevations).toHaveLength(4);
+      expect(contexts[0].lighting.sunDirection).toBeInstanceOf(THREE.Vector3);
+      expect(contexts[0].lighting.sunColor).toBeInstanceOf(THREE.Color);
+      expect(contexts[0].lighting.ambientColor).toBeInstanceOf(THREE.Color);
+      expect(contexts[0].lighting.groundBounceColor).toBeInstanceOf(THREE.Color);
+      expect(contexts[0].fog.color).toBeInstanceOf(THREE.Color);
+      expect(contexts[0].fog.near).toBe(contexts[0].uniforms.fogNear.value);
+      expect(contexts[0].fog.far).toBe(contexts[0].uniforms.fogFar.value);
       expect(contexts[0].origin.x).toBeCloseTo(0.1, 12);
       expect(contexts[0].origin.y).toBeCloseTo(0.65, 12);
       expect(contexts[0].origin.z).toBeCloseTo(0.1, 12);
@@ -131,6 +145,71 @@ describe('konveyor impostor material adapter', () => {
         depthDiscardThreshold: 1,
       });
       expect(contexts[0].shaders.fragmentShader).toContain('kilnAlphaThreshold');
+    } finally {
+      material.dispose();
+    }
+  });
+
+  it('can route Kiln impostors through the reusable WebGPU node material candidate', () => {
+    const contexts = [];
+    const params = createParams({
+      search: '?renderer=webgpu&konveyorImpostors=1',
+      konveyorImpostorFactories: {
+        createKilnImpostorMaterial: (context) => {
+          contexts.push(context);
+          return createKonveyorKilnImpostorNodeMaterial(
+            { MeshBasicNodeMaterial, DoubleSide, TSL },
+            {
+              tilesX: context.layout.tilesX,
+              tilesY: context.layout.tilesY,
+              atlasSize: context.layout.atlasSize,
+              tileBlendTiles: [
+                [0, 0],
+                [1, 0],
+                [0, 1],
+              ],
+              tileBlendWeights: [0.45, 0.35, 0.2],
+              sunDirection: context.lighting.sunDirection.toArray(),
+              sunColor: context.lighting.sunColor.toArray(),
+              ambientColor: context.lighting.ambientColor.toArray(),
+              fogColor: context.fog.color.toArray(),
+              fogNear: context.fog.near,
+              fogFar: context.fog.far,
+              alphaTest: context.tunables.alphaTest,
+              alphaHash: true,
+              side: context.material.side,
+              transparent: context.material.transparent,
+              depthWrite: context.material.depthWrite,
+              depthTest: context.material.depthTest,
+            },
+            context.albedoAtlas,
+            context.normalAtlas,
+            context.depthAtlas
+          );
+        },
+      },
+    });
+
+    const material = createKilnImpostorMaterial(params);
+    try {
+      expect(material.name).toBe('konveyor-node-kiln-impostor');
+      expect(material.isNodeMaterial).toBe(true);
+      expect(material.isMeshBasicNodeMaterial).toBe(true);
+      expect(material.side).toBe(THREE.DoubleSide);
+      expect(material.transparent).toBe(false);
+      expect(material.depthWrite).toBe(true);
+      expect(material.depthTest).toBe(true);
+      expect(material.alphaHash).toBe(true);
+      expect(material.alphaTest).toBe(0.3);
+      expect(material.colorNode).toBeTruthy();
+      expect(material.opacityNode).toBeTruthy();
+      expect(material.userData.isKilnImpostor).toBe(true);
+      expect(material.userData.sidecar).toBe(params.sidecar);
+      expect(material.userData.konveyorImpostorMaterialSummary).toMatchObject({
+        kind: 'kiln-impostor',
+        applied: true,
+      });
+      expect(contexts).toHaveLength(1);
     } finally {
       material.dispose();
     }

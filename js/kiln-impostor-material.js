@@ -530,6 +530,11 @@ export function createKilnImpostorMaterial({
   const xCenter = (sidecar.bbox.min[0] + sidecar.bbox.max[0]) * 0.5;
   const yCenter = sidecar.yOffset ?? (sidecar.bbox.min[1] + sidecar.bbox.max[1]) * 0.5;
   const zCenter = (sidecar.bbox.min[2] + sidecar.bbox.max[2]) * 0.5;
+  const tileSize = sidecar.tileSize ?? null;
+  const atlasSize = [
+    sidecar.atlasWidth ?? sidecar.tilesX * (tileSize ?? 512),
+    sidecar.atlasHeight ?? sidecar.tilesY * (tileSize ?? 512),
+  ];
 
   const uniforms = {
     ...THREE.UniformsLib.fog,
@@ -626,8 +631,21 @@ export function createKilnImpostorMaterial({
         tilesY: TILES_Y,
         sidecarTilesX: sidecar.tilesX,
         sidecarTilesY: sidecar.tilesY,
+        tileSize,
+        atlasSize,
         azimuths: azPad,
         elevations: elPad,
+      },
+      lighting: {
+        sunDirection: uniforms.uSunDirWorld.value.clone(),
+        sunColor: uniforms.uSunColor.value.clone(),
+        ambientColor: uniforms.uAmbientColor.value.clone(),
+        groundBounceColor: uniforms.uGroundBounceColor.value.clone(),
+      },
+      fog: {
+        color: uniforms.fogColor.value.clone(),
+        near: uniforms.fogNear?.value ?? 18,
+        far: uniforms.fogFar?.value ?? 92,
       },
       origin: {
         x: xCenter,

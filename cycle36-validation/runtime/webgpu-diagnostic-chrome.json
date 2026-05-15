@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T07:00:43.565Z",
+  "capturedAt": "2026-05-15T07:07:48.835Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -1966,6 +1966,6 @@
         "hasControls": false
       }
     },
-    "frames": 3
+    "frames": 2
   }
 }
