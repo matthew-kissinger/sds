@@ -18,6 +18,7 @@
 import * as THREE from 'three';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { generateRockPlacementPlan } from './rockPlacementPlan.js';
+import { createKonveyorRockPlacementRng } from './konveyorRockPlacementAdapter.js';
 
 /**
  * @param {object} builder TerrainBuilder instance.
@@ -33,10 +34,16 @@ export async function placeEnvironmentDetails(builder) {
         Object.entries(builder.models.rocks)
             .map(([rockType, model]) => [rockType, model?.userData?.modelBaseYOffset ?? 0])
     );
+    const placementRng = createKonveyorRockPlacementRng({
+        search: builder.konveyorRockPlacementSearch,
+        sceneDef: builder.sceneDef,
+        defaultRng: Math.random,
+    });
+    builder.konveyorRockPlacementSummary = placementRng.summary;
     const placementPlan = generateRockPlacementPlan({
         zones: builder.zones,
         sceneDef: builder.sceneDef,
-        rng: Math.random,
+        rng: placementRng.rng,
         isInFarmHouseArea: (x, z) => builder.isInFarmHouseArea(x, z),
         groundY: (x, z) => builder._groundY(x, z),
         modelBaseYOffsets,

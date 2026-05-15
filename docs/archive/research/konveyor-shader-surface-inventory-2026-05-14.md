@@ -153,8 +153,11 @@ goes through `js/world/konveyorNativeInstancingAdapter.js`. A rock transform
 diagnostic now uses production-side `js/world/rockPlacementPlan.js` with an
 injected seeded RNG, records generated scene-zone rock samples for all three
 rock GLBs, and renders them through the same native instancing seam. Production
-`RockPlacement` still passes `Math.random()`, and shared obstacle state remains
-unwired. Do not start production wiring with
+`RockPlacement` still leaves the default route on `Math.random()`, but the
+production-side opt-in route `?renderer=webgpu&konveyorRocks=1` now uses
+`mulberry32(sceneSeed + Rock)` and records a stable scene proof in
+`cycle36-validation/runtime/rock-placement-flag-proof.json`. Shared obstacle
+state remains unwired. Do not start production wiring with
 terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
@@ -242,8 +245,9 @@ comments:
   scene zones by `js/world/rockPlacementPlan.js` with an injected seeded RNG,
   covers all three shipped rock GLBs, renders them through native WebGPU
   `THREE.InstancedMesh`, and reports the obstacle fields as recorded-only.
-  Production `RockPlacement` still passes client `Math.random()`, so production
-  seeded generation and shared obstacle wiring remain separate work.
+  Production `RockPlacement` now has a separate deterministic RNG route behind
+  `?renderer=webgpu&konveyorRocks=1`; default production still uses client
+  `Math.random()`, and shared obstacle wiring remains separate work.
 - The production-side adapter in `js/world/konveyorMaterialAdapter.js` reuses
   the same tree-name and rock-traversal replacement rules for cached GLB roots.
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and

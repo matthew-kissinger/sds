@@ -75,6 +75,8 @@ export class TerrainBuilder {
         this.konveyorMaterialSearch = options.search;
         this.konveyorMaterialFactories = options.konveyorMaterialFactories;
         this.konveyorTreeRockMaterialSummary = null;
+        this.konveyorRockPlacementSearch = options.search;
+        this.konveyorRockPlacementSummary = null;
         this.grassMaterial = null;
         this.grassInstanceCount = 0;
         this.grassInstancedMesh = null;
