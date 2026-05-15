@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T06:12:04.403Z",
+  "capturedAt": "2026-05-15T06:15:37.974Z",
   "contract": "konveyor-production-flag-fallback-proof",
   "baseUrl": "http://127.0.0.1:4173/",
   "channel": "playwright-chromium",
@@ -36,7 +36,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 116,
-        "triangles": 4158322
+        "triangles": 4164342
       },
       "summaries": {
         "treeRockMaterial": {
@@ -92,7 +92,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 91,
-        "triangles": 3760508
+        "triangles": 3763532
       },
       "summaries": {
         "treeRockMaterial": {
@@ -120,6 +120,70 @@
           "reason": "missing-factories"
         },
         "meadowQuadMaterial": null,
+        "waterMaterial": {
+          "kind": "anime-water",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "atmosphereMaterial": {
+          "kind": "cloud-layer",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "effectMaterial": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "ok": true
+    },
+    {
+      "sceneId": "open-country",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=open-country&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": false,
+        "effective": "webgl",
+        "fallbackReason": "diagnostic-flag-required"
+      },
+      "diagnosticBoot": false,
+      "currentSceneId": "open-country",
+      "renderer": {
+        "className": "ux",
+        "isWebGLRenderer": true,
+        "isWebGPURenderer": false,
+        "calls": 156,
+        "triangles": 3577402
+      },
+      "summaries": {
+        "treeRockMaterial": {
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "rockPlacement": {
+          "kind": "rock-placement-rng",
+          "applied": true,
+          "reason": null,
+          "sceneId": "open-country",
+          "sceneSeed": 42,
+          "seed": 1383031701,
+          "seedOffset": 1383031659,
+          "rng": "mulberry32(sceneSeed + Rock)"
+        },
+        "terrainMaterial": {
+          "kind": "terrain-ground",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "grassBladeMaterial": {
+          "kind": "grass-blade",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "meadowQuadMaterial": {
+          "kind": "meadow-quad",
+          "applied": false,
+          "reason": "missing-factories"
+        },
         "waterMaterial": {
           "kind": "anime-water",
           "applied": false,

@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const DEFAULT_SCENES = ['field', 'rolling-hills'];
+const DEFAULT_SCENES = ['field', 'rolling-hills', 'open-country'];
 const CHROMIUM_GPU_ARGS = process.platform === 'win32'
   ? ['--use-angle=d3d11', '--enable-gpu']
   : [];

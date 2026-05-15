@@ -158,10 +158,11 @@ production-side opt-in route `?renderer=webgpu&konveyorRocks=1` now uses
 `mulberry32(sceneSeed + Rock)` and records a stable scene proof in
 `cycle36-validation/runtime/rock-placement-flag-proof.json`. Shared obstacle
 state remains unwired. `cycle36-validation/runtime/production-flag-fallback-proof.json`
-now records Field and Rolling Hills with `renderer=webgpu` plus all current
-Konveyor material and placement flags but without `diagnostic=1`; both scenes
-stay effective WebGL with `fallbackReason: "diagnostic-flag-required"`, the
-rock-placement route applies, and material adapters fail closed with
+now records Field, Rolling Hills, and Open Country with `renderer=webgpu` plus
+all current Konveyor material and placement flags but without `diagnostic=1`;
+all three scenes stay effective WebGL with
+`fallbackReason: "diagnostic-flag-required"`, the rock-placement route applies,
+and material adapters fail closed with
 `missing-factories`. Do not start production wiring with
 terrain, grass, water, sheep, or Kiln impostors.
 
