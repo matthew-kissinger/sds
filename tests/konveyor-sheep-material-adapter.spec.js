@@ -1,0 +1,132 @@
+import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+
+import { OptimizedSheepSystem } from '../js/OptimizedSheep.js';
+import {
+    createKonveyorSheepMaterial,
+    shouldApplyKonveyorSheep,
+} from '../js/konveyorSheepMaterialAdapter.js';
+
+function createMaterial(name) {
+    const material = new THREE.MeshBasicMaterial();
+    material.name = name;
+    return material;
+}
+
+describe('konveyor sheep material adapter', () => {
+    it('requires the explicit WebGPU sheep flag', () => {
+        expect(shouldApplyKonveyorSheep('?renderer=webgpu&konveyorSheep=1')).toBe(true);
+        expect(shouldApplyKonveyorSheep('?renderer=webgpu&diagnostic=1')).toBe(false);
+        expect(shouldApplyKonveyorSheep('?renderer=webgl&konveyorSheep=1')).toBe(false);
+        expect(shouldApplyKonveyorSheep('')).toBe(false);
+    });
+
+    it('leaves the default optimized sheep material untouched without flag and factories', () => {
+        const scene = new THREE.Scene();
+        const sheep = new OptimizedSheepSystem(scene, 0);
+
+        try {
+            expect(sheep.material.isShaderMaterial).toBe(true);
+            expect(sheep.material.vertexColors).toBe(true);
+            expect(sheep.material.fog).toBe(false);
+            expect(sheep.material.uniforms.time.value).toBe(0);
+            expect(sheep.material.uniforms.globalAnimSpeed.value).toBe(1);
+            expect(sheep.instancedMesh.material).toBe(sheep.material);
+            expect(sheep.konveyorSheepMaterialSummary).toMatchObject({
+                kind: 'sheep-wool',
+                applied: false,
+                reason: 'flag-disabled',
+            });
+        } finally {
+            sheep.dispose();
+        }
+    });
+
+    it('routes optimized sheep material creation through an explicit WebGPU factory', () => {
+        const contexts = [];
+        const scene = new THREE.Scene();
+        const sheep = new OptimizedSheepSystem(scene, 2, null, false, {
+            search: '?renderer=webgpu&konveyorSheep=1',
+            konveyorSheepFactories: {
+                createSheepMaterial: (context) => {
+                    contexts.push(context);
+                    return createMaterial('konveyor-sheep-wool');
+                },
+            },
+        });
+
+        try {
+            expect(sheep.material.name).toBe('konveyor-sheep-wool');
+            expect(sheep.instancedMesh.material).toBe(sheep.material);
+            expect(sheep.konveyorSheepMaterialSummary).toMatchObject({
+                kind: 'sheep-wool',
+                applied: true,
+            });
+            expect(contexts).toHaveLength(1);
+            expect(contexts[0].sheepCount).toBe(2);
+            expect(contexts[0].vertexShader).toContain('attribute float vertexId');
+            expect(contexts[0].fragmentShader).toContain('vColor');
+            expect(contexts[0].uniforms.time.value).toBe(0);
+            expect(contexts[0].uniforms.globalAnimSpeed.value).toBe(1);
+            expect(contexts[0].material).toEqual({ vertexColors: true, fog: false });
+            expect(contexts[0].geometry.vertexCount).toBeGreaterThan(0);
+            expect(contexts[0].geometry.triangleCount).toBeGreaterThan(0);
+            expect(contexts[0].geometry.vertexAttributes).toEqual(
+                expect.arrayContaining(['position', 'normal', 'uv', 'color', 'vertexId'])
+            );
+            expect(contexts[0].geometry.instanceAttributes).toEqual(['instanceData', 'instanceAnimation']);
+        } finally {
+            sheep.dispose();
+        }
+    });
+
+    it('uses factory controls for sheep material updates', () => {
+        const calls = [];
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x88aacc, 0.002);
+        const sheep = new OptimizedSheepSystem(scene, 0, null, false, {
+            search: '?renderer=webgpu&konveyorSheep=1',
+            konveyorSheepFactories: {
+                createSheepMaterial: () => ({
+                    material: createMaterial('konveyor-sheep-controls'),
+                    controls: {
+                        update: (state) => calls.push(['update', state]),
+                        dispose: () => calls.push(['dispose']),
+                    },
+                }),
+            },
+        });
+
+        sheep.update(0.25, null, null, null, null, null);
+        sheep.dispose();
+
+        expect(calls.map(([kind]) => kind)).toEqual(['update', 'dispose']);
+        expect(calls[0][1]).toMatchObject({
+            deltaTime: 0.25,
+            sceneFog: scene.fog,
+            material: expect.objectContaining({ name: 'konveyor-sheep-controls' }),
+        });
+    });
+
+    it('falls back to the default sheep material when a factory is missing or invalid', () => {
+        const missing = createKonveyorSheepMaterial('sheep-wool', 'createSheepMaterial', {
+            createDefaultMaterial: () => createMaterial('default-sheep'),
+            search: '?renderer=webgpu&konveyorSheep=1',
+            factories: {},
+        });
+        expect(missing.material.name).toBe('default-sheep');
+        expect(missing.summary.reason).toBe('missing-factories');
+        missing.material.dispose();
+
+        const invalid = createKonveyorSheepMaterial('sheep-wool', 'createSheepMaterial', {
+            createDefaultMaterial: () => createMaterial('default-invalid-sheep'),
+            search: '?renderer=webgpu&konveyorSheep=1',
+            factories: {
+                createSheepMaterial: () => null,
+            },
+        });
+        expect(invalid.material.name).toBe('default-invalid-sheep');
+        expect(invalid.summary.reason).toBe('invalid-factory-result');
+        invalid.material.dispose();
+    });
+});

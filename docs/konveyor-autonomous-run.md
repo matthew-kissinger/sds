@@ -159,6 +159,14 @@ WebGPU now has a diagnostic island, not a production renderer:
   terrain colors, procedural-noise constants, fog, side, and polygon-offset
   contract to the factory. Default WebGL terrain still uses the existing
   `ShaderMaterial` with Three fog chunks.
+- A production-facing `OptimizedSheep` material adapter now exists behind
+  `?renderer=webgpu&konveyorSheep=1` and an explicit sheep material factory.
+  It covers only `OptimizedSheepSystem.createOptimizedMaterial()` material
+  creation and lets a supplied factory own time/fog update controls. Default
+  WebGL sheep still uses the existing custom `ShaderMaterial` on the
+  production `InstancedMesh`; production instancing parity, animation
+  attributes, terrain grounding, multiplayer-safe visual parity, and high-count
+  perf remain deferred.
 - A production-facing sun/portal effect material adapter now exists behind
   `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect factories. It
   routes the already-proved diagnostic sun billboard and portal ring node
@@ -173,7 +181,7 @@ WebGPU now has a diagnostic island, not a production renderer:
 - `GrassSystem` is now loaded only by the async production grass creation
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
-  bundle-size fixture. Current production build evidence: `mainKB=548`,
+  bundle-size fixture. Current production build evidence: `mainKB=550`,
   `threeKB=603`, `GrassSystem=35 KB`, `AnimeWater=9 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
   `Atmosphere` can forward an explicit `skyFactory` to `HosekWilkieSky`, and
@@ -236,8 +244,10 @@ Recommended order:
    production stochastic blade dither, interaction bending, production
    instancing, and compute experiments. The sheep-wool diagnostic island now
    covers toon/wool color, procedural wool displacement, rim/SSS lighting terms,
-   and sky/fog handoff while explicitly deferring production `OptimizedSheep`
-   instancing, animation attributes, terrain grounding, and high-count perf.
+   and sky/fog handoff. Production `OptimizedSheep` material creation now has a
+   flag-gated explicit factory seam, but production instancing parity,
+   animation attributes, terrain grounding, multiplayer-safe visual parity, and
+   high-count perf remain deferred.
    The Kiln
    impostor diagnostic island now fetches the committed `tree1` sidecar plus
    albedo/normal/depth atlases, derives a diagnostic view tile triad from
@@ -267,9 +277,9 @@ Recommended order:
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
    says otherwise. The sun/portal effect material adapter, sky-dome
    atmosphere material seam, far-ring meadow material seam, grass-blade
-   material seam, anime-water material seam, and terrain-ground material seam
-   are now production-facing hooks, but all are still flag-gated and factory
-   supplied.
+   material seam, anime-water material seam, terrain-ground material seam, and
+   sheep material seam are now production-facing hooks, but all are still
+   flag-gated and factory supplied.
    The atmosphere seam now reaches the
    `Atmosphere` orchestrator through an explicit `skyFactory` and reaches
    `HosekWilkieSky` directly through the same fail-closed adapter; the same
@@ -283,7 +293,10 @@ Recommended order:
    The water path now has a production-facing factory/update-control seam, but
    scene-bound Rolling Hills/Open Country screenshot parity remains deferred.
    The terrain path now has a production-facing material factory seam, but
-   scene-bound Rolling Hills/Open Country terrain parity remains deferred.
+   scene-bound Rolling Hills/Open Country terrain parity remains deferred. The
+   sheep path now has a production-facing material factory seam, but high-count
+   animation, terrain-grounded visual parity, and multiplayer-safe scene proof
+   remain deferred.
    The sky path still needs a real TSL
    sky material plus preset screenshot parity before any default production
    boot claim; next move to a smaller shader/material island or the measured

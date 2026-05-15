@@ -75,11 +75,15 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   wind, sun direction, and interactor state, while default WebGL keeps the
   existing grass `ShaderMaterial`. Production stochastic blade dither,
   production instancing, compute/trample experiments, and scene-level WebGPU
-  grass parity remain deferred. A sheep-wool
-  diagnostic material covers production toon/wool color, procedural wool
-  displacement, rim/SSS lighting terms, and sky/fog handoff while explicitly
-  deferring production `OptimizedSheep` instancing, animation attributes,
-  terrain grounding, and high-count perf. A one-species Kiln impostor
+  grass parity remain deferred. A sheep-wool diagnostic material covers
+  production toon/wool color, procedural wool displacement, rim/SSS lighting
+  terms, and sky/fog handoff. A production-facing `OptimizedSheep` material
+  seam now exists behind `?renderer=webgpu&konveyorSheep=1` plus an explicit
+  `createSheepMaterial` factory and optional update controls for time/fog
+  state, while default WebGL keeps the existing sheep `ShaderMaterial`.
+  Production sheep instancing parity, animation-attribute parity, terrain
+  grounding, multiplayer-safe visual parity, and high-count perf remain
+  deferred. A one-species Kiln impostor
   diagnostic material fetches the committed `tree1` sidecar plus
   albedo/normal/depth atlases, derives a diagnostic view tile triad from sidecar
   angles, blends three atlas tiles with premultiplied alpha/fog in a WebGPU
@@ -114,6 +118,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   passes terrain size, segment count, heightfield metadata, color constants,
   noise constants, fog, side, and polygon-offset posture to the factory while
   default WebGL still uses the existing terrain `ShaderMaterial`. A
+  production-facing `OptimizedSheep` material adapter now exists behind
+  `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory. It can
+  hand time/fog update ownership to factory controls, while default WebGL
+  still uses the existing instanced sheep `ShaderMaterial`. A
   production-facing sun/portal effect material adapter now exists behind
   `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories;
   both `SunBillboard` and `PortalEffect` material creation now route through
@@ -123,7 +131,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=548`, `threeKB=603`, `GrassSystem=35 KB`) for later production seams
+  (`mainKB=550`, `threeKB=603`, `GrassSystem=35 KB`) for later production seams
   without regenerating the refactor-baseline bundle ratchet. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
@@ -154,6 +162,9 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `?renderer=webgpu&konveyorGrass=1` plus an explicit meadow factory; default
   WebGL still uses the existing `MeshLambertMaterial` and procedural tint
   injection, with the `USE_UV` shader define assigned on the material instance.
+  A production-facing sheep material adapter now exists behind
+  `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory; default
+  WebGL still uses the existing optimized sheep shader and instancing path.
   A production-facing material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
   factories, so cached production tree/rock GLB roots can be replaced without
