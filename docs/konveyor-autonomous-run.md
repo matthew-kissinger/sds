@@ -78,7 +78,9 @@ WebGPU now has a diagnostic island, not a production renderer:
 - [`archive/research/konveyor-shader-surface-inventory-2026-05-14.md`](archive/research/konveyor-shader-surface-inventory-2026-05-14.md)
   ranks the current GLSL and `onBeforeCompile` migration surface. The sun
   billboard, portal ring, cloud-plane, sky/fog, and anime-water formulas are
-  now ported inside the diagnostic island. The meadow-quad diagnostic now uses
+  now ported inside the diagnostic island. The sky/fog and cloud-plane
+  node-material candidates now also live in reusable atmosphere modules. The
+  meadow-quad diagnostic now uses
   production default grass colors, the far-ring UV hash scale, and CPU sky/fog
   input. A terrain-heightfield diagnostic
   island now samples the real Rolling Hills heightfield texture for
@@ -192,8 +194,9 @@ WebGPU now has a diagnostic island, not a production renderer:
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
   bundle-size fixture. Current production build evidence: `mainKB=553`,
-  `threeKB=603`, `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
-  `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
+  `threeKB=603`, `webgpuDiagnostic=42 KB`,
+  `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`, `AnimeWater=9 KB`,
+  `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
   `Atmosphere` can forward an explicit `skyFactory` to `HosekWilkieSky`, and
   `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory
@@ -210,6 +213,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   layer can route coverage, edge fade, time, feature scale, sun color, and
   wind state through factory controls while keeping the default WebGL
   `ShaderMaterial` path untouched when the flag or factories are absent.
+  `js/atmosphere/konveyorCloudNodeMaterial.js` now owns the reusable WebGPU
+  cloud-layer node-material candidate that the diagnostic cloud plane and an
+  explicit `CloudLayer` factory can share. Dynamic production cloud controls,
+  sky-preset screenshots, fog/horizon integration, and default production
+  wiring remain deferred.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
   The sky/fog packet now lives in `js/atmosphere/skyFogSamplePacket.js` and
@@ -299,10 +307,11 @@ Recommended order:
    `Atmosphere` orchestrator through an explicit `skyFactory` and reaches
    `HosekWilkieSky` directly through the same fail-closed adapter; the same
    adapter now reaches production `CloudLayer` through an explicit
-   `cloudFactory` or the direct fail-closed flag/factory path. The sky/fog
-   node material is now extracted into a reusable WebGPU factory candidate, but
-   cloud TSL material, preset screenshots, fog-consumer proof, and default
-   production wiring remain deferred. Production
+   `cloudFactory` or the direct fail-closed flag/factory path. The sky/fog and
+   cloud-layer node materials are now extracted into reusable WebGPU factory
+   candidates, but dynamic cloud controls, preset screenshots,
+   fog-consumer proof, fog/horizon integration, and default production wiring
+   remain deferred. Production
    `SunBillboard` itself is now
    scene-coupled and lazy-loaded, which creates bundle room for the next seam
    without changing default WebGL behavior. The far-ring meadow path now has a

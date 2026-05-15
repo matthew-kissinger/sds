@@ -12,6 +12,10 @@ import {
   shouldApplyKonveyorAtmosphere,
 } from '../js/atmosphere/konveyorAtmosphereMaterialAdapter.js';
 import {
+  createKonveyorCloudLayerMaterialFactories,
+  createKonveyorCloudLayerNodeMaterial,
+} from '../js/atmosphere/konveyorCloudNodeMaterial.js';
+import {
   createKonveyorSkyDomeMaterialFactories,
   createKonveyorSkyFogNodeMaterial,
 } from '../js/atmosphere/konveyorSkyNodeMaterial.js';
@@ -214,6 +218,35 @@ describe('konveyor atmosphere material adapter', () => {
       expect(lastUpdate.timeSeconds).toBeCloseTo(0.5);
       expect(lastUpdate.sunColorHex).toBe(new THREE.Color(0.25, 0.5, 1.0).getHex());
       expect(layer.getMesh().visible).toBe(true);
+    } finally {
+      layer.dispose();
+    }
+  });
+
+  it('creates a reusable WebGPU cloud node material', () => {
+    const material = createKonveyorCloudLayerNodeMaterial(WEBGPU);
+
+    expect(material.name).toBe('konveyor-node-cloud-layer');
+    expect(material.isNodeMaterial).toBe(true);
+    expect(material.transparent).toBe(true);
+    expect(material.depthWrite).toBe(false);
+    expect(material.side).toBe(WEBGPU.DoubleSide);
+  });
+
+  it('routes CloudLayer to the extracted WebGPU cloud node material factory under the explicit flag', () => {
+    const layer = new CloudLayer({
+      search: '?renderer=webgpu&konveyorAtmosphere=1',
+      konveyorAtmosphereFactories: createKonveyorCloudLayerMaterialFactories(WEBGPU),
+    });
+
+    try {
+      expect(layer.material.name).toBe('konveyor-node-cloud-layer');
+      expect(layer.material.isNodeMaterial).toBe(true);
+      expect(layer.konveyorMaterialSummary).toMatchObject({
+        kind: 'cloud-layer',
+        applied: true,
+      });
+      expect(layer.getMesh().material).toBe(layer.material);
     } finally {
       layer.dispose();
     }

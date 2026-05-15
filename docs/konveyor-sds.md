@@ -113,7 +113,12 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   The same atmosphere adapter now reaches production `CloudLayer`: `Atmosphere`
   can forward an explicit `cloudFactory`, and cloud coverage, edge fade, time,
   feature scale, sun color, and wind state can flow through adapter controls
-  while the default WebGL `ShaderMaterial` path remains unchanged. A
+  while the default WebGL `ShaderMaterial` path remains unchanged.
+  `js/atmosphere/konveyorCloudNodeMaterial.js` now owns the reusable WebGPU
+  cloud-layer node-material candidate used by the diagnostic cloud plane and by
+  an explicit `CloudLayer` factory under the same fail-closed flag. Dynamic
+  production cloud controls, sky-preset screenshots, fog/horizon integration,
+  and default production wiring remain deferred. A
   production-facing anime-water material adapter now exists behind
   `?renderer=webgpu&konveyorWater=1` plus an explicit water factory. It can
   hand water update ownership to factory controls, while default WebGL still
@@ -143,10 +148,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=553`, `threeKB=603`, `konveyorMaterialAdapter=3 KB`,
-  `GrassSystem=35 KB`, `AnimeWater=9 KB`, `PortalEffect=5 KB`,
-  `CorralZapEffect=5 KB`) for later production seams without regenerating the
-  refactor-baseline bundle ratchet. A
+  (`mainKB=553`, `threeKB=603`, `webgpuDiagnostic=42 KB`,
+  `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
+  `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`) for later
+  production seams without regenerating the refactor-baseline bundle ratchet. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed
