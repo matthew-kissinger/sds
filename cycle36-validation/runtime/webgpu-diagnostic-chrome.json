@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T01:14:24.915Z",
+  "capturedAt": "2026-05-15T01:18:21.412Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -333,6 +333,9 @@
       "windSpeed": 0.6,
       "gustStrength": 0.05,
       "bladeHeight": 1,
+      "grassFadeStart": 70,
+      "grassFadeEnd": 260,
+      "distanceFadeStrength": 1,
       "sunColor": [
         1,
         0.3055,
@@ -353,7 +356,8 @@
       "alphaHash": true,
       "alphaTest": 0.06,
       "interaction": "deferred",
-      "distanceFade": "deferred",
+      "distanceFade": "diagnostic-smooth-opacity-proxy",
+      "productionDistanceFade": "GrassSystem stochastic blade dither",
       "source": "GrassSystem.shader-contract"
     },
     "sheepWool": {

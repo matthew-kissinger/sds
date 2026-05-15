@@ -379,6 +379,9 @@ export function createGrassBladeDiagnosticState(skyFog = createSkyFogDiagnosticS
         windSpeed: 0.6,
         gustStrength: 0.05,
         bladeHeight: 1.0,
+        grassFadeStart: 70,
+        grassFadeEnd: 260,
+        distanceFadeStrength: 1.0,
         sunColor: skyFog.sunColor,
         sunDirection: skyFog.sunDirection,
         fogColor: skyFog.fogColor,
@@ -387,7 +390,8 @@ export function createGrassBladeDiagnosticState(skyFog = createSkyFogDiagnosticS
         alphaHash: true,
         alphaTest: 0.06,
         interaction: 'deferred',
-        distanceFade: 'deferred',
+        distanceFade: 'diagnostic-smooth-opacity-proxy',
+        productionDistanceFade: 'GrassSystem stochastic blade dither',
         source: 'GrassSystem.shader-contract',
     };
 }
@@ -727,6 +731,10 @@ function createGrassBladeNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TS
     const verticalRim = pow(max(dot(viewDir, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
     const viewDistance = length(positionView);
     const fogBlend = smoothstep(grassBlade.fogNear, grassBlade.fogFar, viewDistance).mul(0.55);
+    const densityFade = float(1.0).sub(
+        smoothstep(grassBlade.grassFadeStart, grassBlade.grassFadeEnd, viewDistance)
+            .mul(grassBlade.distanceFadeStrength)
+    );
 
     const material = new MeshStandardNodeMaterial();
     material.name = 'konveyor-node-grass-blade';
@@ -737,7 +745,7 @@ function createGrassBladeNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TS
         vec3(...grassBlade.fogColor),
         fogBlend
     );
-    material.opacityNode = bladeShape;
+    material.opacityNode = bladeShape.mul(densityFade);
     material.positionNode = positionLocal.add(vec3(windDisp.x, 0.0, windDisp.y));
     material.roughnessNode = float(0.96);
     material.metalnessNode = float(0.0);

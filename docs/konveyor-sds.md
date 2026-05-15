@@ -63,8 +63,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   reuses that texture for height-based ground color and fog input. A
   grass-blade diagnostic material covers the production default gradient colors,
   analytic wind/gust/flutter displacement, alpha-hash posture, and sky/fog
-  handoff while explicitly deferring interaction bending, distance fade,
-  production instancing, and compute/trample experiments. A sheep-wool
+  handoff plus a smooth opacity proxy driven by production
+  `grassFadeStart`/`grassFadeEnd`, while explicitly deferring production
+  stochastic blade dither, interaction bending, production instancing, and
+  compute/trample experiments. A sheep-wool
   diagnostic material covers production toon/wool color, procedural wool
   displacement, rim/SSS lighting terms, and sky/fog handoff while explicitly
   deferring production `OptimizedSheep` instancing, animation attributes,

@@ -168,12 +168,14 @@ Recommended order:
    while leaving production far-ring wiring and scene screenshots deferred. The
    grass-blade diagnostic island now covers
    production default gradient colors, analytic wind/gust/flutter displacement,
-   alpha-hash posture, and sky/fog handoff while explicitly deferring
-   interaction bending, distance fade, production instancing, and compute
-   experiments. The sheep-wool diagnostic island now covers toon/wool color,
-   procedural wool displacement, rim/SSS lighting terms, and sky/fog handoff
-   while explicitly deferring production `OptimizedSheep` instancing,
-   animation attributes, terrain grounding, and high-count perf. The Kiln
+   alpha-hash posture, sky/fog handoff, and a smooth opacity proxy driven by
+   production `grassFadeStart`/`grassFadeEnd` while explicitly deferring
+   production stochastic blade dither, interaction bending, production
+   instancing, and compute experiments. The sheep-wool diagnostic island now
+   covers toon/wool color, procedural wool displacement, rim/SSS lighting terms,
+   and sky/fog handoff while explicitly deferring production `OptimizedSheep`
+   instancing, animation attributes, terrain grounding, and high-count perf.
+   The Kiln
    impostor diagnostic island now fetches the committed `tree1` sidecar plus
    albedo/normal/depth atlases, derives a diagnostic view tile triad from
    sidecar angles, blends three atlas tiles with premultiplied alpha/fog in a

@@ -173,6 +173,9 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(grassBlade.windStrength).toBe(0.12);
     expect(grassBlade.windSpeed).toBe(0.6);
     expect(grassBlade.gustStrength).toBe(0.05);
+    expect(grassBlade.grassFadeStart).toBe(70);
+    expect(grassBlade.grassFadeEnd).toBe(260);
+    expect(grassBlade.grassFadeStart).toBeLessThan(grassBlade.grassFadeEnd);
     expect(grassBlade.sunColor).toBe(skyFog.sunColor);
     expect(grassBlade.sunDirection).toBe(skyFog.sunDirection);
     expect(grassBlade.fogColor).toBe(skyFog.fogColor);
@@ -180,7 +183,8 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(grassBlade.fogFar).toBe(skyFog.fogFar);
     expect(grassBlade.alphaHash).toBe(true);
     expect(grassBlade.interaction).toBe('deferred');
-    expect(grassBlade.distanceFade).toBe('deferred');
+    expect(grassBlade.distanceFade).toBe('diagnostic-smooth-opacity-proxy');
+    expect(grassBlade.productionDistanceFade).toBe('GrassSystem stochastic blade dither');
   });
 
   it('keeps the sheep wool diagnostic tied to production sheep shader inputs', () => {

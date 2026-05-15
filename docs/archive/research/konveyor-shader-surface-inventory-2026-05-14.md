@@ -28,8 +28,10 @@ loaded from the real Rolling Hills heightfield. The same texture now drives a
 diagnostic terrain-heightfield material for height-based ground color and fog
 input. A diagnostic grass-blade island now covers the production grass default
 color gradient, analytic wind/gust/flutter displacement, alpha-hash posture,
-sun/fog inputs, and explicit deferral markers for interaction bending and
-distance fade. A diagnostic sheep-wool island now covers the production sheep
+sun/fog inputs, and a smooth WebGPU opacity proxy tied to production
+`grassFadeStart`/`grassFadeEnd`; production stochastic blade dither,
+interaction bending, instancing, and compute experiments remain deferred. A
+diagnostic sheep-wool island now covers the production sheep
 toon/wool color contract, procedural wool noise displacement, rim/SSS lighting
 terms, and sky/fog handoff while recording `instanceData`,
 `instanceAnimation`, and `vertexId` as deferred production instancing inputs.
@@ -81,7 +83,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 | 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet; production wiring still needs analytic parity and preset screenshots. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
 | 5 | Anime water | `js/water/AnimeWater.js` | Shoreline foam, heightfield-driven foam, ripples, sun glint, fog. | High. Samples a generated heightfield `DataTexture` and drives a visible scene focal point. | Diagnostic TSL island now covers production palette, shoreline bands, foam, ripples, sun glint, fog input, and a non-filtered `RedFormat`/`FloatType` sample loaded from `public/terrain/rolling-hills.bin`. Production wiring still needs scene-bound Rolling Hills/Open Country screenshots before replacing WebGL water. | Water shoreline specs, Rolling Hills/Open Country screenshots, latency. |
 | 6 | Terrain ground | `js/TerrainBuilder.js` | Heightfield-displaced terrain with procedural ground color and Three fog chunks. | High. It is the base surface of every production scene and uses fog chunks. | Diagnostic terrain-heightfield TSL island now samples the real Rolling Hills heightfield texture for height-based ground color and fog input. Production terrain remains WebGL. | Refactor-baseline terrain hash untouched, screenshots, perf. |
-| 7 | Grass blades | `js/GrassSystem.js`, `js/shaders/grass/*.glsl` | Instanced blade geometry, wind, interaction, LOD fade, fake SSS, manual fog. | Very high. It owns interaction feel and high-count perf. | Diagnostic grass-blade TSL material now covers production default gradient colors, analytic wind/gust/flutter displacement, alpha hash, and sky/fog handoff. Interaction bending, distance fade, production instancing, and compute/trample experiments remain deferred. | Perf, latency, visual, mobile profile, interaction smoke. |
+| 7 | Grass blades | `js/GrassSystem.js`, `js/shaders/grass/*.glsl` | Instanced blade geometry, wind, interaction, LOD fade, fake SSS, manual fog. | Very high. It owns interaction feel and high-count perf. | Diagnostic grass-blade TSL material now covers production default gradient colors, analytic wind/gust/flutter displacement, alpha hash, sky/fog handoff, and a smooth opacity proxy using `grassFadeStart`/`grassFadeEnd`. Production stochastic blade dither, interaction bending, instancing, and compute/trample experiments remain deferred. | Perf, latency, visual, mobile profile, interaction smoke. |
 | 8 | Sheep instancing | `js/OptimizedSheep.js`, `js/shaders/sheep/*.glsl` | Instanced sheep geometry, animation attributes, vertex colors, manual fog. | Very high. It touches core gameplay scale and animation feel. | Diagnostic sheep-wool TSL material now covers toon/wool colors, procedural wool displacement, rim/SSS terms, and sky/fog handoff. Production `InstancedMesh`, `instanceData`, `instanceAnimation`, `vertexId`, terrain grounding, and high-count animation remain deferred. | Sim fixtures unchanged, smoke, perf high-count modes. |
 | 9 | Kiln tree impostors | `js/kiln-impostor-material.js` | Atlas-sampled tree impostors with relighting, alpha hash, fog, parallax/depth scaffolding. | Very high. It is asset-pipeline coupled and must match LOD0 color. | Diagnostic one-species TSL island now fetches the `tree1` sidecar plus albedo/normal/depth atlases, derives a diagnostic view tile triad from sidecar angles, blends three atlas tiles with premultiplied alpha, relights from the normal aux layer, and samples the depth aux layer as a diagnostic shading proxy. Per-frame production tile selection, parallax, depth discard, production LOD, and LOD color matching remain deferred. | LOD color-match artifacts, tree visibility, perf, screenshots. |
 | 10 | Procedural mountains | `js/ProceduralMountains.js`, `js/shaders/proceduralMountainsShader.js` | Inactive standalone horizon ring. `TerrainBuilder.addMountains()` returns no meshes. | Low as a blocker, but misleading as migration scope. | Do not port now. Delete or re-scope when a real horizon ring is approved. | None until reactivated. |
@@ -213,8 +215,9 @@ comments:
    instancing, and production Kiln impostors until the diagnostic islands have
    proved scene binding, bundle posture, and visual gates. The grass-blade
    island is shader-contract evidence only; it does not yet prove production
-   instancing, entity interaction, LOD fade, or high-count grass performance.
-   The sheep-wool island is likewise material evidence only; it does not yet
+   instancing, entity interaction, production stochastic LOD dither, or
+   high-count grass performance. The sheep-wool island is likewise material
+   evidence only; it does not yet
    prove production `OptimizedSheep` instancing, animation attributes, terrain
    grounding, multiplayer-safe visual parity, or high-count perf. The Kiln
    island proves sidecar/atlas fetch, WebGPU texture sampling, normal-aux
