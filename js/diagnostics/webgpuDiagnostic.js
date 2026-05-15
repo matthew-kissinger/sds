@@ -14,7 +14,10 @@ import {
 } from '../atmosphere/konveyorAtmosphereMaterialAdapter.js';
 import { DEFAULT_SCENE_ID, getSceneById } from '../../shared/scenes/index.js';
 import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
-import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
+import {
+    RUNTIME_GLB_RENDER_PREVIEW_ASSETS,
+    createRuntimeGlbPreview,
+} from './webgpuRuntimeGlbPreview.js';
 import {
     createKonveyorEffectMaterial,
 } from '../effects/konveyorEffectMaterialAdapter.js';
@@ -722,6 +725,85 @@ export function createProductionSheepAdapterDiagnosticProof({
     };
 }
 
+export function createProductionTreeRockAdapterDiagnosticProof({
+    sceneBinding,
+    runtimeGlbPreview,
+}) {
+    const rendered = runtimeGlbPreview?.rendered ?? [];
+    const treeAssets = rendered.filter((asset) => asset.role === 'tree');
+    const rockAssets = rendered.filter((asset) => asset.role === 'rock');
+    const treeGroups = runtimeGlbPreview?.productionInstancingPreview?.groups ?? [];
+    const rockGroups = runtimeGlbPreview?.diagnosticRockInstancingPreview?.groups ?? [];
+    const expectedMaterialNames = {
+        treeBranches: 'konveyor-node-branches',
+        treeLeaves: 'konveyor-node-leaves',
+        rock: 'konveyor-node-rock-rim',
+    };
+    const treeMaterialNames = [...new Set(treeGroups.map((group) => group.materialName).filter(Boolean))].sort();
+    const rockMaterialNames = [...new Set(rockGroups.map((group) => group.materialName).filter(Boolean))].sort();
+    const expectedAssetPaths = RUNTIME_GLB_RENDER_PREVIEW_ASSETS.map((asset) => asset.path).sort();
+    const renderedAssetPaths = rendered.map((asset) => asset.path).sort();
+    const checks = {
+        runtimePreviewOk: runtimeGlbPreview?.ok === true,
+        adapterOk: runtimeGlbPreview?.adapter?.ok === true,
+        assetSetMatchesRuntimeContract: JSON.stringify(renderedAssetPaths) === JSON.stringify(expectedAssetPaths),
+        allPreviewAssetsRendered: rendered.length === RUNTIME_GLB_RENDER_PREVIEW_ASSETS.length,
+        treeAssetsCovered: treeAssets.length === 4
+            && treeAssets.every((asset) => asset.replacement?.strategy === 'material-name')
+            && treeAssets.every((asset) => asset.replacement?.missingTargets?.length === 0),
+        rockAssetsCovered: rockAssets.length === 3
+            && rockAssets.every((asset) => asset.replacement?.strategy === 'asset-class-traversal')
+            && rockAssets.every((asset) => asset.replacement?.replacedMaterials > 0),
+        treeNodeMaterialsBound: treeMaterialNames.includes(expectedMaterialNames.treeBranches)
+            && treeMaterialNames.includes(expectedMaterialNames.treeLeaves),
+        rockNodeMaterialBound: rockMaterialNames.length === 1
+            && rockMaterialNames[0] === expectedMaterialNames.rock,
+        replacementCounts: runtimeGlbPreview?.adapter?.treeReplacedMaterials === 8
+            && runtimeGlbPreview?.adapter?.rockReplacedMaterials === 3,
+        productionTreePlacementPreview: runtimeGlbPreview?.productionPlacementPreview?.ok === true
+            && runtimeGlbPreview.productionPlacementPreview.source === 'shared/TreePlacement.generateTrees',
+        productionTreeInstancingPreview: runtimeGlbPreview?.productionInstancingPreview?.ok === true
+            && runtimeGlbPreview.productionInstancingPreview.source === 'THREE.InstancedMesh'
+            && runtimeGlbPreview.productionInstancingPreview.instancedMesh2Status === 'not imported in WebGPU diagnostic',
+        diagnosticRockInstancingPreview: runtimeGlbPreview?.diagnosticRockInstancingPreview?.ok === true
+            && runtimeGlbPreview.diagnosticRockInstancingPreview.source === 'THREE.InstancedMesh'
+            && runtimeGlbPreview.diagnosticRockInstancingPreview.instancedMesh2Status === 'not imported in WebGPU diagnostic',
+    };
+
+    return {
+        proof: {
+            source: 'shipped-tree-rock-glbs-with-production-material-adapter-and-native-instancing-preview',
+            sceneId: sceneBinding?.sceneId ?? null,
+            expectedMaterialNames,
+            expectedAssets: RUNTIME_GLB_RENDER_PREVIEW_ASSETS.map((asset) => ({
+                key: asset.key,
+                group: asset.group,
+                role: asset.role,
+                path: asset.path,
+            })),
+            adapter: runtimeGlbPreview?.adapter ?? null,
+            renderedAssets: rendered.map((asset) => ({
+                key: asset.key,
+                group: asset.group,
+                role: asset.role,
+                path: asset.path,
+                replacement: asset.replacement,
+                bounds: asset.bounds,
+            })),
+            productionPlacementPreview: runtimeGlbPreview?.productionPlacementPreview ?? null,
+            productionInstancingPreview: runtimeGlbPreview?.productionInstancingPreview ?? null,
+            diagnosticRockPlacementPreview: runtimeGlbPreview?.diagnosticRockPlacementPreview ?? null,
+            diagnosticRockInstancingPreview: runtimeGlbPreview?.diagnosticRockInstancingPreview ?? null,
+            materialNames: {
+                trees: treeMaterialNames,
+                rocks: rockMaterialNames,
+            },
+            checks,
+            ok: Object.values(checks).every(Boolean),
+        },
+    };
+}
+
 function summarizeMaterial(material) {
     return {
         materialName: material?.name ?? null,
@@ -1190,7 +1272,7 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter', 'production-atmosphere-adapter', 'production-water-adapter', 'production-terrain-adapter', 'production-grass-adapter', 'production-sheep-adapter'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-tree-rock-adapter', 'production-effect-adapter', 'production-atmosphere-adapter', 'production-water-adapter', 'production-terrain-adapter', 'production-grass-adapter', 'production-sheep-adapter'],
         sceneBinding,
         skyPreset,
         skyFog,
@@ -1209,6 +1291,7 @@ export async function bootWebGpuDiagnostic() {
         productionInstancingPreview: null,
         diagnosticRockPlacementPreview: null,
         diagnosticRockInstancingPreview: null,
+        productionTreeRockAdapter: null,
         effectMaterialAdapter: null,
         productionEffectAdapter: null,
         productionAtmosphereAdapter: null,
@@ -1445,6 +1528,14 @@ export async function bootWebGpuDiagnostic() {
         state.productionInstancingPreview = state.runtimeGlbPreview.productionInstancingPreview;
         state.diagnosticRockPlacementPreview = state.runtimeGlbPreview.diagnosticRockPlacementPreview;
         state.diagnosticRockInstancingPreview = state.runtimeGlbPreview.diagnosticRockInstancingPreview;
+        const productionTreeRockProof = createProductionTreeRockAdapterDiagnosticProof({
+            sceneBinding,
+            runtimeGlbPreview: state.runtimeGlbPreview,
+        });
+        state.productionTreeRockAdapter = productionTreeRockProof.proof;
+        if (!state.productionTreeRockAdapter.ok) {
+            return fail('production tree/rock adapter proof failed');
+        }
     } catch (err) {
         state.runtimeGlbPreview = {
             ok: false,

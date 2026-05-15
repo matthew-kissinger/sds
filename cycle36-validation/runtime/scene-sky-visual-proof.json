@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T10:25:30.701Z",
+  "capturedAt": "2026-05-15T10:36:08.086Z",
   "source": "Konveyor scene sky screenshot visual proof",
   "manifest": "cycle36-validation/runtime/scene-sky-screenshots/manifest.json",
   "sceneProof": "cycle36-validation/runtime/scene-fog-horizon-proof.json",
@@ -52,8 +52,8 @@
         233
       ],
       "capturedCloudRgb": [
-        229.37,
-        233.07,
+        229.33,
+        233.05,
         232.2
       ],
       "visual": {
@@ -83,15 +83,15 @@
             233
           ],
           "cloudPatch": [
-            229.37,
-            233.07,
+            229.33,
+            233.05,
             232.2
           ]
         },
         "metrics": {
           "backgroundLuma": 225.09,
           "edgeDistance": 0,
-          "cloudBackgroundDistance": 14.71
+          "cloudBackgroundDistance": 14.66
         },
         "checks": {
           "dimensionsMatch": true,
@@ -128,9 +128,9 @@
         113
       ],
       "capturedCloudRgb": [
-        199.32,
-        178.02,
-        167.85
+        199.27,
+        177.96,
+        167.79
       ],
       "visual": {
         "screenshot": "rolling-hills.png",
@@ -159,15 +159,15 @@
             113
           ],
           "cloudPatch": [
-            199.32,
-            178.02,
-            167.85
+            199.27,
+            177.96,
+            167.79
           ]
         },
         "metrics": {
           "backgroundLuma": 130.36,
           "edgeDistance": 0,
-          "cloudBackgroundDistance": 86.63
+          "cloudBackgroundDistance": 86.53
         },
         "checks": {
           "dimensionsMatch": true,
@@ -205,7 +205,7 @@
       ],
       "capturedCloudRgb": [
         230.1,
-        224.29,
+        224.28,
         219.44
       ],
       "visual": {
@@ -236,7 +236,7 @@
           ],
           "cloudPatch": [
             230.1,
-            224.29,
+            224.28,
             219.44
           ]
         },

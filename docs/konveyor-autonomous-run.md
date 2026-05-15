@@ -276,7 +276,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
   bundle-size fixture. Current production build evidence: `mainKB=569`,
-  `threeKB=618`, `webgpuDiagnostic=77 KB`,
+  `threeKB=618`, `webgpuDiagnostic=80 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`, `AnimeWater=9 KB`,
   `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
@@ -359,6 +359,15 @@ WebGPU now has a diagnostic island, not a production renderer:
   meadow, anime water, terrain heightfield, grass blade, sheep wool, tree
   foliage, Kiln impostor, and rock-rim islands. This is still a diagnostic
   material-island gate, not production WebGPU scene parity.
+- [`../cycle36-validation/runtime/production-tree-rock-adapter-proof.json`](../cycle36-validation/runtime/production-tree-rock-adapter-proof.json)
+  verifies that the same scene-bound diagnostic WebGPU captures load all seven
+  shipped tree and rock GLBs through the production GLTF/Draco/Meshopt path,
+  route LOD0/LOD1 tree material-name replacement and rock traversal replacement
+  through the explicit WebGPU node-material factories, and keep the native
+  `THREE.InstancedMesh` tree/rock preview path covered without importing
+  `InstancedMesh2`. This is production tree/rock material-adapter proof inside
+  the diagnostic renderer; full production WebGPU tree/rock scene parity and
+  measured tree-heavy optimization remain separate gates.
 - [`../cycle36-validation/runtime/production-atmosphere-adapter-proof.json`](../cycle36-validation/runtime/production-atmosphere-adapter-proof.json)
   verifies that the same scene-bound diagnostic WebGPU captures instantiate the
   real production `Atmosphere`, `HosekWilkieSky`, and `CloudLayer` constructors
@@ -542,7 +551,8 @@ Recommended order:
    Field, Rolling Hills, and Open Country diagnostic screenshots for visible
    water, terrain, grass, sheep, tree, rock, impostor, meadow, sun, and cloud
    signatures, and constructor proofs now cover production `Atmosphere`,
-   `SunBillboard`, `PortalEffect`, `CorralZapEffectPool`, `AnimeWater`,
+   tree/rock material adapter, `SunBillboard`, `PortalEffect`,
+   `CorralZapEffectPool`, `AnimeWater`,
    `TerrainBuilder.createTerrain()`, and representative `GrassSystem`
    material/chunk construction plus `OptimizedSheepSystem`
    merged-geometry/instancing construction inside the diagnostic renderer. The

@@ -13,6 +13,7 @@ import {
   createProductionGrassAdapterDiagnosticProof,
   createProductionSheepAdapterDiagnosticProof,
   createProductionTerrainAdapterDiagnosticProof,
+  createProductionTreeRockAdapterDiagnosticProof,
   createProductionWaterAdapterDiagnosticProof,
   createRockRimDiagnosticState,
   createSceneBoundSkyFogDiagnosticState,
@@ -858,5 +859,80 @@ describe('webgpu runtime glb material proof', () => {
     expect(plan.samples.every((sample) => sample.production.scale > 0)).toBe(true);
     expect(plan.samples.every((sample) => sample.production.scaleY === 0.7)).toBe(true);
     expect(plan.samples.every((sample) => sample.production.scaleZ === 1.2)).toBe(true);
+  });
+
+  it('summarizes shipped tree/rock GLB replacement and native instancing as a production adapter proof', () => {
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills');
+    const rendered = RUNTIME_GLB_RENDER_PREVIEW_ASSETS.map((asset) => ({
+      ...asset,
+      replacement: asset.role === 'tree'
+        ? {
+          strategy: 'material-name',
+          missingTargets: [],
+          replacedMaterials: 2,
+        }
+        : {
+          strategy: 'asset-class-traversal',
+          replacedMaterials: 1,
+        },
+      bounds: {
+        width: 0.5,
+        height: 0.5,
+        depth: 0.5,
+      },
+    }));
+    const runtimeGlbPreview = {
+      ok: true,
+      assets: RUNTIME_GLB_RENDER_PREVIEW_ASSETS.length,
+      adapter: {
+        ok: true,
+        treeReplacedMaterials: 8,
+        rockReplacedMaterials: 3,
+      },
+      rendered,
+      productionPlacementPreview: {
+        ok: true,
+        source: 'shared/TreePlacement.generateTrees',
+        sampledTrees: 8,
+        renderedTrees: 8,
+      },
+      productionInstancingPreview: {
+        ok: true,
+        source: 'THREE.InstancedMesh',
+        instancedMesh2Status: 'not imported in WebGPU diagnostic',
+        groups: [
+          { materialName: 'konveyor-node-branches' },
+          { materialName: 'konveyor-node-leaves' },
+        ],
+      },
+      diagnosticRockInstancingPreview: {
+        ok: true,
+        source: 'THREE.InstancedMesh',
+        instancedMesh2Status: 'not imported in WebGPU diagnostic',
+        groups: [
+          { materialName: 'konveyor-node-rock-rim' },
+        ],
+      },
+    };
+
+    const { proof } = createProductionTreeRockAdapterDiagnosticProof({
+      sceneBinding,
+      runtimeGlbPreview,
+    });
+
+    expect(proof.ok).toBe(true);
+    expect(proof.source).toBe('shipped-tree-rock-glbs-with-production-material-adapter-and-native-instancing-preview');
+    expect(proof.sceneId).toBe('rolling-hills');
+    expect(proof.expectedAssets).toHaveLength(7);
+    expect(proof.adapter).toMatchObject({
+      ok: true,
+      treeReplacedMaterials: 8,
+      rockReplacedMaterials: 3,
+    });
+    expect(proof.materialNames).toEqual({
+      trees: ['konveyor-node-branches', 'konveyor-node-leaves'],
+      rocks: ['konveyor-node-rock-rim'],
+    });
+    expect(Object.values(proof.checks).every(Boolean)).toBe(true);
   });
 });

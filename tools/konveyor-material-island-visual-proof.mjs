@@ -26,6 +26,7 @@ const REQUIRED_ISLANDS = Object.freeze([
   'runtime-glb-rendered-clones',
   'production-instanced-tree-preview',
   'diagnostic-rock-instancing-preview',
+  'production-tree-rock-adapter',
   'production-effect-adapter',
   'production-atmosphere-adapter',
   'production-water-adapter',
