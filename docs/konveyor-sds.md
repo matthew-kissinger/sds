@@ -105,6 +105,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   hand water update ownership to factory controls, while default WebGL still
   uses the existing `ShaderMaterial` uniforms for time, sun direction,
   shoreline foam, heightfield foam, ripples, sparkles, and fog. A
+  production-facing terrain-ground material adapter now exists behind
+  `?renderer=webgpu&konveyorTerrain=1` plus an explicit terrain factory. It
+  passes terrain size, segment count, heightfield metadata, color constants,
+  noise constants, fog, side, and polygon-offset posture to the factory while
+  default WebGL still uses the existing terrain `ShaderMaterial`. A
   production-facing sun/portal effect material adapter now exists behind
   `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories;
   both `SunBillboard` and `PortalEffect` material creation now route through
@@ -114,7 +119,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=545`, `threeKB=603`, `GrassSystem=32 KB`) for later production seams
+  (`mainKB=548`, `threeKB=603`, `GrassSystem=32 KB`) for later production seams
   without regenerating the refactor-baseline bundle ratchet. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
