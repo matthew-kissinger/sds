@@ -107,6 +107,9 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   that factory behind `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit
   WebGPU sky factory. Default `HosekWilkieSky` still creates the existing WebGL
   `ShaderMaterial`, and the CPU LUT plus sky/fog packet stay authoritative.
+  `js/atmosphere/konveyorSkyNodeMaterial.js` now owns the reusable WebGPU
+  sky/fog node-material candidate used by the diagnostic backdrop and by an
+  explicit `HosekWilkieSky` factory under the same fail-closed flag.
   The same atmosphere adapter now reaches production `CloudLayer`: `Atmosphere`
   can forward an explicit `cloudFactory`, and cloud coverage, edge fade, time,
   feature scale, sun color, and wind state can flow through adapter controls

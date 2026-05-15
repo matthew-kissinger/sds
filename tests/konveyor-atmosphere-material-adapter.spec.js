@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import * as WEBGPU from 'three/webgpu';
 
 import { Atmosphere } from '../js/atmosphere/Atmosphere.js';
 import { CloudLayer } from '../js/atmosphere/CloudLayer.js';
 import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
 import { SKY_PRESETS } from '../js/atmosphere/skyPresets.js';
+import { createSkyFogSamplePacket } from '../js/atmosphere/skyFogSamplePacket.js';
 import {
   createKonveyorAtmosphereMaterial,
   shouldApplyKonveyorAtmosphere,
 } from '../js/atmosphere/konveyorAtmosphereMaterialAdapter.js';
+import {
+  createKonveyorSkyDomeMaterialFactories,
+  createKonveyorSkyFogNodeMaterial,
+} from '../js/atmosphere/konveyorSkyNodeMaterial.js';
 
 function defaultMaterial(name = 'default-atmosphere') {
   return {
@@ -96,6 +102,33 @@ describe('konveyor atmosphere material adapter', () => {
       expect(sky.material.name).toBe('konveyor-direct-sky');
       expect(contexts).toHaveLength(1);
       expect(contexts[0].uniforms).toBe(sky.uniforms);
+    } finally {
+      sky.dispose();
+    }
+  });
+
+  it('creates a reusable WebGPU sky node material from the CPU sky fog packet', () => {
+    const skyFog = createSkyFogSamplePacket();
+    const material = createKonveyorSkyFogNodeMaterial(WEBGPU, skyFog);
+
+    expect(material.name).toBe('konveyor-node-sky-fog');
+    expect(material.isNodeMaterial).toBe(true);
+    expect(material.depthWrite).toBe(false);
+    expect(material.depthTest).toBe(false);
+  });
+
+  it('routes HosekWilkieSky to the extracted WebGPU sky node material factory under the explicit flag', () => {
+    const skyFog = createSkyFogSamplePacket();
+    const sky = new HosekWilkieSky({
+      search: '?renderer=webgpu&konveyorAtmosphere=1',
+      konveyorAtmosphereFactories: createKonveyorSkyDomeMaterialFactories(WEBGPU, skyFog),
+    });
+
+    try {
+      expect(sky.material.name).toBe('konveyor-node-sky-dome');
+      expect(sky.material.isNodeMaterial).toBe(true);
+      expect(sky.material.side).toBe(WEBGPU.BackSide);
+      expect(sky.getMesh().material).toBe(sky.material);
     } finally {
       sky.dispose();
     }

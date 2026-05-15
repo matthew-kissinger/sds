@@ -199,9 +199,12 @@ WebGPU now has a diagnostic island, not a production renderer:
   `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory
   behind `?renderer=webgpu&konveyorAtmosphere=1`. `HosekWilkieSky` now also
   calls that same fail-closed adapter directly when no override factory is
-  supplied. The default path still creates the existing WebGL `ShaderMaterial`,
-  and the CPU LUT plus sky/fog packet remain the authority for fog, sun color,
-  cloud, water, grass, rock, tree, and impostor consumers.
+  supplied. `js/atmosphere/konveyorSkyNodeMaterial.js` now owns the reusable
+  WebGPU sky/fog node-material candidate that the diagnostic backdrop and an
+  explicit `HosekWilkieSky` sky factory can share. The default path still
+  creates the existing WebGL `ShaderMaterial`, and the CPU LUT plus sky/fog
+  packet remain the authority for fog, sun color, cloud, water, grass, rock,
+  tree, and impostor consumers.
 - The same production-facing atmosphere adapter now reaches `CloudLayer`.
   `Atmosphere` can forward an explicit `cloudFactory`, and the real cloud
   layer can route coverage, edge fade, time, feature scale, sun color, and
@@ -296,8 +299,10 @@ Recommended order:
    `Atmosphere` orchestrator through an explicit `skyFactory` and reaches
    `HosekWilkieSky` directly through the same fail-closed adapter; the same
    adapter now reaches production `CloudLayer` through an explicit
-   `cloudFactory` or the direct fail-closed flag/factory path. It still does
-   not provide a real TSL sky/cloud material or alter default WebGL. Production
+   `cloudFactory` or the direct fail-closed flag/factory path. The sky/fog
+   node material is now extracted into a reusable WebGPU factory candidate, but
+   cloud TSL material, preset screenshots, fog-consumer proof, and default
+   production wiring remain deferred. Production
    `SunBillboard` itself is now
    scene-coupled and lazy-loaded, which creates bundle room for the next seam
    without changing default WebGL behavior. The far-ring meadow path now has a
@@ -311,10 +316,10 @@ Recommended order:
    remain deferred. The Kiln path now has a production-facing material factory
    seam, but per-frame tile selection, LOD wiring, and LOD0 color parity remain
    deferred.
-   The sky path still needs a real TSL
-   sky material plus preset screenshot parity before any default production
-   boot claim; next move to a smaller shader/material island or the measured
-   rock-generation extraction before touching production boot.
+   The sky path still needs preset screenshot parity and fog-consumer proof
+   before any default production boot claim; next move to a smaller
+   shader/material island or the measured rock-generation extraction before
+   touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
    The current atmosphere packet now has both preset parity evidence and a

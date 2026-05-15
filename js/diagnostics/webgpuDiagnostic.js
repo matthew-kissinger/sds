@@ -8,6 +8,7 @@ import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 import {
     createKonveyorEffectMaterial,
 } from '../effects/konveyorEffectMaterialAdapter.js';
+import { createKonveyorSkyFogNodeMaterial } from '../atmosphere/konveyorSkyNodeMaterial.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -804,30 +805,6 @@ function createSheepPartNodeMaterial({ MeshStandardNodeMaterial, TSL }, name, co
     return material;
 }
 
-function createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog) {
-    const { float, length, mix, pow, smoothstep, uv, vec2, vec3 } = TSL;
-    const skyUv = uv();
-    const horizon = vec3(...skyFog.horizonColor);
-    const zenith = vec3(...skyFog.zenithColor);
-    const sunColor = vec3(...skyFog.sunColor);
-    const fogColor = vec3(...skyFog.fogColor);
-    const vertical = smoothstep(0.02, 0.92, skyUv.y);
-    const sunDelta = skyUv.sub(vec2(...skyFog.sunPositionUv));
-    const sunDistance = length(sunDelta);
-    const sunDisc = float(1.0).sub(smoothstep(0.018, 0.052, sunDistance));
-    const sunGlow = pow(float(1.0).sub(smoothstep(0.0, 0.42, sunDistance)), 2.2);
-    const fogBand = float(1.0).sub(smoothstep(0.12, 0.48, skyUv.y));
-    const skyColor = mix(horizon, zenith, vertical)
-        .add(sunColor.mul(sunGlow.mul(0.42)))
-        .add(vec3(1.0, 0.95, 0.82).mul(sunDisc.mul(0.7)));
-
-    const material = new MeshBasicNodeMaterial();
-    material.colorNode = mix(skyColor, fogColor, fogBand.mul(0.58));
-    material.depthWrite = false;
-    material.depthTest = false;
-    return material;
-}
-
 function createTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf) {
     const { abs, clamp, dot, float, floor, fract, length, mix, normalize, positionLocal, positionWorld, screenCoordinate, sin, smoothstep, time, uv, vec2, vec3 } = TSL;
     const leafUv = uv();
@@ -1040,7 +1017,7 @@ export async function bootWebGpuDiagnostic() {
 
     const skyFogBackdrop = new Mesh(
         new PlaneGeometry(7.5, 4.25, 1, 1),
-        createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog)
+        createKonveyorSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog)
     );
     skyFogBackdrop.position.set(0, 0.05, -1.65);
     skyFogBackdrop.renderOrder = -10;
