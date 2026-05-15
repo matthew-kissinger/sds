@@ -135,6 +135,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   It reuses the proved tree material-name and rock traversal strategies against
   cached production GLB roots, but leaves the default WebGL `onBeforeCompile`
   patch path untouched when the flag or factories are absent.
+- A production-facing far-ring meadow material adapter now exists behind
+  `?renderer=webgpu&konveyorGrass=1` and an explicit meadow material factory.
+  It covers only `GrassSystem.createMeadowQuadMaterial`; blade grass,
+  stochastic blade dither, interaction bending, and instancing remain on the
+  existing WebGL path. The default meadow material still uses
+  `MeshLambertMaterial` plus procedural tint injection, with the required
+  `USE_UV` define assigned on the material instance before shader compile.
 - A production-facing sun/portal effect material adapter now exists behind
   `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect factories. It
   routes the already-proved diagnostic sun billboard and portal ring node
@@ -146,7 +153,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   scene-coupled chunk before normal scene body construction and scene swaps.
   This preserves the default WebGL sun disc while recovering main-bundle
   headroom for later production seams. Current production build evidence:
-  `mainKB=576`, `threeKB=603`.
+  `mainKB=577`, `threeKB=603`.
 - A production-facing sky-dome atmosphere material seam now exists:
   `Atmosphere` can forward an explicit `skyFactory` to `HosekWilkieSky`, and
   `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory
@@ -238,8 +245,9 @@ Recommended order:
    current decision is to keep `InstancedMesh2` on the WebGL path and continue
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
    says otherwise. The sun/portal effect material adapter and sky-dome
-   atmosphere material seam are now production-facing hooks, but both are still
-   flag-gated and factory supplied. The atmosphere seam now reaches the
+   atmosphere material seam and far-ring meadow material seam are now
+   production-facing hooks, but all are still flag-gated and factory supplied.
+   The atmosphere seam now reaches the
    `Atmosphere` orchestrator through an explicit `skyFactory` and reaches
    `HosekWilkieSky` directly through the same fail-closed adapter; the same
    adapter now reaches production `CloudLayer` through an explicit
@@ -247,7 +255,9 @@ Recommended order:
    not provide a real TSL sky/cloud material or alter default WebGL. Production
    `SunBillboard` itself is now
    scene-coupled and lazy-loaded, which creates bundle room for the next seam
-   without changing default WebGL behavior. The sky path still needs a real TSL
+   without changing default WebGL behavior. The far-ring meadow path now has a
+   production-facing factory seam but no production WebGPU scene wiring claim.
+   The sky path still needs a real TSL
    sky material plus preset screenshot parity before any default production
    boot claim; next move to a smaller shader/material island or the measured
    rock-generation extraction before touching production boot.

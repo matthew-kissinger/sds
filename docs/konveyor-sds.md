@@ -108,7 +108,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   still construct their existing WebGL `ShaderMaterial`s. Production
   `SunBillboard` is now a scene-coupled
   lazy chunk, preserving the default WebGL sun disc while recovering main
-  bundle headroom (`mainKB=576`, `threeKB=603`) for later production seams. A
+  bundle headroom (`mainKB=577`, `threeKB=603`) for later production seams. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed
@@ -134,6 +134,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   shipped rock GLBs through native `THREE.InstancedMesh`; production
   `RockPlacement` still passes `Math.random()`, and shared obstacle wiring
   remains unchanged.
+  A production-facing far-ring meadow material adapter now exists behind
+  `?renderer=webgpu&konveyorGrass=1` plus an explicit meadow factory; default
+  WebGL still uses the existing `MeshLambertMaterial` and procedural tint
+  injection, with the `USE_UV` shader define assigned on the material instance.
   A production-facing material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` plus explicit WebGPU material
   factories, so cached production tree/rock GLB roots can be replaced without

@@ -22,7 +22,7 @@ real `SunBillboard` and `PortalEffect` material creation paths now use that
 shared fail-closed seam.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, so the default
 WebGL sun disc remains intact while the critical `main` bundle has headroom for
-later seams (`mainKB=576`, `threeKB=603`).
+later seams (`mainKB=577`, `threeKB=603`).
 A production-facing sky-dome atmosphere seam now exists: `Atmosphere` can
 forward an explicit `skyFactory` to `HosekWilkieSky`, and the adapter keeps
 that factory behind `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit
@@ -33,6 +33,11 @@ The same production-facing atmosphere adapter now reaches `CloudLayer` behind
 `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit cloud factory, with
 update controls for coverage, edge fade, time, feature scale, sun color, and
 wind state. The default cloud `ShaderMaterial` path remains untouched.
+The far-ring meadow quad now has a production-facing grass material adapter
+behind `?renderer=webgpu&konveyorGrass=1` plus an explicit meadow factory.
+Default WebGL still uses the existing `MeshLambertMaterial` procedural tint
+path, with the `USE_UV` shader define assigned on the material instance before
+compile.
 The rock-rim fresnel formula is also ported as a
 diagnostic `MeshStandardNodeMaterial` island driven by the CPU sky/fog sun
 color packet. A diagnostic tree-leaf island now covers wind displacement,
@@ -113,7 +118,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 |---|---|---|---|---|
 | Tree wind plus occluder fade | `js/world/shaderPatches.js`, `js/shaders/OccluderFadePatch.js` | Tree GLB leaf `MeshStandardMaterial` instances. | Adds wind sway, alpha hash, and camera-to-dog dither fade. | Diagnostic leaf TSL material now proves wind, alpha-hash posture, and occluder fade inputs. Production replacement still needs GLB material ownership or a normalization pass. Cannot carry `onBeforeCompile` into WebGPU. |
 | Rock rim light | `js/world/shaderPatches.js` | Rock GLB materials. | Adds stylized fresnel rim keyed to atmosphere sun color. | Formula now exists in the diagnostic TSL harness as `MeshStandardNodeMaterial`; production wiring still needs GLB material ownership and replacement strategy for the current patch chain. |
-| Meadow quad tint | `js/GrassSystem.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists in the diagnostic TSL harness as `MeshLambertNodeMaterial` using production default grass colors, the same 5-cell UV hash scale, and CPU sky/fog input. Production wiring and far-ring scene screenshots remain deferred. |
+| Meadow quad tint | `js/GrassSystem.js` | Far-ring `MeshLambertMaterial`. | Replaces flat distant grass with UV-noise color variance. | Formula now exists in the diagnostic TSL harness as `MeshLambertNodeMaterial` using production default grass colors, the same 5-cell UV hash scale, and CPU sky/fog input. Production-facing material creation can now route through `?renderer=webgpu&konveyorGrass=1` with an explicit factory; default WebGL still uses the existing `MeshLambertMaterial` procedural tint path. Far-ring scene screenshots remain deferred. |
 
 ## GLB Material Ownership Evidence
 
@@ -189,10 +194,15 @@ comments:
   when `renderer=webgpu&konveyorEffects=1` is present and explicit effect
   factories are supplied; otherwise the existing WebGL `ShaderMaterial` paths
   stay untouched. Both production effect classes now call this adapter directly.
+- The production-side adapter in `js/world/konveyorGrassMaterialAdapter.js`
+  covers far-ring meadow quad material creation only. It activates when
+  `renderer=webgpu&konveyorGrass=1` is present and a meadow factory is supplied;
+  otherwise the existing WebGL `MeshLambertMaterial` plus procedural tint
+  injection stays untouched.
 - `SunBillboard` itself is now loaded through a scene-coupled dynamic import.
   The default WebGL effect remains present before normal scene body construction
   and after scene swaps, while the build emits a separate sun-billboard chunk
-  and keeps the current default bundle at `mainKB=576` / `threeKB=603`.
+  and keeps the current default bundle at `mainKB=577` / `threeKB=603`.
 
 ## Dormant Or Supporting Surfaces
 
@@ -227,10 +237,9 @@ comments:
    production `InstancedMesh2` on the WebGL path for now; move to another
    smaller material island while
    keeping current WebGL `onBeforeCompile` patches as default. The meadow-quad
-   diagnostic now records production default grass colors and CPU sky/fog input,
-   but it is still diagnostic-only. The sun/portal effect adapter is now
-   available for the lowest-risk production-adjacent wiring proof, but it is
-   not yet a production scene WebGPU boot.
+   diagnostic records production default grass colors and CPU sky/fog input,
+   and its production material creation path now has a flag-gated adapter seam,
+   but it is not yet a production scene WebGPU boot.
 2. Keep sky/fog production wiring behind parity evidence for preset screenshots
    and fog consumers. The renderless preset-color matrix now exists for all
    shipped sky presets, and the production-facing sky-dome factory seam now

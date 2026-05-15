@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { loadShaderWithReplacements } from './shaders/ShaderLoader.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { TIER_PRESETS } from './HardwareTier.js';
+import { createKonveyorGrassMaterial } from './world/konveyorGrassMaterialAdapter.js';
 
 // Shader cache for sync access after async load
 let grassDesktopVertexShader = null;
@@ -61,7 +62,7 @@ export class GrassSystem {
      * @param {import('../shared/scenes/types.js').GrassDef} [sceneGrass] Optional scene-sourced grass config; when present, its `clumpsPerChunk` wins over the default.
      * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} [heightfield] Optional heightfield; when present, clumps sit on the displaced terrain instead of y=0.
      * @param {import('../shared/scenes/types.js').BoundaryDef | null} [boundary] Optional scene boundary; for `kind:'island'` scenes, grass past `radius+falloff` is culled so clumps don't extend over the water.
-     * @param {{ tier?: 'low'|'med'|'high' }} [opts] Cycle 23 Phase D1 — hardware tier overrides isMobile-binary defaults.
+     * @param {{ tier?: 'low'|'med'|'high', search?: string, konveyorGrassFactories?: Object }} [opts] Cycle 23 Phase D1 — hardware tier overrides isMobile-binary defaults.
      */
     constructor(scene, isMobile = false, sceneGrass = null, heightfield = null, boundary = null, opts = {}) {
         this.scene = scene;
@@ -69,6 +70,9 @@ export class GrassSystem {
         this.sceneGrass = sceneGrass;
         this.heightfield = heightfield;
         this.boundary = boundary || null;
+        this.konveyorGrassSearch = opts.search;
+        this.konveyorGrassFactories = opts.konveyorGrassFactories;
+        this.konveyorMeadowQuadMaterialSummary = null;
         // Cycle 23 Phase D1: tier overrides the isMobile binary. 'low' inherits
         // mobile-style defaults; 'med' / 'high' get desktop defaults with
         // wind-octave and meadow-quad enable knobs differentiated.
@@ -1163,11 +1167,13 @@ export class GrassSystem {
         const baseColor = this.config.baseColor.clone();
         const midColor = this.config.midColor.clone();
         const tipColor = this.config.tipColor.clone();
-        const mat = new THREE.MeshLambertMaterial({
-            color: midColor,
-            side: THREE.DoubleSide,
-            fog: true,
-            flatShading: false,
+        const createDefaultMaterial = () => {
+            const mat = new THREE.MeshLambertMaterial({
+                color: midColor,
+                side: THREE.DoubleSide,
+                fog: true,
+                flatShading: false,
+            });
             // Cycle 35 Phase 9: the onBeforeCompile injection below reads
             // `vUv` for procedural meadow tinting, but Three.js only declares
             // the `vUv` varying when USE_UV is set (normally triggered by
@@ -1175,43 +1181,58 @@ export class GrassSystem {
             // compile with "ERROR: 'vUv' : undeclared identifier" on every
             // far-ring meadow quad. Defining USE_UV here makes Three.js emit
             // the standard `varying vec2 vUv;` plumbing in both shaders.
-            defines: { USE_UV: '' },
-        });
-        mat.onBeforeCompile = (shader) => {
-            shader.uniforms.uMeadowBase = { value: baseColor };
-            shader.uniforms.uMeadowMid  = { value: midColor };
-            shader.uniforms.uMeadowTip  = { value: tipColor };
-            // Inject a per-fragment hash mix so neighbour quads don't all
-            // read identical. Keyed off mesh-local UV scaled to ~5 cells per
-            // 40m chunk so the pattern reads at far-ring scale (50-80m
-            // perceived feature size from a 250m-far camera).
-            shader.fragmentShader = shader.fragmentShader
-                .replace(
-                    '#include <common>',
-                    [
+            mat.defines = { USE_UV: '' };
+            mat.onBeforeCompile = (shader) => {
+                shader.uniforms.uMeadowBase = { value: baseColor };
+                shader.uniforms.uMeadowMid  = { value: midColor };
+                shader.uniforms.uMeadowTip  = { value: tipColor };
+                // Inject a per-fragment hash mix so neighbour quads don't all
+                // read identical. Keyed off mesh-local UV scaled to ~5 cells per
+                // 40m chunk so the pattern reads at far-ring scale (50-80m
+                // perceived feature size from a 250m-far camera).
+                shader.fragmentShader = shader.fragmentShader
+                    .replace(
                         '#include <common>',
-                        'uniform vec3 uMeadowBase;',
-                        'uniform vec3 uMeadowMid;',
-                        'uniform vec3 uMeadowTip;',
-                        'float meadowHash(vec2 v) {',
-                        '  return fract(sin(dot(v, vec2(127.1, 311.7))) * 43758.5453);',
-                        '}'
-                    ].join('\n')
-                )
-                .replace(
-                    '#include <map_fragment>',
-                    [
+                        [
+                            '#include <common>',
+                            'uniform vec3 uMeadowBase;',
+                            'uniform vec3 uMeadowMid;',
+                            'uniform vec3 uMeadowTip;',
+                            'float meadowHash(vec2 v) {',
+                            '  return fract(sin(dot(v, vec2(127.1, 311.7))) * 43758.5453);',
+                            '}'
+                        ].join('\n')
+                    )
+                    .replace(
                         '#include <map_fragment>',
-                        'vec2 muv = vUv * 5.0;',
-                        'float n1 = meadowHash(floor(muv));',
-                        'float n2 = meadowHash(floor(muv * 2.0));',
-                        'float blend = mix(n1, n2, 0.5);',
-                        'vec3 meadowCol = mix(mix(uMeadowBase, uMeadowMid, blend), uMeadowTip, smoothstep(0.6, 0.95, blend));',
-                        'diffuseColor.rgb = meadowCol;'
-                    ].join('\n')
-                );
+                        [
+                            '#include <map_fragment>',
+                            'vec2 muv = vUv * 5.0;',
+                            'float n1 = meadowHash(floor(muv));',
+                            'float n2 = meadowHash(floor(muv * 2.0));',
+                            'float blend = mix(n1, n2, 0.5);',
+                            'vec3 meadowCol = mix(mix(uMeadowBase, uMeadowMid, blend), uMeadowTip, smoothstep(0.6, 0.95, blend));',
+                            'diffuseColor.rgb = meadowCol;'
+                        ].join('\n')
+                    );
+            };
+            return mat;
         };
-        return mat;
+        const materialResult = createKonveyorGrassMaterial('meadow-quad', 'createMeadowQuadMaterial', {
+            createDefaultMaterial,
+            search: this.konveyorGrassSearch,
+            factories: this.konveyorGrassFactories,
+            context: {
+                baseColor,
+                midColor,
+                tipColor,
+                uvCellsPerChunk: 5.0,
+                noiseHashVector: [127.1, 311.7],
+                noiseOctaves: [1, 2],
+            },
+        });
+        this.konveyorMeadowQuadMaterialSummary = materialResult.summary;
+        return materialResult.material;
     }
 
     /**
