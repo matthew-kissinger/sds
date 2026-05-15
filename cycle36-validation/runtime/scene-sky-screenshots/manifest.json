@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T09:07:50.768Z",
+  "capturedAt": "2026-05-15T09:18:57.329Z",
   "baseUrl": "http://127.0.0.1:4173/",
   "channel": "chrome",
   "chromiumArgs": [
@@ -127,8 +127,62 @@
         },
         "ok": true
       },
+      "productionWaterAdapter": {
+        "source": "production-anime-water-constructor-with-webgpu-node-factory",
+        "sceneId": "field",
+        "waterSourceSceneId": "rolling-hills",
+        "materialName": "konveyor-node-anime-water",
+        "isNodeMaterial": true,
+        "summary": {
+          "kind": "anime-water",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "mesh": {
+          "name": "",
+          "geometryType": "PlaneGeometry",
+          "size": 2,
+          "segments": 4,
+          "y": -1.19,
+          "frustumCulled": false
+        },
+        "boundary": {
+          "kind": "island",
+          "center": [
+            0,
+            0
+          ],
+          "radius": 180,
+          "falloff": 40
+        },
+        "heightfield": {
+          "sceneId": "rolling-hills",
+          "source": "/terrain/rolling-hills.bin",
+          "size": [
+            1024,
+            1024
+          ],
+          "worldSize": 500,
+          "peakHeight": 6,
+          "waterY": -0.05,
+          "rawArrayType": "Float32Array",
+          "rawArrayLength": 1048576
+        },
+        "checks": {
+          "factoryApplied": true,
+          "nodeMaterial": true,
+          "meshPresent": true,
+          "meshIsWaterPlane": true,
+          "productionHeightTexture": true,
+          "sourceHeightfieldMatchesTexture": true,
+          "updateCallable": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
       "frames": 3,
-      "islandCount": 20,
+      "islandCount": 21,
       "islands": [
         "sun-billboard",
         "portal-ring",
@@ -149,7 +203,8 @@
         "production-instanced-tree-preview",
         "diagnostic-rock-instancing-preview",
         "production-effect-adapter",
-        "production-atmosphere-adapter"
+        "production-atmosphere-adapter",
+        "production-water-adapter"
       ],
       "hasSkyFog": true,
       "hasCloudPlane": true,
@@ -271,8 +326,62 @@
         },
         "ok": true
       },
+      "productionWaterAdapter": {
+        "source": "production-anime-water-constructor-with-webgpu-node-factory",
+        "sceneId": "rolling-hills",
+        "waterSourceSceneId": "rolling-hills",
+        "materialName": "konveyor-node-anime-water",
+        "isNodeMaterial": true,
+        "summary": {
+          "kind": "anime-water",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "mesh": {
+          "name": "",
+          "geometryType": "PlaneGeometry",
+          "size": 2,
+          "segments": 4,
+          "y": -1.19,
+          "frustumCulled": false
+        },
+        "boundary": {
+          "kind": "island",
+          "center": [
+            0,
+            0
+          ],
+          "radius": 180,
+          "falloff": 40
+        },
+        "heightfield": {
+          "sceneId": "rolling-hills",
+          "source": "/terrain/rolling-hills.bin",
+          "size": [
+            1024,
+            1024
+          ],
+          "worldSize": 500,
+          "peakHeight": 6,
+          "waterY": -0.05,
+          "rawArrayType": "Float32Array",
+          "rawArrayLength": 1048576
+        },
+        "checks": {
+          "factoryApplied": true,
+          "nodeMaterial": true,
+          "meshPresent": true,
+          "meshIsWaterPlane": true,
+          "productionHeightTexture": true,
+          "sourceHeightfieldMatchesTexture": true,
+          "updateCallable": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
       "frames": 3,
-      "islandCount": 20,
+      "islandCount": 21,
       "islands": [
         "sun-billboard",
         "portal-ring",
@@ -293,7 +402,8 @@
         "production-instanced-tree-preview",
         "diagnostic-rock-instancing-preview",
         "production-effect-adapter",
-        "production-atmosphere-adapter"
+        "production-atmosphere-adapter",
+        "production-water-adapter"
       ],
       "hasSkyFog": true,
       "hasCloudPlane": true,
@@ -415,8 +525,62 @@
         },
         "ok": true
       },
+      "productionWaterAdapter": {
+        "source": "production-anime-water-constructor-with-webgpu-node-factory",
+        "sceneId": "open-country",
+        "waterSourceSceneId": "rolling-hills",
+        "materialName": "konveyor-node-anime-water",
+        "isNodeMaterial": true,
+        "summary": {
+          "kind": "anime-water",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "mesh": {
+          "name": "",
+          "geometryType": "PlaneGeometry",
+          "size": 2,
+          "segments": 4,
+          "y": -1.19,
+          "frustumCulled": false
+        },
+        "boundary": {
+          "kind": "island",
+          "center": [
+            0,
+            0
+          ],
+          "radius": 180,
+          "falloff": 40
+        },
+        "heightfield": {
+          "sceneId": "rolling-hills",
+          "source": "/terrain/rolling-hills.bin",
+          "size": [
+            1024,
+            1024
+          ],
+          "worldSize": 500,
+          "peakHeight": 6,
+          "waterY": -0.05,
+          "rawArrayType": "Float32Array",
+          "rawArrayLength": 1048576
+        },
+        "checks": {
+          "factoryApplied": true,
+          "nodeMaterial": true,
+          "meshPresent": true,
+          "meshIsWaterPlane": true,
+          "productionHeightTexture": true,
+          "sourceHeightfieldMatchesTexture": true,
+          "updateCallable": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
       "frames": 3,
-      "islandCount": 20,
+      "islandCount": 21,
       "islands": [
         "sun-billboard",
         "portal-ring",
@@ -437,7 +601,8 @@
         "production-instanced-tree-preview",
         "diagnostic-rock-instancing-preview",
         "production-effect-adapter",
-        "production-atmosphere-adapter"
+        "production-atmosphere-adapter",
+        "production-water-adapter"
       ],
       "hasSkyFog": true,
       "hasCloudPlane": true,

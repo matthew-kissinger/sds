@@ -27,6 +27,7 @@ const REQUIRED_ISLANDS = Object.freeze([
   'production-instanced-tree-preview',
   'diagnostic-rock-instancing-preview',
   'production-atmosphere-adapter',
+  'production-water-adapter',
 ]);
 
 const SAMPLE_REGIONS = Object.freeze({

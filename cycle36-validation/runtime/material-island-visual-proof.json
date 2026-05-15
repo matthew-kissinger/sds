@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T09:07:51.503Z",
+  "capturedAt": "2026-05-15T09:18:58.145Z",
   "source": "Konveyor diagnostic material island screenshot proof",
   "manifest": "cycle36-validation/runtime/scene-sky-screenshots/manifest.json",
   "thresholds": {
@@ -97,7 +97,8 @@
     "runtime-glb-rendered-clones",
     "production-instanced-tree-preview",
     "diagnostic-rock-instancing-preview",
-    "production-atmosphere-adapter"
+    "production-atmosphere-adapter",
+    "production-water-adapter"
   ],
   "crossSceneChecks": {
     "sceneSetMatchesShippingScenes": true,
@@ -108,7 +109,7 @@
       "sceneId": "field",
       "presetName": "pastoral-noon",
       "screenshot": "field.png",
-      "islandCount": 20,
+      "islandCount": 21,
       "visual": {
         "dimensions": {
           "width": 1280,
@@ -126,44 +127,44 @@
             254.95
           ],
           "cloudPlane": [
-            228.88,
-            232.81,
-            232.13
+            228.87,
+            232.8,
+            232.12
           ],
           "meadowQuad": [
-            135.99,
-            140.72,
-            130.08
+            135.5,
+            140.28,
+            129.36
           ],
           "animeWater": [
-            173.81,
-            210.5,
-            212.03
+            174.36,
+            210.54,
+            212.06
           ],
           "terrainHeightfield": [
-            103.75,
-            154.06,
-            121.95
+            106.16,
+            158.64,
+            130.71
           ],
           "grassBlade": [
-            98.62,
-            126.73,
-            66.98
+            98.61,
+            126.72,
+            66.97
           ],
           "sheepWool": [
-            148.61,
-            147.53,
-            145.39
+            148.36,
+            147.27,
+            145.14
           ],
           "treeLeaf": [
-            111.56,
-            138.42,
-            119.14
+            110.98,
+            137.86,
+            118.21
           ],
           "kilnImpostor": [
-            175.73,
-            178.48,
-            148.28
+            172.5,
+            176.74,
+            146.46
           ],
           "rockRim": [
             127.59,
@@ -173,40 +174,40 @@
         },
         "distancesFromBackground": {
           "sunBillboard": 52.68,
-          "cloudPlane": 14.16,
-          "meadowQuad": 156.33,
-          "animeWater": 49.92,
-          "terrainHeightfield": 173.93,
-          "grassBlade": 226.7,
-          "sheepWool": 136.13,
-          "treeLeaf": 178.1,
-          "kilnImpostor": 105.61,
+          "cloudPlane": 14.14,
+          "meadowQuad": 157.3,
+          "animeWater": 49.43,
+          "terrainHeightfield": 164.93,
+          "grassBlade": 226.72,
+          "sheepWool": 136.57,
+          "treeLeaf": 179.31,
+          "kilnImpostor": 109.12,
           "rockRim": 177.16
         },
         "luma": {
           "background": 225.09,
           "sunBillboard": 254.94,
-          "cloudPlane": 231.93,
-          "meadowQuad": 138.95,
-          "animeWater": 202.81,
-          "terrainHeightfield": 141.05,
-          "grassBlade": 116.44,
-          "sheepWool": 147.61,
-          "treeLeaf": 131.32,
-          "kilnImpostor": 175.71,
+          "cloudPlane": 231.92,
+          "meadowQuad": 138.48,
+          "animeWater": 202.96,
+          "terrainHeightfield": 145.47,
+          "grassBlade": 116.43,
+          "sheepWool": 147.35,
+          "treeLeaf": 130.73,
+          "kilnImpostor": 173.65,
           "rockRim": 131.22
         },
         "channelSpread": {
           "background": 17,
           "sunBillboard": 0.06,
           "cloudPlane": 3.93,
-          "meadowQuad": 10.64,
-          "animeWater": 38.22,
-          "terrainHeightfield": 50.31,
+          "meadowQuad": 10.92,
+          "animeWater": 37.7,
+          "terrainHeightfield": 52.48,
           "grassBlade": 59.75,
           "sheepWool": 3.22,
-          "treeLeaf": 26.86,
-          "kilnImpostor": 30.2,
+          "treeLeaf": 26.88,
+          "kilnImpostor": 30.28,
           "rockRim": 23.82
         }
       },
@@ -233,7 +234,7 @@
       "sceneId": "rolling-hills",
       "presetName": "dusk",
       "screenshot": "rolling-hills.png",
-      "islandCount": 20,
+      "islandCount": 21,
       "visual": {
         "dimensions": {
           "width": 1280,
@@ -251,87 +252,87 @@
             250.39
           ],
           "cloudPlane": [
-            198.01,
-            176.27,
-            166.11
+            198.02,
+            176.3,
+            166.14
           ],
           "meadowQuad": [
-            134.01,
-            138.57,
-            126.96
+            134.37,
+            138.89,
+            127.49
           ],
           "animeWater": [
-            163.93,
-            201.1,
-            204.15
+            163.67,
+            200.91,
+            204.12
           ],
           "terrainHeightfield": [
-            108.37,
-            161.62,
-            136.15
+            108.39,
+            161.99,
+            136.95
           ],
           "grassBlade": [
-            98.33,
-            125.53,
-            65.42
+            98.3,
+            125.55,
+            65.4
           ],
           "sheepWool": [
-            147.62,
-            146.34,
-            144.15
+            147.16,
+            145.89,
+            143.7
           ],
           "treeLeaf": [
-            102.26,
-            124.36,
-            102.46
+            102.02,
+            124.11,
+            102.7
           ],
           "kilnImpostor": [
-            153.51,
-            132.73,
-            97.84
+            150.52,
+            131.47,
+            96.56
           ],
           "rockRim": [
-            119.61,
+            119.59,
             112.35,
-            84
+            83.98
           ]
         },
         "distancesFromBackground": {
           "sunBillboard": 210.13,
-          "cloudPlane": 83.83,
-          "meadowQuad": 34.14,
-          "animeWater": 120.07,
-          "terrainHeightfield": 69.26,
-          "grassBlade": 78.73,
-          "sheepWool": 41.16,
-          "treeLeaf": 59.69,
-          "kilnImpostor": 19.51,
-          "rockRim": 51.65
+          "cloudPlane": 83.88,
+          "meadowQuad": 34.23,
+          "animeWater": 119.92,
+          "terrainHeightfield": 69.73,
+          "grassBlade": 78.76,
+          "sheepWool": 40.72,
+          "treeLeaf": 59.88,
+          "kilnImpostor": 21.26,
+          "rockRim": 51.68
         },
         "luma": {
           "background": 130.36,
           "sunBillboard": 252.34,
-          "cloudPlane": 180.16,
-          "meadowQuad": 136.76,
-          "animeWater": 193.42,
-          "terrainHeightfield": 148.46,
+          "cloudPlane": 180.18,
+          "meadowQuad": 137.11,
+          "animeWater": 193.22,
+          "terrainHeightfield": 148.79,
           "grassBlade": 115.41,
-          "sheepWool": 146.45,
-          "treeLeaf": 118.08,
-          "kilnImpostor": 134.63,
-          "rockRim": 111.85
+          "sheepWool": 146,
+          "treeLeaf": 117.87,
+          "kilnImpostor": 133,
+          "rockRim": 111.84
         },
         "channelSpread": {
           "background": 48,
           "sunBillboard": 3.39,
-          "cloudPlane": 31.9,
-          "meadowQuad": 11.61,
-          "animeWater": 40.22,
-          "terrainHeightfield": 53.25,
-          "grassBlade": 60.11,
-          "sheepWool": 3.47,
-          "treeLeaf": 22.1,
-          "kilnImpostor": 55.67,
+          "cloudPlane": 31.88,
+          "meadowQuad": 11.4,
+          "animeWater": 40.45,
+          "terrainHeightfield": 53.6,
+          "grassBlade": 60.15,
+          "sheepWool": 3.46,
+          "treeLeaf": 22.09,
+          "kilnImpostor": 53.96,
           "rockRim": 35.61
         }
       },
@@ -358,7 +359,7 @@
       "sceneId": "open-country",
       "presetName": "golden-hour",
       "screenshot": "open-country.png",
-      "islandCount": 20,
+      "islandCount": 21,
       "visual": {
         "dimensions": {
           "width": 1280,
@@ -378,42 +379,42 @@
           "cloudPlane": [
             229.58,
             223.82,
-            219.1
+            219.11
           ],
           "meadowQuad": [
-            134.04,
-            138.83,
-            126.96
+            134.3,
+            139.06,
+            127.34
           ],
           "animeWater": [
-            175.68,
-            209.18,
-            210.34
+            175.55,
+            209.16,
+            210.32
           ],
           "terrainHeightfield": [
-            107.94,
-            160.34,
-            133.31
+            108.27,
+            161.26,
+            135.17
           ],
           "grassBlade": [
-            98.47,
-            126.33,
-            66.16
+            98.5,
+            126.35,
+            66.2
           ],
           "sheepWool": [
-            147.85,
-            146.69,
-            144.53
+            147.76,
+            146.6,
+            144.44
           ],
           "treeLeaf": [
-            111,
-            135.58,
-            113.32
+            110.72,
+            135.34,
+            113.29
           ],
           "kilnImpostor": [
-            179.42,
-            173.36,
-            139.22
+            176.17,
+            171.68,
+            137.49
           ],
           "rockRim": [
             127.94,
@@ -424,39 +425,39 @@
         "distancesFromBackground": {
           "sunBillboard": 70.2,
           "cloudPlane": 17.37,
-          "meadowQuad": 140.65,
-          "animeWater": 42.52,
-          "terrainHeightfield": 145.18,
-          "grassBlade": 207.53,
-          "sheepWool": 117.77,
-          "treeLeaf": 164.87,
-          "kilnImpostor": 91.41,
+          "meadowQuad": 140.14,
+          "animeWater": 42.66,
+          "terrainHeightfield": 143.6,
+          "grassBlade": 207.48,
+          "sheepWool": 117.93,
+          "treeLeaf": 165.18,
+          "kilnImpostor": 94.91,
           "rockRim": 163.9
         },
         "luma": {
           "background": 213.99,
           "sunBillboard": 254.82,
           "cloudPlane": 224.7,
-          "meadowQuad": 136.95,
-          "animeWater": 202.14,
-          "terrainHeightfield": 147.25,
-          "grassBlade": 116.06,
-          "sheepWool": 146.78,
-          "treeLeaf": 128.75,
-          "kilnImpostor": 172.18,
+          "meadowQuad": 137.2,
+          "animeWater": 202.1,
+          "terrainHeightfield": 148.11,
+          "grassBlade": 116.09,
+          "sheepWool": 146.69,
+          "treeLeaf": 128.51,
+          "kilnImpostor": 170.17,
           "rockRim": 127.79
         },
         "channelSpread": {
           "background": 6,
           "sunBillboard": 0.25,
-          "cloudPlane": 10.48,
-          "meadowQuad": 11.87,
-          "animeWater": 34.66,
-          "terrainHeightfield": 52.4,
-          "grassBlade": 60.17,
+          "cloudPlane": 10.47,
+          "meadowQuad": 11.72,
+          "animeWater": 34.77,
+          "terrainHeightfield": 52.99,
+          "grassBlade": 60.15,
           "sheepWool": 3.32,
-          "treeLeaf": 24.58,
-          "kilnImpostor": 40.2,
+          "treeLeaf": 24.62,
+          "kilnImpostor": 38.68,
           "rockRim": 27.38
         }
       },

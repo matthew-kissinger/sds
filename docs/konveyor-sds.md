@@ -154,6 +154,16 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   linear fog near/far values, matches the CPU-visible sky/fog packet, and
   renders cleanly in installed Chrome. This is production atmosphere constructor
   proof, not default production WebGPU boot.
+  `cycle36-validation/runtime/production-water-adapter-proof.json` now verifies
+  the real production `AnimeWater.createAnimeWater()` wrapper inside the same
+  WebGPU diagnostic scene for Field, Rolling Hills, and Open Country. Each
+  scene routes water material creation through the explicit
+  `?renderer=webgpu&konveyorWater=1` factory path, binds the Rolling Hills
+  heightfield-backed `Float32Array`/`DataTexture` packet, confirms the
+  `konveyor-node-anime-water` node material, and records a clean installed
+  Chrome diagnostic render. This is production water constructor proof inside
+  the diagnostic renderer; scene-specific production water parity remains
+  deferred.
   `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
   across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
   full production-scene WebGPU visual parity remains a separate gate. A
@@ -186,7 +196,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `js/water/konveyorAnimeWaterNodeMaterial.js`; the adapter spec proves the
   flagged production seam can route through it. Default WebGL still uses the
   existing `ShaderMaterial` uniforms for time, sun direction, shoreline foam,
-  heightfield foam, ripples, sparkles, and fog. A
+  heightfield foam, ripples, sparkles, and fog. The WebGPU diagnostic now also
+  instantiates the real `AnimeWater` wrapper with that factory path and verifies
+  the heightfield-backed production constructor proof in
+  `cycle36-validation/runtime/production-water-adapter-proof.json`. A
   production-facing terrain-ground material adapter now exists behind
   `?renderer=webgpu&konveyorTerrain=1` plus an explicit terrain factory. It
   passes terrain size, segment count, heightfield metadata, lazy height-texture
@@ -245,7 +258,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=54 KB`,
+  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=60 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
   `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`) for later
   production seams without regenerating the refactor-baseline bundle ratchet. A

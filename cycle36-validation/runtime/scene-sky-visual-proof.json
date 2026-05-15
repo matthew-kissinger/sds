@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T09:07:51.169Z",
+  "capturedAt": "2026-05-15T09:18:57.795Z",
   "source": "Konveyor scene sky screenshot visual proof",
   "manifest": "cycle36-validation/runtime/scene-sky-screenshots/manifest.json",
   "sceneProof": "cycle36-validation/runtime/scene-fog-horizon-proof.json",
@@ -52,9 +52,9 @@
         233
       ],
       "capturedCloudRgb": [
-        229.29,
+        229.28,
         233.02,
-        232.19
+        232.18
       ],
       "visual": {
         "screenshot": "field.png",
@@ -83,15 +83,15 @@
             233
           ],
           "cloudPatch": [
-            229.29,
+            229.28,
             233.02,
-            232.19
+            232.18
           ]
         },
         "metrics": {
           "backgroundLuma": 225.09,
           "edgeDistance": 0,
-          "cloudBackgroundDistance": 14.61
+          "cloudBackgroundDistance": 14.6
         },
         "checks": {
           "dimensionsMatch": true,
@@ -128,9 +128,9 @@
         113
       ],
       "capturedCloudRgb": [
-        198.99,
-        177.58,
-        167.41
+        199.01,
+        177.61,
+        167.44
       ],
       "visual": {
         "screenshot": "rolling-hills.png",
@@ -159,15 +159,15 @@
             113
           ],
           "cloudPatch": [
-            198.99,
-            177.58,
-            167.41
+            199.01,
+            177.61,
+            167.44
           ]
         },
         "metrics": {
           "backgroundLuma": 130.36,
           "edgeDistance": 0,
-          "cloudBackgroundDistance": 85.92
+          "cloudBackgroundDistance": 85.97
         },
         "checks": {
           "dimensionsMatch": true,

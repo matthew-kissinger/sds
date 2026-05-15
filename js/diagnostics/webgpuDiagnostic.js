@@ -17,6 +17,7 @@ import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 import {
     createKonveyorEffectMaterial,
 } from '../effects/konveyorEffectMaterialAdapter.js';
+import { createAnimeWater } from '../water/AnimeWater.js';
 import {
     createKonveyorNodeMaterialFactorySuite,
     summarizeKonveyorNodeMaterialFactorySuite,
@@ -325,6 +326,106 @@ export function createProductionAtmosphereAdapterDiagnosticProof({
                 near: atmosphere.fog?.near ?? null,
                 far: atmosphere.fog?.far ?? null,
                 density: atmosphere.fog?.density ?? null,
+            },
+            checks,
+            ok: Object.values(checks).every(Boolean),
+        },
+    };
+}
+
+function createDiagnosticHeightfieldFromTexture(texture) {
+    const meta = texture.userData?.konveyorHeightfield ?? {};
+    const data = texture.image?.data;
+    return {
+        width: meta.size?.[0] ?? texture.image?.width ?? 0,
+        height: meta.size?.[1] ?? texture.image?.height ?? 0,
+        worldSize: meta.worldSize ?? 1,
+        peakHeight: meta.peakHeight ?? 1,
+        sceneId: meta.sceneId ?? null,
+        source: meta.source ?? null,
+        waterY: meta.waterY ?? DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.waterY,
+        getRawArray: () => data,
+    };
+}
+
+export function createProductionWaterAdapterDiagnosticProof({
+    scene,
+    sceneBinding,
+    heightTexture,
+    waterFactories,
+}) {
+    const sourceScene = getSceneById(DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.sceneId)
+        ?? getSceneById(DEFAULT_SCENE_ID);
+    const boundary = sourceScene?.boundary?.kind === 'island'
+        ? sourceScene.boundary
+        : { kind: 'island', center: { x: 0, z: 0 }, radius: 180, falloff: 40 };
+    const heightfield = createDiagnosticHeightfieldFromTexture(heightTexture);
+    const water = createAnimeWater({
+        boundary,
+        heightfield,
+        size: 2.0,
+        y: -1.19,
+        segments: 4,
+        search: '?renderer=webgpu&konveyorWater=1',
+        konveyorWaterFactories: waterFactories,
+    });
+
+    water.mesh.position.z = 0.11;
+    water.mesh.frustumCulled = false;
+    water.mesh.renderOrder = 2;
+    scene.add(water.mesh);
+    water.update(1.25);
+
+    const summary = water.konveyorWaterMaterialSummary ?? water.material.userData?.konveyorWaterMaterialSummary ?? null;
+    const productionHeightTexture = water.material.userData?.heightTexture ?? null;
+    const checks = {
+        factoryApplied: summary?.applied === true,
+        nodeMaterial: water.material?.name === 'konveyor-node-anime-water'
+            && water.material?.isNodeMaterial === true,
+        meshPresent: scene.children.includes(water.mesh),
+        meshIsWaterPlane: water.mesh?.isMesh === true
+            && water.mesh?.geometry?.type === 'PlaneGeometry',
+        productionHeightTexture: productionHeightTexture?.isDataTexture === true,
+        sourceHeightfieldMatchesTexture: heightfield.width === heightTexture.userData.konveyorHeightfield.size[0]
+            && heightfield.height === heightTexture.userData.konveyorHeightfield.size[1]
+            && heightfield.worldSize === heightTexture.userData.konveyorHeightfield.worldSize
+            && heightfield.peakHeight === heightTexture.userData.konveyorHeightfield.peakHeight,
+        updateCallable: typeof water.update === 'function',
+        disposeCallable: typeof water.dispose === 'function',
+    };
+
+    return {
+        water,
+        proof: {
+            source: 'production-anime-water-constructor-with-webgpu-node-factory',
+            sceneId: sceneBinding?.sceneId ?? null,
+            waterSourceSceneId: sourceScene?.id ?? null,
+            materialName: water.material?.name ?? null,
+            isNodeMaterial: water.material?.isNodeMaterial === true,
+            summary,
+            mesh: {
+                name: water.mesh?.name ?? '',
+                geometryType: water.mesh?.geometry?.type ?? null,
+                size: 2.0,
+                segments: 4,
+                y: water.mesh?.position?.y ?? null,
+                frustumCulled: water.mesh?.frustumCulled ?? null,
+            },
+            boundary: {
+                kind: boundary.kind,
+                center: [boundary.center?.x ?? 0, boundary.center?.z ?? 0],
+                radius: boundary.radius,
+                falloff: boundary.falloff,
+            },
+            heightfield: {
+                sceneId: heightfield.sceneId,
+                source: heightfield.source,
+                size: [heightfield.width, heightfield.height],
+                worldSize: heightfield.worldSize,
+                peakHeight: heightfield.peakHeight,
+                waterY: heightfield.waterY,
+                rawArrayType: heightfield.getRawArray()?.constructor?.name ?? null,
+                rawArrayLength: heightfield.getRawArray()?.length ?? null,
             },
             checks,
             ok: Object.values(checks).every(Boolean),
@@ -651,7 +752,7 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter', 'production-atmosphere-adapter'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter', 'production-atmosphere-adapter', 'production-water-adapter'],
         sceneBinding,
         skyPreset,
         skyFog,
@@ -672,6 +773,7 @@ export async function bootWebGpuDiagnostic() {
         diagnosticRockInstancingPreview: null,
         effectMaterialAdapter: null,
         productionAtmosphereAdapter: null,
+        productionWaterAdapter: null,
         factorySuite: null,
         frames: 0,
     };
@@ -931,6 +1033,16 @@ export async function bootWebGpuDiagnostic() {
     });
     animeWater.heightfieldTexture = waterHeightTexture.userData.konveyorHeightfield;
     syncDiagnosticHeightfieldState(terrainHeightfield, waterHeightTexture.userData.konveyorHeightfield);
+    const productionWaterProof = createProductionWaterAdapterDiagnosticProof({
+        scene,
+        sceneBinding,
+        heightTexture: waterHeightTexture,
+        waterFactories,
+    });
+    state.productionWaterAdapter = productionWaterProof.proof;
+    if (!state.productionWaterAdapter.ok) {
+        return fail('production water adapter proof failed');
+    }
     const water = new Mesh(
         new PlaneGeometry(2.0, 0.62, 1, 1),
         waterFactories.createAnimeWaterMaterial({
@@ -1077,6 +1189,7 @@ export async function bootWebGpuDiagnostic() {
         cloudPlane.geometry.dispose();
         cloudPlane.material.dispose();
         productionAtmosphereProof.atmosphere.dispose();
+        productionWaterProof.water.dispose();
         renderer.dispose();
         sun.geometry.dispose();
         sun.material.dispose();

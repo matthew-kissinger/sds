@@ -194,7 +194,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   `js/water/konveyorAnimeWaterNodeMaterial.js`, and the water adapter spec
   proves the flagged production seam can route through it. Default WebGL water
   still uses the existing `ShaderMaterial` uniforms for time, sun direction,
-  shoreline foam, heightfield foam, ripples, sparkles, and fog.
+  shoreline foam, heightfield foam, ripples, sparkles, and fog. The WebGPU
+  diagnostic now also instantiates the real `AnimeWater.createAnimeWater()`
+  wrapper through that same flag/factory path and records a heightfield-backed
+  production constructor proof for all shipped diagnostic scene captures.
 - A production-facing terrain-ground material adapter now exists behind
   `?renderer=webgpu&konveyorTerrain=1` and an explicit terrain material
   factory. It covers only `TerrainBuilder.createTerrain()` material creation
@@ -265,7 +268,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
   bundle-size fixture. Current production build evidence: `mainKB=569`,
-  `threeKB=618`, `webgpuDiagnostic=54 KB`,
+  `threeKB=618`, `webgpuDiagnostic=60 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`, `AnimeWater=9 KB`,
   `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
@@ -347,6 +350,15 @@ WebGPU now has a diagnostic island, not a production renderer:
   still matches the CPU-visible sky/fog packet. This is production atmosphere
   constructor proof inside the diagnostic renderer, not default production
   WebGPU boot.
+- [`../cycle36-validation/runtime/production-water-adapter-proof.json`](../cycle36-validation/runtime/production-water-adapter-proof.json)
+  verifies that the same scene-bound diagnostic WebGPU captures instantiate the
+  real production `AnimeWater.createAnimeWater()` wrapper with explicit WebGPU
+  node-material factories for all shipped diagnostic scenes. The proof records
+  `konveyor-node-anime-water`, the `?renderer=webgpu&konveyorWater=1` factory
+  summary, a production `PlaneGeometry` mesh, and the Rolling Hills
+  heightfield-backed `Float32Array`/`DataTexture` contract. This is production
+  water constructor proof inside the diagnostic renderer; scene-specific
+  production WebGPU water parity remains a separate gate.
 - [`../cycle36-validation/runtime/sky-lut-profile.json`](../cycle36-validation/runtime/sky-lut-profile.json)
   profiles the same renderless Hosek-Wilkie CPU LUT for the five required
   presets. Current local evidence keeps the CPU-visible LUT as the atmosphere
@@ -466,7 +478,9 @@ Recommended order:
    fourteen current factories. The material-island visual proof now samples
    Field, Rolling Hills, and Open Country diagnostic screenshots for visible
    water, terrain, grass, sheep, tree, rock, impostor, meadow, sun, and cloud
-   signatures. The next production-adjacent move should keep
+   signatures, and constructor proofs now cover production `Atmosphere` and
+   `AnimeWater` inside the diagnostic renderer. The next production-adjacent
+   move should keep
    `?renderer=webgpu` fail-closed without `diagnostic=1` while moving one
    island from diagnostic visibility toward measured production-scene parity.
    The sky path now has diagnostic preset screenshot parity, renderless scene

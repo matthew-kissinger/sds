@@ -9,6 +9,7 @@ import {
   createKilnImpostorDiagnosticState,
   createMeadowQuadDiagnosticState,
   createProductionAtmosphereAdapterDiagnosticProof,
+  createProductionWaterAdapterDiagnosticProof,
   createRockRimDiagnosticState,
   createSceneBoundSkyFogDiagnosticState,
   createSheepWoolDiagnosticState,
@@ -182,6 +183,72 @@ describe('webgpu diagnostic sky fog state', () => {
       expect(scene.children).toContain(atmosphere.cloudLayer.getMesh());
     } finally {
       atmosphere.dispose();
+    }
+  });
+
+  it('routes production AnimeWater construction through WebGPU node factories in the diagnostic proof', () => {
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills');
+    const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
+    const webGpuModules = {
+      MeshBasicNodeMaterial: WEBGPU.MeshBasicNodeMaterial,
+      MeshLambertNodeMaterial: WEBGPU.MeshLambertNodeMaterial,
+      MeshStandardNodeMaterial: WEBGPU.MeshStandardNodeMaterial,
+      AdditiveBlending: WEBGPU.AdditiveBlending,
+      BackSide: WEBGPU.BackSide,
+      DoubleSide: WEBGPU.DoubleSide,
+      TSL: WEBGPU.TSL,
+    };
+    const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+      skyFog,
+      water: {
+        fogColor: skyFog.fogColor,
+        sunColor: skyFog.sunColor,
+      },
+    });
+    const heightTexture = new THREE.DataTexture(
+      new Float32Array([0, 0.1, 0.2, 0.3]),
+      2,
+      2,
+      THREE.RedFormat,
+      THREE.FloatType
+    );
+    heightTexture.userData.konveyorHeightfield = {
+      sceneId: 'rolling-hills',
+      source: '/terrain/rolling-hills.bin',
+      format: 'RedFormat/FloatType',
+      size: [2, 2],
+      sampler: 'nearest-clamp',
+      worldSize: 16,
+      peakHeight: 1.5,
+      waterY: -0.05,
+    };
+    const scene = new THREE.Scene();
+    const { water, proof } = createProductionWaterAdapterDiagnosticProof({
+      scene,
+      sceneBinding,
+      heightTexture,
+      waterFactories: suite.water,
+    });
+
+    try {
+      expect(proof.ok).toBe(true);
+      expect(proof.materialName).toBe('konveyor-node-anime-water');
+      expect(proof.isNodeMaterial).toBe(true);
+      expect(proof.summary).toMatchObject({ kind: 'anime-water', applied: true });
+      expect(proof.heightfield).toMatchObject({
+        sceneId: 'rolling-hills',
+        source: '/terrain/rolling-hills.bin',
+        size: [2, 2],
+        worldSize: 16,
+        peakHeight: 1.5,
+        waterY: -0.05,
+        rawArrayType: 'Float32Array',
+        rawArrayLength: 4,
+      });
+      expect(scene.children).toContain(water.mesh);
+    } finally {
+      water.dispose();
+      heightTexture.dispose();
     }
   });
 

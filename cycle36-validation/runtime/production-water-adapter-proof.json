@@ -1,0 +1,225 @@
+{
+  "capturedAt": "2026-05-15T09:18:57.634Z",
+  "source": "Konveyor production AnimeWater adapter proof",
+  "manifest": "cycle36-validation/runtime/scene-sky-screenshots/manifest.json",
+  "crossSceneChecks": {
+    "sceneSetMatchesShippingScenes": true,
+    "manifestOk": true
+  },
+  "scenes": [
+    {
+      "sceneId": "field",
+      "productionWaterAdapter": {
+        "source": "production-anime-water-constructor-with-webgpu-node-factory",
+        "sceneId": "field",
+        "waterSourceSceneId": "rolling-hills",
+        "materialName": "konveyor-node-anime-water",
+        "isNodeMaterial": true,
+        "summary": {
+          "kind": "anime-water",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "mesh": {
+          "name": "",
+          "geometryType": "PlaneGeometry",
+          "size": 2,
+          "segments": 4,
+          "y": -1.19,
+          "frustumCulled": false
+        },
+        "boundary": {
+          "kind": "island",
+          "center": [
+            0,
+            0
+          ],
+          "radius": 180,
+          "falloff": 40
+        },
+        "heightfield": {
+          "sceneId": "rolling-hills",
+          "source": "/terrain/rolling-hills.bin",
+          "size": [
+            1024,
+            1024
+          ],
+          "worldSize": 500,
+          "peakHeight": 6,
+          "waterY": -0.05,
+          "rawArrayType": "Float32Array",
+          "rawArrayLength": 1048576
+        },
+        "checks": {
+          "factoryApplied": true,
+          "nodeMaterial": true,
+          "meshPresent": true,
+          "meshIsWaterPlane": true,
+          "productionHeightTexture": true,
+          "sourceHeightfieldMatchesTexture": true,
+          "updateCallable": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
+      "checks": {
+        "rendererMode": true,
+        "sceneBinding": true,
+        "diagnosticOk": true,
+        "productionWaterOk": true,
+        "proofSceneMatches": true,
+        "waterSourcePinnedToHeightfieldScene": true,
+        "factoryApplied": true,
+        "nodeMaterial": true,
+        "meshIsProductionPlane": true,
+        "heightfieldBacked": true,
+        "checksPassed": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "rolling-hills",
+      "productionWaterAdapter": {
+        "source": "production-anime-water-constructor-with-webgpu-node-factory",
+        "sceneId": "rolling-hills",
+        "waterSourceSceneId": "rolling-hills",
+        "materialName": "konveyor-node-anime-water",
+        "isNodeMaterial": true,
+        "summary": {
+          "kind": "anime-water",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "mesh": {
+          "name": "",
+          "geometryType": "PlaneGeometry",
+          "size": 2,
+          "segments": 4,
+          "y": -1.19,
+          "frustumCulled": false
+        },
+        "boundary": {
+          "kind": "island",
+          "center": [
+            0,
+            0
+          ],
+          "radius": 180,
+          "falloff": 40
+        },
+        "heightfield": {
+          "sceneId": "rolling-hills",
+          "source": "/terrain/rolling-hills.bin",
+          "size": [
+            1024,
+            1024
+          ],
+          "worldSize": 500,
+          "peakHeight": 6,
+          "waterY": -0.05,
+          "rawArrayType": "Float32Array",
+          "rawArrayLength": 1048576
+        },
+        "checks": {
+          "factoryApplied": true,
+          "nodeMaterial": true,
+          "meshPresent": true,
+          "meshIsWaterPlane": true,
+          "productionHeightTexture": true,
+          "sourceHeightfieldMatchesTexture": true,
+          "updateCallable": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
+      "checks": {
+        "rendererMode": true,
+        "sceneBinding": true,
+        "diagnosticOk": true,
+        "productionWaterOk": true,
+        "proofSceneMatches": true,
+        "waterSourcePinnedToHeightfieldScene": true,
+        "factoryApplied": true,
+        "nodeMaterial": true,
+        "meshIsProductionPlane": true,
+        "heightfieldBacked": true,
+        "checksPassed": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "open-country",
+      "productionWaterAdapter": {
+        "source": "production-anime-water-constructor-with-webgpu-node-factory",
+        "sceneId": "open-country",
+        "waterSourceSceneId": "rolling-hills",
+        "materialName": "konveyor-node-anime-water",
+        "isNodeMaterial": true,
+        "summary": {
+          "kind": "anime-water",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "mesh": {
+          "name": "",
+          "geometryType": "PlaneGeometry",
+          "size": 2,
+          "segments": 4,
+          "y": -1.19,
+          "frustumCulled": false
+        },
+        "boundary": {
+          "kind": "island",
+          "center": [
+            0,
+            0
+          ],
+          "radius": 180,
+          "falloff": 40
+        },
+        "heightfield": {
+          "sceneId": "rolling-hills",
+          "source": "/terrain/rolling-hills.bin",
+          "size": [
+            1024,
+            1024
+          ],
+          "worldSize": 500,
+          "peakHeight": 6,
+          "waterY": -0.05,
+          "rawArrayType": "Float32Array",
+          "rawArrayLength": 1048576
+        },
+        "checks": {
+          "factoryApplied": true,
+          "nodeMaterial": true,
+          "meshPresent": true,
+          "meshIsWaterPlane": true,
+          "productionHeightTexture": true,
+          "sourceHeightfieldMatchesTexture": true,
+          "updateCallable": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
+      "checks": {
+        "rendererMode": true,
+        "sceneBinding": true,
+        "diagnosticOk": true,
+        "productionWaterOk": true,
+        "proofSceneMatches": true,
+        "waterSourcePinnedToHeightfieldScene": true,
+        "factoryApplied": true,
+        "nodeMaterial": true,
+        "meshIsProductionPlane": true,
+        "heightfieldBacked": true,
+        "checksPassed": true
+      },
+      "ok": true
+    }
+  ],
+  "ok": true
+}
