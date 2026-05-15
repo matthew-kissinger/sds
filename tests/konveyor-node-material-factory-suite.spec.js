@@ -81,6 +81,10 @@ describe('konveyor node material factory suite', () => {
       'createSkyDomeMaterial',
     ]);
     expect(Object.keys(suite.effects).sort()).toEqual([
+      'createCorralZapBoltMaterial',
+      'createCorralZapParticleMaterial',
+      'createPortalPadMaterial',
+      'createPortalParticleMaterial',
       'createPortalRingMaterial',
       'createSunBillboardMaterial',
     ]);
@@ -142,8 +146,12 @@ describe('konveyor node material factory suite', () => {
     const materials = [
       suite.atmosphere.createSkyDomeMaterial().material,
       suite.atmosphere.createCloudLayerMaterial().material,
-      suite.effects.createSunBillboardMaterial(),
-      suite.effects.createPortalRingMaterial(),
+      suite.effects.createSunBillboardMaterial().material,
+      suite.effects.createPortalRingMaterial().material,
+      suite.effects.createPortalPadMaterial().material,
+      suite.effects.createPortalParticleMaterial().material,
+      suite.effects.createCorralZapBoltMaterial().material,
+      suite.effects.createCorralZapParticleMaterial().material,
       suite.treeRock.createTreeBranchMaterial(),
       suite.treeRock.createTreeLeafMaterial(),
       suite.treeRock.createRockMaterial(),
@@ -175,6 +183,10 @@ describe('konveyor node material factory suite', () => {
         'konveyor-node-cloud-layer',
         'konveyor-node-sun-billboard',
         'konveyor-node-portal-ring',
+        'konveyor-node-portal-pad',
+        'konveyor-node-portal-particles',
+        'konveyor-node-corral-zap-bolt',
+        'konveyor-node-corral-zap-particles',
         'konveyor-node-branches',
         'konveyor-node-leaves',
         'konveyor-node-rock-rim',
@@ -189,8 +201,8 @@ describe('konveyor node material factory suite', () => {
       expect(materials.every((material) => material.isNodeMaterial)).toBe(true);
       expect(materials[0].side).toBe(WEBGPU.BackSide);
       expect(materials[1].side).toBe(WEBGPU.DoubleSide);
-      expect(materials[9].side).toBe(WEBGPU.DoubleSide);
       expect(materials[13].side).toBe(WEBGPU.DoubleSide);
+      expect(materials[17].side).toBe(WEBGPU.DoubleSide);
     } finally {
       materials.forEach((material) => material?.dispose?.());
       heightTexture.dispose();
@@ -222,13 +234,17 @@ describe('konveyor node material factory suite', () => {
     expect(summarizeKonveyorNodeMaterialFactorySuite(suite)).toEqual({
       source: 'konveyor-node-material-factory-suite',
       groupCount: 8,
-      factoryCount: 14,
+      factoryCount: 18,
       groups: {
         atmosphere: [
           'createCloudLayerMaterial',
           'createSkyDomeMaterial',
         ],
         effects: [
+          'createCorralZapBoltMaterial',
+          'createCorralZapParticleMaterial',
+          'createPortalPadMaterial',
+          'createPortalParticleMaterial',
           'createPortalRingMaterial',
           'createSunBillboardMaterial',
         ],

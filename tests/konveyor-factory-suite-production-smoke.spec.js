@@ -5,6 +5,8 @@ import * as WEBGPU from 'three/webgpu';
 import { CloudLayer } from '../js/atmosphere/CloudLayer.js';
 import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
 import { createSkyFogSamplePacket } from '../js/atmosphere/skyFogSamplePacket.js';
+import { CorralZapEffectPool } from '../js/effects/CorralZapEffect.js';
+import { PortalEffect } from '../js/effects/PortalEffect.js';
 import { SunBillboard } from '../js/effects/SunBillboard.js';
 import { GrassSystem } from '../js/GrassSystem.js';
 import { createKilnImpostorMaterial } from '../js/kiln-impostor-material.js';
@@ -124,6 +126,8 @@ describe('konveyor factory suite production smoke', () => {
         created.sky = new HosekWilkieSky();
         created.cloud = new CloudLayer();
         created.sun = new SunBillboard(scene);
+        created.portal = new PortalEffect(scene, { x: 0, z: 0 }, 0);
+        created.zap = new CorralZapEffectPool(scene);
 
         created.grass = new GrassSystem(scene);
         created.grassBladeMaterial = created.grass.createGrassMaterial();
@@ -160,6 +164,11 @@ describe('konveyor factory suite production smoke', () => {
       expect(created.sky.material.name).toBe('konveyor-node-sky-dome');
       expect(created.cloud.material.name).toBe('konveyor-node-cloud-layer');
       expect(created.sun.material.name).toBe('konveyor-node-sun-billboard');
+      expect(created.portal.ringMaterial.name).toBe('konveyor-node-portal-ring');
+      expect(created.portal.pad.material.name).toBe('konveyor-node-portal-pad');
+      expect(created.portal.particles.material.name).toBe('konveyor-node-portal-particles');
+      expect(created.zap.effects[0].bolt.material.name).toBe('konveyor-node-corral-zap-bolt');
+      expect(created.zap.effects[0].particles.material.name).toBe('konveyor-node-corral-zap-particles');
       expect(created.grassBladeMaterial.name).toBe('konveyor-node-grass-blade');
       expect(created.meadowMaterial.name).toBe('konveyor-node-meadow-quad');
       expect(created.terrainMesh.material.name).toBe('konveyor-node-terrain-heightfield');
@@ -168,6 +177,11 @@ describe('konveyor factory suite production smoke', () => {
       expect(created.impostorMaterial.name).toBe('konveyor-node-kiln-impostor');
       expect(created.cloud.konveyorMaterialSummary).toMatchObject({ applied: true });
       expect(created.sun.konveyorMaterialSummary).toMatchObject({ applied: true });
+      expect(created.portal.konveyorRingMaterialSummary).toMatchObject({ applied: true });
+      expect(created.portal.konveyorPadMaterialSummary).toMatchObject({ applied: true });
+      expect(created.portal.konveyorParticleMaterialSummary).toMatchObject({ applied: true });
+      expect(created.zap.effects[0].konveyorBoltMaterialSummary).toMatchObject({ applied: true });
+      expect(created.zap.effects[0].konveyorParticleMaterialSummary).toMatchObject({ applied: true });
       expect(created.grass.konveyorGrassBladeMaterialSummary).toMatchObject({ applied: true });
       expect(created.grass.konveyorMeadowQuadMaterialSummary).toMatchObject({ applied: true });
       expect(created.terrain.konveyorTerrainMaterialSummary).toMatchObject({ applied: true });
@@ -178,6 +192,8 @@ describe('konveyor factory suite production smoke', () => {
       created.sky?.dispose?.();
       created.cloud?.dispose?.();
       created.sun?.dispose?.();
+      created.portal?.dispose?.();
+      created.zap?.dispose?.();
       created.grassBladeMaterial?.dispose?.();
       created.meadowMaterial?.dispose?.();
       created.terrain?.dispose?.();

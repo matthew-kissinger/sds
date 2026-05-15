@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T09:48:47.984Z",
+  "capturedAt": "2026-05-15T10:25:35.421Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills",
   "platform": "win32",
   "channel": "chrome",
@@ -1966,14 +1966,144 @@
         "kind": "sun-billboard",
         "applied": true,
         "reason": null,
-        "hasControls": false
+        "hasControls": true
       },
       "portal": {
         "kind": "portal-ring",
         "applied": true,
         "reason": null,
-        "hasControls": false
+        "hasControls": true
       }
+    },
+    "productionEffectAdapter": {
+      "source": "production-effect-constructors-with-webgpu-node-factories",
+      "sceneId": "rolling-hills",
+      "expectedMaterialNames": {
+        "sun": "konveyor-node-sun-billboard",
+        "portalRing": "konveyor-node-portal-ring",
+        "portalPad": "konveyor-node-portal-pad",
+        "portalParticles": "konveyor-node-portal-particles",
+        "corralZapBolt": "konveyor-node-corral-zap-bolt",
+        "corralZapParticles": "konveyor-node-corral-zap-particles"
+      },
+      "sun": {
+        "materialName": "konveyor-node-sun-billboard",
+        "isNodeMaterial": true,
+        "transparent": true,
+        "depthWrite": false,
+        "hasOpacityNode": true,
+        "hasColorNode": true,
+        "summary": {
+          "kind": "sun-billboard",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        },
+        "hasControls": true
+      },
+      "portal": {
+        "ring": {
+          "materialName": "konveyor-node-portal-ring",
+          "isNodeMaterial": true,
+          "transparent": true,
+          "depthWrite": false,
+          "hasOpacityNode": true,
+          "hasColorNode": true,
+          "summary": {
+            "kind": "portal-ring",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "hasControls": true
+        },
+        "pad": {
+          "materialName": "konveyor-node-portal-pad",
+          "isNodeMaterial": true,
+          "transparent": true,
+          "depthWrite": false,
+          "hasOpacityNode": true,
+          "hasColorNode": true,
+          "summary": {
+            "kind": "portal-pad",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "hasControls": true
+        },
+        "particles": {
+          "materialName": "konveyor-node-portal-particles",
+          "isNodeMaterial": true,
+          "transparent": true,
+          "depthWrite": false,
+          "hasOpacityNode": true,
+          "hasColorNode": true,
+          "summary": {
+            "kind": "portal-particles",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "hasControls": true
+        }
+      },
+      "corralZap": {
+        "poolSize": 8,
+        "activeEffects": 2,
+        "bolt": {
+          "materialName": "konveyor-node-corral-zap-bolt",
+          "isNodeMaterial": true,
+          "transparent": true,
+          "depthWrite": false,
+          "hasOpacityNode": true,
+          "hasColorNode": true,
+          "summary": {
+            "kind": "corral-zap-bolt",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "hasControls": true
+        },
+        "particles": {
+          "materialName": "konveyor-node-corral-zap-particles",
+          "isNodeMaterial": true,
+          "transparent": true,
+          "depthWrite": false,
+          "hasOpacityNode": true,
+          "hasColorNode": true,
+          "summary": {
+            "kind": "corral-zap-particles",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "hasControls": true
+        }
+      },
+      "checks": {
+        "sunFactoryApplied": true,
+        "portalRingFactoryApplied": true,
+        "portalPadFactoryApplied": true,
+        "portalParticleFactoryApplied": true,
+        "zapBoltFactoryApplied": true,
+        "zapParticleFactoryApplied": true,
+        "sunNodeMaterial": true,
+        "portalRingNodeMaterial": true,
+        "portalPadNodeMaterial": true,
+        "portalParticleNodeMaterial": true,
+        "zapBoltNodeMaterial": true,
+        "zapParticleNodeMaterial": true,
+        "sceneContainsSun": true,
+        "sceneContainsPortal": true,
+        "sceneContainsZap": true,
+        "portalControlsConnected": true,
+        "zapControlsConnected": true,
+        "zapPoolInitialized": true,
+        "zapEffectActivated": true
+      },
+      "ok": true
     },
     "productionAtmosphereAdapter": {
       "source": "production-atmosphere-constructors-with-webgpu-node-factories",
@@ -2246,13 +2376,17 @@
     "factorySuite": {
       "source": "konveyor-node-material-factory-suite",
       "groupCount": 8,
-      "factoryCount": 14,
+      "factoryCount": 18,
       "groups": {
         "atmosphere": [
           "createCloudLayerMaterial",
           "createSkyDomeMaterial"
         ],
         "effects": [
+          "createCorralZapBoltMaterial",
+          "createCorralZapParticleMaterial",
+          "createPortalPadMaterial",
+          "createPortalParticleMaterial",
           "createPortalRingMaterial",
           "createSunBillboardMaterial"
         ],

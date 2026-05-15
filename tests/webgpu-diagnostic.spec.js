@@ -9,6 +9,7 @@ import {
   createKilnImpostorDiagnosticState,
   createMeadowQuadDiagnosticState,
   createProductionAtmosphereAdapterDiagnosticProof,
+  createProductionEffectAdapterDiagnosticProof,
   createProductionGrassAdapterDiagnosticProof,
   createProductionSheepAdapterDiagnosticProof,
   createProductionTerrainAdapterDiagnosticProof,
@@ -186,6 +187,38 @@ describe('webgpu diagnostic sky fog state', () => {
       expect(scene.children).toContain(atmosphere.cloudLayer.getMesh());
     } finally {
       atmosphere.dispose();
+    }
+  });
+
+  it('routes production effect constructors through WebGPU node factories in the diagnostic proof', () => {
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=open-country');
+    const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
+    const suite = createKonveyorNodeMaterialFactorySuite(WEBGPU, { skyFog });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(0, 0.2, 3);
+    const { proof, dispose } = createProductionEffectAdapterDiagnosticProof({
+      scene,
+      camera,
+      sceneBinding,
+      skyFog,
+      effectFactories: suite.effects,
+    });
+
+    try {
+      expect(proof.ok).toBe(true);
+      expect(proof.sun.materialName).toBe('konveyor-node-sun-billboard');
+      expect(proof.sun.summary).toMatchObject({ kind: 'sun-billboard', applied: true, hasControls: true });
+      expect(proof.portal.ring.materialName).toBe('konveyor-node-portal-ring');
+      expect(proof.portal.pad.materialName).toBe('konveyor-node-portal-pad');
+      expect(proof.portal.particles.materialName).toBe('konveyor-node-portal-particles');
+      expect(proof.corralZap.bolt.materialName).toBe('konveyor-node-corral-zap-bolt');
+      expect(proof.corralZap.particles.materialName).toBe('konveyor-node-corral-zap-particles');
+      expect(proof.corralZap.poolSize).toBe(8);
+      expect(proof.corralZap.activeEffects).toBeGreaterThan(0);
+      expect(Object.values(proof.checks).every(Boolean)).toBe(true);
+    } finally {
+      dispose();
     }
   });
 

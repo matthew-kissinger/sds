@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { AdditiveBlending, DoubleSide, MeshBasicNodeMaterial, TSL } from 'three/webgpu';
+import {
+  AdditiveBlending,
+  DoubleSide,
+  LineBasicNodeMaterial,
+  MeshBasicNodeMaterial,
+  PointsNodeMaterial,
+  TSL,
+} from 'three/webgpu';
 
 import {
   createKonveyorEffectMaterial,
@@ -94,9 +101,9 @@ describe('konveyor effect material adapter', () => {
     expect(portalUpdates).toEqual([{ time: 1, pulse: 0.2, intensity: 0.8 }]);
   });
 
-  it('can route sun and portal ring through reusable WebGPU node material candidates', () => {
+  it('can route production effects through reusable WebGPU node material candidates', () => {
     const factories = createKonveyorEffectNodeMaterialFactories(
-      { MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL },
+      { MeshBasicNodeMaterial, PointsNodeMaterial, LineBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL },
       {
         sun: { depthTest: true },
         portal: { depthTest: true },
@@ -112,6 +119,49 @@ describe('konveyor effect material adapter', () => {
       search: '?renderer=webgpu&konveyorEffects=1',
       factories,
     });
+    const pad = createKonveyorEffectMaterial('portal-pad', 'createPortalPadMaterial', {
+      createDefaultMaterial: () => defaultMaterial('default-pad'),
+      search: '?renderer=webgpu&konveyorEffects=1',
+      factories,
+      context: {
+        color: new THREE.Color(0x6cf2ff),
+        opacity: 0.18,
+        depthWrite: false,
+      },
+    });
+    const portalParticles = createKonveyorEffectMaterial('portal-particles', 'createPortalParticleMaterial', {
+      createDefaultMaterial: () => defaultMaterial('default-portal-particles'),
+      search: '?renderer=webgpu&konveyorEffects=1',
+      factories,
+      context: {
+        color: new THREE.Color(0xb8e8ff),
+        size: 0.5,
+        opacity: 0.9,
+        depthWrite: false,
+      },
+    });
+    const zapBolt = createKonveyorEffectMaterial('corral-zap-bolt', 'createCorralZapBoltMaterial', {
+      createDefaultMaterial: () => defaultMaterial('default-zap-bolt'),
+      search: '?renderer=webgpu&konveyorEffects=1',
+      factories,
+      context: {
+        color: new THREE.Color(0xeaffff),
+        opacity: 0,
+        linewidth: 2,
+        depthWrite: false,
+      },
+    });
+    const zapParticles = createKonveyorEffectMaterial('corral-zap-particles', 'createCorralZapParticleMaterial', {
+      createDefaultMaterial: () => defaultMaterial('default-zap-particles'),
+      search: '?renderer=webgpu&konveyorEffects=1',
+      factories,
+      context: {
+        color: new THREE.Color(0xc8efff),
+        size: 0.6,
+        opacity: 0,
+        depthWrite: false,
+      },
+    });
 
     try {
       expect(sun.material.name).toBe('konveyor-node-sun-billboard');
@@ -123,7 +173,7 @@ describe('konveyor effect material adapter', () => {
       expect(sun.material.blending).toBe(THREE.AdditiveBlending);
       expect(sun.material.colorNode).toBeTruthy();
       expect(sun.material.opacityNode).toBeTruthy();
-      expect(sun.summary).toMatchObject({ kind: 'sun-billboard', applied: true });
+      expect(sun.summary).toMatchObject({ kind: 'sun-billboard', applied: true, hasControls: true });
 
       expect(portal.material.name).toBe('konveyor-node-portal-ring');
       expect(portal.material.isNodeMaterial).toBe(true);
@@ -135,10 +185,49 @@ describe('konveyor effect material adapter', () => {
       expect(portal.material.blending).toBe(THREE.AdditiveBlending);
       expect(portal.material.colorNode).toBeTruthy();
       expect(portal.material.opacityNode).toBeTruthy();
-      expect(portal.summary).toMatchObject({ kind: 'portal-ring', applied: true });
+      expect(portal.summary).toMatchObject({ kind: 'portal-ring', applied: true, hasControls: true });
+
+      expect(pad.material.name).toBe('konveyor-node-portal-pad');
+      expect(pad.material.isNodeMaterial).toBe(true);
+      expect(pad.material.transparent).toBe(true);
+      expect(pad.material.depthWrite).toBe(false);
+      expect(pad.material.blending).toBe(THREE.AdditiveBlending);
+      expect(pad.material.opacityNode).toBeTruthy();
+      expect(pad.summary).toMatchObject({ kind: 'portal-pad', applied: true, hasControls: true });
+
+      expect(portalParticles.material.name).toBe('konveyor-node-portal-particles');
+      expect(portalParticles.material.isNodeMaterial).toBe(true);
+      expect(portalParticles.material.transparent).toBe(true);
+      expect(portalParticles.material.depthWrite).toBe(false);
+      expect(portalParticles.material.blending).toBe(THREE.AdditiveBlending);
+      expect(portalParticles.material.opacityNode).toBeTruthy();
+      expect(portalParticles.summary).toMatchObject({ kind: 'portal-particles', applied: true, hasControls: true });
+
+      expect(zapBolt.material.name).toBe('konveyor-node-corral-zap-bolt');
+      expect(zapBolt.material.isNodeMaterial).toBe(true);
+      expect(zapBolt.material.transparent).toBe(true);
+      expect(zapBolt.material.depthWrite).toBe(false);
+      expect(zapBolt.material.opacityNode).toBeTruthy();
+      expect(zapBolt.summary).toMatchObject({ kind: 'corral-zap-bolt', applied: true, hasControls: true });
+
+      expect(zapParticles.material.name).toBe('konveyor-node-corral-zap-particles');
+      expect(zapParticles.material.isNodeMaterial).toBe(true);
+      expect(zapParticles.material.transparent).toBe(true);
+      expect(zapParticles.material.depthWrite).toBe(false);
+      expect(zapParticles.material.opacityNode).toBeTruthy();
+      expect(zapParticles.summary).toMatchObject({ kind: 'corral-zap-particles', applied: true, hasControls: true });
+
+      pad.controls.update({ intensity: 1, pulse: 1, material: pad.material });
+      zapBolt.controls.update({ opacity: 0.5, material: zapBolt.material });
+      expect(pad.material.opacity).toBeGreaterThan(0.18);
+      expect(zapBolt.material.opacity).toBe(0.5);
     } finally {
       sun.material.dispose?.();
       portal.material.dispose?.();
+      pad.material.dispose?.();
+      portalParticles.material.dispose?.();
+      zapBolt.material.dispose?.();
+      zapParticles.material.dispose?.();
     }
   });
 

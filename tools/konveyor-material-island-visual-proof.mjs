@@ -26,6 +26,7 @@ const REQUIRED_ISLANDS = Object.freeze([
   'runtime-glb-rendered-clones',
   'production-instanced-tree-preview',
   'diagnostic-rock-instancing-preview',
+  'production-effect-adapter',
   'production-atmosphere-adapter',
   'production-water-adapter',
   'production-terrain-adapter',
@@ -53,6 +54,7 @@ const THRESHOLDS = Object.freeze({
   minCloudBackgroundDistance: 10,
   minMeadowBackgroundDistance: 20,
   minSheepBackgroundDistance: 20,
+  minKilnGreenBlueDelta: 10,
   maxSunChannelSpread: 8,
   maxSheepChannelSpread: 20,
   minSunLuma: 240,
@@ -179,7 +181,7 @@ function materialChecks(visual) {
       && s.treeLeaf[1] > s.treeLeaf[2] + 10,
     kilnImpostorVisible: s.kilnImpostor[0] >= 140
       && s.kilnImpostor[1] >= 120
-      && s.kilnImpostor[2] < s.kilnImpostor[1] - 15,
+      && s.kilnImpostor[2] < s.kilnImpostor[1] - THRESHOLDS.minKilnGreenBlueDelta,
     rockRimVisible: s.rockRim[2] < s.rockRim[1]
       && s.rockRim[2] < s.rockRim[0],
   };

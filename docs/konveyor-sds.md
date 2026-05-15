@@ -286,15 +286,18 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   the existing atlas-sampled impostor `ShaderMaterial`. A
   production-facing sun/portal/transient effect material adapter now exists
   behind `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories.
-  The reusable WebGPU sun billboard and portal ring node-material candidates
-  now live in `js/effects/konveyorSunNodeMaterial.js` and
-  `js/effects/konveyorPortalNodeMaterial.js`, and the effect adapter spec
-  proves the flagged production seam can route through them.
-  `SunBillboard`, `PortalEffect` ring/pad/particle materials, and
-  `CorralZapEffect` bolt/particle materials now route through that shared
-  fail-closed seam. Without the flag and factories, those effects still
-  construct their existing WebGL `ShaderMaterial`, `MeshBasicMaterial`,
-  `LineBasicMaterial`, and `PointsMaterial` paths. The WebGPU factory supply
+  The reusable WebGPU sun billboard, portal ring/pad/particle, and corral zap
+  bolt/particle node-material candidates now live in
+  `js/effects/konveyorSunNodeMaterial.js`,
+  `js/effects/konveyorPortalNodeMaterial.js`, and
+  `js/effects/konveyorZapNodeMaterial.js`, and the effect adapter spec proves
+  the flagged production seam can route through them.
+  `SunBillboard`, `PortalEffect`, and `CorralZapEffectPool` now have
+  diagnostic-renderer production constructor proof in
+  `cycle36-validation/runtime/production-effect-adapter-proof.json`. Without
+  the flag and factories, those effects still construct their existing WebGL
+  `ShaderMaterial`, `MeshBasicMaterial`, `LineBasicMaterial`, and
+  `PointsMaterial` paths. The WebGPU factory supply
   for tree/rock, effects, grass, water, terrain, sheep, and Kiln impostors is
   now reusable through dedicated `konveyor*NodeMaterialFactories.js` helpers.
   Each helper accepts an already-loaded WebGPU/TSL module object, so none of
@@ -307,20 +310,21 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   names and a test proves the current adapters can consume that map only when
   their explicit `renderer=webgpu&konveyor*=1` flags are present. A production
   constructor smoke spec now proves the same suite-backed globals reach
-  `HosekWilkieSky`, `CloudLayer`, `SunBillboard`, `GrassSystem`,
+  `HosekWilkieSky`, `CloudLayer`, `SunBillboard`, `PortalEffect`,
+  `CorralZapEffectPool`, `GrassSystem`,
   `TerrainBuilder`, `AnimeWater`, `OptimizedSheepSystem`, and Kiln impostor
   material creation without changing default WebGL startup.
   The diagnostic harness now consumes the suite for its material proofs instead
   of carrying local factory glue, and
   `cycle36-validation/runtime/webgpu-diagnostic-chrome.json` records the
-  suite's eight groups and fourteen current factories during a Rolling Hills
+  suite's eight groups and eighteen current factories during a Rolling Hills
   scene-bound diagnostic WebGPU boot.
   Production
   `SunBillboard` is now a scene-coupled
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=68 KB`,
+  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=77 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
   `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`) for later
   production seams without regenerating the refactor-baseline bundle ratchet. A

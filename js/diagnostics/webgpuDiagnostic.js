@@ -2,6 +2,7 @@ import {
     replaceRockMaterialsByTraversal,
     replaceTreeMaterialsByName,
 } from './webgpuMaterialReplacement.js';
+import * as THREE from 'three';
 import {
     DEFAULT_SKY_FOG_SAMPLE_PRESET,
     createSkyFogSamplePacket,
@@ -17,6 +18,9 @@ import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 import {
     createKonveyorEffectMaterial,
 } from '../effects/konveyorEffectMaterialAdapter.js';
+import { CorralZapEffectPool } from '../effects/CorralZapEffect.js';
+import { PortalEffect } from '../effects/PortalEffect.js';
+import { SunBillboard } from '../effects/SunBillboard.js';
 import { TerrainBuilder } from '../TerrainBuilder.js';
 import { createAnimeWater } from '../water/AnimeWater.js';
 import { GrassSystem } from '../GrassSystem.js';
@@ -718,6 +722,155 @@ export function createProductionSheepAdapterDiagnosticProof({
     };
 }
 
+function summarizeMaterial(material) {
+    return {
+        materialName: material?.name ?? null,
+        isNodeMaterial: material?.isNodeMaterial === true,
+        transparent: material?.transparent === true,
+        depthWrite: material?.depthWrite ?? null,
+        hasOpacityNode: !!material?.opacityNode,
+        hasColorNode: !!material?.colorNode,
+    };
+}
+
+export function createProductionEffectAdapterDiagnosticProof({
+    scene,
+    camera,
+    sceneBinding,
+    skyFog,
+    effectFactories,
+}) {
+    const search = '?renderer=webgpu&konveyorEffects=1';
+    const sun = new SunBillboard(scene, {
+        distance: 2.2,
+        size: 0.42,
+        search,
+        konveyorEffectFactories: effectFactories,
+    });
+    sun.update(
+        camera,
+        new THREE.Vector3(...(skyFog?.sunDirection ?? [0, 1, 0])),
+        new THREE.Color(...(skyFog?.sunColor ?? [1, 0.92, 0.72]))
+    );
+    const portal = new PortalEffect(scene, { x: -0.45, z: 0.18 }, -1.02, {
+        search,
+        konveyorEffectFactories: effectFactories,
+    });
+    portal.setIntensity(1);
+    portal.pulse();
+    portal.update(0.08);
+
+    const zapPool = new CorralZapEffectPool(scene, {
+        search,
+        konveyorEffectFactories: effectFactories,
+    });
+    zapPool.fire({ x: 0.62, y: -1.0, z: 0.18 });
+    zapPool.fireSpark({ x: 0.92, y: 0.45, z: 0.12 });
+    zapPool.update(0.05);
+    const firstZap = zapPool.effects[0] ?? null;
+
+    const summaries = {
+        sun: sun.konveyorMaterialSummary,
+        portalRing: portal.konveyorRingMaterialSummary,
+        portalPad: portal.konveyorPadMaterialSummary,
+        portalParticles: portal.konveyorParticleMaterialSummary,
+        corralZapBolt: firstZap?.konveyorBoltMaterialSummary ?? null,
+        corralZapParticles: firstZap?.konveyorParticleMaterialSummary ?? null,
+    };
+    const materialNames = {
+        sun: 'konveyor-node-sun-billboard',
+        portalRing: 'konveyor-node-portal-ring',
+        portalPad: 'konveyor-node-portal-pad',
+        portalParticles: 'konveyor-node-portal-particles',
+        corralZapBolt: 'konveyor-node-corral-zap-bolt',
+        corralZapParticles: 'konveyor-node-corral-zap-particles',
+    };
+    const checks = {
+        sunFactoryApplied: summaries.sun?.applied === true,
+        portalRingFactoryApplied: summaries.portalRing?.applied === true,
+        portalPadFactoryApplied: summaries.portalPad?.applied === true,
+        portalParticleFactoryApplied: summaries.portalParticles?.applied === true,
+        zapBoltFactoryApplied: summaries.corralZapBolt?.applied === true,
+        zapParticleFactoryApplied: summaries.corralZapParticles?.applied === true,
+        sunNodeMaterial: sun.material?.name === materialNames.sun && sun.material?.isNodeMaterial === true,
+        portalRingNodeMaterial: portal.ringMaterial?.name === materialNames.portalRing && portal.ringMaterial?.isNodeMaterial === true,
+        portalPadNodeMaterial: portal.pad?.material?.name === materialNames.portalPad && portal.pad?.material?.isNodeMaterial === true,
+        portalParticleNodeMaterial: portal.particles?.material?.name === materialNames.portalParticles && portal.particles?.material?.isNodeMaterial === true,
+        zapBoltNodeMaterial: firstZap?.bolt?.material?.name === materialNames.corralZapBolt && firstZap?.bolt?.material?.isNodeMaterial === true,
+        zapParticleNodeMaterial: firstZap?.particles?.material?.name === materialNames.corralZapParticles && firstZap?.particles?.material?.isNodeMaterial === true,
+        sceneContainsSun: scene.children.includes(sun.mesh),
+        sceneContainsPortal: scene.children.includes(portal.ring)
+            && scene.children.includes(portal.pad)
+            && scene.children.includes(portal.particles),
+        sceneContainsZap: !!firstZap
+            && scene.children.includes(firstZap.bolt)
+            && scene.children.includes(firstZap.particles),
+        portalControlsConnected: !!portal.ringMaterialControls?.update
+            && !!portal.padMaterialControls?.update
+            && !!portal.particleMaterialControls?.update,
+        zapControlsConnected: !!firstZap?.boltMaterialControls?.update
+            && !!firstZap?.particleMaterialControls?.update,
+        zapPoolInitialized: zapPool.effects.length === 8,
+        zapEffectActivated: zapPool.effects.some((effect) => effect.active),
+    };
+
+    const dispose = () => {
+        sun.dispose();
+        portal.dispose();
+        zapPool.dispose();
+    };
+
+    return {
+        sun,
+        portal,
+        zapPool,
+        dispose,
+        proof: {
+            source: 'production-effect-constructors-with-webgpu-node-factories',
+            sceneId: sceneBinding?.sceneId ?? null,
+            expectedMaterialNames: materialNames,
+            sun: {
+                ...summarizeMaterial(sun.material),
+                summary: summaries.sun,
+                hasControls: !!sun.materialControls?.update,
+            },
+            portal: {
+                ring: {
+                    ...summarizeMaterial(portal.ringMaterial),
+                    summary: summaries.portalRing,
+                    hasControls: !!portal.ringMaterialControls?.update,
+                },
+                pad: {
+                    ...summarizeMaterial(portal.pad?.material),
+                    summary: summaries.portalPad,
+                    hasControls: !!portal.padMaterialControls?.update,
+                },
+                particles: {
+                    ...summarizeMaterial(portal.particles?.material),
+                    summary: summaries.portalParticles,
+                    hasControls: !!portal.particleMaterialControls?.update,
+                },
+            },
+            corralZap: {
+                poolSize: zapPool.effects.length,
+                activeEffects: zapPool.effects.filter((effect) => effect.active).length,
+                bolt: {
+                    ...summarizeMaterial(firstZap?.bolt?.material),
+                    summary: summaries.corralZapBolt,
+                    hasControls: !!firstZap?.boltMaterialControls?.update,
+                },
+                particles: {
+                    ...summarizeMaterial(firstZap?.particles?.material),
+                    summary: summaries.corralZapParticles,
+                    hasControls: !!firstZap?.particleMaterialControls?.update,
+                },
+            },
+            checks,
+            ok: Object.values(checks).every(Boolean),
+        },
+    };
+}
+
 export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
     return {
         baseColor: [0.34, 0.32, 0.27],
@@ -1057,6 +1210,7 @@ export async function bootWebGpuDiagnostic() {
         diagnosticRockPlacementPreview: null,
         diagnosticRockInstancingPreview: null,
         effectMaterialAdapter: null,
+        productionEffectAdapter: null,
         productionAtmosphereAdapter: null,
         productionWaterAdapter: null,
         productionTerrainAdapter: null,
@@ -1109,6 +1263,8 @@ export async function bootWebGpuDiagnostic() {
         MeshBasicNodeMaterial,
         MeshLambertNodeMaterial,
         MeshStandardNodeMaterial,
+        PointsNodeMaterial,
+        LineBasicNodeMaterial,
         Color,
         Fog,
         AmbientLight,
@@ -1137,6 +1293,8 @@ export async function bootWebGpuDiagnostic() {
         MeshBasicNodeMaterial,
         MeshLambertNodeMaterial,
         MeshStandardNodeMaterial,
+        PointsNodeMaterial,
+        LineBasicNodeMaterial,
         AdditiveBlending,
         BackSide,
         DoubleSide,
@@ -1228,7 +1386,10 @@ export async function bootWebGpuDiagnostic() {
     scene.add(skyFogBackdrop);
 
     const sunMaterialResult = createKonveyorEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
-        createDefaultMaterial: () => effectFactories.createSunBillboardMaterial(),
+        createDefaultMaterial: () => {
+            const result = effectFactories.createSunBillboardMaterial();
+            return result.material ?? result;
+        },
         search: '?renderer=webgpu&konveyorEffects=1',
         factories: effectFactories,
     });
@@ -1293,7 +1454,10 @@ export async function bootWebGpuDiagnostic() {
     }
 
     const portalMaterialResult = createKonveyorEffectMaterial('portal-ring', 'createPortalRingMaterial', {
-        createDefaultMaterial: () => effectFactories.createPortalRingMaterial(),
+        createDefaultMaterial: () => {
+            const result = effectFactories.createPortalRingMaterial();
+            return result.material ?? result;
+        },
         search: '?renderer=webgpu&konveyorEffects=1',
         factories: effectFactories,
     });
@@ -1304,6 +1468,17 @@ export async function bootWebGpuDiagnostic() {
         sun: sunMaterialResult.summary,
         portal: portalMaterialResult.summary,
     };
+    const productionEffectProof = createProductionEffectAdapterDiagnosticProof({
+        scene,
+        camera,
+        sceneBinding,
+        skyFog,
+        effectFactories,
+    });
+    state.productionEffectAdapter = productionEffectProof.proof;
+    if (!state.productionEffectAdapter.ok) {
+        return fail('production effect adapter proof failed');
+    }
 
     const meadow = new Mesh(
         new PlaneGeometry(1.45, 0.8, 1, 1),
@@ -1507,6 +1682,7 @@ export async function bootWebGpuDiagnostic() {
         cloudPlane.geometry.dispose();
         cloudPlane.material.dispose();
         productionAtmosphereProof.atmosphere.dispose();
+        productionEffectProof.dispose();
         productionWaterProof.water.dispose();
         productionTerrainProof.builder.dispose();
         productionGrassProof.dispose();

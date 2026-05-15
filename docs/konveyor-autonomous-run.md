@@ -237,13 +237,17 @@ WebGPU now has a diagnostic island, not a production renderer:
   LOD0 color parity remain deferred.
 - A production-facing sun/portal/transient effect material adapter now exists
   behind `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect
-  factories. The reusable WebGPU sun billboard and portal ring node-material
-  candidates now live in `js/effects/konveyorSunNodeMaterial.js` and
-  `js/effects/konveyorPortalNodeMaterial.js`, and the effect adapter spec
-  proves the flagged production seam can route through them. The real production
-  `SunBillboard`, `PortalEffect` ring/pad/particle materials, and
-  `CorralZapEffect` bolt/particle materials now use that shared adapter;
-  default WebGL `ShaderMaterial`, `MeshBasicMaterial`, `LineBasicMaterial`, and
+  factories. The reusable WebGPU sun billboard, portal ring/pad/particle, and
+  corral zap bolt/particle node-material candidates now live in
+  `js/effects/konveyorSunNodeMaterial.js`,
+  `js/effects/konveyorPortalNodeMaterial.js`, and
+  `js/effects/konveyorZapNodeMaterial.js`, and the effect adapter spec proves
+  the flagged production seam can route through them. The real production
+  `SunBillboard`, `PortalEffect`, and `CorralZapEffectPool` constructors are now
+  covered inside the WebGPU diagnostic renderer by
+  `window.__sdsG.productionEffectAdapter` and
+  `cycle36-validation/runtime/production-effect-adapter-proof.json`; default
+  WebGL `ShaderMaterial`, `MeshBasicMaterial`, `LineBasicMaterial`, and
   `PointsMaterial` creation remains untouched.
 - Reusable WebGPU factory-supply helpers now exist without importing
   `three/webgpu` into the default production bundle. Tree/rock, effects,
@@ -256,14 +260,14 @@ WebGPU now has a diagnostic island, not a production renderer:
   production global factory names, so a future scene-bound proof can supply all
   current fail-closed seams from one surface without installing factories by
   default. `tests/konveyor-factory-suite-production-smoke.spec.js` now proves
-  that the real production constructors for sky, clouds, sun, grass, terrain,
-  water, sheep, and Kiln impostors can consume that suite-backed global map
-  only when their explicit Konveyor flags are present.
+  that the real production constructors for sky, clouds, sun, portal, corral
+  zap, grass, terrain, water, sheep, and Kiln impostors can consume that
+  suite-backed global map only when their explicit Konveyor flags are present.
   The diagnostic harness now consumes that suite instead of owning the material
   mapping inline and records a `factorySuite` summary in
-  `cycle36-validation/runtime/webgpu-diagnostic-chrome.json` for the
-  Rolling Hills scene-bound diagnostic boot, while the fail-closed adapter
-  flags still require explicit factories.
+  `cycle36-validation/runtime/webgpu-diagnostic-chrome.json` for scene-bound
+  diagnostic boot, while the fail-closed adapter flags still require explicit
+  factories.
 - The production `SunBillboard` implementation is now lazy-loaded as a
   scene-coupled chunk before normal scene body construction and scene swaps.
   This preserves the default WebGL sun disc while recovering main-bundle
@@ -272,7 +276,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
   bundle-size fixture. Current production build evidence: `mainKB=569`,
-  `threeKB=618`, `webgpuDiagnostic=68 KB`,
+  `threeKB=618`, `webgpuDiagnostic=77 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`, `AnimeWater=9 KB`,
   `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
@@ -364,6 +368,16 @@ WebGPU now has a diagnostic island, not a production renderer:
   still matches the CPU-visible sky/fog packet. This is production atmosphere
   constructor proof inside the diagnostic renderer, not default production
   WebGPU boot.
+- [`../cycle36-validation/runtime/production-effect-adapter-proof.json`](../cycle36-validation/runtime/production-effect-adapter-proof.json)
+  verifies that the same scene-bound diagnostic WebGPU captures instantiate
+  real production `SunBillboard`, `PortalEffect`, and `CorralZapEffectPool`
+  constructors with explicit WebGPU node-material factories for all shipped
+  diagnostic scenes. The proof records node material names and live controls
+  for the sun billboard, portal ring, portal pad, portal particles, corral zap
+  bolt, and corral zap particles under `?renderer=webgpu&konveyorEffects=1`.
+  This is production effect constructor proof inside the diagnostic renderer;
+  gameplay timing, camera-framed portal parity, and default production WebGPU
+  boot remain separate gates.
 - [`../cycle36-validation/runtime/production-water-adapter-proof.json`](../cycle36-validation/runtime/production-water-adapter-proof.json)
   verifies that the same scene-bound diagnostic WebGPU captures instantiate the
   real production `AnimeWater.createAnimeWater()` wrapper with explicit WebGPU
@@ -524,12 +538,13 @@ Recommended order:
    deferred.
    The reusable WebGPU factory-suite proof now exists and the scene-bound
    Rolling Hills diagnostic boot records the suite's eight factory groups and
-   fourteen current factories. The material-island visual proof now samples
+   eighteen current factories. The material-island visual proof now samples
    Field, Rolling Hills, and Open Country diagnostic screenshots for visible
    water, terrain, grass, sheep, tree, rock, impostor, meadow, sun, and cloud
    signatures, and constructor proofs now cover production `Atmosphere`,
-   `AnimeWater`, `TerrainBuilder.createTerrain()`, and representative
-   `GrassSystem` material/chunk construction plus `OptimizedSheepSystem`
+   `SunBillboard`, `PortalEffect`, `CorralZapEffectPool`, `AnimeWater`,
+   `TerrainBuilder.createTerrain()`, and representative `GrassSystem`
+   material/chunk construction plus `OptimizedSheepSystem`
    merged-geometry/instancing construction inside the diagnostic renderer. The
    next production-adjacent move should keep
    `?renderer=webgpu` fail-closed without `diagnostic=1` while moving one
