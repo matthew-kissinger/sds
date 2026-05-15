@@ -78,6 +78,12 @@ export class CloudLayer {
     this.material = materialResult?.material ?? materialResult ?? createDefaultMaterial();
     this.materialControls = materialResult?.controls ?? null;
     this.konveyorMaterialSummary = materialResult?.summary ?? null;
+    if (this.materialControls) {
+      this.material.userData.konveyorCloudLayerMaterialControls = this.materialControls;
+    }
+    if (this.konveyorMaterialSummary) {
+      this.material.userData.konveyorCloudLayerMaterialSummary = this.konveyorMaterialSummary;
+    }
 
     this.geometry = new THREE.PlaneGeometry(PLANE_LENGTH, PLANE_WIDTH, 1, 1);
     this.mesh = new THREE.Mesh(this.geometry, this.material);

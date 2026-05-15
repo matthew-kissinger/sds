@@ -247,6 +247,31 @@ describe('konveyor atmosphere material adapter', () => {
         applied: true,
       });
       expect(layer.getMesh().material).toBe(layer.material);
+      expect(layer.materialControls).toBe(layer.material.userData.konveyorCloudLayerMaterialControls);
+      expect(layer.material.userData.konveyorCloudLayerMaterialSummary).toMatchObject({
+        kind: 'cloud-layer',
+        applied: true,
+      });
+
+      layer.setCoverage(0.35);
+      layer.setFeatureScaleMeters(450);
+      layer.update(
+        new THREE.Vector3(20, 1300, -10),
+        0,
+        new THREE.Vector3(0.25, 1, 0.5),
+        new THREE.Color(0.7, 0.8, 0.9),
+        0.75
+      );
+
+      const nodes = layer.materialControls.nodes;
+      expect(nodes.coverage.value).toBeCloseTo(0.35);
+      expect(nodes.edgeFade.value).toBeCloseTo(1);
+      expect(nodes.noiseScale.value).toBeCloseTo(1 / 450);
+      expect(nodes.timeSeconds.value).toBeCloseTo(0.75);
+      expect(nodes.sunDirection.value.toArray()).toEqual(
+        new THREE.Vector3(0.25, 1, 0.5).normalize().toArray()
+      );
+      expect(nodes.sunColor.value.getHex()).toBe(new THREE.Color(0.7, 0.8, 0.9).getHex());
     } finally {
       layer.dispose();
     }

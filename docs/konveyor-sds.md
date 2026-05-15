@@ -116,9 +116,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   while the default WebGL `ShaderMaterial` path remains unchanged.
   `js/atmosphere/konveyorCloudNodeMaterial.js` now owns the reusable WebGPU
   cloud-layer node-material candidate used by the diagnostic cloud plane and by
-  an explicit `CloudLayer` factory under the same fail-closed flag. Dynamic
-  production cloud controls, sky-preset screenshots, fog/horizon integration,
-  and default production wiring remain deferred. A
+  an explicit `CloudLayer` factory under the same fail-closed flag, with
+  coverage, edge fade, feature scale, time, wind, sun direction, and sun color
+  driven through node uniform controls. Sky-preset screenshots, fog/horizon
+  integration, and default production wiring remain deferred. A
   production-facing anime-water material adapter now exists behind
   `?renderer=webgpu&konveyorWater=1` plus an explicit water factory. It can
   hand water update ownership to factory controls, while default WebGL still

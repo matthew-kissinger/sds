@@ -215,9 +215,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   `ShaderMaterial` path untouched when the flag or factories are absent.
   `js/atmosphere/konveyorCloudNodeMaterial.js` now owns the reusable WebGPU
   cloud-layer node-material candidate that the diagnostic cloud plane and an
-  explicit `CloudLayer` factory can share. Dynamic production cloud controls,
-  sky-preset screenshots, fog/horizon integration, and default production
-  wiring remain deferred.
+  explicit `CloudLayer` factory can share, with coverage, edge fade, feature
+  scale, time, wind, sun direction, and sun color driven through node uniform
+  controls. Sky-preset screenshots, fog/horizon integration, and default
+  production wiring remain deferred.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
   The sky/fog packet now lives in `js/atmosphere/skyFogSamplePacket.js` and
@@ -309,9 +310,10 @@ Recommended order:
    adapter now reaches production `CloudLayer` through an explicit
    `cloudFactory` or the direct fail-closed flag/factory path. The sky/fog and
    cloud-layer node materials are now extracted into reusable WebGPU factory
-   candidates, but dynamic cloud controls, preset screenshots,
-   fog-consumer proof, fog/horizon integration, and default production wiring
-   remain deferred. Production
+   candidates, and the cloud-layer candidate now consumes live `CloudLayer`
+   state through node uniform controls. Preset screenshots, fog-consumer proof,
+   fog/horizon integration, and default production wiring remain deferred.
+   Production
    `SunBillboard` itself is now
    scene-coupled and lazy-loaded, which creates bundle room for the next seam
    without changing default WebGL behavior. The far-ring meadow path now has a
