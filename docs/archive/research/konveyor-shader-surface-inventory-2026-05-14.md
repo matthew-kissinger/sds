@@ -34,7 +34,9 @@ already loaded WebGPU/TSL module object instead of importing `three/webgpu`,
 and `js/konveyorNodeMaterialFactorySuite.js` now assembles them with atmosphere
 and sheep-part factories into one grouped factory surface. The diagnostic
 harness now consumes that suite for material proofs instead of carrying that
-factory glue inline.
+factory glue inline. The suite also provides a renderless map to the existing
+production global factory names, and the suite spec proves the current adapters
+consume that map only under their explicit WebGPU/Konveyor flags.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, and
 `GrassSystem` is now loaded by the async grass creation paths. The default
 WebGL sun/grass behavior remains intact while the critical `main` bundle has

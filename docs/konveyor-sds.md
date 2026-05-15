@@ -207,6 +207,9 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   atmosphere and sheep-part factories from a supplied module object, and
   `tests/konveyor-node-material-factory-suite.spec.js` proves the grouped
   factory surface without requiring the suite itself to import `three/webgpu`.
+  The suite also maps those groups to the existing production global factory
+  names and a test proves the current adapters can consume that map only when
+  their explicit `renderer=webgpu&konveyor*=1` flags are present.
   The diagnostic harness now consumes the suite for its material proofs instead
   of carrying local factory glue.
   Production

@@ -43,3 +43,16 @@ export function createKonveyorNodeMaterialFactorySuite(webGpuModules, options = 
     impostor: createKonveyorImpostorNodeMaterialFactories(webGpuModules, options.impostor),
   };
 }
+
+export function createKonveyorNodeMaterialFactoryGlobals(factorySuite) {
+  return {
+    __sdsKonveyorAtmosphereMaterialFactories: factorySuite.atmosphere,
+    __sdsKonveyorEffectMaterialFactories: factorySuite.effects,
+    __sdsKonveyorMaterialFactories: factorySuite.treeRock,
+    __sdsKonveyorGrassMaterialFactories: factorySuite.grass,
+    __sdsKonveyorWaterMaterialFactories: factorySuite.water,
+    __sdsKonveyorTerrainMaterialFactories: factorySuite.terrain,
+    __sdsKonveyorSheepMaterialFactories: factorySuite.sheep,
+    __sdsKonveyorImpostorMaterialFactories: factorySuite.impostor,
+  };
+}

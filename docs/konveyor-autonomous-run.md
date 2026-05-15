@@ -238,6 +238,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   already-loaded WebGPU/TSL module object. `js/konveyorNodeMaterialFactorySuite.js`
   now assembles those helpers plus atmosphere and sheep-part factories from the
   supplied module object; the suite does not statically import `three/webgpu`.
+  It also exposes a renderless map from the grouped suite to the existing
+  production global factory names, so a future scene-bound proof can supply all
+  current fail-closed seams from one surface without installing factories by
+  default.
   The diagnostic harness now consumes that suite instead of owning the material
   mapping inline, while the fail-closed adapter flags still require explicit
   factories.
