@@ -140,6 +140,12 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `Atmosphere` proof, checks stable scene-background pixels, confirms visible
   cloud-band pixels, and confirms Rolling Hills stays visually darker than the
   daytime scenes.
+  `cycle36-validation/runtime/material-island-visual-proof.json` now samples
+  the same installed-Chrome scene screenshots, verifies the required diagnostic
+  material-island list per scene, and checks visible color signatures for sun,
+  cloud, meadow, anime water, terrain heightfield, grass blade, sheep wool,
+  tree foliage, Kiln impostor, and rock-rim islands. This is diagnostic
+  material-island visibility, not production WebGPU renderer parity.
   `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
   across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
   full production-scene WebGPU visual parity remains a separate gate. A
@@ -162,8 +168,9 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   coverage, edge fade, feature scale, time, wind, sun direction, and sun color
   driven through node uniform controls. Diagnostic sky-preset screenshots are
   captured, the renderless scene fog/horizon contract is pinned, and
-  scene-bound diagnostic WebGPU screenshots now exist; full production-scene
-  WebGPU screenshots and default production wiring remain deferred. A
+  scene-bound diagnostic WebGPU screenshots plus material-island visual samples
+  now exist; full production-scene WebGPU screenshots and default production
+  wiring remain deferred. A
   production-facing anime-water material adapter now exists behind
   `?renderer=webgpu&konveyorWater=1` plus an explicit water factory. It can
   hand water update ownership to factory controls, and the reusable

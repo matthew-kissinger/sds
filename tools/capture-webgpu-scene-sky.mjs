@@ -101,6 +101,7 @@ async function captureScene({ context, baseUrl, sceneDef, outDir }) {
       },
       frames: state.frames,
       islandCount: state.islands.length,
+      islands: state.islands,
       hasSkyFog: state.islands.includes('sky-fog'),
       hasCloudPlane: state.islands.includes('cloud-plane'),
       consoleErrors,

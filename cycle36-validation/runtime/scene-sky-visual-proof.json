@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T08:35:58.017Z",
+  "capturedAt": "2026-05-15T08:45:21.760Z",
   "source": "Konveyor scene sky screenshot visual proof",
   "manifest": "cycle36-validation/runtime/scene-sky-screenshots/manifest.json",
   "sceneProof": "cycle36-validation/runtime/scene-fog-horizon-proof.json",
@@ -52,8 +52,8 @@
         233
       ],
       "capturedCloudRgb": [
-        229.28,
-        233.02,
+        229.26,
+        233.01,
         232.18
       ],
       "visual": {
@@ -83,15 +83,15 @@
             233
           ],
           "cloudPatch": [
-            229.28,
-            233.02,
+            229.26,
+            233.01,
             232.18
           ]
         },
         "metrics": {
           "backgroundLuma": 225.09,
           "edgeDistance": 0,
-          "cloudBackgroundDistance": 14.6
+          "cloudBackgroundDistance": 14.58
         },
         "checks": {
           "dimensionsMatch": true,
@@ -128,9 +128,9 @@
         113
       ],
       "capturedCloudRgb": [
-        199,
-        177.6,
-        167.43
+        198.94,
+        177.51,
+        167.33
       ],
       "visual": {
         "screenshot": "rolling-hills.png",
@@ -159,15 +159,15 @@
             113
           ],
           "cloudPatch": [
-            199,
-            177.6,
-            167.43
+            198.94,
+            177.51,
+            167.33
           ]
         },
         "metrics": {
           "backgroundLuma": 130.36,
           "edgeDistance": 0,
-          "cloudBackgroundDistance": 85.95
+          "cloudBackgroundDistance": 85.81
         },
         "checks": {
           "dimensionsMatch": true,
@@ -204,9 +204,9 @@
         212
       ],
       "capturedCloudRgb": [
-        229.98,
-        224.18,
-        219.36
+        229.95,
+        224.15,
+        219.34
       ],
       "visual": {
         "screenshot": "open-country.png",
@@ -235,15 +235,15 @@
             212
           ],
           "cloudPatch": [
-            229.98,
-            224.18,
-            219.36
+            229.95,
+            224.15,
+            219.34
           ]
         },
         "metrics": {
           "backgroundLuma": 213.99,
           "edgeDistance": 0,
-          "cloudBackgroundDistance": 17.96
+          "cloudBackgroundDistance": 17.92
         },
         "checks": {
           "dimensionsMatch": true,

@@ -314,7 +314,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   Hills, and Open Country using
   `?renderer=webgpu&diagnostic=1&konveyorScene=...`. Each scene reached
   `effective=webgpu-diagnostic`, bound the expected shipped scene sky preset
-  and linear fog range, included the sky/fog and cloud-plane islands, and
+  and linear fog range, included the full diagnostic material-island list, and
   recorded no console or page errors. This is scene-bound diagnostic evidence;
   full production-scene WebGPU renderer parity remains a separate gate.
 - [`../cycle36-validation/runtime/scene-sky-visual-proof.json`](../cycle36-validation/runtime/scene-sky-visual-proof.json)
@@ -324,6 +324,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   stable scene-background pixels, confirms the cloud band is visually distinct
   from the background, and confirms Rolling Hills remains darker than the
   daytime scenes.
+- [`../cycle36-validation/runtime/material-island-visual-proof.json`](../cycle36-validation/runtime/material-island-visual-proof.json)
+  samples the same installed-Chrome scene screenshots with `sharp`. It verifies
+  Field, Rolling Hills, and Open Country all reached the required diagnostic
+  material-island list and checks visible color signatures for sun, cloud,
+  meadow, anime water, terrain heightfield, grass blade, sheep wool, tree
+  foliage, Kiln impostor, and rock-rim islands. This is still a diagnostic
+  material-island gate, not production WebGPU scene parity.
 - [`../cycle36-validation/runtime/sky-lut-profile.json`](../cycle36-validation/runtime/sky-lut-profile.json)
   profiles the same renderless Hosek-Wilkie CPU LUT for the five required
   presets. Current local evidence keeps the CPU-visible LUT as the atmosphere
@@ -418,18 +425,21 @@ Recommended order:
    candidates, and the cloud-layer candidate now consumes live `CloudLayer`
    state through node uniform controls. Diagnostic fog consumers are pinned by
    `tests/webgpu-diagnostic.spec.js`; diagnostic preset screenshots, renderless
-   scene fog/horizon proof, and scene-bound diagnostic WebGPU screenshots are
-   now captured, while full production-scene WebGPU screenshots and default
-   production wiring remain deferred.
+   scene fog/horizon proof, scene-bound diagnostic WebGPU screenshots, and a
+   material-island screenshot sampler are now captured, while full
+   production-scene WebGPU screenshots and default production wiring remain
+   deferred.
    Production
    `SunBillboard` itself is now
    scene-coupled and lazy-loaded, which creates bundle room for the next seam
    without changing default WebGL behavior. The far-ring meadow path now has a
    production-facing factory seam but no production WebGPU scene wiring claim.
-   The water path now has a production-facing factory/update-control seam, but
-   scene-bound Rolling Hills/Open Country screenshot parity remains deferred.
-   The terrain path now has a production-facing material factory seam, but
-   scene-bound Rolling Hills/Open Country terrain parity remains deferred. The
+   The water path now has a production-facing factory/update-control seam and
+   diagnostic scene-bound screenshot visibility, but production-scene
+   Rolling Hills/Open Country parity remains deferred. The terrain path now has
+   a production-facing material factory seam and diagnostic scene-bound
+   screenshot visibility, but production-scene Rolling Hills/Open Country
+   terrain parity remains deferred. The
    sheep path now has a production-facing material factory seam, but high-count
    animation, terrain-grounded visual parity, and multiplayer-safe scene proof
    remain deferred. The Kiln path now has a production-facing material factory
@@ -437,9 +447,12 @@ Recommended order:
    deferred.
    The reusable WebGPU factory-suite proof now exists and the scene-bound
    Rolling Hills diagnostic boot records the suite's eight factory groups and
-   fourteen current factories. The next production-adjacent move should keep
-   `?renderer=webgpu` fail-closed without `diagnostic=1` while continuing the
-   remaining visual parity/perf gates for one material island.
+   fourteen current factories. The material-island visual proof now samples
+   Field, Rolling Hills, and Open Country diagnostic screenshots for visible
+   water, terrain, grass, sheep, tree, rock, impostor, meadow, sun, and cloud
+   signatures. The next production-adjacent move should keep
+   `?renderer=webgpu` fail-closed without `diagnostic=1` while moving one
+   island from diagnostic visibility toward measured production-scene parity.
    The sky path now has diagnostic preset screenshot parity, renderless scene
    fog/horizon proof, and scene-bound diagnostic WebGPU screenshots, but still
    needs full production-scene WebGPU screenshot parity before any default
