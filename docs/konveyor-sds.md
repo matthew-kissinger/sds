@@ -99,8 +99,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   production-facing
   sun/portal effect material adapter now exists behind
   `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories;
-  without the flag and factories, both effects still construct their existing
-  WebGL `ShaderMaterial`s. Production `SunBillboard` is now a scene-coupled
+  both `SunBillboard` and `PortalEffect` material creation now route through
+  that shared fail-closed seam. Without the flag and factories, both effects
+  still construct their existing WebGL `ShaderMaterial`s. Production
+  `SunBillboard` is now a scene-coupled
   lazy chunk, preserving the default WebGL sun disc while recovering main
   bundle headroom (`mainKB=574`, `threeKB=603`) for later production seams. A
   diagnostic material-replacement island proves tree replacement by

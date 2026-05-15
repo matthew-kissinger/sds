@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createKonveyorEffectMaterial } from './konveyorEffectMaterialAdapter.js';
 
 /**
  * Cycle 7 Phase 2e: a billboarded sun disc placed in the sky direction
@@ -65,31 +66,6 @@ function makeSunBillboardMaterial() {
     });
 }
 
-function createSunBillboardMaterial(options) {
-    const search = options.search ?? (typeof window === 'undefined' ? '' : window.location?.search ?? '');
-    const enabled = search.includes('renderer=webgpu') && search.includes('konveyorEffects=1');
-    const factories = options.konveyorEffectFactories ?? (
-        typeof window === 'undefined' ? null : window.__sdsKonveyorEffectMaterialFactories
-    );
-    const factory = factories?.createSunBillboardMaterial;
-    if (enabled && typeof factory === 'function') {
-        const result = factory();
-        const material = result?.material ?? result;
-        if (material) {
-            return {
-                material,
-                controls: result?.controls ?? null,
-                summary: { applied: true, reason: null }
-            };
-        }
-    }
-    return {
-        material: makeSunBillboardMaterial(),
-        controls: null,
-        summary: { applied: false, reason: enabled ? 'missing-factories' : 'flag-disabled' }
-    };
-}
-
 export class SunBillboard {
     /**
      * @param {THREE.Scene} scene
@@ -104,7 +80,11 @@ export class SunBillboard {
         this.distance = distance;
 
         const geometry = new THREE.PlaneGeometry(size, size);
-        const materialResult = createSunBillboardMaterial(options);
+        const materialResult = createKonveyorEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
+            createDefaultMaterial: makeSunBillboardMaterial,
+            search: options.search,
+            factories: options.konveyorEffectFactories
+        });
 
         this.material = materialResult.material;
         this.materialControls = materialResult.controls;

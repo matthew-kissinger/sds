@@ -17,7 +17,9 @@ cloud-plane, and sky/fog formulas are now ported inside the diagnostic island,
 and the meadow-quad island now uses the production grass default colors,
 far-ring UV hash scale, and CPU sky/fog packet. Sun/portal now have a
 production-facing effect material adapter behind
-`?renderer=webgpu&konveyorEffects=1` plus explicit factories.
+`?renderer=webgpu&konveyorEffects=1` plus explicit factories, and both the
+real `SunBillboard` and `PortalEffect` material creation paths now use that
+shared fail-closed seam.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, so the default
 WebGL sun disc remains intact while the critical `main` bundle has headroom for
 later seams (`mainKB=574`, `threeKB=603`).
@@ -89,7 +91,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 
 | Order | Surface | File | Current role | WebGPU risk | Migration shape | Gate |
 |---:|---|---|---|---|---|---|
-| 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction; lazy-loaded as a scene-coupled production chunk. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. Production-facing material creation can now route through `?renderer=webgpu&konveyorEffects=1` plus explicit factories; default WebGL still uses the existing `ShaderMaterial` after the scene-coupled dynamic import. | Diagnostic island screenshot/probe, then default smoke. |
+| 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction; lazy-loaded as a scene-coupled production chunk. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. Production-facing material creation routes through the shared `?renderer=webgpu&konveyorEffects=1` adapter plus explicit factories; default WebGL still uses the existing `ShaderMaterial` after the scene-coupled dynamic import. | Diagnostic island screenshot/probe, then default smoke. |
 | 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. Production-facing ring material creation can now route through the same effect adapter with explicit factories; default WebGL still uses the existing `ShaderMaterial`. | Open Country objective visual screenshot plus completion smoke. |
 | 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | Diagnostic cloud-plane TSL material now covers value-noise/fbm mask, sun tint, coverage, footprint fade, and time input. Production wiring still needs sky preset screenshots and fog/horizon integration. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
 | 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet. `HosekWilkieSky` can receive an injected material factory, and the adapter can route that factory through `?renderer=webgpu&konveyorAtmosphere=1`, but it still needs a real TSL sky material, analytic parity, preset screenshots, and fog-consumer proof before production WebGPU sky coverage is claimed. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
@@ -183,7 +185,7 @@ comments:
   covers sun billboard and portal ring material creation. It only activates
   when `renderer=webgpu&konveyorEffects=1` is present and explicit effect
   factories are supplied; otherwise the existing WebGL `ShaderMaterial` paths
-  stay untouched.
+  stay untouched. Both production effect classes now call this adapter directly.
 - `SunBillboard` itself is now loaded through a scene-coupled dynamic import.
   The default WebGL effect remains present before normal scene body construction
   and after scene swaps, while the build emits a separate sun-billboard chunk

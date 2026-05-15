@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 
 import {
   createKonveyorEffectMaterial,
   shouldApplyKonveyorEffects,
 } from '../js/effects/konveyorEffectMaterialAdapter.js';
+import { SunBillboard } from '../js/effects/SunBillboard.js';
 
 function defaultMaterial(name = 'default-effect') {
   return { name };
@@ -86,5 +88,40 @@ describe('konveyor effect material adapter', () => {
     portal.controls.update({ time: 1, pulse: 0.2, intensity: 0.8 });
     expect(sunUpdates).toEqual([{ intensity: 0.7 }]);
     expect(portalUpdates).toEqual([{ time: 1, pulse: 0.2, intensity: 0.8 }]);
+  });
+
+  it('routes SunBillboard material creation through the shared adapter', () => {
+    const scene = new THREE.Scene();
+    const updates = [];
+    const konveyorMaterial = new THREE.MeshBasicMaterial({ name: 'konveyor-sun' });
+
+    const sun = new SunBillboard(scene, {
+      search: '?renderer=webgpu&konveyorEffects=1',
+      konveyorEffectFactories: {
+        createSunBillboardMaterial: () => ({
+          material: konveyorMaterial,
+          controls: { update: (state) => updates.push(state) },
+        }),
+      },
+    });
+
+    expect(sun.material).toBe(konveyorMaterial);
+    expect(sun.konveyorMaterialSummary).toMatchObject({
+      kind: 'sun-billboard',
+      applied: true,
+      reason: null,
+      hasControls: true,
+    });
+
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(0, 10, 0);
+    sun.update(camera, new THREE.Vector3(0, 1, 0), new THREE.Color(0.8, 0.7, 0.6));
+
+    expect(updates).toHaveLength(1);
+    expect(updates[0]).toMatchObject({ intensity: 1 });
+    expect(updates[0].haloColor).toBeInstanceOf(THREE.Color);
+    expect(updates[0].coreColor).toBeInstanceOf(THREE.Color);
+
+    sun.dispose();
   });
 });

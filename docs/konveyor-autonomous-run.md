@@ -139,8 +139,10 @@ WebGPU now has a diagnostic island, not a production renderer:
 - A production-facing sun/portal effect material adapter now exists behind
   `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect factories. It
   routes the already-proved diagnostic sun billboard and portal ring node
-  materials through the same fail-closed pattern while leaving default WebGL
-  `ShaderMaterial` creation untouched.
+  materials through the same fail-closed pattern. The real production
+  `SunBillboard` and `PortalEffect` material creation paths both use that
+  shared adapter now; default WebGL `ShaderMaterial` creation remains
+  untouched.
 - The production `SunBillboard` implementation is now lazy-loaded as a
   scene-coupled chunk before normal scene body construction and scene swaps.
   This preserves the default WebGL sun disc while recovering main-bundle
