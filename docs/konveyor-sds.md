@@ -33,6 +33,11 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
 - The tree pipeline is already optimized for the current WebGL stack: EZ-Tree
   build-time GLBs, meshopt compression, InstancedMesh2 per-instance LOD, and
   Kiln impostor sidecars.
+- The current tree-refresh baseline is captured at
+  `cycle36-validation/runtime/tree-refresh-baseline.json`: active `tree1` and
+  `tree2` picks, runtime/original GLB bytes, Kiln impostor sidecar and atlas
+  contracts, material replacement evidence, and the current EZ-Tree upstream
+  candidate status before any asset rebake.
 - Cycle 36 repaired the perf harness. `tests/perf-baseline/baseline.json`
   currently records all six default configs with `ok: true` and 900 samples
   each on the local Windows RTX 3070 workstation.
@@ -340,7 +345,9 @@ and externalized texture assets
 That is a serious tree-refresh candidate for the WebGPU/native target, but it
 must run through the asset-gallery pick flow, GLB compression, Kiln impostor
 rebake where needed, material-ownership proof, visual review, and perf/latency
-gates before replacing shipped trees.
+gates before replacing shipped trees. Use
+`node tools/konveyor-tree-refresh-baseline.mjs` before and after candidate
+rebakes so accepted tree deltas compare against the same evidence surface.
 
 Exit: every accepted tree delta is artifact-backed, and tree goldens are updated
 only for named, intentional differences.

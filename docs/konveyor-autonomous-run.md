@@ -151,6 +151,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   records renderless CPU sky/fog packets for all five shipped sky presets.
   This covers analytic preset-color parity; preset screenshots and production
   wiring remain separate gates.
+- [`../cycle36-validation/runtime/tree-refresh-baseline.json`](../cycle36-validation/runtime/tree-refresh-baseline.json)
+  records the current tree-refresh input contract before any EZ-Tree rebake:
+  active `tree1`/`tree2` picks, compressed/original GLB bytes, Kiln impostor
+  sidecar and atlas bytes, material-name replacement proof, and the current
+  upstream EZ-Tree candidate status.
 - [`../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png`](../cycle36-validation/runtime/webgpu-diagnostic-islands-chrome.png)
   is a Chrome 148 screenshot artifact for the diagnostic material islands.
 
@@ -219,8 +224,9 @@ Recommended order:
    tree-generation changes around softer leaf normals, corrected growth force,
    stratified child branch/leaf placement, and externalized texture assets
    ([changelog](https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md)).
-   Evaluate those before Phase 2/4 tree rebakes, but only accept regenerated
-   GLBs with named visual and perf artifacts.
+   The baseline packet now captures the current shipped tree contract before
+   any rebake. Evaluate upstream output before Phase 2/4 tree replacement, but
+   only accept regenerated GLBs with named visual and perf artifacts.
 4. **Advance through the Konveyor phase outline.** Keep moving from cosmetic
    shader compatibility to trees, grass, sheep/high-count rendering, compute
    experiments, native packaging, and web fallback/release decisions as
