@@ -222,9 +222,15 @@ export function createAnimeWaterDiagnosticState(skyFog = createSkyFogDiagnosticS
         sunColor: skyFog.sunColor,
         sunDirection: skyFog.sunDirection,
         foamThickness: DIAGNOSTIC_FOAM_THICKNESS,
+        heightfieldTexture: {
+            format: 'RedFormat/FloatType',
+            size: [4, 4],
+            sampler: 'nearest-clamp',
+            interfaceHeight: 0.5,
+        },
         rippleStrength: 1.0,
         sparkleStrength: 0.7,
-        heightfieldSampling: 'deferred',
+        heightfieldSampling: 'diagnostic-data-texture',
     };
 }
 
@@ -244,8 +250,31 @@ export function createTreeLeafDiagnosticState() {
     };
 }
 
-function createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, water) {
-    const { dot, float, floor, fract, length, mix, pow, sin, smoothstep, time, uv, vec2, vec3 } = TSL;
+function createDiagnosticHeightTexture({
+    DataTexture,
+    RedFormat,
+    FloatType,
+    NearestFilter,
+    ClampToEdgeWrapping,
+}) {
+    const data = new Float32Array([
+        0.10, 0.24, 0.62, 0.92,
+        0.18, 0.42, 0.54, 0.76,
+        0.32, 0.48, 0.52, 0.68,
+        0.08, 0.30, 0.57, 0.88,
+    ]);
+    const texture = new DataTexture(data, 4, 4, RedFormat, FloatType);
+    texture.magFilter = NearestFilter;
+    texture.minFilter = NearestFilter;
+    texture.wrapS = ClampToEdgeWrapping;
+    texture.wrapT = ClampToEdgeWrapping;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+    return texture;
+}
+
+function createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, water, heightTexture) {
+    const { abs, dot, float, floor, fract, length, max, mix, pow, sin, smoothstep, texture, time, uv, vec2, vec3 } = TSL;
     const hash21 = (p) => {
         const q = fract(p.mul(vec2(123.34, 456.21)));
         const r = q.add(dot(q, q.add(45.32)));
@@ -272,7 +301,11 @@ function createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }
     const ripple = smoothstep(0.56, 0.66, rippleA.mul(0.68).add(rippleB.mul(0.32)))
         .mul(water.rippleStrength * 0.08);
     const foamNoise = valueNoise(waterUv.mul(vec2(18.0, 3.0)).add(vec2(time.mul(0.07), 0.0)));
-    const foamBand = float(1.0).sub(smoothstep(0.10, 0.22, waterUv.y.add(foamNoise.mul(0.04))));
+    const shorelineFoam = float(1.0).sub(smoothstep(0.10, 0.22, waterUv.y.add(foamNoise.mul(0.04))));
+    const heightSample = texture(heightTexture, waterUv).r;
+    const heightInterfaceFoam = float(1.0)
+        .sub(smoothstep(0.035, 0.16, abs(heightSample.sub(water.heightfieldTexture.interfaceHeight))));
+    const foamBand = max(shorelineFoam, heightInterfaceFoam.mul(0.68));
     const glintDelta = waterUv.sub(vec2(0.72, 0.64));
     const glint = pow(float(1.0).sub(smoothstep(0.0, 0.42, length(glintDelta))), 4.0)
         .mul(water.sparkleStrength);
@@ -465,6 +498,11 @@ export async function bootWebGpuDiagnostic() {
         Matrix4,
         Object3D,
         Vector3,
+        DataTexture,
+        RedFormat,
+        FloatType,
+        NearestFilter,
+        ClampToEdgeWrapping,
         TSL,
     } = await loadWebGpuThree();
 
@@ -590,9 +628,16 @@ export async function bootWebGpuDiagnostic() {
     meadow.position.set(0.85, -0.75, 0.1);
     scene.add(meadow);
 
+    const waterHeightTexture = createDiagnosticHeightTexture({
+        DataTexture,
+        RedFormat,
+        FloatType,
+        NearestFilter,
+        ClampToEdgeWrapping,
+    });
     const water = new Mesh(
         new PlaneGeometry(2.0, 0.62, 1, 1),
-        createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, animeWater)
+        createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, animeWater, waterHeightTexture)
     );
     water.position.set(0.0, -1.16, 0.09);
     scene.add(water);
@@ -645,6 +690,7 @@ export async function bootWebGpuDiagnostic() {
         meadow.material.dispose();
         water.geometry.dispose();
         water.material.dispose();
+        waterHeightTexture.dispose();
         cloudPlane.geometry.dispose();
         cloudPlane.material.dispose();
         renderer.dispose();

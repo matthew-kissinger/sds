@@ -100,7 +100,13 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(water.fogColor).toBe(skyFog.fogColor);
     expect(water.sunColor).toBe(skyFog.sunColor);
     expect(water.sunDirection).toBe(skyFog.sunDirection);
-    expect(water.heightfieldSampling).toBe('deferred');
+    expect(water.heightfieldSampling).toBe('diagnostic-data-texture');
+    expect(water.heightfieldTexture).toEqual({
+      format: 'RedFormat/FloatType',
+      size: [4, 4],
+      sampler: 'nearest-clamp',
+      interfaceHeight: 0.5,
+    });
   });
 
   it('keeps the tree leaf diagnostic scoped to wind and occluder inputs', () => {

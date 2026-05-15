@@ -53,7 +53,8 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   CPU sample packet from `js/atmosphere/skyFogSamplePacket.js`, plus the
   rock-rim fresnel formula, a tree-leaf wind/alpha/occluder proxy, and a
   diagnostic anime-water material covering palette, shoreline bands, foam,
-  ripples, sun glint, and fog input. Heightfield water texture sampling remains
+  ripples, sun glint, fog input, and a small non-filtered float heightfield
+  texture sample. Real Rolling Hills/Open Country heightfield binding remains
   deferred before production water wiring. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB

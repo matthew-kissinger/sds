@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-14T23:56:14.955Z",
+  "capturedAt": "2026-05-15T00:01:02.397Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -187,9 +187,18 @@
         -0.306
       ],
       "foamThickness": 2.5,
+      "heightfieldTexture": {
+        "format": "RedFormat/FloatType",
+        "size": [
+          4,
+          4
+        ],
+        "sampler": "nearest-clamp",
+        "interfaceHeight": 0.5
+      },
       "rippleStrength": 1,
       "sparkleStrength": 0.7,
-      "heightfieldSampling": "deferred"
+      "heightfieldSampling": "diagnostic-data-texture"
     },
     "treeLeaf": {
       "baseColor": [
