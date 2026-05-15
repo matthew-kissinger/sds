@@ -252,7 +252,8 @@ Each phase names one keep-or-discard metric before implementation. Examples:
 - Native phases: target shell boots, WebGPU proof passes, worker connection
   succeeds, and gates pass.
 - Native-prep phases: `npm run native:check` passes and records the generated
-  bundle's worker/service-worker posture.
+  bundle's worker/service-worker posture plus relative asset URL posture for
+  both HTML entrypoints.
 
 ### Repo methodology applies
 

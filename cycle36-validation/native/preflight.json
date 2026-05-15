@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T01:24:35.617Z",
+  "capturedAt": "2026-05-15T01:27:05.354Z",
   "target": "native",
   "dist": "dist",
   "mainBundle": "dist\\assets\\main-DYCZSn4-.js",
@@ -25,6 +25,26 @@
     {
       "ok": true,
       "message": "service worker registration is gated by build target",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "index.html has no root-relative asset URLs",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "about.html has no root-relative asset URLs",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "index.html emits relative asset URLs for native shells",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "about.html emits relative asset URLs for native shells",
       "details": null
     },
     {

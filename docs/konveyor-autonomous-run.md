@@ -57,7 +57,9 @@ Native-readiness now has a code seam:
 - `js/runtimeConfig.js` owns Worker HTTP origin, Worker WebSocket origin, and
   telemetry enablement.
 - `npm run native:check` builds the native target and verifies the generated
-  bundle with `tools/native-preflight.mjs`.
+  bundle with `tools/native-preflight.mjs`. The preflight also checks both
+  HTML entrypoints for relative `./assets/...` URLs and rejects root-relative
+  `/assets/...` URLs for native shell packaging.
 
 WebGPU now has a diagnostic island, not a production renderer:
 

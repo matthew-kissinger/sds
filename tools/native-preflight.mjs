@@ -33,12 +33,22 @@ function check(condition, message, details = null) {
   return { ok: !!condition, message, details };
 }
 
+function hasRootRelativeAssetUrls(html) {
+  return /(?:src|href)="\/assets\//.test(html);
+}
+
+function hasRelativeAssetUrls(html) {
+  return /(?:src|href)="\.\/assets\//.test(html);
+}
+
 async function run() {
   const args = parseArgs(process.argv);
   const distDir = resolve(ROOT, args.dist);
   const indexPath = resolve(distDir, 'index.html');
+  const aboutPath = resolve(distDir, 'about.html');
   const mainBundlePath = await findMainBundle(distDir);
   const index = await readFile(indexPath, 'utf8');
+  const about = await readFile(aboutPath, 'utf8');
   const mainBundle = await readFile(mainBundlePath, 'utf8');
   const expectedWorkerBase = process.env.SDS_WORKER_BASE || DEFAULT_WORKER_BASE;
   const swPath = resolve(distDir, 'sw.js');
@@ -48,6 +58,10 @@ async function run() {
     check(!index.includes('__SDS_BUILD_TARGET__'), 'index.html has no unreplaced build-target token'),
     check(!existsSync(swPath), 'native build does not emit sw.js'),
     check(index.includes('serviceWorkerDisabledTargets.includes(buildTarget)'), 'service worker registration is gated by build target'),
+    check(!hasRootRelativeAssetUrls(index), 'index.html has no root-relative asset URLs'),
+    check(!hasRootRelativeAssetUrls(about), 'about.html has no root-relative asset URLs'),
+    check(hasRelativeAssetUrls(index), 'index.html emits relative asset URLs for native shells'),
+    check(hasRelativeAssetUrls(about), 'about.html emits relative asset URLs for native shells'),
     check(mainBundle.includes(expectedWorkerBase), 'main bundle contains configured worker base', { expectedWorkerBase }),
     check(mainBundle.includes('getApiBase') || mainBundle.includes('sds-worker'), 'main bundle includes runtime network configuration'),
   ];
