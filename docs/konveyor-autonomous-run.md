@@ -131,6 +131,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   It reuses the proved tree material-name and rock traversal strategies against
   cached production GLB roots, but leaves the default WebGL `onBeforeCompile`
   patch path untouched when the flag or factories are absent.
+- A production-facing sun/portal effect material adapter now exists behind
+  `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect factories. It
+  routes the already-proved diagnostic sun billboard and portal ring node
+  materials through the same fail-closed pattern while leaving default WebGL
+  `ShaderMaterial` creation untouched.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
   The sky/fog packet now lives in `js/atmosphere/skyFogSamplePacket.js` and
@@ -187,7 +192,9 @@ Recommended order:
    `@three.ez/instanced-mesh` has WebGL-specific hooks, so the conservative
    current decision is to keep `InstancedMesh2` on the WebGL path and continue
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
-   says otherwise. Next move to a smaller shader/material island or the
+   says otherwise. The sun/portal effect material adapter is now the
+   lowest-risk production-adjacent seam available, but it is still flag-gated
+   and factory supplied; next move to a smaller shader/material island or the
    measured rock-generation extraction before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.

@@ -75,7 +75,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   production tile selection, parallax, depth discard, production LOD wiring,
   and LOD0 color parity. Production Rolling
   Hills/Open Country replacement remains deferred before water/terrain/grass/sheep/Kiln
-  wiring. A
+  wiring. A production-facing sun/portal effect material adapter now exists
+  behind `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories;
+  without the flag and factories, both effects still construct their existing
+  WebGL `ShaderMaterial`s. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed

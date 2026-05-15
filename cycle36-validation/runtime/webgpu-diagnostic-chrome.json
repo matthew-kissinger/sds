@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:51:39.554Z",
+  "capturedAt": "2026-05-15T01:01:58.753Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -100,7 +100,8 @@
       "runtime-glb-rendered-clones",
       "production-placement-preview",
       "production-instanced-tree-preview",
-      "diagnostic-rock-instancing-preview"
+      "diagnostic-rock-instancing-preview",
+      "production-effect-adapter"
     ],
     "skyFog": {
       "source": "HosekWilkieSky.cpu-lut",
@@ -1883,6 +1884,20 @@
         }
       ]
     },
-    "frames": 2
+    "effectMaterialAdapter": {
+      "sun": {
+        "kind": "sun-billboard",
+        "applied": true,
+        "reason": null,
+        "hasControls": false
+      },
+      "portal": {
+        "kind": "portal-ring",
+        "applied": true,
+        "reason": null,
+        "hasControls": false
+      }
+    },
+    "frames": 3
   }
 }

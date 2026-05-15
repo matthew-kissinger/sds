@@ -49,6 +49,47 @@ const FRAG = /* glsl */ `
   }
 `;
 
+function makeSunBillboardMaterial() {
+    return new THREE.ShaderMaterial({
+        uniforms: {
+            uCoreColor: { value: new THREE.Color(1.0, 0.97, 0.88) },
+            uHaloColor: { value: new THREE.Color(1.0, 0.82, 0.55) },
+            uIntensity: { value: 1.0 }
+        },
+        vertexShader: VERT,
+        fragmentShader: FRAG,
+        transparent: true,
+        depthWrite: false,
+        depthTest: true,
+        blending: THREE.AdditiveBlending
+    });
+}
+
+function createSunBillboardMaterial(options) {
+    const search = options.search ?? (typeof window === 'undefined' ? '' : window.location?.search ?? '');
+    const enabled = search.includes('renderer=webgpu') && search.includes('konveyorEffects=1');
+    const factories = options.konveyorEffectFactories ?? (
+        typeof window === 'undefined' ? null : window.__sdsKonveyorEffectMaterialFactories
+    );
+    const factory = factories?.createSunBillboardMaterial;
+    if (enabled && typeof factory === 'function') {
+        const result = factory();
+        const material = result?.material ?? result;
+        if (material) {
+            return {
+                material,
+                controls: result?.controls ?? null,
+                summary: { applied: true, reason: null }
+            };
+        }
+    }
+    return {
+        material: makeSunBillboardMaterial(),
+        controls: null,
+        summary: { applied: false, reason: enabled ? 'missing-factories' : 'flag-disabled' }
+    };
+}
+
 export class SunBillboard {
     /**
      * @param {THREE.Scene} scene
@@ -63,22 +104,12 @@ export class SunBillboard {
         this.distance = distance;
 
         const geometry = new THREE.PlaneGeometry(size, size);
-        const material = new THREE.ShaderMaterial({
-            uniforms: {
-                uCoreColor: { value: new THREE.Color(1.0, 0.97, 0.88) },
-                uHaloColor: { value: new THREE.Color(1.0, 0.82, 0.55) },
-                uIntensity: { value: 1.0 }
-            },
-            vertexShader: VERT,
-            fragmentShader: FRAG,
-            transparent: true,
-            depthWrite: false,
-            depthTest: true,
-            blending: THREE.AdditiveBlending
-        });
+        const materialResult = createSunBillboardMaterial(options);
 
-        this.material = material;
-        this.mesh = new THREE.Mesh(geometry, material);
+        this.material = materialResult.material;
+        this.materialControls = materialResult.controls;
+        this.konveyorMaterialSummary = materialResult.summary;
+        this.mesh = new THREE.Mesh(geometry, this.material);
         this.mesh.name = 'SunBillboard';
         // Render after sky dome but before transparent water; terrain will
         // still occlude the disc via depth-test from the prior opaque pass.
@@ -106,17 +137,31 @@ export class SunBillboard {
         this.mesh.position.copy(camera.position).addScaledVector(this._tmpDir, this.distance);
         this.mesh.lookAt(camera.position);
 
-        if (sunColor) {
-            // Bias the halo slightly warmer than the core so the disc reads
-            // as warm without losing the cleaner near-white center.
-            this.material.uniforms.uHaloColor.value.copy(sunColor);
-            this.material.uniforms.uCoreColor.value.copy(sunColor).lerp(new THREE.Color(1.0, 1.0, 1.0), 0.4);
-        }
-
         // Fade the disc as the sun drops below the horizon so it doesn't
         // sit dimly visible underground in dusk presets.
         const elevation = Math.max(0, this._tmpDir.y);
-        this.material.uniforms.uIntensity.value = Math.min(1, elevation * 4.0);
+        const intensity = Math.min(1, elevation * 4.0);
+
+        if (sunColor) {
+            // Bias the halo slightly warmer than the core so the disc reads
+            // as warm without losing the cleaner near-white center.
+            if (this.materialControls?.update) {
+                this.materialControls.update({
+                    haloColor: sunColor,
+                    coreColor: new THREE.Color().copy(sunColor).lerp(new THREE.Color(1.0, 1.0, 1.0), 0.4),
+                    intensity,
+                });
+            } else if (this.material.uniforms) {
+                this.material.uniforms.uHaloColor.value.copy(sunColor);
+                this.material.uniforms.uCoreColor.value.copy(sunColor).lerp(new THREE.Color(1.0, 1.0, 1.0), 0.4);
+            }
+        }
+
+        if (this.materialControls?.update && !sunColor) {
+            this.materialControls.update({ intensity });
+        } else if (this.material.uniforms) {
+            this.material.uniforms.uIntensity.value = intensity;
+        }
     }
 
     dispose() {

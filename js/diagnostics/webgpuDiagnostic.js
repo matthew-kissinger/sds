@@ -5,6 +5,9 @@ import {
 import { createSkyFogSamplePacket } from '../atmosphere/skyFogSamplePacket.js';
 import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
 import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
+import {
+    createKonveyorEffectMaterial,
+} from '../effects/konveyorEffectMaterialAdapter.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -142,6 +145,7 @@ function createSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlendin
     const alpha = core.add(halo.mul(0.7)).mul(intensity).mul(haloFalloff);
 
     const material = new MeshBasicNodeMaterial();
+    material.name = 'konveyor-node-sun-billboard';
     material.colorNode = rgb;
     material.opacityNode = alpha;
     material.transparent = true;
@@ -165,6 +169,7 @@ function createPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending,
         .mul(float(1.0).sub(smoothstep(0.82, 1.0, radial)));
 
     const material = new MeshBasicNodeMaterial();
+    material.name = 'konveyor-node-portal-ring';
     material.colorNode = mix(innerColor, outerColor, radial).mul(intensity);
     material.opacityNode = intensity.mul(edge);
     material.transparent = true;
@@ -880,7 +885,7 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter'],
         skyFog,
         rockRim,
         animeWater,
@@ -896,6 +901,7 @@ export async function bootWebGpuDiagnostic() {
         productionInstancingPreview: null,
         diagnosticRockPlacementPreview: null,
         diagnosticRockInstancingPreview: null,
+        effectMaterialAdapter: null,
         frames: 0,
     };
 
@@ -1009,10 +1015,14 @@ export async function bootWebGpuDiagnostic() {
     skyFogBackdrop.renderOrder = -10;
     scene.add(skyFogBackdrop);
 
-    const sun = new Mesh(
-        new PlaneGeometry(1.45, 1.45),
-        createSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, TSL })
-    );
+    const sunMaterialResult = createKonveyorEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
+        createDefaultMaterial: () => createSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, TSL }),
+        search: '?renderer=webgpu&konveyorEffects=1',
+        factories: {
+            createSunBillboardMaterial: () => createSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, TSL }),
+        },
+    });
+    const sun = new Mesh(new PlaneGeometry(1.45, 1.45), sunMaterialResult.material);
     sun.position.set(-0.85, 0.35, 0.15);
     scene.add(sun);
 
@@ -1074,12 +1084,20 @@ export async function bootWebGpuDiagnostic() {
         return fail(`runtime GLB rendered clone proof failed: ${state.runtimeGlbPreview.error}`);
     }
 
-    const portal = new Mesh(
-        new RingGeometry(0.62, 0.86, 80, 1),
-        createPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL })
-    );
+    const portalMaterialResult = createKonveyorEffectMaterial('portal-ring', 'createPortalRingMaterial', {
+        createDefaultMaterial: () => createPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL }),
+        search: '?renderer=webgpu&konveyorEffects=1',
+        factories: {
+            createPortalRingMaterial: () => createPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL }),
+        },
+    });
+    const portal = new Mesh(new RingGeometry(0.62, 0.86, 80, 1), portalMaterialResult.material);
     portal.position.set(-0.85, -0.75, 0.12);
     scene.add(portal);
+    state.effectMaterialAdapter = {
+        sun: sunMaterialResult.summary,
+        portal: portalMaterialResult.summary,
+    };
 
     const meadow = new Mesh(
         new PlaneGeometry(1.45, 0.8, 1, 1),

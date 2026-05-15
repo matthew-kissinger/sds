@@ -14,7 +14,9 @@ The safest first production-adjacent island was `SunBillboard`: it is small,
 cosmetic, has no scene data dependency, and maps cleanly to a
 `MeshBasicNodeMaterial`/TSL expression. The sun billboard, portal ring,
 meadow-quad, cloud-plane, and sky/fog formulas are now ported inside the
-diagnostic island only. The rock-rim fresnel formula is also ported as a
+diagnostic island, and sun/portal now have a production-facing effect material
+adapter behind `?renderer=webgpu&konveyorEffects=1` plus explicit factories.
+The rock-rim fresnel formula is also ported as a
 diagnostic `MeshStandardNodeMaterial` island driven by the CPU sky/fog sun
 color packet. A diagnostic tree-leaf island now covers wind displacement,
 alpha-hash posture, and a local occluder fade proxy. A diagnostic anime-water
@@ -69,8 +71,8 @@ terrain, grass, water, sheep, or Kiln impostors.
 
 | Order | Surface | File | Current role | WebGPU risk | Migration shape | Gate |
 |---:|---|---|---|---|---|---|
-| 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. | Diagnostic island screenshot/probe, then default smoke. |
-| 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. | Open Country objective visual screenshot plus completion smoke. |
+| 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. Production-facing material creation can now route through `?renderer=webgpu&konveyorEffects=1` plus explicit factories; default WebGL still uses the existing `ShaderMaterial`. | Diagnostic island screenshot/probe, then default smoke. |
+| 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. Production-facing ring material creation can now route through the same effect adapter with explicit factories; default WebGL still uses the existing `ShaderMaterial`. | Open Country objective visual screenshot plus completion smoke. |
 | 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | Diagnostic cloud-plane TSL material now covers value-noise/fbm mask, sun tint, coverage, footprint fade, and time input. Production wiring still needs sky preset screenshots and fog/horizon integration. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
 | 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet; production wiring still needs analytic parity and preset screenshots. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
 | 5 | Anime water | `js/water/AnimeWater.js` | Shoreline foam, heightfield-driven foam, ripples, sun glint, fog. | High. Samples a generated heightfield `DataTexture` and drives a visible scene focal point. | Diagnostic TSL island now covers production palette, shoreline bands, foam, ripples, sun glint, fog input, and a non-filtered `RedFormat`/`FloatType` sample loaded from `public/terrain/rolling-hills.bin`. Production wiring still needs scene-bound Rolling Hills/Open Country screenshots before replacing WebGL water. | Water shoreline specs, Rolling Hills/Open Country screenshots, latency. |
@@ -158,6 +160,11 @@ comments:
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and
   WebGPU material factories are explicitly supplied; otherwise production
   materials stay untouched.
+- The production-side adapter in `js/effects/konveyorEffectMaterialAdapter.js`
+  covers sun billboard and portal ring material creation. It only activates
+  when `renderer=webgpu&konveyorEffects=1` is present and explicit effect
+  factories are supplied; otherwise the existing WebGL `ShaderMaterial` paths
+  stay untouched.
 
 ## Dormant Or Supporting Surfaces
 
@@ -186,7 +193,9 @@ comments:
    transform/instancing proof, but not a seeded production generator. Keep
    production `InstancedMesh2` on the WebGL path for now; move to another
    smaller material island or the measured rock-generation extraction while
-   keeping current WebGL `onBeforeCompile` patches as default.
+   keeping current WebGL `onBeforeCompile` patches as default. The sun/portal
+   effect adapter is now available for the lowest-risk production-adjacent
+   wiring proof, but it is not yet a production scene WebGPU boot.
 2. Keep sky/fog production wiring behind parity evidence for analytic colors,
    preset screenshots, and fog consumers.
 3. Keep water production wiring deferred until the diagnostic heightfield
