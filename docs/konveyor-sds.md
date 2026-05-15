@@ -65,10 +65,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   deferring production `OptimizedSheep` instancing, animation attributes,
   terrain grounding, and high-count perf. A one-species Kiln impostor
   diagnostic material fetches the committed `tree1` sidecar plus albedo/normal
-  atlases, samples one tile with alpha/fog in a WebGPU node material, and
-  relights it from the normal aux layer while explicitly deferring barycentric
-  tile blending, depth aux use, parallax, depth discard, production LOD wiring,
-  and LOD0 color parity. Production Rolling
+  atlases, blends three fixed atlas tiles with premultiplied alpha/fog in a
+  WebGPU node material, and relights from the normal aux layer while explicitly
+  deferring view-driven tile selection, depth aux use, parallax, depth discard,
+  production LOD wiring, and LOD0 color parity. Production Rolling
   Hills/Open Country replacement remains deferred before water/terrain/grass/sheep/Kiln
   wiring. A
   diagnostic material-replacement island proves tree replacement by
@@ -315,9 +315,10 @@ Check the current `@dgreenheck/ez-tree` release, re-bake only if there is a
 clear output or performance reason, and re-run GLB compression plus Kiln
 impostor bakes when silhouettes or materials change.
 
-As of 2026-05-14, npm latest for `@dgreenheck/ez-tree` is 1.1.0 and SDS already
-resolves that version. Upstream `main` has unreleased changes for softer leaf
-normals, corrected growth force, and stratified branch/leaf placement
+As of 2026-05-15, npm latest for `@dgreenheck/ez-tree` is still 1.1.0 and SDS
+already resolves that version. Upstream `main` has unreleased changes for
+softer leaf normals, corrected growth force, stratified branch/leaf placement,
+and externalized texture assets
 ([changelog](https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md)).
 That is a serious tree-refresh candidate for the WebGPU/native target, but it
 must run through the asset-gallery pick flow, GLB compression, Kiln impostor

@@ -31,11 +31,12 @@ terms, and sky/fog handoff while recording `instanceData`,
 `instanceAnimation`, and `vertexId` as deferred production instancing inputs.
 A diagnostic Kiln impostor island now fetches the committed `tree1` sidecar and
 albedo/normal atlases, samples one atlas tile in a WebGPU node material, and
-uses the normal aux layer for a single-tile sun relight keyed to the sky/fog
-packet. It still records tile blend, depth aux use, parallax, depth discard,
-and production LOD wiring as deferred. Production grass, sheep, Kiln impostors,
-water, and terrain wiring remain deferred until scene binding and screenshot
-proof cover the shipped island scenes. GLB
+uses the normal aux layer for a sun relight keyed to the sky/fog packet. It now
+blends three fixed atlas tiles with premultiplied alpha in the diagnostic TSL
+path, while keeping view-driven tile selection, depth aux use, parallax, depth
+discard, and production LOD wiring deferred. Production grass, sheep, Kiln
+impostors, water, and terrain wiring remain deferred until scene binding and
+screenshot proof cover the shipped island scenes. GLB
 material ownership proof now shows that tree LOD0/LOD1
 assets have stable `branches` and `leaves`
 materials, while rock assets currently expose runtime-default primitive
@@ -74,7 +75,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 | 6 | Terrain ground | `js/TerrainBuilder.js` | Heightfield-displaced terrain with procedural ground color and Three fog chunks. | High. It is the base surface of every production scene and uses fog chunks. | Diagnostic terrain-heightfield TSL island now samples the real Rolling Hills heightfield texture for height-based ground color and fog input. Production terrain remains WebGL. | Refactor-baseline terrain hash untouched, screenshots, perf. |
 | 7 | Grass blades | `js/GrassSystem.js`, `js/shaders/grass/*.glsl` | Instanced blade geometry, wind, interaction, LOD fade, fake SSS, manual fog. | Very high. It owns interaction feel and high-count perf. | Diagnostic grass-blade TSL material now covers production default gradient colors, analytic wind/gust/flutter displacement, alpha hash, and sky/fog handoff. Interaction bending, distance fade, production instancing, and compute/trample experiments remain deferred. | Perf, latency, visual, mobile profile, interaction smoke. |
 | 8 | Sheep instancing | `js/OptimizedSheep.js`, `js/shaders/sheep/*.glsl` | Instanced sheep geometry, animation attributes, vertex colors, manual fog. | Very high. It touches core gameplay scale and animation feel. | Diagnostic sheep-wool TSL material now covers toon/wool colors, procedural wool displacement, rim/SSS terms, and sky/fog handoff. Production `InstancedMesh`, `instanceData`, `instanceAnimation`, `vertexId`, terrain grounding, and high-count animation remain deferred. | Sim fixtures unchanged, smoke, perf high-count modes. |
-| 9 | Kiln tree impostors | `js/kiln-impostor-material.js` | Atlas-sampled tree impostors with relighting, alpha hash, fog, parallax/depth scaffolding. | Very high. It is asset-pipeline coupled and must match LOD0 color. | Diagnostic one-species TSL island now fetches the `tree1` sidecar plus albedo/normal atlases, samples one tile with alpha/fog, and relights it from the normal aux layer. Barycentric tile blend, depth aux use, parallax, depth discard, production LOD, and LOD color matching remain deferred. | LOD color-match artifacts, tree visibility, perf, screenshots. |
+| 9 | Kiln tree impostors | `js/kiln-impostor-material.js` | Atlas-sampled tree impostors with relighting, alpha hash, fog, parallax/depth scaffolding. | Very high. It is asset-pipeline coupled and must match LOD0 color. | Diagnostic one-species TSL island now fetches the `tree1` sidecar plus albedo/normal atlases, blends three fixed atlas tiles with premultiplied alpha, and relights from the normal aux layer. View-driven tile selection, depth aux use, parallax, depth discard, production LOD, and LOD color matching remain deferred. | LOD color-match artifacts, tree visibility, perf, screenshots. |
 | 10 | Procedural mountains | `js/ProceduralMountains.js`, `js/shaders/proceduralMountainsShader.js` | Inactive standalone horizon ring. `TerrainBuilder.addMountains()` returns no meshes. | Low as a blocker, but misleading as migration scope. | Do not port now. Delete or re-scope when a real horizon ring is approved. | None until reactivated. |
 
 ## Active onBeforeCompile Patch Chains
@@ -197,10 +198,11 @@ comments:
    The sheep-wool island is likewise material evidence only; it does not yet
    prove production `OptimizedSheep` instancing, animation attributes, terrain
    grounding, multiplayer-safe visual parity, or high-count perf. The Kiln
-   island proves sidecar/atlas fetch, WebGPU texture sampling, and single-tile
-   normal-aux relighting only; it does not yet prove barycentric tile blending,
-   depth aux use, parallax, depth-discard ghost suppression, production LOD
-   wiring, or color parity against LOD0.
+   island proves sidecar/atlas fetch, WebGPU texture sampling, normal-aux
+   relighting, and static three-tile premultiplied blending only; it does not
+   yet prove view-driven barycentric tile selection, depth aux use, parallax,
+   depth-discard ghost suppression, production LOD wiring, or color parity
+   against LOD0.
 
 ## Acceptance For The Next Code Island
 

@@ -160,10 +160,10 @@ Recommended order:
    while explicitly deferring production `OptimizedSheep` instancing,
    animation attributes, terrain grounding, and high-count perf. The Kiln
    impostor diagnostic island now fetches the committed `tree1` sidecar plus
-   albedo/normal atlases, samples one tile with alpha/fog in a WebGPU node
-   material, and relights it from the normal aux layer. Barycentric tile blend,
-   depth aux use, parallax, depth discard, production LOD wiring, and LOD0
-   color parity remain deferred. The rock-rim
+   albedo/normal atlases, blends three fixed atlas tiles with premultiplied
+   alpha/fog in a WebGPU node material, and relights from the normal aux layer.
+   View-driven tile selection, depth aux use, parallax, depth discard,
+   production LOD wiring, and LOD0 color parity remain deferred. The rock-rim
    TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
@@ -186,10 +186,10 @@ Recommended order:
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The
-   repo already resolves `@dgreenheck/ez-tree` 1.1.0, which is the current npm
-   latest as of 2026-05-14. Upstream `main` has unreleased tree-generation
-   changes around softer leaf normals, corrected growth force, and stratified
-   child branch/leaf placement
+   repo already resolves `@dgreenheck/ez-tree` 1.1.0, which is still the
+   current npm latest as of 2026-05-15. Upstream `main` has unreleased
+   tree-generation changes around softer leaf normals, corrected growth force,
+   stratified child branch/leaf placement, and externalized texture assets
    ([changelog](https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md)).
    Evaluate those before Phase 2/4 tree rebakes, but only accept regenerated
    GLBs with named visual and perf artifacts.

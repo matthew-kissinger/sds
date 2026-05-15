@@ -64,3 +64,14 @@ inputs, and the diagnostic sky/fog island proves a renderer-visible material can
 share a renderless CPU-accessible horizon/sun/fog packet. Production sky, fog,
 terrain, water, grass, and impostor wiring still needs parity evidence before
 any default renderer path changes.
+
+## Cross-Project Lesson
+
+The relevant Terror in the Jungle atmosphere lesson is not to rebuild an
+expensive CPU LUT into every consumer. Its shipped contract keeps fog, ambient,
+water, terrain, and billboards sampling the same atmosphere state, while
+deferring heavier Hillaire-style LUT/cubemap backends until their lifecycle and
+budget are owned explicitly. SDS should keep the current CPU-visible sky/fog
+packet as the contract authority, then move work onto GPU textures only when a
+measured WebGPU path reduces cost or removes visible parity drift without
+splitting atmosphere ownership.

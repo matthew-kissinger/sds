@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:27:52.572Z",
+  "capturedAt": "2026-05-15T00:36:54.747Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -403,6 +403,25 @@
         0.55,
         0.58
       ],
+      "tileBlendTiles": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "tileBlendWeights": [
+        0.58,
+        0.27,
+        0.15
+      ],
       "fogColor": [
         0.2933,
         0.1629,
@@ -410,8 +429,9 @@
       ],
       "fogNear": 18,
       "fogFar": 74,
-      "atlasSampling": "single-tile-albedo",
-      "tileBlend": "deferred",
+      "atlasSampling": "three-tile-albedo-normal",
+      "tileBlend": "static-three-tile-premultiplied",
+      "viewDrivenTileSelection": "deferred",
       "relighting": "single-tile-normal-aux",
       "parallax": "deferred",
       "depthDiscard": "deferred",

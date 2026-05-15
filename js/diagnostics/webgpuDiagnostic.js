@@ -346,11 +346,14 @@ export function createKilnImpostorDiagnosticState(skyFog = createSkyFogDiagnosti
         sunColor: skyFog.sunColor,
         sunDirection: skyFog.sunDirection,
         ambientColor: [0.55, 0.55, 0.58],
+        tileBlendTiles: [[0, 0], [1, 0], [0, 1]],
+        tileBlendWeights: [0.58, 0.27, 0.15],
         fogColor: skyFog.fogColor,
         fogNear: skyFog.fogNear,
         fogFar: skyFog.fogFar,
-        atlasSampling: 'single-tile-albedo',
-        tileBlend: 'deferred',
+        atlasSampling: 'three-tile-albedo-normal',
+        tileBlend: 'static-three-tile-premultiplied',
+        viewDrivenTileSelection: 'deferred',
         relighting: 'single-tile-normal-aux',
         parallax: 'deferred',
         depthDiscard: 'deferred',
@@ -530,15 +533,32 @@ function syncKilnImpostorState(target, sidecar) {
 }
 
 function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, albedoAtlas, normalAtlas) {
-    const { dot, length, max, mix, normalize, smoothstep, texture, uv, positionView, vec2, vec3 } = TSL;
-    const tileUv = uv().mul(vec2(1 / kilnImpostor.tilesX, 1 / kilnImpostor.tilesY))
-        .add(vec2(0, (kilnImpostor.tilesY - 1) / kilnImpostor.tilesY));
-    const atlasSample = texture(albedoAtlas, tileUv);
-    const normalSample = texture(normalAtlas, tileUv).rgb.mul(2.0).sub(vec3(1.0, 1.0, 1.0));
-    const relightNormal = normalize(normalSample);
+    const { clamp, dot, length, max, mix, normalize, smoothstep, texture, uv, positionView, vec2, vec3 } = TSL;
+    const tileScale = vec2(1 / kilnImpostor.tilesX, 1 / kilnImpostor.tilesY);
+    const tileInset = vec2(
+        0.5 / kilnImpostor.atlasSize[0] / tileScale.x,
+        0.5 / kilnImpostor.atlasSize[1] / tileScale.y
+    );
+    const tileLocalUv = clamp(uv(), tileInset, vec2(1.0, 1.0).sub(tileInset));
+    const tileUv = ([azIdx, elIdx]) => tileLocalUv.mul(tileScale)
+        .add(vec2(azIdx / kilnImpostor.tilesX, (kilnImpostor.tilesY - 1 - elIdx) / kilnImpostor.tilesY));
+    const [tile0, tile1, tile2] = kilnImpostor.tileBlendTiles;
+    const [w0, w1, w2] = kilnImpostor.tileBlendWeights;
+    const albedo0 = texture(albedoAtlas, tileUv(tile0));
+    const albedo1 = texture(albedoAtlas, tileUv(tile1));
+    const albedo2 = texture(albedoAtlas, tileUv(tile2));
+    const alphaBlend = albedo0.a.mul(w0).add(albedo1.a.mul(w1)).add(albedo2.a.mul(w2));
+    const albedoPremul = albedo0.rgb.mul(albedo0.a).mul(w0)
+        .add(albedo1.rgb.mul(albedo1.a).mul(w1))
+        .add(albedo2.rgb.mul(albedo2.a).mul(w2));
+    const atlasRgb = albedoPremul.div(max(alphaBlend, 0.0001));
+    const normal0 = texture(normalAtlas, tileUv(tile0)).rgb.mul(2.0).sub(vec3(1.0, 1.0, 1.0));
+    const normal1 = texture(normalAtlas, tileUv(tile1)).rgb.mul(2.0).sub(vec3(1.0, 1.0, 1.0));
+    const normal2 = texture(normalAtlas, tileUv(tile2)).rgb.mul(2.0).sub(vec3(1.0, 1.0, 1.0));
+    const relightNormal = normalize(normal0.mul(w0).add(normal1.mul(w1)).add(normal2.mul(w2)));
     const sunDirection = normalize(vec3(...kilnImpostor.sunDirection));
     const wrappedSun = max(dot(relightNormal, sunDirection), 0.0).mul(0.65).add(0.35);
-    const relitColor = atlasSample.rgb.mul(
+    const relitColor = atlasRgb.mul(
         vec3(...kilnImpostor.ambientColor).add(vec3(...kilnImpostor.sunColor).mul(wrappedSun.mul(0.42)))
     );
     const viewDistance = length(positionView);
@@ -547,7 +567,7 @@ function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL
     const material = new MeshBasicNodeMaterial();
     material.name = 'konveyor-node-kiln-impostor';
     material.colorNode = mix(relitColor, vec3(...kilnImpostor.fogColor), fogBlend);
-    material.opacityNode = atlasSample.a;
+    material.opacityNode = alphaBlend;
     material.transparent = true;
     material.depthWrite = true;
     material.depthTest = true;
