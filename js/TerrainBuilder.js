@@ -3,7 +3,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
-import { GrassSystem } from './GrassSystem.js';
 import { loadKilnImpostor } from './kiln-impostor-material.js';
 import { getOccluderUniforms, patchMaterialOccluder } from './shaders/OccluderFadePatch.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
@@ -801,6 +800,7 @@ export class TerrainBuilder {
         // Cycle 23 Phase D1: hardware tier passed through to GrassSystem
         // for per-tier presets (blade count, meadow-quad enable, wind octaves).
         const tier = getSceneManager()?.getTier?.() ?? (this.isMobile ? 'low' : 'med');
+        const { GrassSystem } = await import('./GrassSystem.js');
         this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield, this.sceneDef?.boundary ?? null, { tier });
 
         // Add exclusion zone for farm house — only if the scene actually

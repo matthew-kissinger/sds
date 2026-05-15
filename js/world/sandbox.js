@@ -8,7 +8,6 @@
  * methods did. Behavior is unchanged.
  */
 
-import { GrassSystem } from '../GrassSystem.js';
 import { getSceneManager } from '../GameBridge.js';
 
 /**
@@ -171,6 +170,7 @@ export async function regenerateGrass(builder, bounds, pasture) {
     // Cycle 23 Phase D1: hardware tier passed through to GrassSystem for
     // per-tier presets (blade count, meadow-quad enable, wind octaves).
     const tier = getSceneManager()?.getTier?.() ?? (builder.isMobile ? 'low' : 'med');
+    const { GrassSystem } = await import('../GrassSystem.js');
     builder.grassSystem = new GrassSystem(
         builder.scene,
         builder.isMobile,

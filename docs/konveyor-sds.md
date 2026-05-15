@@ -83,7 +83,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   atlas as a diagnostic shading proxy while explicitly deferring per-frame
   production tile selection, parallax, depth discard, production LOD wiring,
   and LOD0 color parity. Production Rolling
-  Hills/Open Country replacement remains deferred before water/terrain/grass/sheep/Kiln
+  Hills/Open Country replacement remains deferred before terrain/grass/sheep/Kiln
   wiring. `cycle36-validation/runtime/sky-fog-preset-matrix.json` now records
   renderless CPU sky/fog packets for all five shipped sky presets as analytic
   preset-color parity evidence, and
@@ -100,15 +100,22 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   can forward an explicit `cloudFactory`, and cloud coverage, edge fade, time,
   feature scale, sun color, and wind state can flow through adapter controls
   while the default WebGL `ShaderMaterial` path remains unchanged. A
-  production-facing
-  sun/portal effect material adapter now exists behind
+  production-facing anime-water material adapter now exists behind
+  `?renderer=webgpu&konveyorWater=1` plus an explicit water factory. It can
+  hand water update ownership to factory controls, while default WebGL still
+  uses the existing `ShaderMaterial` uniforms for time, sun direction,
+  shoreline foam, heightfield foam, ripples, sparkles, and fog. A
+  production-facing sun/portal effect material adapter now exists behind
   `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories;
   both `SunBillboard` and `PortalEffect` material creation now route through
   that shared fail-closed seam. Without the flag and factories, both effects
   still construct their existing WebGL `ShaderMaterial`s. Production
   `SunBillboard` is now a scene-coupled
-  lazy chunk, preserving the default WebGL sun disc while recovering main
-  bundle headroom (`mainKB=577`, `threeKB=603`) for later production seams. A
+  lazy chunk, and `GrassSystem` is now loaded by the async grass creation
+  paths instead of the default entry chunk. Together they preserve the default
+  WebGL sun/grass behavior while recovering main bundle headroom
+  (`mainKB=545`, `threeKB=603`, `GrassSystem=32 KB`) for later production seams
+  without regenerating the refactor-baseline bundle ratchet. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed
