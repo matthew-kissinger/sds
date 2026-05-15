@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:01:02.397Z",
+  "capturedAt": "2026-05-15T00:04:41.257Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -188,13 +188,17 @@
       ],
       "foamThickness": 2.5,
       "heightfieldTexture": {
+        "sceneId": "rolling-hills",
+        "source": "/terrain/rolling-hills.bin",
         "format": "RedFormat/FloatType",
         "size": [
-          4,
-          4
+          1024,
+          1024
         ],
         "sampler": "nearest-clamp",
-        "interfaceHeight": 0.5
+        "worldSize": 500,
+        "peakHeight": 6,
+        "waterY": -0.05
       },
       "rippleStrength": 1,
       "sparkleStrength": 0.7,

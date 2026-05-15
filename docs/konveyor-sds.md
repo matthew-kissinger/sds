@@ -53,9 +53,9 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   CPU sample packet from `js/atmosphere/skyFogSamplePacket.js`, plus the
   rock-rim fresnel formula, a tree-leaf wind/alpha/occluder proxy, and a
   diagnostic anime-water material covering palette, shoreline bands, foam,
-  ripples, sun glint, fog input, and a small non-filtered float heightfield
-  texture sample. Real Rolling Hills/Open Country heightfield binding remains
-  deferred before production water wiring. A
+  ripples, sun glint, fog input, and a non-filtered float texture loaded from
+  the real Rolling Hills heightfield. Production Rolling Hills/Open Country
+  replacement remains deferred before water wiring. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed

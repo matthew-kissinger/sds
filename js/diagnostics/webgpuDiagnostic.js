@@ -13,6 +13,12 @@ const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
 });
 
 const DIAGNOSTIC_FOAM_THICKNESS = 2.5;
+const DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE = Object.freeze({
+    sceneId: 'rolling-hills',
+    binUrl: '/terrain/rolling-hills.bin',
+    manifestUrl: '/terrain/rolling-hills.bin.json',
+    waterY: -0.05,
+});
 
 function clamp01(value) {
     return Math.min(1, Math.max(0, value));
@@ -223,10 +229,14 @@ export function createAnimeWaterDiagnosticState(skyFog = createSkyFogDiagnosticS
         sunDirection: skyFog.sunDirection,
         foamThickness: DIAGNOSTIC_FOAM_THICKNESS,
         heightfieldTexture: {
+            sceneId: DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.sceneId,
+            source: DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.binUrl,
             format: 'RedFormat/FloatType',
-            size: [4, 4],
+            size: [1024, 1024],
             sampler: 'nearest-clamp',
-            interfaceHeight: 0.5,
+            worldSize: 500,
+            peakHeight: 6,
+            waterY: DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.waterY,
         },
         rippleStrength: 1.0,
         sparkleStrength: 0.7,
@@ -250,26 +260,43 @@ export function createTreeLeafDiagnosticState() {
     };
 }
 
-function createDiagnosticHeightTexture({
+async function createDiagnosticHeightTexture({
     DataTexture,
     RedFormat,
     FloatType,
     NearestFilter,
     ClampToEdgeWrapping,
 }) {
-    const data = new Float32Array([
-        0.10, 0.24, 0.62, 0.92,
-        0.18, 0.42, 0.54, 0.76,
-        0.32, 0.48, 0.52, 0.68,
-        0.08, 0.30, 0.57, 0.88,
+    const [manifestResponse, binResponse] = await Promise.all([
+        fetch(DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.manifestUrl),
+        fetch(DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.binUrl),
     ]);
-    const texture = new DataTexture(data, 4, 4, RedFormat, FloatType);
+    if (!manifestResponse.ok || !binResponse.ok) {
+        throw new Error('diagnostic heightfield fetch failed');
+    }
+    const manifest = await manifestResponse.json();
+    const buffer = await binResponse.arrayBuffer();
+    const data = new Float32Array(buffer);
+    if (data.length !== manifest.width * manifest.height) {
+        throw new Error('diagnostic heightfield byte count mismatch');
+    }
+    const texture = new DataTexture(data, manifest.width, manifest.height, RedFormat, FloatType);
     texture.magFilter = NearestFilter;
     texture.minFilter = NearestFilter;
     texture.wrapS = ClampToEdgeWrapping;
     texture.wrapT = ClampToEdgeWrapping;
     texture.generateMipmaps = false;
     texture.needsUpdate = true;
+    texture.userData.konveyorHeightfield = {
+        sceneId: manifest.scene ?? DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.sceneId,
+        source: DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.binUrl,
+        format: 'RedFormat/FloatType',
+        size: [manifest.width, manifest.height],
+        sampler: 'nearest-clamp',
+        worldSize: manifest.worldSize,
+        peakHeight: manifest.peakHeight,
+        waterY: DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.waterY,
+    };
     return texture;
 }
 
@@ -302,9 +329,9 @@ function createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }
         .mul(water.rippleStrength * 0.08);
     const foamNoise = valueNoise(waterUv.mul(vec2(18.0, 3.0)).add(vec2(time.mul(0.07), 0.0)));
     const shorelineFoam = float(1.0).sub(smoothstep(0.10, 0.22, waterUv.y.add(foamNoise.mul(0.04))));
-    const heightSample = texture(heightTexture, waterUv).r;
+    const heightSample = texture(heightTexture, waterUv).r.mul(water.heightfieldTexture.peakHeight);
     const heightInterfaceFoam = float(1.0)
-        .sub(smoothstep(0.035, 0.16, abs(heightSample.sub(water.heightfieldTexture.interfaceHeight))));
+        .sub(smoothstep(0.08, 0.45, abs(heightSample.sub(water.heightfieldTexture.waterY))));
     const foamBand = max(shorelineFoam, heightInterfaceFoam.mul(0.68));
     const glintDelta = waterUv.sub(vec2(0.72, 0.64));
     const glint = pow(float(1.0).sub(smoothstep(0.0, 0.42, length(glintDelta))), 4.0)
@@ -628,13 +655,14 @@ export async function bootWebGpuDiagnostic() {
     meadow.position.set(0.85, -0.75, 0.1);
     scene.add(meadow);
 
-    const waterHeightTexture = createDiagnosticHeightTexture({
+    const waterHeightTexture = await createDiagnosticHeightTexture({
         DataTexture,
         RedFormat,
         FloatType,
         NearestFilter,
         ClampToEdgeWrapping,
     });
+    animeWater.heightfieldTexture = waterHeightTexture.userData.konveyorHeightfield;
     const water = new Mesh(
         new PlaneGeometry(2.0, 0.62, 1, 1),
         createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, animeWater, waterHeightTexture)

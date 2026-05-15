@@ -102,10 +102,14 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(water.sunDirection).toBe(skyFog.sunDirection);
     expect(water.heightfieldSampling).toBe('diagnostic-data-texture');
     expect(water.heightfieldTexture).toEqual({
+      sceneId: 'rolling-hills',
+      source: '/terrain/rolling-hills.bin',
       format: 'RedFormat/FloatType',
-      size: [4, 4],
+      size: [1024, 1024],
       sampler: 'nearest-clamp',
-      interfaceHeight: 0.5,
+      worldSize: 500,
+      peakHeight: 6,
+      waterY: -0.05,
     });
   });
 
