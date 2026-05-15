@@ -56,3 +56,24 @@ export function createKonveyorNodeMaterialFactoryGlobals(factorySuite) {
     __sdsKonveyorImpostorMaterialFactories: factorySuite.impostor,
   };
 }
+
+export function summarizeKonveyorNodeMaterialFactorySuite(factorySuite) {
+  const groups = {};
+  let factoryCount = 0;
+
+  for (const [groupName, group] of Object.entries(factorySuite)) {
+    const factories = Object.entries(group ?? {})
+      .filter(([, value]) => typeof value === 'function')
+      .map(([factoryName]) => factoryName)
+      .sort();
+    groups[groupName] = factories;
+    factoryCount += factories.length;
+  }
+
+  return {
+    source: 'konveyor-node-material-factory-suite',
+    groupCount: Object.keys(groups).length,
+    factoryCount,
+    groups,
+  };
+}

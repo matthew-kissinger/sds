@@ -39,7 +39,9 @@ production global factory names, and the suite spec proves the current adapters
 consume that map only under their explicit WebGPU/Konveyor flags. A production
 constructor smoke spec now covers the real sky, cloud, sun, grass, terrain,
 water, sheep, and Kiln impostor construction paths against the same
-suite-backed global supply surface.
+suite-backed global supply surface. The installed Chrome Rolling Hills
+diagnostic artifact now records the suite's eight groups and fourteen current
+factories.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, and
 `GrassSystem` is now loaded by the async grass creation paths. The default
 WebGL sun/grass behavior remains intact while the critical `main` bundle has

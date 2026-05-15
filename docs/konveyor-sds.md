@@ -215,7 +215,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `TerrainBuilder`, `AnimeWater`, `OptimizedSheepSystem`, and Kiln impostor
   material creation without changing default WebGL startup.
   The diagnostic harness now consumes the suite for its material proofs instead
-  of carrying local factory glue.
+  of carrying local factory glue, and
+  `cycle36-validation/runtime/webgpu-diagnostic-chrome.json` records the
+  suite's eight groups and fourteen current factories during a Rolling Hills
+  scene-bound diagnostic WebGPU boot.
   Production
   `SunBillboard` is now a scene-coupled
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation

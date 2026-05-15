@@ -246,8 +246,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   water, sheep, and Kiln impostors can consume that suite-backed global map
   only when their explicit Konveyor flags are present.
   The diagnostic harness now consumes that suite instead of owning the material
-  mapping inline, while the fail-closed adapter flags still require explicit
-  factories.
+  mapping inline and records a `factorySuite` summary in
+  `cycle36-validation/runtime/webgpu-diagnostic-chrome.json` for the
+  Rolling Hills scene-bound diagnostic boot, while the fail-closed adapter
+  flags still require explicit factories.
 - The production `SunBillboard` implementation is now lazy-loaded as a
   scene-coupled chunk before normal scene body construction and scene swaps.
   This preserves the default WebGL sun disc while recovering main-bundle
@@ -426,11 +428,11 @@ Recommended order:
    remain deferred. The Kiln path now has a production-facing material factory
    seam, but per-frame tile selection, LOD wiring, and LOD0 color parity remain
    deferred.
-   The reusable WebGPU factory-suite proof now exists and the diagnostic boot
-   path consumes it. The next production-adjacent move should either supply that
-   suite through a controlled scene-bound proof while keeping `?renderer=webgpu`
-   fail-closed without `diagnostic=1`, or continue with the remaining visual
-   parity/perf gates for one material island.
+   The reusable WebGPU factory-suite proof now exists and the scene-bound
+   Rolling Hills diagnostic boot records the suite's eight factory groups and
+   fourteen current factories. The next production-adjacent move should keep
+   `?renderer=webgpu` fail-closed without `diagnostic=1` while continuing the
+   remaining visual parity/perf gates for one material island.
    The sky path now has diagnostic preset screenshot parity, renderless scene
    fog/horizon proof, and scene-bound diagnostic WebGPU screenshots, but still
    needs full production-scene WebGPU screenshot parity before any default

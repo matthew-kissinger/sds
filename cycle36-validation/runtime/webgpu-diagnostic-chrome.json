@@ -1,6 +1,6 @@
 {
-  "capturedAt": "2026-05-15T08:09:58.608Z",
-  "url": "http://127.0.0.1:4176/?renderer=webgpu&diagnostic=1",
+  "capturedAt": "2026-05-15T08:23:59.863Z",
+  "url": "http://127.0.0.1:4176/?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills",
   "platform": "win32",
   "channel": "chrome",
   "chromiumArgs": [
@@ -104,12 +104,16 @@
       "production-effect-adapter"
     ],
     "sceneBinding": {
-      "active": false,
-      "requestedSceneId": null,
-      "sceneId": null,
-      "sceneName": null,
-      "skyPresetName": null,
-      "fog": null,
+      "active": true,
+      "requestedSceneId": "rolling-hills",
+      "sceneId": "rolling-hills",
+      "sceneName": "Sheep Dog Island",
+      "skyPresetName": "dusk",
+      "fog": {
+        "color": "#d4c4a8",
+        "near": 350,
+        "far": 900
+      },
       "fallbackReason": null
     },
     "skyPreset": {
@@ -140,14 +144,14 @@
         0.1392,
         -0.306
       ],
-      "fogDarkenMultiplier": 0.82,
+      "fogDarkenMultiplier": 1,
       "fogColor": [
-        0.2933,
-        0.1629,
-        0.1348
+        0.3577,
+        0.1986,
+        0.1644
       ],
-      "fogNear": 18,
-      "fogFar": 74,
+      "fogNear": 350,
+      "fogFar": 900,
       "sunPositionUv": [
         0.32,
         0.72
@@ -197,12 +201,12 @@
         2
       ],
       "fogColor": [
-        0.2933,
-        0.1629,
-        0.1348
+        0.3577,
+        0.1986,
+        0.1644
       ],
-      "fogNear": 18,
-      "fogFar": 74,
+      "fogNear": 350,
+      "fogFar": 900,
       "fogStrength": 0.55,
       "farRingLod": "meadow-quad"
     },
@@ -233,9 +237,9 @@
         0.3843
       ],
       "fogColor": [
-        0.2933,
-        0.1629,
-        0.1348
+        0.3577,
+        0.1986,
+        0.1644
       ],
       "sunColor": [
         1,
@@ -290,9 +294,9 @@
         0.42
       ],
       "fogColor": [
-        0.2933,
-        0.1629,
-        0.1348
+        0.3577,
+        0.1986,
+        0.1644
       ],
       "heightfieldSampling": "diagnostic-data-texture"
     },
@@ -361,12 +365,12 @@
         -0.306
       ],
       "fogColor": [
-        0.2933,
-        0.1629,
-        0.1348
+        0.3577,
+        0.1986,
+        0.1644
       ],
-      "fogNear": 18,
-      "fogFar": 74,
+      "fogNear": 350,
+      "fogFar": 900,
       "alphaHash": true,
       "alphaTest": 0.06,
       "interaction": "deferred",
@@ -409,12 +413,12 @@
       "woolDisplacementStrength": 0.045,
       "breathingStrength": 0.012,
       "fogColor": [
-        0.2933,
-        0.1629,
-        0.1348
+        0.3577,
+        0.1986,
+        0.1644
       ],
-      "fogNear": 18,
-      "fogFar": 74,
+      "fogNear": 350,
+      "fogFar": 900,
       "instancing": "deferred",
       "animationAttributes": [
         "instanceData",
@@ -489,12 +493,12 @@
         0.5
       ],
       "fogColor": [
-        0.2933,
-        0.1629,
-        0.1348
+        0.3577,
+        0.1986,
+        0.1644
       ],
-      "fogNear": 18,
-      "fogFar": 74,
+      "fogNear": 350,
+      "fogFar": 900,
       "atlasSampling": "three-tile-albedo-normal",
       "tileBlend": "view-derived-three-tile-premultiplied",
       "viewDrivenTileSelection": "cpu-diagnostic-sample",
@@ -1966,6 +1970,43 @@
         "hasControls": false
       }
     },
-    "frames": 2
+    "factorySuite": {
+      "source": "konveyor-node-material-factory-suite",
+      "groupCount": 8,
+      "factoryCount": 14,
+      "groups": {
+        "atmosphere": [
+          "createCloudLayerMaterial",
+          "createSkyDomeMaterial"
+        ],
+        "effects": [
+          "createPortalRingMaterial",
+          "createSunBillboardMaterial"
+        ],
+        "treeRock": [
+          "createRockMaterial",
+          "createTreeBranchMaterial",
+          "createTreeLeafMaterial"
+        ],
+        "grass": [
+          "createGrassBladeMaterial",
+          "createMeadowQuadMaterial"
+        ],
+        "water": [
+          "createAnimeWaterMaterial"
+        ],
+        "terrain": [
+          "createTerrainMaterial"
+        ],
+        "sheep": [
+          "createSheepMaterial",
+          "createSheepPartMaterial"
+        ],
+        "impostor": [
+          "createKilnImpostorMaterial"
+        ]
+      }
+    },
+    "frames": 3
   }
 }

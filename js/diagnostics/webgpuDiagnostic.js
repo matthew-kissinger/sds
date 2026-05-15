@@ -13,7 +13,10 @@ import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 import {
     createKonveyorEffectMaterial,
 } from '../effects/konveyorEffectMaterialAdapter.js';
-import { createKonveyorNodeMaterialFactorySuite } from '../konveyorNodeMaterialFactorySuite.js';
+import {
+    createKonveyorNodeMaterialFactorySuite,
+    summarizeKonveyorNodeMaterialFactorySuite,
+} from '../konveyorNodeMaterialFactorySuite.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -542,6 +545,7 @@ export async function bootWebGpuDiagnostic() {
         diagnosticRockPlacementPreview: null,
         diagnosticRockInstancingPreview: null,
         effectMaterialAdapter: null,
+        factorySuite: null,
         frames: 0,
     };
 
@@ -639,6 +643,7 @@ export async function bootWebGpuDiagnostic() {
             fogColor: skyFog.fogColor,
         },
     });
+    state.factorySuite = summarizeKonveyorNodeMaterialFactorySuite(nodeMaterialFactories);
     const {
         atmosphere: atmosphereFactories,
         effects: effectFactories,

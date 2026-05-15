@@ -7,6 +7,7 @@ import { createSkyFogSamplePacket } from '../js/atmosphere/skyFogSamplePacket.js
 import {
   createKonveyorNodeMaterialFactoryGlobals,
   createKonveyorNodeMaterialFactorySuite,
+  summarizeKonveyorNodeMaterialFactorySuite,
 } from '../js/konveyorNodeMaterialFactorySuite.js';
 import { createKonveyorAtmosphereMaterial } from '../js/atmosphere/konveyorAtmosphereMaterialAdapter.js';
 import { createKonveyorEffectMaterial } from '../js/effects/konveyorEffectMaterialAdapter.js';
@@ -212,6 +213,42 @@ describe('konveyor node material factory suite', () => {
       __sdsKonveyorTerrainMaterialFactories: suite.terrain,
       __sdsKonveyorSheepMaterialFactories: suite.sheep,
       __sdsKonveyorImpostorMaterialFactories: suite.impostor,
+    });
+  });
+
+  it('summarizes grouped factory supply for browser runtime evidence', () => {
+    const suite = createKonveyorNodeMaterialFactorySuite({}, { skyFog: {} });
+
+    expect(summarizeKonveyorNodeMaterialFactorySuite(suite)).toEqual({
+      source: 'konveyor-node-material-factory-suite',
+      groupCount: 8,
+      factoryCount: 14,
+      groups: {
+        atmosphere: [
+          'createCloudLayerMaterial',
+          'createSkyDomeMaterial',
+        ],
+        effects: [
+          'createPortalRingMaterial',
+          'createSunBillboardMaterial',
+        ],
+        treeRock: [
+          'createRockMaterial',
+          'createTreeBranchMaterial',
+          'createTreeLeafMaterial',
+        ],
+        grass: [
+          'createGrassBladeMaterial',
+          'createMeadowQuadMaterial',
+        ],
+        water: ['createAnimeWaterMaterial'],
+        terrain: ['createTerrainMaterial'],
+        sheep: [
+          'createSheepMaterial',
+          'createSheepPartMaterial',
+        ],
+        impostor: ['createKilnImpostorMaterial'],
+      },
     });
   });
 
