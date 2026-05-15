@@ -241,7 +241,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   It also exposes a renderless map from the grouped suite to the existing
   production global factory names, so a future scene-bound proof can supply all
   current fail-closed seams from one surface without installing factories by
-  default.
+  default. `tests/konveyor-factory-suite-production-smoke.spec.js` now proves
+  that the real production constructors for sky, clouds, sun, grass, terrain,
+  water, sheep, and Kiln impostors can consume that suite-backed global map
+  only when their explicit Konveyor flags are present.
   The diagnostic harness now consumes that suite instead of owning the material
   mapping inline, while the fail-closed adapter flags still require explicit
   factories.
