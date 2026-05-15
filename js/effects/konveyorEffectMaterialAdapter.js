@@ -25,6 +25,7 @@ export function createKonveyorEffectMaterial(kind, factoryName, {
     createDefaultMaterial,
     search = getWindowSearch(),
     factories = getWindowFactories(),
+    context = {},
 } = {}) {
     if (!shouldApplyKonveyorEffects(search)) {
         return defaultResult(kind, 'flag-disabled', createDefaultMaterial);
@@ -35,7 +36,7 @@ export function createKonveyorEffectMaterial(kind, factoryName, {
         return defaultResult(kind, 'missing-factories', createDefaultMaterial);
     }
 
-    const result = factory();
+    const result = factory(context);
     const material = result?.material ?? result;
     if (!material) {
         return defaultResult(kind, 'invalid-factory-result', createDefaultMaterial);

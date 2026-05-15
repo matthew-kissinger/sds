@@ -129,17 +129,20 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `?renderer=webgpu&konveyorImpostors=1` plus an explicit impostor factory. It
   can hand sun/ambient tint ownership to factory controls, while default WebGL
   still uses the existing atlas-sampled impostor `ShaderMaterial`. A
-  production-facing sun/portal effect material adapter now exists behind
-  `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories;
-  both `SunBillboard` and `PortalEffect` material creation now route through
-  that shared fail-closed seam. Without the flag and factories, both effects
-  still construct their existing WebGL `ShaderMaterial`s. Production
+  production-facing sun/portal/transient effect material adapter now exists
+  behind `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories.
+  `SunBillboard`, `PortalEffect` ring/pad/particle materials, and
+  `CorralZapEffect` bolt/particle materials now route through that shared
+  fail-closed seam. Without the flag and factories, those effects still
+  construct their existing WebGL `ShaderMaterial`, `MeshBasicMaterial`,
+  `LineBasicMaterial`, and `PointsMaterial` paths. Production
   `SunBillboard` is now a scene-coupled
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=552`, `threeKB=603`, `GrassSystem=35 KB`) for later production seams
-  without regenerating the refactor-baseline bundle ratchet. A
+  (`mainKB=552`, `threeKB=603`, `GrassSystem=35 KB`, `PortalEffect=5 KB`,
+  `CorralZapEffect=5 KB`) for later production seams without regenerating the
+  refactor-baseline bundle ratchet. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed

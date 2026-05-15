@@ -15,16 +15,18 @@ cosmetic, has no scene data dependency, and maps cleanly to a
 `MeshBasicNodeMaterial`/TSL expression. The sun billboard, portal ring,
 cloud-plane, and sky/fog formulas are now ported inside the diagnostic island,
 and the meadow-quad island now uses the production grass default colors,
-far-ring UV hash scale, and CPU sky/fog packet. Sun/portal now have a
-production-facing effect material adapter behind
-`?renderer=webgpu&konveyorEffects=1` plus explicit factories, and both the
-real `SunBillboard` and `PortalEffect` material creation paths now use that
-shared fail-closed seam.
+far-ring UV hash scale, and CPU sky/fog packet. Sun, portal, and transient
+corral effects now have a production-facing effect material adapter behind
+`?renderer=webgpu&konveyorEffects=1` plus explicit factories. The real
+`SunBillboard`, `PortalEffect` ring/pad/particle materials, and
+`CorralZapEffect` bolt/particle materials now use that shared fail-closed
+seam.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, and
 `GrassSystem` is now loaded by the async grass creation paths. The default
 WebGL sun/grass behavior remains intact while the critical `main` bundle has
-headroom for later seams (`mainKB=552`, `threeKB=603`, `GrassSystem=35 KB`)
-without regenerating the refactor-baseline bundle ratchet.
+headroom for later seams (`mainKB=552`, `threeKB=603`, `GrassSystem=35 KB`,
+`PortalEffect=5 KB`, `CorralZapEffect=5 KB`) without regenerating the
+refactor-baseline bundle ratchet.
 A production-facing sky-dome atmosphere seam now exists: `Atmosphere` can
 forward an explicit `skyFactory` to `HosekWilkieSky`, and the adapter keeps
 that factory behind `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit
@@ -127,7 +129,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 | Order | Surface | File | Current role | WebGPU risk | Migration shape | Gate |
 |---:|---|---|---|---|---|---|
 | 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction; lazy-loaded as a scene-coupled production chunk. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. Production-facing material creation routes through the shared `?renderer=webgpu&konveyorEffects=1` adapter plus explicit factories; default WebGL still uses the existing `ShaderMaterial` after the scene-coupled dynamic import. | Diagnostic island screenshot/probe, then default smoke. |
-| 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. Production-facing ring material creation can now route through the same effect adapter with explicit factories; default WebGL still uses the existing `ShaderMaterial`. | Open Country objective visual screenshot plus completion smoke. |
+| 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. Production-facing ring, pad, and particle material creation can now route through the same effect adapter with explicit factories; default WebGL still uses the existing ring `ShaderMaterial`, pad `MeshBasicMaterial`, and particle `PointsMaterial`. | Open Country objective visual screenshot plus completion smoke. |
 | 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | Diagnostic cloud-plane TSL material now covers value-noise/fbm mask, sun tint, coverage, footprint fade, and time input. Production-facing material creation can now route through the shared `?renderer=webgpu&konveyorAtmosphere=1` adapter with explicit factories and update controls; default WebGL still uses the existing `ShaderMaterial`. Production WebGPU cloud wiring still needs a real TSL cloud material, sky preset screenshots, and fog/horizon integration. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
 | 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet. `Atmosphere` can forward an explicit sky factory to `HosekWilkieSky`, and `HosekWilkieSky` directly routes through `?renderer=webgpu&konveyorAtmosphere=1` when explicit factories are present, but it still needs a real TSL sky material, analytic parity, preset screenshots, and fog-consumer proof before production WebGPU sky coverage is claimed. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
 | 5 | Anime water | `js/water/AnimeWater.js` | Shoreline foam, heightfield-driven foam, ripples, sun glint, fog. | High. Samples a generated heightfield `DataTexture` and drives a visible scene focal point. | Diagnostic TSL island now covers production palette, shoreline bands, foam, ripples, sun glint, fog input, and a non-filtered `RedFormat`/`FloatType` sample loaded from `public/terrain/rolling-hills.bin`. Production-facing material creation can now route through `?renderer=webgpu&konveyorWater=1` with an explicit factory and update controls; default WebGL still uses the existing `ShaderMaterial`. Scene-bound Rolling Hills/Open Country screenshots remain required before replacing WebGL water. | Water shoreline specs, Rolling Hills/Open Country screenshots, latency. |

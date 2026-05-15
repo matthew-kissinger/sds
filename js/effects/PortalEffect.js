@@ -119,13 +119,27 @@ export class PortalEffect {
 
         // Soft glowing disc at the base — a fainter inner pad
         const padGeo = new THREE.CircleGeometry(RING_RADIUS_INNER * 0.95, 48);
-        const padMat = new THREE.MeshBasicMaterial({
-            color: 0x6cf2ff,
-            transparent: true,
-            opacity: 0.18,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
+        const padMaterialResult = createKonveyorEffectMaterial('portal-pad', 'createPortalPadMaterial', {
+            createDefaultMaterial: () => new THREE.MeshBasicMaterial({
+                color: 0x6cf2ff,
+                transparent: true,
+                opacity: 0.18,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending,
+            }),
+            search: options.search,
+            factories: options.konveyorEffectFactories,
+            context: {
+                color: new THREE.Color(0x6cf2ff),
+                opacity: 0.18,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending,
+                radius: RING_RADIUS_INNER * 0.95,
+            },
         });
+        const padMat = padMaterialResult.material;
+        this.padMaterialControls = padMaterialResult.controls;
+        this.konveyorPadMaterialSummary = padMaterialResult.summary;
         this.pad = new THREE.Mesh(padGeo, padMat);
         this.pad.rotation.x = -Math.PI / 2;
         this.pad.position.set(center.x, groundY + 0.04, center.z);
@@ -137,15 +151,34 @@ export class PortalEffect {
         this._partMaxLife = new Float32Array(PARTICLE_COUNT);
         const partGeo = new THREE.BufferGeometry();
         partGeo.setAttribute('position', new THREE.BufferAttribute(this._partPositions, 3));
-        const partMat = new THREE.PointsMaterial({
-            color: 0xb8e8ff,
-            size: 0.5,
-            transparent: true,
-            opacity: 0.9,
-            depthWrite: false,
-            sizeAttenuation: true,
-            blending: THREE.AdditiveBlending,
+        const particleMaterialResult = createKonveyorEffectMaterial('portal-particles', 'createPortalParticleMaterial', {
+            createDefaultMaterial: () => new THREE.PointsMaterial({
+                color: 0xb8e8ff,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.9,
+                depthWrite: false,
+                sizeAttenuation: true,
+                blending: THREE.AdditiveBlending,
+            }),
+            search: options.search,
+            factories: options.konveyorEffectFactories,
+            context: {
+                color: new THREE.Color(0xb8e8ff),
+                size: 0.5,
+                opacity: 0.9,
+                depthWrite: false,
+                sizeAttenuation: true,
+                blending: THREE.AdditiveBlending,
+                particleCount: PARTICLE_COUNT,
+                columnHeight: COLUMN_HEIGHT,
+                columnRadius: COLUMN_RADIUS,
+                riseSpeed: RISE_SPEED,
+            },
         });
+        const partMat = particleMaterialResult.material;
+        this.particleMaterialControls = particleMaterialResult.controls;
+        this.konveyorParticleMaterialSummary = particleMaterialResult.summary;
         this.particles = new THREE.Points(partGeo, partMat);
         this.particles.frustumCulled = false;
         scene.add(this.particles);
@@ -233,6 +266,19 @@ export class PortalEffect {
             this.ringMaterial.uniforms.uIntensity.value = visualIntensity;
             this.ringMaterial.uniforms.uPulse.value = pulse;
         }
+        this.padMaterialControls?.update?.({
+            time: this.elapsed,
+            intensity: visualIntensity,
+            pulse,
+            material: this.pad.material,
+        });
+        this.particleMaterialControls?.update?.({
+            time: this.elapsed,
+            intensity: visualIntensity,
+            pulse,
+            speedFactor,
+            material: this.particles.material,
+        });
 
         // Particle integration — rise and recycle. Rise speed scales with
         // intensity so the closed portal has a slow drift, the open portal

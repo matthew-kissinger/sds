@@ -6,6 +6,8 @@ import {
   shouldApplyKonveyorEffects,
 } from '../js/effects/konveyorEffectMaterialAdapter.js';
 import { SunBillboard } from '../js/effects/SunBillboard.js';
+import { PortalEffect } from '../js/effects/PortalEffect.js';
+import { CorralZapEffectPool } from '../js/effects/CorralZapEffect.js';
 
 function defaultMaterial(name = 'default-effect') {
   return { name };
@@ -90,6 +92,27 @@ describe('konveyor effect material adapter', () => {
     expect(portalUpdates).toEqual([{ time: 1, pulse: 0.2, intensity: 0.8 }]);
   });
 
+  it('passes effect material context into explicit factories', () => {
+    const contexts = [];
+    const result = createKonveyorEffectMaterial('portal-pad', 'createPortalPadMaterial', {
+      createDefaultMaterial: () => defaultMaterial('default-pad'),
+      search: '?renderer=webgpu&konveyorEffects=1',
+      factories: {
+        createPortalPadMaterial: (context) => {
+          contexts.push(context);
+          return defaultMaterial('konveyor-pad');
+        },
+      },
+      context: {
+        opacity: 0.18,
+        radius: 3.99,
+      },
+    });
+
+    expect(result.material.name).toBe('konveyor-pad');
+    expect(contexts).toEqual([{ opacity: 0.18, radius: 3.99 }]);
+  });
+
   it('routes SunBillboard material creation through the shared adapter', () => {
     const scene = new THREE.Scene();
     const updates = [];
@@ -123,5 +146,131 @@ describe('konveyor effect material adapter', () => {
     expect(updates[0].coreColor).toBeInstanceOf(THREE.Color);
 
     sun.dispose();
+  });
+
+  it('routes PortalEffect pad and particle materials through the shared adapter', () => {
+    const scene = new THREE.Scene();
+    const padContexts = [];
+    const particleContexts = [];
+    const padUpdates = [];
+    const particleUpdates = [];
+    const padMaterial = new THREE.MeshBasicMaterial({ name: 'konveyor-portal-pad' });
+    const particleMaterial = new THREE.PointsMaterial({ name: 'konveyor-portal-particles' });
+
+    const portal = new PortalEffect(scene, { x: 2, z: 3 }, 0.4, {
+      search: '?renderer=webgpu&konveyorEffects=1',
+      konveyorEffectFactories: {
+        createPortalPadMaterial: (context) => {
+          padContexts.push(context);
+          return {
+            material: padMaterial,
+            controls: { update: (state) => padUpdates.push(state) },
+          };
+        },
+        createPortalParticleMaterial: (context) => {
+          particleContexts.push(context);
+          return {
+            material: particleMaterial,
+            controls: { update: (state) => particleUpdates.push(state) },
+          };
+        },
+      },
+    });
+
+    try {
+      expect(portal.pad.material).toBe(padMaterial);
+      expect(portal.particles.material).toBe(particleMaterial);
+      expect(portal.konveyorPadMaterialSummary).toMatchObject({
+        kind: 'portal-pad',
+        applied: true,
+      });
+      expect(portal.konveyorParticleMaterialSummary).toMatchObject({
+        kind: 'portal-particles',
+        applied: true,
+      });
+      expect(padContexts[0]).toMatchObject({
+        opacity: 0.18,
+      });
+      expect(padContexts[0].radius).toBeCloseTo(3.99, 12);
+      expect(padContexts[0].color).toBeInstanceOf(THREE.Color);
+      expect(particleContexts[0]).toMatchObject({
+        size: 0.5,
+        opacity: 0.9,
+        particleCount: 96,
+        columnHeight: 22,
+        columnRadius: 1.2,
+        riseSpeed: 6.5,
+      });
+      expect(particleContexts[0].color).toBeInstanceOf(THREE.Color);
+
+      portal.update(0.016);
+      expect(padUpdates).toHaveLength(1);
+      expect(particleUpdates).toHaveLength(1);
+      expect(padUpdates[0].material).toBe(padMaterial);
+      expect(particleUpdates[0].material).toBe(particleMaterial);
+    } finally {
+      portal.dispose();
+    }
+  });
+
+  it('routes corral zap bolt and particle materials through the shared adapter', () => {
+    const scene = new THREE.Scene();
+    const boltContexts = [];
+    const particleContexts = [];
+    const boltUpdates = [];
+    const particleUpdates = [];
+    const boltMaterial = new THREE.LineBasicMaterial({ name: 'konveyor-zap-bolt' });
+    const particleMaterial = new THREE.PointsMaterial({ name: 'konveyor-zap-particles' });
+
+    const pool = new CorralZapEffectPool(scene, {
+      search: '?renderer=webgpu&konveyorEffects=1',
+      konveyorEffectFactories: {
+        createCorralZapBoltMaterial: (context) => {
+          boltContexts.push(context);
+          return {
+            material: boltMaterial,
+            controls: { update: (state) => boltUpdates.push(state) },
+          };
+        },
+        createCorralZapParticleMaterial: (context) => {
+          particleContexts.push(context);
+          return {
+            material: particleMaterial,
+            controls: { update: (state) => particleUpdates.push(state) },
+          };
+        },
+      },
+    });
+
+    try {
+      expect(boltContexts.length).toBeGreaterThan(0);
+      expect(particleContexts.length).toBe(boltContexts.length);
+      expect(boltContexts[0]).toMatchObject({
+        opacity: 0,
+        linewidth: 2,
+        boltSegments: 14,
+        boltHeight: 60,
+        boltJitter: 1,
+      });
+      expect(boltContexts[0].color).toBeInstanceOf(THREE.Color);
+      expect(particleContexts[0]).toMatchObject({
+        size: 0.6,
+        opacity: 0,
+        particleCount: 36,
+        particleSpeed: 8,
+        particleGravity: -8,
+      });
+      expect(particleContexts[0].color).toBeInstanceOf(THREE.Color);
+
+      pool.fire({ x: 1, y: 0.2, z: -2 });
+      pool.update(0.05);
+
+      expect(boltUpdates.some((state) => state.opacity === 1)).toBe(true);
+      expect(particleUpdates.some((state) => state.opacity === 1)).toBe(true);
+      expect(boltUpdates.every((state) => state.material === boltMaterial)).toBe(true);
+      expect(particleUpdates.every((state) => state.material === particleMaterial)).toBe(true);
+    } finally {
+      pool.dispose();
+    }
   });
 });

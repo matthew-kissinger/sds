@@ -174,13 +174,14 @@ WebGPU now has a diagnostic island, not a production renderer:
   Default WebGL impostors still use the existing atlas-sampled
   `ShaderMaterial`; production tile selection, parallax, depth discard,
   production LOD wiring, and LOD0 color parity remain deferred.
-- A production-facing sun/portal effect material adapter now exists behind
-  `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect factories. It
-  routes the already-proved diagnostic sun billboard and portal ring node
-  materials through the same fail-closed pattern. The real production
-  `SunBillboard` and `PortalEffect` material creation paths both use that
-  shared adapter now; default WebGL `ShaderMaterial` creation remains
-  untouched.
+- A production-facing sun/portal/transient effect material adapter now exists
+  behind `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect
+  factories. It routes the already-proved diagnostic sun billboard and portal
+  ring node materials through the same fail-closed pattern. The real production
+  `SunBillboard`, `PortalEffect` ring/pad/particle materials, and
+  `CorralZapEffect` bolt/particle materials now use that shared adapter;
+  default WebGL `ShaderMaterial`, `MeshBasicMaterial`, `LineBasicMaterial`, and
+  `PointsMaterial` creation remains untouched.
 - The production `SunBillboard` implementation is now lazy-loaded as a
   scene-coupled chunk before normal scene body construction and scene swaps.
   This preserves the default WebGL sun disc while recovering main-bundle
@@ -189,7 +190,8 @@ WebGPU now has a diagnostic island, not a production renderer:
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
   bundle-size fixture. Current production build evidence: `mainKB=552`,
-  `threeKB=603`, `GrassSystem=35 KB`, `AnimeWater=9 KB`.
+  `threeKB=603`, `GrassSystem=35 KB`, `AnimeWater=9 KB`, `PortalEffect=5 KB`,
+  `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
   `Atmosphere` can forward an explicit `skyFactory` to `HosekWilkieSky`, and
   `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory
@@ -283,7 +285,7 @@ Recommended order:
    `@three.ez/instanced-mesh` has WebGL-specific hooks, so the conservative
    current decision is to keep `InstancedMesh2` on the WebGL path and continue
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
-   says otherwise. The sun/portal effect material adapter, sky-dome
+   says otherwise. The sun/portal/transient effect material adapter, sky-dome
    atmosphere material seam, far-ring meadow material seam, grass-blade
    material seam, anime-water material seam, terrain-ground material seam,
    sheep material seam, and Kiln impostor material seam are now
