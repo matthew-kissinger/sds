@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { DoubleSide, MeshBasicNodeMaterial, TSL } from 'three/webgpu';
 
 import {
     createAnimeWater,
     createAnimeWaterMaterial,
 } from '../js/water/AnimeWater.js';
+import { createKonveyorAnimeWaterNodeMaterial } from '../js/water/konveyorAnimeWaterNodeMaterial.js';
 import {
     createKonveyorWaterMaterial,
     shouldApplyKonveyorWater,
@@ -20,6 +22,17 @@ function createMaterial(name) {
     const material = new THREE.MeshBasicMaterial();
     material.name = name;
     return material;
+}
+
+function createHeightfield() {
+    const data = new Float32Array([0, 0.1, 0.2, 0.3]);
+    return {
+        width: 2,
+        height: 2,
+        worldSize: 16,
+        peakHeight: 1.5,
+        getRawArray: () => data,
+    };
 }
 
 describe('konveyor water material adapter', () => {
@@ -81,6 +94,63 @@ describe('konveyor water material adapter', () => {
             expect(contexts[0].sparkleStrength).toBe(0.7);
         } finally {
             material.dispose();
+        }
+    });
+
+    it('can route anime water through the reusable WebGPU node material candidate', () => {
+        const contexts = [];
+        const material = createAnimeWaterMaterial({
+            boundary,
+            heightfield: createHeightfield(),
+            waterY: -0.25,
+            search: '?renderer=webgpu&konveyorWater=1',
+            konveyorWaterFactories: {
+                createAnimeWaterMaterial: (context) => {
+                    contexts.push(context);
+                    return createKonveyorAnimeWaterNodeMaterial(
+                        { MeshBasicNodeMaterial, DoubleSide, TSL },
+                        {
+                            shallowColor: context.shallowColor.toArray(),
+                            deepColor: context.deepColor.toArray(),
+                            foamColor: context.foamColor.toArray(),
+                            fogColor: [0.2933, 0.1629, 0.1348],
+                            sunColor: [1, 0.3055, 0.0242],
+                            rippleStrength: context.rippleStrength,
+                            sparkleStrength: context.sparkleStrength,
+                            heightfieldTexture: {
+                                peakHeight: context.heightfield.peakHeight,
+                                waterY: context.waterY,
+                            },
+                        },
+                        context.heightTexture
+                    );
+                },
+            },
+        });
+
+        try {
+            expect(material.name).toBe('konveyor-node-anime-water');
+            expect(material.isMeshBasicNodeMaterial).toBe(true);
+            expect(material.isNodeMaterial).toBe(true);
+            expect(material.side).toBe(DoubleSide);
+            expect(material.colorNode).toBeTruthy();
+            expect(material.depthWrite).toBe(true);
+            expect(material.userData.konveyorWaterMaterialSummary).toMatchObject({
+                kind: 'anime-water',
+                applied: true,
+            });
+            expect(contexts).toHaveLength(1);
+            expect(contexts[0].hasHeightfield).toBe(true);
+            expect(contexts[0].heightTexture.isDataTexture).toBe(true);
+            expect(contexts[0].heightfield).toMatchObject({
+                width: 2,
+                height: 2,
+                worldSize: 16,
+                peakHeight: 1.5,
+            });
+        } finally {
+            material.dispose();
+            material.userData.heightTexture?.dispose?.();
         }
     });
 

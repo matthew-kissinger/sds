@@ -170,9 +170,12 @@ WebGPU now has a diagnostic island, not a production renderer:
 - A production-facing anime-water material adapter now exists behind
   `?renderer=webgpu&konveyorWater=1` and an explicit water material factory.
   It covers only `AnimeWater.createAnimeWaterMaterial` and lets a supplied
-  factory own material update controls. Default WebGL water still uses the
-  existing `ShaderMaterial` uniforms for time, sun direction, shoreline foam,
-  heightfield foam, ripples, sparkles, and fog.
+  factory own material update controls. The reusable heightfield-backed
+  WebGPU anime-water node-material candidate now lives in
+  `js/water/konveyorAnimeWaterNodeMaterial.js`, and the water adapter spec
+  proves the flagged production seam can route through it. Default WebGL water
+  still uses the existing `ShaderMaterial` uniforms for time, sun direction,
+  shoreline foam, heightfield foam, ripples, sparkles, and fog.
 - A production-facing terrain-ground material adapter now exists behind
   `?renderer=webgpu&konveyorTerrain=1` and an explicit terrain material
   factory. It covers only `TerrainBuilder.createTerrain()` material creation

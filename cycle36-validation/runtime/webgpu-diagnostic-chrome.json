@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T05:27:12.177Z",
+  "capturedAt": "2026-05-15T06:34:17.721Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -103,6 +103,15 @@
       "diagnostic-rock-instancing-preview",
       "production-effect-adapter"
     ],
+    "sceneBinding": {
+      "active": false,
+      "requestedSceneId": null,
+      "sceneId": null,
+      "sceneName": null,
+      "skyPresetName": null,
+      "fog": null,
+      "fallbackReason": null
+    },
     "skyPreset": {
       "requestedPresetName": "dusk",
       "presetName": "dusk",

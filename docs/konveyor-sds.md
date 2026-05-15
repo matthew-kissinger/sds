@@ -147,9 +147,12 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   WebGPU screenshots and default production wiring remain deferred. A
   production-facing anime-water material adapter now exists behind
   `?renderer=webgpu&konveyorWater=1` plus an explicit water factory. It can
-  hand water update ownership to factory controls, while default WebGL still
-  uses the existing `ShaderMaterial` uniforms for time, sun direction,
-  shoreline foam, heightfield foam, ripples, sparkles, and fog. A
+  hand water update ownership to factory controls, and the reusable
+  heightfield-backed WebGPU anime-water node-material candidate now lives in
+  `js/water/konveyorAnimeWaterNodeMaterial.js`; the adapter spec proves the
+  flagged production seam can route through it. Default WebGL still uses the
+  existing `ShaderMaterial` uniforms for time, sun direction, shoreline foam,
+  heightfield foam, ripples, sparkles, and fog. A
   production-facing terrain-ground material adapter now exists behind
   `?renderer=webgpu&konveyorTerrain=1` plus an explicit terrain factory. It
   passes terrain size, segment count, heightfield metadata, color constants,
