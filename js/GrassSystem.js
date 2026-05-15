@@ -543,10 +543,19 @@ export class GrassSystem {
                     direction: new THREE.Vector2(0.7, 0.7),
                     gustStrength: this.config.gustStrength,
                 },
+                geometry: {
+                    bladeHeight: this.config.bladeHeight,
+                    bladeWidth: this.config.bladeWidth,
+                    bladeHeightVariation: this.config.bladeHeightVariation,
+                },
                 colors: {
                     baseColor: this.config.baseColor.clone(),
                     midColor: this.config.midColor.clone(),
                     tipColor: this.config.tipColor.clone(),
+                },
+                lighting: {
+                    sunDirection: new THREE.Vector3(0, 1, 0),
+                    sunColor: new THREE.Color(0xffffff),
                 },
                 interaction: {
                     maxInteractors: this.config.maxInteractors,
@@ -563,12 +572,15 @@ export class GrassSystem {
                 fade: {
                     start: this.config.grassFadeStart,
                     end: this.config.grassFadeEnd,
+                    strength: 1,
                 },
                 material: {
                     side: THREE.FrontSide,
                     transparent: false,
                     depthWrite: true,
                     depthTest: true,
+                    alphaHash: true,
+                    alphaTest: 0.06,
                 },
             },
         });

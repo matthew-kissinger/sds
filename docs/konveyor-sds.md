@@ -75,10 +75,15 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   adapter now exists behind `?renderer=webgpu&konveyorGrass=1` plus an
   explicit blade factory and optional update controls for time, fog, camera,
   wind, sun direction, and interactor state, while default WebGL keeps the
-  existing grass `ShaderMaterial`. Production stochastic blade dither,
-  production instancing, compute/trample experiments, and scene-level WebGPU
-  grass parity remain deferred. A sheep-wool diagnostic material covers
-  production toon/wool color, procedural wool displacement, rim/SSS lighting
+  existing grass `ShaderMaterial`. The reusable WebGPU grass-blade
+  node-material candidate now lives in
+  `js/world/konveyorGrassBladeNodeMaterial.js`, and the adapter spec proves
+  the flagged production seam can route through it with production blade
+  geometry, wind, color, lighting, fade, and material posture inputs.
+  Production stochastic blade dither, production instancing, compute/trample
+  experiments, and scene-level WebGPU grass parity remain deferred. A
+  sheep-wool diagnostic material covers production toon/wool color, procedural
+  wool displacement, rim/SSS lighting
   terms, and sky/fog handoff. A production-facing `OptimizedSheep` material
   seam now exists behind `?renderer=webgpu&konveyorSheep=1` plus an explicit
   `createSheepMaterial` factory and optional update controls for time/fog
@@ -227,7 +232,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   The reusable meadow-quad WebGPU node-material candidate now lives in
   `js/world/konveyorMeadowQuadNodeMaterial.js` instead of only inside the
   diagnostic harness, and `tests/konveyor-grass-material-adapter.spec.js`
-  proves the flagged production seam can route through it.
+  proves the flagged production seam can route through it. The reusable
+  grass-blade WebGPU node-material candidate now lives in
+  `js/world/konveyorGrassBladeNodeMaterial.js`, and the same spec proves the
+  flagged blade factory seam can route through it while default WebGL keeps the
+  existing grass `ShaderMaterial`.
   A production-facing sheep material adapter now exists behind
   `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory; default
   WebGL still uses the existing optimized sheep shader and instancing path.

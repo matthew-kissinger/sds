@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { DoubleSide, MeshLambertNodeMaterial, TSL } from 'three/webgpu';
+import { DoubleSide, MeshLambertNodeMaterial, MeshStandardNodeMaterial, TSL } from 'three/webgpu';
 
 import { GrassSystem } from '../js/GrassSystem.js';
+import { createKonveyorGrassBladeNodeMaterial } from '../js/world/konveyorGrassBladeNodeMaterial.js';
 import { createKonveyorMeadowQuadNodeMaterial } from '../js/world/konveyorMeadowQuadNodeMaterial.js';
 import {
     createKonveyorGrassMaterial,
@@ -176,10 +177,88 @@ describe('konveyor grass material adapter', () => {
                 speed: grass.config.windSpeed,
                 gustStrength: grass.config.gustStrength,
             });
+            expect(contexts[0].geometry).toMatchObject({
+                bladeHeight: grass.config.bladeHeight,
+                bladeWidth: grass.config.bladeWidth,
+                bladeHeightVariation: grass.config.bladeHeightVariation,
+            });
+            expect(contexts[0].lighting.sunDirection.toArray()).toEqual([0, 1, 0]);
+            expect(contexts[0].lighting.sunColor.getHex()).toBe(0xffffff);
             expect(contexts[0].interaction.positions).toBe(grass.interactorPositions);
             expect(contexts[0].interaction.data).toBe(grass.interactorData);
             expect(contexts[0].interaction.facings).toBe(grass.interactorFacings);
-            expect(contexts[0].fade).toEqual({ start: 70, end: 260 });
+            expect(contexts[0].fade).toEqual({ start: 70, end: 260, strength: 1 });
+            expect(contexts[0].material).toMatchObject({
+                side: THREE.FrontSide,
+                transparent: false,
+                depthWrite: true,
+                depthTest: true,
+                alphaHash: true,
+                alphaTest: 0.06,
+            });
+        } finally {
+            material.dispose();
+        }
+    });
+
+    it('can route grass blades through the reusable WebGPU node material candidate', () => {
+        const contexts = [];
+        const scene = new THREE.Scene();
+        const grass = new GrassSystem(scene, false, null, null, null, {
+            search: '?renderer=webgpu&konveyorGrass=1',
+            konveyorGrassFactories: {
+                createGrassBladeMaterial: (context) => {
+                    contexts.push(context);
+                    return createKonveyorGrassBladeNodeMaterial(
+                        { MeshStandardNodeMaterial, DoubleSide, TSL },
+                        {
+                            baseColor: context.colors.baseColor.toArray(),
+                            midColor: context.colors.midColor.toArray(),
+                            tipColor: context.colors.tipColor.toArray(),
+                            windDirection: context.wind.direction.toArray(),
+                            windStrength: context.wind.strength,
+                            windSpeed: context.wind.speed,
+                            gustStrength: context.wind.gustStrength,
+                            bladeHeight: context.geometry.bladeHeight,
+                            grassFadeStart: context.fade.start,
+                            grassFadeEnd: context.fade.end,
+                            distanceFadeStrength: context.fade.strength,
+                            sunColor: context.lighting.sunColor.toArray(),
+                            sunDirection: context.lighting.sunDirection.toArray(),
+                            fogColor: context.fog.color.toArray(),
+                            fogNear: 18,
+                            fogFar: 74,
+                            alphaHash: context.material.alphaHash,
+                            alphaTest: context.material.alphaTest,
+                            side: context.material.side,
+                            transparent: context.material.transparent,
+                            depthWrite: context.material.depthWrite,
+                            depthTest: context.material.depthTest,
+                        }
+                    );
+                },
+            },
+        });
+
+        const material = grass.createGrassMaterial();
+        try {
+            expect(material.name).toBe('konveyor-node-grass-blade');
+            expect(material.isMeshStandardNodeMaterial).toBe(true);
+            expect(material.isNodeMaterial).toBe(true);
+            expect(material.side).toBe(THREE.FrontSide);
+            expect(material.transparent).toBe(false);
+            expect(material.depthWrite).toBe(true);
+            expect(material.depthTest).toBe(true);
+            expect(material.alphaHash).toBe(true);
+            expect(material.alphaTest).toBe(0.06);
+            expect(material.colorNode).toBeTruthy();
+            expect(material.opacityNode).toBeTruthy();
+            expect(material.positionNode).toBeTruthy();
+            expect(grass.konveyorGrassBladeMaterialSummary).toMatchObject({
+                kind: 'grass-blade',
+                applied: true,
+            });
+            expect(contexts).toHaveLength(1);
         } finally {
             material.dispose();
         }

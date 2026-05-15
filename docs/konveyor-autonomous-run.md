@@ -161,7 +161,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   the flagged production seam can route through that reusable candidate; blade
   grass material creation now also has a production-facing seam behind the same
   flag with an explicit `createGrassBladeMaterial` factory and optional controls
-  for time, fog, camera, wind, sun direction, and interactor updates. Production
+  for time, fog, camera, wind, sun direction, and interactor updates. The
+  reusable WebGPU grass-blade node-material candidate now lives in
+  `js/world/konveyorGrassBladeNodeMaterial.js`, and the grass adapter spec
+  proves the flagged production seam can route through it with production blade
+  geometry, wind, color, lighting, fade, and material posture inputs. Production
   stochastic blade dither, production instancing, compute/trample experiments,
   and scene-level WebGPU grass parity remain deferred. The default meadow
   material still uses
