@@ -1,0 +1,223 @@
+{
+  "capturedAt": "2026-05-15T05:51:54.243Z",
+  "baseUrl": "http://127.0.0.1:4173/",
+  "channel": "chrome",
+  "chromiumArgs": [
+    "--use-angle=d3d11",
+    "--enable-gpu"
+  ],
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "ok": true,
+  "scenes": [
+    {
+      "sceneId": "field",
+      "sceneName": "Home Field",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorScene=field",
+      "screenshot": "field.png",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": true,
+        "effective": "webgpu-diagnostic",
+        "fallbackReason": null
+      },
+      "sceneBinding": {
+        "active": true,
+        "requestedSceneId": "field",
+        "sceneId": "field",
+        "sceneName": "Home Field",
+        "skyPresetName": "pastoral-noon",
+        "fog": {
+          "color": "#cfd9e8",
+          "near": 350,
+          "far": 900
+        },
+        "fallbackReason": null
+      },
+      "skyPreset": {
+        "requestedPresetName": "pastoral-noon",
+        "presetName": "pastoral-noon",
+        "fallbackReason": null
+      },
+      "skyFog": {
+        "source": "HosekWilkieSky.cpu-lut",
+        "presetName": "pastoral-noon",
+        "horizonColor": [
+          0.6891,
+          0.7723,
+          0.8128
+        ],
+        "zenithColor": [
+          0.1131,
+          0.2935,
+          0.6742
+        ],
+        "sunColor": [
+          1,
+          0.8691,
+          0.6433
+        ],
+        "sunDirection": [
+          0.2418,
+          0.9397,
+          0.2418
+        ],
+        "fogDarkenMultiplier": 1,
+        "fogColor": [
+          0.6891,
+          0.7723,
+          0.8128
+        ],
+        "fogNear": 350,
+        "fogFar": 900,
+        "cloudCoverage": 0.3
+      },
+      "frames": 3,
+      "islandCount": 19,
+      "hasSkyFog": true,
+      "hasCloudPlane": true,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "sceneId": "rolling-hills",
+      "sceneName": "Sheep Dog Island",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills",
+      "screenshot": "rolling-hills.png",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": true,
+        "effective": "webgpu-diagnostic",
+        "fallbackReason": null
+      },
+      "sceneBinding": {
+        "active": true,
+        "requestedSceneId": "rolling-hills",
+        "sceneId": "rolling-hills",
+        "sceneName": "Sheep Dog Island",
+        "skyPresetName": "dusk",
+        "fog": {
+          "color": "#d4c4a8",
+          "near": 350,
+          "far": 900
+        },
+        "fallbackReason": null
+      },
+      "skyPreset": {
+        "requestedPresetName": "dusk",
+        "presetName": "dusk",
+        "fallbackReason": null
+      },
+      "skyFog": {
+        "source": "HosekWilkieSky.cpu-lut",
+        "presetName": "dusk",
+        "horizonColor": [
+          0.3577,
+          0.1986,
+          0.1644
+        ],
+        "zenithColor": [
+          0.0107,
+          0.0341,
+          0.0832
+        ],
+        "sunColor": [
+          1,
+          0.3055,
+          0.0242
+        ],
+        "sunDirection": [
+          -0.9418,
+          0.1392,
+          -0.306
+        ],
+        "fogDarkenMultiplier": 1,
+        "fogColor": [
+          0.3577,
+          0.1986,
+          0.1644
+        ],
+        "fogNear": 350,
+        "fogFar": 900,
+        "cloudCoverage": 0.5
+      },
+      "frames": 3,
+      "islandCount": 19,
+      "hasSkyFog": true,
+      "hasCloudPlane": true,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "sceneId": "open-country",
+      "sceneName": "Open Country",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorScene=open-country",
+      "screenshot": "open-country.png",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": true,
+        "effective": "webgpu-diagnostic",
+        "fallbackReason": null
+      },
+      "sceneBinding": {
+        "active": true,
+        "requestedSceneId": "open-country",
+        "sceneId": "open-country",
+        "sceneName": "Open Country",
+        "skyPresetName": "golden-hour",
+        "fog": {
+          "color": "#b8c8d8",
+          "near": 350,
+          "far": 900
+        },
+        "fallbackReason": null
+      },
+      "skyPreset": {
+        "requestedPresetName": "golden-hour",
+        "presetName": "golden-hour",
+        "fallbackReason": null
+      },
+      "skyFog": {
+        "source": "HosekWilkieSky.cpu-lut",
+        "presetName": "golden-hour",
+        "horizonColor": [
+          0.698,
+          0.6664,
+          0.6607
+        ],
+        "zenithColor": [
+          0.0286,
+          0.0944,
+          0.2523
+        ],
+        "sunColor": [
+          1,
+          0.6796,
+          0.2973
+        ],
+        "sunDirection": [
+          -0.7144,
+          0.3746,
+          0.591
+        ],
+        "fogDarkenMultiplier": 1,
+        "fogColor": [
+          0.698,
+          0.6664,
+          0.6607
+        ],
+        "fogNear": 350,
+        "fogFar": 900,
+        "cloudCoverage": 0.4
+      },
+      "frames": 3,
+      "islandCount": 19,
+      "hasSkyFog": true,
+      "hasCloudPlane": true,
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}

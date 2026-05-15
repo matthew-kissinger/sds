@@ -7,6 +7,7 @@ import {
     createSkyFogSamplePacket,
 } from '../atmosphere/skyFogSamplePacket.js';
 import { isKnownPreset } from '../atmosphere/skyPresets.js';
+import { DEFAULT_SCENE_ID, getSceneById } from '../../shared/scenes/index.js';
 import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
 import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 import {
@@ -211,9 +212,41 @@ function createMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL
     return material;
 }
 
-export function resolveDiagnosticSkyPreset(search = '') {
+export function resolveDiagnosticScene(search = '') {
     const params = new URLSearchParams(search || '');
-    const requestedPresetName = params.get('konveyorSkyPreset') || DEFAULT_SKY_FOG_SAMPLE_PRESET;
+    const requestedSceneId = params.get('konveyorScene') || params.get('scene');
+
+    if (!requestedSceneId) {
+        return {
+            active: false,
+            requestedSceneId: null,
+            sceneId: null,
+            sceneName: null,
+            skyPresetName: null,
+            fog: null,
+            fallbackReason: null,
+        };
+    }
+
+    const sceneDef = getSceneById(requestedSceneId) ?? getSceneById(DEFAULT_SCENE_ID);
+
+    return {
+        active: true,
+        requestedSceneId,
+        sceneId: sceneDef.id,
+        sceneName: sceneDef.name,
+        skyPresetName: sceneDef.sky?.preset ?? DEFAULT_SKY_FOG_SAMPLE_PRESET,
+        fog: sceneDef.fog ?? null,
+        fallbackReason: sceneDef.id === requestedSceneId ? null : 'unknown-scene',
+    };
+}
+
+export function resolveDiagnosticSkyPreset(search = '', defaultPresetName = DEFAULT_SKY_FOG_SAMPLE_PRESET) {
+    const params = new URLSearchParams(search || '');
+    const fallbackPresetName = isKnownPreset(defaultPresetName)
+        ? defaultPresetName
+        : DEFAULT_SKY_FOG_SAMPLE_PRESET;
+    const requestedPresetName = params.get('konveyorSkyPreset') || fallbackPresetName;
 
     if (isKnownPreset(requestedPresetName)) {
         return {
@@ -232,6 +265,17 @@ export function resolveDiagnosticSkyPreset(search = '') {
 
 export function createSkyFogDiagnosticState(options = {}) {
     return createSkyFogSamplePacket(options);
+}
+
+export function createSceneBoundSkyFogDiagnosticState(sceneBinding) {
+    if (!sceneBinding?.active) return createSkyFogDiagnosticState();
+
+    return createSkyFogDiagnosticState({
+        presetName: sceneBinding.skyPresetName ?? DEFAULT_SKY_FOG_SAMPLE_PRESET,
+        fogDarkenMultiplier: sceneBinding.fog ? 1.0 : 0.82,
+        fogNear: sceneBinding.fog?.near ?? 18,
+        fogFar: sceneBinding.fog?.far ?? 74,
+    });
 }
 
 export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
@@ -847,8 +891,14 @@ function createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }) {
 }
 
 export async function bootWebGpuDiagnostic() {
-    const skyPreset = resolveDiagnosticSkyPreset(window.location.search);
-    const skyFog = createSkyFogDiagnosticState({ presetName: skyPreset.presetName });
+    const sceneBinding = resolveDiagnosticScene(window.location.search);
+    const skyPreset = resolveDiagnosticSkyPreset(window.location.search, sceneBinding.skyPresetName);
+    const skyFog = sceneBinding.active
+        ? createSceneBoundSkyFogDiagnosticState({
+            ...sceneBinding,
+            skyPresetName: skyPreset.presetName,
+        })
+        : createSkyFogDiagnosticState({ presetName: skyPreset.presetName });
     const rockRim = createRockRimDiagnosticState(skyFog);
     const meadowQuad = createMeadowQuadDiagnosticState(skyFog);
     const animeWater = createAnimeWaterDiagnosticState(skyFog);
@@ -864,6 +914,7 @@ export async function bootWebGpuDiagnostic() {
         ok: false,
         renderer: 'webgpu',
         islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter'],
+        sceneBinding,
         skyPreset,
         skyFog,
         rockRim,

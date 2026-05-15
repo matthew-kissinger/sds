@@ -116,9 +116,14 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   each scene resolves its intended sky preset, preserves linear fog near/far,
   drives fog color from the Hosek-Wilkie horizon, and carries preset cloud
   coverage into both sky and cloud layer.
+  `cycle36-validation/runtime/scene-sky-screenshots/manifest.json` now records
+  installed-Chrome diagnostic WebGPU screenshots for Field, Rolling Hills, and
+  Open Country using `?renderer=webgpu&diagnostic=1&konveyorScene=...`; each
+  scene reached `effective=webgpu-diagnostic`, bound the expected shipped scene
+  sky/fog values, and recorded no console or page errors.
   `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
   across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
-  scene-level fog/horizon visual parity remains a separate gate. A
+  full production-scene WebGPU visual parity remains a separate gate. A
   production-facing sky-dome atmosphere material seam now exists: `Atmosphere`
   can forward an explicit `skyFactory` to `HosekWilkieSky`, and the Konveyor
   adapter keeps that factory behind `?renderer=webgpu&konveyorAtmosphere=1`
@@ -137,7 +142,8 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   an explicit `CloudLayer` factory under the same fail-closed flag, with
   coverage, edge fade, feature scale, time, wind, sun direction, and sun color
   driven through node uniform controls. Diagnostic sky-preset screenshots are
-  captured and the renderless scene fog/horizon contract is pinned; scene-bound
+  captured, the renderless scene fog/horizon contract is pinned, and
+  scene-bound diagnostic WebGPU screenshots now exist; full production-scene
   WebGPU screenshots and default production wiring remain deferred. A
   production-facing anime-water material adapter now exists behind
   `?renderer=webgpu&konveyorWater=1` plus an explicit water factory. It can

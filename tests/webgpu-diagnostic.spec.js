@@ -8,10 +8,12 @@ import {
   createKilnImpostorDiagnosticState,
   createMeadowQuadDiagnosticState,
   createRockRimDiagnosticState,
+  createSceneBoundSkyFogDiagnosticState,
   createSheepWoolDiagnosticState,
   createSkyFogDiagnosticState,
   createTerrainHeightfieldDiagnosticState,
   createTreeLeafDiagnosticState,
+  resolveDiagnosticScene,
   resolveDiagnosticSkyPreset,
 } from '../js/diagnostics/webgpuDiagnostic.js';
 import {
@@ -111,6 +113,45 @@ describe('webgpu diagnostic sky fog state', () => {
       fallbackReason: 'unknown-preset',
     });
     expect(state.presetName).toBe('dusk');
+  });
+
+  it('binds diagnostic sky fog to shipped scene definitions when requested', () => {
+    const scene = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=open-country');
+    const resolved = resolveDiagnosticSkyPreset('?renderer=webgpu&diagnostic=1&konveyorScene=open-country', scene.skyPresetName);
+    const state = createSceneBoundSkyFogDiagnosticState({
+      ...scene,
+      skyPresetName: resolved.presetName,
+    });
+
+    expect(scene).toMatchObject({
+      active: true,
+      requestedSceneId: 'open-country',
+      sceneId: 'open-country',
+      skyPresetName: 'golden-hour',
+      fallbackReason: null,
+    });
+    expect(resolved).toEqual({
+      requestedPresetName: 'golden-hour',
+      presetName: 'golden-hour',
+      fallbackReason: null,
+    });
+    expect(state.presetName).toBe('golden-hour');
+    expect(state.fogDarkenMultiplier).toBe(1.0);
+    expect(state.fogNear).toBe(350);
+    expect(state.fogFar).toBe(900);
+    expect(state.fogColor).toEqual(state.horizonColor);
+  });
+
+  it('falls back to the default scene for unknown diagnostic scene bindings', () => {
+    const scene = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=missing');
+
+    expect(scene).toMatchObject({
+      active: true,
+      requestedSceneId: 'missing',
+      sceneId: 'rolling-hills',
+      skyPresetName: 'dusk',
+      fallbackReason: 'unknown-scene',
+    });
   });
 
   it('drives the diagnostic rock rim from the CPU sun color packet', () => {
