@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:23:50.948Z",
+  "capturedAt": "2026-05-15T00:27:52.572Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -388,6 +388,21 @@
       "edgeBleedPx": 2,
       "alphaTest": 0.3,
       "alphaHashScale": 0.3,
+      "sunColor": [
+        1,
+        0.3055,
+        0.0242
+      ],
+      "sunDirection": [
+        -0.9418,
+        0.1392,
+        -0.306
+      ],
+      "ambientColor": [
+        0.55,
+        0.55,
+        0.58
+      ],
       "fogColor": [
         0.2933,
         0.1629,
@@ -397,7 +412,7 @@
       "fogFar": 74,
       "atlasSampling": "single-tile-albedo",
       "tileBlend": "deferred",
-      "relighting": "deferred",
+      "relighting": "single-tile-normal-aux",
       "parallax": "deferred",
       "depthDiscard": "deferred",
       "productionLod": "deferred",

@@ -210,10 +210,13 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(kiln.normalSpace).toBe('capture-view');
     expect(kiln.auxLayers).toEqual(['albedo', 'normal', 'depth']);
     expect(kiln.edgeBleedPx).toBe(2);
+    expect(kiln.sunColor).toBe(skyFog.sunColor);
+    expect(kiln.sunDirection).toBe(skyFog.sunDirection);
+    expect(kiln.ambientColor).toHaveLength(3);
     expect(kiln.fogColor).toBe(skyFog.fogColor);
     expect(kiln.atlasSampling).toBe('single-tile-albedo');
     expect(kiln.tileBlend).toBe('deferred');
-    expect(kiln.relighting).toBe('deferred');
+    expect(kiln.relighting).toBe('single-tile-normal-aux');
     expect(kiln.parallax).toBe('deferred');
     expect(kiln.depthDiscard).toBe('deferred');
     expect(kiln.productionLod).toBe('deferred');

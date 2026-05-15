@@ -64,10 +64,11 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   displacement, rim/SSS lighting terms, and sky/fog handoff while explicitly
   deferring production `OptimizedSheep` instancing, animation attributes,
   terrain grounding, and high-count perf. A one-species Kiln impostor
-  diagnostic material fetches the committed `tree1` sidecar and albedo atlas,
-  samples one tile with alpha/fog in a WebGPU node material, and explicitly
-  defers barycentric tile blending, normal/depth relighting, parallax, depth
-  discard, production LOD wiring, and LOD0 color parity. Production Rolling
+  diagnostic material fetches the committed `tree1` sidecar plus albedo/normal
+  atlases, samples one tile with alpha/fog in a WebGPU node material, and
+  relights it from the normal aux layer while explicitly deferring barycentric
+  tile blending, depth aux use, parallax, depth discard, production LOD wiring,
+  and LOD0 color parity. Production Rolling
   Hills/Open Country replacement remains deferred before water/terrain/grass/sheep/Kiln
   wiring. A
   diagnostic material-replacement island proves tree replacement by

@@ -159,10 +159,11 @@ Recommended order:
    procedural wool displacement, rim/SSS lighting terms, and sky/fog handoff
    while explicitly deferring production `OptimizedSheep` instancing,
    animation attributes, terrain grounding, and high-count perf. The Kiln
-   impostor diagnostic island now fetches the committed `tree1` sidecar and
-   albedo atlas, samples one tile with alpha/fog in a WebGPU node material, and
-   leaves barycentric tile blend, normal/depth relighting, parallax, depth
-   discard, production LOD wiring, and LOD0 color parity deferred. The rock-rim
+   impostor diagnostic island now fetches the committed `tree1` sidecar plus
+   albedo/normal atlases, samples one tile with alpha/fog in a WebGPU node
+   material, and relights it from the normal aux layer. Barycentric tile blend,
+   depth aux use, parallax, depth discard, production LOD wiring, and LOD0
+   color parity remain deferred. The rock-rim
    TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof

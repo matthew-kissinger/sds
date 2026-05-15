@@ -343,12 +343,15 @@ export function createKilnImpostorDiagnosticState(skyFog = createSkyFogDiagnosti
         edgeBleedPx: sidecar?.edgeBleedPx ?? 2,
         alphaTest: 0.3,
         alphaHashScale: 0.3,
+        sunColor: skyFog.sunColor,
+        sunDirection: skyFog.sunDirection,
+        ambientColor: [0.55, 0.55, 0.58],
         fogColor: skyFog.fogColor,
         fogNear: skyFog.fogNear,
         fogFar: skyFog.fogFar,
         atlasSampling: 'single-tile-albedo',
         tileBlend: 'deferred',
-        relighting: 'deferred',
+        relighting: 'single-tile-normal-aux',
         parallax: 'deferred',
         depthDiscard: 'deferred',
         productionLod: 'deferred',
@@ -526,17 +529,24 @@ function syncKilnImpostorState(target, sidecar) {
     target.edgeBleedPx = sidecar.edgeBleedPx;
 }
 
-function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, albedoAtlas) {
-    const { length, mix, smoothstep, texture, uv, positionView, vec2, vec3 } = TSL;
+function createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, albedoAtlas, normalAtlas) {
+    const { dot, length, max, mix, normalize, smoothstep, texture, uv, positionView, vec2, vec3 } = TSL;
     const tileUv = uv().mul(vec2(1 / kilnImpostor.tilesX, 1 / kilnImpostor.tilesY))
         .add(vec2(0, (kilnImpostor.tilesY - 1) / kilnImpostor.tilesY));
     const atlasSample = texture(albedoAtlas, tileUv);
+    const normalSample = texture(normalAtlas, tileUv).rgb.mul(2.0).sub(vec3(1.0, 1.0, 1.0));
+    const relightNormal = normalize(normalSample);
+    const sunDirection = normalize(vec3(...kilnImpostor.sunDirection));
+    const wrappedSun = max(dot(relightNormal, sunDirection), 0.0).mul(0.65).add(0.35);
+    const relitColor = atlasSample.rgb.mul(
+        vec3(...kilnImpostor.ambientColor).add(vec3(...kilnImpostor.sunColor).mul(wrappedSun.mul(0.42)))
+    );
     const viewDistance = length(positionView);
     const fogBlend = smoothstep(kilnImpostor.fogNear, kilnImpostor.fogFar, viewDistance).mul(0.62);
 
     const material = new MeshBasicNodeMaterial();
     material.name = 'konveyor-node-kiln-impostor';
-    material.colorNode = mix(atlasSample.rgb, vec3(...kilnImpostor.fogColor), fogBlend);
+    material.colorNode = mix(relitColor, vec3(...kilnImpostor.fogColor), fogBlend);
     material.opacityNode = atlasSample.a;
     material.transparent = true;
     material.depthWrite = true;
@@ -1047,7 +1057,7 @@ export async function bootWebGpuDiagnostic() {
     syncKilnImpostorState(kilnImpostor, kilnAssets.sidecar);
     const kilnImpostorMesh = new Mesh(
         new PlaneGeometry(0.82, 0.82, 1, 1),
-        createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, kilnAssets.albedoAtlas)
+        createKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, kilnAssets.albedoAtlas, kilnAssets.normalAtlas)
     );
     kilnImpostorMesh.position.set(-1.05, -1.16, 0.27);
     kilnImpostorMesh.rotation.set(0, 0.1, 0);
