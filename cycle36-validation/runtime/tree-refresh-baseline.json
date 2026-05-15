@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T05:41:25.317Z",
+  "capturedAt": "2026-05-15T08:38:44.841Z",
   "contract": "konveyor-tree-refresh-baseline",
   "sourceOfTruth": {
     "picksPath": "tools/asset-gallery/picks.json",
@@ -16,7 +16,7 @@
     "peerThree": ">=0.167",
     "upstream": {
       "npmLatestObserved": "1.1.0",
-      "npmObservedAt": "2026-05-15T05:41:25.104Z",
+      "npmObservedAt": "2026-05-15T08:38:44.562Z",
       "mainPackageVersionObserved": "1.1.0",
       "changelogUrl": "https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md",
       "npmUrl": "https://www.npmjs.com/package/@dgreenheck/ez-tree",
