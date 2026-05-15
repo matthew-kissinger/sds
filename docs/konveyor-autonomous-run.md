@@ -147,7 +147,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   scene-coupled chunk before normal scene body construction and scene swaps.
   This preserves the default WebGL sun disc while recovering main-bundle
   headroom for later production seams. Current production build evidence:
-  `mainKB=575`, `threeKB=603`.
+  `mainKB=576`, `threeKB=603`.
 - A production-facing sky-dome atmosphere material seam now exists:
   `Atmosphere` can forward an explicit `skyFactory` to `HosekWilkieSky`, and
   `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory
@@ -156,6 +156,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   supplied. The default path still creates the existing WebGL `ShaderMaterial`,
   and the CPU LUT plus sky/fog packet remain the authority for fog, sun color,
   cloud, water, grass, rock, tree, and impostor consumers.
+- The same production-facing atmosphere adapter now reaches `CloudLayer`.
+  `Atmosphere` can forward an explicit `cloudFactory`, and the real cloud
+  layer can route coverage, edge fade, time, feature scale, sun color, and
+  wind state through factory controls while keeping the default WebGL
+  `ShaderMaterial` path untouched when the flag or factories are absent.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
   The sky/fog packet now lives in `js/atmosphere/skyFogSamplePacket.js` and
@@ -236,8 +241,10 @@ Recommended order:
    atmosphere material seam are now production-facing hooks, but both are still
    flag-gated and factory supplied. The atmosphere seam now reaches the
    `Atmosphere` orchestrator through an explicit `skyFactory` and reaches
-   `HosekWilkieSky` directly through the same fail-closed adapter; it still
-   does not provide a real TSL sky material or alter default WebGL. Production
+   `HosekWilkieSky` directly through the same fail-closed adapter; the same
+   adapter now reaches production `CloudLayer` through an explicit
+   `cloudFactory` or the direct fail-closed flag/factory path. It still does
+   not provide a real TSL sky/cloud material or alter default WebGL. Production
    `SunBillboard` itself is now
    scene-coupled and lazy-loaded, which creates bundle room for the next seam
    without changing default WebGL behavior. The sky path still needs a real TSL

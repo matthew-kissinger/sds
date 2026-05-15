@@ -95,7 +95,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   explicit `skyFactory` to `HosekWilkieSky`, and the Konveyor adapter keeps
   that factory behind `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit
   WebGPU sky factory. Default `HosekWilkieSky` still creates the existing WebGL
-  `ShaderMaterial`, and the CPU LUT plus sky/fog packet stay authoritative. A
+  `ShaderMaterial`, and the CPU LUT plus sky/fog packet stay authoritative.
+  The same atmosphere adapter now reaches production `CloudLayer`: `Atmosphere`
+  can forward an explicit `cloudFactory`, and cloud coverage, edge fade, time,
+  feature scale, sun color, and wind state can flow through adapter controls
+  while the default WebGL `ShaderMaterial` path remains unchanged. A
   production-facing
   sun/portal effect material adapter now exists behind
   `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories;
@@ -104,7 +108,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   still construct their existing WebGL `ShaderMaterial`s. Production
   `SunBillboard` is now a scene-coupled
   lazy chunk, preserving the default WebGL sun disc while recovering main
-  bundle headroom (`mainKB=575`, `threeKB=603`) for later production seams. A
+  bundle headroom (`mainKB=576`, `threeKB=603`) for later production seams. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed

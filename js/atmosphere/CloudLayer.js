@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { cloudFragmentShader, cloudVertexShader } from './cloudShader.glsl.js';
+import { createKonveyorAtmosphereMaterial } from './konveyorAtmosphereMaterialAdapter.js';
 
 /**
  * High-altitude cloud layer rendered as a single horizontal plane with a
@@ -30,7 +31,7 @@ const DEFAULT_WIND_DIR_X = 0.7;
 const DEFAULT_WIND_DIR_Z = 0.7;
 
 export class CloudLayer {
-  constructor() {
+  constructor(options = {}) {
     /** @private */
     this.sunDirection = new THREE.Vector3(0, 1, 0);
     /** @private */
@@ -44,17 +45,19 @@ export class CloudLayer {
     /** @private */
     this.elapsedSeconds = 0;
 
-    this.material = new THREE.ShaderMaterial({
+    this.uniforms = {
+      uSunDirection: { value: this.sunDirection },
+      uSunColor: { value: this.sunColor },
+      uCoverage: { value: 0 },
+      uEdgeFade: { value: 1 },
+      uNoiseScale: { value: DEFAULT_NOISE_SCALE },
+      uTimeSeconds: { value: 0 },
+      uWindDir: { value: this.windDir },
+    };
+
+    const createDefaultMaterial = () => new THREE.ShaderMaterial({
       name: 'CloudLayer',
-      uniforms: {
-        uSunDirection: { value: this.sunDirection },
-        uSunColor: { value: this.sunColor },
-        uCoverage: { value: 0 },
-        uEdgeFade: { value: 1 },
-        uNoiseScale: { value: DEFAULT_NOISE_SCALE },
-        uTimeSeconds: { value: 0 },
-        uWindDir: { value: this.windDir },
-      },
+      uniforms: this.uniforms,
       vertexShader: cloudVertexShader,
       fragmentShader: cloudFragmentShader,
       transparent: true,
@@ -62,6 +65,19 @@ export class CloudLayer {
       side: THREE.DoubleSide,
       forceSinglePass: true,
     });
+    const materialResult = typeof options.factory === 'function'
+      ? options.factory({
+          uniforms: this.uniforms,
+        })
+      : createKonveyorAtmosphereMaterial('cloud-layer', 'createCloudLayerMaterial', {
+          createDefaultMaterial,
+          search: options.search,
+          factories: options.konveyorAtmosphereFactories,
+          context: { uniforms: this.uniforms },
+        });
+    this.material = materialResult?.material ?? materialResult ?? createDefaultMaterial();
+    this.materialControls = materialResult?.controls ?? null;
+    this.konveyorMaterialSummary = materialResult?.summary ?? null;
 
     this.geometry = new THREE.PlaneGeometry(PLANE_LENGTH, PLANE_WIDTH, 1, 1);
     this.mesh = new THREE.Mesh(this.geometry, this.material);
@@ -74,6 +90,7 @@ export class CloudLayer {
     this.mesh.frustumCulled = false;
     this.mesh.name = 'CloudLayer';
     this.mesh.visible = false;
+    this.syncMaterialState();
   }
 
   /** @returns {THREE.Mesh} */
@@ -108,21 +125,23 @@ export class CloudLayer {
 
     const dy = Math.abs(cameraPosition.y - planeY);
     this.edgeFade = smoothstep01(dy / EDGE_FADE_HALF_WIDTH);
-    this.material.uniforms.uCoverage.value = this.coverage;
-    this.material.uniforms.uEdgeFade.value = this.edgeFade;
+    this.uniforms.uCoverage.value = this.coverage;
+    this.uniforms.uEdgeFade.value = this.edgeFade;
 
     if (Number.isFinite(deltaSeconds) && deltaSeconds > 0) {
       this.elapsedSeconds += deltaSeconds;
-      this.material.uniforms.uTimeSeconds.value = this.elapsedSeconds;
+      this.uniforms.uTimeSeconds.value = this.elapsedSeconds;
     }
 
+    this.syncMaterialState();
     this.mesh.visible = this.coverage > 0.001 && this.edgeFade > 0.001;
   }
 
   /** @param {number} v */
   setCoverage(v) {
     this.coverage = Math.max(0, Math.min(1, v));
-    this.material.uniforms.uCoverage.value = this.coverage;
+    this.uniforms.uCoverage.value = this.coverage;
+    this.syncMaterialState();
   }
 
   /** @returns {number} */
@@ -133,16 +152,31 @@ export class CloudLayer {
   /** @param {number} metersPerFeature */
   setFeatureScaleMeters(metersPerFeature) {
     if (!Number.isFinite(metersPerFeature) || metersPerFeature <= 0) return;
-    this.material.uniforms.uNoiseScale.value = 1 / metersPerFeature;
+    this.uniforms.uNoiseScale.value = 1 / metersPerFeature;
+    this.syncMaterialState();
   }
 
   resetFeatureScale() {
-    this.material.uniforms.uNoiseScale.value = DEFAULT_NOISE_SCALE;
+    this.uniforms.uNoiseScale.value = DEFAULT_NOISE_SCALE;
+    this.syncMaterialState();
   }
 
   /** @returns {number} */
   getEdgeFade() {
     return this.edgeFade;
+  }
+
+  syncMaterialState() {
+    if (!this.materialControls?.update) return;
+    this.materialControls.update({
+      sunDirection: this.sunDirection,
+      sunColor: this.sunColor,
+      coverage: this.coverage,
+      edgeFade: this.edgeFade,
+      noiseScale: this.uniforms.uNoiseScale.value,
+      timeSeconds: this.elapsedSeconds,
+      windDir: this.windDir,
+    });
   }
 
   dispose() {

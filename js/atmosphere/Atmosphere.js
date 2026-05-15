@@ -51,6 +51,7 @@ export class Atmosphere {
    * @param {boolean} [options.attachFog=true]    Set scene.fog.
    * @param {Object} [options.sunOptions]         Forwarded to SunSystem.
    * @param {Function} [options.skyFactory]       Forwarded to HosekWilkieSky.
+   * @param {Function} [options.cloudFactory]     Forwarded to CloudLayer.
    */
   constructor(scene, options = {}) {
     if (!scene) {
@@ -73,7 +74,9 @@ export class Atmosphere {
     }
 
     /** @type {CloudLayer | null} */
-    this.cloudLayer = enableClouds ? new CloudLayer() : null;
+    this.cloudLayer = enableClouds ? new CloudLayer({
+      factory: options.cloudFactory,
+    }) : null;
     if (this.cloudLayer && attachClouds) {
       scene.add(this.cloudLayer.getMesh());
     }
