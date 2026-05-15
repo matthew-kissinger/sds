@@ -145,6 +145,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   `fallbackReason: "diagnostic-flag-required"`, the deterministic rock route
   applies, and the material adapters remain fail-closed with
   `missing-factories` when explicit WebGPU factories are not supplied.
+  The proof now also captures non-diagnostic production canvas screenshots in
+  [`../cycle36-validation/runtime/production-flag-fallback-screenshots/`](../cycle36-validation/runtime/production-flag-fallback-screenshots/)
+  and verifies each screenshot is nonblank before accepting the fallback
+  contract.
   This is the current production fallback contract, not a WebGPU production
   scene claim.
 - A production-facing tree/rock material adapter now exists behind

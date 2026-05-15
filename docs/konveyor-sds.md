@@ -276,8 +276,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   but no `diagnostic=1`; all three scenes remain effective WebGL with
   `fallbackReason: "diagnostic-flag-required"`, deterministic rock placement
   applies, and material adapters report `missing-factories` when explicit
-  WebGPU factories are not supplied. This is the current fail-closed production
-  contract, not a WebGPU scene-boot claim.
+  WebGPU factories are not supplied. The proof now captures non-diagnostic
+  production canvas screenshots in
+  `cycle36-validation/runtime/production-flag-fallback-screenshots/` and checks
+  each is nonblank before accepting the fallback contract. This is the current
+  fail-closed production contract, not a WebGPU scene-boot claim.
   A production-facing far-ring meadow material adapter now exists behind
   `?renderer=webgpu&konveyorGrass=1` plus an explicit meadow factory; default
   WebGL still uses the existing `MeshLambertMaterial` and procedural tint

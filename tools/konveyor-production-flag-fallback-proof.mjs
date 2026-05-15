@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -25,6 +26,7 @@ function parseArgs(argv) {
   const args = {
     baseUrl: 'http://127.0.0.1:4173/',
     out: 'cycle36-validation/runtime/production-flag-fallback-proof.json',
+    outDir: 'cycle36-validation/runtime/production-flag-fallback-screenshots',
     scenes: DEFAULT_SCENES.join(','),
     channel: null,
   };
@@ -53,7 +55,60 @@ function buildUrl(baseUrl, sceneId) {
   return url.href;
 }
 
-async function captureScene({ context, baseUrl, sceneId }) {
+function round(value, digits = 2) {
+  return Number(value.toFixed(digits));
+}
+
+function luma(r, g, b) {
+  return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+}
+
+async function inspectScreenshot(path) {
+  const image = sharp(path);
+  const metadata = await image.metadata();
+  const { data } = await image
+    .resize({ width: 64, height: 36, fit: 'fill' })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const total = [0, 0, 0];
+  let minLuma = Infinity;
+  let maxLuma = -Infinity;
+  const colorBuckets = new Set();
+  let count = 0;
+
+  for (let offset = 0; offset < data.length; offset += 4) {
+    const r = data[offset];
+    const g = data[offset + 1];
+    const b = data[offset + 2];
+    const y = luma(r, g, b);
+    total[0] += r;
+    total[1] += g;
+    total[2] += b;
+    minLuma = Math.min(minLuma, y);
+    maxLuma = Math.max(maxLuma, y);
+    colorBuckets.add(`${r >> 4},${g >> 4},${b >> 4}`);
+    count += 1;
+  }
+
+  const averageRgb = total.map((value) => round(value / count));
+  const lumaRange = round(maxLuma - minLuma);
+
+  return {
+    dimensions: {
+      width: metadata.width ?? 0,
+      height: metadata.height ?? 0,
+    },
+    averageRgb,
+    averageLuma: round(luma(...averageRgb)),
+    lumaRange,
+    coarseColorBuckets: colorBuckets.size,
+    nonBlank: lumaRange >= 20 && colorBuckets.size >= 16,
+  };
+}
+
+async function captureScene({ context, baseUrl, sceneId, outDir }) {
   const page = await context.newPage();
   const url = buildUrl(baseUrl, sceneId);
   const consoleErrors = [];
@@ -107,10 +162,16 @@ async function captureScene({ context, baseUrl, sceneId }) {
         },
       };
     });
+    const screenshot = `${sceneId}.png`;
+    const screenshotPath = resolve(outDir, screenshot);
+    await page.locator('canvas').first().screenshot({ path: screenshotPath });
+    const screenshotProof = await inspectScreenshot(screenshotPath);
 
     return {
       sceneId,
       url,
+      screenshot,
+      screenshotProof,
       ...state,
       consoleErrors,
       pageErrors,
@@ -120,6 +181,7 @@ async function captureScene({ context, baseUrl, sceneId }) {
         && state.renderer?.isWebGLRenderer === true
         && state.renderer?.isWebGPURenderer === false
         && state.summaries?.rockPlacement?.applied === true
+        && screenshotProof.nonBlank === true
         && consoleErrors.length === 0
         && pageErrors.length === 0,
     };
@@ -132,6 +194,8 @@ async function run() {
   const args = parseArgs(process.argv);
   const launchOptions = { args: CHROMIUM_GPU_ARGS, headless: true };
   if (args.channel) launchOptions.channel = args.channel;
+  const outDir = resolve(ROOT, args.outDir);
+  await mkdir(outDir, { recursive: true });
 
   const browser = await chromium.launch(launchOptions);
   try {
@@ -139,12 +203,18 @@ async function run() {
     try {
       const scenes = [];
       for (const sceneId of args.sceneIds) {
-        scenes.push(await captureScene({ context, baseUrl: args.baseUrl, sceneId }));
+        scenes.push(await captureScene({
+          context,
+          baseUrl: args.baseUrl,
+          sceneId,
+          outDir,
+        }));
       }
       const manifest = {
         capturedAt: new Date().toISOString(),
         contract: 'konveyor-production-flag-fallback-proof',
         baseUrl: args.baseUrl,
+        screenshotDir: args.outDir,
         channel: args.channel ?? 'playwright-chromium',
         chromiumArgs: CHROMIUM_GPU_ARGS,
         flags: KONVEYOR_FLAGS,

@@ -1,7 +1,8 @@
 {
-  "capturedAt": "2026-05-15T07:59:04.001Z",
+  "capturedAt": "2026-05-15T08:50:23.285Z",
   "contract": "konveyor-production-flag-fallback-proof",
   "baseUrl": "http://127.0.0.1:4173/",
+  "screenshotDir": "cycle36-validation/runtime/production-flag-fallback-screenshots",
   "channel": "chrome",
   "chromiumArgs": [
     "--use-angle=d3d11",
@@ -23,6 +24,22 @@
     {
       "sceneId": "field",
       "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=field&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
+      "screenshot": "field.png",
+      "screenshotProof": {
+        "dimensions": {
+          "width": 1280,
+          "height": 720
+        },
+        "averageRgb": [
+          43.68,
+          51.15,
+          49.24
+        ],
+        "averageLuma": 49.42,
+        "lumaRange": 135.43,
+        "coarseColorBuckets": 44,
+        "nonBlank": true
+      },
       "rendererMode": {
         "requested": "webgpu",
         "diagnostic": false,
@@ -36,7 +53,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 116,
-        "triangles": 4170614
+        "triangles": 4175206
       },
       "summaries": {
         "treeRockMaterial": {
@@ -79,6 +96,22 @@
     {
       "sceneId": "rolling-hills",
       "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=rolling-hills&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
+      "screenshot": "rolling-hills.png",
+      "screenshotProof": {
+        "dimensions": {
+          "width": 1280,
+          "height": 720
+        },
+        "averageRgb": [
+          43.54,
+          44.6,
+          42.68
+        ],
+        "averageLuma": 44.24,
+        "lumaRange": 115.71,
+        "coarseColorBuckets": 70,
+        "nonBlank": true
+      },
       "rendererMode": {
         "requested": "webgpu",
         "diagnostic": false,
@@ -92,7 +125,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 91,
-        "triangles": 3758764
+        "triangles": 3756496
       },
       "summaries": {
         "treeRockMaterial": {
@@ -139,6 +172,22 @@
     {
       "sceneId": "open-country",
       "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=open-country&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
+      "screenshot": "open-country.png",
+      "screenshotProof": {
+        "dimensions": {
+          "width": 1280,
+          "height": 720
+        },
+        "averageRgb": [
+          49.4,
+          53.65,
+          50.42
+        ],
+        "averageLuma": 52.51,
+        "lumaRange": 127.64,
+        "coarseColorBuckets": 59,
+        "nonBlank": true
+      },
       "rendererMode": {
         "requested": "webgpu",
         "diagnostic": false,
@@ -152,7 +201,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 157,
-        "triangles": 3599675
+        "triangles": 3617283
       },
       "summaries": {
         "treeRockMaterial": {
