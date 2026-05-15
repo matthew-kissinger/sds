@@ -9,6 +9,7 @@ import {
   createKilnImpostorDiagnosticState,
   createMeadowQuadDiagnosticState,
   createProductionAtmosphereAdapterDiagnosticProof,
+  createProductionGrassAdapterDiagnosticProof,
   createProductionTerrainAdapterDiagnosticProof,
   createProductionWaterAdapterDiagnosticProof,
   createRockRimDiagnosticState,
@@ -320,6 +321,91 @@ describe('webgpu diagnostic sky fog state', () => {
       expect(scene.children).toContain(terrain);
     } finally {
       builder.dispose();
+      heightTexture.dispose();
+    }
+  });
+
+  it('routes production GrassSystem material and chunk construction through WebGPU node factories in the diagnostic proof', () => {
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills');
+    const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
+    const webGpuModules = {
+      MeshBasicNodeMaterial: WEBGPU.MeshBasicNodeMaterial,
+      MeshLambertNodeMaterial: WEBGPU.MeshLambertNodeMaterial,
+      MeshStandardNodeMaterial: WEBGPU.MeshStandardNodeMaterial,
+      AdditiveBlending: WEBGPU.AdditiveBlending,
+      BackSide: WEBGPU.BackSide,
+      DoubleSide: WEBGPU.DoubleSide,
+      TSL: WEBGPU.TSL,
+    };
+    const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+      skyFog,
+      grass: {
+        fogNear: skyFog.fogNear,
+        fogFar: skyFog.fogFar,
+      },
+    });
+    const heightTexture = new THREE.DataTexture(
+      new Float32Array([1, 1, 1, 1]),
+      2,
+      2,
+      THREE.RedFormat,
+      THREE.FloatType
+    );
+    heightTexture.userData.konveyorHeightfield = {
+      sceneId: 'rolling-hills',
+      source: '/terrain/rolling-hills.bin',
+      format: 'RedFormat/FloatType',
+      size: [2, 2],
+      sampler: 'nearest-clamp',
+      worldSize: 500,
+      peakHeight: 6,
+      waterY: -0.05,
+    };
+    const scene = new THREE.Scene();
+    const { proof, dispose } = createProductionGrassAdapterDiagnosticProof({
+      scene,
+      sceneBinding,
+      heightTexture,
+      grassFactories: suite.grass,
+      three: {
+        Mesh: THREE.Mesh,
+        PlaneGeometry: THREE.PlaneGeometry,
+      },
+    });
+
+    try {
+      expect(proof.ok).toBe(true);
+      expect(proof.blade.materialName).toBe('konveyor-node-grass-blade');
+      expect(proof.blade.isNodeMaterial).toBe(true);
+      expect(proof.blade.summary).toMatchObject({ kind: 'grass-blade', applied: true });
+      expect(proof.meadow.materialName).toBe('konveyor-node-meadow-quad');
+      expect(proof.meadow.isNodeMaterial).toBe(true);
+      expect(proof.meadow.summary).toMatchObject({ kind: 'meadow-quad', applied: true });
+      expect(proof.geometry).toMatchObject({
+        bladesPerClump: 7,
+        vertices: 28,
+        triangles: 28,
+        bladeDataItemSize: 4,
+        bladeDataCount: 28,
+      });
+      expect(proof.chunk).toMatchObject({
+        isInstancedMesh: true,
+        instanceCount: 12,
+        fullCount: 12,
+        clumpCount: 12,
+      });
+      expect(proof.heightfield).toMatchObject({
+        sceneId: 'rolling-hills',
+        source: '/terrain/rolling-hills.bin',
+        size: [2, 2],
+        worldSize: 500,
+        peakHeight: 6,
+        rawArrayType: 'Float32Array',
+        rawArrayLength: 4,
+        meshGridLength: 66049,
+      });
+    } finally {
+      dispose();
       heightTexture.dispose();
     }
   });

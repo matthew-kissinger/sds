@@ -272,7 +272,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
   bundle-size fixture. Current production build evidence: `mainKB=569`,
-  `threeKB=618`, `webgpuDiagnostic=63 KB`,
+  `threeKB=618`, `webgpuDiagnostic=66 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`, `AnimeWater=9 KB`,
   `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
@@ -374,6 +374,18 @@ WebGPU now has a diagnostic island, not a production renderer:
   `Float32Array`/`DataTexture` contract. This is production terrain constructor
   proof inside the diagnostic renderer; scene-specific production WebGPU
   terrain parity remains a separate gate.
+- [`../cycle36-validation/runtime/production-grass-adapter-proof.json`](../cycle36-validation/runtime/production-grass-adapter-proof.json)
+  verifies that the same scene-bound diagnostic WebGPU captures instantiate
+  real production `GrassSystem` grass-blade and meadow material creation plus a
+  representative production `InstancedMesh` grass chunk with explicit WebGPU
+  node-material factories for all shipped diagnostic scenes. The proof records
+  `konveyor-node-grass-blade`, `konveyor-node-meadow-quad`, the
+  `?renderer=webgpu&konveyorGrass=1` factory summaries, `28` clump-geometry
+  vertices, `12` representative clump instances, the baked heightfield mesh
+  grid, and the Rolling Hills heightfield-backed `Float32Array`/`DataTexture`
+  contract. This is production grass constructor proof inside the diagnostic
+  renderer; full production grass-field generation and scene parity remain
+  separate gates.
 - [`../cycle36-validation/runtime/sky-lut-profile.json`](../cycle36-validation/runtime/sky-lut-profile.json)
   profiles the same renderless Hosek-Wilkie CPU LUT for the five required
   presets. Current local evidence keeps the CPU-visible LUT as the atmosphere
@@ -494,8 +506,9 @@ Recommended order:
    Field, Rolling Hills, and Open Country diagnostic screenshots for visible
    water, terrain, grass, sheep, tree, rock, impostor, meadow, sun, and cloud
    signatures, and constructor proofs now cover production `Atmosphere`,
-   `AnimeWater`, and `TerrainBuilder.createTerrain()` inside the diagnostic
-   renderer. The next production-adjacent move should keep
+   `AnimeWater`, `TerrainBuilder.createTerrain()`, and representative
+   `GrassSystem` material/chunk construction inside the diagnostic renderer.
+   The next production-adjacent move should keep
    `?renderer=webgpu` fail-closed without `diagnostic=1` while moving one
    island from diagnostic visibility toward measured production-scene parity.
    The sky path now has diagnostic preset screenshot parity, renderless scene

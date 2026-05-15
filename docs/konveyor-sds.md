@@ -79,9 +79,12 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   node-material candidate now lives in
   `js/world/konveyorGrassBladeNodeMaterial.js`, and the adapter spec proves
   the flagged production seam can route through it with production blade
-  geometry, wind, color, lighting, fade, and material posture inputs.
-  Production stochastic blade dither, production instancing, compute/trample
-  experiments, and scene-level WebGPU grass parity remain deferred. A
+  geometry, wind, color, lighting, fade, and material posture inputs. The
+  WebGPU diagnostic now also instantiates real `GrassSystem` grass-blade and
+  meadow material creation plus a representative production `InstancedMesh`
+  chunk through that same explicit factory path. Production stochastic blade
+  dither, full production grass generation, compute/trample experiments, and
+  scene-level WebGPU grass parity remain deferred. A
   sheep-wool diagnostic material covers production toon/wool color, procedural
   wool displacement, rim/SSS lighting
   terms, and sky/fog handoff. A production-facing `OptimizedSheep` material
@@ -175,6 +178,18 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   installed Chrome diagnostic render. This is production terrain constructor
   proof inside the diagnostic renderer; scene-specific production terrain
   parity remains deferred.
+  `cycle36-validation/runtime/production-grass-adapter-proof.json` now verifies
+  real production `GrassSystem` material and representative chunk construction
+  inside the same WebGPU diagnostic scene for Field, Rolling Hills, and Open
+  Country. Each scene routes grass blade and meadow material creation through
+  the explicit `?renderer=webgpu&konveyorGrass=1` factory path, binds the
+  Rolling Hills heightfield-backed `Float32Array`/`DataTexture` packet with a
+  baked visual mesh grid (`66049` samples), confirms the
+  `konveyor-node-grass-blade` and `konveyor-node-meadow-quad` node materials,
+  and records a small production `InstancedMesh` chunk (`12` clumps, `28`
+  vertices) in a clean installed Chrome diagnostic render. This is
+  diagnostic-renderer constructor evidence, not full production grass field
+  parity.
   `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
   across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
   full production-scene WebGPU visual parity remains a separate gate. A
@@ -222,7 +237,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   diagnostic now also instantiates the real `TerrainBuilder.createTerrain()`
   path with that factory seam and verifies the heightfield-backed production
   constructor proof in
-  `cycle36-validation/runtime/production-terrain-adapter-proof.json`. A
+  `cycle36-validation/runtime/production-terrain-adapter-proof.json`. The same
+  diagnostic now instantiates real `GrassSystem` grass-blade and meadow material
+  creation plus a representative production `InstancedMesh` chunk through
+  `?renderer=webgpu&konveyorGrass=1`, with proof recorded in
+  `cycle36-validation/runtime/production-grass-adapter-proof.json`. A
   production-facing `OptimizedSheep` material adapter now exists behind
   `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory. It can
   hand time/fog update ownership to factory controls. The reusable WebGPU
@@ -273,7 +292,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=63 KB`,
+  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=66 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
   `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`) for later
   production seams without regenerating the refactor-baseline bundle ratchet. A

@@ -19,6 +19,7 @@ import {
 } from '../effects/konveyorEffectMaterialAdapter.js';
 import { TerrainBuilder } from '../TerrainBuilder.js';
 import { createAnimeWater } from '../water/AnimeWater.js';
+import { GrassSystem } from '../GrassSystem.js';
 import {
     createKonveyorNodeMaterialFactorySuite,
     summarizeKonveyorNodeMaterialFactorySuite,
@@ -510,6 +511,139 @@ export function createProductionTerrainAdapterDiagnosticProof({
     };
 }
 
+export function createProductionGrassAdapterDiagnosticProof({
+    scene,
+    sceneBinding,
+    heightTexture,
+    grassFactories,
+    three = null,
+}) {
+    const sourceScene = getSceneById(DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.sceneId)
+        ?? getSceneById(DEFAULT_SCENE_ID);
+    const heightfield = createDiagnosticHeightfieldFromTexture(heightTexture);
+    heightfield.bakeMeshGrid({ segments: 256, size: 3200 });
+    const grass = new GrassSystem(scene, false, sourceScene?.grass ?? null, heightfield, sourceScene?.boundary ?? null, {
+        search: '?renderer=webgpu&konveyorGrass=1',
+        konveyorGrassFactories: grassFactories,
+    });
+
+    grass.noiseTexture = grass.createNoiseTexture();
+    grass.grassMaterial = grass.createGrassMaterial();
+    grass.clumpGeometry = grass.createClumpGeometry();
+    const chunkCenters = [[0, 0], [-30, 0], [30, 0], [0, -30], [0, 30]];
+    let bladeChunk = null;
+    for (let i = 0; i < chunkCenters.length && !bladeChunk; i++) {
+        const [centerX, centerZ] = chunkCenters[i];
+        bladeChunk = grass.createChunk(i, 0, centerX - 5, centerZ - 5, centerX + 5, centerZ + 5, 12);
+    }
+    if (bladeChunk?.mesh) {
+        grass.chunks.set('diagnostic-blade', bladeChunk);
+        bladeChunk.mesh.position.set(1.62, -1.08, 0.24);
+        bladeChunk.mesh.scale.setScalar(0.055);
+        bladeChunk.mesh.frustumCulled = false;
+        bladeChunk.mesh.renderOrder = 3;
+    }
+
+    const meadowMaterial = grass.createMeadowQuadMaterial();
+    let meadowMesh = null;
+    if (three?.Mesh && three?.PlaneGeometry) {
+        meadowMesh = new three.Mesh(new three.PlaneGeometry(1.1, 0.48, 1, 1), meadowMaterial);
+        meadowMesh.position.set(1.46, -0.58, 0.11);
+        meadowMesh.frustumCulled = false;
+        meadowMesh.renderOrder = 2;
+        scene.add(meadowMesh);
+    }
+
+    const bladeSummary = grass.konveyorGrassBladeMaterialSummary ?? grass.grassMaterial?.userData?.konveyorGrassBladeMaterialSummary ?? null;
+    const meadowSummary = grass.konveyorMeadowQuadMaterialSummary ?? null;
+    const bladeData = grass.clumpGeometry?.attributes?.bladeData ?? null;
+    const checks = {
+        bladeFactoryApplied: bladeSummary?.applied === true,
+        meadowFactoryApplied: meadowSummary?.applied === true,
+        bladeNodeMaterial: grass.grassMaterial?.name === 'konveyor-node-grass-blade'
+            && grass.grassMaterial?.isNodeMaterial === true,
+        meadowNodeMaterial: meadowMaterial?.name === 'konveyor-node-meadow-quad'
+            && meadowMaterial?.isNodeMaterial === true,
+        clumpGeometryBound: grass.clumpGeometry?.type === 'BufferGeometry'
+            && grass.clumpGeometry?.attributes?.position?.count === grass.config.bladesPerClump * 4
+            && bladeData?.itemSize === 4,
+        bladeChunkInstanced: bladeChunk?.mesh?.isInstancedMesh === true
+            && bladeChunk.mesh.count > 0
+            && bladeChunk.mesh.count <= 12
+            && scene.children.includes(bladeChunk.mesh),
+        sourceHeightfieldMatchesTexture: heightfield.width === heightTexture.userData.konveyorHeightfield.size[0]
+            && heightfield.height === heightTexture.userData.konveyorHeightfield.size[1]
+            && heightfield.worldSize === heightTexture.userData.konveyorHeightfield.worldSize
+            && heightfield.peakHeight === heightTexture.userData.konveyorHeightfield.peakHeight,
+        meshGridBound: heightfield.displacedHeights?.length === 66049,
+        disposeCallable: typeof grass.dispose === 'function',
+    };
+
+    const dispose = () => {
+        if (meadowMesh) {
+            scene.remove(meadowMesh);
+            meadowMesh.geometry?.dispose?.();
+            meadowMesh = null;
+        }
+        meadowMaterial?.dispose?.();
+        grass.dispose();
+    };
+
+    return {
+        grass,
+        bladeChunk,
+        meadowMaterial,
+        meadowMesh,
+        dispose,
+        proof: {
+            source: 'production-grasssystem-material-and-chunk-constructors-with-webgpu-node-factories',
+            sceneId: sceneBinding?.sceneId ?? null,
+            grassSourceSceneId: sourceScene?.id ?? null,
+            blade: {
+                materialName: grass.grassMaterial?.name ?? null,
+                isNodeMaterial: grass.grassMaterial?.isNodeMaterial === true,
+                summary: bladeSummary,
+            },
+            meadow: {
+                materialName: meadowMaterial?.name ?? null,
+                isNodeMaterial: meadowMaterial?.isNodeMaterial === true,
+                summary: meadowSummary,
+                meshPresent: !!meadowMesh && scene.children.includes(meadowMesh),
+            },
+            geometry: {
+                bladesPerClump: grass.config.bladesPerClump,
+                vertices: grass.clumpGeometry?.attributes?.position?.count ?? null,
+                triangles: grass.clumpGeometry?.index?.count
+                    ? grass.clumpGeometry.index.count / 3
+                    : null,
+                bladeDataItemSize: bladeData?.itemSize ?? null,
+                bladeDataCount: bladeData?.count ?? null,
+            },
+            chunk: {
+                isInstancedMesh: bladeChunk?.mesh?.isInstancedMesh === true,
+                instanceCount: bladeChunk?.mesh?.count ?? null,
+                fullCount: bladeChunk?.fullCount ?? null,
+                clumpCount: bladeChunk?.clumpCount ?? null,
+                frustumCulled: bladeChunk?.mesh?.frustumCulled ?? null,
+                scale: bladeChunk?.mesh?.scale?.x ?? null,
+            },
+            heightfield: {
+                sceneId: heightfield.sceneId,
+                source: heightfield.source,
+                size: [heightfield.width, heightfield.height],
+                worldSize: heightfield.worldSize,
+                peakHeight: heightfield.peakHeight,
+                waterY: heightfield.waterY,
+                rawArrayType: heightfield.getRawArray()?.constructor?.name ?? null,
+                rawArrayLength: heightfield.getRawArray()?.length ?? null,
+                meshGridLength: heightfield.displacedHeights?.length ?? null,
+            },
+            checks,
+            ok: Object.values(checks).every(Boolean),
+        },
+    };
+}
+
 export function createRockRimDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
     return {
         baseColor: [0.34, 0.32, 0.27],
@@ -829,7 +963,7 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter', 'production-atmosphere-adapter', 'production-water-adapter', 'production-terrain-adapter'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'sheep-wool', 'kiln-impostor', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview', 'production-effect-adapter', 'production-atmosphere-adapter', 'production-water-adapter', 'production-terrain-adapter', 'production-grass-adapter'],
         sceneBinding,
         skyPreset,
         skyFog,
@@ -852,6 +986,7 @@ export async function bootWebGpuDiagnostic() {
         productionAtmosphereAdapter: null,
         productionWaterAdapter: null,
         productionTerrainAdapter: null,
+        productionGrassAdapter: null,
         factorySuite: null,
         frames: 0,
     };
@@ -1131,6 +1266,17 @@ export async function bootWebGpuDiagnostic() {
     if (!state.productionTerrainAdapter.ok) {
         return fail('production terrain adapter proof failed');
     }
+    const productionGrassProof = createProductionGrassAdapterDiagnosticProof({
+        scene,
+        sceneBinding,
+        heightTexture: waterHeightTexture,
+        grassFactories,
+        three: { Mesh, PlaneGeometry },
+    });
+    state.productionGrassAdapter = productionGrassProof.proof;
+    if (!state.productionGrassAdapter.ok) {
+        return fail('production grass adapter proof failed');
+    }
     const water = new Mesh(
         new PlaneGeometry(2.0, 0.62, 1, 1),
         waterFactories.createAnimeWaterMaterial({
@@ -1279,6 +1425,7 @@ export async function bootWebGpuDiagnostic() {
         productionAtmosphereProof.atmosphere.dispose();
         productionWaterProof.water.dispose();
         productionTerrainProof.builder.dispose();
+        productionGrassProof.dispose();
         renderer.dispose();
         sun.geometry.dispose();
         sun.material.dispose();

@@ -29,6 +29,7 @@ const REQUIRED_ISLANDS = Object.freeze([
   'production-atmosphere-adapter',
   'production-water-adapter',
   'production-terrain-adapter',
+  'production-grass-adapter',
 ]);
 
 const SAMPLE_REGIONS = Object.freeze({

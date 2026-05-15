@@ -1,0 +1,273 @@
+{
+  "capturedAt": "2026-05-15T09:39:35.122Z",
+  "source": "Konveyor production GrassSystem material and chunk adapter proof",
+  "manifest": "cycle36-validation/runtime/scene-sky-screenshots/manifest.json",
+  "crossSceneChecks": {
+    "sceneSetMatchesShippingScenes": true,
+    "manifestOk": true
+  },
+  "scenes": [
+    {
+      "sceneId": "field",
+      "productionGrassAdapter": {
+        "source": "production-grasssystem-material-and-chunk-constructors-with-webgpu-node-factories",
+        "sceneId": "field",
+        "grassSourceSceneId": "rolling-hills",
+        "blade": {
+          "materialName": "konveyor-node-grass-blade",
+          "isNodeMaterial": true,
+          "summary": {
+            "kind": "grass-blade",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          }
+        },
+        "meadow": {
+          "materialName": "konveyor-node-meadow-quad",
+          "isNodeMaterial": true,
+          "summary": {
+            "kind": "meadow-quad",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "meshPresent": true
+        },
+        "geometry": {
+          "bladesPerClump": 7,
+          "vertices": 28,
+          "triangles": 28,
+          "bladeDataItemSize": 4,
+          "bladeDataCount": 28
+        },
+        "chunk": {
+          "isInstancedMesh": true,
+          "instanceCount": 12,
+          "fullCount": 12,
+          "clumpCount": 12,
+          "frustumCulled": false,
+          "scale": 0.055
+        },
+        "heightfield": {
+          "sceneId": "rolling-hills",
+          "source": "/terrain/rolling-hills.bin",
+          "size": [
+            1024,
+            1024
+          ],
+          "worldSize": 500,
+          "peakHeight": 6,
+          "waterY": -0.05,
+          "rawArrayType": "Float32Array",
+          "rawArrayLength": 1048576,
+          "meshGridLength": 66049
+        },
+        "checks": {
+          "bladeFactoryApplied": true,
+          "meadowFactoryApplied": true,
+          "bladeNodeMaterial": true,
+          "meadowNodeMaterial": true,
+          "clumpGeometryBound": true,
+          "bladeChunkInstanced": true,
+          "sourceHeightfieldMatchesTexture": true,
+          "meshGridBound": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
+      "checks": {
+        "rendererMode": true,
+        "sceneBinding": true,
+        "diagnosticOk": true,
+        "productionGrassOk": true,
+        "proofSceneMatches": true,
+        "grassSourcePinnedToHeightfieldScene": true,
+        "bladeFactoryApplied": true,
+        "meadowFactoryApplied": true,
+        "bladeNodeMaterial": true,
+        "meadowNodeMaterial": true,
+        "clumpGeometry": true,
+        "chunkInstanced": true,
+        "heightfieldBacked": true,
+        "checksPassed": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "rolling-hills",
+      "productionGrassAdapter": {
+        "source": "production-grasssystem-material-and-chunk-constructors-with-webgpu-node-factories",
+        "sceneId": "rolling-hills",
+        "grassSourceSceneId": "rolling-hills",
+        "blade": {
+          "materialName": "konveyor-node-grass-blade",
+          "isNodeMaterial": true,
+          "summary": {
+            "kind": "grass-blade",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          }
+        },
+        "meadow": {
+          "materialName": "konveyor-node-meadow-quad",
+          "isNodeMaterial": true,
+          "summary": {
+            "kind": "meadow-quad",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "meshPresent": true
+        },
+        "geometry": {
+          "bladesPerClump": 7,
+          "vertices": 28,
+          "triangles": 28,
+          "bladeDataItemSize": 4,
+          "bladeDataCount": 28
+        },
+        "chunk": {
+          "isInstancedMesh": true,
+          "instanceCount": 12,
+          "fullCount": 12,
+          "clumpCount": 12,
+          "frustumCulled": false,
+          "scale": 0.055
+        },
+        "heightfield": {
+          "sceneId": "rolling-hills",
+          "source": "/terrain/rolling-hills.bin",
+          "size": [
+            1024,
+            1024
+          ],
+          "worldSize": 500,
+          "peakHeight": 6,
+          "waterY": -0.05,
+          "rawArrayType": "Float32Array",
+          "rawArrayLength": 1048576,
+          "meshGridLength": 66049
+        },
+        "checks": {
+          "bladeFactoryApplied": true,
+          "meadowFactoryApplied": true,
+          "bladeNodeMaterial": true,
+          "meadowNodeMaterial": true,
+          "clumpGeometryBound": true,
+          "bladeChunkInstanced": true,
+          "sourceHeightfieldMatchesTexture": true,
+          "meshGridBound": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
+      "checks": {
+        "rendererMode": true,
+        "sceneBinding": true,
+        "diagnosticOk": true,
+        "productionGrassOk": true,
+        "proofSceneMatches": true,
+        "grassSourcePinnedToHeightfieldScene": true,
+        "bladeFactoryApplied": true,
+        "meadowFactoryApplied": true,
+        "bladeNodeMaterial": true,
+        "meadowNodeMaterial": true,
+        "clumpGeometry": true,
+        "chunkInstanced": true,
+        "heightfieldBacked": true,
+        "checksPassed": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "open-country",
+      "productionGrassAdapter": {
+        "source": "production-grasssystem-material-and-chunk-constructors-with-webgpu-node-factories",
+        "sceneId": "open-country",
+        "grassSourceSceneId": "rolling-hills",
+        "blade": {
+          "materialName": "konveyor-node-grass-blade",
+          "isNodeMaterial": true,
+          "summary": {
+            "kind": "grass-blade",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          }
+        },
+        "meadow": {
+          "materialName": "konveyor-node-meadow-quad",
+          "isNodeMaterial": true,
+          "summary": {
+            "kind": "meadow-quad",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "meshPresent": true
+        },
+        "geometry": {
+          "bladesPerClump": 7,
+          "vertices": 28,
+          "triangles": 28,
+          "bladeDataItemSize": 4,
+          "bladeDataCount": 28
+        },
+        "chunk": {
+          "isInstancedMesh": true,
+          "instanceCount": 12,
+          "fullCount": 12,
+          "clumpCount": 12,
+          "frustumCulled": false,
+          "scale": 0.055
+        },
+        "heightfield": {
+          "sceneId": "rolling-hills",
+          "source": "/terrain/rolling-hills.bin",
+          "size": [
+            1024,
+            1024
+          ],
+          "worldSize": 500,
+          "peakHeight": 6,
+          "waterY": -0.05,
+          "rawArrayType": "Float32Array",
+          "rawArrayLength": 1048576,
+          "meshGridLength": 66049
+        },
+        "checks": {
+          "bladeFactoryApplied": true,
+          "meadowFactoryApplied": true,
+          "bladeNodeMaterial": true,
+          "meadowNodeMaterial": true,
+          "clumpGeometryBound": true,
+          "bladeChunkInstanced": true,
+          "sourceHeightfieldMatchesTexture": true,
+          "meshGridBound": true,
+          "disposeCallable": true
+        },
+        "ok": true
+      },
+      "checks": {
+        "rendererMode": true,
+        "sceneBinding": true,
+        "diagnosticOk": true,
+        "productionGrassOk": true,
+        "proofSceneMatches": true,
+        "grassSourcePinnedToHeightfieldScene": true,
+        "bladeFactoryApplied": true,
+        "meadowFactoryApplied": true,
+        "bladeNodeMaterial": true,
+        "meadowNodeMaterial": true,
+        "clumpGeometry": true,
+        "chunkInstanced": true,
+        "heightfieldBacked": true,
+        "checksPassed": true
+      },
+      "ok": true
+    }
+  ],
+  "ok": true
+}
