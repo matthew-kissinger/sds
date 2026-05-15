@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:04:41.257Z",
+  "capturedAt": "2026-05-15T00:07:26.073Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -85,6 +85,7 @@
       "rock-rim",
       "tree-leaf",
       "anime-water",
+      "terrain-heightfield",
       "glb-material-replacement",
       "runtime-glb-material-proof",
       "runtime-glb-rendered-clones",
@@ -202,6 +203,37 @@
       },
       "rippleStrength": 1,
       "sparkleStrength": 0.7,
+      "heightfieldSampling": "diagnostic-data-texture"
+    },
+    "terrainHeightfield": {
+      "source": "/terrain/rolling-hills.bin",
+      "sceneId": "rolling-hills",
+      "size": [
+        1024,
+        1024
+      ],
+      "worldSize": 500,
+      "peakHeight": 6,
+      "lowColor": [
+        0.29,
+        0.38,
+        0.18
+      ],
+      "midColor": [
+        0.43,
+        0.55,
+        0.25
+      ],
+      "highColor": [
+        0.56,
+        0.53,
+        0.42
+      ],
+      "fogColor": [
+        0.2933,
+        0.1629,
+        0.1348
+      ],
       "heightfieldSampling": "diagnostic-data-texture"
     },
     "treeLeaf": {

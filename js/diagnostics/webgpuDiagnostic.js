@@ -244,6 +244,21 @@ export function createAnimeWaterDiagnosticState(skyFog = createSkyFogDiagnosticS
     };
 }
 
+export function createTerrainHeightfieldDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
+    return {
+        source: DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.binUrl,
+        sceneId: DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.sceneId,
+        size: [1024, 1024],
+        worldSize: 500,
+        peakHeight: 6,
+        lowColor: [0.29, 0.38, 0.18],
+        midColor: [0.43, 0.55, 0.25],
+        highColor: [0.56, 0.53, 0.42],
+        fogColor: skyFog.fogColor,
+        heightfieldSampling: 'diagnostic-data-texture',
+    };
+}
+
 export function createTreeLeafDiagnosticState() {
     return {
         baseColor: [0.18, 0.34, 0.12],
@@ -351,6 +366,34 @@ function createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }
     return material;
 }
 
+function createTerrainHeightfieldNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, terrain, heightTexture) {
+    const { float, mix, smoothstep, texture, uv, vec3 } = TSL;
+    const groundUv = uv();
+    const heightMeters = texture(heightTexture, groundUv).r.mul(terrain.peakHeight);
+    const midBlend = smoothstep(0.45, 2.4, heightMeters);
+    const highBlend = smoothstep(2.2, 5.0, heightMeters);
+    const baseColor = mix(
+        mix(vec3(...terrain.lowColor), vec3(...terrain.midColor), midBlend),
+        vec3(...terrain.highColor),
+        highBlend
+    );
+    const fogBlend = smoothstep(0.72, 1.0, groundUv.y).mul(0.42);
+
+    const material = new MeshLambertNodeMaterial();
+    material.name = 'konveyor-node-terrain-heightfield';
+    material.colorNode = mix(baseColor.mul(float(0.92)), vec3(...terrain.fogColor), fogBlend);
+    material.side = DoubleSide;
+    return material;
+}
+
+function syncDiagnosticHeightfieldState(target, heightfield) {
+    target.source = heightfield.source;
+    target.sceneId = heightfield.sceneId;
+    target.size = heightfield.size;
+    target.worldSize = heightfield.worldSize;
+    target.peakHeight = heightfield.peakHeight;
+}
+
 function createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog) {
     const { float, length, mix, pow, smoothstep, uv, vec2, vec3 } = TSL;
     const skyUv = uv();
@@ -450,6 +493,7 @@ export async function bootWebGpuDiagnostic() {
     const skyFog = createSkyFogDiagnosticState();
     const rockRim = createRockRimDiagnosticState(skyFog);
     const animeWater = createAnimeWaterDiagnosticState(skyFog);
+    const terrainHeightfield = createTerrainHeightfieldDiagnosticState(skyFog);
     const treeLeaf = createTreeLeafDiagnosticState();
     const state = window.__sdsG = {
         ...(window.__sdsG || {}),
@@ -457,10 +501,11 @@ export async function bootWebGpuDiagnostic() {
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'anime-water', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
         skyFog,
         rockRim,
         animeWater,
+        terrainHeightfield,
         treeLeaf,
         materialReplacement: null,
         runtimeGlbReplacement: null,
@@ -663,12 +708,20 @@ export async function bootWebGpuDiagnostic() {
         ClampToEdgeWrapping,
     });
     animeWater.heightfieldTexture = waterHeightTexture.userData.konveyorHeightfield;
+    syncDiagnosticHeightfieldState(terrainHeightfield, waterHeightTexture.userData.konveyorHeightfield);
     const water = new Mesh(
         new PlaneGeometry(2.0, 0.62, 1, 1),
         createAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, animeWater, waterHeightTexture)
     );
     water.position.set(0.0, -1.16, 0.09);
     scene.add(water);
+
+    const terrainPatch = new Mesh(
+        new PlaneGeometry(2.15, 0.72, 1, 1),
+        createTerrainHeightfieldNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, terrainHeightfield, waterHeightTexture)
+    );
+    terrainPatch.position.set(0.0, -0.34, 0.08);
+    scene.add(terrainPatch);
 
     const cloudPlane = new Mesh(
         new PlaneGeometry(2.4, 0.65, 1, 1),
@@ -718,6 +771,8 @@ export async function bootWebGpuDiagnostic() {
         meadow.material.dispose();
         water.geometry.dispose();
         water.material.dispose();
+        terrainPatch.geometry.dispose();
+        terrainPatch.material.dispose();
         waterHeightTexture.dispose();
         cloudPlane.geometry.dispose();
         cloudPlane.material.dispose();

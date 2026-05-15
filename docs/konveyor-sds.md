@@ -54,8 +54,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   rock-rim fresnel formula, a tree-leaf wind/alpha/occluder proxy, and a
   diagnostic anime-water material covering palette, shoreline bands, foam,
   ripples, sun glint, fog input, and a non-filtered float texture loaded from
-  the real Rolling Hills heightfield. Production Rolling Hills/Open Country
-  replacement remains deferred before water wiring. A
+  the real Rolling Hills heightfield. A terrain-heightfield diagnostic material
+  reuses that texture for height-based ground color and fog input. Production
+  Rolling Hills/Open Country replacement remains deferred before water/terrain
+  wiring. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
   material ownership proof now shows that tree LOD0/LOD1 assets can be addressed
