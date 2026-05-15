@@ -8,6 +8,7 @@ import {
   shouldApplyKonveyorMaterials,
 } from '../js/world/konveyorMaterialAdapter.js';
 import { TerrainBuilder } from '../js/TerrainBuilder.js';
+import { createKonveyorTreeBranchNodeMaterial } from '../js/world/konveyorTreeBranchNodeMaterial.js';
 import { createKonveyorTreeLeafNodeMaterial } from '../js/world/konveyorTreeLeafNodeMaterial.js';
 
 function mesh(materialName) {
@@ -97,7 +98,7 @@ describe('konveyor production material adapter', () => {
     expect(builder.models.rocks.rock1.children[0].material.name).toBe('konveyor-rock');
   });
 
-  it('can route tree leaves through the reusable WebGPU node material candidate', () => {
+  it('can route tree branches and leaves through reusable WebGPU node material candidates', () => {
     const branchMaterial = new THREE.MeshBasicMaterial({ name: 'branches' });
     const leafMaterial = new THREE.MeshBasicMaterial({ name: 'leaves' });
     const rockMaterial = new THREE.MeshBasicMaterial({ name: '' });
@@ -115,7 +116,18 @@ describe('konveyor production material adapter', () => {
       trees: { tree1: tree },
       treesLod1: {},
       rocks: { rock1: rock },
-      createTreeBranchMaterial: ({ previous }) => new THREE.MeshBasicMaterial({ name: `konveyor-${previous.name}` }),
+      createTreeBranchMaterial: ({ previous }) => createKonveyorTreeBranchNodeMaterial(
+        { MeshStandardNodeMaterial, TSL },
+        {
+          baseColor: [0.20, 0.11, 0.055],
+          roughness: 0.94,
+          metalness: 0.0,
+          side: previous.side,
+          transparent: previous.transparent,
+          depthWrite: previous.depthWrite,
+          depthTest: previous.depthTest,
+        }
+      ),
       createTreeLeafMaterial: ({ previous }) => createKonveyorTreeLeafNodeMaterial(
         { MeshStandardNodeMaterial, DoubleSide, TSL },
         {
@@ -139,9 +151,19 @@ describe('konveyor production material adapter', () => {
       createRockMaterial: () => new THREE.MeshBasicMaterial({ name: 'konveyor-rock' }),
     });
 
+    const branches = tree.children[0].material;
     const leaves = tree.children[1].material;
     try {
       expect(summary.ok).toBe(true);
+      expect(branches.name).toBe('konveyor-node-branches');
+      expect(branches.isNodeMaterial).toBe(true);
+      expect(branches.isMeshStandardNodeMaterial).toBe(true);
+      expect(branches.colorNode).toBeTruthy();
+      expect(branches.roughnessNode).toBeTruthy();
+      expect(branches.metalnessNode).toBeTruthy();
+      expect(branches.transparent).toBe(false);
+      expect(branches.depthWrite).toBe(true);
+      expect(branches.depthTest).toBe(true);
       expect(leaves.name).toBe('konveyor-node-leaves');
       expect(leaves.isNodeMaterial).toBe(true);
       expect(leaves.isMeshStandardNodeMaterial).toBe(true);

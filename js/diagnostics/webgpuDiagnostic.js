@@ -18,6 +18,7 @@ import { createKonveyorCloudLayerNodeMaterial } from '../atmosphere/konveyorClou
 import { createKonveyorGrassBladeNodeMaterial } from '../world/konveyorGrassBladeNodeMaterial.js';
 import { createKonveyorMeadowQuadNodeMaterial } from '../world/konveyorMeadowQuadNodeMaterial.js';
 import { createKonveyorTerrainHeightfieldNodeMaterial } from '../world/konveyorTerrainNodeMaterial.js';
+import { createKonveyorTreeBranchNodeMaterial } from '../world/konveyorTreeBranchNodeMaterial.js';
 import { createKonveyorTreeLeafNodeMaterial } from '../world/konveyorTreeLeafNodeMaterial.js';
 import { createKonveyorAnimeWaterNodeMaterial } from '../water/konveyorAnimeWaterNodeMaterial.js';
 import {
@@ -574,16 +575,6 @@ function createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim) {
     return material;
 }
 
-function createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }) {
-    const { float, vec3 } = TSL;
-    const material = new MeshStandardNodeMaterial();
-    material.name = 'konveyor-node-branches';
-    material.colorNode = vec3(0.20, 0.11, 0.055);
-    material.roughnessNode = float(0.94);
-    material.metalnessNode = float(0.0);
-    return material;
-}
-
 export async function bootWebGpuDiagnostic() {
     const sceneBinding = resolveDiagnosticScene(window.location.search);
     const skyPreset = resolveDiagnosticSkyPreset(window.location.search, sceneBinding.skyPresetName);
@@ -765,7 +756,7 @@ export async function bootWebGpuDiagnostic() {
     treeLeafMesh.rotation.set(0.0, -0.18, -0.25);
     treeGroup.add(treeLeafMesh);
     const treeReplacement = replaceTreeMaterialsByName(treeGroup, {
-        branches: () => createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
+        branches: () => createKonveyorTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
         leaves: () => createKonveyorTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf),
     });
     treeGroup.position.set(-1.55, 0.33, 0.18);
@@ -790,7 +781,7 @@ export async function bootWebGpuDiagnostic() {
         state.runtimeGlbPreview = await createRuntimeGlbPreview({
             scene,
             three: { Box3, InstancedMesh, Matrix4, Object3D, Vector3 },
-            createTreeBranchMaterial: () => createTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
+            createTreeBranchMaterial: () => createKonveyorTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
             createTreeLeafMaterial: () => createKonveyorTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf),
             createRockMaterial: () => createRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim),
         });

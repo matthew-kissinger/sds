@@ -152,11 +152,12 @@ WebGPU now has a diagnostic island, not a production renderer:
   tree-wind and rock-rim patch chain, reusing the proved tree material-name and
   rock traversal strategies against cached production GLB roots. It still
   leaves the default WebGL `onBeforeCompile` patch path untouched when the flag
-  or factories are absent. The reusable WebGPU tree-leaf node-material
-  candidate now lives in `js/world/konveyorTreeLeafNodeMaterial.js`, and the
-  material adapter spec proves the flagged production seam can route `leaves`
-  through it while default WebGL tree wind and occluder patching remain
-  untouched.
+  or factories are absent. The reusable WebGPU tree branch and leaf
+  node-material candidates now live in
+  `js/world/konveyorTreeBranchNodeMaterial.js` and
+  `js/world/konveyorTreeLeafNodeMaterial.js`, and the material adapter spec
+  proves the flagged production seam can route `branches` and `leaves` through
+  them while default WebGL tree wind and occluder patching remain untouched.
 - A production-facing far-ring meadow material adapter now exists behind
   `?renderer=webgpu&konveyorGrass=1` and an explicit meadow material factory.
   It covers `GrassSystem.createMeadowQuadMaterial`, and the reusable WebGPU
@@ -354,9 +355,9 @@ Recommended order:
    and a diagnostic replacement proof now exist, plus a GLB primitive-clone
    proof, browser runtime fetch proof, and rendered production-GLB clone proof
    against all shipped compressed tree/rock assets. The feature-flagged
-   production adapter seam now exists, and the reusable tree-leaf node-material
-   candidate is now extracted and adapter-spec-covered for flagged `leaves`
-   replacement. The first tree-placement diagnostic
+   production adapter seam now exists, and the reusable tree branch/leaf
+   node-material candidates are now extracted and adapter-spec-covered for
+   flagged `branches`/`leaves` replacement. The first tree-placement diagnostic
    proof now samples Rolling Hills production scene data through the shared
    tree placement generator, renders adapter-backed WebGPU tree GLB samples,
    and proves a LOD0-only WebGPU `THREE.InstancedMesh` path for the same
