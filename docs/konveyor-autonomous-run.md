@@ -180,9 +180,12 @@ WebGPU now has a diagnostic island, not a production renderer:
   `?renderer=webgpu&konveyorTerrain=1` and an explicit terrain material
   factory. It covers only `TerrainBuilder.createTerrain()` material creation
   and passes the current terrain size, segment count, heightfield metadata,
-  terrain colors, procedural-noise constants, fog, side, and polygon-offset
-  contract to the factory. Default WebGL terrain still uses the existing
-  `ShaderMaterial` with Three fog chunks.
+  lazy height-texture creation, terrain colors, procedural-noise constants,
+  fog, side, and polygon-offset contract to the factory. The reusable
+  heightfield-backed WebGPU terrain node-material candidate now lives in
+  `js/world/konveyorTerrainNodeMaterial.js`, and the terrain adapter spec
+  proves the flagged production seam can route through it. Default WebGL
+  terrain still uses the existing `ShaderMaterial` with Three fog chunks.
 - A production-facing `OptimizedSheep` material adapter now exists behind
   `?renderer=webgpu&konveyorSheep=1` and an explicit sheep material factory.
   It covers only `OptimizedSheepSystem.createOptimizedMaterial()` material

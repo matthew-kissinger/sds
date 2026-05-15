@@ -155,9 +155,12 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   heightfield foam, ripples, sparkles, and fog. A
   production-facing terrain-ground material adapter now exists behind
   `?renderer=webgpu&konveyorTerrain=1` plus an explicit terrain factory. It
-  passes terrain size, segment count, heightfield metadata, color constants,
-  noise constants, fog, side, and polygon-offset posture to the factory while
-  default WebGL still uses the existing terrain `ShaderMaterial`. A
+  passes terrain size, segment count, heightfield metadata, lazy height-texture
+  creation, color constants, noise constants, fog, side, and polygon-offset
+  posture to the factory. The reusable heightfield-backed WebGPU terrain
+  node-material candidate now lives in `js/world/konveyorTerrainNodeMaterial.js`,
+  and the adapter spec proves the flagged production seam can route through it.
+  Default WebGL still uses the existing terrain `ShaderMaterial`. A
   production-facing `OptimizedSheep` material adapter now exists behind
   `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory. It can
   hand time/fog update ownership to factory controls, while default WebGL

@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { DoubleSide, MeshLambertNodeMaterial, TSL } from 'three/webgpu';
 
 import { TerrainBuilder } from '../js/TerrainBuilder.js';
 import {
     createKonveyorTerrainMaterial,
     shouldApplyKonveyorTerrain,
 } from '../js/world/konveyorTerrainMaterialAdapter.js';
+import { createKonveyorTerrainHeightfieldNodeMaterial } from '../js/world/konveyorTerrainNodeMaterial.js';
 
 function createMaterial(name) {
     const material = new THREE.MeshBasicMaterial();
@@ -13,11 +15,29 @@ function createMaterial(name) {
     return material;
 }
 
+function createHeightfield() {
+    const width = 17;
+    const height = 17;
+    const data = new Float32Array(width * height);
+    for (let i = 0; i < data.length; i++) {
+        data[i] = (i % width) / width;
+    }
+    return {
+        width,
+        height,
+        worldSize: 400,
+        peakHeight: 6,
+        getRawArray: () => data,
+        bakeMeshGrid: ({ segments }) => new Float32Array((segments + 1) * (segments + 1)),
+    };
+}
+
 function disposeTerrain(builder) {
     const terrain = builder.terrainMesh;
     if (!terrain) return;
     if (terrain.parent) terrain.parent.remove(terrain);
     terrain.geometry?.dispose?.();
+    terrain.material?.userData?.heightTexture?.dispose?.();
     terrain.material?.dispose?.();
     builder.terrainMesh = null;
 }
@@ -84,6 +104,7 @@ describe('konveyor terrain material adapter', () => {
             expect(contexts[0].segments).toBe(256);
             expect(contexts[0].isMobile).toBe(true);
             expect(contexts[0].hasHeightfield).toBe(true);
+            expect(typeof contexts[0].createHeightTexture).toBe('function');
             expect(contexts[0].heightfield).toMatchObject({
                 width: 17,
                 height: 17,
@@ -99,6 +120,67 @@ describe('konveyor terrain material adapter', () => {
                 factor: 1,
                 units: 1,
             });
+        } finally {
+            disposeTerrain(builder);
+        }
+    });
+
+    it('can route terrain ground through the reusable WebGPU node material candidate', () => {
+        const contexts = [];
+        const scene = new THREE.Scene();
+        const builder = new TerrainBuilder(scene, false, null, {
+            search: '?renderer=webgpu&konveyorTerrain=1',
+            konveyorTerrainFactories: {
+                createTerrainMaterial: (context) => {
+                    contexts.push(context);
+                    const heightTexture = context.createHeightTexture();
+                    const material = createKonveyorTerrainHeightfieldNodeMaterial(
+                        { MeshLambertNodeMaterial, DoubleSide, TSL },
+                        {
+                            lowColor: context.colors.baseColor1.toArray(),
+                            midColor: context.colors.baseColor2.toArray(),
+                            highColor: context.colors.baseColor3.toArray(),
+                            fogColor: [0.2933, 0.1629, 0.1348],
+                            peakHeight: context.heightfield.peakHeight,
+                            side: context.side,
+                            polygonOffset: context.polygonOffset,
+                        },
+                        heightTexture
+                    );
+                    material.userData.heightTexture = heightTexture;
+                    return material;
+                },
+            },
+        });
+        builder.setHeightfield(createHeightfield());
+
+        const terrain = builder.createTerrain();
+        try {
+            expect(terrain.material.name).toBe('konveyor-node-terrain-heightfield');
+            expect(terrain.material.isMeshLambertNodeMaterial).toBe(true);
+            expect(terrain.material.isNodeMaterial).toBe(true);
+            expect(terrain.material.side).toBe(THREE.FrontSide);
+            expect(terrain.material.colorNode).toBeTruthy();
+            expect(terrain.material.polygonOffset).toBe(true);
+            expect(terrain.material.polygonOffsetFactor).toBe(1);
+            expect(terrain.material.polygonOffsetUnits).toBe(1);
+            expect(builder.konveyorTerrainMaterialSummary).toMatchObject({
+                kind: 'terrain-ground',
+                applied: true,
+            });
+            expect(contexts).toHaveLength(1);
+            expect(contexts[0].hasHeightfield).toBe(true);
+            expect(contexts[0].heightfield).toMatchObject({
+                width: 17,
+                height: 17,
+                worldSize: 400,
+                peakHeight: 6,
+            });
+            expect(terrain.material.userData.heightTexture.isDataTexture).toBe(true);
+            expect(terrain.material.userData.heightTexture.format).toBe(THREE.RedFormat);
+            expect(terrain.material.userData.heightTexture.type).toBe(THREE.FloatType);
+            expect(terrain.material.userData.heightTexture.magFilter).toBe(THREE.LinearFilter);
+            expect(terrain.material.userData.heightTexture.minFilter).toBe(THREE.LinearFilter);
         } finally {
             disposeTerrain(builder);
         }

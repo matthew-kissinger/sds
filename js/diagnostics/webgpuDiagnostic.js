@@ -16,6 +16,7 @@ import {
 import { createKonveyorSkyFogNodeMaterial } from '../atmosphere/konveyorSkyNodeMaterial.js';
 import { createKonveyorCloudLayerNodeMaterial } from '../atmosphere/konveyorCloudNodeMaterial.js';
 import { createKonveyorMeadowQuadNodeMaterial } from '../world/konveyorMeadowQuadNodeMaterial.js';
+import { createKonveyorTerrainHeightfieldNodeMaterial } from '../world/konveyorTerrainNodeMaterial.js';
 import { createKonveyorAnimeWaterNodeMaterial } from '../water/konveyorAnimeWaterNodeMaterial.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
@@ -525,26 +526,6 @@ async function createDiagnosticKilnImpostorAssets({
         loadTexture(`${DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.basePath}.depth.png`, NoColorSpace),
     ]);
     return { sidecar, albedoAtlas, normalAtlas, depthAtlas };
-}
-
-function createTerrainHeightfieldNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, terrain, heightTexture) {
-    const { float, mix, smoothstep, texture, uv, vec3 } = TSL;
-    const groundUv = uv();
-    const heightMeters = texture(heightTexture, groundUv).r.mul(terrain.peakHeight);
-    const midBlend = smoothstep(0.45, 2.4, heightMeters);
-    const highBlend = smoothstep(2.2, 5.0, heightMeters);
-    const baseColor = mix(
-        mix(vec3(...terrain.lowColor), vec3(...terrain.midColor), midBlend),
-        vec3(...terrain.highColor),
-        highBlend
-    );
-    const fogBlend = smoothstep(0.72, 1.0, groundUv.y).mul(0.42);
-
-    const material = new MeshLambertNodeMaterial();
-    material.name = 'konveyor-node-terrain-heightfield';
-    material.colorNode = mix(baseColor.mul(float(0.92)), vec3(...terrain.fogColor), fogBlend);
-    material.side = DoubleSide;
-    return material;
 }
 
 function syncDiagnosticHeightfieldState(target, heightfield) {
@@ -1081,7 +1062,7 @@ export async function bootWebGpuDiagnostic() {
 
     const terrainPatch = new Mesh(
         new PlaneGeometry(2.15, 0.72, 1, 1),
-        createTerrainHeightfieldNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, terrainHeightfield, waterHeightTexture)
+        createKonveyorTerrainHeightfieldNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, terrainHeightfield, waterHeightTexture)
     );
     terrainPatch.position.set(0.0, -0.34, 0.08);
     scene.add(terrainPatch);

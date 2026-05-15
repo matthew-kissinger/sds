@@ -52,6 +52,23 @@ import {
 } from './world/sandbox.js';
 import { createKonveyorTerrainMaterial } from './world/konveyorTerrainMaterialAdapter.js';
 
+function createKonveyorTerrainHeightTexture(heightfield) {
+    const texture = new THREE.DataTexture(
+        heightfield.getRawArray(),
+        heightfield.width,
+        heightfield.height,
+        THREE.RedFormat,
+        THREE.FloatType,
+    );
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+    return texture;
+}
+
 /**
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements.
  * Scene-aware: when a SceneDef is passed, zones / farm house / grass density come
@@ -841,6 +858,9 @@ export class TerrainBuilder {
                 segments: terrainSegments,
                 isMobile: this.isMobile,
                 hasHeightfield: !!this.heightfield,
+                createHeightTexture: this.heightfield
+                    ? () => createKonveyorTerrainHeightTexture(this.heightfield)
+                    : null,
                 heightfield: this.heightfield ? {
                     width: this.heightfield.width,
                     height: this.heightfield.height,
