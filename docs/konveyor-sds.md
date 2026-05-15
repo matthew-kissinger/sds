@@ -164,6 +164,17 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   Chrome diagnostic render. This is production water constructor proof inside
   the diagnostic renderer; scene-specific production water parity remains
   deferred.
+  `cycle36-validation/runtime/production-terrain-adapter-proof.json` now
+  verifies the real production `TerrainBuilder.createTerrain()` path inside
+  the same WebGPU diagnostic scene for Field, Rolling Hills, and Open Country.
+  Each scene routes terrain material creation through the explicit
+  `?renderer=webgpu&konveyorTerrain=1` factory path, binds the Rolling Hills
+  heightfield-backed `Float32Array`/`DataTexture` packet, bakes the production
+  mobile terrain mesh grid (`66049` vertices), confirms the
+  `konveyor-node-terrain-heightfield` node material, and records a clean
+  installed Chrome diagnostic render. This is production terrain constructor
+  proof inside the diagnostic renderer; scene-specific production terrain
+  parity remains deferred.
   `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
   across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
   full production-scene WebGPU visual parity remains a separate gate. A
@@ -207,7 +218,11 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   posture to the factory. The reusable heightfield-backed WebGPU terrain
   node-material candidate now lives in `js/world/konveyorTerrainNodeMaterial.js`,
   and the adapter spec proves the flagged production seam can route through it.
-  Default WebGL still uses the existing terrain `ShaderMaterial`. A
+  Default WebGL still uses the existing terrain `ShaderMaterial`. The WebGPU
+  diagnostic now also instantiates the real `TerrainBuilder.createTerrain()`
+  path with that factory seam and verifies the heightfield-backed production
+  constructor proof in
+  `cycle36-validation/runtime/production-terrain-adapter-proof.json`. A
   production-facing `OptimizedSheep` material adapter now exists behind
   `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory. It can
   hand time/fog update ownership to factory controls. The reusable WebGPU
@@ -258,7 +273,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=60 KB`,
+  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=63 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
   `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`) for later
   production seams without regenerating the refactor-baseline bundle ratchet. A

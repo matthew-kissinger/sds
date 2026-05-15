@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T09:21:45.502Z",
+  "capturedAt": "2026-05-15T09:27:23.577Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills",
   "platform": "win32",
   "channel": "chrome",
@@ -103,7 +103,8 @@
       "diagnostic-rock-instancing-preview",
       "production-effect-adapter",
       "production-atmosphere-adapter",
-      "production-water-adapter"
+      "production-water-adapter",
+      "production-terrain-adapter"
     ],
     "sceneBinding": {
       "active": true,
@@ -2075,6 +2076,53 @@
         "productionHeightTexture": true,
         "sourceHeightfieldMatchesTexture": true,
         "updateCallable": true,
+        "disposeCallable": true
+      },
+      "ok": true
+    },
+    "productionTerrainAdapter": {
+      "source": "production-terrainbuilder-create-terrain-with-webgpu-node-factory",
+      "sceneId": "rolling-hills",
+      "terrainSourceSceneId": "rolling-hills",
+      "materialName": "konveyor-node-terrain-heightfield",
+      "isNodeMaterial": true,
+      "summary": {
+        "kind": "terrain-ground",
+        "applied": true,
+        "reason": null,
+        "hasControls": false
+      },
+      "mesh": {
+        "name": "",
+        "geometryType": "PlaneGeometry",
+        "vertices": 66049,
+        "size": 3200,
+        "segments": 256,
+        "scale": 0.00045,
+        "frustumCulled": false
+      },
+      "heightfield": {
+        "sceneId": "rolling-hills",
+        "source": "/terrain/rolling-hills.bin",
+        "size": [
+          1024,
+          1024
+        ],
+        "worldSize": 500,
+        "peakHeight": 6,
+        "waterY": -0.05,
+        "rawArrayType": "Float32Array",
+        "rawArrayLength": 1048576,
+        "meshGridLength": 66049
+      },
+      "checks": {
+        "factoryApplied": true,
+        "nodeMaterial": true,
+        "sceneContainsTerrain": true,
+        "meshIsTerrainPlane": true,
+        "productionHeightTexture": true,
+        "sourceHeightfieldMatchesTexture": true,
+        "meshGridBound": true,
         "disposeCallable": true
       },
       "ok": true
