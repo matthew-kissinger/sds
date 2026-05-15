@@ -5,6 +5,7 @@ import {
   createAnimeWaterDiagnosticState,
   createGrassBladeDiagnosticState,
   createRockRimDiagnosticState,
+  createSheepWoolDiagnosticState,
   createSkyFogDiagnosticState,
   createTerrainHeightfieldDiagnosticState,
   createTreeLeafDiagnosticState,
@@ -160,6 +161,25 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(grassBlade.alphaHash).toBe(true);
     expect(grassBlade.interaction).toBe('deferred');
     expect(grassBlade.distanceFade).toBe('deferred');
+  });
+
+  it('keeps the sheep wool diagnostic tied to production sheep shader inputs', () => {
+    const skyFog = createSkyFogDiagnosticState();
+    const sheepWool = createSheepWoolDiagnosticState(skyFog);
+
+    expect(sheepWool.source).toBe('OptimizedSheep.shader-contract');
+    expect(sheepWool.bodyColor).toEqual([1.0, 1.0, 1.0]);
+    expect(sheepWool.faceColor).toEqual([0.22, 0.20, 0.18]);
+    expect(sheepWool.hoofColor).toEqual([0.16, 0.16, 0.16]);
+    expect(sheepWool.lightDirection).toEqual([0.3, 1.0, 0.5]);
+    expect(sheepWool.woolNoiseScale).toBe(6.0);
+    expect(sheepWool.woolDisplacementStrength).toBeGreaterThan(0);
+    expect(sheepWool.breathingStrength).toBeGreaterThan(0);
+    expect(sheepWool.fogColor).toBe(skyFog.fogColor);
+    expect(sheepWool.fogNear).toBe(skyFog.fogNear);
+    expect(sheepWool.fogFar).toBe(skyFog.fogFar);
+    expect(sheepWool.instancing).toBe('deferred');
+    expect(sheepWool.animationAttributes).toEqual(['instanceData', 'instanceAnimation', 'vertexId']);
   });
 });
 

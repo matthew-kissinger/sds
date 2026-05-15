@@ -155,7 +155,11 @@ Recommended order:
    production default gradient colors, analytic wind/gust/flutter displacement,
    alpha-hash posture, and sky/fog handoff while explicitly deferring
    interaction bending, distance fade, production instancing, and compute
-   experiments. The rock-rim TSL prototype covers the smallest `onBeforeCompile`
+   experiments. The sheep-wool diagnostic island now covers toon/wool color,
+   procedural wool displacement, rim/SSS lighting terms, and sky/fog handoff
+   while explicitly deferring production `OptimizedSheep` instancing,
+   animation attributes, terrain grounding, and high-count perf. The rock-rim
+   TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
    and a diagnostic replacement proof now exist, plus a GLB primitive-clone

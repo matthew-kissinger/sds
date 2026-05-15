@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:14:48.211Z",
+  "capturedAt": "2026-05-15T00:18:55.400Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -85,6 +85,7 @@
       "rock-rim",
       "tree-leaf",
       "grass-blade",
+      "sheep-wool",
       "anime-water",
       "terrain-heightfield",
       "glb-material-replacement",
@@ -310,6 +311,55 @@
       "interaction": "deferred",
       "distanceFade": "deferred",
       "source": "GrassSystem.shader-contract"
+    },
+    "sheepWool": {
+      "bodyColor": [
+        1,
+        1,
+        1
+      ],
+      "faceColor": [
+        0.22,
+        0.2,
+        0.18
+      ],
+      "hoofColor": [
+        0.16,
+        0.16,
+        0.16
+      ],
+      "rimColor": [
+        1,
+        1,
+        1
+      ],
+      "sssColor": [
+        1,
+        1,
+        0.98
+      ],
+      "lightDirection": [
+        0.3,
+        1,
+        0.5
+      ],
+      "woolNoiseScale": 6,
+      "woolDisplacementStrength": 0.045,
+      "breathingStrength": 0.012,
+      "fogColor": [
+        0.2933,
+        0.1629,
+        0.1348
+      ],
+      "fogNear": 18,
+      "fogFar": 74,
+      "instancing": "deferred",
+      "animationAttributes": [
+        "instanceData",
+        "instanceAnimation",
+        "vertexId"
+      ],
+      "source": "OptimizedSheep.shader-contract"
     },
     "materialReplacement": {
       "rocks": {

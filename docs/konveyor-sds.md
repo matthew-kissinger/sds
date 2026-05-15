@@ -59,8 +59,12 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   grass-blade diagnostic material covers the production default gradient colors,
   analytic wind/gust/flutter displacement, alpha-hash posture, and sky/fog
   handoff while explicitly deferring interaction bending, distance fade,
-  production instancing, and compute/trample experiments. Production Rolling
-  Hills/Open Country replacement remains deferred before water/terrain/grass
+  production instancing, and compute/trample experiments. A sheep-wool
+  diagnostic material covers production toon/wool color, procedural wool
+  displacement, rim/SSS lighting terms, and sky/fog handoff while explicitly
+  deferring production `OptimizedSheep` instancing, animation attributes,
+  terrain grounding, and high-count perf. Production Rolling Hills/Open Country
+  replacement remains deferred before water/terrain/grass/sheep
   wiring. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB
