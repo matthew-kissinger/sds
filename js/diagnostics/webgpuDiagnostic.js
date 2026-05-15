@@ -16,16 +16,15 @@ import {
 import { createKonveyorEffectNodeMaterialFactories } from '../effects/konveyorEffectNodeMaterialFactories.js';
 import { createKonveyorSkyFogNodeMaterial } from '../atmosphere/konveyorSkyNodeMaterial.js';
 import { createKonveyorCloudLayerNodeMaterial } from '../atmosphere/konveyorCloudNodeMaterial.js';
-import { createKonveyorGrassBladeNodeMaterial } from '../world/konveyorGrassBladeNodeMaterial.js';
-import { createKonveyorMeadowQuadNodeMaterial } from '../world/konveyorMeadowQuadNodeMaterial.js';
-import { createKonveyorTerrainHeightfieldNodeMaterial } from '../world/konveyorTerrainNodeMaterial.js';
+import { createKonveyorGrassNodeMaterialFactories } from '../world/konveyorGrassNodeMaterialFactories.js';
+import { createKonveyorTerrainNodeMaterialFactories } from '../world/konveyorTerrainNodeMaterialFactories.js';
 import { createKonveyorTreeRockNodeMaterialFactories } from '../world/konveyorTreeRockNodeMaterialFactories.js';
-import { createKonveyorAnimeWaterNodeMaterial } from '../water/konveyorAnimeWaterNodeMaterial.js';
+import { createKonveyorWaterNodeMaterialFactories } from '../water/konveyorWaterNodeMaterialFactories.js';
 import {
     createKonveyorSheepPartNodeMaterial,
-    createKonveyorSheepWoolNodeMaterial,
 } from '../konveyorSheepNodeMaterial.js';
-import { createKonveyorKilnImpostorNodeMaterial } from '../konveyorKilnImpostorNodeMaterial.js';
+import { createKonveyorSheepNodeMaterialFactories } from '../konveyorSheepNodeMaterialFactories.js';
+import { createKonveyorImpostorNodeMaterialFactories } from '../konveyorImpostorNodeMaterialFactories.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -625,6 +624,7 @@ export async function bootWebGpuDiagnostic() {
     } = await loadWebGpuThree();
     const webGpuModules = {
         MeshBasicNodeMaterial,
+        MeshLambertNodeMaterial,
         MeshStandardNodeMaterial,
         AdditiveBlending,
         DoubleSide,
@@ -635,6 +635,19 @@ export async function bootWebGpuDiagnostic() {
         treeLeaf,
         rockRim,
     });
+    const grassFactories = createKonveyorGrassNodeMaterialFactories(webGpuModules, {
+        meadowQuad,
+        grassBlade,
+    });
+    const waterFactories = createKonveyorWaterNodeMaterialFactories(webGpuModules, {
+        fogColor: skyFog.fogColor,
+        sunColor: skyFog.sunColor,
+    });
+    const terrainFactories = createKonveyorTerrainNodeMaterialFactories(webGpuModules, {
+        fogColor: skyFog.fogColor,
+    });
+    const sheepFactories = createKonveyorSheepNodeMaterialFactories(webGpuModules);
+    const impostorFactories = createKonveyorImpostorNodeMaterialFactories(webGpuModules);
 
     const canvas = document.createElement('canvas');
     container.appendChild(canvas);
@@ -759,7 +772,7 @@ export async function bootWebGpuDiagnostic() {
 
     const meadow = new Mesh(
         new PlaneGeometry(1.45, 0.8, 1, 1),
-        createKonveyorMeadowQuadNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, meadowQuad)
+        grassFactories.createMeadowQuadMaterial(meadowQuad)
     );
     meadow.position.set(0.85, -0.75, 0.1);
     scene.add(meadow);
@@ -775,14 +788,20 @@ export async function bootWebGpuDiagnostic() {
     syncDiagnosticHeightfieldState(terrainHeightfield, waterHeightTexture.userData.konveyorHeightfield);
     const water = new Mesh(
         new PlaneGeometry(2.0, 0.62, 1, 1),
-        createKonveyorAnimeWaterNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, animeWater, waterHeightTexture)
+        waterFactories.createAnimeWaterMaterial({
+            ...animeWater,
+            heightTexture: waterHeightTexture,
+        })
     );
     water.position.set(0.0, -1.16, 0.09);
     scene.add(water);
 
     const terrainPatch = new Mesh(
         new PlaneGeometry(2.15, 0.72, 1, 1),
-        createKonveyorTerrainHeightfieldNodeMaterial({ MeshLambertNodeMaterial, DoubleSide, TSL }, terrainHeightfield, waterHeightTexture)
+        terrainFactories.createTerrainMaterial({
+            ...terrainHeightfield,
+            heightTexture: waterHeightTexture,
+        })
     );
     terrainPatch.position.set(0.0, -0.34, 0.08);
     scene.add(terrainPatch);
@@ -791,14 +810,14 @@ export async function bootWebGpuDiagnostic() {
     grassBladeGeometry.translate(0, grassBlade.bladeHeight * 0.5, 0);
     const grassBladeMesh = new Mesh(
         grassBladeGeometry,
-        createKonveyorGrassBladeNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, grassBlade)
+        grassFactories.createGrassBladeMaterial(grassBlade)
     );
     grassBladeMesh.position.set(1.92, -0.82, 0.2);
     grassBladeMesh.rotation.set(0, -0.08, 0.06);
     scene.add(grassBladeMesh);
 
     const sheepGroup = new Group();
-    const sheepWoolMaterial = createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, TSL }, sheepWool);
+    const sheepWoolMaterial = sheepFactories.createSheepMaterial(sheepWool);
     const sheepFaceMaterial = createKonveyorSheepPartNodeMaterial({ MeshStandardNodeMaterial, TSL }, 'konveyor-node-sheep-face', sheepWool.faceColor);
     const sheepHoofMaterial = createKonveyorSheepPartNodeMaterial({ MeshStandardNodeMaterial, TSL }, 'konveyor-node-sheep-hoof', sheepWool.hoofColor);
     const sheepBody = new Mesh(new SphereGeometry(0.36, 18, 12), sheepWoolMaterial);
@@ -834,7 +853,12 @@ export async function bootWebGpuDiagnostic() {
     syncKilnImpostorState(kilnImpostor, kilnAssets.sidecar);
     const kilnImpostorMesh = new Mesh(
         new PlaneGeometry(0.82, 0.82, 1, 1),
-        createKonveyorKilnImpostorNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL }, kilnImpostor, kilnAssets.albedoAtlas, kilnAssets.normalAtlas, kilnAssets.depthAtlas)
+        impostorFactories.createKilnImpostorMaterial({
+            ...kilnImpostor,
+            albedoAtlas: kilnAssets.albedoAtlas,
+            normalAtlas: kilnAssets.normalAtlas,
+            depthAtlas: kilnAssets.depthAtlas,
+        })
     );
     kilnImpostorMesh.position.set(-1.05, -1.16, 0.27);
     kilnImpostorMesh.rotation.set(0, 0.1, 0);

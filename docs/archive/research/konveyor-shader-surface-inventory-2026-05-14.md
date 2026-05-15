@@ -27,17 +27,17 @@ seam. The reusable WebGPU sun billboard and portal ring node-material
 candidates now live in `js/effects/konveyorSunNodeMaterial.js` and
 `js/effects/konveyorPortalNodeMaterial.js`, and the effect adapter spec proves
 the flagged production seam can route through them.
-The first reusable WebGPU factory-supply helpers now live in
-`js/world/konveyorTreeRockNodeMaterialFactories.js` and
-`js/effects/konveyorEffectNodeMaterialFactories.js`. They accept the already
-loaded WebGPU/TSL module object instead of importing `three/webgpu`, and the
-diagnostic harness now consumes them for tree/rock and sun/portal material
-proofs instead of carrying that factory glue inline.
+Reusable WebGPU factory-supply helpers now live beside the material islands:
+tree/rock, effects, grass, water, terrain, sheep, and Kiln impostor seams each
+have a dedicated `konveyor*NodeMaterialFactories.js` helper. They accept the
+already loaded WebGPU/TSL module object instead of importing `three/webgpu`,
+and the diagnostic harness now consumes them for material proofs instead of
+carrying that factory glue inline.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, and
 `GrassSystem` is now loaded by the async grass creation paths. The default
 WebGL sun/grass behavior remains intact while the critical `main` bundle has
-headroom for later seams (`mainKB=553`, `threeKB=603`,
-`webgpuDiagnostic=42 KB`, `konveyorMaterialAdapter=3 KB`,
+headroom for later seams (`mainKB=569`, `threeKB=618`,
+`webgpuDiagnostic=53 KB`, `konveyorMaterialAdapter=3 KB`,
 `GrassSystem=35 KB`, `AnimeWater=9 KB`, `PortalEffect=5 KB`,
 `CorralZapEffect=5 KB`) without regenerating the
 refactor-baseline bundle ratchet.
@@ -351,7 +351,7 @@ comments:
 - `SunBillboard` itself is now loaded through a scene-coupled dynamic import.
   The default WebGL effect remains present before normal scene body construction
   and after scene swaps, while the build emits a separate sun-billboard chunk
-  and keeps the current default bundle at `mainKB=553` / `threeKB=603`, with
+  and keeps the current default bundle at `mainKB=569` / `threeKB=618`, with
   the tree/rock material adapter emitted as a separate 3 KB lazy chunk.
 - `GrassSystem` is now a separate async chunk loaded from production grass
   creation paths. This recovered the bundle budget after the water seam and

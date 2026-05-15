@@ -198,19 +198,19 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `CorralZapEffect` bolt/particle materials now route through that shared
   fail-closed seam. Without the flag and factories, those effects still
   construct their existing WebGL `ShaderMaterial`, `MeshBasicMaterial`,
-  `LineBasicMaterial`, and `PointsMaterial` paths. The tree/rock and
-  sun/portal WebGPU factory supply is now reusable through
-  `js/world/konveyorTreeRockNodeMaterialFactories.js` and
-  `js/effects/konveyorEffectNodeMaterialFactories.js`; both helpers accept an
-  already-loaded WebGPU/TSL module object, so they do not statically import
-  `three/webgpu` into the default production graph. The diagnostic harness now
-  consumes those helpers for its tree/rock and sun/portal material proofs.
+  `LineBasicMaterial`, and `PointsMaterial` paths. The WebGPU factory supply
+  for tree/rock, effects, grass, water, terrain, sheep, and Kiln impostors is
+  now reusable through dedicated `konveyor*NodeMaterialFactories.js` helpers.
+  Each helper accepts an already-loaded WebGPU/TSL module object, so none of
+  them statically import `three/webgpu` into the default production graph. The
+  diagnostic harness now consumes those helpers for its material proofs instead
+  of carrying local factory glue.
   Production
   `SunBillboard` is now a scene-coupled
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=553`, `threeKB=603`, `webgpuDiagnostic=42 KB`,
+  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=53 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
   `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`) for later
   production seams without regenerating the refactor-baseline bundle ratchet. A

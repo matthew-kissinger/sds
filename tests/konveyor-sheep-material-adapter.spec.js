@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { MeshStandardNodeMaterial, TSL } from 'three/webgpu';
 
 import { OptimizedSheepSystem } from '../js/OptimizedSheep.js';
-import { createKonveyorSheepWoolNodeMaterial } from '../js/konveyorSheepNodeMaterial.js';
+import { createKonveyorSheepNodeMaterialFactories } from '../js/konveyorSheepNodeMaterialFactories.js';
 import {
     createKonveyorSheepMaterial,
     shouldApplyKonveyorSheep,
@@ -98,29 +98,14 @@ describe('konveyor sheep material adapter', () => {
 
     it('can route optimized sheep through the reusable WebGPU wool node material candidate', () => {
         const contexts = [];
+        const nodeFactories = createKonveyorSheepNodeMaterialFactories({ MeshStandardNodeMaterial, TSL });
         const scene = new THREE.Scene();
         const sheep = new OptimizedSheepSystem(scene, 1, null, false, {
             search: '?renderer=webgpu&konveyorSheep=1',
             konveyorSheepFactories: {
                 createSheepMaterial: (context) => {
                     contexts.push(context);
-                    return createKonveyorSheepWoolNodeMaterial(
-                        { MeshStandardNodeMaterial, TSL },
-                        {
-                            bodyColor: context.colors.body.toArray(),
-                            lightDirection: context.lighting.direction.toArray(),
-                            rimColor: context.lighting.rimColor.toArray(),
-                            sssColor: context.lighting.sssColor.toArray(),
-                            fogColor: context.fog.color.toArray(),
-                            fogNear: context.fog.near,
-                            fogFar: context.fog.far,
-                            woolNoiseScale: context.wool.noiseScale,
-                            woolDisplacementStrength: context.wool.displacementStrength,
-                            breathingStrength: context.wool.breathingStrength,
-                            vertexColors: context.material.vertexColors,
-                            fog: context.material.fog,
-                        }
-                    );
+                    return nodeFactories.createSheepMaterial(context);
                 },
             },
         });

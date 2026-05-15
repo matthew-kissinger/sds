@@ -3,8 +3,7 @@ import * as THREE from 'three';
 import { DoubleSide, MeshLambertNodeMaterial, MeshStandardNodeMaterial, TSL } from 'three/webgpu';
 
 import { GrassSystem } from '../js/GrassSystem.js';
-import { createKonveyorGrassBladeNodeMaterial } from '../js/world/konveyorGrassBladeNodeMaterial.js';
-import { createKonveyorMeadowQuadNodeMaterial } from '../js/world/konveyorMeadowQuadNodeMaterial.js';
+import { createKonveyorGrassNodeMaterialFactories } from '../js/world/konveyorGrassNodeMaterialFactories.js';
 import {
     createKonveyorGrassMaterial,
     shouldApplyKonveyorGrass,
@@ -105,26 +104,22 @@ describe('konveyor grass material adapter', () => {
 
     it('can route the meadow quad through the reusable WebGPU node material candidate', () => {
         const contexts = [];
+        const nodeFactories = createKonveyorGrassNodeMaterialFactories(
+            { MeshLambertNodeMaterial, MeshStandardNodeMaterial, DoubleSide, TSL },
+            {
+                fogColor: [0.2933, 0.1629, 0.1348],
+                fogNear: 18,
+                fogFar: 74,
+                fogStrength: 0.55,
+            }
+        );
         const scene = new THREE.Scene();
         const grass = new GrassSystem(scene, false, null, null, null, {
             search: '?renderer=webgpu&konveyorGrass=1',
             konveyorGrassFactories: {
                 createMeadowQuadMaterial: (context) => {
                     contexts.push(context);
-                    return createKonveyorMeadowQuadNodeMaterial(
-                        { MeshLambertNodeMaterial, DoubleSide, TSL },
-                        {
-                            baseColor: context.baseColor.toArray(),
-                            midColor: context.midColor.toArray(),
-                            tipColor: context.tipColor.toArray(),
-                            uvCellsPerChunk: context.uvCellsPerChunk,
-                            noiseHashVector: context.noiseHashVector,
-                            fogColor: [0.2933, 0.1629, 0.1348],
-                            fogNear: 18,
-                            fogFar: 74,
-                            fogStrength: 0.55,
-                        }
-                    );
+                    return nodeFactories.createMeadowQuadMaterial(context);
                 },
             },
         });
@@ -203,39 +198,20 @@ describe('konveyor grass material adapter', () => {
 
     it('can route grass blades through the reusable WebGPU node material candidate', () => {
         const contexts = [];
+        const nodeFactories = createKonveyorGrassNodeMaterialFactories(
+            { MeshLambertNodeMaterial, MeshStandardNodeMaterial, DoubleSide, TSL },
+            {
+                fogNear: 18,
+                fogFar: 74,
+            }
+        );
         const scene = new THREE.Scene();
         const grass = new GrassSystem(scene, false, null, null, null, {
             search: '?renderer=webgpu&konveyorGrass=1',
             konveyorGrassFactories: {
                 createGrassBladeMaterial: (context) => {
                     contexts.push(context);
-                    return createKonveyorGrassBladeNodeMaterial(
-                        { MeshStandardNodeMaterial, DoubleSide, TSL },
-                        {
-                            baseColor: context.colors.baseColor.toArray(),
-                            midColor: context.colors.midColor.toArray(),
-                            tipColor: context.colors.tipColor.toArray(),
-                            windDirection: context.wind.direction.toArray(),
-                            windStrength: context.wind.strength,
-                            windSpeed: context.wind.speed,
-                            gustStrength: context.wind.gustStrength,
-                            bladeHeight: context.geometry.bladeHeight,
-                            grassFadeStart: context.fade.start,
-                            grassFadeEnd: context.fade.end,
-                            distanceFadeStrength: context.fade.strength,
-                            sunColor: context.lighting.sunColor.toArray(),
-                            sunDirection: context.lighting.sunDirection.toArray(),
-                            fogColor: context.fog.color.toArray(),
-                            fogNear: 18,
-                            fogFar: 74,
-                            alphaHash: context.material.alphaHash,
-                            alphaTest: context.material.alphaTest,
-                            side: context.material.side,
-                            transparent: context.material.transparent,
-                            depthWrite: context.material.depthWrite,
-                            depthTest: context.material.depthTest,
-                        }
-                    );
+                    return nodeFactories.createGrassBladeMaterial(context);
                 },
             },
         });

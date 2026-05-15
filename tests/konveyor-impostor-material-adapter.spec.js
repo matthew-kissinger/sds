@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { DoubleSide, MeshBasicNodeMaterial, TSL } from 'three/webgpu';
 
 import { createKilnImpostorMaterial } from '../js/kiln-impostor-material.js';
-import { createKonveyorKilnImpostorNodeMaterial } from '../js/konveyorKilnImpostorNodeMaterial.js';
+import { createKonveyorImpostorNodeMaterialFactories } from '../js/konveyorImpostorNodeMaterialFactories.js';
 import {
   createKonveyorImpostorMaterial,
   shouldApplyKonveyorImpostors,
@@ -152,40 +152,23 @@ describe('konveyor impostor material adapter', () => {
 
   it('can route Kiln impostors through the reusable WebGPU node material candidate', () => {
     const contexts = [];
+    const nodeFactories = createKonveyorImpostorNodeMaterialFactories(
+      { MeshBasicNodeMaterial, DoubleSide, TSL },
+      {
+        tileBlendTiles: [
+          [0, 0],
+          [1, 0],
+          [0, 1],
+        ],
+        tileBlendWeights: [0.45, 0.35, 0.2],
+      }
+    );
     const params = createParams({
       search: '?renderer=webgpu&konveyorImpostors=1',
       konveyorImpostorFactories: {
         createKilnImpostorMaterial: (context) => {
           contexts.push(context);
-          return createKonveyorKilnImpostorNodeMaterial(
-            { MeshBasicNodeMaterial, DoubleSide, TSL },
-            {
-              tilesX: context.layout.tilesX,
-              tilesY: context.layout.tilesY,
-              atlasSize: context.layout.atlasSize,
-              tileBlendTiles: [
-                [0, 0],
-                [1, 0],
-                [0, 1],
-              ],
-              tileBlendWeights: [0.45, 0.35, 0.2],
-              sunDirection: context.lighting.sunDirection.toArray(),
-              sunColor: context.lighting.sunColor.toArray(),
-              ambientColor: context.lighting.ambientColor.toArray(),
-              fogColor: context.fog.color.toArray(),
-              fogNear: context.fog.near,
-              fogFar: context.fog.far,
-              alphaTest: context.tunables.alphaTest,
-              alphaHash: true,
-              side: context.material.side,
-              transparent: context.material.transparent,
-              depthWrite: context.material.depthWrite,
-              depthTest: context.material.depthTest,
-            },
-            context.albedoAtlas,
-            context.normalAtlas,
-            context.depthAtlas
-          );
+          return nodeFactories.createKilnImpostorMaterial(context);
         },
       },
     });

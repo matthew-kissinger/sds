@@ -230,13 +230,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   `CorralZapEffect` bolt/particle materials now use that shared adapter;
   default WebGL `ShaderMaterial`, `MeshBasicMaterial`, `LineBasicMaterial`, and
   `PointsMaterial` creation remains untouched.
-- The first reusable WebGPU factory-supply helpers now exist without importing
-  `three/webgpu` into the default production bundle:
-  `js/world/konveyorTreeRockNodeMaterialFactories.js` supplies the tree/rock
-  adapter factories, and `js/effects/konveyorEffectNodeMaterialFactories.js`
-  supplies the sun/portal factories. The diagnostic harness now consumes those
-  helpers instead of owning that factory glue inline, while the fail-closed
-  adapter flags still require explicit factories.
+- Reusable WebGPU factory-supply helpers now exist without importing
+  `three/webgpu` into the default production bundle. Tree/rock, effects,
+  grass, water, terrain, sheep, and Kiln impostor factory glue live in
+  dedicated `konveyor*NodeMaterialFactories.js` modules that accept an
+  already-loaded WebGPU/TSL module object. The diagnostic harness now consumes
+  those helpers instead of owning the material mapping inline, while the
+  fail-closed adapter flags still require explicit factories.
 - The production `SunBillboard` implementation is now lazy-loaded as a
   scene-coupled chunk before normal scene body construction and scene swaps.
   This preserves the default WebGL sun disc while recovering main-bundle
@@ -244,8 +244,8 @@ WebGPU now has a diagnostic island, not a production renderer:
 - `GrassSystem` is now loaded only by the async production grass creation
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
-  bundle-size fixture. Current production build evidence: `mainKB=553`,
-  `threeKB=603`, `webgpuDiagnostic=42 KB`,
+  bundle-size fixture. Current production build evidence: `mainKB=569`,
+  `threeKB=618`, `webgpuDiagnostic=53 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`, `AnimeWater=9 KB`,
   `PortalEffect=5 KB`, `CorralZapEffect=5 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:

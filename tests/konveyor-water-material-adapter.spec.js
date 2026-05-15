@@ -6,7 +6,7 @@ import {
     createAnimeWater,
     createAnimeWaterMaterial,
 } from '../js/water/AnimeWater.js';
-import { createKonveyorAnimeWaterNodeMaterial } from '../js/water/konveyorAnimeWaterNodeMaterial.js';
+import { createKonveyorWaterNodeMaterialFactories } from '../js/water/konveyorWaterNodeMaterialFactories.js';
 import {
     createKonveyorWaterMaterial,
     shouldApplyKonveyorWater,
@@ -99,6 +99,13 @@ describe('konveyor water material adapter', () => {
 
     it('can route anime water through the reusable WebGPU node material candidate', () => {
         const contexts = [];
+        const nodeFactories = createKonveyorWaterNodeMaterialFactories(
+            { MeshBasicNodeMaterial, DoubleSide, TSL },
+            {
+                fogColor: [0.2933, 0.1629, 0.1348],
+                sunColor: [1, 0.3055, 0.0242],
+            }
+        );
         const material = createAnimeWaterMaterial({
             boundary,
             heightfield: createHeightfield(),
@@ -107,23 +114,7 @@ describe('konveyor water material adapter', () => {
             konveyorWaterFactories: {
                 createAnimeWaterMaterial: (context) => {
                     contexts.push(context);
-                    return createKonveyorAnimeWaterNodeMaterial(
-                        { MeshBasicNodeMaterial, DoubleSide, TSL },
-                        {
-                            shallowColor: context.shallowColor.toArray(),
-                            deepColor: context.deepColor.toArray(),
-                            foamColor: context.foamColor.toArray(),
-                            fogColor: [0.2933, 0.1629, 0.1348],
-                            sunColor: [1, 0.3055, 0.0242],
-                            rippleStrength: context.rippleStrength,
-                            sparkleStrength: context.sparkleStrength,
-                            heightfieldTexture: {
-                                peakHeight: context.heightfield.peakHeight,
-                                waterY: context.waterY,
-                            },
-                        },
-                        context.heightTexture
-                    );
+                    return nodeFactories.createAnimeWaterMaterial(context);
                 },
             },
         });

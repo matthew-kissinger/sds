@@ -7,7 +7,7 @@ import {
     createKonveyorTerrainMaterial,
     shouldApplyKonveyorTerrain,
 } from '../js/world/konveyorTerrainMaterialAdapter.js';
-import { createKonveyorTerrainHeightfieldNodeMaterial } from '../js/world/konveyorTerrainNodeMaterial.js';
+import { createKonveyorTerrainNodeMaterialFactories } from '../js/world/konveyorTerrainNodeMaterialFactories.js';
 
 function createMaterial(name) {
     const material = new THREE.MeshBasicMaterial();
@@ -127,28 +127,17 @@ describe('konveyor terrain material adapter', () => {
 
     it('can route terrain ground through the reusable WebGPU node material candidate', () => {
         const contexts = [];
+        const nodeFactories = createKonveyorTerrainNodeMaterialFactories(
+            { MeshLambertNodeMaterial, DoubleSide, TSL },
+            { fogColor: [0.2933, 0.1629, 0.1348] }
+        );
         const scene = new THREE.Scene();
         const builder = new TerrainBuilder(scene, false, null, {
             search: '?renderer=webgpu&konveyorTerrain=1',
             konveyorTerrainFactories: {
                 createTerrainMaterial: (context) => {
                     contexts.push(context);
-                    const heightTexture = context.createHeightTexture();
-                    const material = createKonveyorTerrainHeightfieldNodeMaterial(
-                        { MeshLambertNodeMaterial, DoubleSide, TSL },
-                        {
-                            lowColor: context.colors.baseColor1.toArray(),
-                            midColor: context.colors.baseColor2.toArray(),
-                            highColor: context.colors.baseColor3.toArray(),
-                            fogColor: [0.2933, 0.1629, 0.1348],
-                            peakHeight: context.heightfield.peakHeight,
-                            side: context.side,
-                            polygonOffset: context.polygonOffset,
-                        },
-                        heightTexture
-                    );
-                    material.userData.heightTexture = heightTexture;
-                    return material;
+                    return nodeFactories.createTerrainMaterial(context);
                 },
             },
         });
