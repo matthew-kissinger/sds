@@ -8,9 +8,7 @@ import {
   shouldApplyKonveyorMaterials,
 } from '../js/world/konveyorMaterialAdapter.js';
 import { TerrainBuilder } from '../js/TerrainBuilder.js';
-import { createKonveyorRockRimNodeMaterial } from '../js/world/konveyorRockRimNodeMaterial.js';
-import { createKonveyorTreeBranchNodeMaterial } from '../js/world/konveyorTreeBranchNodeMaterial.js';
-import { createKonveyorTreeLeafNodeMaterial } from '../js/world/konveyorTreeLeafNodeMaterial.js';
+import { createKonveyorTreeRockNodeMaterialFactories } from '../js/world/konveyorTreeRockNodeMaterialFactories.js';
 
 function mesh(materialName) {
   return {
@@ -112,26 +110,15 @@ describe('konveyor production material adapter', () => {
 
     const tree = root({ isMesh: true, material: branchMaterial }, { isMesh: true, material: leafMaterial });
     const rock = root({ isMesh: true, material: rockMaterial });
-
-    const summary = applyKonveyorTreeRockMaterials({
-      trees: { tree1: tree },
-      treesLod1: {},
-      rocks: { rock1: rock },
-      createTreeBranchMaterial: ({ previous }) => createKonveyorTreeBranchNodeMaterial(
-        { MeshStandardNodeMaterial, TSL },
-        {
+    const nodeFactories = createKonveyorTreeRockNodeMaterialFactories(
+      { MeshStandardNodeMaterial, DoubleSide, TSL },
+      {
+        treeBranch: {
           baseColor: [0.20, 0.11, 0.055],
           roughness: 0.94,
           metalness: 0.0,
-          side: previous.side,
-          transparent: previous.transparent,
-          depthWrite: previous.depthWrite,
-          depthTest: previous.depthTest,
-        }
-      ),
-      createTreeLeafMaterial: ({ previous }) => createKonveyorTreeLeafNodeMaterial(
-        { MeshStandardNodeMaterial, DoubleSide, TSL },
-        {
+        },
+        treeLeaf: {
           baseColor: [0.18, 0.34, 0.12],
           tipColor: [0.5, 0.68, 0.24],
           windDirection: [0.7, 0.7],
@@ -141,29 +128,23 @@ describe('konveyor production material adapter', () => {
           occluderStrength: 0.55,
           occluderPeak: 0.62,
           occluderUv: [0.5, 0.42],
-          alphaHash: previous.alphaHash,
-          alphaTest: previous.alphaTest,
-          side: previous.side,
-          transparent: previous.transparent,
-          depthWrite: previous.depthWrite,
-          depthTest: previous.depthTest,
-        }
-      ),
-      createRockMaterial: ({ previous }) => createKonveyorRockRimNodeMaterial(
-        { MeshStandardNodeMaterial, TSL },
-        {
+        },
+        rockRim: {
           baseColor: [0.32, 0.29, 0.25],
           rimColor: [0.7, 0.54, 0.36],
           rimPower: 2.25,
           rimStrength: 0.22,
           roughness: 0.86,
           metalness: 0.0,
-          side: previous.side,
-          transparent: previous.transparent,
-          depthWrite: previous.depthWrite,
-          depthTest: previous.depthTest,
-        }
-      ),
+        },
+      }
+    );
+
+    const summary = applyKonveyorTreeRockMaterials({
+      trees: { tree1: tree },
+      treesLod1: {},
+      rocks: { rock1: rock },
+      ...nodeFactories,
     });
 
     const branches = tree.children[0].material;

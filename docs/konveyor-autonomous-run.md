@@ -230,6 +230,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   `CorralZapEffect` bolt/particle materials now use that shared adapter;
   default WebGL `ShaderMaterial`, `MeshBasicMaterial`, `LineBasicMaterial`, and
   `PointsMaterial` creation remains untouched.
+- The first reusable WebGPU factory-supply helpers now exist without importing
+  `three/webgpu` into the default production bundle:
+  `js/world/konveyorTreeRockNodeMaterialFactories.js` supplies the tree/rock
+  adapter factories, and `js/effects/konveyorEffectNodeMaterialFactories.js`
+  supplies the sun/portal factories. The diagnostic harness now consumes those
+  helpers instead of owning that factory glue inline, while the fail-closed
+  adapter flags still require explicit factories.
 - The production `SunBillboard` implementation is now lazy-loaded as a
   scene-coupled chunk before normal scene body construction and scene swaps.
   This preserves the default WebGL sun disc while recovering main-bundle

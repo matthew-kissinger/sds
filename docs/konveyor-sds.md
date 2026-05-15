@@ -198,7 +198,14 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `CorralZapEffect` bolt/particle materials now route through that shared
   fail-closed seam. Without the flag and factories, those effects still
   construct their existing WebGL `ShaderMaterial`, `MeshBasicMaterial`,
-  `LineBasicMaterial`, and `PointsMaterial` paths. Production
+  `LineBasicMaterial`, and `PointsMaterial` paths. The tree/rock and
+  sun/portal WebGPU factory supply is now reusable through
+  `js/world/konveyorTreeRockNodeMaterialFactories.js` and
+  `js/effects/konveyorEffectNodeMaterialFactories.js`; both helpers accept an
+  already-loaded WebGPU/TSL module object, so they do not statically import
+  `three/webgpu` into the default production graph. The diagnostic harness now
+  consumes those helpers for its tree/rock and sun/portal material proofs.
+  Production
   `SunBillboard` is now a scene-coupled
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default

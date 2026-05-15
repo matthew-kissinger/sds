@@ -6,8 +6,7 @@ import {
   createKonveyorEffectMaterial,
   shouldApplyKonveyorEffects,
 } from '../js/effects/konveyorEffectMaterialAdapter.js';
-import { createKonveyorPortalRingNodeMaterial } from '../js/effects/konveyorPortalNodeMaterial.js';
-import { createKonveyorSunBillboardNodeMaterial } from '../js/effects/konveyorSunNodeMaterial.js';
+import { createKonveyorEffectNodeMaterialFactories } from '../js/effects/konveyorEffectNodeMaterialFactories.js';
 import { SunBillboard } from '../js/effects/SunBillboard.js';
 import { PortalEffect } from '../js/effects/PortalEffect.js';
 import { CorralZapEffectPool } from '../js/effects/CorralZapEffect.js';
@@ -96,25 +95,22 @@ describe('konveyor effect material adapter', () => {
   });
 
   it('can route sun and portal ring through reusable WebGPU node material candidates', () => {
+    const factories = createKonveyorEffectNodeMaterialFactories(
+      { MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL },
+      {
+        sun: { depthTest: true },
+        portal: { depthTest: true },
+      }
+    );
     const sun = createKonveyorEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
       createDefaultMaterial: () => defaultMaterial('default-sun'),
       search: '?renderer=webgpu&konveyorEffects=1',
-      factories: {
-        createSunBillboardMaterial: () => createKonveyorSunBillboardNodeMaterial(
-          { MeshBasicNodeMaterial, AdditiveBlending, TSL },
-          { depthTest: true }
-        ),
-      },
+      factories,
     });
     const portal = createKonveyorEffectMaterial('portal-ring', 'createPortalRingMaterial', {
       createDefaultMaterial: () => defaultMaterial('default-portal'),
       search: '?renderer=webgpu&konveyorEffects=1',
-      factories: {
-        createPortalRingMaterial: () => createKonveyorPortalRingNodeMaterial(
-          { MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL },
-          { depthTest: true }
-        ),
-      },
+      factories,
     });
 
     try {

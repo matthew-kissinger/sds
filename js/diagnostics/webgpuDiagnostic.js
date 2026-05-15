@@ -13,16 +13,13 @@ import { createRuntimeGlbPreview } from './webgpuRuntimeGlbPreview.js';
 import {
     createKonveyorEffectMaterial,
 } from '../effects/konveyorEffectMaterialAdapter.js';
-import { createKonveyorPortalRingNodeMaterial } from '../effects/konveyorPortalNodeMaterial.js';
-import { createKonveyorSunBillboardNodeMaterial } from '../effects/konveyorSunNodeMaterial.js';
+import { createKonveyorEffectNodeMaterialFactories } from '../effects/konveyorEffectNodeMaterialFactories.js';
 import { createKonveyorSkyFogNodeMaterial } from '../atmosphere/konveyorSkyNodeMaterial.js';
 import { createKonveyorCloudLayerNodeMaterial } from '../atmosphere/konveyorCloudNodeMaterial.js';
 import { createKonveyorGrassBladeNodeMaterial } from '../world/konveyorGrassBladeNodeMaterial.js';
 import { createKonveyorMeadowQuadNodeMaterial } from '../world/konveyorMeadowQuadNodeMaterial.js';
-import { createKonveyorRockRimNodeMaterial } from '../world/konveyorRockRimNodeMaterial.js';
 import { createKonveyorTerrainHeightfieldNodeMaterial } from '../world/konveyorTerrainNodeMaterial.js';
-import { createKonveyorTreeBranchNodeMaterial } from '../world/konveyorTreeBranchNodeMaterial.js';
-import { createKonveyorTreeLeafNodeMaterial } from '../world/konveyorTreeLeafNodeMaterial.js';
+import { createKonveyorTreeRockNodeMaterialFactories } from '../world/konveyorTreeRockNodeMaterialFactories.js';
 import { createKonveyorAnimeWaterNodeMaterial } from '../water/konveyorAnimeWaterNodeMaterial.js';
 import {
     createKonveyorSheepPartNodeMaterial,
@@ -626,6 +623,18 @@ export async function bootWebGpuDiagnostic() {
         NoColorSpace,
         TSL,
     } = await loadWebGpuThree();
+    const webGpuModules = {
+        MeshBasicNodeMaterial,
+        MeshStandardNodeMaterial,
+        AdditiveBlending,
+        DoubleSide,
+        TSL,
+    };
+    const effectFactories = createKonveyorEffectNodeMaterialFactories(webGpuModules);
+    const treeRockFactories = createKonveyorTreeRockNodeMaterialFactories(webGpuModules, {
+        treeLeaf,
+        rockRim,
+    });
 
     const canvas = document.createElement('canvas');
     container.appendChild(canvas);
@@ -658,7 +667,7 @@ export async function bootWebGpuDiagnostic() {
     rock.rotation.set(0.25, 0.45, 0.1);
     const rockReplacement = replaceRockMaterialsByTraversal(
         rock,
-        () => createKonveyorRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim)
+        treeRockFactories.createRockMaterial
     );
     scene.add(rock);
 
@@ -671,11 +680,9 @@ export async function bootWebGpuDiagnostic() {
     scene.add(skyFogBackdrop);
 
     const sunMaterialResult = createKonveyorEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
-        createDefaultMaterial: () => createKonveyorSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, TSL }),
+        createDefaultMaterial: () => effectFactories.createSunBillboardMaterial(),
         search: '?renderer=webgpu&konveyorEffects=1',
-        factories: {
-            createSunBillboardMaterial: () => createKonveyorSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, TSL }),
-        },
+        factories: effectFactories,
     });
     const sun = new Mesh(new PlaneGeometry(1.45, 1.45), sunMaterialResult.material);
     sun.position.set(-0.85, 0.35, 0.15);
@@ -695,8 +702,8 @@ export async function bootWebGpuDiagnostic() {
     treeLeafMesh.rotation.set(0.0, -0.18, -0.25);
     treeGroup.add(treeLeafMesh);
     const treeReplacement = replaceTreeMaterialsByName(treeGroup, {
-        branches: () => createKonveyorTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
-        leaves: () => createKonveyorTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf),
+        branches: treeRockFactories.createTreeBranchMaterial,
+        leaves: treeRockFactories.createTreeLeafMaterial,
     });
     treeGroup.position.set(-1.55, 0.33, 0.18);
     scene.add(treeGroup);
@@ -720,9 +727,7 @@ export async function bootWebGpuDiagnostic() {
         state.runtimeGlbPreview = await createRuntimeGlbPreview({
             scene,
             three: { Box3, InstancedMesh, Matrix4, Object3D, Vector3 },
-            createTreeBranchMaterial: () => createKonveyorTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }),
-            createTreeLeafMaterial: () => createKonveyorTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf),
-            createRockMaterial: () => createKonveyorRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim),
+            ...treeRockFactories,
         });
         if (!state.runtimeGlbPreview.ok) {
             return fail('runtime GLB rendered clone proof failed');
@@ -740,11 +745,9 @@ export async function bootWebGpuDiagnostic() {
     }
 
     const portalMaterialResult = createKonveyorEffectMaterial('portal-ring', 'createPortalRingMaterial', {
-        createDefaultMaterial: () => createKonveyorPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL }),
+        createDefaultMaterial: () => effectFactories.createPortalRingMaterial(),
         search: '?renderer=webgpu&konveyorEffects=1',
-        factories: {
-            createPortalRingMaterial: () => createKonveyorPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL }),
-        },
+        factories: effectFactories,
     });
     const portal = new Mesh(new RingGeometry(0.62, 0.86, 80, 1), portalMaterialResult.material);
     portal.position.set(-0.85, -0.75, 0.12);

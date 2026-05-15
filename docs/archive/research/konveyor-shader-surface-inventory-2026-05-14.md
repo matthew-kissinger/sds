@@ -27,6 +27,12 @@ seam. The reusable WebGPU sun billboard and portal ring node-material
 candidates now live in `js/effects/konveyorSunNodeMaterial.js` and
 `js/effects/konveyorPortalNodeMaterial.js`, and the effect adapter spec proves
 the flagged production seam can route through them.
+The first reusable WebGPU factory-supply helpers now live in
+`js/world/konveyorTreeRockNodeMaterialFactories.js` and
+`js/effects/konveyorEffectNodeMaterialFactories.js`. They accept the already
+loaded WebGPU/TSL module object instead of importing `three/webgpu`, and the
+diagnostic harness now consumes them for tree/rock and sun/portal material
+proofs instead of carrying that factory glue inline.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, and
 `GrassSystem` is now loaded by the async grass creation paths. The default
 WebGL sun/grass behavior remains intact while the critical `main` bundle has
