@@ -309,15 +309,17 @@ comments:
    and its production material creation path now has a flag-gated adapter seam,
    but it is not yet a production scene WebGPU boot.
 2. Keep sky/fog production wiring behind parity evidence for preset screenshots
-   and fog consumers. The renderless preset-color matrix now exists for all
-   shipped sky presets, the production-facing sky-dome factory seam now
-   reaches `Atmosphere` and `HosekWilkieSky`, and the reusable sky/fog
-   node-material candidate now lives outside the diagnostic harness. The same
-   atmosphere seam now reaches production `CloudLayer` with update controls,
-   and the reusable cloud-layer node-material candidate now also lives outside
-   the diagnostic harness with live node uniform controls for CloudLayer state.
-   Both paths are still factory supplied and do not replace the default WebGL
-   sky or cloud material by themselves.
+   and scene-level fog/horizon behavior. The renderless preset-color matrix now
+   exists for all shipped sky presets, and `tests/webgpu-diagnostic.spec.js`
+   pins the diagnostic fog-consumer contract across rock rim, meadow, water,
+   terrain, grass, sheep, and Kiln states. The production-facing sky-dome
+   factory seam now reaches `Atmosphere` and `HosekWilkieSky`, and the reusable
+   sky/fog node-material candidate now lives outside the diagnostic harness.
+   The same atmosphere seam now reaches production `CloudLayer` with update
+   controls, and the reusable cloud-layer node-material candidate now also lives
+   outside the diagnostic harness with live node uniform controls for CloudLayer
+   state. Both paths are still factory supplied and do not replace the default
+   WebGL sky or cloud material by themselves.
 3. Keep water production wiring deferred until the diagnostic heightfield
    `DataTexture` proof is expanded beyond Rolling Hills, then backed by
    Rolling Hills/Open Country scene screenshots. The production-facing water

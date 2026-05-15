@@ -101,12 +101,16 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `cycle36-validation/runtime/sky-lut-profile.json` records the current
   renderless Hosek-Wilkie CPU LUT cost. Current local evidence keeps that LUT
   as the CPU-visible atmosphere contract, not a measured bottleneck; a GPU LUT
-  remains a production-profile-driven candidate. A production-facing
-  sky-dome atmosphere material seam now exists: `Atmosphere` can forward an
-  explicit `skyFactory` to `HosekWilkieSky`, and the Konveyor adapter keeps
-  that factory behind `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit
-  WebGPU sky factory. Default `HosekWilkieSky` still creates the existing WebGL
-  `ShaderMaterial`, and the CPU LUT plus sky/fog packet stay authoritative.
+  remains a production-profile-driven candidate.
+  `tests/webgpu-diagnostic.spec.js` pins the diagnostic fog-consumer contract
+  across rock rim, meadow, anime water, terrain, grass, sheep, and Kiln states;
+  scene-level fog/horizon visual parity remains a separate gate. A
+  production-facing sky-dome atmosphere material seam now exists: `Atmosphere`
+  can forward an explicit `skyFactory` to `HosekWilkieSky`, and the Konveyor
+  adapter keeps that factory behind `?renderer=webgpu&konveyorAtmosphere=1`
+  plus an explicit WebGPU sky factory. Default `HosekWilkieSky` still creates
+  the existing WebGL `ShaderMaterial`, and the CPU LUT plus sky/fog packet stay
+  authoritative.
   `js/atmosphere/konveyorSkyNodeMaterial.js` now owns the reusable WebGPU
   sky/fog node-material candidate used by the diagnostic backdrop and by an
   explicit `HosekWilkieSky` factory under the same fail-closed flag.

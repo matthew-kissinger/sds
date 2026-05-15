@@ -219,6 +219,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   scale, time, wind, sun direction, and sun color driven through node uniform
   controls. Sky-preset screenshots, fog/horizon integration, and default
   production wiring remain deferred.
+- `tests/webgpu-diagnostic.spec.js` now pins the diagnostic fog-consumer
+  contract: rock rim, meadow, anime water, terrain, grass, sheep, and Kiln
+  diagnostic states all consume the same CPU-visible sky/fog packet. This is
+  not a scene-level screenshot parity claim.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
   The sky/fog packet now lives in `js/atmosphere/skyFogSamplePacket.js` and
@@ -311,7 +315,8 @@ Recommended order:
    `cloudFactory` or the direct fail-closed flag/factory path. The sky/fog and
    cloud-layer node materials are now extracted into reusable WebGPU factory
    candidates, and the cloud-layer candidate now consumes live `CloudLayer`
-   state through node uniform controls. Preset screenshots, fog-consumer proof,
+   state through node uniform controls. Diagnostic fog consumers are pinned by
+   `tests/webgpu-diagnostic.spec.js`; preset screenshots, scene-level
    fog/horizon integration, and default production wiring remain deferred.
    Production
    `SunBillboard` itself is now
@@ -327,10 +332,10 @@ Recommended order:
    remain deferred. The Kiln path now has a production-facing material factory
    seam, but per-frame tile selection, LOD wiring, and LOD0 color parity remain
    deferred.
-   The sky path still needs preset screenshot parity and fog-consumer proof
-   before any default production boot claim; next move to a smaller
-   shader/material island or the measured rock-generation extraction before
-   touching production boot.
+   The sky path still needs preset screenshot parity and scene-level
+   fog/horizon proof before any default production boot claim; next move to a
+   smaller shader/material island or the measured rock-generation extraction
+   before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
    The current atmosphere packet now has both preset parity evidence and a
