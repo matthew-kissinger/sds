@@ -1,6 +1,6 @@
 {
-  "capturedAt": "2026-05-15T00:51:41.289Z",
-  "url": "http://127.0.0.1:4173/?scene=rolling-hills",
+  "capturedAt": "2026-05-15T00:51:42.926Z",
+  "url": "http://127.0.0.1:4173/?renderer=webgpu",
   "platform": "win32",
   "channel": "chrome",
   "chromiumArgs": [
@@ -25,10 +25,10 @@
   },
   "browser": {
     "rendererMode": {
-      "requested": "webgl",
+      "requested": "webgpu",
       "diagnostic": false,
       "effective": "webgl",
-      "fallbackReason": null
+      "fallbackReason": "diagnostic-flag-required"
     },
     "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.0.0 Safari/537.36",
     "secureContext": true,

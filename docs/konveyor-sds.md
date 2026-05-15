@@ -48,7 +48,10 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
 - There is a diagnostic-only WebGPU/TSL boot path at
   `?renderer=webgpu&diagnostic=1`. It is not a production renderer. It loads
   copied Three WebGPU/Core browser modules after the query flag and leaves the
-  normal WebGL bundle path as default. Current diagnostic islands cover the sun
+  normal WebGL bundle path as default. The boot contract records
+  `window.__sdsRendererMode`: `?renderer=webgpu` without `diagnostic=1` remains
+  effective WebGL with `fallbackReason: "diagnostic-flag-required"`. Current
+  diagnostic islands cover the sun
   billboard, portal ring, meadow quad, cloud plane, and a renderless sky/fog
   CPU sample packet from `js/atmosphere/skyFogSamplePacket.js`, plus the
   rock-rim fresnel formula, a tree-leaf wind/alpha/occluder proxy, and a

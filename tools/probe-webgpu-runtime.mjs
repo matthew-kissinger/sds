@@ -77,6 +77,7 @@ async function run() {
       }
 
       return {
+        rendererMode: window.__sdsRendererMode ?? null,
         userAgent: navigator.userAgent,
         secureContext: window.isSecureContext,
         navigatorGpu: !!navigator.gpu,

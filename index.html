@@ -405,8 +405,17 @@
     <script>
         (() => {
             const params = new URLSearchParams(window.location.search);
+            const requested = params.get('renderer') || 'webgl';
+            const diagnostic = params.get('diagnostic') === '1';
+            const webgpuDiagnostic = requested === 'webgpu' && diagnostic;
+            window.__sdsRendererMode = {
+                requested,
+                diagnostic,
+                effective: webgpuDiagnostic ? 'webgpu-diagnostic' : 'webgl',
+                fallbackReason: requested === 'webgpu' && !diagnostic ? 'diagnostic-flag-required' : null
+            };
             window.__sdsG = {
-                r: params.get('renderer') === 'webgpu' && params.get('diagnostic') === '1'
+                r: webgpuDiagnostic
             };
         })();
     </script>

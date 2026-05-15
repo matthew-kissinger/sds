@@ -69,6 +69,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   records installed Chrome 148 rendering diagnostic frames through WebGPU.
 - [`../cycle36-validation/runtime/webgl-default-chrome.json`](../cycle36-validation/runtime/webgl-default-chrome.json)
   records the default production-preview URL with `diagnostic: null`.
+- [`../cycle36-validation/runtime/webgpu-request-fallback-chrome.json`](../cycle36-validation/runtime/webgpu-request-fallback-chrome.json)
+  records the current fail-closed renderer contract: `?renderer=webgpu`
+  without `diagnostic=1` reports `effective: "webgl"` and
+  `fallbackReason: "diagnostic-flag-required"`.
 - [`archive/research/konveyor-shader-surface-inventory-2026-05-14.md`](archive/research/konveyor-shader-surface-inventory-2026-05-14.md)
   ranks the current GLSL and `onBeforeCompile` migration surface. The sun
   billboard, portal ring, meadow-quad, cloud-plane, sky/fog, and anime-water formulas are

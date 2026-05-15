@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:45:41.839Z",
+  "capturedAt": "2026-05-15T00:51:39.554Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -24,6 +24,12 @@
     ]
   },
   "browser": {
+    "rendererMode": {
+      "requested": "webgpu",
+      "diagnostic": true,
+      "effective": "webgpu-diagnostic",
+      "fallbackReason": null
+    },
     "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.0.0 Safari/537.36",
     "secureContext": true,
     "navigatorGpu": true,
@@ -1877,6 +1883,6 @@
         }
       ]
     },
-    "frames": 3
+    "frames": 2
   }
 }
