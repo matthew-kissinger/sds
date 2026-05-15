@@ -190,6 +190,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   the existing atlas-sampled impostor `ShaderMaterial`. A
   production-facing sun/portal/transient effect material adapter now exists
   behind `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories.
+  The reusable WebGPU sun billboard and portal ring node-material candidates
+  now live in `js/effects/konveyorSunNodeMaterial.js` and
+  `js/effects/konveyorPortalNodeMaterial.js`, and the effect adapter spec
+  proves the flagged production seam can route through them.
   `SunBillboard`, `PortalEffect` ring/pad/particle materials, and
   `CorralZapEffect` bolt/particle materials now route through that shared
   fail-closed seam. Without the flag and factories, those effects still

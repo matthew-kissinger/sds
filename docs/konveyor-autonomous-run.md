@@ -222,8 +222,10 @@ WebGPU now has a diagnostic island, not a production renderer:
   LOD0 color parity remain deferred.
 - A production-facing sun/portal/transient effect material adapter now exists
   behind `?renderer=webgpu&konveyorEffects=1` and explicit WebGPU effect
-  factories. It routes the already-proved diagnostic sun billboard and portal
-  ring node materials through the same fail-closed pattern. The real production
+  factories. The reusable WebGPU sun billboard and portal ring node-material
+  candidates now live in `js/effects/konveyorSunNodeMaterial.js` and
+  `js/effects/konveyorPortalNodeMaterial.js`, and the effect adapter spec
+  proves the flagged production seam can route through them. The real production
   `SunBillboard`, `PortalEffect` ring/pad/particle materials, and
   `CorralZapEffect` bolt/particle materials now use that shared adapter;
   default WebGL `ShaderMaterial`, `MeshBasicMaterial`, `LineBasicMaterial`, and

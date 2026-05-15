@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { AdditiveBlending, DoubleSide, MeshBasicNodeMaterial, TSL } from 'three/webgpu';
 
 import {
   createKonveyorEffectMaterial,
   shouldApplyKonveyorEffects,
 } from '../js/effects/konveyorEffectMaterialAdapter.js';
+import { createKonveyorPortalRingNodeMaterial } from '../js/effects/konveyorPortalNodeMaterial.js';
+import { createKonveyorSunBillboardNodeMaterial } from '../js/effects/konveyorSunNodeMaterial.js';
 import { SunBillboard } from '../js/effects/SunBillboard.js';
 import { PortalEffect } from '../js/effects/PortalEffect.js';
 import { CorralZapEffectPool } from '../js/effects/CorralZapEffect.js';
@@ -90,6 +93,57 @@ describe('konveyor effect material adapter', () => {
     portal.controls.update({ time: 1, pulse: 0.2, intensity: 0.8 });
     expect(sunUpdates).toEqual([{ intensity: 0.7 }]);
     expect(portalUpdates).toEqual([{ time: 1, pulse: 0.2, intensity: 0.8 }]);
+  });
+
+  it('can route sun and portal ring through reusable WebGPU node material candidates', () => {
+    const sun = createKonveyorEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
+      createDefaultMaterial: () => defaultMaterial('default-sun'),
+      search: '?renderer=webgpu&konveyorEffects=1',
+      factories: {
+        createSunBillboardMaterial: () => createKonveyorSunBillboardNodeMaterial(
+          { MeshBasicNodeMaterial, AdditiveBlending, TSL },
+          { depthTest: true }
+        ),
+      },
+    });
+    const portal = createKonveyorEffectMaterial('portal-ring', 'createPortalRingMaterial', {
+      createDefaultMaterial: () => defaultMaterial('default-portal'),
+      search: '?renderer=webgpu&konveyorEffects=1',
+      factories: {
+        createPortalRingMaterial: () => createKonveyorPortalRingNodeMaterial(
+          { MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL },
+          { depthTest: true }
+        ),
+      },
+    });
+
+    try {
+      expect(sun.material.name).toBe('konveyor-node-sun-billboard');
+      expect(sun.material.isNodeMaterial).toBe(true);
+      expect(sun.material.isMeshBasicNodeMaterial).toBe(true);
+      expect(sun.material.transparent).toBe(true);
+      expect(sun.material.depthWrite).toBe(false);
+      expect(sun.material.depthTest).toBe(true);
+      expect(sun.material.blending).toBe(THREE.AdditiveBlending);
+      expect(sun.material.colorNode).toBeTruthy();
+      expect(sun.material.opacityNode).toBeTruthy();
+      expect(sun.summary).toMatchObject({ kind: 'sun-billboard', applied: true });
+
+      expect(portal.material.name).toBe('konveyor-node-portal-ring');
+      expect(portal.material.isNodeMaterial).toBe(true);
+      expect(portal.material.isMeshBasicNodeMaterial).toBe(true);
+      expect(portal.material.transparent).toBe(true);
+      expect(portal.material.depthWrite).toBe(false);
+      expect(portal.material.depthTest).toBe(true);
+      expect(portal.material.side).toBe(THREE.DoubleSide);
+      expect(portal.material.blending).toBe(THREE.AdditiveBlending);
+      expect(portal.material.colorNode).toBeTruthy();
+      expect(portal.material.opacityNode).toBeTruthy();
+      expect(portal.summary).toMatchObject({ kind: 'portal-ring', applied: true });
+    } finally {
+      sun.material.dispose?.();
+      portal.material.dispose?.();
+    }
   });
 
   it('passes effect material context into explicit factories', () => {

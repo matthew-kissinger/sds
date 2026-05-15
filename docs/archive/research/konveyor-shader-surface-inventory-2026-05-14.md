@@ -14,15 +14,19 @@ The safest first production-adjacent island was `SunBillboard`: it is small,
 cosmetic, has no scene data dependency, and maps cleanly to a
 `MeshBasicNodeMaterial`/TSL expression. The sun billboard, portal ring,
 cloud-plane, and sky/fog formulas are now ported inside the diagnostic island,
-the sky/fog and cloud-plane node-material candidates now live in reusable
-atmosphere modules, and the meadow-quad island now uses the production grass
+the sky/fog, cloud-plane, sun billboard, and portal ring node-material
+candidates now live in reusable modules, and the meadow-quad island now uses
+the production grass
 default colors,
 far-ring UV hash scale, and CPU sky/fog packet. Sun, portal, and transient
 corral effects now have a production-facing effect material adapter behind
 `?renderer=webgpu&konveyorEffects=1` plus explicit factories. The real
 `SunBillboard`, `PortalEffect` ring/pad/particle materials, and
 `CorralZapEffect` bolt/particle materials now use that shared fail-closed
-seam.
+seam. The reusable WebGPU sun billboard and portal ring node-material
+candidates now live in `js/effects/konveyorSunNodeMaterial.js` and
+`js/effects/konveyorPortalNodeMaterial.js`, and the effect adapter spec proves
+the flagged production seam can route through them.
 Production `SunBillboard` is also scene-coupled and lazy-loaded, and
 `GrassSystem` is now loaded by the async grass creation paths. The default
 WebGL sun/grass behavior remains intact while the critical `main` bundle has
@@ -196,8 +200,8 @@ terrain, grass, water, sheep, or Kiln impostors.
 
 | Order | Surface | File | Current role | WebGPU risk | Migration shape | Gate |
 |---:|---|---|---|---|---|---|
-| 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction; lazy-loaded as a scene-coupled production chunk. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. Production-facing material creation routes through the shared `?renderer=webgpu&konveyorEffects=1` adapter plus explicit factories; default WebGL still uses the existing `ShaderMaterial` after the scene-coupled dynamic import. | Diagnostic island screenshot/probe, then default smoke. |
-| 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. Production-facing ring, pad, and particle material creation can now route through the same effect adapter with explicit factories; default WebGL still uses the existing ring `ShaderMaterial`, pad `MeshBasicMaterial`, and particle `PointsMaterial`. | Open Country objective visual screenshot plus completion smoke. |
+| 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction; lazy-loaded as a scene-coupled production chunk. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node now lives in `js/effects/konveyorSunNodeMaterial.js`. Production-facing material creation routes through the shared `?renderer=webgpu&konveyorEffects=1` adapter plus explicit factories, and the effect adapter spec proves the flagged seam can use the reusable node candidate; default WebGL still uses the existing `ShaderMaterial` after the scene-coupled dynamic import. | Diagnostic island screenshot/probe, then default smoke. |
+| 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material now lives in `js/effects/konveyorPortalNodeMaterial.js`. Production-facing ring, pad, and particle material creation can route through the same effect adapter with explicit factories, and the effect adapter spec proves the flagged ring seam can use the reusable node candidate; default WebGL still uses the existing ring `ShaderMaterial`, pad `MeshBasicMaterial`, and particle `PointsMaterial`. | Open Country objective visual screenshot plus completion smoke. |
 | 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | Diagnostic cloud-plane TSL material now covers value-noise/fbm mask, sun tint, coverage, footprint fade, and time input, and the reusable WebGPU cloud-layer node-material candidate now lives outside the diagnostic file. Production-facing material creation can route through the shared `?renderer=webgpu&konveyorAtmosphere=1` adapter with explicit factories and update controls; the extracted node factory now consumes coverage, edge fade, feature scale, time, wind, sun direction, and sun color through node uniforms; default WebGL still uses the existing `ShaderMaterial`. Diagnostic sky-preset screenshots, renderless scene fog/horizon proof, and scene-bound diagnostic WebGPU screenshots now exist; full production-scene WebGPU screenshots and default production wiring remain deferred before WebGPU cloud coverage is claimed. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
 | 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet. `Atmosphere` can forward an explicit sky factory to `HosekWilkieSky`, and `HosekWilkieSky` directly routes through `?renderer=webgpu&konveyorAtmosphere=1` when explicit factories are present. The reusable WebGPU sky/fog node-material candidate now lives outside the diagnostic file. Diagnostic preset screenshots, fog-consumer proof, renderless scene fog/horizon proof, and scene-bound diagnostic WebGPU screenshots now exist, but production default wiring remains deferred before WebGPU sky coverage is claimed. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
 | 5 | Anime water | `js/water/AnimeWater.js` | Shoreline foam, heightfield-driven foam, ripples, sun glint, fog. | High. Samples a generated heightfield `DataTexture` and drives a visible scene focal point. | Diagnostic TSL island now covers production palette, shoreline bands, foam, ripples, sun glint, fog input, and a non-filtered `RedFormat`/`FloatType` sample loaded from `public/terrain/rolling-hills.bin`. Production-facing material creation can now route through `?renderer=webgpu&konveyorWater=1` with an explicit factory and update controls. The reusable heightfield-backed WebGPU anime-water node-material candidate now lives in `js/water/konveyorAnimeWaterNodeMaterial.js`, and the adapter spec proves the flagged production seam can route through it; default WebGL still uses the existing `ShaderMaterial`. Scene-bound Rolling Hills/Open Country screenshots remain required before replacing WebGL water. | Water shoreline specs, Rolling Hills/Open Country screenshots, latency. |
@@ -301,6 +305,10 @@ comments:
   when `renderer=webgpu&konveyorEffects=1` is present and explicit effect
   factories are supplied; otherwise the existing WebGL `ShaderMaterial` paths
   stay untouched. Both production effect classes now call this adapter directly.
+  The reusable WebGPU sun billboard and portal ring node-material candidates now
+  live in `js/effects/konveyorSunNodeMaterial.js` and
+  `js/effects/konveyorPortalNodeMaterial.js`, and the effect adapter spec proves
+  the flagged production seam can route through them.
 - The production-side adapter in `js/world/konveyorGrassMaterialAdapter.js`
   covers far-ring meadow quad and grass-blade material creation. It activates
   when `renderer=webgpu&konveyorGrass=1` is present and the matching explicit
