@@ -86,9 +86,13 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   Hills/Open Country replacement remains deferred before water/terrain/grass/sheep/Kiln
   wiring. `cycle36-validation/runtime/sky-fog-preset-matrix.json` now records
   renderless CPU sky/fog packets for all five shipped sky presets as analytic
-  preset-color parity evidence. A production-facing sun/portal effect material
-  adapter now exists behind `?renderer=webgpu&konveyorEffects=1` plus explicit
-  WebGPU factories;
+  preset-color parity evidence, and
+  `cycle36-validation/runtime/sky-lut-profile.json` records the current
+  renderless Hosek-Wilkie CPU LUT cost. Current local evidence keeps that LUT
+  as the CPU-visible atmosphere contract, not a measured bottleneck; a GPU LUT
+  remains a production-profile-driven candidate. A production-facing
+  sun/portal effect material adapter now exists behind
+  `?renderer=webgpu&konveyorEffects=1` plus explicit WebGPU factories;
   without the flag and factories, both effects still construct their existing
   WebGL `ShaderMaterial`s. A
   diagnostic material-replacement island proves tree replacement by

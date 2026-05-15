@@ -151,6 +151,11 @@ WebGPU now has a diagnostic island, not a production renderer:
   records renderless CPU sky/fog packets for all five shipped sky presets.
   This covers analytic preset-color parity; preset screenshots and production
   wiring remain separate gates.
+- [`../cycle36-validation/runtime/sky-lut-profile.json`](../cycle36-validation/runtime/sky-lut-profile.json)
+  profiles the same renderless Hosek-Wilkie CPU LUT for the five required
+  presets. Current local evidence keeps the CPU-visible LUT as the atmosphere
+  contract surface rather than a measured bottleneck; a GPU LUT remains a
+  production-profile-driven candidate, not a default assumption.
 - [`../cycle36-validation/runtime/tree-refresh-baseline.json`](../cycle36-validation/runtime/tree-refresh-baseline.json)
   records the current tree-refresh input contract before any EZ-Tree rebake:
   active `tree1`/`tree2` picks, compressed/original GLB bytes, Kiln impostor
@@ -218,6 +223,9 @@ Recommended order:
    measured rock-generation extraction before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
+   The current atmosphere packet now has both preset parity evidence and a
+   CPU LUT timing artifact; do not replace it with a GPU LUT unless production
+   profiling shows cost or parity drift.
 3. **Treat EZ-Tree refresh as a measured tree phase, not a side edit.** The
    repo already resolves `@dgreenheck/ez-tree` 1.1.0, which is still the
    current npm latest as of 2026-05-15. Upstream `main` has unreleased

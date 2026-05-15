@@ -54,6 +54,12 @@ renderless packet for every required sky preset (`pastoral-noon`, `dusk`,
 only; preset screenshots and production renderer wiring are still separate
 gates.
 
+`cycle36-validation/runtime/sky-lut-profile.json` records a renderless CPU LUT
+profile for the same five presets using `tools/konveyor-sky-lut-profile.mjs`.
+The current LUT has 256 RGB entries; in this local profile the worst bake was
+1.2966 ms and the worst 1024-direction sample batch was 0.94 ms. That makes the
+current SDS CPU-visible LUT a contract surface, not a measured bottleneck.
+
 ## Next Migration Shape
 
 Do not wire production WebGPU cloud or sky rendering until a diagnostic island
@@ -82,3 +88,30 @@ budget are owned explicitly. SDS should keep the current CPU-visible sky/fog
 packet as the contract authority, then move work onto GPU textures only when a
 measured WebGPU path reduces cost or removes visible parity drift without
 splitting atmosphere ownership.
+
+## Best-Practice Alignment
+
+Three's WebGPU migration guidance says `ShaderMaterial`, `RawShaderMaterial`,
+and `onBeforeCompile()` surfaces need to move to node materials and TSL for
+`WebGPURenderer`, while WebGL 2 fallback remains part of the renderer strategy
+during migration. That matches the SDS island approach: keep WebGL default,
+port one material contract at a time, and keep the CPU-visible atmosphere
+packet stable until the WebGPU path proves equivalent.
+
+Three's TSL docs also frame node materials as reusable graph components that
+can target WGSL or GLSL. For SDS, that means fog, sun color, water, grass,
+rock, tree, and impostor consumers should share one atmosphere packet or one
+equivalent node/texture source rather than each rebuilding a sky formula.
+
+The WebGPU best-practice notes from Google's Chrome/WebGPU work emphasize
+labels/debug groups, compressed texture formats, asynchronous pipeline
+creation, and shared bind groups/layouts. Applied here: a future GPU LUT should
+be an explicitly owned texture/pipeline resource with labels and lifecycle
+evidence, not an implicit replacement for the CPU API that gameplay and visual
+systems already consume.
+
+References:
+
+- Three.js WebGPURenderer manual: https://threejs.org/manual/en/webgpurenderer
+- Three.js TSL docs: https://threejs.org/docs/TSL.html
+- WebGPU Best Practices, Google/Khronos slides: https://www.khronos.org/assets/uploads/developers/presentations/WebGPU_Best_Practices_Google.pdf
