@@ -137,6 +137,14 @@ WebGPU now has a diagnostic island, not a production renderer:
   Field and Rolling Hills produce stable rock/obstacle placements, while Open
   Country records a stable zero-rock outcome for the current scene zones. The
   default route still uses client `Math.random()` because the flag is off.
+- [`../cycle36-validation/runtime/production-flag-fallback-proof.json`](../cycle36-validation/runtime/production-flag-fallback-proof.json)
+  records Field and Rolling Hills production scenes with `renderer=webgpu` and
+  every current Konveyor material/placement flag enabled, but without
+  `diagnostic=1`. The boot still fails closed to WebGL with
+  `fallbackReason: "diagnostic-flag-required"`, the deterministic rock route
+  applies, and the material adapters remain absent with `missing-factories`.
+  This is the current production fallback contract, not a WebGPU production
+  scene claim.
 - A production-facing tree/rock material adapter now exists behind
   `?renderer=webgpu&konveyorMaterials=1` and explicit WebGPU material factories.
   `TerrainBuilder.loadModels()` now invokes it after the default WebGL

@@ -1,0 +1,140 @@
+{
+  "capturedAt": "2026-05-15T06:12:04.403Z",
+  "contract": "konveyor-production-flag-fallback-proof",
+  "baseUrl": "http://127.0.0.1:4173/",
+  "channel": "playwright-chromium",
+  "chromiumArgs": [
+    "--use-angle=d3d11",
+    "--enable-gpu"
+  ],
+  "flags": [
+    "konveyorAtmosphere",
+    "konveyorEffects",
+    "konveyorGrass",
+    "konveyorImpostors",
+    "konveyorMaterials",
+    "konveyorRocks",
+    "konveyorSheep",
+    "konveyorTerrain",
+    "konveyorWater"
+  ],
+  "ok": true,
+  "scenes": [
+    {
+      "sceneId": "field",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=field&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": false,
+        "effective": "webgl",
+        "fallbackReason": "diagnostic-flag-required"
+      },
+      "diagnosticBoot": false,
+      "currentSceneId": "field",
+      "renderer": {
+        "className": "ux",
+        "isWebGLRenderer": true,
+        "isWebGPURenderer": false,
+        "calls": 116,
+        "triangles": 4158322
+      },
+      "summaries": {
+        "treeRockMaterial": {
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "rockPlacement": {
+          "kind": "rock-placement-rng",
+          "applied": true,
+          "reason": null,
+          "sceneId": "field",
+          "sceneSeed": 0,
+          "seed": 1383031659,
+          "seedOffset": 1383031659,
+          "rng": "mulberry32(sceneSeed + Rock)"
+        },
+        "terrainMaterial": {
+          "kind": "terrain-ground",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "grassBladeMaterial": {
+          "kind": "grass-blade",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "meadowQuadMaterial": null,
+        "waterMaterial": null,
+        "atmosphereMaterial": {
+          "kind": "cloud-layer",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "effectMaterial": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "ok": true
+    },
+    {
+      "sceneId": "rolling-hills",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=rolling-hills&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": false,
+        "effective": "webgl",
+        "fallbackReason": "diagnostic-flag-required"
+      },
+      "diagnosticBoot": false,
+      "currentSceneId": "rolling-hills",
+      "renderer": {
+        "className": "ux",
+        "isWebGLRenderer": true,
+        "isWebGPURenderer": false,
+        "calls": 91,
+        "triangles": 3760508
+      },
+      "summaries": {
+        "treeRockMaterial": {
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "rockPlacement": {
+          "kind": "rock-placement-rng",
+          "applied": true,
+          "reason": null,
+          "sceneId": "rolling-hills",
+          "sceneSeed": 1,
+          "seed": 1383031660,
+          "seedOffset": 1383031659,
+          "rng": "mulberry32(sceneSeed + Rock)"
+        },
+        "terrainMaterial": {
+          "kind": "terrain-ground",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "grassBladeMaterial": {
+          "kind": "grass-blade",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "meadowQuadMaterial": null,
+        "waterMaterial": {
+          "kind": "anime-water",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "atmosphereMaterial": {
+          "kind": "cloud-layer",
+          "applied": false,
+          "reason": "missing-factories"
+        },
+        "effectMaterial": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "ok": true
+    }
+  ]
+}

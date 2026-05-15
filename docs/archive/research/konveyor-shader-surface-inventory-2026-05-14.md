@@ -157,7 +157,12 @@ rock GLBs, and renders them through the same native instancing seam. Production
 production-side opt-in route `?renderer=webgpu&konveyorRocks=1` now uses
 `mulberry32(sceneSeed + Rock)` and records a stable scene proof in
 `cycle36-validation/runtime/rock-placement-flag-proof.json`. Shared obstacle
-state remains unwired. Do not start production wiring with
+state remains unwired. `cycle36-validation/runtime/production-flag-fallback-proof.json`
+now records Field and Rolling Hills with `renderer=webgpu` plus all current
+Konveyor material and placement flags but without `diagnostic=1`; both scenes
+stay effective WebGL with `fallbackReason: "diagnostic-flag-required"`, the
+rock-placement route applies, and material adapters fail closed with
+`missing-factories`. Do not start production wiring with
 terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
@@ -248,6 +253,11 @@ comments:
   Production `RockPlacement` now has a separate deterministic RNG route behind
   `?renderer=webgpu&konveyorRocks=1`; default production still uses client
   `Math.random()`, and shared obstacle wiring remains separate work.
+- `cycle36-validation/runtime/production-flag-fallback-proof.json` records the
+  current production fail-closed contract: `renderer=webgpu` plus all Konveyor
+  material/placement flags still boots effective WebGL unless `diagnostic=1`,
+  the rock placement flag applies deterministic RNG, and material adapters stay
+  off without explicit factories.
 - The production-side adapter in `js/world/konveyorMaterialAdapter.js` reuses
   the same tree-name and rock-traversal replacement rules for cached GLB roots.
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and

@@ -207,6 +207,13 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   rock/obstacle placements, Open Country records a stable zero-rock outcome for
   the current scene zones, and default production still uses `Math.random()`
   while the flag is off.
+  `cycle36-validation/runtime/production-flag-fallback-proof.json` records
+  Field and Rolling Hills production scenes with `renderer=webgpu` plus every
+  current Konveyor material/placement flag enabled but no `diagnostic=1`; both
+  scenes remain effective WebGL with
+  `fallbackReason: "diagnostic-flag-required"`, deterministic rock placement
+  applies, and material adapters report `missing-factories`. This is the
+  current fail-closed production contract, not a WebGPU scene-boot claim.
   A production-facing far-ring meadow material adapter now exists behind
   `?renderer=webgpu&konveyorGrass=1` plus an explicit meadow factory; default
   WebGL still uses the existing `MeshLambertMaterial` and procedural tint
