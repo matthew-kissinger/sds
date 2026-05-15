@@ -143,7 +143,8 @@ WebGPU now has a diagnostic island, not a production renderer:
   but without
   `diagnostic=1`. The boot still fails closed to WebGL with
   `fallbackReason: "diagnostic-flag-required"`, the deterministic rock route
-  applies, and the material adapters remain absent with `missing-factories`.
+  applies, and the material adapters remain fail-closed with
+  `missing-factories` when explicit WebGPU factories are not supplied.
   This is the current production fallback contract, not a WebGPU production
   scene claim.
 - A production-facing tree/rock material adapter now exists behind

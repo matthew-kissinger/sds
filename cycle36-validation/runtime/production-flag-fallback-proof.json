@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-05-15T06:15:37.974Z",
+  "capturedAt": "2026-05-15T07:59:04.001Z",
   "contract": "konveyor-production-flag-fallback-proof",
   "baseUrl": "http://127.0.0.1:4173/",
-  "channel": "playwright-chromium",
+  "channel": "chrome",
   "chromiumArgs": [
     "--use-angle=d3d11",
     "--enable-gpu"
@@ -36,7 +36,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 116,
-        "triangles": 4164342
+        "triangles": 4170614
       },
       "summaries": {
         "treeRockMaterial": {
@@ -92,7 +92,7 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 91,
-        "triangles": 3763532
+        "triangles": 3758764
       },
       "summaries": {
         "treeRockMaterial": {
@@ -151,8 +151,8 @@
         "className": "ux",
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
-        "calls": 156,
-        "triangles": 3577402
+        "calls": 157,
+        "triangles": 3599675
       },
       "summaries": {
         "treeRockMaterial": {

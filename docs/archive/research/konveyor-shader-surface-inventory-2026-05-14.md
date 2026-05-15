@@ -294,7 +294,7 @@ comments:
   current production fail-closed contract: `renderer=webgpu` plus all Konveyor
   material/placement flags still boots effective WebGL unless `diagnostic=1`,
   the rock placement flag applies deterministic RNG, and material adapters stay
-  off without explicit factories.
+  fail-closed without explicit factories.
 - The production-side adapter in `js/world/konveyorMaterialAdapter.js` reuses
   the same tree-name and rock-traversal replacement rules for cached GLB roots.
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and
