@@ -90,27 +90,34 @@ export class HosekWilkieSky {
     this.mesh = null;
 
     if (createRenderable) {
-      this.material = new THREE.ShaderMaterial({
+      this.uniforms = {
+        uSunDirection: { value: this.sunDirection },
+        uTurbidity: { value: this.turbidity },
+        uRayleigh: { value: this.rayleigh },
+        uMieCoefficient: { value: this.mieCoefficient },
+        uMieDirectionalG: { value: this.mieDirectionalG },
+        uGroundAlbedo: { value: this.groundAlbedo },
+        uExposure: { value: this.exposure },
+        uCloudCoverage: { value: this.cloudCoverage },
+        uCloudNoiseScale: { value: this.cloudNoiseScale },
+        uCloudTimeSeconds: { value: this.cloudTimeSeconds },
+        uCloudWindDir: { value: this.cloudWindDir },
+      };
+      const createDefaultMaterial = () => new THREE.ShaderMaterial({
         name: 'HosekWilkieSky',
-        uniforms: {
-          uSunDirection: { value: this.sunDirection },
-          uTurbidity: { value: this.turbidity },
-          uRayleigh: { value: this.rayleigh },
-          uMieCoefficient: { value: this.mieCoefficient },
-          uMieDirectionalG: { value: this.mieDirectionalG },
-          uGroundAlbedo: { value: this.groundAlbedo },
-          uExposure: { value: this.exposure },
-          uCloudCoverage: { value: this.cloudCoverage },
-          uCloudNoiseScale: { value: this.cloudNoiseScale },
-          uCloudTimeSeconds: { value: this.cloudTimeSeconds },
-          uCloudWindDir: { value: this.cloudWindDir },
-        },
+        uniforms: this.uniforms,
         vertexShader: hosekWilkieVertexShader,
         fragmentShader: hosekWilkieFragmentShader,
         side: THREE.BackSide,
         depthWrite: false,
         depthTest: false,
       });
+      const materialResult = typeof options.factory === 'function'
+        ? options.factory({
+            uniforms: this.uniforms,
+          })
+        : null;
+      this.material = materialResult?.material ?? materialResult ?? createDefaultMaterial();
 
       this.geometry = new THREE.SphereGeometry(
         DOME_RADIUS,
@@ -145,9 +152,9 @@ export class HosekWilkieSky {
     this.exposure = preset.exposure;
 
     if (this.material) {
-      this.material.uniforms.uTurbidity.value = this.turbidity;
-      this.material.uniforms.uRayleigh.value = this.rayleigh;
-      this.material.uniforms.uExposure.value = this.exposure;
+      this.uniforms.uTurbidity.value = this.turbidity;
+      this.uniforms.uRayleigh.value = this.rayleigh;
+      this.uniforms.uExposure.value = this.exposure;
     }
 
     this.lutDirty = true;
@@ -186,7 +193,7 @@ export class HosekWilkieSky {
     if (Number.isFinite(deltaTime) && deltaTime > 0) {
       this.cloudTimeSeconds += deltaTime;
       if (this.material) {
-        this.material.uniforms.uCloudTimeSeconds.value = this.cloudTimeSeconds;
+        this.uniforms.uCloudTimeSeconds.value = this.cloudTimeSeconds;
       }
     }
   }
@@ -195,7 +202,7 @@ export class HosekWilkieSky {
   setCloudCoverage(value) {
     this.cloudCoverage = Math.max(0, Math.min(1, value));
     if (this.material) {
-      this.material.uniforms.uCloudCoverage.value = this.cloudCoverage;
+      this.uniforms.uCloudCoverage.value = this.cloudCoverage;
     }
   }
 
@@ -206,14 +213,14 @@ export class HosekWilkieSky {
     }
     this.cloudNoiseScale = 1 / metersPerFeature;
     if (this.material) {
-      this.material.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
+      this.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
     }
   }
 
   resetCloudFeatureScale() {
     this.cloudNoiseScale = DEFAULT_CLOUD_NOISE_SCALE;
     if (this.material) {
-      this.material.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
+      this.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
     }
   }
 
@@ -233,19 +240,19 @@ export class HosekWilkieSky {
     if (t.turbidity !== undefined) {
       this.turbidity = t.turbidity;
       if (this.material) {
-        this.material.uniforms.uTurbidity.value = t.turbidity;
+        this.uniforms.uTurbidity.value = t.turbidity;
       }
     }
     if (t.rayleigh !== undefined) {
       this.rayleigh = t.rayleigh;
       if (this.material) {
-        this.material.uniforms.uRayleigh.value = t.rayleigh;
+        this.uniforms.uRayleigh.value = t.rayleigh;
       }
     }
     if (t.exposure !== undefined) {
       this.exposure = t.exposure;
       if (this.material) {
-        this.material.uniforms.uExposure.value = t.exposure;
+        this.uniforms.uExposure.value = t.exposure;
       }
     }
     if (t.groundAlbedo) {

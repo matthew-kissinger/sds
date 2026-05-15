@@ -9,6 +9,14 @@ diagnostic material islands.
 derived zenith, horizon, and sun colors. `Atmosphere` is the orchestrator that
 applies those derived values to the rest of the scene.
 
+A production-facing sky-dome adapter now exists in
+`js/atmosphere/konveyorAtmosphereMaterialAdapter.js`, and `HosekWilkieSky` can
+receive an injected material factory for that adapter. The adapter only
+activates for `?renderer=webgpu&konveyorAtmosphere=1` plus an explicit
+`createSkyDomeMaterial` factory; otherwise the injected path returns the
+existing WebGL `ShaderMaterial`. The seam passes the shared sky uniform state,
+but it does not move fog or sun ownership out of the CPU-visible LUT contract.
+
 The WebGPU diagnostic path now uses
 `js/atmosphere/skyFogSamplePacket.js` for the same contract. That helper can
 sample an existing `HosekWilkieSky` instance, or create a renderless
@@ -20,7 +28,7 @@ Runtime ownership today:
 
 | Value | Owner | Consumers | WebGPU migration note |
 |---|---|---|---|
-| Sky dome color | `HosekWilkieSky` shader + CPU mirror | Backdrop, atmosphere specs | Do not replace with a visual-only sky shader unless the CPU LUT contract stays equivalent. |
+| Sky dome color | `HosekWilkieSky` shader + CPU mirror | Backdrop, atmosphere specs | Production-facing material creation can now route through the explicit atmosphere adapter, but do not replace the sky with a visual-only shader unless the CPU LUT contract stays equivalent. |
 | Horizon color | `HosekWilkieSky.getHorizon()` | `Atmosphere.applyFogColor()` | Fog color follows horizon every frame, including linear `sceneDef.fog` overrides. |
 | Sun color | `HosekWilkieSky.getSun()` unless preset has a direct hint | `SunSystem`, `CloudLayer`, sun billboard, rocks/impostors through `main.js` | WebGPU cloud/sky work must preserve this color handoff before production wiring. |
 | Fog density | `Atmosphere.baseFogDensity` plus weather multiplier | `scene.fog`, terrain fog chunks, grass fog uniforms | Fog type can be `FogExp2` or scene-level linear `Fog`; color source is still horizon. |
@@ -40,6 +48,17 @@ Runtime ownership today:
 - `sampleSkyFogPacketFromSky()` and `createSkyFogSamplePacket()` emit a
   CPU-visible packet with horizon, zenith, sun, fog, preset, and cloud values.
 
+`tests/konveyor-atmosphere-material-adapter.spec.js` asserts:
+
+- The sky material adapter requires both `renderer=webgpu` and
+  `konveyorAtmosphere=1`.
+- Missing factories fall back to the default sky material with an explicit
+  reason.
+- `HosekWilkieSky` can receive an explicit sky material factory while keeping
+  shared uniforms available to the factory.
+- The default `HosekWilkieSky` constructor remains on the WebGL
+  `ShaderMaterial` path.
+
 `tests/webgpu-diagnostic.spec.js` asserts the diagnostic WebGPU sky/fog packet
 keeps fog color derived from the CPU horizon sample and matches the production
 Hosek-Wilkie LUT. The Chrome diagnostic probe records
@@ -57,8 +76,8 @@ gates.
 `cycle36-validation/runtime/sky-lut-profile.json` records a renderless CPU LUT
 profile for the same five presets using `tools/konveyor-sky-lut-profile.mjs`.
 The current LUT has 256 RGB entries; in this local profile the worst bake was
-1.2966 ms and the worst 1024-direction sample batch was 0.94 ms. That makes the
-current SDS CPU-visible LUT a contract surface, not a measured bottleneck.
+1.4724 ms and the worst 1024-direction sample batch was 1.0535 ms. That makes
+the current SDS CPU-visible LUT a contract surface, not a measured bottleneck.
 
 ## Next Migration Shape
 
@@ -77,6 +96,11 @@ inputs, and the diagnostic sky/fog island proves a renderer-visible material can
 share a renderless CPU-accessible horizon/sun/fog packet. Production sky, fog,
 terrain, water, grass, and impostor wiring still needs parity evidence before
 any default renderer path changes.
+
+The production-facing atmosphere adapter is only a seam. The next sky step
+still needs an explicit TSL sky material factory, preset screenshot parity, and
+fog-consumer proof before the production renderer can claim WebGPU sky
+coverage.
 
 ## Cross-Project Lesson
 

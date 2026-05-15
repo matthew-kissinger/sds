@@ -141,6 +141,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   routes the already-proved diagnostic sun billboard and portal ring node
   materials through the same fail-closed pattern while leaving default WebGL
   `ShaderMaterial` creation untouched.
+- A production-facing sky-dome atmosphere material seam now exists:
+  `HosekWilkieSky` can receive an injected material factory, and
+  `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory
+  behind `?renderer=webgpu&konveyorAtmosphere=1`. The default
+  `HosekWilkieSky` path still creates the existing WebGL `ShaderMaterial`, and
+  the CPU LUT plus sky/fog packet remain the authority for fog, sun color,
+  cloud, water, grass, rock, tree, and impostor consumers.
 - [`archive/research/konveyor-atmosphere-ownership-2026-05-14.md`](archive/research/konveyor-atmosphere-ownership-2026-05-14.md)
   pins sky, fog, sun-color, and cloud ownership before cloud/sky WebGPU work.
   The sky/fog packet now lives in `js/atmosphere/skyFogSamplePacket.js` and
@@ -217,10 +224,12 @@ Recommended order:
    `@three.ez/instanced-mesh` has WebGL-specific hooks, so the conservative
    current decision is to keep `InstancedMesh2` on the WebGL path and continue
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
-   says otherwise. The sun/portal effect material adapter is now the
-   lowest-risk production-adjacent seam available, but it is still flag-gated
-   and factory supplied; next move to a smaller shader/material island or the
-   measured rock-generation extraction before touching production boot.
+   says otherwise. The sun/portal effect material adapter and sky-dome
+   atmosphere material seam are now production-facing hooks, but both are still
+   flag-gated and factory supplied. The sky path still needs a real TSL sky
+   material plus preset screenshot parity before any default production boot
+   claim; next move to a smaller shader/material island or the measured
+   rock-generation extraction before touching production boot.
 2. **Keep measurement attached to every change.** Run the relevant perf,
    latency, screenshot, test, lint, and build gates before claiming progress.
    The current atmosphere packet now has both preset parity evidence and a

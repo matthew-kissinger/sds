@@ -18,6 +18,11 @@ and the meadow-quad island now uses the production grass default colors,
 far-ring UV hash scale, and CPU sky/fog packet. Sun/portal now have a
 production-facing effect material adapter behind
 `?renderer=webgpu&konveyorEffects=1` plus explicit factories.
+A production-facing sky-dome atmosphere seam now exists: `HosekWilkieSky` can
+receive an injected material factory, and the adapter keeps that factory behind
+`?renderer=webgpu&konveyorAtmosphere=1` plus an explicit sky factory. The
+default `HosekWilkieSky` `ShaderMaterial` path and CPU LUT authority remain
+untouched when no factory is supplied.
 The rock-rim fresnel formula is also ported as a
 diagnostic `MeshStandardNodeMaterial` island driven by the CPU sky/fog sun
 color packet. A diagnostic tree-leaf island now covers wind displacement,
@@ -84,7 +89,7 @@ terrain, grass, water, sheep, or Kiln impostors.
 | 1 | Sun disc billboard | `js/effects/SunBillboard.js` | Additive quad aligned to the atmosphere sun direction. | Low. Fragment is radial alpha/color math only. | TSL node material with `uv()`, `smoothstep`, additive blending, and opacity node. Production-facing material creation can now route through `?renderer=webgpu&konveyorEffects=1` plus explicit factories; default WebGL still uses the existing `ShaderMaterial`. | Diagnostic island screenshot/probe, then default smoke. |
 | 2 | Portal ring | `js/effects/PortalEffect.js` | Open Country corral portal ring pulse and color phase. | Low-medium. Small shader, but user-visible objective feedback. | TSL node material or WebGPU-only diagnostic replica before wiring to the real portal. Production-facing ring material creation can now route through the same effect adapter with explicit factories; default WebGL still uses the existing `ShaderMaterial`. | Open Country objective visual screenshot plus completion smoke. |
 | 3 | Cloud layer | `js/atmosphere/CloudLayer.js`, `js/atmosphere/cloudShader.glsl.js` | Transparent moving sky-plane clouds. | Medium. Transparency, forceSinglePass, horizon edge fade, and time/sun uniforms. | Diagnostic cloud-plane TSL material now covers value-noise/fbm mask, sun tint, coverage, footprint fade, and time input. Production wiring still needs sky preset screenshots and fog/horizon integration. | 12-cell screenshot matrix once goldens exist, plus atmosphere specs. |
-| 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet; production wiring still needs analytic parity and preset screenshots. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
+| 4 | Hosek-Wilkie sky | `js/atmosphere/HosekWilkieSky.js`, `js/atmosphere/skyShader.glsl.js` | Analytic sky dome and horizon color source for scene fog. | High. It anchors scene fog color and Safari precision fixes. | Diagnostic sky/fog TSL prototype now exposes a CPU horizon/sun/fog packet. `HosekWilkieSky` can receive an injected material factory, and the adapter can route that factory through `?renderer=webgpu&konveyorAtmosphere=1`, but it still needs a real TSL sky material, analytic parity, preset screenshots, and fog-consumer proof before production WebGPU sky coverage is claimed. | Atmosphere specs, visual cells across sun presets, mobile/Safari canary. |
 | 5 | Anime water | `js/water/AnimeWater.js` | Shoreline foam, heightfield-driven foam, ripples, sun glint, fog. | High. Samples a generated heightfield `DataTexture` and drives a visible scene focal point. | Diagnostic TSL island now covers production palette, shoreline bands, foam, ripples, sun glint, fog input, and a non-filtered `RedFormat`/`FloatType` sample loaded from `public/terrain/rolling-hills.bin`. Production wiring still needs scene-bound Rolling Hills/Open Country screenshots before replacing WebGL water. | Water shoreline specs, Rolling Hills/Open Country screenshots, latency. |
 | 6 | Terrain ground | `js/TerrainBuilder.js` | Heightfield-displaced terrain with procedural ground color and Three fog chunks. | High. It is the base surface of every production scene and uses fog chunks. | Diagnostic terrain-heightfield TSL island now samples the real Rolling Hills heightfield texture for height-based ground color and fog input. Production terrain remains WebGL. | Refactor-baseline terrain hash untouched, screenshots, perf. |
 | 7 | Grass blades | `js/GrassSystem.js`, `js/shaders/grass/*.glsl` | Instanced blade geometry, wind, interaction, LOD fade, fake SSS, manual fog. | Very high. It owns interaction feel and high-count perf. | Diagnostic grass-blade TSL material now covers production default gradient colors, analytic wind/gust/flutter displacement, alpha hash, sky/fog handoff, and a smooth opacity proxy using `grassFadeStart`/`grassFadeEnd`. Production stochastic blade dither, interaction bending, instancing, and compute/trample experiments remain deferred. | Perf, latency, visual, mobile profile, interaction smoke. |
@@ -212,7 +217,9 @@ comments:
    not yet a production scene WebGPU boot.
 2. Keep sky/fog production wiring behind parity evidence for preset screenshots
    and fog consumers. The renderless preset-color matrix now exists for all
-   shipped sky presets.
+   shipped sky presets, and the production-facing sky-dome factory seam now
+   exists, but it is injection supplied and does not replace the default WebGL
+   sky material by itself.
 3. Keep water production wiring deferred until the diagnostic heightfield
    `DataTexture` proof is expanded beyond Rolling Hills, then backed by
    Rolling Hills/Open Country scene screenshots.
