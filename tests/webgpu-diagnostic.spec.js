@@ -394,12 +394,14 @@ describe('webgpu runtime glb material proof', () => {
     expect(plan).toMatchObject({
       ok: true,
       sceneId: 'field',
-      source: 'diagnostic-rock-placement-transform-samples',
+      source: 'diagnostic-rock-placement-generated-from-scene-zones',
+      rng: 'mulberry32(sceneSeed + Rock)',
       productionReference: 'js/world/RockPlacement.js rockInstances transform contract',
       obstacleContract: 'recorded-only-not-wired-to-shared/SceneObstacles',
       sampledRocks: 6,
       types: ['rock1', 'rock2', 'rock3'],
     });
+    expect(plan.generatedRocks).toBeGreaterThan(plan.sampledRocks);
     const counts = plan.samples.reduce((acc, sample) => ({
       ...acc,
       [sample.type]: (acc[sample.type] ?? 0) + 1,

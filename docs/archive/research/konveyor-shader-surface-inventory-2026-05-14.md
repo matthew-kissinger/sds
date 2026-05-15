@@ -62,9 +62,11 @@ diagnostic island renders the same samples through WebGPU `THREE.InstancedMesh`
 groups for trunks and leaves, proving LOD0 native Three instancing without
 pulling production `InstancedMesh2` into the WebGPU namespace. That path now
 goes through `js/world/konveyorNativeInstancingAdapter.js`. A rock transform
-diagnostic now renders fixed `RockPlacement`-shaped samples for all three rock
-GLBs through the same native instancing seam; it deliberately does not extract
-or claim seeded production rock generation. Do not start production wiring with
+diagnostic now mirrors production `RockPlacement` formation rules with a
+diagnostic-only seeded RNG, records generated scene-zone rock samples for all
+three rock GLBs, and renders them through the same native instancing seam. It
+deliberately does not change production `Math.random()` rock placement or wire
+shared obstacle state. Do not start production wiring with
 terrain, grass, water, sheep, or Kiln impostors.
 
 ## Active ShaderMaterial Surfaces
@@ -149,12 +151,13 @@ comments:
   `@three.ez/instanced-mesh` surfaces (`WebGLRenderer`,
   `WebGL2RenderingContext`, `WebGLProperties`), so the current WebGPU route is
   native `THREE.InstancedMesh` rather than direct `InstancedMesh2` reuse.
-- `diagnostic-rock-instancing-preview` records fixed transform samples shaped
-  like `js/world/RockPlacement.js` instance data, covers all three shipped rock
-  GLBs, renders them through native WebGPU `THREE.InstancedMesh`, and reports
-  the obstacle fields as recorded-only. Production rock placement still uses
-  client `Math.random()`, so seeded generation and shared obstacle wiring
-  remain separate work.
+- `diagnostic-rock-instancing-preview` records transform samples generated from
+  scene zones with a diagnostic-only seeded mirror of `js/world/RockPlacement.js`
+  formation rules, covers all three shipped rock GLBs, renders them through
+  native WebGPU `THREE.InstancedMesh`, and reports the obstacle fields as
+  recorded-only. Production rock placement still uses client `Math.random()`,
+  so production seeded generation and shared obstacle wiring remain separate
+  work.
 - The production-side adapter in `js/world/konveyorMaterialAdapter.js` reuses
   the same tree-name and rock-traversal replacement rules for cached GLB roots.
   It only activates when `renderer=webgpu&konveyorMaterials=1` is present and
@@ -190,7 +193,8 @@ comments:
    data through the shared tree placement generator. The WebGPU diagnostic now
    also proves a LOD0-only `THREE.InstancedMesh` tree path through the
    production-facing adapter seam. Rock placement now has a diagnostic
-   transform/instancing proof, but not a seeded production generator. Keep
+   scene-zone generation and transform/instancing proof, but not a seeded
+   production generator. Keep
    production `InstancedMesh2` on the WebGL path for now; move to another
    smaller material island or the measured rock-generation extraction while
    keeping current WebGL `onBeforeCompile` patches as default. The sun/portal

@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T01:01:58.753Z",
+  "capturedAt": "2026-05-15T01:08:55.131Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -1033,10 +1033,11 @@
         "ok": true,
         "sceneId": "field",
         "seed": 0,
-        "source": "diagnostic-rock-placement-transform-samples",
+        "rng": "mulberry32(sceneSeed + Rock)",
+        "source": "diagnostic-rock-placement-generated-from-scene-zones",
         "productionReference": "js/world/RockPlacement.js rockInstances transform contract",
         "obstacleContract": "recorded-only-not-wired-to-shared/SceneObstacles",
-        "generatedRocks": null,
+        "generatedRocks": 308,
         "sampledRocks": 6,
         "types": [
           "rock1",
@@ -1045,104 +1046,104 @@
         ],
         "samples": [
           {
-            "sourceIndex": 12,
+            "sourceIndex": 0,
             "type": "rock1",
             "production": {
-              "x": -172.5,
-              "z": -136.25,
-              "scale": 6.85,
-              "rotationX": 0.08,
-              "rotationY": 0.35,
-              "rotationZ": -0.04,
+              "x": -181.3546,
+              "z": -299.499,
+              "scale": 13.1155,
+              "rotationX": 0.2695,
+              "rotationY": 0.5388,
+              "rotationZ": 0.1631,
               "scaleY": 0.7,
               "scaleZ": 1.2,
-              "radius": 8.22,
-              "colliderRadius": 3.768,
+              "radius": 15.739,
+              "colliderRadius": 7.214,
               "isObstacle": true
             }
           },
           {
-            "sourceIndex": 31,
+            "sourceIndex": 1,
+            "type": "rock2",
+            "production": {
+              "x": -192.8845,
+              "z": -309.6516,
+              "scale": 12.9614,
+              "rotationX": 0.2559,
+              "rotationY": 4.4126,
+              "rotationZ": 0.0487,
+              "scaleY": 0.7,
+              "scaleZ": 1.2,
+              "radius": 15.554,
+              "colliderRadius": 7.129,
+              "isObstacle": true
+            }
+          },
+          {
+            "sourceIndex": 7,
+            "type": "rock3",
+            "production": {
+              "x": -189.7007,
+              "z": -362.6485,
+              "scale": 15.051,
+              "rotationX": 0.0494,
+              "rotationY": 0.337,
+              "rotationZ": 0.5362,
+              "scaleY": 0.7,
+              "scaleZ": 1.2,
+              "radius": 18.061,
+              "colliderRadius": 8.278,
+              "isObstacle": true
+            }
+          },
+          {
+            "sourceIndex": 2,
             "type": "rock1",
             "production": {
-              "x": -118.75,
-              "z": 154.5,
-              "scale": 8.2,
-              "rotationX": 0.16,
-              "rotationY": 2.1,
-              "rotationZ": 0.09,
+              "x": -183.5053,
+              "z": -317.5161,
+              "scale": 11.7769,
+              "rotationX": 0.1867,
+              "rotationY": 3.9279,
+              "rotationZ": 0.8915,
               "scaleY": 0.7,
               "scaleZ": 1.2,
-              "radius": 9.84,
-              "colliderRadius": 4.51,
+              "radius": 14.132,
+              "colliderRadius": 6.477,
               "isObstacle": true
             }
           },
           {
-            "sourceIndex": 54,
+            "sourceIndex": 4,
             "type": "rock2",
             "production": {
-              "x": 158,
-              "z": -122,
-              "scale": 11.6,
-              "rotationX": 0.11,
-              "rotationY": 1.25,
-              "rotationZ": -0.13,
+              "x": -188.235,
+              "z": -335.8154,
+              "scale": 19.6127,
+              "rotationX": 0.0808,
+              "rotationY": 2.0401,
+              "rotationZ": 0.1253,
               "scaleY": 0.7,
               "scaleZ": 1.2,
-              "radius": 13.92,
-              "colliderRadius": 6.38,
+              "radius": 23.535,
+              "colliderRadius": 10.787,
               "isObstacle": true
             }
           },
           {
-            "sourceIndex": 77,
-            "type": "rock2",
-            "production": {
-              "x": 232.5,
-              "z": 206,
-              "scale": 14.4,
-              "rotationX": 0.22,
-              "rotationY": 3.62,
-              "rotationZ": 0.07,
-              "scaleY": 0.7,
-              "scaleZ": 1.2,
-              "radius": 17.28,
-              "colliderRadius": 7.92,
-              "isObstacle": true
-            }
-          },
-          {
-            "sourceIndex": 109,
+            "sourceIndex": 8,
             "type": "rock3",
             "production": {
-              "x": -344,
-              "z": 282.25,
-              "scale": 22.5,
-              "rotationX": 0.19,
-              "rotationY": 4.4,
-              "rotationZ": -0.16,
+              "x": 127.0575,
+              "z": 284.6463,
+              "scale": 19.8176,
+              "rotationX": 0.8894,
+              "rotationY": 2.7175,
+              "rotationZ": 0.2256,
               "scaleY": 0.7,
               "scaleZ": 1.2,
-              "radius": 27,
-              "colliderRadius": 12.375,
-              "isObstacle": true
-            }
-          },
-          {
-            "sourceIndex": 144,
-            "type": "rock3",
-            "production": {
-              "x": 408.5,
-              "z": -318,
-              "scale": 31,
-              "rotationX": 0.27,
-              "rotationY": 5.55,
-              "rotationZ": 0.15,
-              "scaleY": 0.7,
-              "scaleZ": 1.2,
-              "radius": 37.2,
-              "colliderRadius": 17.05,
+              "radius": 23.781,
+              "colliderRadius": 10.9,
               "isObstacle": true
             }
           }
@@ -1152,7 +1153,7 @@
         "ok": true,
         "source": "THREE.InstancedMesh",
         "productionReference": "RockPlacement InstancedMesh2.addInstances",
-        "instanceSource": "diagnostic-rock-placement-transform-samples",
+        "instanceSource": "diagnostic-rock-placement-generated-from-scene-zones",
         "lod": "lod0-only",
         "instancedMesh2Status": "not imported in WebGPU diagnostic",
         "rockInstances": 6,
@@ -1731,10 +1732,11 @@
       "ok": true,
       "sceneId": "field",
       "seed": 0,
-      "source": "diagnostic-rock-placement-transform-samples",
+      "rng": "mulberry32(sceneSeed + Rock)",
+      "source": "diagnostic-rock-placement-generated-from-scene-zones",
       "productionReference": "js/world/RockPlacement.js rockInstances transform contract",
       "obstacleContract": "recorded-only-not-wired-to-shared/SceneObstacles",
-      "generatedRocks": null,
+      "generatedRocks": 308,
       "sampledRocks": 6,
       "types": [
         "rock1",
@@ -1743,104 +1745,104 @@
       ],
       "samples": [
         {
-          "sourceIndex": 12,
+          "sourceIndex": 0,
           "type": "rock1",
           "production": {
-            "x": -172.5,
-            "z": -136.25,
-            "scale": 6.85,
-            "rotationX": 0.08,
-            "rotationY": 0.35,
-            "rotationZ": -0.04,
+            "x": -181.3546,
+            "z": -299.499,
+            "scale": 13.1155,
+            "rotationX": 0.2695,
+            "rotationY": 0.5388,
+            "rotationZ": 0.1631,
             "scaleY": 0.7,
             "scaleZ": 1.2,
-            "radius": 8.22,
-            "colliderRadius": 3.768,
+            "radius": 15.739,
+            "colliderRadius": 7.214,
             "isObstacle": true
           }
         },
         {
-          "sourceIndex": 31,
+          "sourceIndex": 1,
+          "type": "rock2",
+          "production": {
+            "x": -192.8845,
+            "z": -309.6516,
+            "scale": 12.9614,
+            "rotationX": 0.2559,
+            "rotationY": 4.4126,
+            "rotationZ": 0.0487,
+            "scaleY": 0.7,
+            "scaleZ": 1.2,
+            "radius": 15.554,
+            "colliderRadius": 7.129,
+            "isObstacle": true
+          }
+        },
+        {
+          "sourceIndex": 7,
+          "type": "rock3",
+          "production": {
+            "x": -189.7007,
+            "z": -362.6485,
+            "scale": 15.051,
+            "rotationX": 0.0494,
+            "rotationY": 0.337,
+            "rotationZ": 0.5362,
+            "scaleY": 0.7,
+            "scaleZ": 1.2,
+            "radius": 18.061,
+            "colliderRadius": 8.278,
+            "isObstacle": true
+          }
+        },
+        {
+          "sourceIndex": 2,
           "type": "rock1",
           "production": {
-            "x": -118.75,
-            "z": 154.5,
-            "scale": 8.2,
-            "rotationX": 0.16,
-            "rotationY": 2.1,
-            "rotationZ": 0.09,
+            "x": -183.5053,
+            "z": -317.5161,
+            "scale": 11.7769,
+            "rotationX": 0.1867,
+            "rotationY": 3.9279,
+            "rotationZ": 0.8915,
             "scaleY": 0.7,
             "scaleZ": 1.2,
-            "radius": 9.84,
-            "colliderRadius": 4.51,
+            "radius": 14.132,
+            "colliderRadius": 6.477,
             "isObstacle": true
           }
         },
         {
-          "sourceIndex": 54,
+          "sourceIndex": 4,
           "type": "rock2",
           "production": {
-            "x": 158,
-            "z": -122,
-            "scale": 11.6,
-            "rotationX": 0.11,
-            "rotationY": 1.25,
-            "rotationZ": -0.13,
+            "x": -188.235,
+            "z": -335.8154,
+            "scale": 19.6127,
+            "rotationX": 0.0808,
+            "rotationY": 2.0401,
+            "rotationZ": 0.1253,
             "scaleY": 0.7,
             "scaleZ": 1.2,
-            "radius": 13.92,
-            "colliderRadius": 6.38,
+            "radius": 23.535,
+            "colliderRadius": 10.787,
             "isObstacle": true
           }
         },
         {
-          "sourceIndex": 77,
-          "type": "rock2",
-          "production": {
-            "x": 232.5,
-            "z": 206,
-            "scale": 14.4,
-            "rotationX": 0.22,
-            "rotationY": 3.62,
-            "rotationZ": 0.07,
-            "scaleY": 0.7,
-            "scaleZ": 1.2,
-            "radius": 17.28,
-            "colliderRadius": 7.92,
-            "isObstacle": true
-          }
-        },
-        {
-          "sourceIndex": 109,
+          "sourceIndex": 8,
           "type": "rock3",
           "production": {
-            "x": -344,
-            "z": 282.25,
-            "scale": 22.5,
-            "rotationX": 0.19,
-            "rotationY": 4.4,
-            "rotationZ": -0.16,
+            "x": 127.0575,
+            "z": 284.6463,
+            "scale": 19.8176,
+            "rotationX": 0.8894,
+            "rotationY": 2.7175,
+            "rotationZ": 0.2256,
             "scaleY": 0.7,
             "scaleZ": 1.2,
-            "radius": 27,
-            "colliderRadius": 12.375,
-            "isObstacle": true
-          }
-        },
-        {
-          "sourceIndex": 144,
-          "type": "rock3",
-          "production": {
-            "x": 408.5,
-            "z": -318,
-            "scale": 31,
-            "rotationX": 0.27,
-            "rotationY": 5.55,
-            "rotationZ": 0.15,
-            "scaleY": 0.7,
-            "scaleZ": 1.2,
-            "radius": 37.2,
-            "colliderRadius": 17.05,
+            "radius": 23.781,
+            "colliderRadius": 10.9,
             "isObstacle": true
           }
         }
@@ -1850,7 +1852,7 @@
       "ok": true,
       "source": "THREE.InstancedMesh",
       "productionReference": "RockPlacement InstancedMesh2.addInstances",
-      "instanceSource": "diagnostic-rock-placement-transform-samples",
+      "instanceSource": "diagnostic-rock-placement-generated-from-scene-zones",
       "lod": "lod0-only",
       "instancedMesh2Status": "not imported in WebGPU diagnostic",
       "rockInstances": 6,
@@ -1898,6 +1900,6 @@
         "hasControls": false
       }
     },
-    "frames": 3
+    "frames": 2
   }
 }
