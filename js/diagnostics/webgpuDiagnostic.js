@@ -275,6 +275,29 @@ export function createTreeLeafDiagnosticState() {
     };
 }
 
+export function createGrassBladeDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
+    return {
+        baseColor: [0.08, 0.28, 0.04],
+        midColor: [0.18, 0.48, 0.12],
+        tipColor: [0.55, 0.82, 0.30],
+        windDirection: [0.7, 0.7],
+        windStrength: 0.12,
+        windSpeed: 0.6,
+        gustStrength: 0.05,
+        bladeHeight: 1.0,
+        sunColor: skyFog.sunColor,
+        sunDirection: skyFog.sunDirection,
+        fogColor: skyFog.fogColor,
+        fogNear: skyFog.fogNear,
+        fogFar: skyFog.fogFar,
+        alphaHash: true,
+        alphaTest: 0.06,
+        interaction: 'deferred',
+        distanceFade: 'deferred',
+        source: 'GrassSystem.shader-contract',
+    };
+}
+
 async function createDiagnosticHeightTexture({
     DataTexture,
     RedFormat,
@@ -394,6 +417,69 @@ function syncDiagnosticHeightfieldState(target, heightfield) {
     target.peakHeight = heightfield.peakHeight;
 }
 
+function createGrassBladeNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, grassBlade) {
+    const { abs, clamp, dot, float, length, max, mix, normalize, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, uv, vec2, vec3 } = TSL;
+    const bladeUv = uv();
+    const height01 = clamp(positionLocal.y.div(Math.max(grassBlade.bladeHeight, 0.001)), 0.0, 1.0);
+    const windDir = normalize(vec2(...grassBlade.windDirection));
+    const windPerp = vec2(-grassBlade.windDirection[1], grassBlade.windDirection[0]);
+    const windPower = height01.mul(height01);
+    const worldX = positionWorld.x;
+    const worldZ = positionWorld.z;
+    const gustFlow = time.mul(grassBlade.windSpeed * 1.5);
+    const gustA = sin(worldX.mul(0.045).add(worldZ.mul(0.038)).sub(gustFlow));
+    const gustB = sin(worldX.mul(0.022).add(worldZ.mul(0.029)).add(1.7).sub(gustFlow.mul(0.72)));
+    const gustEnv = smoothstep(-0.2, 1.0, gustA.mul(0.6).add(gustB.mul(0.4)));
+    const swayTime = time.mul(grassBlade.windSpeed);
+    const sway1 = sin(worldX.mul(0.13).add(worldZ.mul(0.09)).add(swayTime.mul(0.85)));
+    const sway2 = sin(worldX.mul(0.07).sub(worldZ.mul(0.11)).add(swayTime.mul(0.55)).add(1.3));
+    const sway = sway1.mul(0.6).add(sway2.mul(0.4));
+    const carrier = float(0.45).add(sway.mul(0.5).mul(float(0.4).add(gustEnv.mul(0.8))));
+    const tipMask = smoothstep(0.65, 1.0, height01);
+    const flutter = sin(worldX.mul(0.7).add(worldZ.mul(0.6)).add(time.mul(4.5)));
+    const windDisp = windDir.mul(carrier.mul(grassBlade.windStrength).mul(windPower))
+        .add(windPerp.mul(flutter.mul(0.06 * grassBlade.windStrength).mul(tipMask)));
+    const centerDist = abs(bladeUv.x.sub(0.5)).mul(2.0);
+    const taperWidth = mix(0.9, 0.18, height01);
+    const bladeShape = float(1.0).sub(smoothstep(taperWidth, taperWidth.add(0.16), centerDist));
+    const gradient = mix(
+        mix(vec3(...grassBlade.baseColor), vec3(...grassBlade.midColor), smoothstep(0.0, 0.4, height01)),
+        vec3(...grassBlade.tipColor),
+        smoothstep(0.4, 1.0, height01)
+    );
+    const colorVariation = smoothstep(-1.0, 1.0, sin(worldX.mul(0.2).add(worldZ.mul(0.15))));
+    const variation = vec3(
+        colorVariation.mul(0.08),
+        colorVariation.mul(0.05).sub(0.02),
+        colorVariation.mul(-0.03)
+    );
+    const ao = mix(0.7, 1.0, height01);
+    const sunLift = max(dot(normalize(vec3(...grassBlade.sunDirection)), vec3(0.0, 1.0, 0.0)), 0.0);
+    const sunTip = vec3(...grassBlade.sunColor).mul(tipMask.mul(sunLift).mul(0.16 + grassBlade.gustStrength));
+    const viewDir = normalize(positionView.negate());
+    const verticalRim = pow(max(dot(viewDir, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
+    const viewDistance = length(positionView);
+    const fogBlend = smoothstep(grassBlade.fogNear, grassBlade.fogFar, viewDistance).mul(0.55);
+
+    const material = new MeshStandardNodeMaterial();
+    material.name = 'konveyor-node-grass-blade';
+    material.colorNode = mix(
+        gradient.add(variation).mul(ao)
+            .add(sunTip)
+            .add(vec3(...grassBlade.tipColor).mul(verticalRim.mul(0.2).mul(tipMask))),
+        vec3(...grassBlade.fogColor),
+        fogBlend
+    );
+    material.opacityNode = bladeShape;
+    material.positionNode = positionLocal.add(vec3(windDisp.x, 0.0, windDisp.y));
+    material.roughnessNode = float(0.96);
+    material.metalnessNode = float(0.0);
+    material.alphaHash = grassBlade.alphaHash;
+    material.alphaTest = grassBlade.alphaTest;
+    material.side = DoubleSide;
+    return material;
+}
+
 function createSkyFogNodeMaterial({ MeshBasicNodeMaterial, TSL }, skyFog) {
     const { float, length, mix, pow, smoothstep, uv, vec2, vec3 } = TSL;
     const skyUv = uv();
@@ -495,18 +581,20 @@ export async function bootWebGpuDiagnostic() {
     const animeWater = createAnimeWaterDiagnosticState(skyFog);
     const terrainHeightfield = createTerrainHeightfieldDiagnosticState(skyFog);
     const treeLeaf = createTreeLeafDiagnosticState();
+    const grassBlade = createGrassBladeDiagnosticState(skyFog);
     const state = window.__sdsG = {
         ...(window.__sdsG || {}),
         r: true,
         requested: true,
         ok: false,
         renderer: 'webgpu',
-        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
+        islands: ['sun-billboard', 'portal-ring', 'meadow-quad', 'cloud-plane', 'sky-fog', 'rock-rim', 'tree-leaf', 'grass-blade', 'anime-water', 'terrain-heightfield', 'glb-material-replacement', 'runtime-glb-material-proof', 'runtime-glb-rendered-clones', 'production-placement-preview', 'production-instanced-tree-preview', 'diagnostic-rock-instancing-preview'],
         skyFog,
         rockRim,
         animeWater,
         terrainHeightfield,
         treeLeaf,
+        grassBlade,
         materialReplacement: null,
         runtimeGlbReplacement: null,
         runtimeGlbPreview: null,
@@ -723,6 +811,16 @@ export async function bootWebGpuDiagnostic() {
     terrainPatch.position.set(0.0, -0.34, 0.08);
     scene.add(terrainPatch);
 
+    const grassBladeGeometry = new PlaneGeometry(0.58, grassBlade.bladeHeight, 4, 8);
+    grassBladeGeometry.translate(0, grassBlade.bladeHeight * 0.5, 0);
+    const grassBladeMesh = new Mesh(
+        grassBladeGeometry,
+        createGrassBladeNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, grassBlade)
+    );
+    grassBladeMesh.position.set(1.92, -0.82, 0.2);
+    grassBladeMesh.rotation.set(0, -0.08, 0.06);
+    scene.add(grassBladeMesh);
+
     const cloudPlane = new Mesh(
         new PlaneGeometry(2.4, 0.65, 1, 1),
         createCloudPlaneNodeMaterial({ MeshBasicNodeMaterial, DoubleSide, TSL })
@@ -773,6 +871,8 @@ export async function bootWebGpuDiagnostic() {
         water.material.dispose();
         terrainPatch.geometry.dispose();
         terrainPatch.material.dispose();
+        grassBladeMesh.geometry.dispose();
+        grassBladeMesh.material.dispose();
         waterHeightTexture.dispose();
         cloudPlane.geometry.dispose();
         cloudPlane.material.dispose();

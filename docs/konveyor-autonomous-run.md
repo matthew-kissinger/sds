@@ -151,8 +151,11 @@ Recommended order:
    fog-color inputs, and a non-filtered float texture loaded from the real
    Rolling Hills heightfield. The terrain-heightfield diagnostic island reuses
    that texture for height-based ground color and fog input while deferring
-   production scene replacement.
-   the rock-rim TSL prototype covers the smallest `onBeforeCompile`
+   production scene replacement. The grass-blade diagnostic island now covers
+   production default gradient colors, analytic wind/gust/flutter displacement,
+   alpha-hash posture, and sky/fog handoff while explicitly deferring
+   interaction bending, distance fade, production instancing, and compute
+   experiments. The rock-rim TSL prototype covers the smallest `onBeforeCompile`
    replacement formula, and the tree-leaf TSL prototype covers wind,
    alpha-hash posture, and occluder fade inputs. GLB material ownership proof
    and a diagnostic replacement proof now exist, plus a GLB primitive-clone

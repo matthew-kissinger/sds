@@ -3,6 +3,7 @@ import * as THREE from 'three';
 
 import {
   createAnimeWaterDiagnosticState,
+  createGrassBladeDiagnosticState,
   createRockRimDiagnosticState,
   createSkyFogDiagnosticState,
   createTerrainHeightfieldDiagnosticState,
@@ -137,6 +138,28 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(treeLeaf.alphaHash).toBe(true);
     expect(treeLeaf.occluderStrength).toBeGreaterThan(0);
     expect(treeLeaf.occluderPeak).toBeGreaterThan(0);
+  });
+
+  it('keeps the grass blade diagnostic tied to production grass defaults and sky fog', () => {
+    const skyFog = createSkyFogDiagnosticState();
+    const grassBlade = createGrassBladeDiagnosticState(skyFog);
+
+    expect(grassBlade.source).toBe('GrassSystem.shader-contract');
+    expect(grassBlade.baseColor).toEqual([0.08, 0.28, 0.04]);
+    expect(grassBlade.midColor).toEqual([0.18, 0.48, 0.12]);
+    expect(grassBlade.tipColor).toEqual([0.55, 0.82, 0.30]);
+    expect(grassBlade.windDirection).toEqual([0.7, 0.7]);
+    expect(grassBlade.windStrength).toBe(0.12);
+    expect(grassBlade.windSpeed).toBe(0.6);
+    expect(grassBlade.gustStrength).toBe(0.05);
+    expect(grassBlade.sunColor).toBe(skyFog.sunColor);
+    expect(grassBlade.sunDirection).toBe(skyFog.sunDirection);
+    expect(grassBlade.fogColor).toBe(skyFog.fogColor);
+    expect(grassBlade.fogNear).toBe(skyFog.fogNear);
+    expect(grassBlade.fogFar).toBe(skyFog.fogFar);
+    expect(grassBlade.alphaHash).toBe(true);
+    expect(grassBlade.interaction).toBe('deferred');
+    expect(grassBlade.distanceFade).toBe('deferred');
   });
 });
 

@@ -55,8 +55,12 @@ As of 2026-05-14, SDS is not a WebGPU project yet.
   diagnostic anime-water material covering palette, shoreline bands, foam,
   ripples, sun glint, fog input, and a non-filtered float texture loaded from
   the real Rolling Hills heightfield. A terrain-heightfield diagnostic material
-  reuses that texture for height-based ground color and fog input. Production
-  Rolling Hills/Open Country replacement remains deferred before water/terrain
+  reuses that texture for height-based ground color and fog input. A
+  grass-blade diagnostic material covers the production default gradient colors,
+  analytic wind/gust/flutter displacement, alpha-hash posture, and sky/fog
+  handoff while explicitly deferring interaction bending, distance fade,
+  production instancing, and compute/trample experiments. Production Rolling
+  Hills/Open Country replacement remains deferred before water/terrain/grass
   wiring. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB

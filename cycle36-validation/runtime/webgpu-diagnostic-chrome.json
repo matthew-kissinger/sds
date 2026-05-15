@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-15T00:07:26.073Z",
+  "capturedAt": "2026-05-15T00:14:48.211Z",
   "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1",
   "platform": "win32",
   "channel": "chrome",
@@ -84,6 +84,7 @@
       "sky-fog",
       "rock-rim",
       "tree-leaf",
+      "grass-blade",
       "anime-water",
       "terrain-heightfield",
       "glb-material-replacement",
@@ -262,6 +263,53 @@
         0.5,
         0.42
       ]
+    },
+    "grassBlade": {
+      "baseColor": [
+        0.08,
+        0.28,
+        0.04
+      ],
+      "midColor": [
+        0.18,
+        0.48,
+        0.12
+      ],
+      "tipColor": [
+        0.55,
+        0.82,
+        0.3
+      ],
+      "windDirection": [
+        0.7,
+        0.7
+      ],
+      "windStrength": 0.12,
+      "windSpeed": 0.6,
+      "gustStrength": 0.05,
+      "bladeHeight": 1,
+      "sunColor": [
+        1,
+        0.3055,
+        0.0242
+      ],
+      "sunDirection": [
+        -0.9418,
+        0.1392,
+        -0.306
+      ],
+      "fogColor": [
+        0.2933,
+        0.1629,
+        0.1348
+      ],
+      "fogNear": 18,
+      "fogFar": 74,
+      "alphaHash": true,
+      "alphaTest": 0.06,
+      "interaction": "deferred",
+      "distanceFade": "deferred",
+      "source": "GrassSystem.shader-contract"
     },
     "materialReplacement": {
       "rocks": {
