@@ -73,6 +73,8 @@ export class GrassSystem {
         this.konveyorGrassSearch = opts.search;
         this.konveyorGrassFactories = opts.konveyorGrassFactories;
         this.konveyorMeadowQuadMaterialSummary = null;
+        this.konveyorGrassBladeMaterialSummary = null;
+        this.konveyorGrassBladeMaterialControls = null;
         // Cycle 23 Phase D1: tier overrides the isMobile binary. 'low' inherits
         // mobile-style defaults; 'med' / 'high' get desktop defaults with
         // wind-octave and meadow-quad enable knobs differentiated.
@@ -516,7 +518,7 @@ export class GrassSystem {
             grassFadeEnd: { value: this.config.grassFadeEnd }
         };
 
-        return new THREE.ShaderMaterial({
+        const createDefaultMaterial = () => new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
             uniforms,
@@ -525,6 +527,58 @@ export class GrassSystem {
             depthWrite: true,
             depthTest: true
         });
+        const materialResult = createKonveyorGrassMaterial('grass-blade', 'createGrassBladeMaterial', {
+            createDefaultMaterial,
+            search: this.konveyorGrassSearch,
+            factories: this.konveyorGrassFactories,
+            context: {
+                isMobile: this.isMobile,
+                tier: this.tier,
+                vertexShader,
+                fragmentShader,
+                noiseTexture: this.noiseTexture,
+                wind: {
+                    strength: this.config.windStrength,
+                    speed: this.config.windSpeed,
+                    direction: new THREE.Vector2(0.7, 0.7),
+                    gustStrength: this.config.gustStrength,
+                },
+                colors: {
+                    baseColor: this.config.baseColor.clone(),
+                    midColor: this.config.midColor.clone(),
+                    tipColor: this.config.tipColor.clone(),
+                },
+                interaction: {
+                    maxInteractors: this.config.maxInteractors,
+                    positions: this.interactorPositions,
+                    data: this.interactorData,
+                    facings: this.interactorFacings,
+                    radius: this.config.interactionRadius,
+                    strength: this.config.interactionStrength,
+                },
+                fog: {
+                    color: this.config.fogColor.clone(),
+                    density: this.config.fogDensity,
+                },
+                fade: {
+                    start: this.config.grassFadeStart,
+                    end: this.config.grassFadeEnd,
+                },
+                material: {
+                    side: THREE.FrontSide,
+                    transparent: false,
+                    depthWrite: true,
+                    depthTest: true,
+                },
+            },
+        });
+        const material = materialResult.material;
+        material.userData = material.userData ?? {};
+        material.userData.konveyorGrassBladeMaterialControls = materialResult.controls;
+        material.userData.konveyorGrassBladeMaterialSummary = materialResult.summary;
+        this.konveyorGrassBladeMaterialSummary = materialResult.summary;
+        this.konveyorGrassBladeMaterialControls = materialResult.controls;
+        return material;
     }
 
     /**
@@ -1379,7 +1433,15 @@ export class GrassSystem {
         }
 
         // Update uniforms
-        if (this.grassMaterial) {
+        if (this.konveyorGrassBladeMaterialControls?.updateInteractors) {
+            this.konveyorGrassBladeMaterialControls.updateInteractors({
+                positions: this.interactorPositions,
+                data: this.interactorData,
+                facings: this.interactorFacings,
+                count: this.interactorCount,
+                material: this.grassMaterial,
+            });
+        } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.interactorPositions.value = this.interactorPositions;
             this.grassMaterial.uniforms.interactorData.value = this.interactorData;
             this.grassMaterial.uniforms.interactorFacings.value = this.interactorFacings;
@@ -1426,7 +1488,15 @@ export class GrassSystem {
         }
 
         // Update time uniform
-        if (this.grassMaterial) {
+        if (this.konveyorGrassBladeMaterialControls?.update) {
+            this.konveyorGrassBladeMaterialControls.update({
+                time: this.time,
+                deltaTime,
+                camera,
+                sceneFog: this.scene?.fog ?? null,
+                material: this.grassMaterial,
+            });
+        } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.time.value = this.time;
 
             // Update camera position for fog/lighting calculations
@@ -1572,7 +1642,9 @@ export class GrassSystem {
      * Set wind parameters
      */
     setWind(strength, direction) {
-        if (this.grassMaterial) {
+        if (this.konveyorGrassBladeMaterialControls?.setWind) {
+            this.konveyorGrassBladeMaterialControls.setWind({ strength, direction, material: this.grassMaterial });
+        } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.windStrength.value = strength;
             if (direction) {
                 this.grassMaterial.uniforms.windDirection.value.set(direction.x, direction.y);
@@ -1589,7 +1661,13 @@ export class GrassSystem {
      */
     setSunDirection(sunDir) {
         if (!sunDir || !this.grassMaterial) return;
-        this.grassMaterial.uniforms.uSunDirection.value.copy(sunDir);
+        if (this.konveyorGrassBladeMaterialControls?.setSunDirection) {
+            this.konveyorGrassBladeMaterialControls.setSunDirection({ sunDir, material: this.grassMaterial });
+            return;
+        }
+        if (this.grassMaterial.uniforms?.uSunDirection) {
+            this.grassMaterial.uniforms.uSunDirection.value.copy(sunDir);
+        }
     }
 
     /**
@@ -1609,6 +1687,7 @@ export class GrassSystem {
         this.chunks.clear();
 
         if (this.grassMaterial) {
+            this.konveyorGrassBladeMaterialControls?.dispose?.();
             this.grassMaterial.dispose();
         }
 

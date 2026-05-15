@@ -69,9 +69,13 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   grass-blade diagnostic material covers the production default gradient colors,
   analytic wind/gust/flutter displacement, alpha-hash posture, and sky/fog
   handoff plus a smooth opacity proxy driven by production
-  `grassFadeStart`/`grassFadeEnd`, while explicitly deferring production
-  stochastic blade dither, interaction bending, production instancing, and
-  compute/trample experiments. A sheep-wool
+  `grassFadeStart`/`grassFadeEnd`. A production-facing grass-blade material
+  adapter now exists behind `?renderer=webgpu&konveyorGrass=1` plus an
+  explicit blade factory and optional update controls for time, fog, camera,
+  wind, sun direction, and interactor state, while default WebGL keeps the
+  existing grass `ShaderMaterial`. Production stochastic blade dither,
+  production instancing, compute/trample experiments, and scene-level WebGPU
+  grass parity remain deferred. A sheep-wool
   diagnostic material covers production toon/wool color, procedural wool
   displacement, rim/SSS lighting terms, and sky/fog handoff while explicitly
   deferring production `OptimizedSheep` instancing, animation attributes,
@@ -119,7 +123,7 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=548`, `threeKB=603`, `GrassSystem=32 KB`) for later production seams
+  (`mainKB=548`, `threeKB=603`, `GrassSystem=35 KB`) for later production seams
   without regenerating the refactor-baseline bundle ratchet. A
   diagnostic material-replacement island proves tree replacement by
   `branches`/`leaves` material names and rock replacement by traversal. GLB

@@ -137,9 +137,13 @@ WebGPU now has a diagnostic island, not a production renderer:
   patch path untouched when the flag or factories are absent.
 - A production-facing far-ring meadow material adapter now exists behind
   `?renderer=webgpu&konveyorGrass=1` and an explicit meadow material factory.
-  It covers only `GrassSystem.createMeadowQuadMaterial`; blade grass,
-  stochastic blade dither, interaction bending, and instancing remain on the
-  existing WebGL path. The default meadow material still uses
+  It covers `GrassSystem.createMeadowQuadMaterial`; blade grass material
+  creation now also has a production-facing seam behind the same flag with an
+  explicit `createGrassBladeMaterial` factory and optional controls for time,
+  fog, camera, wind, sun direction, and interactor updates. Production
+  stochastic blade dither, production instancing, compute/trample experiments,
+  and scene-level WebGPU grass parity remain deferred. The default meadow
+  material still uses
   `MeshLambertMaterial` plus procedural tint injection, with the required
   `USE_UV` define assigned on the material instance before shader compile.
 - A production-facing anime-water material adapter now exists behind
@@ -170,7 +174,7 @@ WebGPU now has a diagnostic island, not a production renderer:
   paths in `TerrainBuilder` and sandbox rebuilds. This restored the
   refactor-baseline bundle gate after the water seam without regenerating the
   bundle-size fixture. Current production build evidence: `mainKB=548`,
-  `threeKB=603`, `GrassSystem=32 KB`, `AnimeWater=9 KB`.
+  `threeKB=603`, `GrassSystem=35 KB`, `AnimeWater=9 KB`.
 - A production-facing sky-dome atmosphere material seam now exists:
   `Atmosphere` can forward an explicit `skyFactory` to `HosekWilkieSky`, and
   `js/atmosphere/konveyorAtmosphereMaterialAdapter.js` keeps that factory
@@ -262,9 +266,10 @@ Recommended order:
    current decision is to keep `InstancedMesh2` on the WebGL path and continue
    the WebGPU route with native `THREE.InstancedMesh` until a measured reason
    says otherwise. The sun/portal effect material adapter, sky-dome
-   atmosphere material seam, far-ring meadow material seam, anime-water
-   material seam, and terrain-ground material seam are now production-facing
-   hooks, but all are still flag-gated and factory supplied.
+   atmosphere material seam, far-ring meadow material seam, grass-blade
+   material seam, anime-water material seam, and terrain-ground material seam
+   are now production-facing hooks, but all are still flag-gated and factory
+   supplied.
    The atmosphere seam now reaches the
    `Atmosphere` orchestrator through an explicit `skyFactory` and reaches
    `HosekWilkieSky` directly through the same fail-closed adapter; the same
