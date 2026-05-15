@@ -343,6 +343,12 @@ contradicting it:
   [MDN requestAdapter](https://developer.mozilla.org/docs/Web/API/GPU/requestAdapter)).
   That matches the repo's explicit probe artifacts and the decision to keep
   WebGL default until production evidence exists.
+- The current best-practices alignment packet is
+  [`archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md`](archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md).
+  It keeps the next work pointed at explicit TSL/node-material factories,
+  device-level runtime probes, native shell proof by platform, CPU-visible
+  atmosphere ownership until a measured GPU LUT is justified, measured EZ-Tree
+  asset refreshes, and isolated compute experiments.
 
 ## Objective
 

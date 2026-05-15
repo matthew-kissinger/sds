@@ -36,6 +36,9 @@ control surface:
 - [`cycle-36-plan.md`](cycle-36-plan.md) records the foundation closeout.
 - [`archive/research/cycle-36-konveyor-runtime-proof.md`](archive/research/cycle-36-konveyor-runtime-proof.md)
   records current runtime and native-shell facts.
+- [`archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md`](archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md)
+  aligns current Three WebGPU/TSL, browser WebGPU, Tauri, WebView2, Electron,
+  Capacitor, and WebKit facts with the active SDS migration shape.
 - [`archive/research/cycle-36-webgpu-hero-blocker.md`](archive/research/cycle-36-webgpu-hero-blocker.md)
   records why Rolling Hills production rendering should not be the first
   WebGPU boot target.
@@ -483,6 +486,11 @@ Recommended order:
    shader compatibility to trees, grass, sheep/high-count rendering, compute
    experiments, native packaging, and web fallback/release decisions as
    evidence allows.
+5. **Keep the external-doc alignment current.** Current Three docs support the
+   TSL/node-material island approach, MDN keeps device creation as the WebGPU
+   proof gate, and native-shell docs keep runtime variability as the packaging
+   risk. Refresh those facts before choosing Tauri, Electron, Capacitor, a GPU
+   LUT, a tree rebake, or a compute path.
 
 ## Hard stops
 
