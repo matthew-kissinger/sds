@@ -22,6 +22,10 @@ audit is
 [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md);
 it records that the branch packet is implementation-ready but not production
 complete until the explicit deploy/default-renderer hard stops are resolved.
+If those hard stops are explicitly cleared, use
+[`konveyor-release-decision-checklist.md`](konveyor-release-decision-checklist.md)
+for the merge, deploy, post-deploy canary, telemetry readout, and default-policy
+decision sequence.
 
 ## Current repo baseline
 
