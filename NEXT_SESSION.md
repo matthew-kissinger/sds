@@ -4,6 +4,7 @@
 > Rolling Hills terrain/sheep scene-swap fixes, the explicit production WebGPU
 > request route, and the completion audit on the experimental branch.
 > **For:** `exp/konveyor-webgpu-migration`.
+> **Draft PR:** [#52](https://github.com/matthew-kissinger/sds/pull/52).
 > **Pickup priority:** continue the full SDS Konveyor campaign from
 > [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md). Do not
 > stop at numbered cycle boundaries. Treat Cycle 36 as completed foundation

@@ -4,6 +4,8 @@ Branch: `exp/konveyor-webgpu-migration`
 
 Commit audited: `b77eac4c4c785b01ef824eaaf60d7d7ff462d439`
 
+Draft PR: [#52](https://github.com/matthew-kissinger/sds/pull/52)
+
 ## Objective Restatement
 
 Complete the SDS Konveyor autonomous campaign by finishing the WebGPU migration
