@@ -17,7 +17,11 @@ The full migration campaign runs on `exp/konveyor-webgpu-migration`. In that
 mode, numbered cycle plans are evidence and checkpoints, not stopping points.
 Agents should keep moving until the full objective is reached or a documented
 hard stop is hit. Use [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md)
-as the control surface for the next autonomous pass.
+as the control surface for the next autonomous pass. The current completion
+audit is
+[`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md);
+it records that the branch packet is implementation-ready but not production
+complete until the explicit deploy/default-renderer hard stops are resolved.
 
 ## Current repo baseline
 

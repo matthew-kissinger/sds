@@ -1,15 +1,15 @@
 # Next Session - Konveyor Autonomous Run
 
 > **Updated:** 2026-05-16 after guarded WebGPU gameplay parity proof,
-> Rolling Hills terrain/sheep scene-swap fixes, and the explicit production
-> WebGPU request route on the experimental branch.
+> Rolling Hills terrain/sheep scene-swap fixes, the explicit production WebGPU
+> request route, and the completion audit on the experimental branch.
 > **For:** `exp/konveyor-webgpu-migration`.
 > **Pickup priority:** continue the full SDS Konveyor campaign from
 > [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md). Do not
 > stop at numbered cycle boundaries. Treat Cycle 36 as completed foundation
 > evidence, not the active stopping point.
 
-Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completed foundation plan [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
+Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completion audit [`docs/konveyor-completion-audit-2026-05-16.md`](docs/konveyor-completion-audit-2026-05-16.md), then the completed foundation plan [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
 
 ## Cycle 35 Outcome
 
