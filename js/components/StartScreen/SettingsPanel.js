@@ -327,7 +327,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
         const newSettings = { ...settings, [key]: value };
         onSettingsChange(newSettings);
         saveSettings(newSettings);
-        applySettingsToGame(newSettings);
+        applySettingsToGame(newSettings, { applyRenderer: key === 'experimentalWebGpu' });
     }, [settings, onSettingsChange]);
 
     const handlePresetChange = useCallback((presetName) => {
@@ -341,7 +341,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
         const defaults = getDefaultSettings();
         onSettingsChange(defaults);
         saveSettings(defaults);
-        applySettingsToGame(defaults);
+        applySettingsToGame(defaults, { applyRenderer: settings.experimentalWebGpu !== defaults.experimentalWebGpu });
     }, [onSettingsChange]);
 
     const resetKeyBindings = useCallback(() => {
@@ -411,6 +411,17 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
         ]),
 
         // Individual settings
+        createElement(SettingRow, {
+            key: 'experimental-webgpu',
+            label: t('settings.experimentalWebGpu'),
+            description: t('settings.experimentalWebGpuDesc'),
+            isCompact
+        }, createElement(Toggle, {
+            value: settings.experimentalWebGpu !== false,
+            onChange: (v) => handleSettingChange('experimentalWebGpu', v),
+            color: '#0ea5e9'
+        })),
+
         !isMobile && createElement(SettingRow, {
             key: 'shadows',
             label: t('settings.shadows'),

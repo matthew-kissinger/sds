@@ -1,20 +1,57 @@
-# Next Session - Konveyor Autonomous Run
+# Next Session - Post-Cycle 37 Konveyor Pickup
 
-> **Updated:** 2026-05-16 after guarded WebGPU gameplay parity proof,
-> Rolling Hills terrain/sheep scene-swap fixes, the explicit production WebGPU
-> request route, and the completion audit on the experimental branch.
+> **Updated:** 2026-05-16 after completing Cycle 37 isolated WebGPU perf,
+> focused sun/sky atmosphere repair, Native Packaging Proof 0, store/Steam
+> readiness docs, and the approved progressive WebGPU default/toggle pass.
 > **For:** `exp/konveyor-webgpu-migration`.
 > **Draft PR:** [#52](https://github.com/matthew-kissinger/sds/pull/52).
-> **Pickup priority:** continue the full SDS Konveyor campaign from
-> [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md). Do not
-> stop at numbered cycle boundaries. Treat Cycle 36 as completed foundation
-> evidence, not the active stopping point.
+> **Pickup priority:** review the Cycle 37 closeout packet below, then either
+> prepare the next Konveyor cycle or commit/handoff this packet. Do not rerun
+> Cycle 37 unless the artifacts are stale.
 
-Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completion audit [`docs/konveyor-completion-audit-2026-05-16.md`](docs/konveyor-completion-audit-2026-05-16.md), then the completed foundation plan [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
+Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then the completed Cycle 37 plan [`docs/cycle-37-plan.md`](docs/cycle-37-plan.md), then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completion audit [`docs/konveyor-completion-audit-2026-05-16.md`](docs/konveyor-completion-audit-2026-05-16.md). Cycle 36 is completed foundation evidence at [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
 
 If Matt explicitly approves merge/deploy, use
 [`docs/konveyor-release-decision-checklist.md`](docs/konveyor-release-decision-checklist.md)
 as the release gate. Do not infer approval from the existence of PR #52.
+
+## Cycle 37 Closeout
+
+Cycle 37 itself completed without changing the WebGL default, merging,
+deploying, submitting to a store, paying store fees, signing installers, or
+adding Steamworks features. After closeout, Matt approved moving the web route
+to a progressive WebGPU default with WebGL fallback and a user-facing
+experimental toggle.
+
+Key artifacts:
+
+- Isolated perf recapture: `cycle36-validation/runtime/cycle37-isolated-webgpu-perf.json`.
+- Final WebGPU request proof and screenshots:
+  `cycle36-validation/runtime/cycle37-final-webgpu-request.json` and
+  `cycle36-validation/runtime/cycle37-final-webgpu-request/`.
+- Final WebGPU perf proof:
+  `cycle36-validation/runtime/cycle37-final-webgpu-perf.json`.
+  Rolling Hills passed with `avgFrameTime=6.993 ms`,
+  `p95FrameTime=7.29 ms`, and `sampleCount=1144`; Open Country passed with
+  `avgFrameTime=6.944 ms`, `p95FrameTime=6.958 ms`, and
+  `sampleCount=1151`.
+- Native Packaging Proof 0:
+  [`docs/native-packaging-proof-0.md`](docs/native-packaging-proof-0.md).
+- Store/Steam readiness checklist:
+  [`docs/native-store-steam-readiness-checklist.md`](docs/native-store-steam-readiness-checklist.md).
+- Native preflight:
+  `cycle36-validation/native/preflight.json` passed at
+  `2026-05-16T06:36:27.879Z`.
+- Post-cycle progressive-default proof:
+  `cycle36-validation/runtime/progressive-webgpu-default-request-proof.json`,
+  `cycle36-validation/runtime/progressive-webgpu-default-perf-proof.json`, and
+  `cycle36-validation/runtime/progressive-webgpu-settings-toggle.png`.
+
+The next implementation step is not automatic shell integration. If Matt
+approves a native shell proof, the first desktop proof boundary is
+`sandbox/native-electron-proof/` for pinned-Chromium Windows behavior, followed
+by `sandbox/native-tauri-proof/` for platform-WebView behavior. Otherwise, draft
+the next Konveyor cycle from the current renderer/native packet.
 
 ## Cycle 35 Outcome
 
@@ -30,16 +67,31 @@ The cycle delivered:
 
 ## Pickup Priority
 
-Work on `exp/konveyor-webgpu-migration`. Continue from
-[`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md): create a
-minimal WebGPU/TSL diagnostic boot path, inventory shader/material migration
-surfaces, migrate incrementally, keep WebGL default, and keep moving through
-optimization and native proof until a real hard stop.
+Work on `exp/konveyor-webgpu-migration`. Cycle 37 is complete; do not restart
+it as an active plan. Read the closeout packet above, then decide whether the
+next action is commit/handoff cleanup, a new Konveyor cycle, or an explicitly
+approved native shell proof.
+
+Matt approved the progressive WebGPU default after Cycle 37. The branch should
+now keep WebGPU as the default request on supported browsers, preserve the
+WebGL fallback and explicit `?renderer=webgl` escape hatch, and expose the
+experimental WebGPU setting as the user-facing rollback. Do not add paid-store
+steps, submit to Steam/App Store/Google Play, or cross store/signing/manual
+release gates without explicit approval.
 
 The branch now has native-readiness code before a shell dependency:
 `BUILD_TARGET=native`, `SDS_WORKER_BASE`, `js/runtimeConfig.js`, and
 `npm run native:check`. Use that path for native-shaped perf/profiling work
 without committing to Tauri, Electron, or Capacitor yet.
+The broader native/release option space is now captured in
+[`docs/archive/research/native-release-oss-options-spike-2026-05-16.md`](docs/archive/research/native-release-oss-options-spike-2026-05-16.md):
+compare pinned Chromium, platform WebViews, mobile shells, PWA/TWA wrappers,
+Steamworks integrations, and true-native rewrite paths by SDS proof, not vibes.
+The performance/Rust/WASM option space is captured in
+[`docs/archive/research/perf-extensibility-rust-oss-spike-2026-05-16.md`](docs/archive/research/perf-extensibility-rust-oss-spike-2026-05-16.md):
+profile first, prefer JS allocation fixes/worker offload/offline Rust tools or
+visual-only WebGPU compute, and keep deterministic `shared/**` rewrites behind
+explicit authorization.
 
 Cycle 36 foundation evidence is complete. The perf harness has been repaired
 and `tests/perf-baseline/baseline.json` now has all six default configs passing
@@ -197,11 +249,41 @@ Matt's local WebGPU visual review after opening
 `?renderer=webgpu&scene=open-country&autostart=1&mode=classic` found that the
 route works but is not production-polished. Record of findings:
 [`docs/konveyor-visual-polish-qa-2026-05-16.md`](docs/konveyor-visual-polish-qa-2026-05-16.md).
-Key issues: non-interactive grass, bland water, sky/cloud cutoff line, leaf wind
-detaching from static branches, and incorrect/black/palette ground material
-mapping. The prior look should guide the art direction, not be copied exactly.
-Next visual work should prioritize ground material mapping, sky/cloud cutoff,
-water richness, tree wind coherence, then grass interaction.
+Key issues: non-interactive grass, bland water, sky/cloud cutoff line, missing
+or unreadable sun, leaf wind detaching from static branches, and
+incorrect/black/palette ground material mapping. The prior look, WebGL, old
+screenshots, roadmap, and current scene identity are art-direction references
+only, not strict parity targets. The active visual goal is a calmer, richer,
+more intentional WebGPU scene that feels relaxing and zen-like while still
+carrying mystery and adventure. Next visual work should prioritize ground
+material mapping, sky/cloud cutoff plus sun readability, water richness, tree
+wind coherence, then grass interaction.
+
+2026-05-16 implementation status: the first WebGPU visual-polish pass is now
+implemented and validated on the experimental branch. Final evidence lives at
+`cycle36-validation/runtime/visual-polish-final2-webgpu-request.json`, final
+screenshots at
+`cycle36-validation/runtime/visual-polish-final2-webgpu-request/`, and perf
+proof at `cycle36-validation/runtime/visual-polish-final-webgpu-perf.json`.
+Fresh validation from the repeated 2026-05-16 `/goal` lives at
+`cycle36-validation/runtime/visual-polish-refresh-webgpu-request.json`,
+`cycle36-validation/runtime/visual-polish-refresh-webgpu-request/`,
+`cycle36-validation/runtime/visual-polish-refresh-webgpu-perf.json`, and
+`cycle36-validation/runtime/visual-polish-refresh-grass-interaction.json`.
+The pass preserved WebGL as default, preserved fallback gates, made the sun
+readable in WebGPU, repaired the worst ground/sky/water/grass/tree-wind reads,
+and did not cross merge, deploy, default-renderer, or manual production gates.
+Remaining review is art-direction/human acceptance, not WebGL parity.
+The contaminated live perf warning was resolved by Cycle 37 Phase 1. Under
+isolated installed-Chrome production preview, Rolling Hills and Open Country
+both stayed well under the 22 ms average / 30 ms p95 budget. The sun/sky
+follow-up from
+[`docs/archive/research/sun-sky-atmosphere-perf-spike-2026-05-16.md`](docs/archive/research/sun-sky-atmosphere-perf-spike-2026-05-16.md)
+is also closed for this cycle: `AtmosphereFrame.v1` now records the shared
+sun/sky/fog/cloud packet, `SunBillboard` owns the readable disc, the WebGPU sun
+is materially larger, sky/cloud/fog horizon tuning is recorded in the final
+request proof, and final Rolling Hills/Open Country screenshots plus perf
+artifacts are under `cycle36-validation/runtime/cycle37-final-*`.
 
 Rolling Hills terrain placement is fixed in current proof: the camera sample is
 `y=43.134`, `surfaceY=31.134`, `aboveSurface=12`, and sheep placement reports

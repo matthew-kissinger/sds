@@ -6,7 +6,7 @@ const DEFAULT_TREE_LEAF = Object.freeze({
   baseColor: [0.18, 0.34, 0.12],
   tipColor: [0.5, 0.68, 0.24],
   windDirection: [0.7, 0.7],
-  windStrength: 0.72,
+  windStrength: 0.38,
   treeBaseY: -0.525,
   treeTopY: 0.525,
   occluderStrength: 0.55,
@@ -19,6 +19,12 @@ const DEFAULT_TREE_LEAF = Object.freeze({
 
 const COMMON_POSTURE = Object.freeze(['side', 'transparent', 'depthWrite', 'depthTest']);
 const LEAF_POSTURE = Object.freeze([...COMMON_POSTURE, 'alphaHash', 'alphaTest']);
+const DEFAULT_TREE_BRANCH_WIND = Object.freeze({
+  windDirection: [0.7, 0.7],
+  windStrength: 0.18,
+  treeBaseY: -0.525,
+  treeTopY: 0.525,
+});
 
 function previousColor(previous) {
   return previous?.color?.toArray?.().slice(0, 3) ?? null;
@@ -71,7 +77,7 @@ export function createKonveyorTreeRockNodeMaterialFactories(webGpuModules, optio
     createTreeBranchMaterial: ({ previous } = {}) =>
       createKonveyorTreeBranchNodeMaterial(
         webGpuModules,
-        mergeBranchMaterial(treeBranch, previous)
+        mergeBranchMaterial({ ...DEFAULT_TREE_BRANCH_WIND, ...treeBranch }, previous)
       ),
     createTreeLeafMaterial: ({ previous } = {}) =>
       createKonveyorTreeLeafNodeMaterial(

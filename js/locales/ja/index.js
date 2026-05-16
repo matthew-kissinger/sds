@@ -94,6 +94,8 @@ export default {
         performanceOption: 'パフォーマンス - 最大FPS',
         balancedOption: 'バランス - デフォルト設定',
         qualityOption: 'クオリティ - 最高のビジュアル',
+        experimentalWebGpu: 'WebGPUレンダラー',
+        experimentalWebGpuDesc: '実験的機能です。利用可能な場合はWebGPUを使います。オフにするとWebGLで再読み込みします。',
         audioEnabled: 'オーディオ有効',
         audioVolume: 'オーディオ音量',
         showStats: 'パフォーマンス統計を表示',

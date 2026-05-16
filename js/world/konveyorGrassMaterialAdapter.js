@@ -50,7 +50,10 @@ export function createKonveyorGrassMaterial(kind, factoryName, {
         return defaultResult(kind, 'invalid-factory-result', createDefaultMaterial);
     }
 
-    const controls = result?.controls ?? null;
+    const controls = result?.controls
+        ?? material.userData?.konveyorGrassBladeMaterialControls
+        ?? material.userData?.konveyorMeadowQuadMaterialControls
+        ?? null;
     return {
         material,
         controls,

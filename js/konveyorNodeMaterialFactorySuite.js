@@ -18,60 +18,96 @@ import { createKonveyorWaterNodeMaterialFactories } from './water/konveyorWaterN
 const SKY_FOG_PRESET_TUNING = Object.freeze({
   dusk: {
     sky: {
-      lowTint: [0.11, 0.17, 0.39],
-      highTint: [0.12, 0.16, 0.37],
-      sunGlowStrength: 0.045,
-      sunDiscStrength: 0.12,
-      fogBandStrength: 0.10,
+      lowTint: [1.00, 0.80, 0.80],
+      highTint: [1.20, 1.60, 2.60],
+      lowLift: [0.45, 0.12, 0.18],
+      highLift: [0.08, 0.08, 0.48],
+      verticalStart: 0.00,
+      verticalEnd: 0.34,
+      sunGlowStrength: 0.50,
+      sunDiscStrength: 1.05,
+      fogBandStrength: 0.012,
+    },
+    effects: {
+      sun: {
+        depthTest: false,
+        intensity: 1.55,
+        haloStrength: 1.02,
+        haloPower: 1.65,
+        alphaHaloMix: 1.0,
+        coreRadius: 0.23,
+        coreFeather: 0.48,
+      },
     },
     treeLeaf: {
-      sourceMapScale: 0.14,
+      sourceMapScale: 0.32,
       alphaScale: 1,
-      fogColorScale: 0.72,
-      fogStrength: 0.84,
+      fogColorScale: 0.58,
+      fogStrength: 0.62,
+      windStrength: 0.34,
     },
     grassBlade: {
-      colorScale: 0.24,
+      colorScale: 0.62,
+      tipDampen: 0.50,
     },
     meadowQuad: {
-      colorScale: 0.30,
+      colorScale: 0.66,
     },
     terrain: {
-      colorScale: 0.36,
+      colorScale: 1.05,
+      horizonFogStrength: 0.12,
     },
     water: {
-      colorScale: 0.22,
-      foamScale: 0.24,
-      sparkleScale: 0.25,
+      colorScale: 0.66,
+      foamScale: 0.74,
+      sparkleScale: 0.72,
     },
   },
   'golden-hour': {
     sky: {
-      lowTint: [0.20, 0.56, 0.92],
-      highTint: [0.24, 0.85, 1.22],
-      sunGlowStrength: 0.055,
-      sunDiscStrength: 0.12,
-      fogBandStrength: 0.07,
+      lowTint: [0.85, 0.55, 0.25],
+      highTint: [0.70, 1.95, 2.25],
+      lowLift: [0.43, 0.28, 0.20],
+      highLift: [0.04, 0.18, 0.40],
+      verticalStart: 0.00,
+      verticalEnd: 0.28,
+      sunGlowStrength: 0.58,
+      sunDiscStrength: 1.12,
+      fogBandStrength: 0.010,
+    },
+    effects: {
+      sun: {
+        depthTest: false,
+        intensity: 1.62,
+        haloStrength: 1.00,
+        haloPower: 1.62,
+        alphaHaloMix: 1.0,
+        coreRadius: 0.24,
+        coreFeather: 0.50,
+      },
     },
     treeLeaf: {
-      sourceMapScale: 0.20,
+      sourceMapScale: 0.36,
       alphaScale: 1,
-      fogColorScale: 0.60,
-      fogStrength: 0.78,
+      fogColorScale: 0.52,
+      fogStrength: 0.58,
+      windStrength: 0.34,
     },
     grassBlade: {
-      colorScale: 0.32,
+      colorScale: 0.64,
+      tipDampen: 0.48,
     },
     meadowQuad: {
-      colorScale: 0.34,
+      colorScale: 0.68,
     },
     terrain: {
-      colorScale: 0.44,
+      colorScale: 1.08,
+      horizonFogStrength: 0.10,
     },
     water: {
-      colorScale: 0.68,
-      foamScale: 0.70,
-      sparkleScale: 0.55,
+      colorScale: 0.92,
+      foamScale: 0.88,
+      sparkleScale: 0.85,
     },
   },
 });
@@ -87,6 +123,7 @@ function withSkyFogMaterialOptions(options = {}, skyFog = null) {
   const grassOptions = options.grass ?? {};
   const waterOptions = options.water ?? {};
   const terrainOptions = options.terrain ?? {};
+  const effectsOptions = options.effects ?? {};
   return {
     ...options,
     sky: {
@@ -132,23 +169,33 @@ function withSkyFogMaterialOptions(options = {}, skyFog = null) {
     },
     terrain: {
       fogColor: skyFog.fogColor,
+      fogNear: skyFog.fogNear,
+      fogFar: skyFog.fogFar,
       ...(tuning.terrain ?? {}),
       ...terrainOptions,
+    },
+    effects: {
+      ...effectsOptions,
+      sun: {
+        ...(tuning.effects?.sun ?? {}),
+        ...(effectsOptions.sun ?? {}),
+      },
     },
   };
 }
 
 export function createKonveyorNodeMaterialFactorySuite(webGpuModules, options = {}) {
-  const materialOptions = withSkyFogMaterialOptions(options, options.skyFog);
+  const atmosphereFrame = options.atmosphereFrame ?? options.skyFog;
+  const materialOptions = withSkyFogMaterialOptions(options, atmosphereFrame);
   const atmosphere = {
     ...createKonveyorCloudLayerMaterialFactories(webGpuModules),
   };
-  if (materialOptions.skyFog) {
+  if (atmosphereFrame) {
     Object.assign(
       atmosphere,
       createKonveyorSkyDomeMaterialFactories(
         webGpuModules,
-        materialOptions.skyFog,
+        atmosphereFrame,
         materialOptions.sky
       )
     );

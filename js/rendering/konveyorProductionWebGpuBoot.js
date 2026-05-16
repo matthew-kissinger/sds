@@ -5,7 +5,7 @@ import {
 } from '../konveyorNodeMaterialFactorySuite.js';
 import {
     DEFAULT_SKY_FOG_SAMPLE_PRESET,
-    createSkyFogSamplePacket,
+    createAtmosphereFrame,
 } from '../atmosphere/skyFogSamplePacket.js';
 import { DEFAULT_SCENE_ID, getSceneById } from '../../shared/scenes/index.js';
 
@@ -28,7 +28,7 @@ async function loadKonveyorWebGpuThree() {
 function resolveSceneSkyFog(sceneId) {
     const sceneDef = getSceneById(sceneId) ?? getSceneById(DEFAULT_SCENE_ID);
     const presetName = sceneDef?.sky?.preset ?? DEFAULT_SKY_FOG_SAMPLE_PRESET;
-    return createSkyFogSamplePacket({
+    return createAtmosphereFrame({
         presetName,
         fogNear: sceneDef?.fog?.near ?? 18,
         fogFar: sceneDef?.fog?.far ?? 74,
@@ -83,8 +83,11 @@ function installKonveyorProductionFactoryGlobals(webGpuModules, {
     sceneId = DEFAULT_SCENE_ID,
     state = null,
 } = {}) {
-    const skyFog = resolveSceneSkyFog(sceneId);
-    const factorySuite = createKonveyorNodeMaterialFactorySuite(webGpuModules, { skyFog });
+    const atmosphereFrame = resolveSceneSkyFog(sceneId);
+    const factorySuite = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+        atmosphereFrame,
+        skyFog: atmosphereFrame,
+    });
     const globals = createKonveyorNodeMaterialFactoryGlobals(factorySuite);
     for (const [name, value] of Object.entries(globals)) {
         window[name] = value;
@@ -95,11 +98,12 @@ function installKonveyorProductionFactoryGlobals(webGpuModules, {
         state.factorySupply = {
             ...summary,
             sceneId,
-            skyFogPreset: skyFog.presetName,
+            skyFogPreset: atmosphereFrame.presetName,
+            atmosphereFrame,
             ok: summary.groupCount === 8 && summary.factoryCount >= 18,
         };
     }
-    return { globals, summary, skyFog };
+    return { globals, summary, skyFog: atmosphereFrame, atmosphereFrame };
 }
 
 export async function createKonveyorProductionWebGpuSceneManagerOptions(state = null, options = {}) {
@@ -166,6 +170,9 @@ export async function recordKonveyorProductionWebGpuBoot(gameInstance, state = n
     const terrainBuilder = gameInstance.terrainBuilder ?? null;
     const grassSystem = terrainBuilder?.grassSystem ?? null;
     const sheepSystem = gameInstance.gameState?.optimizedSheepSystem ?? null;
+    const atmosphereFrame = gameInstance.atmosphere?.getFrame?.({
+        sunBillboard: gameInstance._sunBillboard,
+    }) ?? state.factorySupply?.atmosphereFrame ?? null;
     const checks = {
         rendererMode: window.__sdsRendererMode?.effective === 'webgpu-production',
         rendererReady: rendererReady === true
@@ -190,6 +197,14 @@ export async function recordKonveyorProductionWebGpuBoot(gameInstance, state = n
         rendererIsWebGpu: checks.rendererIsWebGpu,
         renderStatus,
         currentSceneId: gameInstance.currentScene?.id ?? null,
+        atmosphereFrame,
+        atmosphereDiagnostics: {
+            presetName: atmosphereFrame?.presetName ?? null,
+            sunBillboard: atmosphereFrame?.sunBillboard ?? null,
+            skyMaterialMode: atmosphereFrame?.sky?.materialMode ?? null,
+            cloud: atmosphereFrame?.cloud ?? null,
+            atmosphereDrawCount: atmosphereFrame?.atmosphereDrawCount ?? null,
+        },
         sceneBody: {
             terrainFactory: terrainBuilder?.konveyorTerrainMaterialSummary ?? null,
             grassFactory: grassSystem?.konveyorGrassBladeMaterialSummary ?? null,

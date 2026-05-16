@@ -1,16 +1,36 @@
+import { Vector2 as ThreeVector2, Vector3 as ThreeVector3 } from 'three';
+
 export function createKonveyorGrassBladeNodeMaterial(
-  { MeshBasicNodeMaterial, MeshStandardNodeMaterial, DoubleSide, TSL },
+  { MeshBasicNodeMaterial, MeshStandardNodeMaterial, DoubleSide, Vector2 = ThreeVector2, Vector3 = ThreeVector3, TSL },
   grassBlade
 ) {
-  const { cameraPosition, clamp, dot, float, length, max, mix, normalize, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, vec2, vec3 } = TSL;
+  const { abs, cameraPosition, clamp, dot, float, length, max, mix, normalize, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
   const linearColor = (color) => color.map((value) => (
     value <= 0.04045
       ? value / 12.92
       : ((value + 0.055) / 1.055) ** 2.4
   ));
+  const vector2 = (value) => (
+    typeof Vector2 === 'function'
+      ? new Vector2(value[0], value[1])
+      : value
+  );
+  const vector3 = (value) => (
+    typeof Vector3 === 'function'
+      ? new Vector3(value[0], value[1], value[2])
+      : value
+  );
   const height01 = clamp(positionLocal.y.div(Math.max(grassBlade.bladeHeight, 0.001)), 0.0, 1.0);
-  const windDir = normalize(vec2(...grassBlade.windDirection));
-  const windPerp = vec2(-grassBlade.windDirection[1], grassBlade.windDirection[0]);
+  const windDirection = uniform(vector2(grassBlade.windDirection));
+  const windStrength = uniform(grassBlade.windStrength);
+  const sunDirection = uniform(vector3(grassBlade.sunDirection));
+  const interactorPosition = uniform(vector3([0, -10000, 0]));
+  const interactorFacing = uniform(vector2([0, 1]));
+  const interactorCount = uniform(0);
+  const interactionRadius = uniform(grassBlade.interactionRadius ?? 2.2);
+  const interactionStrength = uniform(grassBlade.interactionStrength ?? 0.6);
+  const windDir = normalize(windDirection);
+  const windPerp = vec2(windDir.y.negate(), windDir.x);
   const windPower = height01.mul(height01);
   const worldX = positionWorld.x;
   const worldZ = positionWorld.z;
@@ -25,11 +45,27 @@ export function createKonveyorGrassBladeNodeMaterial(
   const carrier = float(0.45).add(sway.mul(0.5).mul(float(0.4).add(gustEnv.mul(0.8))));
   const tipMask = smoothstep(0.65, 1.0, height01);
   const flutter = sin(worldX.mul(0.7).add(worldZ.mul(0.6)).add(time.mul(4.5)));
-  const windDisp = windDir.mul(carrier.mul(grassBlade.windStrength).mul(windPower))
-    .add(windPerp.mul(flutter.mul(0.06 * grassBlade.windStrength).mul(tipMask)));
+  const windDisp = windDir.mul(carrier.mul(windStrength).mul(windPower))
+    .add(windPerp.mul(flutter.mul(windStrength).mul(0.06).mul(tipMask)));
+  const interactorDelta = vec2(worldX.sub(interactorPosition.x), worldZ.sub(interactorPosition.z));
+  const interactorDistance = max(length(interactorDelta), 0.001);
+  const pushDirection = interactorDelta.div(interactorDistance);
+  const facing = normalize(interactorFacing);
+  const side = vec2(facing.y.negate(), facing.x);
+  const along = abs(dot(interactorDelta, facing));
+  const across = abs(dot(interactorDelta, side));
+  const bodyDistance = length(vec2(along.div(1.65), across.div(0.78)));
+  const activeInteractor = smoothstep(0.5, 0.95, interactorCount);
+  const bodyFalloff = float(1.0).sub(smoothstep(0.15, interactionRadius, bodyDistance)).mul(activeInteractor);
+  const interactionDisp = pushDirection.mul(bodyFalloff.mul(interactionStrength).mul(windPower));
+  const tipColor = mix(
+    vec3(...linearColor(grassBlade.tipColor)),
+    vec3(...linearColor(grassBlade.midColor)),
+    grassBlade.tipDampen ?? 0.36
+  );
   const gradient = mix(
     mix(vec3(...linearColor(grassBlade.baseColor)), vec3(...linearColor(grassBlade.midColor)), smoothstep(0.0, 0.4, height01)),
-    vec3(...linearColor(grassBlade.tipColor)),
+    tipColor,
     smoothstep(0.4, 1.0, height01)
   );
   const colorVariation = smoothstep(-1.0, 1.0, sin(worldX.mul(0.2).add(worldZ.mul(0.15))));
@@ -40,9 +76,9 @@ export function createKonveyorGrassBladeNodeMaterial(
   );
   const ao = mix(0.7, 1.0, height01);
   const toCamera = normalize(cameraPosition.sub(positionWorld));
-  const toSun = normalize(vec3(...grassBlade.sunDirection));
+  const toSun = normalize(sunDirection);
   const backlitSun = pow(max(dot(toCamera, toSun.mul(-1.0)), 0.0), 4.0);
-  const sunTip = vec3(...linearColor(grassBlade.tipColor)).mul(backlitSun.mul(0.7).mul(tipMask));
+  const sunTip = tipColor.mul(backlitSun.mul(0.7).mul(tipMask));
   const verticalRim = pow(max(dot(toCamera, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
   const viewDistance = length(positionView);
   const fogBlend = smoothstep(grassBlade.fogNear, grassBlade.fogFar, viewDistance).mul(0.55);
@@ -51,9 +87,10 @@ export function createKonveyorGrassBladeNodeMaterial(
       .mul(grassBlade.distanceFadeStrength)
   );
   const colorScale = grassBlade.colorScale ?? 1;
-  const grassColor = gradient.add(variation).mul(ao)
+  const interactionShadow = float(1.0).sub(bodyFalloff.mul(0.18).mul(smoothstep(0.15, 1.0, height01)));
+  const grassColor = gradient.add(variation).mul(ao).mul(interactionShadow)
     .add(sunTip)
-    .add(vec3(...linearColor(grassBlade.tipColor)).mul(verticalRim.mul(0.2).mul(tipMask)))
+    .add(tipColor.mul(verticalRim.mul(0.2).mul(tipMask)))
     .mul(colorScale);
 
   const MaterialClass = MeshBasicNodeMaterial ?? MeshStandardNodeMaterial;
@@ -65,7 +102,8 @@ export function createKonveyorGrassBladeNodeMaterial(
     fogBlend
   );
   material.opacityNode = densityFade;
-  material.positionNode = positionLocal.add(vec3(windDisp.x, 0.0, windDisp.y));
+  const totalDisp = windDisp.add(interactionDisp);
+  material.positionNode = positionLocal.add(vec3(totalDisp.x, 0.0, totalDisp.y));
   if (material.isMeshStandardNodeMaterial) {
     material.roughnessNode = float(0.96);
     material.metalnessNode = float(0.0);
@@ -86,5 +124,55 @@ export function createKonveyorGrassBladeNodeMaterial(
   material.userData.konveyorGrassLighting = material.isMeshBasicNodeMaterial
     ? 'shader-owned-unlit'
     : 'standard-fallback';
+  material.userData.konveyorGrassBladeNodeUniforms = {
+    windDirection,
+    windStrength,
+    sunDirection,
+    interactorPosition,
+    interactorFacing,
+    interactorCount,
+    interactionRadius,
+    interactionStrength,
+  };
+  material.userData.konveyorGrassBladeMaterialControls = createKonveyorGrassBladeNodeMaterialControls(material);
   return material;
+}
+
+function createKonveyorGrassBladeNodeMaterialControls(material) {
+  const nodes = material.userData.konveyorGrassBladeNodeUniforms;
+  return {
+    nodes,
+    updateInteractors(state = {}) {
+      const count = Math.max(0, Math.min(1, Number.isFinite(state.count) ? state.count : 0));
+      nodes.interactorCount.value = count;
+      if (count <= 0) return;
+      const positions = state.positions;
+      const facings = state.facings;
+      if (nodes.interactorPosition?.value && positions?.length >= 3) {
+        nodes.interactorPosition.value.set(positions[0], positions[1], positions[2]);
+      }
+      if (nodes.interactorFacing?.value && facings?.length >= 2) {
+        nodes.interactorFacing.value.set(facings[0], facings[1]);
+      }
+    },
+    update() {},
+    setWind(state = {}) {
+      if (Number.isFinite(state.strength)) {
+        nodes.windStrength.value = state.strength;
+      }
+      const direction = state.direction;
+      if (direction && nodes.windDirection?.value) {
+        nodes.windDirection.value.set(direction.x, direction.y);
+      }
+    },
+    setSunDirection(state = {}) {
+      copyNodeValue(nodes.sunDirection, state.sunDir);
+    },
+    dispose() {},
+  };
+}
+
+function copyNodeValue(node, value) {
+  if (!node?.value || !value || typeof node.value.copy !== 'function') return;
+  node.value.copy(value);
 }

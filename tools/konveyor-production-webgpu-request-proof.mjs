@@ -52,15 +52,81 @@ async function captureDefaultMode({ context, baseUrl }) {
   const page = await context.newPage();
   try {
     await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    const rendererMode = await page.evaluate(() => window.__sdsRendererMode ?? null);
+    await page.waitForFunction(() => {
+      const state = window.__sdsG?.productionWebGpu;
+      return state?.ok === true || !!state?.error;
+    }, null, { timeout: 120_000 });
+    const state = await page.evaluate(() => ({
+      rendererMode: window.__sdsRendererMode ?? null,
+      productionWebGpuState: window.__sdsG?.productionWebGpu ?? null,
+    }));
     const checks = {
-      defaultWebGl: rendererMode?.effective === 'webgl',
-      defaultHasNoFallback: rendererMode?.fallbackReason == null,
-      defaultNotProductionWebGpu: rendererMode?.productionWebGpu === false,
+      defaultRequestedWebGpu: state.rendererMode?.requested === 'webgpu',
+      defaultProductionWebGpu: state.rendererMode?.effective === 'webgpu-production',
+      defaultHasNoFallback: state.rendererMode?.fallbackReason == null,
+      defaultProductionStateOk: state.productionWebGpuState?.ok === true,
+      defaultDevicePreflightOk: state.productionWebGpuState?.devicePreflight?.ok === true,
     };
     return {
       url: baseUrl,
-      rendererMode,
+      ...state,
+      checks,
+      ok: Object.values(checks).every(Boolean),
+    };
+  } finally {
+    await page.close().catch(() => {});
+  }
+}
+
+async function captureStoredWebGlPreferenceMode({ context, baseUrl }) {
+  const page = await context.newPage();
+  try {
+    await page.addInitScript(() => {
+      localStorage.setItem('sds-settings', JSON.stringify({ experimentalWebGpu: false }));
+    });
+    await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    const state = await page.evaluate(() => ({
+      rendererMode: window.__sdsRendererMode ?? null,
+      productionWebGpuState: window.__sdsG?.productionWebGpu ?? null,
+    }));
+    const checks = {
+      storedPreferenceRequestedWebGl: state.rendererMode?.requested === 'webgl',
+      storedPreferenceEffectiveWebGl: state.rendererMode?.effective === 'webgl',
+      storedPreferenceHasNoFallback: state.rendererMode?.fallbackReason == null,
+      storedPreferenceNotProductionWebGpu: state.rendererMode?.productionWebGpu === false,
+      storedPreferenceNoProductionState: state.productionWebGpuState == null,
+    };
+    return {
+      url: baseUrl,
+      ...state,
+      checks,
+      ok: Object.values(checks).every(Boolean),
+    };
+  } finally {
+    await page.close().catch(() => {});
+  }
+}
+
+async function captureExplicitWebGlMode({ context, baseUrl }) {
+  const page = await context.newPage();
+  const url = new URL(baseUrl);
+  url.searchParams.set('renderer', 'webgl');
+  try {
+    await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    const state = await page.evaluate(() => ({
+      rendererMode: window.__sdsRendererMode ?? null,
+      productionWebGpuState: window.__sdsG?.productionWebGpu ?? null,
+    }));
+    const checks = {
+      explicitRequestedWebGl: state.rendererMode?.requested === 'webgl',
+      explicitEffectiveWebGl: state.rendererMode?.effective === 'webgl',
+      explicitHasNoFallback: state.rendererMode?.fallbackReason == null,
+      explicitNotProductionWebGpu: state.rendererMode?.productionWebGpu === false,
+      explicitNoProductionState: state.productionWebGpuState == null,
+    };
+    return {
+      url: url.href,
+      ...state,
       checks,
       ok: Object.values(checks).every(Boolean),
     };
@@ -259,6 +325,16 @@ async function captureScene({ context, baseUrl, sceneId, outDir, route }) {
       nativeInstancing: state.productionWebGpu?.checks?.nativeTreeInstancing === true
         && state.productionWebGpu?.checks?.nativeRockInstancing === true,
       waterMaterialApplied: !isIsland || state.summaries?.waterMaterial?.applied === true,
+      atmosphereFrameRecorded: state.productionWebGpu?.atmosphereFrame?.contract === 'AtmosphereFrame.v1'
+        && state.productionWebGpu?.atmosphereFrame?.presetName != null
+        && Array.isArray(state.productionWebGpu?.atmosphereFrame?.sunDirection)
+        && Array.isArray(state.productionWebGpu?.atmosphereFrame?.sunColor)
+        && Array.isArray(state.productionWebGpu?.atmosphereFrame?.zenithColor)
+        && Array.isArray(state.productionWebGpu?.atmosphereFrame?.horizonColor)
+        && Array.isArray(state.productionWebGpu?.atmosphereFrame?.fogColor)
+        && Number.isFinite(state.productionWebGpu?.atmosphereFrame?.fogNear)
+        && Number.isFinite(state.productionWebGpu?.atmosphereFrame?.fogFar)
+        && Number.isFinite(state.productionWebGpu?.atmosphereFrame?.cloudCoverage),
       screenshotNonBlank: screenshotProof.nonBlank === true,
       perfSampled: (state.perfSummary?.sampleCount ?? 0) >= 1,
       noConsoleErrors: consoleErrors.length === 0,
@@ -363,6 +439,14 @@ async function run() {
         context,
         baseUrl: args.baseUrl,
       });
+      const storedWebGlPreferenceMode = await captureStoredWebGlPreferenceMode({
+        context,
+        baseUrl: args.baseUrl,
+      });
+      const explicitWebGlMode = await captureExplicitWebGlMode({
+        context,
+        baseUrl: args.baseUrl,
+      });
       for (const sceneId of args.sceneIds) {
         scenes.push(await captureScene({
           context,
@@ -382,9 +466,14 @@ async function run() {
         channel: args.channel,
         chromiumArgs: CHROMIUM_GPU_ARGS,
         defaultMode,
+        storedWebGlPreferenceMode,
+        explicitWebGlMode,
         webGpuUnavailableMode,
         webGpuDeviceFailureMode,
-        ok: defaultMode.ok && scenes.every((scene) => scene.ok),
+        ok: defaultMode.ok
+          && storedWebGlPreferenceMode.ok
+          && explicitWebGlMode.ok
+          && scenes.every((scene) => scene.ok),
         scenes,
       };
       manifest.ok = manifest.ok

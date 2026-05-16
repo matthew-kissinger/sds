@@ -12,6 +12,7 @@ import {
   isKnownPreset,
   sunDirectionFromPreset,
 } from './skyPresets.js';
+import { sampleSkyFogPacketFromSky } from './skyFogSamplePacket.js';
 
 /**
  * Top-level atmosphere orchestrator. Owns:
@@ -380,6 +381,31 @@ export class Atmosphere {
   /** @returns {string | null} */
   getCurrentPresetName() {
     return this.currentPresetName;
+  }
+
+  getFrame({ sunBillboard = null } = {}) {
+    const fogNear = this.fog && 'near' in this.fog ? this.fog.near : 18;
+    const fogFar = this.fog && 'far' in this.fog ? this.fog.far : 74;
+    const sunBillboardFrame = sunBillboard?.getDiagnostics?.() ?? null;
+    return sampleSkyFogPacketFromSky({
+      sky: this.sky,
+      presetName: this.currentPresetName ?? DEFAULT_PRESET,
+      fogDarkenMultiplier: this.weather.fogDarkenMultiplier ?? 1.0,
+      fogNear,
+      fogFar,
+      cloudCoverage: this.sky.getCloudCoverage(),
+      sunPhysicalDirection: this.sun.dirVec.toArray(),
+      sunVisualDirection: sunBillboardFrame?.visualDirection ?? null,
+      sunBillboard: sunBillboardFrame,
+      skyMaterialMode: this.sky.material?.isNodeMaterial ? 'webgpu-node' : 'webgl-shader',
+      cloudAlpha: this.cloudLayer?.getCoverage?.() ?? null,
+      cloudHorizonFade: this.cloudLayer?.getEdgeFade?.() ?? null,
+      atmosphereDrawCount: [
+        this.sky?.getMesh ? 1 : 0,
+        this.cloudLayer && this.cloudLayer.getCoverage() > 0.001 ? 1 : 0,
+        sunBillboardFrame ? 1 : 0,
+      ].reduce((sum, value) => sum + value, 0),
+    });
   }
 
   dispose() {

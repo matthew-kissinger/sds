@@ -405,7 +405,17 @@
     <script>
         (() => {
             const params = new URLSearchParams(window.location.search);
-            const requested = params.get('renderer') || 'webgl';
+            const readExperimentalWebGpuPreference = () => {
+                try {
+                    const raw = localStorage.getItem('sds-settings');
+                    if (!raw) return true;
+                    const settings = JSON.parse(raw);
+                    return settings.experimentalWebGpu !== false;
+                } catch {
+                    return true;
+                }
+            };
+            const requested = params.get('renderer') || (readExperimentalWebGpuPreference() ? 'webgpu' : 'webgl');
             const diagnostic = params.get('diagnostic') === '1';
             const webgpuApiAvailable = !!navigator.gpu;
             const productionGate = params.get('konveyorProduction') === '1';

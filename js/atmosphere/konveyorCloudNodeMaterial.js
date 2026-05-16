@@ -57,8 +57,8 @@ export function createKonveyorCloudLayerNodeMaterial(
   const edgeDist = min(min(planeUv.x, planeUv.x.oneMinus()), min(planeUv.y, planeUv.y.oneMinus()));
   const footprintFade = smoothstep(0.0, 0.08, edgeDist);
   const viewDir = normalize(positionWorld.sub(cameraPosition));
-  const horizonFade = smoothstep(0.02, 0.85, abs(viewDir.y));
-  const alpha = mask.mul(mix(0.55, 0.95, coverage)).mul(footprintFade).mul(edgeFade).mul(horizonFade);
+  const horizonFade = smoothstep(0.22, 0.72, abs(viewDir.y));
+  const alpha = mask.mul(mix(0.08, 0.28, coverage)).mul(footprintFade).mul(edgeFade).mul(horizonFade);
 
   const material = new MeshBasicNodeMaterial();
   material.name = name;

@@ -1,0 +1,2219 @@
+{
+  "capturedAt": "2026-05-16T06:30:01.121Z",
+  "contract": "konveyor-production-webgpu-request-proof",
+  "baseUrl": "http://127.0.0.1:4173/",
+  "route": "plain",
+  "screenshotDir": "cycle36-validation/runtime/progressive-webgpu-default-request-proof",
+  "channel": "chrome",
+  "chromiumArgs": [
+    "--use-angle=d3d11",
+    "--enable-gpu"
+  ],
+  "defaultMode": {
+    "url": "http://127.0.0.1:4173/",
+    "rendererMode": {
+      "requested": "webgpu",
+      "diagnostic": false,
+      "productionWebGpu": true,
+      "productionGate": false,
+      "webgpuApiAvailable": true,
+      "productionBootScout": false,
+      "effective": "webgpu-production",
+      "fallbackReason": null
+    },
+    "productionWebGpuState": {
+      "requested": true,
+      "enabled": true,
+      "ok": true,
+      "error": null,
+      "devicePreflight": {
+        "ok": true,
+        "adapterAvailable": true,
+        "deviceAvailable": true,
+        "reason": null
+      },
+      "startedAt": "2026-05-16T06:29:41.786Z",
+      "sceneId": "rolling-hills",
+      "moduleLoaded": true,
+      "moduleSource": "assets/vendor/three/three.webgpu.min.js",
+      "factoryGlobalsInstalled": true,
+      "factorySupply": {
+        "source": "konveyor-node-material-factory-suite",
+        "groupCount": 8,
+        "factoryCount": 18,
+        "groups": {
+          "atmosphere": [
+            "createCloudLayerMaterial",
+            "createSkyDomeMaterial"
+          ],
+          "effects": [
+            "createCorralZapBoltMaterial",
+            "createCorralZapParticleMaterial",
+            "createPortalPadMaterial",
+            "createPortalParticleMaterial",
+            "createPortalRingMaterial",
+            "createSunBillboardMaterial"
+          ],
+          "treeRock": [
+            "createRockMaterial",
+            "createTreeBranchMaterial",
+            "createTreeLeafMaterial"
+          ],
+          "grass": [
+            "createGrassBladeMaterial",
+            "createMeadowQuadMaterial"
+          ],
+          "water": [
+            "createAnimeWaterMaterial"
+          ],
+          "terrain": [
+            "createTerrainMaterial"
+          ],
+          "sheep": [
+            "createSheepMaterial",
+            "createSheepPartMaterial"
+          ],
+          "impostor": [
+            "createKilnImpostorMaterial"
+          ]
+        },
+        "sceneId": null,
+        "skyFogPreset": "dusk",
+        "atmosphereFrame": {
+          "contract": "AtmosphereFrame.v1",
+          "source": "HosekWilkieSky.cpu-lut",
+          "presetName": "dusk",
+          "horizonColor": [
+            0.3577,
+            0.1986,
+            0.1644
+          ],
+          "zenithColor": [
+            0.0107,
+            0.0341,
+            0.0832
+          ],
+          "sunColor": [
+            1,
+            0.3055,
+            0.0242
+          ],
+          "sunDirection": [
+            -0.9418,
+            0.1392,
+            -0.306
+          ],
+          "sunPhysicalDirection": [
+            -0.9418,
+            0.1392,
+            -0.306
+          ],
+          "sunVisualDirection": [
+            -0.9418,
+            0.1392,
+            -0.306
+          ],
+          "fogDarkenMultiplier": 0.82,
+          "fogColor": [
+            0.2933,
+            0.1629,
+            0.1348
+          ],
+          "fogNear": 350,
+          "fogFar": 900,
+          "sunPositionUv": [
+            0.32,
+            0.72
+          ],
+          "cloudCoverage": 0.5,
+          "sunBillboard": {
+            "size": 620,
+            "distance": 3000,
+            "intensity": 1.58,
+            "materialName": null,
+            "applied": null
+          },
+          "sky": {
+            "materialMode": "webgpu-node",
+            "horizonColor": [
+              0.3577,
+              0.1986,
+              0.1644
+            ],
+            "zenithColor": [
+              0.0107,
+              0.0341,
+              0.0832
+            ],
+            "sunGlowStrength": null,
+            "sunDiscStrength": null
+          },
+          "cloud": {
+            "coverage": 0.5,
+            "alpha": 0.72,
+            "horizonFade": 0.72
+          },
+          "atmosphereDrawCount": null,
+          "cpuVisible": true
+        },
+        "ok": true
+      },
+      "route": "renderer-webgpu-konveyor-production",
+      "rendererCreated": true,
+      "rendererClassName": "$C",
+      "webGpuLightingBridge": {
+        "source": "production-boot-scout-webgpu-lighting-bridge",
+        "proofOnlyBridge": true,
+        "ambientAdded": true,
+        "directionalAdded": true,
+        "ok": true
+      },
+      "completedAt": "2026-05-16T06:29:43.747Z",
+      "rendererIsWebGpu": true,
+      "renderStatus": {
+        "mode": "async",
+        "inFlight": false,
+        "rendererReady": true,
+        "rendererReadyError": null,
+        "lastError": null
+      },
+      "currentSceneId": "rolling-hills",
+      "atmosphereFrame": {
+        "contract": "AtmosphereFrame.v1",
+        "source": "HosekWilkieSky.cpu-lut",
+        "presetName": "dusk",
+        "horizonColor": [
+          0.3577,
+          0.1986,
+          0.1644
+        ],
+        "zenithColor": [
+          0.0107,
+          0.0341,
+          0.0832
+        ],
+        "sunColor": [
+          1,
+          0.3055,
+          0.0242
+        ],
+        "sunDirection": [
+          -0.9418,
+          0.1392,
+          -0.306
+        ],
+        "sunPhysicalDirection": [
+          -0.9418,
+          0.1392,
+          -0.306
+        ],
+        "sunVisualDirection": [
+          -0.8873,
+          -0.085,
+          -0.4532
+        ],
+        "fogDarkenMultiplier": 1,
+        "fogColor": [
+          0.3577,
+          0.1986,
+          0.1644
+        ],
+        "fogNear": 350,
+        "fogFar": 900,
+        "sunPositionUv": [
+          0.32,
+          0.72
+        ],
+        "cloudCoverage": 0.5,
+        "sunBillboard": {
+          "size": 620,
+          "distance": 3000,
+          "intensity": 1.3436,
+          "materialName": "konveyor-node-sun-billboard",
+          "applied": true
+        },
+        "sky": {
+          "materialMode": "webgpu-node",
+          "horizonColor": [
+            0.3577,
+            0.1986,
+            0.1644
+          ],
+          "zenithColor": [
+            0.0107,
+            0.0341,
+            0.0832
+          ],
+          "sunGlowStrength": null,
+          "sunDiscStrength": null
+        },
+        "cloud": {
+          "coverage": 0.5,
+          "alpha": 0.5,
+          "horizonFade": 1
+        },
+        "atmosphereDrawCount": 3,
+        "cpuVisible": true
+      },
+      "atmosphereDiagnostics": {
+        "presetName": "dusk",
+        "sunBillboard": {
+          "size": 620,
+          "distance": 3000,
+          "intensity": 1.3436,
+          "materialName": "konveyor-node-sun-billboard",
+          "applied": true
+        },
+        "skyMaterialMode": "webgpu-node",
+        "cloud": {
+          "coverage": 0.5,
+          "alpha": 0.5,
+          "horizonFade": 1
+        },
+        "atmosphereDrawCount": 3
+      },
+      "sceneBody": {
+        "terrainFactory": {
+          "kind": "terrain-ground",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "grassFactory": {
+          "kind": "grass-blade",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        },
+        "meadowFactory": null,
+        "sheepFactory": {
+          "kind": "sheep-wool",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "nativeTreeInstancing": {
+          "applied": true,
+          "ok": true,
+          "source": "THREE.InstancedMesh",
+          "route": "konveyor-production-scene-body",
+          "lod": "lod0-only",
+          "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+          "treeInstances": 179,
+          "renderedInstanceMeshes": 4,
+          "groups": [
+            {
+              "type": "tree1",
+              "meshName": "trunk",
+              "instances": 88,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 840
+            },
+            {
+              "type": "tree1",
+              "meshName": "leaves",
+              "instances": 88,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 9240
+            },
+            {
+              "type": "tree2",
+              "meshName": "trunk",
+              "instances": 91,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 2283
+            },
+            {
+              "type": "tree2",
+              "meshName": "leaves",
+              "instances": 91,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 31968
+            }
+          ]
+        },
+        "nativeRockInstancing": {
+          "applied": true,
+          "ok": true,
+          "source": "THREE.InstancedMesh",
+          "route": "konveyor-production-scene-body",
+          "productionReference": "RockPlacement InstancedMesh2.addInstances",
+          "rockInstances": 9,
+          "renderedInstanceMeshes": 2,
+          "emptyPlacement": false,
+          "groups": [
+            {
+              "type": "rock1",
+              "meshName": "rock",
+              "instances": 7,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 540
+            },
+            {
+              "type": "rock2",
+              "meshName": "rock",
+              "instances": 2,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 538
+            }
+          ]
+        }
+      },
+      "checks": {
+        "rendererMode": true,
+        "rendererReady": true,
+        "rendererIsWebGpu": true,
+        "asyncRender": true,
+        "factorySupply": true,
+        "lightingBridge": true,
+        "terrainFactoryApplied": true,
+        "grassFactoryApplied": true,
+        "sheepFactoryApplied": true,
+        "nativeTreeInstancing": true,
+        "nativeRockInstancing": true
+      }
+    },
+    "checks": {
+      "defaultRequestedWebGpu": true,
+      "defaultProductionWebGpu": true,
+      "defaultHasNoFallback": true,
+      "defaultProductionStateOk": true,
+      "defaultDevicePreflightOk": true
+    },
+    "ok": true
+  },
+  "storedWebGlPreferenceMode": {
+    "url": "http://127.0.0.1:4173/",
+    "rendererMode": {
+      "requested": "webgl",
+      "diagnostic": false,
+      "productionWebGpu": false,
+      "productionGate": false,
+      "webgpuApiAvailable": true,
+      "productionBootScout": false,
+      "effective": "webgl",
+      "fallbackReason": null
+    },
+    "productionWebGpuState": null,
+    "checks": {
+      "storedPreferenceRequestedWebGl": true,
+      "storedPreferenceEffectiveWebGl": true,
+      "storedPreferenceHasNoFallback": true,
+      "storedPreferenceNotProductionWebGpu": true,
+      "storedPreferenceNoProductionState": true
+    },
+    "ok": true
+  },
+  "explicitWebGlMode": {
+    "url": "http://127.0.0.1:4173/?renderer=webgl",
+    "rendererMode": {
+      "requested": "webgl",
+      "diagnostic": false,
+      "productionWebGpu": false,
+      "productionGate": false,
+      "webgpuApiAvailable": true,
+      "productionBootScout": false,
+      "effective": "webgl",
+      "fallbackReason": null
+    },
+    "productionWebGpuState": null,
+    "checks": {
+      "explicitRequestedWebGl": true,
+      "explicitEffectiveWebGl": true,
+      "explicitHasNoFallback": true,
+      "explicitNotProductionWebGpu": true,
+      "explicitNoProductionState": true
+    },
+    "ok": true
+  },
+  "webGpuUnavailableMode": {
+    "url": "http://127.0.0.1:4173/?renderer=webgpu",
+    "rendererMode": {
+      "requested": "webgpu",
+      "diagnostic": false,
+      "productionWebGpu": false,
+      "productionGate": false,
+      "webgpuApiAvailable": false,
+      "productionBootScout": false,
+      "effective": "webgl",
+      "fallbackReason": "webgpu-unavailable"
+    },
+    "productionWebGpuState": null,
+    "checks": {
+      "requestedWebGpu": true,
+      "webgpuApiUnavailable": true,
+      "fallbackWebGl": true,
+      "fallbackReasonUnavailable": true,
+      "notProductionWebGpu": true,
+      "noProductionState": true
+    },
+    "ok": true
+  },
+  "webGpuDeviceFailureMode": {
+    "url": "http://127.0.0.1:4173/?renderer=webgpu&probeRender=1",
+    "rendererMode": {
+      "requested": "webgpu",
+      "diagnostic": false,
+      "productionWebGpu": false,
+      "productionGate": false,
+      "webgpuApiAvailable": true,
+      "productionBootScout": false,
+      "effective": "webgl",
+      "fallbackReason": "webgpu-device-request-failed"
+    },
+    "productionWebGpuState": {
+      "requested": true,
+      "enabled": false,
+      "ok": false,
+      "error": "webgpu-device-request-failed",
+      "devicePreflight": {
+        "ok": false,
+        "adapterAvailable": true,
+        "deviceAvailable": false,
+        "reason": "webgpu-device-request-failed",
+        "error": "simulated-device-failure"
+      },
+      "fallbackReason": "webgpu-device-request-failed"
+    },
+    "renderer": {
+      "className": "ux",
+      "isWebGLRenderer": true,
+      "isWebGPURenderer": false
+    },
+    "checks": {
+      "requestedWebGpu": true,
+      "webgpuApiAvailable": true,
+      "fallbackWebGl": true,
+      "fallbackReasonDevice": true,
+      "notProductionWebGpu": true,
+      "productionStateFailed": true,
+      "preflightFailed": true,
+      "rendererWebGl": true
+    },
+    "ok": true
+  },
+  "ok": true,
+  "scenes": [
+    {
+      "sceneId": "field",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=field&probeRender=1&perfMode=1&autostart=1&mode=classic",
+      "screenshot": "field.png",
+      "screenshotProof": {
+        "dimensions": {
+          "width": 1280,
+          "height": 720
+        },
+        "lumaRange": 209.08,
+        "coarseColorBuckets": 135,
+        "nonBlank": true
+      },
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": false,
+        "productionWebGpu": true,
+        "productionGate": false,
+        "webgpuApiAvailable": true,
+        "productionBootScout": false,
+        "effective": "webgpu-production",
+        "fallbackReason": null
+      },
+      "diagnosticBoot": false,
+      "productionWebGpu": {
+        "requested": true,
+        "enabled": true,
+        "ok": true,
+        "error": null,
+        "devicePreflight": {
+          "ok": true,
+          "adapterAvailable": true,
+          "deviceAvailable": true,
+          "reason": null
+        },
+        "startedAt": "2026-05-16T06:29:45.697Z",
+        "sceneId": "field",
+        "moduleLoaded": true,
+        "moduleSource": "assets/vendor/three/three.webgpu.min.js",
+        "factoryGlobalsInstalled": true,
+        "factorySupply": {
+          "source": "konveyor-node-material-factory-suite",
+          "groupCount": 8,
+          "factoryCount": 18,
+          "groups": {
+            "atmosphere": [
+              "createCloudLayerMaterial",
+              "createSkyDomeMaterial"
+            ],
+            "effects": [
+              "createCorralZapBoltMaterial",
+              "createCorralZapParticleMaterial",
+              "createPortalPadMaterial",
+              "createPortalParticleMaterial",
+              "createPortalRingMaterial",
+              "createSunBillboardMaterial"
+            ],
+            "treeRock": [
+              "createRockMaterial",
+              "createTreeBranchMaterial",
+              "createTreeLeafMaterial"
+            ],
+            "grass": [
+              "createGrassBladeMaterial",
+              "createMeadowQuadMaterial"
+            ],
+            "water": [
+              "createAnimeWaterMaterial"
+            ],
+            "terrain": [
+              "createTerrainMaterial"
+            ],
+            "sheep": [
+              "createSheepMaterial",
+              "createSheepPartMaterial"
+            ],
+            "impostor": [
+              "createKilnImpostorMaterial"
+            ]
+          },
+          "sceneId": "field",
+          "skyFogPreset": "pastoral-noon",
+          "atmosphereFrame": {
+            "contract": "AtmosphereFrame.v1",
+            "source": "HosekWilkieSky.cpu-lut",
+            "presetName": "pastoral-noon",
+            "horizonColor": [
+              0.6891,
+              0.7723,
+              0.8128
+            ],
+            "zenithColor": [
+              0.1131,
+              0.2935,
+              0.6742
+            ],
+            "sunColor": [
+              1,
+              0.8691,
+              0.6433
+            ],
+            "sunDirection": [
+              0.2418,
+              0.9397,
+              0.2418
+            ],
+            "sunPhysicalDirection": [
+              0.2418,
+              0.9397,
+              0.2418
+            ],
+            "sunVisualDirection": [
+              0.2418,
+              0.9397,
+              0.2418
+            ],
+            "fogDarkenMultiplier": 0.82,
+            "fogColor": [
+              0.5651,
+              0.6333,
+              0.6665
+            ],
+            "fogNear": 350,
+            "fogFar": 900,
+            "sunPositionUv": [
+              0.32,
+              0.72
+            ],
+            "cloudCoverage": 0.3,
+            "sunBillboard": {
+              "size": 620,
+              "distance": 3000,
+              "intensity": 1.58,
+              "materialName": null,
+              "applied": null
+            },
+            "sky": {
+              "materialMode": "webgpu-node",
+              "horizonColor": [
+                0.6891,
+                0.7723,
+                0.8128
+              ],
+              "zenithColor": [
+                0.1131,
+                0.2935,
+                0.6742
+              ],
+              "sunGlowStrength": null,
+              "sunDiscStrength": null
+            },
+            "cloud": {
+              "coverage": 0.3,
+              "alpha": 0.72,
+              "horizonFade": 0.72
+            },
+            "atmosphereDrawCount": null,
+            "cpuVisible": true
+          },
+          "ok": true
+        },
+        "route": "renderer-webgpu-konveyor-production",
+        "rendererCreated": true,
+        "rendererClassName": "$C",
+        "webGpuLightingBridge": {
+          "source": "production-boot-scout-webgpu-lighting-bridge",
+          "proofOnlyBridge": true,
+          "ambientAdded": true,
+          "directionalAdded": true,
+          "ok": true
+        },
+        "completedAt": "2026-05-16T06:29:47.634Z",
+        "rendererIsWebGpu": true,
+        "renderStatus": {
+          "mode": "async",
+          "inFlight": false,
+          "rendererReady": true,
+          "rendererReadyError": null,
+          "lastError": null
+        },
+        "currentSceneId": "field",
+        "atmosphereFrame": {
+          "contract": "AtmosphereFrame.v1",
+          "source": "HosekWilkieSky.cpu-lut",
+          "presetName": "pastoral-noon",
+          "horizonColor": [
+            0.6891,
+            0.7723,
+            0.8128
+          ],
+          "zenithColor": [
+            0.1131,
+            0.2935,
+            0.6742
+          ],
+          "sunColor": [
+            1,
+            0.8691,
+            0.6433
+          ],
+          "sunDirection": [
+            0.2418,
+            0.9397,
+            0.2418
+          ],
+          "sunPhysicalDirection": [
+            0.2418,
+            0.9397,
+            0.2418
+          ],
+          "sunVisualDirection": [
+            -0.8873,
+            -0.085,
+            0.4532
+          ],
+          "fogDarkenMultiplier": 1,
+          "fogColor": [
+            0.6891,
+            0.7723,
+            0.8128
+          ],
+          "fogNear": 350,
+          "fogFar": 900,
+          "sunPositionUv": [
+            0.32,
+            0.72
+          ],
+          "cloudCoverage": 0.3,
+          "sunBillboard": {
+            "size": 620,
+            "distance": 3000,
+            "intensity": 1.62,
+            "materialName": "konveyor-node-sun-billboard",
+            "applied": true
+          },
+          "sky": {
+            "materialMode": "webgpu-node",
+            "horizonColor": [
+              0.6891,
+              0.7723,
+              0.8128
+            ],
+            "zenithColor": [
+              0.1131,
+              0.2935,
+              0.6742
+            ],
+            "sunGlowStrength": null,
+            "sunDiscStrength": null
+          },
+          "cloud": {
+            "coverage": 0.3,
+            "alpha": 0.3,
+            "horizonFade": 1
+          },
+          "atmosphereDrawCount": 3,
+          "cpuVisible": true
+        },
+        "atmosphereDiagnostics": {
+          "presetName": "pastoral-noon",
+          "sunBillboard": {
+            "size": 620,
+            "distance": 3000,
+            "intensity": 1.62,
+            "materialName": "konveyor-node-sun-billboard",
+            "applied": true
+          },
+          "skyMaterialMode": "webgpu-node",
+          "cloud": {
+            "coverage": 0.3,
+            "alpha": 0.3,
+            "horizonFade": 1
+          },
+          "atmosphereDrawCount": 3
+        },
+        "sceneBody": {
+          "terrainFactory": {
+            "kind": "terrain-ground",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "grassFactory": {
+            "kind": "grass-blade",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "meadowFactory": null,
+          "sheepFactory": {
+            "kind": "sheep-wool",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "nativeTreeInstancing": {
+            "applied": true,
+            "ok": true,
+            "source": "THREE.InstancedMesh",
+            "route": "konveyor-production-scene-body",
+            "lod": "lod0-only",
+            "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+            "treeInstances": 2002,
+            "renderedInstanceMeshes": 4,
+            "groups": [
+              {
+                "type": "tree1",
+                "meshName": "trunk",
+                "instances": 1396,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 840
+              },
+              {
+                "type": "tree1",
+                "meshName": "leaves",
+                "instances": 1396,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 9240
+              },
+              {
+                "type": "tree2",
+                "meshName": "trunk",
+                "instances": 606,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 2283
+              },
+              {
+                "type": "tree2",
+                "meshName": "leaves",
+                "instances": 606,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 31968
+              }
+            ]
+          },
+          "nativeRockInstancing": {
+            "applied": true,
+            "ok": true,
+            "source": "THREE.InstancedMesh",
+            "route": "konveyor-production-scene-body",
+            "productionReference": "RockPlacement InstancedMesh2.addInstances",
+            "rockInstances": 334,
+            "renderedInstanceMeshes": 3,
+            "emptyPlacement": false,
+            "groups": [
+              {
+                "type": "rock1",
+                "meshName": "rock",
+                "instances": 176,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 540
+              },
+              {
+                "type": "rock2",
+                "meshName": "rock",
+                "instances": 89,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 538
+              },
+              {
+                "type": "rock3",
+                "meshName": "rock",
+                "instances": 69,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 960
+              }
+            ]
+          }
+        },
+        "checks": {
+          "rendererMode": true,
+          "rendererReady": true,
+          "rendererIsWebGpu": true,
+          "asyncRender": true,
+          "factorySupply": true,
+          "lightingBridge": true,
+          "terrainFactoryApplied": true,
+          "grassFactoryApplied": true,
+          "sheepFactoryApplied": true,
+          "nativeTreeInstancing": true,
+          "nativeRockInstancing": true
+        }
+      },
+      "currentSceneId": "field",
+      "renderer": {
+        "className": "$C",
+        "isWebGLRenderer": false,
+        "isWebGPURenderer": true,
+        "calls": 52,
+        "triangles": 0
+      },
+      "summaries": {
+        "treeRockMaterial": {
+          "applied": true,
+          "ok": true,
+          "treeTargetsResolved": true,
+          "treeReplacedMaterials": 8,
+          "rockReplacedMaterials": 3,
+          "treeResults": [
+            {
+              "group": "tree-lod0",
+              "key": "tree1",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            },
+            {
+              "group": "tree-lod0",
+              "key": "tree2",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            },
+            {
+              "group": "tree-lod1",
+              "key": "tree1",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            },
+            {
+              "group": "tree-lod1",
+              "key": "tree2",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            }
+          ],
+          "rockResults": [
+            {
+              "group": "rock-lod0",
+              "key": "rock1",
+              "strategy": "asset-class-traversal",
+              "visitedMeshes": 1,
+              "replacedMaterials": 1,
+              "previousMaterialNames": [
+                "(runtime-default)"
+              ]
+            },
+            {
+              "group": "rock-lod0",
+              "key": "rock2",
+              "strategy": "asset-class-traversal",
+              "visitedMeshes": 1,
+              "replacedMaterials": 1,
+              "previousMaterialNames": [
+                "(runtime-default)"
+              ]
+            },
+            {
+              "group": "rock-lod0",
+              "key": "rock3",
+              "strategy": "asset-class-traversal",
+              "visitedMeshes": 1,
+              "replacedMaterials": 1,
+              "previousMaterialNames": [
+                "(runtime-default)"
+              ]
+            }
+          ]
+        },
+        "rockPlacement": {
+          "kind": "rock-placement-rng",
+          "applied": true,
+          "reason": null,
+          "sceneId": "field",
+          "sceneSeed": 0,
+          "seed": 1383031659,
+          "seedOffset": 1383031659,
+          "rng": "mulberry32(sceneSeed + Rock)"
+        },
+        "terrainMaterial": {
+          "kind": "terrain-ground",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "grassBladeMaterial": {
+          "kind": "grass-blade",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        },
+        "meadowQuadMaterial": null,
+        "waterMaterial": null,
+        "atmosphereMaterial": {
+          "kind": "cloud-layer",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        },
+        "effectMaterial": {
+          "kind": "sun-billboard",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        }
+      },
+      "perfSummary": {
+        "sampleCount": 1,
+        "avgFrameTime": 147.85000000024834,
+        "p50FrameTime": 147.85000000024834,
+        "p95FrameTime": 147.85000000024834,
+        "p99FrameTime": 147.85000000024834,
+        "maxFrameTime": 147.85000000024834,
+        "avgDrawCalls": 50,
+        "avgTriangles": 0,
+        "avgActiveSheep": 200
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "checks": {
+        "effectiveProductionWebGpu": true,
+        "noFallback": true,
+        "diagnosticOff": true,
+        "productionStateOk": true,
+        "devicePreflightOk": true,
+        "rendererWebGpu": true,
+        "sceneMatches": true,
+        "treeRockMaterialApplied": true,
+        "terrainMaterialApplied": true,
+        "grassMaterialApplied": true,
+        "sheepMaterialApplied": true,
+        "nativeInstancing": true,
+        "waterMaterialApplied": true,
+        "atmosphereFrameRecorded": true,
+        "screenshotNonBlank": true,
+        "perfSampled": true,
+        "noConsoleErrors": true,
+        "noPageErrors": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "rolling-hills",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=rolling-hills&probeRender=1&perfMode=1&autostart=1&mode=classic",
+      "screenshot": "rolling-hills.png",
+      "screenshotProof": {
+        "dimensions": {
+          "width": 1280,
+          "height": 720
+        },
+        "lumaRange": 201.18,
+        "coarseColorBuckets": 210,
+        "nonBlank": true
+      },
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": false,
+        "productionWebGpu": true,
+        "productionGate": false,
+        "webgpuApiAvailable": true,
+        "productionBootScout": false,
+        "effective": "webgpu-production",
+        "fallbackReason": null
+      },
+      "diagnosticBoot": false,
+      "productionWebGpu": {
+        "requested": true,
+        "enabled": true,
+        "ok": true,
+        "error": null,
+        "devicePreflight": {
+          "ok": true,
+          "adapterAvailable": true,
+          "deviceAvailable": true,
+          "reason": null
+        },
+        "startedAt": "2026-05-16T06:29:50.946Z",
+        "sceneId": "rolling-hills",
+        "moduleLoaded": true,
+        "moduleSource": "assets/vendor/three/three.webgpu.min.js",
+        "factoryGlobalsInstalled": true,
+        "factorySupply": {
+          "source": "konveyor-node-material-factory-suite",
+          "groupCount": 8,
+          "factoryCount": 18,
+          "groups": {
+            "atmosphere": [
+              "createCloudLayerMaterial",
+              "createSkyDomeMaterial"
+            ],
+            "effects": [
+              "createCorralZapBoltMaterial",
+              "createCorralZapParticleMaterial",
+              "createPortalPadMaterial",
+              "createPortalParticleMaterial",
+              "createPortalRingMaterial",
+              "createSunBillboardMaterial"
+            ],
+            "treeRock": [
+              "createRockMaterial",
+              "createTreeBranchMaterial",
+              "createTreeLeafMaterial"
+            ],
+            "grass": [
+              "createGrassBladeMaterial",
+              "createMeadowQuadMaterial"
+            ],
+            "water": [
+              "createAnimeWaterMaterial"
+            ],
+            "terrain": [
+              "createTerrainMaterial"
+            ],
+            "sheep": [
+              "createSheepMaterial",
+              "createSheepPartMaterial"
+            ],
+            "impostor": [
+              "createKilnImpostorMaterial"
+            ]
+          },
+          "sceneId": "rolling-hills",
+          "skyFogPreset": "dusk",
+          "atmosphereFrame": {
+            "contract": "AtmosphereFrame.v1",
+            "source": "HosekWilkieSky.cpu-lut",
+            "presetName": "dusk",
+            "horizonColor": [
+              0.3577,
+              0.1986,
+              0.1644
+            ],
+            "zenithColor": [
+              0.0107,
+              0.0341,
+              0.0832
+            ],
+            "sunColor": [
+              1,
+              0.3055,
+              0.0242
+            ],
+            "sunDirection": [
+              -0.9418,
+              0.1392,
+              -0.306
+            ],
+            "sunPhysicalDirection": [
+              -0.9418,
+              0.1392,
+              -0.306
+            ],
+            "sunVisualDirection": [
+              -0.9418,
+              0.1392,
+              -0.306
+            ],
+            "fogDarkenMultiplier": 0.82,
+            "fogColor": [
+              0.2933,
+              0.1629,
+              0.1348
+            ],
+            "fogNear": 350,
+            "fogFar": 900,
+            "sunPositionUv": [
+              0.32,
+              0.72
+            ],
+            "cloudCoverage": 0.5,
+            "sunBillboard": {
+              "size": 620,
+              "distance": 3000,
+              "intensity": 1.58,
+              "materialName": null,
+              "applied": null
+            },
+            "sky": {
+              "materialMode": "webgpu-node",
+              "horizonColor": [
+                0.3577,
+                0.1986,
+                0.1644
+              ],
+              "zenithColor": [
+                0.0107,
+                0.0341,
+                0.0832
+              ],
+              "sunGlowStrength": null,
+              "sunDiscStrength": null
+            },
+            "cloud": {
+              "coverage": 0.5,
+              "alpha": 0.72,
+              "horizonFade": 0.72
+            },
+            "atmosphereDrawCount": null,
+            "cpuVisible": true
+          },
+          "ok": true
+        },
+        "route": "renderer-webgpu-konveyor-production",
+        "rendererCreated": true,
+        "rendererClassName": "$C",
+        "webGpuLightingBridge": {
+          "source": "production-boot-scout-webgpu-lighting-bridge",
+          "proofOnlyBridge": true,
+          "ambientAdded": true,
+          "directionalAdded": true,
+          "ok": true
+        },
+        "completedAt": "2026-05-16T06:29:52.663Z",
+        "rendererIsWebGpu": true,
+        "renderStatus": {
+          "mode": "async",
+          "inFlight": false,
+          "rendererReady": true,
+          "rendererReadyError": null,
+          "lastError": null
+        },
+        "currentSceneId": "rolling-hills",
+        "atmosphereFrame": {
+          "contract": "AtmosphereFrame.v1",
+          "source": "HosekWilkieSky.cpu-lut",
+          "presetName": "dusk",
+          "horizonColor": [
+            0.3577,
+            0.1986,
+            0.1644
+          ],
+          "zenithColor": [
+            0.0107,
+            0.0341,
+            0.0832
+          ],
+          "sunColor": [
+            1,
+            0.3055,
+            0.0242
+          ],
+          "sunDirection": [
+            -0.9418,
+            0.1392,
+            -0.306
+          ],
+          "sunPhysicalDirection": [
+            -0.9418,
+            0.1392,
+            -0.306
+          ],
+          "sunVisualDirection": [
+            -0.8873,
+            -0.085,
+            -0.4532
+          ],
+          "fogDarkenMultiplier": 1,
+          "fogColor": [
+            0.3577,
+            0.1986,
+            0.1644
+          ],
+          "fogNear": 350,
+          "fogFar": 900,
+          "sunPositionUv": [
+            0.32,
+            0.72
+          ],
+          "cloudCoverage": 0.5,
+          "sunBillboard": {
+            "size": 620,
+            "distance": 3000,
+            "intensity": 1.3436,
+            "materialName": "konveyor-node-sun-billboard",
+            "applied": true
+          },
+          "sky": {
+            "materialMode": "webgpu-node",
+            "horizonColor": [
+              0.3577,
+              0.1986,
+              0.1644
+            ],
+            "zenithColor": [
+              0.0107,
+              0.0341,
+              0.0832
+            ],
+            "sunGlowStrength": null,
+            "sunDiscStrength": null
+          },
+          "cloud": {
+            "coverage": 0.5,
+            "alpha": 0.5,
+            "horizonFade": 1
+          },
+          "atmosphereDrawCount": 3,
+          "cpuVisible": true
+        },
+        "atmosphereDiagnostics": {
+          "presetName": "dusk",
+          "sunBillboard": {
+            "size": 620,
+            "distance": 3000,
+            "intensity": 1.3436,
+            "materialName": "konveyor-node-sun-billboard",
+            "applied": true
+          },
+          "skyMaterialMode": "webgpu-node",
+          "cloud": {
+            "coverage": 0.5,
+            "alpha": 0.5,
+            "horizonFade": 1
+          },
+          "atmosphereDrawCount": 3
+        },
+        "sceneBody": {
+          "terrainFactory": {
+            "kind": "terrain-ground",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "grassFactory": {
+            "kind": "grass-blade",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "meadowFactory": null,
+          "sheepFactory": {
+            "kind": "sheep-wool",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "nativeTreeInstancing": {
+            "applied": true,
+            "ok": true,
+            "source": "THREE.InstancedMesh",
+            "route": "konveyor-production-scene-body",
+            "lod": "lod0-only",
+            "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+            "treeInstances": 179,
+            "renderedInstanceMeshes": 4,
+            "groups": [
+              {
+                "type": "tree1",
+                "meshName": "trunk",
+                "instances": 88,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 840
+              },
+              {
+                "type": "tree1",
+                "meshName": "leaves",
+                "instances": 88,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 9240
+              },
+              {
+                "type": "tree2",
+                "meshName": "trunk",
+                "instances": 91,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 2283
+              },
+              {
+                "type": "tree2",
+                "meshName": "leaves",
+                "instances": 91,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 31968
+              }
+            ]
+          },
+          "nativeRockInstancing": {
+            "applied": true,
+            "ok": true,
+            "source": "THREE.InstancedMesh",
+            "route": "konveyor-production-scene-body",
+            "productionReference": "RockPlacement InstancedMesh2.addInstances",
+            "rockInstances": 9,
+            "renderedInstanceMeshes": 2,
+            "emptyPlacement": false,
+            "groups": [
+              {
+                "type": "rock1",
+                "meshName": "rock",
+                "instances": 7,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 540
+              },
+              {
+                "type": "rock2",
+                "meshName": "rock",
+                "instances": 2,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 538
+              }
+            ]
+          }
+        },
+        "checks": {
+          "rendererMode": true,
+          "rendererReady": true,
+          "rendererIsWebGpu": true,
+          "asyncRender": true,
+          "factorySupply": true,
+          "lightingBridge": true,
+          "terrainFactoryApplied": true,
+          "grassFactoryApplied": true,
+          "sheepFactoryApplied": true,
+          "nativeTreeInstancing": true,
+          "nativeRockInstancing": true
+        }
+      },
+      "currentSceneId": "rolling-hills",
+      "renderer": {
+        "className": "$C",
+        "isWebGLRenderer": false,
+        "isWebGPURenderer": true,
+        "calls": 262,
+        "triangles": 0
+      },
+      "summaries": {
+        "treeRockMaterial": {
+          "applied": true,
+          "ok": true,
+          "treeTargetsResolved": true,
+          "treeReplacedMaterials": 8,
+          "rockReplacedMaterials": 3,
+          "treeResults": [
+            {
+              "group": "tree-lod0",
+              "key": "tree1",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            },
+            {
+              "group": "tree-lod0",
+              "key": "tree2",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            },
+            {
+              "group": "tree-lod1",
+              "key": "tree1",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            },
+            {
+              "group": "tree-lod1",
+              "key": "tree2",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            }
+          ],
+          "rockResults": [
+            {
+              "group": "rock-lod0",
+              "key": "rock1",
+              "strategy": "asset-class-traversal",
+              "visitedMeshes": 1,
+              "replacedMaterials": 1,
+              "previousMaterialNames": [
+                "(runtime-default)"
+              ]
+            },
+            {
+              "group": "rock-lod0",
+              "key": "rock2",
+              "strategy": "asset-class-traversal",
+              "visitedMeshes": 1,
+              "replacedMaterials": 1,
+              "previousMaterialNames": [
+                "(runtime-default)"
+              ]
+            },
+            {
+              "group": "rock-lod0",
+              "key": "rock3",
+              "strategy": "asset-class-traversal",
+              "visitedMeshes": 1,
+              "replacedMaterials": 1,
+              "previousMaterialNames": [
+                "(runtime-default)"
+              ]
+            }
+          ]
+        },
+        "rockPlacement": {
+          "kind": "rock-placement-rng",
+          "applied": true,
+          "reason": null,
+          "sceneId": "rolling-hills",
+          "sceneSeed": 1,
+          "seed": 1383031660,
+          "seedOffset": 1383031659,
+          "rng": "mulberry32(sceneSeed + Rock)"
+        },
+        "terrainMaterial": {
+          "kind": "terrain-ground",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "grassBladeMaterial": {
+          "kind": "grass-blade",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        },
+        "meadowQuadMaterial": null,
+        "waterMaterial": {
+          "kind": "anime-water",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "atmosphereMaterial": {
+          "kind": "cloud-layer",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        },
+        "effectMaterial": {
+          "kind": "corral-zap-particles",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        }
+      },
+      "perfSummary": {
+        "sampleCount": 63,
+        "avgFrameTime": 62.566427495754105,
+        "p50FrameTime": 54.45499999995033,
+        "p95FrameTime": 94.49722222238779,
+        "p99FrameTime": 102.24242424242425,
+        "maxFrameTime": 102.24242424242425,
+        "avgDrawCalls": 134,
+        "avgTriangles": 0,
+        "avgActiveSheep": 200
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "checks": {
+        "effectiveProductionWebGpu": true,
+        "noFallback": true,
+        "diagnosticOff": true,
+        "productionStateOk": true,
+        "devicePreflightOk": true,
+        "rendererWebGpu": true,
+        "sceneMatches": true,
+        "treeRockMaterialApplied": true,
+        "terrainMaterialApplied": true,
+        "grassMaterialApplied": true,
+        "sheepMaterialApplied": true,
+        "nativeInstancing": true,
+        "waterMaterialApplied": true,
+        "atmosphereFrameRecorded": true,
+        "screenshotNonBlank": true,
+        "perfSampled": true,
+        "noConsoleErrors": true,
+        "noPageErrors": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "open-country",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=open-country&probeRender=1&perfMode=1&autostart=1&mode=classic",
+      "screenshot": "open-country.png",
+      "screenshotProof": {
+        "dimensions": {
+          "width": 1280,
+          "height": 720
+        },
+        "lumaRange": 226.78,
+        "coarseColorBuckets": 154,
+        "nonBlank": true
+      },
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": false,
+        "productionWebGpu": true,
+        "productionGate": false,
+        "webgpuApiAvailable": true,
+        "productionBootScout": false,
+        "effective": "webgpu-production",
+        "fallbackReason": null
+      },
+      "diagnosticBoot": false,
+      "productionWebGpu": {
+        "requested": true,
+        "enabled": true,
+        "ok": true,
+        "error": null,
+        "devicePreflight": {
+          "ok": true,
+          "adapterAvailable": true,
+          "deviceAvailable": true,
+          "reason": null
+        },
+        "startedAt": "2026-05-16T06:29:55.630Z",
+        "sceneId": "open-country",
+        "moduleLoaded": true,
+        "moduleSource": "assets/vendor/three/three.webgpu.min.js",
+        "factoryGlobalsInstalled": true,
+        "factorySupply": {
+          "source": "konveyor-node-material-factory-suite",
+          "groupCount": 8,
+          "factoryCount": 18,
+          "groups": {
+            "atmosphere": [
+              "createCloudLayerMaterial",
+              "createSkyDomeMaterial"
+            ],
+            "effects": [
+              "createCorralZapBoltMaterial",
+              "createCorralZapParticleMaterial",
+              "createPortalPadMaterial",
+              "createPortalParticleMaterial",
+              "createPortalRingMaterial",
+              "createSunBillboardMaterial"
+            ],
+            "treeRock": [
+              "createRockMaterial",
+              "createTreeBranchMaterial",
+              "createTreeLeafMaterial"
+            ],
+            "grass": [
+              "createGrassBladeMaterial",
+              "createMeadowQuadMaterial"
+            ],
+            "water": [
+              "createAnimeWaterMaterial"
+            ],
+            "terrain": [
+              "createTerrainMaterial"
+            ],
+            "sheep": [
+              "createSheepMaterial",
+              "createSheepPartMaterial"
+            ],
+            "impostor": [
+              "createKilnImpostorMaterial"
+            ]
+          },
+          "sceneId": "open-country",
+          "skyFogPreset": "golden-hour",
+          "atmosphereFrame": {
+            "contract": "AtmosphereFrame.v1",
+            "source": "HosekWilkieSky.cpu-lut",
+            "presetName": "golden-hour",
+            "horizonColor": [
+              0.698,
+              0.6664,
+              0.6607
+            ],
+            "zenithColor": [
+              0.0286,
+              0.0944,
+              0.2523
+            ],
+            "sunColor": [
+              1,
+              0.6796,
+              0.2973
+            ],
+            "sunDirection": [
+              -0.7144,
+              0.3746,
+              0.591
+            ],
+            "sunPhysicalDirection": [
+              -0.7144,
+              0.3746,
+              0.591
+            ],
+            "sunVisualDirection": [
+              -0.7144,
+              0.3746,
+              0.591
+            ],
+            "fogDarkenMultiplier": 0.82,
+            "fogColor": [
+              0.5724,
+              0.5464,
+              0.5418
+            ],
+            "fogNear": 350,
+            "fogFar": 900,
+            "sunPositionUv": [
+              0.32,
+              0.72
+            ],
+            "cloudCoverage": 0.4,
+            "sunBillboard": {
+              "size": 620,
+              "distance": 3000,
+              "intensity": 1.58,
+              "materialName": null,
+              "applied": null
+            },
+            "sky": {
+              "materialMode": "webgpu-node",
+              "horizonColor": [
+                0.698,
+                0.6664,
+                0.6607
+              ],
+              "zenithColor": [
+                0.0286,
+                0.0944,
+                0.2523
+              ],
+              "sunGlowStrength": null,
+              "sunDiscStrength": null
+            },
+            "cloud": {
+              "coverage": 0.4,
+              "alpha": 0.72,
+              "horizonFade": 0.72
+            },
+            "atmosphereDrawCount": null,
+            "cpuVisible": true
+          },
+          "ok": true
+        },
+        "route": "renderer-webgpu-konveyor-production",
+        "rendererCreated": true,
+        "rendererClassName": "$C",
+        "webGpuLightingBridge": {
+          "source": "production-boot-scout-webgpu-lighting-bridge",
+          "proofOnlyBridge": true,
+          "ambientAdded": true,
+          "directionalAdded": true,
+          "ok": true
+        },
+        "completedAt": "2026-05-16T06:29:57.984Z",
+        "rendererIsWebGpu": true,
+        "renderStatus": {
+          "mode": "async",
+          "inFlight": false,
+          "rendererReady": true,
+          "rendererReadyError": null,
+          "lastError": null
+        },
+        "currentSceneId": "open-country",
+        "atmosphereFrame": {
+          "contract": "AtmosphereFrame.v1",
+          "source": "HosekWilkieSky.cpu-lut",
+          "presetName": "golden-hour",
+          "horizonColor": [
+            0.698,
+            0.6664,
+            0.6607
+          ],
+          "zenithColor": [
+            0.0286,
+            0.0944,
+            0.2523
+          ],
+          "sunColor": [
+            1,
+            0.6796,
+            0.2973
+          ],
+          "sunDirection": [
+            -0.7144,
+            0.3746,
+            0.591
+          ],
+          "sunPhysicalDirection": [
+            -0.7144,
+            0.3746,
+            0.591
+          ],
+          "sunVisualDirection": [
+            -0.4446,
+            -0.0456,
+            0.8946
+          ],
+          "fogDarkenMultiplier": 1,
+          "fogColor": [
+            0.698,
+            0.6664,
+            0.6607
+          ],
+          "fogNear": 350,
+          "fogFar": 900,
+          "sunPositionUv": [
+            0.32,
+            0.72
+          ],
+          "cloudCoverage": 0.4,
+          "sunBillboard": {
+            "size": 620,
+            "distance": 3000,
+            "intensity": 1.62,
+            "materialName": "konveyor-node-sun-billboard",
+            "applied": true
+          },
+          "sky": {
+            "materialMode": "webgpu-node",
+            "horizonColor": [
+              0.698,
+              0.6664,
+              0.6607
+            ],
+            "zenithColor": [
+              0.0286,
+              0.0944,
+              0.2523
+            ],
+            "sunGlowStrength": null,
+            "sunDiscStrength": null
+          },
+          "cloud": {
+            "coverage": 0.4,
+            "alpha": 0.4,
+            "horizonFade": 1
+          },
+          "atmosphereDrawCount": 3,
+          "cpuVisible": true
+        },
+        "atmosphereDiagnostics": {
+          "presetName": "golden-hour",
+          "sunBillboard": {
+            "size": 620,
+            "distance": 3000,
+            "intensity": 1.62,
+            "materialName": "konveyor-node-sun-billboard",
+            "applied": true
+          },
+          "skyMaterialMode": "webgpu-node",
+          "cloud": {
+            "coverage": 0.4,
+            "alpha": 0.4,
+            "horizonFade": 1
+          },
+          "atmosphereDrawCount": 3
+        },
+        "sceneBody": {
+          "terrainFactory": {
+            "kind": "terrain-ground",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "grassFactory": {
+            "kind": "grass-blade",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "meadowFactory": {
+            "kind": "meadow-quad",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "sheepFactory": {
+            "kind": "sheep-wool",
+            "applied": true,
+            "reason": null,
+            "hasControls": false
+          },
+          "nativeTreeInstancing": {
+            "applied": true,
+            "ok": true,
+            "source": "THREE.InstancedMesh",
+            "route": "konveyor-production-scene-body",
+            "lod": "lod0-only",
+            "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+            "treeInstances": 457,
+            "renderedInstanceMeshes": 4,
+            "groups": [
+              {
+                "type": "tree1",
+                "meshName": "trunk",
+                "instances": 193,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 840
+              },
+              {
+                "type": "tree1",
+                "meshName": "leaves",
+                "instances": 193,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 9240
+              },
+              {
+                "type": "tree2",
+                "meshName": "trunk",
+                "instances": 264,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 2283
+              },
+              {
+                "type": "tree2",
+                "meshName": "leaves",
+                "instances": 264,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "vertexCount": 31968
+              }
+            ]
+          },
+          "nativeRockInstancing": {
+            "applied": true,
+            "ok": true,
+            "source": "THREE.InstancedMesh",
+            "route": "konveyor-production-scene-body",
+            "productionReference": "RockPlacement InstancedMesh2.addInstances",
+            "rockInstances": 0,
+            "renderedInstanceMeshes": 0,
+            "emptyPlacement": true,
+            "groups": []
+          }
+        },
+        "checks": {
+          "rendererMode": true,
+          "rendererReady": true,
+          "rendererIsWebGpu": true,
+          "asyncRender": true,
+          "factorySupply": true,
+          "lightingBridge": true,
+          "terrainFactoryApplied": true,
+          "grassFactoryApplied": true,
+          "sheepFactoryApplied": true,
+          "nativeTreeInstancing": true,
+          "nativeRockInstancing": true
+        }
+      },
+      "currentSceneId": "open-country",
+      "renderer": {
+        "className": "$C",
+        "isWebGLRenderer": false,
+        "isWebGPURenderer": true,
+        "calls": 772,
+        "triangles": 0
+      },
+      "summaries": {
+        "treeRockMaterial": {
+          "applied": true,
+          "ok": true,
+          "treeTargetsResolved": true,
+          "treeReplacedMaterials": 8,
+          "rockReplacedMaterials": 3,
+          "treeResults": [
+            {
+              "group": "tree-lod0",
+              "key": "tree1",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            },
+            {
+              "group": "tree-lod0",
+              "key": "tree2",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            },
+            {
+              "group": "tree-lod1",
+              "key": "tree1",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            },
+            {
+              "group": "tree-lod1",
+              "key": "tree2",
+              "strategy": "material-name",
+              "targetNames": [
+                "branches",
+                "leaves"
+              ],
+              "seenNames": [
+                "branches",
+                "leaves"
+              ],
+              "missingTargets": [],
+              "visitedMeshes": 2,
+              "replacedMaterials": 2
+            }
+          ],
+          "rockResults": [
+            {
+              "group": "rock-lod0",
+              "key": "rock1",
+              "strategy": "asset-class-traversal",
+              "visitedMeshes": 1,
+              "replacedMaterials": 1,
+              "previousMaterialNames": [
+                "(runtime-default)"
+              ]
+            },
+            {
+              "group": "rock-lod0",
+              "key": "rock2",
+              "strategy": "asset-class-traversal",
+              "visitedMeshes": 1,
+              "replacedMaterials": 1,
+              "previousMaterialNames": [
+                "(runtime-default)"
+              ]
+            },
+            {
+              "group": "rock-lod0",
+              "key": "rock3",
+              "strategy": "asset-class-traversal",
+              "visitedMeshes": 1,
+              "replacedMaterials": 1,
+              "previousMaterialNames": [
+                "(runtime-default)"
+              ]
+            }
+          ]
+        },
+        "rockPlacement": {
+          "kind": "rock-placement-rng",
+          "applied": true,
+          "reason": null,
+          "sceneId": "open-country",
+          "sceneSeed": 42,
+          "seed": 1383031701,
+          "seedOffset": 1383031659,
+          "rng": "mulberry32(sceneSeed + Rock)"
+        },
+        "terrainMaterial": {
+          "kind": "terrain-ground",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "grassBladeMaterial": {
+          "kind": "grass-blade",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        },
+        "meadowQuadMaterial": {
+          "kind": "meadow-quad",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "waterMaterial": {
+          "kind": "anime-water",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "atmosphereMaterial": {
+          "kind": "cloud-layer",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        },
+        "effectMaterial": {
+          "kind": "portal-particles",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        }
+      },
+      "perfSummary": {
+        "sampleCount": 287,
+        "avgFrameTime": 12.418577235769241,
+        "p50FrameTime": 6.945000000049671,
+        "p95FrameTime": 42.54499999980132,
+        "p99FrameTime": 42.98499999990066,
+        "maxFrameTime": 43.061666666716334,
+        "avgDrawCalls": 420,
+        "avgTriangles": 0,
+        "avgActiveSheep": 200
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "checks": {
+        "effectiveProductionWebGpu": true,
+        "noFallback": true,
+        "diagnosticOff": true,
+        "productionStateOk": true,
+        "devicePreflightOk": true,
+        "rendererWebGpu": true,
+        "sceneMatches": true,
+        "treeRockMaterialApplied": true,
+        "terrainMaterialApplied": true,
+        "grassMaterialApplied": true,
+        "sheepMaterialApplied": true,
+        "nativeInstancing": true,
+        "waterMaterialApplied": true,
+        "atmosphereFrameRecorded": true,
+        "screenshotNonBlank": true,
+        "perfSampled": true,
+        "noConsoleErrors": true,
+        "noPageErrors": true
+      },
+      "ok": true
+    }
+  ]
+}

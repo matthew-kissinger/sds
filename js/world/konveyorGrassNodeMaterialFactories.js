@@ -44,6 +44,7 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
       const wind = context.wind ?? {};
       const geometry = context.geometry ?? {};
       const lighting = context.lighting ?? {};
+      const interaction = context.interaction ?? {};
       const fade = context.fade ?? {};
       const material = context.material ?? {};
       const fog = context.fog ?? {};
@@ -56,12 +57,15 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
         windStrength: wind.strength ?? context.windStrength ?? bladeDefaults.windStrength ?? 0,
         windSpeed: wind.speed ?? context.windSpeed ?? bladeDefaults.windSpeed ?? 0,
         gustStrength: wind.gustStrength ?? context.gustStrength ?? bladeDefaults.gustStrength ?? 0,
+        tipDampen: context.tipDampen ?? bladeDefaults.tipDampen ?? options.tipDampen,
         bladeHeight: geometry.bladeHeight ?? context.bladeHeight ?? bladeDefaults.bladeHeight ?? 1,
         grassFadeStart: fade.start ?? context.grassFadeStart ?? bladeDefaults.grassFadeStart ?? 70,
         grassFadeEnd: fade.end ?? context.grassFadeEnd ?? bladeDefaults.grassFadeEnd ?? 260,
         distanceFadeStrength: fade.strength ?? context.distanceFadeStrength ?? bladeDefaults.distanceFadeStrength ?? 1,
         sunColor: toArray(lighting.sunColor ?? context.sunColor ?? bladeDefaults.sunColor, DEFAULT_SUN_COLOR),
         sunDirection: toArray(lighting.sunDirection ?? context.sunDirection ?? bladeDefaults.sunDirection, DEFAULT_SUN_DIRECTION),
+        interactionRadius: interaction.radius ?? context.interactionRadius ?? bladeDefaults.interactionRadius ?? 2.2,
+        interactionStrength: interaction.strength ?? context.interactionStrength ?? bladeDefaults.interactionStrength ?? 0.6,
         fogColor: toArray(fog.color ?? context.fogColor ?? bladeDefaults.fogColor ?? options.fogColor, DEFAULT_FOG_COLOR),
         fogNear: fog.near ?? context.fogNear ?? bladeDefaults.fogNear ?? options.fogNear ?? 18,
         fogFar: fog.far ?? context.fogFar ?? bladeDefaults.fogFar ?? options.fogFar ?? 74,

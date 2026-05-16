@@ -78,6 +78,7 @@ export function getDefaultSettings() {
         grassDensity: 0.7,        // 0.3-1.0
         pixelRatio: 1.5,          // 1-2
         antialias: true,
+        experimentalWebGpu: true,
 
         // Audio
         audioEnabled: true,
@@ -120,6 +121,21 @@ export function saveSettings(settings) {
     }
 }
 
+function applyRendererPreference(settings) {
+    if (typeof window === 'undefined' || !settings) return;
+    const wantsWebGpu = settings.experimentalWebGpu !== false;
+    const desired = wantsWebGpu ? 'webgpu' : 'webgl';
+    if (window.__sdsRendererMode?.requested === desired) return;
+
+    const url = new URL(window.location.href);
+    if (wantsWebGpu) {
+        url.searchParams.delete('renderer');
+    } else {
+        url.searchParams.set('renderer', 'webgl');
+    }
+    window.location.replace(url.href);
+}
+
 // Apply a performance preset
 export function applyPerformancePreset(presetName, currentSettings) {
     const preset = PERFORMANCE_PRESETS[presetName];
@@ -137,8 +153,11 @@ export function applyPerformancePreset(presetName, currentSettings) {
 }
 
 // Apply settings to the game instance
-export function applySettingsToGame(settings) {
+export function applySettingsToGame(settings, options = {}) {
     console.log('[SETTINGS] Applying settings to game:', settings);
+    if (options.applyRenderer) {
+        applyRendererPreference(settings);
+    }
 
     // Apply performance mode settings
     const sceneManager = getSceneManager();

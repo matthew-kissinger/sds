@@ -280,9 +280,16 @@ describe('konveyor effect material adapter', () => {
     sun.update(camera, new THREE.Vector3(0, 1, 0), new THREE.Color(0.8, 0.7, 0.6));
 
     expect(updates).toHaveLength(1);
-    expect(updates[0]).toMatchObject({ intensity: 1 });
+    expect(updates[0]).toMatchObject({ intensity: 1.62 });
     expect(updates[0].haloColor).toBeInstanceOf(THREE.Color);
     expect(updates[0].coreColor).toBeInstanceOf(THREE.Color);
+    expect(sun.getDiagnostics()).toMatchObject({
+      size: 620,
+      distance: 3000,
+      intensity: 1.62,
+      materialName: 'konveyor-sun',
+      applied: true,
+    });
 
     sun.dispose();
   });

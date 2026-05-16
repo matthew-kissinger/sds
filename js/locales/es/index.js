@@ -94,6 +94,8 @@ export default {
         performanceOption: 'Rendimiento - FPS Máximo',
         balancedOption: 'Equilibrado - Configuración predeterminada',
         qualityOption: 'Calidad - Mejores visuales',
+        experimentalWebGpu: 'Renderizador WebGPU',
+        experimentalWebGpuDesc: 'Experimental. Usa WebGPU cuando esté disponible; desactívalo para recargar con WebGL.',
         audioEnabled: 'Audio Activado',
         audioVolume: 'Volumen de Audio',
         showStats: 'Mostrar Estadísticas de Rendimiento',

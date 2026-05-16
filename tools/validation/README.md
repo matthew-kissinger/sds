@@ -21,10 +21,11 @@ semantic sky, horizon, and ground regions.
 
 Explicit production WebGPU request proof uses
 `node tools/konveyor-production-webgpu-request-proof.mjs` against the same built
-preview. It validates that default URLs still use WebGL and that plain
-`?renderer=webgpu` fails closed to WebGL when `navigator.gpu` is unavailable
-and enters the production WebGPU route across the shipped scenes when WebGPU is
-available. The proof defaults to the installed Chrome channel because bundled
+preview. It validates that default URLs enter production WebGPU on supported
+desktop Chrome, that unsupported WebGPU fails closed to WebGL, and that forced
+`?renderer=webgl` plus stored `experimentalWebGpu=false` remain WebGL escape
+hatches. It also verifies the production WebGPU route across the shipped scenes.
+The proof defaults to the installed Chrome channel because bundled
 Playwright Chromium can expose `navigator.gpu` while failing device creation on
 the local Windows Dawn/DXIL path.
 

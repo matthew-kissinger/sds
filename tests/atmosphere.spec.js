@@ -10,7 +10,9 @@ import * as THREE from 'three';
 
 import {
   Atmosphere,
+  ATMOSPHERE_FRAME_CONTRACT,
   HosekWilkieSky,
+  createAtmosphereFrame,
   createSkyFogSamplePacket,
   sampleSkyFogPacketFromSky,
   CloudLayer,
@@ -194,10 +196,49 @@ describe('HosekWilkieSky', () => {
   it('creates a renderless CPU-visible sky/fog packet from a preset', () => {
     const packet = createSkyFogSamplePacket({ presetName: 'dusk' });
 
+    expect(packet.contract).toBe(ATMOSPHERE_FRAME_CONTRACT);
     expect(packet.source).toBe('HosekWilkieSky.cpu-lut');
     expect(packet.cpuVisible).toBe(true);
     expect(packet.presetName).toBe('dusk');
     expect(packet.fogNear).toBeLessThan(packet.fogFar);
+  });
+
+  it('creates an AtmosphereFrame packet with sun, sky, fog, cloud, and billboard diagnostics', () => {
+    const frame = createAtmosphereFrame({
+      presetName: 'golden-hour',
+      fogNear: 180,
+      fogFar: 780,
+      sunBillboard: {
+        size: 390,
+        distance: 3000,
+        intensity: 1.45,
+        materialName: 'konveyor-node-sun-billboard',
+        applied: true,
+      },
+    });
+
+    expect(frame.contract).toBe(ATMOSPHERE_FRAME_CONTRACT);
+    expect(frame.presetName).toBe('golden-hour');
+    expect(frame.sunDirection).toHaveLength(3);
+    expect(frame.sunPhysicalDirection).toEqual(frame.sunDirection);
+    expect(frame.sunVisualDirection).toHaveLength(3);
+    expect(frame.sunColor).toHaveLength(3);
+    expect(frame.zenithColor).toHaveLength(3);
+    expect(frame.horizonColor).toHaveLength(3);
+    expect(frame.fogColor).toHaveLength(3);
+    expect(frame.fogNear).toBe(180);
+    expect(frame.fogFar).toBe(780);
+    expect(frame.cloudCoverage).toBeGreaterThanOrEqual(0);
+    expect(frame.cloudCoverage).toBeLessThanOrEqual(1);
+    expect(frame.sunBillboard).toMatchObject({
+      size: 390,
+      distance: 3000,
+      intensity: 1.45,
+      materialName: 'konveyor-node-sun-billboard',
+      applied: true,
+    });
+    expect(frame.sky.materialMode).toBe('webgpu-node');
+    expect(frame.cloud.coverage).toBe(frame.cloudCoverage);
   });
 
   it('creates renderless CPU-visible sky/fog packets for every required preset', () => {
@@ -321,6 +362,39 @@ describe('Atmosphere orchestrator', () => {
     expect(atmo.sun.getElevation()).toBeCloseTo(0.3, 5);
     expect(atmo.sun.getAzimuth()).toBeCloseTo(1.2, 5);
     atmo.dispose();
+  });
+
+  it('exposes a live AtmosphereFrame from the orchestrator', () => {
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, {
+      initialPreset: 'golden-hour',
+      sceneFog: { color: '#aabbcc', near: 180, far: 760 },
+    });
+    const sunBillboard = {
+      getDiagnostics: () => ({
+        size: 390,
+        distance: 3000,
+        intensity: 1.3,
+        materialName: 'konveyor-node-sun-billboard',
+        applied: true,
+        visualDirection: [0.1, 0.9, 0.2],
+      }),
+    };
+
+    try {
+      atmo.update(0);
+      const frame = atmo.getFrame({ sunBillboard });
+
+      expect(frame.contract).toBe(ATMOSPHERE_FRAME_CONTRACT);
+      expect(frame.presetName).toBe('golden-hour');
+      expect(frame.fogNear).toBe(180);
+      expect(frame.fogFar).toBe(760);
+      expect(frame.sunBillboard.size).toBe(390);
+      expect(frame.sky.materialMode).toBe('webgl-shader');
+      expect(frame.atmosphereDrawCount).toBeGreaterThanOrEqual(2);
+    } finally {
+      atmo.dispose();
+    }
   });
 
   it('setWeather raises fog density and cloud coverage when applying STORM', () => {

@@ -29,15 +29,20 @@ decision sequence.
 
 ## Current repo baseline
 
-As of 2026-05-15, SDS is not a WebGPU project yet.
+As of 2026-05-16, Matt approved the branch to request WebGPU by default on the
+web route. The policy is progressive: unsupported browsers or failed WebGPU
+device requests fall back to WebGL, `?renderer=webgl` remains a forced escape
+hatch, and the settings UI exposes an experimental WebGPU toggle backed by
+`localStorage`.
 
-- The client renderer is WebGL-only: `js/SceneManager.js` creates the default
-  production renderer through `js/rendering/sceneRendererSetup.js`, which still
-  constructs `THREE.WebGLRenderer`. The setup seam now records guarded WebGL
-  capability, context-loss, shadow, pixel-ratio, and tonemapping posture on
-  `SceneManager.rendererSetup`, and proof runs may inject an explicit renderer
-  factory without changing the normal call site; it is a production renderer
-  boundary, not a WebGPU production boot. The opt-in proof artifact
+- The client now has both the WebGL renderer path and the production WebGPU
+  request path. `js/SceneManager.js` still creates the WebGL fallback/forced
+  renderer through `js/rendering/sceneRendererSetup.js`, while the WebGPU route
+  injects async renderer options through the Konveyor production boot seam. The
+  setup seam records guarded WebGL capability, context-loss, shadow,
+  pixel-ratio, and tonemapping posture on `SceneManager.rendererSetup`, and
+  proof runs may inject an explicit renderer factory without changing the normal
+  call site. The opt-in proof artifact
   `cycle36-validation/runtime/scene-manager-webgpu-renderer-proof.json`
   verifies installed Chrome can instantiate `SceneManager` with an injected
   `WebGPURenderer`, initialize that async renderer through
@@ -86,8 +91,9 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   render through 4 native
   `THREE.InstancedMesh` groups, 334 rocks render through 3 native
   `THREE.InstancedMesh` groups, and `suppressedWebglOnlyObjects` is empty.
-  Plain non-diagnostic `?renderer=webgpu` now uses the proven production route;
-  default URLs still remain WebGL.
+  Plain non-diagnostic `?renderer=webgpu` now uses the proven production route.
+  This proof predates the later approved progressive WebGPU default switch, so
+  treat its default-URL note as historical.
 - A guarded gameplay-start scout now exists at
   `cycle36-validation/runtime/production-webgpu-gameplay-scout.json`. It uses
   the same diagnostic production WebGPU boot route but runs without
@@ -138,6 +144,19 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   (`avgFrameTime=6.944 ms`, `p95=6.952 ms`) while still requiring
   `effective: "webgpu-production"`, WebGPU renderer identity, no fallback, and
   clean console/page state.
+- Cycle 37 closed the follow-up atmosphere and perf packet for Rolling Hills
+  and Open Country. The accepted final proof is
+  `cycle36-validation/runtime/cycle37-final-webgpu-request.json` with
+  screenshots in `cycle36-validation/runtime/cycle37-final-webgpu-request/`,
+  and `cycle36-validation/runtime/cycle37-final-webgpu-perf.json` passes the
+  local desktop budget: Rolling Hills `avgFrameTime=6.993 ms`,
+  `p95FrameTime=7.29 ms`, `sampleCount=1144`; Open Country
+  `avgFrameTime=6.944 ms`, `p95FrameTime=6.958 ms`, `sampleCount=1151`.
+  This packet formalized `AtmosphereFrame.v1`, made broad sky glow and
+  readable sun-disc ownership explicit, enlarged the WebGPU sun, reduced the
+  bland/grey sky read, and preserved WebGL fallback behavior. At Cycle 37
+  closeout WebGL was still the default; the later approved release-policy pass
+  moved default requests to WebGPU.
 - The first real multiplayer WebGPU proof now exists at
   `cycle36-validation/runtime/production-webgpu-mp-proof.json` (captured
   2026-05-16T01:42:30.718Z on installed Chrome against local Vite + Wrangler).
@@ -637,6 +656,25 @@ contradicting it:
   device-level runtime probes, native shell proof by platform, CPU-visible
   atmosphere ownership until a measured GPU LUT is justified, measured EZ-Tree
   asset refreshes, and isolated compute experiments.
+- The native release option space is broadened in
+  [`archive/research/native-release-oss-options-spike-2026-05-16.md`](archive/research/native-release-oss-options-spike-2026-05-16.md).
+  Treat the primary decision as pinned Chromium runtime versus platform WebView
+  runtime versus mobile/PWA wrapper versus true-native rewrite. Do not add shell
+  dependencies, Steamworks integration, or store prep without an explicit proof
+  scope.
+- The performance, extensibility, memory, and Rust/WASM option space is recorded
+  in
+  [`archive/research/perf-extensibility-rust-oss-spike-2026-05-16.md`](archive/research/perf-extensibility-rust-oss-spike-2026-05-16.md).
+  Prefer profiler-backed JS allocation fixes, worker offload, offline
+  Rust/WASM tools, and visual-only WebGPU compute before considering a
+  deterministic `shared/**` rewrite.
+- The focused sun/sky atmosphere path was scoped in
+  [`archive/research/sun-sky-atmosphere-perf-spike-2026-05-16.md`](archive/research/sun-sky-atmosphere-perf-spike-2026-05-16.md).
+  Cycle 37 implemented that path for the current WebGPU production route:
+  `AtmosphereFrame.v1`, explicit `SunBillboard` readable-disc ownership,
+  coherent sky/cloud/fog horizon tuning, final screenshots, and isolated perf
+  proof now exist. Future atmosphere work should extend from those artifacts,
+  not restart the packet.
 
 ## Objective
 
@@ -835,8 +873,11 @@ condition.
 
 Add `?renderer=webgpu` as a flag-gated path, but do not force a production hero
 scene through WebGPU until the shader/material inventory proves the required
-surfaces. WebGL stays default. The current path is a diagnostic WebGPU/TSL boot
-with one material system migrated at a time.
+surfaces. This phase was written before the progressive WebGPU default was
+approved. The current release policy defaults the request to WebGPU on
+supported browsers while preserving WebGL fallback and forced `?renderer=webgl`.
+The original path was a diagnostic WebGPU/TSL boot with one material system
+migrated at a time.
 
 Exit: the diagnostic path proves the required production-adjacent material
 contracts, fails closed on unsupported devices, and preserves default WebGL
@@ -944,8 +985,8 @@ release path is ready for external users.
 
 ## Fresh-agent goal
 
-Use this goal when starting an autonomous Konveyor session:
+Use this goal after Cycle 37:
 
 ```text
-/goal On branch exp/konveyor-webgpu-migration, continue the SDS Konveyor autonomous campaign from docs/konveyor-autonomous-run.md and docs/konveyor-sds.md until the full objective is reached or a documented hard stop is hit. Treat docs/cycle-36-plan.md as completed foundation evidence, not the active stopping point. First stabilize and commit the foundation/native-readiness packet on the experimental branch while excluding unrelated .agents/skills folders and verifying npm test, npm run lint, npm run build, and npm run native:check. Then build a minimal WebGPU/TSL diagnostic boot path instead of forcing Rolling Hills through WebGPU, inventory and migrate shader/material systems incrementally, keep WebGL default and all WebGPU work flag-gated, preserve deterministic shared sim and multiplayer contracts, run the relevant perf/latency/visual/test/build/native gates before claiming progress, and keep moving through optimization, native packaging proof, and web fallback decisions without stopping at cycle boundaries.
+/goal On branch exp/konveyor-webgpu-migration, continue after the completed Cycle 37 packet and approved progressive WebGPU default. Read NEXT_SESSION.md, docs/cycle-37-plan.md, docs/native-packaging-proof-0.md, and docs/native-store-steam-readiness-checklist.md. Do not rerun Cycle 37 unless its artifacts are stale. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Next implementation work should be planned explicitly from the current packet; if Matt approves native shell code, keep the first Electron proof inside sandbox/native-electron-proof/ and document package size, startup, fullscreen/pointer-lock, audio, storage, and multiplayer behavior before adding broader shell or store work. Do not submit to Steam/App Store/Google Play, pay store fees, add Steamworks features, sign installers, or cross store/manual gates without explicit approval.
 ```

@@ -13,6 +13,7 @@ import { createKonveyorEffectMaterial } from './konveyorEffectMaterialAdapter.js
 
 const SUN_DISTANCE = 3000;
 const SUN_QUAD_SIZE = 110;
+const KONVEYOR_SUN_QUAD_SIZE = 620;
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -75,16 +76,17 @@ export class SunBillboard {
      */
     constructor(scene, options = {}) {
         const distance = options.distance ?? SUN_DISTANCE;
-        const size = options.size ?? SUN_QUAD_SIZE;
 
         this.distance = distance;
 
-        const geometry = new THREE.PlaneGeometry(size, size);
         const materialResult = createKonveyorEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
             createDefaultMaterial: makeSunBillboardMaterial,
             search: options.search,
             factories: options.konveyorEffectFactories
         });
+        const size = options.size ?? (materialResult.summary?.applied ? KONVEYOR_SUN_QUAD_SIZE : SUN_QUAD_SIZE);
+        this.size = size;
+        const geometry = new THREE.PlaneGeometry(size, size);
 
         this.material = materialResult.material;
         this.materialControls = materialResult.controls;
@@ -93,12 +95,18 @@ export class SunBillboard {
         this.mesh.name = 'SunBillboard';
         // Render after sky dome but before transparent water; terrain will
         // still occlude the disc via depth-test from the prior opaque pass.
-        this.mesh.renderOrder = 5;
+        this.mesh.renderOrder = this.konveyorMaterialSummary?.applied ? 999 : 5;
         this.mesh.frustumCulled = false;
 
         scene.add(this.mesh);
 
         this._tmpDir = new THREE.Vector3();
+        this._visualDir = new THREE.Vector3();
+        this._cameraForward = new THREE.Vector3();
+        this._cameraRight = new THREE.Vector3();
+        this._cameraUp = new THREE.Vector3();
+        this._lastIntensity = 0;
+        this._lastSunColor = new THREE.Color(1, 1, 1);
     }
 
     /**
@@ -114,21 +122,41 @@ export class SunBillboard {
         if (!sunDirection) return;
 
         this._tmpDir.copy(sunDirection).normalize();
-        this.mesh.position.copy(camera.position).addScaledVector(this._tmpDir, this.distance);
+        this._visualDir.copy(this._tmpDir);
+        if (this.konveyorMaterialSummary?.applied && camera?.getWorldDirection) {
+            camera.getWorldDirection(this._cameraForward).normalize();
+            this._cameraUp.copy(camera.up).normalize();
+            this._cameraRight.crossVectors(this._cameraForward, this._cameraUp).normalize();
+            const facing = this._cameraForward.dot(this._tmpDir);
+            if (facing < 0.92) {
+                const side = this._cameraRight.dot(this._tmpDir) < 0 ? -1 : 1;
+                this._visualDir.copy(this._cameraForward)
+                    .multiplyScalar(0.80)
+                    .addScaledVector(this._cameraRight, side * 0.34)
+                    .addScaledVector(this._cameraUp, 0.38)
+                    .normalize();
+            }
+        }
+        this.mesh.position.copy(camera.position).addScaledVector(this._visualDir, this.distance);
         this.mesh.lookAt(camera.position);
 
         // Fade the disc as the sun drops below the horizon so it doesn't
         // sit dimly visible underground in dusk presets.
         const elevation = Math.max(0, this._tmpDir.y);
-        const intensity = Math.min(1, elevation * 4.0);
+        const intensity = this.konveyorMaterialSummary?.applied
+            ? Math.max(1.28, Math.min(1.62, 1.10 + elevation * 1.75))
+            : Math.min(1, elevation * 4.0);
+        this._lastIntensity = intensity;
 
         if (sunColor) {
             // Bias the halo slightly warmer than the core so the disc reads
             // as warm without losing the cleaner near-white center.
             if (this.materialControls?.update) {
+                const coreBlend = this.konveyorMaterialSummary?.applied ? 0.72 : 0.4;
+                this._lastSunColor.copy(sunColor);
                 this.materialControls.update({
                     haloColor: sunColor,
-                    coreColor: new THREE.Color().copy(sunColor).lerp(new THREE.Color(1.0, 1.0, 1.0), 0.4),
+                    coreColor: new THREE.Color().copy(sunColor).lerp(new THREE.Color(1.0, 1.0, 1.0), coreBlend),
                     intensity,
                 });
             } else if (this.material.uniforms) {
@@ -142,6 +170,20 @@ export class SunBillboard {
         } else if (this.material.uniforms) {
             this.material.uniforms.uIntensity.value = intensity;
         }
+    }
+
+    getDiagnostics() {
+        return {
+            size: this.size,
+            distance: this.distance,
+            intensity: this._lastIntensity,
+            materialName: this.material?.name ?? null,
+            applied: this.konveyorMaterialSummary?.applied ?? false,
+            physicalDirection: this._tmpDir.toArray().map((value) => Number(value.toFixed(4))),
+            visualDirection: this._visualDir.toArray().map((value) => Number(value.toFixed(4))),
+            sunColor: this._lastSunColor.toArray().map((value) => Number(value.toFixed(4))),
+            renderOrder: this.mesh.renderOrder,
+        };
     }
 
     dispose() {

@@ -12,6 +12,12 @@ function getWindowFactories() {
     return window.__sdsKonveyorEffectMaterialFactories ?? null;
 }
 
+function exposeSummary(summary) {
+    if (typeof window !== 'undefined') {
+        window.__sdsKonveyorEffectMaterialAdapter = summary;
+    }
+}
+
 function defaultResult(kind, reason, createDefaultMaterial) {
     const material = createDefaultMaterial();
     const summary = {
@@ -19,6 +25,7 @@ function defaultResult(kind, reason, createDefaultMaterial) {
         applied: false,
         reason,
     };
+    exposeSummary(summary);
     return { material, controls: null, summary };
 }
 
@@ -50,6 +57,7 @@ export function createKonveyorEffectMaterial(kind, factoryName, {
         reason: null,
         hasControls: !!controls,
     };
+    exposeSummary(summary);
     return { material, controls, summary };
 }
 

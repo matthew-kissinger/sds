@@ -39,6 +39,15 @@ control surface:
 - [`archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md`](archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md)
   aligns current Three WebGPU/TSL, browser WebGPU, Tauri, WebView2, Electron,
   Capacitor, and WebKit facts with the active SDS migration shape.
+- [`archive/research/native-release-oss-options-spike-2026-05-16.md`](archive/research/native-release-oss-options-spike-2026-05-16.md)
+  broadens the native release path beyond Electron/Tauri into pinned Chromium,
+  platform WebViews, mobile shells, PWA/TWA wrappers, Steamworks integrations,
+  and true-native rewrite candidates without approving dependencies or store
+  prep.
+- [`archive/research/perf-extensibility-rust-oss-spike-2026-05-16.md`](archive/research/perf-extensibility-rust-oss-spike-2026-05-16.md)
+  records the performance, memory, worker, WebGPU-compute, and Rust/WASM option
+  space while keeping `shared/**` deterministic changes behind explicit
+  authorization.
 - [`archive/research/cycle-36-webgpu-hero-blocker.md`](archive/research/cycle-36-webgpu-hero-blocker.md)
   records why Rolling Hills production rendering should not be the first
   WebGPU boot target.
@@ -52,6 +61,24 @@ control surface:
 - [`../progress.md`](../progress.md) records the completed foundation steps.
 - Commit `2f9b846` stabilized the foundation/native-readiness packet on this
   branch while leaving unrelated `.agents/skills/*` folders uncommitted.
+- Cycle 37 is now complete evidence, not the active control surface. The final
+  packet is `../cycle36-validation/runtime/cycle37-final-webgpu-request.json`
+  plus screenshots in `../cycle36-validation/runtime/cycle37-final-webgpu-request/`,
+  final perf at
+  `../cycle36-validation/runtime/cycle37-final-webgpu-perf.json`, native
+  preflight at `../cycle36-validation/native/preflight.json`, and docs at
+  [`native-packaging-proof-0.md`](native-packaging-proof-0.md) plus
+  [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md).
+  It formalized `AtmosphereFrame.v1`, enlarged the WebGPU sun, improved
+  sky/cloud/fog horizon tuning, and preserved the then-current WebGL default
+  plus deploy/default-renderer/store gates. Matt later approved a progressive
+  WebGPU default while keeping WebGL rollback paths. The post-cycle default
+  proof is
+  `../cycle36-validation/runtime/progressive-webgpu-default-request-proof.json`,
+  with perf at
+  `../cycle36-validation/runtime/progressive-webgpu-default-perf-proof.json`
+  and settings UI proof at
+  `../cycle36-validation/runtime/progressive-webgpu-settings-toggle.png`.
 
 The important conclusion: installed Chrome 148 can create a WebGPU device on
 the current Windows machine, but Playwright's bundled Chromium 147 exposes
@@ -289,7 +316,9 @@ WebGPU now has a diagnostic island, not a production renderer:
   `SceneManager` also accepts an explicit renderer/configure factory for proof
   runs without changing normal gameplay construction. This is a
   renderer-boundary migration step. Plain `?renderer=webgpu` now has its own
-  production-route proof; default URLs still remain WebGL.
+  production-route proof. This was captured before the later approved
+  progressive WebGPU default switch, so treat the default-URL note in this
+  historical scout as superseded by the current release-policy proof.
   [`../cycle36-validation/runtime/scene-manager-webgpu-renderer-proof.json`](../cycle36-validation/runtime/scene-manager-webgpu-renderer-proof.json)
   now records installed Chrome running `?renderer=webgpu&diagnostic=1&konveyorSceneManagerProof=1`,
   injecting a real `WebGPURenderer` into `SceneManager`, initializing it through
@@ -339,7 +368,8 @@ WebGPU now has a diagnostic island, not a production renderer:
   `THREE.InstancedMesh` groups, rock placement renders 334 rocks through 3
   native `THREE.InstancedMesh` groups, and `suppressedWebglOnlyObjects` is
   empty. Plain non-diagnostic `?renderer=webgpu` now uses the proven
-  production route; default URLs still remain WebGL.
+  production route. This historical proof predates the later progressive
+  WebGPU default switch.
 - A guarded production gameplay-start scout now exists at
   [`../cycle36-validation/runtime/production-webgpu-gameplay-scout.json`](../cycle36-validation/runtime/production-webgpu-gameplay-scout.json).
   It uses the same diagnostic production WebGPU route but omits
@@ -606,9 +636,16 @@ WebGPU now has a diagnostic island, not a production renderer:
 
 ## Next autonomous direction
 
-The next agent should not try to boot Rolling Hills through WebGPU wholesale.
-The diagnostic island exists; the honest next step is to inventory and migrate
-one material system at a time.
+Cycle 37 is complete. Start with [`../NEXT_SESSION.md`](../NEXT_SESSION.md),
+then review [`cycle-37-plan.md`](cycle-37-plan.md),
+[`native-packaging-proof-0.md`](native-packaging-proof-0.md), and
+[`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md).
+The next implementation step should be planned from the current packet instead
+of rerunning the Cycle 37 phases.
+
+The older material-island sequence below is historical context for how the
+current WebGPU route was built. Use it for orientation, not as the next pickup
+order after Cycle 37.
 
 Recommended order:
 
@@ -791,6 +828,20 @@ Recommended order:
    runtime variability as the packaging risk. Refresh those facts before
    choosing Tauri, Electron, Capacitor, default web renderer policy, a GPU LUT,
    a tree rebake, or a compute path.
+6. **Current visual-polish status.** The first design-led WebGPU polish pass from
+   `docs/konveyor-visual-polish-qa-2026-05-16.md` is implemented and Cycle 37
+   closed its perf and sun/sky follow-up. The latest accepted packet is
+   `cycle36-validation/runtime/cycle37-final-webgpu-request.json`, screenshots
+   live in `cycle36-validation/runtime/cycle37-final-webgpu-request/`, and perf
+   proof is `cycle36-validation/runtime/cycle37-final-webgpu-perf.json`.
+   Rolling Hills passed with `avgFrameTime=6.993 ms`,
+   `p95FrameTime=7.29 ms`, and `sampleCount=1144`; Open Country passed with
+   `avgFrameTime=6.944 ms`, `p95FrameTime=6.958 ms`, and
+   `sampleCount=1151`. Matt later approved a progressive WebGPU default with
+   WebGL fallback, forced `?renderer=webgl`, and an experimental settings
+   toggle. Store/signing/native-shell decisions still require explicit
+   approval. Continue from this packet; do not restart Cycle 37 or reframe the
+   work as strict WebGL parity.
 
 ## Hard stops
 
@@ -811,8 +862,10 @@ safe route, and keep moving.
 
 ## Non-negotiables
 
-- WebGL stays the default until the campaign records a fallback decision.
-- WebGPU work stays feature-flagged or diagnostic until gates pass.
+- WebGPU is now the progressive default request on supported browsers; WebGL
+  fallback, forced `?renderer=webgl`, and the experimental setting remain the
+  rollback paths.
+- New WebGPU work still needs proof before it widens the release surface.
 - Native build-target plumbing may advance without choosing Tauri, Electron, or
   Capacitor. Shell dependencies still require a scoped proof step.
 - No `shared/**` deterministic sim changes without explicit operator
@@ -825,8 +878,8 @@ safe route, and keep moving.
 
 ## Fresh-agent goal
 
-Use this exact goal for the next autonomous run:
+Use this exact goal for the next session:
 
 ```text
-/goal On branch exp/konveyor-webgpu-migration, continue the SDS Konveyor autonomous campaign from docs/konveyor-autonomous-run.md and docs/konveyor-sds.md until the full objective is reached or a documented hard stop is hit. Treat docs/cycle-36-plan.md as completed foundation evidence, not the active stopping point. First stabilize and commit the foundation/native-readiness packet on the experimental branch while excluding unrelated .agents/skills folders and verifying npm test, npm run lint, npm run build, and npm run native:check. Then build a minimal WebGPU/TSL diagnostic boot path instead of forcing Rolling Hills through WebGPU, inventory and migrate shader/material systems incrementally, keep WebGL default and all WebGPU work flag-gated, preserve deterministic shared sim and multiplayer contracts, run the relevant perf/latency/visual/test/build/native gates before claiming progress, and keep moving through optimization, native packaging proof, and web fallback decisions without stopping at cycle boundaries.
+/goal On branch exp/konveyor-webgpu-migration, continue after the completed Cycle 37 packet and approved progressive WebGPU default. Read NEXT_SESSION.md, docs/cycle-37-plan.md, docs/native-packaging-proof-0.md, and docs/native-store-steam-readiness-checklist.md. Do not rerun Cycle 37 unless its artifacts are stale. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Next implementation work should be planned explicitly from the current packet; if Matt approves native shell code, keep the first Electron proof inside sandbox/native-electron-proof/ and document package size, startup, fullscreen/pointer-lock, audio, storage, and multiplayer behavior before adding broader shell or store work. Do not submit to Steam/App Store/Google Play, pay store fees, add Steamworks features, sign installers, or cross store/manual gates without explicit approval.
 ```

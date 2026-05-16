@@ -94,6 +94,8 @@ export default {
         performanceOption: '性能优先 - 最高帧率',
         balancedOption: '均衡 - 默认设置',
         qualityOption: '画质优先 - 最佳视觉效果',
+        experimentalWebGpu: 'WebGPU 渲染器',
+        experimentalWebGpuDesc: '实验性功能。可用时使用 WebGPU；关闭后将以 WebGL 重新加载。',
         audioEnabled: '启用音效',
         audioVolume: '音量',
         showStats: '显示性能统计',

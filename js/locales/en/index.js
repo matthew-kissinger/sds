@@ -116,6 +116,8 @@ export default {
         // Graphics
         shadows: 'Shadows',
         shadowsDesc: 'Enable dynamic shadows (desktop only)',
+        experimentalWebGpu: 'WebGPU renderer',
+        experimentalWebGpuDesc: 'Experimental. Uses WebGPU when available; turn off to reload with WebGL.',
         shadowQuality: 'Shadow Quality',
         low: 'Low',
         medium: 'Medium',

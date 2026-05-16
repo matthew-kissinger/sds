@@ -22,8 +22,8 @@ export function createKonveyorTreeLeafNodeMaterial({ MeshStandardNodeMaterial, D
   const sway = sway1.mul(0.6).add(sway2.mul(0.4));
   const carrier = sway.mul(float(0.4).add(gustEnv.mul(0.8)));
   const flutter = sin(worldX.mul(0.6).add(worldZ.mul(0.5)).add(time.mul(4.5)));
-  const windDisp = windDir.mul(carrier.mul(treeLeaf.windStrength * 0.18).mul(windWeight))
-    .add(windPerp.mul(flutter.mul(0.05 * treeLeaf.windStrength).mul(windWeight)));
+  const windDisp = windDir.mul(carrier.mul(treeLeaf.windStrength * 0.10).mul(windWeight))
+    .add(windPerp.mul(flutter.mul(0.02 * treeLeaf.windStrength).mul(windWeight)));
   const leafCenter = leafUv.sub(vec2(0.5, 0.52));
   const leafRadius = length(vec2(leafCenter.x.mul(1.28), leafCenter.y.mul(0.82)));
   const leafShape = float(1.0).sub(smoothstep(0.42, 0.56, leafRadius));
