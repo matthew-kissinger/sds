@@ -193,6 +193,16 @@ at 2026-05-16T01:57Z. The attached sample averaged `[29, 42, 20]` and reported
 `nearFoamWhite: false` against the foam-white failure color `[234, 246, 255]`.
 Rerun this after any deploy that carries the WebGPU packet.
 
+Matt's local WebGPU visual review after opening
+`?renderer=webgpu&scene=open-country&autostart=1&mode=classic` found that the
+route works but is not production-polished. Record of findings:
+[`docs/konveyor-visual-polish-qa-2026-05-16.md`](docs/konveyor-visual-polish-qa-2026-05-16.md).
+Key issues: non-interactive grass, bland water, sky/cloud cutoff line, leaf wind
+detaching from static branches, and incorrect/black/palette ground material
+mapping. The prior look should guide the art direction, not be copied exactly.
+Next visual work should prioritize ground material mapping, sky/cloud cutoff,
+water richness, tree wind coherence, then grass interaction.
+
 Rolling Hills terrain placement is fixed in current proof: the camera sample is
 `y=43.134`, `surfaceY=31.134`, `aboveSurface=12`, and sheep placement reports
 `matrixSurfaceAbsMax=0` plus `belowWaterMatrices=0`. The runtime fix keeps
