@@ -209,6 +209,13 @@ Keep two carryovers visible:
 2. **iOS Safari foam canary post-deploy.** `npm run test:ios-water` against `https://sheepdogsim.com/` after the latest deploy lands. The current public site passed at 2026-05-16T01:57Z, but that does not cover this unpublished branch. Hard-stop gate from Cycle 32. If `nearFoamWhite: true`, revert Phase 6 and re-open as a paired investigation.
 3. **Renderer telemetry readout post-deploy.** After traffic hits a deployed build with `renderer_mode_resolved`, run `npm run konveyor:renderer-telemetry -- --days=7` to summarize requested/effective renderer, fallback reason, device-preflight, scene id, and production WebGPU success before making a default-renderer policy decision. Current live remote smoke returned zero rows before this branch deploys, which is expected.
 
+Automated coverage now reduces the first carryover but does not close it:
+`npx playwright test tests/e2e/mp/in-game-state.spec.ts --project=mp --reporter=list`
+passes 4/4 and includes an Open Country cooperative room that preserves
+`sceneId: "open-country"` across host create, guest join, and start-game. The
+manual playtest is still needed for actual sheep driving, `roundup -> drive`,
+and portal/open-corral visibility.
+
 **Closed 2026-05-12:** D1 telemetry-route verification. Remote query confirmed `mode_selected` landed 2026-05-11 23:34:45 (after the 18:53 deploy), so the route fix is working end-to-end. `score_errors` table clean (0 entries). No `game_completed` yet, but that's traffic (3 GSC clicks in the same period), not a route bug.
 
 **Closed 2026-05-13:** leaderboard solo-tab correction and content-campaign alignment. `GlobalLeaderboard` now shows solo modes for every concrete scene while multiplayer tabs still follow `scene.allowedModes`. The May 2026 Discord/devlog/capture docs live at [`docs/content-campaign-2026-05.md`](docs/content-campaign-2026-05.md), [`docs/capture-pipeline-spike-2026-05.md`](docs/capture-pipeline-spike-2026-05.md), and [`assets/marketing/content/2026-05-update/discord-threejs-update.md`](assets/marketing/content/2026-05-update/discord-threejs-update.md). Current Discord attachment image: [`assets/marketing/og/og-rh-sunset.webp`](assets/marketing/og/og-rh-sunset.webp). Generated MP4s are review-only; next capture pass should wait for the optimization/EZ-Tree/tree-spacing prep in [`docs/tree-pipeline.md`](docs/tree-pipeline.md).

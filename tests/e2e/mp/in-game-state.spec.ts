@@ -140,4 +140,47 @@ test.describe('Cycle 24 Phase 2 — in-game state', () => {
       await guestContext.close();
     }
   });
+
+  test('Open Country cooperative room keeps scene identity through start-game', async ({ browser }) => {
+    const hostContext = await browser.newContext();
+    const guestContext = await browser.newContext();
+    await seedIdentity(hostContext, makeIdentity('host'));
+    await seedIdentity(guestContext, makeIdentity('guest'));
+    const hostPage = await hostContext.newPage();
+    const guestPage = await guestContext.newPage();
+
+    try {
+      await bootApp(hostPage);
+      await navigateToMultiplayer(hostPage);
+      const roomCode = await createRoomAsHost(hostPage, {
+        sceneId: 'open-country',
+        gameMode: 'cooperative',
+        sheepCount: 200,
+      });
+
+      await bootApp(guestPage);
+      await navigateToMultiplayer(guestPage);
+      await joinRoomByCode(guestPage, roomCode);
+
+      await waitForRoomState(hostPage, { minPlayers: 2, timeoutMs: 30_000 });
+
+      const startBtn = hostPage.getByRole('button', { name: /^Start Game$/i });
+      await expect(startBtn).toBeEnabled({ timeout: 15_000 });
+      await startBtn.dispatchEvent('click');
+
+      await waitForRoomState(hostPage, { roomState: 'in-game', timeoutMs: 30_000 });
+      await waitForRoomState(guestPage, { roomState: 'in-game', timeoutMs: 30_000 });
+
+      const hostProbe = await getMpProbe(hostPage);
+      const guestProbe = await getMpProbe(guestPage);
+      expect(hostProbe.sceneId).toBe('open-country');
+      expect(guestProbe.sceneId).toBe('open-country');
+      expect(hostProbe.gameMode).toBe('cooperative');
+      expect(guestProbe.gameMode).toBe('cooperative');
+      expect(hostProbe.roomCode).toBe(guestProbe.roomCode);
+    } finally {
+      await hostContext.close();
+      await guestContext.close();
+    }
+  });
 });
