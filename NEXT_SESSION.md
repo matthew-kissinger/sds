@@ -219,8 +219,10 @@ passes 4/4 and includes an Open Country cooperative room that preserves
 `sceneId: "open-country"` across host create, guest join, and start-game. The
 worker objective snapshot spec now also drives the authoritative OC
 `GameSimulation.tick()` path through `roundup -> drive` and proves corral
-retirement stays closed until `drive`. The manual playtest is still needed for
-actual two-client sheep driving and portal/open-corral visibility.
+retirement stays closed until `drive`. The local-only scene-swap e2e also
+proves the OC objective-stage event opens the portal target and hides the
+round-up decal in a real browser scene. The manual playtest is still needed for
+actual two-client sheep driving through the objective.
 
 **Closed 2026-05-12:** D1 telemetry-route verification. Remote query confirmed `mode_selected` landed 2026-05-11 23:34:45 (after the 18:53 deploy), so the route fix is working end-to-end. `score_errors` table clean (0 entries). No `game_completed` yet, but that's traffic (3 GSC clicks in the same period), not a route bug.
 

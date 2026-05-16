@@ -40,7 +40,29 @@ export function installStressTestHarness(game) {
             hasHeightfield: !!hf,
             grassHeightfieldMatches: tb?.grassSystem ? tb.grassSystem.heightfield === hf : true,
             sheep: { count: 0, outOfBounds: 0, maxDistanceFromCenter: 0, samples: [] },
+            objectiveVisual: null,
         };
+        if (game.currentScene?.objective || game._portalEffect || game._roundupZoneDecal) {
+            const sceneRef = game.sceneManager?.getScene?.();
+            const portal = game._portalEffect ?? null;
+            const decal = game._roundupZoneDecal ?? null;
+            out.objectiveVisual = {
+                stage: game.gameState?.objective?.stage ?? null,
+                portal: portal ? {
+                    present: true,
+                    intensity: portal.intensity,
+                    targetIntensity: portal.targetIntensity,
+                    ringInScene: sceneRef?.children?.includes?.(portal.ring) === true,
+                    padInScene: sceneRef?.children?.includes?.(portal.pad) === true,
+                    particlesInScene: sceneRef?.children?.includes?.(portal.particles) === true,
+                } : null,
+                roundupZoneDecal: decal ? {
+                    present: true,
+                    visible: decal.visible,
+                    inScene: sceneRef?.children?.includes?.(decal) === true,
+                } : null,
+            };
+        }
         // Sheep in-bounds vs scene boundary. Q3 fix gate: post-swap mode
         // start should respawn within the new scene's playArea, not
         // leftover positions from the prior mode/scene.
