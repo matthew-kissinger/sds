@@ -2,7 +2,7 @@
 
 Branch: `exp/konveyor-webgpu-migration`
 
-Current review head: see draft PR [#52](https://github.com/matthew-kissinger/sds/pull/52).
+Current review head: draft PR [#52](https://github.com/matthew-kissinger/sds/pull/52) tracks the branch head; latest inspected PR state is open, draft, mergeable, and has no status checks configured.
 
 Core implementation packet: `b77eac4c4c785b01ef824eaaf60d7d7ff462d439`
 
@@ -55,6 +55,6 @@ documented hard-stop or manual boundaries:
 4. The paired Open Country multiplayer playtest remains human-gated.
 
 Do not mark the thread goal complete from the current branch state. The correct
-next step is an explicit user decision: keep this branch as a review packet,
-open a PR, merge/deploy it, or continue with more pre-release hardening while
+next step is an explicit user decision: keep this branch as a draft review
+packet, merge/deploy it, or continue with more pre-release hardening while
 WebGL remains default.
