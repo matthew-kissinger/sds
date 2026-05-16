@@ -207,6 +207,7 @@ Keep two carryovers visible:
 
 1. **Phase 7 carryover from Cycle 35: paired OC MP playtest.** Matt at the keyboard, two browser tabs, host an OC cooperative room, drive sheep into the round-up zone at (0, 50), confirm `roundup → drive` flips server-side at hold=2.0s and the portal at z=295 opens. Cannot run autonomously.
 2. **iOS Safari foam canary post-deploy.** `npm run test:ios-water` against `https://sheepdogsim.com/` after the latest deploy lands. The current public site passed at 2026-05-16T01:57Z, but that does not cover this unpublished branch. Hard-stop gate from Cycle 32. If `nearFoamWhite: true`, revert Phase 6 and re-open as a paired investigation.
+3. **Renderer telemetry readout post-deploy.** After traffic hits a deployed build with `renderer_mode_resolved`, run `npm run konveyor:renderer-telemetry -- --days=7` to summarize requested/effective renderer, fallback reason, device-preflight, scene id, and production WebGPU success before making a default-renderer policy decision. Current live remote smoke returned zero rows before this branch deploys, which is expected.
 
 **Closed 2026-05-12:** D1 telemetry-route verification. Remote query confirmed `mode_selected` landed 2026-05-11 23:34:45 (after the 18:53 deploy), so the route fix is working end-to-end. `score_errors` table clean (0 entries). No `game_completed` yet, but that's traffic (3 GSC clicks in the same period), not a route bug.
 

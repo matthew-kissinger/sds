@@ -38,6 +38,7 @@
     "perf:baseline": "node tools/perf-harness.mjs --baseline",
     "perf:check": "node tools/perf-harness.mjs --check",
     "probe:webgpu": "node tools/probe-webgpu-runtime.mjs",
+    "konveyor:renderer-telemetry": "node tools/konveyor-renderer-telemetry-summary.mjs --remote",
     "native:preflight": "node tools/native-preflight.mjs",
     "native:check": "npm run build:native && npm run native:preflight",
     "validation:lod": "node tools/validation/lod-compare.mjs",

@@ -624,6 +624,9 @@ contradicting it:
   fallback reason, WebGPU API presence, production-route success, device
   preflight success, and scene id, so Phase 9 can compare real SDS traffic
   against the upstream support tables without fingerprinting users.
+- After a deploy carrying this branch, run
+  `npm run konveyor:renderer-telemetry -- --days=7` to summarize the remote D1
+  `renderer_mode_resolved` rows before changing the web default policy.
 - The current best-practices alignment packet is
   [`archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md`](archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md).
   It keeps the next work pointed at explicit TSL/node-material factories,
