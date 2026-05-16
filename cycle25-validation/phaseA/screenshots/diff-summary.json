@@ -1,22 +1,58 @@
 {
-  "cells": 0,
+  "cells": 12,
   "expectedCells": 12,
-  "mean": 0,
+  "mean": 0.9945007926542798,
   "fails": [],
-  "missing": [
-    "field__sun05__follow__zoom25",
-    "field__sun085__classic__zoom60",
-    "field__sun05__classic__zoom60",
-    "field__sun085__follow__zoom25",
-    "rolling-hills__sun05__follow__zoom25",
-    "rolling-hills__sun085__classic__zoom60",
-    "rolling-hills__sun05__classic__zoom60",
-    "rolling-hills__sun085__follow__zoom25",
-    "open-country__sun05__follow__zoom25",
-    "open-country__sun085__classic__zoom60",
-    "open-country__sun05__classic__zoom60",
-    "open-country__sun085__follow__zoom25"
+  "missing": [],
+  "results": [
+    {
+      "id": "field__sun05__follow__zoom25",
+      "ssim": 0.9995407846950868
+    },
+    {
+      "id": "field__sun085__classic__zoom60",
+      "ssim": 0.9995115634474041
+    },
+    {
+      "id": "field__sun05__classic__zoom60",
+      "ssim": 0.9995165092788605
+    },
+    {
+      "id": "field__sun085__follow__zoom25",
+      "ssim": 0.9998360504592093
+    },
+    {
+      "id": "rolling-hills__sun05__follow__zoom25",
+      "ssim": 0.9838338483444165
+    },
+    {
+      "id": "rolling-hills__sun085__classic__zoom60",
+      "ssim": 0.9898499767323111
+    },
+    {
+      "id": "rolling-hills__sun05__classic__zoom60",
+      "ssim": 0.9915632428028884
+    },
+    {
+      "id": "rolling-hills__sun085__follow__zoom25",
+      "ssim": 0.9827971826786517
+    },
+    {
+      "id": "open-country__sun05__follow__zoom25",
+      "ssim": 0.9975053598018742
+    },
+    {
+      "id": "open-country__sun085__classic__zoom60",
+      "ssim": 0.9960081625875551
+    },
+    {
+      "id": "open-country__sun05__classic__zoom60",
+      "ssim": 0.995751033956368
+    },
+    {
+      "id": "open-country__sun085__follow__zoom25",
+      "ssim": 0.9982957970667302
+    }
   ],
-  "results": [],
-  "capturedAt": "2026-05-14T19:43:07.266Z"
+  "capturedAt": "2026-05-15T20:29:25.470Z"
 }

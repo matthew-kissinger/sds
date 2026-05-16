@@ -407,15 +407,38 @@
             const params = new URLSearchParams(window.location.search);
             const requested = params.get('renderer') || 'webgl';
             const diagnostic = params.get('diagnostic') === '1';
-            const webgpuDiagnostic = requested === 'webgpu' && diagnostic;
+            const webgpuApiAvailable = !!navigator.gpu;
+            const productionGate = params.get('konveyorProduction') === '1';
+            const productionWebGpu = requested === 'webgpu' &&
+                !diagnostic &&
+                webgpuApiAvailable;
+            const productionBootScout = requested === 'webgpu' &&
+                diagnostic &&
+                params.get('konveyorProductionBootScout') === '1';
+            const webgpuDiagnostic = requested === 'webgpu' && diagnostic && !productionBootScout;
             window.__sdsRendererMode = {
                 requested,
                 diagnostic,
-                effective: webgpuDiagnostic ? 'webgpu-diagnostic' : 'webgl',
-                fallbackReason: requested === 'webgpu' && !diagnostic ? 'diagnostic-flag-required' : null
+                productionWebGpu,
+                productionGate,
+                webgpuApiAvailable,
+                productionBootScout,
+                effective: productionBootScout ? 'webgpu-production-boot-scout' : (webgpuDiagnostic ? 'webgpu-diagnostic' : (productionWebGpu ? 'webgpu-production' : 'webgl')),
+                fallbackReason: requested === 'webgpu' && !diagnostic && !productionWebGpu ? 'webgpu-unavailable' : null
             };
             window.__sdsG = {
-                r: webgpuDiagnostic
+                r: webgpuDiagnostic,
+                productionWebGpu: productionWebGpu ? {
+                    requested: true,
+                    enabled: false,
+                    ok: false,
+                    error: null
+                } : null,
+                productionBootScout: productionBootScout ? {
+                    requested: true,
+                    ok: false,
+                    error: null
+                } : null
             };
         })();
     </script>

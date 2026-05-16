@@ -112,6 +112,22 @@ describe('konveyor node material factory suite', () => {
     expect(source).not.toContain('three/webgpu');
   });
 
+  it('seeds grass factory fog from the scene sky-fog packet', () => {
+    const skyFog = createSkyFogSamplePacket({ fogNear: 350, fogFar: 900 });
+    const suite = createKonveyorNodeMaterialFactorySuite(WEBGPU, { skyFog });
+    const material = suite.grass.createGrassBladeMaterial();
+
+    try {
+      expect(material.userData.konveyorGrassBladeFog).toEqual({
+        color: skyFog.fogColor,
+        near: 350,
+        far: 900,
+      });
+    } finally {
+      material.dispose();
+    }
+  });
+
   it('routes material creation through grouped reusable WebGPU factories', () => {
     const skyFog = createSkyFogSamplePacket();
     const heightTexture = createHeightTexture();
@@ -201,6 +217,8 @@ describe('konveyor node material factory suite', () => {
       expect(materials.every((material) => material.isNodeMaterial)).toBe(true);
       expect(materials[0].side).toBe(WEBGPU.BackSide);
       expect(materials[1].side).toBe(WEBGPU.DoubleSide);
+      expect(materials[8].userData.konveyorUsesDistanceFog).toBe(true);
+      expect(materials[9].userData.konveyorUsesDistanceFog).toBe(true);
       expect(materials[13].side).toBe(WEBGPU.DoubleSide);
       expect(materials[17].side).toBe(WEBGPU.DoubleSide);
     } finally {

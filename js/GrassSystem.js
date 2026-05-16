@@ -3,6 +3,7 @@ import { loadShaderWithReplacements } from './shaders/ShaderLoader.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { TIER_PRESETS } from './HardwareTier.js';
 import { createKonveyorGrassMaterial } from './world/konveyorGrassMaterialAdapter.js';
+import { mulberry32 } from '../shared/Random.js';
 
 // Shader cache for sync access after async load
 let grassDesktopVertexShader = null;
@@ -17,6 +18,23 @@ let grassShadersLoaded = false;
 // drops past Y=0.5 near the outer half of the falloff annulus where the
 // shore visually meets the water.
 const SHORELINE_Y_MIN = 0.5;
+
+function hashString32(input) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < input.length; i++) {
+        hash ^= input.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return hash >>> 0;
+}
+
+function createVisualGoldenRandom() {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('visualGolden') !== '1') return null;
+    const sceneId = params.get('scene') || 'default';
+    return mulberry32(hashString32(`visual-golden-grass:${sceneId}`));
+}
 
 /**
  * Preload grass shaders - call this early in app initialization
@@ -75,6 +93,7 @@ export class GrassSystem {
         this.konveyorMeadowQuadMaterialSummary = null;
         this.konveyorGrassBladeMaterialSummary = null;
         this.konveyorGrassBladeMaterialControls = null;
+        this.random = createVisualGoldenRandom() ?? Math.random;
         // Cycle 23 Phase D1: tier overrides the isMobile binary. 'low' inherits
         // mobile-style defaults; 'med' / 'high' get desktop defaults with
         // wind-octave and meadow-quad enable knobs differentiated.
@@ -373,16 +392,16 @@ export class GrassSystem {
 
         for (let blade = 0; blade < bladesPerClump; blade++) {
             // Distribute blades in a natural clump pattern
-            const angle = (blade / bladesPerClump) * Math.PI * 2 + (Math.random() - 0.5) * 0.8;
-            const radius = Math.random() * 0.6;
+            const angle = (blade / bladesPerClump) * Math.PI * 2 + (this.random() - 0.5) * 0.8;
+            const radius = this.random() * 0.6;
             const offsetX = Math.cos(angle) * radius;
             const offsetZ = Math.sin(angle) * radius;
 
             // Random blade properties
-            const heightScale = 0.4 + Math.random() * 0.8;
-            const widthScale = 0.7 + Math.random() * 0.5;
-            const rotY = Math.random() * Math.PI; // Random facing direction
-            const lean = (Math.random() - 0.5) * 0.4;
+            const heightScale = 0.4 + this.random() * 0.8;
+            const widthScale = 0.7 + this.random() * 0.5;
+            const rotY = this.random() * Math.PI; // Random facing direction
+            const lean = (this.random() - 0.5) * 0.4;
 
             const h = bladeHeight * heightScale;
             const w = bladeWidth * widthScale;
@@ -1068,8 +1087,8 @@ export class GrassSystem {
 
         // Generate grass positions within chunk
         for (let i = 0; i < clumpCount * 1.5; i++) { // Oversample then filter
-            const x = minX + Math.random() * (maxX - minX);
-            const z = minZ + Math.random() * (maxZ - minZ);
+            const x = minX + this.random() * (maxX - minX);
+            const z = minZ + this.random() * (maxZ - minZ);
 
             // Check exclusion zones
             if (this.isExcluded(x, z)) continue;
@@ -1083,7 +1102,7 @@ export class GrassSystem {
             // shoreline rather than the density curve.
             const distFromCenter = Math.sqrt(x * x + z * z);
             const densityFactor = Math.max(0, 1 - distFromCenter / this.config.grassRadius);
-            if (Math.random() > densityFactor * 0.8 + 0.2) continue;
+            if (this.random() > densityFactor * 0.8 + 0.2) continue;
 
             validPositions.push({ x, z });
 
@@ -1123,12 +1142,12 @@ export class GrassSystem {
             dummy.position.set(pos.x, baseY, pos.z);
 
             // Random rotation and scale
-            dummy.rotation.y = Math.random() * Math.PI * 2;
+            dummy.rotation.y = this.random() * Math.PI * 2;
 
             // Scale variation with distance falloff
             const distFromCenter = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
             const distanceScale = Math.max(0.5, 1 - distFromCenter / (this.config.worldSize * 0.8));
-            const scale = (0.7 + Math.random() * 0.6) * distanceScale;
+            const scale = (0.7 + this.random() * 0.6) * distanceScale;
             dummy.scale.setScalar(scale);
 
             dummy.updateMatrix();

@@ -1,9 +1,13 @@
 export function createKonveyorGrassBladeNodeMaterial(
-  { MeshStandardNodeMaterial, DoubleSide, TSL },
+  { MeshBasicNodeMaterial, MeshStandardNodeMaterial, DoubleSide, TSL },
   grassBlade
 ) {
-  const { abs, clamp, dot, float, length, max, mix, normalize, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, uv, vec2, vec3 } = TSL;
-  const bladeUv = uv();
+  const { cameraPosition, clamp, dot, float, length, max, mix, normalize, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, vec2, vec3 } = TSL;
+  const linearColor = (color) => color.map((value) => (
+    value <= 0.04045
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4
+  ));
   const height01 = clamp(positionLocal.y.div(Math.max(grassBlade.bladeHeight, 0.001)), 0.0, 1.0);
   const windDir = normalize(vec2(...grassBlade.windDirection));
   const windPerp = vec2(-grassBlade.windDirection[1], grassBlade.windDirection[0]);
@@ -23,12 +27,9 @@ export function createKonveyorGrassBladeNodeMaterial(
   const flutter = sin(worldX.mul(0.7).add(worldZ.mul(0.6)).add(time.mul(4.5)));
   const windDisp = windDir.mul(carrier.mul(grassBlade.windStrength).mul(windPower))
     .add(windPerp.mul(flutter.mul(0.06 * grassBlade.windStrength).mul(tipMask)));
-  const centerDist = abs(bladeUv.x.sub(0.5)).mul(2.0);
-  const taperWidth = mix(0.9, 0.18, height01);
-  const bladeShape = float(1.0).sub(smoothstep(taperWidth, taperWidth.add(0.16), centerDist));
   const gradient = mix(
-    mix(vec3(...grassBlade.baseColor), vec3(...grassBlade.midColor), smoothstep(0.0, 0.4, height01)),
-    vec3(...grassBlade.tipColor),
+    mix(vec3(...linearColor(grassBlade.baseColor)), vec3(...linearColor(grassBlade.midColor)), smoothstep(0.0, 0.4, height01)),
+    vec3(...linearColor(grassBlade.tipColor)),
     smoothstep(0.4, 1.0, height01)
   );
   const colorVariation = smoothstep(-1.0, 1.0, sin(worldX.mul(0.2).add(worldZ.mul(0.15))));
@@ -38,35 +39,52 @@ export function createKonveyorGrassBladeNodeMaterial(
     colorVariation.mul(-0.03)
   );
   const ao = mix(0.7, 1.0, height01);
-  const sunLift = max(dot(normalize(vec3(...grassBlade.sunDirection)), vec3(0.0, 1.0, 0.0)), 0.0);
-  const sunTip = vec3(...grassBlade.sunColor).mul(tipMask.mul(sunLift).mul(0.16 + grassBlade.gustStrength));
-  const viewDir = normalize(positionView.negate());
-  const verticalRim = pow(max(dot(viewDir, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
+  const toCamera = normalize(cameraPosition.sub(positionWorld));
+  const toSun = normalize(vec3(...grassBlade.sunDirection));
+  const backlitSun = pow(max(dot(toCamera, toSun.mul(-1.0)), 0.0), 4.0);
+  const sunTip = vec3(...linearColor(grassBlade.tipColor)).mul(backlitSun.mul(0.7).mul(tipMask));
+  const verticalRim = pow(max(dot(toCamera, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
   const viewDistance = length(positionView);
   const fogBlend = smoothstep(grassBlade.fogNear, grassBlade.fogFar, viewDistance).mul(0.55);
   const densityFade = float(1.0).sub(
     smoothstep(grassBlade.grassFadeStart, grassBlade.grassFadeEnd, viewDistance)
       .mul(grassBlade.distanceFadeStrength)
   );
+  const colorScale = grassBlade.colorScale ?? 1;
+  const grassColor = gradient.add(variation).mul(ao)
+    .add(sunTip)
+    .add(vec3(...linearColor(grassBlade.tipColor)).mul(verticalRim.mul(0.2).mul(tipMask)))
+    .mul(colorScale);
 
-  const material = new MeshStandardNodeMaterial();
+  const MaterialClass = MeshBasicNodeMaterial ?? MeshStandardNodeMaterial;
+  const material = new MaterialClass();
   material.name = 'konveyor-node-grass-blade';
   material.colorNode = mix(
-    gradient.add(variation).mul(ao)
-      .add(sunTip)
-      .add(vec3(...grassBlade.tipColor).mul(verticalRim.mul(0.2).mul(tipMask))),
-    vec3(...grassBlade.fogColor),
+    grassColor,
+    vec3(...linearColor(grassBlade.fogColor)),
     fogBlend
   );
-  material.opacityNode = bladeShape.mul(densityFade);
+  material.opacityNode = densityFade;
   material.positionNode = positionLocal.add(vec3(windDisp.x, 0.0, windDisp.y));
-  material.roughnessNode = float(0.96);
-  material.metalnessNode = float(0.0);
+  if (material.isMeshStandardNodeMaterial) {
+    material.roughnessNode = float(0.96);
+    material.metalnessNode = float(0.0);
+  }
   material.alphaHash = grassBlade.alphaHash;
   material.alphaTest = grassBlade.alphaTest;
   material.side = grassBlade.side ?? DoubleSide;
   material.transparent = grassBlade.transparent ?? false;
   material.depthWrite = grassBlade.depthWrite ?? true;
   material.depthTest = grassBlade.depthTest ?? true;
+  material.toneMapped = true;
+  material.userData.konveyorGrassBladeFog = {
+    color: grassBlade.fogColor,
+    near: grassBlade.fogNear,
+    far: grassBlade.fogFar,
+  };
+  material.userData.konveyorGrassColorScale = colorScale;
+  material.userData.konveyorGrassLighting = material.isMeshBasicNodeMaterial
+    ? 'shader-owned-unlit'
+    : 'standard-fallback';
   return material;
 }

@@ -100,7 +100,12 @@ describe('konveyor production material adapter', () => {
   it('can route tree and rock replacements through reusable WebGPU node material candidates', () => {
     const branchMaterial = new THREE.MeshBasicMaterial({ name: 'branches' });
     const leafMaterial = new THREE.MeshBasicMaterial({ name: 'leaves' });
+    const leafTexture = new THREE.DataTexture(new Uint8Array([24, 96, 12, 255]), 1, 1, THREE.RGBAFormat);
+    leafTexture.needsUpdate = true;
     const rockMaterial = new THREE.MeshBasicMaterial({ name: '' });
+    branchMaterial.color.setRGB(0.26, 0.16, 0.08);
+    leafMaterial.color.setRGB(1.0, 0.95, 0.12);
+    leafMaterial.map = leafTexture;
     leafMaterial.side = THREE.DoubleSide;
     leafMaterial.transparent = false;
     leafMaterial.depthWrite = true;
@@ -156,6 +161,8 @@ describe('konveyor production material adapter', () => {
       expect(branches.isNodeMaterial).toBe(true);
       expect(branches.isMeshStandardNodeMaterial).toBe(true);
       expect(branches.colorNode).toBeTruthy();
+      expect(branches.userData.konveyorUsesSourceColor).toBe(true);
+      expect(branches.userData.konveyorUsesDistanceFog).toBe(true);
       expect(branches.roughnessNode).toBeTruthy();
       expect(branches.metalnessNode).toBeTruthy();
       expect(branches.transparent).toBe(false);
@@ -173,6 +180,10 @@ describe('konveyor production material adapter', () => {
       expect(leaves.colorNode).toBeTruthy();
       expect(leaves.opacityNode).toBeTruthy();
       expect(leaves.positionNode).toBeTruthy();
+      expect(leaves.userData.konveyorUsesSourceMap).toBe(true);
+      expect(leaves.userData.konveyorUsesSourceTint).toBe(true);
+      expect(leaves.userData.konveyorUsesDistanceFog).toBe(true);
+      expect(leaves.userData.konveyorSourceMapScale).toBe(0.58);
       expect(rockRim.name).toBe('konveyor-node-rock-rim');
       expect(rockRim.isNodeMaterial).toBe(true);
       expect(rockRim.isMeshStandardNodeMaterial).toBe(true);
@@ -186,6 +197,7 @@ describe('konveyor production material adapter', () => {
     } finally {
       branchMaterial.dispose();
       leafMaterial.dispose();
+      leafTexture.dispose();
       rockMaterial.dispose();
       tree.children.forEach((child) => child.material?.dispose?.());
       rock.children.forEach((child) => child.material?.dispose?.());

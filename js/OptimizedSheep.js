@@ -61,7 +61,7 @@ export class OptimizedSheepSystem {
         this.sheep = [];
         this.audioManager = null;
         /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
-        this.heightfield = null;
+        this.heightfield = opts.heightfield ?? null;
         this.konveyorSheepSearch = opts.search;
         this.konveyorSheepFactories = opts.konveyorSheepFactories;
         this.konveyorSheepMaterialSummary = null;
@@ -448,7 +448,7 @@ export class OptimizedSheepSystem {
             this.sheep.push(sheep);
 
             // Set initial transform
-            const initY = this.heightfield ? this.heightfield.sample(x, z) : 0;
+            const initY = this._surfaceY(x, z);
             dummy.position.set(x, initY, z);
             dummy.rotation.y = Math.random() * Math.PI * 2;
             dummy.updateMatrix();
@@ -724,7 +724,7 @@ export class OptimizedSheepSystem {
                 const easedT = t * t * (3 - 2 * t); // smoothstep — symmetric in/out
                 const sx = sheep.ascendStartX ?? sheep.position.x;
                 const sz = sheep.ascendStartZ ?? sheep.position.z;
-                const baseY = this.heightfield ? this.heightfield.sample(sx, sz) : 0;
+                const baseY = this._surfaceY(sx, sz);
                 const ascendY = baseY + 0.5 + easedT * ASCEND_HEIGHT;
                 dummy.position.set(sx, ascendY, sz);
                 dummy.rotation.set(0, 0, 0);
@@ -751,7 +751,7 @@ export class OptimizedSheepSystem {
             }
 
             // Update transform matrix using interpolated render position for smooth movement
-            const sheepY = this.heightfield ? this.heightfield.surfaceY(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
+            const sheepY = this._surfaceY(sheep.renderPosition.x, sheep.renderPosition.z);
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
             const sheepYaw = -sheep.renderFacingDirection + Math.PI / 2;
             dummy.rotation.y = sheepYaw;
@@ -812,7 +812,7 @@ export class OptimizedSheepSystem {
             sheep.renderFacingDirection = sheep.facingDirection;
             
             // Update transform matrix
-            const sheepY = this.heightfield ? this.heightfield.surfaceY(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
+            const sheepY = this._surfaceY(sheep.renderPosition.x, sheep.renderPosition.z);
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
             const sheepYaw = -sheep.renderFacingDirection + Math.PI / 2;
             dummy.rotation.y = sheepYaw;
@@ -1008,7 +1008,7 @@ export class OptimizedSheepSystem {
             sheep.renderFacingDirection = sheep.facingDirection;
             
             // Update transform matrix
-            const respawnY = this.heightfield ? this.heightfield.sample(x, z) : 0;
+            const respawnY = this._surfaceY(x, z);
             dummy.position.set(x, respawnY, z);
             dummy.rotation.y = sheep.facingDirection;
             dummy.scale.set(1, 1, 1);
@@ -1020,6 +1020,17 @@ export class OptimizedSheepSystem {
         }
         
         this.instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    _surfaceY(x, z) {
+        if (!this.heightfield) return 0;
+        if (typeof this.heightfield.surfaceY === 'function') {
+            return this.heightfield.surfaceY(x, z);
+        }
+        if (typeof this.heightfield.sample === 'function') {
+            return this.heightfield.sample(x, z);
+        }
+        return 0;
     }
 
     /**

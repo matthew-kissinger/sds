@@ -37,6 +37,7 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
         fogNear: context.fog?.near ?? context.fogNear ?? meadowDefaults.fogNear ?? options.fogNear ?? 18,
         fogFar: context.fog?.far ?? context.fogFar ?? meadowDefaults.fogFar ?? options.fogFar ?? 74,
         fogStrength: context.fog?.strength ?? context.fogStrength ?? meadowDefaults.fogStrength ?? options.fogStrength ?? 0.55,
+        colorScale: context.colorScale ?? meadowDefaults.colorScale ?? options.colorScale ?? 1,
       }),
     createGrassBladeMaterial: (context = {}) => {
       const colors = context.colors ?? {};
@@ -64,6 +65,7 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
         fogColor: toArray(fog.color ?? context.fogColor ?? bladeDefaults.fogColor ?? options.fogColor, DEFAULT_FOG_COLOR),
         fogNear: fog.near ?? context.fogNear ?? bladeDefaults.fogNear ?? options.fogNear ?? 18,
         fogFar: fog.far ?? context.fogFar ?? bladeDefaults.fogFar ?? options.fogFar ?? 74,
+        colorScale: context.colorScale ?? bladeDefaults.colorScale ?? options.colorScale ?? 1,
         alphaHash: material.alphaHash ?? context.alphaHash ?? bladeDefaults.alphaHash ?? true,
         alphaTest: material.alphaTest ?? context.alphaTest ?? bladeDefaults.alphaTest ?? 0.06,
         side: material.side ?? context.side ?? bladeDefaults.side,

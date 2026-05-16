@@ -175,6 +175,34 @@ describe('konveyor terrain material adapter', () => {
         }
     });
 
+    it('creates a flat height texture for WebGPU terrain without a heightfield', () => {
+        const nodeFactories = createKonveyorTerrainNodeMaterialFactories(
+            { ...THREE, MeshLambertNodeMaterial, DoubleSide, TSL },
+            { fogColor: [0.2933, 0.1629, 0.1348] }
+        );
+        const scene = new THREE.Scene();
+        const builder = new TerrainBuilder(scene, false, null, {
+            search: '?renderer=webgpu&konveyorTerrain=1',
+            konveyorTerrainFactories: nodeFactories,
+        });
+
+        const terrain = builder.createTerrain();
+        try {
+            expect(terrain.material.name).toBe('konveyor-node-terrain-heightfield');
+            expect(builder.konveyorTerrainMaterialSummary).toMatchObject({
+                kind: 'terrain-ground',
+                applied: true,
+            });
+            expect(terrain.material.userData.heightTexture.isDataTexture).toBe(true);
+            expect(terrain.material.userData.heightTexture.image.width).toBe(1);
+            expect(terrain.material.userData.heightTexture.image.height).toBe(1);
+            expect(terrain.material.userData.heightTexture.userData.konveyorHeightTextureSource)
+                .toBe('flat-terrain-fallback');
+        } finally {
+            disposeTerrain(builder);
+        }
+    });
+
     it('falls back to default terrain material when a factory is missing or invalid', () => {
         const missing = createKonveyorTerrainMaterial('terrain-ground', 'createTerrainMaterial', {
             createDefaultMaterial: () => createMaterial('default-terrain'),

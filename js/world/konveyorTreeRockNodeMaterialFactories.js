@@ -12,12 +12,17 @@ const DEFAULT_TREE_LEAF = Object.freeze({
   occluderStrength: 0.55,
   occluderPeak: 0.62,
   occluderUv: [0.5, 0.42],
+  sourceMapScale: 0.58,
   alphaHash: true,
   alphaTest: 0.08,
 });
 
 const COMMON_POSTURE = Object.freeze(['side', 'transparent', 'depthWrite', 'depthTest']);
 const LEAF_POSTURE = Object.freeze([...COMMON_POSTURE, 'alphaHash', 'alphaTest']);
+
+function previousColor(previous) {
+  return previous?.color?.toArray?.().slice(0, 3) ?? null;
+}
 
 function mergePosture(defaults, previous, keys) {
   const result = { ...defaults };
@@ -26,6 +31,31 @@ function mergePosture(defaults, previous, keys) {
       result[key] = previous[key];
     }
   }
+  return result;
+}
+
+function mergeBranchMaterial(defaults, previous) {
+  const result = mergePosture(defaults, previous, COMMON_POSTURE);
+  const color = previousColor(previous);
+  if (color) {
+    result.baseColor = color;
+    result.baseColorLinear = true;
+  }
+  if (previous?.roughness !== undefined) result.roughness = previous.roughness;
+  if (previous?.metalness !== undefined) result.metalness = previous.metalness;
+  return result;
+}
+
+function mergeLeafMaterial(defaults, previous) {
+  const result = mergePosture(defaults, previous, LEAF_POSTURE);
+  const color = previousColor(previous);
+  if (color) {
+    result.tintColor = color;
+    result.tintColorLinear = true;
+  }
+  if (previous?.map) result.map = previous.map;
+  if (previous?.roughness !== undefined) result.roughness = previous.roughness;
+  if (previous?.metalness !== undefined) result.metalness = previous.metalness;
   return result;
 }
 
@@ -41,12 +71,12 @@ export function createKonveyorTreeRockNodeMaterialFactories(webGpuModules, optio
     createTreeBranchMaterial: ({ previous } = {}) =>
       createKonveyorTreeBranchNodeMaterial(
         webGpuModules,
-        mergePosture(treeBranch, previous, COMMON_POSTURE)
+        mergeBranchMaterial(treeBranch, previous)
       ),
     createTreeLeafMaterial: ({ previous } = {}) =>
       createKonveyorTreeLeafNodeMaterial(
         webGpuModules,
-        mergePosture(treeLeaf, previous, LEAF_POSTURE)
+        mergeLeafMaterial(treeLeaf, previous)
       ),
     createRockMaterial: ({ previous } = {}) =>
       createKonveyorRockRimNodeMaterial(

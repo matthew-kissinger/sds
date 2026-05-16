@@ -46,7 +46,6 @@ function parseArgs(argv) {
 
 function buildUrl(baseUrl, sceneId) {
   const url = new URL(baseUrl);
-  url.searchParams.set('renderer', 'webgpu');
   url.searchParams.set('scene', sceneId);
   url.searchParams.set('probeRender', '1');
   for (const flag of KONVEYOR_FLAGS) {
@@ -175,12 +174,17 @@ async function captureScene({ context, baseUrl, sceneId, outDir }) {
       ...state,
       consoleErrors,
       pageErrors,
-      ok: state.rendererMode?.effective === 'webgl'
-        && state.rendererMode?.fallbackReason === 'diagnostic-flag-required'
+      ok: state.rendererMode?.requested === 'webgl'
+        && state.rendererMode?.effective === 'webgl'
+        && state.rendererMode?.fallbackReason == null
         && state.diagnosticBoot === false
         && state.renderer?.isWebGLRenderer === true
         && state.renderer?.isWebGPURenderer === false
-        && state.summaries?.rockPlacement?.applied === true
+        && state.summaries?.rockPlacement?.applied !== true
+        && state.summaries?.treeRockMaterial?.applied !== true
+        && state.summaries?.terrainMaterial?.applied !== true
+        && state.summaries?.grassBladeMaterial?.applied !== true
+        && state.summaries?.waterMaterial?.applied !== true
         && screenshotProof.nonBlank === true
         && consoleErrors.length === 0
         && pageErrors.length === 0,

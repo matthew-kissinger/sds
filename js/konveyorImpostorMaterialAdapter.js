@@ -1,5 +1,6 @@
+import { shouldApplyKonveyorRendererFlag } from './rendering/konveyorRuntimeMode.js';
+
 const FLAG_PARAM = 'konveyorImpostors';
-const RENDERER_PARAM = 'renderer';
 
 function getWindowSearch() {
   if (typeof window === 'undefined') return '';
@@ -29,8 +30,7 @@ function defaultResult(kind, reason, createDefaultMaterial) {
 }
 
 export function shouldApplyKonveyorImpostors(search = getWindowSearch()) {
-  const params = new URLSearchParams(search);
-  return params.get(RENDERER_PARAM) === 'webgpu' && params.get(FLAG_PARAM) === '1';
+  return shouldApplyKonveyorRendererFlag(search, FLAG_PARAM);
 }
 
 export function createKonveyorImpostorMaterial(kind, factoryName, {

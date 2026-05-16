@@ -42,6 +42,7 @@ import { createDiagnosticRockPlacementPlan } from '../js/diagnostics/webgpuRockP
 import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
 import { SKY_PRESETS, getRequiredPresetNames } from '../js/atmosphere/skyPresets.js';
 import { createKonveyorNodeMaterialFactorySuite } from '../js/konveyorNodeMaterialFactorySuite.js';
+import { shouldRunSceneManagerWebGpuProof } from '../js/diagnostics/sceneManagerWebGpuProof.js';
 
 function createGlbBuffer(gltf) {
   const json = JSON.stringify(gltf);
@@ -149,6 +150,13 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(state.fogNear).toBe(350);
     expect(state.fogFar).toBe(900);
     expect(state.fogColor).toEqual(state.horizonColor);
+  });
+
+  it('keeps the SceneManager WebGPU renderer proof behind an explicit diagnostic flag', () => {
+    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgpu&diagnostic=1&konveyorSceneManagerProof=1')).toBe(true);
+    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgpu&diagnostic=1')).toBe(false);
+    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgpu&konveyorSceneManagerProof=1')).toBe(false);
+    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgl&diagnostic=1&konveyorSceneManagerProof=1')).toBe(false);
   });
 
   it('routes production Atmosphere constructors through WebGPU node factories in the diagnostic proof', () => {

@@ -146,7 +146,8 @@ export async function disposeScene(game) {
             game.gameState.boundary = null;
             game.gameState.corral = null;
             game.gameState.objective = null;
-            game.gameState.sheepSpawn = null;
+            game.gameState.sceneSpawnDef = null;
+            game.gameState._objectiveDef = null;
             game.gameState.flockingOverride = null;
             game.gameState.heightfield = null;
         }

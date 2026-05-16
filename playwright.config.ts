@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const CHROMIUM_GPU_ARGS = process.platform === 'win32'
+  ? ['--use-angle=d3d11', '--enable-gpu']
+  : [];
+
 /**
  * Playwright config for SDS e2e smoke tests.
  *
@@ -42,7 +46,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], launchOptions: { args: CHROMIUM_GPU_ARGS } },
       // Cycle 24 Phase 1: MP specs run under their own `mp-*` projects to
       // keep the cross-context boot pattern (host + guest in separate
       // BrowserContexts) from showing up under the smoke-test browser
@@ -71,7 +75,7 @@ export default defineConfig({
     // use `--project=mp` `--project=mp-firefox` `--project=mp-webkit`.
     {
       name: 'mp',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], launchOptions: { args: CHROMIUM_GPU_ARGS } },
       testMatch: '**/mp/*.spec.ts',
     },
     {
@@ -87,7 +91,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev',
+    command: 'npx cross-env SDS_SUPPRESS_BROWSER_OPEN=1 npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120_000,

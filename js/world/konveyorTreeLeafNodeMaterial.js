@@ -1,5 +1,10 @@
 export function createKonveyorTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf) {
-  const { abs, clamp, dot, float, floor, fract, length, mix, normalize, positionLocal, positionWorld, screenCoordinate, sin, smoothstep, time, uv, vec2, vec3 } = TSL;
+  const { abs, clamp, dot, float, floor, fract, length, mix, normalize, positionLocal, positionView, positionWorld, screenCoordinate, sin, smoothstep, texture, time, uv, vec2, vec3 } = TSL;
+  const linearColor = (color) => color.map((value) => (
+    value <= 0.04045
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4
+  ));
   const leafUv = uv();
   const windDir = normalize(vec2(...treeLeaf.windDirection));
   const windPerp = vec2(-treeLeaf.windDirection[1], treeLeaf.windDirection[0]);
@@ -29,15 +34,38 @@ export function createKonveyorTreeLeafNodeMaterial({ MeshStandardNodeMaterial, D
     .mul(treeLeaf.occluderStrength);
   const alpha = leafShape
     .mul(float(1.0).sub(occluderFade.mul(treeLeaf.occluderPeak).mul(mix(0.65, 1.0, screenHash))));
+  const tintColor = treeLeaf.tintColorLinear
+    ? treeLeaf.tintColor
+    : linearColor(treeLeaf.tintColor ?? [1.0, 1.0, 1.0]);
+  const proceduralColor = mix(vec3(...linearColor(treeLeaf.baseColor)), vec3(...linearColor(treeLeaf.tipColor)), posY01)
+    .mul(mix(0.72, 1.14, midrib));
+  const sampled = treeLeaf.map && typeof texture === 'function'
+    ? texture(treeLeaf.map, leafUv)
+    : null;
+  const baseColor = sampled
+    ? sampled.rgb.mul(vec3(...tintColor)).mul(treeLeaf.sourceMapScale ?? 0.58)
+    : proceduralColor;
+  const colorScale = treeLeaf.colorScale ?? 1;
+  const fogColor = vec3(...linearColor(treeLeaf.fogColor ?? [0.5651, 0.6333, 0.6665])).mul(treeLeaf.fogColorScale ?? 0.62);
+  const fogBlend = smoothstep(treeLeaf.fogNear ?? 220, treeLeaf.fogFar ?? 700, length(positionView))
+    .mul(treeLeaf.fogStrength ?? 0.72);
 
   const material = new MeshStandardNodeMaterial();
   material.name = 'konveyor-node-leaves';
-  material.colorNode = mix(vec3(...treeLeaf.baseColor), vec3(...treeLeaf.tipColor), posY01)
-    .mul(mix(0.72, 1.14, midrib));
-  material.opacityNode = alpha;
+  material.colorNode = mix(baseColor.mul(colorScale), fogColor, fogBlend);
+  const alphaScale = treeLeaf.alphaScale ?? 1;
+  material.opacityNode = sampled
+    ? sampled.a.mul(alphaScale).mul(float(1.0).sub(occluderFade.mul(treeLeaf.occluderPeak).mul(mix(0.65, 1.0, screenHash))))
+    : alpha.mul(alphaScale);
   material.positionNode = positionLocal.add(vec3(windDisp.x, 0.0, windDisp.y));
-  material.roughnessNode = float(0.92);
-  material.metalnessNode = float(0.0);
+  material.roughnessNode = float(treeLeaf.roughness ?? 0.92);
+  material.metalnessNode = float(treeLeaf.metalness ?? 0.0);
+  material.userData.konveyorUsesSourceMap = !!sampled;
+  material.userData.konveyorUsesSourceTint = treeLeaf.tintColorLinear === true;
+  material.userData.konveyorUsesDistanceFog = true;
+  material.userData.konveyorSourceMapScale = treeLeaf.sourceMapScale ?? 0.58;
+  material.userData.konveyorLeafColorScale = colorScale;
+  material.userData.konveyorLeafAlphaScale = alphaScale;
   material.alphaHash = treeLeaf.alphaHash;
   material.alphaTest = treeLeaf.alphaTest;
   material.side = treeLeaf.side ?? DoubleSide;

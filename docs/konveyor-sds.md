@@ -23,8 +23,151 @@ as the control surface for the next autonomous pass.
 
 As of 2026-05-15, SDS is not a WebGPU project yet.
 
-- The client renderer is WebGL-only: `js/SceneManager.js` constructs
-  `THREE.WebGLRenderer` directly.
+- The client renderer is WebGL-only: `js/SceneManager.js` creates the default
+  production renderer through `js/rendering/sceneRendererSetup.js`, which still
+  constructs `THREE.WebGLRenderer`. The setup seam now records guarded WebGL
+  capability, context-loss, shadow, pixel-ratio, and tonemapping posture on
+  `SceneManager.rendererSetup`, and proof runs may inject an explicit renderer
+  factory without changing the normal call site; it is a production renderer
+  boundary, not a WebGPU production boot. The opt-in proof artifact
+  `cycle36-validation/runtime/scene-manager-webgpu-renderer-proof.json`
+  verifies installed Chrome can instantiate `SceneManager` with an injected
+  `WebGPURenderer`, initialize that async renderer through
+  `SceneManager.whenRendererReady()`, render through `SceneManager.render()`
+  using the async WebGPU render path, route production `Atmosphere` sky/cloud/fog,
+  `SunBillboard`, `TerrainBuilder.createTerrain()`, and
+  `AnimeWater.createAnimeWater()`, plus representative `PortalEffect`,
+  `CorralZapEffectPool`, tree/rock GLB material replacement/native instancing,
+  `GrassSystem`, `OptimizedSheepSystem`, and `createKilnImpostorMaterial()`
+  construction through the diagnostic-installed
+  `window.__sdsKonveyor*MaterialFactories` WebGPU factory supply on the
+  `SceneManager` scene, render a nonblank
+  320x180 proof frame with a visible compact
+  tree/rock/sheep/Kiln/terrain/water/grass/effects slice, and keep the default
+  production boot untouched. The proof uses WebGPU-module
+  ambient/directional lights only
+  because this diagnostic path mixes the vendored WebGPU Three module with the
+  default production Three module; production `SceneManager` lights remain
+  present and unchanged.
+- A guarded production boot scout now exists at
+  `cycle36-validation/runtime/production-webgpu-boot-scout.json`. It loads the
+  built production preview at
+  `?renderer=webgpu&diagnostic=1&konveyorProductionBootScout=1&testNoCanvas=1&konveyorProductionSceneBody=1&konveyorNativeInstancing=1&konveyorProductionLoopScout=1&konveyorProductionRafScout=1&scene=field`,
+  bypasses the diagnostic scene boot, constructs the normal
+  `SheepDogSimulation` shell with injected WebGPU `SceneManager` options, waits
+  through `SceneManager.whenRendererReady()`, installs the centralized WebGPU
+  factory globals, runs the normal Home Field scene-body init once, and drives
+  a guarded 12-frame WebGPU scene-loop scout plus a bounded 12-frame
+  `requestAnimationFrame` scout. It records a ready WebGPU renderer with
+  `rendererSetup.rendererMode: "non-webgl"`, `renderStatus.mode: "async"`,
+  WebGPU material application for terrain, grass blade, atmosphere/cloud, and
+  sheep, plus a nonblank canvas screenshot. This is guarded scene-body evidence
+  only: `testNoCanvas=1` intentionally blocks the normal gameplay start path,
+  while the rAF scout proves browser frame timestamps can drive the shared frame
+  body. The controlled loop scout records
+  12 async WebGPU frames through `SheepDogSimulation.runFrame(deltaTime)`,
+  `performanceFrameCount: 12`, grass time advancing from 0 to 0.2,
+  `sharedFrameStep: true`, no frame errors, no console/page errors, a
+  first-frame warmup of 2595.6 ms, and later proof frames between 9.2 and
+  21.3 ms. The bounded rAF scout records 12 more async WebGPU frames with
+  `scheduler: "requestAnimationFrame"`, `performanceFrameCount: 24`, grass time
+  advancing from 0.2 to 0.3347, monotonic timestamps, no frame errors, no
+  console/page errors, and per-frame render elapsed samples between 7.4 and
+  13.1 ms; this is not yet a perf threshold gate. The current proof uses guarded
+  native production instancing instead of suppression: 2,002 Home Field trees
+  render through 4 native
+  `THREE.InstancedMesh` groups, 334 rocks render through 3 native
+  `THREE.InstancedMesh` groups, and `suppressedWebglOnlyObjects` is empty.
+  Plain non-diagnostic `?renderer=webgpu` now uses the proven production route;
+  default URLs still remain WebGL.
+- A guarded gameplay-start scout now exists at
+  `cycle36-validation/runtime/production-webgpu-gameplay-scout.json`. It uses
+  the same diagnostic production WebGPU boot route but runs without
+  `testNoCanvas=1`, lets the normal `SheepDogSimulation` constructor call
+  `init()` and `animate()`, autostarts solo Classic play, advances the normal
+  animation loop from `performanceFrameCount` 6 to 68, records a 60-frame
+  normal-loop timing sample (`avgMs: 11.64`, `p95Ms: 14.9`,
+  `p99Ms/maxMs: 53.6` from an initial warmup spike), advances grass time from
+  4.0586 to 4.8102,
+  creates the player dog plus 200 sheep, records async WebGPU render status with
+  no init/console/page errors, and captures a nonblank gameplay canvas
+  screenshot. This proves the guarded production WebGPU route can enter normal
+  solo gameplay, but it is still diagnostic-gated scout evidence, not a perf
+  threshold gate or default WebGPU production enablement.
+  The same scout now has scene-matrix coverage for all shipped scenes:
+  `production-webgpu-gameplay-scout.json` (Home Field),
+  `production-webgpu-gameplay-scout-rolling-hills.json`, and
+  `production-webgpu-gameplay-scout-open-country.json` all report `ok: true`,
+  no console/page errors, normal animation-loop advancement, and nonblank
+  gameplay canvases. Open Country records
+  `nativeRockInstancing.emptyPlacement: true`, which is the valid zero-rock
+  island placement case after water/corral filtering.
+- The current plain non-diagnostic production WebGPU request proof exists
+  at `cycle36-validation/runtime/production-webgpu-request-proof.json`
+  (captured 2026-05-16T01:49:53.535Z on installed Chrome). It first confirms
+  the default URL stays `effective: "webgl"` with no fallback, proves a
+  simulated browser without `navigator.gpu` falls back to WebGL with
+  `fallbackReason: "webgpu-unavailable"`, proves a browser with
+  `navigator.gpu` but failing `requestDevice()` falls back to WebGL with
+  `fallbackReason: "webgpu-device-request-failed"`, then runs Field, Rolling
+  Hills, and Open Country at plain
+  `?renderer=webgpu&autostart=1&mode=classic`, reports
+  `effective: "webgpu-production"` with no fallback and successful device
+  preflight, uses the shared Konveyor runtime-mode gate to apply terrain,
+  grass, sheep, water, tree/rock, and native tree/rock instancing without
+  per-subsystem URL flags, captures nonblank screenshots, and records no
+  console/page errors.
+  `konveyorProduction=1` remains compatible but is no longer required for an
+  explicit WebGPU renderer request.
+- The explicit production WebGPU route now has a post-warmup perf threshold
+  proof at `cycle36-validation/runtime/production-webgpu-perf-proof.json`
+  (captured 2026-05-16T01:50:50.393Z on installed Chrome). The proof warms
+  each shipped scene, resets the perf harness rolling metrics, samples 8000 ms,
+  and gates the route against the local desktop budget of average <= 22 ms,
+  p95 <= 30 ms, and at least 240 samples. Current captures pass for Field
+  (`avgFrameTime=6.956 ms`, `p95=7.067 ms`), Rolling Hills
+  (`avgFrameTime=6.944 ms`, `p95=6.952 ms`), and Open Country
+  (`avgFrameTime=6.944 ms`, `p95=6.952 ms`) while still requiring
+  `effective: "webgpu-production"`, WebGPU renderer identity, no fallback, and
+  clean console/page state.
+- The first real multiplayer WebGPU proof now exists at
+  `cycle36-validation/runtime/production-webgpu-mp-proof.json` (captured
+  2026-05-16T01:42:30.718Z on installed Chrome against local Vite + Wrangler).
+  It drives host and guest through a worker-backed cooperative room without
+  `testNoCanvas`, starts gameplay, captures both canvases, and requires both
+  clients to report `effective: "webgpu-production"`, connected two-player
+  in-game state, room scene `field`, nonblank screenshots, and clean
+  console/page state. This closed the MP-only scene-sync gap where the host
+  could create a field room while still rendering the boot scene, and it made
+  production WebGPU state refresh after in-process scene rebuilds.
+- The current public-site iOS Safari water baseline was refreshed with
+  `IOS_WATER_BASE_URL=https://sheepdogsim.com npm run test:ios-water` at
+  2026-05-16T01:57Z. BrowserStack iPhone 15 Pro Max / iOS 17 Safari passed with
+  water sample average `[29, 42, 20]` and `nearFoamWhite: false`. This proves
+  the current live WebGL baseline only; rerun it after a deploy carrying this
+  branch.
+- The first guarded WebGL-vs-WebGPU production gameplay parity proof now exists
+  at `cycle36-validation/runtime/production-gameplay-parity-proof.json`
+  (captured 2026-05-16T00:12:39.618Z). It compares Field, Rolling Hills, and
+  Open Country under production WebGL and the diagnostic-gated production
+  WebGPU route. The artifact is `ok: true` and `defaultReady: true` because
+  capture/runtime gates plus semantic regional checks pass for upper sky,
+  horizon, ground chroma, and ground luma. Full-frame SSIM is still recorded as
+  advisory only; alpha-hashed foliage/grass produce renderer-structural
+  differences that should not block default-readiness by themselves.
+- Rolling Hills terrain/camera/sheep placement is now part of the proof
+  contract. The current parity artifact records camera `aboveSurface: 12` and
+  sheep `matrixSurfaceAbsMax: 0`, `belowWaterMatrices: 0`, `waterY: -0.05`.
+  `OptimizedSheepSystem` now receives the scene heightfield before first matrix
+  placement and uses the terrain surface for reset, update, force-update, and
+  corral ascent transforms. In-process scene rebuilds also reset the frame
+  clock and cap client `deltaTime` to 0.05s so a rebuild stall or resumed tab
+  cannot throw a fresh flock to an island boundary.
+- Browser-probe hygiene is part of the migration contract. Automated Vite dev
+  validation should set `SDS_SUPPRESS_BROWSER_OPEN=1` so the human-friendly
+  `server.open` setting does not create real Chrome tabs during tests, and every
+  probe must close Playwright contexts/browsers plus local dev/preview listeners
+  before recording perf, screenshot, or benchmark evidence.
 - The prior repo decision deferred a full WebGPU/TSL migration. Cycle 24 kept
   `@three.ez/instanced-mesh`, meshopt LODs, Kiln impostors, and meadow quads,
   with only a possible future `?renderer=webgpu` spike. This charter supersedes
@@ -45,19 +188,22 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   each on the local Windows RTX 3070 workstation.
 - The screenshot validation tool enforces per-cell SSIM >= 0.95 across its
   12-cell smoke matrix and fails if any expected golden is missing. The current
-  repo has no committed screenshot goldens, so the visual gate is blocked until
-  an explicit baseline-capture decision is made.
+  repo commits the 12 initial Konveyor goldens in `tools/validation/golden/`.
+  The harness captures deterministic canvas frames with `probeRender=1`,
+  `cinematic=1`, `visualGolden=1`, and the fail-closed Konveyor rock placement
+  route, then compares normalized 320x180 luma SSIM against the 0.95 threshold.
 - The latency tool enforces desktop p99 <= 33 ms and has a mobile-profile path
   enforcing p99 <= 50 ms.
 - There is no Tauri, Electron, or Capacitor shell dependency in `package.json`,
   but the repo now has native build-target plumbing: `BUILD_TARGET=native`,
   `SDS_WORKER_BASE`, `js/runtimeConfig.js`, and `npm run native:check`.
-- There is a diagnostic-only WebGPU/TSL boot path at
+- There is a diagnostic WebGPU/TSL boot path at
   `?renderer=webgpu&diagnostic=1`. It is not a production renderer. It loads
   copied Three WebGPU/Core browser modules after the query flag and leaves the
-  normal WebGL bundle path as default. The boot contract records
-  `window.__sdsRendererMode`: `?renderer=webgpu` without `diagnostic=1` remains
-  effective WebGL with `fallbackReason: "diagnostic-flag-required"`. Current
+  normal WebGL bundle path as default. The separate plain
+  `?renderer=webgpu` production route is now covered by
+  `cycle36-validation/runtime/production-webgpu-request-proof.json`; default
+  URLs still report effective WebGL. Current
   diagnostic islands cover the sun
   billboard, portal ring, cloud plane, and a renderless sky/fog
   CPU sample packet from `js/atmosphere/skyFogSamplePacket.js`. The meadow
@@ -113,7 +259,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   candidate now lives in `js/konveyorKilnImpostorNodeMaterial.js`, and the
   adapter spec proves the flagged production seam can route through it with
   atlas textures, sidecar layout, lighting, fog, tunables, and material
-  posture, while default WebGL keeps the existing `ShaderMaterial`. Per-frame
+  posture, while default WebGL keeps the existing `ShaderMaterial`. The
+  injected-`SceneManager` proof now creates real Kiln impostor geometry plus
+  the committed `tree1` albedo/normal/depth atlas set through that same factory
+  seam and verifies `konveyor-node-kiln-impostor` in installed Chrome. Per-frame
   production tile selection, parallax, depth discard, production LOD wiring,
   and LOD0 color parity remain deferred.
   Production Rolling
@@ -270,7 +419,16 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   production `InstancedMesh` through `?renderer=webgpu&konveyorSheep=1`, with
   proof recorded in
   `cycle36-validation/runtime/production-sheep-adapter-proof.json`. A
-  production-facing `OptimizedSheep` material adapter now exists behind
+  representative Kiln impostor material/geometry slice is now also covered by
+  `cycle36-validation/runtime/scene-manager-webgpu-renderer-proof.json`: it
+  loads the committed `tree1` sidecar plus albedo/normal/depth atlases, routes
+  `createKilnImpostorMaterial()` through
+  `?renderer=webgpu&konveyorImpostors=1`, confirms the
+  `konveyor-node-kiln-impostor` node material, verifies the 4x4 / 2048 atlas
+  layout and depth aux layer, and renders inside the injected `SceneManager`
+  scene. This is still diagnostic-renderer constructor evidence, not production
+  LOD-chain wiring. A production-facing `OptimizedSheep` material adapter now
+  exists behind
   `?renderer=webgpu&konveyorSheep=1` plus an explicit sheep factory. It can
   hand time/fog update ownership to factory controls. The reusable WebGPU
   sheep-wool node-material candidate now lives in
@@ -315,7 +473,14 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   `TerrainBuilder`, `AnimeWater`, `OptimizedSheepSystem`, and Kiln impostor
   material creation without changing default WebGL startup.
   The diagnostic harness now consumes the suite for its material proofs instead
-  of carrying local factory glue, and
+  of carrying local factory glue, installs the grouped suite onto the
+  production global factory names, and the injected `SceneManager` proof now
+  requires `factorySupply.mode: "window-global"` before accepting the rendered
+  proof frame. The same proof now requires
+  `SceneManager.getRenderStatus().rendererReady === true` and
+  `mode === "async"` after rendering through the production
+  `SceneManager.render()` method, proving the render loop seam can initialize
+  and drive an injected WebGPU renderer without overlapping async frames.
   `cycle36-validation/runtime/webgpu-diagnostic-chrome.json` records the
   suite's eight groups and eighteen current factories during a Rolling Hills
   scene-bound diagnostic WebGPU boot.
@@ -324,7 +489,10 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   lazy chunk, and `GrassSystem` is now loaded by the async grass creation
   paths instead of the default entry chunk. Together they preserve the default
   WebGL sun/grass behavior while recovering main bundle headroom
-  (`mainKB=569`, `threeKB=618`, `webgpuDiagnostic=80 KB`,
+  (`mainKB=576.09`, `threeKB=617.77`, `webgpuDiagnostic=81.83 KB`,
+  `konveyorProductionWebGpuBoot=1.98 KB`,
+  `konveyorProductionBootScoutRecorder=13.27 KB`,
+  `konveyorNodeMaterialFactorySuite=29.15 KB`,
   `konveyorMaterialAdapter=3 KB`, `GrassSystem=35 KB`,
   `AnimeWater=9 KB`, `PortalEffect=5 KB`, `CorralZapEffect=5 KB`) for later
   production seams without regenerating the refactor-baseline bundle ratchet. A
@@ -358,16 +526,15 @@ As of 2026-05-15, SDS is not a WebGPU project yet.
   the current scene zones, and default production still uses `Math.random()`
   while the flag is off.
   `cycle36-validation/runtime/production-flag-fallback-proof.json` records
-  Field, Rolling Hills, and Open Country production scenes with
-  `renderer=webgpu` plus every current Konveyor material/placement flag enabled
-  but no `diagnostic=1`; all three scenes remain effective WebGL with
-  `fallbackReason: "diagnostic-flag-required"`, deterministic rock placement
-  applies, and material adapters report `missing-factories` when explicit
-  WebGPU factories are not supplied. The proof now captures non-diagnostic
-  production canvas screenshots in
+  Field, Rolling Hills, and Open Country production scenes with every current
+  Konveyor material/placement flag enabled while omitting `renderer=webgpu`.
+  All three scenes remain effective WebGL with no fallback reason, and the
+  material/placement adapters stay flag-disabled. The proof now captures
+  non-diagnostic production canvas screenshots in
   `cycle36-validation/runtime/production-flag-fallback-screenshots/` and checks
-  each is nonblank before accepting the fallback contract. This is the current
-  fail-closed production contract, not a WebGPU scene-boot claim.
+  each is nonblank before accepting the default-route policy contract. Plain
+  `?renderer=webgpu` is validated separately by
+  `production-webgpu-request-proof.json`.
   A production-facing far-ring meadow material adapter now exists behind
   `?renderer=webgpu&konveyorGrass=1` plus an explicit meadow factory; default
   WebGL still uses the existing `MeshLambertMaterial` and procedural tint
@@ -415,7 +582,7 @@ true.
 
 ## Current external-doc alignment
 
-As of 2026-05-15, current upstream docs support the SDS direction rather than
+As of 2026-05-16, current upstream docs support the SDS direction rather than
 contradicting it:
 
 - Three's WebGPU guide says `WebGPURenderer` can use WebGPU and fall back to a
@@ -433,8 +600,26 @@ contradicting it:
   required before claiming support
   ([MDN WebGPU API](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API),
   [MDN requestAdapter](https://developer.mozilla.org/docs/Web/API/GPU/requestAdapter)).
-  That matches the repo's explicit probe artifacts and the decision to keep
-  WebGL default until production evidence exists.
+  That matches the repo's explicit device preflight, probe artifacts, and the
+  decision to keep default URLs WebGL until the release policy is backed by
+  analytics and cross-browser/WebView proof.
+- Chrome's current WebGPU overview and the GPUWeb implementation-status table
+  show WebGPU broadly shipped but still uneven by platform/browser version,
+  especially across Firefox, Linux, Android GPU families, and WebView-style
+  shells
+  ([Chrome WebGPU overview](https://developer.chrome.com/docs/web-platform/webgpu/overview),
+  [GPUWeb implementation status](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status)).
+  That supports the current `?renderer=webgpu` production route plus WebGL
+  fallback, not a blind WebGPU-required web default.
+- WebKit lists WebGPU among Safari 26 features, which makes iOS/macOS WebGPU
+  plausible, but SDS still needs real Safari/WKWebView proof before claiming
+  Apple mobile default-readiness
+  ([WebKit Safari 26.0 features](https://webkit.org/blog/17333/webkit-features-in-safari-26-0/)).
+- Production clients now emit a low-cardinality `renderer_mode_resolved`
+  telemetry event after boot. The event records requested/effective renderer,
+  fallback reason, WebGPU API presence, production-route success, device
+  preflight success, and scene id, so Phase 9 can compare real SDS traffic
+  against the upstream support tables without fingerprinting users.
 - The current best-practices alignment packet is
   [`archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md`](archive/research/konveyor-webgpu-native-best-practices-2026-05-15.md).
   It keeps the next work pointed at explicit TSL/node-material factories,
@@ -517,9 +702,9 @@ and active-sheep counts. A timeout-heavy baseline is a blocker, not a baseline.
 ### Visual gate
 
 The current repo gate is `npm run validation:screenshots -- --diff`, with every
-cell in the 12-cell smoke matrix present and at SSIM >= 0.95. A Konveyor cycle
-may change that rule only by editing the tool and documenting the new threshold
-in the active handoff or `DECISIONS.md`.
+cell in the 12-cell smoke matrix present and at normalized-luma SSIM >= 0.95. A
+Konveyor cycle may change that rule only by editing the tool and documenting
+the new threshold or comparison contract in the active handoff or `DECISIONS.md`.
 
 Asset-regeneration phases may accept specific visual deltas, but acceptance
 must name the cell, attach artifacts, and explain the intended change. Silent
@@ -727,9 +912,10 @@ claimed, connect to live multiplayer, and pass gates.
 
 ### Phase 9 - Web fallback decision and release prep
 
-Use Cloudflare Web Analytics and current browser support data to choose between
-a WebGL fallback and a WebGPU-required gate for `sheepdogsim.com`. Then prepare
-Steam and mobile release surfaces from the proven builds.
+Use Cloudflare Web Analytics and current browser support data to choose whether
+`sheepdogsim.com` should stay WebGL-default, move to progressive WebGPU-first
+with WebGL fallback, or use a WebGPU-required gate. Then prepare Steam and
+mobile release surfaces from the proven builds.
 
 Exit: fallback decision recorded in `DECISIONS.md`, code reflects it, and the
 release path is ready for external users.

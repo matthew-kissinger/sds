@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { DoubleSide, MeshLambertNodeMaterial, MeshStandardNodeMaterial, TSL } from 'three/webgpu';
+import { DoubleSide, MeshBasicNodeMaterial, MeshLambertNodeMaterial, MeshStandardNodeMaterial, TSL } from 'three/webgpu';
 
 import { GrassSystem } from '../js/GrassSystem.js';
 import { createKonveyorGrassNodeMaterialFactories } from '../js/world/konveyorGrassNodeMaterialFactories.js';
@@ -199,7 +199,7 @@ describe('konveyor grass material adapter', () => {
     it('can route grass blades through the reusable WebGPU node material candidate', () => {
         const contexts = [];
         const nodeFactories = createKonveyorGrassNodeMaterialFactories(
-            { MeshLambertNodeMaterial, MeshStandardNodeMaterial, DoubleSide, TSL },
+            { MeshBasicNodeMaterial, MeshLambertNodeMaterial, MeshStandardNodeMaterial, DoubleSide, TSL },
             {
                 fogNear: 18,
                 fogFar: 74,
@@ -219,8 +219,9 @@ describe('konveyor grass material adapter', () => {
         const material = grass.createGrassMaterial();
         try {
             expect(material.name).toBe('konveyor-node-grass-blade');
-            expect(material.isMeshStandardNodeMaterial).toBe(true);
+            expect(material.isMeshBasicNodeMaterial).toBe(true);
             expect(material.isNodeMaterial).toBe(true);
+            expect(material.userData.konveyorGrassLighting).toBe('shader-owned-unlit');
             expect(material.side).toBe(THREE.FrontSide);
             expect(material.transparent).toBe(false);
             expect(material.depthWrite).toBe(true);

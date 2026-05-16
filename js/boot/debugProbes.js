@@ -39,22 +39,30 @@ export function installStressTestHarness(game) {
             scene,
             hasHeightfield: !!hf,
             grassHeightfieldMatches: tb?.grassSystem ? tb.grassSystem.heightfield === hf : true,
-            sheep: { count: 0, outOfBounds: 0 },
+            sheep: { count: 0, outOfBounds: 0, maxDistanceFromCenter: 0, samples: [] },
         };
         // Sheep in-bounds vs scene boundary. Q3 fix gate: post-swap mode
         // start should respawn within the new scene's playArea, not
         // leftover positions from the prior mode/scene.
         const sys = game.gameState?.optimizedSheepSystem;
         const boundary = game.currentScene?.boundary;
-        if (sys?.sheep && boundary) {
+        if (sys?.sheep) {
             for (const s of sys.sheep) {
                 out.sheep.count += 1;
+                if (!boundary) continue;
                 const x = s?.position?.x;
                 const z = s?.position?.z;
                 if (typeof x !== 'number' || typeof z !== 'number') continue;
+                if (out.sheep.samples.length < 5) {
+                    out.sheep.samples.push({ x, z });
+                }
                 if (boundary.kind === 'island') {
                     const dx = x - (boundary.center?.x ?? 0);
                     const dz = z - (boundary.center?.z ?? 0);
+                    out.sheep.maxDistanceFromCenter = Math.max(
+                        out.sheep.maxDistanceFromCenter,
+                        Math.sqrt(dx * dx + dz * dz)
+                    );
                     const r = boundary.radius - (boundary.falloff ?? 0);
                     if (dx * dx + dz * dz > r * r) out.sheep.outOfBounds += 1;
                 } else if (boundary.minX != null) {

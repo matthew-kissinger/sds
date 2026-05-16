@@ -1,0 +1,416 @@
+{
+  "capturedAt": "2026-05-15T20:24:02.011Z",
+  "contract": "konveyor-production-webgpu-boot-scout",
+  "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorProductionBootScout=1&scene=rolling-hills&konveyorProductionGameplayScout=1&autostart=1&mode=classic&konveyorProductionSceneBody=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorMaterials=1&konveyorRocks=1&konveyorGrass=1&konveyorWater=1&konveyorTerrain=1&konveyorSheep=1&konveyorImpostors=1&konveyorNativeInstancing=1",
+  "sceneId": "rolling-hills",
+  "sceneBody": true,
+  "loop": false,
+  "raf": false,
+  "gameplay": true,
+  "channel": "chrome",
+  "chromiumArgs": [
+    "--use-angle=d3d11",
+    "--enable-gpu"
+  ],
+  "screenshotDir": "cycle36-validation/runtime/production-webgpu-gameplay-scout-rolling-hills",
+  "screenshot": "production-webgpu-gameplay-start.png",
+  "rendererMode": {
+    "requested": "webgpu",
+    "diagnostic": true,
+    "productionBootScout": true,
+    "effective": "webgpu-production-boot-scout",
+    "fallbackReason": null
+  },
+  "diagnosticBoot": false,
+  "productionBootScout": {
+    "requested": true,
+    "ok": true,
+    "error": null,
+    "startedAt": "2026-05-15T20:23:54.287Z",
+    "testNoCanvas": false,
+    "sceneBodyRequested": true,
+    "nativeInstancingRequested": true,
+    "sceneLoopRequested": false,
+    "rafLoopRequested": false,
+    "gameplayStartRequested": true,
+    "moduleLoaded": true,
+    "moduleSource": "assets/vendor/three/three.webgpu.min.js",
+    "factoryGlobalsInstalled": true,
+    "factorySupply": {
+      "source": "konveyor-node-material-factory-suite",
+      "groupCount": 8,
+      "factoryCount": 18,
+      "groups": {
+        "atmosphere": [
+          "createCloudLayerMaterial",
+          "createSkyDomeMaterial"
+        ],
+        "effects": [
+          "createCorralZapBoltMaterial",
+          "createCorralZapParticleMaterial",
+          "createPortalPadMaterial",
+          "createPortalParticleMaterial",
+          "createPortalRingMaterial",
+          "createSunBillboardMaterial"
+        ],
+        "treeRock": [
+          "createRockMaterial",
+          "createTreeBranchMaterial",
+          "createTreeLeafMaterial"
+        ],
+        "grass": [
+          "createGrassBladeMaterial",
+          "createMeadowQuadMaterial"
+        ],
+        "water": [
+          "createAnimeWaterMaterial"
+        ],
+        "terrain": [
+          "createTerrainMaterial"
+        ],
+        "sheep": [
+          "createSheepMaterial",
+          "createSheepPartMaterial"
+        ],
+        "impostor": [
+          "createKilnImpostorMaterial"
+        ]
+      },
+      "sceneId": "rolling-hills",
+      "skyFogPreset": "dusk",
+      "ok": true
+    },
+    "rendererCreated": true,
+    "rendererClassName": "$C",
+    "webGpuLightingBridge": {
+      "source": "production-boot-scout-webgpu-lighting-bridge",
+      "proofOnlyBridge": true,
+      "ambientAdded": true,
+      "directionalAdded": true,
+      "ok": true
+    },
+    "completedAt": "2026-05-15T20:23:55.049Z",
+    "diagnosticBoot": false,
+    "rendererMode": {
+      "requested": "webgpu",
+      "diagnostic": true,
+      "productionBootScout": true,
+      "effective": "webgpu-production-boot-scout",
+      "fallbackReason": null
+    },
+    "rendererReady": true,
+    "rendererIsWebGpu": true,
+    "rendererSetup": {
+      "rendererMode": "non-webgl",
+      "webglInfo": {
+        "mode": "non-webgl",
+        "hasContext": false,
+        "vendor": null,
+        "renderer": null,
+        "version": null,
+        "maxVertexUniforms": null,
+        "maxFragmentUniforms": null,
+        "maxTextureSize": null
+      },
+      "contextHandlersInstalled": false,
+      "toneMapping": {
+        "name": "ACESFilmic",
+        "isApplePlatform": false,
+        "override": null
+      },
+      "shadowsEnabled": true,
+      "pixelRatio": 1
+    },
+    "renderStatus": {
+      "mode": "async",
+      "inFlight": true,
+      "rendererReady": true,
+      "rendererReadyError": null,
+      "lastError": null
+    },
+    "sceneManagerScene": true,
+    "sceneManagerCamera": true,
+    "bootShellOk": true,
+    "sceneBody": {
+      "requested": true,
+      "ok": true,
+      "startedAt": "2026-05-15T20:23:55.050Z",
+      "completedAt": "2026-05-15T20:24:00.033Z",
+      "sceneId": "rolling-hills",
+      "sceneName": "Sheep Dog Island",
+      "renderStatus": {
+        "mode": "async",
+        "inFlight": false,
+        "rendererReady": true,
+        "rendererReadyError": null,
+        "lastError": null
+      },
+      "renderResult": true,
+      "canvas": {
+        "width": 1280,
+        "height": 720,
+        "clientWidth": 1280,
+        "clientHeight": 720,
+        "dataset": {
+          "engine": "three.js r184 webgpu",
+          "konveyorProductionBootScout": "1"
+        }
+      },
+      "scene": {
+        "childCount": 105,
+        "hasTerrain": true,
+        "hasGrassSystem": true,
+        "hasSheepSystem": true,
+        "suppressedWebglOnlyObjects": []
+      },
+      "materials": {
+        "atmosphere": {
+          "kind": "cloud-layer",
+          "applied": true,
+          "reason": null,
+          "hasControls": true
+        },
+        "terrain": {
+          "kind": "terrain-ground",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "grassBlade": {
+          "kind": "grass-blade",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "meadow": null,
+        "sheep": {
+          "kind": "sheep-wool",
+          "applied": true,
+          "reason": null,
+          "hasControls": false
+        },
+        "nativeTreeInstancing": {
+          "applied": true,
+          "ok": true,
+          "source": "THREE.InstancedMesh",
+          "route": "konveyor-production-scene-body",
+          "lod": "lod0-only",
+          "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+          "treeInstances": 179,
+          "renderedInstanceMeshes": 4,
+          "groups": [
+            {
+              "type": "tree1",
+              "meshName": "trunk",
+              "instances": 88,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 840
+            },
+            {
+              "type": "tree1",
+              "meshName": "leaves",
+              "instances": 88,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 9240
+            },
+            {
+              "type": "tree2",
+              "meshName": "trunk",
+              "instances": 91,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 2283
+            },
+            {
+              "type": "tree2",
+              "meshName": "leaves",
+              "instances": 91,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 31968
+            }
+          ]
+        },
+        "nativeRockInstancing": {
+          "applied": true,
+          "ok": true,
+          "source": "THREE.InstancedMesh",
+          "route": "konveyor-production-scene-body",
+          "productionReference": "RockPlacement InstancedMesh2.addInstances",
+          "rockInstances": 9,
+          "renderedInstanceMeshes": 2,
+          "groups": [
+            {
+              "type": "rock1",
+              "meshName": "rock",
+              "instances": 7,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 540
+            },
+            {
+              "type": "rock2",
+              "meshName": "rock",
+              "instances": 2,
+              "isInstancedMesh": true,
+              "isInstancedMesh2": false,
+              "vertexCount": 538
+            }
+          ]
+        }
+      },
+      "checks": {
+        "bootShellOk": true,
+        "factorySupply": true,
+        "lightingBridge": true,
+        "initialized": true,
+        "rendererReady": true,
+        "asyncRender": true,
+        "renderSucceeded": true,
+        "canvasAttached": true,
+        "scenePopulated": true,
+        "webglOnlyInstancedMesh2Suppressed": true,
+        "nativeTreeInstancing": true,
+        "nativeRockInstancing": true,
+        "terrainFactoryApplied": true,
+        "grassFactoryApplied": true,
+        "sheepFactoryApplied": true
+      }
+    },
+    "gameplayStart": {
+      "requested": true,
+      "startedAt": "2026-05-15T20:24:00.034Z",
+      "completedAt": "2026-05-15T20:24:01.594Z",
+      "scheduler": "normal-animation-loop",
+      "autostart": true,
+      "mode": "solo",
+      "singlePlayerMode": "classic",
+      "frameCountStart": 68,
+      "frameCountEnd": 130,
+      "frameSampleTarget": 60,
+      "frameTimeSummary": {
+        "sampleCount": 60,
+        "avgMs": 8.53,
+        "p50Ms": 7.3,
+        "p95Ms": 11.5,
+        "p99Ms": 56.1,
+        "maxMs": 56.1
+      },
+      "frameTimeSamples": [
+        56.1,
+        8.1,
+        8.8,
+        8.1,
+        10.8,
+        6.3,
+        8.7,
+        8.6,
+        8,
+        8.2,
+        7.6,
+        7,
+        6.9,
+        8.7,
+        11.5,
+        6.8,
+        12.5,
+        10.2,
+        10.2,
+        6.5,
+        7.9,
+        11.1,
+        7.3,
+        9.6,
+        7.3,
+        7,
+        7.7,
+        7.1,
+        5.4,
+        7.1,
+        7.2,
+        6.6,
+        7.1,
+        7.4,
+        6.7,
+        7.9,
+        6.8,
+        5.8,
+        7.3,
+        7.4,
+        7.3,
+        6.9,
+        5.6,
+        6.9,
+        7.4,
+        7.2,
+        9,
+        5.3,
+        5.8,
+        7.7,
+        6.4,
+        6.8,
+        9.5,
+        7.5,
+        5.2,
+        6.4,
+        11.5,
+        5.8,
+        7.1,
+        9.3
+      ],
+      "grassTimeStart": 3.80010000000149,
+      "grassTimeEnd": 4.340100000001487,
+      "sheepCount": 200,
+      "renderStatus": {
+        "mode": "async",
+        "inFlight": false,
+        "rendererReady": true,
+        "rendererReadyError": null,
+        "lastError": null
+      },
+      "checks": {
+        "bootShellOk": true,
+        "sceneBodyOk": true,
+        "testNoCanvasDisabled": true,
+        "initialized": true,
+        "menuGameStarted": true,
+        "soloModeStarted": true,
+        "sheepdogInScene": true,
+        "sheepFlockReady": true,
+        "normalAnimationLoopAdvanced": true,
+        "frameTimingSampled": true,
+        "grassAdvanced": true,
+        "asyncRender": true,
+        "canvasAttached": true,
+        "noInitError": true
+      },
+      "ok": true
+    }
+  },
+  "currentSceneId": "rolling-hills",
+  "sceneManagerExposed": true,
+  "terrainBuilderExposed": true,
+  "screenshotProof": {
+    "dimensions": {
+      "width": 1280,
+      "height": 720
+    },
+    "lumaRange": 163.33,
+    "coarseColorBuckets": 103,
+    "nonBlank": true
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "ok": true,
+  "checks": {
+    "bootShellOk": true,
+    "sceneBodyOk": true,
+    "sceneLoopOk": true,
+    "sceneRafLoopOk": true,
+    "gameplayStartOk": true,
+    "noConsoleErrors": true,
+    "noPageErrors": true
+  }
+}

@@ -1,9 +1,9 @@
 {
-  "capturedAt": "2026-05-15T10:36:22.701Z",
+  "capturedAt": "2026-05-16T01:00:11.953Z",
   "contract": "konveyor-production-flag-fallback-proof",
   "baseUrl": "http://127.0.0.1:4173/",
   "screenshotDir": "cycle36-validation/runtime/production-flag-fallback-screenshots",
-  "channel": "chrome",
+  "channel": "playwright-chromium",
   "chromiumArgs": [
     "--use-angle=d3d11",
     "--enable-gpu"
@@ -23,7 +23,7 @@
   "scenes": [
     {
       "sceneId": "field",
-      "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=field&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
+      "url": "http://127.0.0.1:4173/?scene=field&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
       "screenshot": "field.png",
       "screenshotProof": {
         "dimensions": {
@@ -31,20 +31,24 @@
           "height": 720
         },
         "averageRgb": [
-          43.76,
-          51.33,
-          48.95
+          43.35,
+          50.65,
+          48.57
         ],
-        "averageLuma": 49.55,
-        "lumaRange": 135.5,
-        "coarseColorBuckets": 42,
+        "averageLuma": 48.95,
+        "lumaRange": 136.22,
+        "coarseColorBuckets": 44,
         "nonBlank": true
       },
       "rendererMode": {
-        "requested": "webgpu",
+        "requested": "webgl",
         "diagnostic": false,
+        "productionWebGpu": false,
+        "productionGate": false,
+        "webgpuApiAvailable": true,
+        "productionBootScout": false,
         "effective": "webgl",
-        "fallbackReason": "diagnostic-flag-required"
+        "fallbackReason": null
       },
       "diagnosticBoot": false,
       "currentSceneId": "field",
@@ -53,39 +57,34 @@
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
         "calls": 116,
-        "triangles": 4162410
+        "triangles": 4150346
       },
       "summaries": {
         "treeRockMaterial": {
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "rockPlacement": {
           "kind": "rock-placement-rng",
-          "applied": true,
-          "reason": null,
-          "sceneId": "field",
-          "sceneSeed": 0,
-          "seed": 1383031659,
-          "seedOffset": 1383031659,
-          "rng": "mulberry32(sceneSeed + Rock)"
+          "applied": false,
+          "reason": "flag-disabled"
         },
         "terrainMaterial": {
           "kind": "terrain-ground",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "grassBladeMaterial": {
           "kind": "grass-blade",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "meadowQuadMaterial": null,
         "waterMaterial": null,
         "atmosphereMaterial": {
           "kind": "cloud-layer",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "effectMaterial": null
       },
@@ -95,7 +94,7 @@
     },
     {
       "sceneId": "rolling-hills",
-      "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=rolling-hills&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
+      "url": "http://127.0.0.1:4173/?scene=rolling-hills&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
       "screenshot": "rolling-hills.png",
       "screenshotProof": {
         "dimensions": {
@@ -103,20 +102,24 @@
           "height": 720
         },
         "averageRgb": [
-          43.76,
-          44.72,
-          42.72
+          42.92,
+          44.4,
+          42.65
         ],
-        "averageLuma": 44.37,
-        "lumaRange": 115.71,
-        "coarseColorBuckets": 68,
+        "averageLuma": 43.96,
+        "lumaRange": 119.35,
+        "coarseColorBuckets": 70,
         "nonBlank": true
       },
       "rendererMode": {
-        "requested": "webgpu",
+        "requested": "webgl",
         "diagnostic": false,
+        "productionWebGpu": false,
+        "productionGate": false,
+        "webgpuApiAvailable": true,
+        "productionBootScout": false,
         "effective": "webgl",
-        "fallbackReason": "diagnostic-flag-required"
+        "fallbackReason": null
       },
       "diagnosticBoot": false,
       "currentSceneId": "rolling-hills",
@@ -124,44 +127,39 @@
         "className": "ux",
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
-        "calls": 91,
-        "triangles": 3765316
+        "calls": 90,
+        "triangles": 3811078
       },
       "summaries": {
         "treeRockMaterial": {
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "rockPlacement": {
           "kind": "rock-placement-rng",
-          "applied": true,
-          "reason": null,
-          "sceneId": "rolling-hills",
-          "sceneSeed": 1,
-          "seed": 1383031660,
-          "seedOffset": 1383031659,
-          "rng": "mulberry32(sceneSeed + Rock)"
+          "applied": false,
+          "reason": "flag-disabled"
         },
         "terrainMaterial": {
           "kind": "terrain-ground",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "grassBladeMaterial": {
           "kind": "grass-blade",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "meadowQuadMaterial": null,
         "waterMaterial": {
           "kind": "anime-water",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "atmosphereMaterial": {
           "kind": "cloud-layer",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "effectMaterial": null
       },
@@ -171,7 +169,7 @@
     },
     {
       "sceneId": "open-country",
-      "url": "http://127.0.0.1:4173/?renderer=webgpu&scene=open-country&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
+      "url": "http://127.0.0.1:4173/?scene=open-country&probeRender=1&konveyorAtmosphere=1&konveyorEffects=1&konveyorGrass=1&konveyorImpostors=1&konveyorMaterials=1&konveyorRocks=1&konveyorSheep=1&konveyorTerrain=1&konveyorWater=1",
       "screenshot": "open-country.png",
       "screenshotProof": {
         "dimensions": {
@@ -179,20 +177,24 @@
           "height": 720
         },
         "averageRgb": [
-          49.33,
-          53.59,
-          50.42
+          49.28,
+          53.48,
+          50.44
         ],
-        "averageLuma": 52.46,
-        "lumaRange": 128.22,
+        "averageLuma": 52.37,
+        "lumaRange": 128.64,
         "coarseColorBuckets": 58,
         "nonBlank": true
       },
       "rendererMode": {
-        "requested": "webgpu",
+        "requested": "webgl",
         "diagnostic": false,
+        "productionWebGpu": false,
+        "productionGate": false,
+        "webgpuApiAvailable": true,
+        "productionBootScout": false,
         "effective": "webgl",
-        "fallbackReason": "diagnostic-flag-required"
+        "fallbackReason": null
       },
       "diagnosticBoot": false,
       "currentSceneId": "open-country",
@@ -200,48 +202,43 @@
         "className": "ux",
         "isWebGLRenderer": true,
         "isWebGPURenderer": false,
-        "calls": 157,
-        "triangles": 3613475
+        "calls": 158,
+        "triangles": 3655424
       },
       "summaries": {
         "treeRockMaterial": {
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "rockPlacement": {
           "kind": "rock-placement-rng",
-          "applied": true,
-          "reason": null,
-          "sceneId": "open-country",
-          "sceneSeed": 42,
-          "seed": 1383031701,
-          "seedOffset": 1383031659,
-          "rng": "mulberry32(sceneSeed + Rock)"
+          "applied": false,
+          "reason": "flag-disabled"
         },
         "terrainMaterial": {
           "kind": "terrain-ground",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "grassBladeMaterial": {
           "kind": "grass-blade",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "meadowQuadMaterial": {
           "kind": "meadow-quad",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "waterMaterial": {
           "kind": "anime-water",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "atmosphereMaterial": {
           "kind": "cloud-layer",
           "applied": false,
-          "reason": "missing-factories"
+          "reason": "flag-disabled"
         },
         "effectMaterial": null
       },

@@ -37,12 +37,13 @@ export function createKonveyorAnimeWaterNodeMaterial(
   const foamBand = max(shorelineFoam, heightInterfaceFoam.mul(0.68));
   const glintDelta = waterUv.sub(vec2(0.72, 0.64));
   const glint = pow(float(1.0).sub(smoothstep(0.0, 0.42, length(glintDelta))), 4.0)
-    .mul(water.sparkleStrength);
+    .mul(water.sparkleStrength * water.sparkleScale);
   const fogBlend = smoothstep(0.56, 1.0, waterUv.y).mul(0.36);
   const baseColor = mix(vec3(...water.shallowColor), vec3(...water.deepColor), depthT)
     .add(vec3(ripple, ripple, ripple))
-    .add(vec3(...water.sunColor).mul(glint.mul(0.35)));
-  const colorWithFoam = mix(baseColor, vec3(...water.foamColor), foamBand);
+    .add(vec3(...water.sunColor).mul(glint.mul(0.35)))
+    .mul(water.colorScale);
+  const colorWithFoam = mix(baseColor, vec3(...water.foamColor).mul(water.foamScale), foamBand);
 
   const material = new MeshBasicNodeMaterial();
   material.name = 'konveyor-node-anime-water';
@@ -50,5 +51,8 @@ export function createKonveyorAnimeWaterNodeMaterial(
   material.side = DoubleSide;
   material.depthWrite = true;
   material.depthTest = true;
+  material.userData.konveyorWaterColorScale = water.colorScale;
+  material.userData.konveyorWaterFoamScale = water.foamScale;
+  material.userData.konveyorWaterSparkleScale = water.sparkleScale;
   return material;
 }

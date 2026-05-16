@@ -12,13 +12,42 @@ function toArray(value, fallback) {
   return value?.toArray?.() ?? fallback;
 }
 
+function createFlatHeightTexture({
+  DataTexture,
+  RedFormat,
+  FloatType,
+  LinearFilter,
+  ClampToEdgeWrapping,
+}) {
+  if (typeof DataTexture !== 'function') return null;
+  const texture = new DataTexture(
+    new Float32Array([0]),
+    1,
+    1,
+    RedFormat,
+    FloatType
+  );
+  texture.magFilter = LinearFilter;
+  texture.minFilter = LinearFilter;
+  texture.wrapS = ClampToEdgeWrapping;
+  texture.wrapT = ClampToEdgeWrapping;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  texture.userData.konveyorHeightTextureSource = 'flat-terrain-fallback';
+  return texture;
+}
+
 export function createKonveyorTerrainNodeMaterialFactories(webGpuModules, options = {}) {
   const terrainDefaults = options.terrain ?? {};
 
   return {
     createTerrainMaterial: (context = {}) => {
       const createHeightTexture = context.createHeightTexture ?? terrainDefaults.createHeightTexture ?? options.createHeightTexture;
-      const heightTexture = context.heightTexture ?? terrainDefaults.heightTexture ?? options.heightTexture ?? createHeightTexture?.();
+      const heightTexture = context.heightTexture
+        ?? terrainDefaults.heightTexture
+        ?? options.heightTexture
+        ?? createHeightTexture?.()
+        ?? createFlatHeightTexture(webGpuModules);
       if (!heightTexture) return null;
 
       const colors = context.colors ?? {};
@@ -30,6 +59,7 @@ export function createKonveyorTerrainNodeMaterialFactories(webGpuModules, option
         highColor: toArray(colors.baseColor3 ?? context.highColor ?? terrainDefaults.highColor, DEFAULT_TERRAIN_COLORS.highColor),
         fogColor: toArray(context.fogColor ?? terrainDefaults.fogColor ?? options.fogColor, DEFAULT_TERRAIN_COLORS.fogColor),
         peakHeight: heightfield.peakHeight ?? context.peakHeight ?? terrainDefaults.peakHeight ?? options.peakHeight ?? 1,
+        colorScale: context.colorScale ?? terrainDefaults.colorScale ?? options.colorScale,
         side: context.side ?? terrainDefaults.side ?? options.side,
         polygonOffset,
       }, heightTexture);

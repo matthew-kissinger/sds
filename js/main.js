@@ -68,14 +68,32 @@ import {
     console.log('[CINEMA] Stripped ?cinematic=1 from invite-hash URL — preserveDrawingBuffer stays off for guests.');
 })();
 
+function emitRendererModeTelemetry(gameInstance = null) {
+    const rendererMode = window.__sdsRendererMode ?? null;
+    if (!rendererMode) return;
+    const productionWebGpu = window.__sdsG?.productionWebGpu ?? null;
+    import('./telemetry.js').then(({ emitEvent }) => {
+        emitEvent('renderer_mode_resolved', {
+            requested: rendererMode.requested ?? '',
+            effective: rendererMode.effective ?? '',
+            fallbackReason: rendererMode.fallbackReason ?? '',
+            webgpuApiAvailable: rendererMode.webgpuApiAvailable === true,
+            productionWebGpu: rendererMode.productionWebGpu === true,
+            productionOk: productionWebGpu?.ok === true,
+            devicePreflightOk: productionWebGpu?.devicePreflight?.ok === true,
+            sceneId: gameInstance?.currentScene?.id ?? window.__currentSceneId ?? '',
+        });
+    }).catch(() => {});
+}
+
 /**
  * Main simulation controller - Enhanced with mobile controls support
  * Uses separate modules for different responsibilities
  */
 class SheepDogSimulation {
-    constructor() {
+    constructor(options = {}) {
         // Initialize all modules
-        this.sceneManager = new SceneManager();
+        this.sceneManager = new SceneManager(options.sceneManagerOptions);
         this.gameState = new GameState();
         this.gameTimer = new GameTimer();
         // Cycle 27 Phase E: rolling 10-second WebM tail of gameplay.
@@ -181,9 +199,15 @@ class SheepDogSimulation {
             window.__perfHarness = {
                 isReady: () => {
                     const sheep = gameStateRef.getSheep?.() || [];
-                    return perfMon.isEnabled && sheep.length > 0 && perfMon.frameCount;
+                    return perfMon.isEnabled && sheep.length > 0 && perfMon.frameCount > 0;
                 },
                 getMetrics: () => ({ ...perfMon.metrics, frameCount: perfMon.frameCount }),
+                reset() {
+                    perfMon.reset();
+                    this._samples = [];
+                    this._stop = 0;
+                    return true;
+                },
                 startSampling(durationMs = 8000) {
                     this._samples = [];
                     this._stop = Date.now() + durationMs;
@@ -396,13 +420,23 @@ class SheepDogSimulation {
             console.log('[TEST] testNoCanvas=1 — skipping init() + animate()');
             this.isInitialized = true;
         } else {
-            this.init().then(() => {
-                this.isInitialized = true;
-                console.log('[GAME] Game initialization complete, starting animation loop');
-                if (urlParams.get('autostart') === '1') {
-                    this.menuController.selectSolo('jep', urlParams.get('mode') || 'classic');
-                }
-            });
+            Promise.resolve()
+                .then(() => options.beforeInit?.(this))
+                .then(() => this.init())
+                .then(() => {
+                    this.isInitialized = true;
+                    console.log('[GAME] Game initialization complete, starting animation loop');
+                    if (urlParams.get('autostart') === '1') {
+                        this.menuController.selectSolo('jep', urlParams.get('mode') || 'classic');
+                    }
+                }).catch((error) => {
+                    console.error('[GAME] Game initialization failed:', error);
+                    const scout = window.__sdsG?.productionBootScout;
+                    if (scout) {
+                        scout.ok = false;
+                        scout.error = String(error?.message || error);
+                    }
+                });
             this.animate();
         }
     }
@@ -663,6 +697,11 @@ class SheepDogSimulation {
         this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
         this.registerSystemTriangleCounts();
 
+        if (window.__sdsG?.productionWebGpu?.enabled) {
+            const productionWebGpu = await import('./rendering/konveyorProductionWebGpuBoot.js');
+            await productionWebGpu.recordKonveyorProductionWebGpuBoot(this, window.__sdsG.productionWebGpu);
+        }
+
         // 6. Re-apply cinematic sun if requested (lazy getters in __sdsCinema
         //    re-resolve atmosphere automatically; just need to honour ?sun=).
         if (isCinematicMode()) {
@@ -672,6 +711,7 @@ class SheepDogSimulation {
             }
         }
 
+        this.lastTime = performance.now();
         this._sceneRebuilding = false;
     }
 
@@ -1500,20 +1540,28 @@ class SheepDogSimulation {
     animate() {
         requestAnimationFrame(() => this.animate());
 
+        const currentTime = performance.now();
+        const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.05);
+        this.lastTime = currentTime;
+
+        const frameResult = this.runFrame(deltaTime);
+        if (frameResult && typeof frameResult.catch === 'function') {
+            frameResult.catch((err) => {
+                console.error('[RENDER] Frame step failed:', err);
+            });
+        }
+    }
+
+    runFrame(deltaTime) {
         // Cycle 11 Phase 1: hard early-out while disposeScene/rebuildScene is
         // mid-flight. Renderer + scene + camera persist across swaps, so a
         // single render keeps the canvas alive under the SceneSwapOverlay.
         // Game-logic update path is skipped — half-disposed references would
         // otherwise crash the rAF loop.
         if (this._sceneRebuilding) {
-            try { this.sceneManager?.render?.(); } catch {}
-            return;
+            try { return this.sceneManager?.render?.(); } catch {}
+            return false;
         }
-
-        // Calculate delta time
-        const currentTime = performance.now();
-        const deltaTime = (currentTime - this.lastTime) / 1000; // Convert to seconds
-        this.lastTime = currentTime;
         
         // Check if game is paused
         const isPaused = this.inputHandler.isPausedState();
@@ -1666,7 +1714,7 @@ class SheepDogSimulation {
         }
 
         // Render the scene (always render to show pause indicator)
-        this.sceneManager.render();
+        const renderResult = this.sceneManager.render();
 
         // Cycle 9 Phase 4: framebuffer samples to detect the "ground
         // rendered white" failure mode on Safari/Metal. Take two:
@@ -1700,6 +1748,7 @@ class SheepDogSimulation {
 
         // Notify HUD subscribers (replaces setInterval polling in useGameState).
         emitGameEvent('frame');
+        return renderResult;
     }
     
     // Legacy mobile UI organization removed - all mobile UI now handled by React components
@@ -2133,7 +2182,7 @@ class SheepDogSimulation {
 }
 
 // Start simulation when page loads
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     if (window.__sdsG?.r) {
         import('./diagnostics/webgpuDiagnostic.js')
             .then((m) => m.boot())
@@ -2144,7 +2193,48 @@ window.addEventListener('DOMContentLoaded', () => {
     import('./utils/ScreenshotCapture.js')
         .catch((err) => console.warn('[SCREENSHOT] helper load failed:', err?.message || err));
 
-    const gameInstance = new SheepDogSimulation();
+    const urlParams = new URLSearchParams(location.search);
+    let rendererOptions = {};
+    let recordProductionBootScoutSequence = async () => {};
+    let recordProductionWebGpuBoot = async () => {};
+    if (window.__sdsG?.productionBootScout) {
+        const scoutRecorder = await import('./diagnostics/konveyorProductionBootScoutRecorder.js');
+        rendererOptions = await scoutRecorder.createProductionBootScoutOptions(urlParams);
+        if (rendererOptions.blocked) return;
+        recordProductionBootScoutSequence = scoutRecorder.recordProductionBootScoutSequence;
+    } else if (window.__sdsG?.productionWebGpu) {
+        const productionWebGpu = await import('./rendering/konveyorProductionWebGpuBoot.js');
+        try {
+            const preflight = await productionWebGpu.preflightKonveyorProductionWebGpuDevice(
+                window.__sdsG.productionWebGpu,
+            );
+            if (!preflight.ok) {
+                throw new Error(preflight.reason || 'webgpu-device-unavailable');
+            }
+            rendererOptions = await productionWebGpu.createKonveyorProductionWebGpuGameOptions(
+                urlParams,
+                window.__sdsG.productionWebGpu,
+            );
+            recordProductionWebGpuBoot = (gameInstance) => productionWebGpu.recordKonveyorProductionWebGpuBoot(
+                gameInstance,
+                window.__sdsG.productionWebGpu,
+            );
+        } catch (err) {
+            window.__sdsG.productionWebGpu.ok = false;
+            window.__sdsG.productionWebGpu.error = String(err?.message || err);
+            window.__sdsG.productionWebGpu.enabled = false;
+            window.__sdsRendererMode.productionWebGpu = false;
+            window.__sdsRendererMode.effective = 'webgl';
+            window.__sdsRendererMode.fallbackReason =
+                window.__sdsG.productionWebGpu.fallbackReason || 'production-webgpu-boot-failed';
+            rendererOptions = {};
+        }
+    }
+
+    const gameInstance = new SheepDogSimulation(rendererOptions);
+    await recordProductionBootScoutSequence(gameInstance);
+    await recordProductionWebGpuBoot(gameInstance);
+    emitRendererModeTelemetry(gameInstance);
 
     // Delegate menu/network flows from gameInstance to menuController for GameBridge
     gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {

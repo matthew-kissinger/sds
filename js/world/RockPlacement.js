@@ -19,6 +19,72 @@ import * as THREE from 'three';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { generateRockPlacementPlan } from './rockPlacementPlan.js';
 import { createKonveyorRockPlacementRng } from './konveyorRockPlacementAdapter.js';
+import { shouldUseKonveyorProductionNativeInstancing } from '../rendering/konveyorRuntimeMode.js';
+
+function createNativeRockInstancedMeshes(builder, rockInstances, placementPlan) {
+    const instancedMeshes = [];
+    const groups = [];
+    const dummy = new THREE.Object3D();
+
+    Object.entries(rockInstances).forEach(([rockType, instances]) => {
+        if (instances.length === 0 || !builder.models.rocks[rockType]) return;
+
+        const model = builder.models.rocks[rockType];
+        model.traverse(child => {
+            if (!child.isMesh || !child.geometry) return;
+
+            const instancedMesh = new THREE.InstancedMesh(child.geometry, child.material, instances.length);
+            instancedMesh.userData.sharedFromGlbCache = true;
+            instancedMesh.userData.konveyorNativeInstancing = 'rock';
+
+            instances.forEach((inst, i) => {
+                dummy.position.set(inst.position.x, inst.position.y, inst.position.z);
+                dummy.quaternion.setFromEuler(new THREE.Euler(inst.rotation.x, inst.rotation.y, inst.rotation.z));
+                dummy.scale.set(inst.scale.x, inst.scale.y, inst.scale.z);
+                dummy.updateMatrix();
+                instancedMesh.setMatrixAt(i, dummy.matrix);
+            });
+            instancedMesh.instanceMatrix.needsUpdate = true;
+            instancedMesh.frustumCulled = false;
+            instancedMesh.castShadow = !builder.isMobile;
+            instancedMesh.receiveShadow = true;
+
+            builder.scene.add(instancedMesh);
+            instancedMeshes.push(instancedMesh);
+            groups.push({
+                type: rockType,
+                meshName: child.name || '(unnamed)',
+                instances: instances.length,
+                isInstancedMesh: instancedMesh.isInstancedMesh === true,
+                isInstancedMesh2: instancedMesh.isInstancedMesh2 === true,
+                vertexCount: child.geometry.attributes?.position?.count ?? 0,
+            });
+        });
+
+        console.log(`[BUILD] Created ${instances.length} ${rockType} native WebGPU rock instances`);
+    });
+
+    const noRocksPlaced = placementPlan.totalRocks === 0;
+    const summary = {
+        applied: true,
+        ok: noRocksPlaced
+            ? instancedMeshes.length === 0 && groups.length === 0
+            : instancedMeshes.length > 0
+                && groups.every(group => group.isInstancedMesh && !group.isInstancedMesh2 && group.vertexCount > 0),
+        source: 'THREE.InstancedMesh',
+        route: 'konveyor-production-scene-body',
+        productionReference: 'RockPlacement InstancedMesh2.addInstances',
+        rockInstances: placementPlan.totalRocks,
+        renderedInstanceMeshes: instancedMeshes.length,
+        emptyPlacement: noRocksPlaced,
+        groups,
+    };
+    builder.konveyorNativeRockInstancingSummary = summary;
+    builder.rocks = instancedMeshes;
+    builder.environmentDetails = instancedMeshes;
+    console.log(`[BUILD] Total rocks created: ${placementPlan.totalRocks} using native WebGPU instancing`);
+    return instancedMeshes;
+}
 
 /**
  * @param {object} builder TerrainBuilder instance.
@@ -50,6 +116,12 @@ export async function placeEnvironmentDetails(builder) {
     });
     const rockInstances = placementPlan.rockInstances;
     builder.rockPositions = placementPlan.rockPositions;
+    builder.konveyorRockPlacementPlan = placementPlan;
+
+    if (shouldUseKonveyorProductionNativeInstancing()) {
+        return createNativeRockInstancedMeshes(builder, rockInstances, placementPlan);
+    }
+    builder.konveyorNativeRockInstancingSummary = { applied: false, reason: 'flag-disabled' };
 
     // Create instanced meshes for each rock type. Cycle 19 follow-up:
     // migrated from THREE.InstancedMesh → InstancedMesh2 so we get

@@ -36,13 +36,14 @@ describe('konveyor rock placement adapter', () => {
         expect(shouldApplyKonveyorRockPlacement('?renderer=webgpu&konveyorRocks=1')).toBe(true);
         expect(shouldApplyKonveyorRockPlacement('?renderer=webgpu&diagnostic=1')).toBe(false);
         expect(shouldApplyKonveyorRockPlacement('?renderer=webgl&konveyorRocks=1')).toBe(false);
+        expect(shouldApplyKonveyorRockPlacement('?renderer=webgl&visualGolden=1&konveyorRocks=1')).toBe(true);
         expect(shouldApplyKonveyorRockPlacement('')).toBe(false);
     });
 
     it('leaves the default RNG untouched without the flag', () => {
         const defaultRng = () => 0.25;
         const result = createKonveyorRockPlacementRng({
-            search: '?renderer=webgl&konveyorRocks=1',
+            search: '?renderer=webgl&visualGolden=1',
             sceneDef: loadScene('field'),
             defaultRng,
         });

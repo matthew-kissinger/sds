@@ -61,6 +61,15 @@ Three camera modes share one controller: Classic (top-down isometric, world-axis
 - **Camera Y is clamped above the max ridge along the camera→dog line** (sample 7 points, take the max + clearance). Catches the case where dog is on a peak and a hill between camera and dog occludes.
 - **`speedNorm` is exponentially smoothed at τ=0.1s** before driving look-ahead distance, and `posK` is capped at 0.3 per frame so a single dropped frame can't lurch the camera.
 
+## Browser probe hygiene
+
+Browser validation is part of the render contract. Close every Playwright page/context/browser and any manually opened browser tab as soon as the probe is done. Also stop local Vite preview/dev listeners started only for that probe.
+
+Agent-launched Vite dev servers must set `SDS_SUPPRESS_BROWSER_OPEN=1`. The repo keeps `server.open` enabled for human local development, but automated validation must not create real Chrome tabs before a probe starts.
+After preview-based proofs, explicitly check for and close any real localhost Chrome tab/process on `127.0.0.1:3000` or `127.0.0.1:4173`.
+
+Leaving tabs or listeners open can keep GPU memory, animation timers, service workers, and network activity alive. That contaminates perf profiling, metrics, screenshot comparisons, and benchmark runs, especially during WebGL/WebGPU migration work.
+
 ## What NOT to refactor in render code
 
 - **`OptimizedSheep.js`** — single InstancedMesh + custom shader + per-instance state machine. Cohesive by design; splitting would scatter coupling across files.

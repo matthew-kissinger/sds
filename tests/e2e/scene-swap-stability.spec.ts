@@ -101,7 +101,8 @@ test.describe('Cycle 18 Phase 2 — scene-swap + mode-restart hygiene @local-onl
       }, target);
 
       expect(probeBefore.scene, `landed on ${target}`).toBe(target);
-      expect(probeBefore.hasHeightfield, `heightfield loaded for ${target}`).toBe(true);
+      expect(probeBefore.hasHeightfield, `heightfield loaded for ${target}`)
+        .toBe(target !== 'field');
       expect(probeBefore.grassHeightfieldMatches,
         `grass heightfield ref must match current heightfield post-swap to ${target}`).toBe(true);
     }

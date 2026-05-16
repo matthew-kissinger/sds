@@ -11,6 +11,7 @@ const isItchio = buildTarget === 'itchio'
 const isNative = nativeTargets.has(buildTarget)
 const workerBase = (process.env.SDS_WORKER_BASE || 'https://sds-worker.matt-m-kissinger.workers.dev').replace(/\/+$/, '')
 const buildId = Date.now().toString()
+const suppressBrowserOpen = process.env.SDS_SUPPRESS_BROWSER_OPEN === '1'
 
 function patchThreeAddonImport(content) {
   return content.replace(/from 'three';/g, "from '../../../three.core.min.js';")
@@ -119,7 +120,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true
+    open: suppressBrowserOpen ? false : true
   },
   resolve: {
     alias: {

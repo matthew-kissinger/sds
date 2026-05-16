@@ -51,6 +51,7 @@ import {
     regenerateGrass as runRegenerateGrass
 } from './world/sandbox.js';
 import { createKonveyorTerrainMaterial } from './world/konveyorTerrainMaterialAdapter.js';
+import { shouldApplyKonveyorRendererFlag } from './rendering/konveyorRuntimeMode.js';
 
 function createKonveyorTerrainHeightTexture(heightfield) {
     const texture = new THREE.DataTexture(
@@ -629,8 +630,7 @@ export class TerrainBuilder {
 
     async _applyKonveyorTreeRockMaterials() {
         const search = this._getKonveyorMaterialSearch();
-        const params = new URLSearchParams(search);
-        if (params.get('renderer') !== 'webgpu' || params.get('konveyorMaterials') !== '1') {
+        if (!shouldApplyKonveyorRendererFlag(search, 'konveyorMaterials')) {
             return this._setKonveyorTreeRockMaterialSummary({ applied: false, reason: 'flag-disabled' });
         }
 

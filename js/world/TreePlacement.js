@@ -24,6 +24,70 @@ import { mulberry32 } from '../../shared/Random.js';
 import { loadKilnImpostor } from '../kiln-impostor-material.js';
 import { getSceneManager } from '../GameBridge.js';
 import { TIER_PRESETS } from '../HardwareTier.js';
+import { shouldUseKonveyorProductionNativeInstancing } from '../rendering/konveyorRuntimeMode.js';
+
+function createNativeTreeInstancedMeshes(builder, treeInstances) {
+    const instancedMeshes = [];
+    const groups = [];
+    const dummy = new THREE.Object3D();
+
+    Object.entries(treeInstances).forEach(([treeType, instances]) => {
+        if (instances.length === 0 || !builder.models.trees[treeType]) return;
+
+        const lod0Model = builder.models.trees[treeType];
+        lod0Model.traverse(child => {
+            if (!child.isMesh || !child.geometry) return;
+
+            const im = new THREE.InstancedMesh(child.geometry, child.material, instances.length);
+            im.userData.sharedFromGlbCache = true;
+            im.userData.konveyorNativeInstancing = 'tree';
+
+            instances.forEach((inst, i) => {
+                dummy.position.copy(inst.position);
+                dummy.quaternion.setFromEuler(inst.rotation);
+                dummy.scale.copy(inst.scale);
+                dummy.updateMatrix();
+                im.setMatrixAt(i, dummy.matrix);
+            });
+            im.instanceMatrix.needsUpdate = true;
+            im.frustumCulled = false;
+            im.castShadow = !builder.isMobile;
+            im.receiveShadow = true;
+
+            builder.scene.add(im);
+            instancedMeshes.push(im);
+            groups.push({
+                type: treeType,
+                meshName: child.name || '(unnamed)',
+                instances: instances.length,
+                isInstancedMesh: im.isInstancedMesh === true,
+                isInstancedMesh2: im.isInstancedMesh2 === true,
+                vertexCount: child.geometry.attributes?.position?.count ?? 0,
+            });
+        });
+
+        console.log(`[TERRAIN] Created ${instances.length} ${treeType} native WebGPU tree instances (LOD0-only)`);
+    });
+
+    const totalTrees = Object.values(treeInstances).reduce((s, a) => s + a.length, 0);
+    const summary = {
+        applied: true,
+        ok: totalTrees > 0
+            && instancedMeshes.length > 0
+            && groups.every(group => group.isInstancedMesh && !group.isInstancedMesh2 && group.vertexCount > 0),
+        source: 'THREE.InstancedMesh',
+        route: 'konveyor-production-scene-body',
+        lod: 'lod0-only',
+        productionReference: 'TerrainBuilder InstancedMesh2.addInstances',
+        treeInstances: totalTrees,
+        renderedInstanceMeshes: instancedMeshes.length,
+        groups,
+    };
+    builder.konveyorNativeTreeInstancingSummary = summary;
+    builder.trees = instancedMeshes;
+    console.log(`[TERRAIN] Total trees: ${totalTrees} (native WebGPU InstancedMesh route)`);
+    return instancedMeshes;
+}
 
 /**
  * @param {object} builder TerrainBuilder instance.
@@ -88,6 +152,11 @@ export async function placeTrees(builder, competitivePastures = null) {
         probe.trees.isMobile = !!builder.isMobile;
         probe.trees.byType = {};
     }
+
+    if (shouldUseKonveyorProductionNativeInstancing()) {
+        return createNativeTreeInstancedMeshes(builder, treeInstances);
+    }
+    builder.konveyorNativeTreeInstancingSummary = { applied: false, reason: 'flag-disabled' };
 
     // Cache baked cross-billboard impostors per tree type. Survives dispose()
     // like the models cache. Cycle 11 Phase 1 A8 finding: re-baking on each

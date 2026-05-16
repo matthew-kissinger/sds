@@ -2,9 +2,9 @@ import {
     replaceRockMaterialsByTraversal,
     replaceTreeMaterialsByName,
 } from './materialReplacement.js';
+import { shouldApplyKonveyorRendererFlag } from '../rendering/konveyorRuntimeMode.js';
 
 const FLAG_PARAM = 'konveyorMaterials';
-const RENDERER_PARAM = 'renderer';
 
 function getWindowSearch() {
     if (typeof window === 'undefined') return '';
@@ -23,8 +23,7 @@ function exposeSummary(summary) {
 }
 
 export function shouldApplyKonveyorMaterials(search = getWindowSearch()) {
-    const params = new URLSearchParams(search);
-    return params.get(RENDERER_PARAM) === 'webgpu' && params.get(FLAG_PARAM) === '1';
+    return shouldApplyKonveyorRendererFlag(search, FLAG_PARAM);
 }
 
 export function applyKonveyorTreeRockMaterials({

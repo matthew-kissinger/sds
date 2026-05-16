@@ -1,10 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 
 import {
   createKonveyorNativeRockInstancingPreview,
   createKonveyorNativeTreeInstancingPreview,
 } from '../js/world/konveyorNativeInstancingAdapter.js';
+import { placeEnvironmentDetails } from '../js/world/RockPlacement.js';
+import { placeTrees } from '../js/world/TreePlacement.js';
+import { loadScene } from '../shared/scenes/index.js';
+
+const NATIVE_INSTANCING_SEARCH = '?renderer=webgpu&diagnostic=1&konveyorProductionBootScout=1&konveyorProductionSceneBody=1&konveyorNativeInstancing=1&konveyorRocks=1';
+
+function setWindowSearch(search) {
+  globalThis.window = { location: { search } };
+}
+
+afterEach(() => {
+  delete globalThis.window;
+});
 
 function treeRoot() {
   const root = new THREE.Group();
@@ -143,5 +156,129 @@ describe('konveyor native tree instancing adapter', () => {
     });
     expect(result.roots.every((root) => root.isInstancedMesh)).toBe(true);
     expect(scene.children).toHaveLength(1);
+  });
+
+  it('uses native Three instancing for production scene-body tree placement under the guarded flag', async () => {
+    setWindowSearch(NATIVE_INSTANCING_SEARCH);
+    const scene = new THREE.Scene();
+    const builder = {
+      modelsLoaded: true,
+      scene,
+      sceneDef: loadScene('field'),
+      rockPositions: [],
+      models: {
+        trees: {
+          tree1: treeRoot(),
+          tree2: treeRoot(),
+        },
+      },
+      isMobile: false,
+      _groundY: () => 0,
+    };
+
+    const meshes = await placeTrees(builder);
+
+    expect(builder.konveyorNativeTreeInstancingSummary).toMatchObject({
+      applied: true,
+      ok: true,
+      source: 'THREE.InstancedMesh',
+      route: 'konveyor-production-scene-body',
+      productionReference: 'TerrainBuilder InstancedMesh2.addInstances',
+    });
+    expect(meshes.length).toBeGreaterThan(0);
+    expect(meshes.every((mesh) => mesh.isInstancedMesh === true)).toBe(true);
+    expect(meshes.some((mesh) => mesh.isInstancedMesh2 === true)).toBe(false);
+    expect(scene.children.some((child) => child.isInstancedMesh2 === true)).toBe(false);
+  });
+
+  it('uses native Three instancing for production scene-body rock placement under the guarded flag', async () => {
+    setWindowSearch(NATIVE_INSTANCING_SEARCH);
+    const sceneDef = loadScene('field');
+    const scene = new THREE.Scene();
+    const builder = {
+      modelsLoaded: true,
+      scene,
+      sceneDef,
+      zones: sceneDef.terrain.zones,
+      models: {
+        rocks: {
+          rock1: rockRoot(),
+          rock2: rockRoot(),
+          rock3: rockRoot(),
+        },
+      },
+      isMobile: false,
+      isInFarmHouseArea: () => false,
+      _groundY: () => 0,
+    };
+
+    const meshes = await placeEnvironmentDetails(builder);
+
+    expect(builder.konveyorNativeRockInstancingSummary).toMatchObject({
+      applied: true,
+      ok: true,
+      source: 'THREE.InstancedMesh',
+      route: 'konveyor-production-scene-body',
+      productionReference: 'RockPlacement InstancedMesh2.addInstances',
+    });
+    expect(meshes.length).toBeGreaterThan(0);
+    expect(meshes.every((mesh) => mesh.isInstancedMesh === true)).toBe(true);
+    expect(meshes.some((mesh) => mesh.isInstancedMesh2 === true)).toBe(false);
+    expect(scene.children.some((child) => child.isInstancedMesh2 === true)).toBe(false);
+    expect(builder.konveyorRockPlacementPlan.totalRocks).toBe(builder.konveyorNativeRockInstancingSummary.rockInstances);
+  });
+
+  it('accepts empty native rock placement when an island scene filters every rock candidate', async () => {
+    setWindowSearch(NATIVE_INSTANCING_SEARCH);
+    const scene = new THREE.Scene();
+    const sceneDef = {
+      id: 'zero-rock-island',
+      boundary: {
+        kind: 'island',
+        center: { x: 0, z: 0 },
+        radius: 10,
+        falloff: 4,
+      },
+      terrain: {
+        seed: 7,
+      },
+    };
+    const farZone = { minX: 100, maxX: 100, minZ: 100, maxZ: 100 };
+    const builder = {
+      modelsLoaded: true,
+      scene,
+      sceneDef,
+      zones: {
+        playArea: farZone,
+        nearField: farZone,
+        midField: farZone,
+        farField: farZone,
+        horizon: farZone,
+      },
+      models: {
+        rocks: {
+          rock1: rockRoot(),
+          rock2: rockRoot(),
+          rock3: rockRoot(),
+        },
+      },
+      isMobile: false,
+      isInFarmHouseArea: () => false,
+      _groundY: () => 0,
+    };
+
+    const meshes = await placeEnvironmentDetails(builder);
+
+    expect(meshes).toEqual([]);
+    expect(builder.konveyorRockPlacementPlan.totalRocks).toBe(0);
+    expect(builder.konveyorNativeRockInstancingSummary).toMatchObject({
+      applied: true,
+      ok: true,
+      rockInstances: 0,
+      renderedInstanceMeshes: 0,
+      emptyPlacement: true,
+      groups: [],
+    });
+    expect(scene.children).toHaveLength(0);
   });
 });

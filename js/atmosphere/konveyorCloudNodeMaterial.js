@@ -2,7 +2,7 @@ export function createKonveyorCloudLayerNodeMaterial(
   { MeshBasicNodeMaterial, DoubleSide, TSL },
   { name = 'konveyor-node-cloud-layer', uniforms = null } = {}
 ) {
-  const { dot, float, floor, fract, max, min, mix, normalize, smoothstep, time, uniform, uv, vec2, vec3 } = TSL;
+  const { abs, cameraPosition, dot, float, floor, fract, max, min, mix, normalize, positionWorld, smoothstep, time, uniform, uv, vec2, vec3 } = TSL;
   const hash21 = (p) => {
     const q = fract(p.mul(vec2(123.34, 456.21)));
     const r = q.add(dot(q, q.add(45.32)));
@@ -41,8 +41,8 @@ export function createKonveyorCloudLayerNodeMaterial(
     ? uniform(uniforms.uSunColor.value.clone())
     : vec3(1.0, 0.86, 0.62);
   const windTime = uniforms ? timeSeconds : time;
-  const wind = normalize(windDir).mul(windTime.mul(0.035));
-  const noiseUv = planeUv.mul(noiseScale.mul(4050.0)).add(wind);
+  const wind = normalize(windDir).mul(windTime.mul(10.0));
+  const noiseUv = vec2(positionWorld.x, positionWorld.z).add(wind).mul(noiseScale);
   const bigField = float(0.5).add(smoothstep(0.2, 0.7, fbm(noiseUv.mul(0.2))).mul(0.5));
   const base = fbm(noiseUv);
   const lowerEdge = mix(1.0, -0.4, coverage);
@@ -56,7 +56,9 @@ export function createKonveyorCloudLayerNodeMaterial(
   const cloudColor = vec3(0.95, 0.95, 0.98).mul(mix(sunColor, vec3(1.0, 1.0, 1.0), 0.5)).mul(shade);
   const edgeDist = min(min(planeUv.x, planeUv.x.oneMinus()), min(planeUv.y, planeUv.y.oneMinus()));
   const footprintFade = smoothstep(0.0, 0.08, edgeDist);
-  const alpha = mask.mul(mix(0.55, 0.95, coverage)).mul(footprintFade).mul(edgeFade);
+  const viewDir = normalize(positionWorld.sub(cameraPosition));
+  const horizonFade = smoothstep(0.02, 0.85, abs(viewDir.y));
+  const alpha = mask.mul(mix(0.55, 0.95, coverage)).mul(footprintFade).mul(edgeFade).mul(horizonFade);
 
   const material = new MeshBasicNodeMaterial();
   material.name = name;

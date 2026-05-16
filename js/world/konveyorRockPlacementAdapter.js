@@ -1,4 +1,5 @@
 import { mulberry32 } from '../../shared/Random.js';
+import { isKonveyorProductionWebGpuActive } from '../rendering/konveyorRuntimeMode.js';
 
 const FLAG_PARAM = 'konveyorRocks';
 const RENDERER_PARAM = 'renderer';
@@ -12,7 +13,12 @@ function getWindowSearch() {
 
 export function shouldApplyKonveyorRockPlacement(search = getWindowSearch()) {
     const params = new URLSearchParams(search);
-    return params.get(RENDERER_PARAM) === 'webgpu' && params.get(FLAG_PARAM) === '1';
+    return isKonveyorProductionWebGpuActive()
+        || (params.get(FLAG_PARAM) === '1'
+        && (
+            params.get(RENDERER_PARAM) === 'webgpu'
+            || params.get('visualGolden') === '1'
+        ));
 }
 
 export function createKonveyorRockPlacementRng({

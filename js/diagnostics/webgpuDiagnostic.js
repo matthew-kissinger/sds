@@ -29,11 +29,16 @@ import { createAnimeWater } from '../water/AnimeWater.js';
 import { GrassSystem } from '../GrassSystem.js';
 import { OptimizedSheepSystem } from '../OptimizedSheep.js';
 import {
+    createKonveyorNodeMaterialFactoryGlobals,
     createKonveyorNodeMaterialFactorySuite,
     summarizeKonveyorNodeMaterialFactorySuite,
 } from '../konveyorNodeMaterialFactorySuite.js';
 import { geometryTriangleCount } from '../utils/TriangleCount.js';
 import { Heightfield } from '../../shared/terrain/Heightfield.js';
+import {
+    createSceneManagerWebGpuRendererProof,
+    shouldRunSceneManagerWebGpuProof,
+} from './sceneManagerWebGpuProof.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -153,6 +158,9 @@ function mixDiagnosticWaterBaseColor(depthT) {
 }
 
 async function loadWebGpuThree() {
+    if (import.meta.env?.DEV && typeof location !== 'undefined') {
+        return import(/* @vite-ignore */ new URL('/assets/vendor/three/three.webgpu.min.js', location.origin).href);
+    }
     const webGpuModulePath = './vendor/three/three.webgpu.min.js';
     return import(/* @vite-ignore */ new URL(webGpuModulePath, import.meta.url).href);
 }
@@ -1299,7 +1307,9 @@ export async function bootWebGpuDiagnostic() {
         productionTerrainAdapter: null,
         productionGrassAdapter: null,
         productionSheepAdapter: null,
+        sceneManagerRendererProof: null,
         factorySuite: null,
+        factoryGlobals: null,
         frames: 0,
     };
 
@@ -1378,9 +1388,21 @@ export async function bootWebGpuDiagnostic() {
         MeshStandardNodeMaterial,
         PointsNodeMaterial,
         LineBasicNodeMaterial,
+        AmbientLight,
+        DirectionalLight,
         AdditiveBlending,
         BackSide,
         DoubleSide,
+        Box3,
+        InstancedMesh,
+        Matrix4,
+        Object3D,
+        Vector3,
+        TextureLoader,
+        LinearFilter,
+        ClampToEdgeWrapping,
+        SRGBColorSpace,
+        NoColorSpace,
         TSL,
     };
     const nodeMaterialFactories = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
@@ -1402,6 +1424,13 @@ export async function bootWebGpuDiagnostic() {
         },
     });
     state.factorySuite = summarizeKonveyorNodeMaterialFactorySuite(nodeMaterialFactories);
+    const factoryGlobals = createKonveyorNodeMaterialFactoryGlobals(nodeMaterialFactories);
+    Object.assign(window, factoryGlobals);
+    state.factoryGlobals = {
+        source: 'window.__sdsKonveyor*MaterialFactories',
+        keys: Object.keys(factoryGlobals).sort(),
+        installed: Object.keys(factoryGlobals).every((key) => window[key] === factoryGlobals[key]),
+    };
     const {
         atmosphere: atmosphereFactories,
         effects: effectFactories,
@@ -1419,6 +1448,39 @@ export async function bootWebGpuDiagnostic() {
     const renderer = new WebGPURenderer({ canvas, antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     await renderer.init();
+
+    let sceneManagerRendererProof = null;
+    let sceneManagerHeightTexture = null;
+    if (shouldRunSceneManagerWebGpuProof(window.location.search)) {
+        sceneManagerHeightTexture = await createDiagnosticHeightTexture({
+            DataTexture,
+            RedFormat,
+            FloatType,
+            NearestFilter,
+            ClampToEdgeWrapping,
+        });
+        sceneManagerRendererProof = await createSceneManagerWebGpuRendererProof({
+            ...webGpuModules,
+            WebGPURenderer,
+        }, {
+            sceneBinding,
+            skyFog,
+            heightTexture: sceneManagerHeightTexture,
+            atmosphereFactories,
+            effectFactories,
+            treeRockFactories,
+            terrainFactories,
+            waterFactories,
+            grassFactories,
+            sheepFactories,
+            impostorFactories,
+            useGlobalFactories: true,
+        });
+        state.sceneManagerRendererProof = sceneManagerRendererProof.proof;
+        if (!state.sceneManagerRendererProof.ok) {
+            return fail('scene manager WebGPU renderer proof failed');
+        }
+    }
 
     const scene = new Scene();
     const fogColor = new Color().setRGB(...skyFog.fogColor);
@@ -1778,6 +1840,8 @@ export async function bootWebGpuDiagnostic() {
         productionTerrainProof.builder.dispose();
         productionGrassProof.dispose();
         productionSheepProof.sheep.dispose();
+        sceneManagerRendererProof?.dispose?.();
+        sceneManagerHeightTexture?.dispose?.();
         renderer.dispose();
         sun.geometry.dispose();
         sun.material.dispose();
