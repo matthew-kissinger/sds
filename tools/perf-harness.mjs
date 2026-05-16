@@ -26,7 +26,9 @@
  *   1. Headless Chromium adds ~5-8ms vs visible. Live with it.
  *   2. The app enters the requested solo mode through the perf autostart URL;
  *      the menu transition itself doesn't pollute the measurement window.
- *   3. WebGLRenderer.info counters reset each frame; we read them
+ *   3. The committed baseline is a WebGL baseline, so this harness pins
+ *      `renderer=webgl` unless --renderer overrides it.
+ *   4. WebGLRenderer.info counters reset each frame; we read them
  *      mid-window so they reflect the rolling state, not the cold paint.
  *
  * Threshold rule (per cycle plan): a config is "regressed" if its
@@ -57,6 +59,7 @@ const WARMUP_MS = Number(args.warmup ?? 3) * 1000;
 const MEASURE_MS = Number(args.measure ?? 15) * 1000;
 const HEADED = !!args.headed;
 const URL_BASE = args.url ?? 'http://localhost:3000';
+const RENDERER_MODE = args.renderer ?? 'webgl';
 const REGRESSION_PCT = 5; // % over baseline avgFrameTime
 const REGRESSION_FLOOR_MS = 0.5; // absolute slack
 const CHROMIUM_GPU_ARGS = !args.software && process.platform === 'win32'
@@ -97,8 +100,15 @@ async function seedIdentity(context) {
 }
 
 async function navigateAndWait(page, cfg) {
-    const url = `${URL_BASE}/?scene=${encodeURIComponent(cfg.scene)}&perfMode=1&autostart=1&mode=${encodeURIComponent(cfg.mode)}`;
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    const url = new URL(URL_BASE);
+    url.searchParams.set('scene', cfg.scene);
+    url.searchParams.set('perfMode', '1');
+    url.searchParams.set('autostart', '1');
+    url.searchParams.set('mode', cfg.mode);
+    if (RENDERER_MODE !== 'default') {
+        url.searchParams.set('renderer', RENDERER_MODE);
+    }
+    await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 60_000 });
 }
 
 async function startGame(page) {
@@ -240,7 +250,7 @@ async function main() {
     const configs = pickConfigs();
     console.log(`[PERF] Mode: ${MODE_BASELINE ? 'BASELINE' : 'CHECK'}`);
     console.log(`[PERF] Configs (${configs.length}): ${configs.map((c) => c.id).join(', ')}`);
-    console.log(`[PERF] Warmup ${WARMUP_MS / 1000}s · measure ${MEASURE_MS / 1000}s · target ${URL_BASE}`);
+    console.log(`[PERF] Warmup ${WARMUP_MS / 1000}s · measure ${MEASURE_MS / 1000}s · target ${URL_BASE} · renderer ${RENDERER_MODE}`);
     if (CHROMIUM_GPU_ARGS.length > 0) {
         console.log(`[PERF] Chromium args: ${CHROMIUM_GPU_ARGS.join(' ')}`);
     }
@@ -270,6 +280,7 @@ async function main() {
         warmupMs: WARMUP_MS,
         measureMs: MEASURE_MS,
         target: URL_BASE,
+        renderer: RENDERER_MODE,
         results
     };
 
