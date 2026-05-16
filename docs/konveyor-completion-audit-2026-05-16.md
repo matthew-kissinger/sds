@@ -2,11 +2,9 @@
 
 Branch: `exp/konveyor-webgpu-migration`
 
-HEAD audited: `ff2cd6cbd2aae8c1aab10066d7f1755058ef8718`
+Current review head: see draft PR [#52](https://github.com/matthew-kissinger/sds/pull/52).
 
 Core implementation packet: `b77eac4c4c785b01ef824eaaf60d7d7ff462d439`
-
-Draft PR: [#52](https://github.com/matthew-kissinger/sds/pull/52)
 
 ## Objective Restatement
 
@@ -21,7 +19,7 @@ documented hard stop is reached.
 
 | Requirement | Evidence inspected | Status |
 |---|---|---|
-| Work happens on `exp/konveyor-webgpu-migration`. | `git status --short --branch` reports `exp/konveyor-webgpu-migration...origin/exp/konveyor-webgpu-migration`; current audited HEAD is `ff2cd6cbd2aae8c1aab10066d7f1755058ef8718`. | Pass |
+| Work happens on `exp/konveyor-webgpu-migration`. | `git status --short --branch` reports `exp/konveyor-webgpu-migration...origin/exp/konveyor-webgpu-migration`; draft PR #52 tracks the current review head. | Pass |
 | Keep WebGL default until documented gates pass. | `cycle36-validation/runtime/production-webgpu-request-proof.json` records default URL `effective: "webgl"`, `fallbackReason: null`, `defaultNotProductionWebGpu: true`. `index.html` still defaults `window.__SDS_RENDERER_MODE` to `webgl`. | Pass |
 | Explicit WebGPU request enters the production WebGPU route on supported desktop hardware. | `production-webgpu-request-proof.json` records Field, Rolling Hills, and Open Country with `effective: "webgpu-production"`, device preflight `ok: true`, `rendererIsWebGpu: true`, nonblank screenshots, zero console/page errors, and scene-body material/native-instancing checks passing. | Pass |
 | Unsupported WebGPU or failed device creation fails closed to WebGL. | `production-webgpu-request-proof.json` records the no-`navigator.gpu` case as `fallbackReason: "webgpu-unavailable"` and simulated request-device failure as `fallbackReason: "webgpu-device-request-failed"`, both `effective: "webgl"`. | Pass |
