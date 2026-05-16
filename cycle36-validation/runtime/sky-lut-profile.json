@@ -1,0 +1,121 @@
+{
+  "capturedAt": "2026-05-15T01:40:04.854Z",
+  "contract": "konveyor-sky-lut-profile",
+  "source": "HosekWilkieSky.renderless-cpu-lut",
+  "lutShape": {
+    "entries": 256,
+    "channels": 3
+  },
+  "methodology": {
+    "bakeIterations": 80,
+    "sampleBatches": 80,
+    "sampleDirections": 1024,
+    "directions": "deterministic-fibonacci-sphere"
+  },
+  "verdict": {
+    "currentStatus": "not-a-measured-bottleneck",
+    "reason": "The current CPU-visible LUT is small, rebakes only on dirty sky state, and remains the atmosphere handoff authority for fog, sun, water, grass, rocks, and impostors.",
+    "gpuLutCandidate": "only-if-production-profile-shows-lut-cost-or-parity-drift"
+  },
+  "worstCase": {
+    "bakeMaxMs": 1.4724,
+    "sampleBatchMaxMs": 1.0535
+  },
+  "presets": [
+    {
+      "presetName": "pastoral-noon",
+      "label": "Pastoral noon",
+      "bakeIterations": 80,
+      "sampleBatches": 80,
+      "sampleDirections": 1024,
+      "lutEntries": 256,
+      "bake": {
+        "minMs": 0.154,
+        "maxMs": 1.4724,
+        "avgMs": 0.2048
+      },
+      "sampleBatch": {
+        "minMs": 0.0823,
+        "maxMs": 1.0535,
+        "avgMs": 0.1789
+      },
+      "samplePerDirectionAvgUs": 0.1747
+    },
+    {
+      "presetName": "dusk",
+      "label": "Dusk",
+      "bakeIterations": 80,
+      "sampleBatches": 80,
+      "sampleDirections": 1024,
+      "lutEntries": 256,
+      "bake": {
+        "minMs": 0.0815,
+        "maxMs": 0.2526,
+        "avgMs": 0.0921
+      },
+      "sampleBatch": {
+        "minMs": 0.0844,
+        "maxMs": 0.3252,
+        "avgMs": 0.1045
+      },
+      "samplePerDirectionAvgUs": 0.1021
+    },
+    {
+      "presetName": "overcast",
+      "label": "Overcast",
+      "bakeIterations": 80,
+      "sampleBatches": 80,
+      "sampleDirections": 1024,
+      "lutEntries": 256,
+      "bake": {
+        "minMs": 0.0839,
+        "maxMs": 0.2517,
+        "avgMs": 0.0892
+      },
+      "sampleBatch": {
+        "minMs": 0.0845,
+        "maxMs": 0.247,
+        "avgMs": 0.0926
+      },
+      "samplePerDirectionAvgUs": 0.0904
+    },
+    {
+      "presetName": "dawn",
+      "label": "Dawn",
+      "bakeIterations": 80,
+      "sampleBatches": 80,
+      "sampleDirections": 1024,
+      "lutEntries": 256,
+      "bake": {
+        "minMs": 0.082,
+        "maxMs": 0.2446,
+        "avgMs": 0.0916
+      },
+      "sampleBatch": {
+        "minMs": 0.0842,
+        "maxMs": 0.1903,
+        "avgMs": 0.0887
+      },
+      "samplePerDirectionAvgUs": 0.0866
+    },
+    {
+      "presetName": "golden-hour",
+      "label": "Golden hour",
+      "bakeIterations": 80,
+      "sampleBatches": 80,
+      "sampleDirections": 1024,
+      "lutEntries": 256,
+      "bake": {
+        "minMs": 0.0828,
+        "maxMs": 0.2366,
+        "avgMs": 0.0879
+      },
+      "sampleBatch": {
+        "minMs": 0.0841,
+        "maxMs": 0.2132,
+        "avgMs": 0.0892
+      },
+      "samplePerDirectionAvgUs": 0.0871
+    }
+  ]
+}

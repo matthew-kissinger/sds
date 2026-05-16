@@ -479,3 +479,433 @@ The Cycle 35 post-deploy verification ("confirm the first real `game_completed` 
 - No `game_completed` events yet, but that's traffic, not a route bug. GSC reports 3 web search clicks in the same period.
 
 The Cycle 35 carryover is closed.
+
+---
+
+## Konveyor campaign supersedes WebGPU deferral (2026-05-14 · Cycle 36 scoping)
+
+[`docs/konveyor-sds.md`](docs/konveyor-sds.md) is now the campaign doctrine for
+the SDS WebGPU, optimization, and native-shipping push. This supersedes the
+Cycle 24 posture that treated `?renderer=webgpu` as a possible future spike but
+not a committed migration direction.
+
+### Why
+
+SDS has shipped enough surface area that optimization work should no longer be
+treated as incidental polish. The current game is still WebGL-first, and the
+existing perf baseline is not trustworthy enough to guide major renderer work.
+Konveyor makes measurement repair, WebGPU proof, and native runtime proof the
+first-class path before any tree, grass, sheep, or shader rewrite.
+
+### Corrections to the draft doctrine
+
+Native runtime guarantees must be precise:
+
+- Tauri 2 uses platform WebViews: WebView2 on Windows, WebKit on macOS, and
+  WebKitGTK on Linux. It does not bundle one pinned Chromium runtime across all
+  desktop platforms.
+- Electron remains the desktop fallback if SDS needs one bundled Chromium engine
+  across Windows, macOS, and Linux.
+- Capacitor uses WKWebView on iOS and Android WebView / Chrome-backed WebView on
+  Android. It does not pin WKWebView independently of the OS.
+- Safari 26 WebGPU support makes an iOS 26+ target plausible, but SDS still
+  needs WKWebView proof in the actual shell.
+
+### Rule
+
+Konveyor phases run through normal SDS cycle plans. Phase 0 is measurement and
+platform proof, not a renderer rewrite. Do not touch deterministic `shared/**`
+files, sim-baseline fixtures, or Worker migration history for Konveyor unless
+the active cycle explicitly authorizes that file and records the acceptance
+criteria.
+
+---
+
+## Konveyor runs on an experimental branch until objective or hard stop (2026-05-14 · post-foundation)
+
+Cycle 36 completed the foundation pass by documented hard stop: measurement
+repair, validation reconciliation, runtime proof, and a WebGPU hero-scene
+blocker report. Matt then redirected the campaign away from numbered cycle
+boundaries and into a full autonomous run on `exp/konveyor-webgpu-migration`.
+
+### Why
+
+The foundation pass proved that the next real work is not "one more cycle
+plan." SDS needs an experimental migration branch where agents can keep moving
+through ordinary implementation blockers, like the TIJ Konveyor campaign did,
+without repeatedly stopping at phase boundaries. The risk is managed by
+branch isolation, feature flags, validation gates, and durable hard stops rather
+than by keeping the work artificially small.
+
+### Rule
+
+For Konveyor autonomous work:
+
+- Work on `exp/konveyor-webgpu-migration`, not `main`.
+- Use [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md) as
+  the active handoff and [`docs/konveyor-sds.md`](docs/konveyor-sds.md) as the
+  campaign doctrine.
+- Treat [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md) as completed
+  foundation evidence, not the active stopping point.
+- Keep WebGL default until a fallback decision is recorded.
+- Keep WebGPU work diagnostic or feature-flagged until gates pass.
+- Stop only for documented hard stops: frozen-file authorization, unexpected
+  sim-baseline drift, broken measurement with no route around, contradicted
+  platform assumptions, destructive production changes, store/public release
+  decisions, or completion of the full objective.
+
+---
+
+## Native-readiness seam before native-shell dependency (2026-05-14 · Konveyor autonomous branch)
+
+Konveyor now has a code-level native-prep seam without choosing Tauri, Electron,
+or Capacitor yet.
+
+### Why
+
+The native path needs more than docs: native shells change asset base paths,
+service-worker behavior, worker origins, WebSocket origins, telemetry, and
+profiling assumptions. Those seams are useful before a shell dependency lands,
+and they let the autonomous branch compare web and native-shaped builds with
+the same validation language.
+
+### Rule
+
+- `BUILD_TARGET=native npm run build` creates a relative-asset build with
+  service-worker registration disabled.
+- `SDS_WORKER_BASE=<origin>` controls the Worker HTTP and WebSocket origin for
+  packaged builds.
+- `js/runtimeConfig.js` owns Worker API base, Worker WebSocket base,
+  local-runtime detection, and telemetry enablement.
+- `npm run native:check` runs the native build and `tools/native-preflight.mjs`
+  to verify generated bundle posture.
+- Tauri, Electron, and Capacitor dependencies are still deferred until a
+  scoped shell proof step.
+
+---
+
+## Cycle 36 runtime proof defers native shell choice (2026-05-14 · Cycle 36 Phase 3)
+
+[`docs/archive/research/cycle-36-konveyor-runtime-proof.md`](docs/archive/research/cycle-36-konveyor-runtime-proof.md)
+records the current official-source and local-probe evidence for the Konveyor
+runtime assumptions.
+
+### Decision
+
+Native desktop shell selection is explicitly deferred.
+
+Tauri remains a candidate because its Windows WebView2 path can plausibly use a
+modern WebGPU-capable runtime, and it is the lighter shell. Electron remains
+the fallback if SDS needs one pinned Chromium runtime across Windows, macOS,
+and Linux. The repo currently has no Tauri, Electron, or Capacitor dependency,
+and no native shell has booted SDS.
+
+### Evidence
+
+- Installed Chrome 148 on the Windows workstation creates a WebGPU adapter and
+  device with the RTX 3070 D3D11 GPU path.
+- Playwright's bundled Chromium 147 exposes `navigator.gpu` and an adapter, but
+  `requestDevice()` fails with a D3D12 `dxil.dll` load error. Therefore adapter
+  presence is not a sufficient gate.
+- Three r184 exposes `three/webgpu` and `WebGPURenderer`, but Rolling Hills is
+  built on custom GLSL `ShaderMaterial` and `onBeforeCompile` surfaces.
+
+### Rule
+
+WebGL remains the default renderer. WebGPU work stays opt-in and must prove
+adapter plus device creation in the actual runtime. Native packaging
+dependencies should not be added until a later cycle is specifically scoped to
+boot SDS in that shell and measure multiplayer, fullscreen, input, audio,
+visual, latency, and perf behavior there.
+
+---
+
+## WebGPU diagnostic island stays outside the default bundle (2026-05-14 · Konveyor autonomous branch)
+
+SDS now has a minimal WebGPU/TSL diagnostic boot path, but it is intentionally
+not a production renderer path.
+
+### Why
+
+Directly bundling `three/webgpu` and `three/tsl` into the Vite graph pulled
+WebGPU and node-material internals into the default Three chunk, violating the
+existing refactor-baseline bundle ratchet. The diagnostic needs to prove
+renderer/device viability without making every normal WebGL player download the
+WebGPU renderer surface.
+
+### Rule
+
+- `?renderer=webgpu&diagnostic=1` is the only WebGPU boot path.
+- The default SDS runtime still constructs `THREE.WebGLRenderer`.
+- The diagnostic loads copied `three.webgpu.min.js` and `three.core.min.js`
+  vendor modules only after the diagnostic flag is present.
+- `three/webgpu` and `three/tsl` must not be statically imported by production
+  game modules until the active handoff records a bundle and fallback decision.
+- Runtime proof must record both the flagged WebGPU path and the default WebGL
+  path before claiming progress.
+
+---
+
+## Screenshot goldens use deterministic Konveyor validation mode (2026-05-15 · Konveyor autonomous branch)
+
+The 12-cell screenshot matrix now has committed goldens and is allowed to run as
+a hard gate for the WebGPU migration.
+
+### Why
+
+The old screenshot diff either passed an empty matrix or failed noisily from
+ambient randomness: strict `isReady()` checks did not match the perf hook,
+Playwright full-page screenshots depended on browser screenshot behavior, scene
+construction used random grass and rock placement, and live sim/camera movement
+made same-scene captures drift.
+
+### Rule
+
+- `npm run validation:screenshots -- --diff` must find all 12 expected goldens.
+- Captures use `probeRender=1`, `cinematic=1`, `visualGolden=1`, canvas
+  `toDataURL`, paused simulation, seeded gameplay placement, and the
+  fail-closed deterministic Konveyor rock route.
+- Captures remain 1280x720, but SSIM is computed on normalized 320x180 luma so
+  dense grass and alpha-hash shimmer do not dominate scene-level regression
+  detection.
+- `--baseline` rewrites are acceptable only for intentional visual changes with
+  explicit acceptance recorded in the active handoff, a cycle plan, or this log.
+
+---
+
+## Production renderer setup is an explicit WebGL boundary (2026-05-15 · Konveyor autonomous branch)
+
+SDS still boots production through WebGL, but renderer creation and WebGL-only
+setup no longer live as loose constructor code inside `SceneManager`.
+
+### Why
+
+The migration needs a narrow production renderer boundary before any true
+scene-bound WebGPU proof. `SceneManager` still owned renderer construction,
+WebGL capability logging, context-loss handlers, shadow setup, pixel-ratio
+setup, and tonemapping selection inline. That made it too easy to hide
+WebGL-only assumptions while adding WebGPU material islands.
+
+### Rule
+
+- `SceneManager` must keep using the default WebGL renderer until the WebGPU
+  production-scene gates pass.
+- `js/rendering/sceneRendererSetup.js` owns production renderer setup and must
+  guard WebGL-specific context access.
+- `SceneManager` may accept an explicit renderer/configure factory for proof
+  runs, but normal gameplay construction must continue to use the default WebGL
+  setup until the production WebGPU fallback decision is recorded.
+- `SceneManager.rendererSetup` is evidence of renderer posture, not a WebGPU
+  boot claim.
+- `SceneManager` must own async renderer readiness for injected proof renderers;
+  `SceneManager.render()` must support async renderer backends without
+  overlapping in-flight frames, and expose render status for proof artifacts.
+- At this boundary point, a future WebGPU production proof must consume this
+  boundary explicitly and keep plain `?renderer=webgpu` fail-closed until a
+  narrower production gate or fallback decision is recorded.
+- `?renderer=webgpu&diagnostic=1&konveyorSceneManagerProof=1` is allowed to
+  inject `WebGPURenderer` into `SceneManager` for diagnostic proof artifacts.
+  That proof must initialize through `SceneManager.whenRendererReady()`, render
+  through `SceneManager.render()` using the async WebGPU path, and may route
+  production `Atmosphere` sky/cloud/fog constructors
+  plus production `SunBillboard`, `TerrainBuilder.createTerrain()`, and
+  `AnimeWater.createAnimeWater()` construction plus representative
+  `PortalEffect`, `CorralZapEffectPool`, tree/rock GLB
+  material-replacement/native-instancing, `GrassSystem`, and
+  `OptimizedSheepSystem` construction plus a Kiln impostor material/geometry
+  slice through the diagnostic-installed
+  `window.__sdsKonveyor*MaterialFactories` WebGPU supply on the injected
+  `SceneManager` scene. It may add WebGPU-module
+  ambient/directional lights inside the diagnostic harness to bridge the
+  vendored WebGPU Three module split for lit node materials. It does not change
+  the normal production call site, production lighting, or default renderer
+  mode.
+
+---
+
+## Production WebGPU boot scout is guarded shell evidence only (2026-05-15 · Konveyor autonomous branch)
+
+The campaign now needs evidence from the normal `main.js` entry, not only from
+diagnostic scene modules. The first step is a minimal boot-shell scout that can
+construct `SheepDogSimulation` with injected WebGPU `SceneManager` options
+without claiming full gameplay rendering.
+
+### Why
+
+The injected `SceneManager` proof already demonstrates the renderer boundary,
+factory supply, readiness, and async render loop. It still starts from the
+diagnostic harness. Before production scene-body rendering can move, the normal
+entry must prove it can accept a WebGPU renderer option without confusing
+players, changing default boot, or silently treating WebGPU as production-ready.
+
+### Rule
+
+- The production boot scout is allowed only under
+  `?renderer=webgpu&diagnostic=1&konveyorProductionBootScout=1&testNoCanvas=1`.
+- The route must bypass the diagnostic scene boot, construct the normal
+  `SheepDogSimulation` shell with injected `SceneManager` options, wait through
+  `SceneManager.whenRendererReady()`, and record renderer setup/status evidence.
+- `konveyorProductionSceneBody=1` may extend that guarded route to install the
+  centralized WebGPU factory globals, run one normal scene-body init, and render
+  one proof frame. It must remain under `testNoCanvas=1` until the normal
+  animation/gameplay loop has its own gate.
+- `konveyorNativeInstancing=1` may extend that scene-body proof to replace the
+  guarded tree/rock placement path with native `THREE.InstancedMesh`. The proof
+  must record tree/rock instance counts and an empty WebGL-only suppression list
+  before claiming the `InstancedMesh2` blocker is cleared for that guarded route.
+- `konveyorProductionLoopScout=1` may extend the same guarded route to advance a
+  controlled async WebGPU scene-loop scout after scene-body init. It should
+  drive `SheepDogSimulation.runFrame(deltaTime)` rather than duplicating the
+  normal frame body. It must record frame count, render status, grass time
+  advancement, performance-monitor frame count, shared-frame-step evidence,
+  frame errors, console/page errors, and any warmup/per-frame timings. It is
+  not a substitute for the normal browser `requestAnimationFrame` gameplay path
+  or a perf threshold gate.
+- `konveyorProductionRafScout=1` may extend the same guarded route to advance a
+  bounded `requestAnimationFrame` scout through `SheepDogSimulation.runFrame`.
+  It must record scheduler identity, monotonic timestamps, delta samples, shared
+  frame-step evidence, render status, grass time advancement,
+  performance-monitor frame count, frame errors, and console/page errors. It is
+  still not normal gameplay parity while `testNoCanvas=1` owns the route.
+- `konveyorProductionGameplayScout=1` may extend the guarded route without
+  `testNoCanvas=1` only while `diagnostic=1` and
+  `konveyorProductionBootScout=1` are present. It must use the normal
+  constructor `init()` plus `animate()` path, autostart solo gameplay, record
+  initialized/menu/gameplay state, dog and sheep presence, normal animation-loop
+  frame advancement, grass advancement, async render status, a nonblank canvas
+  screenshot, and console/page/init errors.
+- Any WebGL-only production objects suppressed to make a proof render must be
+  recorded in the artifact.
+- This scout is not full production WebGPU boot, not gameplay parity, not
+  full-scene tree/rock LOD parity, and not a fallback decision.
+- At this decision point, non-diagnostic `?renderer=webgpu` must continue to
+  fail closed to WebGL until the production WebGPU scene gates and fallback
+  decision are recorded. Later decisions may add a narrower explicit production
+  gate without changing default WebGL.
+
+## Browser probe hygiene is part of render evidence (2026-05-15 · Konveyor autonomous branch)
+
+Browser validation is not neutral if it leaves tabs, GPU contexts, animation
+timers, service workers, or local servers alive after a probe. Those leftovers
+can change perf profiles, screenshot comparisons, metrics, and WebGL/WebGPU
+benchmark results.
+
+### Rule
+
+- Every browser probe must close Playwright pages, contexts, browsers, and any
+  manually opened localhost tab before recording final evidence.
+- Every probe-owned Vite dev or preview listener must be stopped after the
+  artifact is captured.
+- Agent-launched Vite dev servers must set `SDS_SUPPRESS_BROWSER_OPEN=1` so the
+  repo's human-friendly `server.open` setting does not create real Chrome tabs
+  during automation.
+
+---
+
+## Guarded WebGPU default-readiness uses semantic scene parity, not full-frame SSIM alone (2026-05-16 · Konveyor autonomous branch)
+
+The guarded production WebGPU route now has a WebGL-vs-WebGPU gameplay parity
+artifact across Field, Rolling Hills, and Open Country. The proof still keeps
+WebGL as the default and keeps plain `?renderer=webgpu` fail-closed unless an
+explicit production gate is present.
+
+### Why
+
+Full-frame SSIM is useful as a warning light, but it overweights high-frequency
+alpha-hashed foliage and grass differences that are structurally different
+between WebGL and WebGPU. The renderer migration needs a gate that catches
+scene-level color, luma, terrain, camera, and placement regressions without
+blocking on expected stochastic foliage differences.
+
+### Rule
+
+- `tools/konveyor-production-gameplay-parity-proof.mjs --enforce-default-parity`
+  may mark the guarded route default-ready only when capture/runtime gates pass
+  and semantic regions pass for upper-sky chroma, horizon chroma, ground chroma,
+  and ground luma.
+- Full-frame SSIM remains recorded as `advisoryChecks.fullSsim`; a miss there is
+  polish evidence, not by itself a default-readiness blocker.
+- The proof must continue to record renderer identity, WebGL default status,
+  guarded WebGPU status, console/page errors, camera terrain clearance, and
+  sheep placement against terrain/water.
+- Scene-rebuild frame stalls must not advance gameplay by the stall duration.
+  The client frame step caps `deltaTime` at 0.05s, and in-process scene rebuilds
+  reset `lastTime` before re-enabling gameplay updates.
+- `OptimizedSheepSystem` must receive the active scene heightfield before first
+  instance matrices are written, and it must use terrain surface height for
+  reset, update, force-update, and corral ascent transforms.
+
+---
+
+## Plain WebGPU request route may use production WebGPU (2026-05-16 · Konveyor autonomous branch)
+
+The default-ready parity proof is now backed by an explicit non-diagnostic
+production WebGPU request proof across all shipped scenes. After the request
+and perf proofs passed, plain `?renderer=webgpu` is allowed to enter the
+production WebGPU route on browsers exposing `navigator.gpu`, while default
+URLs remain WebGL.
+
+### Rule
+
+- Default URLs remain WebGL.
+- Plain `?renderer=webgpu` without `diagnostic=1` may construct the normal
+  `SheepDogSimulation` shell with an injected `WebGPURenderer`, centralized
+  Konveyor WebGPU factory globals, the WebGPU lighting bridge, native
+  `THREE.InstancedMesh` tree/rock placement, and the production terrain, grass,
+  sheep, water, and tree/rock material routes.
+- If `navigator.gpu` is absent for a plain WebGPU request, the route must fail
+  closed to WebGL with `fallbackReason: "webgpu-unavailable"`.
+- If `navigator.gpu` is present but adapter/device creation fails, the route
+  must fail closed to WebGL before constructing the WebGPU scene, with the
+  device-preflight failure recorded.
+- `konveyorProduction=1` remains a compatible marker for older proof URLs, but
+  it is no longer required.
+- `tools/konveyor-production-webgpu-request-proof.mjs` must pass across Field,
+  Rolling Hills, and Open Country before treating that route as current truth.
+  The proof must record `effective: "webgpu-production"`, no fallback,
+  nonblank screenshots, WebGPU renderer identity, material/native-instancing
+  gates, no console/page errors, default URL WebGL preservation, and a
+  no-`navigator.gpu` fallback case plus a device-request failure fallback case.
+
+---
+
+## Explicit production WebGPU perf must be post-warmup and threshold-gated (2026-05-16 · Konveyor autonomous branch)
+
+The explicit production WebGPU request route now has a separate perf proof. The
+request proof validates renderer identity, route gating, materials, instancing,
+screenshots, and clean console/page state; the perf proof validates sustained
+post-warmup frame timing.
+
+### Rule
+
+- `tools/konveyor-production-webgpu-perf-proof.mjs` must run against the built
+  preview route `?renderer=webgpu&autostart=1&mode=classic`
+  for Field, Rolling Hills, and Open Country.
+- The proof must warm each scene before sampling, reset `window.__perfHarness`
+  so startup/shader compilation does not pollute the rolling frame-time window,
+  then sample the steady-state window.
+- The local desktop production WebGPU perf gate is average <= 22 ms,
+  p95 <= 30 ms, and at least 240 samples for each shipped scene.
+- A passing route still does not make WebGPU the default by itself. Default
+  enablement remains gated by the broader Konveyor fallback and release
+  decision.
+
+---
+
+## WebGPU default policy needs real renderer-resolution telemetry (2026-05-16 · Konveyor autonomous branch)
+
+Current browser support tables are not enough to choose the public web default.
+SDS needs its own route-resolution data because `navigator.gpu` can be present
+while device creation fails, and because WebGPU availability still varies by
+browser, OS, GPU family, and WebView shell.
+
+### Rule
+
+- Production boot may emit `renderer_mode_resolved` through the existing
+  `/api/event` telemetry route.
+- The payload must stay low-cardinality and primitive-only: requested renderer,
+  effective renderer, fallback reason, WebGPU API presence, production WebGPU
+  success, device-preflight success, and scene id.
+- Do not flip `sheepdogsim.com` default URLs to WebGPU-first until the renderer
+  telemetry, Cloudflare Web Analytics, and cross-browser/WebView proofs support
+  the policy.

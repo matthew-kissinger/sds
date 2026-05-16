@@ -190,7 +190,9 @@ export class GameState {
         // Enable extreme boid optimization for extreme/insane/chaos mode or sandbox with useExtremeBoids flag
         const useExtremeBoids = isExtremeBoidMode(this.singlePlayerMode) || this.useExtremeBoids === true;
 
-        this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig, useExtremeBoids);
+        this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig, useExtremeBoids, {
+            heightfield: this.heightfield,
+        });
         if (this.heightfield) {
             this.optimizedSheepSystem.heightfield = this.heightfield;
         }

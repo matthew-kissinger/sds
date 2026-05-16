@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CameraController } from './CameraController.js';
 import { detectTier } from './HardwareTier.js';
 import { initGlProbe, captureContext, captureFramebufferSample, captureWaterSample } from './diagnostics/glProbe.js';
+import { configureProductionRenderer, createProductionWebGLRenderer } from './rendering/sceneRendererSetup.js';
 
 /**
  * SceneManager - Three.js scene/lighting/renderer lifecycle plus competitive
@@ -10,7 +11,7 @@ import { initGlProbe, captureContext, captureFramebufferSample, captureWaterSamp
  * etc.) so existing callers don't need to know about the split.
  */
 export class SceneManager {
-    constructor() {
+    constructor(options = {}) {
         this.scene = new THREE.Scene();
         
         // Mobile-optimized camera parameters to prevent clipping
@@ -32,7 +33,6 @@ export class SceneManager {
             far
         );
         
-        // iOS-safe WebGL renderer settings
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
         // Cycle 10 Phase 3: opt-in cinematic mode. ?cinematic=1 enables
@@ -43,29 +43,29 @@ export class SceneManager {
         const isCinematic = typeof location !== 'undefined' &&
             new URLSearchParams(location.search).get('cinematic') === '1';
 
-        this.renderer = new THREE.WebGLRenderer({
-            antialias: !isIOS, // Disable antialiasing on iOS (known issues)
-            powerPreference: "high-performance",
-            stencil: false,
-            alpha: false, // Opaque canvas for better performance
-            preserveDrawingBuffer: isCinematic,
-            failIfMajorPerformanceCaveat: false // Don't fail on software rendering
+        const createRenderer = options.createRenderer ?? createProductionWebGLRenderer;
+        const configureRenderer = options.configureRenderer ?? configureProductionRenderer;
+        this.renderer = createRenderer({ isIOS, isCinematic });
+        this.renderStatus = {
+            mode: typeof this.renderer.renderAsync === 'function' ? 'async' : 'sync',
+            inFlight: false,
+            rendererReady: typeof this.renderer.renderAsync !== 'function',
+            rendererReadyError: null,
+            lastError: null,
+        };
+        this._renderAsyncInFlight = null;
+
+        const toneOverride = (typeof location !== 'undefined' &&
+            new URLSearchParams(location.search).get('tonemap')) || null;
+        this.rendererSetup = configureRenderer(this.renderer, {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            isMobile: this.isMobile,
+            devicePixelRatio: window.devicePixelRatio,
+            toneOverride,
+            platform: navigator.platform,
+            userAgent: navigator.userAgent,
         });
-
-        // Enable shader error checking for debugging
-        this.renderer.debug.checkShaderErrors = true;
-
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-
-        // Log WebGL info for debugging
-        const gl = this.renderer.getContext();
-        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-        if (debugInfo) {
-            console.log('[WEBGL] Vendor:', gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
-            console.log('[WEBGL] Renderer:', gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
-        }
-        console.log('[WEBGL] Version:', gl.getParameter(gl.VERSION));
-        console.log('[WEBGL] Max Vertex Uniforms:', gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS));
 
         // Cycle 23 Phase D1: classify hardware tier once per session.
         // Drives per-tier presets in GrassSystem (clumps, blade count, fade)
@@ -77,76 +77,10 @@ export class SceneManager {
             debugForceTier: ['low','med','high'].includes(debugForceTier) ? debugForceTier : undefined,
         });
         console.log(`[TIER] Hardware tier detected: ${this.tier}${debugForceTier ? ' (forced via ?tier=)' : ''}`);
-
-        console.log('[WEBGL] Max Fragment Uniforms:', gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
-        console.log('[WEBGL] Max Texture Size:', gl.getParameter(gl.MAX_TEXTURE_SIZE));
         console.log('[WEBGL] isIOS:', isIOS);
-
-        // Handle WebGL context loss
-        this.renderer.domElement.addEventListener('webglcontextlost', (event) => {
-            console.error('[WEBGL] Context lost!', event);
-            event.preventDefault();
-        });
-
-        this.renderer.domElement.addEventListener('webglcontextrestored', () => {
-            console.log('[WEBGL] Context restored');
-        });
-
-        // Disable shadows on mobile for performance
-        if (this.isMobile) {
-            this.renderer.shadowMap.enabled = false;
-            console.log('[PERF] Shadows disabled on mobile for performance');
-        } else {
-            this.renderer.shadowMap.enabled = true;
-            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        }
-        
-        // Performance optimizations
-        // Force devicePixelRatio to 1 on mobile, otherwise limit to 2
-        if (this.isMobile) {
-            this.renderer.setPixelRatio(1);
-            console.log('[PERF] Mobile detected: forcing devicePixelRatio to 1');
-        } else {
-            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        }
-        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-        // The Hosek-Wilkie sky shader (and its preset exposure values 0.18-0.22)
-        // assumes the renderer is tonemapping HDR radiance down. Without
-        // tonemapping the shader output ends up near-black. ACES Filmic is the
-        // de-facto-standard pick; it brightens midtones and rolls off highlights.
-        //
-        // Apple caveat: ACES pushes cool blues (sky-blue fog 0x87CEEB at distance)
-        // toward white on Apple Metal-ANGLE + extended-sRGB display output, so
-        // the foggy horizon reads as a near-white wash. v2.0.3 covered Mac;
-        // v2.0.4 extends to iPhone/iPad after Matt observed the same wash on
-        // iPhone water (foam + sun-glint terms, same Metal-ANGLE pipeline).
-        // Neutral (Khronos PBR Neutral, r162+) preserves color identity through
-        // the same dynamic range, fixing the wash without affecting non-Apple
-        // platforms. Override with ?tonemap=aces|neutral|linear|none for A/B.
-        const toneOverride = (typeof location !== 'undefined' &&
-            new URLSearchParams(location.search).get('tonemap')) || null;
-        const isApplePlatform = typeof navigator !== 'undefined' &&
-            /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '');
-        let chosenToneMapping;
-        if (toneOverride === 'aces') chosenToneMapping = THREE.ACESFilmicToneMapping;
-        else if (toneOverride === 'neutral') chosenToneMapping = THREE.NeutralToneMapping;
-        else if (toneOverride === 'linear') chosenToneMapping = THREE.LinearToneMapping;
-        else if (toneOverride === 'none') chosenToneMapping = THREE.NoToneMapping;
-        else chosenToneMapping = isApplePlatform ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
-        this.renderer.toneMapping = chosenToneMapping;
-        this.renderer.toneMappingExposure = 1.0;
-        const toneName = chosenToneMapping === THREE.NeutralToneMapping ? 'Neutral'
-            : chosenToneMapping === THREE.ACESFilmicToneMapping ? 'ACESFilmic'
-            : chosenToneMapping === THREE.LinearToneMapping ? 'Linear'
-            : 'None';
-        console.log(`[TONEMAP] ${isApplePlatform ? 'Apple' : 'non-Apple'} platform — ${toneName}${toneOverride ? ` (override=${toneOverride})` : ''}`);
-
-        // Enable frustum culling and other optimizations
-        this.renderer.sortObjects = true;
-        this.renderer.autoClear = true;
         
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+        this.rendererReady = this.createRendererReadyPromise(options.rendererReady);
 
         // Cycle 9 Phase 4: capture WebGL context info into window.__sdsDiag
         // when ?debug=gl is set. macOS Safari smoke harvests this.
@@ -355,8 +289,76 @@ export class SceneManager {
         this.waterBundle = null;
     }
 
+    createRendererReadyPromise(rendererReady = null) {
+        if (rendererReady) {
+            return Promise.resolve(rendererReady)
+                .then(() => {
+                    this.renderStatus.rendererReady = true;
+                    return true;
+                })
+                .catch((err) => {
+                    this.renderStatus.rendererReady = false;
+                    this.renderStatus.rendererReadyError = String(err?.message || err);
+                    console.error('[RENDER] renderer initialization failed:', err);
+                    return false;
+                });
+        }
+
+        if (this.renderStatus.mode !== 'async' || typeof this.renderer.init !== 'function') {
+            this.renderStatus.rendererReady = true;
+            return Promise.resolve(true);
+        }
+
+        return this.renderer.init()
+            .then(() => {
+                this.renderStatus.rendererReady = true;
+                return true;
+            })
+            .catch((err) => {
+                this.renderStatus.rendererReady = false;
+                this.renderStatus.rendererReadyError = String(err?.message || err);
+                console.error('[RENDER] renderer initialization failed:', err);
+                return false;
+            });
+    }
+
+    whenRendererReady() {
+        return this.rendererReady ?? Promise.resolve(true);
+    }
+
+    async renderAsyncFrame() {
+        const ready = await this.whenRendererReady();
+        if (!ready) return false;
+        try {
+            await this.renderer.renderAsync(this.scene, this.camera);
+            this.renderStatus.lastError = null;
+            return true;
+        } catch (err) {
+            this.renderStatus.lastError = String(err?.message || err);
+            console.error('[RENDER] async render failed:', err);
+            return false;
+        }
+    }
+
     render() {
+        if (typeof this.renderer.renderAsync === 'function') {
+            if (this._renderAsyncInFlight) return this._renderAsyncInFlight;
+            this.renderStatus.inFlight = true;
+            this._renderAsyncInFlight = this.renderAsyncFrame()
+                .finally(() => {
+                    this.renderStatus.inFlight = false;
+                    this._renderAsyncInFlight = null;
+                });
+            return this._renderAsyncInFlight;
+        }
+
         this.renderer.render(this.scene, this.camera);
+        this.renderStatus.lastError = null;
+        return true;
+    }
+
+    getRenderStatus() {
+        return { ...this.renderStatus };
     }
 
     onWindowResize() {

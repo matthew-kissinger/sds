@@ -172,7 +172,7 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }) {
         const newSettings = { ...settings, [key]: value };
         onSettingsChange(newSettings);
         saveSettings(newSettings);
-        applySettingsToGame(newSettings);
+        applySettingsToGame(newSettings, { applyRenderer: key === 'experimentalWebGpu' });
     };
 
     const handlePresetChange = (preset) => {
@@ -282,6 +282,28 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }) {
                     style: presetButtonStyle(settings.performanceMode === 'quality', '#a855f7')
                 }, t('settings.qualityOption'))
             ])
+        ]),
+
+        createElement('div', { key: 'renderer', style: rowStyle }, [
+            createElement('div', {
+                key: 'label',
+                style: { display: 'flex', flexDirection: 'column', gap: '0.15rem', marginRight: '0.75rem' }
+            }, [
+                createElement('span', { key: 'title', style: labelStyle }, t('settings.experimentalWebGpu')),
+                createElement('span', {
+                    key: 'desc',
+                    style: {
+                        color: 'rgba(255,255,255,0.55)',
+                        fontSize: isCompact ? '0.68rem' : '0.72rem'
+                    }
+                }, t('settings.experimentalWebGpuDesc'))
+            ]),
+            createElement(Toggle, {
+                key: 'toggle',
+                value: settings.experimentalWebGpu !== false,
+                onChange: (v) => handleChange('experimentalWebGpu', v),
+                color: '#0ea5e9'
+            })
         ]),
 
         // Audio toggle

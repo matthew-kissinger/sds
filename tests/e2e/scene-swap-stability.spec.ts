@@ -31,9 +31,9 @@ async function seedIdentity(page: Page) {
   });
 }
 
-async function bootSolo(page: Page) {
+async function bootSolo(page: Page, scene = 'field') {
   await seedIdentity(page);
-  await page.goto('/?scene=field', { waitUntil: 'domcontentloaded' });
+  await page.goto(`/?scene=${scene}`, { waitUntil: 'domcontentloaded' });
 
   // Wait for the start screen + the swap harness to be installed
   // (window.__sdsSwapTo is set inside _installStressTestHarness, which
@@ -101,7 +101,8 @@ test.describe('Cycle 18 Phase 2 — scene-swap + mode-restart hygiene @local-onl
       }, target);
 
       expect(probeBefore.scene, `landed on ${target}`).toBe(target);
-      expect(probeBefore.hasHeightfield, `heightfield loaded for ${target}`).toBe(true);
+      expect(probeBefore.hasHeightfield, `heightfield loaded for ${target}`)
+        .toBe(target !== 'field');
       expect(probeBefore.grassHeightfieldMatches,
         `grass heightfield ref must match current heightfield post-swap to ${target}`).toBe(true);
     }
@@ -139,5 +140,30 @@ test.describe('Cycle 18 Phase 2 — scene-swap + mode-restart hygiene @local-onl
     expect(ocProbe.sheep.outOfBounds,
       `at most a handful of OC sheep should leak past the island boundary; got ${ocProbe.sheep.outOfBounds}/${ocProbe.sheep.count}`)
       .toBeLessThanOrEqual(5);
+  });
+
+  test('open country objective event opens portal and hides roundup decal @local-only', async ({ page }) => {
+    await bootSolo(page, 'open-country');
+
+    const initialProbe = await page.evaluate(() => (window as any).__sdsSwapProbe());
+    expect(initialProbe.scene).toBe('open-country');
+    expect(initialProbe.objectiveVisual?.stage).toBe('roundup');
+    expect(initialProbe.objectiveVisual?.portal?.present).toBe(true);
+    expect(initialProbe.objectiveVisual?.portal?.targetIntensity).toBe(0);
+    expect(initialProbe.objectiveVisual?.portal?.ringInScene).toBe(true);
+    expect(initialProbe.objectiveVisual?.portal?.padInScene).toBe(true);
+    expect(initialProbe.objectiveVisual?.portal?.particlesInScene).toBe(true);
+    expect(initialProbe.objectiveVisual?.roundupZoneDecal?.visible).toBe(true);
+    expect(initialProbe.objectiveVisual?.roundupZoneDecal?.inScene).toBe(true);
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('objective-stage-changed', { detail: { stage: 'drive' } }));
+    });
+
+    await expect(async () => {
+      const probe = await page.evaluate(() => (window as any).__sdsSwapProbe());
+      expect(probe.objectiveVisual?.portal?.targetIntensity).toBe(1);
+      expect(probe.objectiveVisual?.roundupZoneDecal?.visible).toBe(false);
+    }).toPass({ timeout: 5_000 });
   });
 });

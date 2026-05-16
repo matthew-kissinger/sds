@@ -1,0 +1,63 @@
+{
+  "capturedAt": "2026-05-16T06:36:27.879Z",
+  "target": "native",
+  "dist": "dist",
+  "mainBundle": "dist\\assets\\main-BLaB5Srk.js",
+  "ok": true,
+  "checks": [
+    {
+      "ok": true,
+      "message": "index.html has native build target injected",
+      "details": {
+        "target": "native"
+      }
+    },
+    {
+      "ok": true,
+      "message": "index.html has no unreplaced build-target token",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "native build does not emit sw.js",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "service worker registration is gated by build target",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "index.html has no root-relative asset URLs",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "about.html has no root-relative asset URLs",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "index.html emits relative asset URLs for native shells",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "about.html emits relative asset URLs for native shells",
+      "details": null
+    },
+    {
+      "ok": true,
+      "message": "main bundle contains configured worker base",
+      "details": {
+        "expectedWorkerBase": "https://sds-worker.matt-m-kissinger.workers.dev"
+      }
+    },
+    {
+      "ok": true,
+      "message": "main bundle includes runtime network configuration",
+      "details": null
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import { FieldConfig, GATE_DEFAULTS } from './FieldConfig.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
+import { createKonveyorSheepMaterial } from './konveyorSheepMaterialAdapter.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
 
 // Cycle 6 Phase 2 — sheep obstacle avoidance.
@@ -54,13 +55,17 @@ export async function preloadSheepShaders() {
  */
 
 export class OptimizedSheepSystem {
-    constructor(scene, sheepCount = 200, spawnConfig = null, useExtremeBoids = false) {
+    constructor(scene, sheepCount = 200, spawnConfig = null, useExtremeBoids = false, opts = {}) {
         this.scene = scene;
         this.sheepCount = sheepCount;
         this.sheep = [];
         this.audioManager = null;
         /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
-        this.heightfield = null;
+        this.heightfield = opts.heightfield ?? null;
+        this.konveyorSheepSearch = opts.search;
+        this.konveyorSheepFactories = opts.konveyorSheepFactories;
+        this.konveyorSheepMaterialSummary = null;
+        this.konveyorSheepMaterialControls = null;
 
         // Extreme boids optimization flag
         this.useExtremeBoids = useExtremeBoids;
@@ -252,21 +257,69 @@ export class OptimizedSheepSystem {
         const vertexShader = sheepVertexShader || this.getInlineVertexShader();
         const fragmentShader = sheepFragmentShader || this.getInlineFragmentShader();
 
-        this.material = new THREE.ShaderMaterial({
+        const uniforms = {
+            time: { value: 0 },
+            globalAnimSpeed: { value: 1.0 },
+            // Synced to scene.fog every frame in update() so sheep fade
+            // to the same horizon color as the terrain. Initial values
+            // are placeholders — Atmosphere overwrites them per-frame.
+            fogColor: { value: new THREE.Color(0xcccccc) },
+            fogDensity: { value: 0.0006 }
+        };
+        const createDefaultMaterial = () => new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
-            uniforms: {
-                time: { value: 0 },
-                globalAnimSpeed: { value: 1.0 },
-                // Synced to scene.fog every frame in update() so sheep fade
-                // to the same horizon color as the terrain. Initial values
-                // are placeholders — Atmosphere overwrites them per-frame.
-                fogColor: { value: new THREE.Color(0xcccccc) },
-                fogDensity: { value: 0.0006 }
-            },
+            uniforms,
             vertexColors: true,
             fog: false // We handle fog manually in shader (synced to scene.fog)
         });
+        const materialResult = createKonveyorSheepMaterial('sheep-wool', 'createSheepMaterial', {
+            createDefaultMaterial,
+            search: this.konveyorSheepSearch,
+            factories: this.konveyorSheepFactories,
+            context: {
+                sheepCount: this.sheepCount,
+                vertexShader,
+                fragmentShader,
+                uniforms,
+                colors: {
+                    body: new THREE.Color(0xffffff),
+                    face: new THREE.Color(0.22, 0.20, 0.18),
+                    hoof: new THREE.Color(0.16, 0.16, 0.16),
+                },
+                lighting: {
+                    direction: new THREE.Vector3(0.3, 1.0, 0.5),
+                    rimColor: new THREE.Color(1.0, 1.0, 1.0),
+                    sssColor: new THREE.Color(1.0, 1.0, 0.98),
+                },
+                wool: {
+                    noiseScale: 0.62,
+                    displacementStrength: 0.045,
+                    breathingStrength: 0.012,
+                },
+                fog: {
+                    color: uniforms.fogColor.value.clone(),
+                    near: 18,
+                    far: 92,
+                },
+                material: {
+                    vertexColors: true,
+                    fog: false,
+                },
+                geometry: {
+                    vertexCount: this.mergedGeometry.attributes.position.count,
+                    triangleCount: geometryTriangleCount(this.mergedGeometry),
+                    vertexAttributes: Object.keys(this.mergedGeometry.attributes),
+                    instanceAttributes: ['instanceData', 'instanceAnimation'],
+                },
+            },
+        });
+        this.material = materialResult.material;
+        this.material.userData = this.material.userData ?? {};
+        this.material.userData.konveyorSheepMaterialControls = materialResult.controls;
+        this.material.userData.konveyorSheepMaterialSummary = materialResult.summary;
+        this.konveyorSheepMaterialSummary = materialResult.summary;
+        this.konveyorSheepMaterialControls = materialResult.controls;
     }
     
     /**
@@ -395,7 +448,7 @@ export class OptimizedSheepSystem {
             this.sheep.push(sheep);
 
             // Set initial transform
-            const initY = this.heightfield ? this.heightfield.sample(x, z) : 0;
+            const initY = this._surfaceY(x, z);
             dummy.position.set(x, initY, z);
             dummy.rotation.y = Math.random() * Math.PI * 2;
             dummy.updateMatrix();
@@ -533,22 +586,31 @@ export class OptimizedSheepSystem {
         const dummy = new THREE.Object3D();
         dummy.rotation.order = 'YXZ';
 
-        // Update time uniform
-        this.material.uniforms.time.value += deltaTime;
-
-        // Sync fog to scene.fog so distant sheep fade to the same horizon
-        // color as the terrain (Atmosphere updates scene.fog.color per
-        // frame from the sky's horizon). Supports FogExp2 (current) and
-        // falls back gracefully for legacy linear THREE.Fog.
         const sceneFog = this.scene && this.scene.fog;
-        if (sceneFog) {
-            this.material.uniforms.fogColor.value.copy(sceneFog.color);
-            if (sceneFog.isFogExp2) {
-                this.material.uniforms.fogDensity.value = sceneFog.density;
-            } else if (sceneFog.isFog) {
-                // Approximate linear fog as an FogExp2 density that hits
-                // ~95% opacity at `far`. exp(-d*d*far*far)=0.05 → d≈sqrt(3)/far.
-                this.material.uniforms.fogDensity.value = 1.732 / Math.max(1, sceneFog.far);
+        if (this.konveyorSheepMaterialControls?.update) {
+            this.konveyorSheepMaterialControls.update({
+                deltaTime,
+                sceneFog,
+                material: this.material,
+            });
+        } else if (this.material?.uniforms) {
+            if (this.material.uniforms.time) {
+                this.material.uniforms.time.value += deltaTime;
+            }
+
+            // Sync fog to scene.fog so distant sheep fade to the same horizon
+            // color as the terrain (Atmosphere updates scene.fog.color per
+            // frame from the sky's horizon). Supports FogExp2 (current) and
+            // falls back gracefully for legacy linear THREE.Fog.
+            if (sceneFog) {
+                this.material.uniforms.fogColor?.value.copy(sceneFog.color);
+                if (sceneFog.isFogExp2 && this.material.uniforms.fogDensity) {
+                    this.material.uniforms.fogDensity.value = sceneFog.density;
+                } else if (sceneFog.isFog && this.material.uniforms.fogDensity) {
+                    // Approximate linear fog as an FogExp2 density that hits
+                    // ~95% opacity at `far`. exp(-d*d*far*far)=0.05 → d≈sqrt(3)/far.
+                    this.material.uniforms.fogDensity.value = 1.732 / Math.max(1, sceneFog.far);
+                }
             }
         }
 
@@ -662,7 +724,7 @@ export class OptimizedSheepSystem {
                 const easedT = t * t * (3 - 2 * t); // smoothstep — symmetric in/out
                 const sx = sheep.ascendStartX ?? sheep.position.x;
                 const sz = sheep.ascendStartZ ?? sheep.position.z;
-                const baseY = this.heightfield ? this.heightfield.sample(sx, sz) : 0;
+                const baseY = this._surfaceY(sx, sz);
                 const ascendY = baseY + 0.5 + easedT * ASCEND_HEIGHT;
                 dummy.position.set(sx, ascendY, sz);
                 dummy.rotation.set(0, 0, 0);
@@ -689,7 +751,7 @@ export class OptimizedSheepSystem {
             }
 
             // Update transform matrix using interpolated render position for smooth movement
-            const sheepY = this.heightfield ? this.heightfield.surfaceY(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
+            const sheepY = this._surfaceY(sheep.renderPosition.x, sheep.renderPosition.z);
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
             const sheepYaw = -sheep.renderFacingDirection + Math.PI / 2;
             dummy.rotation.y = sheepYaw;
@@ -750,7 +812,7 @@ export class OptimizedSheepSystem {
             sheep.renderFacingDirection = sheep.facingDirection;
             
             // Update transform matrix
-            const sheepY = this.heightfield ? this.heightfield.surfaceY(sheep.renderPosition.x, sheep.renderPosition.z) : 0;
+            const sheepY = this._surfaceY(sheep.renderPosition.x, sheep.renderPosition.z);
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
             const sheepYaw = -sheep.renderFacingDirection + Math.PI / 2;
             dummy.rotation.y = sheepYaw;
@@ -946,7 +1008,7 @@ export class OptimizedSheepSystem {
             sheep.renderFacingDirection = sheep.facingDirection;
             
             // Update transform matrix
-            const respawnY = this.heightfield ? this.heightfield.sample(x, z) : 0;
+            const respawnY = this._surfaceY(x, z);
             dummy.position.set(x, respawnY, z);
             dummy.rotation.y = sheep.facingDirection;
             dummy.scale.set(1, 1, 1);
@@ -958,6 +1020,17 @@ export class OptimizedSheepSystem {
         }
         
         this.instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    _surfaceY(x, z) {
+        if (!this.heightfield) return 0;
+        if (typeof this.heightfield.surfaceY === 'function') {
+            return this.heightfield.surfaceY(x, z);
+        }
+        if (typeof this.heightfield.sample === 'function') {
+            return this.heightfield.sample(x, z);
+        }
+        return 0;
     }
 
     /**
@@ -984,6 +1057,7 @@ export class OptimizedSheepSystem {
             this.mergedGeometry = null;
         }
         if (this.material) {
+            this.konveyorSheepMaterialControls?.dispose?.();
             if (Array.isArray(this.material)) {
                 this.material.forEach(m => m?.dispose?.());
             } else {

@@ -1,0 +1,227 @@
+{
+  "capturedAt": "2026-05-15T06:00:39.858Z",
+  "contract": "konveyor-rock-placement-flag-proof",
+  "search": "?renderer=webgpu&konveyorRocks=1",
+  "ok": true,
+  "scenes": [
+    {
+      "sceneId": "field",
+      "sceneName": "Home Field",
+      "summary": {
+        "kind": "rock-placement-rng",
+        "applied": true,
+        "reason": null,
+        "sceneId": "field",
+        "sceneSeed": 0,
+        "seed": 1383031659,
+        "seedOffset": 1383031659,
+        "rng": "mulberry32(sceneSeed + Rock)"
+      },
+      "ok": true,
+      "hasRocks": true,
+      "totalRocks": 334,
+      "rockTypes": [
+        {
+          "type": "rock1",
+          "count": 176
+        },
+        {
+          "type": "rock2",
+          "count": 89
+        },
+        {
+          "type": "rock3",
+          "count": 69
+        }
+      ],
+      "placementsStable": true,
+      "rockPositionsStable": true,
+      "samples": [
+        {
+          "sourceIndex": 0,
+          "type": "rock1",
+          "x": -181.3546,
+          "y": -0.506,
+          "z": -299.499,
+          "scale": 13.1155,
+          "rotationY": 1.0874,
+          "colliderRadius": 7.2135,
+          "isObstacle": true
+        },
+        {
+          "sourceIndex": 1,
+          "type": "rock1",
+          "x": -192.8845,
+          "y": -0.6593,
+          "z": -309.6516,
+          "scale": 12.9105,
+          "rotationY": 1.6928,
+          "colliderRadius": 7.1007,
+          "isObstacle": true
+        },
+        {
+          "sourceIndex": 2,
+          "type": "rock1",
+          "x": -183.5053,
+          "y": -0.8026,
+          "z": -317.5161,
+          "scale": 13.7489,
+          "rotationY": 0.3802,
+          "colliderRadius": 7.5619,
+          "isObstacle": true
+        },
+        {
+          "sourceIndex": 3,
+          "type": "rock1",
+          "x": -188.2329,
+          "y": -0.7679,
+          "z": -326.9243,
+          "scale": 15.4807,
+          "rotationY": 0.5385,
+          "colliderRadius": 8.5144,
+          "isObstacle": true
+        },
+        {
+          "sourceIndex": 4,
+          "type": "rock1",
+          "x": -188.235,
+          "y": -0.5093,
+          "z": -335.8154,
+          "scale": 11.3262,
+          "rotationY": 5.8244,
+          "colliderRadius": 6.2294,
+          "isObstacle": true
+        },
+        {
+          "sourceIndex": 5,
+          "type": "rock1",
+          "x": -194.0573,
+          "y": -0.6912,
+          "z": -345.3435,
+          "scale": 21.2985,
+          "rotationY": 4.0097,
+          "colliderRadius": 11.7142,
+          "isObstacle": true
+        }
+      ]
+    },
+    {
+      "sceneId": "rolling-hills",
+      "sceneName": "Sheep Dog Island",
+      "summary": {
+        "kind": "rock-placement-rng",
+        "applied": true,
+        "reason": null,
+        "sceneId": "rolling-hills",
+        "sceneSeed": 1,
+        "seed": 1383031660,
+        "seedOffset": 1383031659,
+        "rng": "mulberry32(sceneSeed + Rock)"
+      },
+      "ok": true,
+      "hasRocks": true,
+      "totalRocks": 9,
+      "rockTypes": [
+        {
+          "type": "rock1",
+          "count": 7
+        },
+        {
+          "type": "rock2",
+          "count": 2
+        }
+      ],
+      "placementsStable": true,
+      "rockPositionsStable": true,
+      "samples": [
+        {
+          "sourceIndex": 0,
+          "type": "rock2",
+          "x": 122.6266,
+          "y": -0.2114,
+          "z": 17.6733,
+          "scale": 5.6597,
+          "rotationY": 3.67,
+          "colliderRadius": 3.1128,
+          "isObstacle": true
+        },
+        {
+          "sourceIndex": 1,
+          "type": "rock1",
+          "x": 96.9043,
+          "y": -0.401,
+          "z": -84.2447,
+          "scale": 6.7556,
+          "rotationY": 5.1243,
+          "colliderRadius": 3.7156,
+          "isObstacle": true
+        },
+        {
+          "sourceIndex": 2,
+          "type": "rock1",
+          "x": 103.485,
+          "y": -0.1578,
+          "z": -20.754,
+          "scale": 4.927,
+          "rotationY": 2.4463,
+          "colliderRadius": 2.7099,
+          "isObstacle": false
+        },
+        {
+          "sourceIndex": 3,
+          "type": "rock1",
+          "x": 102.5486,
+          "y": -0.3112,
+          "z": -38.8028,
+          "scale": 6.177,
+          "rotationY": 4.9837,
+          "colliderRadius": 3.3973,
+          "isObstacle": true
+        },
+        {
+          "sourceIndex": 4,
+          "type": "rock1",
+          "x": 118.8616,
+          "y": -0.2636,
+          "z": -29.499,
+          "scale": 5.8256,
+          "rotationY": 1.5653,
+          "colliderRadius": 3.2041,
+          "isObstacle": true
+        },
+        {
+          "sourceIndex": 5,
+          "type": "rock1",
+          "x": 118.7933,
+          "y": -0.2074,
+          "z": -9.9806,
+          "scale": 4.9875,
+          "rotationY": 6.2551,
+          "colliderRadius": 2.7431,
+          "isObstacle": true
+        }
+      ]
+    },
+    {
+      "sceneId": "open-country",
+      "sceneName": "Open Country",
+      "summary": {
+        "kind": "rock-placement-rng",
+        "applied": true,
+        "reason": null,
+        "sceneId": "open-country",
+        "sceneSeed": 42,
+        "seed": 1383031701,
+        "seedOffset": 1383031659,
+        "rng": "mulberry32(sceneSeed + Rock)"
+      },
+      "ok": true,
+      "hasRocks": false,
+      "totalRocks": 0,
+      "rockTypes": [],
+      "placementsStable": true,
+      "rockPositionsStable": true,
+      "samples": []
+    }
+  ]
+}

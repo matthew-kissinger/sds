@@ -30,17 +30,21 @@ The runtime never generates a tree from scratch. All variation comes from the se
 
 ## Recipes
 
-Three recipes, one GLB each, all in `tools/bake-trees.mjs`:
+The active shipped tree set has two canonical GLBs. `tools/bake-trees.mjs`
+can still bake the broader candidate matrix, but production integration is
+controlled by `tools/asset-gallery/picks.json`.
 
 | File | Preset | Seed | Visual role |
 | --- | --- | --- | --- |
 | `tree1.glb` | Aspen Small | 11 | Slim vertical silhouette — pasture scenes |
 | `tree2.glb` | Oak Medium | 17 | Broad canopy anchor — Field + RH |
-| `pine.glb` | Pine Medium | 33 | Conifer evergreen — Open Country horizons |
 
 > **Source of truth** for the canonical tree mapping is [`tools/asset-gallery/picks.json`](../tools/asset-gallery/picks.json). The seeds above match `tools/bake-trees.mjs` `SEEDS[species][scaleIdx]` for the scale chosen in picks. Cycle 21 Phase 0 corrected this table — prior entries listed Aspen Medium / seed 7 (and similar drift on the other two), which never matched the source.
 
-All three share `STYLIZED_BARK` (untextured + flat-shaded brown bark, halved branch tessellation, leaf count tuned for a fuller silhouette than EZ-Tree's defaults). Per-recipe `bark.tint` and `branch.children` overrides differentiate the species.
+The active tree recipes share `STYLIZED_BARK` (untextured + flat-shaded brown
+bark, halved branch tessellation, leaf count tuned for a fuller silhouette than
+EZ-Tree's defaults). Per-recipe `bark.tint` and `branch.children` overrides
+differentiate the species.
 
 The bake is byte-stable: same `(EZ-Tree version, recipe seed)` produces identical GLB bytes. Recipes are committed; outputs are committed.
 
@@ -57,28 +61,45 @@ The `_originals/` rm is REQUIRED. `scripts/compress-glbs.mjs` reads from the bac
 After re-baking:
 
 ```bash
-npm test -- tests/tree-assets.spec.js      # verify all 3 GLBs exist + non-empty + < 3 MB total
+npm test -- tests/tree-assets.spec.js      # verify active LOD0/LOD1 GLBs exist, are non-empty, and fit the size ceiling
+node tools/konveyor-tree-refresh-baseline.mjs --refresh-upstream
 ```
+
+The `--refresh-upstream` flag records live npm and GitHub changelog evidence in
+the Konveyor baseline. If network is unavailable, run the tool without the flag
+and treat the upstream fields as the last static observation, not current truth.
 
 ## Marketing recapture prep
 
 Before the next screenshot/video capture pass, update tree assets as an intentional visual change rather than treating capture framing as the only problem:
 
 1. Check the current `@dgreenheck/ez-tree` release and adopt the latest acceptable update.
-2. Re-bake GLBs through the normal cache-invalidation flow above.
-3. Re-run impostor baking if the GLB silhouette, canopy density, trunk profile, or material output changes.
-4. Review Sheep Dog Island and Open Country from the main gameplay/capture cameras and verify trees do not read as too close together. No pair should visually merge into a single blob, hide the dog/sheep action, or block the hero camera path.
-5. If spacing changes are needed, make them in the deterministic placement path and verify with `npm test -- tests/tree-placement.spec.js` plus a browser screenshot review.
+2. Capture the current asset contract with `node tools/konveyor-tree-refresh-baseline.mjs --refresh-upstream`; the committed Konveyor packet lives at [`cycle36-validation/runtime/tree-refresh-baseline.json`](../cycle36-validation/runtime/tree-refresh-baseline.json).
+3. Re-bake GLBs through the normal cache-invalidation flow above.
+4. Re-run impostor baking if the GLB silhouette, canopy density, trunk profile, or material output changes.
+5. Review Sheep Dog Island and Open Country from the main gameplay/capture cameras and verify trees do not read as too close together. No pair should visually merge into a single blob, hide the dog/sheep action, or block the hero camera path.
+6. If spacing changes are needed, make them in the deterministic placement path and verify with `npm test -- tests/tree-placement.spec.js` plus a browser screenshot review.
+
+As of the 2026-05-15 live refresh, SDS already resolves the npm latest
+`@dgreenheck/ez-tree` 1.1.0. Upstream `main` has unreleased tree-output
+candidates for softer leaf normals, corrected growth force, and stratified
+branch/leaf placement. Do not chase unreleased `main` by hand in production
+assets; either wait for a package release or create a deliberate, commit-pinned
+candidate bake with gallery, material, impostor, visual, perf, and native gates.
 
 ## Loader contract
 
-`js/GameAssetLoader.js` splits the three trees by load priority:
+`js/GameAssetLoader.js` splits the active tree assets by load priority:
 
 - `assets/models/trees/tree1.glb` — **critical**. Loaded before scene init.
 - `assets/models/trees/tree2.glb` — **deferred**. Loaded via `requestIdleCallback` after the menu mounts.
-- `assets/models/trees/pine.glb` — **deferred**. Same path as tree2.
 
-If you add a fourth recipe in `bake-trees.mjs`, also add it to either `defineCriticalAssets()` or `defineDeferredAssets()` in `GameAssetLoader.js`, AND add it to `TREE_FILES` in `tests/tree-assets.spec.js`. Total committed GLB size must stay under 3 MB; if you need more, raise the ceiling deliberately rather than letting it drift.
+If you add another production tree slot in `bake-trees.mjs`, also add it to
+either `defineCriticalAssets()` or `defineDeferredAssets()` in
+`GameAssetLoader.js`, add it to `TREE_FILES` in `tests/tree-assets.spec.js`,
+and add it to the `TREES` list in `tests/imposter-sidecar.spec.js` when it has
+an impostor. Total committed GLB size must stay under the test ceiling; if you
+need more, raise the ceiling deliberately rather than letting it drift.
 
 ## InstancedMesh2 quaternion gotcha
 
@@ -90,7 +111,9 @@ When cloning a GLB asset via `SkeletonUtils.clone()` for placement, the clone sh
 
 ## Cycle 20 — Pixel Forge / Kiln impostor bake
 
-LOD2 atlases are generated by `npm run bake-tree-impostors` (Cycle 20 Phase 1). The script shells out to the local Pixel Forge `kiln bake-imposter` CLI for each tree and writes four artifacts per tree under `assets/models/trees/`:
+LOD2 atlases are generated by `npm run bake-tree-impostors` (Cycle 20 Phase 1).
+The script shells out to the local Pixel Forge `kiln bake-imposter` CLI for
+each active tree and writes four artifacts per tree under `assets/models/trees/`:
 
 - `<name>.imposter.png` — albedo atlas (4×4 lat/lon hemi-y, 2048×2048, baseColor unlit)
 - `<name>.imposter.normal.png` — capture-view-space normal aux atlas (Phase 2 relighting)
@@ -111,7 +134,7 @@ bun install
 ### Re-baking impostors
 
 ```bash
-npm run bake-tree-impostors    # writes 12 files (3 trees × 4 artifacts)
+npm run bake-tree-impostors    # writes 8 files (2 trees × 4 artifacts)
 npm test -- tests/imposter-sidecar.spec.js   # verify schema contract
 ```
 
@@ -127,11 +150,11 @@ Cycle 20 Phase 0 ran a 2D barycentric simulation of the runtime shader and corro
 
 ## What NOT to do
 
-- Don't generate a fourth tree at runtime via EZ-Tree directly. The deterministic seed contract requires the bake to be the single source of truth.
+- Don't generate another production tree at runtime via EZ-Tree directly. The deterministic seed contract requires the bake to be the single source of truth.
 - Don't edit GLB files by hand. Re-author the recipe and re-bake.
 - Don't bypass the `_originals/` rm step on re-bake. The compress-glbs cache will silently replay stale bytes.
 - Don't add a recipe without also updating `GameAssetLoader.js` AND `tests/tree-assets.spec.js`.
 - Don't gate tree placement on runtime randomness; use seeded `mulberry32(seed)` from `shared/Random.js` so client + Worker compute identical positions.
 - Don't bake impostors from `assets/models/trees/*.glb` (the Draco-compressed runtime path). Pixel Forge's harness has no `DRACOLoader` and will error. Always bake from `assets/_originals/models/trees/*.glb`.
 - Don't invoke Pixel Forge via `bun run` on Windows — Playwright CDP handshake hangs. Use the bake script (`npm run bake-tree-impostors`) which routes through Node + tsx.
-- Don't add a fourth tree without also adding it to `TREES` in `tools/bake-tree-impostors.mjs` AND the `TREES` list in `tests/imposter-sidecar.spec.js`.
+- Don't add another production tree without also adding it to `TREES` in `tools/bake-tree-impostors.mjs` AND the `TREES` list in `tests/imposter-sidecar.spec.js`.

@@ -107,6 +107,8 @@ docs/                cycle plans, decisions, backlog, architecture deep-dives
 - **Run `npm test` before any commit that touches client code.** Specs run in ~1.5s; no excuse to skip.
 - **Run `npm run build` before any commit that touches imports or affects the bundle.**
 - **Run `npm run test:e2e` if a change could regress visual or interactive behavior.** Playwright captures golden screenshots; SSIM diff catches regressions.
+- **Close browser tabs/contexts and stop local dev/preview listeners after browser probes.** Stray tabs keep GPU memory, timers, service workers, and network activity alive; they can muddy perf profiling, metrics, screenshots, and benchmark runs. Agent-launched Vite dev servers should set `SDS_SUPPRESS_BROWSER_OPEN=1` so `server.open` does not create real Chrome tabs during automation.
+  After preview-based proofs, explicitly check for and close any real localhost Chrome tab/process on `127.0.0.1:3000` or `127.0.0.1:4173`.
 - **Sim-baseline failure** = stop, read diff, decide intent. Never regenerate to make tests pass.
 
 ## PR + commit conventions

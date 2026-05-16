@@ -12,6 +12,7 @@ import {
   isKnownPreset,
   sunDirectionFromPreset,
 } from './skyPresets.js';
+import { sampleSkyFogPacketFromSky } from './skyFogSamplePacket.js';
 
 /**
  * Top-level atmosphere orchestrator. Owns:
@@ -50,6 +51,8 @@ export class Atmosphere {
    * @param {boolean} [options.attachSunLight=false] Add directional light to scene.
    * @param {boolean} [options.attachFog=true]    Set scene.fog.
    * @param {Object} [options.sunOptions]         Forwarded to SunSystem.
+   * @param {Function} [options.skyFactory]       Forwarded to HosekWilkieSky.
+   * @param {Function} [options.cloudFactory]     Forwarded to CloudLayer.
    */
   constructor(scene, options = {}) {
     if (!scene) {
@@ -64,13 +67,17 @@ export class Atmosphere {
     const attachSunLight = options.attachSunLight === true;
     const attachFog = options.attachFog !== false;
 
-    this.sky = new HosekWilkieSky();
+    this.sky = new HosekWilkieSky({
+      factory: options.skyFactory,
+    });
     if (attachSky) {
       scene.add(this.sky.getMesh());
     }
 
     /** @type {CloudLayer | null} */
-    this.cloudLayer = enableClouds ? new CloudLayer() : null;
+    this.cloudLayer = enableClouds ? new CloudLayer({
+      factory: options.cloudFactory,
+    }) : null;
     if (this.cloudLayer && attachClouds) {
       scene.add(this.cloudLayer.getMesh());
     }
@@ -374,6 +381,31 @@ export class Atmosphere {
   /** @returns {string | null} */
   getCurrentPresetName() {
     return this.currentPresetName;
+  }
+
+  getFrame({ sunBillboard = null } = {}) {
+    const fogNear = this.fog && 'near' in this.fog ? this.fog.near : 18;
+    const fogFar = this.fog && 'far' in this.fog ? this.fog.far : 74;
+    const sunBillboardFrame = sunBillboard?.getDiagnostics?.() ?? null;
+    return sampleSkyFogPacketFromSky({
+      sky: this.sky,
+      presetName: this.currentPresetName ?? DEFAULT_PRESET,
+      fogDarkenMultiplier: this.weather.fogDarkenMultiplier ?? 1.0,
+      fogNear,
+      fogFar,
+      cloudCoverage: this.sky.getCloudCoverage(),
+      sunPhysicalDirection: this.sun.dirVec.toArray(),
+      sunVisualDirection: sunBillboardFrame?.visualDirection ?? null,
+      sunBillboard: sunBillboardFrame,
+      skyMaterialMode: this.sky.material?.isNodeMaterial ? 'webgpu-node' : 'webgl-shader',
+      cloudAlpha: this.cloudLayer?.getCoverage?.() ?? null,
+      cloudHorizonFade: this.cloudLayer?.getEdgeFade?.() ?? null,
+      atmosphereDrawCount: [
+        this.sky?.getMesh ? 1 : 0,
+        this.cloudLayer && this.cloudLayer.getCoverage() > 0.001 ? 1 : 0,
+        sunBillboardFrame ? 1 : 0,
+      ].reduce((sum, value) => sum + value, 0),
+    });
   }
 
   dispose() {

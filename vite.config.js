@@ -5,9 +5,17 @@ import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { readFileSync, writeFileSync, readdirSync, unlinkSync, statSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 
-// Use relative paths for itch.io, absolute for GitHub Pages
-const isItchio = process.env.BUILD_TARGET === 'itchio'
+const buildTarget = process.env.BUILD_TARGET || 'web'
+const nativeTargets = new Set(['native', 'desktop', 'electron', 'tauri', 'capacitor', 'ios', 'android'])
+const isItchio = buildTarget === 'itchio'
+const isNative = nativeTargets.has(buildTarget)
+const workerBase = (process.env.SDS_WORKER_BASE || 'https://sds-worker.matt-m-kissinger.workers.dev').replace(/\/+$/, '')
 const buildId = Date.now().toString()
+const suppressBrowserOpen = process.env.SDS_SUPPRESS_BROWSER_OPEN === '1'
+
+function patchThreeAddonImport(content) {
+  return content.replace(/from 'three';/g, "from '../../../three.core.min.js';")
+}
 
 // Cloudflare Pages has a 26MB per-file limit; .blend source files aren't needed at runtime.
 function excludeBlendFilesPlugin() {
@@ -39,21 +47,59 @@ function serviceWorkerPlugin() {
   }
 }
 
+function htmlRuntimeConfigPlugin() {
+  return {
+    name: 'html-runtime-config',
+    transformIndexHtml(html) {
+      return html.replace(/__SDS_BUILD_TARGET__/g, buildTarget)
+    }
+  }
+}
+
 export default defineConfig({
-  base: isItchio ? './' : '/',
+  base: (isItchio || isNative) ? './' : '/',
   define: {
-    __BUILD_ID__: JSON.stringify(buildId)
+    __BUILD_ID__: JSON.stringify(buildId),
+    __SDS_BUILD_TARGET__: JSON.stringify(buildTarget),
+    __SDS_WORKER_BASE__: JSON.stringify(workerBase)
   },
   plugins: [
     tailwindcss(),
     react(),
+    htmlRuntimeConfigPlugin(),
     viteStaticCopy({
       targets: [
-        { src: 'assets/*', dest: 'assets' }
+        { src: 'assets/*', dest: 'assets' },
+        { src: 'node_modules/three/build/three.webgpu.min.js', dest: 'assets/vendor/three' },
+        { src: 'node_modules/three/build/three.core.min.js', dest: 'assets/vendor/three' },
+        {
+          src: 'node_modules/three/examples/jsm/loaders/GLTFLoader.js',
+          dest: 'assets/vendor/three/examples/jsm/loaders',
+          transform: { encoding: 'utf8', handler: patchThreeAddonImport }
+        },
+        {
+          src: 'node_modules/three/examples/jsm/loaders/DRACOLoader.js',
+          dest: 'assets/vendor/three/examples/jsm/loaders',
+          transform: { encoding: 'utf8', handler: patchThreeAddonImport }
+        },
+        {
+          src: 'node_modules/three/examples/jsm/utils/BufferGeometryUtils.js',
+          dest: 'assets/vendor/three/examples/jsm/utils',
+          transform: { encoding: 'utf8', handler: patchThreeAddonImport }
+        },
+        {
+          src: 'node_modules/three/examples/jsm/utils/SkeletonUtils.js',
+          dest: 'assets/vendor/three/examples/jsm/utils',
+          transform: { encoding: 'utf8', handler: patchThreeAddonImport }
+        },
+        {
+          src: 'node_modules/three/examples/jsm/libs/meshopt_decoder.module.js',
+          dest: 'assets/vendor/three/examples/jsm/libs'
+        }
       ]
     }),
     excludeBlendFilesPlugin(),
-    serviceWorkerPlugin()
+    ...(!isNative ? [serviceWorkerPlugin()] : [])
   ],
   build: {
     outDir: 'dist',
@@ -74,7 +120,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true
+    open: suppressBrowserOpen ? false : true
   },
   resolve: {
     alias: {

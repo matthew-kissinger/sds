@@ -3,11 +3,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
-import { GrassSystem } from './GrassSystem.js';
 import { loadKilnImpostor } from './kiln-impostor-material.js';
 import { getOccluderUniforms, patchMaterialOccluder } from './shaders/OccluderFadePatch.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
-import { ProceduralMountains } from './ProceduralMountains.js';
 import { getSceneManager } from './GameBridge.js';
 import { TIER_PRESETS } from './HardwareTier.js';
 
@@ -52,6 +50,25 @@ import {
     rebuildEnvironment as runRebuildEnvironment,
     regenerateGrass as runRegenerateGrass
 } from './world/sandbox.js';
+import { createKonveyorTerrainMaterial } from './world/konveyorTerrainMaterialAdapter.js';
+import { shouldApplyKonveyorRendererFlag } from './rendering/konveyorRuntimeMode.js';
+
+function createKonveyorTerrainHeightTexture(heightfield) {
+    const texture = new THREE.DataTexture(
+        heightfield.getRawArray(),
+        heightfield.width,
+        heightfield.height,
+        THREE.RedFormat,
+        THREE.FloatType,
+    );
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+    return texture;
+}
 
 /**
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements.
@@ -64,11 +81,20 @@ export class TerrainBuilder {
      * @param {THREE.Scene} scene
      * @param {boolean} [isMobile=false]
      * @param {import('../shared/scenes/types.js').SceneDef} [sceneDef]
+     * @param {{ search?: string, konveyorTerrainFactories?: object, konveyorMaterialFactories?: object }} [options]
      */
-    constructor(scene, isMobile = false, sceneDef = null) {
+    constructor(scene, isMobile = false, sceneDef = null, options = {}) {
         this.scene = scene;
         this.isMobile = isMobile;
         this.sceneDef = sceneDef;
+        this.konveyorTerrainSearch = options.search;
+        this.konveyorTerrainFactories = options.konveyorTerrainFactories;
+        this.konveyorTerrainMaterialSummary = null;
+        this.konveyorMaterialSearch = options.search;
+        this.konveyorMaterialFactories = options.konveyorMaterialFactories;
+        this.konveyorTreeRockMaterialSummary = null;
+        this.konveyorRockPlacementSearch = options.search;
+        this.konveyorRockPlacementSummary = null;
         this.grassMaterial = null;
         this.grassInstanceCount = 0;
         this.grassInstancedMesh = null;
@@ -562,6 +588,7 @@ export class TerrainBuilder {
         this._setupTreeWind();
         // Cycle 14 Phase 4: patch rock materials with fresnel rim-light.
         this._setupRockShader();
+        await this._applyKonveyorTreeRockMaterials();
 
         // Report loading results
         const loadedAnimals = Object.keys(this.models.animals).filter(k => !k.endsWith('_animations'));
@@ -579,6 +606,47 @@ export class TerrainBuilder {
         }
 
         console.log('[ASSET] All critical models loaded successfully!');
+    }
+
+    _getKonveyorMaterialSearch() {
+        if (this.konveyorMaterialSearch !== undefined) return this.konveyorMaterialSearch;
+        if (typeof window === 'undefined') return '';
+        return window.location?.search ?? '';
+    }
+
+    _getKonveyorMaterialFactories() {
+        if (this.konveyorMaterialFactories !== undefined) return this.konveyorMaterialFactories;
+        if (typeof window === 'undefined') return null;
+        return window.__sdsKonveyorMaterialFactories ?? null;
+    }
+
+    _setKonveyorTreeRockMaterialSummary(summary) {
+        this.konveyorTreeRockMaterialSummary = summary;
+        if (typeof window !== 'undefined') {
+            window.__sdsKonveyorMaterialAdapter = summary;
+        }
+        return this.konveyorTreeRockMaterialSummary;
+    }
+
+    async _applyKonveyorTreeRockMaterials() {
+        const search = this._getKonveyorMaterialSearch();
+        if (!shouldApplyKonveyorRendererFlag(search, 'konveyorMaterials')) {
+            return this._setKonveyorTreeRockMaterialSummary({ applied: false, reason: 'flag-disabled' });
+        }
+
+        const factories = this._getKonveyorMaterialFactories();
+        const hasFactories = typeof factories?.createTreeBranchMaterial === 'function'
+            && typeof factories?.createTreeLeafMaterial === 'function'
+            && typeof factories?.createRockMaterial === 'function';
+        if (!hasFactories) {
+            return this._setKonveyorTreeRockMaterialSummary({ applied: false, reason: 'missing-factories' });
+        }
+
+        const { maybeApplyKonveyorTreeRockMaterials } = await import('./world/konveyorMaterialAdapter.js');
+        return this._setKonveyorTreeRockMaterialSummary(maybeApplyKonveyorTreeRockMaterials(this, {
+            search,
+            factories,
+        }));
     }
     
     isInZone(x, z, zone) {
@@ -666,16 +734,23 @@ export class TerrainBuilder {
         // color per-frame, is the single source of truth for terrain fade.
         // Without this, terrain faded to a fixed warm-grey-green while the
         // skybox showed sky color — a visible cutoff line where the two met.
-        const terrainMaterial = new THREE.ShaderMaterial({
-            uniforms: THREE.UniformsUtils.merge([
-                THREE.UniformsLib.fog,
-                {
-                    baseColor1: { value: new THREE.Color(0x3d5c2e) },  // Dark earthy green
-                    baseColor2: { value: new THREE.Color(0x5a7a42) },  // Medium green
-                    baseColor3: { value: new THREE.Color(0x4a6838) },  // Olive green
-                    dirtColor:  { value: new THREE.Color(0x6b5d4a) }   // Brown dirt patches
-                }
-            ]),
+        const terrainColors = {
+            baseColor1: new THREE.Color(0x3d5c2e),
+            baseColor2: new THREE.Color(0x5a7a42),
+            baseColor3: new THREE.Color(0x4a6838),
+            dirtColor: new THREE.Color(0x6b5d4a),
+        };
+        const uniforms = THREE.UniformsUtils.merge([
+            THREE.UniformsLib.fog,
+            {
+                baseColor1: { value: terrainColors.baseColor1.clone() },
+                baseColor2: { value: terrainColors.baseColor2.clone() },
+                baseColor3: { value: terrainColors.baseColor3.clone() },
+                dirtColor: { value: terrainColors.dirtColor.clone() }
+            }
+        ]);
+        const createDefaultMaterial = () => new THREE.ShaderMaterial({
+            uniforms,
             fog: true,
             vertexShader: `
                 #include <common>
@@ -774,6 +849,53 @@ export class TerrainBuilder {
             polygonOffsetFactor: 1,
             polygonOffsetUnits: 1
         });
+        const terrainMaterialResult = createKonveyorTerrainMaterial('terrain-ground', 'createTerrainMaterial', {
+            createDefaultMaterial,
+            search: this.konveyorTerrainSearch,
+            factories: this.konveyorTerrainFactories,
+            context: {
+                size: terrainSize,
+                segments: terrainSegments,
+                isMobile: this.isMobile,
+                hasHeightfield: !!this.heightfield,
+                createHeightTexture: this.heightfield
+                    ? () => createKonveyorTerrainHeightTexture(this.heightfield)
+                    : null,
+                heightfield: this.heightfield ? {
+                    width: this.heightfield.width,
+                    height: this.heightfield.height,
+                    worldSize: this.heightfield.worldSize,
+                    peakHeight: this.heightfield.peakHeight,
+                } : null,
+                colors: {
+                    baseColor1: terrainColors.baseColor1.clone(),
+                    baseColor2: terrainColors.baseColor2.clone(),
+                    baseColor3: terrainColors.baseColor3.clone(),
+                    dirtColor: terrainColors.dirtColor.clone(),
+                },
+                noise: {
+                    baseScales: [0.02, 0.05, 0.1],
+                    hashVector: [127.1, 311.7],
+                    fbmOctaves: 4,
+                    dirtThresholds: [0.55, 0.7],
+                    dirtStrength: 0.4,
+                    fineDetail: [0.9, 0.2],
+                    ao: [0.85, 0.15],
+                },
+                fog: true,
+                side: THREE.FrontSide,
+                polygonOffset: {
+                    enabled: true,
+                    factor: 1,
+                    units: 1,
+                },
+            },
+        });
+        const terrainMaterial = terrainMaterialResult.material;
+        terrainMaterial.userData = terrainMaterial.userData ?? {};
+        terrainMaterial.userData.konveyorTerrainMaterialControls = terrainMaterialResult.controls;
+        terrainMaterial.userData.konveyorTerrainMaterialSummary = terrainMaterialResult.summary;
+        this.konveyorTerrainMaterialSummary = terrainMaterialResult.summary;
 
         const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
         terrain.rotation.x = -Math.PI / 2;
@@ -802,6 +924,7 @@ export class TerrainBuilder {
         // Cycle 23 Phase D1: hardware tier passed through to GrassSystem
         // for per-tier presets (blade count, meadow-quad enable, wind octaves).
         const tier = getSceneManager()?.getTier?.() ?? (this.isMobile ? 'low' : 'med');
+        const { GrassSystem } = await import('./GrassSystem.js');
         this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield, this.sceneDef?.boundary ?? null, { tier });
 
         // Add exclusion zone for farm house — only if the scene actually
@@ -1349,8 +1472,14 @@ export class TerrainBuilder {
             if (this.terrainMesh.parent) this.terrainMesh.parent.remove(this.terrainMesh);
             this.terrainMesh.geometry?.dispose();
             if (this.terrainMesh.material) {
-                if (Array.isArray(this.terrainMesh.material)) this.terrainMesh.material.forEach(m => m?.dispose?.());
-                else this.terrainMesh.material.dispose();
+                if (Array.isArray(this.terrainMesh.material)) this.terrainMesh.material.forEach(m => {
+                    m?.userData?.konveyorTerrainMaterialControls?.dispose?.();
+                    m?.dispose?.();
+                });
+                else {
+                    this.terrainMesh.material.userData?.konveyorTerrainMaterialControls?.dispose?.();
+                    this.terrainMesh.material.dispose();
+                }
             }
             this.terrainMesh = null;
         }

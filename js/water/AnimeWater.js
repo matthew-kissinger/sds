@@ -15,6 +15,7 @@
  * linear, write gl_FragColor raw to avoid tonemap double-apply.
  */
 import * as THREE from 'three';
+import { createKonveyorWaterMaterial } from './konveyorWaterMaterialAdapter.js';
 
 export const WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -230,7 +231,13 @@ function makeHeightTexture(heightfield) {
     return tex;
 }
 
-export function createAnimeWaterMaterial({ boundary, heightfield = null, waterY = -0.05 }) {
+export function createAnimeWaterMaterial({
+    boundary,
+    heightfield = null,
+    waterY = -0.05,
+    search,
+    konveyorWaterFactories,
+}) {
     const shoreline = getBoundaryUniforms(boundary);
     const heightTex = heightfield ? makeHeightTexture(heightfield) : null;
     const uniforms = THREE.UniformsUtils.merge([
@@ -261,27 +268,64 @@ export function createAnimeWaterMaterial({ boundary, heightfield = null, waterY 
         }
     ]);
 
-    const material = new THREE.ShaderMaterial({
-        uniforms,
-        vertexShader: VERT,
-        fragmentShader: FRAG,
-        fog: true,
-        transparent: false,
-        depthWrite: true,
-        side: THREE.FrontSide,
+    const createDefaultMaterial = () => {
+        const material = new THREE.ShaderMaterial({
+            uniforms,
+            vertexShader: VERT,
+            fragmentShader: FRAG,
+            fog: true,
+            transparent: false,
+            depthWrite: true,
+            side: THREE.FrontSide,
+        });
+        // THREE.UniformsUtils.merge clones uniform values, so the merged
+        // uHeightTex.value is a stale Texture clone with no source. Re-bind
+        // the real DataTexture so the GPU samples the heightfield data.
+        if (heightTex) {
+            material.uniforms.uHeightTex.value = heightTex;
+        }
+        return material;
+    };
+    const materialResult = createKonveyorWaterMaterial('anime-water', 'createAnimeWaterMaterial', {
+        createDefaultMaterial,
+        search,
+        factories: konveyorWaterFactories,
+        context: {
+            shoreline: {
+                center: shoreline.center.clone(),
+                radius: shoreline.radius,
+                falloff: shoreline.falloff,
+            },
+            waterY,
+            hasHeightfield: !!heightfield,
+            heightTexture: heightTex,
+            heightfield: heightfield ? {
+                width: heightfield.width,
+                height: heightfield.height,
+                worldSize: heightfield.worldSize,
+                peakHeight: heightfield.peakHeight,
+            } : null,
+            shallowColor: uniforms.uShallowColor.value.clone(),
+            deepColor: uniforms.uDeepColor.value.clone(),
+            foamColor: uniforms.uFoamColor.value.clone(),
+            foamThickness: uniforms.uFoamThickness.value,
+            rippleStrength: uniforms.uRippleStrength.value,
+            sparkleStrength: uniforms.uSparkleStrength.value,
+            sunDirection: uniforms.uSunDirection.value.clone(),
+            sunSpecularIntensity: uniforms.uSunSpecularIntensity.value,
+        },
     });
-    // THREE.UniformsUtils.merge clones uniform values, so the merged
-    // uHeightTex.value is a stale Texture clone with no source. Re-bind
-    // the real DataTexture so the GPU samples the heightfield data.
-    if (heightTex) {
-        material.uniforms.uHeightTex.value = heightTex;
-    }
+    const material = materialResult.material;
+    material.userData = material.userData ?? {};
     material.userData.heightTexture = heightTex;
+    material.userData.konveyorWaterMaterialControls = materialResult.controls;
+    material.userData.konveyorWaterMaterialSummary = materialResult.summary;
     return material;
 }
 
-export function createAnimeWater({ boundary, heightfield = null, size = 4000, y = -0.05, segments = 64 }) {
-    const material = createAnimeWaterMaterial({ boundary, heightfield, waterY: y });
+export function createAnimeWater({ boundary, heightfield = null, size = 4000, y = -0.05, segments = 64, search, konveyorWaterFactories }) {
+    const material = createAnimeWaterMaterial({ boundary, heightfield, waterY: y, search, konveyorWaterFactories });
+    const waterControls = material.userData?.konveyorWaterMaterialControls ?? null;
 
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
     geometry.rotateX(-Math.PI / 2);
@@ -294,18 +338,26 @@ export function createAnimeWater({ boundary, heightfield = null, size = 4000, y 
     return {
         mesh,
         material,
+        konveyorWaterMaterialSummary: material.userData?.konveyorWaterMaterialSummary ?? null,
         update(timeSec, sunDirection) {
-            material.uniforms.uTime.value = timeSec;
-            if (sunDirection) {
+            if (waterControls?.update) {
+                waterControls.update({ timeSec, sunDirection, material });
+                return;
+            }
+            if (material.uniforms?.uTime) {
+                material.uniforms.uTime.value = timeSec;
+            }
+            if (sunDirection && material.uniforms?.uSunDirection) {
                 material.uniforms.uSunDirection.value.copy(sunDirection);
             }
         },
         resize() {},
         dispose() {
+            waterControls?.dispose?.();
             geometry.dispose();
             const heightTex = material.userData?.heightTexture;
             if (heightTex) heightTex.dispose();
-            material.dispose();
+            material.dispose?.();
         }
     };
 }

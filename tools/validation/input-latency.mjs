@@ -19,9 +19,26 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
+const CHROMIUM_GPU_ARGS = process.platform === 'win32'
+  ? ['--use-angle=d3d11', '--enable-gpu']
+  : [];
+
+const PROFILES = {
+  desktop: {
+    viewport: { width: 1280, height: 720 },
+    targetMs: 33,
+  },
+  mobile: {
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    targetMs: 50,
+  },
+};
 
 function parseArgs(argv) {
-  const args = { scene: 'field', keys: 100, out: null };
+  const args = { scene: 'field', keys: 100, out: null, profile: 'desktop' };
   for (const a of argv.slice(2)) {
     const m = a.match(/^--(\w+)=(.*)$/);
     if (!m) continue;
@@ -40,14 +57,15 @@ function percentile(sorted, p) {
 
 async function run() {
   const args = parseArgs(process.argv);
-  const browser = await chromium.launch();
-  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const profile = PROFILES[args.profile] ?? PROFILES.desktop;
+  const browser = await chromium.launch({ args: CHROMIUM_GPU_ARGS });
+  const context = await browser.newContext(profile);
   const page = await context.newPage();
 
-  const url = `http://localhost:3000/?perfMode=1&scene=${args.scene}&autostart=1`;
+  const url = `http://localhost:3000/?perfMode=1&scene=${args.scene}&autostart=1&mode=classic`;
   console.log(`[INPUT-LAT] booting ${url}`);
   await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => !!window.__perfHarness, null, { timeout: 60_000 });
+  await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 90_000 });
   await page.waitForTimeout(2000);
 
   // Install a per-key latency probe. Timestamp on keydown (performance.now)
@@ -79,6 +97,7 @@ async function run() {
   const sorted = [...samples].sort((a, b) => a - b);
   const result = {
     scene: args.scene,
+    profile: args.profile,
     keys: args.keys,
     sampleCount: sorted.length,
     avgMs: sorted.reduce((a, b) => a + b, 0) / Math.max(1, sorted.length),
@@ -99,8 +118,8 @@ async function run() {
 
   await browser.close();
 
-  if (result.p99Ms > 33) {
-    console.error(`[INPUT-LAT] FAIL: p99=${result.p99Ms.toFixed(2)}ms > 33ms desktop target`);
+  if (result.p99Ms > profile.targetMs) {
+    console.error(`[INPUT-LAT] FAIL: p99=${result.p99Ms.toFixed(2)}ms > ${profile.targetMs}ms ${args.profile} target`);
     process.exit(1);
   }
 }

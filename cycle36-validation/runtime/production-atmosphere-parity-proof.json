@@ -1,0 +1,657 @@
+{
+  "capturedAt": "2026-05-15T10:00:46.550Z",
+  "contract": "konveyor-production-atmosphere-scene-parity-proof",
+  "baseUrl": "http://127.0.0.1:4173/",
+  "screenshotDir": "cycle36-validation/runtime/production-atmosphere-parity-screenshots",
+  "diagnosticManifest": "cycle36-validation/runtime/scene-sky-screenshots/manifest.json",
+  "channel": "chrome",
+  "chromiumArgs": [
+    "--use-angle=d3d11",
+    "--enable-gpu"
+  ],
+  "comparisonBasis": {
+    "topBand": "centered upper-sky band",
+    "skyBandMetric": "normalized RGB chroma, not luma, so exposure and tonemapping differences do not masquerade as hue drift",
+    "topChromaTolerance": 0.04,
+    "fogColorTolerance": 0.002
+  },
+  "relativeToneChecks": {
+    "productionRollingHillsDarkerThanField": true,
+    "productionRollingHillsDarkerThanOpenCountry": true,
+    "diagnosticRollingHillsDarkerThanField": true,
+    "diagnosticRollingHillsDarkerThanOpenCountry": true
+  },
+  "ok": true,
+  "scenes": [
+    {
+      "sceneId": "field",
+      "production": {
+        "sceneId": "field",
+        "url": "http://127.0.0.1:4173/?scene=field&probeRender=1&cinematic=1&ui=off",
+        "screenshot": "field.png",
+        "screenshotProof": {
+          "dimensions": {
+            "width": 1280,
+            "height": 720
+          },
+          "topSky": {
+            "averageRgb": [
+              172,
+              188.36,
+              196.59
+            ],
+            "averageChroma": [
+              0.30882,
+              0.3382,
+              0.35298
+            ],
+            "averageLuma": 185.48,
+            "lumaRange": 72.7,
+            "coarseColorBuckets": 10
+          },
+          "full": {
+            "averageRgb": [
+              54.8,
+              68.73,
+              46.53
+            ],
+            "averageChroma": [
+              0.32224,
+              0.40415,
+              0.27361
+            ],
+            "averageLuma": 64.17,
+            "lumaRange": 214.67,
+            "coarseColorBuckets": 85
+          },
+          "nonBlank": true
+        },
+        "rendererMode": {
+          "requested": "webgl",
+          "diagnostic": false,
+          "effective": "webgl",
+          "fallbackReason": null
+        },
+        "currentSceneId": "field",
+        "renderer": {
+          "className": "ux",
+          "isWebGLRenderer": true,
+          "isWebGPURenderer": false,
+          "calls": 116,
+          "triangles": 4161510
+        },
+        "atmosphere": {
+          "presetName": "pastoral-noon",
+          "sky": {
+            "meshName": "HosekWilkieSkyDome",
+            "materialName": "HosekWilkieSky",
+            "materialType": "ShaderMaterial",
+            "isShaderMaterial": true,
+            "isNodeMaterial": false
+          },
+          "cloud": {
+            "meshName": "CloudLayer",
+            "materialName": "CloudLayer",
+            "materialType": "ShaderMaterial",
+            "visible": false,
+            "coverage": 0.3,
+            "edgeFade": 1,
+            "isShaderMaterial": true,
+            "isNodeMaterial": false
+          },
+          "fog": {
+            "kind": "Fog",
+            "color": [
+              0.6891161291099235,
+              0.7722801185009082,
+              0.8128012082872941
+            ],
+            "near": 350,
+            "far": 900,
+            "density": null
+          }
+        },
+        "consoleErrors": [],
+        "pageErrors": []
+      },
+      "diagnostic": {
+        "sceneId": "field",
+        "screenshot": "field.png",
+        "rendererMode": {
+          "requested": "webgpu",
+          "diagnostic": true,
+          "effective": "webgpu-diagnostic",
+          "fallbackReason": null
+        },
+        "sceneBinding": {
+          "active": true,
+          "requestedSceneId": "field",
+          "sceneId": "field",
+          "sceneName": "Home Field",
+          "skyPresetName": "pastoral-noon",
+          "fog": {
+            "color": "#cfd9e8",
+            "near": 350,
+            "far": 900
+          },
+          "fallbackReason": null
+        },
+        "skyFog": {
+          "source": "HosekWilkieSky.cpu-lut",
+          "presetName": "pastoral-noon",
+          "horizonColor": [
+            0.6891,
+            0.7723,
+            0.8128
+          ],
+          "zenithColor": [
+            0.1131,
+            0.2935,
+            0.6742
+          ],
+          "sunColor": [
+            1,
+            0.8691,
+            0.6433
+          ],
+          "sunDirection": [
+            0.2418,
+            0.9397,
+            0.2418
+          ],
+          "fogDarkenMultiplier": 1,
+          "fogColor": [
+            0.6891,
+            0.7723,
+            0.8128
+          ],
+          "fogNear": 350,
+          "fogFar": 900,
+          "cloudCoverage": 0.3
+        },
+        "screenshotProof": {
+          "dimensions": {
+            "width": 1280,
+            "height": 720
+          },
+          "topSky": {
+            "averageRgb": [
+              216.52,
+              227.25,
+              232.94
+            ],
+            "averageChroma": [
+              0.31996,
+              0.33582,
+              0.34422
+            ],
+            "averageLuma": 225.38,
+            "lumaRange": 6.49,
+            "coarseColorBuckets": 2
+          },
+          "full": {
+            "averageRgb": [
+              178.85,
+              197.97,
+              193.88
+            ],
+            "averageChroma": [
+              0.31339,
+              0.34689,
+              0.33972
+            ],
+            "averageLuma": 193.61,
+            "lumaRange": 235.43,
+            "coarseColorBuckets": 195
+          },
+          "nonBlank": true
+        }
+      },
+      "comparison": {
+        "topChromaDistance": 0.01437,
+        "fogColorDistance": 0.00003,
+        "cloudCoverageDelta": 0,
+        "fogNearDelta": 0,
+        "fogFarDelta": 0
+      },
+      "checks": {
+        "productionWebGl": true,
+        "diagnosticWebGpu": true,
+        "sceneMatches": true,
+        "presetMatches": true,
+        "fogKindIsLinear": true,
+        "fogColorMatchesPacket": true,
+        "fogNearMatchesPacket": true,
+        "fogFarMatchesPacket": true,
+        "cloudCoverageMatchesPacket": true,
+        "productionUsesDefaultSkyShader": true,
+        "productionUsesDefaultCloudShader": true,
+        "productionScreenshotNonBlank": true,
+        "diagnosticScreenshotNonBlank": true,
+        "skyBandChromaMatches": true,
+        "cleanConsole": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "rolling-hills",
+      "production": {
+        "sceneId": "rolling-hills",
+        "url": "http://127.0.0.1:4173/?scene=rolling-hills&probeRender=1&cinematic=1&ui=off",
+        "screenshot": "rolling-hills.png",
+        "screenshotProof": {
+          "dimensions": {
+            "width": 1280,
+            "height": 720
+          },
+          "topSky": {
+            "averageRgb": [
+              165.91,
+              135.25,
+              118.46
+            ],
+            "averageChroma": [
+              0.39538,
+              0.32232,
+              0.2823
+            ],
+            "averageLuma": 140.56,
+            "lumaRange": 218.72,
+            "coarseColorBuckets": 46
+          },
+          "full": {
+            "averageRgb": [
+              55.4,
+              51.16,
+              29.21
+            ],
+            "averageChroma": [
+              0.40804,
+              0.37681,
+              0.21514
+            ],
+            "averageLuma": 50.48,
+            "lumaRange": 250.29,
+            "coarseColorBuckets": 145
+          },
+          "nonBlank": true
+        },
+        "rendererMode": {
+          "requested": "webgl",
+          "diagnostic": false,
+          "effective": "webgl",
+          "fallbackReason": null
+        },
+        "currentSceneId": "rolling-hills",
+        "renderer": {
+          "className": "ux",
+          "isWebGLRenderer": true,
+          "isWebGPURenderer": false,
+          "calls": 91,
+          "triangles": 3780493
+        },
+        "atmosphere": {
+          "presetName": "dusk",
+          "sky": {
+            "meshName": "HosekWilkieSkyDome",
+            "materialName": "HosekWilkieSky",
+            "materialType": "ShaderMaterial",
+            "isShaderMaterial": true,
+            "isNodeMaterial": false
+          },
+          "cloud": {
+            "meshName": "CloudLayer",
+            "materialName": "CloudLayer",
+            "materialType": "ShaderMaterial",
+            "visible": false,
+            "coverage": 0.5,
+            "edgeFade": 1,
+            "isShaderMaterial": true,
+            "isNodeMaterial": false
+          },
+          "fog": {
+            "kind": "Fog",
+            "color": [
+              0.35771902355682683,
+              0.19864409650376988,
+              0.16444731383479338
+            ],
+            "near": 350,
+            "far": 900,
+            "density": null
+          }
+        },
+        "consoleErrors": [],
+        "pageErrors": []
+      },
+      "diagnostic": {
+        "sceneId": "rolling-hills",
+        "screenshot": "rolling-hills.png",
+        "rendererMode": {
+          "requested": "webgpu",
+          "diagnostic": true,
+          "effective": "webgpu-diagnostic",
+          "fallbackReason": null
+        },
+        "sceneBinding": {
+          "active": true,
+          "requestedSceneId": "rolling-hills",
+          "sceneId": "rolling-hills",
+          "sceneName": "Sheep Dog Island",
+          "skyPresetName": "dusk",
+          "fog": {
+            "color": "#d4c4a8",
+            "near": 350,
+            "far": 900
+          },
+          "fallbackReason": null
+        },
+        "skyFog": {
+          "source": "HosekWilkieSky.cpu-lut",
+          "presetName": "dusk",
+          "horizonColor": [
+            0.3577,
+            0.1986,
+            0.1644
+          ],
+          "zenithColor": [
+            0.0107,
+            0.0341,
+            0.0832
+          ],
+          "sunColor": [
+            1,
+            0.3055,
+            0.0242
+          ],
+          "sunDirection": [
+            -0.9418,
+            0.1392,
+            -0.306
+          ],
+          "fogDarkenMultiplier": 1,
+          "fogColor": [
+            0.3577,
+            0.1986,
+            0.1644
+          ],
+          "fogNear": 350,
+          "fogFar": 900,
+          "cloudCoverage": 0.5
+        },
+        "screenshotProof": {
+          "dimensions": {
+            "width": 1280,
+            "height": 720
+          },
+          "topSky": {
+            "averageRgb": [
+              162.67,
+              125.52,
+              115.51
+            ],
+            "averageChroma": [
+              0.40295,
+              0.31092,
+              0.28613
+            ],
+            "averageLuma": 132.7,
+            "lumaRange": 31.87,
+            "coarseColorBuckets": 8
+          },
+          "full": {
+            "averageRgb": [
+              148.81,
+              141.03,
+              128.5
+            ],
+            "averageChroma": [
+              0.35572,
+              0.33712,
+              0.30717
+            ],
+            "averageLuma": 141.78,
+            "lumaRange": 229.64,
+            "coarseColorBuckets": 212
+          },
+          "nonBlank": true
+        }
+      },
+      "comparison": {
+        "topChromaDistance": 0.01421,
+        "fogColorDistance": 0.00007,
+        "cloudCoverageDelta": 0,
+        "fogNearDelta": 0,
+        "fogFarDelta": 0
+      },
+      "checks": {
+        "productionWebGl": true,
+        "diagnosticWebGpu": true,
+        "sceneMatches": true,
+        "presetMatches": true,
+        "fogKindIsLinear": true,
+        "fogColorMatchesPacket": true,
+        "fogNearMatchesPacket": true,
+        "fogFarMatchesPacket": true,
+        "cloudCoverageMatchesPacket": true,
+        "productionUsesDefaultSkyShader": true,
+        "productionUsesDefaultCloudShader": true,
+        "productionScreenshotNonBlank": true,
+        "diagnosticScreenshotNonBlank": true,
+        "skyBandChromaMatches": true,
+        "cleanConsole": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "open-country",
+      "production": {
+        "sceneId": "open-country",
+        "url": "http://127.0.0.1:4173/?scene=open-country&probeRender=1&cinematic=1&ui=off",
+        "screenshot": "open-country.png",
+        "screenshotProof": {
+          "dimensions": {
+            "width": 1280,
+            "height": 720
+          },
+          "topSky": {
+            "averageRgb": [
+              213.85,
+              213.45,
+              215.32
+            ],
+            "averageChroma": [
+              0.33278,
+              0.33216,
+              0.33507
+            ],
+            "averageLuma": 213.67,
+            "lumaRange": 110.05,
+            "coarseColorBuckets": 19
+          },
+          "full": {
+            "averageRgb": [
+              73.33,
+              77.05,
+              49.77
+            ],
+            "averageChroma": [
+              0.36638,
+              0.38496,
+              0.24866
+            ],
+            "averageLuma": 74.29,
+            "lumaRange": 252.93,
+            "coarseColorBuckets": 139
+          },
+          "nonBlank": true
+        },
+        "rendererMode": {
+          "requested": "webgl",
+          "diagnostic": false,
+          "effective": "webgl",
+          "fallbackReason": null
+        },
+        "currentSceneId": "open-country",
+        "renderer": {
+          "className": "ux",
+          "isWebGLRenderer": true,
+          "isWebGPURenderer": false,
+          "calls": 159,
+          "triangles": 3610795
+        },
+        "atmosphere": {
+          "presetName": "golden-hour",
+          "sky": {
+            "meshName": "HosekWilkieSkyDome",
+            "materialName": "HosekWilkieSky",
+            "materialType": "ShaderMaterial",
+            "isShaderMaterial": true,
+            "isNodeMaterial": false
+          },
+          "cloud": {
+            "meshName": "CloudLayer",
+            "materialName": "CloudLayer",
+            "materialType": "ShaderMaterial",
+            "visible": false,
+            "coverage": 0.4,
+            "edgeFade": 1,
+            "isShaderMaterial": true,
+            "isNodeMaterial": false
+          },
+          "fog": {
+            "kind": "Fog",
+            "color": [
+              0.6979706617621373,
+              0.6663575912317725,
+              0.6606916515081357
+            ],
+            "near": 350,
+            "far": 900,
+            "density": null
+          }
+        },
+        "consoleErrors": [],
+        "pageErrors": []
+      },
+      "diagnostic": {
+        "sceneId": "open-country",
+        "screenshot": "open-country.png",
+        "rendererMode": {
+          "requested": "webgpu",
+          "diagnostic": true,
+          "effective": "webgpu-diagnostic",
+          "fallbackReason": null
+        },
+        "sceneBinding": {
+          "active": true,
+          "requestedSceneId": "open-country",
+          "sceneId": "open-country",
+          "sceneName": "Open Country",
+          "skyPresetName": "golden-hour",
+          "fog": {
+            "color": "#b8c8d8",
+            "near": 350,
+            "far": 900
+          },
+          "fallbackReason": null
+        },
+        "skyFog": {
+          "source": "HosekWilkieSky.cpu-lut",
+          "presetName": "golden-hour",
+          "horizonColor": [
+            0.698,
+            0.6664,
+            0.6607
+          ],
+          "zenithColor": [
+            0.0286,
+            0.0944,
+            0.2523
+          ],
+          "sunColor": [
+            1,
+            0.6796,
+            0.2973
+          ],
+          "sunDirection": [
+            -0.7144,
+            0.3746,
+            0.591
+          ],
+          "fogDarkenMultiplier": 1,
+          "fogColor": [
+            0.698,
+            0.6664,
+            0.6607
+          ],
+          "fogNear": 350,
+          "fogFar": 900,
+          "cloudCoverage": 0.4
+        },
+        "screenshotProof": {
+          "dimensions": {
+            "width": 1280,
+            "height": 720
+          },
+          "topSky": {
+            "averageRgb": [
+              218.43,
+              213.43,
+              212.3
+            ],
+            "averageChroma": [
+              0.33909,
+              0.33133,
+              0.32958
+            ],
+            "averageLuma": 214.41,
+            "lumaRange": 8.14,
+            "coarseColorBuckets": 2
+          },
+          "full": {
+            "averageRgb": [
+              180.23,
+              190.26,
+              182.41
+            ],
+            "averageChroma": [
+              0.32597,
+              0.34411,
+              0.32991
+            ],
+            "averageLuma": 187.56,
+            "lumaRange": 234.64,
+            "coarseColorBuckets": 201
+          },
+          "nonBlank": true
+        }
+      },
+      "comparison": {
+        "topChromaDistance": 0.00841,
+        "fogColorDistance": 0.00005,
+        "cloudCoverageDelta": 0,
+        "fogNearDelta": 0,
+        "fogFarDelta": 0
+      },
+      "checks": {
+        "productionWebGl": true,
+        "diagnosticWebGpu": true,
+        "sceneMatches": true,
+        "presetMatches": true,
+        "fogKindIsLinear": true,
+        "fogColorMatchesPacket": true,
+        "fogNearMatchesPacket": true,
+        "fogFarMatchesPacket": true,
+        "cloudCoverageMatchesPacket": true,
+        "productionUsesDefaultSkyShader": true,
+        "productionUsesDefaultCloudShader": true,
+        "productionScreenshotNonBlank": true,
+        "diagnosticScreenshotNonBlank": true,
+        "skyBandChromaMatches": true,
+        "cleanConsole": true
+      },
+      "ok": true
+    }
+  ]
+}

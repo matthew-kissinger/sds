@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { loadShaderWithReplacements } from './shaders/ShaderLoader.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { TIER_PRESETS } from './HardwareTier.js';
+import { createKonveyorGrassMaterial } from './world/konveyorGrassMaterialAdapter.js';
+import { mulberry32 } from '../shared/Random.js';
 
 // Shader cache for sync access after async load
 let grassDesktopVertexShader = null;
@@ -16,6 +18,23 @@ let grassShadersLoaded = false;
 // drops past Y=0.5 near the outer half of the falloff annulus where the
 // shore visually meets the water.
 const SHORELINE_Y_MIN = 0.5;
+
+function hashString32(input) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < input.length; i++) {
+        hash ^= input.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return hash >>> 0;
+}
+
+function createVisualGoldenRandom() {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('visualGolden') !== '1') return null;
+    const sceneId = params.get('scene') || 'default';
+    return mulberry32(hashString32(`visual-golden-grass:${sceneId}`));
+}
 
 /**
  * Preload grass shaders - call this early in app initialization
@@ -61,7 +80,7 @@ export class GrassSystem {
      * @param {import('../shared/scenes/types.js').GrassDef} [sceneGrass] Optional scene-sourced grass config; when present, its `clumpsPerChunk` wins over the default.
      * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} [heightfield] Optional heightfield; when present, clumps sit on the displaced terrain instead of y=0.
      * @param {import('../shared/scenes/types.js').BoundaryDef | null} [boundary] Optional scene boundary; for `kind:'island'` scenes, grass past `radius+falloff` is culled so clumps don't extend over the water.
-     * @param {{ tier?: 'low'|'med'|'high' }} [opts] Cycle 23 Phase D1 — hardware tier overrides isMobile-binary defaults.
+     * @param {{ tier?: 'low'|'med'|'high', search?: string, konveyorGrassFactories?: Object }} [opts] Cycle 23 Phase D1 — hardware tier overrides isMobile-binary defaults.
      */
     constructor(scene, isMobile = false, sceneGrass = null, heightfield = null, boundary = null, opts = {}) {
         this.scene = scene;
@@ -69,6 +88,12 @@ export class GrassSystem {
         this.sceneGrass = sceneGrass;
         this.heightfield = heightfield;
         this.boundary = boundary || null;
+        this.konveyorGrassSearch = opts.search;
+        this.konveyorGrassFactories = opts.konveyorGrassFactories;
+        this.konveyorMeadowQuadMaterialSummary = null;
+        this.konveyorGrassBladeMaterialSummary = null;
+        this.konveyorGrassBladeMaterialControls = null;
+        this.random = createVisualGoldenRandom() ?? Math.random;
         // Cycle 23 Phase D1: tier overrides the isMobile binary. 'low' inherits
         // mobile-style defaults; 'med' / 'high' get desktop defaults with
         // wind-octave and meadow-quad enable knobs differentiated.
@@ -367,16 +392,16 @@ export class GrassSystem {
 
         for (let blade = 0; blade < bladesPerClump; blade++) {
             // Distribute blades in a natural clump pattern
-            const angle = (blade / bladesPerClump) * Math.PI * 2 + (Math.random() - 0.5) * 0.8;
-            const radius = Math.random() * 0.6;
+            const angle = (blade / bladesPerClump) * Math.PI * 2 + (this.random() - 0.5) * 0.8;
+            const radius = this.random() * 0.6;
             const offsetX = Math.cos(angle) * radius;
             const offsetZ = Math.sin(angle) * radius;
 
             // Random blade properties
-            const heightScale = 0.4 + Math.random() * 0.8;
-            const widthScale = 0.7 + Math.random() * 0.5;
-            const rotY = Math.random() * Math.PI; // Random facing direction
-            const lean = (Math.random() - 0.5) * 0.4;
+            const heightScale = 0.4 + this.random() * 0.8;
+            const widthScale = 0.7 + this.random() * 0.5;
+            const rotY = this.random() * Math.PI; // Random facing direction
+            const lean = (this.random() - 0.5) * 0.4;
 
             const h = bladeHeight * heightScale;
             const w = bladeWidth * widthScale;
@@ -512,7 +537,7 @@ export class GrassSystem {
             grassFadeEnd: { value: this.config.grassFadeEnd }
         };
 
-        return new THREE.ShaderMaterial({
+        const createDefaultMaterial = () => new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
             uniforms,
@@ -521,6 +546,70 @@ export class GrassSystem {
             depthWrite: true,
             depthTest: true
         });
+        const materialResult = createKonveyorGrassMaterial('grass-blade', 'createGrassBladeMaterial', {
+            createDefaultMaterial,
+            search: this.konveyorGrassSearch,
+            factories: this.konveyorGrassFactories,
+            context: {
+                isMobile: this.isMobile,
+                tier: this.tier,
+                vertexShader,
+                fragmentShader,
+                noiseTexture: this.noiseTexture,
+                wind: {
+                    strength: this.config.windStrength,
+                    speed: this.config.windSpeed,
+                    direction: new THREE.Vector2(0.7, 0.7),
+                    gustStrength: this.config.gustStrength,
+                },
+                geometry: {
+                    bladeHeight: this.config.bladeHeight,
+                    bladeWidth: this.config.bladeWidth,
+                    bladeHeightVariation: this.config.bladeHeightVariation,
+                },
+                colors: {
+                    baseColor: this.config.baseColor.clone(),
+                    midColor: this.config.midColor.clone(),
+                    tipColor: this.config.tipColor.clone(),
+                },
+                lighting: {
+                    sunDirection: new THREE.Vector3(0, 1, 0),
+                    sunColor: new THREE.Color(0xffffff),
+                },
+                interaction: {
+                    maxInteractors: this.config.maxInteractors,
+                    positions: this.interactorPositions,
+                    data: this.interactorData,
+                    facings: this.interactorFacings,
+                    radius: this.config.interactionRadius,
+                    strength: this.config.interactionStrength,
+                },
+                fog: {
+                    color: this.config.fogColor.clone(),
+                    density: this.config.fogDensity,
+                },
+                fade: {
+                    start: this.config.grassFadeStart,
+                    end: this.config.grassFadeEnd,
+                    strength: 1,
+                },
+                material: {
+                    side: THREE.FrontSide,
+                    transparent: false,
+                    depthWrite: true,
+                    depthTest: true,
+                    alphaHash: true,
+                    alphaTest: 0.06,
+                },
+            },
+        });
+        const material = materialResult.material;
+        material.userData = material.userData ?? {};
+        material.userData.konveyorGrassBladeMaterialControls = materialResult.controls;
+        material.userData.konveyorGrassBladeMaterialSummary = materialResult.summary;
+        this.konveyorGrassBladeMaterialSummary = materialResult.summary;
+        this.konveyorGrassBladeMaterialControls = materialResult.controls;
+        return material;
     }
 
     /**
@@ -998,8 +1087,8 @@ export class GrassSystem {
 
         // Generate grass positions within chunk
         for (let i = 0; i < clumpCount * 1.5; i++) { // Oversample then filter
-            const x = minX + Math.random() * (maxX - minX);
-            const z = minZ + Math.random() * (maxZ - minZ);
+            const x = minX + this.random() * (maxX - minX);
+            const z = minZ + this.random() * (maxZ - minZ);
 
             // Check exclusion zones
             if (this.isExcluded(x, z)) continue;
@@ -1013,7 +1102,7 @@ export class GrassSystem {
             // shoreline rather than the density curve.
             const distFromCenter = Math.sqrt(x * x + z * z);
             const densityFactor = Math.max(0, 1 - distFromCenter / this.config.grassRadius);
-            if (Math.random() > densityFactor * 0.8 + 0.2) continue;
+            if (this.random() > densityFactor * 0.8 + 0.2) continue;
 
             validPositions.push({ x, z });
 
@@ -1053,12 +1142,12 @@ export class GrassSystem {
             dummy.position.set(pos.x, baseY, pos.z);
 
             // Random rotation and scale
-            dummy.rotation.y = Math.random() * Math.PI * 2;
+            dummy.rotation.y = this.random() * Math.PI * 2;
 
             // Scale variation with distance falloff
             const distFromCenter = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
             const distanceScale = Math.max(0.5, 1 - distFromCenter / (this.config.worldSize * 0.8));
-            const scale = (0.7 + Math.random() * 0.6) * distanceScale;
+            const scale = (0.7 + this.random() * 0.6) * distanceScale;
             dummy.scale.setScalar(scale);
 
             dummy.updateMatrix();
@@ -1163,11 +1252,13 @@ export class GrassSystem {
         const baseColor = this.config.baseColor.clone();
         const midColor = this.config.midColor.clone();
         const tipColor = this.config.tipColor.clone();
-        const mat = new THREE.MeshLambertMaterial({
-            color: midColor,
-            side: THREE.DoubleSide,
-            fog: true,
-            flatShading: false,
+        const createDefaultMaterial = () => {
+            const mat = new THREE.MeshLambertMaterial({
+                color: midColor,
+                side: THREE.DoubleSide,
+                fog: true,
+                flatShading: false,
+            });
             // Cycle 35 Phase 9: the onBeforeCompile injection below reads
             // `vUv` for procedural meadow tinting, but Three.js only declares
             // the `vUv` varying when USE_UV is set (normally triggered by
@@ -1175,43 +1266,58 @@ export class GrassSystem {
             // compile with "ERROR: 'vUv' : undeclared identifier" on every
             // far-ring meadow quad. Defining USE_UV here makes Three.js emit
             // the standard `varying vec2 vUv;` plumbing in both shaders.
-            defines: { USE_UV: '' },
-        });
-        mat.onBeforeCompile = (shader) => {
-            shader.uniforms.uMeadowBase = { value: baseColor };
-            shader.uniforms.uMeadowMid  = { value: midColor };
-            shader.uniforms.uMeadowTip  = { value: tipColor };
-            // Inject a per-fragment hash mix so neighbour quads don't all
-            // read identical. Keyed off mesh-local UV scaled to ~5 cells per
-            // 40m chunk so the pattern reads at far-ring scale (50-80m
-            // perceived feature size from a 250m-far camera).
-            shader.fragmentShader = shader.fragmentShader
-                .replace(
-                    '#include <common>',
-                    [
+            mat.defines = { USE_UV: '' };
+            mat.onBeforeCompile = (shader) => {
+                shader.uniforms.uMeadowBase = { value: baseColor };
+                shader.uniforms.uMeadowMid  = { value: midColor };
+                shader.uniforms.uMeadowTip  = { value: tipColor };
+                // Inject a per-fragment hash mix so neighbour quads don't all
+                // read identical. Keyed off mesh-local UV scaled to ~5 cells per
+                // 40m chunk so the pattern reads at far-ring scale (50-80m
+                // perceived feature size from a 250m-far camera).
+                shader.fragmentShader = shader.fragmentShader
+                    .replace(
                         '#include <common>',
-                        'uniform vec3 uMeadowBase;',
-                        'uniform vec3 uMeadowMid;',
-                        'uniform vec3 uMeadowTip;',
-                        'float meadowHash(vec2 v) {',
-                        '  return fract(sin(dot(v, vec2(127.1, 311.7))) * 43758.5453);',
-                        '}'
-                    ].join('\n')
-                )
-                .replace(
-                    '#include <map_fragment>',
-                    [
+                        [
+                            '#include <common>',
+                            'uniform vec3 uMeadowBase;',
+                            'uniform vec3 uMeadowMid;',
+                            'uniform vec3 uMeadowTip;',
+                            'float meadowHash(vec2 v) {',
+                            '  return fract(sin(dot(v, vec2(127.1, 311.7))) * 43758.5453);',
+                            '}'
+                        ].join('\n')
+                    )
+                    .replace(
                         '#include <map_fragment>',
-                        'vec2 muv = vUv * 5.0;',
-                        'float n1 = meadowHash(floor(muv));',
-                        'float n2 = meadowHash(floor(muv * 2.0));',
-                        'float blend = mix(n1, n2, 0.5);',
-                        'vec3 meadowCol = mix(mix(uMeadowBase, uMeadowMid, blend), uMeadowTip, smoothstep(0.6, 0.95, blend));',
-                        'diffuseColor.rgb = meadowCol;'
-                    ].join('\n')
-                );
+                        [
+                            '#include <map_fragment>',
+                            'vec2 muv = vUv * 5.0;',
+                            'float n1 = meadowHash(floor(muv));',
+                            'float n2 = meadowHash(floor(muv * 2.0));',
+                            'float blend = mix(n1, n2, 0.5);',
+                            'vec3 meadowCol = mix(mix(uMeadowBase, uMeadowMid, blend), uMeadowTip, smoothstep(0.6, 0.95, blend));',
+                            'diffuseColor.rgb = meadowCol;'
+                        ].join('\n')
+                    );
+            };
+            return mat;
         };
-        return mat;
+        const materialResult = createKonveyorGrassMaterial('meadow-quad', 'createMeadowQuadMaterial', {
+            createDefaultMaterial,
+            search: this.konveyorGrassSearch,
+            factories: this.konveyorGrassFactories,
+            context: {
+                baseColor,
+                midColor,
+                tipColor,
+                uvCellsPerChunk: 5.0,
+                noiseHashVector: [127.1, 311.7],
+                noiseOctaves: [1, 2],
+            },
+        });
+        this.konveyorMeadowQuadMaterialSummary = materialResult.summary;
+        return materialResult.material;
     }
 
     /**
@@ -1358,7 +1464,15 @@ export class GrassSystem {
         }
 
         // Update uniforms
-        if (this.grassMaterial) {
+        if (this.konveyorGrassBladeMaterialControls?.updateInteractors) {
+            this.konveyorGrassBladeMaterialControls.updateInteractors({
+                positions: this.interactorPositions,
+                data: this.interactorData,
+                facings: this.interactorFacings,
+                count: this.interactorCount,
+                material: this.grassMaterial,
+            });
+        } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.interactorPositions.value = this.interactorPositions;
             this.grassMaterial.uniforms.interactorData.value = this.interactorData;
             this.grassMaterial.uniforms.interactorFacings.value = this.interactorFacings;
@@ -1405,7 +1519,15 @@ export class GrassSystem {
         }
 
         // Update time uniform
-        if (this.grassMaterial) {
+        if (this.konveyorGrassBladeMaterialControls?.update) {
+            this.konveyorGrassBladeMaterialControls.update({
+                time: this.time,
+                deltaTime,
+                camera,
+                sceneFog: this.scene?.fog ?? null,
+                material: this.grassMaterial,
+            });
+        } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.time.value = this.time;
 
             // Update camera position for fog/lighting calculations
@@ -1551,7 +1673,9 @@ export class GrassSystem {
      * Set wind parameters
      */
     setWind(strength, direction) {
-        if (this.grassMaterial) {
+        if (this.konveyorGrassBladeMaterialControls?.setWind) {
+            this.konveyorGrassBladeMaterialControls.setWind({ strength, direction, material: this.grassMaterial });
+        } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.windStrength.value = strength;
             if (direction) {
                 this.grassMaterial.uniforms.windDirection.value.set(direction.x, direction.y);
@@ -1568,7 +1692,13 @@ export class GrassSystem {
      */
     setSunDirection(sunDir) {
         if (!sunDir || !this.grassMaterial) return;
-        this.grassMaterial.uniforms.uSunDirection.value.copy(sunDir);
+        if (this.konveyorGrassBladeMaterialControls?.setSunDirection) {
+            this.konveyorGrassBladeMaterialControls.setSunDirection({ sunDir, material: this.grassMaterial });
+            return;
+        }
+        if (this.grassMaterial.uniforms?.uSunDirection) {
+            this.grassMaterial.uniforms.uSunDirection.value.copy(sunDir);
+        }
     }
 
     /**
@@ -1588,6 +1718,7 @@ export class GrassSystem {
         this.chunks.clear();
 
         if (this.grassMaterial) {
+            this.konveyorGrassBladeMaterialControls?.dispose?.();
             this.grassMaterial.dispose();
         }
 

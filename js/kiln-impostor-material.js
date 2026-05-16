@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createKonveyorImpostorMaterial } from './konveyorImpostorMaterialAdapter.js';
 
 /**
  * Cycle 20 Phase 2 — Kiln impostor material (replaces octahedral-impostor-material.js).
@@ -492,7 +493,14 @@ void main() {
  * @param {KilnImpostorParams} params
  * @returns {THREE.ShaderMaterial}
  */
-export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtlas, sidecar }) {
+export function createKilnImpostorMaterial({
+  albedoAtlas,
+  normalAtlas,
+  depthAtlas,
+  sidecar,
+  search,
+  konveyorImpostorFactories,
+} = {}) {
   if (sidecar.tilesX !== TILES_X || sidecar.tilesY !== TILES_Y) {
     console.warn(
       `[KILN] sidecar is ${sidecar.tilesX}×${sidecar.tilesY}, shader compiled for ${TILES_X}×${TILES_Y}. ` +
@@ -522,59 +530,75 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
   const xCenter = (sidecar.bbox.min[0] + sidecar.bbox.max[0]) * 0.5;
   const yCenter = sidecar.yOffset ?? (sidecar.bbox.min[1] + sidecar.bbox.max[1]) * 0.5;
   const zCenter = (sidecar.bbox.min[2] + sidecar.bbox.max[2]) * 0.5;
+  const tileSize = sidecar.tileSize ?? null;
+  const atlasSize = [
+    sidecar.atlasWidth ?? sidecar.tilesX * (tileSize ?? 512),
+    sidecar.atlasHeight ?? sidecar.tilesY * (tileSize ?? 512),
+  ];
 
-  const material = new THREE.ShaderMaterial({
-    uniforms: {
-      ...THREE.UniformsLib.fog,
-      uAtlas:           { value: albedoAtlas },
-      uNormal:          { value: normalAtlas },
-      uDepth:           { value: depthAtlas },
-      uAzimuths:        { value: new THREE.Vector4(...azPad) },
-      uElevations:      { value: new THREE.Vector4(...elPad) },
-      uTreeOriginObj:   { value: new THREE.Vector3(xCenter, yCenter, zCenter) },
-      uSunDirWorld:     { value: new THREE.Vector3(0.5, 0.7, 0.3).normalize() },
-      // sun + ambient pre-multiplied by light intensity in setImpostorTint.
-      // Defaults are sane fallbacks for the boot-frame paint.
-      uSunColor:        { value: new THREE.Color(1.0, 1.0, 1.0) },
-      uAmbientColor:    { value: new THREE.Color(0.7 * Math.PI, 0.7 * Math.PI, 0.7 * Math.PI) },
-      // Ground-bounce ambient — irradiance value for the ground-side of the
-      // hemi blend. Live updates via setImpostorTint multiply atmosphere
-      // ambient by a small earth-tilt factor at half-strength. Default
-      // here is a neutral 50% of sky-side magnitude, no hue tilt — so
-      // the sandbox (which bypasses setImpostorTint) renders neutrally.
-      uGroundBounceColor: { value: new THREE.Color().setRGB(0.35 * Math.PI, 0.35 * Math.PI, 0.35 * Math.PI) },
-      // Half-Lambert wrap exponent. 1.0 = standard Valve wrap (very soft);
-      // 1.5 retains slightly more directional contrast. Foliage typically
-      // wants 1.0-1.5.
-      uWrapPow:         { value: 1.2 },
-      // Subsurface "constant glow" floor — albedo-tinted lift independent
-      // of N.L. 0.10-0.20 typical for foliage; 0 disables. Cycle 20 v4
-      // measured at 0.0 in the LOD-color-match sandbox: with the hemi
-      // ambient already lifting shadow-side saturation, SSS pushed
-      // impostor +13 luma over LOD0. Re-enable if shadow side still
-      // reads grey at distance.
-      uSubsurfaceLift:  { value: 0.0 },
-      // Cycle 21 Phase 0 (2026-05-04): Schlick fresnel rim magnitude.
-      // 0.04 matches MeshStandardMaterial's implicit F0 at metalness=0
-      // (dielectric reflectance). Closes the warm-bias hue gap by
-      // adding the cool-shifted edge highlight LOD0 had via Three's
-      // PBR pipeline. 0 disables.
-      uFresnelStrength: { value: 0.04 },
-      // 0.30 instead of 0.40: alpha is bleed-padded 2px into transparent
-      // neighbours by Pixel Forge so a lower test pulls in the soft fringe,
-      // closing the "snappy" silhouette gap vs LOD0 geometric edges.
-      uAlphaTest:       { value: 0.3 },
-      // Cycle 22 Phase B: dithered alphaTest band. 0 disables; 0.30 typical
-      // (threshold jitter +/-0.15 around uAlphaTest 0.3, well within the
-      // 0.30-band the impostor's bleed-padded alpha taper covers). Pairs
-      // with material.alphaHash=true on LOD0+LOD1 leaf MeshStandardMaterials
-      // so all three LOD tiers crossfade with matching dither pattern.
-      uAlphaHashScale:  { value: 0.30 },
-      // v1 defaults: parallax + depth-discard scaffolded but disabled.
-      // Tune via TerrainBuilder.setKilnImpostorTunables() per Layer F.
-      uParallaxScale:   { value: 0.0 },
-      uDepthDiscardThr: { value: 1.0 },
-    },
+  const uniforms = {
+    ...THREE.UniformsLib.fog,
+    uAtlas:           { value: albedoAtlas },
+    uNormal:          { value: normalAtlas },
+    uDepth:           { value: depthAtlas },
+    uAzimuths:        { value: new THREE.Vector4(...azPad) },
+    uElevations:      { value: new THREE.Vector4(...elPad) },
+    uTreeOriginObj:   { value: new THREE.Vector3(xCenter, yCenter, zCenter) },
+    uSunDirWorld:     { value: new THREE.Vector3(0.5, 0.7, 0.3).normalize() },
+    // sun + ambient pre-multiplied by light intensity in setImpostorTint.
+    // Defaults are sane fallbacks for the boot-frame paint.
+    uSunColor:        { value: new THREE.Color(1.0, 1.0, 1.0) },
+    uAmbientColor:    { value: new THREE.Color(0.7 * Math.PI, 0.7 * Math.PI, 0.7 * Math.PI) },
+    // Ground-bounce ambient — irradiance value for the ground-side of the
+    // hemi blend. Live updates via setImpostorTint multiply atmosphere
+    // ambient by a small earth-tilt factor at half-strength. Default
+    // here is a neutral 50% of sky-side magnitude, no hue tilt — so
+    // the sandbox (which bypasses setImpostorTint) renders neutrally.
+    uGroundBounceColor: { value: new THREE.Color().setRGB(0.35 * Math.PI, 0.35 * Math.PI, 0.35 * Math.PI) },
+    // Half-Lambert wrap exponent. 1.0 = standard Valve wrap (very soft);
+    // 1.5 retains slightly more directional contrast. Foliage typically
+    // wants 1.0-1.5.
+    uWrapPow:         { value: 1.2 },
+    // Subsurface "constant glow" floor — albedo-tinted lift independent
+    // of N.L. 0.10-0.20 typical for foliage; 0 disables. Cycle 20 v4
+    // measured at 0.0 in the LOD-color-match sandbox: with the hemi
+    // ambient already lifting shadow-side saturation, SSS pushed
+    // impostor +13 luma over LOD0. Re-enable if shadow side still
+    // reads grey at distance.
+    uSubsurfaceLift:  { value: 0.0 },
+    // Cycle 21 Phase 0 (2026-05-04): Schlick fresnel rim magnitude.
+    // 0.04 matches MeshStandardMaterial's implicit F0 at metalness=0
+    // (dielectric reflectance). Closes the warm-bias hue gap by
+    // adding the cool-shifted edge highlight LOD0 had via Three's
+    // PBR pipeline. 0 disables.
+    uFresnelStrength: { value: 0.04 },
+    // 0.30 instead of 0.40: alpha is bleed-padded 2px into transparent
+    // neighbours by Pixel Forge so a lower test pulls in the soft fringe,
+    // closing the "snappy" silhouette gap vs LOD0 geometric edges.
+    uAlphaTest:       { value: 0.3 },
+    // Cycle 22 Phase B: dithered alphaTest band. 0 disables; 0.30 typical
+    // (threshold jitter +/-0.15 around uAlphaTest 0.3, well within the
+    // 0.30-band the impostor's bleed-padded alpha taper covers). Pairs
+    // with material.alphaHash=true on LOD0+LOD1 leaf MeshStandardMaterials
+    // so all three LOD tiers crossfade with matching dither pattern.
+    uAlphaHashScale:  { value: 0.30 },
+    // v1 defaults: parallax + depth-discard scaffolded but disabled.
+    // Tune via TerrainBuilder.setKilnImpostorTunables() per Layer F.
+    uParallaxScale:   { value: 0.0 },
+    uDepthDiscardThr: { value: 1.0 },
+  };
+  const materialOptions = {
+    vertexShader: VERTEX_SHADER,
+    fragmentShader: FRAGMENT_SHADER,
+    side: THREE.DoubleSide,
+    transparent: false,
+    depthWrite: true,
+    depthTest: true,
+    fog: true,
+    toneMapped: true,
+  };
+  const createDefaultMaterial = () => new THREE.ShaderMaterial({
+    uniforms,
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
     side: THREE.DoubleSide,
@@ -588,12 +612,68 @@ export function createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtla
     // gets and read noticeably darker / less saturated.
     toneMapped: true,
   });
+  const materialResult = createKonveyorImpostorMaterial('kiln-impostor', 'createKilnImpostorMaterial', {
+    createDefaultMaterial,
+    search,
+    factories: konveyorImpostorFactories,
+    context: {
+      albedoAtlas,
+      normalAtlas,
+      depthAtlas,
+      sidecar,
+      uniforms,
+      shaders: {
+        vertexShader: VERTEX_SHADER,
+        fragmentShader: FRAGMENT_SHADER,
+      },
+      layout: {
+        tilesX: TILES_X,
+        tilesY: TILES_Y,
+        sidecarTilesX: sidecar.tilesX,
+        sidecarTilesY: sidecar.tilesY,
+        tileSize,
+        atlasSize,
+        azimuths: azPad,
+        elevations: elPad,
+      },
+      lighting: {
+        sunDirection: uniforms.uSunDirWorld.value.clone(),
+        sunColor: uniforms.uSunColor.value.clone(),
+        ambientColor: uniforms.uAmbientColor.value.clone(),
+        groundBounceColor: uniforms.uGroundBounceColor.value.clone(),
+      },
+      fog: {
+        color: uniforms.fogColor.value.clone(),
+        near: uniforms.fogNear?.value ?? 18,
+        far: uniforms.fogFar?.value ?? 92,
+      },
+      origin: {
+        x: xCenter,
+        y: yCenter,
+        z: zCenter,
+      },
+      material: materialOptions,
+      tunables: {
+        alphaTest: uniforms.uAlphaTest.value,
+        alphaHashScale: uniforms.uAlphaHashScale.value,
+        parallaxScale: uniforms.uParallaxScale.value,
+        depthDiscardThreshold: uniforms.uDepthDiscardThr.value,
+        wrapPower: uniforms.uWrapPow.value,
+        subsurfaceLift: uniforms.uSubsurfaceLift.value,
+        fresnelStrength: uniforms.uFresnelStrength.value,
+      },
+    },
+  });
+  const material = materialResult.material;
 
   // Tag for setImpostorTint() so the per-frame sun update knows to write
   // uSunColor + uSunDirWorld + uAmbientColor instead of uColor.
+  material.userData = material.userData ?? {};
   material.userData.isKilnImpostor = true;
   // Stash sidecar for downstream consumers (e.g. the inspector page).
   material.userData.sidecar = sidecar;
+  material.userData.konveyorImpostorMaterialControls = materialResult.controls;
+  material.userData.konveyorImpostorMaterialSummary = materialResult.summary;
   return material;
 }
 

@@ -10,7 +10,11 @@ import * as THREE from 'three';
 
 import {
   Atmosphere,
+  ATMOSPHERE_FRAME_CONTRACT,
   HosekWilkieSky,
+  createAtmosphereFrame,
+  createSkyFogSamplePacket,
+  sampleSkyFogPacketFromSky,
   CloudLayer,
   SunSystem,
   DayNightCycle,
@@ -154,6 +158,105 @@ describe('HosekWilkieSky', () => {
     const sun = sky.getSun(new THREE.Color());
     expect(sun.r).toBeGreaterThan(sun.b);
   });
+
+  it('can sample sky colors without allocating a render mesh', () => {
+    const sky = new HosekWilkieSky({ createRenderable: false });
+    sky.applyPreset(SKY_PRESETS.dusk);
+    sky.update(0, sunDirectionFromPreset(SKY_PRESETS.dusk));
+
+    const horizon = sky.getHorizon(new THREE.Color());
+    expect(horizon.r + horizon.g + horizon.b).toBeGreaterThan(0);
+    expect(() => sky.getMesh()).toThrow(/render mesh/);
+    expect(() => sky.dispose()).not.toThrow();
+  });
+
+  it('exports a CPU-visible sky/fog packet from an existing sky', () => {
+    const sky = new HosekWilkieSky({ createRenderable: false });
+    try {
+      sky.applyPreset(SKY_PRESETS.dusk);
+      sky.update(0, sunDirectionFromPreset(SKY_PRESETS.dusk));
+
+      const packet = sampleSkyFogPacketFromSky({
+        sky,
+        presetName: 'dusk',
+        fogDarkenMultiplier: 0.5,
+        cloudCoverage: SKY_PRESETS.dusk.cloudCoverageDefault ?? 0,
+      });
+
+      expect(packet.source).toBe('HosekWilkieSky.cpu-lut');
+      expect(packet.cpuVisible).toBe(true);
+      expect(packet.fogColor).toEqual(
+        packet.horizonColor.map((value) => Number((value * 0.5).toFixed(4)))
+      );
+    } finally {
+      sky.dispose();
+    }
+  });
+
+  it('creates a renderless CPU-visible sky/fog packet from a preset', () => {
+    const packet = createSkyFogSamplePacket({ presetName: 'dusk' });
+
+    expect(packet.contract).toBe(ATMOSPHERE_FRAME_CONTRACT);
+    expect(packet.source).toBe('HosekWilkieSky.cpu-lut');
+    expect(packet.cpuVisible).toBe(true);
+    expect(packet.presetName).toBe('dusk');
+    expect(packet.fogNear).toBeLessThan(packet.fogFar);
+  });
+
+  it('creates an AtmosphereFrame packet with sun, sky, fog, cloud, and billboard diagnostics', () => {
+    const frame = createAtmosphereFrame({
+      presetName: 'golden-hour',
+      fogNear: 180,
+      fogFar: 780,
+      sunBillboard: {
+        size: 390,
+        distance: 3000,
+        intensity: 1.45,
+        materialName: 'konveyor-node-sun-billboard',
+        applied: true,
+      },
+    });
+
+    expect(frame.contract).toBe(ATMOSPHERE_FRAME_CONTRACT);
+    expect(frame.presetName).toBe('golden-hour');
+    expect(frame.sunDirection).toHaveLength(3);
+    expect(frame.sunPhysicalDirection).toEqual(frame.sunDirection);
+    expect(frame.sunVisualDirection).toHaveLength(3);
+    expect(frame.sunColor).toHaveLength(3);
+    expect(frame.zenithColor).toHaveLength(3);
+    expect(frame.horizonColor).toHaveLength(3);
+    expect(frame.fogColor).toHaveLength(3);
+    expect(frame.fogNear).toBe(180);
+    expect(frame.fogFar).toBe(780);
+    expect(frame.cloudCoverage).toBeGreaterThanOrEqual(0);
+    expect(frame.cloudCoverage).toBeLessThanOrEqual(1);
+    expect(frame.sunBillboard).toMatchObject({
+      size: 390,
+      distance: 3000,
+      intensity: 1.45,
+      materialName: 'konveyor-node-sun-billboard',
+      applied: true,
+    });
+    expect(frame.sky.materialMode).toBe('webgpu-node');
+    expect(frame.cloud.coverage).toBe(frame.cloudCoverage);
+  });
+
+  it('creates renderless CPU-visible sky/fog packets for every required preset', () => {
+    for (const presetName of getRequiredPresetNames()) {
+      const packet = createSkyFogSamplePacket({ presetName });
+
+      expect(packet.source).toBe('HosekWilkieSky.cpu-lut');
+      expect(packet.cpuVisible).toBe(true);
+      expect(packet.presetName).toBe(presetName);
+      expect(packet.horizonColor).toHaveLength(3);
+      expect(packet.zenithColor).toHaveLength(3);
+      expect(packet.sunColor).toHaveLength(3);
+      expect(packet.sunDirection).toHaveLength(3);
+      expect(packet.fogColor).toEqual(
+        packet.horizonColor.map((value) => Number((value * packet.fogDarkenMultiplier).toFixed(4)))
+      );
+    }
+  });
 });
 
 describe('DayNightCycle', () => {
@@ -261,6 +364,39 @@ describe('Atmosphere orchestrator', () => {
     atmo.dispose();
   });
 
+  it('exposes a live AtmosphereFrame from the orchestrator', () => {
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, {
+      initialPreset: 'golden-hour',
+      sceneFog: { color: '#aabbcc', near: 180, far: 760 },
+    });
+    const sunBillboard = {
+      getDiagnostics: () => ({
+        size: 390,
+        distance: 3000,
+        intensity: 1.3,
+        materialName: 'konveyor-node-sun-billboard',
+        applied: true,
+        visualDirection: [0.1, 0.9, 0.2],
+      }),
+    };
+
+    try {
+      atmo.update(0);
+      const frame = atmo.getFrame({ sunBillboard });
+
+      expect(frame.contract).toBe(ATMOSPHERE_FRAME_CONTRACT);
+      expect(frame.presetName).toBe('golden-hour');
+      expect(frame.fogNear).toBe(180);
+      expect(frame.fogFar).toBe(760);
+      expect(frame.sunBillboard.size).toBe(390);
+      expect(frame.sky.materialMode).toBe('webgl-shader');
+      expect(frame.atmosphereDrawCount).toBeGreaterThanOrEqual(2);
+    } finally {
+      atmo.dispose();
+    }
+  });
+
   it('setWeather raises fog density and cloud coverage when applying STORM', () => {
     const scene = new THREE.Scene();
     const atmo = new Atmosphere(scene, { initialPreset: 'pastoral-noon' });
@@ -273,6 +409,53 @@ describe('Atmosphere orchestrator', () => {
 
     atmo.setWeather({ weatherState: 'CLEAR' });
     expect(atmo.fog.density).toBeCloseTo(baselineDensity, 8);
+    atmo.dispose();
+  });
+
+  it('update drives fog color from the sky horizon with weather darkening applied', () => {
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, { initialPreset: 'dawn' });
+    const horizon = atmo.sky.getHorizon(new THREE.Color());
+
+    atmo.update(0);
+    expect(atmo.fog.color.r).toBeCloseTo(horizon.r, 5);
+    expect(atmo.fog.color.g).toBeCloseTo(horizon.g, 5);
+    expect(atmo.fog.color.b).toBeCloseTo(horizon.b, 5);
+
+    atmo.setWeather({ fogDarkenMultiplier: 0.5 });
+    atmo.update(0);
+    expect(atmo.fog.color.r).toBeCloseTo(horizon.r * 0.5, 5);
+    expect(atmo.fog.color.g).toBeCloseTo(horizon.g * 0.5, 5);
+    expect(atmo.fog.color.b).toBeCloseTo(horizon.b * 0.5, 5);
+    atmo.dispose();
+  });
+
+  it('scene fog overrides keep distance parameters while horizon owns fog color', () => {
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, {
+      initialPreset: 'golden-hour',
+      sceneFog: { color: '#123456', near: 40, far: 680 },
+    });
+    const horizon = atmo.sky.getHorizon(new THREE.Color());
+
+    expect(scene.fog.near).toBe(40);
+    expect(scene.fog.far).toBe(680);
+    expect(scene.fog.color.r).toBeCloseTo(horizon.r, 5);
+    expect(scene.fog.color.g).toBeCloseTo(horizon.g, 5);
+    expect(scene.fog.color.b).toBeCloseTo(horizon.b, 5);
+    atmo.dispose();
+  });
+
+  it('cloud layer consumes the sky-derived sun color during update', () => {
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, { initialPreset: 'dusk' });
+
+    atmo.update(0.016);
+    const skySun = atmo.sky.getSun(new THREE.Color());
+    const cloudSun = atmo.cloudLayer.material.uniforms.uSunColor.value;
+    expect(cloudSun.r).toBeCloseTo(skySun.r, 5);
+    expect(cloudSun.g).toBeCloseTo(skySun.g, 5);
+    expect(cloudSun.b).toBeCloseTo(skySun.b, 5);
     atmo.dispose();
   });
 

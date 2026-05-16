@@ -1,0 +1,152 @@
+{
+  "capturedAt": "2026-05-15T05:45:56.118Z",
+  "source": "Atmosphere scene fog/horizon proof",
+  "sceneCount": 3,
+  "ok": true,
+  "scenes": [
+    {
+      "sceneId": "field",
+      "presetName": "pastoral-noon",
+      "source": "shared/scenes + Atmosphere",
+      "sceneFog": {
+        "color": "#cfd9e8",
+        "near": 350,
+        "far": 900
+      },
+      "fog": {
+        "type": "Fog",
+        "color": [
+          0.6891,
+          0.7723,
+          0.8128
+        ],
+        "near": 350,
+        "far": 900
+      },
+      "horizonColor": [
+        0.6891,
+        0.7723,
+        0.8128
+      ],
+      "zenithColor": [
+        0.1131,
+        0.2935,
+        0.6742
+      ],
+      "sunColor": [
+        1,
+        0.8691,
+        0.6433
+      ],
+      "cloudCoverage": 0.3,
+      "cloudLayerCoverage": 0.3,
+      "expectedCoverage": 0.3,
+      "checks": {
+        "presetResolved": true,
+        "sceneFogType": true,
+        "sceneFogNearMatches": true,
+        "sceneFogFarMatches": true,
+        "fogColorTracksHorizon": true,
+        "skyCloudCoverageMatchesPreset": true,
+        "cloudLayerCoverageMatchesPreset": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "rolling-hills",
+      "presetName": "dusk",
+      "source": "shared/scenes + Atmosphere",
+      "sceneFog": {
+        "color": "#d4c4a8",
+        "near": 350,
+        "far": 900
+      },
+      "fog": {
+        "type": "Fog",
+        "color": [
+          0.3577,
+          0.1986,
+          0.1644
+        ],
+        "near": 350,
+        "far": 900
+      },
+      "horizonColor": [
+        0.3577,
+        0.1986,
+        0.1644
+      ],
+      "zenithColor": [
+        0.0107,
+        0.0341,
+        0.0832
+      ],
+      "sunColor": [
+        1,
+        0.3055,
+        0.0242
+      ],
+      "cloudCoverage": 0.5,
+      "cloudLayerCoverage": 0.5,
+      "expectedCoverage": 0.5,
+      "checks": {
+        "presetResolved": true,
+        "sceneFogType": true,
+        "sceneFogNearMatches": true,
+        "sceneFogFarMatches": true,
+        "fogColorTracksHorizon": true,
+        "skyCloudCoverageMatchesPreset": true,
+        "cloudLayerCoverageMatchesPreset": true
+      },
+      "ok": true
+    },
+    {
+      "sceneId": "open-country",
+      "presetName": "golden-hour",
+      "source": "shared/scenes + Atmosphere",
+      "sceneFog": {
+        "color": "#b8c8d8",
+        "near": 350,
+        "far": 900
+      },
+      "fog": {
+        "type": "Fog",
+        "color": [
+          0.698,
+          0.6664,
+          0.6607
+        ],
+        "near": 350,
+        "far": 900
+      },
+      "horizonColor": [
+        0.698,
+        0.6664,
+        0.6607
+      ],
+      "zenithColor": [
+        0.0286,
+        0.0944,
+        0.2523
+      ],
+      "sunColor": [
+        1,
+        0.6796,
+        0.2973
+      ],
+      "cloudCoverage": 0.4,
+      "cloudLayerCoverage": 0.4,
+      "expectedCoverage": 0.4,
+      "checks": {
+        "presetResolved": true,
+        "sceneFogType": true,
+        "sceneFogNearMatches": true,
+        "sceneFogFarMatches": true,
+        "fogColorTracksHorizon": true,
+        "skyCloudCoverageMatchesPreset": true,
+        "cloudLayerCoverageMatchesPreset": true
+      },
+      "ok": true
+    }
+  ]
+}

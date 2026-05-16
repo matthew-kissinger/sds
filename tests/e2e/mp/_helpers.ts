@@ -141,6 +141,8 @@ export async function navigateToMultiplayer(
 export type CreateRoomOpts = {
   /** Sheep count value to pick from dropdown (200, 250, 500, 1000, 3000, 5000). Default 200. */
   sheepCount?: number;
+  /** Scene id to pick from dropdown. Default is the UI's selected scene. */
+  sceneId?: 'rolling-hills' | 'open-country' | 'field';
   /** Game mode value (cooperative | competitive | timed). Default cooperative. */
   gameMode?: 'cooperative' | 'competitive' | 'timed';
   /** maxPlayers value (2, 3, 4). Default 4. */
@@ -161,12 +163,16 @@ export async function createRoomAsHost(page: Page, opts: CreateRoomOpts = {}): P
     const select = page.locator('select').nth(0);
     await select.selectOption(String(opts.maxPlayers));
   }
-  if (opts.gameMode) {
+  if (opts.sceneId) {
     const select = page.locator('select').nth(1);
+    await select.selectOption(opts.sceneId);
+  }
+  if (opts.gameMode) {
+    const select = page.locator('select').nth(2);
     await select.selectOption(opts.gameMode);
   }
   if (opts.sheepCount != null) {
-    const select = page.locator('select').nth(2);
+    const select = page.locator('select').nth(3);
     await select.selectOption(String(opts.sheepCount));
   }
 

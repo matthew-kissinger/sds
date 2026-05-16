@@ -1,0 +1,379 @@
+{
+  "capturedAt": "2026-05-15T08:38:44.841Z",
+  "contract": "konveyor-tree-refresh-baseline",
+  "sourceOfTruth": {
+    "picksPath": "tools/asset-gallery/picks.json",
+    "picksSavedAt": "2026-05-04T00:30:00.000Z",
+    "activeTreeIds": [
+      "tree1",
+      "tree2"
+    ]
+  },
+  "ezTree": {
+    "declared": "^1.1.0",
+    "lockfile": "1.1.0",
+    "installed": "1.1.0",
+    "peerThree": ">=0.167",
+    "upstream": {
+      "npmLatestObserved": "1.1.0",
+      "npmObservedAt": "2026-05-15T08:38:44.562Z",
+      "mainPackageVersionObserved": "1.1.0",
+      "changelogUrl": "https://github.com/dgreenheck/ez-tree/blob/main/CHANGELOG.md",
+      "npmUrl": "https://www.npmjs.com/package/@dgreenheck/ez-tree",
+      "unreleasedCandidateChanges": [
+        "Use custom rounded normals for leaves for softer shading (#43).",
+        "The growth force was not being applied correctly. Branches should now grow uniformly in the same world direction.",
+        "Child branches and leaves are now placed with stratified sampling (with a permuted slot assignment) instead of fixed angular spacing, eliminating visible spirals and one-sided clumping."
+      ],
+      "observedFrom": "live-npm-and-github-changelog",
+      "sourceUrls": {
+        "npmLatest": "https://registry.npmjs.org/@dgreenheck%2Fez-tree/latest",
+        "mainPackage": "https://raw.githubusercontent.com/dgreenheck/ez-tree/main/package.json",
+        "changelogRaw": "https://raw.githubusercontent.com/dgreenheck/ez-tree/main/CHANGELOG.md"
+      },
+      "unreleasedChanges": [
+        "Updated Dockerfile to Node 24 and removed the obsolete `version` attribute from `docker-compose.yml`.",
+        "Use custom rounded normals for leaves for softer shading (#43).",
+        "The growth force was not being applied correctly. Branches should now grow uniformly in the same world direction.",
+        "Child branches and leaves are now placed with stratified sampling (with a permuted slot assignment) instead of fixed angular spacing, eliminating visible spirals and one-sided clumping."
+      ],
+      "fallbackStaticObservedAt": "2026-05-15"
+    }
+  },
+  "currentDecision": {
+    "verdict": "do-not-rebake-yet",
+    "reason": "SDS already resolves the latest npm release; upstream main contains relevant unreleased visual changes that need a measured gallery, impostor, material, visual, latency, and perf pass before replacing shipped assets.",
+    "acceptedInputSurface": "artifact-backed evaluation only"
+  },
+  "acceptanceBeforeAssetReplacement": [
+    "run normal cache-invalidation tree rebake flow",
+    "re-run GLB compression and compare runtime/original bytes",
+    "re-run Kiln impostor bake if silhouette, canopy, trunk, or material output changes",
+    "refresh material ownership and replacement proofs",
+    "review gameplay/capture cameras for visible clumping or blocked action",
+    "run tree asset, impostor sidecar, visual, latency, perf, build, native, lint, and test gates relevant to the accepted change"
+  ],
+  "totals": {
+    "runtimeGlbBytes": 1620300,
+    "originalGlbBytes": 2885828,
+    "impostorAtlasBytes": 7274234
+  },
+  "trees": [
+    {
+      "id": "tree1",
+      "picks": {
+        "lod0": {
+          "sourcePath": "tools/asset-gallery/staging/trees/aspen_small_single.glb",
+          "name": "aspen_small_single.glb",
+          "canonicalName": "tree1.glb",
+          "role": "slim pasture silhouette (lightest at 3.7k tris)",
+          "tris": 3744,
+          "bbox": {
+            "sx": 0.645,
+            "sy": 1,
+            "sz": 0.708
+          },
+          "recipe": {
+            "species": "aspen",
+            "scale": "small",
+            "billboard": "single",
+            "seed": 11
+          }
+        },
+        "lod1": {
+          "sourcePath": "tools/asset-gallery/staging/trees-lod1/aspen_small_single_lod1.glb",
+          "name": "aspen_small_single_lod1.glb",
+          "canonicalName": "tree1_lod1.glb",
+          "role": "auto-paired LOD1 sibling for aspen_small_single",
+          "tris": 1462,
+          "recipe": {
+            "species": "aspen",
+            "scale": "small",
+            "billboard": "single",
+            "seed": 11
+          }
+        }
+      },
+      "runtimeGlbs": [
+        {
+          "path": "assets/models/trees/tree1.glb",
+          "bytes": 282596
+        },
+        {
+          "path": "assets/models/trees/tree1_lod1.glb",
+          "bytes": 202856
+        }
+      ],
+      "originals": [
+        {
+          "path": "assets/_originals/models/trees/tree1.glb",
+          "bytes": 470988
+        },
+        {
+          "path": "assets/_originals/models/trees/tree1_lod1.glb",
+          "bytes": 291088
+        }
+      ],
+      "impostorAtlases": [
+        {
+          "path": "assets/models/trees/tree1.imposter.png",
+          "bytes": 1223531
+        },
+        {
+          "path": "assets/models/trees/tree1.imposter.normal.png",
+          "bytes": 829008
+        },
+        {
+          "path": "assets/models/trees/tree1.imposter.depth.png",
+          "bytes": 1580359
+        }
+      ],
+      "impostorSidecar": {
+        "path": "assets/models/trees/tree1.imposter.json",
+        "version": 1,
+        "angles": 16,
+        "tilesX": 4,
+        "tilesY": 4,
+        "tileSize": 512,
+        "atlasWidth": 2048,
+        "atlasHeight": 2048,
+        "axis": "hemi-y",
+        "layout": "latlon",
+        "hemi": true,
+        "worldSize": 1,
+        "yOffset": 0.5,
+        "colorLayer": "baseColor",
+        "normalSpace": "capture-view",
+        "textureColorSpace": "srgb",
+        "auxLayers": [
+          "albedo",
+          "normal",
+          "depth"
+        ],
+        "bbox": {
+          "min": [
+            -0.30735816354251005,
+            0,
+            -0.3250702435522191
+          ],
+          "max": [
+            0.3452493979671826,
+            1,
+            0.3545956168595977
+          ]
+        },
+        "source": {
+          "path": "assets/_originals/models/trees/tree1.glb",
+          "bytes": 470988,
+          "tris": 5880
+        }
+      },
+      "materialOwnership": [
+        {
+          "group": "tree-lod0",
+          "path": "assets/models/trees/tree1.glb",
+          "materialNames": [
+            "branches",
+            "leaves"
+          ],
+          "replacementStrategy": null,
+          "replacedMaterials": null,
+          "missingTargets": null
+        },
+        {
+          "group": "tree-lod1",
+          "path": "assets/models/trees/tree1_lod1.glb",
+          "materialNames": [
+            "branches",
+            "leaves"
+          ],
+          "replacementStrategy": null,
+          "replacedMaterials": null,
+          "missingTargets": null
+        }
+      ],
+      "materialReplacement": [
+        {
+          "group": "tree-lod0",
+          "path": "assets/models/trees/tree1.glb",
+          "materialNames": [
+            "branches",
+            "leaves"
+          ],
+          "replacementStrategy": "material-name",
+          "replacedMaterials": 2,
+          "missingTargets": []
+        },
+        {
+          "group": "tree-lod1",
+          "path": "assets/models/trees/tree1_lod1.glb",
+          "materialNames": [
+            "branches",
+            "leaves"
+          ],
+          "replacementStrategy": "material-name",
+          "replacedMaterials": 2,
+          "missingTargets": []
+        }
+      ]
+    },
+    {
+      "id": "tree2",
+      "picks": {
+        "lod0": {
+          "sourcePath": "tools/asset-gallery/staging/trees/oak_medium_single.glb",
+          "name": "oak_medium_single.glb",
+          "canonicalName": "tree2.glb",
+          "role": "broad canopy anchor (~18.8k tris)",
+          "tris": 18772,
+          "bbox": {
+            "sx": 0.821,
+            "sy": 1,
+            "sz": 0.818
+          },
+          "recipe": {
+            "species": "oak",
+            "scale": "medium",
+            "billboard": "single",
+            "seed": 17
+          }
+        },
+        "lod1": {
+          "sourcePath": "tools/asset-gallery/staging/trees-lod1/oak_medium_single_lod1.glb",
+          "name": "oak_medium_single_lod1.glb",
+          "canonicalName": "tree2_lod1.glb",
+          "role": "auto-paired LOD1 sibling for oak_medium_single",
+          "tris": 2314,
+          "recipe": {
+            "species": "oak",
+            "scale": "medium",
+            "billboard": "single",
+            "seed": 17
+          }
+        }
+      },
+      "runtimeGlbs": [
+        {
+          "path": "assets/models/trees/tree2.glb",
+          "bytes": 695728
+        },
+        {
+          "path": "assets/models/trees/tree2_lod1.glb",
+          "bytes": 439120
+        }
+      ],
+      "originals": [
+        {
+          "path": "assets/_originals/models/trees/tree2.glb",
+          "bytes": 1373592
+        },
+        {
+          "path": "assets/_originals/models/trees/tree2_lod1.glb",
+          "bytes": 750160
+        }
+      ],
+      "impostorAtlases": [
+        {
+          "path": "assets/models/trees/tree2.imposter.png",
+          "bytes": 1073864
+        },
+        {
+          "path": "assets/models/trees/tree2.imposter.normal.png",
+          "bytes": 1333444
+        },
+        {
+          "path": "assets/models/trees/tree2.imposter.depth.png",
+          "bytes": 1234028
+        }
+      ],
+      "impostorSidecar": {
+        "path": "assets/models/trees/tree2.imposter.json",
+        "version": 1,
+        "angles": 16,
+        "tilesX": 4,
+        "tilesY": 4,
+        "tileSize": 512,
+        "atlasWidth": 2048,
+        "atlasHeight": 2048,
+        "axis": "hemi-y",
+        "layout": "latlon",
+        "hemi": true,
+        "worldSize": 1,
+        "yOffset": 0.5,
+        "colorLayer": "baseColor",
+        "normalSpace": "capture-view",
+        "textureColorSpace": "srgb",
+        "auxLayers": [
+          "albedo",
+          "normal",
+          "depth"
+        ],
+        "bbox": {
+          "min": [
+            -0.4135517670121835,
+            0,
+            -0.37792487801166696
+          ],
+          "max": [
+            0.40728931178869804,
+            1,
+            0.4397178862682093
+          ]
+        },
+        "source": {
+          "path": "assets/_originals/models/trees/tree2.glb",
+          "bytes": 1373592,
+          "tris": 18772
+        }
+      },
+      "materialOwnership": [
+        {
+          "group": "tree-lod0",
+          "path": "assets/models/trees/tree2.glb",
+          "materialNames": [
+            "branches",
+            "leaves"
+          ],
+          "replacementStrategy": null,
+          "replacedMaterials": null,
+          "missingTargets": null
+        },
+        {
+          "group": "tree-lod1",
+          "path": "assets/models/trees/tree2_lod1.glb",
+          "materialNames": [
+            "branches",
+            "leaves"
+          ],
+          "replacementStrategy": null,
+          "replacedMaterials": null,
+          "missingTargets": null
+        }
+      ],
+      "materialReplacement": [
+        {
+          "group": "tree-lod0",
+          "path": "assets/models/trees/tree2.glb",
+          "materialNames": [
+            "branches",
+            "leaves"
+          ],
+          "replacementStrategy": "material-name",
+          "replacedMaterials": 2,
+          "missingTargets": []
+        },
+        {
+          "group": "tree-lod1",
+          "path": "assets/models/trees/tree2_lod1.glb",
+          "materialNames": [
+            "branches",
+            "leaves"
+          ],
+          "replacementStrategy": "material-name",
+          "replacedMaterials": 2,
+          "missingTargets": []
+        }
+      ]
+    }
+  ]
+}

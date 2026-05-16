@@ -24,6 +24,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
+const CHROMIUM_GPU_ARGS = process.platform === 'win32'
+  ? ['--use-angle=d3d11', '--enable-gpu']
+  : [];
 
 // Three offsets representing the LOD0 (close), LOD0/LOD1 boundary
 // (mid), and LOD1/LOD2 boundary (far) regions.
@@ -100,9 +103,9 @@ function compareImages(a, b) {
 }
 
 async function captureAtDistance(page, scene, distance) {
-  const url = `http://localhost:3000/?perfMode=1&scene=${scene}&autostart=1&ui=off`;
+  const url = `http://localhost:3000/?perfMode=1&scene=${scene}&autostart=1&mode=classic&ui=off`;
   await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => !!window.__perfHarness, null, { timeout: 60_000 });
+  await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 90_000 });
   await page.evaluate((d) => {
     const cc = window.__sds?.cameraController;
     if (cc) {
@@ -123,7 +126,7 @@ async function decodePng(buf) {
 
 async function run() {
   const args = parseArgs(process.argv);
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: CHROMIUM_GPU_ARGS });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
 

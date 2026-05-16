@@ -1,0 +1,281 @@
+{
+  "capturedAt": "2026-05-15T05:19:54.327Z",
+  "baseUrl": "http://127.0.0.1:4173/",
+  "channel": "chrome",
+  "chromiumArgs": [
+    "--use-angle=d3d11",
+    "--enable-gpu"
+  ],
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "ok": true,
+  "presets": [
+    {
+      "presetName": "pastoral-noon",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorSkyPreset=pastoral-noon",
+      "screenshot": "pastoral-noon.png",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": true,
+        "effective": "webgpu-diagnostic",
+        "fallbackReason": null
+      },
+      "skyPreset": {
+        "requestedPresetName": "pastoral-noon",
+        "presetName": "pastoral-noon",
+        "fallbackReason": null
+      },
+      "skyFog": {
+        "source": "HosekWilkieSky.cpu-lut",
+        "presetName": "pastoral-noon",
+        "horizonColor": [
+          0.6891,
+          0.7723,
+          0.8128
+        ],
+        "zenithColor": [
+          0.1131,
+          0.2935,
+          0.6742
+        ],
+        "sunColor": [
+          1,
+          0.8691,
+          0.6433
+        ],
+        "sunDirection": [
+          0.2418,
+          0.9397,
+          0.2418
+        ],
+        "fogColor": [
+          0.5651,
+          0.6333,
+          0.6665
+        ],
+        "fogNear": 18,
+        "fogFar": 74,
+        "cloudCoverage": 0.3
+      },
+      "frames": 3,
+      "islandCount": 19,
+      "hasCloudPlane": true,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "presetName": "dusk",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorSkyPreset=dusk",
+      "screenshot": "dusk.png",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": true,
+        "effective": "webgpu-diagnostic",
+        "fallbackReason": null
+      },
+      "skyPreset": {
+        "requestedPresetName": "dusk",
+        "presetName": "dusk",
+        "fallbackReason": null
+      },
+      "skyFog": {
+        "source": "HosekWilkieSky.cpu-lut",
+        "presetName": "dusk",
+        "horizonColor": [
+          0.3577,
+          0.1986,
+          0.1644
+        ],
+        "zenithColor": [
+          0.0107,
+          0.0341,
+          0.0832
+        ],
+        "sunColor": [
+          1,
+          0.3055,
+          0.0242
+        ],
+        "sunDirection": [
+          -0.9418,
+          0.1392,
+          -0.306
+        ],
+        "fogColor": [
+          0.2933,
+          0.1629,
+          0.1348
+        ],
+        "fogNear": 18,
+        "fogFar": 74,
+        "cloudCoverage": 0.5
+      },
+      "frames": 3,
+      "islandCount": 19,
+      "hasCloudPlane": true,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "presetName": "overcast",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorSkyPreset=overcast",
+      "screenshot": "overcast.png",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": true,
+        "effective": "webgpu-diagnostic",
+        "fallbackReason": null
+      },
+      "skyPreset": {
+        "requestedPresetName": "overcast",
+        "presetName": "overcast",
+        "fallbackReason": null
+      },
+      "skyFog": {
+        "source": "HosekWilkieSky.cpu-lut",
+        "presetName": "overcast",
+        "horizonColor": [
+          0.7719,
+          0.9452,
+          1.0449
+        ],
+        "zenithColor": [
+          0.0302,
+          0.0997,
+          0.2914
+        ],
+        "sunColor": [
+          1,
+          0.8614,
+          0.6284
+        ],
+        "sunDirection": [
+          0.2367,
+          0.6428,
+          0.7286
+        ],
+        "fogColor": [
+          0.633,
+          0.7751,
+          0.8568
+        ],
+        "fogNear": 18,
+        "fogFar": 74,
+        "cloudCoverage": 1
+      },
+      "frames": 3,
+      "islandCount": 19,
+      "hasCloudPlane": true,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "presetName": "dawn",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorSkyPreset=dawn",
+      "screenshot": "dawn.png",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": true,
+        "effective": "webgpu-diagnostic",
+        "fallbackReason": null
+      },
+      "skyPreset": {
+        "requestedPresetName": "dawn",
+        "presetName": "dawn",
+        "fallbackReason": null
+      },
+      "skyFog": {
+        "source": "HosekWilkieSky.cpu-lut",
+        "presetName": "dawn",
+        "horizonColor": [
+          0.292,
+          0.1487,
+          0.123
+        ],
+        "zenithColor": [
+          0.009,
+          0.0281,
+          0.0691
+        ],
+        "sunColor": [
+          1,
+          0.2928,
+          0.0211
+        ],
+        "sunDirection": [
+          0.944,
+          0.1219,
+          0.3067
+        ],
+        "fogColor": [
+          0.2394,
+          0.1219,
+          0.1009
+        ],
+        "fogNear": 18,
+        "fogFar": 74,
+        "cloudCoverage": 0.45
+      },
+      "frames": 3,
+      "islandCount": 19,
+      "hasCloudPlane": true,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "presetName": "golden-hour",
+      "url": "http://127.0.0.1:4173/?renderer=webgpu&diagnostic=1&konveyorSkyPreset=golden-hour",
+      "screenshot": "golden-hour.png",
+      "rendererMode": {
+        "requested": "webgpu",
+        "diagnostic": true,
+        "effective": "webgpu-diagnostic",
+        "fallbackReason": null
+      },
+      "skyPreset": {
+        "requestedPresetName": "golden-hour",
+        "presetName": "golden-hour",
+        "fallbackReason": null
+      },
+      "skyFog": {
+        "source": "HosekWilkieSky.cpu-lut",
+        "presetName": "golden-hour",
+        "horizonColor": [
+          0.698,
+          0.6664,
+          0.6607
+        ],
+        "zenithColor": [
+          0.0286,
+          0.0944,
+          0.2523
+        ],
+        "sunColor": [
+          1,
+          0.6796,
+          0.2973
+        ],
+        "sunDirection": [
+          -0.7144,
+          0.3746,
+          0.591
+        ],
+        "fogColor": [
+          0.5724,
+          0.5464,
+          0.5418
+        ],
+        "fogNear": 18,
+        "fogFar": 74,
+        "cloudCoverage": 0.4
+      },
+      "frames": 3,
+      "islandCount": 19,
+      "hasCloudPlane": true,
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}
