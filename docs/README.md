@@ -49,13 +49,13 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`multiplayer-ux.md`](multiplayer-ux.md) | How-to / Reference | Multiplayer UX flow + lobby state diagrams. |
 | [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) | Reference / Explanation | Active experimental-branch handoff for the full autonomous Konveyor campaign. |
 | [`konveyor-sds.md`](konveyor-sds.md) | Reference / Explanation | WebGPU, optimization, and native-shipping campaign doctrine. Read before any Konveyor cycle. |
-| [`cycle-38-plan.md`](cycle-38-plan.md) | Reference / Explanation | Active Cycle 38: WebGPU mobile scene/camera/system matrix, visual gates, asset budgets, quality-governor closeout, and current connected-phone blockers. |
+| [`cycle-38-plan.md`](cycle-38-plan.md) | Reference / Explanation | Active Cycle 38: WebGPU mobile scene/camera/system matrix, visual gates, asset budgets, opt-in three-tier tree route, and current connected-phone blockers. |
 | [`archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md`](archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md) | Explanation | Current WebGPU tree-impostor spike: why the fixed-tile Kiln node path is not production octahedral impostor readiness. |
 | [`cycle-37-plan.md`](cycle-37-plan.md) | Reference / Explanation | Completed Cycle 37: isolated WebGPU perf, sun/sky atmosphere repair, Native Packaging Proof 0, and store/Steam checklist. |
 | [`native-packaging-proof-0.md`](native-packaging-proof-0.md) | Reference | Cycle 37 native packaging proof matrix for Electron, Tauri, Capacitor, PWA/TWA, Steam, stores, and true-native paths. |
 | [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md) | Reference | Docs-only readiness gates for Steam, App Store, Google Play, and optional PWA/TWA distribution. |
 | [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md) | Reference | Current prompt-to-artifact audit for the Konveyor WebGPU branch packet and remaining hard stops. |
-| [`konveyor-release-decision-checklist.md`](konveyor-release-decision-checklist.md) | Reference | Human-approved merge/deploy/default-renderer checklist after the Konveyor review packet is accepted. |
+| [`konveyor-release-decision-checklist.md`](konveyor-release-decision-checklist.md) | Reference | Human-approved merge/deploy/default-renderer checklist for the current Cycle 38 `2.1.5` review packet. |
 | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | Reference | Module map + render pipeline + network protocol. The "where does X live" doc. |
 | [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) | Reference | Which files are frozen + how authorization works. |
 | [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) | Reference | Cycle plan stub. New cycle plans inherit from this. |

@@ -1,61 +1,71 @@
 # Konveyor Release Decision Checklist
 
-Use this only after the branch review packet is accepted. It is intentionally
-separate from the autonomous run docs because merging, deploying, and changing
-the default renderer are release decisions.
+Use this only after the current branch review packet is accepted. It is
+intentionally separate from the autonomous run docs because merging, deploying,
+and changing default renderer policy are release decisions.
 
-Historical Cycle 37 review packet:
+Current Cycle 38 review packet:
 
-- Branch: `exp/konveyor-webgpu-migration`, since merged through PR
-  [#52](https://github.com/matthew-kissinger/sds/pull/52)
-- Completion audit:
+- Branch: `codex/cycle-38-tree-impostors`
+- Release version: `2.1.5`
+- Core code packet: `e3158d9`
+  (`feat(konveyor): advance cycle 38 tree impostors`)
+- Completion context:
   [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md)
-- Final local default-policy proof:
-  `../cycle36-validation/runtime/progressive-webgpu-default-request-proof.json`
-  and `../cycle36-validation/runtime/progressive-webgpu-default-perf-proof.json`
+- Active cycle plan:
+  [`cycle-38-plan.md`](cycle-38-plan.md)
 
-For the later mobile-readiness work, do not reuse the Cycle 37 merge checklist
-as proof. Re-run validation from the current checkout, then add Cycle 38 mobile
-matrix artifacts, visual screenshot gates, iOS/BrowserStack canaries, and
-telemetry review before any release claim.
+This packet may be deployed as a WebGPU/tree-impostor branch release. It does
+not make SDS mobile-ready. The Android WebGPU matrix remains budget-red, and
+the opt-in tree path is a lat/lon-hemi compatibility stage rather than true
+octahedral impostoring.
 
 ## Before Merge
 
 1. Confirm the operator explicitly approved merging/deploying the WebGPU packet
-   with progressive WebGPU as the web default. Matt approved this on
-   2026-05-16.
-2. Confirm PR #52 is still pointed at the intended head.
-3. Confirm no unrelated `.agents/skills/*` files are staged or included.
+   with progressive WebGPU and WebGL fallback. Matt approved docs alignment,
+   commit, push, and deploy on 2026-05-16.
+2. Confirm the branch is pointed at the intended Cycle 38 head and includes the
+   README/CHANGELOG/version alignment for `2.1.5`.
+3. Confirm no unrelated `.agents/skills/*` files are newly staged or included
+   relative to `main`.
 4. Re-run the current fast gates if the branch moved after the last audit:
 
    ```bash
    npm test
    npm run lint
    npm run build
-   npm run native:check
    ```
 
-5. Re-run the explicit WebGPU proofs if renderer code changed after the last
-   audit:
+5. Re-run the explicit WebGPU proofs if renderer code changed after the current
+   Cycle 38 tree packet. A docs-only release-alignment commit does not require
+   recapturing the Android matrix:
 
    ```bash
-   node tools/konveyor-production-webgpu-request-proof.mjs --base-url=http://127.0.0.1:4173/ --scenes=field,rolling-hills,open-country --out=cycle36-validation/runtime/progressive-webgpu-default-request-proof.json --out-dir=cycle36-validation/runtime/progressive-webgpu-default-request-proof
-   node tools/konveyor-production-webgpu-perf-proof.mjs --base-url=http://127.0.0.1:4173/ --scenes=field,rolling-hills,open-country --out=cycle36-validation/runtime/progressive-webgpu-default-perf-proof.json
-   node tools/konveyor-production-webgpu-mp-proof.mjs --base-url=http://localhost:3000/
+   npm run probe:webgpu-impostor-lab
+   npm run perf:cycle38-desktop
+   npm run perf:cycle38-android
    ```
 
 ## Deploy Gate
 
-The web default is progressive WebGPU after this release-policy update. The
-deploy acceptance is:
+The web default remains progressive WebGPU after this packet. The deploy
+acceptance is:
 
-1. GitHub Actions Deploy on `main` is green.
-2. `https://sheepdogsim.com/` serves the new commit hash or asset manifest.
-3. Default URL resolves production WebGPU on supported desktop Chrome/Edge.
-4. Unsupported WebGPU or failed device creation falls back to WebGL.
-5. `?renderer=webgl` remains a forced WebGL escape hatch.
-6. Settings exposes the experimental WebGPU renderer toggle and persists the
+1. A PR from `codex/cycle-38-tree-impostors` is squash-merged to `main`.
+2. GitHub Actions Deploy on `main` is green.
+3. `https://sheepdogsim.com/` serves the deployed commit hash or matching asset
+   manifest.
+4. Default URL resolves production WebGPU on supported desktop Chrome/Edge.
+5. Unsupported WebGPU or failed device creation falls back to WebGL.
+6. `?renderer=webgl` remains a forced WebGL escape hatch.
+7. Settings exposes the experimental WebGPU renderer toggle and persists the
    off state through `sds-settings.experimentalWebGpu=false`.
+8. Release notes and docs do not call the Android path mobile-ready.
+
+If the only remaining change is docs-only and the `push` deploy trigger is
+skipped by `paths-ignore`, run the same deploy workflow manually on `main`
+through `workflow_dispatch`.
 
 ## Post-Deploy Required Checks
 

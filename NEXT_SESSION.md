@@ -1,10 +1,10 @@
 # Next Session - Polished WebGPU Production Readiness Pickup
 
 > **Updated:** 2026-05-16 after Cycle 38 tree-impostor branch proof, LOD1
-> rebake, and Android/desktop matrix refresh.
-> **For:** current checkout `main` after the Konveyor PR #52 merge. Create a
-> scoped `codex/` branch before committing Cycle 38 work if branch isolation is
-> desired.
+> rebake, Android/desktop matrix refresh, and `2.1.5` release-doc alignment.
+> **For:** current Cycle 38 branch `codex/cycle-38-tree-impostors`; after this
+> packet merges, continue from `main` unless a scoped follow-up branch is
+> needed.
 > **Merged PR:** [#52](https://github.com/matthew-kissinger/sds/pull/52).
 > **Pickup priority:** continue Cycle 38 toward a polished production game.
 > The top implementation priority is production-ready tree octahedral impostors
@@ -14,10 +14,11 @@
 
 Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then the completed Cycle 37 plan [`docs/cycle-37-plan.md`](docs/cycle-37-plan.md), then the next plan [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md), then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completion audit [`docs/konveyor-completion-audit-2026-05-16.md`](docs/konveyor-completion-audit-2026-05-16.md). Cycle 36 is completed foundation evidence at [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
 
-If Matt explicitly approves merge/deploy, use
+Matt approved README/docs alignment, commit, push, and deploy for the Cycle 38
+packet on 2026-05-16. Use
 [`docs/konveyor-release-decision-checklist.md`](docs/konveyor-release-decision-checklist.md)
 as the release gate. PR #52 is now historical merged evidence, not a current
-approval to deploy new uncommitted mobile-readiness work.
+approval to deploy future mobile-readiness work.
 
 ## Fresh Agent Goal
 
@@ -26,9 +27,9 @@ packet. The branch advanced trees from lab-only impostor sampling to an explicit
 three-tier production route, but it did not finish true octahedral sidecars or
 mobile budget acceptance.
 
-Start from the current dirty worktree; do not restart Cycle 37. The repo now
-contains partially implemented Cycle 38 work and proof artifacts. Before
-editing, inspect `git status --short`, then read this section and
+Start from the current checkout; do not restart Cycle 37. The repo now contains
+implemented Cycle 38 tree work and proof artifacts, with mobile readiness still
+open. Before editing, inspect `git status --short`, then read this section and
 [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md). Keep changes scoped, create a
 `codex/` branch before committing if desired, and do not touch `shared/**`,
 sim-baseline goldens, or worker migrations without explicit acceptance.
@@ -135,8 +136,8 @@ Key artifact:
 
 Current validation:
 
-- `npm test` passed 457 specs / 7 skipped after the mobile-readiness pass.
-- `npm run build` passed with the accepted bundle fixture at `mainKB=577`.
+- `npm test` passed 469 specs / 7 skipped after the Cycle 38 tree packet.
+- `npm run build` passed with the accepted bundle fixture at `mainKB=590`.
 - New Android runner: `npm run perf:android-webgpu`.
 - New runtime report shape includes `renderer`, `deviceTier`, `sceneId`,
   `cameraPose`, `frameP95`, `frameP99`, `drawCalls`,

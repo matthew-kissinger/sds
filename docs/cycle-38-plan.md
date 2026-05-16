@@ -1,7 +1,7 @@
 # Cycle 38 - Polished WebGPU Production Readiness
 
 Status: active/in progress - not mobile-ready yet; tree-impostor branch
-packet captured and pushed for review  
+packet captured, README/release docs aligned for `2.1.5`, and deploy approved
 Date: 2026-05-16  
 Branch: `codex/cycle-38-tree-impostors`
 
@@ -27,6 +27,8 @@ priority for PC and mobile.
 Current truth:
 
 - Cycle 38 is not complete and SDS is not mobile-ready.
+- The `2.1.5` release packet can deploy the current WebGPU/tree-impostor work,
+  but that deploy is not a mobile-readiness or true-octahedral readiness claim.
 - WebGPU remains the intended default on supported browsers, with WebGL fallback
   and explicit `?renderer=webgl` preserved.
 - The default WebGPU mobile tree path no longer forces high-tier mobile into
@@ -211,7 +213,8 @@ Current connected-phone blockers:
   `p95=50.1 ms`, grass-only `p95=66.8 ms` / `p99=83.4 ms`, trees-only
   `p95=50.1 ms` / `p99=66.8 ms`, sheep-only `p95=50.1 ms`, water-only
   `p95=50.0 ms`, and atmosphere-only `p95=33.4 ms`.
-- The current WebGPU mobile tree path is still chunked native LOD1 geometry.
+- The default/fallback WebGPU mobile tree path is still chunked native LOD1
+  geometry until the explicit tree route passes the Android gates.
 - The explicit three-tier tree path is not ready to replace fallback behavior
   automatically. It improves the close/mid visual read and enables far impostor
   proof, but the connected Android matrix still fails budget and true

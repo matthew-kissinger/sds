@@ -2,9 +2,9 @@
 
 [![Play now](https://img.shields.io/badge/play-sheepdogsim.com-2563eb?style=for-the-badge)](https://sheepdogsim.com) &nbsp; [![MIT License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](LICENSE) &nbsp; [![Star on GitHub](https://img.shields.io/github/stars/matthew-kissinger/sds?style=for-the-badge&logo=github&color=eab308)](https://github.com/matthew-kissinger/sds)
 
-[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 300](https://img.shields.io/badge/tests-300%20passing-22c55e)](tests/)
+[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 469](https://img.shields.io/badge/tests-469%20passing-22c55e)](tests/)
 
-**Herd up to 5,000 sheep across three biomes in your browser, on your phone, with friends, at 60fps.** No install, no signup, no ads. Free. MIT-licensed. Built to be forked.
+**Herd up to 5,000 sheep across three biomes in a modern browser, with progressive WebGPU on supported hardware and WebGL fallback everywhere else.** No install, no signup, no ads. Free. MIT-licensed. Built to be forked.
 
 > [Play it now → sheepdogsim.com](https://sheepdogsim.com)
 
@@ -14,14 +14,14 @@
 
 ## Why this exists
 
-Most WebGL games are tech demos with no game inside, or closed-source mobile-clone ports with no tech to learn from. **This is neither.** It's a polished, fully playable 3D game whose source you can read end-to-end in an afternoon and ship a personal mod of by the weekend.
+Most browser 3D games are tech demos with no game inside, or closed-source mobile-clone ports with no tech to learn from. **This is neither.** It's a polished, fully playable 3D game whose source you can read end-to-end in an afternoon and ship a personal mod of by the weekend.
 
 The whole stack:
 
-- **Client engine:** ~10k lines of vanilla JavaScript (no JSX, no codegen, no wasm)
+- **Client engine:** vanilla JavaScript, Three.js, progressive WebGPU on supported browsers, and WebGL fallback
 - **Server:** ~600-line TypeScript Cloudflare Worker with Durable Objects and D1
 - **Shared sim:** deterministic boid + obstacle modules imported byte-identically by both
-- **Tests:** 315 specs (Vitest 4) covering atmosphere, heightfield, scene-obstacles, island-boundary (incl. island sim-baselines + corral retirement + OC objective stage), tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation + objective snapshot contract + allowedModes enforcement, integration harness, practice-mode, SEO, and water shoreline math
+- **Tests:** 469 passing / 7 skipped (Vitest 4) covering renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode, SEO, and water shoreline math
 
 If you're learning 3D web games, real-time multiplayer on edge compute, or large-scale boid simulation, this codebase is a rare opportunity to read a complete shipped product instead of yet another minimal example.
 
@@ -56,10 +56,11 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - Reconnect grace window — drop a tab and rejoin within 15 s without losing your run
 
 ### 🎨 Cinematic visual layer
+- **Progressive WebGPU renderer path** with explicit WebGL fallback and a forced `?renderer=webgl` escape hatch
 - **Hosek-Wilkie analytic sky** with day/night presets, parallax cloud layer, shoreline-aware water with sun-glint, billboarded sun disc
 - **Hundreds of thousands of grass blades** with directional wind shader, dog-bends-grass-along-its-facing interaction, per-scene density tuning, stochastic-dither LOD
 - **Apple-correct tone mapping** — Mac/iPhone/iPad use Neutral instead of ACES so the sky doesn't wash white on Metal-ANGLE
-- Per-scene tree LOD + impostor atlases (Mediterranean / Pacific-NW species mix)
+- Per-scene tree LOD + impostor atlases. Cycle 38 adds the first explicit WebGPU three-tier tree route behind `?konveyorNativeTreeImpostors=1`; proper mobile octahedral impostors are still active work.
 - Three camera modes: **Classic** (top-down isometric), **Follow** (cinematic chase with ridge-clearance lift), **Free** (mouse-yaw orbit)
 
 ### 🌐 Mobile + i18n + accessibility
@@ -94,7 +95,7 @@ npm run dev:client     # just Vite (no multiplayer worker)
 npm run dev:worker     # just wrangler
 npm run dev:lan        # vite --host + wrangler (LAN-accessible — for mobile testing)
 
-npm test               # Vitest — 300 specs in ~2s
+npm test               # Vitest — 469 passing / 7 skipped in ~2s on the current branch
 npm run test:ios-water # BrowserStack real iOS Safari water canary
 npm run build          # production output to dist/
 ```
@@ -106,6 +107,9 @@ URL params for fast scene picking + shoot setup:
 - `?cinematic=1` — exposes `window.__sdsCinema` for scripted captures + free-fly camera + tone-map override
 - `?ui=off` — hide React overlay (canvas-only render)
 - `?sun=N` — N in 0..1 (`0.06` = dusk, `0.20` = golden hour, `0.50` = noon)
+- `?renderer=webgpu` — request the production WebGPU path where the browser can create a device
+- `?renderer=webgl` — force the WebGL fallback path
+- `?konveyorNativeTreeImpostors=1` — opt into the Cycle 38 explicit three-tier WebGPU tree route for review
 
 ---
 
@@ -172,20 +176,21 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 ## Tech stack
 
-**Client:** Three.js 0.184 · React 19.2 · Vite 7.3 · Tailwind 4.1 · @msgpack/msgpack 3 · i18next 25 · lz-string · nipple.js · kdbush
+**Client:** Three.js 0.184 WebGL/WebGPU renderer paths · React 19.2 · Vite 7.3 · Tailwind 4.1 · @msgpack/msgpack 3 · i18next 25 · lz-string · nipple.js · kdbush
 
 **Server:** Cloudflare Workers · Durable Objects · D1 · wrangler 4
 
 **Shared:** `shared/` deterministic boid + physics + obstacle modules, imported by both runtimes
 
-**Testing:** Vitest 4.1 (315 specs · 30 files · ~2 s full run) covering atmosphere, heightfield, scene-obstacles, island-boundary (incl. island sim-baselines + corral retirement + OC objective stage), tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation + objective snapshot contract + allowedModes enforcement, integration harness, practice-mode contracts, SEO, and water shoreline math. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright for browser smoke + perf-baseline harness, plus BrowserStack for the real iOS Safari water canary.
+**Testing:** Vitest 4.1 (469 passing / 7 skipped · 51 files · ~2 s full run) covering renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode contracts, SEO, and water shoreline math. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright covers browser smoke and perf-baseline harnesses; BrowserStack covers the real iOS Safari water canary.
 
 ---
 
-## Recent ships (current cycle)
+## Recent ships and current branch
 
-We work in numbered cycles; each ship is a `vN.N.N` tag with a CHANGELOG entry. The last twelve cycles delivered everything you see today; here's where the surface is moving right now:
+We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANGELOG entry. The last cycles delivered everything you see today; here's where the surface is moving right now:
 
+- **`v2.1.5`** (2026-05-16) — Cycle 38 WebGPU tree-impostor packet: branch/leaf-preserving tree rebakes, explicit three-tier WebGPU tree route behind `?konveyorNativeTreeImpostors=1`, dynamic impostor tile plumbing, and refreshed desktop/Android proof artifacts. Desktop proof is green; Android WebGPU remains budget-red and is not a mobile-ready claim.
 - **`v2.1.4`** (2026-05-10) — real iOS Safari water validation via BrowserStack + shoreline-based water shader, removing the fragile depth pre-pass.
 - **`v2.1.3`** (2026-05-09) — public-surface pass: crawler body content, per-scene landing pages, devlog scaffold, sitemap fix, footer links, and repo topic refresh.
 - **`v2.1.1`** (2026-05-08) — OG card refresh: new Rolling Hills dusk + Field farmhouse social-share images. `_headers` cache TTL added so future asset refreshes propagate fast at the CF edge.
@@ -201,13 +206,13 @@ We work in numbered cycles; each ship is a `vN.N.N` tag with a CHANGELOG entry. 
 
 ## Roadmap — where we'd love help
 
-The backend on Cloudflare's edge is solved-as-far-as-it-needs-to-be. The visual layer ships at 60fps on most hardware. What's left is content depth, dynamic life, and rough edges. **Each item below is a real PR-able piece of work** — issue numbers welcome.
+The backend on Cloudflare's edge is solved-as-far-as-it-needs-to-be. The visual layer is now progressively WebGPU-backed on supported browsers while retaining WebGL fallback. Android WebGPU frame budgets and tree representation quality are still active engineering work. **Each item below is a real PR-able piece of work** — issue numbers welcome.
 
 - **Dynamic weather + time-of-day as gameplay levers.** The Hosek-Wilkie sky already supports dawn/noon/dusk/golden/overcast presets; wiring a `DayNightCycle` driver where sheep flocking tightens at dusk and visibility drops in fog turns atmosphere into mechanic.
 - **More multi-stage objectives** beyond Open Country's gather→drive. River crossings, predator-flushing, lost-sheep recovery, scattered sub-flocks at multiple cardinal directions — each unlocked by data in `shared/scenes/*.js` rather than new code paths.
 - **Predators + NPCs.** Wolves/strays as obstacle-aware boids using the same `SceneObstacles` index sheep already query. A second AI shepherd that competes or assists.
 - **Mod-friendly scene format.** Sandbox already uses lz-string-encoded URLs; growing this to full scene descriptions (heightmap + tree zones + woods clusters + objective def) so a custom biome ships as a link.
-- **Spherical-billboard impostors.** The Cycle 18 octahedral atlas bakes 16 views per species (4 azimuth × 4 elevation) but the runtime quad still billboards around world-Y only — high-elevation atlas tiles render edge-on from cinematic camera altitudes. A proper spherical billboard with a square-tile bake unlocks the overhead shots.
+- **Production octahedral tree impostors.** Cycle 38 deliberately keeps the WebGPU tree route opt-in while desktop/Android evidence improves. The next useful version is a real view-dependent impostor or hybrid trunk/branch geometry plus impostor canopy, with grounded pivots, tile selection, relighting, LOD transition hysteresis, and screenshot gates before it replaces native LODs on mobile.
 - **Competitive seasons + tournaments** once the leaderboard has enough player history to make them meaningful.
 
 ---
@@ -227,7 +232,7 @@ This codebase is **deliberately easy to read**. Whether you want to mod the game
 
 - **More languages.** i18n keys live in [js/locales/](js/locales/); PRs add a new directory + JSON files. Today: 5 languages (en, es, ja, pt, zh-CN). Want German? French? Korean? Open a PR.
 - **Dog GLB compression** via gltf-transform + Draco. Each dog is 25–40k triangles; five dog models. Trims the bundle.
-- **Better mobile perf.** Current target is 30–60fps on mid-range Android; getting reliable 60 would help a lot of users.
+- **Better Android WebGPU perf.** The Cycle 38 connected-phone matrix is screenshot-valid but budget-red. Reducing Field draw calls, Open Country terrain/tree cost, and sprint-start spikes comes before any mobile-readiness claim.
 - **MP joiner renderer sync.** Joiners whose URL-param scene differs from the room's see correct sim but mismatched visuals.
 - **LOD2 → LOD0 cross-fade** at the 100 m boundary. The hard pop is visible — alpha-dither / fade across a 5–10 m hysteresis band would soften it.
 - **Resize behavior audit.** Sometimes camera/HUD don't reseat correctly after a window resize.

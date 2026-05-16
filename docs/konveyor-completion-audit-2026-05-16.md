@@ -3,10 +3,9 @@
 Original branch: `exp/konveyor-webgpu-migration`
 
 Post-audit update: PR [#52](https://github.com/matthew-kissinger/sds/pull/52)
-has since merged to `main`; local `main` is currently at `ea34753`
-(`ci(konveyor): make linux perf check manual`) before the uncommitted
-mobile-readiness work. Treat the PR/draft state below as historical audit
-context, not current branch truth.
+has since merged to `main`. The current Cycle 38 release packet is
+`codex/cycle-38-tree-impostors` for `2.1.5`; treat the PR/draft state below as
+historical audit context, not current branch truth.
 
 Core implementation packet: Cycle 37 plus the post-cycle progressive WebGPU
 default/toggle pass, followed by the later connected-Android WebGPU
@@ -26,7 +25,7 @@ documented hard stop is reached.
 
 | Requirement | Evidence inspected | Status |
 |---|---|---|
-| Work happened on the intended Konveyor branch before merge, and current follow-up work starts from `main`. | Historical audit state was `exp/konveyor-webgpu-migration...origin/exp/konveyor-webgpu-migration` with draft PR #52. Post-audit update: PR #52 merged and current local `main` is at `ea34753` before uncommitted mobile-readiness work. | Pass |
+| Work happened on the intended Konveyor branch before merge, and current follow-up work moved to a scoped Cycle 38 branch. | Historical audit state was `exp/konveyor-webgpu-migration...origin/exp/konveyor-webgpu-migration` with draft PR #52. Post-audit update: PR #52 merged; Cycle 38 release work is on `codex/cycle-38-tree-impostors`. | Pass |
 | Progressive WebGPU default with WebGL fallback. | `progressive-webgpu-default-request-proof.json` records default URL `requested: "webgpu"` and `effective: "webgpu-production"`, stored `sds-settings.experimentalWebGpu=false` staying WebGL, forced `?renderer=webgl` staying WebGL, unsupported API fallback, simulated device-failure fallback, and nonblank Field/Rolling Hills/Open Country screenshots. `progressive-webgpu-settings-toggle.png` verifies the settings label/experimental copy in the UI. | Pass |
 | Explicit WebGPU request enters the production WebGPU route on supported desktop hardware. | `production-webgpu-request-proof.json` records Field, Rolling Hills, and Open Country with `effective: "webgpu-production"`, device preflight `ok: true`, `rendererIsWebGpu: true`, nonblank screenshots, zero console/page errors, and scene-body material/native-instancing checks passing. | Pass |
 | Unsupported WebGPU or failed device creation fails closed to WebGL. | `production-webgpu-request-proof.json` records the no-`navigator.gpu` case as `fallbackReason: "webgpu-unavailable"` and simulated request-device failure as `fallbackReason: "webgpu-device-request-failed"`, both `effective: "webgl"`. | Pass |
@@ -77,13 +76,14 @@ audit packet with a real-device baseline but does not close full mobile
 readiness; that remains the Cycle 38 matrix and visual-gate work.
 
 Cycle 38 follow-up has now proved that the remaining work is real, not
-paperwork. The Android runner and dog sprint route were hardened, but Open
-Country connected-phone artifacts still miss high-mobile frame budgets:
-follow-close is around `p95=33.4 ms` / `p99=50.1 ms`, and
-horizon/terrain-seam is around `p95=66.8 ms` / `p99=66.9 ms`. The terrain seam
-is reduced but still visible, grass interaction is wired but not visually
-accepted, and the current mobile tree path is chunked LOD1 containment rather
-than proper view-dependent octahedral impostors.
+paperwork. The Android runner and dog sprint route were hardened, the middle
+tree LOD was rebaked to preserve branches, and the black/no-texture WebGPU
+impostor read was fixed with a foliage lighting floor and ambient tint clamp.
+The explicit `?konveyorNativeTreeImpostors=1` route now uses near LOD0, mid
+branch-preserving LOD1, and far lat/lon-hemi impostors with per-instance tile
+attributes. Desktop installed-Chrome proof is green, but Android connected-phone
+proof remains budget-red, and the route is still not true octahedral impostor
+readiness.
 
 The campaign is still not complete as full mobile production readiness. The
 remaining work after the merged Cycle 37 packet and the uncommitted

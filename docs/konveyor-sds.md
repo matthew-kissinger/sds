@@ -14,21 +14,21 @@ code around the new assumption.
 ## Autonomous branch mode
 
 The full migration campaign originally ran on `exp/konveyor-webgpu-migration`.
-PR #52 has since merged the progressive WebGPU packet to `main`, and the current
-checkout for post-merge mobile-readiness work is `main`. Create a scoped
-`codex/` branch before committing if branch isolation is desired. Numbered
-cycle plans are evidence and checkpoints, not stopping points. Agents should
-keep moving until the full objective is reached or a documented hard stop is
-hit. Use [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) as the
-control surface for the next autonomous pass. The dated completion audit is
+PR #52 has since merged the progressive WebGPU packet to `main`. The active
+Cycle 38 release packet now lives on `codex/cycle-38-tree-impostors` and is
+prepared for the `2.1.5` deploy. Numbered cycle plans are evidence and
+checkpoints, not stopping points. Agents should keep moving until the full
+objective is reached or a documented hard stop is hit. Use
+[`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) as the control
+surface for the next autonomous pass. The dated completion audit is
 [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md);
-it is historical for the Cycle 37/PR #52 packet and now includes a post-audit
-note for the Android mobile-readiness baseline.
+it is historical for the Cycle 37/PR #52 packet and now includes post-audit
+notes for the Android mobile-readiness baseline and Cycle 38 tree packet.
 The browser/device research spike for the mobile path is
 [`archive/research/browser-device-performance-spike-2026-05-16.md`](archive/research/browser-device-performance-spike-2026-05-16.md);
 it is now root-cause context behind the later mobile-readiness implementation
 rather than current performance truth.
-For any future release that carries the uncommitted mobile-readiness work, use
+For any release that carries the Cycle 38 tree/mobile-readiness work, use
 [`konveyor-release-decision-checklist.md`](konveyor-release-decision-checklist.md)
 for the deploy, post-deploy canary, telemetry readout, and default-policy
 review sequence.
@@ -199,6 +199,13 @@ hatch, and the settings UI exposes an experimental WebGPU toggle backed by
   `cycle38-validation/runtime/webgpu-impostor-lab-proof.json`; it proves dynamic
   tile controls and selector variation in the diagnostic scene, while still
   marking impostors as not production-ready.
+- The Cycle 38 tree-impostor release packet adds the explicit
+  `?konveyorNativeTreeImpostors=1` route: near native LOD0, mid
+  branch-preserving native LOD1, and far lat/lon-hemi Kiln impostor quads with
+  per-instance camera-driven tile offsets/weights. This fixes the detached
+  middle LOD read and the black/no-texture WebGPU impostor tint bug, but it is
+  still opt-in while Android remains over budget and true octahedral sidecars
+  are unbaked.
 - The first real multiplayer WebGPU proof now exists at
   `cycle36-validation/runtime/production-webgpu-mp-proof.json` (captured
   2026-05-16T01:42:30.718Z on installed Chrome against local Vite + Wrangler).

@@ -13,11 +13,11 @@ Historical Konveyor work happened on:
 git switch exp/konveyor-webgpu-migration
 ```
 
-PR #52 has since merged the progressive WebGPU packet to `main`, and the current
-checkout for the mobile-readiness work is `main`. Continue from the current
-checkout or create a scoped `codex/` branch before committing. Do not restart
-from the stale experimental branch unless the user explicitly asks to inspect
-that historical line.
+PR #52 has since merged the progressive WebGPU packet to `main`. The current
+Cycle 38 release packet is `codex/cycle-38-tree-impostors`, prepared as
+version `2.1.5` for deploy. Continue from the current checkout, and do not
+restart from the stale experimental branch unless the user explicitly asks to
+inspect that historical line.
 
 ## Objective
 
@@ -120,6 +120,12 @@ control surface:
   impostor lab proof is also executable at `npm run probe:webgpu-impostor-lab`
   and records dynamic tile controls plus lat/lon and octahedral selector
   variation, but it is a diagnostic lab only.
+- The Cycle 38 tree-impostor branch packet now has an explicit
+  `?konveyorNativeTreeImpostors=1` route that keeps near native LOD0, uses a
+  branch-preserving native LOD1 mid tier, and switches far trees to
+  lat/lon-hemi Kiln impostor quads with per-instance tile offsets and weights.
+  Desktop installed-Chrome proof is green, Android proof is screenshot-valid
+  but budget-red, and this is still not true octahedral impostor readiness.
 
 The desktop browser conclusion: installed Chrome 148 can create a WebGPU device
 on the current Windows machine, but Playwright's bundled Chromium 147 exposes

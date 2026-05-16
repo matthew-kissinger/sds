@@ -6,6 +6,11 @@ Current visual-polish prompt: /goal Treat the Cycle 37 visual-polish pass and th
 
 # Progress
 
+- 2026-05-16: Aligned the Cycle 38 release packet for `2.1.5`: README now
+  reflects progressive WebGPU with WebGL fallback, current 469/7 Vitest status,
+  the opt-in three-tier tree route, and the Android budget-red blocker. The
+  release checklist now points at `codex/cycle-38-tree-impostors`; the branch
+  removes newly added `.agents/skills/*` files before deploy.
 - 2026-05-14: Oriented on `docs/konveyor-sds.md`, `docs/cycle-36-plan.md`, `NEXT_SESSION.md`, and current dirty worktree. Cycle 36 gates renderer work behind perf baseline repair, validation reconciliation, and runtime/native proof.
 - 2026-05-14: No `shared/**`, sim-baseline fixture, or worker migration changes are authorized.
 - 2026-05-14: Repaired perf gate by adding the app's missing `perfMode=1&autostart=1` path, making perf readiness require live gameplay plus one measured frame, and launching Windows Playwright Chromium with D3D11 GPU flags. `npm run perf:baseline` now completes all six configs with `ok: true` and 900 samples each.

@@ -4,6 +4,57 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.5] - 2026-05-16 (Cycle 38 - WebGPU tree-impostor packet)
+
+Renderer and vegetation release packet for the Konveyor WebGPU track. This
+keeps WebGPU progressive with WebGL fallback, ships the Cycle 38 tree evidence
+and tooling, and keeps the Android WebGPU matrix honest as over budget.
+
+### Added
+
+- Explicit Cycle 38 WebGPU tree route behind
+  `?konveyorNativeTreeImpostors=1`, with close native LOD0, mid
+  branch-preserving native LOD1, and far lat/lon-hemi Kiln impostor quads.
+- Dynamic WebGPU impostor tile plumbing and executable lab proof via
+  `npm run probe:webgpu-impostor-lab`.
+- Render-cost reporting, Android WebGPU perf harnesses, dog-sprint camera
+  harnesses, and Cycle 38 desktop/Android screenshot matrices under
+  `cycle38-validation/`.
+
+### Changed
+
+- Rebuilt tree LOD assets to preserve branch structure in the mid tier instead
+  of leaving detached-looking foliage at gameplay camera distances.
+- Tuned WebGPU foliage, grass, terrain, sheep, and water material adapters for
+  the Cycle 38 proof packet.
+- Updated repo-facing docs, README, and release checklist to describe
+  progressive WebGPU, the opt-in tree route, and the remaining Android budget
+  blocker without calling the mobile path ready.
+
+### Fixed
+
+- WebGPU Kiln impostors no longer read as black/no-texture quads; the node
+  material now has a foliage lighting floor and ambient tint clamp so atlas
+  color survives runtime relighting.
+- Mobile tree routing no longer treats the broken all-distance impostor read as
+  production default behavior.
+
+### Validation
+
+- `npm test` - 469 passed / 7 skipped.
+- `npm run build` - clean production build, main chunk within ratchet.
+- Desktop installed-Chrome WebGPU three-tier tree matrix:
+  `cycle38-validation/runtime/desktop-webgpu-tree-impostors-three-tier-matrix.json`.
+- Connected Android WebGPU three-tier tight matrix:
+  `cycle38-validation/runtime/android-webgpu-tree-impostors-three-tier-tight-matrix.json`.
+
+### Notes
+
+- Android WebGPU remains budget-red in the full Cycle 38 pose matrix. This is
+  not a mobile-ready release claim.
+- True octahedral tree impostors remain future work; the shipped route is
+  lat/lon-hemi impostor plumbing plus native close/mid geometry containment.
+
 ## [2.1.4] - 2026-05-10 (Cycle 32 - Apple platform water validation)
 
 Player-visible fix for iPhone Safari water rendering. Rolling Hills and Open
