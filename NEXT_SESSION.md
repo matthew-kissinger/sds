@@ -217,8 +217,10 @@ Automated coverage now reduces the first carryover but does not close it:
 `npx playwright test tests/e2e/mp/in-game-state.spec.ts --project=mp --reporter=list`
 passes 4/4 and includes an Open Country cooperative room that preserves
 `sceneId: "open-country"` across host create, guest join, and start-game. The
-manual playtest is still needed for actual sheep driving, `roundup -> drive`,
-and portal/open-corral visibility.
+worker objective snapshot spec now also drives the authoritative OC
+`GameSimulation.tick()` path through `roundup -> drive` and proves corral
+retirement stays closed until `drive`. The manual playtest is still needed for
+actual two-client sheep driving and portal/open-corral visibility.
 
 **Closed 2026-05-12:** D1 telemetry-route verification. Remote query confirmed `mode_selected` landed 2026-05-11 23:34:45 (after the 18:53 deploy), so the route fix is working end-to-end. `score_errors` table clean (0 entries). No `game_completed` yet, but that's traffic (3 GSC clicks in the same period), not a route bug.
 

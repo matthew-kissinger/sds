@@ -34,6 +34,25 @@ function makeRoomAdapter(sceneId, sheepCount = 50) {
     };
 }
 
+function parkSheep(sheep, x, z) {
+    sheep.position.set(x, z);
+    sheep.velocity.set(0, 0);
+    sheep.acceleration.set(0, 0);
+    sheep.hasPassedGate = false;
+    sheep.isRetiring = false;
+    sheep.retirementTarget = null;
+    sheep.state = 2;
+}
+
+function tickFrames(sim, frameCount) {
+    sim.isRunning = true;
+    try {
+        for (let i = 0; i < frameCount; i++) sim.tick();
+    } finally {
+        sim.isRunning = false;
+    }
+}
+
 describe('Cycle 34 Phase 3: wire-format objective block', () => {
     it('OC snapshot includes objective block with stage roundup at start', () => {
         const sim = new GameSimulation(makeRoomAdapter('open-country', 50));
@@ -92,6 +111,47 @@ describe('Cycle 34 Phase 3: wire-format objective block', () => {
             sim.objective.stage = 'drive';
             const snap = sim.createGameStateSnapshot();
             expect(snap.objective.stage).toBe('drive');
+        } finally {
+            sim.cleanup?.();
+        }
+    });
+
+    it('OC worker tick advances roundup objective to drive after hold', () => {
+        const sim = new GameSimulation(makeRoomAdapter('open-country', 50));
+        try {
+            const zone = sim.objective.roundupZone;
+            for (let i = 0; i < sim.objective.requiredSheep; i++) {
+                parkSheep(sim.gameState.sheep[i], zone.x, zone.z);
+            }
+
+            tickFrames(sim, Math.ceil(sim.objective.holdRequired * sim.tickRate) + 1);
+
+            const snap = sim.createGameStateSnapshot();
+            expect(snap.objective.stage).toBe('drive');
+            expect(snap.objective.sheepInZone).toBeGreaterThanOrEqual(sim.objective.requiredSheep);
+            expect(snap.objective.holdTimer).toBeGreaterThanOrEqual(sim.objective.holdRequired);
+        } finally {
+            sim.cleanup?.();
+        }
+    });
+
+    it('OC corral retirement stays closed until worker objective reaches drive', () => {
+        const sim = new GameSimulation(makeRoomAdapter('open-country', 50));
+        try {
+            const sheep = sim.gameState.sheep[0];
+            parkSheep(sheep, sim.gameState.corral.center.x, sim.gameState.corral.center.z);
+
+            tickFrames(sim, 1);
+            expect(sim.objective.stage).toBe('roundup');
+            expect(sheep.hasPassedGate).toBe(false);
+            expect(sheep.isRetiring).toBe(false);
+            expect(sim.gameState.sheepRetired).toBe(0);
+
+            sim.objective.stage = 'drive';
+            tickFrames(sim, 1);
+            expect(sheep.hasPassedGate).toBe(true);
+            expect(sheep.isRetiring || sheep.state === 2).toBe(true);
+            expect(sim.gameState.sheepRetired).toBe(1);
         } finally {
             sim.cleanup?.();
         }
