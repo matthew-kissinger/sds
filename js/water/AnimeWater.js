@@ -326,6 +326,8 @@ export function createAnimeWaterMaterial({
 export function createAnimeWater({ boundary, heightfield = null, size = 4000, y = -0.05, segments = 64, search, konveyorWaterFactories }) {
     const material = createAnimeWaterMaterial({ boundary, heightfield, waterY: y, search, konveyorWaterFactories });
     const waterControls = material.userData?.konveyorWaterMaterialControls ?? null;
+    const baseSparkleStrength = material.uniforms?.uSparkleStrength?.value ?? 0.7;
+    let qualitySparkleScale = 1;
 
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
     geometry.rotateX(-Math.PI / 2);
@@ -339,9 +341,28 @@ export function createAnimeWater({ boundary, heightfield = null, size = 4000, y 
         mesh,
         material,
         konveyorWaterMaterialSummary: material.userData?.konveyorWaterMaterialSummary ?? null,
+        get qualitySparkleScale() {
+            return qualitySparkleScale;
+        },
+        setQualityState(state = {}) {
+            qualitySparkleScale = Number.isFinite(state.waterSparkleScale)
+                ? THREE.MathUtils.clamp(state.waterSparkleScale, 0, 1.25)
+                : 1;
+            const sparkleStrength = baseSparkleStrength * qualitySparkleScale;
+            if (waterControls?.update) {
+                waterControls.update({ sparkleStrength, material });
+            } else if (material.uniforms?.uSparkleStrength) {
+                material.uniforms.uSparkleStrength.value = sparkleStrength;
+            }
+        },
         update(timeSec, sunDirection) {
             if (waterControls?.update) {
-                waterControls.update({ timeSec, sunDirection, material });
+                waterControls.update({
+                    timeSec,
+                    sunDirection,
+                    sparkleStrength: baseSparkleStrength * qualitySparkleScale,
+                    material
+                });
                 return;
             }
             if (material.uniforms?.uTime) {
@@ -349,6 +370,9 @@ export function createAnimeWater({ boundary, heightfield = null, size = 4000, y 
             }
             if (sunDirection && material.uniforms?.uSunDirection) {
                 material.uniforms.uSunDirection.value.copy(sunDirection);
+            }
+            if (material.uniforms?.uSparkleStrength) {
+                material.uniforms.uSparkleStrength.value = baseSparkleStrength * qualitySparkleScale;
             }
         },
         resize() {},

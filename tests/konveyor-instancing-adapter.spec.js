@@ -7,6 +7,13 @@ import {
 } from '../js/world/konveyorNativeInstancingAdapter.js';
 import { placeEnvironmentDetails } from '../js/world/RockPlacement.js';
 import { placeTrees } from '../js/world/TreePlacement.js';
+import {
+  createKonveyorTreeImpostorGeometry,
+  installKonveyorTreeHybridRuntime,
+  installKonveyorTreeImpostorRuntime,
+  syncKonveyorTreeHybridVisibility,
+  syncKonveyorTreeImpostorMesh,
+} from '../js/world/TreeImpostorRuntime.js';
 import { loadScene } from '../shared/scenes/index.js';
 
 const NATIVE_INSTANCING_SEARCH = '?renderer=webgpu&diagnostic=1&konveyorProductionBootScout=1&konveyorProductionSceneBody=1&konveyorNativeInstancing=1&konveyorRocks=1';
@@ -189,6 +196,132 @@ describe('konveyor native tree instancing adapter', () => {
     expect(meshes.every((mesh) => mesh.isInstancedMesh === true)).toBe(true);
     expect(meshes.some((mesh) => mesh.isInstancedMesh2 === true)).toBe(false);
     expect(scene.children.some((child) => child.isInstancedMesh2 === true)).toBe(false);
+  });
+
+  it('syncs production tree impostor tiles and world-up billboard matrices per instance', () => {
+    const sidecar = {
+      layout: 'latlon',
+      axis: 'hemi-y',
+      tilesX: 4,
+      tilesY: 4,
+      elevations: [Math.PI * 0.35, Math.PI * 0.2, Math.PI * 0.05, -Math.PI * 0.1],
+      bbox: {
+        min: [0, 0, 0],
+        max: [0, 1, 0],
+      },
+      yOffset: 0.5,
+    };
+    const instances = [
+      {
+        position: new THREE.Vector3(0, 0, 0),
+        rotation: new THREE.Euler(0, 0, 0),
+        scale: new THREE.Vector3(1, 1, 1),
+        groundY: 0,
+        scaleScalar: 1,
+      },
+      {
+        position: new THREE.Vector3(4, 2, 0),
+        rotation: new THREE.Euler(0, Math.PI / 2, 0),
+        scale: new THREE.Vector3(2, 2, 2),
+        groundY: 2,
+        scaleScalar: 2,
+      },
+    ];
+    const runtime = createKonveyorTreeImpostorGeometry(new THREE.PlaneGeometry(1, 1), instances, sidecar);
+    const mesh = new THREE.InstancedMesh(runtime.geometry, new THREE.MeshBasicMaterial(), instances.length);
+    installKonveyorTreeImpostorRuntime(mesh, {
+      ...runtime,
+      sidecar,
+      treeType: 'tree1',
+      chunkKey: '0:0',
+    });
+
+    const camera = { position: new THREE.Vector3(0, 1, 10) };
+    expect(syncKonveyorTreeImpostorMesh(mesh, camera)).toBe(true);
+    const firstOffset = [
+      runtime.attributes.tileOffsets[0].getX(0),
+      runtime.attributes.tileOffsets[0].getY(0),
+    ];
+    const firstWeightSum = runtime.attributes.tileWeights.getX(0)
+      + runtime.attributes.tileWeights.getY(0)
+      + runtime.attributes.tileWeights.getZ(0);
+    expect(firstWeightSum).toBeCloseTo(1, 6);
+    expect(mesh.instanceMatrix.array[13]).toBeCloseTo(0.5, 6);
+    expect(mesh.instanceMatrix.array[16 + 13]).toBeCloseTo(3, 6);
+
+    camera.position.set(10, 1, 0);
+    expect(syncKonveyorTreeImpostorMesh(mesh, camera)).toBe(true);
+    const nextOffset = [
+      runtime.attributes.tileOffsets[0].getX(0),
+      runtime.attributes.tileOffsets[0].getY(0),
+    ];
+    expect(nextOffset).not.toEqual(firstOffset);
+    expect(mesh.userData.konveyorNativeTreeImpostor).toMatchObject({
+      layout: 'latlon-hemi-y',
+      selection: 'camera-driven-per-instance-instanced-attributes',
+      billboardProjection: 'cpu-world-up-locked-camera-facing',
+      terrainGroundedPivots: true,
+      syncCount: 2,
+    });
+
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+  });
+
+  it('keeps near tree chunks geometric and switches far chunks to impostors', () => {
+    const nearMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial(), 1);
+    const midMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial(), 1);
+    const farMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial(), 1);
+    const chunkCenter = new THREE.Vector3(0, 0, 0);
+    installKonveyorTreeHybridRuntime(nearMesh, {
+      role: 'near-lod0',
+      chunkCenter,
+      nearDistance: 5,
+      switchDistance: 10,
+    });
+    installKonveyorTreeHybridRuntime(midMesh, {
+      role: 'mid-lod1',
+      chunkCenter,
+      nearDistance: 5,
+      switchDistance: 10,
+    });
+    installKonveyorTreeHybridRuntime(farMesh, {
+      role: 'far-impostor',
+      chunkCenter,
+      nearDistance: 5,
+      switchDistance: 10,
+    });
+
+    const camera = { position: new THREE.Vector3(0, 0, 2) };
+    expect(syncKonveyorTreeHybridVisibility(nearMesh, camera)).toBe(true);
+    expect(syncKonveyorTreeHybridVisibility(midMesh, camera)).toBe(true);
+    expect(syncKonveyorTreeHybridVisibility(farMesh, camera)).toBe(true);
+    expect(nearMesh.visible).toBe(true);
+    expect(midMesh.visible).toBe(false);
+    expect(farMesh.visible).toBe(false);
+
+    camera.position.set(7, 0, 0);
+    syncKonveyorTreeHybridVisibility(nearMesh, camera);
+    syncKonveyorTreeHybridVisibility(midMesh, camera);
+    syncKonveyorTreeHybridVisibility(farMesh, camera);
+    expect(nearMesh.visible).toBe(false);
+    expect(midMesh.visible).toBe(true);
+    expect(farMesh.visible).toBe(false);
+
+    camera.position.set(20, 0, 0);
+    syncKonveyorTreeHybridVisibility(nearMesh, camera);
+    syncKonveyorTreeHybridVisibility(midMesh, camera);
+    syncKonveyorTreeHybridVisibility(farMesh, camera);
+    expect(nearMesh.visible).toBe(false);
+    expect(midMesh.visible).toBe(false);
+    expect(farMesh.visible).toBe(true);
+
+    nearMesh.geometry.dispose();
+    nearMesh.material.dispose();
+    midMesh.geometry.dispose();
+    midMesh.material.dispose();
+    farMesh.geometry.dispose();
+    farMesh.material.dispose();
   });
 
   it('uses native Three instancing for production scene-body rock placement under the guarded flag', async () => {

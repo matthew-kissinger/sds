@@ -39,6 +39,7 @@ export function createKonveyorImpostorNodeMaterialFactories(webGpuModules, optio
         atlasSize: layout.atlasSize ?? context.atlasSize ?? impostorDefaults.atlasSize ?? [2048, 2048],
         tileBlendTiles: context.tileBlendTiles ?? impostorDefaults.tileBlendTiles ?? options.tileBlendTiles ?? DEFAULT_IMPOSTOR.tileBlendTiles,
         tileBlendWeights: context.tileBlendWeights ?? impostorDefaults.tileBlendWeights ?? options.tileBlendWeights ?? DEFAULT_IMPOSTOR.tileBlendWeights,
+        tileSelectionMode: context.tileSelectionMode ?? context.selectionMode ?? impostorDefaults.tileSelectionMode ?? options.tileSelectionMode,
         sunDirection: toArray(lighting.sunDirection ?? context.sunDirection ?? impostorDefaults.sunDirection, DEFAULT_IMPOSTOR.sunDirection),
         sunColor: toArray(lighting.sunColor ?? context.sunColor ?? impostorDefaults.sunColor, DEFAULT_IMPOSTOR.sunColor),
         ambientColor: toArray(lighting.ambientColor ?? context.ambientColor ?? impostorDefaults.ambientColor, DEFAULT_IMPOSTOR.ambientColor),

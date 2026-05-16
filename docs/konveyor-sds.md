@@ -13,19 +13,25 @@ code around the new assumption.
 
 ## Autonomous branch mode
 
-The full migration campaign runs on `exp/konveyor-webgpu-migration`. In that
-mode, numbered cycle plans are evidence and checkpoints, not stopping points.
-Agents should keep moving until the full objective is reached or a documented
-hard stop is hit. Use [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md)
-as the control surface for the next autonomous pass. The current completion
-audit is
+The full migration campaign originally ran on `exp/konveyor-webgpu-migration`.
+PR #52 has since merged the progressive WebGPU packet to `main`. The active
+Cycle 38 release packet now lives on `codex/cycle-38-tree-impostors` and is
+prepared for the `2.1.5` deploy. Numbered cycle plans are evidence and
+checkpoints, not stopping points. Agents should keep moving until the full
+objective is reached or a documented hard stop is hit. Use
+[`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) as the control
+surface for the next autonomous pass. The dated completion audit is
 [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md);
-it records that the branch packet is implementation-ready but not production
-complete until the explicit deploy/default-renderer hard stops are resolved.
-If those hard stops are explicitly cleared, use
+it is historical for the Cycle 37/PR #52 packet and now includes post-audit
+notes for the Android mobile-readiness baseline and Cycle 38 tree packet.
+The browser/device research spike for the mobile path is
+[`archive/research/browser-device-performance-spike-2026-05-16.md`](archive/research/browser-device-performance-spike-2026-05-16.md);
+it is now root-cause context behind the later mobile-readiness implementation
+rather than current performance truth.
+For any release that carries the Cycle 38 tree/mobile-readiness work, use
 [`konveyor-release-decision-checklist.md`](konveyor-release-decision-checklist.md)
-for the merge, deploy, post-deploy canary, telemetry readout, and default-policy
-decision sequence.
+for the deploy, post-deploy canary, telemetry readout, and default-policy
+review sequence.
 
 ## Current repo baseline
 
@@ -157,6 +163,49 @@ hatch, and the settings UI exposes an experimental WebGPU toggle backed by
   bland/grey sky read, and preserved WebGL fallback behavior. At Cycle 37
   closeout WebGL was still the default; the later approved release-policy pass
   moved default requests to WebGPU.
+- The post-Cycle 37 mobile-readiness pass added a first connected Android
+  WebGPU proof at
+  `cycle37-validation/runtime/android-webgpu-rolling-hills-final-2026-05-16.json`.
+  Device `R5CX4028VGJ` ran Android Chrome through secure localhost with
+  `adb reverse tcp:3000 tcp:3000`; WebGPU was available, and Rolling Hills
+  follow-close full-scene WebGPU passed the high-mobile target with
+  `p95=16.733 ms`, `p99=16.871 ms`, `drawCalls=37`, and
+  `avgEstimatedTriangles=753920`. This pass also added custom WebGPU cost
+  reports, `QualityGovernor`, Android ADB/CDP tooling, mobile WebGPU tree/rock
+  culling, committed Kiln impostor sidecar use for the mobile tree path, shared
+  branch/leaf wind controls, dog-through-tree leaf occluder controls, deep-blue
+  shoreline/glint water controls, grass interaction for dog plus nearest sheep,
+  and tiered terrain fidelity policy. The proof is a baseline, not full
+  mobile certification. Cycle 38 owns the scene/camera/system matrix, visual
+  screenshot gates, and over-budget asset rebakes.
+- Cycle 38 follow-up on the connected phone confirms the mobile path is still
+  incomplete. The dog sprint harness now runs a line route across the island
+  and no longer circles, but the current phone proof still records sprint-start
+  spikes up to `66.7 ms`. The Android runner now cleans up to one game page
+  target. Open Country still misses high-mobile budgets: current artifacts
+  under `cycle38-validation/runtime/` report follow-close around
+  `p95=50.1 ms` / `p99=50.1 ms` and horizon/terrain-seam around
+  `p95=50.0 ms` / `p99=50.1 ms`. Terrain bands/lines remain visible, grass
+  displacement is wired but not yet visually obvious enough, and proper WebGPU
+  view-dependent octahedral impostors are still a future work package. Current
+  mobile trees are chunked native LOD1 containment plus lab-only tile-selection
+  groundwork, not production octahedral impostors.
+- Cycle 38 now also has the first full connected-Android pose matrix:
+  `cycle38-validation/runtime/android-webgpu-cycle38-poses.json`. It captured
+  15 Field/Rolling Hills/Open Country pose rows with nonblank screenshots, but
+  all rows fail the high-mobile budget and 12 fail the mid-mobile budget. Field
+  is currently the draw-call outlier (`732-748` draw calls). The first
+  executable impostor lab proof exists at
+  `cycle38-validation/runtime/webgpu-impostor-lab-proof.json`; it proves dynamic
+  tile controls and selector variation in the diagnostic scene, while still
+  marking impostors as not production-ready.
+- The Cycle 38 tree-impostor release packet adds the explicit
+  `?konveyorNativeTreeImpostors=1` route: near native LOD0, mid
+  branch-preserving native LOD1, and far lat/lon-hemi Kiln impostor quads with
+  per-instance camera-driven tile offsets/weights. This fixes the detached
+  middle LOD read and the black/no-texture WebGPU impostor tint bug, but it is
+  still opt-in while Android remains over budget and true octahedral sidecars
+  are unbaked.
 - The first real multiplayer WebGPU proof now exists at
   `cycle36-validation/runtime/production-webgpu-mp-proof.json` (captured
   2026-05-16T01:42:30.718Z on installed Chrome against local Vite + Wrangler).
@@ -903,6 +952,13 @@ visual review, and perf/latency gates before replacing shipped trees. Use
 after candidate rebakes when network is available so accepted tree deltas
 compare against the same evidence surface.
 
+After the mobile-readiness pass, tree refresh is also an explicit budget task:
+`tree1` LOD0 target <= `4k` triangles, broad canopy LOD0 target <= `8k`
+triangles, LOD1 <= `25%` of LOD0, and far impostor sidecars are mandatory.
+`tree2` remains accepted as the current legacy broad-canopy production asset,
+but it is above the target budget and should be the first author-time rebake in
+Cycle 38. Runtime tree generation is not an accepted path for production.
+
 Exit: every accepted tree delta is artifact-backed, and tree goldens are updated
 only for named, intentional differences.
 
@@ -921,6 +977,13 @@ Optimize the tree path with evidence. Candidate work includes TSL tree shader
 work, better impostor parameterization, multi-species batching, alpha transition
 cleanup, or staying on the current Kiln/InstancedMesh2 stack if measurement
 says that is still the right call.
+
+For the WebGPU/mobile route, LOD0-only native instancing is no longer an
+acceptable production strategy. The current mobile path uses committed Kiln
+impostor sidecars and WebGPU-safe tree/rock culling as a stopgap toward the
+proper asset budget. Cycle 38 should close the author-time LOD/impostor asset
+contract and keep rocks at <= `500` triangles each unless an explicit exception
+is recorded.
 
 Exit: tree-heavy scenes recover the target p99 frame budget on the measured
 mobile and desktop tiers without visual regressions.
@@ -985,8 +1048,9 @@ release path is ready for external users.
 
 ## Fresh-agent goal
 
-Use this goal after Cycle 37:
+Use this goal after Cycle 37 and the first Android WebGPU mobile-readiness
+proof, including the later Cycle 38 connected-phone findings:
 
 ```text
-/goal On branch exp/konveyor-webgpu-migration, continue after the completed Cycle 37 packet and approved progressive WebGPU default. Read NEXT_SESSION.md, docs/cycle-37-plan.md, docs/native-packaging-proof-0.md, and docs/native-store-steam-readiness-checklist.md. Do not rerun Cycle 37 unless its artifacts are stale. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Next implementation work should be planned explicitly from the current packet; if Matt approves native shell code, keep the first Electron proof inside sandbox/native-electron-proof/ and document package size, startup, fullscreen/pointer-lock, audio, storage, and multiplayer behavior before adding broader shell or store work. Do not submit to Steam/App Store/Google Play, pay store fees, add Steamworks features, sign installers, or cross store/manual gates without explicit approval.
+/goal On the current SDS checkout, continue Cycle 38 after the completed Cycle 37 packet, approved progressive WebGPU default, first connected-Android WebGPU mobile-readiness proof, and the later Open Country connected-phone findings. Read NEXT_SESSION.md, docs/cycle-38-plan.md, docs/cycle-37-plan.md, docs/konveyor-autonomous-run.md, and docs/konveyor-sds.md. Do not rerun Cycle 37 or treat the one-phone Rolling Hills proof as full mobile certification. Continue the WebGPU mobile scene/camera/system matrix, close visual screenshot gates for terrain seams, grass interaction, tree grounding/readability, water/glint, and dog-through-tree readability, rebuild over-budget author-time tree/rock assets with real LOD/impostor sidecars, and wire the remaining QualityGovernor knobs. Treat current native LOD1 mobile trees as containment only; implement proper view-dependent WebGPU octahedral impostors in a lab before production. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Create a scoped codex/ branch before committing if branch isolation is desired. Do not touch shared/**, sim-baseline goldens, worker migrations, paid-store submission, signing, Steam/App Store/Google Play, production deploy, or native-shell dependencies without explicit approval.
 ```

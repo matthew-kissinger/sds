@@ -1,3 +1,6 @@
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { applyKonveyorTreeRockMaterials } from '../world/konveyorMaterialAdapter.js';
 import {
     createKonveyorNativeRockInstancingPreview,
@@ -73,17 +76,6 @@ export const RUNTIME_GLB_RENDER_PREVIEW_ASSETS = [
 ];
 
 async function loadGltfLoaderModules() {
-    const vendorPath = './vendor/three/examples/jsm/';
-    const [
-        { GLTFLoader },
-        { DRACOLoader },
-        { MeshoptDecoder },
-    ] = await Promise.all([
-        import(/* @vite-ignore */ new URL(`${vendorPath}loaders/GLTFLoader.js`, import.meta.url).href),
-        import(/* @vite-ignore */ new URL(`${vendorPath}loaders/DRACOLoader.js`, import.meta.url).href),
-        import(/* @vite-ignore */ new URL(`${vendorPath}libs/meshopt_decoder.module.js`, import.meta.url).href),
-    ]);
-
     return { GLTFLoader, DRACOLoader, MeshoptDecoder };
 }
 

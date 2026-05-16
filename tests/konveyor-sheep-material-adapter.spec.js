@@ -118,6 +118,14 @@ describe('konveyor sheep material adapter', () => {
             expect(sheep.material.fog).toBe(false);
             expect(sheep.material.colorNode).toBeTruthy();
             expect(sheep.material.positionNode).toBeTruthy();
+            expect(sheep.material.userData.konveyorSheepAnimation).toMatchObject({
+                source: 'vertexId-instanceData-instanceAnimation',
+                body: true,
+                head: true,
+                legs: true,
+                wool: true,
+                animationSpeed: 1,
+            });
             expect(sheep.instancedMesh.material).toBe(sheep.material);
             expect(sheep.konveyorSheepMaterialSummary).toMatchObject({
                 kind: 'sheep-wool',

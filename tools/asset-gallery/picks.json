@@ -7,31 +7,39 @@
       "path": "tools/asset-gallery/staging/trees/aspen_small_single.glb",
       "name": "aspen_small_single.glb",
       "canonicalName": "tree1.glb",
-      "_role": "slim pasture silhouette (lightest at 3.7k tris)",
-      "tris": 3744,
-      "bbox": { "sx": 0.645, "sy": 1.0, "sz": 0.708 }
+      "_role": "slim pasture silhouette (3783 tris mobile LOD0)",
+      "tris": 3783,
+      "bbox": {
+        "sx": 0.645,
+        "sy": 1,
+        "sz": 0.708
+      }
     },
     {
       "path": "tools/asset-gallery/staging/trees/oak_medium_single.glb",
       "name": "oak_medium_single.glb",
       "canonicalName": "tree2.glb",
-      "_role": "broad canopy anchor (~18.8k tris)",
-      "tris": 18772,
-      "bbox": { "sx": 0.821, "sy": 1.0, "sz": 0.818 }
+      "_role": "broad canopy anchor (7700 tris mobile LOD0)",
+      "tris": 7700,
+      "bbox": {
+        "sx": 0.821,
+        "sy": 1,
+        "sz": 0.818
+      }
     },
     {
       "path": "tools/asset-gallery/staging/trees-lod1/aspen_small_single_lod1.glb",
       "name": "aspen_small_single_lod1.glb",
       "canonicalName": "tree1_lod1.glb",
-      "_role": "auto-paired LOD1 sibling for aspen_small_single",
-      "tris": 1462
+      "_role": "mobile LOD1 sibling (944 tris, <=25% of paired LOD0)",
+      "tris": 944
     },
     {
       "path": "tools/asset-gallery/staging/trees-lod1/oak_medium_single_lod1.glb",
       "name": "oak_medium_single_lod1.glb",
       "canonicalName": "tree2_lod1.glb",
-      "_role": "auto-paired LOD1 sibling for oak_medium_single",
-      "tris": 2314
+      "_role": "mobile LOD1 sibling (1924 tris, <=25% of paired LOD0)",
+      "tris": 1924
     },
     {
       "path": "tools/asset-gallery/staging/rocks/pebble_round_small.glb",
@@ -39,7 +47,9 @@
       "canonicalName": "rock1.glb",
       "_role": "small classic pebble (~0.10m)",
       "tris": 180,
-      "bbox": { "sy": 0.10 }
+      "bbox": {
+        "sy": 0.1
+      }
     },
     {
       "path": "tools/asset-gallery/staging/rocks/boulder_chunky_mid.glb",
@@ -47,7 +57,9 @@
       "canonicalName": "rock2.glb",
       "_role": "medium grey-brown boulder (~0.28m)",
       "tris": 180,
-      "bbox": { "sy": 0.28 }
+      "bbox": {
+        "sy": 0.28
+      }
     },
     {
       "path": "tools/asset-gallery/staging/rocks/spire_jagged_dark.glb",
@@ -55,7 +67,9 @@
       "canonicalName": "rock3.glb",
       "_role": "tall jagged slate spire (~0.50m) — replaces the previous warm-granite craggy formation for more silhouette drama",
       "tris": 320,
-      "bbox": { "sy": 0.50 }
+      "bbox": {
+        "sy": 0.5
+      }
     }
   ]
 }

@@ -45,7 +45,9 @@ function createNativeRockInstancedMeshes(builder, rockInstances, placementPlan) 
                 instancedMesh.setMatrixAt(i, dummy.matrix);
             });
             instancedMesh.instanceMatrix.needsUpdate = true;
-            instancedMesh.frustumCulled = false;
+            instancedMesh.computeBoundingBox?.();
+            instancedMesh.computeBoundingSphere?.();
+            instancedMesh.frustumCulled = true;
             instancedMesh.castShadow = !builder.isMobile;
             instancedMesh.receiveShadow = true;
 
@@ -57,6 +59,7 @@ function createNativeRockInstancedMeshes(builder, rockInstances, placementPlan) 
                 instances: instances.length,
                 isInstancedMesh: instancedMesh.isInstancedMesh === true,
                 isInstancedMesh2: instancedMesh.isInstancedMesh2 === true,
+                frustumCulled: instancedMesh.frustumCulled === true,
                 vertexCount: child.geometry.attributes?.position?.count ?? 0,
             });
         });
@@ -73,10 +76,12 @@ function createNativeRockInstancedMeshes(builder, rockInstances, placementPlan) 
                 && groups.every(group => group.isInstancedMesh && !group.isInstancedMesh2 && group.vertexCount > 0),
         source: 'THREE.InstancedMesh',
         route: 'konveyor-production-scene-body',
+        culling: 'instanced-bounds',
         productionReference: 'RockPlacement InstancedMesh2.addInstances',
         rockInstances: placementPlan.totalRocks,
         renderedInstanceMeshes: instancedMeshes.length,
         emptyPlacement: noRocksPlaced,
+        frustumCulled: groups.length === 0 || groups.every(group => group.frustumCulled),
         groups,
     };
     builder.konveyorNativeRockInstancingSummary = summary;

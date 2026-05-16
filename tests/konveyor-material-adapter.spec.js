@@ -163,6 +163,8 @@ describe('konveyor production material adapter', () => {
       expect(branches.colorNode).toBeTruthy();
       expect(branches.userData.konveyorUsesSourceColor).toBe(true);
       expect(branches.userData.konveyorUsesDistanceFog).toBe(true);
+      expect(branches.userData.konveyorTreeWindNodeUniforms).toBeTruthy();
+      expect(branches.userData.konveyorTreeNodeMaterialControls?.setWind).toBeInstanceOf(Function);
       expect(branches.roughnessNode).toBeTruthy();
       expect(branches.metalnessNode).toBeTruthy();
       expect(branches.transparent).toBe(false);
@@ -184,6 +186,9 @@ describe('konveyor production material adapter', () => {
       expect(leaves.userData.konveyorUsesSourceTint).toBe(true);
       expect(leaves.userData.konveyorUsesDistanceFog).toBe(true);
       expect(leaves.userData.konveyorSourceMapScale).toBe(0.58);
+      expect(leaves.userData.konveyorTreeWindNodeUniforms).toBeTruthy();
+      expect(leaves.userData.konveyorTreeLeafOccluderNodeUniforms).toBeTruthy();
+      expect(leaves.userData.konveyorTreeNodeMaterialControls?.setOccluder).toBeInstanceOf(Function);
       expect(rockRim.name).toBe('konveyor-node-rock-rim');
       expect(rockRim.isNodeMaterial).toBe(true);
       expect(rockRim.isMeshStandardNodeMaterial).toBe(true);

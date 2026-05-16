@@ -98,7 +98,8 @@ export class GrassSystem {
         // mobile-style defaults; 'med' / 'high' get desktop defaults with
         // wind-octave and meadow-quad enable knobs differentiated.
         this.tier = opts.tier ?? (isMobile ? 'low' : 'med');
-        const tierPreset = TIER_PRESETS[this.tier] ?? TIER_PRESETS.med;
+        const grassPresetTier = isMobile ? 'low' : this.tier;
+        const tierPreset = TIER_PRESETS[grassPresetTier] ?? TIER_PRESETS.med;
         this._tierPreset = tierPreset;
 
         const sceneClumps = sceneGrass?.clumpsPerChunk;
@@ -242,6 +243,13 @@ export class GrassSystem {
         // dog is heading.
         this.interactorFacings = new Float32Array(this.config.maxInteractors * 2);
         this.interactorCount = 0;
+        this.qualityDistanceScale = 1;
+        this.qualityDensityScale = 1;
+        this._qualityBase = {
+            lodDecimateMid: this.config.lodDecimateMid,
+            lodDecimateFar: this.config.lodDecimateFar,
+            grassFadeEnd: this.config.grassFadeEnd,
+        };
 
         // Frustum culling
         this.frustum = new THREE.Frustum();
@@ -1480,6 +1488,28 @@ export class GrassSystem {
         }
     }
 
+    getInteractorSample(limit = 8) {
+        const count = Math.max(0, Math.min(this.interactorCount, limit, this.config.maxInteractors));
+        const sample = [];
+        for (let i = 0; i < count; i++) {
+            const p = i * 3;
+            const f = i * 2;
+            sample.push({
+                type: this.interactorData[i] === 1 ? 'sheep' : 'dog',
+                position: {
+                    x: +this.interactorPositions[p].toFixed(3),
+                    y: +this.interactorPositions[p + 1].toFixed(3),
+                    z: +this.interactorPositions[p + 2].toFixed(3),
+                },
+                facing: {
+                    x: +this.interactorFacings[f].toFixed(3),
+                    z: +this.interactorFacings[f + 1].toFixed(3),
+                },
+            });
+        }
+        return sample;
+    }
+
     /**
      * Update grass system each frame
      */
@@ -1642,8 +1672,25 @@ export class GrassSystem {
      * is already a uniform spatial sample — no geometry rebuild needed.
      */
     applyLOD(chunk, lodLevel) {
-        const fraction = lodLevel === 0 ? 1.0 : lodLevel === 1 ? 0.5 : 0.25;
+        const fraction = (lodLevel === 0 ? 1.0 : lodLevel === 1 ? 0.5 : 0.25) * this.qualityDensityScale;
         chunk.mesh.count = Math.max(1, Math.round(chunk.fullCount * fraction));
+    }
+
+    applyQualityState(state = {}) {
+        const distanceScale = Number.isFinite(state.grassDistanceScale)
+            ? THREE.MathUtils.clamp(state.grassDistanceScale, 0.35, 1.25)
+            : 1;
+        this.qualityDistanceScale = distanceScale;
+        this.qualityDensityScale = distanceScale;
+        this.config.lodDecimateMid = this._qualityBase.lodDecimateMid * distanceScale;
+        this.config.lodDecimateFar = this._qualityBase.lodDecimateFar * distanceScale;
+        this.config.grassFadeEnd = Math.max(
+            this.config.grassFadeStart + 20,
+            this._qualityBase.grassFadeEnd * distanceScale
+        );
+        for (const [, chunk] of this.chunks) {
+            if (!chunk.isMeadowQuad) this.applyLOD(chunk, chunk.lodLevel ?? 0);
+        }
     }
 
     /**
@@ -1667,6 +1714,11 @@ export class GrassSystem {
     getTotalTriangleEstimate() {
         const trisPerClump = geometryTriangleCount(this.clumpGeometry);
         return Math.round(trisPerClump * this.stats.totalClumps);
+    }
+
+    getVisibleTriangleEstimate() {
+        const trisPerClump = geometryTriangleCount(this.clumpGeometry);
+        return Math.round(trisPerClump * (this.stats.visibleClumps ?? this.stats.totalClumps ?? 0));
     }
 
     /**

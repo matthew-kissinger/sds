@@ -56,6 +56,15 @@ export async function preflightKonveyorProductionWebGpuDevice(state = null) {
             preflight.reason = 'webgpu-adapter-unavailable';
             return preflight;
         }
+        preflight.adapterFeatures = adapter.features ? Array.from(adapter.features).sort() : [];
+        preflight.adapterInfo = adapter.info ? { ...adapter.info } : null;
+        preflight.adapterLimits = adapter.limits ? {
+            maxTextureDimension2D: adapter.limits.maxTextureDimension2D,
+            maxBindGroups: adapter.limits.maxBindGroups,
+            maxStorageBuffersPerShaderStage: adapter.limits.maxStorageBuffersPerShaderStage,
+            maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize,
+            maxComputeWorkgroupStorageSize: adapter.limits.maxComputeWorkgroupStorageSize,
+        } : null;
 
         const device = await adapter.requestDevice();
         preflight.deviceAvailable = !!device;

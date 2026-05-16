@@ -26,61 +26,233 @@ import { getSceneManager } from '../GameBridge.js';
 import { TIER_PRESETS } from '../HardwareTier.js';
 import { shouldUseKonveyorProductionNativeInstancing } from '../rendering/konveyorRuntimeMode.js';
 
-function createNativeTreeInstancedMeshes(builder, treeInstances) {
+const HYBRID_TREE_LOD1_SWITCH_DISTANCE = 56;
+const HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE = 144;
+let treeImpostorRuntimePromise = null;
+
+function loadTreeImpostorRuntime() {
+    if (!treeImpostorRuntimePromise) {
+        treeImpostorRuntimePromise = import('./TreeImpostorRuntime.js');
+    }
+    return treeImpostorRuntimePromise;
+}
+
+function computeChunkCenter(instances) {
+    const center = new THREE.Vector3();
+    if (!instances.length) return center;
+    for (const inst of instances) center.add(inst.position);
+    return center.multiplyScalar(1 / instances.length);
+}
+
+async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     const instancedMeshes = [];
     const groups = [];
     const dummy = new THREE.Object3D();
-
-    Object.entries(treeInstances).forEach(([treeType, instances]) => {
-        if (instances.length === 0 || !builder.models.trees[treeType]) return;
-
-        const lod0Model = builder.models.trees[treeType];
-        lod0Model.traverse(child => {
-            if (!child.isMesh || !child.geometry) return;
-
-            const im = new THREE.InstancedMesh(child.geometry, child.material, instances.length);
-            im.userData.sharedFromGlbCache = true;
-            im.userData.konveyorNativeInstancing = 'tree';
-
-            instances.forEach((inst, i) => {
-                dummy.position.copy(inst.position);
-                dummy.quaternion.setFromEuler(inst.rotation);
-                dummy.scale.copy(inst.scale);
-                dummy.updateMatrix();
-                im.setMatrixAt(i, dummy.matrix);
-            });
-            im.instanceMatrix.needsUpdate = true;
-            im.frustumCulled = false;
-            im.castShadow = !builder.isMobile;
-            im.receiveShadow = true;
-
-            builder.scene.add(im);
-            instancedMeshes.push(im);
-            groups.push({
-                type: treeType,
-                meshName: child.name || '(unnamed)',
-                instances: instances.length,
-                isInstancedMesh: im.isInstancedMesh === true,
-                isInstancedMesh2: im.isInstancedMesh2 === true,
-                vertexCount: child.geometry.attributes?.position?.count ?? 0,
-            });
-        });
-
-        console.log(`[TERRAIN] Created ${instances.length} ${treeType} native WebGPU tree instances (LOD0-only)`);
-    });
-
+    const hwTier = getSceneManager()?.getTier?.() ?? (builder.isMobile ? 'low' : 'med');
     const totalTrees = Object.values(treeInstances).reduce((s, a) => s + a.length, 0);
+    const params = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
+    const useMobileNativeLod1 = hwTier === 'low';
+    const useProductionNativeImpostor = params.get('konveyorNativeTreeImpostors') === '1';
+    const treeImpostorRuntime = useProductionNativeImpostor ? await loadTreeImpostorRuntime() : null;
+    builder._konveyorTreeImpostorSync = treeImpostorRuntime?.syncKonveyorTreeImpostorMeshes ?? null;
+    const chunkSize = useProductionNativeImpostor ? 160 : (builder.isMobile ? 320 : 192);
+
+    for (const [treeType, instances] of Object.entries(treeInstances)) {
+        if (instances.length === 0 || !builder.models.trees[treeType]) continue;
+
+        const meshDefs = [];
+        const kiln = useProductionNativeImpostor
+            ? await loadKilnImpostor(`assets/models/trees/${treeType}.imposter`, {
+                tileSelectionMode: 'production-instanced-attributes',
+            })
+            : null;
+        if (kiln?.geometry && kiln?.material) {
+            builder.models.trees[treeType].traverse(child => {
+                if (!child.isMesh || !child.geometry) return;
+                meshDefs.push({
+                    geometry: child.geometry,
+                    material: child.material,
+                    meshName: child.name || '(unnamed)',
+                    sourceLod: 'lod0',
+                    hybridRole: 'near-lod0',
+                    baseOffset: builder.models.trees[treeType]?.userData?.modelBaseYOffset ?? 0,
+                });
+            });
+            const lod1Model = builder.models.treesLod1?.[treeType] ?? null;
+            if (lod1Model) {
+                lod1Model.traverse(child => {
+                    if (!child.isMesh || !child.geometry) return;
+                    meshDefs.push({
+                        geometry: child.geometry,
+                        material: child.material,
+                        meshName: child.name || '(unnamed)',
+                        sourceLod: 'lod1',
+                        hybridRole: 'mid-lod1',
+                        baseOffset: lod1Model.userData?.modelBaseYOffset
+                            ?? builder.models.trees[treeType]?.userData?.modelBaseYOffset
+                            ?? 0,
+                    });
+                });
+            }
+            if (!builder._impostorMaterials) builder._impostorMaterials = [];
+            builder._impostorMaterials.push(kiln.material);
+            meshDefs.push({
+                geometry: kiln.geometry,
+                material: kiln.material,
+                meshName: 'kiln-impostor',
+                sourceLod: 'impostor',
+                hybridRole: 'far-impostor',
+                sidecar: kiln.sidecar,
+            });
+        } else {
+            const sourceModel = useMobileNativeLod1
+                ? (builder.models.treesLod1?.[treeType] ?? builder.models.trees[treeType])
+                : builder.models.trees[treeType];
+            const sourceLod = sourceModel === builder.models.treesLod1?.[treeType] ? 'lod1' : 'lod0';
+            sourceModel.traverse(child => {
+                if (!child.isMesh || !child.geometry) return;
+                meshDefs.push({
+                    geometry: child.geometry,
+                    material: child.material,
+                    meshName: child.name || '(unnamed)',
+                    sourceLod,
+                    baseOffset: sourceModel.userData?.modelBaseYOffset
+                        ?? builder.models.trees[treeType]?.userData?.modelBaseYOffset
+                        ?? 0,
+                });
+            });
+        }
+
+        const chunkedInstances = new Map();
+        for (const inst of instances) {
+            const key = `${Math.floor(inst.position.x / chunkSize)}:${Math.floor(inst.position.z / chunkSize)}`;
+            let chunk = chunkedInstances.get(key);
+            if (!chunk) {
+                chunk = [];
+                chunkedInstances.set(key, chunk);
+            }
+            chunk.push(inst);
+        }
+
+        for (const [chunkKey, chunkInstances] of chunkedInstances) {
+            const chunkCenter = computeChunkCenter(chunkInstances);
+            for (const meshDef of meshDefs) {
+                const impostorRuntime = meshDef.sourceLod === 'impostor'
+                    ? treeImpostorRuntime.createKonveyorTreeImpostorGeometry(meshDef.geometry, chunkInstances, meshDef.sidecar)
+                    : null;
+                const geometry = impostorRuntime?.geometry ?? meshDef.geometry;
+                const im = new THREE.InstancedMesh(geometry, meshDef.material, chunkInstances.length);
+                im.userData.sharedFromGlbCache = meshDef.sourceLod !== 'impostor';
+                im.userData.konveyorSharedMaterialFromImpostorCache = meshDef.sourceLod === 'impostor';
+                im.userData.konveyorRuntimeGeometry = meshDef.sourceLod === 'impostor';
+                im.userData.konveyorNativeInstancing = 'tree';
+                im.userData.konveyorNativeChunkKey = chunkKey;
+
+                if (meshDef.hybridRole) {
+                    treeImpostorRuntime.installKonveyorTreeHybridRuntime(im, {
+                        role: meshDef.hybridRole,
+                        chunkCenter,
+                        nearDistance: HYBRID_TREE_LOD1_SWITCH_DISTANCE,
+                        switchDistance: HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE,
+                    });
+                    treeImpostorRuntime.syncKonveyorTreeHybridVisibility(im, getSceneManager()?.getCamera?.());
+                }
+
+                if (impostorRuntime) {
+                    treeImpostorRuntime.installKonveyorTreeImpostorRuntime(im, {
+                        ...impostorRuntime,
+                        sidecar: meshDef.sidecar,
+                        treeType,
+                        chunkKey,
+                    });
+                    treeImpostorRuntime.syncKonveyorTreeImpostorMesh(im, getSceneManager()?.getCamera?.());
+                } else {
+                    chunkInstances.forEach((inst, i) => {
+                        dummy.position.copy(inst.position);
+                        if (Number.isFinite(inst.groundY)) {
+                            const scaleScalar = Number.isFinite(inst.scaleScalar)
+                                ? inst.scaleScalar
+                                : (Number.isFinite(inst.scale?.y) ? inst.scale.y : 1);
+                            dummy.position.y = inst.groundY + (meshDef.baseOffset ?? 0) * scaleScalar;
+                        }
+                        dummy.quaternion.setFromEuler(inst.rotation);
+                        dummy.scale.copy(inst.scale);
+                        dummy.updateMatrix();
+                        im.setMatrixAt(i, dummy.matrix);
+                    });
+                }
+                im.instanceMatrix.needsUpdate = true;
+                im.computeBoundingBox?.();
+                im.computeBoundingSphere?.();
+                im.frustumCulled = true;
+                im.castShadow = !builder.isMobile;
+                im.receiveShadow = true;
+
+                builder.scene.add(im);
+                instancedMeshes.push(im);
+                groups.push({
+                    type: treeType,
+                    chunkKey,
+                    meshName: meshDef.meshName,
+                    instances: chunkInstances.length,
+                    isInstancedMesh: im.isInstancedMesh === true,
+                    isInstancedMesh2: im.isInstancedMesh2 === true,
+                    frustumCulled: im.frustumCulled === true,
+                    sourceLod: meshDef.sourceLod,
+                    hybridRole: meshDef.hybridRole ?? null,
+                    baseOffset: meshDef.baseOffset ?? null,
+                    tileSelection: im.userData.konveyorNativeTreeImpostor?.selection ?? null,
+                    billboardProjection: im.userData.konveyorNativeTreeImpostor?.billboardProjection ?? null,
+                    terrainGroundedPivots: im.userData.konveyorNativeTreeImpostor?.terrainGroundedPivots ?? null,
+                    vertexCount: meshDef.geometry.attributes?.position?.count ?? 0,
+                });
+            }
+        }
+
+        console.log(`[TERRAIN] Created ${instances.length} ${treeType} native WebGPU tree instances in ${chunkedInstances.size} chunks (${meshDefs.map(def => def.sourceLod).join('+') || 'none'})`);
+    }
+
+    const nativeGroupsOk = groups.every(group => group.isInstancedMesh && !group.isInstancedMesh2 && group.vertexCount > 0);
+    const impostorGroups = groups.filter(group => group.sourceLod === 'impostor');
+    const nearLodGroups = groups.filter(group => group.hybridRole === 'near-lod0');
+    const impostorGroupsOk = !useProductionNativeImpostor
+        || (impostorGroups.length > 0
+            && nearLodGroups.length > 0
+            && groups.some(group => group.hybridRole === 'mid-lod1')
+            && impostorGroups.every(group => group.sourceLod === 'impostor'
+                && group.tileSelection === 'camera-driven-per-instance-instanced-attributes'
+                && group.billboardProjection === 'cpu-world-up-locked-camera-facing'
+                && group.terrainGroundedPivots === true));
+
     const summary = {
         applied: true,
         ok: totalTrees > 0
             && instancedMeshes.length > 0
-            && groups.every(group => group.isInstancedMesh && !group.isInstancedMesh2 && group.vertexCount > 0),
+            && nativeGroupsOk
+            && impostorGroupsOk,
         source: 'THREE.InstancedMesh',
         route: 'konveyor-production-scene-body',
-        lod: 'lod0-only',
+        lod: useProductionNativeImpostor ? 'production-hybrid-lod0-latlon-hemi-impostor-explicit' : (useMobileNativeLod1 ? 'low-tier-lod1-native' : 'lod0-only'),
+        culling: 'chunked-instanced-bounds',
+        chunkSize,
+        impostor: {
+            active: useProductionNativeImpostor,
+            ok: impostorGroupsOk,
+            groupCount: impostorGroups.length,
+            sidecarLayout: useProductionNativeImpostor ? 'latlon-hemi-y' : null,
+            selection: useProductionNativeImpostor ? 'camera-driven-per-instance-instanced-attributes' : null,
+            billboardProjection: useProductionNativeImpostor ? 'cpu-world-up-locked-camera-facing' : null,
+            terrainGroundedPivots: useProductionNativeImpostor,
+            replacesMobileLod1ByDefault: false,
+            nearLod: useProductionNativeImpostor ? 'lod0' : null,
+            midLod: useProductionNativeImpostor ? 'lod1' : null,
+            nearDistance: useProductionNativeImpostor ? HYBRID_TREE_LOD1_SWITCH_DISTANCE : null,
+            switchDistance: useProductionNativeImpostor ? HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE : null,
+        },
         productionReference: 'TerrainBuilder InstancedMesh2.addInstances',
         treeInstances: totalTrees,
         renderedInstanceMeshes: instancedMeshes.length,
+        frustumCulled: groups.every(group => group.frustumCulled),
         groups,
     };
     builder.konveyorNativeTreeInstancingSummary = summary;
@@ -128,8 +300,23 @@ export async function placeTrees(builder, competitivePastures = null) {
             position: new THREE.Vector3(t.x, placementY, t.z),
             rotation: new THREE.Euler(0, t.rotationY, 0),
             scale: new THREE.Vector3(t.scale, t.scale, t.scale),
+            groundY: treeY,
+            scaleScalar: t.scale,
+            lod0BaseOffset: baseOffset,
         });
     }
+    builder.konveyorTreeGroundingSample = Object.entries(treeInstances)
+        .flatMap(([type, instances]) => instances.slice(0, 6).map((inst) => ({
+            type,
+            x: +inst.position.x.toFixed(3),
+            z: +inst.position.z.toFixed(3),
+            groundY: +inst.groundY.toFixed(3),
+            placementY: +inst.position.y.toFixed(3),
+            scale: +inst.scaleScalar.toFixed(3),
+            lod0BaseOffset: +inst.lod0BaseOffset.toFixed(3),
+            lod1BaseOffset: +(builder.models.treesLod1?.[type]?.userData?.modelBaseYOffset
+                ?? inst.lod0BaseOffset).toFixed(3),
+        })));
 
     // Cycle 16 Phase 1+2: per-instance LOD chain via InstancedMesh2.addLOD.
     const renderer = getSceneManager()?.getRenderer();

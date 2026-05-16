@@ -9,7 +9,7 @@
 ## Short description / tagline (≤ 120 chars)
 
 ```
-Herd up to 5,000 sheep across three biomes — in your browser, on your phone, with friends, at 60fps. Free, no install.
+Herd 5,000 sheep across three biomes in your browser, with friends, WebGPU, and WebGL fallback. Free, no install.
 ```
 
 Variants if you want a different angle:
@@ -52,7 +52,7 @@ A free, browser-based **herding sim** where you guide a sheepdog across three ha
 - **Free.** No ads, no microtransactions, no energy meters, no notifications. Just the game.
 - **MIT-licensed.** Free to play, free to fork, free to teach with. Source: [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds).
 - **Five languages.** English, Spanish, Portuguese, Japanese, Simplified Chinese — auto-detected via i18next.
-- **Mobile-ready.** Touch joystick, responsive HUD, gamepad support, installable as a PWA.
+- **Mobile controls.** Touch joystick, responsive HUD, gamepad support, and PWA installability are in place; Android WebGPU performance work remains active.
 
 ### Native version on the web
 

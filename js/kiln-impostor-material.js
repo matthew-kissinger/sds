@@ -500,6 +500,7 @@ export function createKilnImpostorMaterial({
   sidecar,
   search,
   konveyorImpostorFactories,
+  tileSelectionMode,
 } = {}) {
   if (sidecar.tilesX !== TILES_X || sidecar.tilesY !== TILES_Y) {
     console.warn(
@@ -662,6 +663,7 @@ export function createKilnImpostorMaterial({
         subsurfaceLift: uniforms.uSubsurfaceLift.value,
         fresnelStrength: uniforms.uFresnelStrength.value,
       },
+      tileSelectionMode,
     },
   });
   const material = materialResult.material;
@@ -738,8 +740,12 @@ export function createKilnImpostorGeometry(sidecar) {
  * @returns {Promise<{ material: THREE.ShaderMaterial, geometry: THREE.BufferGeometry, sidecar: object } | null>}
  */
 const _cache = new Map();
-export async function loadKilnImpostor(basePath) {
-  if (_cache.has(basePath)) return _cache.get(basePath);
+export async function loadKilnImpostor(basePath, options = {}) {
+  const cacheKey = [
+    basePath,
+    options.tileSelectionMode ?? 'default',
+  ].join('|');
+  if (_cache.has(cacheKey)) return _cache.get(cacheKey);
 
   const promise = (async () => {
     const sidecarUrl = `${basePath}.json`;
@@ -805,11 +811,17 @@ export async function loadKilnImpostor(basePath) {
       return null;
     }
 
-    const material = createKilnImpostorMaterial({ albedoAtlas, normalAtlas, depthAtlas, sidecar });
+    const material = createKilnImpostorMaterial({
+      albedoAtlas,
+      normalAtlas,
+      depthAtlas,
+      sidecar,
+      tileSelectionMode: options.tileSelectionMode,
+    });
     const geometry = createKilnImpostorGeometry(sidecar);
     return { material, geometry, sidecar };
   })();
 
-  _cache.set(basePath, promise);
+  _cache.set(cacheKey, promise);
   return promise;
 }

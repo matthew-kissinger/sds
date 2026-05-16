@@ -39,6 +39,10 @@ import {
     createSceneManagerWebGpuRendererProof,
     shouldRunSceneManagerWebGpuProof,
 } from './sceneManagerWebGpuProof.js';
+import {
+    createImpostorOrbitLabReport,
+    selectImpostorTilesForLayout,
+} from '../impostors/impostorOrbitLab.js';
 
 const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -473,6 +477,12 @@ export function createProductionTerrainAdapterDiagnosticProof({
     terrain.scale.setScalar(0.00045);
     terrain.frustumCulled = false;
     terrain.renderOrder = 1;
+    if (builder.terrainSkirtMesh) {
+        builder.terrainSkirtMesh.position.set(0.0, -1.236, 0.14);
+        builder.terrainSkirtMesh.scale.setScalar(0.00045);
+        builder.terrainSkirtMesh.frustumCulled = false;
+        builder.terrainSkirtMesh.renderOrder = 0;
+    }
 
     const summary = builder.konveyorTerrainMaterialSummary ?? terrain.material.userData?.konveyorTerrainMaterialSummary ?? null;
     const productionHeightTexture = terrain.material.userData?.heightTexture ?? null;
@@ -506,10 +516,15 @@ export function createProductionTerrainAdapterDiagnosticProof({
                 name: terrain.name ?? '',
                 geometryType: terrain.geometry?.type ?? null,
                 vertices: terrain.geometry?.attributes?.position?.count ?? null,
-                size: 3200,
-                segments: 256,
+                size: terrain.geometry?.parameters?.width ?? null,
+                segments: terrain.geometry?.parameters?.widthSegments ?? null,
                 scale: terrain.scale?.x ?? null,
                 frustumCulled: terrain.frustumCulled ?? null,
+                skirtSize: builder.terrainSkirtMesh?.geometry?.userData?.terrainSkirtSize ?? null,
+                skirtInnerSize: builder.terrainSkirtMesh?.geometry?.userData?.terrainSkirtInnerSize ?? null,
+                skirtTriangles: builder.terrainSkirtMesh?.geometry?.index?.count
+                    ? builder.terrainSkirtMesh.geometry.index.count / 3
+                    : null,
             },
             heightfield: {
                 sceneId: heightfield.sceneId,
@@ -1766,6 +1781,32 @@ export async function bootWebGpuDiagnostic() {
     kilnImpostorMesh.position.set(-1.05, -1.16, 0.27);
     kilnImpostorMesh.rotation.set(0, 0.1, 0);
     scene.add(kilnImpostorMesh);
+    const kilnControls = kilnImpostorMesh.material?.userData?.konveyorImpostorMaterialControls ?? null;
+    const kilnOrbitReport = createImpostorOrbitLabReport({ sidecar: kilnAssets.sidecar });
+    state.kilnImpostorOrbitLab = {
+        treeType: DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.treeType,
+        materialName: kilnImpostorMesh.material?.name ?? null,
+        materialSelectionMode: kilnImpostorMesh.material?.userData?.konveyorImpostorTileSelection ?? null,
+        controlsAvailable: typeof kilnControls?.setTileBlend === 'function',
+        appliedSamples: [],
+        report: kilnOrbitReport,
+        applyDirection(direction, layout = 'latlon-hemi-y') {
+            const selection = selectImpostorTilesForLayout(layout, direction, kilnAssets.sidecar);
+            if (layout === 'latlon-hemi-y') {
+                kilnControls?.setTileBlend?.(selection);
+            }
+            const sample = {
+                layout,
+                direction,
+                tiles: selection.tiles,
+                weights: selection.weights.map(roundBlendWeight),
+                weightsSum: roundBlendWeight(selection.weights.reduce((sum, value) => sum + value, 0)),
+                appliedToMaterial: layout === 'latlon-hemi-y' && typeof kilnControls?.setTileBlend === 'function',
+            };
+            state.kilnImpostorOrbitLab.appliedSamples.push(sample);
+            return sample;
+        },
+    };
 
     const cloudPlane = new Mesh(
         new PlaneGeometry(2.4, 0.65, 1, 1),

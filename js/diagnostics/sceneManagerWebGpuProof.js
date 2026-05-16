@@ -697,6 +697,12 @@ function createProductionTerrainSceneManagerIsland({
     terrain.scale.setScalar(0.00045);
     terrain.frustumCulled = false;
     terrain.renderOrder = 1;
+    if (builder.terrainSkirtMesh) {
+        builder.terrainSkirtMesh.position.set(0.0, -1.236, 0.14);
+        builder.terrainSkirtMesh.scale.setScalar(0.00045);
+        builder.terrainSkirtMesh.frustumCulled = false;
+        builder.terrainSkirtMesh.renderOrder = 0;
+    }
 
     const summary = builder.konveyorTerrainMaterialSummary
         ?? terrain.material.userData?.konveyorTerrainMaterialSummary
@@ -728,10 +734,15 @@ function createProductionTerrainSceneManagerIsland({
                 name: terrain.name ?? '',
                 geometryType: terrain.geometry?.type ?? null,
                 vertices: terrain.geometry?.attributes?.position?.count ?? null,
-                size: 3200,
-                segments: 256,
+                size: terrain.geometry?.parameters?.width ?? null,
+                segments: terrain.geometry?.parameters?.widthSegments ?? null,
                 scale: terrain.scale?.x ?? null,
                 frustumCulled: terrain.frustumCulled ?? null,
+                skirtSize: builder.terrainSkirtMesh?.geometry?.userData?.terrainSkirtSize ?? null,
+                skirtInnerSize: builder.terrainSkirtMesh?.geometry?.userData?.terrainSkirtInnerSize ?? null,
+                skirtTriangles: builder.terrainSkirtMesh?.geometry?.index?.count
+                    ? builder.terrainSkirtMesh.geometry.index.count / 3
+                    : null,
             },
             heightfield: describeHeightfield(heightfield),
             checks,

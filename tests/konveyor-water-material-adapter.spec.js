@@ -126,9 +126,15 @@ describe('konveyor water material adapter', () => {
             expect(material.side).toBe(DoubleSide);
             expect(material.colorNode).toBeTruthy();
             expect(material.depthWrite).toBe(true);
+            expect(material.userData.konveyorWaterWorldSpaceHeightfield).toBe(true);
+            expect(material.userData.konveyorWaterSunCameraGlint).toBe(true);
+            expect(material.userData.konveyorWaterGlintMode).toBe('ripple-normal-sun-camera-v2');
+            expect(material.userData.konveyorWaterGlintGain).toBe(0.16);
+            expect(material.userData.konveyorWaterMaterialControls?.update).toBeInstanceOf(Function);
             expect(material.userData.konveyorWaterMaterialSummary).toMatchObject({
                 kind: 'anime-water',
                 applied: true,
+                hasControls: true,
             });
             expect(contexts).toHaveLength(1);
             expect(contexts[0].hasHeightfield).toBe(true);
@@ -183,6 +189,36 @@ describe('konveyor water material adapter', () => {
         }
 
         expect(disposals).toEqual(['disposed']);
+    });
+
+    it('applies quality state to WebGPU water sparkle cost', () => {
+        const updates = [];
+        const water = createAnimeWater({
+            boundary,
+            size: 16,
+            segments: 1,
+            search: '?renderer=webgpu&konveyorWater=1',
+            konveyorWaterFactories: {
+                createAnimeWaterMaterial: () => ({
+                    material: createMaterial('konveyor-water-quality-controls'),
+                    controls: {
+                        update: (state) => updates.push(state),
+                    },
+                }),
+            },
+        });
+
+        try {
+            water.setQualityState({ waterSparkleScale: 0.25 });
+            water.update(2.0, new THREE.Vector3(0, 1, 0));
+            expect(water.qualitySparkleScale).toBe(0.25);
+            expect(updates.at(-1)).toMatchObject({
+                timeSec: 2.0,
+                sparkleStrength: 0.175,
+            });
+        } finally {
+            water.dispose();
+        }
     });
 
     it('falls back to default water material when a factory is missing or invalid', () => {

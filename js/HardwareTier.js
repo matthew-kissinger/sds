@@ -32,17 +32,17 @@ export function detectTier(renderer, opts = {}) {
     }
 
     if (!renderer || typeof renderer.getContext !== 'function') {
-        return opts.isMobile ? 'low' : 'med';
+        return detectNonWebGlTier(renderer, opts);
     }
 
     let gl;
     try {
         gl = renderer.getContext();
     } catch (_) {
-        return opts.isMobile ? 'low' : 'med';
+        return detectNonWebGlTier(renderer, opts);
     }
 
-    if (!gl) return opts.isMobile ? 'low' : 'med';
+    if (!gl) return detectNonWebGlTier(renderer, opts);
 
     let maxVertexUniforms = 256;
     try {
@@ -67,6 +67,29 @@ export function detectTier(renderer, opts = {}) {
     if (LOW_TIER_VENDOR_RE.test(rendererStr)) return 'low';
     if (HIGH_TIER_VENDOR_RE.test(rendererStr) && !opts.isMobile) return 'high';
     return opts.isMobile ? 'low' : 'med';
+}
+
+function detectNonWebGlTier(renderer, opts = {}) {
+    const isWebGpu = renderer?.isWebGPURenderer === true
+        || renderer?.constructor?.name === 'WebGPURenderer'
+        || String(globalThis.window?.__sdsRendererMode?.effective ?? '').startsWith('webgpu');
+    if (!isWebGpu) return opts.isMobile ? 'low' : 'med';
+    if (!opts.isMobile) return 'high';
+
+    const limits = globalThis.window?.__sdsG?.productionWebGpu?.devicePreflight?.adapterLimits ?? {};
+    const maxTexture = limits.maxTextureDimension2D ?? 0;
+    const concurrency = globalThis.navigator?.hardwareConcurrency ?? 0;
+    const memory = globalThis.navigator?.deviceMemory ?? 0;
+    const width = globalThis.window?.innerWidth ?? 0;
+    const height = globalThis.window?.innerHeight ?? 0;
+    const dpr = globalThis.window?.devicePixelRatio ?? 1;
+    const physicalPixels = width * height * dpr * dpr;
+
+    if (maxTexture >= 8192 && concurrency >= 8 && (memory === 0 || memory >= 6) && physicalPixels >= 1_000_000) {
+        return 'high';
+    }
+    if (maxTexture >= 4096 && concurrency >= 4) return 'med';
+    return 'low';
 }
 
 /**

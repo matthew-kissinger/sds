@@ -299,18 +299,37 @@ export function setImpostorTint(builder, sunColor, sunDirWorld = null, ambientCo
                 ambientColor: ambientColor ? ambientColor.toArray() : null,
                 ambientIntensity,
             },
-            live: firstKiln ? {
-                uSunColor: firstKiln.uniforms.uSunColor.value.toArray(),
-                uAmbientColor: firstKiln.uniforms.uAmbientColor.value.toArray(),
-                uGroundBounceColor: firstKiln.uniforms.uGroundBounceColor.value.toArray(),
-                uSunDirWorld: firstKiln.uniforms.uSunDirWorld.value.toArray(),
-                uWrapPow: firstKiln.uniforms.uWrapPow.value,
-                uSubsurfaceLift: firstKiln.uniforms.uSubsurfaceLift.value,
-            } : null,
+            live: buildLiveImpostorProbe(firstKiln),
             count: builder._impostorMaterials.filter(m => m.userData?.isKilnImpostor).length,
             scene: builder.scene,
             trees: builder.trees,
             kilnMaterial: firstKiln,
         };
     }
+}
+
+function buildLiveImpostorProbe(material) {
+    if (!material) return null;
+    if (
+        material.uniforms?.uSunColor
+        && material.uniforms?.uAmbientColor
+        && material.uniforms?.uGroundBounceColor
+        && material.uniforms?.uSunDirWorld
+    ) {
+        return {
+            materialMode: 'shader-uniforms',
+            uSunColor: material.uniforms.uSunColor.value.toArray(),
+            uAmbientColor: material.uniforms.uAmbientColor.value.toArray(),
+            uGroundBounceColor: material.uniforms.uGroundBounceColor.value.toArray(),
+            uSunDirWorld: material.uniforms.uSunDirWorld.value.toArray(),
+            uWrapPow: material.uniforms.uWrapPow?.value ?? null,
+            uSubsurfaceLift: material.uniforms.uSubsurfaceLift?.value ?? null,
+        };
+    }
+    const controls = material.userData?.konveyorImpostorMaterialControls;
+    return {
+        materialMode: material.isNodeMaterial ? 'node-material' : 'factory-material',
+        hasSetTintControl: typeof controls?.setTint === 'function',
+        summary: material.userData?.konveyorImpostorMaterialSummary ?? null,
+    };
 }

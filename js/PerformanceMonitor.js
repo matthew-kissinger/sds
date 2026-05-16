@@ -5,6 +5,12 @@
  * Integrates Stats.js for real-time FPS/memory tracking and provides
  * custom metrics for simulation-specific performance analysis.
  */
+import {
+    buildRenderCostReport,
+    inferRendererMode,
+    isWebGpuRenderer,
+    sumSystemTriangles,
+} from './perf/RenderCostReport.js';
 
 /**
  * Performance monitoring and statistics display
@@ -27,7 +33,9 @@ export class PerformanceMonitor {
             grassInstances: 0,
             drawCalls: 0,
             triangles: 0,
+            estimatedTriangles: 0,
             avgFrameTime: 0,
+            lastFrameTime: 0,
             minFrameTime: Infinity,
             maxFrameTime: 0,
             geometries: 0,
@@ -38,6 +46,11 @@ export class PerformanceMonitor {
         // Per-system triangle breakdown, keyed by name so systems can overwrite
         // their own report if they rebuild (e.g. grass regeneration).
         this.systemTriangles = new Map();
+        this.visibleCountsBySystem = {};
+        this.estimatedDrawCalls = 0;
+        this.qualityState = {};
+        this.deviceTier = 'unknown';
+        this.rendererMode = 'unknown';
 
         this.init();
     }
@@ -154,6 +167,7 @@ export class PerformanceMonitor {
         const currentTime = performance.now();
         const frameTime = currentTime - this.lastFrameTime;
         this.lastFrameTime = currentTime;
+        this.metrics.lastFrameTime = frameTime;
         
         // Update frame time statistics
         this.frameTimeHistory.push(frameTime);
@@ -176,8 +190,15 @@ export class PerformanceMonitor {
         
         // Update renderer metrics
         if (renderer && renderer.info) {
-            this.metrics.drawCalls = renderer.info.render.calls;
-            this.metrics.triangles = renderer.info.render.triangles;
+            this.rendererMode = inferRendererMode(renderer);
+            this.metrics.drawCalls = isWebGpuRenderer(renderer) && this.estimatedDrawCalls > 0
+                ? this.estimatedDrawCalls
+                : renderer.info.render.calls;
+            const estimatedTriangles = sumSystemTriangles(this.getSystemBreakdown());
+            this.metrics.estimatedTriangles = estimatedTriangles;
+            this.metrics.triangles = isWebGpuRenderer(renderer)
+                ? estimatedTriangles
+                : (renderer.info.render.triangles || estimatedTriangles);
             this.metrics.geometries = renderer.info.memory.geometries;
             this.metrics.textures = renderer.info.memory.textures;
             this.metrics.programs = renderer.info.programs ? renderer.info.programs.length : 0;
@@ -297,6 +318,47 @@ export class PerformanceMonitor {
     getSystemBreakdown() {
         return Array.from(this.systemTriangles, ([name, count]) => ({ name, count }))
             .sort((a, b) => b.count - a.count);
+    }
+
+    setVisibleCountsBySystem(counts = {}) {
+        this.visibleCountsBySystem = { ...counts };
+    }
+
+    setEstimatedDrawCalls(count) {
+        if (Number.isFinite(count) && count >= 0) {
+            this.estimatedDrawCalls = Math.round(count);
+        }
+    }
+
+    setDeviceTier(deviceTier) {
+        if (deviceTier) this.deviceTier = deviceTier;
+    }
+
+    setQualityState(state = {}) {
+        this.qualityState = { ...state };
+        if (state.deviceTier) this.setDeviceTier(state.deviceTier);
+    }
+
+    getCostReport({
+        renderer = null,
+        sceneId = 'unknown',
+        cameraPose = 'default',
+        deviceTier = this.deviceTier,
+        qualityState = this.qualityState,
+        frameTimes = this.frameTimeHistory,
+    } = {}) {
+        return buildRenderCostReport({
+            renderer,
+            rendererMode: this.rendererMode,
+            deviceTier,
+            sceneId,
+            cameraPose,
+            frameTimes,
+            drawCalls: this.metrics.drawCalls,
+            systemBreakdown: this.getSystemBreakdown(),
+            visibleCountsBySystem: this.visibleCountsBySystem,
+            qualityState,
+        });
     }
 
     /**

@@ -231,11 +231,100 @@ describe('konveyor grass material adapter', () => {
             expect(material.colorNode).toBeTruthy();
             expect(material.opacityNode).toBeTruthy();
             expect(material.positionNode).toBeTruthy();
+            expect(material.userData.konveyorGrassBladeInteractors).toMatchObject({
+                maxNodeInteractors: 4,
+                source: 'dog-plus-nearest-sheep-unrolled',
+                displacement: 'horizontal-push-plus-laydown',
+                visualScale: 3.2,
+                laydownStrength: 1.0,
+                shadowStrength: 0.48,
+            });
             expect(grass.konveyorGrassBladeMaterialSummary).toMatchObject({
                 kind: 'grass-blade',
                 applied: true,
             });
             expect(contexts).toHaveLength(1);
+        } finally {
+            material.dispose();
+        }
+    });
+
+    it('copies dog plus sheep interactors into the WebGPU node control packet', () => {
+        const nodeFactories = createKonveyorGrassNodeMaterialFactories(
+            { MeshBasicNodeMaterial, MeshLambertNodeMaterial, MeshStandardNodeMaterial, DoubleSide, TSL },
+            {
+                fogNear: 18,
+                fogFar: 74,
+            }
+        );
+        const material = nodeFactories.createGrassBladeMaterial({
+            tier: 'high',
+            interaction: { maxInteractors: 10 },
+        });
+
+        try {
+            const controls = material.userData.konveyorGrassBladeMaterialControls;
+            controls.updateInteractors({
+                count: 5,
+                positions: new Float32Array([
+                    1, 0, 2,
+                    3, 0, 4,
+                    5, 0, 6,
+                    7, 0, 8,
+                    9, 0, 10,
+                ]),
+                facings: new Float32Array([
+                    0, 1,
+                    1, 0,
+                    0, -1,
+                    -1, 0,
+                    0.7, 0.7,
+                ]),
+                data: new Float32Array([0, 1, 1, 1, 1]),
+            });
+            const nodes = controls.nodes;
+            expect(nodes.interactionRadius.value).toBeCloseTo(2.64);
+            expect(nodes.interactionStrength.value).toBeCloseTo(0.75);
+            expect(nodes.sheepInteractionRadius.value).toBeCloseTo(1.5);
+            expect(nodes.sheepInteractionStrength.value).toBeCloseTo(0.475);
+            expect(material.userData.konveyorGrassBladeInteractors.maxNodeInteractors).toBe(8);
+            expect(nodes.interactorCount.value).toBe(5);
+            expect(nodes.interactorPositions[0].value.toArray()).toEqual([1, 0, 2]);
+            expect(nodes.interactorPositions[4].value.toArray()).toEqual([9, 0, 10]);
+            expect(nodes.interactorFacings[1].value.toArray()).toEqual([1, 0]);
+            expect(nodes.interactorTypes[0].value).toBe(0);
+            expect(nodes.interactorTypes[4].value).toBe(1);
+        } finally {
+            material.dispose();
+        }
+    });
+
+    it('uses stronger mobile grass interaction controls for visible dog and sheep displacement', () => {
+        const nodeFactories = createKonveyorGrassNodeMaterialFactories(
+            { MeshBasicNodeMaterial, MeshLambertNodeMaterial, MeshStandardNodeMaterial, DoubleSide, TSL },
+            {
+                fogNear: 18,
+                fogFar: 74,
+            }
+        );
+        const material = nodeFactories.createGrassBladeMaterial({
+            isMobile: true,
+            tier: 'high',
+            interaction: { maxInteractors: 8 },
+        });
+
+        try {
+            const controls = material.userData.konveyorGrassBladeMaterialControls;
+            const nodes = controls.nodes;
+            expect(nodes.interactionRadius.value).toBeCloseTo(3.85);
+            expect(nodes.interactionStrength.value).toBeCloseTo(0.93);
+            expect(nodes.sheepInteractionRadius.value).toBeCloseTo(2.1875);
+            expect(nodes.sheepInteractionStrength.value).toBeCloseTo(0.589);
+            expect(material.userData.konveyorGrassBladeInteractors).toMatchObject({
+                visualScale: 3.4,
+                laydownStrength: 1.05,
+                shadowStrength: 0.52,
+            });
         } finally {
             material.dispose();
         }
@@ -268,6 +357,13 @@ describe('konveyor grass material adapter', () => {
         camera.updateMatrixWorld();
         const sunDir = new THREE.Vector3(0, 1, 0);
         grass.updateInteractors([{ position: { x: 1, y: 0, z: 2 }, type: 'sheep', facing: { x: 0, z: 1 } }]);
+        expect(grass.getInteractorSample()).toEqual([
+            {
+                type: 'sheep',
+                position: { x: 1, y: 0, z: 2 },
+                facing: { x: 0, z: 1 },
+            },
+        ]);
         grass.update(0.25, camera, null);
         grass.setWind(0.4, { x: 0.2, y: 0.8 });
         grass.setSunDirection(sunDir);
@@ -280,6 +376,26 @@ describe('konveyor grass material adapter', () => {
         expect(calls[1][1].sceneFog).toBe(scene.fog);
         expect(calls[2][1]).toMatchObject({ strength: 0.4 });
         expect(calls[3][1].sunDir).toBe(sunDir);
+    });
+
+    it('applies quality state to grass distance and density LOD knobs', () => {
+        const scene = new THREE.Scene();
+        const grass = new GrassSystem(scene);
+        const chunk = {
+            isMeadowQuad: false,
+            lodLevel: 0,
+            fullCount: 100,
+            mesh: { count: 100 },
+        };
+        grass.chunks.set('0,0', chunk);
+
+        grass.applyQualityState({ grassDistanceScale: 0.55 });
+
+        expect(grass.qualityDistanceScale).toBe(0.55);
+        expect(grass.qualityDensityScale).toBe(0.55);
+        expect(grass.config.lodDecimateMid).toBeCloseTo(110);
+        expect(grass.config.lodDecimateFar).toBeCloseTo(154);
+        expect(chunk.mesh.count).toBe(55);
     });
 
     it('falls back to default meadow material when a factory is missing or invalid', () => {

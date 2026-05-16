@@ -909,3 +909,31 @@ browser, OS, GPU family, and WebView shell.
 - Do not flip `sheepdogsim.com` default URLs to WebGPU-first until the renderer
   telemetry, Cloudflare Web Analytics, and cross-browser/WebView proofs support
   the policy.
+
+---
+
+## Progressive WebGPU default and opt-in Cycle 38 tree route are current release policy (2026-05-16)
+
+Matt approved moving the low-traffic web route to a progressive WebGPU request
+after the production request, fallback, perf, settings-toggle, and multiplayer
+proof packets landed. PR #52 merged that policy to `main`. The later Cycle 38
+tree-impostor release packet is version `2.1.5` on
+`codex/cycle-38-tree-impostors`.
+
+### Rule
+
+- Default web boot requests WebGPU on browsers that can create a WebGPU device.
+- Unsupported WebGPU or failed adapter/device creation must fall back to WebGL.
+- `?renderer=webgl` remains a forced WebGL escape hatch.
+- The settings toggle must keep the experimental WebGPU opt-out path alive.
+- The Cycle 38 tree path behind `?konveyorNativeTreeImpostors=1` is an opt-in
+  review route: near native LOD0, mid branch-preserving native LOD1, and far
+  lat/lon-hemi Kiln impostor quads with per-instance tile attributes.
+- Do not describe the Cycle 38 tree route as production octahedral impostors.
+  True octahedral sidecars, depth/parallax parity, transition polish, and green
+  Android frame budgets remain future work.
+- Do not call SDS mobile-ready. The current Android WebGPU matrix is
+  screenshot-valid but budget-red.
+- After any deploy carrying this packet, rerun the iOS Safari water canary and
+  review renderer-resolution telemetry before making a stronger public default
+  or mobile-readiness claim.
