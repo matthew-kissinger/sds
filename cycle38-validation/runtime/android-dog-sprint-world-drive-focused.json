@@ -1,0 +1,2130 @@
+{
+  "capturedAt": "2026-05-16T17:02:57.985Z",
+  "target": "android",
+  "deviceId": "R5CX4028VGJ",
+  "origin": "http://127.0.0.1:3000",
+  "renderer": "webgpu",
+  "scene": "rolling-hills",
+  "gameMode": "classic",
+  "durationMs": 10000,
+  "warmupMs": 1500,
+  "switchMs": 2600,
+  "turnRate": 1.2,
+  "ok": true,
+  "errors": [],
+  "results": [
+    {
+      "configId": "follow-near",
+      "scene": "rolling-hills",
+      "gameMode": "classic",
+      "renderer": "webgpu",
+      "effectiveRenderer": "webgpu-production",
+      "ok": true,
+      "thresholds": {
+        "maxSpikeMs": 50,
+        "p99Ms": 34,
+        "repeatedSpikeLimit": 0
+      },
+      "checks": {
+        "dogMoved": true,
+        "crossIslandProgress": true,
+        "notCircular": true,
+        "p99": true,
+        "maxSpike": true,
+        "repeatedSpikes": true,
+        "renderer": true,
+        "screenshot": true
+      },
+      "routeValidation": {
+        "netDisplacement": 160.758,
+        "straightness": 0.984
+      },
+      "report": {
+        "cameraMode": "follow",
+        "zoomPreset": "near",
+        "routeMode": "perf-world-drive-cross-island",
+        "route": [
+          {
+            "x": -155,
+            "z": -145
+          },
+          {
+            "x": 155,
+            "z": 135
+          },
+          {
+            "x": -155,
+            "z": 145
+          },
+          {
+            "x": 155,
+            "z": -135
+          }
+        ],
+        "zoomState": {
+          "mode": "follow",
+          "distance": 10,
+          "min": 10,
+          "max": 45
+        },
+        "durationMs": 10000,
+        "switchMs": 2600,
+        "turnRate": 1.2,
+        "waypointSwitchCount": 0,
+        "routeDistance": 163.419,
+        "frameCount": 598,
+        "avgFrameTime": 16.732441471571907,
+        "p50FrameTime": 16.700000000000728,
+        "p95FrameTime": 16.799999999999272,
+        "p99FrameTime": 16.80000000000109,
+        "maxFrameTime": 33.5,
+        "spikeCount50ms": 0,
+        "spikes": [],
+        "startDog": {
+          "x": 0,
+          "y": 19.3,
+          "z": -30
+        },
+        "endDog": {
+          "x": -130.209,
+          "y": -11.972,
+          "z": -124.28
+        },
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "default",
+          "frameP95": 16.799999999999272,
+          "frameP99": 16.80000000000109,
+          "drawCalls": 30,
+          "estimatedTrianglesBySystem": {
+            "Terrain": 295424,
+            "Sheep": 108800,
+            "Trees": 45394,
+            "Grass": 8580,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 2,
+            "Trees": 179,
+            "Rocks": 9,
+            "Mountains": 0,
+            "Grass": 429,
+            "Structures": 1,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 1,
+            "renderScale": 0.9,
+            "grassDistanceScale": 0.85,
+            "treeLodBias": 0.15,
+            "waterSparkleScale": 0.75,
+            "sheepAnimationRate": 0.75,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "samples": [
+          {
+            "t": 13.5,
+            "frameMs": 13.5,
+            "dog": {
+              "x": 0,
+              "y": 19.3,
+              "z": -30
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 113.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -1.718,
+              "y": 17.896,
+              "z": -31.275
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 230.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -4.123,
+              "y": 16.223,
+              "z": -33.059
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 330.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.067,
+              "y": 15.172,
+              "z": -34.501
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 430.6,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -8.117,
+              "y": 14.273,
+              "z": -36.022
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 530.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -10.084,
+              "y": 13.502,
+              "z": -37.482
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 630.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -12.102,
+              "y": 12.393,
+              "z": -38.979
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 730.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -14.164,
+              "y": 11.31,
+              "z": -40.509
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 831,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -16.114,
+              "y": 10.397,
+              "z": -41.955
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 931,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -18.166,
+              "y": 9.581,
+              "z": -43.478
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1031.2,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -20.191,
+              "y": 8.955,
+              "z": -44.981
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1131.2,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -22.147,
+              "y": 8.562,
+              "z": -46.432
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1231.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -24.221,
+              "y": 8.34,
+              "z": -47.97
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1331.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -26.164,
+              "y": 8.313,
+              "z": -49.412
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1431.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -28.23,
+              "y": 8.449,
+              "z": -50.945
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1531.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -30.24,
+              "y": 8.715,
+              "z": -52.436
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1631.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -30.785,
+              "y": 9.013,
+              "z": -53.71
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1748.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -31.831,
+              "y": 9.435,
+              "z": -55.811
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1848.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -33.759,
+              "y": 9.759,
+              "z": -57.225
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 1948.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -35.776,
+              "y": 10.156,
+              "z": -58.685
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2048.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -37.854,
+              "y": 10.635,
+              "z": -60.189
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2148.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -39.887,
+              "y": 11.186,
+              "z": -61.661
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2249,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -41.908,
+              "y": 11.817,
+              "z": -63.124
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2349,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -43.878,
+              "y": 12.503,
+              "z": -64.551
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2449.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -45.909,
+              "y": 12.883,
+              "z": -66.021
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2549.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -47.939,
+              "y": 12.734,
+              "z": -67.49
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2649.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -49.992,
+              "y": 12.678,
+              "z": -68.977
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2749.5,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -52.057,
+              "y": 12.763,
+              "z": -70.472
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2849.6,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -54.072,
+              "y": 13.013,
+              "z": -71.931
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 2949.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -56.113,
+              "y": 13.447,
+              "z": -73.409
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3049.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -58.116,
+              "y": 14.065,
+              "z": -74.858
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3149.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -60.101,
+              "y": 14.883,
+              "z": -76.295
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3249.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -62.124,
+              "y": 15.891,
+              "z": -77.76
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3349.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -64.155,
+              "y": 17.047,
+              "z": -79.23
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3450,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -66.026,
+              "y": 18.203,
+              "z": -80.585
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3550.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -67.563,
+              "y": 19.198,
+              "z": -81.698
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3650.1,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -69.04,
+              "y": 20.186,
+              "z": -82.767
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3750.2,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -70.357,
+              "y": 21.068,
+              "z": -83.72
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3850.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -71.689,
+              "y": 21.873,
+              "z": -84.685
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 3967.1,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -73.13,
+              "y": 22.636,
+              "z": -85.728
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4067.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -74.374,
+              "y": 23.049,
+              "z": -86.629
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4167.2,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -75.676,
+              "y": 23.495,
+              "z": -87.571
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4267.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -76.87,
+              "y": 23.907,
+              "z": -88.436
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4367.4,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -78.096,
+              "y": 24.353,
+              "z": -89.324
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4467.6,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -79.344,
+              "y": 24.798,
+              "z": -90.227
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4567.7,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -80.551,
+              "y": 25.226,
+              "z": -91.1
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4667.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -81.716,
+              "y": 25.645,
+              "z": -91.944
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4767.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -82.959,
+              "y": 26.087,
+              "z": -92.844
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4868,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -84.197,
+              "y": 26.513,
+              "z": -93.74
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 4968.1,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -85.382,
+              "y": 26.938,
+              "z": -94.598
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5068.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -86.58,
+              "y": 27.344,
+              "z": -95.466
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5168.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -87.82,
+              "y": 27.775,
+              "z": -96.363
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5268.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -89.051,
+              "y": 28.208,
+              "z": -97.254
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5368.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -90.236,
+              "y": 28.625,
+              "z": -98.113
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5468.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -91.483,
+              "y": 29.079,
+              "z": -99.015
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5568.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -92.68,
+              "y": 29.532,
+              "z": -99.882
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5685.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -94.082,
+              "y": 30.074,
+              "z": -100.897
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5785.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -95.313,
+              "y": 30.576,
+              "z": -101.788
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5885.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -96.517,
+              "y": 30.805,
+              "z": -102.66
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 5985.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -97.745,
+              "y": 30.735,
+              "z": -103.549
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6085.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -98.975,
+              "y": 30.137,
+              "z": -104.439
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6186,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -100.195,
+              "y": 29.28,
+              "z": -105.322
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6286.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -101.381,
+              "y": 28.198,
+              "z": -106.181
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6386.1,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -102.636,
+              "y": 26.845,
+              "z": -107.089
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6486.2,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -103.819,
+              "y": 25.361,
+              "z": -107.946
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6586.3,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -105.052,
+              "y": 23.621,
+              "z": -108.839
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6686.4,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -106.284,
+              "y": 21.709,
+              "z": -109.731
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6786.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -107.493,
+              "y": 19.648,
+              "z": -110.606
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6886.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -108.715,
+              "y": 17.415,
+              "z": -111.491
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 6986.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -109.95,
+              "y": 14.789,
+              "z": -112.385
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 7086.8,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -111.137,
+              "y": 12.248,
+              "z": -113.244
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 7186.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -112.359,
+              "y": 9.666,
+              "z": -114.129
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 7286.9,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -113.577,
+              "y": 7.131,
+              "z": -115.011
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 7387,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -114.793,
+              "y": 4.612,
+              "z": -115.891
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 7487.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -116.007,
+              "y": 2.357,
+              "z": -116.77
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 7587.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -117.231,
+              "y": 0.027,
+              "z": -117.657
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 7687.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -118.439,
+              "y": -2.006,
+              "z": -118.531
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 7804.1,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -119.86,
+              "y": -4.289,
+              "z": -119.559
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 7904.2,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -121.041,
+              "y": -6.04,
+              "z": -120.414
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8004.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -122.256,
+              "y": -7.61,
+              "z": -121.294
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8104.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -123.471,
+              "y": -9.01,
+              "z": -122.173
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8204.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -124.686,
+              "y": -10.144,
+              "z": -123.053
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8304.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -125.902,
+              "y": -11.038,
+              "z": -123.934
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8404.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -127.119,
+              "y": -11.653,
+              "z": -124.815
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8504.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -128.331,
+              "y": -11.942,
+              "z": -125.692
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8604.8,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -128.748,
+              "y": -11.973,
+              "z": -125.793
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8704.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -128.894,
+              "y": -11.972,
+              "z": -125.644
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8804.9,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -129.032,
+              "y": -11.973,
+              "z": -125.502
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 8904.9,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -129.166,
+              "y": -11.973,
+              "z": -125.364
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9005.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -129.289,
+              "y": -11.974,
+              "z": -125.237
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9105.2,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -129.405,
+              "y": -11.974,
+              "z": -125.117
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9205.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -129.516,
+              "y": -11.974,
+              "z": -125.003
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9305.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -129.62,
+              "y": -11.973,
+              "z": -124.894
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9405.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -129.72,
+              "y": -11.973,
+              "z": -124.79
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9505.6,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -129.812,
+              "y": -11.973,
+              "z": -124.695
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9622.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -129.915,
+              "y": -11.973,
+              "z": -124.588
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9722.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -129.998,
+              "y": -11.973,
+              "z": -124.501
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9822.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -130.074,
+              "y": -11.972,
+              "z": -124.421
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          },
+          {
+            "t": 9922.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -130.149,
+              "y": -11.972,
+              "z": -124.344
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            },
+            "target": {
+              "x": -155,
+              "z": -145
+            },
+            "waypointIndex": 0
+          }
+        ]
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/android-dog-sprint-world-drive-focused/rolling-hills-follow-near.png",
+        "stats": {
+          "width": 1080,
+          "height": 1963,
+          "stdev": 30.236,
+          "min": 12,
+          "max": 255,
+          "nonBlank": true
+        }
+      }
+    }
+  ]
+}

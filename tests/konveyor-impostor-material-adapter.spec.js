@@ -8,6 +8,11 @@ import {
   createKonveyorImpostorMaterial,
   shouldApplyKonveyorImpostors,
 } from '../js/konveyorImpostorMaterialAdapter.js';
+import {
+  selectLatLonHemiYImpostorTiles,
+  selectOctahedralImpostorTiles,
+} from '../js/impostors/impostorTileSelection.js';
+import { createImpostorOrbitLabReport } from '../js/impostors/impostorOrbitLab.js';
 import { setImpostorTint } from '../js/world/shaderPatches.js';
 
 function createTexture(name) {
@@ -20,6 +25,9 @@ function createSidecar() {
   return {
     tilesX: 4,
     tilesY: 4,
+    layout: 'latlon',
+    axis: 'hemi-y',
+    hemi: true,
     azimuths: [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5],
     elevations: [Math.PI * 0.35, Math.PI * 0.2, Math.PI * 0.05, -Math.PI * 0.1],
     tileSize: 512,
@@ -186,15 +194,155 @@ describe('konveyor impostor material adapter', () => {
       expect(material.alphaTest).toBe(0.3);
       expect(material.colorNode).toBeTruthy();
       expect(material.opacityNode).toBeTruthy();
+      expect(material.userData.konveyorImpostorTileSelection).toMatchObject({
+        mode: 'dynamic-uniform-lab',
+        layout: 'latlon-hemi-y',
+      });
+      expect(material.userData.konveyorImpostorMaterialControls?.setTileBlend).toBeTypeOf('function');
       expect(material.userData.isKilnImpostor).toBe(true);
       expect(material.userData.sidecar).toBe(params.sidecar);
       expect(material.userData.konveyorImpostorMaterialSummary).toMatchObject({
         kind: 'kiln-impostor',
         applied: true,
+        hasControls: true,
       });
       expect(contexts).toHaveLength(1);
     } finally {
       material.dispose();
+    }
+  });
+
+  it('can create a production WebGPU impostor material driven by instanced tile attributes', () => {
+    const nodeFactories = createKonveyorImpostorNodeMaterialFactories(
+      { MeshBasicNodeMaterial, DoubleSide, Vector2: THREE.Vector2, Vector3: THREE.Vector3, TSL },
+      {}
+    );
+    const material = createKilnImpostorMaterial(createParams({
+      search: '?renderer=webgpu&konveyorImpostors=1',
+      tileSelectionMode: 'production-instanced-attributes',
+      konveyorImpostorFactories: {
+        createKilnImpostorMaterial: (context) => nodeFactories.createKilnImpostorMaterial(context),
+      },
+    }));
+
+    try {
+      expect(material.name).toBe('konveyor-node-kiln-impostor');
+      expect(material.userData.konveyorImpostorTileSelection).toMatchObject({
+        mode: 'production-instanced-attributes',
+        source: 'instanced-attributes',
+        layout: 'latlon-hemi-y',
+      });
+      const controls = material.userData.konveyorImpostorMaterialControls;
+      expect(controls.setTileBlend({
+        tiles: [[2, 1], [3, 1], [2, 2]],
+        weights: [0.2, 0.3, 0.5],
+      })).toBe(false);
+      expect(controls.setTint).toBeTypeOf('function');
+      expect(controls.nodes.tint.sunDirection.value).toBeInstanceOf(THREE.Vector3);
+    } finally {
+      material.dispose();
+    }
+  });
+
+  it('computes view-dependent impostor tile blends for the WebGPU lab path', () => {
+    const sidecar = createSidecar();
+    const forward = selectLatLonHemiYImpostorTiles({ x: 0, y: 0.2, z: 1 }, sidecar);
+    const side = selectLatLonHemiYImpostorTiles({ x: 1, y: 0.2, z: 0 }, sidecar);
+    const octa = selectOctahedralImpostorTiles({ x: 0.4, y: 0.8, z: 0.2 }, sidecar);
+
+    expect(forward.layout).toBe('latlon-hemi-y');
+    expect(forward.tiles).toHaveLength(3);
+    expect(forward.weights.reduce((sum, value) => sum + value, 0)).toBeCloseTo(1, 6);
+    expect(side.tiles).not.toEqual(forward.tiles);
+    expect(octa.layout).toBe('octahedral');
+    expect(octa.tiles).toHaveLength(3);
+    expect(octa.weights.reduce((sum, value) => sum + value, 0)).toBeCloseTo(1, 6);
+  });
+
+  it('summarizes a one-tree impostor orbit lab without claiming production readiness', () => {
+    const report = createImpostorOrbitLabReport({ sidecar: createSidecar() });
+
+    expect(report.source).toBe('SDS WebGPU impostor orbit lab');
+    expect(report.sidecarLayout).toBe('latlon-hemi-y');
+    expect(report.productionReady).toBe(false);
+    expect(report.productionBlockers).toContain('per-instance camera-driven tile selection');
+    expect(report.layouts['latlon-hemi-y'].sampleCount).toBeGreaterThanOrEqual(8);
+    expect(report.layouts['latlon-hemi-y'].uniqueDominantTileCount).toBeGreaterThanOrEqual(4);
+    expect(report.layouts.octahedral.uniqueDominantTileCount).toBeGreaterThanOrEqual(4);
+    expect(Object.values(report.checks).every(Boolean)).toBe(true);
+  });
+
+  it('updates WebGPU node impostor tile uniforms from a dynamic selection', () => {
+    const nodeFactories = createKonveyorImpostorNodeMaterialFactories(
+      { MeshBasicNodeMaterial, DoubleSide, Vector2: THREE.Vector2, TSL },
+      {}
+    );
+    const material = createKilnImpostorMaterial(createParams({
+      search: '?renderer=webgpu&konveyorImpostors=1',
+      konveyorImpostorFactories: {
+        createKilnImpostorMaterial: (context) => nodeFactories.createKilnImpostorMaterial(context),
+      },
+    }));
+
+    try {
+      const controls = material.userData.konveyorImpostorMaterialControls;
+      const selection = selectLatLonHemiYImpostorTiles({ x: 1, y: 0.15, z: 0.2 }, createSidecar());
+      controls.setTileBlend(selection);
+      const nodes = controls.nodes;
+      expect(nodes.tileWeights.map((node) => node.value)
+        .reduce((sum, value) => sum + value, 0)).toBeCloseTo(1, 6);
+      expect(nodes.tileOffsets[0].value.toArray()).toEqual([
+        selection.tiles[0][0] / 4,
+        (4 - 1 - selection.tiles[0][1]) / 4,
+      ]);
+    } finally {
+      material.dispose();
+    }
+  });
+
+  it('reports node impostor tint probes without assuming WebGL uniforms', () => {
+    const nodeFactories = createKonveyorImpostorNodeMaterialFactories(
+      { MeshBasicNodeMaterial, DoubleSide, TSL },
+      {
+        tileBlendTiles: [
+          [0, 0],
+          [1, 0],
+          [0, 1],
+        ],
+        tileBlendWeights: [0.45, 0.35, 0.2],
+      }
+    );
+    const material = createKilnImpostorMaterial(createParams({
+      search: '?renderer=webgpu&konveyorImpostors=1',
+      konveyorImpostorFactories: {
+        createKilnImpostorMaterial: (context) => nodeFactories.createKilnImpostorMaterial(context),
+      },
+    }));
+    const previousWindow = globalThis.window;
+    globalThis.window = {};
+
+    try {
+      expect(() => {
+        setImpostorTint(
+          { _impostorMaterials: [material] },
+          new THREE.Color(1, 0.5, 0.25),
+          new THREE.Vector3(0.1, 0.9, 0.2).normalize(),
+          new THREE.Color(0.2, 0.3, 0.4),
+          2,
+          0.5
+        );
+      }).not.toThrow();
+      expect(globalThis.window.__sdsImpostorProbe.live).toMatchObject({
+        materialMode: 'node-material',
+      });
+      expect(globalThis.window.__sdsImpostorProbe.live.uSunColor).toBeUndefined();
+    } finally {
+      material.dispose();
+      if (previousWindow === undefined) {
+        delete globalThis.window;
+      } else {
+        globalThis.window = previousWindow;
+      }
     }
   });
 

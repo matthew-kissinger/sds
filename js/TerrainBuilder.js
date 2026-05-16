@@ -70,6 +70,77 @@ function createKonveyorTerrainHeightTexture(heightfield) {
     return texture;
 }
 
+function createTerrainSkirtGeometry(outerSize, innerSize, heightfield = null) {
+    const outer = outerSize * 0.5;
+    const inner = innerSize * 0.5;
+    const radialSegments = 8;
+    const edgeSegments = 48;
+    const positions = [];
+    const uvs = [];
+    const indices = [];
+
+    const sampleSkirtHeight = (localX, localY, radialT) => {
+        if (!heightfield) return 0;
+        const worldZ = -localY;
+        const fade = (1 - radialT) * (1 - radialT);
+        const sample = heightfield.meshSampleY?.(localX, worldZ)
+            ?? heightfield.sample?.(localX, worldZ)
+            ?? 0;
+        return sample * fade;
+    };
+    const pushVertex = (localX, localY, radialT) => {
+        positions.push(localX, localY, sampleSkirtHeight(localX, localY, radialT));
+        uvs.push((localX + outer) / outerSize, (localY + outer) / outerSize);
+    };
+    const addStrip = (coordAt) => {
+        const base = positions.length / 3;
+        for (let r = 0; r <= radialSegments; r++) {
+            const radialT = r / radialSegments;
+            for (let e = 0; e <= edgeSegments; e++) {
+                const edgeT = e / edgeSegments;
+                const { x, y } = coordAt(edgeT, radialT);
+                pushVertex(x, y, radialT);
+            }
+        }
+        const stride = edgeSegments + 1;
+        for (let r = 0; r < radialSegments; r++) {
+            for (let e = 0; e < edgeSegments; e++) {
+                const i = base + r * stride + e;
+                indices.push(i, i + 1, i + stride + 1, i, i + stride + 1, i + stride);
+            }
+        }
+    };
+
+    addStrip((edgeT, radialT) => ({
+        x: THREE.MathUtils.lerp(-outer, outer, edgeT),
+        y: THREE.MathUtils.lerp(-inner, -outer, radialT),
+    }));
+    addStrip((edgeT, radialT) => ({
+        x: THREE.MathUtils.lerp(-outer, outer, edgeT),
+        y: THREE.MathUtils.lerp(inner, outer, radialT),
+    }));
+    addStrip((edgeT, radialT) => ({
+        x: THREE.MathUtils.lerp(-inner, -outer, radialT),
+        y: THREE.MathUtils.lerp(-inner, inner, edgeT),
+    }));
+    addStrip((edgeT, radialT) => ({
+        x: THREE.MathUtils.lerp(inner, outer, radialT),
+        y: THREE.MathUtils.lerp(-inner, inner, edgeT),
+    }));
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    geometry.userData.terrainSkirtSize = outerSize;
+    geometry.userData.terrainSkirtInnerSize = innerSize;
+    geometry.userData.terrainSkirtRadialSegments = radialSegments;
+    geometry.userData.terrainSkirtEdgeSegments = edgeSegments;
+    geometry.userData.terrainSkirtTriangles = indices.length / 3;
+    return geometry;
+}
+
 /**
  * TerrainBuilder - Handles terrain, grass, mountains, and environmental elements.
  * Scene-aware: when a SceneDef is passed, zones / farm house / grass density come
@@ -102,6 +173,7 @@ export class TerrainBuilder {
         // New advanced grass system
         this.grassSystem = null;
         this.terrainMesh = null;
+        this.terrainSkirtMesh = null;
         this.environmentDetails = [];
         this.trees = []; // Track trees for removal
         this.rocks = []; // Track rocks for removal
@@ -428,6 +500,9 @@ export class TerrainBuilder {
                 this.loader.loadAsync(model.path).then(gltf => {
                     const root = gltf.scene;
                     root.updateMatrixWorld(true);
+                    let trunkMinY = Infinity;
+                    let allMinY = Infinity;
+                    let allMaxY = -Infinity;
                     root.traverse(child => {
                         if (!child.isMesh || !child.geometry) return;
                         child.geometry = child.geometry.clone();
@@ -436,6 +511,13 @@ export class TerrainBuilder {
                         child.quaternion.identity();
                         child.scale.set(1, 1, 1);
                         child.updateMatrixWorld(true);
+                        child.geometry.computeBoundingBox();
+                        const bb = child.geometry.boundingBox;
+                        if (bb && isFinite(bb.min.y)) {
+                            if (child.name === 'trunk' && bb.min.y < trunkMinY) trunkMinY = bb.min.y;
+                            if (bb.min.y < allMinY) allMinY = bb.min.y;
+                            if (bb.max.y > allMaxY) allMaxY = bb.max.y;
+                        }
                     });
                     // Match LOD0: drop every node's local transform (root +
                     // intermediate Groups) so any Box3.setFromObject sees
@@ -446,8 +528,13 @@ export class TerrainBuilder {
                         node.scale.set(1, 1, 1);
                     });
                     root.updateMatrixWorld(true);
+                    if (!isFinite(allMinY)) { allMinY = 0; allMaxY = 1; }
+                    const groundRef = isFinite(trunkMinY) ? trunkMinY : allMinY;
+                    root.userData.modelBaseYOffset = -groundRef;
+                    root.userData.modelBboxMinY = allMinY;
+                    root.userData.modelBboxMaxY = allMaxY;
                     this.models.treesLod1[model.name] = root;
-                    console.log(`[OK] Loaded tree LOD1 model: ${model.name}`);
+                    console.log(`[OK] Loaded tree LOD1 model: ${model.name} (baseYOffset=${root.userData.modelBaseYOffset.toFixed(3)}, bbox y=[${allMinY.toFixed(2)}, ${allMaxY.toFixed(2)}])`);
                 }).catch(err => {
                     // LOD1 missing is degraded-but-recoverable: createTrees
                     // falls back to LOD0-only when no sibling exists.
@@ -700,12 +787,27 @@ export class TerrainBuilder {
         // The earlier 2400m/1600m sizes left the perpendicular edge only ~40%
         // fogged at FogExp2 density 0.0006 — a faint but visible cutoff line.
         //   Desktop: 4000m / 384 = 10.4m/quad — edge at 2000m is ~76% fogged.
-        //   Mobile:  3200m / 256 = 12.5m/quad — edge at 1600m is ~69% fogged.
-        // Segment count was bumped on mobile (192 → 256) so the inner heightfield
-        // sampling stays usable; desktop's 384 was already plenty for the larger plane.
-        const terrainSize = this.isMobile ? 3200 : 4000;
-        const terrainSegments = this.isMobile ? 256 : 384;
+        //   Mobile now splits this into a dense 720m inner heightfield plus a
+        //   cheap 3200m flat skirt. The old single 3200m mobile mesh spent
+        //   most vertices in fog and left the playable hills at ~8-12m quads,
+        //   which read as visible terrain lines on phone screenshots.
+        const terrainTier = getSceneManager()?.getTier?.() ?? (this.isMobile ? 'low' : 'med');
+        const terrainSize = this.isMobile ? 720 : 4000;
+        const terrainSkirtSize = this.isMobile ? 3200 : 0;
+        const terrainSkirtSegments = this.isMobile ? 8 : 0;
+        const terrainSkirtTriangles = this.isMobile ? 3072 : 0;
+        const terrainSegments = this.isMobile && terrainTier !== 'high' ? 256 : 384;
         const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
+        this.konveyorTerrainGeometryBudget = {
+            tier: terrainTier,
+            isMobile: this.isMobile,
+            size: terrainSize,
+            segments: terrainSegments,
+            skirtSize: terrainSkirtSize,
+            skirtSegments: terrainSkirtSegments,
+            skirtTriangles: terrainSkirtTriangles,
+            splitSkirt: this.isMobile,
+        };
 
         // Apply heightfield displacement before the mesh is rotated to lie flat.
         // Geometry is built in the XY plane; after the mesh is rotated -PI/2
@@ -901,6 +1003,16 @@ export class TerrainBuilder {
         terrain.rotation.x = -Math.PI / 2;
         terrain.position.y = 0;
         terrain.receiveShadow = true;
+        if (this.isMobile) {
+            const skirtGeometry = createTerrainSkirtGeometry(terrainSkirtSize, terrainSize, this.heightfield);
+            this.konveyorTerrainGeometryBudget.skirtTriangles = skirtGeometry.userData.terrainSkirtTriangles;
+            const skirt = new THREE.Mesh(skirtGeometry, terrainMaterial);
+            skirt.rotation.x = -Math.PI / 2;
+            skirt.position.y = -0.01;
+            skirt.receiveShadow = true;
+            this.scene.add(skirt);
+            this.terrainSkirtMesh = skirt;
+        }
         this.scene.add(terrain);
 
         this.terrainMesh = terrain;
@@ -1030,6 +1142,47 @@ export class TerrainBuilder {
             this._occluder.uOccluderStrength.value = 1.0;
         } else if (this._occluder) {
             this._occluder.uOccluderStrength.value = 0.0;
+        }
+        this._syncKonveyorTreeNodeControls(camera);
+    }
+
+    _syncKonveyorTreeNodeControls(camera = null) {
+        if (!Array.isArray(this.trees) || this.trees.length === 0) return;
+        const impostorSyncCount = this._konveyorTreeImpostorSync?.(this.trees, camera) ?? 0;
+        if (this.konveyorNativeTreeInstancingSummary?.impostor) {
+            this.konveyorNativeTreeInstancingSummary.impostor.syncedMeshes = impostorSyncCount;
+        }
+        const wind = this._treeWind;
+        const occluder = this._occluder;
+        const state = {
+            windStrength: wind?.uWindStrength?.value ?? 0,
+            windDirection: wind?.uWindDirection?.value ?? null,
+            dogVS: occluder?.uOccluderDogVS?.value ?? null,
+            occluderRadius: occluder?.uOccluderRadius?.value,
+            occluderStrength: occluder?.uOccluderStrength?.value,
+            occluderPeak: occluder?.uOccluderPeak?.value,
+        };
+        const updateMaterial = (material) => {
+            const controls = material?.userData?.konveyorTreeNodeMaterialControls;
+            if (!controls) return;
+            controls.setWind?.({
+                strength: state.windStrength,
+                direction: state.windDirection,
+            });
+            controls.setOccluder?.({
+                dogVS: state.dogVS,
+                radius: state.occluderRadius,
+                strength: state.occluderStrength,
+                peak: state.occluderPeak,
+            });
+        };
+        for (const mesh of this.trees) {
+            const material = mesh?.material;
+            if (Array.isArray(material)) {
+                material.forEach(updateMaterial);
+            } else {
+                updateMaterial(material);
+            }
         }
     }
 
@@ -1220,11 +1373,61 @@ export class TerrainBuilder {
      */
     getTriangleBreakdown() {
         return {
-            Terrain: countMeshTriangles(this.terrainMesh),
+            Terrain: countMeshTriangles(this.terrainMesh) + countMeshTriangles(this.terrainSkirtMesh),
             Trees: sumInstancedMeshTriangles(this.trees),
             Rocks: sumInstancedMeshTriangles(this.rocks),
             Mountains: sumObjectTreeTriangles(this.mountains)
         };
+    }
+
+    getVisibleTriangleBreakdown(camera = null) {
+        const visibleObjects = (objects) => {
+            if (!Array.isArray(objects)) return [];
+            if (!camera) return objects.filter(obj => obj?.visible !== false);
+
+            const matrix = new THREE.Matrix4().multiplyMatrices(
+                camera.projectionMatrix,
+                camera.matrixWorldInverse
+            );
+            const frustum = new THREE.Frustum().setFromProjectionMatrix(matrix);
+            const sphere = new THREE.Sphere();
+            return objects.filter(obj => {
+                if (!obj || obj.visible === false) return false;
+                const sourceSphere = obj.boundingSphere ?? obj.geometry?.boundingSphere ?? null;
+                if (!sourceSphere) return true;
+                sphere.copy(sourceSphere).applyMatrix4(obj.matrixWorld);
+                return frustum.intersectsSphere(sphere);
+            });
+        };
+
+        return {
+            Terrain: (this.terrainMesh?.visible === false ? 0 : countMeshTriangles(this.terrainMesh))
+                + (this.terrainSkirtMesh?.visible === false ? 0 : countMeshTriangles(this.terrainSkirtMesh)),
+            Trees: sumInstancedMeshTriangles(visibleObjects(this.trees)),
+            Rocks: sumInstancedMeshTriangles(visibleObjects(this.rocks)),
+            Mountains: sumObjectTreeTriangles(visibleObjects(this.mountains))
+        };
+    }
+
+    applyQualityState(state = {}) {
+        this.konveyorQualityState = { ...state };
+        this.grassSystem?.applyQualityState?.(state);
+        const treeLodBias = Number.isFinite(state.treeLodBias)
+            ? THREE.MathUtils.clamp(state.treeLodBias, 0, 0.75)
+            : 0;
+        for (const tree of this.trees ?? []) {
+            const levels = tree?.LODinfo?.render?.levels;
+            if (!levels || levels.length < 2 || typeof tree.updateLOD !== 'function') continue;
+            if (!tree.userData.qualityBaseLodDistances) {
+                tree.userData.qualityBaseLodDistances = levels.slice(1)
+                    .map((level) => Math.sqrt(level.distance));
+            }
+            const baseDistances = tree.userData.qualityBaseLodDistances;
+            for (let i = 0; i < baseDistances.length; i++) {
+                const nextDistance = Math.max(24, baseDistances[i] * (1 - treeLodBias));
+                tree.updateLOD(i + 1, nextDistance);
+            }
+        }
     }
 
     /**
@@ -1290,6 +1493,7 @@ export class TerrainBuilder {
             // disposed (cleared explicitly below).
             if (tree.userData?.sharedFromGlbCache) return;
             if (tree.geometry) tree.geometry.dispose();
+            if (tree.userData?.konveyorSharedMaterialFromImpostorCache) return;
             if (tree.material) {
                 if (Array.isArray(tree.material)) {
                     tree.material.forEach(mat => {
@@ -1468,6 +1672,7 @@ export class TerrainBuilder {
             this.buildings = [];
         }
 
+        const disposedTerrainMaterials = new WeakSet();
         if (this.terrainMesh) {
             if (this.terrainMesh.parent) this.terrainMesh.parent.remove(this.terrainMesh);
             this.terrainMesh.geometry?.dispose();
@@ -1475,13 +1680,28 @@ export class TerrainBuilder {
                 if (Array.isArray(this.terrainMesh.material)) this.terrainMesh.material.forEach(m => {
                     m?.userData?.konveyorTerrainMaterialControls?.dispose?.();
                     m?.dispose?.();
+                    if (m) disposedTerrainMaterials.add(m);
                 });
                 else {
                     this.terrainMesh.material.userData?.konveyorTerrainMaterialControls?.dispose?.();
                     this.terrainMesh.material.dispose();
+                    disposedTerrainMaterials.add(this.terrainMesh.material);
                 }
             }
             this.terrainMesh = null;
+        }
+        if (this.terrainSkirtMesh) {
+            if (this.terrainSkirtMesh.parent) this.terrainSkirtMesh.parent.remove(this.terrainSkirtMesh);
+            this.terrainSkirtMesh.geometry?.dispose();
+            const skirtMaterial = this.terrainSkirtMesh.material;
+            if (Array.isArray(skirtMaterial)) {
+                skirtMaterial.forEach(m => {
+                    if (m && !disposedTerrainMaterials.has(m)) m.dispose?.();
+                });
+            } else if (skirtMaterial && !disposedTerrainMaterials.has(skirtMaterial)) {
+                skirtMaterial.dispose?.();
+            }
+            this.terrainSkirtMesh = null;
         }
 
         this.environmentDetails = [];

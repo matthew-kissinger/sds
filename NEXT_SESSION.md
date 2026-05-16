@@ -1,19 +1,86 @@
-# Next Session - Post-Cycle 37 Konveyor Pickup
+# Next Session - Polished WebGPU Production Readiness Pickup
 
-> **Updated:** 2026-05-16 after completing Cycle 37 isolated WebGPU perf,
-> focused sun/sky atmosphere repair, Native Packaging Proof 0, store/Steam
-> readiness docs, and the approved progressive WebGPU default/toggle pass.
-> **For:** `exp/konveyor-webgpu-migration`.
-> **Draft PR:** [#52](https://github.com/matthew-kissinger/sds/pull/52).
-> **Pickup priority:** review the Cycle 37 closeout packet below, then either
-> prepare the next Konveyor cycle or commit/handoff this packet. Do not rerun
-> Cycle 37 unless the artifacts are stale.
+> **Updated:** 2026-05-16 after Cycle 38 tree-impostor branch proof, LOD1
+> rebake, and Android/desktop matrix refresh.
+> **For:** current checkout `main` after the Konveyor PR #52 merge. Create a
+> scoped `codex/` branch before committing Cycle 38 work if branch isolation is
+> desired.
+> **Merged PR:** [#52](https://github.com/matthew-kissinger/sds/pull/52).
+> **Pickup priority:** continue Cycle 38 toward a polished production game.
+> The top implementation priority is production-ready tree octahedral impostors
+> for PC and mobile, with water grid/glint, grass interaction, sheep animation,
+> terrain seams, and frame-budget governance carried as active visual gates.
+> Do not call SDS mobile-ready yet.
 
-Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then the completed Cycle 37 plan [`docs/cycle-37-plan.md`](docs/cycle-37-plan.md), then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completion audit [`docs/konveyor-completion-audit-2026-05-16.md`](docs/konveyor-completion-audit-2026-05-16.md). Cycle 36 is completed foundation evidence at [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
+Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then the completed Cycle 37 plan [`docs/cycle-37-plan.md`](docs/cycle-37-plan.md), then the next plan [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md), then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completion audit [`docs/konveyor-completion-audit-2026-05-16.md`](docs/konveyor-completion-audit-2026-05-16.md). Cycle 36 is completed foundation evidence at [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
 
 If Matt explicitly approves merge/deploy, use
 [`docs/konveyor-release-decision-checklist.md`](docs/konveyor-release-decision-checklist.md)
-as the release gate. Do not infer approval from the existence of PR #52.
+as the release gate. PR #52 is now historical merged evidence, not a current
+approval to deploy new uncommitted mobile-readiness work.
+
+## Fresh Agent Goal
+
+Continue polished-production WebGPU work from the Cycle 38 tree-impostor branch
+packet. The branch advanced trees from lab-only impostor sampling to an explicit
+three-tier production route, but it did not finish true octahedral sidecars or
+mobile budget acceptance.
+
+Start from the current dirty worktree; do not restart Cycle 37. The repo now
+contains partially implemented Cycle 38 work and proof artifacts. Before
+editing, inspect `git status --short`, then read this section and
+[`docs/cycle-38-plan.md`](docs/cycle-38-plan.md). Keep changes scoped, create a
+`codex/` branch before committing if desired, and do not touch `shared/**`,
+sim-baseline goldens, or worker migrations without explicit acceptance.
+
+Implementation order:
+
+1. Finish the tree representation contract from the current three-tier stage:
+   near LOD0 geometry, mid branch-preserving LOD1 geometry, and far
+   lat/lon-hemi impostors are integrated behind
+   `?konveyorNativeTreeImpostors=1`. Next work is true octahedral sidecar v2,
+   shader-side depth/parallax parity where feasible, transition polish, and a
+   green Android matrix.
+2. Preserve fallback behavior until the production impostor gates pass. Do not
+   describe the current lat/lon-hemi sidecars as octahedral.
+3. Close active visual parity gates: water grid/alignment lines, sticky or
+   overdone sun glint, dog/sheep grass displacement visibility, WebGPU sheep
+   leg animation, Open Country terrain bands/seams, and tree grounding/read.
+4. Continue using installed Chrome for desktop WebGPU proof and the connected
+   Android runner through `adb reverse tcp:3000 tcp:3000`. The current desktop
+   tree matrix is valid; the current Android tree matrix is screenshot-valid
+   but budget-red.
+
+Latest focused evidence:
+
+- Android phone `R5CX4028VGJ` is reachable when USB debugging is authorized.
+  Restore secure localhost with `adb reverse tcp:3000 tcp:3000` before Android
+  probes.
+- `cycle38-validation/runtime/android-webgpu-glint-grass-sheep-spotcheck.json`
+  is the latest focused Android WebGPU artifact. It proves effective
+  `webgpu-production`, nonblank screenshots, the new water glint contract
+  `ripple-normal-sun-camera-v2`, grass interactor contract
+  `visualScale=3.4` / `laydownStrength=1.05`, and WebGPU sheep animation
+  contract `vertexId-instanceData-instanceAnimation`. It is still budget-red:
+  follow-close `p95=33.3 ms`, `p99=33.4 ms`; shoreline-glint `p95=33.4 ms`,
+  `p99=50.0 ms`.
+- `cycle38-validation/runtime/desktop-webgpu-tree-impostors-three-tier-matrix.json`
+  is current installed-Chrome WebGPU evidence for the explicit three-tier tree
+  route, with screenshots under
+  `cycle38-validation/screenshots/desktop-webgpu-tree-impostors-three-tier-matrix/`.
+- `cycle38-validation/runtime/android-webgpu-tree-impostors-three-tier-tight-matrix.json`
+  is current connected-phone evidence for the same route. Screenshots are
+  nonblank, but three full-scene rows fail the mid-mobile budget.
+
+Matt's latest visual observations to carry forward:
+
+- Water now also shows grid-like/alignment lines, as if the texture/ripple or
+  heightfield sampling is visibly tiled.
+- Sun glint/reflection still reads sticky and out of sync on PC.
+- Sheep/dog grass interaction is still not visually obvious.
+- Sheep leg animation was lost in the migration and must visibly return.
+- Open Country terrain still has lines/bands, and tree impostor/grounding read
+  is not production-polished.
 
 ## Cycle 37 Closeout
 
@@ -47,11 +114,155 @@ Key artifacts:
   `cycle36-validation/runtime/progressive-webgpu-default-perf-proof.json`, and
   `cycle36-validation/runtime/progressive-webgpu-settings-toggle.png`.
 
-The next implementation step is not automatic shell integration. If Matt
-approves a native shell proof, the first desktop proof boundary is
-`sandbox/native-electron-proof/` for pinned-Chromium Windows behavior, followed
-by `sandbox/native-tauri-proof/` for platform-WebView behavior. Otherwise, draft
-the next Konveyor cycle from the current renderer/native packet.
+## Mobile WebGPU Readiness Packet
+
+The mobile-readiness pass after Cycle 37 added a first connected-phone WebGPU
+proof, custom WebGPU cost reporting, a scene-wide `QualityGovernor`, Android
+ADB/CDP perf tooling, mobile WebGPU tree/rock culling, tree/rock cost
+estimates, shared branch/leaf wind controls, dog-through-tree leaf occluder
+controls, deep-blue shoreline/glint water controls, grass interaction for dog
+plus nearest sheep, and high-tier terrain fidelity policy.
+
+Key artifact:
+
+- Android WebGPU perf proof:
+  `cycle37-validation/runtime/android-webgpu-rolling-hills-final-2026-05-16.json`.
+  Connected device `R5CX4028VGJ` tested through secure localhost
+  `http://127.0.0.1:3000` with `adb reverse tcp:3000 tcp:3000`. Android Chrome
+  reported WebGPU available. Rolling Hills follow-close full-scene WebGPU passed
+  with `p95=16.733 ms`, `p99=16.871 ms`, `drawCalls=37`,
+  `avgEstimatedTriangles=753920`, and no recorded page or console errors.
+
+Current validation:
+
+- `npm test` passed 457 specs / 7 skipped after the mobile-readiness pass.
+- `npm run build` passed with the accepted bundle fixture at `mainKB=577`.
+- New Android runner: `npm run perf:android-webgpu`.
+- New runtime report shape includes `renderer`, `deviceTier`, `sceneId`,
+  `cameraPose`, `frameP95`, `frameP99`, `drawCalls`,
+  `estimatedTrianglesBySystem`, `visibleCountsBySystem`, and `qualityState`.
+
+Scope note: this is one Android phone, one scene, and one camera pose. It proves
+the new browser/device path and gives a real high-mobile baseline; it does not
+certify the whole game across mobile devices.
+
+The next implementation step is Cycle 38: run the scene/camera/system matrix,
+add visual screenshot gates, rebuild over-budget author-time tree/rock assets,
+wire the remaining adaptive quality knobs, and keep iOS Safari / BrowserStack
+water and WebGPU canaries separate from Android Chrome proof.
+
+## Cycle 38 Connected-Android Follow-Up
+
+Cycle 38 is now active and partially implemented, but not complete. The latest
+connected-phone evidence is:
+
+- Dog sprint harness is fixed from circular keyboard input to a scene-specific
+  cross-island polyline. Current artifact
+  `cycle38-validation/runtime/android-dog-sprint-cross-island-polyline-focused.json`
+  proves `routeMode="perf-world-drive-cross-island-polyline"`,
+  `routeProgress=1.0`, `finalTargetDistance=0.133 m`,
+  `netDisplacement=269.164`, and `straightness=0.938`, but it still captures
+  sprint spikes (`p95=33.3 ms`, `p99=33.4 ms`, `max=66.6 ms`, three frames
+  above `50 ms`). The route bug is closed; the sprint spike blocker is not.
+- Android runner now keeps one game page target and closes CDP extras. Smoke
+  artifact `cycle38-validation/runtime/android-webgpu-open-country-one-tab-smoke.json`
+  ran follow-close and horizon rows, and post-run CDP showed `page:1` plus
+  worker targets.
+- Open Country terrain split/ring-skirt and continuous WebGPU terrain material
+  reduced the worst hard seam. The current focused artifact
+  `cycle38-validation/runtime/android-open-country-horizon-current-terrain.json`
+  is from the split mobile path (`size=720`, `segments=384`, `skirtSize=3200`,
+  `skirtTriangles=3072`) and writes screenshots under
+  `cycle38-validation/screenshots/android-open-country-horizon-current-terrain/`.
+  The screenshot is nonblank and the old coarse-plane line is reduced, but the
+  terrain visual gate remains open until more camera angles show no visible
+  bands/seams.
+- Open Country high-mobile perf still fails. Follow-close full scene reports
+  `p95=50.1 ms`, `p99=50.1 ms`, `drawCalls=87`, and about `996K` estimated
+  visible triangles in
+  `cycle38-validation/runtime/android-webgpu-open-country-terrain-grass-impostor-followup.json`.
+  The current horizon/terrain-seam artifact
+  `cycle38-validation/runtime/android-open-country-horizon-current-terrain.json`
+  reports `p95=50.1 ms`, `p99=50.2 ms`, `drawCalls=128`, and about `1.147M`
+  estimated visible triangles. It correctly reports aggregate `ok=false` after
+  the one-row Android budget-result fix.
+- Horizon isolation shows combined pressure, not one isolated bug:
+  grass-only `p95=66.8 ms` / `p99=83.4 ms`, trees-only `p95=50.1 ms` /
+  `p99=66.8 ms`, terrain-only `p95=50.1 ms`, water-only `p95=50.0 ms`, and
+  atmosphere-only `p95=33.4 ms`.
+- Grass WebGPU interactor data is live for dog plus nearest sheep sorted by
+  dog distance, and the node material now has stronger mobile controls
+  (`interactionRadius=3.85`, `interactionStrength=0.93`, `visualScale=3.4`,
+  `laydownStrength=1.05`). The latest Android probe records eight interactor
+  samples, but visual acceptance remains open until screenshots clearly show
+  dog and sheep bending grass in actual play.
+- Tree grounding probes show sampled Open Country trees placed at terrain
+  height (`placementY == groundY`), but the current path is still native LOD1
+  geometry. Proper view-dependent octahedral impostors remain the next renderer
+  work package.
+- A full connected-Android pose matrix now exists at
+  `cycle38-validation/runtime/android-webgpu-cycle38-poses.json`. It captured
+  Field, Rolling Hills, and Open Country across all five Cycle 38 poses with
+  nonblank screenshots under
+  `cycle38-validation/screenshots/android-webgpu-cycle38-poses/`. The matrix is
+  not green: all 15 rows miss the high-mobile budget and 12 rows miss the
+  mid-mobile budget. Field is the draw-call outlier (`732-748` draw calls);
+  Rolling Hills is closest but still high-budget-red; Open Country remains
+  visually and budget blocked.
+- Validation after the latest Cycle 38 corrections: focused syntax checks
+  passed, focused tree and material specs passed, full `npm test` passed with
+  `469` specs passing and `7` skipped, `npm run build` passed with known chunk
+  warnings, and `git diff --check` only reported LF-to-CRLF working-copy
+  notices.
+
+## Cycle 38 WebGPU Tree-Impostor Packet
+
+Matt's mobile screenshots exposed two concrete representation bugs: the mid LOD
+had sparse leaves visually detached from branches, and the WebGPU impostor path
+could render as black/no-texture foliage. The research spike is recorded at
+[`docs/archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md`](docs/archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md).
+
+Pickup rules:
+
+- Do not claim WebGPU mobile trees are using production-quality octahedral
+  impostors.
+- Current sidecars are 4x4 lat/lon hemi-y Kiln atlases, not true octahedral
+  atlases.
+- The explicit `?konveyorNativeTreeImpostors=1` path is now a three-tier
+  production route: near LOD0 geometry, mid branch-preserving LOD1 geometry, and
+  far lat/lon-hemi Kiln impostor quads with per-instance camera-driven tile
+  offsets/weights and world-up billboard matrix sync.
+- The branch fixed the black impostor read by adding a foliage lighting floor
+  and ambient tint clamp in the WebGPU Kiln node material, so atlas color stays
+  visible in shadowed captures.
+- The middle LOD was rebaked to preserve branches and stop the detached-leaf
+  read. Current budget evidence:
+  `cycle38-validation/assets/mobile-tree-budget-bake.json`.
+- Sibling repo review supports the hybrid choice: TIJ vegetation notes prefer
+  close mesh LODs or trunk/branch geometry plus impostor canopy when pure
+  impostors read poorly, and Pixel Forge vegetation notes reinforce
+  base-color/normal impostor sidecars with runtime relighting.
+- The remaining proper impostor work is true octahedral sidecar v2 plus WebGL
+  parity for shader-side projection, depth/parallax, depth discard, and
+  transition quality.
+- Executable lab proof now exists: `npm run probe:webgpu-impostor-lab` writes
+  `cycle38-validation/runtime/webgpu-impostor-lab-proof.json` plus nonblank
+  screenshots under `cycle38-validation/screenshots/webgpu-impostor-lab/`. The
+  installed-Chrome proof verifies dynamic uniform tile controls and varied
+  lat/lon plus octahedral selector output, while still reporting
+  `productionReady=false`.
+- Desktop proof is current:
+  `cycle38-validation/runtime/desktop-webgpu-tree-impostors-three-tier-matrix.json`
+  with screenshots under
+  `cycle38-validation/screenshots/desktop-webgpu-tree-impostors-three-tier-matrix/`.
+- Android proof is current but budget-red:
+  `cycle38-validation/runtime/android-webgpu-tree-impostors-three-tier-tight-matrix.json`
+  has nonblank screenshots but three full-scene mid-mobile budget failures,
+  including Open Country horizon/terrain-seam at `p95=100.0 ms`,
+  `p99=133.5 ms`.
+- Re-enable WebGPU production impostors as default behavior only after Android
+  screenshot and perf gates prove camera-facing behavior, terrain sync, LOD
+  transition quality, and frame-budget compliance.
 
 ## Cycle 35 Outcome
 
@@ -67,10 +278,11 @@ The cycle delivered:
 
 ## Pickup Priority
 
-Work on `exp/konveyor-webgpu-migration`. Cycle 37 is complete; do not restart
-it as an active plan. Read the closeout packet above, then decide whether the
-next action is commit/handoff cleanup, a new Konveyor cycle, or an explicitly
-approved native shell proof.
+Work from the current `main` checkout or create a scoped `codex/` branch before
+committing. Cycle 37 and the first Android mobile-readiness proof are complete;
+do not restart either as an active plan. Read the closeout packet above, then start
+[`docs/cycle-38-plan.md`](docs/cycle-38-plan.md) unless Matt explicitly changes
+direction.
 
 Matt approved the progressive WebGPU default after Cycle 37. The branch should
 now keep WebGPU as the default request on supported browsers, preserve the
@@ -78,6 +290,13 @@ WebGL fallback and explicit `?renderer=webgl` escape hatch, and expose the
 experimental WebGPU setting as the user-facing rollback. Do not add paid-store
 steps, submit to Steam/App Store/Google Play, or cross store/signing/manual
 release gates without explicit approval.
+
+Cycle 38 should close the gap between "works on the connected phone" and
+"mobile-ready policy": Field, Rolling Hills, and Open Country across
+follow-close, classic-max, tree-occluded, shoreline/glint, and
+horizon/terrain-seam poses; full-scene plus terrain, grass, trees, rocks,
+water, sheep, and atmosphere isolation; screenshot gates for the visual parity
+fixes; and asset-budget rebakes for production tree/rock presets.
 
 The branch now has native-readiness code before a shell dependency:
 `BUILD_TARGET=native`, `SDS_WORKER_BASE`, `js/runtimeConfig.js`, and

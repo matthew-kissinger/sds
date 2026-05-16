@@ -54,7 +54,7 @@ export function createKonveyorWaterMaterial(kind, factoryName, {
         return defaultResult(kind, 'invalid-factory-result', createDefaultMaterial);
     }
 
-    const controls = result?.controls ?? null;
+    const controls = result?.controls ?? material.userData?.konveyorWaterMaterialControls ?? null;
     const summary = {
         kind,
         applied: true,

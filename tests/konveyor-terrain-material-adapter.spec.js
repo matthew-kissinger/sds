@@ -34,12 +34,20 @@ function createHeightfield() {
 
 function disposeTerrain(builder) {
     const terrain = builder.terrainMesh;
-    if (!terrain) return;
-    if (terrain.parent) terrain.parent.remove(terrain);
-    terrain.geometry?.dispose?.();
-    terrain.material?.userData?.heightTexture?.dispose?.();
-    terrain.material?.dispose?.();
+    if (terrain) {
+        if (terrain.parent) terrain.parent.remove(terrain);
+        terrain.geometry?.dispose?.();
+        terrain.material?.userData?.heightTexture?.dispose?.();
+        terrain.material?.dispose?.();
+    }
+    const skirt = builder.terrainSkirtMesh;
+    if (skirt) {
+        if (skirt.parent) skirt.parent.remove(skirt);
+        skirt.geometry?.dispose?.();
+        skirt.material?.dispose?.();
+    }
     builder.terrainMesh = null;
+    builder.terrainSkirtMesh = null;
 }
 
 describe('konveyor terrain material adapter', () => {
@@ -100,10 +108,14 @@ describe('konveyor terrain material adapter', () => {
                 applied: true,
             });
             expect(contexts).toHaveLength(1);
-            expect(contexts[0].size).toBe(3200);
+            expect(contexts[0].size).toBe(720);
             expect(contexts[0].segments).toBe(256);
             expect(contexts[0].isMobile).toBe(true);
             expect(contexts[0].hasHeightfield).toBe(true);
+            expect(builder.terrainSkirtMesh.geometry.userData.terrainSkirtSize).toBe(3200);
+            expect(builder.terrainSkirtMesh.geometry.userData.terrainSkirtInnerSize).toBe(720);
+            expect(builder.terrainSkirtMesh.geometry.userData.terrainSkirtTriangles).toBe(3072);
+            expect(builder.terrainSkirtMesh.material).toBe(terrain.material);
             expect(typeof contexts[0].createHeightTexture).toBe('function');
             expect(contexts[0].heightfield).toMatchObject({
                 width: 17,
@@ -170,6 +182,8 @@ describe('konveyor terrain material adapter', () => {
             expect(terrain.material.userData.heightTexture.type).toBe(THREE.FloatType);
             expect(terrain.material.userData.heightTexture.magFilter).toBe(THREE.LinearFilter);
             expect(terrain.material.userData.heightTexture.minFilter).toBe(THREE.LinearFilter);
+            expect(terrain.material.userData.konveyorTerrainHeightTextureMapping).toBe('world-space-heightfield');
+            expect(builder.konveyorTerrainGeometryBudget.skirtTriangles).toBe(0);
         } finally {
             disposeTerrain(builder);
         }

@@ -10,7 +10,7 @@ You're a fresh agent (Claude / Codex / Cursor / etc.) on this repo with no sessi
 
 1. **[`../NEXT_SESSION.md`](../NEXT_SESSION.md)** — current pickup state. Tells you which cycle is active, when the snapshot was taken, and where to start.
 2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open, typically [`cycle-N-plan.md`](.). If NEXT_SESSION says the next cycle is not drafted yet, pick the goal with Matt before creating it. Top-to-bottom. EARS-format Acceptance lines tell you what "done" means.
-3. **[`konveyor-autonomous-run.md`](konveyor-autonomous-run.md)** — active brief when working on `exp/konveyor-webgpu-migration`.
+3. **[`konveyor-autonomous-run.md`](konveyor-autonomous-run.md)** — active brief for the Konveyor WebGPU/mobile campaign.
 4. **[`konveyor-sds.md`](konveyor-sds.md)** — required when the active scope is the WebGPU / native-shipping campaign.
 5. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
 6. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
@@ -49,6 +49,8 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`multiplayer-ux.md`](multiplayer-ux.md) | How-to / Reference | Multiplayer UX flow + lobby state diagrams. |
 | [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) | Reference / Explanation | Active experimental-branch handoff for the full autonomous Konveyor campaign. |
 | [`konveyor-sds.md`](konveyor-sds.md) | Reference / Explanation | WebGPU, optimization, and native-shipping campaign doctrine. Read before any Konveyor cycle. |
+| [`cycle-38-plan.md`](cycle-38-plan.md) | Reference / Explanation | Active Cycle 38: WebGPU mobile scene/camera/system matrix, visual gates, asset budgets, quality-governor closeout, and current connected-phone blockers. |
+| [`archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md`](archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md) | Explanation | Current WebGPU tree-impostor spike: why the fixed-tile Kiln node path is not production octahedral impostor readiness. |
 | [`cycle-37-plan.md`](cycle-37-plan.md) | Reference / Explanation | Completed Cycle 37: isolated WebGPU perf, sun/sky atmosphere repair, Native Packaging Proof 0, and store/Steam checklist. |
 | [`native-packaging-proof-0.md`](native-packaging-proof-0.md) | Reference | Cycle 37 native packaging proof matrix for Electron, Tauri, Capacitor, PWA/TWA, Steam, stores, and true-native paths. |
 | [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md) | Reference | Docs-only readiness gates for Steam, App Store, Google Play, and optional PWA/TWA distribution. |

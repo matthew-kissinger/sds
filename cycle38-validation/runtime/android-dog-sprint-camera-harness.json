@@ -1,0 +1,7579 @@
+{
+  "capturedAt": "2026-05-16T16:36:07.193Z",
+  "target": "android",
+  "deviceId": "R5CX4028VGJ",
+  "origin": "http://127.0.0.1:3000",
+  "renderer": "webgpu",
+  "scene": "rolling-hills",
+  "gameMode": "classic",
+  "durationMs": 8000,
+  "warmupMs": 1500,
+  "switchMs": 900,
+  "turnRate": 1.2,
+  "ok": false,
+  "errors": [],
+  "results": [
+    {
+      "configId": "follow-near",
+      "scene": "rolling-hills",
+      "gameMode": "classic",
+      "renderer": "webgpu",
+      "effectiveRenderer": "webgpu-production",
+      "ok": false,
+      "thresholds": {
+        "maxSpikeMs": 50,
+        "p99Ms": 34,
+        "repeatedSpikeLimit": 0
+      },
+      "checks": {
+        "dogMoved": true,
+        "p99": true,
+        "maxSpike": false,
+        "repeatedSpikes": false,
+        "renderer": true,
+        "screenshot": true
+      },
+      "report": {
+        "cameraMode": "follow",
+        "zoomPreset": "near",
+        "zoomState": {
+          "mode": "follow",
+          "distance": 10,
+          "min": 10,
+          "max": 45
+        },
+        "durationMs": 8000,
+        "switchMs": 900,
+        "turnRate": 1.2,
+        "directionFlipCount": 10,
+        "frameCount": 406,
+        "avgFrameTime": 19.722413793103446,
+        "p50FrameTime": 16.700000000000728,
+        "p95FrameTime": 33.399999999999636,
+        "p99FrameTime": 33.5,
+        "maxFrameTime": 100.10000000000036,
+        "spikeCount50ms": 2,
+        "spikes": [
+          {
+            "t": 843.5,
+            "frameMs": 100.1
+          },
+          {
+            "t": 1977.9,
+            "frameMs": 83.5
+          }
+        ],
+        "startDog": {
+          "x": 0,
+          "y": 18.817,
+          "z": -30
+        },
+        "endDog": {
+          "x": -3.985,
+          "y": 15.557,
+          "z": -36.986
+        },
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "default",
+          "frameP95": 33.399999999999636,
+          "frameP99": 33.5,
+          "drawCalls": 53,
+          "estimatedTrianglesBySystem": {
+            "Terrain": 294912,
+            "Trees": 123947,
+            "Sheep": 108800,
+            "Grass": 94540,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 179,
+            "Rocks": 9,
+            "Mountains": 0,
+            "Grass": 4727,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 1,
+            "renderScale": 0.9,
+            "grassDistanceScale": 0.85,
+            "treeLodBias": 0.15,
+            "waterSparkleScale": 0.75,
+            "sheepAnimationRate": 0.75,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "samples": [
+          {
+            "t": -7.3,
+            "frameMs": -7.3,
+            "dog": {
+              "x": -0.296,
+              "y": 18.627,
+              "z": -30
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 109.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -1.17,
+              "y": 18.044,
+              "z": -30.083
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 209.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -3.44,
+              "y": 16.577,
+              "z": -31.235
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 309.7,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -4.962,
+              "y": 15.846,
+              "z": -33.204
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 409.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.538,
+              "y": 15.161,
+              "z": -35.622
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 509.9,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -5.082,
+              "y": 15.102,
+              "z": -37.974
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 609.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.528,
+              "y": 15.433,
+              "z": -40.144
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 710,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -1.132,
+              "y": 16.047,
+              "z": -41.359
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 843.5,
+            "frameMs": 100.1,
+            "dog": {
+              "x": 0.6,
+              "y": 16.743,
+              "z": -41.456
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 943.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": 1.76,
+              "y": 17.449,
+              "z": -41.325
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1043.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -0.665,
+              "y": 16.166,
+              "z": -41.603
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1143.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -2.971,
+              "y": 15.553,
+              "z": -40.883
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1243.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.817,
+              "y": 15.114,
+              "z": -39.242
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1360.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -5.868,
+              "y": 14.955,
+              "z": -36.468
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1460.8,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -5.644,
+              "y": 15.409,
+              "z": -34.084
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1560.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.348,
+              "y": 16.164,
+              "z": -31.903
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1677.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -1.935,
+              "y": 17.472,
+              "z": -30.39
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1777.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": 0.599,
+              "y": 19.14,
+              "z": -30.151
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1894.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": 0.272,
+              "y": 18.991,
+              "z": -29.963
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1994.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -1.347,
+              "y": 17.959,
+              "z": -29.976
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2094.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.629,
+              "y": 16.52,
+              "z": -30.736
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2211.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.694,
+              "y": 15.55,
+              "z": -32.901
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2311.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.422,
+              "y": 14.858,
+              "z": -35.263
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2411.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.136,
+              "y": 14.819,
+              "z": -37.7
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2511.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.678,
+              "y": 15.12,
+              "z": -39.92
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2611.8,
+            "frameMs": 33.5,
+            "dog": {
+              "x": -2.709,
+              "y": 15.615,
+              "z": -41.129
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2711.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -0.328,
+              "y": 16.267,
+              "z": -41.483
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2828.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -2.908,
+              "y": 15.556,
+              "z": -41.185
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2928.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.963,
+              "y": 15.038,
+              "z": -39.955
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3045.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.51,
+              "y": 14.726,
+              "z": -37.45
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3145.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -6.745,
+              "y": 14.779,
+              "z": -35.021
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3245.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.919,
+              "y": 15.464,
+              "z": -32.695
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3345.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.179,
+              "y": 16.28,
+              "z": -30.911
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3462.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -1.549,
+              "y": 17.817,
+              "z": -30.021
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3562.6,
+            "frameMs": 16.8,
+            "dog": {
+              "x": 0.438,
+              "y": 19.008,
+              "z": -30.283
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3662.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": 0.763,
+              "y": 19.182,
+              "z": -30.372
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3779.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -1.204,
+              "y": 18.058,
+              "z": -29.949
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3879.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.656,
+              "y": 17.028,
+              "z": -30.32
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3996.3,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -4.079,
+              "y": 16.292,
+              "z": -31.569
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4096.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.628,
+              "y": 16,
+              "z": -32.905
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4196.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.583,
+              "y": 15.794,
+              "z": -34.414
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4296.6,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -3.928,
+              "y": 15.813,
+              "z": -35.771
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4396.7,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -2.769,
+              "y": 16.12,
+              "z": -36.728
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4496.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -1.45,
+              "y": 16.571,
+              "z": -37.292
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4596.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -1.661,
+              "y": 16.443,
+              "z": -37.497
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4697,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -3.122,
+              "y": 15.908,
+              "z": -37.06
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4797,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.268,
+              "y": 15.621,
+              "z": -36.027
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4897.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.839,
+              "y": 15.628,
+              "z": -34.723
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4997.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.833,
+              "y": 15.898,
+              "z": -33.259
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5097.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.173,
+              "y": 16.238,
+              "z": -31.887
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5197.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.025,
+              "y": 16.765,
+              "z": -30.955
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5297.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -1.561,
+              "y": 17.658,
+              "z": -30.596
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5397.5,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -0.117,
+              "y": 18.51,
+              "z": -30.877
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5497.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -0.752,
+              "y": 18.174,
+              "z": -30.606
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5597.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.244,
+              "y": 17.235,
+              "z": -30.538
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5697.8,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -3.648,
+              "y": 16.493,
+              "z": -31.157
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5797.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.642,
+              "y": 16.024,
+              "z": -32.254
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5914.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -5.103,
+              "y": 15.668,
+              "z": -33.926
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6014.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.816,
+              "y": 15.508,
+              "z": -35.399
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6114.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -3.998,
+              "y": 15.632,
+              "z": -36.566
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6215,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -2.684,
+              "y": 16.04,
+              "z": -37.339
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6315,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -1.249,
+              "y": 16.617,
+              "z": -37.492
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6415.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.574,
+              "y": 16.055,
+              "z": -37.506
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6515.3,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -3.982,
+              "y": 15.576,
+              "z": -36.896
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6615.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.964,
+              "y": 15.369,
+              "z": -35.802
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6732.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.402,
+              "y": 15.506,
+              "z": -34.111
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6832.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.086,
+              "y": 15.819,
+              "z": -32.627
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6932.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.227,
+              "y": 16.235,
+              "z": -31.464
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7032.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.892,
+              "y": 16.831,
+              "z": -30.747
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7132.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -1.431,
+              "y": 17.724,
+              "z": -30.662
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7232.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -0.185,
+              "y": 18.4,
+              "z": -31.13
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7349.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -1.662,
+              "y": 17.619,
+              "z": -30.498
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7466.1,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -3.391,
+              "y": 16.624,
+              "z": -30.65
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7566.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.632,
+              "y": 16.066,
+              "z": -31.395
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7666.3,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -5.471,
+              "y": 15.657,
+              "z": -32.624
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7766.4,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -5.718,
+              "y": 15.377,
+              "z": -34.089
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7866.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.347,
+              "y": 15.258,
+              "z": -35.537
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7966.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.398,
+              "y": 15.437,
+              "z": -36.704
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 10,
+              "min": 10,
+              "max": 45
+            }
+          }
+        ]
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/android-dog-sprint-camera/rolling-hills-follow-near.png",
+        "stats": {
+          "width": 1080,
+          "height": 1963,
+          "stdev": 32.95,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      }
+    },
+    {
+      "configId": "follow-mid",
+      "scene": "rolling-hills",
+      "gameMode": "classic",
+      "renderer": "webgpu",
+      "effectiveRenderer": "webgpu-production",
+      "ok": false,
+      "thresholds": {
+        "maxSpikeMs": 50,
+        "p99Ms": 34,
+        "repeatedSpikeLimit": 0
+      },
+      "checks": {
+        "dogMoved": true,
+        "p99": true,
+        "maxSpike": false,
+        "repeatedSpikes": false,
+        "renderer": true,
+        "screenshot": true
+      },
+      "report": {
+        "cameraMode": "follow",
+        "zoomPreset": "mid",
+        "zoomState": {
+          "mode": "follow",
+          "distance": 27.5,
+          "min": 10,
+          "max": 45
+        },
+        "durationMs": 8000,
+        "switchMs": 900,
+        "turnRate": 1.2,
+        "directionFlipCount": 8,
+        "frameCount": 379,
+        "avgFrameTime": 21.135620052801897,
+        "p50FrameTime": 16.700000000000728,
+        "p95FrameTime": 33.399999999999636,
+        "p99FrameTime": 33.5,
+        "maxFrameTime": 133.5,
+        "spikeCount50ms": 1,
+        "spikes": [
+          {
+            "t": 887.5,
+            "frameMs": 133.5
+          }
+        ],
+        "startDog": {
+          "x": 0,
+          "y": 18.817,
+          "z": -30
+        },
+        "endDog": {
+          "x": -2.831,
+          "y": 15.824,
+          "z": -38.148
+        },
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "default",
+          "frameP95": 33.399999999999636,
+          "frameP99": 33.5,
+          "drawCalls": 52,
+          "estimatedTrianglesBySystem": {
+            "Terrain": 294912,
+            "Trees": 124752,
+            "Sheep": 108800,
+            "Grass": 90860,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 179,
+            "Rocks": 9,
+            "Mountains": 0,
+            "Grass": 4543,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 1,
+            "renderScale": 0.9,
+            "grassDistanceScale": 0.85,
+            "treeLodBias": 0.15,
+            "waterSparkleScale": 0.75,
+            "sheepAnimationRate": 0.75,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "samples": [
+          {
+            "t": 3.2,
+            "frameMs": 3.2,
+            "dog": {
+              "x": -0.53,
+              "y": 18.477,
+              "z": -30
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 103.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -2.914,
+              "y": 16.818,
+              "z": -30.829
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 220.1,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -4.897,
+              "y": 15.888,
+              "z": -32.894
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 320.2,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.633,
+              "y": 15.189,
+              "z": -35.261
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 420.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.267,
+              "y": 15.06,
+              "z": -37.772
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 520.5,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -4.017,
+              "y": 15.313,
+              "z": -39.775
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 620.6,
+            "frameMs": 33.5,
+            "dog": {
+              "x": -1.908,
+              "y": 15.839,
+              "z": -41.151
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 720.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": 0.626,
+              "y": 16.748,
+              "z": -41.511
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 887.5,
+            "frameMs": 133.5,
+            "dog": {
+              "x": 2.505,
+              "y": 17.955,
+              "z": -40.968
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 987.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": 2.271,
+              "y": 17.785,
+              "z": -41.139
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1087.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -0.176,
+              "y": 16.301,
+              "z": -41.674
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1204.4,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -3.019,
+              "y": 15.54,
+              "z": -40.875
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1304.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.79,
+              "y": 15.119,
+              "z": -39.298
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1404.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -5.816,
+              "y": 14.947,
+              "z": -36.922
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1504.8,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -5.772,
+              "y": 15.257,
+              "z": -34.598
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1604.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.719,
+              "y": 15.987,
+              "z": -32.345
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1704.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.788,
+              "y": 16.875,
+              "z": -30.741
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1821.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": 0.086,
+              "y": 18.838,
+              "z": -30.118
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1921.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.008,
+              "y": 17.458,
+              "z": -30.264
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2021.8,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -4.205,
+              "y": 16.244,
+              "z": -31.445
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2122,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.672,
+              "y": 15.524,
+              "z": -33.418
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2238.8,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.152,
+              "y": 14.881,
+              "z": -36.341
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2338.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -5.484,
+              "y": 14.958,
+              "z": -38.599
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2439,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.744,
+              "y": 15.351,
+              "z": -40.564
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2539,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -1.538,
+              "y": 15.925,
+              "z": -41.517
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2639.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": 0.855,
+              "y": 16.879,
+              "z": -41.529
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2739.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": 1.991,
+              "y": 17.606,
+              "z": -41.216
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2839.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -0.195,
+              "y": 16.315,
+              "z": -41.917
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2939.3,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -2.721,
+              "y": 15.587,
+              "z": -41.626
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3039.4,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.786,
+              "y": 15.066,
+              "z": -40.415
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3139.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -6.225,
+              "y": 14.765,
+              "z": -38.296
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3239.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -6.612,
+              "y": 14.776,
+              "z": -35.84
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3339.7,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -5.935,
+              "y": 15.405,
+              "z": -33.459
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3439.8,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -4.376,
+              "y": 16.164,
+              "z": -31.636
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3539.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.553,
+              "y": 16.973,
+              "z": -30.787
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3640,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -1.813,
+              "y": 17.487,
+              "z": -30.632
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3756.7,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -3.737,
+              "y": 16.461,
+              "z": -31.019
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3873.5,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -5.211,
+              "y": 15.78,
+              "z": -32.324
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3973.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -5.762,
+              "y": 15.433,
+              "z": -33.695
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4090.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.62,
+              "y": 15.157,
+              "z": -35.459
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4190.4,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.848,
+              "y": 15.237,
+              "z": -36.752
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4290.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -3.509,
+              "y": 15.635,
+              "z": -37.632
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4390.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.118,
+              "y": 16.184,
+              "z": -37.842
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4507.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -0.468,
+              "y": 16.945,
+              "z": -37.505
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4607.4,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -1.681,
+              "y": 16.326,
+              "z": -38.067
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4707.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -3.203,
+              "y": 15.686,
+              "z": -38.043
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4807.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.601,
+              "y": 15.268,
+              "z": -37.344
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4907.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.518,
+              "y": 15.068,
+              "z": -36.177
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5007.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.867,
+              "y": 15.192,
+              "z": -34.731
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5124.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.475,
+              "y": 15.634,
+              "z": -33.096
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5224.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -4.503,
+              "y": 16.097,
+              "z": -31.933
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5324.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.197,
+              "y": 16.677,
+              "z": -31.311
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5441.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -2.541,
+              "y": 16.961,
+              "z": -31.158
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5558.3,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -4.193,
+              "y": 16.249,
+              "z": -31.452
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5658.3,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -5.404,
+              "y": 15.696,
+              "z": -32.383
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5775.1,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -6.145,
+              "y": 15.22,
+              "z": -33.966
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5875.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.128,
+              "y": 14.954,
+              "z": -35.398
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5992,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.301,
+              "y": 15.091,
+              "z": -36.951
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6108.7,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -3.826,
+              "y": 15.458,
+              "z": -37.916
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6208.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.403,
+              "y": 16.015,
+              "z": -38.096
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6309,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -0.948,
+              "y": 16.721,
+              "z": -37.618
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6425.7,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -2.306,
+              "y": 16.045,
+              "z": -38.153
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6525.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.785,
+              "y": 15.461,
+              "z": -38.087
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6625.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -5.149,
+              "y": 15.114,
+              "z": -37.349
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6742.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.11,
+              "y": 14.911,
+              "z": -35.972
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6842.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.347,
+              "y": 15.03,
+              "z": -34.514
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6942.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.952,
+              "y": 15.432,
+              "z": -33.112
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7042.9,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -4.96,
+              "y": 15.903,
+              "z": -31.957
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7159.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -3.333,
+              "y": 16.619,
+              "z": -31.311
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7259.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -3.336,
+              "y": 16.622,
+              "z": -31.215
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7376.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.001,
+              "y": 15.897,
+              "z": -31.689
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7493.2,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -6.223,
+              "y": 15.326,
+              "z": -32.916
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7593.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.684,
+              "y": 14.91,
+              "z": -34.395
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7710.2,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.404,
+              "y": 14.824,
+              "z": -36.064
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7826.9,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.373,
+              "y": 15.048,
+              "z": -37.412
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7943.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -3.74,
+              "y": 15.472,
+              "z": -38.118
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 27.5,
+              "min": 10,
+              "max": 45
+            }
+          }
+        ]
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/android-dog-sprint-camera/rolling-hills-follow-mid.png",
+        "stats": {
+          "width": 1080,
+          "height": 1963,
+          "stdev": 40.134,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      }
+    },
+    {
+      "configId": "follow-far",
+      "scene": "rolling-hills",
+      "gameMode": "classic",
+      "renderer": "webgpu",
+      "effectiveRenderer": "webgpu-production",
+      "ok": false,
+      "thresholds": {
+        "maxSpikeMs": 50,
+        "p99Ms": 34,
+        "repeatedSpikeLimit": 0
+      },
+      "checks": {
+        "dogMoved": true,
+        "p99": true,
+        "maxSpike": false,
+        "repeatedSpikes": false,
+        "renderer": true,
+        "screenshot": true
+      },
+      "report": {
+        "cameraMode": "follow",
+        "zoomPreset": "far",
+        "zoomState": {
+          "mode": "follow",
+          "distance": 45,
+          "min": 10,
+          "max": 45
+        },
+        "durationMs": 8000,
+        "switchMs": 900,
+        "turnRate": 1.2,
+        "directionFlipCount": 8,
+        "frameCount": 353,
+        "avgFrameTime": 22.703116147291894,
+        "p50FrameTime": 16.700000000000728,
+        "p95FrameTime": 33.400000000001455,
+        "p99FrameTime": 33.5,
+        "maxFrameTime": 116.80000000000109,
+        "spikeCount50ms": 1,
+        "spikes": [
+          {
+            "t": 874.3,
+            "frameMs": 116.8
+          }
+        ],
+        "startDog": {
+          "x": 0,
+          "y": 18.817,
+          "z": -30
+        },
+        "endDog": {
+          "x": -2.757,
+          "y": 15.799,
+          "z": -38.442
+        },
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "default",
+          "frameP95": 33.400000000001455,
+          "frameP99": 33.5,
+          "drawCalls": 56,
+          "estimatedTrianglesBySystem": {
+            "Terrain": 294912,
+            "Trees": 124886,
+            "Grass": 124440,
+            "Sheep": 108800,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 179,
+            "Rocks": 9,
+            "Mountains": 0,
+            "Grass": 6222,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 1,
+            "renderScale": 0.9,
+            "grassDistanceScale": 0.85,
+            "treeLodBias": 0.15,
+            "waterSparkleScale": 0.75,
+            "sheepAnimationRate": 0.75,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "samples": [
+          {
+            "t": 6.9,
+            "frameMs": 6.9,
+            "dog": {
+              "x": -0.512,
+              "y": 18.489,
+              "z": -30
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 123.7,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -3.146,
+              "y": 16.714,
+              "z": -30.956
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 240.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.075,
+              "y": 15.799,
+              "z": -33.194
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 357.2,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.634,
+              "y": 15.044,
+              "z": -36.021
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 473.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.807,
+              "y": 15.143,
+              "z": -38.726
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 574,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -3.01,
+              "y": 15.558,
+              "z": -40.55
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 674.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -0.585,
+              "y": 16.198,
+              "z": -41.417
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 874.3,
+            "frameMs": 116.8,
+            "dog": {
+              "x": 2.541,
+              "y": 17.994,
+              "z": -40.872
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 991.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": 1.993,
+              "y": 17.603,
+              "z": -41.235
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1107.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -0.784,
+              "y": 16.134,
+              "z": -41.718
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1207.9,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -3.222,
+              "y": 15.478,
+              "z": -40.965
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1308,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.022,
+              "y": 15.052,
+              "z": -39.341
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1408.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.013,
+              "y": 14.886,
+              "z": -37.026
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1508.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.956,
+              "y": 15.177,
+              "z": -34.612
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1608.3,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -4.726,
+              "y": 15.988,
+              "z": -32.266
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1725.1,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -2.466,
+              "y": 17.064,
+              "z": -30.648
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1825.2,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -0.012,
+              "y": 18.74,
+              "z": -30.26
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 1925.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.203,
+              "y": 17.297,
+              "z": -30.403
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2042.1,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -4.737,
+              "y": 16,
+              "z": -31.894
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2142.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.078,
+              "y": 15.245,
+              "z": -33.984
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2259,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.34,
+              "y": 14.802,
+              "z": -36.877
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2359.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.394,
+              "y": 14.952,
+              "z": -39.231
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2459.2,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -3.636,
+              "y": 15.366,
+              "z": -40.889
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2576,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -0.931,
+              "y": 16.091,
+              "z": -41.706
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2676.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": 1.579,
+              "y": 17.349,
+              "z": -41.291
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2792.8,
+            "frameMs": 33.3,
+            "dog": {
+              "x": 1.715,
+              "y": 17.427,
+              "z": -41.301
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 2892.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -0.685,
+              "y": 16.176,
+              "z": -41.907
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3009.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -3.49,
+              "y": 15.389,
+              "z": -41.257
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3109.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.359,
+              "y": 14.938,
+              "z": -39.736
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3209.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -6.461,
+              "y": 14.737,
+              "z": -37.507
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3309.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.517,
+              "y": 14.87,
+              "z": -34.975
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3410,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.422,
+              "y": 15.677,
+              "z": -32.64
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3510.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.868,
+              "y": 16.394,
+              "z": -31.282
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3610.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.015,
+              "y": 17.328,
+              "z": -30.743
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3743.7,
+            "frameMs": 33.5,
+            "dog": {
+              "x": -4.302,
+              "y": 16.207,
+              "z": -31.358
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3860.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.559,
+              "y": 15.617,
+              "z": -32.676
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 3960.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.016,
+              "y": 15.224,
+              "z": -34.228
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4060.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.781,
+              "y": 15.035,
+              "z": -35.742
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4160.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -4.969,
+              "y": 15.182,
+              "z": -36.98
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4294.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -3.076,
+              "y": 15.762,
+              "z": -37.931
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4410.9,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -1.455,
+              "y": 16.466,
+              "z": -37.829
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4511,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -0.196,
+              "y": 17.06,
+              "z": -37.505
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4644.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -2.052,
+              "y": 16.11,
+              "z": -38.372
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4744.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.564,
+              "y": 15.514,
+              "z": -38.279
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4844.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.803,
+              "y": 15.197,
+              "z": -37.635
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 4961.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.83,
+              "y": 14.976,
+              "z": -36.242
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5061.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.069,
+              "y": 15.11,
+              "z": -34.713
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5161.5,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -5.659,
+              "y": 15.547,
+              "z": -33.303
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5261.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.721,
+              "y": 15.993,
+              "z": -32.202
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5378.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -3.124,
+              "y": 16.698,
+              "z": -31.536
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5495.1,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -3.204,
+              "y": 16.665,
+              "z": -31.497
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5595.3,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -4.611,
+              "y": 16.049,
+              "z": -31.992
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5695.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.657,
+              "y": 15.561,
+              "z": -33.005
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5795.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.198,
+              "y": 15.117,
+              "z": -34.388
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 5912.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.027,
+              "y": 14.928,
+              "z": -36.113
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6029,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -4.995,
+              "y": 15.146,
+              "z": -37.574
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6129.1,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -3.736,
+              "y": 15.466,
+              "z": -38.259
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6229.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.206,
+              "y": 16.048,
+              "z": -38.36
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6329.3,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -1.048,
+              "y": 16.612,
+              "z": -37.966
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6429.4,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -2.31,
+              "y": 15.986,
+              "z": -38.451
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6529.6,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -3.824,
+              "y": 15.436,
+              "z": -38.374
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6646.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.329,
+              "y": 15.055,
+              "z": -37.507
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6746.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.13,
+              "y": 14.89,
+              "z": -36.289
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6846.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.361,
+              "y": 14.972,
+              "z": -34.786
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 6946.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.953,
+              "y": 15.413,
+              "z": -33.38
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7063.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -4.722,
+              "y": 15.997,
+              "z": -32.096
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7163.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.329,
+              "y": 16.608,
+              "z": -31.603
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7263.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.409,
+              "y": 16.577,
+              "z": -31.524
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7380.3,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.156,
+              "y": 15.813,
+              "z": -32.117
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7480.5,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -6.12,
+              "y": 15.362,
+              "z": -33.082
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7613.9,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.7,
+              "y": 14.794,
+              "z": -34.972
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7730.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.294,
+              "y": 14.827,
+              "z": -36.623
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7830.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.354,
+              "y": 15.036,
+              "z": -37.749
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          },
+          {
+            "t": 7930.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.006,
+              "y": 15.384,
+              "z": -38.391
+            },
+            "zoom": {
+              "mode": "follow",
+              "distance": 45,
+              "min": 10,
+              "max": 45
+            }
+          }
+        ]
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/android-dog-sprint-camera/rolling-hills-follow-far.png",
+        "stats": {
+          "width": 1080,
+          "height": 1963,
+          "stdev": 39.13,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      }
+    },
+    {
+      "configId": "free-near",
+      "scene": "rolling-hills",
+      "gameMode": "classic",
+      "renderer": "webgpu",
+      "effectiveRenderer": "webgpu-production",
+      "ok": false,
+      "thresholds": {
+        "maxSpikeMs": 50,
+        "p99Ms": 34,
+        "repeatedSpikeLimit": 0
+      },
+      "checks": {
+        "dogMoved": true,
+        "p99": false,
+        "maxSpike": false,
+        "repeatedSpikes": false,
+        "renderer": true,
+        "screenshot": true
+      },
+      "report": {
+        "cameraMode": "free",
+        "zoomPreset": "near",
+        "zoomState": {
+          "mode": "free",
+          "distance": 14,
+          "min": 14,
+          "max": 70
+        },
+        "durationMs": 8000,
+        "switchMs": 900,
+        "turnRate": 1.2,
+        "directionFlipCount": 8,
+        "frameCount": 404,
+        "avgFrameTime": 19.821039603989906,
+        "p50FrameTime": 16.700000000000728,
+        "p95FrameTime": 33.400000000001455,
+        "p99FrameTime": 50.099999999998545,
+        "maxFrameTime": 116.79999999999927,
+        "spikeCount50ms": 7,
+        "spikes": [
+          {
+            "t": 517.1,
+            "frameMs": 50.1
+          },
+          {
+            "t": 600.5,
+            "frameMs": 50.1
+          },
+          {
+            "t": 650.6,
+            "frameMs": 50.1
+          },
+          {
+            "t": 900.8,
+            "frameMs": 116.8
+          },
+          {
+            "t": 1084.3,
+            "frameMs": 83.5
+          },
+          {
+            "t": 1134.3,
+            "frameMs": 50
+          },
+          {
+            "t": 1234.5,
+            "frameMs": 66.8
+          }
+        ],
+        "startDog": {
+          "x": 0,
+          "y": 18.817,
+          "z": -30
+        },
+        "endDog": {
+          "x": -8.089,
+          "y": 14.726,
+          "z": -28.69
+        },
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "default",
+          "frameP95": 33.400000000001455,
+          "frameP99": 50.099999999998545,
+          "drawCalls": 53,
+          "estimatedTrianglesBySystem": {
+            "Terrain": 294912,
+            "Trees": 124886,
+            "Sheep": 108800,
+            "Grass": 98200,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 179,
+            "Rocks": 9,
+            "Mountains": 0,
+            "Grass": 4910,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 1,
+            "renderScale": 0.9,
+            "grassDistanceScale": 0.85,
+            "treeLodBias": 0.15,
+            "waterSparkleScale": 0.75,
+            "sheepAnimationRate": 0.75,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "samples": [
+          {
+            "t": 16.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -0.499,
+              "y": 18.496,
+              "z": -30
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 133.3,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -3.455,
+              "y": 16.66,
+              "z": -29.77
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 233.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.793,
+              "y": 15.67,
+              "z": -29.279
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 333.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -8.231,
+              "y": 14.676,
+              "z": -28.456
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 433.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -10.482,
+              "y": 13.775,
+              "z": -27.378
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 550.4,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -12.894,
+              "y": 12.828,
+              "z": -25.796
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 650.6,
+            "frameMs": 50.1,
+            "dog": {
+              "x": -14.772,
+              "y": 12.281,
+              "z": -24.147
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 750.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -16.461,
+              "y": 12.02,
+              "z": -22.31
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 900.8,
+            "frameMs": 116.8,
+            "dog": {
+              "x": -17.629,
+              "y": 12.241,
+              "z": -20.681
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1000.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -16.834,
+              "y": 11.88,
+              "z": -22.459
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1134.3,
+            "frameMs": 50,
+            "dog": {
+              "x": -16.169,
+              "y": 11.516,
+              "z": -24.86
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1234.5,
+            "frameMs": 66.8,
+            "dog": {
+              "x": -15.83,
+              "y": 11.425,
+              "z": -26.938
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1334.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -15.732,
+              "y": 11.109,
+              "z": -29.438
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1434.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.911,
+              "y": 10.656,
+              "z": -31.87
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1534.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -16.421,
+              "y": 10.16,
+              "z": -34.422
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1634.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -17.176,
+              "y": 9.946,
+              "z": -36.699
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1734.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -18.235,
+              "y": 9.747,
+              "z": -38.976
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1851.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -18.416,
+              "y": 9.713,
+              "z": -39.458
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1951.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -16.869,
+              "y": 10.003,
+              "z": -37.574
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2068.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -14.719,
+              "y": 10.97,
+              "z": -35.597
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2168.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -12.626,
+              "y": 12.126,
+              "z": -34.099
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2268.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -10.432,
+              "y": 13.378,
+              "z": -32.906
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2368.9,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -8.098,
+              "y": 14.575,
+              "z": -31.98
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2468.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -5.688,
+              "y": 15.622,
+              "z": -31.342
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2569,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -3.293,
+              "y": 16.65,
+              "z": -31.007
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2669.1,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -0.79,
+              "y": 18.058,
+              "z": -30.957
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2769.2,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -1.264,
+              "y": 17.788,
+              "z": -30.824
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2869.4,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -3.684,
+              "y": 16.517,
+              "z": -30.273
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2969.5,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -6.424,
+              "y": 15.404,
+              "z": -29.258
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3069.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -8.298,
+              "y": 14.654,
+              "z": -28.307
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3169.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -10.332,
+              "y": 13.856,
+              "z": -26.971
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3269.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -12.238,
+              "y": 13.124,
+              "z": -25.361
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3369.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -13.942,
+              "y": 12.783,
+              "z": -23.527
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3469.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.444,
+              "y": 12.658,
+              "z": -21.459
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3570,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.522,
+              "y": 12.676,
+              "z": -19.535
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3670,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -16.464,
+              "y": 12.623,
+              "z": -19.848
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3770.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.003,
+              "y": 12.406,
+              "z": -21.524
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3870.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.75,
+              "y": 12.097,
+              "z": -23.218
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3970.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.706,
+              "y": 11.732,
+              "z": -24.777
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4070.4,
+            "frameMs": 16.5,
+            "dog": {
+              "x": -15.856,
+              "y": 11.495,
+              "z": -26.378
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4170.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.18,
+              "y": 11.103,
+              "z": -27.878
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4270.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.665,
+              "y": 10.642,
+              "z": -29.283
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4370.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -17.336,
+              "y": 10.374,
+              "z": -30.665
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4470.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -18.141,
+              "y": 10.108,
+              "z": -31.913
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4571,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -17.96,
+              "y": 10.151,
+              "z": -31.773
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4671.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.866,
+              "y": 10.407,
+              "z": -30.743
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4771.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.707,
+              "y": 11.056,
+              "z": -29.884
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4871.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -14.363,
+              "y": 11.873,
+              "z": -29.119
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4971.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -13.015,
+              "y": 12.654,
+              "z": -28.557
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5071.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -11.575,
+              "y": 13.28,
+              "z": -28.145
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5188.3,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -9.795,
+              "y": 14.042,
+              "z": -27.89
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5288.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -8.344,
+              "y": 14.655,
+              "z": -27.862
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5388.5,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -6.806,
+              "y": 15.298,
+              "z": -28.028
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5488.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -7.545,
+              "y": 14.995,
+              "z": -27.819
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5588.7,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -8.945,
+              "y": 14.426,
+              "z": -27.309
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5688.8,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -10.302,
+              "y": 13.885,
+              "z": -26.619
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5805.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -11.755,
+              "y": 13.316,
+              "z": -25.627
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5905.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -12.866,
+              "y": 12.962,
+              "z": -24.646
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6005.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -13.86,
+              "y": 12.819,
+              "z": -23.521
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6105.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -14.706,
+              "y": 12.764,
+              "z": -22.293
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6206,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.419,
+              "y": 12.802,
+              "z": -20.914
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6306.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.927,
+              "y": 12.917,
+              "z": -19.572
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6422.9,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -15.508,
+              "y": 12.671,
+              "z": -21.295
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6522.9,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -15.361,
+              "y": 12.373,
+              "z": -22.762
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6623.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.401,
+              "y": 11.958,
+              "z": -24.383
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6739.9,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.651,
+              "y": 11.656,
+              "z": -26.006
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6840,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.046,
+              "y": 11.243,
+              "z": -27.406
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6956.7,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -16.781,
+              "y": 10.659,
+              "z": -29.083
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7056.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -17.53,
+              "y": 10.404,
+              "z": -30.337
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7157,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -18.462,
+              "y": 10.137,
+              "z": -31.542
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7257,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -18.546,
+              "y": 10.087,
+              "z": -31.687
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7357.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -17.369,
+              "y": 10.357,
+              "z": -30.754
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7457.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.149,
+              "y": 10.806,
+              "z": -30.002
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7557.3,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -14.725,
+              "y": 11.65,
+              "z": -29.349
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7657.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -13.348,
+              "y": 12.437,
+              "z": -28.906
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7774.2,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -11.6,
+              "y": 13.249,
+              "z": -28.586
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7874.3,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -10.176,
+              "y": 13.854,
+              "z": -28.506
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7974.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -8.602,
+              "y": 14.512,
+              "z": -28.612
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 14,
+              "min": 14,
+              "max": 70
+            }
+          }
+        ]
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/android-dog-sprint-camera/rolling-hills-free-near.png",
+        "stats": {
+          "width": 1080,
+          "height": 1963,
+          "stdev": 39.336,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      }
+    },
+    {
+      "configId": "free-mid",
+      "scene": "rolling-hills",
+      "gameMode": "classic",
+      "renderer": "webgpu",
+      "effectiveRenderer": "webgpu-production",
+      "ok": false,
+      "thresholds": {
+        "maxSpikeMs": 50,
+        "p99Ms": 34,
+        "repeatedSpikeLimit": 0
+      },
+      "checks": {
+        "dogMoved": true,
+        "p99": false,
+        "maxSpike": false,
+        "repeatedSpikes": false,
+        "renderer": true,
+        "screenshot": true
+      },
+      "report": {
+        "cameraMode": "free",
+        "zoomPreset": "mid",
+        "zoomState": {
+          "mode": "free",
+          "distance": 42,
+          "min": 14,
+          "max": 70
+        },
+        "durationMs": 8000,
+        "switchMs": 900,
+        "turnRate": 1.2,
+        "directionFlipCount": 8,
+        "frameCount": 368,
+        "avgFrameTime": 21.742663043494463,
+        "p50FrameTime": 16.700000000000728,
+        "p95FrameTime": 33.400000000001455,
+        "p99FrameTime": 66.70000000000073,
+        "maxFrameTime": 133.5,
+        "spikeCount50ms": 8,
+        "spikes": [
+          {
+            "t": 477.4,
+            "frameMs": 66.7
+          },
+          {
+            "t": 560.8,
+            "frameMs": 50.1
+          },
+          {
+            "t": 627.5,
+            "frameMs": 66.7
+          },
+          {
+            "t": 861.1,
+            "frameMs": 133.5
+          },
+          {
+            "t": 1094.6,
+            "frameMs": 133.4
+          },
+          {
+            "t": 1161.4,
+            "frameMs": 50
+          },
+          {
+            "t": 1228.1,
+            "frameMs": 66.7
+          },
+          {
+            "t": 1978.9,
+            "frameMs": 50.1
+          }
+        ],
+        "startDog": {
+          "x": 0,
+          "y": 18.817,
+          "z": -30
+        },
+        "endDog": {
+          "x": -7.8,
+          "y": 14.872,
+          "z": -28.155
+        },
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "default",
+          "frameP95": 33.400000000001455,
+          "frameP99": 66.70000000000073,
+          "drawCalls": 56,
+          "estimatedTrianglesBySystem": {
+            "Terrain": 294912,
+            "Trees": 141087,
+            "Grass": 131220,
+            "Sheep": 108800,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 179,
+            "Rocks": 9,
+            "Mountains": 0,
+            "Grass": 6561,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 1,
+            "renderScale": 0.9,
+            "grassDistanceScale": 0.85,
+            "treeLodBias": 0.15,
+            "waterSparkleScale": 0.75,
+            "sheepAnimationRate": 0.75,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "samples": [
+          {
+            "t": 10.5,
+            "frameMs": 10.5,
+            "dog": {
+              "x": -0.555,
+              "y": 18.461,
+              "z": -30
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 110.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -2.951,
+              "y": 16.962,
+              "z": -29.851
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 227.2,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -5.831,
+              "y": 15.653,
+              "z": -29.297
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 327.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -8.153,
+              "y": 14.706,
+              "z": -28.534
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 477.4,
+            "frameMs": 66.7,
+            "dog": {
+              "x": -11.243,
+              "y": 13.471,
+              "z": -26.985
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 627.5,
+            "frameMs": 66.7,
+            "dog": {
+              "x": -13.807,
+              "y": 12.477,
+              "z": -25.027
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 727.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -15.519,
+              "y": 12.183,
+              "z": -23.262
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 861.1,
+            "frameMs": 133.5,
+            "dog": {
+              "x": -16.294,
+              "y": 12.097,
+              "z": -22.281
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 961.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.249,
+              "y": 12.053,
+              "z": -22.537
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1094.6,
+            "frameMs": 133.4,
+            "dog": {
+              "x": -15.766,
+              "y": 11.974,
+              "z": -23.69
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1228.1,
+            "frameMs": 66.7,
+            "dog": {
+              "x": -15.204,
+              "y": 11.813,
+              "z": -26.533
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1345,
+            "frameMs": 33.5,
+            "dog": {
+              "x": -15.107,
+              "y": 11.448,
+              "z": -29.357
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1461.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.402,
+              "y": 10.865,
+              "z": -32.267
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1561.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.977,
+              "y": 10.371,
+              "z": -34.695
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1678.5,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -17.014,
+              "y": 9.976,
+              "z": -37.422
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1778.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -18.208,
+              "y": 9.752,
+              "z": -39.63
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1895.4,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -17.406,
+              "y": 9.902,
+              "z": -38.637
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1995.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -15.816,
+              "y": 10.446,
+              "z": -36.943
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2095.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -13.859,
+              "y": 11.42,
+              "z": -35.3
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2212.4,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -11.379,
+              "y": 12.799,
+              "z": -33.716
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2312.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -9.118,
+              "y": 14.105,
+              "z": -32.648
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2412.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -6.79,
+              "y": 15.132,
+              "z": -31.887
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2512.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -4.319,
+              "y": 16.199,
+              "z": -31.375
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2629.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -1.397,
+              "y": 17.613,
+              "z": -31.167
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2746.3,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -0.11,
+              "y": 18.435,
+              "z": -31.181
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2846.3,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -2.537,
+              "y": 17.007,
+              "z": -30.689
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2963.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.27,
+              "y": 15.87,
+              "z": -29.748
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3063.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -7.549,
+              "y": 14.957,
+              "z": -28.625
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3163.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -9.57,
+              "y": 14.162,
+              "z": -27.315
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3263.3,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -11.547,
+              "y": 13.402,
+              "z": -25.659
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3363.4,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -13.237,
+              "y": 13.002,
+              "z": -23.848
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3480.2,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -14.952,
+              "y": 12.869,
+              "z": -21.442
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3580.3,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -16.095,
+              "y": 12.909,
+              "z": -19.316
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3680.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.059,
+              "y": 12.857,
+              "z": -19.591
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3780.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.58,
+              "y": 12.602,
+              "z": -21.452
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3880.6,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -15.348,
+              "y": 12.288,
+              "z": -23.131
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3980.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.327,
+              "y": 11.894,
+              "z": -24.768
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4080.9,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.503,
+              "y": 11.678,
+              "z": -26.389
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4181,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.867,
+              "y": 11.258,
+              "z": -27.941
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4281.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.387,
+              "y": 10.777,
+              "z": -29.353
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4381.1,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -17.067,
+              "y": 10.395,
+              "z": -30.694
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4481.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -17.917,
+              "y": 10.127,
+              "z": -31.963
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4581.3,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -17.703,
+              "y": 10.175,
+              "z": -31.777
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4698.2,
+            "frameMs": 33.5,
+            "dog": {
+              "x": -16.362,
+              "y": 10.61,
+              "z": -30.577
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4798.2,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -15.165,
+              "y": 11.36,
+              "z": -29.749
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4898.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -13.809,
+              "y": 12.175,
+              "z": -29.043
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4998.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -12.356,
+              "y": 12.934,
+              "z": -28.51
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5098.5,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -10.937,
+              "y": 13.548,
+              "z": -28.165
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5198.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -9.469,
+              "y": 14.175,
+              "z": -27.992
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5298.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -7.971,
+              "y": 14.807,
+              "z": -27.991
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5415.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.236,
+              "y": 15.53,
+              "z": -28.224
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5515.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -7.383,
+              "y": 15.059,
+              "z": -27.906
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5615.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -8.811,
+              "y": 14.482,
+              "z": -27.327
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5715.8,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -10.126,
+              "y": 13.959,
+              "z": -26.605
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5815.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -11.34,
+              "y": 13.486,
+              "z": -25.743
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5916,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -12.423,
+              "y": 13.122,
+              "z": -24.755
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6016,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -13.432,
+              "y": 12.982,
+              "z": -23.593
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6116.2,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -14.247,
+              "y": 12.938,
+              "z": -22.374
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6216.2,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -14.948,
+              "y": 12.98,
+              "z": -20.997
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6316.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.464,
+              "y": 13.108,
+              "z": -19.592
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6416.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.201,
+              "y": 12.92,
+              "z": -20.808
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6533.2,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -15.025,
+              "y": 12.563,
+              "z": -22.564
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6633.4,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -15.067,
+              "y": 12.183,
+              "z": -24.038
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6733.5,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.285,
+              "y": 11.833,
+              "z": -25.487
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6833.6,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.694,
+              "y": 11.491,
+              "z": -26.976
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6933.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.246,
+              "y": 11.003,
+              "z": -28.326
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7033.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.981,
+              "y": 10.559,
+              "z": -29.639
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7150.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -18.048,
+              "y": 10.246,
+              "z": -31.075
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7250.7,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -18.182,
+              "y": 10.202,
+              "z": -31.283
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7350.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -17.047,
+              "y": 10.446,
+              "z": -30.359
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7450.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -15.772,
+              "y": 11.069,
+              "z": -29.559
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7550.8,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -14.393,
+              "y": 11.89,
+              "z": -28.902
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7651,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -13.006,
+              "y": 12.663,
+              "z": -28.434
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7751,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -11.528,
+              "y": 13.3,
+              "z": -28.133
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7851.1,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -10.04,
+              "y": 13.933,
+              "z": -28.007
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7951.3,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -8.541,
+              "y": 14.563,
+              "z": -28.061
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 42,
+              "min": 14,
+              "max": 70
+            }
+          }
+        ]
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/android-dog-sprint-camera/rolling-hills-free-mid.png",
+        "stats": {
+          "width": 1080,
+          "height": 1963,
+          "stdev": 36.979,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      }
+    },
+    {
+      "configId": "free-far",
+      "scene": "rolling-hills",
+      "gameMode": "classic",
+      "renderer": "webgpu",
+      "effectiveRenderer": "webgpu-production",
+      "ok": false,
+      "thresholds": {
+        "maxSpikeMs": 50,
+        "p99Ms": 34,
+        "repeatedSpikeLimit": 0
+      },
+      "checks": {
+        "dogMoved": true,
+        "p99": false,
+        "maxSpike": false,
+        "repeatedSpikes": false,
+        "renderer": true,
+        "screenshot": true
+      },
+      "report": {
+        "cameraMode": "free",
+        "zoomPreset": "far",
+        "zoomState": {
+          "mode": "free",
+          "distance": 70,
+          "min": 14,
+          "max": 70
+        },
+        "durationMs": 8000,
+        "switchMs": 900,
+        "turnRate": 1.2,
+        "directionFlipCount": 10,
+        "frameCount": 299,
+        "avgFrameTime": 26.781270903010036,
+        "p50FrameTime": 33.29999999999927,
+        "p95FrameTime": 33.5,
+        "p99FrameTime": 83.39999999999964,
+        "maxFrameTime": 133.39999999999964,
+        "spikeCount50ms": 7,
+        "spikes": [
+          {
+            "t": 378.8,
+            "frameMs": 66.8
+          },
+          {
+            "t": 445.5,
+            "frameMs": 50.1
+          },
+          {
+            "t": 512.2,
+            "frameMs": 66.7
+          },
+          {
+            "t": 729,
+            "frameMs": 133.4
+          },
+          {
+            "t": 1012.5,
+            "frameMs": 116.7
+          },
+          {
+            "t": 1112.6,
+            "frameMs": 83.4
+          },
+          {
+            "t": 1879.9,
+            "frameMs": 50
+          }
+        ],
+        "startDog": {
+          "x": 0,
+          "y": 18.817,
+          "z": -30
+        },
+        "endDog": {
+          "x": -7.586,
+          "y": 15.02,
+          "z": -26.858
+        },
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "default",
+          "frameP95": 33.5,
+          "frameP99": 83.39999999999964,
+          "drawCalls": 61,
+          "estimatedTrianglesBySystem": {
+            "Terrain": 294912,
+            "Grass": 175820,
+            "Trees": 162684,
+            "Sheep": 108800,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 179,
+            "Rocks": 9,
+            "Mountains": 0,
+            "Grass": 8791,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 1,
+            "renderScale": 0.9,
+            "grassDistanceScale": 0.85,
+            "treeLodBias": 0.15,
+            "waterSparkleScale": 0.75,
+            "sheepAnimationRate": 0.75,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "samples": [
+          {
+            "t": -4.9,
+            "frameMs": -4.9,
+            "dog": {
+              "x": -0.121,
+              "y": 18.739,
+              "z": -30
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 111.9,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -2.447,
+              "y": 17.284,
+              "z": -29.855
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 228.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -5.319,
+              "y": 15.869,
+              "z": -29.301
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 378.8,
+            "frameMs": 66.8,
+            "dog": {
+              "x": -8.462,
+              "y": 14.591,
+              "z": -28.177
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 512.2,
+            "frameMs": 66.7,
+            "dog": {
+              "x": -11.006,
+              "y": 13.583,
+              "z": -26.719
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 729,
+            "frameMs": 133.4,
+            "dog": {
+              "x": -13.549,
+              "y": 12.676,
+              "z": -24.638
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 845.8,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.3,
+              "y": 12.52,
+              "z": -22.266
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1012.5,
+            "frameMs": 116.7,
+            "dog": {
+              "x": -16.414,
+              "y": 12.552,
+              "z": -20.222
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1112.6,
+            "frameMs": 83.4,
+            "dog": {
+              "x": -15.977,
+              "y": 12.44,
+              "z": -21.429
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1229.3,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -15.484,
+              "y": 11.927,
+              "z": -24.364
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1329.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.367,
+              "y": 11.691,
+              "z": -26.785
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1446.3,
+            "frameMs": 33.5,
+            "dog": {
+              "x": -15.621,
+              "y": 11.119,
+              "z": -29.762
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1546.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.132,
+              "y": 10.497,
+              "z": -32.161
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1646.4,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -16.974,
+              "y": 9.986,
+              "z": -34.58
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1763.1,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -18.272,
+              "y": 9.742,
+              "z": -37.179
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1879.9,
+            "frameMs": 50,
+            "dog": {
+              "x": -18.006,
+              "y": 9.792,
+              "z": -36.948
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 1980.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -16.338,
+              "y": 10.199,
+              "z": -35.092
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2080.2,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -14.445,
+              "y": 11.204,
+              "z": -33.439
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2180.2,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -12.449,
+              "y": 12.444,
+              "z": -32.061
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2280.3,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -10.17,
+              "y": 13.75,
+              "z": -30.876
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2397.1,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -7.439,
+              "y": 14.947,
+              "z": -29.886
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2513.9,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -4.578,
+              "y": 16.184,
+              "z": -29.276
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2630.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -1.65,
+              "y": 18.002,
+              "z": -29.073
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2730.8,
+            "frameMs": 33.3,
+            "dog": {
+              "x": 0.897,
+              "y": 19.562,
+              "z": -29.237
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2847.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -1.639,
+              "y": 18.112,
+              "z": -28.685
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 2947.7,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -3.808,
+              "y": 16.91,
+              "z": -27.964
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3047.8,
+            "frameMs": 16.8,
+            "dog": {
+              "x": -6.111,
+              "y": 15.721,
+              "z": -26.866
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3147.9,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -8.25,
+              "y": 14.8,
+              "z": -25.513
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3248,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -10.169,
+              "y": 14.272,
+              "z": -23.945
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3364.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -12.154,
+              "y": 13.951,
+              "z": -21.844
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3464.8,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -13.62,
+              "y": 13.831,
+              "z": -19.816
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3564.9,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -14.802,
+              "y": 13.86,
+              "z": -17.695
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3681.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.14,
+              "y": 13.875,
+              "z": -17.064
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3781.8,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -14.695,
+              "y": 13.616,
+              "z": -18.845
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3881.9,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -14.478,
+              "y": 13.282,
+              "z": -20.577
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 3998.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -14.49,
+              "y": 12.818,
+              "z": -22.446
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4115.4,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -14.743,
+              "y": 12.274,
+              "z": -24.226
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4215.5,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -15.165,
+              "y": 11.874,
+              "z": -25.703
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4315.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -15.752,
+              "y": 11.441,
+              "z": -27.111
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4415.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -16.526,
+              "y": 10.834,
+              "z": -28.476
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4532.6,
+            "frameMs": 33.5,
+            "dog": {
+              "x": -17.553,
+              "y": 10.475,
+              "z": -29.837
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4632.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -16.615,
+              "y": 10.727,
+              "z": -28.881
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4749.4,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -15.27,
+              "y": 11.588,
+              "z": -27.827
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4849.5,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -13.947,
+              "y": 12.328,
+              "z": -27.04
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 4966.3,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -12.314,
+              "y": 13.048,
+              "z": -26.341
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5083.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -10.649,
+              "y": 13.771,
+              "z": -25.888
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5183.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -9.151,
+              "y": 14.412,
+              "z": -25.682
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5300,
+            "frameMs": 33.5,
+            "dog": {
+              "x": -7.406,
+              "y": 15.205,
+              "z": -25.673
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5416.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -5.669,
+              "y": 16.256,
+              "z": -25.914
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5516.8,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -6.933,
+              "y": 15.538,
+              "z": -25.561
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5633.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -8.57,
+              "y": 14.717,
+              "z": -24.878
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5733.7,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -9.857,
+              "y": 14.359,
+              "z": -24.125
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5833.7,
+            "frameMs": 16.6,
+            "dog": {
+              "x": -11.04,
+              "y": 14.078,
+              "z": -23.238
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 5950.6,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -12.298,
+              "y": 13.851,
+              "z": -22.003
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6050.7,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -13.211,
+              "y": 13.752,
+              "z": -20.838
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6150.8,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -13.994,
+              "y": 13.737,
+              "z": -19.553
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6267.5,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -14.709,
+              "y": 13.841,
+              "z": -17.929
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6384.3,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -14.598,
+              "y": 13.737,
+              "z": -18.526
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6501.1,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -14.36,
+              "y": 13.408,
+              "z": -20.265
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6601.3,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -14.356,
+              "y": 13.039,
+              "z": -21.775
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6701.3,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -14.523,
+              "y": 12.609,
+              "z": -23.239
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6818.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -14.953,
+              "y": 12.008,
+              "z": -24.947
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 6934.9,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.608,
+              "y": 11.598,
+              "z": -26.559
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7034.9,
+            "frameMs": 33.2,
+            "dog": {
+              "x": -16.355,
+              "y": 11.012,
+              "z": -27.874
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7135.1,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -17.242,
+              "y": 10.616,
+              "z": -29.078
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7235.2,
+            "frameMs": 16.7,
+            "dog": {
+              "x": -18.142,
+              "y": 10.388,
+              "z": -30.047
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7352,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -16.824,
+              "y": 10.672,
+              "z": -28.969
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7468.8,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -15.325,
+              "y": 11.524,
+              "z": -28.064
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7585.5,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -13.735,
+              "y": 12.403,
+              "z": -27.379
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7685.6,
+            "frameMs": 33.3,
+            "dog": {
+              "x": -12.328,
+              "y": 13.014,
+              "z": -26.985
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7802.4,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -10.547,
+              "y": 13.776,
+              "z": -26.726
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          },
+          {
+            "t": 7919.2,
+            "frameMs": 33.4,
+            "dog": {
+              "x": -8.803,
+              "y": 14.513,
+              "z": -26.719
+            },
+            "zoom": {
+              "mode": "free",
+              "distance": 70,
+              "min": 14,
+              "max": 70
+            }
+          }
+        ]
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/android-dog-sprint-camera/rolling-hills-free-far.png",
+        "stats": {
+          "width": 1080,
+          "height": 1963,
+          "stdev": 42.362,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      }
+    }
+  ]
+}

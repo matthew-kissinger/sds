@@ -1,0 +1,129 @@
+{
+  "capturedAt": "2026-05-16T19:37:38.540Z",
+  "budgets": {
+    "tree1": {
+      "lod0Ratio": 0.65,
+      "lod1Ratio": 0.45,
+      "lod0Budget": 4000
+    },
+    "tree2": {
+      "lod0Ratio": 0.42,
+      "lod1Ratio": 0.35,
+      "lod0Budget": 8000
+    }
+  },
+  "assets": {
+    "tree1.glb": {
+      "config": {
+        "ratio": 0.65,
+        "budget": 4000
+      },
+      "source": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree1.glb",
+      "runtimePath": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\models\\trees\\tree1.glb",
+      "intermediateBytes": 225688,
+      "runtimeBytes": 225352,
+      "runtimeTriangles": {
+        "total": 3783,
+        "verts": 6798,
+        "byMaterial": {
+          "branches": 780,
+          "leaves": 3003
+        }
+      }
+    },
+    "tree1_lod1.glb": {
+      "config": {
+        "ratio": 0.45,
+        "budget": 945
+      },
+      "source": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree1.glb",
+      "decimation": {
+        "before": {
+          "total": 2918,
+          "verts": 5245,
+          "byMaterial": {
+            "branches": 518,
+            "leaves": 2400
+          }
+        },
+        "after": {
+          "total": 944,
+          "verts": 1297,
+          "byMaterial": {
+            "branches": 518,
+            "leaves": 426
+          }
+        },
+        "leafBudget": 427,
+        "keepFraction": 0.17791666666666667
+      },
+      "runtimePath": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\models\\trees\\tree1_lod1.glb",
+      "intermediateBytes": 136040,
+      "runtimeBytes": 131652,
+      "runtimeTriangles": {
+        "total": 944,
+        "verts": 1331,
+        "byMaterial": {
+          "branches": 518,
+          "leaves": 426
+        }
+      }
+    },
+    "tree2.glb": {
+      "config": {
+        "ratio": 0.42,
+        "budget": 8000
+      },
+      "source": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree2.glb",
+      "runtimePath": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\models\\trees\\tree2.glb",
+      "intermediateBytes": 400368,
+      "runtimeBytes": 400296,
+      "runtimeTriangles": {
+        "total": 7700,
+        "verts": 14991,
+        "byMaterial": {
+          "branches": 987,
+          "leaves": 6713
+        }
+      }
+    },
+    "tree2_lod1.glb": {
+      "config": {
+        "ratio": 0.35,
+        "budget": 1925
+      },
+      "source": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree2.glb",
+      "decimation": {
+        "before": {
+          "total": 6458,
+          "verts": 12304,
+          "byMaterial": {
+            "branches": 864,
+            "leaves": 5594
+          }
+        },
+        "after": {
+          "total": 1924,
+          "verts": 3302,
+          "byMaterial": {
+            "branches": 864,
+            "leaves": 1060
+          }
+        },
+        "leafBudget": 1061,
+        "keepFraction": 0.1896675008938148
+      },
+      "runtimePath": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\models\\trees\\tree2_lod1.glb",
+      "intermediateBytes": 221832,
+      "runtimeBytes": 211948,
+      "runtimeTriangles": {
+        "total": 1924,
+        "verts": 3609,
+        "byMaterial": {
+          "branches": 864,
+          "leaves": 1060
+        }
+      }
+    }
+  }
+}

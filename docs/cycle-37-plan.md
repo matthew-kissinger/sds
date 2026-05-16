@@ -38,6 +38,18 @@ Closeout artifacts:
   Country captures. `../cycle36-validation/runtime/progressive-webgpu-default-perf-proof.json`
   passes Field, Rolling Hills, and Open Country inside the existing WebGPU perf
   budget.
+- Post-cycle mobile-readiness acceptance: the WebGPU cost-report,
+  QualityGovernor, Android ADB/CDP runner, and mobile tree-impostor path move
+  the refactor bundle fixture from `mainKB=576` to `mainKB=577`. This is an
+  accepted production-code delta for real-device mobile WebGPU governance, with
+  the governor split into its own lazy chunk to keep the main bundle increase
+  to one KiB.
+  Connected Android proof is recorded at
+  `../cycle37-validation/runtime/android-webgpu-rolling-hills-final-2026-05-16.json`:
+  device `R5CX4028VGJ`, secure localhost WebGPU, Rolling Hills follow-close
+  full scene, `p95=16.733 ms`, `p99=16.871 ms`, `drawCalls=37`,
+  `avgEstimatedTriangles=753920`, and no page/console errors. Full mobile
+  readiness continues in [`cycle-38-plan.md`](cycle-38-plan.md).
 
 ## Goal
 
@@ -50,7 +62,8 @@ readiness without crossing store, deploy, or default-renderer gates.
 
 ## How to read this plan
 
-This is the active next-cycle plan for `exp/konveyor-webgpu-migration`.
+This is completed evidence for the Konveyor migration. The current checkout is
+post-merge `main`; do not treat this plan as the active next-cycle plan.
 
 Order matters:
 

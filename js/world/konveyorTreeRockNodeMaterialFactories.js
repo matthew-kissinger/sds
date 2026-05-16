@@ -21,7 +21,7 @@ const COMMON_POSTURE = Object.freeze(['side', 'transparent', 'depthWrite', 'dept
 const LEAF_POSTURE = Object.freeze([...COMMON_POSTURE, 'alphaHash', 'alphaTest']);
 const DEFAULT_TREE_BRANCH_WIND = Object.freeze({
   windDirection: [0.7, 0.7],
-  windStrength: 0.18,
+  windStrength: 0.38,
   treeBaseY: -0.525,
   treeTopY: 0.525,
 });

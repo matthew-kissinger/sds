@@ -415,7 +415,20 @@
                     return true;
                 }
             };
-            const requested = params.get('renderer') || (readExperimentalWebGpuPreference() ? 'webgpu' : 'webgl');
+            const readRecentWebGpuFallback = () => {
+                try {
+                    const raw = localStorage.getItem('sds-renderer-fallback');
+                    if (!raw) return null;
+                    const record = JSON.parse(raw);
+                    if (record?.reason !== 'webgpu-frame-budget') return null;
+                    if (Date.now() - Number(record.at ?? 0) > 24 * 60 * 60 * 1000) return null;
+                    return record.reason;
+                } catch {
+                    return null;
+                }
+            };
+            const recentFallbackReason = params.has('renderer') ? null : readRecentWebGpuFallback();
+            const requested = params.get('renderer') || (readExperimentalWebGpuPreference() && !recentFallbackReason ? 'webgpu' : 'webgl');
             const diagnostic = params.get('diagnostic') === '1';
             const webgpuApiAvailable = !!navigator.gpu;
             const productionGate = params.get('konveyorProduction') === '1';
@@ -434,7 +447,7 @@
                 webgpuApiAvailable,
                 productionBootScout,
                 effective: productionBootScout ? 'webgpu-production-boot-scout' : (webgpuDiagnostic ? 'webgpu-diagnostic' : (productionWebGpu ? 'webgpu-production' : 'webgl')),
-                fallbackReason: requested === 'webgpu' && !diagnostic && !productionWebGpu ? 'webgpu-unavailable' : null
+                fallbackReason: recentFallbackReason || (requested === 'webgpu' && !diagnostic && !productionWebGpu ? 'webgpu-unavailable' : null)
             };
             window.__sdsG = {
                 r: webgpuDiagnostic,

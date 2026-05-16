@@ -4,15 +4,20 @@ Use this only after the branch review packet is accepted. It is intentionally
 separate from the autonomous run docs because merging, deploying, and changing
 the default renderer are release decisions.
 
-Current review packet:
+Historical Cycle 37 review packet:
 
-- Branch: `exp/konveyor-webgpu-migration`
-- Draft PR: [#52](https://github.com/matthew-kissinger/sds/pull/52)
+- Branch: `exp/konveyor-webgpu-migration`, since merged through PR
+  [#52](https://github.com/matthew-kissinger/sds/pull/52)
 - Completion audit:
   [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md)
 - Final local default-policy proof:
   `../cycle36-validation/runtime/progressive-webgpu-default-request-proof.json`
   and `../cycle36-validation/runtime/progressive-webgpu-default-perf-proof.json`
+
+For the later mobile-readiness work, do not reuse the Cycle 37 merge checklist
+as proof. Re-run validation from the current checkout, then add Cycle 38 mobile
+matrix artifacts, visual screenshot gates, iOS/BrowserStack canaries, and
+telemetry review before any release claim.
 
 ## Before Merge
 

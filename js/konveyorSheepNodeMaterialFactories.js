@@ -11,6 +11,7 @@ const DEFAULT_SHEEP = Object.freeze({
   woolNoiseScale: 0.62,
   woolDisplacementStrength: 0.045,
   breathingStrength: 0.012,
+  animationSpeed: 1,
 });
 
 function toArray(value, fallback) {
@@ -40,6 +41,7 @@ export function createKonveyorSheepNodeMaterialFactories(webGpuModules, options 
         woolNoiseScale: wool.noiseScale ?? context.woolNoiseScale ?? sheepDefaults.woolNoiseScale ?? DEFAULT_SHEEP.woolNoiseScale,
         woolDisplacementStrength: wool.displacementStrength ?? context.woolDisplacementStrength ?? sheepDefaults.woolDisplacementStrength ?? DEFAULT_SHEEP.woolDisplacementStrength,
         breathingStrength: wool.breathingStrength ?? context.breathingStrength ?? sheepDefaults.breathingStrength ?? DEFAULT_SHEEP.breathingStrength,
+        animationSpeed: wool.animationSpeed ?? context.animationSpeed ?? sheepDefaults.animationSpeed ?? DEFAULT_SHEEP.animationSpeed,
         vertexColors: material.vertexColors ?? context.vertexColors ?? sheepDefaults.vertexColors ?? true,
         fog: material.fog ?? context.fogEnabled ?? sheepDefaults.fog ?? false,
       });

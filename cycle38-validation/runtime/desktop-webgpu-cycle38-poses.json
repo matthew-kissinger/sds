@@ -1,0 +1,2259 @@
+{
+  "capturedAt": "2026-05-16T15:47:46.815Z",
+  "warmupMs": 2000,
+  "measureMs": 5000,
+  "target": "http://localhost:3000",
+  "renderer": "webgpu",
+  "results": [
+    {
+      "configId": "field-classic--follow-close--full",
+      "baseConfigId": "field-classic",
+      "scene": "field",
+      "mode": "classic",
+      "cameraPose": "follow-close",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.665527777779445,
+        "p50FrameTime": 16.66500000009934,
+        "p95FrameTime": 16.688333333283662,
+        "p99FrameTime": 16.70333333313465,
+        "maxFrameTime": 16.704999999950328,
+        "avgDrawCalls": 571,
+        "avgTriangles": 2219126,
+        "avgEstimatedTriangles": 14325729,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "field",
+          "cameraPose": "follow-close",
+          "frameP95": 16.688333333283662,
+          "frameP99": 16.70333333313465,
+          "drawCalls": 571,
+          "estimatedTrianglesBySystem": {
+            "Trees": 10007547,
+            "Grass": 3835944,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 58460,
+            "Structures": 20066,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 2000,
+            "Rocks": 282,
+            "Mountains": 0,
+            "Grass": 59070,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 0,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "follow-close",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 571,
+        "triangles": 2219126,
+        "points": 0,
+        "lines": 0,
+        "geometries": 35,
+        "textures": 33
+      },
+      "visualProbe": {
+        "sceneId": "field",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": false,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/field-classic--follow-close--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 71.241,
+          "stdev": 60.948,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "16.0"
+    },
+    {
+      "configId": "field-classic--classic-max--full",
+      "baseConfigId": "field-classic",
+      "scene": "field",
+      "mode": "classic",
+      "cameraPose": "classic-max",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 299,
+        "avgFrameTime": 16.65210144927637,
+        "p50FrameTime": 16.661666666716336,
+        "p95FrameTime": 16.706666666766008,
+        "p99FrameTime": 16.75,
+        "maxFrameTime": 16.761666666716337,
+        "avgDrawCalls": 1070,
+        "avgTriangles": 3073827.806020067,
+        "avgEstimatedTriangles": 15017073,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "field",
+          "cameraPose": "classic-max",
+          "frameP95": 16.706666666766008,
+          "frameP99": 16.75,
+          "drawCalls": 1070,
+          "estimatedTrianglesBySystem": {
+            "Trees": 10699251,
+            "Grass": 3834824,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 59220,
+            "Structures": 20066,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 2159,
+            "Rocks": 280,
+            "Mountains": 0,
+            "Grass": 86130,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 0,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "classic-max",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 1070,
+        "triangles": 3073824,
+        "points": 0,
+        "lines": 0,
+        "geometries": 39,
+        "textures": 33
+      },
+      "visualProbe": {
+        "sceneId": "field",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": false,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/field-classic--classic-max--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 49.075,
+          "stdev": 51.751,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.7"
+    },
+    {
+      "configId": "field-classic--tree-occluded--full",
+      "baseConfigId": "field-classic",
+      "scene": "field",
+      "mode": "classic",
+      "cameraPose": "tree-occluded",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 298,
+        "avgFrameTime": 16.721325503354702,
+        "p50FrameTime": 16.668333333482344,
+        "p95FrameTime": 16.95999999990066,
+        "p99FrameTime": 16.97999999995033,
+        "maxFrameTime": 16.986666666467986,
+        "avgDrawCalls": 571,
+        "avgTriangles": 2222206,
+        "avgEstimatedTriangles": 14735225,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "field",
+          "cameraPose": "tree-occluded",
+          "frameP95": 16.95999999990066,
+          "frameP99": 16.97999999995033,
+          "drawCalls": 571,
+          "estimatedTrianglesBySystem": {
+            "Trees": 10416147,
+            "Grass": 3834600,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 60700,
+            "Structures": 20066,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 2048,
+            "Rocks": 296,
+            "Mountains": 0,
+            "Grass": 59571,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 0,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "tree-occluded",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 571,
+        "triangles": 2222206,
+        "points": 0,
+        "lines": 0,
+        "geometries": 35,
+        "textures": 33
+      },
+      "visualProbe": {
+        "sceneId": "field",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": false,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/field-classic--tree-occluded--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 69.873,
+          "stdev": 61.689,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.4"
+    },
+    {
+      "configId": "field-classic--shoreline-glint--full",
+      "baseConfigId": "field-classic",
+      "scene": "field",
+      "mode": "classic",
+      "cameraPose": "shoreline-glint",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.661633333333675,
+        "p50FrameTime": 16.663333333283664,
+        "p95FrameTime": 16.688333333283662,
+        "p99FrameTime": 16.698333333184323,
+        "maxFrameTime": 16.716666666666665,
+        "avgDrawCalls": 1065,
+        "avgTriangles": 3279221.84,
+        "avgEstimatedTriangles": 14919385,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "field",
+          "cameraPose": "shoreline-glint",
+          "frameP95": 16.688333333283662,
+          "frameP99": 16.698333333184323,
+          "drawCalls": 1065,
+          "estimatedTrianglesBySystem": {
+            "Trees": 10593951,
+            "Grass": 3839976,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 61680,
+            "Structures": 20066,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 2123,
+            "Rocks": 289,
+            "Mountains": 0,
+            "Grass": 93894,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 0,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "shoreline-glint",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 1065,
+        "triangles": 3278414,
+        "points": 0,
+        "lines": 0,
+        "geometries": 39,
+        "textures": 33
+      },
+      "visualProbe": {
+        "sceneId": "field",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": false,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/field-classic--shoreline-glint--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 38.861,
+          "stdev": 35.489,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.5"
+    },
+    {
+      "configId": "field-classic--horizon-terrain-seam--full",
+      "baseConfigId": "field-classic",
+      "scene": "field",
+      "mode": "classic",
+      "cameraPose": "horizon-terrain-seam",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.66511666666303,
+        "p50FrameTime": 16.66500000009934,
+        "p95FrameTime": 16.688333333283662,
+        "p99FrameTime": 16.706666666766008,
+        "maxFrameTime": 16.708333333333332,
+        "avgDrawCalls": 1070,
+        "avgTriangles": 3123257.48,
+        "avgEstimatedTriangles": 15200636,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "field",
+          "cameraPose": "horizon-terrain-seam",
+          "frameP95": 16.688333333283662,
+          "frameP99": 16.706666666766008,
+          "drawCalls": 1070,
+          "estimatedTrianglesBySystem": {
+            "Trees": 10892502,
+            "Grass": 3836476,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 47880,
+            "Structures": 20066,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 2178,
+            "Rocks": 231,
+            "Mountains": 0,
+            "Grass": 86199,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 0,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "horizon-terrain-seam",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 1070,
+        "triangles": 3116813,
+        "points": 0,
+        "lines": 0,
+        "geometries": 39,
+        "textures": 33
+      },
+      "visualProbe": {
+        "sceneId": "field",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": false,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/field-classic--horizon-terrain-seam--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 48.609,
+          "stdev": 51.615,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.4"
+    },
+    {
+      "configId": "rolling-hills-classic--follow-close--full",
+      "baseConfigId": "rolling-hills-classic",
+      "scene": "rolling-hills",
+      "mode": "classic",
+      "cameraPose": "follow-close",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.66593888888842,
+        "p50FrameTime": 16.666666666666668,
+        "p95FrameTime": 16.686666666467985,
+        "p99FrameTime": 16.69499999980132,
+        "maxFrameTime": 16.696666666616995,
+        "avgDrawCalls": 73,
+        "avgTriangles": 2345574,
+        "avgEstimatedTriangles": 3559414,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "follow-close",
+          "frameP95": 16.686666666467985,
+          "frameP99": 16.69499999980132,
+          "drawCalls": 73,
+          "estimatedTrianglesBySystem": {
+            "Grass": 2284408,
+            "Trees": 871164,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 147,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Grass": 51707,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "follow-close",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 73,
+        "triangles": 2345574,
+        "points": 288,
+        "lines": 112,
+        "geometries": 37,
+        "textures": 18
+      },
+      "visualProbe": {
+        "sceneId": "rolling-hills",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 19.036,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/rolling-hills-classic--follow-close--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 42.451,
+          "stdev": 44.546,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.4"
+    },
+    {
+      "configId": "rolling-hills-classic--classic-max--full",
+      "baseConfigId": "rolling-hills-classic",
+      "scene": "rolling-hills",
+      "mode": "classic",
+      "cameraPose": "classic-max",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.66468333333151,
+        "p50FrameTime": 16.66500000009934,
+        "p95FrameTime": 16.683333333333334,
+        "p99FrameTime": 16.69500000004967,
+        "maxFrameTime": 16.696666666616995,
+        "avgDrawCalls": 107,
+        "avgTriangles": 2301725,
+        "avgEstimatedTriangles": 3559442,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "classic-max",
+          "frameP95": 16.683333333333334,
+          "frameP99": 16.69500000004967,
+          "drawCalls": 107,
+          "estimatedTrianglesBySystem": {
+            "Grass": 2284436,
+            "Trees": 871164,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 147,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Grass": 60935,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "classic-max",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 107,
+        "triangles": 2301725,
+        "points": 288,
+        "lines": 112,
+        "geometries": 37,
+        "textures": 18
+      },
+      "visualProbe": {
+        "sceneId": "rolling-hills",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 19.036,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/rolling-hills-classic--classic-max--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 50.43,
+          "stdev": 48.187,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.1"
+    },
+    {
+      "configId": "rolling-hills-classic--tree-occluded--full",
+      "baseConfigId": "rolling-hills-classic",
+      "scene": "rolling-hills",
+      "mode": "classic",
+      "cameraPose": "tree-occluded",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.665483333331032,
+        "p50FrameTime": 16.66500000009934,
+        "p95FrameTime": 16.683333333333334,
+        "p99FrameTime": 16.69500000004967,
+        "maxFrameTime": 16.696666666865347,
+        "avgDrawCalls": 73,
+        "avgTriangles": 2352126,
+        "avgEstimatedTriangles": 3563754,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "tree-occluded",
+          "frameP95": 16.683333333333334,
+          "frameP99": 16.69500000004967,
+          "drawCalls": 73,
+          "estimatedTrianglesBySystem": {
+            "Grass": 2288748,
+            "Trees": 871164,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 147,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Grass": 51941,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "tree-occluded",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 73,
+        "triangles": 2352126,
+        "points": 288,
+        "lines": 112,
+        "geometries": 37,
+        "textures": 18
+      },
+      "visualProbe": {
+        "sceneId": "rolling-hills",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 19.036,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/rolling-hills-classic--tree-occluded--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 37.665,
+          "stdev": 35.22,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.2"
+    },
+    {
+      "configId": "rolling-hills-classic--shoreline-glint--full",
+      "baseConfigId": "rolling-hills-classic",
+      "scene": "rolling-hills",
+      "mode": "classic",
+      "cameraPose": "shoreline-glint",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.664494444443964,
+        "p50FrameTime": 16.664999999850988,
+        "p95FrameTime": 16.68500000014901,
+        "p99FrameTime": 16.696666666865347,
+        "maxFrameTime": 16.710000000149012,
+        "avgDrawCalls": 103,
+        "avgTriangles": 2878799.7866666666,
+        "avgEstimatedTriangles": 3712936,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "shoreline-glint",
+          "frameP95": 16.68500000014901,
+          "frameP99": 16.696666666865347,
+          "drawCalls": 103,
+          "estimatedTrianglesBySystem": {
+            "Grass": 2288020,
+            "Trees": 1018734,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 2340,
+            "Structures": 130,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 173,
+            "Rocks": 13,
+            "Mountains": 0,
+            "Grass": 67393,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "shoreline-glint",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 103,
+        "triangles": 2882515,
+        "points": 288,
+        "lines": 112,
+        "geometries": 39,
+        "textures": 20
+      },
+      "visualProbe": {
+        "sceneId": "rolling-hills",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 19.036,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/rolling-hills-classic--shoreline-glint--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 42.594,
+          "stdev": 43.429,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.1"
+    },
+    {
+      "configId": "rolling-hills-classic--horizon-terrain-seam--full",
+      "baseConfigId": "rolling-hills-classic",
+      "scene": "rolling-hills",
+      "mode": "classic",
+      "cameraPose": "horizon-terrain-seam",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.665227777779126,
+        "p50FrameTime": 16.66500000009934,
+        "p95FrameTime": 16.686666666716338,
+        "p99FrameTime": 16.69500000004967,
+        "maxFrameTime": 16.696666666865347,
+        "avgDrawCalls": 107,
+        "avgTriangles": 2293465,
+        "avgEstimatedTriangles": 3549978,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "horizon-terrain-seam",
+          "frameP95": 16.686666666716338,
+          "frameP99": 16.69500000004967,
+          "drawCalls": 107,
+          "estimatedTrianglesBySystem": {
+            "Grass": 2274972,
+            "Trees": 871164,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Structures": 130,
+            "Rocks": 0,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 147,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Grass": 60640,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "horizon-terrain-seam",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 107,
+        "triangles": 2293465,
+        "points": 288,
+        "lines": 112,
+        "geometries": 37,
+        "textures": 18
+      },
+      "visualProbe": {
+        "sceneId": "rolling-hills",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 19.036,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/rolling-hills-classic--horizon-terrain-seam--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 50.849,
+          "stdev": 48.488,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.1"
+    },
+    {
+      "configId": "open-country-classic--follow-close--full",
+      "baseConfigId": "open-country-classic",
+      "scene": "open-country",
+      "mode": "classic",
+      "cameraPose": "follow-close",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.66564444444245,
+        "p50FrameTime": 16.666666666666668,
+        "p95FrameTime": 16.684999999900658,
+        "p99FrameTime": 16.69499999980132,
+        "maxFrameTime": 16.7,
+        "avgDrawCalls": 126,
+        "avgTriangles": 2776978,
+        "avgEstimatedTriangles": 8597847,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "open-country",
+          "cameraPose": "follow-close",
+          "frameP95": 16.684999999900658,
+          "frameP99": 16.69499999980132,
+          "drawCalls": 126,
+          "estimatedTrianglesBySystem": {
+            "Grass": 5386780,
+            "Trees": 2807355,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Structures": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 457,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Grass": 70047,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "follow-close",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 126,
+        "triangles": 2776978,
+        "points": 96,
+        "lines": 0,
+        "geometries": 23,
+        "textures": 18
+      },
+      "visualProbe": {
+        "sceneId": "open-country",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 145,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 15.66,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/open-country-classic--follow-close--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 53.058,
+          "stdev": 53.183,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.3"
+    },
+    {
+      "configId": "open-country-classic--classic-max--full",
+      "baseConfigId": "open-country-classic",
+      "scene": "open-country",
+      "mode": "classic",
+      "cameraPose": "classic-max",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.664438888889222,
+        "p50FrameTime": 16.664999999850988,
+        "p95FrameTime": 16.686666666716338,
+        "p99FrameTime": 16.698333333432675,
+        "maxFrameTime": 16.708333333333332,
+        "avgDrawCalls": 205,
+        "avgTriangles": 3461495,
+        "avgEstimatedTriangles": 8607134,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "open-country",
+          "cameraPose": "classic-max",
+          "frameP95": 16.686666666716338,
+          "frameP99": 16.698333333432675,
+          "drawCalls": 205,
+          "estimatedTrianglesBySystem": {
+            "Grass": 5390784,
+            "Trees": 2811378,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 1260,
+            "Mountains": 0,
+            "Structures": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 457,
+            "Rocks": 7,
+            "Mountains": 0,
+            "Grass": 102309,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "classic-max",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 205,
+        "triangles": 3461495,
+        "points": 96,
+        "lines": 0,
+        "geometries": 25,
+        "textures": 20
+      },
+      "visualProbe": {
+        "sceneId": "open-country",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 97,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 15.66,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/open-country-classic--classic-max--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 57.537,
+          "stdev": 60.621,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.3"
+    },
+    {
+      "configId": "open-country-classic--tree-occluded--full",
+      "baseConfigId": "open-country-classic",
+      "scene": "open-country",
+      "mode": "classic",
+      "cameraPose": "tree-occluded",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.665200000002983,
+        "p50FrameTime": 16.666666666666668,
+        "p95FrameTime": 16.686666666467985,
+        "p99FrameTime": 16.696666666616995,
+        "maxFrameTime": 16.7,
+        "avgDrawCalls": 128,
+        "avgTriangles": 2775258,
+        "avgEstimatedTriangles": 8631808,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "open-country",
+          "cameraPose": "tree-occluded",
+          "frameP95": 16.686666666467985,
+          "frameP99": 16.696666666616995,
+          "drawCalls": 128,
+          "estimatedTrianglesBySystem": {
+            "Grass": 5374796,
+            "Trees": 2852220,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 1080,
+            "Mountains": 0,
+            "Structures": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 454,
+            "Rocks": 6,
+            "Mountains": 0,
+            "Grass": 69952,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "tree-occluded",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 128,
+        "triangles": 2775258,
+        "points": 96,
+        "lines": 0,
+        "geometries": 25,
+        "textures": 20
+      },
+      "visualProbe": {
+        "sceneId": "open-country",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 154,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 15.66,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/open-country-classic--tree-occluded--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 54.349,
+          "stdev": 55.798,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.2"
+    },
+    {
+      "configId": "open-country-classic--shoreline-glint--full",
+      "baseConfigId": "open-country-classic",
+      "scene": "open-country",
+      "mode": "classic",
+      "cameraPose": "shoreline-glint",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.66548333333352,
+        "p50FrameTime": 16.666666666666668,
+        "p95FrameTime": 16.690000000099342,
+        "p99FrameTime": 16.7,
+        "maxFrameTime": 16.708333333333332,
+        "avgDrawCalls": 187.46666666666667,
+        "avgTriangles": 3818300.2,
+        "avgEstimatedTriangles": 8568860,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "open-country",
+          "cameraPose": "shoreline-glint",
+          "frameP95": 16.690000000099342,
+          "frameP99": 16.7,
+          "drawCalls": 188,
+          "estimatedTrianglesBySystem": {
+            "Grass": 5391540,
+            "Trees": 2772168,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 1440,
+            "Mountains": 0,
+            "Structures": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 452,
+            "Rocks": 8,
+            "Mountains": 0,
+            "Grass": 110257,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "shoreline-glint",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 180,
+        "triangles": 3512305,
+        "points": 96,
+        "lines": 0,
+        "geometries": 25,
+        "textures": 20
+      },
+      "visualProbe": {
+        "sceneId": "open-country",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 114,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 15.66,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/open-country-classic--shoreline-glint--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 44.239,
+          "stdev": 43.129,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.2"
+    },
+    {
+      "configId": "open-country-classic--horizon-terrain-seam--full",
+      "baseConfigId": "open-country-classic",
+      "scene": "open-country",
+      "mode": "classic",
+      "cameraPose": "horizon-terrain-seam",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 300,
+        "avgFrameTime": 16.664900000001012,
+        "p50FrameTime": 16.66500000009934,
+        "p95FrameTime": 16.683333333333334,
+        "p99FrameTime": 16.691666666666666,
+        "maxFrameTime": 16.696666666616995,
+        "avgDrawCalls": 203,
+        "avgTriangles": 3471603.3333333335,
+        "avgEstimatedTriangles": 8608579,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgl",
+          "deviceTier": "high",
+          "sceneId": "open-country",
+          "cameraPose": "horizon-terrain-seam",
+          "frameP95": 16.683333333333334,
+          "frameP99": 16.691666666666666,
+          "drawCalls": 203,
+          "estimatedTrianglesBySystem": {
+            "Grass": 5395712,
+            "Trees": 2807355,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 1800,
+            "Mountains": 0,
+            "Structures": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 457,
+            "Rocks": 10,
+            "Mountains": 0,
+            "Grass": 102340,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "horizon-terrain-seam",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 203,
+        "triangles": 3479182,
+        "points": 96,
+        "lines": 0,
+        "geometries": 23,
+        "textures": 18
+      },
+      "visualProbe": {
+        "sceneId": "open-country",
+        "renderer": "webgl",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384
+        },
+        "trees": {
+          "native": {
+            "applied": false,
+            "reason": "flag-disabled"
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": false,
+          "sunCameraGlint": false,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 98,
+          "maxInteractors": 220,
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": false,
+            "reason": "flag-disabled"
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 15.66,
+            "z": -30
+          }
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-cycle38-poses/open-country-classic--horizon-terrain-seam--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 57.142,
+          "stdev": 60.882,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "10.3"
+    }
+  ]
+}

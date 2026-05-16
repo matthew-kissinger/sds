@@ -176,6 +176,35 @@ class SheepDogSimulation {
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();
         const urlParams = new URLSearchParams(location.search);
+        this.qualityGovernor = null;
+        const sceneTier = this.sceneManager.getTier?.();
+        const initialDeviceTier = !this.sceneManager.isMobile
+            ? 'high'
+            : sceneTier === 'high'
+                ? 'high'
+                : sceneTier === 'med'
+                    ? 'mid'
+                    : 'low';
+        this.performanceMonitor.setDeviceTier(initialDeviceTier);
+        this.performanceMonitor.setQualityState({
+            deviceTier: initialDeviceTier,
+            qualityIndex: 0,
+            fallbackReason: null,
+        });
+        import('./perf/QualityGovernor.js').then(({ QualityGovernor }) => {
+            this.qualityGovernor = new QualityGovernor({
+                performanceMonitor: this.performanceMonitor,
+                isMobile: this.sceneManager.isMobile,
+                tier: sceneTier,
+                adapterLimits: window.__sdsG?.productionWebGpu?.devicePreflight?.adapterLimits ?? null,
+                autoFallback: urlParams.get('qualityAutoFallback') === '1',
+                onQualityStateChange: (state) => this.applyQualityState(state),
+            });
+            this.performanceMonitor.setDeviceTier(this.qualityGovernor.deviceTier);
+            const state = this.qualityGovernor.getState();
+            this.performanceMonitor.setQualityState(state);
+            this.applyQualityState(state);
+        }).catch(() => {});
 
         // Cycle 8 Phase C: perf harness hook. When `?perfMode=1` is set,
         // expose `window.__perfHarness` so Playwright (or a manual page
@@ -192,6 +221,7 @@ class SheepDogSimulation {
             // WebGLRenderer.info per-system without depending on cinematic=1
             // (which flips preserveDrawingBuffer and biases the numbers).
             const sceneManagerRef = this.sceneManager;
+            const gameInstanceRef = this;
             Object.defineProperty(window, '__sdsRenderer', {
                 configurable: true,
                 get() { return sceneManagerRef?.getRenderer?.() ?? null; }
@@ -202,22 +232,147 @@ class SheepDogSimulation {
                     return perfMon.isEnabled && sheep.length > 0 && perfMon.frameCount > 0;
                 },
                 getMetrics: () => ({ ...perfMon.metrics, frameCount: perfMon.frameCount }),
+                setCameraPose(poseId = 'default') {
+                    this._cameraPose = poseId;
+                    const cc = sceneManagerRef.getCameraController?.();
+                    if (poseId === 'follow-close') {
+                        cc?.setMode?.('follow');
+                        cc?.setZoom?.(cc.minDistance);
+                    } else if (poseId === 'classic-max' || poseId === 'horizon-terrain-seam') {
+                        cc?.setMode?.('classic');
+                        cc?.setZoom?.(cc.maxDistance);
+                    } else if (poseId === 'tree-occluded') {
+                        cc?.setMode?.('follow');
+                        cc?.setZoom?.(Math.max(cc.minDistance, 16));
+                    } else if (poseId === 'shoreline-glint') {
+                        cc?.setMode?.('classic');
+                        cc?.setZoom?.(Math.min(cc.maxDistance, 110));
+                    }
+                    return this._cameraPose;
+                },
+                setSystemIsolation(systemId = 'full') {
+                    this._systemIsolation = systemId;
+                    gameInstanceRef._perfSystemIsolation = systemId;
+                    const terrain = gameInstanceRef.terrainBuilder;
+                    const grassMeshes = Array.from(terrain?.grassSystem?.chunks?.values?.() ?? [])
+                        .map((chunk) => chunk?.mesh)
+                        .filter(Boolean);
+                    const groups = {
+                        terrain: [terrain?.terrainMesh, terrain?.terrainSkirtMesh].filter(Boolean),
+                        grass: grassMeshes,
+                        trees: Array.isArray(terrain?.trees) ? terrain.trees : [],
+                        rocks: Array.isArray(terrain?.rocks) ? terrain.rocks : [],
+                        water: [gameInstanceRef._animeWater?.mesh].filter(Boolean),
+                        sheep: [gameInstanceRef.gameState?.optimizedSheepSystem?.instancedMesh].filter(Boolean),
+                        structures: Object.values(gameInstanceRef.structureBuilder?.structures ?? {}).flat(),
+                        atmosphere: [
+                            gameInstanceRef.atmosphere?.sky?.getMesh?.(),
+                            gameInstanceRef.atmosphere?.cloudLayer?.getMesh?.(),
+                            gameInstanceRef._sunBillboard?.mesh,
+                        ].filter(Boolean),
+                    };
+                    if (!this._visibilitySnapshot) this._visibilitySnapshot = new WeakMap();
+                    const remember = (obj) => {
+                        if (obj && !this._visibilitySnapshot.has(obj)) {
+                            this._visibilitySnapshot.set(obj, obj.visible !== false);
+                        }
+                    };
+                    const setVisible = (list, visible) => {
+                        for (const obj of list) {
+                            remember(obj);
+                            obj.visible = visible;
+                        }
+                    };
+                    if (systemId === 'full') {
+                        for (const list of Object.values(groups)) {
+                            for (const obj of list) {
+                                if (this._visibilitySnapshot.has(obj)) {
+                                    obj.visible = this._visibilitySnapshot.get(obj);
+                                }
+                            }
+                        }
+                        return this._systemIsolation;
+                    }
+                    const selected = String(systemId).replace(/-only$/, '');
+                    for (const [name, list] of Object.entries(groups)) {
+                        setVisible(list, name === selected);
+                    }
+                    return this._systemIsolation;
+                },
+                getCostReport(frameTimes = null) {
+                    return perfMon.getCostReport({
+                        renderer: sceneManagerRef?.getRenderer?.(),
+                        sceneId: window.__currentSceneId ?? 'unknown',
+                        cameraPose: this._cameraPose ?? 'default',
+                        qualityState: gameInstanceRef.qualityGovernor?.getState?.() ?? {},
+                        frameTimes: frameTimes ?? undefined,
+                    });
+                },
+                getVisualProbe() {
+                    return gameInstanceRef.getCycle38VisualProbe?.() ?? null;
+                },
+                setDogDrive(state = {}) {
+                    const dir = state.direction ?? {};
+                    const x = Number(dir.x);
+                    const z = Number(dir.z);
+                    gameInstanceRef._perfDogDrive = {
+                        active: state.active !== false && Number.isFinite(x) && Number.isFinite(z),
+                        direction: { x, z },
+                        sprint: state.sprint !== false,
+                    };
+                    return gameInstanceRef._perfDogDrive;
+                },
+                setDogPose(state = {}) {
+                    const x = Number(state.x);
+                    const z = Number(state.z);
+                    if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
+                    const dog = gameInstanceRef.gameState?.getSheepdog?.();
+                    if (!dog) return false;
+                    dog.position.x = x;
+                    dog.position.z = z;
+                    if (state.resetVelocity !== false) {
+                        dog.velocity?.set?.(0, 0);
+                        dog.targetVelocity?.set?.(0, 0);
+                    }
+                    const surfaceY = gameInstanceRef.heightfield?.surfaceY?.(x, z)
+                        ?? gameInstanceRef.terrainBuilder?.sampleTerrainHeight?.(x, z)
+                        ?? 0;
+                    if (dog.mesh?.position) {
+                        dog.mesh.position.set(x, surfaceY, z);
+                    }
+                    if (Number.isFinite(state.rotation)) {
+                        dog.currentRotation = state.rotation;
+                        dog.targetRotation = state.rotation;
+                        if (dog.mesh) dog.mesh.rotation.y = state.rotation;
+                    }
+                    gameInstanceRef.sceneManager?.updateCamera?.(dog, 1 / 60);
+                    return true;
+                },
+                clearDogDrive() {
+                    gameInstanceRef._perfDogDrive = null;
+                    return true;
+                },
                 reset() {
                     perfMon.reset();
                     this._samples = [];
                     this._stop = 0;
+                    this._lastSampleTime = null;
                     return true;
                 },
                 startSampling(durationMs = 8000) {
                     this._samples = [];
                     this._stop = Date.now() + durationMs;
-                    const tick = () => {
+                    this._lastSampleTime = performance.now();
+                    const tick = (now) => {
                         if (Date.now() >= this._stop) return;
+                        const frameTime = Math.max(0, now - (this._lastSampleTime ?? now));
+                        this._lastSampleTime = now;
                         this._samples.push({
-                            t: performance.now(),
-                            frameTime: perfMon.metrics.avgFrameTime,
+                            t: now,
+                            frameTime,
                             drawCalls: perfMon.metrics.drawCalls,
                             triangles: perfMon.metrics.triangles,
+                            estimatedTriangles: perfMon.metrics.estimatedTriangles,
                             activeSheep: perfMon.metrics.activeSheepCount,
                         });
                         requestAnimationFrame(tick);
@@ -239,7 +394,11 @@ class SheepDogSimulation {
                         maxFrameTime: frameTimes[frameTimes.length - 1],
                         avgDrawCalls: samples.reduce((a, s) => a + s.drawCalls, 0) / samples.length,
                         avgTriangles: samples.reduce((a, s) => a + s.triangles, 0) / samples.length,
+                        avgEstimatedTriangles: samples.reduce((a, s) => a + s.estimatedTriangles, 0) / samples.length,
                         avgActiveSheep: samples.reduce((a, s) => a + s.activeSheep, 0) / samples.length,
+                        costReport: this.getCostReport(frameTimes),
+                        cameraPose: this._cameraPose ?? 'default',
+                        systemIsolation: this._systemIsolation ?? 'full',
                     };
                 },
             };
@@ -781,7 +940,10 @@ class SheepDogSimulation {
 
             const grassSystem = this.terrainBuilder.grassSystem;
             if (grassSystem) {
-                perf.addSystemTriangles('Grass', grassSystem.getTotalTriangleEstimate());
+                perf.addSystemTriangles(
+                    'Grass',
+                    grassSystem.getVisibleTriangleEstimate?.() ?? grassSystem.getTotalTriangleEstimate()
+                );
             }
 
             perf.addSystemTriangles('Structures', this.structureBuilder.getTotalTriangleEstimate());
@@ -790,9 +952,145 @@ class SheepDogSimulation {
             if (sheepSystem) {
                 perf.addSystemTriangles('Sheep', sheepSystem.getTotalTriangleEstimate());
             }
+            this.updatePerformanceVisibleCounts();
         } catch (error) {
             console.warn('[PERF] Failed to register system triangle counts:', error);
         }
+    }
+
+    applyQualityState(state = {}) {
+        this._qualityState = { ...state };
+        this.terrainBuilder?.applyQualityState?.(state);
+        this.terrainBuilder?.grassSystem?.applyQualityState?.(state);
+        this._animeWater?.setQualityState?.(state);
+        this.gameState?.optimizedSheepSystem?.setAnimationRate?.(state.sheepAnimationRate);
+    }
+
+    getCycle38VisualProbe() {
+        const grass = this.terrainBuilder?.grassSystem;
+        const waterMaterial = this._animeWater?.material;
+        const sheepSystem = this.gameState?.optimizedSheepSystem;
+        return {
+            sceneId: this.currentScene?.id ?? window.__currentSceneId ?? 'unknown',
+            renderer: window.__sdsRendererMode?.effective ?? null,
+            qualityState: this.qualityGovernor?.getState?.() ?? this._qualityState ?? {},
+            terrain: this.terrainBuilder?.konveyorTerrainGeometryBudget ?? null,
+            trees: {
+                native: this.terrainBuilder?.konveyorNativeTreeInstancingSummary ?? null,
+                impostorRuntime: this.terrainBuilder?.konveyorNativeTreeInstancingSummary?.impostor ?? null,
+                lodBias: this.terrainBuilder?.konveyorQualityState?.treeLodBias ?? 0,
+                materialSummary: this.terrainBuilder?.konveyorTreeRockMaterialSummary ?? null,
+                groundingSample: this.terrainBuilder?.konveyorTreeGroundingSample ?? [],
+            },
+            water: {
+                present: !!this._animeWater?.mesh,
+                worldSpaceHeightfield: waterMaterial?.userData?.konveyorWaterWorldSpaceHeightfield === true,
+                sunCameraGlint: waterMaterial?.userData?.konveyorWaterSunCameraGlint === true,
+                glintMode: waterMaterial?.userData?.konveyorWaterGlintMode ?? null,
+                glintGain: waterMaterial?.userData?.konveyorWaterGlintGain ?? null,
+                sparkleScale: this._animeWater?.qualitySparkleScale ?? 1,
+            },
+            grass: {
+                present: !!grass,
+                interactorCount: grass?.interactorCount ?? 0,
+                maxInteractors: grass?.config?.maxInteractors ?? 0,
+                interactorSample: grass?.getInteractorSample?.(8) ?? [],
+                qualityDistanceScale: grass?.qualityDistanceScale ?? 1,
+                qualityDensityScale: grass?.qualityDensityScale ?? 1,
+                materialSummary: grass?.konveyorGrassBladeMaterialSummary ?? null,
+                interactorContract: grass?.grassMaterial?.userData?.konveyorGrassBladeInteractors ?? null,
+            },
+            sheep: {
+                count: sheepSystem?.sheepCount ?? 0,
+                animationRate: sheepSystem?.animationUpdateRate ?? 1,
+                materialSummary: sheepSystem?.konveyorSheepMaterialSummary ?? null,
+                animationContract: sheepSystem?.material?.userData?.konveyorSheepAnimation ?? null,
+            },
+            dog: {
+                present: !!this.sheepdog?.mesh,
+                position: this.sheepdog?.mesh?.position
+                    ? {
+                        x: +this.sheepdog.mesh.position.x.toFixed(3),
+                        y: +this.sheepdog.mesh.position.y.toFixed(3),
+                        z: +this.sheepdog.mesh.position.z.toFixed(3),
+                    }
+                    : null,
+                velocity: this.sheepdog?.velocity
+                    ? {
+                        x: +this.sheepdog.velocity.x.toFixed(3),
+                        z: +this.sheepdog.velocity.z.toFixed(3),
+                    }
+                    : null,
+                rotation: Number.isFinite(this.sheepdog?.currentRotation)
+                    ? +this.sheepdog.currentRotation.toFixed(3)
+                    : null,
+            },
+        };
+    }
+
+    updatePerformanceVisibleCounts() {
+        try {
+            const tb = this.terrainBuilder;
+            const gs = tb.grassSystem?.getStats?.() ?? {};
+            const visibleBreakdown = tb.getVisibleTriangleBreakdown?.(this.sceneManager?.camera) ?? null;
+            const isolation = this._perfSystemIsolation ?? 'full';
+            const systemVisible = (system) => isolation === 'full' || isolation === `${system}-only`;
+            if (visibleBreakdown) {
+                this.performanceMonitor?.addSystemTriangles?.('Terrain', systemVisible('terrain') ? visibleBreakdown.Terrain : 0);
+                this.performanceMonitor?.addSystemTriangles?.('Trees', systemVisible('trees') ? visibleBreakdown.Trees : 0);
+                this.performanceMonitor?.addSystemTriangles?.('Rocks', systemVisible('rocks') ? visibleBreakdown.Rocks : 0);
+                this.performanceMonitor?.addSystemTriangles?.('Mountains', systemVisible('mountains') ? visibleBreakdown.Mountains : 0);
+            }
+            if (tb.grassSystem?.getVisibleTriangleEstimate) {
+                this.performanceMonitor?.addSystemTriangles?.('Grass', systemVisible('grass') ? tb.grassSystem.getVisibleTriangleEstimate() : 0);
+            }
+            const sheepSystem = this.gameState.optimizedSheepSystem;
+            const sheepVisible = systemVisible('sheep') && sheepSystem?.instancedMesh?.visible !== false;
+            const sheepTriangles = sheepVisible ? (sheepSystem?.getTotalTriangleEstimate?.() ?? 0) : 0;
+            this.performanceMonitor?.addSystemTriangles?.('Sheep', sheepTriangles);
+            const structureObjects = Object.values(this.structureBuilder?.structures ?? {}).flat();
+            const structuresVisible = systemVisible('structures') && structureObjects.some((obj) => obj?.visible !== false);
+            this.performanceMonitor?.addSystemTriangles?.(
+                'Structures',
+                structuresVisible ? this.structureBuilder.getTotalTriangleEstimate() : 0
+            );
+            const terrain = [tb.terrainMesh, tb.terrainSkirtMesh]
+                .filter((mesh) => mesh && mesh.visible !== false)
+                .length;
+            const treeGroups = Array.isArray(tb.trees)
+                ? tb.trees.filter((obj) => obj?.visible !== false).length
+                : (systemVisible('trees') ? (tb.konveyorNativeTreeInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
+            const rockGroups = Array.isArray(tb.rocks)
+                ? tb.rocks.filter((obj) => obj?.visible !== false).length
+                : (systemVisible('rocks') ? (tb.konveyorNativeRockInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
+            const structures = structureObjects.filter((obj) => obj?.visible !== false).length;
+            const grassChunks = systemVisible('grass') ? (gs.chunksVisible ?? 0) : 0;
+            const water = this._animeWater?.mesh?.visible === false ? 0 : (this._animeWater?.mesh ? 1 : 0);
+            const atmosphere = [
+                this.atmosphere?.sky?.getMesh?.(),
+                this.atmosphere?.cloudLayer?.getMesh?.(),
+                this._sunBillboard?.mesh,
+            ].filter((obj) => obj?.visible !== false).length;
+            const sheep = sheepVisible ? (this.gameState.getSheep?.()?.length ?? 0) : 0;
+            this.performanceMonitor?.setVisibleCountsBySystem?.({
+                Terrain: terrain,
+                Trees: systemVisible('trees')
+                    ? (tb.treeInstances?.length ?? tb.konveyorNativeTreeInstancingSummary?.treeInstances ?? 0)
+                    : 0,
+                Rocks: systemVisible('rocks')
+                    ? (tb.konveyorRockPlacementPlan?.totalRocks ?? tb.konveyorNativeRockInstancingSummary?.rockInstances ?? 0)
+                    : 0,
+                Mountains: systemVisible('mountains') ? (tb.mountains?.filter?.((obj) => obj?.visible !== false).length ?? 0) : 0,
+                Grass: systemVisible('grass') ? (gs.visibleClumps ?? gs.totalClumps ?? 0) : 0,
+                Structures: structures,
+                Sheep: sheep,
+                Water: water,
+                Atmosphere: atmosphere,
+            });
+            this.performanceMonitor?.setEstimatedDrawCalls?.(
+                terrain + treeGroups + rockGroups + grassChunks + structures + water + (sheep > 0 ? 1 : 0) + atmosphere
+            );
+        } catch {}
     }
     
     async startGame(mode = 'solo', roomData = null, singlePlayerMode = 'classic') {
@@ -1354,7 +1652,7 @@ class SheepDogSimulation {
 
             // Handle input only when game is active and not paused
             let movementDirection = this.inputHandler.getMovementDirection();
-            const wantsSprint = this.inputHandler.isSprinting();
+            let wantsSprint = this.inputHandler.isSprinting();
             const sheepdog = this.gameState.getSheepdog();
             
             // Store original direction for debugging
@@ -1362,6 +1660,15 @@ class SheepDogSimulation {
             
             // Transform movement direction for competitive mode camera orientation
             movementDirection = this.sceneManager.transformMovementForCompetitive(movementDirection);
+            const forcedDrive = this._perfDogDrive;
+            if (forcedDrive?.active) {
+                const x = Number(forcedDrive.direction?.x);
+                const z = Number(forcedDrive.direction?.z);
+                if (Number.isFinite(x) && Number.isFinite(z)) {
+                    movementDirection = new Vector2D(x, z);
+                    wantsSprint = forcedDrive.sprint !== false;
+                }
+            }
             
             // Debug log transformation in competitive mode
             if (this.sceneManager.competitiveCameraDirection && movementDirection.magnitude() > 0) {
@@ -1587,17 +1894,27 @@ class SheepDogSimulation {
                 const camera = this.sceneManager.getCamera();
                 const cameraPos = camera?.position;
                 if (cameraPos) {
-                    // Get all active sheep within camera view range (state 0 = active, 1 = retiring, 2 = retired)
-                    // Sheep use Vector2D with .x and .z properties
+                    const dogPos = this.sheepdog?.mesh?.position;
+                    const sheepLimit = Math.max(0, (this.terrainBuilder?.grassSystem?.config?.maxInteractors ?? 10) - 1);
+                    // Get active sheep within camera view range, then keep the
+                    // nearest sheep to the dog so the bounded WebGPU uniform
+                    // packet drives visible grass deformation around gameplay.
                     const visibleSheep = this.gameState.sheep
                         .filter(s => s && s.position && s.state !== 2)
                         .filter(s => {
-                            // Check if sheep is within reasonable view distance from camera
                             const dx = s.position.x - cameraPos.x;
                             const dz = s.position.z - cameraPos.z;
                             return dx * dx + dz * dz < 90000; // Within 300 units of camera
                         })
-                        .slice(0, 200); // All sheep
+                        .sort((a, b) => {
+                            if (!dogPos) return 0;
+                            const adx = a.position.x - dogPos.x;
+                            const adz = a.position.z - dogPos.z;
+                            const bdx = b.position.x - dogPos.x;
+                            const bdz = b.position.z - dogPos.z;
+                            return (adx * adx + adz * adz) - (bdx * bdx + bdz * bdz);
+                        })
+                        .slice(0, sheepLimit);
 
                     visibleSheep.forEach(sheep => {
                         interactionEntities.push({
@@ -1663,7 +1980,15 @@ class SheepDogSimulation {
         }
 
         // Update performance monitoring (always update for monitoring purposes)
-        this.performanceMonitor.updateMetrics(this.gameState, this.sceneManager.getRenderer());
+        const renderer = this.sceneManager.getRenderer();
+        this.updatePerformanceVisibleCounts();
+        this.performanceMonitor.updateMetrics(this.gameState, renderer);
+        this.qualityGovernor?.sample?.({
+            frameTime: this.performanceMonitor.metrics.lastFrameTime,
+            renderer,
+            rendererMode: this.performanceMonitor.rendererMode,
+            sceneId: this.currentScene?.id,
+        });
 
         // Cycle 5+: animate water uniforms (uTime drives ripples + foam noise)
         const sunDir = this.atmosphere?.getSunDirection?.();

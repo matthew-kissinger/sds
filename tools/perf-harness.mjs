@@ -37,9 +37,11 @@
  */
 
 import { chromium } from 'playwright';
-import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
+import { WEBGPU_MOBILE_BUDGETS } from '../js/perf/RenderCostReport.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -55,16 +57,84 @@ const args = Object.fromEntries(
 
 const MODE_BASELINE = !!args.baseline;
 const MODE_CHECK = !!args.check;
+const MODE_CAPTURE = !!args.capture;
 const WARMUP_MS = Number(args.warmup ?? 3) * 1000;
 const MEASURE_MS = Number(args.measure ?? 15) * 1000;
 const HEADED = !!args.headed;
+const BROWSER_CHANNEL = args.channel ?? null;
 const URL_BASE = args.url ?? 'http://localhost:3000';
 const RENDERER_MODE = args.renderer ?? 'webgl';
+const OUT_PATH = args.out ? resolve(ROOT, args.out) : RESULTS_PATH;
+const SCREENSHOTS = !!args.screenshots;
+const SCREENSHOT_DIR = args.screenshotDir
+    ? resolve(ROOT, args.screenshotDir)
+    : resolve(ROOT, 'cycle38-validation/screenshots/desktop');
+const BUDGET_TIER = args.budget === 'none' ? null : args.budget;
 const REGRESSION_PCT = 5; // % over baseline avgFrameTime
 const REGRESSION_FLOOR_MS = 0.5; // absolute slack
 const CHROMIUM_GPU_ARGS = !args.software && process.platform === 'win32'
     ? ['--use-angle=d3d11', '--enable-gpu']
     : [];
+
+function safeName(value) {
+    return String(value).replace(/[^a-z0-9_.-]+/gi, '-').replace(/^-+|-+$/g, '');
+}
+
+function relativeArtifactPath(path) {
+    return path.startsWith(ROOT) ? path.slice(ROOT.length + 1).replace(/\\/g, '/') : path;
+}
+
+async function analyzeScreenshot(buffer) {
+    const image = sharp(buffer);
+    const [stats, metadata] = await Promise.all([
+        image.stats(),
+        sharp(buffer).metadata(),
+    ]);
+    const channels = stats.channels.slice(0, 3);
+    const mean = channels.reduce((sum, c) => sum + c.mean, 0) / channels.length;
+    const stdev = channels.reduce((sum, c) => sum + c.stdev, 0) / channels.length;
+    const min = Math.min(...channels.map((c) => c.min));
+    const max = Math.max(...channels.map((c) => c.max));
+    return {
+        width: metadata.width,
+        height: metadata.height,
+        mean: +mean.toFixed(3),
+        stdev: +stdev.toFixed(3),
+        min,
+        max,
+        nonBlank: stdev > 2 && max - min > 12,
+    };
+}
+
+function evaluateBudget(result, tier) {
+    if (!tier || result.systemIsolation !== 'full' || !result.summary) return null;
+    const budget = WEBGPU_MOBILE_BUDGETS[tier];
+    if (!budget) return null;
+    const report = result.summary.costReport ?? {};
+    const estimatedTriangles = Object.values(report.estimatedTrianglesBySystem ?? {})
+        .reduce((sum, count) => sum + (Number.isFinite(count) ? count : 0), 0);
+    const frameP95 = report.frameP95 || result.summary.p95FrameTime;
+    const frameP99 = report.frameP99 || result.summary.p99FrameTime;
+    const drawCalls = report.drawCalls || result.summary.avgDrawCalls || 0;
+    const checks = {
+        frameP95: frameP95 <= budget.frameP95,
+        frameP99: frameP99 <= budget.frameP99,
+        drawCalls: drawCalls <= budget.drawCalls,
+        estimatedTriangles: estimatedTriangles <= budget.estimatedTriangles * 1.05,
+    };
+    return {
+        tier,
+        budget,
+        values: {
+            frameP95,
+            frameP99,
+            drawCalls,
+            estimatedTriangles,
+        },
+        checks,
+        ok: Object.values(checks).every(Boolean),
+    };
+}
 
 // Six-config default matrix. Per the cycle-15 plan: ≥6 configs, scenes
 // and sheep counts vary, sun=default to keep the matrix tight. Add more
@@ -78,10 +148,55 @@ const CONFIGS = [
     { id: 'open-country-extreme',    scene: 'open-country',   mode: 'extreme' }
 ];
 
+const CAMERA_POSES = Object.freeze([
+    'follow-close',
+    'classic-max',
+    'tree-occluded',
+    'shoreline-glint',
+    'horizon-terrain-seam',
+]);
+
+const SYSTEM_ISOLATIONS = Object.freeze([
+    'full',
+    'terrain-only',
+    'grass-only',
+    'trees-only',
+    'rocks-only',
+    'water-only',
+    'sheep-only',
+    'atmosphere-only',
+]);
+
+function pickList(value, defaults, allValues) {
+    if (!value) return defaults;
+    if (value === 'all') return allValues;
+    return String(value).split(',').filter(Boolean);
+}
+
 function pickConfigs() {
-    if (!args.configs) return CONFIGS;
+    const baseConfigs = !args.configs ? CONFIGS : CONFIGS.filter((c) => String(args.configs).split(',').includes(c.id));
+    const poses = pickList(args.poses, ['follow-close'], CAMERA_POSES);
+    const systems = pickList(args.systems, ['full'], SYSTEM_ISOLATIONS);
+    if (poses.length === 1 && poses[0] === 'follow-close' && systems.length === 1 && systems[0] === 'full') {
+        return baseConfigs;
+    }
+    return baseConfigs.flatMap((cfg) => poses.flatMap((pose) => systems.map((system) => ({
+        ...cfg,
+        id: `${cfg.id}--${pose}--${system}`,
+        baseId: cfg.id,
+        cameraPose: pose,
+        systemIsolation: system,
+    }))));
+}
+
+function baseConfigId(cfg) {
+    return cfg.baseId ?? cfg.id;
+}
+
+function legacyConfigFilter() {
+    if (!args.configs) return null;
     const wanted = String(args.configs).split(',');
-    return CONFIGS.filter((c) => wanted.includes(c.id));
+    return wanted;
 }
 
 async function seedIdentity(context) {
@@ -105,6 +220,11 @@ async function navigateAndWait(page, cfg) {
     url.searchParams.set('perfMode', '1');
     url.searchParams.set('autostart', '1');
     url.searchParams.set('mode', cfg.mode);
+    if (cfg.cameraPose) url.searchParams.set('perfPose', cfg.cameraPose);
+    if (cfg.systemIsolation) url.searchParams.set('perfSystem', cfg.systemIsolation);
+    if (args.nativeTreeImpostors === '1' || args.nativeTreeImpostors === true) {
+        url.searchParams.set('konveyorNativeTreeImpostors', '1');
+    }
     if (RENDERER_MODE !== 'default') {
         url.searchParams.set('renderer', RENDERER_MODE);
     }
@@ -137,6 +257,17 @@ async function captureSummary(page, durationMs) {
     }, durationMs);
 }
 
+async function applyPerfAxes(page, cfg) {
+    await page.evaluate(({ cameraPose, systemIsolation }) => {
+        const h = window.__perfHarness;
+        if (cameraPose) h?.setCameraPose?.(cameraPose);
+        if (systemIsolation) h?.setSystemIsolation?.(systemIsolation);
+    }, {
+        cameraPose: cfg.cameraPose ?? 'follow-close',
+        systemIsolation: cfg.systemIsolation ?? 'full',
+    });
+}
+
 async function captureRendererInfo(page) {
     return page.evaluate(() => {
         // Best-effort: many code paths stash the renderer somewhere reachable.
@@ -163,15 +294,32 @@ async function runConfig(browser, cfg) {
 
     let summary = null;
     let rendererInfo = null;
+    let visualProbe = null;
+    let screenshot = null;
     let warningStr = null;
 
     try {
         await navigateAndWait(page, cfg);
         await startGame(page);
         await waitReady(page, cfg.mode);
+        await applyPerfAxes(page, cfg);
         await page.waitForTimeout(WARMUP_MS);
         rendererInfo = await captureRendererInfo(page);
         summary = await captureSummary(page, MEASURE_MS);
+        visualProbe = await page.evaluate(() => window.__perfHarness?.getVisualProbe?.() ?? null).catch(() => null);
+        const effectiveRenderer = summary?.costReport?.renderer ?? visualProbe?.renderer ?? 'unknown';
+        if (RENDERER_MODE === 'webgpu' && !String(effectiveRenderer).startsWith('webgpu')) {
+            warningStr = `requested WebGPU but effective renderer is ${effectiveRenderer}`;
+        }
+        if (SCREENSHOTS) {
+            await mkdir(SCREENSHOT_DIR, { recursive: true });
+            const screenshotPath = resolve(SCREENSHOT_DIR, `${safeName(cfg.id)}.png`);
+            const buffer = await page.screenshot({ path: screenshotPath, fullPage: true });
+            screenshot = {
+                path: relativeArtifactPath(screenshotPath),
+                stats: await analyzeScreenshot(buffer),
+            };
+        }
     } catch (err) {
         warningStr = err.message;
     }
@@ -180,11 +328,16 @@ async function runConfig(browser, cfg) {
 
     return {
         configId: cfg.id,
+        baseConfigId: baseConfigId(cfg),
         scene: cfg.scene,
         mode: cfg.mode,
-        ok: !!summary && errors.length === 0,
+        cameraPose: cfg.cameraPose ?? 'follow-close',
+        systemIsolation: cfg.systemIsolation ?? 'full',
+        ok: !!summary && errors.length === 0 && !warningStr,
         summary,
         rendererInfo,
+        visualProbe,
+        screenshot,
         errors,
         warning: warningStr,
         elapsedSec: ((Date.now() - start) / 1000).toFixed(1)
@@ -238,24 +391,38 @@ function diffAgainstBaseline(current, baseline) {
 }
 
 async function main() {
-    if (MODE_BASELINE && MODE_CHECK) {
-        console.error('[PERF] Pass --baseline OR --check, not both.');
+    const modes = [MODE_BASELINE, MODE_CHECK, MODE_CAPTURE].filter(Boolean).length;
+    if (modes > 1) {
+        console.error('[PERF] Pass only one of --baseline, --check, or --capture.');
         process.exit(1);
     }
-    if (!MODE_BASELINE && !MODE_CHECK) {
-        console.error('[PERF] Pass --baseline (capture + write) or --check (diff vs committed).');
+    if (modes === 0) {
+        console.error('[PERF] Pass --baseline, --check, or --capture.');
         process.exit(1);
     }
 
     const configs = pickConfigs();
-    console.log(`[PERF] Mode: ${MODE_BASELINE ? 'BASELINE' : 'CHECK'}`);
+    const filter = legacyConfigFilter();
+    if (filter) {
+        for (const id of filter) {
+            if (!CONFIGS.some((cfg) => cfg.id === id)) {
+                console.warn(`[PERF] Unknown config requested: ${id}`);
+            }
+        }
+    }
+    console.log(`[PERF] Mode: ${MODE_BASELINE ? 'BASELINE' : MODE_CHECK ? 'CHECK' : 'CAPTURE'}`);
     console.log(`[PERF] Configs (${configs.length}): ${configs.map((c) => c.id).join(', ')}`);
     console.log(`[PERF] Warmup ${WARMUP_MS / 1000}s · measure ${MEASURE_MS / 1000}s · target ${URL_BASE} · renderer ${RENDERER_MODE}`);
+    if (BUDGET_TIER) console.log(`[PERF] Budget tier: ${BUDGET_TIER} (full-scene rows only)`);
+    if (SCREENSHOTS) console.log(`[PERF] Screenshots: ${relativeArtifactPath(SCREENSHOT_DIR)}`);
     if (CHROMIUM_GPU_ARGS.length > 0) {
         console.log(`[PERF] Chromium args: ${CHROMIUM_GPU_ARGS.join(' ')}`);
     }
+    if (BROWSER_CHANNEL) console.log(`[PERF] Browser channel: ${BROWSER_CHANNEL}`);
 
-    const browser = await chromium.launch({ headless: !HEADED, args: CHROMIUM_GPU_ARGS });
+    const launchOptions = { headless: !HEADED, args: CHROMIUM_GPU_ARGS };
+    if (BROWSER_CHANNEL) launchOptions.channel = BROWSER_CHANNEL;
+    const browser = await chromium.launch(launchOptions);
     const results = [];
 
     try {
@@ -268,6 +435,9 @@ async function main() {
             console.log(`[PERF]   ${tag} ${ms}  (${fps})  in ${r.elapsedSec}s`);
             if (r.rendererInfo) {
                 console.log(`[PERF]     renderer.info: ${r.rendererInfo.calls} calls, ${r.rendererInfo.triangles.toLocaleString()} tris, ${r.rendererInfo.geometries} geos, ${r.rendererInfo.textures} tex`);
+            }
+            if (r.screenshot?.stats && !r.screenshot.stats.nonBlank) {
+                console.warn(`[PERF]     screenshot looks blank: ${r.screenshot.path}`);
             }
             results.push(r);
         }
@@ -284,15 +454,15 @@ async function main() {
         results
     };
 
-    await mkdir(dirname(RESULTS_PATH), { recursive: true });
-    await writeFile(RESULTS_PATH, JSON.stringify(out, null, 2), 'utf8');
-    console.log(`\n[PERF] Saved last-run → ${RESULTS_PATH.split(ROOT)[1].slice(1)}`);
+    await mkdir(dirname(OUT_PATH), { recursive: true });
+    await writeFile(OUT_PATH, JSON.stringify(out, null, 2), 'utf8');
+    console.log(`\n[PERF] Saved results → ${relativeArtifactPath(OUT_PATH)}`);
 
     if (MODE_BASELINE) {
         await writeFile(BASELINE_PATH, JSON.stringify(out, null, 2), 'utf8');
         console.log(`[PERF] Saved baseline → ${BASELINE_PATH.split(ROOT)[1].slice(1)}`);
         console.log('[PERF] Commit `tests/perf-baseline/baseline.json` to pin.');
-    } else {
+    } else if (MODE_CHECK) {
         const baseline = await loadBaseline();
         if (!baseline) {
             console.error('[PERF] No baseline at tests/perf-baseline/baseline.json. Run with --baseline first.');
@@ -307,6 +477,27 @@ async function main() {
             process.exit(3);
         }
         console.log('[PERF] PASS.');
+    } else if (MODE_CAPTURE) {
+        const budgetResults = results.map((result) => ({ configId: result.configId, budget: evaluateBudget(result, BUDGET_TIER) }))
+            .filter((entry) => entry.budget);
+        const budgetFailures = budgetResults.filter((entry) => !entry.budget.ok);
+        const blankScreenshots = results.filter((result) => result.screenshot && !result.screenshot.stats.nonBlank);
+        if (budgetResults.length > 0) {
+            console.log(`\n[PERF] Budget checks: ${budgetResults.length - budgetFailures.length}/${budgetResults.length} passed.`);
+            for (const failure of budgetFailures) {
+                console.error(`[PERF]   BUDGET FAIL ${failure.configId}: ${JSON.stringify(failure.budget.values)}`);
+            }
+        }
+        if (blankScreenshots.length > 0) {
+            for (const failure of blankScreenshots) {
+                console.error(`[PERF]   SCREENSHOT BLANK ${failure.configId}: ${failure.screenshot.path}`);
+            }
+        }
+        if (budgetFailures.length > 0 || blankScreenshots.length > 0 || results.some((r) => !r.ok)) {
+            console.error('[PERF] FAIL — capture gates failed.');
+            process.exit(4);
+        }
+        console.log('[PERF] CAPTURE PASS.');
     }
 }
 

@@ -1,19 +1,23 @@
 # Konveyor Autonomous Run
 
-> Active handoff for the experimental SDS WebGPU, optimization, and native
-> shipping campaign. This is not a normal numbered cycle. It is the branch-level
-> operating brief for autonomous work on `exp/konveyor-webgpu-migration`.
+> Active handoff for the SDS WebGPU, optimization, and native shipping campaign.
+> This is not a normal numbered cycle. It started as the branch-level operating
+> brief for `exp/konveyor-webgpu-migration`; after PR #52, it is the current
+> campaign handoff for post-merge WebGPU/mobile work.
 
 ## Branch
 
-Work on:
+Historical Konveyor work happened on:
 
 ```bash
 git switch exp/konveyor-webgpu-migration
 ```
 
-Do not run the full Konveyor campaign on `main`. Keep `main` available for
-ordinary site fixes, releases, and paired production work.
+PR #52 has since merged the progressive WebGPU packet to `main`, and the current
+checkout for the mobile-readiness work is `main`. Continue from the current
+checkout or create a scoped `codex/` branch before committing. Do not restart
+from the stale experimental branch unless the user explicitly asks to inspect
+that historical line.
 
 ## Objective
 
@@ -48,6 +52,10 @@ control surface:
   records the performance, memory, worker, WebGPU-compute, and Rust/WASM option
   space while keeping `shared/**` deterministic changes behind explicit
   authorization.
+- [`archive/research/browser-device-performance-spike-2026-05-16.md`](archive/research/browser-device-performance-spike-2026-05-16.md)
+  records the browser/device/WebGPU/mobile best-practice spike, including why
+  Android WebGPU must be tested on a secure localhost origin through ADB reverse
+  and why one phone proof is not broad mobile certification.
 - [`archive/research/cycle-36-webgpu-hero-blocker.md`](archive/research/cycle-36-webgpu-hero-blocker.md)
   records why Rolling Hills production rendering should not be the first
   WebGPU boot target.
@@ -79,10 +87,46 @@ control surface:
   `../cycle36-validation/runtime/progressive-webgpu-default-perf-proof.json`
   and settings UI proof at
   `../cycle36-validation/runtime/progressive-webgpu-settings-toggle.png`.
+- The post-Cycle 37 mobile-readiness pass added the first connected Android
+  WebGPU proof and the runtime budget layer needed for mobile policy. The proof
+  artifact is
+  `../cycle37-validation/runtime/android-webgpu-rolling-hills-final-2026-05-16.json`.
+  Device `R5CX4028VGJ` ran Android Chrome through secure localhost with
+  `adb reverse tcp:3000 tcp:3000`; WebGPU was available, Rolling Hills
+  follow-close full-scene WebGPU held `p95=16.733 ms` and `p99=16.871 ms`, and
+  the run reported `drawCalls=37`, `avgEstimatedTriangles=753920`, and no page
+  or console errors. This is a valid high-mobile baseline, not full
+  scene/device certification.
+- The mobile-readiness implementation also added custom WebGPU cost estimates,
+  the `QualityGovernor`, Android ADB/CDP perf tooling, mobile WebGPU tree/rock
+  culling, committed Kiln impostor sidecar use for the mobile tree path, shared
+  branch/leaf wind controls, dog-through-tree leaf occluder controls,
+  deep-blue shoreline/glint water controls, grass interaction for dog plus
+  nearest sheep, and tiered terrain fidelity policy.
+- Cycle 38 follow-up evidence shows the mobile path is still not ready. The dog
+  sprint harness now drives a line route across the island
+  (`netDisplacement=148.477`, `straightness=0.974`), but the current connected
+  phone proof still records sprint-start spikes up to `66.7 ms`. The Android
+  runner now keeps one game page target, but Open Country still misses
+  high-mobile budgets. Current artifacts under `../cycle38-validation/runtime/`
+  report follow-close around `p95=50.1 ms` / `p99=50.1 ms` and
+  horizon/terrain-seam around `p95=50.0 ms` / `p99=50.1 ms`. Terrain
+  seams/bands, grass-displacement readability, and proper view-dependent
+  octahedral impostors remain active blockers.
+- A later full connected-Android pose matrix is now recorded at
+  `../cycle38-validation/runtime/android-webgpu-cycle38-poses.json`: 15
+  full-scene rows, nonblank screenshots for every row, all rows red for
+  high-mobile budget, and 12 rows red for mid-mobile budget. The WebGPU
+  impostor lab proof is also executable at `npm run probe:webgpu-impostor-lab`
+  and records dynamic tile controls plus lat/lon and octahedral selector
+  variation, but it is a diagnostic lab only.
 
-The important conclusion: installed Chrome 148 can create a WebGPU device on
-the current Windows machine, but Playwright's bundled Chromium 147 exposes
-WebGPU and fails `requestDevice()`. Device creation is the gate.
+The desktop browser conclusion: installed Chrome 148 can create a WebGPU device
+on the current Windows machine, but Playwright's bundled Chromium 147 exposes
+WebGPU and fails `requestDevice()`. Device creation is the gate. The Android
+conclusion: Chrome WebGPU works on the connected phone when tested through
+secure localhost, but the full scene/camera/device matrix is still Cycle 38
+work.
 
 Native-readiness now has a code seam:
 
@@ -636,16 +680,20 @@ WebGPU now has a diagnostic island, not a production renderer:
 
 ## Next autonomous direction
 
-Cycle 37 is complete. Start with [`../NEXT_SESSION.md`](../NEXT_SESSION.md),
-then review [`cycle-37-plan.md`](cycle-37-plan.md),
+Cycle 37 and the first Android WebGPU mobile-readiness pass are complete. Cycle
+38 is active/incomplete. Start with [`../NEXT_SESSION.md`](../NEXT_SESSION.md),
+then review
+[`cycle-38-plan.md`](cycle-38-plan.md), [`cycle-37-plan.md`](cycle-37-plan.md),
 [`native-packaging-proof-0.md`](native-packaging-proof-0.md), and
 [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md).
-The next implementation step should be planned from the current packet instead
-of rerunning the Cycle 37 phases.
+The next implementation step is to continue the Cycle 38 mobile matrix, visual
+acceptance gates, asset-budget rebake, and governor-knob wiring from the latest
+connected-phone findings. Do not rerun the Cycle 37 phases or treat the
+one-phone Rolling Hills proof as full mobile certification.
 
 The older material-island sequence below is historical context for how the
 current WebGPU route was built. Use it for orientation, not as the next pickup
-order after Cycle 37.
+order after Cycle 37 or the mobile-readiness proof.
 
 Recommended order:
 
@@ -828,20 +876,22 @@ Recommended order:
    runtime variability as the packaging risk. Refresh those facts before
    choosing Tauri, Electron, Capacitor, default web renderer policy, a GPU LUT,
    a tree rebake, or a compute path.
-6. **Current visual-polish status.** The first design-led WebGPU polish pass from
+6. **Current visual-polish and mobile-readiness status.** The first design-led
+   WebGPU polish pass from
    `docs/konveyor-visual-polish-qa-2026-05-16.md` is implemented and Cycle 37
-   closed its perf and sun/sky follow-up. The latest accepted packet is
+   closed its perf and sun/sky follow-up. The latest Cycle 37 packet is
    `cycle36-validation/runtime/cycle37-final-webgpu-request.json`, screenshots
    live in `cycle36-validation/runtime/cycle37-final-webgpu-request/`, and perf
    proof is `cycle36-validation/runtime/cycle37-final-webgpu-perf.json`.
-   Rolling Hills passed with `avgFrameTime=6.993 ms`,
-   `p95FrameTime=7.29 ms`, and `sampleCount=1144`; Open Country passed with
-   `avgFrameTime=6.944 ms`, `p95FrameTime=6.958 ms`, and
-   `sampleCount=1151`. Matt later approved a progressive WebGPU default with
-   WebGL fallback, forced `?renderer=webgl`, and an experimental settings
-   toggle. Store/signing/native-shell decisions still require explicit
-   approval. Continue from this packet; do not restart Cycle 37 or reframe the
-   work as strict WebGL parity.
+   Matt later approved a progressive WebGPU default with WebGL fallback, forced
+   `?renderer=webgl`, and an experimental settings toggle. The later
+   mobile-readiness pass added connected Android proof at
+   `cycle37-validation/runtime/android-webgpu-rolling-hills-final-2026-05-16.json`
+   with Rolling Hills follow-close WebGPU at `p95=16.733 ms` and
+   `p99=16.871 ms`. Continue with `docs/cycle-38-plan.md`; do not restart Cycle
+   37, do not treat one Android pose as full mobile certification, and do not
+   reframe the work as strict WebGL parity. Store/signing/native-shell decisions
+   still require explicit approval.
 
 ## Hard stops
 
@@ -881,5 +931,5 @@ safe route, and keep moving.
 Use this exact goal for the next session:
 
 ```text
-/goal On branch exp/konveyor-webgpu-migration, continue after the completed Cycle 37 packet and approved progressive WebGPU default. Read NEXT_SESSION.md, docs/cycle-37-plan.md, docs/native-packaging-proof-0.md, and docs/native-store-steam-readiness-checklist.md. Do not rerun Cycle 37 unless its artifacts are stale. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Next implementation work should be planned explicitly from the current packet; if Matt approves native shell code, keep the first Electron proof inside sandbox/native-electron-proof/ and document package size, startup, fullscreen/pointer-lock, audio, storage, and multiplayer behavior before adding broader shell or store work. Do not submit to Steam/App Store/Google Play, pay store fees, add Steamworks features, sign installers, or cross store/manual gates without explicit approval.
+/goal On the current SDS checkout, continue after the completed Cycle 37 packet, approved progressive WebGPU default, and first connected-Android WebGPU mobile-readiness proof. Read NEXT_SESSION.md, docs/cycle-38-plan.md, docs/cycle-37-plan.md, docs/konveyor-autonomous-run.md, and docs/konveyor-sds.md. Do not rerun Cycle 37 or treat the one-phone Rolling Hills proof as full mobile certification. Execute Cycle 38: run the WebGPU mobile scene/camera/system matrix, add visual screenshot gates, rebuild over-budget author-time tree/rock assets with LOD/impostor sidecars, and wire the remaining QualityGovernor knobs. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Create a scoped codex/ branch before committing if branch isolation is desired. Do not touch shared/**, sim-baseline goldens, worker migrations, paid-store submission, signing, Steam/App Store/Google Play, production deploy, or native-shell dependencies without explicit approval.
 ```

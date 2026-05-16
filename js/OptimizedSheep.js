@@ -66,6 +66,8 @@ export class OptimizedSheepSystem {
         this.konveyorSheepFactories = opts.konveyorSheepFactories;
         this.konveyorSheepMaterialSummary = null;
         this.konveyorSheepMaterialControls = null;
+        this.animationUpdateRate = 1;
+        this._animationUpdateFrame = 0;
 
         // Extreme boids optimization flag
         this.useExtremeBoids = useExtremeBoids;
@@ -560,6 +562,12 @@ export class OptimizedSheepSystem {
         instanceData.needsUpdate = true;
         instanceAnimation.needsUpdate = true;
     }
+
+    setAnimationRate(rate = 1) {
+        this.animationUpdateRate = Number.isFinite(rate)
+            ? THREE.MathUtils.clamp(rate, 0.25, 1)
+            : 1;
+    }
     
     /**
      * Enable or disable the extreme boid optimization system
@@ -648,6 +656,9 @@ export class OptimizedSheepSystem {
         const gameState = getGameState();
         const isHighDifficultyMode = gameState?.gameMode === 'solo' &&
             (gameState.singlePlayerMode === 'extreme' || gameState.singlePlayerMode === 'insane');
+
+        const animationUpdateStride = Math.max(1, Math.round(1 / this.animationUpdateRate));
+        const animationFrame = this._animationUpdateFrame;
 
         // Update each sheep
         for (let i = 0; i < this.sheepCount; i++) {
@@ -780,9 +791,11 @@ export class OptimizedSheepSystem {
                 // which might make it appear stuck, but it's better than a crash or full invisibility.
             }
             
-            // Update animation attributes
-            this.updateInstanceAttributes(i, sheep);
+            if (animationUpdateStride === 1 || ((i + animationFrame) % animationUpdateStride) === 0) {
+                this.updateInstanceAttributes(i, sheep);
+            }
         }
+        this._animationUpdateFrame = (animationFrame + 1) % animationUpdateStride;
         
         // Play group bleat if multiple sheep started being chased this frame
         if (shouldPlayGroupBleat && sheepBeingChased > 0 && this.audioManager) {

@@ -65,6 +65,7 @@ export function createKonveyorTerrainNodeMaterialFactories(webGpuModules, option
         horizonFogStrength: context.horizonFogStrength ?? terrainDefaults.horizonFogStrength ?? options.horizonFogStrength,
         dirtStrength: context.noise?.dirtStrength ?? context.dirtStrength ?? terrainDefaults.dirtStrength ?? options.dirtStrength,
         peakHeight: heightfield.peakHeight ?? context.peakHeight ?? terrainDefaults.peakHeight ?? options.peakHeight ?? 1,
+        heightfieldWorldSize: heightfield.worldSize ?? context.heightfieldWorldSize ?? terrainDefaults.heightfieldWorldSize ?? options.heightfieldWorldSize,
         colorScale: context.colorScale ?? terrainDefaults.colorScale ?? options.colorScale,
         side: context.side ?? terrainDefaults.side ?? options.side,
         polygonOffset,

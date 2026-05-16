@@ -24,11 +24,19 @@ export function createKonveyorGrassBladeNodeMaterial(
   const windDirection = uniform(vector2(grassBlade.windDirection));
   const windStrength = uniform(grassBlade.windStrength);
   const sunDirection = uniform(vector3(grassBlade.sunDirection));
-  const interactorPosition = uniform(vector3([0, -10000, 0]));
-  const interactorFacing = uniform(vector2([0, 1]));
+  const maxNodeInteractors = Math.max(1, Math.min(8, grassBlade.maxNodeInteractors ?? 4));
+  const interactorPositions = Array.from({ length: maxNodeInteractors }, () => uniform(vector3([0, -10000, 0])));
+  const interactorFacings = Array.from({ length: maxNodeInteractors }, () => uniform(vector2([0, 1])));
+  const interactorTypes = Array.from({ length: maxNodeInteractors }, () => uniform(0));
   const interactorCount = uniform(0);
   const interactionRadius = uniform(grassBlade.interactionRadius ?? 2.2);
   const interactionStrength = uniform(grassBlade.interactionStrength ?? 0.6);
+  const sheepInteractionRadius = uniform(grassBlade.sheepInteractionRadius ?? 1.25);
+  const sheepInteractionStrength = uniform(grassBlade.sheepInteractionStrength ?? 0.38);
+  const interactionVisualScaleValue = grassBlade.interactionVisualScale ?? 2.8;
+  const interactionLaydownStrength = grassBlade.interactionLaydownStrength ?? 0.9;
+  const interactionShadowStrength = grassBlade.interactionShadowStrength ?? 0.42;
+  const interactionVisualScale = float(interactionVisualScaleValue);
   const windDir = normalize(windDirection);
   const windPerp = vec2(windDir.y.negate(), windDir.x);
   const windPower = height01.mul(height01);
@@ -47,17 +55,28 @@ export function createKonveyorGrassBladeNodeMaterial(
   const flutter = sin(worldX.mul(0.7).add(worldZ.mul(0.6)).add(time.mul(4.5)));
   const windDisp = windDir.mul(carrier.mul(windStrength).mul(windPower))
     .add(windPerp.mul(flutter.mul(windStrength).mul(0.06).mul(tipMask)));
-  const interactorDelta = vec2(worldX.sub(interactorPosition.x), worldZ.sub(interactorPosition.z));
-  const interactorDistance = max(length(interactorDelta), 0.001);
-  const pushDirection = interactorDelta.div(interactorDistance);
-  const facing = normalize(interactorFacing);
-  const side = vec2(facing.y.negate(), facing.x);
-  const along = abs(dot(interactorDelta, facing));
-  const across = abs(dot(interactorDelta, side));
-  const bodyDistance = length(vec2(along.div(1.65), across.div(0.78)));
-  const activeInteractor = smoothstep(0.5, 0.95, interactorCount);
-  const bodyFalloff = float(1.0).sub(smoothstep(0.15, interactionRadius, bodyDistance)).mul(activeInteractor);
-  const interactionDisp = pushDirection.mul(bodyFalloff.mul(interactionStrength).mul(windPower));
+  let interactionDisp = vec2(0.0, 0.0);
+  let bodyFalloffTotal = float(0.0);
+  for (let i = 0; i < maxNodeInteractors; i++) {
+    const interactorPosition = interactorPositions[i];
+    const entityType = clamp(interactorTypes[i], 0.0, 1.0);
+    const interactorDelta = vec2(worldX.sub(interactorPosition.x), worldZ.sub(interactorPosition.z));
+    const interactorDistance = max(length(interactorDelta), 0.001);
+    const pushDirection = interactorDelta.div(interactorDistance);
+    const facing = normalize(interactorFacings[i]);
+    const side = vec2(facing.y.negate(), facing.x);
+    const along = abs(dot(interactorDelta, facing));
+    const across = abs(dot(interactorDelta, side));
+    const halfLen = mix(1.65, 0.72, entityType);
+    const halfWidth = mix(0.78, 0.56, entityType);
+    const bodyDistance = length(vec2(along.div(halfLen), across.div(halfWidth)));
+    const activeInteractor = smoothstep(i + 0.5, i + 0.95, interactorCount);
+    const radius = mix(interactionRadius, sheepInteractionRadius, entityType);
+    const strength = mix(interactionStrength, sheepInteractionStrength, entityType).mul(interactionVisualScale);
+    const bodyFalloff = float(1.0).sub(smoothstep(0.15, radius, bodyDistance)).mul(activeInteractor);
+    interactionDisp = interactionDisp.add(pushDirection.mul(bodyFalloff.mul(strength).mul(windPower)));
+    bodyFalloffTotal = max(bodyFalloffTotal, bodyFalloff);
+  }
   const tipColor = mix(
     vec3(...linearColor(grassBlade.tipColor)),
     vec3(...linearColor(grassBlade.midColor)),
@@ -87,7 +106,7 @@ export function createKonveyorGrassBladeNodeMaterial(
       .mul(grassBlade.distanceFadeStrength)
   );
   const colorScale = grassBlade.colorScale ?? 1;
-  const interactionShadow = float(1.0).sub(bodyFalloff.mul(0.18).mul(smoothstep(0.15, 1.0, height01)));
+  const interactionShadow = float(1.0).sub(bodyFalloffTotal.mul(interactionShadowStrength).mul(smoothstep(0.15, 1.0, height01)));
   const grassColor = gradient.add(variation).mul(ao).mul(interactionShadow)
     .add(sunTip)
     .add(tipColor.mul(verticalRim.mul(0.2).mul(tipMask)))
@@ -103,7 +122,8 @@ export function createKonveyorGrassBladeNodeMaterial(
   );
   material.opacityNode = densityFade;
   const totalDisp = windDisp.add(interactionDisp);
-  material.positionNode = positionLocal.add(vec3(totalDisp.x, 0.0, totalDisp.y));
+  const interactionLaydown = bodyFalloffTotal.mul(-interactionLaydownStrength).mul(windPower);
+  material.positionNode = positionLocal.add(vec3(totalDisp.x, interactionLaydown, totalDisp.y));
   if (material.isMeshStandardNodeMaterial) {
     material.roughnessNode = float(0.96);
     material.metalnessNode = float(0.0);
@@ -128,11 +148,23 @@ export function createKonveyorGrassBladeNodeMaterial(
     windDirection,
     windStrength,
     sunDirection,
-    interactorPosition,
-    interactorFacing,
+    interactorPositions,
+    interactorFacings,
+    interactorTypes,
     interactorCount,
     interactionRadius,
     interactionStrength,
+    sheepInteractionRadius,
+    sheepInteractionStrength,
+    maxNodeInteractors,
+  };
+  material.userData.konveyorGrassBladeInteractors = {
+    maxNodeInteractors,
+    source: 'dog-plus-nearest-sheep-unrolled',
+    displacement: 'horizontal-push-plus-laydown',
+    visualScale: interactionVisualScaleValue,
+    laydownStrength: interactionLaydownStrength,
+    shadowStrength: interactionShadowStrength,
   };
   material.userData.konveyorGrassBladeMaterialControls = createKonveyorGrassBladeNodeMaterialControls(material);
   return material;
@@ -143,16 +175,24 @@ function createKonveyorGrassBladeNodeMaterialControls(material) {
   return {
     nodes,
     updateInteractors(state = {}) {
-      const count = Math.max(0, Math.min(1, Number.isFinite(state.count) ? state.count : 0));
+      const count = Math.max(0, Math.min(nodes.maxNodeInteractors, Number.isFinite(state.count) ? state.count : 0));
       nodes.interactorCount.value = count;
       if (count <= 0) return;
       const positions = state.positions;
       const facings = state.facings;
-      if (nodes.interactorPosition?.value && positions?.length >= 3) {
-        nodes.interactorPosition.value.set(positions[0], positions[1], positions[2]);
-      }
-      if (nodes.interactorFacing?.value && facings?.length >= 2) {
-        nodes.interactorFacing.value.set(facings[0], facings[1]);
+      const data = state.data;
+      for (let i = 0; i < count; i++) {
+        const pIdx = i * 3;
+        const fIdx = i * 2;
+        if (nodes.interactorPositions[i]?.value && positions?.length >= pIdx + 3) {
+          nodes.interactorPositions[i].value.set(positions[pIdx], positions[pIdx + 1], positions[pIdx + 2]);
+        }
+        if (nodes.interactorFacings[i]?.value && facings?.length >= fIdx + 2) {
+          nodes.interactorFacings[i].value.set(facings[fIdx], facings[fIdx + 1]);
+        }
+        if (nodes.interactorTypes[i]) {
+          nodes.interactorTypes[i].value = data?.[i] ?? 0;
+        }
       }
     },
     update() {},

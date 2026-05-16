@@ -348,8 +348,11 @@ describe('webgpu diagnostic sky fog state', () => {
       expect(proof.mesh).toMatchObject({
         geometryType: 'PlaneGeometry',
         vertices: 66049,
-        size: 3200,
+        size: 720,
         segments: 256,
+        skirtSize: 3200,
+        skirtInnerSize: 720,
+        skirtTriangles: 3072,
       });
       expect(proof.heightfield).toMatchObject({
         sceneId: 'rolling-hills',
