@@ -1,8 +1,8 @@
 # Cycle 38 - Polished WebGPU Production Readiness
 
 Status: active/in progress - not mobile-ready yet; tree-impostor packet
-captured, desktop WebGPU sheep/grass proof refreshed, and phone validation
-deferred
+captured, desktop WebGPU sheep/grass proof refreshed, tree placement fix
+authorized, and phone validation deferred
 Date: 2026-05-16  
 Branch: current `main` checkout unless a scoped follow-up branch is created
 
@@ -80,6 +80,20 @@ Current truth:
 - Matt still sees water texture/ripple lines in a grid-like alignment pattern,
   sticky or out-of-sync sun glint, Open Country terrain bands/seams, and tree
   representation/grounding that is not production-polished.
+- Matt approved a deterministic tree-placement follow-up after review showed
+  the current nested-zone sampler produces too many small, clumped trees. This
+  explicitly authorizes modifying `shared/TreePlacement.js`, per-scene
+  `treeScaleJitter`, `tests/tree-placement.spec.js`, and the
+  `tests/refactor-baseline` scatter-position fixture for this follow-up. The
+  accepted root cause is that near/mid/far/horizon zones are nested and sampled
+  independently, so Poisson spacing is only guaranteed inside one zone, not
+  between all visible trees.
+- The tree-placement patch is implemented and validated in the current checkout.
+  `cycle38-validation/runtime/tree-placement-spacing-diagnostics.json` records
+  zero canopy-overlap pairs and current counts Field `1359`, Rolling Hills
+  `61`, Open Country `204`. Desktop installed-Chrome WebGPU screenshot proof
+  lives at
+  `cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json`.
 
 Fresh-agent implementation order:
 
@@ -361,6 +375,25 @@ another temporary billboard/LOD hack:
 - Preserve placement and collision contracts unless the active cycle explicitly
   accepts deterministic baseline changes.
 
+### 2026-05-16 Tree Placement Amendment
+
+This amendment is now part of Cycle 38 acceptance:
+
+- `shared/TreePlacement.js` may change to add a deterministic cross-zone
+  visual-spacing pass after candidate generation.
+- The pass should keep trunk collision radius separate from visual canopy
+  spacing. `radiusXZ` remains the gameplay trunk radius; canopy footprint is
+  used only to stop two trees rendering on top of each other.
+- Per-scene `treeScaleJitter` may be tightened so production trees no longer
+  read as undersized saplings in WebGPU/mobile LOD captures.
+- The `tests/refactor-baseline/__fixtures__/scatter-positions.json` drift is
+  intentional if and only if the new counts/hashes match the amended placement
+  contract and the tree-placement tests prove zero canopy overlaps.
+- The `tests/refactor-baseline/__fixtures__/bundle-sizes.json` main bundle
+  ratchet may move from `590 KiB` to `591 KiB` for this placement filter only.
+- No sim-baseline goldens are expected to change from this visual-obstacle
+  placement update.
+
 Acceptance:
 
 - Asset budget specs fail if required LOD/impostor sidecars are missing.
@@ -421,6 +454,10 @@ Do not claim all-mobile readiness from one Android phone:
 Do not touch `shared/**`, sim-baseline goldens, or worker migrations in this
 cycle unless the active plan is explicitly amended and accepted. Placement count
 changes that affect deterministic shared behavior are out of scope by default.
+
+Exception accepted on 2026-05-16: this cycle may modify
+`shared/TreePlacement.js` and regenerate the refactor-baseline scatter fixture
+for the tree-clumping/undersized-tree fix described in the amendment above.
 
 ## Hard Stops
 

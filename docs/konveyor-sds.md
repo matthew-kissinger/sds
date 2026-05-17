@@ -16,8 +16,9 @@ code around the new assumption.
 The full migration campaign originally ran on `exp/konveyor-webgpu-migration`.
 PR #52 has since merged the progressive WebGPU packet to `main`. Cycle 38 work
 continues from the current checkout unless a scoped branch is created for a
-follow-up. The tree-impostor packet, desktop sheep/grass repair, and discrete
-grass proof are now evidence, not a mobile-readiness claim. Numbered cycle
+follow-up. The tree-impostor packet, desktop sheep/grass repair, discrete
+grass proof, and tree-placement readability patch are now evidence, not a
+mobile-readiness claim. Numbered cycle
 plans are evidence and checkpoints, not stopping points. Agents should keep
 moving until the full objective is reached or a documented hard stop is hit. Use
 [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) as the control
@@ -207,6 +208,14 @@ hatch, and the settings UI exposes an experimental WebGPU toggle backed by
   middle LOD read and the black/no-texture WebGPU impostor tint bug, but it is
   still opt-in while Android remains over budget and true octahedral sidecars
   are unbaked.
+- The Cycle 38 tree-placement readability patch fixes the separate placement
+  complaint: nested near/mid/far/horizon candidate zones still seed the
+  deterministic layout, but final placement now rejects cross-zone canopy
+  overlaps and tightens scale jitter floors. Current evidence is
+  `cycle38-validation/runtime/tree-placement-spacing-diagnostics.json`, which
+  reports zero canopy-overlap pairs for Field, Rolling Hills, and Open Country.
+  Desktop WebGPU tree-occluded screenshots are recorded at
+  `cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json`.
 - The later Cycle 38 desktop sheep/grass pass repairs the production WebGPU
   sheep material and the grass contact proof surface. `desktop-webgpu-sheep-grass-fix.json`
   records effective `webgpu-production`, nonblank Rolling Hills screenshots,

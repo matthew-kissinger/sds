@@ -190,6 +190,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANGELOG entry. The last cycles delivered everything you see today; here's where the surface is moving right now:
 
+- **`v2.1.6`** (2026-05-16) — Cycle 38 tree-placement readability patch: deterministic cross-zone canopy spacing removes stacked tree clumps, and tighter scale jitter keeps production trees from reading as saplings.
 - **`v2.1.5`** (2026-05-16) — Cycle 38 WebGPU tree-impostor packet: branch/leaf-preserving tree rebakes, explicit three-tier WebGPU tree route behind `?konveyorNativeTreeImpostors=1`, dynamic impostor tile plumbing, and refreshed desktop/Android proof artifacts. Desktop proof is green; Android WebGPU remains budget-red and is not a mobile-ready claim.
 - **`v2.1.4`** (2026-05-10) — real iOS Safari water validation via BrowserStack + shoreline-based water shader, removing the fragile depth pre-pass.
 - **`v2.1.3`** (2026-05-09) — public-surface pass: crawler body content, per-scene landing pages, devlog scaffold, sitemap fix, footer links, and repo topic refresh.

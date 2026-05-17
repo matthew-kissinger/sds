@@ -4,6 +4,30 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.6] - 2026-05-16 (Cycle 38 - tree placement readability)
+
+Patch release for the Cycle 38 tree layout after review showed clumped,
+undersized trees in WebGPU/mobile captures.
+
+### Changed
+
+- Tree placement now applies deterministic cross-zone canopy spacing after the
+  seeded candidate pass, so nested near/mid/far/horizon zones no longer stack
+  multiple trees on the same spot.
+- Tightened per-scene tree scale jitter floors so the remaining trees read as
+  production trees instead of small saplings.
+
+### Validation
+
+- `npm run probe:tree-placement` - zero canopy-overlap pairs in Field, Rolling
+  Hills, and Open Country.
+- Desktop installed-Chrome WebGPU tree-occluded screenshot proof:
+  `cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json`.
+- `npm test` - 472 passed / 7 skipped.
+- `npm run lint`
+- `npm run build` - clean production build, main bundle ratchet intentionally
+  accepted at `591 KiB`.
+
 ## [2.1.5] - 2026-05-16 (Cycle 38 - WebGPU tree-impostor packet)
 
 Renderer and vegetation release packet for the Konveyor WebGPU track. This

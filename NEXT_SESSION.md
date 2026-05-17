@@ -1,8 +1,8 @@
 # Next Session - Polished WebGPU Production Readiness Pickup
 
 > **Updated:** 2026-05-16 local / 2026-05-17 UTC after the Cycle 38 desktop
-> WebGPU sheep/grass repair, discrete grass-interaction proof, and sheep jitter
-> spike.
+> WebGPU sheep/grass repair, discrete grass-interaction proof, sheep jitter
+> spike, and tree-placement readability patch.
 > **For:** current `main` checkout unless a scoped follow-up branch is needed.
 > **Merged PR:** [#52](https://github.com/matthew-kissinger/sds/pull/52).
 > **Pickup priority:** continue Cycle 38 toward a polished production game.
@@ -28,6 +28,10 @@ three-tier production route, and the later sheep/grass pass repaired the desktop
 WebGPU sheep material, strengthened grass displacement, and added repeatable
 visual evidence. Cycle 38 still has not finished true octahedral sidecars,
 mobile budget acceptance, or phone validation for the latest sheep/grass fixes.
+A follow-up tree-placement patch is also accepted in Cycle 38: nested
+near/mid/far/horizon candidate zones still seed the deterministic layout, but
+final placement rejects cross-zone canopy overlaps and tightens scale jitter
+floors so trees no longer read as small stacked clumps.
 
 Start from the current checkout; do not restart Cycle 37. The repo now contains
 implemented Cycle 38 tree work and proof artifacts, with mobile readiness still
@@ -64,6 +68,14 @@ Latest focused evidence:
 - Phone validation was not rerun for the sheep/grass pass because Matt said the
   phone is not connected. Do not cite the desktop grass/sheep artifacts as
   Android or iOS acceptance evidence.
+- `cycle38-validation/runtime/tree-placement-spacing-diagnostics.json` is the
+  current deterministic placement evidence for the tree readability patch. It
+  records Field `count=1359`, Rolling Hills `count=61`, Open Country
+  `count=204`, and zero canopy-overlap pairs for all three scenes.
+- `cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json` is the
+  current desktop installed-Chrome WebGPU screenshot proof for the same patch,
+  with tree-occluded full and trees-only captures under
+  `cycle38-validation/screenshots/desktop-webgpu-tree-placement-after/`.
 - `cycle38-validation/runtime/desktop-webgpu-sheep-grass-fix.json` is current
   installed-Chrome production-preview evidence for the WebGPU sheep material and
   grass contract. It reports effective `webgpu-production`, nonblank Rolling

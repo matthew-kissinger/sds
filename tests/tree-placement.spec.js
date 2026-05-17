@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { generateTrees, TREE_TRUNK_RADIUS } from '../shared/TreePlacement.js';
+import {
+    generateTrees,
+    getTreeCanopyRadius,
+    TREE_CANOPY_SPACING_PADDING,
+    TREE_TRUNK_RADIUS
+} from '../shared/TreePlacement.js';
 import { mulberry32 } from '../shared/Random.js';
 import { field } from '../shared/scenes/field.js';
 import { rollingHills } from '../shared/scenes/rolling-hills.js';
@@ -83,6 +88,48 @@ describe('generateTrees — placement constraints', () => {
                 t.x >= playArea.minX - buffer && t.x <= playArea.maxX + buffer &&
                 t.z >= playArea.minZ - buffer && t.z <= playArea.maxZ + buffer;
             expect(insidePlayBuffer).toBe(false);
+        }
+    });
+
+    it('keeps visual tree canopies from overlapping across nested zones', () => {
+        const cases = [
+            [field, 0],
+            [rollingHills, rollingHills.terrain.seed],
+            [openCountry, openCountry.terrain.seed],
+        ];
+
+        for (const [scene, seed] of cases) {
+            const trees = generateTrees(scene, mulberry32(seed));
+            const violations = [];
+            for (let i = 0; i < trees.length; i++) {
+                for (let j = i + 1; j < trees.length; j++) {
+                    const a = trees[i];
+                    const b = trees[j];
+                    const distance = Math.hypot(a.x - b.x, a.z - b.z);
+                    const minDistance =
+                        getTreeCanopyRadius(a) +
+                        getTreeCanopyRadius(b) +
+                        TREE_CANOPY_SPACING_PADDING;
+                    if (distance < minDistance - 1e-6) {
+                        violations.push({ scene: scene.id, i, j, distance, minDistance });
+                    }
+                }
+            }
+            expect(violations).toEqual([]);
+        }
+    });
+
+    it('keeps production tree scale above the tiny-sapling floor', () => {
+        const cases = [
+            [field, 0],
+            [rollingHills, rollingHills.terrain.seed],
+            [openCountry, openCountry.terrain.seed],
+        ];
+
+        for (const [scene, seed] of cases) {
+            const trees = generateTrees(scene, mulberry32(seed));
+            const minScale = Math.min(...trees.map((t) => t.scale));
+            expect(minScale).toBeGreaterThanOrEqual(13.5 - 1e-6);
         }
     });
 });

@@ -71,7 +71,7 @@ export const field = {
     // variation for a more manicured silhouette. Profile probabilities
     // sum to 1.
     treeProfile: { tree1: 0.7, tree2: 0.3 },
-    treeScaleJitter: { min: 0.85, max: 1.15 },
+    treeScaleJitter: { min: 0.90, max: 1.15 },
 
     sky: { preset: 'pastoral-noon' },
     // Cycle 25 Phase B: fog retuned from "structural mask" to "horizon

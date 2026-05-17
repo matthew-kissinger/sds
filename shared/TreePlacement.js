@@ -25,6 +25,11 @@
 import { canonicalSort } from './SceneObstacles.js';
 
 const TRUNK_RADIUS_XZ = 1.8;
+const TREE_CANOPY_RADIUS_BY_TYPE = Object.freeze({
+    tree1: 0.36,
+    tree2: 0.44
+});
+export const TREE_CANOPY_SPACING_PADDING = 3;
 
 const ZONES = [
     { name: 'nearField', minDist: 25, maxDist: 40, scale: 15.0 },
@@ -48,6 +53,52 @@ const ZONES = [
 // to widen in lockstep to keep groves from reading as one big blob.
 const WOODS_INSIDE_FACTOR = 0.92;
 const WOODS_OUTSIDE_FACTOR = 1.5;
+
+/**
+ * Visual canopy footprint radius (m). Separate from trunk collision radius so
+ * gameplay keeps the Q2 trunk contract while rendering rejects leaf overlap.
+ *
+ * @param {TreeInstance} tree
+ * @returns {number}
+ */
+export function getTreeCanopyRadius(tree) {
+    const radius = TREE_CANOPY_RADIUS_BY_TYPE[tree.type] ?? 0.4;
+    return radius * tree.scale;
+}
+
+/**
+ * Cross-zone acceptance pass. The per-zone Poisson samplers are still useful
+ * candidate generators, but scene zones are nested; this pass enforces the
+ * final visual footprint across all candidates.
+ *
+ * @param {TreeInstance[]} trees
+ * @returns {TreeInstance[]}
+ */
+function filterCanopyOverlaps(trees) {
+    const candidates = trees
+        .map((tree, index) => ({ tree, index }))
+        .sort((a, b) => b.tree.scale - a.tree.scale || a.index - b.index);
+    /** @type {TreeInstance[]} */
+    const accepted = [];
+
+    for (const { tree } of candidates) {
+        const radius = getTreeCanopyRadius(tree);
+        let valid = true;
+        for (const other of accepted) {
+            const dx = tree.x - other.x;
+            const dz = tree.z - other.z;
+            const minDist = radius + getTreeCanopyRadius(other) + TREE_CANOPY_SPACING_PADDING;
+            if (dx * dx + dz * dz < minDist * minDist) {
+                valid = false;
+                break;
+            }
+        }
+        if (valid) accepted.push(tree);
+    }
+
+    canonicalSort(accepted);
+    return accepted;
+}
 
 /**
  * @param {{x: number, z: number}} p
@@ -314,8 +365,7 @@ export function generateTrees(scene, rng, opts = {}) {
         }
     }
 
-    canonicalSort(out);
-    return out;
+    return filterCanopyOverlaps(out);
 }
 
 /**

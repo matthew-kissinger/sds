@@ -81,6 +81,13 @@ WebGPU-specific material, animation, and scene-composition defects below.
   captures frozen off/on/diff triptychs for dog and sheep contact and reports
   visible localized crop changes. This closes the desktop "prove the blades
   move" request, but it is not phone or mobile acceptance evidence.
+- Later tree-placement status: the clumped/undersized-tree review is now
+  handled as a deterministic placement-contract patch, not an impostor shader
+  issue. `cycle38-validation/runtime/tree-placement-spacing-diagnostics.json`
+  records zero canopy-overlap pairs in Field, Rolling Hills, and Open Country
+  after cross-zone canopy spacing and tighter scale jitter floors. Desktop
+  WebGPU tree-occluded visual proof lives at
+  `cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json`.
 
 ## Original Findings And Current Status
 
@@ -118,7 +125,14 @@ WebGPU-specific material, animation, and scene-composition defects below.
      smaller flutter.
    - Cycle 38 still needs visual gates before closing the user-visible defect.
 
-6. Ground texture/material mapping is incorrect.
+6. Tree placement is too dense, clumped, or too small.
+   - Addressed in the tree-placement readability patch. The current generator
+     keeps deterministic seeded candidates but rejects cross-zone canopy
+     overlaps and raises the minimum scale jitter floor.
+   - Keep visual tree-occluded screenshots in the Cycle 38 matrix so the
+     placement fix is judged in-camera, not only by metrics.
+
+7. Ground texture/material mapping is incorrect.
    - Earlier WebGPU terrain/material work addressed the major mapping defects.
    - Cycle 38 reduced the worst Open Country center seam with the mobile
      terrain split, height-sampled shared-material skirt, and continuous WebGPU

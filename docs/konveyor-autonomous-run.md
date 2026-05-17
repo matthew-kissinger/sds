@@ -125,6 +125,14 @@ control surface:
   lat/lon-hemi Kiln impostor quads with per-instance tile offsets and weights.
   Desktop installed-Chrome proof is green, Android proof is screenshot-valid
   but budget-red, and this is still not true octahedral impostor readiness.
+- The accepted tree-placement readability patch fixes a separate layout issue:
+  deterministic tree candidates still come from the existing nested scene
+  zones, but final placement now applies cross-zone canopy spacing and tighter
+  scale jitter floors. Evidence:
+  `../cycle38-validation/runtime/tree-placement-spacing-diagnostics.json`
+  reports zero canopy-overlap pairs in Field, Rolling Hills, and Open Country;
+  desktop installed-Chrome WebGPU screenshots are in
+  `../cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json`.
 - The later desktop sheep/grass pass repairs the production WebGPU sheep wool
   path and adds discrete grass-interaction evidence. `../cycle38-validation/runtime/desktop-webgpu-sheep-grass-fix.json`
   reports effective `webgpu-production`, nonblank Rolling Hills screenshots,

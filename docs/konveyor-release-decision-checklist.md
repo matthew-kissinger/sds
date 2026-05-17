@@ -6,10 +6,10 @@ and changing default renderer policy are release decisions.
 
 Current Cycle 38 review packet:
 
-- Branch: `codex/cycle-38-tree-impostors`
-- Release version: `2.1.5`
-- Core code packet: `e3158d9`
-  (`feat(konveyor): advance cycle 38 tree impostors`)
+- Branch: `main`
+- Release version: `2.1.6`
+- Core code packet: Cycle 38 tree-impostor packet plus the accepted tree
+  placement readability patch.
 - Completion context:
   [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md)
 - Active cycle plan:
@@ -26,7 +26,7 @@ octahedral impostoring.
    with progressive WebGPU and WebGL fallback. Matt approved docs alignment,
    commit, push, and deploy on 2026-05-16.
 2. Confirm the branch is pointed at the intended Cycle 38 head and includes the
-   README/CHANGELOG/version alignment for `2.1.5`.
+   README/CHANGELOG/version alignment for `2.1.6`.
 3. Confirm no unrelated `.agents/skills/*` files are newly staged or included
    relative to `main`.
 4. Re-run the current fast gates if the branch moved after the last audit:
@@ -36,6 +36,10 @@ octahedral impostoring.
    npm run lint
    npm run build
    ```
+
+   Current `2.1.6` tree-placement patch passed these gates on 2026-05-16 with
+   `472` tests passing / `7` skipped and the main bundle ratchet intentionally
+   accepted at `591 KiB`.
 
 5. Re-run the explicit WebGPU proofs if renderer code changed after the current
    Cycle 38 tree packet. A docs-only release-alignment commit does not require

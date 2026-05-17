@@ -55,7 +55,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`native-packaging-proof-0.md`](native-packaging-proof-0.md) | Reference | Cycle 37 native packaging proof matrix for Electron, Tauri, Capacitor, PWA/TWA, Steam, stores, and true-native paths. |
 | [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md) | Reference | Docs-only readiness gates for Steam, App Store, Google Play, and optional PWA/TWA distribution. |
 | [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md) | Reference | Current prompt-to-artifact audit for the Konveyor WebGPU branch packet and remaining hard stops. |
-| [`konveyor-release-decision-checklist.md`](konveyor-release-decision-checklist.md) | Reference | Human-approved merge/deploy/default-renderer checklist for the current Cycle 38 `2.1.5` review packet. |
+| [`konveyor-release-decision-checklist.md`](konveyor-release-decision-checklist.md) | Reference | Human-approved merge/deploy/default-renderer checklist for the current Cycle 38 `2.1.6` review packet. |
 | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | Reference | Module map + render pipeline + network protocol. The "where does X live" doc. |
 | [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) | Reference | Which files are frozen + how authorization works. |
 | [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) | Reference | Cycle plan stub. New cycle plans inherit from this. |

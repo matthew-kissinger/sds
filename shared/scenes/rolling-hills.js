@@ -76,7 +76,7 @@ export const rollingHills = {
 
     // Cycle 25 Phase G: Mediterranean profile — even mix, default jitter.
     treeProfile: { tree1: 0.5, tree2: 0.5 },
-    treeScaleJitter: { min: 0.80, max: 1.20 },
+    treeScaleJitter: { min: 0.90, max: 1.22 },
 
     sky: { preset: 'dusk' },
     // Cycle 23 Phase A1: warm dusk-tinted linear fog. near 200m matches

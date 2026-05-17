@@ -1,17 +1,17 @@
 {
   "field": {
-    "hash": "4c11fd1f",
-    "count": 2341,
+    "hash": "010745ac",
+    "count": 1389,
     "seed": 3109
   },
   "rolling-hills": {
-    "hash": "393ccdb8",
-    "count": 174,
+    "hash": "5a5e506c",
+    "count": 60,
     "seed": 3109
   },
   "open-country": {
-    "hash": "7921d4af",
-    "count": 461,
+    "hash": "73adefa4",
+    "count": 208,
     "seed": 3109
   }
 }
