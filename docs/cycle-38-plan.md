@@ -1,9 +1,10 @@
 # Cycle 38 - Polished WebGPU Production Readiness
 
-Status: active/in progress - not mobile-ready yet; tree-impostor branch
-packet captured, README/release docs aligned for `2.1.5`, and deploy approved
+Status: active/in progress - not mobile-ready yet; tree-impostor packet
+captured, desktop WebGPU sheep/grass proof refreshed, and phone validation
+deferred
 Date: 2026-05-16  
-Branch: `codex/cycle-38-tree-impostors`
+Branch: current `main` checkout unless a scoped follow-up branch is created
 
 ## Goal
 
@@ -61,16 +62,31 @@ Current truth:
   proves the explicit tree path and screenshots run on phone, but it is
   budget-red: three full-scene rows fail the mid-mobile budget, including Open
   Country horizon/terrain-seam at `p95=100.0 ms`, `p99=133.5 ms`.
+- Desktop WebGPU sheep/grass proof is now current. The sheep wool node material
+  preserves geometry vertex colors for face, legs, eyes, and nose, keeps
+  body-only wool shading/displacement, and syncs fog through material controls.
+  The main loop no longer advances simulation while a WebGPU `renderAsync()`
+  frame is in flight, and `QualityGovernor` no longer degrades sheep animation
+  below `1.0`.
+- Discrete desktop grass-contact evidence exists at
+  `cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`.
+  It freezes wind/sim, isolates one dog or sheep interactor, and writes
+  off/on/diff triptychs under
+  `cycle38-validation/screenshots/desktop-webgpu-grass-interaction-evidence/`.
+  Current production WebGPU proof reports dog contact changed `0.38%` of the
+  crop and sheep contact changed `0.348%`.
+- Phone validation was not rerun for the sheep/grass pass because the phone was
+  not connected. Mobile acceptance remains open.
 - Matt still sees water texture/ripple lines in a grid-like alignment pattern,
-  sticky or out-of-sync sun glint, weak or invisible grass displacement from
-  dog/sheep, missing sheep leg animation, Open Country terrain bands/seams, and
-  tree representation/grounding that is not production-polished.
+  sticky or out-of-sync sun glint, Open Country terrain bands/seams, and tree
+  representation/grounding that is not production-polished.
 
 Fresh-agent implementation order:
 
 1. Production tree octahedral impostors for PC/mobile.
 2. Water grid/alignment line fix plus sun/camera-synced glint proof.
-3. Grass interaction and sheep animation visual proof.
+3. Phone/mobile validation for the desktop sheep/grass fixes when hardware is
+   available.
 4. Open Country terrain seam/band proof.
 5. Mobile/desktop quality-governor and perf budget closeout.
 
@@ -136,6 +152,19 @@ Implemented and validated:
   The current Android terrain artifact proves `interactorCount=10` and records
   eight interactor samples. Visual acceptance is still pending until screenshots
   clearly show dog and sheep bending grass in normal play.
+- A later desktop WebGPU sheep/grass repair strengthened the production blade
+  laydown path further for visual evidence, passed live dog/sheep radius and
+  strength from `GrassSystem`, and records
+  `displacement="world-proximity-laydown-plus-horizontal-push"`,
+  `visualScale=5.2`, and `laydownStrength=1.9` in the desktop proof. Dedicated
+  installed-Chrome triptychs now show localized dog and sheep contact-zone
+  changes. Treat this as desktop visual acceptance only until phone proof is
+  rerun.
+- The WebGPU sheep material now uses geometry vertex colors for non-body parts,
+  body-only wool shading/displacement, and scene-synced fog controls. The
+  WebGPU jitter spike also added a render-in-flight guard and kept
+  `sheepAnimationRate=1.0` across all quality steps, so sheep animation cadence
+  is not deliberately degraded under over-budget windows.
 - WebGPU tree grounding now records per-tree placement samples and recomputes
   native LOD instance Y from `groundY + baseOffset * scale`. Current Open
   Country samples show `placementY == groundY` and `lod0/lod1BaseOffset=0`, so

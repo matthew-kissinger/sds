@@ -31,11 +31,11 @@ export function createKonveyorGrassBladeNodeMaterial(
   const interactorCount = uniform(0);
   const interactionRadius = uniform(grassBlade.interactionRadius ?? 2.2);
   const interactionStrength = uniform(grassBlade.interactionStrength ?? 0.6);
-  const sheepInteractionRadius = uniform(grassBlade.sheepInteractionRadius ?? 1.25);
-  const sheepInteractionStrength = uniform(grassBlade.sheepInteractionStrength ?? 0.38);
-  const interactionVisualScaleValue = grassBlade.interactionVisualScale ?? 2.8;
-  const interactionLaydownStrength = grassBlade.interactionLaydownStrength ?? 0.9;
-  const interactionShadowStrength = grassBlade.interactionShadowStrength ?? 0.42;
+  const sheepInteractionRadius = uniform(grassBlade.sheepInteractionRadius ?? 2.5);
+  const sheepInteractionStrength = uniform(grassBlade.sheepInteractionStrength ?? 0.4);
+  const interactionVisualScaleValue = grassBlade.interactionVisualScale ?? 5.2;
+  const interactionLaydownStrength = grassBlade.interactionLaydownStrength ?? 1.9;
+  const interactionShadowStrength = grassBlade.interactionShadowStrength ?? 0.72;
   const interactionVisualScale = float(interactionVisualScaleValue);
   const windDir = normalize(windDirection);
   const windPerp = vec2(windDir.y.negate(), windDir.x);
@@ -73,9 +73,11 @@ export function createKonveyorGrassBladeNodeMaterial(
     const activeInteractor = smoothstep(i + 0.5, i + 0.95, interactorCount);
     const radius = mix(interactionRadius, sheepInteractionRadius, entityType);
     const strength = mix(interactionStrength, sheepInteractionStrength, entityType).mul(interactionVisualScale);
-    const bodyFalloff = float(1.0).sub(smoothstep(0.15, radius, bodyDistance)).mul(activeInteractor);
-    interactionDisp = interactionDisp.add(pushDirection.mul(bodyFalloff.mul(strength).mul(windPower)));
-    bodyFalloffTotal = max(bodyFalloffTotal, bodyFalloff);
+    const bodyFalloff = float(1.0).sub(smoothstep(0.15, radius, bodyDistance));
+    const proximityFalloff = float(1.0).sub(smoothstep(0.0, radius, interactorDistance));
+    const contactFalloff = max(bodyFalloff, proximityFalloff.mul(0.92)).mul(activeInteractor);
+    interactionDisp = interactionDisp.add(pushDirection.mul(contactFalloff.mul(strength).mul(windPower)));
+    bodyFalloffTotal = max(bodyFalloffTotal, contactFalloff);
   }
   const tipColor = mix(
     vec3(...linearColor(grassBlade.tipColor)),
@@ -122,7 +124,8 @@ export function createKonveyorGrassBladeNodeMaterial(
   );
   material.opacityNode = densityFade;
   const totalDisp = windDisp.add(interactionDisp);
-  const interactionLaydown = bodyFalloffTotal.mul(-interactionLaydownStrength).mul(windPower);
+  const laydownMask = smoothstep(0.08, 1.0, height01);
+  const interactionLaydown = bodyFalloffTotal.mul(-interactionLaydownStrength).mul(laydownMask);
   material.positionNode = positionLocal.add(vec3(totalDisp.x, interactionLaydown, totalDisp.y));
   if (material.isMeshStandardNodeMaterial) {
     material.roughnessNode = float(0.96);
@@ -161,7 +164,7 @@ export function createKonveyorGrassBladeNodeMaterial(
   material.userData.konveyorGrassBladeInteractors = {
     maxNodeInteractors,
     source: 'dog-plus-nearest-sheep-unrolled',
-    displacement: 'horizontal-push-plus-laydown',
+    displacement: 'world-proximity-laydown-plus-horizontal-push',
     visualScale: interactionVisualScaleValue,
     laydownStrength: interactionLaydownStrength,
     shadowStrength: interactionShadowStrength,

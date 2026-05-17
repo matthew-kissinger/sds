@@ -13,11 +13,10 @@ Historical Konveyor work happened on:
 git switch exp/konveyor-webgpu-migration
 ```
 
-PR #52 has since merged the progressive WebGPU packet to `main`. The current
-Cycle 38 release packet is `codex/cycle-38-tree-impostors`, prepared as
-version `2.1.5` for deploy. Continue from the current checkout, and do not
-restart from the stale experimental branch unless the user explicitly asks to
-inspect that historical line.
+PR #52 has since merged the progressive WebGPU packet to `main`. Continue Cycle
+38 from the current checkout unless a scoped follow-up branch is created, and do
+not restart from the stale experimental branch unless the user explicitly asks
+to inspect that historical line.
 
 ## Objective
 
@@ -126,6 +125,14 @@ control surface:
   lat/lon-hemi Kiln impostor quads with per-instance tile offsets and weights.
   Desktop installed-Chrome proof is green, Android proof is screenshot-valid
   but budget-red, and this is still not true octahedral impostor readiness.
+- The later desktop sheep/grass pass repairs the production WebGPU sheep wool
+  path and adds discrete grass-interaction evidence. `../cycle38-validation/runtime/desktop-webgpu-sheep-grass-fix.json`
+  reports effective `webgpu-production`, nonblank Rolling Hills screenshots,
+  grass displacement `world-proximity-laydown-plus-horizontal-push`, and sheep
+  wool metadata based on geometry vertex colors plus instanced animation.
+  `../cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`
+  freezes wind/sim, isolates dog and sheep contact, and writes off/on/diff
+  triptychs. Phone proof remains deferred because the phone was not connected.
 
 The desktop browser conclusion: installed Chrome 148 can create a WebGPU device
 on the current Windows machine, but Playwright's bundled Chromium 147 exposes

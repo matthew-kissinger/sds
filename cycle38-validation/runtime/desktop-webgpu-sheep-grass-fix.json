@@ -1,0 +1,2430 @@
+{
+  "capturedAt": "2026-05-16T23:55:25.491Z",
+  "warmupMs": 2000,
+  "measureMs": 8000,
+  "target": "http://127.0.0.1:4173",
+  "renderer": "webgpu",
+  "results": [
+    {
+      "configId": "rolling-hills-classic--follow-close--full",
+      "baseConfigId": "rolling-hills-classic",
+      "scene": "rolling-hills",
+      "mode": "classic",
+      "cameraPose": "follow-close",
+      "systemIsolation": "full",
+      "ok": true,
+      "summary": {
+        "sampleCount": 945,
+        "avgFrameTime": 8.460634920647536,
+        "p50FrameTime": 6.900000000001455,
+        "p95FrameTime": 7.099999999999454,
+        "p99FrameTime": 7.100000000000364,
+        "maxFrameTime": 847.1999999999998,
+        "avgDrawCalls": 64.02857142857142,
+        "avgTriangles": 2899269.644444444,
+        "avgEstimatedTriangles": 2899269.644444444,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "follow-close",
+          "frameP95": 7.099999999999454,
+          "frameP99": 7.100000000000364,
+          "drawCalls": 64,
+          "estimatedTrianglesBySystem": {
+            "Grass": 1459948,
+            "Trees": 1033604,
+            "Terrain": 294912,
+            "Sheep": 108800,
+            "Rocks": 360,
+            "Structures": 130,
+            "Mountains": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 1,
+            "Trees": 179,
+            "Rocks": 9,
+            "Mountains": 0,
+            "Grass": 52141,
+            "Structures": 1,
+            "Sheep": 200,
+            "Water": 1,
+            "Atmosphere": 3
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "follow-close",
+        "systemIsolation": "full"
+      },
+      "rendererInfo": {
+        "calls": 80,
+        "triangles": 0,
+        "points": 0,
+        "lines": 0,
+        "geometries": 36,
+        "textures": 8
+      },
+      "visualProbe": {
+        "sceneId": "rolling-hills",
+        "renderer": "webgpu-production",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384,
+          "skirtSize": 0,
+          "skirtSegments": 0,
+          "skirtTriangles": 0,
+          "splitSkirt": false
+        },
+        "trees": {
+          "native": {
+            "applied": true,
+            "ok": true,
+            "source": "THREE.InstancedMesh",
+            "route": "konveyor-production-scene-body",
+            "lod": "lod0-only",
+            "culling": "chunked-instanced-bounds",
+            "chunkSize": 192,
+            "impostor": {
+              "active": false,
+              "ok": true,
+              "groupCount": 0,
+              "sidecarLayout": null,
+              "selection": null,
+              "billboardProjection": null,
+              "terrainGroundedPivots": false,
+              "replacesMobileLod1ByDefault": false,
+              "nearLod": null,
+              "midLod": null,
+              "nearDistance": null,
+              "switchDistance": null,
+              "syncedMeshes": 0
+            },
+            "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+            "treeInstances": 179,
+            "renderedInstanceMeshes": 16,
+            "frustumCulled": true,
+            "groups": [
+              {
+                "type": "tree1",
+                "chunkKey": "-1:0",
+                "meshName": "trunk",
+                "instances": 18,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "-1:0",
+                "meshName": "leaves",
+                "instances": 18,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "-1:-1",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "-1:-1",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:0",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:0",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:-1",
+                "meshName": "trunk",
+                "instances": 24,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:-1",
+                "meshName": "leaves",
+                "instances": 24,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:0",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:0",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:-1",
+                "meshName": "trunk",
+                "instances": 25,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:-1",
+                "meshName": "leaves",
+                "instances": 25,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:0",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:0",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:-1",
+                "meshName": "trunk",
+                "instances": 20,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:-1",
+                "meshName": "leaves",
+                "instances": 20,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              }
+            ]
+          },
+          "impostorRuntime": {
+            "active": false,
+            "ok": true,
+            "groupCount": 0,
+            "sidecarLayout": null,
+            "selection": null,
+            "billboardProjection": null,
+            "terrainGroundedPivots": false,
+            "replacesMobileLod1ByDefault": false,
+            "nearLod": null,
+            "midLod": null,
+            "nearDistance": null,
+            "switchDistance": null,
+            "syncedMeshes": 0
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": true,
+            "ok": true,
+            "treeTargetsResolved": true,
+            "treeReplacedMaterials": 8,
+            "rockReplacedMaterials": 3,
+            "treeResults": [
+              {
+                "group": "tree-lod0",
+                "key": "tree1",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              },
+              {
+                "group": "tree-lod0",
+                "key": "tree2",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              },
+              {
+                "group": "tree-lod1",
+                "key": "tree1",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              },
+              {
+                "group": "tree-lod1",
+                "key": "tree2",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              }
+            ],
+            "rockResults": [
+              {
+                "group": "rock-lod0",
+                "key": "rock1",
+                "strategy": "asset-class-traversal",
+                "visitedMeshes": 1,
+                "replacedMaterials": 1,
+                "previousMaterialNames": [
+                  "(runtime-default)"
+                ]
+              },
+              {
+                "group": "rock-lod0",
+                "key": "rock2",
+                "strategy": "asset-class-traversal",
+                "visitedMeshes": 1,
+                "replacedMaterials": 1,
+                "previousMaterialNames": [
+                  "(runtime-default)"
+                ]
+              },
+              {
+                "group": "rock-lod0",
+                "key": "rock3",
+                "strategy": "asset-class-traversal",
+                "visitedMeshes": 1,
+                "replacedMaterials": 1,
+                "previousMaterialNames": [
+                  "(runtime-default)"
+                ]
+              }
+            ]
+          },
+          "groundingSample": [
+            {
+              "type": "tree1",
+              "x": -135.614,
+              "z": 10.123,
+              "groundY": 20.345,
+              "placementY": 20.345,
+              "scale": 28.841,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -124.115,
+              "z": 44.716,
+              "groundY": 18.043,
+              "placementY": 18.043,
+              "scale": 14.806,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -122.083,
+              "z": -9.758,
+              "groundY": 25.992,
+              "placementY": 25.992,
+              "scale": 14.662,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -121.025,
+              "z": 43.237,
+              "groundY": 18.991,
+              "placementY": 18.991,
+              "scale": 23.675,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -120.534,
+              "z": -3.01,
+              "groundY": 25.998,
+              "placementY": 25.998,
+              "scale": 19.659,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -119.201,
+              "z": -57.517,
+              "groundY": 26.684,
+              "placementY": 26.684,
+              "scale": 15.114,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -127.399,
+              "z": 43.18,
+              "groundY": 17.487,
+              "placementY": 17.487,
+              "scale": 20,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -127.031,
+              "z": -25.239,
+              "groundY": 26.125,
+              "placementY": 26.125,
+              "scale": 28.387,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -123.074,
+              "z": 19.358,
+              "groundY": 21.461,
+              "placementY": 21.461,
+              "scale": 17.623,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -120.426,
+              "z": -62.927,
+              "groundY": 26.754,
+              "placementY": 26.754,
+              "scale": 21.57,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -118.401,
+              "z": 39.872,
+              "groundY": 19.793,
+              "placementY": 19.793,
+              "scale": 25.228,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -115.671,
+              "z": 69.073,
+              "groundY": 22.972,
+              "placementY": 22.972,
+              "scale": 12.128,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            }
+          ]
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": true,
+          "sunCameraGlint": true,
+          "glintMode": "ripple-normal-sun-camera-v2",
+          "glintGain": 0.16,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "interactorSample": [
+            {
+              "type": "dog",
+              "position": {
+                "x": 0,
+                "y": 19.036,
+                "z": -30
+              },
+              "facing": {
+                "x": 0,
+                "z": 1
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 12.396,
+                "y": 0,
+                "z": -13.36
+              },
+              "facing": {
+                "x": -0.74,
+                "z": 0.673
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 36.444,
+                "y": 0,
+                "z": -20.417
+              },
+              "facing": {
+                "x": 0.409,
+                "z": 0.912
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 27.812,
+                "y": 0,
+                "z": -57.17
+              },
+              "facing": {
+                "x": -0.748,
+                "z": 0.664
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": -31.507,
+                "y": 0,
+                "z": -6.55
+              },
+              "facing": {
+                "x": 0.997,
+                "z": 0.071
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 25.327,
+                "y": 0,
+                "z": 0.989
+              },
+              "facing": {
+                "x": 0.885,
+                "z": 0.466
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 7.027,
+                "y": 0,
+                "z": 10.468
+              },
+              "facing": {
+                "x": 0.278,
+                "z": 0.961
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": -11.844,
+                "y": 0,
+                "z": -71.517
+              },
+              "facing": {
+                "x": -0.724,
+                "z": -0.69
+              }
+            }
+          ],
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "interactorContract": {
+            "maxNodeInteractors": 8,
+            "source": "dog-plus-nearest-sheep-unrolled",
+            "displacement": "world-proximity-laydown-plus-horizontal-push",
+            "visualScale": 4.2,
+            "laydownStrength": 1.45,
+            "shadowStrength": 0.62
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1,
+          "materialSummary": {
+            "kind": "sheep-wool",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "woolContract": {
+            "vertexColorSource": "geometry-color-attribute",
+            "bodyOnlyWoolShading": true,
+            "fog": "scene-synced-controls"
+          },
+          "animationContract": {
+            "source": "vertexId-instanceData-instanceAnimation",
+            "body": true,
+            "head": true,
+            "legs": true,
+            "wool": true,
+            "animationSpeed": 1
+          }
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 19.036,
+            "z": -30
+          },
+          "velocity": {
+            "x": 0,
+            "z": 0
+          },
+          "rotation": 0
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-sheep-grass-fix/rolling-hills-classic--follow-close--full.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 69.202,
+          "stdev": 41.432,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "14.5"
+    },
+    {
+      "configId": "rolling-hills-classic--follow-close--grass-only",
+      "baseConfigId": "rolling-hills-classic",
+      "scene": "rolling-hills",
+      "mode": "classic",
+      "cameraPose": "follow-close",
+      "systemIsolation": "grass-only",
+      "ok": true,
+      "summary": {
+        "sampleCount": 872,
+        "avgFrameTime": 9.1654816513864,
+        "p50FrameTime": 7,
+        "p95FrameTime": 13.900000000001455,
+        "p99FrameTime": 20.899999999999636,
+        "maxFrameTime": 756.8999999999996,
+        "avgDrawCalls": 40.033256880733944,
+        "avgTriangles": 1462044.3394495412,
+        "avgEstimatedTriangles": 1462044.3394495412,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "follow-close",
+          "frameP95": 13.900000000001455,
+          "frameP99": 20.899999999999636,
+          "drawCalls": 40,
+          "estimatedTrianglesBySystem": {
+            "Grass": 1460284,
+            "Terrain": 0,
+            "Trees": 0,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Sheep": 0,
+            "Structures": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 0,
+            "Trees": 0,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Grass": 52153,
+            "Structures": 0,
+            "Sheep": 0,
+            "Water": 0,
+            "Atmosphere": 1
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "follow-close",
+        "systemIsolation": "grass-only"
+      },
+      "rendererInfo": {
+        "calls": 74,
+        "triangles": 0,
+        "points": 0,
+        "lines": 0,
+        "geometries": 36,
+        "textures": 8
+      },
+      "visualProbe": {
+        "sceneId": "rolling-hills",
+        "renderer": "webgpu-production",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384,
+          "skirtSize": 0,
+          "skirtSegments": 0,
+          "skirtTriangles": 0,
+          "splitSkirt": false
+        },
+        "trees": {
+          "native": {
+            "applied": true,
+            "ok": true,
+            "source": "THREE.InstancedMesh",
+            "route": "konveyor-production-scene-body",
+            "lod": "lod0-only",
+            "culling": "chunked-instanced-bounds",
+            "chunkSize": 192,
+            "impostor": {
+              "active": false,
+              "ok": true,
+              "groupCount": 0,
+              "sidecarLayout": null,
+              "selection": null,
+              "billboardProjection": null,
+              "terrainGroundedPivots": false,
+              "replacesMobileLod1ByDefault": false,
+              "nearLod": null,
+              "midLod": null,
+              "nearDistance": null,
+              "switchDistance": null,
+              "syncedMeshes": 0
+            },
+            "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+            "treeInstances": 179,
+            "renderedInstanceMeshes": 16,
+            "frustumCulled": true,
+            "groups": [
+              {
+                "type": "tree1",
+                "chunkKey": "-1:0",
+                "meshName": "trunk",
+                "instances": 18,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "-1:0",
+                "meshName": "leaves",
+                "instances": 18,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "-1:-1",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "-1:-1",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:0",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:0",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:-1",
+                "meshName": "trunk",
+                "instances": 24,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:-1",
+                "meshName": "leaves",
+                "instances": 24,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:0",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:0",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:-1",
+                "meshName": "trunk",
+                "instances": 25,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:-1",
+                "meshName": "leaves",
+                "instances": 25,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:0",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:0",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:-1",
+                "meshName": "trunk",
+                "instances": 20,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:-1",
+                "meshName": "leaves",
+                "instances": 20,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              }
+            ]
+          },
+          "impostorRuntime": {
+            "active": false,
+            "ok": true,
+            "groupCount": 0,
+            "sidecarLayout": null,
+            "selection": null,
+            "billboardProjection": null,
+            "terrainGroundedPivots": false,
+            "replacesMobileLod1ByDefault": false,
+            "nearLod": null,
+            "midLod": null,
+            "nearDistance": null,
+            "switchDistance": null,
+            "syncedMeshes": 0
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": true,
+            "ok": true,
+            "treeTargetsResolved": true,
+            "treeReplacedMaterials": 8,
+            "rockReplacedMaterials": 3,
+            "treeResults": [
+              {
+                "group": "tree-lod0",
+                "key": "tree1",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              },
+              {
+                "group": "tree-lod0",
+                "key": "tree2",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              },
+              {
+                "group": "tree-lod1",
+                "key": "tree1",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              },
+              {
+                "group": "tree-lod1",
+                "key": "tree2",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              }
+            ],
+            "rockResults": [
+              {
+                "group": "rock-lod0",
+                "key": "rock1",
+                "strategy": "asset-class-traversal",
+                "visitedMeshes": 1,
+                "replacedMaterials": 1,
+                "previousMaterialNames": [
+                  "(runtime-default)"
+                ]
+              },
+              {
+                "group": "rock-lod0",
+                "key": "rock2",
+                "strategy": "asset-class-traversal",
+                "visitedMeshes": 1,
+                "replacedMaterials": 1,
+                "previousMaterialNames": [
+                  "(runtime-default)"
+                ]
+              },
+              {
+                "group": "rock-lod0",
+                "key": "rock3",
+                "strategy": "asset-class-traversal",
+                "visitedMeshes": 1,
+                "replacedMaterials": 1,
+                "previousMaterialNames": [
+                  "(runtime-default)"
+                ]
+              }
+            ]
+          },
+          "groundingSample": [
+            {
+              "type": "tree1",
+              "x": -135.614,
+              "z": 10.123,
+              "groundY": 20.345,
+              "placementY": 20.345,
+              "scale": 28.841,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -124.115,
+              "z": 44.716,
+              "groundY": 18.043,
+              "placementY": 18.043,
+              "scale": 14.806,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -122.083,
+              "z": -9.758,
+              "groundY": 25.992,
+              "placementY": 25.992,
+              "scale": 14.662,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -121.025,
+              "z": 43.237,
+              "groundY": 18.991,
+              "placementY": 18.991,
+              "scale": 23.675,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -120.534,
+              "z": -3.01,
+              "groundY": 25.998,
+              "placementY": 25.998,
+              "scale": 19.659,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -119.201,
+              "z": -57.517,
+              "groundY": 26.684,
+              "placementY": 26.684,
+              "scale": 15.114,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -127.399,
+              "z": 43.18,
+              "groundY": 17.487,
+              "placementY": 17.487,
+              "scale": 20,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -127.031,
+              "z": -25.239,
+              "groundY": 26.125,
+              "placementY": 26.125,
+              "scale": 28.387,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -123.074,
+              "z": 19.358,
+              "groundY": 21.461,
+              "placementY": 21.461,
+              "scale": 17.623,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -120.426,
+              "z": -62.927,
+              "groundY": 26.754,
+              "placementY": 26.754,
+              "scale": 21.57,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -118.401,
+              "z": 39.872,
+              "groundY": 19.793,
+              "placementY": 19.793,
+              "scale": 25.228,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -115.671,
+              "z": 69.073,
+              "groundY": 22.972,
+              "placementY": 22.972,
+              "scale": 12.128,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            }
+          ]
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": true,
+          "sunCameraGlint": true,
+          "glintMode": "ripple-normal-sun-camera-v2",
+          "glintGain": 0.16,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "interactorSample": [
+            {
+              "type": "dog",
+              "position": {
+                "x": 0,
+                "y": 19.036,
+                "z": -30
+              },
+              "facing": {
+                "x": 0,
+                "z": 1
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 4.545,
+                "y": 0,
+                "z": -16.295
+              },
+              "facing": {
+                "x": 0.378,
+                "z": 0.926
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": -15.528,
+                "y": 0,
+                "z": -45.824
+              },
+              "facing": {
+                "x": 0.952,
+                "z": -0.307
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": -37.222,
+                "y": 0,
+                "z": -41.185
+              },
+              "facing": {
+                "x": 0.456,
+                "z": -0.89
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": -10.244,
+                "y": 0,
+                "z": 10.644
+              },
+              "facing": {
+                "x": 0.132,
+                "z": 0.991
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": -14.68,
+                "y": 0,
+                "z": -73.18
+              },
+              "facing": {
+                "x": -0.521,
+                "z": -0.853
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 15.691,
+                "y": 0,
+                "z": -74.777
+              },
+              "facing": {
+                "x": -0.815,
+                "z": -0.579
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 47.262,
+                "y": 0,
+                "z": -20.796
+              },
+              "facing": {
+                "x": 0.941,
+                "z": -0.338
+              }
+            }
+          ],
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "interactorContract": {
+            "maxNodeInteractors": 8,
+            "source": "dog-plus-nearest-sheep-unrolled",
+            "displacement": "world-proximity-laydown-plus-horizontal-push",
+            "visualScale": 4.2,
+            "laydownStrength": 1.45,
+            "shadowStrength": 0.62
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1,
+          "materialSummary": {
+            "kind": "sheep-wool",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "woolContract": {
+            "vertexColorSource": "geometry-color-attribute",
+            "bodyOnlyWoolShading": true,
+            "fog": "scene-synced-controls"
+          },
+          "animationContract": {
+            "source": "vertexId-instanceData-instanceAnimation",
+            "body": true,
+            "head": true,
+            "legs": true,
+            "wool": true,
+            "animationSpeed": 1
+          }
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 19.036,
+            "z": -30
+          },
+          "velocity": {
+            "x": 0,
+            "z": 0
+          },
+          "rotation": 0
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-sheep-grass-fix/rolling-hills-classic--follow-close--grass-only.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 163.968,
+          "stdev": 49.158,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "14.5"
+    },
+    {
+      "configId": "rolling-hills-classic--follow-close--sheep-only",
+      "baseConfigId": "rolling-hills-classic",
+      "scene": "rolling-hills",
+      "mode": "classic",
+      "cameraPose": "follow-close",
+      "systemIsolation": "sheep-only",
+      "ok": true,
+      "summary": {
+        "sampleCount": 548,
+        "avgFrameTime": 14.576277372268212,
+        "p50FrameTime": 7,
+        "p95FrameTime": 14,
+        "p99FrameTime": 27.80000000000109,
+        "maxFrameTime": 2168.8000000029806,
+        "avgDrawCalls": 2,
+        "avgTriangles": 108800,
+        "avgEstimatedTriangles": 108800,
+        "avgActiveSheep": 200,
+        "costReport": {
+          "renderer": "webgpu-production",
+          "deviceTier": "high",
+          "sceneId": "rolling-hills",
+          "cameraPose": "follow-close",
+          "frameP95": 14,
+          "frameP99": 27.80000000000109,
+          "drawCalls": 2,
+          "estimatedTrianglesBySystem": {
+            "Sheep": 108800,
+            "Terrain": 0,
+            "Trees": 0,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Structures": 0,
+            "Grass": 0
+          },
+          "visibleCountsBySystem": {
+            "Terrain": 0,
+            "Trees": 0,
+            "Rocks": 0,
+            "Mountains": 0,
+            "Grass": 0,
+            "Structures": 0,
+            "Sheep": 200,
+            "Water": 0,
+            "Atmosphere": 1
+          },
+          "qualityState": {
+            "deviceTier": "high",
+            "qualityIndex": 0,
+            "renderScale": 1,
+            "grassDistanceScale": 1,
+            "treeLodBias": 0,
+            "waterSparkleScale": 1,
+            "sheepAnimationRate": 1,
+            "terrainSegmentScale": 1,
+            "fallbackReason": null,
+            "lastWindow": null
+          }
+        },
+        "cameraPose": "follow-close",
+        "systemIsolation": "sheep-only"
+      },
+      "rendererInfo": {
+        "calls": 124,
+        "triangles": 0,
+        "points": 0,
+        "lines": 0,
+        "geometries": 36,
+        "textures": 8
+      },
+      "visualProbe": {
+        "sceneId": "rolling-hills",
+        "renderer": "webgpu-production",
+        "qualityState": {
+          "deviceTier": "high",
+          "qualityIndex": 0,
+          "renderScale": 1,
+          "grassDistanceScale": 1,
+          "treeLodBias": 0,
+          "waterSparkleScale": 1,
+          "sheepAnimationRate": 1,
+          "terrainSegmentScale": 1,
+          "fallbackReason": null,
+          "lastWindow": null
+        },
+        "terrain": {
+          "tier": "high",
+          "isMobile": false,
+          "size": 4000,
+          "segments": 384,
+          "skirtSize": 0,
+          "skirtSegments": 0,
+          "skirtTriangles": 0,
+          "splitSkirt": false
+        },
+        "trees": {
+          "native": {
+            "applied": true,
+            "ok": true,
+            "source": "THREE.InstancedMesh",
+            "route": "konveyor-production-scene-body",
+            "lod": "lod0-only",
+            "culling": "chunked-instanced-bounds",
+            "chunkSize": 192,
+            "impostor": {
+              "active": false,
+              "ok": true,
+              "groupCount": 0,
+              "sidecarLayout": null,
+              "selection": null,
+              "billboardProjection": null,
+              "terrainGroundedPivots": false,
+              "replacesMobileLod1ByDefault": false,
+              "nearLod": null,
+              "midLod": null,
+              "nearDistance": null,
+              "switchDistance": null,
+              "syncedMeshes": 0
+            },
+            "productionReference": "TerrainBuilder InstancedMesh2.addInstances",
+            "treeInstances": 179,
+            "renderedInstanceMeshes": 16,
+            "frustumCulled": true,
+            "groups": [
+              {
+                "type": "tree1",
+                "chunkKey": "-1:0",
+                "meshName": "trunk",
+                "instances": 18,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "-1:0",
+                "meshName": "leaves",
+                "instances": 18,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "-1:-1",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "-1:-1",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:0",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:0",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:-1",
+                "meshName": "trunk",
+                "instances": 24,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 791
+              },
+              {
+                "type": "tree1",
+                "chunkKey": "0:-1",
+                "meshName": "leaves",
+                "instances": 24,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 6007
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:0",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:0",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:-1",
+                "meshName": "trunk",
+                "instances": 25,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "-1:-1",
+                "meshName": "leaves",
+                "instances": 25,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:0",
+                "meshName": "trunk",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:0",
+                "meshName": "leaves",
+                "instances": 23,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:-1",
+                "meshName": "trunk",
+                "instances": 20,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 1560
+              },
+              {
+                "type": "tree2",
+                "chunkKey": "0:-1",
+                "meshName": "leaves",
+                "instances": 20,
+                "isInstancedMesh": true,
+                "isInstancedMesh2": false,
+                "frustumCulled": true,
+                "sourceLod": "lod0",
+                "hybridRole": null,
+                "baseOffset": 0,
+                "tileSelection": null,
+                "billboardProjection": null,
+                "terrainGroundedPivots": null,
+                "vertexCount": 13431
+              }
+            ]
+          },
+          "impostorRuntime": {
+            "active": false,
+            "ok": true,
+            "groupCount": 0,
+            "sidecarLayout": null,
+            "selection": null,
+            "billboardProjection": null,
+            "terrainGroundedPivots": false,
+            "replacesMobileLod1ByDefault": false,
+            "nearLod": null,
+            "midLod": null,
+            "nearDistance": null,
+            "switchDistance": null,
+            "syncedMeshes": 0
+          },
+          "lodBias": 0,
+          "materialSummary": {
+            "applied": true,
+            "ok": true,
+            "treeTargetsResolved": true,
+            "treeReplacedMaterials": 8,
+            "rockReplacedMaterials": 3,
+            "treeResults": [
+              {
+                "group": "tree-lod0",
+                "key": "tree2",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              },
+              {
+                "group": "tree-lod0",
+                "key": "tree1",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              },
+              {
+                "group": "tree-lod1",
+                "key": "tree1",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              },
+              {
+                "group": "tree-lod1",
+                "key": "tree2",
+                "strategy": "material-name",
+                "targetNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "seenNames": [
+                  "branches",
+                  "leaves"
+                ],
+                "missingTargets": [],
+                "visitedMeshes": 2,
+                "replacedMaterials": 2
+              }
+            ],
+            "rockResults": [
+              {
+                "group": "rock-lod0",
+                "key": "rock1",
+                "strategy": "asset-class-traversal",
+                "visitedMeshes": 1,
+                "replacedMaterials": 1,
+                "previousMaterialNames": [
+                  "(runtime-default)"
+                ]
+              },
+              {
+                "group": "rock-lod0",
+                "key": "rock2",
+                "strategy": "asset-class-traversal",
+                "visitedMeshes": 1,
+                "replacedMaterials": 1,
+                "previousMaterialNames": [
+                  "(runtime-default)"
+                ]
+              },
+              {
+                "group": "rock-lod0",
+                "key": "rock3",
+                "strategy": "asset-class-traversal",
+                "visitedMeshes": 1,
+                "replacedMaterials": 1,
+                "previousMaterialNames": [
+                  "(runtime-default)"
+                ]
+              }
+            ]
+          },
+          "groundingSample": [
+            {
+              "type": "tree1",
+              "x": -135.614,
+              "z": 10.123,
+              "groundY": 20.345,
+              "placementY": 20.345,
+              "scale": 28.841,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -124.115,
+              "z": 44.716,
+              "groundY": 18.043,
+              "placementY": 18.043,
+              "scale": 14.806,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -122.083,
+              "z": -9.758,
+              "groundY": 25.992,
+              "placementY": 25.992,
+              "scale": 14.662,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -121.025,
+              "z": 43.237,
+              "groundY": 18.991,
+              "placementY": 18.991,
+              "scale": 23.675,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -120.534,
+              "z": -3.01,
+              "groundY": 25.998,
+              "placementY": 25.998,
+              "scale": 19.659,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree1",
+              "x": -119.201,
+              "z": -57.517,
+              "groundY": 26.684,
+              "placementY": 26.684,
+              "scale": 15.114,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -127.399,
+              "z": 43.18,
+              "groundY": 17.487,
+              "placementY": 17.487,
+              "scale": 20,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -127.031,
+              "z": -25.239,
+              "groundY": 26.125,
+              "placementY": 26.125,
+              "scale": 28.387,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -123.074,
+              "z": 19.358,
+              "groundY": 21.461,
+              "placementY": 21.461,
+              "scale": 17.623,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -120.426,
+              "z": -62.927,
+              "groundY": 26.754,
+              "placementY": 26.754,
+              "scale": 21.57,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -118.401,
+              "z": 39.872,
+              "groundY": 19.793,
+              "placementY": 19.793,
+              "scale": 25.228,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            },
+            {
+              "type": "tree2",
+              "x": -115.671,
+              "z": 69.073,
+              "groundY": 22.972,
+              "placementY": 22.972,
+              "scale": 12.128,
+              "lod0BaseOffset": 0,
+              "lod1BaseOffset": 0
+            }
+          ]
+        },
+        "water": {
+          "present": true,
+          "worldSpaceHeightfield": true,
+          "sunCameraGlint": true,
+          "glintMode": "ripple-normal-sun-camera-v2",
+          "glintGain": 0.16,
+          "sparkleScale": 1
+        },
+        "grass": {
+          "present": true,
+          "interactorCount": 201,
+          "maxInteractors": 220,
+          "interactorSample": [
+            {
+              "type": "dog",
+              "position": {
+                "x": 0,
+                "y": 19.036,
+                "z": -30
+              },
+              "facing": {
+                "x": 0,
+                "z": 1
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 12.972,
+                "y": 0,
+                "z": -11.512
+              },
+              "facing": {
+                "x": 0.97,
+                "z": 0.243
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": -5.515,
+                "y": 0,
+                "z": -3.305
+              },
+              "facing": {
+                "x": 0.7,
+                "z": 0.714
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": -21.124,
+                "y": 0,
+                "z": -48.555
+              },
+              "facing": {
+                "x": 0.118,
+                "z": 0.993
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 17.586,
+                "y": 0,
+                "z": -53.826
+              },
+              "facing": {
+                "x": -0.441,
+                "z": -0.898
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 33.116,
+                "y": 0,
+                "z": -28.831
+              },
+              "facing": {
+                "x": 0.914,
+                "z": -0.405
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": -12.533,
+                "y": 0,
+                "z": 10.318
+              },
+              "facing": {
+                "x": -0.593,
+                "z": 0.805
+              }
+            },
+            {
+              "type": "sheep",
+              "position": {
+                "x": 41.115,
+                "y": 0,
+                "z": -46.006
+              },
+              "facing": {
+                "x": 0.438,
+                "z": 0.899
+              }
+            }
+          ],
+          "qualityDistanceScale": 1,
+          "qualityDensityScale": 1,
+          "materialSummary": {
+            "kind": "grass-blade",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "interactorContract": {
+            "maxNodeInteractors": 8,
+            "source": "dog-plus-nearest-sheep-unrolled",
+            "displacement": "world-proximity-laydown-plus-horizontal-push",
+            "visualScale": 4.2,
+            "laydownStrength": 1.45,
+            "shadowStrength": 0.62
+          }
+        },
+        "sheep": {
+          "count": 200,
+          "animationRate": 1,
+          "materialSummary": {
+            "kind": "sheep-wool",
+            "applied": true,
+            "reason": null,
+            "hasControls": true
+          },
+          "woolContract": {
+            "vertexColorSource": "geometry-color-attribute",
+            "bodyOnlyWoolShading": true,
+            "fog": "scene-synced-controls"
+          },
+          "animationContract": {
+            "source": "vertexId-instanceData-instanceAnimation",
+            "body": true,
+            "head": true,
+            "legs": true,
+            "wool": true,
+            "animationSpeed": 1
+          }
+        },
+        "dog": {
+          "present": true,
+          "position": {
+            "x": 0,
+            "y": 19.036,
+            "z": -30
+          },
+          "velocity": {
+            "x": 0,
+            "z": 0
+          },
+          "rotation": 0
+        }
+      },
+      "screenshot": {
+        "path": "cycle38-validation/screenshots/desktop-webgpu-sheep-grass-fix/rolling-hills-classic--follow-close--sheep-only.png",
+        "stats": {
+          "width": 1280,
+          "height": 720,
+          "mean": 191.679,
+          "stdev": 27.357,
+          "min": 0,
+          "max": 255,
+          "nonBlank": true
+        }
+      },
+      "errors": [],
+      "warning": null,
+      "elapsedSec": "15.3"
+    }
+  ]
+}

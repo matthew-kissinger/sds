@@ -405,6 +405,11 @@ class SheepDogSimulation {
             console.log('[PERF] __perfHarness installed. Call window.__perfHarness.startSampling() to capture.');
         }
 
+        if (urlParams.has('grassInteractionProof')) {
+            import('./diagnostics/grassInteractionProofHarness.js')
+                .then((m) => m.installGrassInteractionProofHarness(this));
+        }
+
         // Cycle 17 Phase 1: lightweight diagnostic surface for the
         // mobile-probe harness. URL `?probeRender=1` exposes
         // window.__sds.cameraController + scene-manager so the harness
@@ -1846,6 +1851,10 @@ class SheepDogSimulation {
     
     animate() {
         requestAnimationFrame(() => this.animate());
+
+        if (this.sceneManager.renderStatus.inFlight) {
+            return;
+        }
 
         const currentTime = performance.now();
         const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.05);

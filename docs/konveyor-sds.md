@@ -14,11 +14,12 @@ code around the new assumption.
 ## Autonomous branch mode
 
 The full migration campaign originally ran on `exp/konveyor-webgpu-migration`.
-PR #52 has since merged the progressive WebGPU packet to `main`. The active
-Cycle 38 release packet now lives on `codex/cycle-38-tree-impostors` and is
-prepared for the `2.1.5` deploy. Numbered cycle plans are evidence and
-checkpoints, not stopping points. Agents should keep moving until the full
-objective is reached or a documented hard stop is hit. Use
+PR #52 has since merged the progressive WebGPU packet to `main`. Cycle 38 work
+continues from the current checkout unless a scoped branch is created for a
+follow-up. The tree-impostor packet, desktop sheep/grass repair, and discrete
+grass proof are now evidence, not a mobile-readiness claim. Numbered cycle
+plans are evidence and checkpoints, not stopping points. Agents should keep
+moving until the full objective is reached or a documented hard stop is hit. Use
 [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) as the control
 surface for the next autonomous pass. The dated completion audit is
 [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md);
@@ -206,6 +207,15 @@ hatch, and the settings UI exposes an experimental WebGPU toggle backed by
   middle LOD read and the black/no-texture WebGPU impostor tint bug, but it is
   still opt-in while Android remains over budget and true octahedral sidecars
   are unbaked.
+- The later Cycle 38 desktop sheep/grass pass repairs the production WebGPU
+  sheep material and the grass contact proof surface. `desktop-webgpu-sheep-grass-fix.json`
+  records effective `webgpu-production`, nonblank Rolling Hills screenshots,
+  sheep wool metadata using geometry vertex colors, and grass displacement
+  `world-proximity-laydown-plus-horizontal-push`. `desktop-webgpu-grass-interaction-evidence.json`
+  freezes wind/sim, isolates dog and sheep contact, and writes off/on/diff
+  triptychs with localized blade changes. This is desktop installed-Chrome
+  evidence only; phone validation was deferred because the phone was not
+  connected.
 - The first real multiplayer WebGPU proof now exists at
   `cycle36-validation/runtime/production-webgpu-mp-proof.json` (captured
   2026-05-16T01:42:30.718Z on installed Chrome against local Vite + Wrangler).

@@ -1,8 +1,13 @@
-export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, TSL }, sheepWool) {
-  const { abs, attribute, cos, dot, float, floor, fract, length, max, mix, mod, normalize, normalLocal, normalView, positionLocal, positionView, positionWorld, pow, sin, smoothstep, step, time, vec3 } = TSL;
+import { Vector3 as ThreeVector3 } from 'three';
+
+export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, Vector3 = ThreeVector3, TSL }, sheepWool) {
+  const { abs, attribute, cos, dot, float, floor, fract, length, max, mix, mod, normalize, normalLocal, normalView, positionLocal, positionView, positionWorld, pow, sin, smoothstep, step, time, uniform, vec3, vertexColor } = TSL;
   const vertexId = attribute('vertexId', 'float');
   const instanceData = attribute('instanceData', 'vec4');
   const instanceAnimation = attribute('instanceAnimation', 'vec4');
+  const fogColor = uniform(new Vector3(...sheepWool.fogColor));
+  const fogNear = uniform(sheepWool.fogNear);
+  const fogFar = uniform(sheepWool.fogFar);
   const hash31 = (p) => fract(sin(dot(p, vec3(127.1, 311.7, 74.7))).mul(43758.5453));
   const noisePos = positionWorld.mul(sheepWool.woolNoiseScale)
     .add(vec3(time.mul(0.2).add(instanceData.w.mul(0.1)), time.mul(0.12), time.mul(0.08).add(instanceData.w.mul(0.2))));
@@ -22,7 +27,7 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
   const sss = pow(max(dot(lightDir.negate(), viewDir), 0.0), 3.0).mul(0.12);
   const edge = float(1.0).sub(pow(abs(dot(viewDir, normal)), 0.7));
   const viewDistance = length(positionView);
-  const fogBlend = smoothstep(sheepWool.fogNear, sheepWool.fogFar, viewDistance).mul(0.65);
+  const fogBlend = smoothstep(fogNear, fogFar, viewDistance).mul(0.65);
   const bodyMask = float(1.0).sub(step(50.0, vertexId));
   const headMask = step(50.0, vertexId).mul(float(1.0).sub(step(100.0, vertexId)));
   const legMask = step(100.0, vertexId).mul(float(1.0).sub(step(140.0, vertexId)));
@@ -56,15 +61,18 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
   const woolDisplacement = woolNoise.mul(sheepWool.woolDisplacementStrength)
     .add(sin(time.mul(1.8).add(animPhase)).mul(sheepWool.breathingStrength))
     .mul(bodyMask);
-  const shaded = woolColor.mul(toon).mul(colorShift)
+  const partColor = vertexColor();
+  const bodyWoolColor = woolColor.mul(toon).mul(colorShift)
     .add(vec3(...sheepWool.rimColor).mul(fresnel.mul(0.35)))
     .add(vec3(...sheepWool.sssColor).mul(sss))
     .mul(float(1.0).sub(edge.mul(0.2)))
     .sub(vec3(0.03, 0.03, 0.03).mul(woolNoise.mul(1.5)));
+  const partShade = float(0.66).add(toon.mul(0.34));
+  const shaded = mix(partColor.mul(partShade), bodyWoolColor, bodyMask);
 
   const material = new MeshStandardNodeMaterial();
   material.name = 'konveyor-node-sheep-wool';
-  material.colorNode = mix(shaded, vec3(...sheepWool.fogColor), fogBlend);
+  material.colorNode = mix(shaded, fogColor, fogBlend);
   material.positionNode = positionLocal
     .add(legOffset)
     .add(bodyOffset)
@@ -82,6 +90,17 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
     wool: true,
     animationSpeed: sheepWool.animationSpeed,
   };
+  material.userData.konveyorSheepWool = {
+    vertexColorSource: 'geometry-color-attribute',
+    bodyOnlyWoolShading: true,
+    fog: 'scene-synced-controls',
+  };
+  material.userData.konveyorSheepMaterialControls = createKonveyorSheepWoolNodeMaterialControls({
+    fogColor,
+    fogNear,
+    fogFar,
+    Vector3,
+  });
   return material;
 }
 
@@ -93,4 +112,33 @@ export function createKonveyorSheepPartNodeMaterial({ MeshStandardNodeMaterial, 
   material.roughnessNode = float(0.92);
   material.metalnessNode = float(0.0);
   return material;
+}
+
+function createKonveyorSheepWoolNodeMaterialControls({ fogColor, fogNear, fogFar, Vector3 }) {
+  return {
+    nodes: {
+      fogColor,
+      fogNear,
+      fogFar,
+    },
+    update({ sceneFog } = {}) {
+      if (!sceneFog) return;
+      if (sceneFog.color && fogColor?.value) {
+        const rgb = sceneFog.color.toArray();
+        if (fogColor.value.copy) {
+          fogColor.value.copy(new Vector3(rgb[0], rgb[1], rgb[2]));
+        } else {
+          fogColor.value = rgb;
+        }
+      }
+      if (sceneFog.isFog && Number.isFinite(sceneFog.near) && Number.isFinite(sceneFog.far)) {
+        fogNear.value = sceneFog.near;
+        fogFar.value = sceneFog.far;
+      } else if (sceneFog.isFogExp2 && Number.isFinite(sceneFog.density) && sceneFog.density > 0) {
+        fogNear.value = 18;
+        fogFar.value = Math.max(42, Math.min(180, 1.732 / sceneFog.density));
+      }
+    },
+    dispose() {},
+  };
 }

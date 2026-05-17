@@ -182,6 +182,8 @@ describe('konveyor grass material adapter', () => {
             expect(contexts[0].interaction.positions).toBe(grass.interactorPositions);
             expect(contexts[0].interaction.data).toBe(grass.interactorData);
             expect(contexts[0].interaction.facings).toBe(grass.interactorFacings);
+            expect(contexts[0].interaction.sheepRadius).toBe(grass.config.sheepInteractionRadius);
+            expect(contexts[0].interaction.sheepStrength).toBe(grass.config.sheepInteractionStrength);
             expect(contexts[0].fade).toEqual({ start: 70, end: 260, strength: 1 });
             expect(contexts[0].material).toMatchObject({
                 side: THREE.FrontSide,
@@ -234,10 +236,10 @@ describe('konveyor grass material adapter', () => {
             expect(material.userData.konveyorGrassBladeInteractors).toMatchObject({
                 maxNodeInteractors: 4,
                 source: 'dog-plus-nearest-sheep-unrolled',
-                displacement: 'horizontal-push-plus-laydown',
-                visualScale: 3.2,
-                laydownStrength: 1.0,
-                shadowStrength: 0.48,
+                displacement: 'world-proximity-laydown-plus-horizontal-push',
+                visualScale: 5.2,
+                laydownStrength: 1.9,
+                shadowStrength: 0.72,
             });
             expect(grass.konveyorGrassBladeMaterialSummary).toMatchObject({
                 kind: 'grass-blade',
@@ -283,10 +285,10 @@ describe('konveyor grass material adapter', () => {
                 data: new Float32Array([0, 1, 1, 1, 1]),
             });
             const nodes = controls.nodes;
-            expect(nodes.interactionRadius.value).toBeCloseTo(2.64);
+            expect(nodes.interactionRadius.value).toBeCloseTo(3.52);
             expect(nodes.interactionStrength.value).toBeCloseTo(0.75);
-            expect(nodes.sheepInteractionRadius.value).toBeCloseTo(1.5);
-            expect(nodes.sheepInteractionStrength.value).toBeCloseTo(0.475);
+            expect(nodes.sheepInteractionRadius.value).toBeCloseTo(4.0);
+            expect(nodes.sheepInteractionStrength.value).toBeCloseTo(0.5);
             expect(material.userData.konveyorGrassBladeInteractors.maxNodeInteractors).toBe(8);
             expect(nodes.interactorCount.value).toBe(5);
             expect(nodes.interactorPositions[0].value.toArray()).toEqual([1, 0, 2]);
@@ -316,14 +318,14 @@ describe('konveyor grass material adapter', () => {
         try {
             const controls = material.userData.konveyorGrassBladeMaterialControls;
             const nodes = controls.nodes;
-            expect(nodes.interactionRadius.value).toBeCloseTo(3.85);
+            expect(nodes.interactionRadius.value).toBeCloseTo(4.4);
             expect(nodes.interactionStrength.value).toBeCloseTo(0.93);
-            expect(nodes.sheepInteractionRadius.value).toBeCloseTo(2.1875);
-            expect(nodes.sheepInteractionStrength.value).toBeCloseTo(0.589);
+            expect(nodes.sheepInteractionRadius.value).toBeCloseTo(5.0);
+            expect(nodes.sheepInteractionStrength.value).toBeCloseTo(0.62);
             expect(material.userData.konveyorGrassBladeInteractors).toMatchObject({
-                visualScale: 3.4,
-                laydownStrength: 1.05,
-                shadowStrength: 0.52,
+                visualScale: 5.6,
+                laydownStrength: 2.1,
+                shadowStrength: 0.78,
             });
         } finally {
             material.dispose();

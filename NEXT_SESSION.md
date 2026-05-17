@@ -1,15 +1,15 @@
 # Next Session - Polished WebGPU Production Readiness Pickup
 
-> **Updated:** 2026-05-16 after Cycle 38 tree-impostor branch proof, LOD1
-> rebake, Android/desktop matrix refresh, and `2.1.5` release-doc alignment.
-> **For:** current Cycle 38 branch `codex/cycle-38-tree-impostors`; after this
-> packet merges, continue from `main` unless a scoped follow-up branch is
-> needed.
+> **Updated:** 2026-05-16 local / 2026-05-17 UTC after the Cycle 38 desktop
+> WebGPU sheep/grass repair, discrete grass-interaction proof, and sheep jitter
+> spike.
+> **For:** current `main` checkout unless a scoped follow-up branch is needed.
 > **Merged PR:** [#52](https://github.com/matthew-kissinger/sds/pull/52).
 > **Pickup priority:** continue Cycle 38 toward a polished production game.
-> The top implementation priority is production-ready tree octahedral impostors
-> for PC and mobile, with water grid/glint, grass interaction, sheep animation,
-> terrain seams, and frame-budget governance carried as active visual gates.
+> The top implementation priority is still production-ready tree octahedral
+> impostors for PC and mobile. Desktop WebGPU grass/sheep proof has improved,
+> while water grid/glint, Open Country terrain seams, mobile frame-budget
+> governance, and phone validation remain active gates.
 > Do not call SDS mobile-ready yet.
 
 Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then the completed Cycle 37 plan [`docs/cycle-37-plan.md`](docs/cycle-37-plan.md), then the next plan [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md), then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completion audit [`docs/konveyor-completion-audit-2026-05-16.md`](docs/konveyor-completion-audit-2026-05-16.md). Cycle 36 is completed foundation evidence at [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
@@ -22,10 +22,12 @@ approval to deploy future mobile-readiness work.
 
 ## Fresh Agent Goal
 
-Continue polished-production WebGPU work from the Cycle 38 tree-impostor branch
-packet. The branch advanced trees from lab-only impostor sampling to an explicit
-three-tier production route, but it did not finish true octahedral sidecars or
-mobile budget acceptance.
+Continue polished-production WebGPU work from the current Cycle 38 state. The
+tree packet advanced trees from lab-only impostor sampling to an explicit
+three-tier production route, and the later sheep/grass pass repaired the desktop
+WebGPU sheep material, strengthened grass displacement, and added repeatable
+visual evidence. Cycle 38 still has not finished true octahedral sidecars,
+mobile budget acceptance, or phone validation for the latest sheep/grass fixes.
 
 Start from the current checkout; do not restart Cycle 37. The repo now contains
 implemented Cycle 38 tree work and proof artifacts, with mobile readiness still
@@ -44,9 +46,11 @@ Implementation order:
    green Android matrix.
 2. Preserve fallback behavior until the production impostor gates pass. Do not
    describe the current lat/lon-hemi sidecars as octahedral.
-3. Close active visual parity gates: water grid/alignment lines, sticky or
-   overdone sun glint, dog/sheep grass displacement visibility, WebGPU sheep
-   leg animation, Open Country terrain bands/seams, and tree grounding/read.
+3. Continue active visual gates with current truth: desktop WebGPU dog/sheep
+   grass contact now has repeatable before/after/diff evidence, and the desktop
+   sheep wool/animation cadence path has been repaired. Mobile/phone proof for
+   those fixes is still deferred; water grid/alignment lines, sticky glint,
+   Open Country terrain bands/seams, and tree grounding/read remain open.
 4. Continue using installed Chrome for desktop WebGPU proof and the connected
    Android runner through `adb reverse tcp:3000 tcp:3000`. The current desktop
    tree matrix is valid; the current Android tree matrix is screenshot-valid
@@ -57,6 +61,22 @@ Latest focused evidence:
 - Android phone `R5CX4028VGJ` is reachable when USB debugging is authorized.
   Restore secure localhost with `adb reverse tcp:3000 tcp:3000` before Android
   probes.
+- Phone validation was not rerun for the sheep/grass pass because Matt said the
+  phone is not connected. Do not cite the desktop grass/sheep artifacts as
+  Android or iOS acceptance evidence.
+- `cycle38-validation/runtime/desktop-webgpu-sheep-grass-fix.json` is current
+  installed-Chrome production-preview evidence for the WebGPU sheep material and
+  grass contract. It reports effective `webgpu-production`, nonblank Rolling
+  Hills follow-close screenshots, grass displacement
+  `world-proximity-laydown-plus-horizontal-push`, and sheep wool metadata
+  `vertexColorSource="geometry-color-attribute"` plus
+  `vertexId-instanceData-instanceAnimation`.
+- `cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`
+  is the discrete visual proof for dog/sheep grass contact. It freezes wind/sim,
+  isolates one actor, captures off/on/diff panels, and currently reports dog
+  contact changed `0.38%` of the crop and sheep contact changed `0.348%`.
+  Triptychs live under
+  `cycle38-validation/screenshots/desktop-webgpu-grass-interaction-evidence/`.
 - `cycle38-validation/runtime/android-webgpu-glint-grass-sheep-spotcheck.json`
   is the latest focused Android WebGPU artifact. It proves effective
   `webgpu-production`, nonblank screenshots, the new water glint contract
@@ -78,8 +98,10 @@ Matt's latest visual observations to carry forward:
 - Water now also shows grid-like/alignment lines, as if the texture/ripple or
   heightfield sampling is visibly tiled.
 - Sun glint/reflection still reads sticky and out of sync on PC.
-- Sheep/dog grass interaction is still not visually obvious.
-- Sheep leg animation was lost in the migration and must visibly return.
+- Desktop WebGPU sheep/dog grass contact is now visible in dedicated proof
+  triptychs; normal-play and phone/mobile acceptance remain open.
+- Desktop WebGPU sheep wool shading and animation cadence were repaired; phone
+  validation remains open.
 - Open Country terrain still has lines/bands, and tree impostor/grounding read
   is not production-polished.
 

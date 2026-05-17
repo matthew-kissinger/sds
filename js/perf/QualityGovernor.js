@@ -2,9 +2,9 @@ import { WEBGPU_MOBILE_BUDGETS, percentile } from './RenderCostReport.js';
 
 const QUALITY_STEPS = Object.freeze([
     { renderScale: 1.0, grassDistanceScale: 1.0, treeLodBias: 0, waterSparkleScale: 1.0, sheepAnimationRate: 1.0, terrainSegmentScale: 1.0 },
-    { renderScale: 0.9, grassDistanceScale: 0.85, treeLodBias: 0.15, waterSparkleScale: 0.75, sheepAnimationRate: 0.75, terrainSegmentScale: 1.0 },
-    { renderScale: 0.8, grassDistanceScale: 0.7, treeLodBias: 0.35, waterSparkleScale: 0.5, sheepAnimationRate: 0.5, terrainSegmentScale: 0.75 },
-    { renderScale: 0.72, grassDistanceScale: 0.55, treeLodBias: 0.55, waterSparkleScale: 0.25, sheepAnimationRate: 0.5, terrainSegmentScale: 0.65 },
+    { renderScale: 0.9, grassDistanceScale: 0.85, treeLodBias: 0.15, waterSparkleScale: 0.75, sheepAnimationRate: 1.0, terrainSegmentScale: 1.0 },
+    { renderScale: 0.8, grassDistanceScale: 0.7, treeLodBias: 0.35, waterSparkleScale: 0.5, sheepAnimationRate: 1.0, terrainSegmentScale: 0.75 },
+    { renderScale: 0.72, grassDistanceScale: 0.55, treeLodBias: 0.55, waterSparkleScale: 0.25, sheepAnimationRate: 1.0, terrainSegmentScale: 0.65 },
 ]);
 
 export function classifyDeviceTier({

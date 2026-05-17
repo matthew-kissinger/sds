@@ -74,6 +74,13 @@ WebGPU-specific material, animation, and scene-composition defects below.
   startup spikes, so route correctness and frame pacing must stay separate in
   the acceptance read. Use the Cycle 38 artifacts, not this older first-pass
   list, as the current acceptance truth.
+- Later desktop sheep/grass status: `cycle38-validation/runtime/desktop-webgpu-sheep-grass-fix.json`
+  proves the production WebGPU path applies the repaired sheep wool material and
+  stronger grass interactor contract on Rolling Hills. The dedicated proof
+  `cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`
+  captures frozen off/on/diff triptychs for dog and sheep contact and reports
+  visible localized crop changes. This closes the desktop "prove the blades
+  move" request, but it is not phone or mobile acceptance evidence.
 
 ## Original Findings And Current Status
 
@@ -84,6 +91,9 @@ WebGPU-specific material, animation, and scene-composition defects below.
      proved `interactorCount=10` on the connected phone with nearest-sheep
      selection by dog distance, but the screenshot still does not make the bend
      obvious enough. Keep this open.
+   - Later desktop installed-Chrome proof added a discrete off/on/diff harness
+     and now shows localized dog/sheep blade movement. Keep normal-play and
+     mobile proof open until the phone is connected again.
 
 2. Water shader is bland compared with the target look.
    - Addressed in the mobile-readiness pass at the material/control level:
@@ -117,12 +127,15 @@ WebGPU-specific material, animation, and scene-composition defects below.
 
 ## Priority Order
 
-1. Run Cycle 38 visual screenshot gates across the same camera poses as the perf
+1. Rebuild over-budget tree/rock author-time assets and finish the true
+   octahedral impostor contract.
+2. Fix water grid/alignment lines and glint sync.
+3. Rerun phone/mobile grass and sheep proof when hardware is connected.
+4. Run Cycle 38 visual screenshot gates across the same camera poses as the perf
    matrix.
-2. Rebuild over-budget tree/rock author-time assets, starting with `tree2`.
-3. Wire remaining `QualityGovernor` knobs so mobile frame pacing can degrade and
+5. Wire remaining `QualityGovernor` knobs so mobile frame pacing can degrade and
    recover gracefully.
-4. Expand device/browser proof beyond one Android phone.
+6. Expand device/browser proof beyond one Android phone.
 
 ## Validation Expectation
 

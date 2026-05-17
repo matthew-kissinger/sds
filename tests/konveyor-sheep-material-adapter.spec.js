@@ -118,6 +118,11 @@ describe('konveyor sheep material adapter', () => {
             expect(sheep.material.fog).toBe(false);
             expect(sheep.material.colorNode).toBeTruthy();
             expect(sheep.material.positionNode).toBeTruthy();
+            expect(sheep.material.userData.konveyorSheepWool).toMatchObject({
+                vertexColorSource: 'geometry-color-attribute',
+                bodyOnlyWoolShading: true,
+                fog: 'scene-synced-controls',
+            });
             expect(sheep.material.userData.konveyorSheepAnimation).toMatchObject({
                 source: 'vertexId-instanceData-instanceAnimation',
                 body: true,
@@ -130,6 +135,7 @@ describe('konveyor sheep material adapter', () => {
             expect(sheep.konveyorSheepMaterialSummary).toMatchObject({
                 kind: 'sheep-wool',
                 applied: true,
+                hasControls: true,
             });
             expect(contexts).toHaveLength(1);
         } finally {
@@ -163,6 +169,31 @@ describe('konveyor sheep material adapter', () => {
             sceneFog: scene.fog,
             material: expect.objectContaining({ name: 'konveyor-sheep-controls' }),
         });
+    });
+
+    it('uses built-in WebGPU sheep controls for scene fog updates', () => {
+        const nodeFactories = createKonveyorSheepNodeMaterialFactories({ MeshStandardNodeMaterial, TSL });
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x6688aa, 12, 72);
+        const sheep = new OptimizedSheepSystem(scene, 0, null, false, {
+            search: '?renderer=webgpu&konveyorSheep=1',
+            konveyorSheepFactories: nodeFactories,
+        });
+
+        try {
+            const controls = sheep.konveyorSheepMaterialControls;
+            expect(controls).toBeTruthy();
+            sheep.update(0.1, null, null, null, null, null);
+            expect(controls.nodes.fogColor.value.toArray()).toEqual([
+                scene.fog.color.r,
+                scene.fog.color.g,
+                scene.fog.color.b,
+            ]);
+            expect(controls.nodes.fogNear.value).toBe(12);
+            expect(controls.nodes.fogFar.value).toBe(72);
+        } finally {
+            sheep.dispose();
+        }
     });
 
     it('falls back to the default sheep material when a factory is missing or invalid', () => {

@@ -96,7 +96,7 @@ describe('WebGPU mobile render cost reporting', () => {
             grassDistanceScale: 0.85,
             treeLodBias: 0.15,
             waterSparkleScale: 0.75,
-            sheepAnimationRate: 0.75,
+            sheepAnimationRate: 1.0,
         });
     });
 });

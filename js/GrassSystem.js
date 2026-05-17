@@ -591,6 +591,8 @@ export class GrassSystem {
                     facings: this.interactorFacings,
                     radius: this.config.interactionRadius,
                     strength: this.config.interactionStrength,
+                    sheepRadius: this.config.sheepInteractionRadius,
+                    sheepStrength: this.config.sheepInteractionStrength,
                 },
                 fog: {
                     color: this.config.fogColor.clone(),

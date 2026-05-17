@@ -51,9 +51,9 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
 
       const interactionRadius = interaction.radius ?? context.interactionRadius ?? bladeDefaults.interactionRadius ?? 2.2;
       const interactionStrength = interaction.strength ?? context.interactionStrength ?? bladeDefaults.interactionStrength ?? 0.6;
-      const sheepInteractionRadius = interaction.sheepRadius ?? context.sheepInteractionRadius ?? bladeDefaults.sheepInteractionRadius ?? 1.25;
-      const sheepInteractionStrength = interaction.sheepStrength ?? context.sheepInteractionStrength ?? bladeDefaults.sheepInteractionStrength ?? 0.38;
-      const interactionRadiusScale = context.isMobile ? 1.75 : 1.2;
+      const sheepInteractionRadius = interaction.sheepRadius ?? context.sheepInteractionRadius ?? bladeDefaults.sheepInteractionRadius ?? 2.5;
+      const sheepInteractionStrength = interaction.sheepStrength ?? context.sheepInteractionStrength ?? bladeDefaults.sheepInteractionStrength ?? 0.4;
+      const interactionRadiusScale = context.isMobile ? 2.0 : 1.6;
       const interactionStrengthScale = context.isMobile ? 1.55 : 1.25;
 
       return createKonveyorGrassBladeNodeMaterial(webGpuModules, {
@@ -78,15 +78,15 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
         interactionVisualScale: interaction.visualScale
           ?? context.interactionVisualScale
           ?? bladeDefaults.interactionVisualScale
-          ?? (context.isMobile ? 3.4 : 3.2),
+          ?? (context.isMobile ? 5.6 : 5.2),
         interactionLaydownStrength: interaction.laydownStrength
           ?? context.interactionLaydownStrength
           ?? bladeDefaults.interactionLaydownStrength
-          ?? (context.isMobile ? 1.05 : 1.0),
+          ?? (context.isMobile ? 2.1 : 1.9),
         interactionShadowStrength: interaction.shadowStrength
           ?? context.interactionShadowStrength
           ?? bladeDefaults.interactionShadowStrength
-          ?? (context.isMobile ? 0.52 : 0.48),
+          ?? (context.isMobile ? 0.78 : 0.72),
         maxNodeInteractors: context.tier === 'high'
           ? Math.min(interaction.maxInteractors ?? 8, 8)
           : Math.min(interaction.maxInteractors ?? 4, 4),
