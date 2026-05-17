@@ -18,6 +18,11 @@ export function installGrassInteractionProofHarness(game) {
                 sheep.facingDirection = state.facingDirection;
                 sheep.renderFacingDirection = state.facingDirection;
             }
+            if (Number.isFinite(state.animationPhase)) sheep.animationPhase = state.animationPhase;
+            if (Number.isFinite(state.speed)) sheep.currentSpeed = state.speed;
+            if (Number.isFinite(state.walkCycle)) sheep.walkCycle = state.walkCycle;
+            if (Number.isFinite(state.bounce)) sheep.bounceAmount = state.bounce;
+            if (Number.isFinite(state.lookAngle)) sheep.facingDirection = state.lookAngle;
             sheepSystem.update(
                 0,
                 null,
@@ -29,6 +34,7 @@ export function installGrassInteractionProofHarness(game) {
                 false,
                 null
             );
+            sheepSystem.updateInstanceAttributes?.(index, sheep);
             return true;
         },
         setPauseState(paused = true) {
@@ -45,6 +51,11 @@ export function installGrassInteractionProofHarness(game) {
             const direction = state.direction ?? { x: 1, y: 0 };
             grass.setWind(strength, direction);
             return true;
+        },
+        setInteractionShadowStrength(strength = 0) {
+            const grass = game.terrainBuilder?.grassSystem;
+            if (!grass) return false;
+            return grass.setInteractionShadowStrength(Number.isFinite(strength) ? strength : 0);
         },
         setGrassInteractors(entities = []) {
             const grass = game.terrainBuilder?.grassSystem;
@@ -83,6 +94,10 @@ export function installGrassInteractionProofHarness(game) {
             };
         },
         async renderOnce() {
+            const grass = game.terrainBuilder?.grassSystem;
+            const camera = game.sceneManager?.getCamera?.() ?? game.sceneManager?.camera ?? null;
+            const dog = game.gameState?.getSheepdog?.();
+            grass?.update?.(0, camera, dog?.position ?? null);
             await game.sceneManager?.render?.();
             return true;
         },

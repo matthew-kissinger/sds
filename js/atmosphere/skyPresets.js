@@ -132,21 +132,21 @@ export const SKY_PRESETS = {
     cloudCoverageDefault: 0.45,
     cloudScaleMetersPerFeature: 1000,
   },
-  // Late-afternoon warm oblique light. Open Country default.
+  // Low late-day light. Open Country default.
   'golden-hour': {
-    label: 'Golden hour',
-    sunAzimuthRad: Math.PI * 0.78,        // ~140deg, south-southeast
-    sunElevationRad: 22 * DEG,
-    turbidity: 4.5,
-    rayleigh: 2.2,
+    label: 'Low golden hour',
+    sunAzimuthRad: Math.PI * 0.84,        // ~151deg, south-southeast
+    sunElevationRad: 9 * DEG,
+    turbidity: 6.8,
+    rayleigh: 2.5,
     groundAlbedo: new THREE.Color(0x3e4a2c),
-    exposure: 0.20,
-    fogDensity: 0.0009,
-    fogColor: new THREE.Color(0xe8d8b8),
-    sunColor: new THREE.Color(0xffd8a0),
-    ambientColor: new THREE.Color(0xc4b08c),
-    ambientIntensity: 0.50,
-    cloudCoverageDefault: 0.40,
+    exposure: 0.16,
+    fogDensity: 0.0012,
+    fogColor: new THREE.Color(0xe0b48a),
+    sunColor: new THREE.Color(0xff9a55),
+    ambientColor: new THREE.Color(0xb58c72),
+    ambientIntensity: 0.42,
+    cloudCoverageDefault: 0.46,
     cloudScaleMetersPerFeature: 1300,
   },
 };

@@ -119,6 +119,12 @@ describe('konveyor atmosphere material adapter', () => {
     expect(material.isNodeMaterial).toBe(true);
     expect(material.depthWrite).toBe(false);
     expect(material.depthTest).toBe(false);
+    expect(material.userData.konveyorSkyPresetTuning).toMatchObject({
+      sunGlowStrength: 0.12,
+      sunDiscStrength: 0,
+      sunDiscOwner: 'SunBillboard',
+      ownership: 'sky-broad-glow-and-horizon-warmth',
+    });
   });
 
   it('routes HosekWilkieSky to the extracted WebGPU sky node material factory under the explicit flag', () => {

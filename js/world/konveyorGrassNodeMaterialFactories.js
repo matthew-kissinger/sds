@@ -78,15 +78,15 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
         interactionVisualScale: interaction.visualScale
           ?? context.interactionVisualScale
           ?? bladeDefaults.interactionVisualScale
-          ?? (context.isMobile ? 5.6 : 5.2),
+          ?? (context.isMobile ? 6.8 : 6.4),
         interactionLaydownStrength: interaction.laydownStrength
           ?? context.interactionLaydownStrength
           ?? bladeDefaults.interactionLaydownStrength
-          ?? (context.isMobile ? 2.1 : 1.9),
+          ?? (context.isMobile ? 0.95 : 0.85),
         interactionShadowStrength: interaction.shadowStrength
           ?? context.interactionShadowStrength
           ?? bladeDefaults.interactionShadowStrength
-          ?? (context.isMobile ? 0.78 : 0.72),
+          ?? (context.isMobile ? 0.26 : 0.22),
         maxNodeInteractors: context.tier === 'high'
           ? Math.min(interaction.maxInteractors ?? 8, 8)
           : Math.min(interaction.maxInteractors ?? 4, 4),

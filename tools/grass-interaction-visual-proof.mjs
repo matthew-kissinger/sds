@@ -18,7 +18,7 @@ const BASE_URL = args.baseUrl ?? args['base-url'] ?? 'http://127.0.0.1:4173/';
 const OUT_PATH = resolve(ROOT, args.out ?? 'cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json');
 const SCREENSHOT_DIR = resolve(ROOT, args.screenshotDir ?? 'cycle38-validation/screenshots/desktop-webgpu-grass-interaction-evidence');
 const CHANNEL = args.channel ?? 'chrome';
-const CROP = Object.freeze({ left: 260, top: 80, width: 760, height: 560 });
+const CROP = Object.freeze({ left: 260, top: 100, width: 760, height: 560 });
 const VIEWPORT = Object.freeze({ width: 1280, height: 720 });
 
 function relative(path) {
@@ -133,18 +133,19 @@ async function renderStable(page) {
 }
 
 async function capturePair(page, kind, interactor) {
-    const beforeFull = pathFor(`${kind}-off-full.png`);
-    const afterFull = pathFor(`${kind}-on-full.png`);
-    const beforeCrop = pathFor(`${kind}-off-crop.png`);
-    const afterCrop = pathFor(`${kind}-on-crop.png`);
-    const diff = pathFor(`${kind}-diff-crop.png`);
-    const overlay = pathFor(`${kind}-heat-overlay-crop.png`);
-    const triptych = pathFor(`${kind}-triptych.png`);
+    const beforeFull = pathFor(`${kind}-shadowless-off-full.png`);
+    const afterFull = pathFor(`${kind}-shadowless-on-full.png`);
+    const beforeCrop = pathFor(`${kind}-shadowless-off-crop.png`);
+    const afterCrop = pathFor(`${kind}-shadowless-on-crop.png`);
+    const diff = pathFor(`${kind}-shadowless-diff-crop.png`);
+    const overlay = pathFor(`${kind}-shadowless-bend-overlay-crop.png`);
+    const triptych = pathFor(`${kind}-shadowless-triptych.png`);
 
     await page.evaluate(async ({ kind }) => {
         const h = window.__perfHarness;
         const proof = window.__sdsGrassProof;
         h.setSystemIsolation('grass-only');
+        proof.setInteractionShadowStrength(0);
         proof.setActorVisibility({
             dog: kind === 'dog',
             sheep: kind === 'sheep',
@@ -160,11 +161,15 @@ async function capturePair(page, kind, interactor) {
     const state = await page.evaluate(async ({ interactor }) => {
         const h = window.__perfHarness;
         const proof = window.__sdsGrassProof;
+        const shadowDisabled = proof.setInteractionShadowStrength(0);
         const result = proof.setGrassInteractors([interactor]);
         await proof.renderOnce();
         return {
             visualProbe: h.getVisualProbe(),
             interactorResult: result,
+            proofMode: 'shadow-disabled-geometry-deformation',
+            shadowStrength: 0,
+            shadowDisabled,
         };
     }, { interactor });
     await renderStable(page);
@@ -175,6 +180,7 @@ async function capturePair(page, kind, interactor) {
 
     return {
         kind,
+        proofMode: 'shadow-disabled-geometry-deformation',
         state,
         crop: CROP,
         screenshots: {
@@ -232,12 +238,18 @@ const setup = await page.evaluate(async () => {
     h.setDogPose({ x: 0, z: -30, rotation: 0, resetVelocity: true });
     proof.setSheepPose({ index: 0, x: 0, z: -30, facingDirection: Math.PI });
     proof.setGrassWind({ strength: 0, direction: { x: 1, y: 0 } });
+    const shadowDisabled = proof.setInteractionShadowStrength(0);
     window.__sdsCinema.setCameraPose(
-        { x: 0, y: 30, z: -54 },
-        { x: 0, y: 18, z: -30 }
+        { x: -8, y: 34, z: -52 },
+        { x: 0, y: 19.4, z: -30 }
     );
     await proof.renderOnce();
-    return h.getVisualProbe();
+    return {
+        visualProbe: h.getVisualProbe(),
+        proofMode: 'shadow-disabled-geometry-deformation',
+        shadowStrength: 0,
+        shadowDisabled,
+    };
 });
 
 const dogEvidence = await capturePair(page, 'dog', {
@@ -255,14 +267,24 @@ const sheepEvidence = await capturePair(page, 'sheep', {
 const result = {
     capturedAt: new Date().toISOString(),
     url: url.href,
-    renderer: dogEvidence.state.visualProbe?.renderer ?? setup?.renderer ?? null,
+    renderer: dogEvidence.state.visualProbe?.renderer ?? setup?.visualProbe?.renderer ?? null,
     setup,
+    acceptance: {
+        shadowDisabled: setup.shadowDisabled === true
+            && dogEvidence.state.shadowDisabled === true
+            && sheepEvidence.state.shadowDisabled === true,
+        minimumChangedPixels: 1200,
+        evidenceIsGeometry: 'contact darkening forced to zero in grass material controls',
+    },
     dogEvidence,
     sheepEvidence,
     ok: errors.length === 0
         && String(dogEvidence.state.visualProbe?.renderer ?? '').startsWith('webgpu')
-        && dogEvidence.diffStats.changedPixels > 200
-        && sheepEvidence.diffStats.changedPixels > 200,
+        && setup.shadowDisabled === true
+        && dogEvidence.state.shadowDisabled === true
+        && sheepEvidence.state.shadowDisabled === true
+        && dogEvidence.diffStats.changedPixels > 1200
+        && sheepEvidence.diffStats.changedPixels > 1200,
     errors,
 };
 

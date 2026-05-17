@@ -68,6 +68,12 @@ describe('skyPresets', () => {
       FOG_DENSITY_MULTIPLIERS.LIGHT_RAIN
     );
   });
+
+  it('keeps Open Country golden-hour low enough to read as late-day light', () => {
+    expect(SKY_PRESETS['golden-hour'].sunElevationRad).toBeCloseTo(9 * Math.PI / 180, 5);
+    expect(SKY_PRESETS['golden-hour'].sunColor.r).toBeGreaterThan(SKY_PRESETS['golden-hour'].sunColor.b);
+    expect(SKY_PRESETS['golden-hour'].ambientIntensity).toBeLessThan(SKY_PRESETS['pastoral-noon'].ambientIntensity);
+  });
 });
 
 describe('sun-position math', () => {

@@ -48,7 +48,18 @@ export function createKonveyorEffectNodeMaterialFactories(webGpuModules, options
     createSunBillboardMaterial: (context = {}) => {
       const material = createKonveyorSunBillboardNodeMaterial(
         webGpuModules,
-        mergeDefined(sun, context, ['depthTest', 'blending'])
+        mergeDefined(sun, context, [
+          'depthTest',
+          'blending',
+          'intensity',
+          'haloStrength',
+          'haloPower',
+          'alphaHaloMix',
+          'coreRadius',
+          'coreFeather',
+          'coreColor',
+          'haloColor',
+        ])
       );
       const intensityUniform = material.userData?.konveyorIntensityUniform ?? null;
       const coreColorUniform = material.userData?.konveyorCoreColorUniform ?? null;

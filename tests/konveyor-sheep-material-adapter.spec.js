@@ -77,8 +77,8 @@ describe('konveyor sheep material adapter', () => {
             expect(contexts[0].lighting.rimColor.toArray()).toEqual([1.0, 1.0, 1.0]);
             expect(contexts[0].lighting.sssColor.toArray()).toEqual([1.0, 1.0, 0.98]);
             expect(contexts[0].wool).toEqual({
-                noiseScale: 0.62,
-                displacementStrength: 0.045,
+                noiseScale: 0.78,
+                displacementStrength: 0.065,
                 breathingStrength: 0.012,
             });
             expect(contexts[0].fog.color.getHex()).toBe(0xcccccc);
@@ -121,6 +121,8 @@ describe('konveyor sheep material adapter', () => {
             expect(sheep.material.userData.konveyorSheepWool).toMatchObject({
                 vertexColorSource: 'geometry-color-attribute',
                 bodyOnlyWoolShading: true,
+                bodyOnlyWoolDisplacement: true,
+                silhouetteBreakup: 'normal-offset-plus-rim-color-breakup',
                 fog: 'scene-synced-controls',
             });
             expect(sheep.material.userData.konveyorSheepAnimation).toMatchObject({
@@ -130,6 +132,7 @@ describe('konveyor sheep material adapter', () => {
                 legs: true,
                 wool: true,
                 animationSpeed: 1,
+                legMotion: 'lower-leg-weighted-fore-aft-constrained-lift',
             });
             expect(sheep.instancedMesh.material).toBe(sheep.material);
             expect(sheep.konveyorSheepMaterialSummary).toMatchObject({

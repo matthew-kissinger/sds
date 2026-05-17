@@ -31,8 +31,8 @@ export function createKonveyorSkyFogNodeMaterial(
   const sunGlow = max(uvSunGlow.mul(0.55), physicalSunGlow);
   const fogBand = float(1.0).sub(smoothstep(0.0, 0.38, skyY));
   const skyColor = mix(lowSky, highSky, vertical)
-    .add(sunColor.mul(sunGlow.mul(tuning.sunGlowStrength ?? 0.08)))
-    .add(vec3(1.0, 0.95, 0.82).mul(sunDisc.mul(tuning.sunDiscStrength ?? 0.24)));
+    .add(sunColor.mul(sunGlow.mul(tuning.sunGlowStrength ?? 0.12)))
+    .add(vec3(1.0, 0.80, 0.52).mul(sunDisc.mul(tuning.sunDiscStrength ?? 0.0)));
 
   const material = new MeshBasicNodeMaterial();
   material.name = name;
@@ -49,8 +49,10 @@ export function createKonveyorSkyFogNodeMaterial(
     highLift,
     verticalStart: tuning.verticalStart ?? 0.03,
     verticalEnd: tuning.verticalEnd ?? 0.55,
-    sunGlowStrength: tuning.sunGlowStrength ?? 0.08,
-    sunDiscStrength: tuning.sunDiscStrength ?? 0.24,
+    sunGlowStrength: tuning.sunGlowStrength ?? 0.12,
+    sunDiscStrength: tuning.sunDiscStrength ?? 0.0,
+    sunDiscOwner: 'SunBillboard',
+    ownership: 'sky-broad-glow-and-horizon-warmth',
     fogBandStrength: tuning.fogBandStrength ?? 0.08,
   };
   if (side !== null) {

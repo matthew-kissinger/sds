@@ -133,24 +133,26 @@ control surface:
   reports zero canopy-overlap pairs in Field, Rolling Hills, and Open Country;
   desktop installed-Chrome WebGPU screenshots are in
   `../cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json`.
-- The later desktop sheep/grass pass repairs the production WebGPU sheep wool
-  path and adds discrete grass-interaction evidence. `../cycle38-validation/runtime/desktop-webgpu-sheep-grass-fix.json`
-  reports effective `webgpu-production`, nonblank Rolling Hills screenshots,
-  grass displacement `world-proximity-laydown-plus-horizontal-push`, and sheep
-  wool metadata based on geometry vertex colors plus instanced animation.
-  `../cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`
-  freezes wind/sim, isolates dog and sheep contact, and writes off/on/diff
-  triptychs. Matt's latest review keeps this gate open because the visual read
-  can still be darkening around the dog rather than clear blade deformation.
-  Phone proof remains deferred because the phone was not connected.
+- The later desktop visual recovery pass repairs the production WebGPU
+  grass/sheep/wool/sun proof surface. The current grass artifact,
+  `../cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`,
+  freezes wind/sim, disables contact shadowing, isolates dog and sheep contact,
+  and writes off/on/diff/overlay triptychs. It records
+  `proofMode="shadow-disabled-geometry-deformation"`,
+  `overlapMode="dominant-contact-capped-vector"`, `maxDisplacement=0.95`,
+  dog changed `0.961%`, and sheep changed `0.992%`.
+- `../cycle38-validation/runtime/desktop-webgpu-visual-recovery-proof.json`
+  records installed-Chrome WebGPU evidence for bounded sun discs across Field,
+  Rolling Hills, and Open Country; fixed-phase sheep captures with constrained
+  leg motion and body-only wool; Open Country shoreline/glint; and tree-occluded
+  regression rows. Phone proof remains deferred because the phone was not
+  connected.
 - The current grass/sheep/wool/sun repair contract is
   [`archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md`](archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md).
-  Start there before more visual polish: prove grass geometry deformation with
-  contact darkening disabled, audit WebGPU sheep legs and body-only wool at
-  fixed gait phases, and retune Open Country toward low dawn/late-day light
-  while separating sky glow from the sun billboard disc. Matt's older WebGL
-  screenshot is the art-direction reference for parted blade silhouettes, warm
-  structured sun halo, sun-aligned water reflection, and wool silhouette breakup.
+  The desktop proof surface now implements it. Matt's older WebGL screenshot is
+  still the art-direction reference for parted blade silhouettes, warm
+  structured sun halo, sun-aligned water reflection, and wool silhouette
+  breakup.
 
 The desktop browser conclusion: installed Chrome 148 can create a WebGPU device
 on the current Windows machine, but Playwright's bundled Chromium 147 exposes
@@ -962,5 +964,5 @@ safe route, and keep moving.
 Use this exact goal for the next session:
 
 ```text
-/goal On the current SDS checkout, continue after the completed Cycle 37 packet, approved progressive WebGPU default, first connected-Android WebGPU mobile-readiness proof, tree-placement readability patch, and first-principles visual spike alignment. Read NEXT_SESSION.md, docs/cycle-38-plan.md, docs/archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md, docs/cycle-37-plan.md, docs/konveyor-autonomous-run.md, and docs/konveyor-sds.md. Do not rerun Cycle 37 or treat the one-phone Rolling Hills proof as full mobile certification. Execute Cycle 38 by first repairing the WebGPU visual proof surface: grass geometry deformation must be visible without contact darkening, sheep fixed-phase captures must rule out upward leg silhouettes and prove body-only wool read, and sun/atmosphere proof must separate sky glow from billboard disc while retuning Open Country toward low dawn/late-day light. Then continue the WebGPU mobile scene/camera/system matrix, add visual screenshot gates, rebuild over-budget author-time tree/rock assets with LOD/impostor sidecars, and wire the remaining QualityGovernor knobs. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Create a scoped codex/ branch before committing if branch isolation is desired. Do not touch shared/**, sim-baseline goldens, worker migrations, paid-store submission, signing, Steam/App Store/Google Play, production deploy, or native-shell dependencies without explicit approval.
+/goal On the current SDS checkout, continue after the completed Cycle 37 packet, approved progressive WebGPU default, first connected-Android WebGPU mobile-readiness proof, tree-placement readability patch, and implemented desktop first-principles visual recovery. Read NEXT_SESSION.md, docs/cycle-38-plan.md, docs/archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md, docs/cycle-37-plan.md, docs/konveyor-autonomous-run.md, and docs/konveyor-sds.md. Do not rerun Cycle 37 or treat the one-phone Rolling Hills proof as full mobile certification. Preserve the current desktop proof surface: shadow-disabled grass deformation, fixed-phase sheep leg/body-only wool captures, and bounded sun/atmosphere proof. Continue the WebGPU mobile scene/camera/system matrix, close visual screenshot gates for terrain seams, tree grounding/readability, water grid/glint, and dog-through-tree readability, rebuild over-budget author-time tree/rock assets with LOD/impostor sidecars, and wire the remaining QualityGovernor knobs. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Create a scoped codex/ branch before committing if branch isolation is desired. Do not touch shared/**, sim-baseline goldens, worker migrations, paid-store submission, signing, Steam/App Store/Google Play, production deploy, or native-shell dependencies without explicit approval.
 ```

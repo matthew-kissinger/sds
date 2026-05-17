@@ -128,6 +128,30 @@ describe('konveyor node material factory suite', () => {
     }
   });
 
+  it('keeps low-sun WebGPU sky glow separate from the SunBillboard disc', () => {
+    const skyFog = createSkyFogSamplePacket({ presetName: 'golden-hour' });
+    const suite = createKonveyorNodeMaterialFactorySuite(WEBGPU, { skyFog });
+    const sky = suite.atmosphere.createSkyDomeMaterial().material;
+    const sun = suite.effects.createSunBillboardMaterial().material;
+
+    try {
+      expect(sky.userData.konveyorSkyPresetTuning).toMatchObject({
+        presetName: 'golden-hour',
+        sunGlowStrength: 0.38,
+        sunDiscStrength: 0,
+        sunDiscOwner: 'SunBillboard',
+      });
+      expect(sun.userData.konveyorIntensityUniform.value).toBeCloseTo(1.0);
+      expect(sun.userData.konveyorSunBillboardOwnership).toMatchObject({
+        owns: 'readable-disc-and-near-halo',
+        skyOwns: 'broad-horizon-glow',
+      });
+    } finally {
+      sky.dispose();
+      sun.dispose();
+    }
+  });
+
   it('routes material creation through grouped reusable WebGPU factories', () => {
     const skyFog = createSkyFogSamplePacket();
     const heightTexture = createHeightTexture();

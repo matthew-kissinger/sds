@@ -8,8 +8,8 @@ const DEFAULT_SHEEP = Object.freeze({
   fogColor: [0.8, 0.8, 0.8],
   fogNear: 18,
   fogFar: 92,
-  woolNoiseScale: 0.62,
-  woolDisplacementStrength: 0.045,
+  woolNoiseScale: 0.78,
+  woolDisplacementStrength: 0.065,
   breathingStrength: 0.012,
   animationSpeed: 1,
 });

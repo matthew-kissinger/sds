@@ -975,10 +975,19 @@ class SheepDogSimulation {
         const grass = this.terrainBuilder?.grassSystem;
         const waterMaterial = this._animeWater?.material;
         const sheepSystem = this.gameState?.optimizedSheepSystem;
+        const atmosphereFrame = this.atmosphere?.getFrame?.({ sunBillboard: this._sunBillboard }) ?? null;
         return {
             sceneId: this.currentScene?.id ?? window.__currentSceneId ?? 'unknown',
             renderer: window.__sdsRendererMode?.effective ?? null,
             qualityState: this.qualityGovernor?.getState?.() ?? this._qualityState ?? {},
+            atmosphere: atmosphereFrame ? {
+                presetName: atmosphereFrame.presetName,
+                sunDirection: atmosphereFrame.sunDirection,
+                sunPhysicalDirection: atmosphereFrame.sunPhysicalDirection,
+                sunVisualDirection: atmosphereFrame.sunVisualDirection,
+                sunColor: atmosphereFrame.sunColor,
+                sunBillboard: atmosphereFrame.sunBillboard,
+            } : null,
             terrain: this.terrainBuilder?.konveyorTerrainGeometryBudget ?? null,
             trees: {
                 native: this.terrainBuilder?.konveyorNativeTreeInstancingSummary ?? null,
@@ -1010,6 +1019,7 @@ class SheepDogSimulation {
                 animationRate: sheepSystem?.animationUpdateRate ?? 1,
                 materialSummary: sheepSystem?.konveyorSheepMaterialSummary ?? null,
                 animationContract: sheepSystem?.material?.userData?.konveyorSheepAnimation ?? null,
+                woolContract: sheepSystem?.material?.userData?.konveyorSheepWool ?? null,
             },
             dog: {
                 present: !!this.sheepdog?.mesh,

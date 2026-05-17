@@ -295,8 +295,8 @@ export class OptimizedSheepSystem {
                     sssColor: new THREE.Color(1.0, 1.0, 0.98),
                 },
                 wool: {
-                    noiseScale: 0.62,
-                    displacementStrength: 0.045,
+                    noiseScale: 0.78,
+                    displacementStrength: 0.065,
                     breathingStrength: 0.012,
                 },
                 fog: {

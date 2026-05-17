@@ -1,7 +1,7 @@
 import { Vector3 as ThreeVector3 } from 'three';
 
 export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, Vector3 = ThreeVector3, TSL }, sheepWool) {
-  const { abs, attribute, cos, dot, float, floor, fract, length, max, mix, mod, normalize, normalLocal, normalView, positionLocal, positionView, positionWorld, pow, sin, smoothstep, step, time, uniform, vec3, vertexColor } = TSL;
+  const { abs, attribute, clamp, cos, dot, float, floor, fract, length, max, mix, mod, normalize, normalLocal, normalView, positionLocal, positionView, positionWorld, pow, sin, smoothstep, step, time, uniform, vec3, vertexColor } = TSL;
   const vertexId = attribute('vertexId', 'float');
   const instanceData = attribute('instanceData', 'vec4');
   const instanceAnimation = attribute('instanceAnimation', 'vec4');
@@ -32,7 +32,7 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
   const headMask = step(50.0, vertexId).mul(float(1.0).sub(step(100.0, vertexId)));
   const legMask = step(100.0, vertexId).mul(float(1.0).sub(step(140.0, vertexId)));
   const animPhase = instanceData.x;
-  const speed = instanceData.y;
+  const speed = clamp(instanceData.y, 0.0, 1.0);
   const walkCycle = instanceAnimation.x;
   const bounce = instanceAnimation.y;
   const legIndex = floor(vertexId.sub(100.0).div(10.0));
@@ -43,19 +43,21 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
   const bodyTime = time.mul(sheepWool.animationSpeed).add(animPhase);
   const headTime = bodyTime.add(0.5);
   const lookAngle = instanceAnimation.z;
+  const lowerLegMask = float(1.0).sub(clamp(positionLocal.y.div(0.62), 0.0, 1.0)).mul(legMask);
+  const legSwing = legWave.mul(bounce).mul(speed);
   const legOffset = vec3(
     0.0,
-    max(legWave, 0.0).mul(bounce).mul(2.0).mul(speed).mul(legMask),
-    legWave.mul(bounce).mul(0.3).mul(speed).mul(legMask)
+    max(legWave, 0.0).mul(bounce).mul(0.24).mul(speed).mul(lowerLegMask),
+    legSwing.mul(0.46).mul(lowerLegMask).add(legSwing.mul(0.10).mul(legMask))
   );
   const bodyOffset = vec3(
     sin(bodyTime.mul(2.5)).mul(bounce).mul(0.1).mul(speed).mul(bodyMask),
-    sin(bodyTime.mul(2.0)).mul(bounce).mul(0.5).mul(speed).mul(bodyMask),
+    sin(bodyTime.mul(2.0)).mul(bounce).mul(0.28).mul(speed).mul(bodyMask),
     0.0
   );
   const headOffset = vec3(
     sin(lookAngle).mul(0.1).mul(headMask),
-    sin(headTime.mul(2.0)).mul(bounce).mul(0.3).mul(speed).mul(headMask),
+    sin(headTime.mul(2.0)).mul(bounce).mul(0.16).mul(speed).mul(headMask),
     cos(lookAngle).mul(0.1).mul(headMask)
   );
   const woolDisplacement = woolNoise.mul(sheepWool.woolDisplacementStrength)
@@ -63,10 +65,11 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
     .mul(bodyMask);
   const partColor = vertexColor();
   const bodyWoolColor = woolColor.mul(toon).mul(colorShift)
-    .add(vec3(...sheepWool.rimColor).mul(fresnel.mul(0.35)))
+    .add(vec3(...sheepWool.rimColor).mul(fresnel.mul(0.48)))
     .add(vec3(...sheepWool.sssColor).mul(sss))
-    .mul(float(1.0).sub(edge.mul(0.2)))
-    .sub(vec3(0.03, 0.03, 0.03).mul(woolNoise.mul(1.5)));
+    .mul(float(1.0).sub(edge.mul(0.14)))
+    .sub(vec3(0.045, 0.045, 0.045).mul(woolNoise.mul(1.6)))
+    .add(vec3(0.035, 0.035, 0.03).mul(float(1.0).sub(woolNoise)).mul(fresnel));
   const partShade = float(0.66).add(toon.mul(0.34));
   const shaded = mix(partColor.mul(partShade), bodyWoolColor, bodyMask);
 
@@ -89,10 +92,13 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
     legs: true,
     wool: true,
     animationSpeed: sheepWool.animationSpeed,
+    legMotion: 'lower-leg-weighted-fore-aft-constrained-lift',
   };
   material.userData.konveyorSheepWool = {
     vertexColorSource: 'geometry-color-attribute',
     bodyOnlyWoolShading: true,
+    bodyOnlyWoolDisplacement: true,
+    silhouetteBreakup: 'normal-offset-plus-rim-color-breakup',
     fog: 'scene-synced-controls',
   };
   material.userData.konveyorSheepMaterialControls = createKonveyorSheepWoolNodeMaterialControls({

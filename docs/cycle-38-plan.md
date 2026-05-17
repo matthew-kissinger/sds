@@ -1,9 +1,8 @@
 # Cycle 38 - Polished WebGPU Production Readiness
 
 Status: active/in progress - not mobile-ready yet; tree-impostor packet
-captured, desktop WebGPU sheep/grass proof refreshed, tree placement fix
-shipped, first-principles grass/sheep/sun visual spike aligned, and phone
-validation deferred
+captured, tree placement fix shipped, desktop first-principles
+grass/sheep/sun visual repair implemented, and phone validation deferred
 Date: 2026-05-16  
 Branch: current `main` checkout unless a scoped follow-up branch is created
 
@@ -63,19 +62,31 @@ Current truth:
   proves the explicit tree path and screenshots run on phone, but it is
   budget-red: three full-scene rows fail the mid-mobile budget, including Open
   Country horizon/terrain-seam at `p95=100.0 ms`, `p99=133.5 ms`.
-- Desktop WebGPU sheep/grass proof is now current. The sheep wool node material
-  preserves geometry vertex colors for face, legs, eyes, and nose, keeps
-  body-only wool shading/displacement, and syncs fog through material controls.
-  The main loop no longer advances simulation while a WebGPU `renderAsync()`
-  frame is in flight, and `QualityGovernor` no longer degrades sheep animation
-  below `1.0`.
-- Discrete desktop grass-contact evidence exists at
-  `cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`.
-  It freezes wind/sim, isolates one dog or sheep interactor, and writes
-  off/on/diff triptychs under
+- Desktop WebGPU grass/sheep/sun first-principles proof is now current.
+  `cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`
+  freezes wind/sim, disables contact shadowing, isolates one dog or sheep
+  interactor, and writes off/on/diff/overlay triptychs under
   `cycle38-validation/screenshots/desktop-webgpu-grass-interaction-evidence/`.
-  Current production WebGPU proof reports dog contact changed `0.38%` of the
-  crop and sheep contact changed `0.348%`.
+  It records `proofMode="shadow-disabled-geometry-deformation"`, shadow
+  strength `0`, grass `overlapMode="dominant-contact-capped-vector"`,
+  `maxDisplacement=0.95`, dog changed `0.961%`, and sheep changed `0.992%`.
+- The production grass shader now uses an explicit per-clump
+  `instanceWorldOffset` attribute for world-space contact coordinates, anchored
+  blade bases, stronger mid/tip bend, and capped dominant-contact accumulation
+  so dense dog/sheep overlap does not sum into warped blades.
+- The sheep wool node material preserves geometry vertex colors for face, legs,
+  eyes, and nose, keeps body-only wool shading/displacement, and uses a
+  constrained lower-leg fore/aft gait instead of vertical lift that can project
+  legs upward. The main loop no longer advances simulation while a WebGPU
+  `renderAsync()` frame is in flight, and `QualityGovernor` no longer degrades
+  sheep animation below `1.0`.
+- `cycle38-validation/runtime/desktop-webgpu-visual-recovery-proof.json`
+  records installed-Chrome WebGPU proof for Field, Rolling Hills, and Open
+  Country sun screenshots, fixed-phase sheep crops, Open Country shoreline
+  glint, and tree-occluded regression rows. It reports `ok=true`; clipped-white
+  percentages are Field `0.059`, Rolling Hills `0.059`, and Open Country
+  `0.1443`, with sheep checks confirming constrained leg motion, body-only
+  wool, and nonblank crops.
 - Phone validation was not rerun for the sheep/grass pass because the phone was
   not connected. Mobile acceptance remains open.
 - Matt still sees water texture/ripple lines in a grid-like alignment pattern,
@@ -95,14 +106,14 @@ Current truth:
   `61`, Open Country `204`. Desktop installed-Chrome WebGPU screenshot proof
   lives at
   `cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json`.
-- Matt's latest review keeps grass, sheep, wool, and atmosphere open. The
-  current grass proof is contested because the visible read can be darkening
-  around the dog rather than actual blade deformation. Sheep need a WebGPU
-  fixed-phase leg audit because screenshots may show legs projecting upward, and
-  the wool still does not read wooly enough. The sun still reads as a white
-  splotch, and Open Country should move toward a lower dawn/late-day feel
-  instead of a high 3pm read. First-principles research and the next acceptance
-  plan are recorded in
+- Matt's darkening-only grass review is addressed on desktop by the
+  shadow-disabled proof path, explicit per-clump contact coordinates, and the
+  capped dominant-contact vector that prevents dense-agent blade warping. The
+  WebGPU sheep fixed-phase audit and sun/atmosphere proof are also implemented
+  for installed Chrome. Phone/mobile validation remains open because the phone
+  was not connected, and any further subjective art-direction review should use
+  the new proof artifacts instead of the older contested sheep/grass packet.
+  First-principles research and the acceptance rationale are recorded in
   [`archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md`](archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md).
 - Matt supplied an older WebGL screenshot as the visual target reference. Use it
   for specific cues now missing in WebGPU: grass deformation must read through
@@ -112,8 +123,9 @@ Current truth:
 
 Fresh-agent implementation order:
 
-1. Repair the first-principles visual proof surface for grass, sheep, wool, and
-   sun/atmosphere before more subjective screenshot tuning.
+1. Preserve and review the repaired desktop first-principles visual proof
+   surface for grass, sheep, wool, and sun/atmosphere; rerun phone/mobile proof
+   when hardware is available.
 2. Production tree octahedral impostors for PC/mobile.
 3. Water grid/alignment line fix plus sun/camera-synced glint proof.
 4. Phone/mobile validation for the desktop sheep/grass fixes when hardware is
@@ -183,19 +195,27 @@ Implemented and validated:
   The current Android terrain artifact proves `interactorCount=10` and records
   eight interactor samples. Visual acceptance is still pending until screenshots
   clearly show dog and sheep bending grass in normal play.
-- A later desktop WebGPU sheep/grass repair strengthened the production blade
-  laydown path further for visual evidence, passed live dog/sheep radius and
-  strength from `GrassSystem`, and records
-  `displacement="world-proximity-laydown-plus-horizontal-push"`,
-  `visualScale=5.2`, and `laydownStrength=1.9` in the desktop proof. Dedicated
-  installed-Chrome triptychs now show localized dog and sheep contact-zone
-  changes. Treat this as desktop visual acceptance only until phone proof is
-  rerun.
+- A later desktop WebGPU visual recovery pass replaced the contested
+  darkening-only grass proof with shadow-disabled geometry evidence. The grass
+  blade material now records `coordinateSource="instanceWorldOffset-instanced-attribute"`,
+  `displacement="anchored-tip-splay-plus-local-laydown"`,
+  `overlapMode="dominant-contact-capped-vector"`, `maxDisplacement=0.95`,
+  `visualScale=6.4`, and `laydownStrength=0.85` in the desktop proof.
+  `tools/grass-interaction-visual-proof.mjs` captures shadow-disabled
+  off/on/diff/overlay triptychs and currently reports dog contact changed
+  `0.961%` and sheep contact changed `0.992%`.
 - The WebGPU sheep material now uses geometry vertex colors for non-body parts,
-  body-only wool shading/displacement, and scene-synced fog controls. The
+  body-only wool shading/displacement, scene-synced fog controls, and
+  lower-leg-weighted fore/aft motion that avoids upward leg silhouettes. The
   WebGPU jitter spike also added a render-in-flight guard and kept
   `sheepAnimationRate=1.0` across all quality steps, so sheep animation cadence
   is not deliberately degraded under over-budget windows.
+- Sun/atmosphere ownership is explicit again on desktop WebGPU: the sky owns
+  broad glow/horizon warmth, `SunBillboard` owns the readable disc/near halo,
+  and Open Country now uses the lower `golden-hour` preset. The installed
+  Chrome visual proof records bounded clipped-white percentages for Field
+  `0.059`, Rolling Hills `0.059`, and Open Country `0.1443`, plus Open Country
+  shoreline/glint and tree-occluded regression screenshots.
 - WebGPU tree grounding now records per-tree placement samples and recomputes
   native LOD instance Y from `groundY + baseOffset * scale`. Current Open
   Country samples show `placementY == groundY` and `lod0/lod1BaseOffset=0`, so
@@ -244,9 +264,14 @@ Implemented and validated:
 - The Android perf runner now preserves aggregate `ok=false` on single-row
   artifacts when budget checks fail. Before this fix, a one-row probe could
   overwrite the budget failure with the row-level screenshot/runtime `ok=true`.
-- Validation after this pass: focused syntax checks passed, focused tree and
-  material specs passed, full `npm test` passed with `469` specs passing and
-  `7` skipped, and `npm run build` passed with known chunk warnings. The Cycle
+- Validation after this pass: focused grass/sheep/effect/atmosphere/tree specs
+  passed with `106` specs, full `npm test` passed with `476` specs passing and
+  `7` skipped, `npm run lint` passed, `npm run build` passed with known chunk
+  warnings, and targeted Chromium e2e smoke passed with `2` specs. The broad
+  `npm run test:e2e` command was attempted but timed out while running the full
+  multi-browser/multiplayer Playwright matrix, so the scoped Chromium smoke and
+  installed-Chrome WebGPU proof scripts are the current browser evidence for
+  this pass. The Cycle
   38 diagnostic and
   mobile proof surface intentionally ratchets `tests/refactor-baseline` main
   bundle size to `590 KiB` after splitting the explicit tree-impostor runtime
@@ -284,15 +309,14 @@ Current connected-phone blockers:
 - The water visual gate remains open. In addition to glint sync/strength,
   Matt now reports grid-like lines where the water texture/ripple field appears
   misaligned or visibly tiled.
-- The grass visual gate remains open even after desktop material repairs.
-  Evidence must prove geometry deformation with contact shadow disabled; a
-  darker contact patch is not sufficient.
-- The sheep visual gate remains open until WebGPU fixed-phase captures prove
-  legs stay under the body and wool reads as body-only fleece instead of smooth
-  color noise.
-- The sun/atmosphere gate remains open until Rolling Hills and Open Country have
-  warm bounded sun discs and Open Country reads low-sun dawn/late-day rather
-  than high afternoon.
+- The desktop grass proof gate now has shadow-disabled geometry evidence, but
+  phone/mobile proof and normal-play screenshot review remain open.
+- The desktop sheep proof gate now has fixed-phase WebGPU captures and material
+  metadata for constrained leg motion and body-only wool; phone/mobile proof
+  and final art-direction review remain open.
+- The desktop sun/atmosphere proof gate now has bounded sun-disc histograms and
+  a lower Open Country preset; further subjective tuning should use the
+  installed-Chrome visual recovery screenshots as the baseline.
 
 ## Grass, Sheep, Wool, and Sun First-Principles Amendment
 
@@ -323,6 +347,11 @@ This amendment is now part of Cycle 38 acceptance:
   cues. Do not chase exact WebGL parity wholesale, but do recover the visible
   bend, warm low-sun gradient, synced water reflection, and wool silhouette
   breakup shown there.
+- Implemented desktop first-principles proof on 2026-05-16/17:
+  `cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`
+  and `cycle38-validation/runtime/desktop-webgpu-visual-recovery-proof.json`
+  are the current installed-Chrome evidence. Mobile/phone proof is still
+  deferred because the phone was not connected.
 
 ## WebGPU Impostor Spike Update
 

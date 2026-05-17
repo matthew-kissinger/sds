@@ -13,7 +13,7 @@ import { createKonveyorEffectMaterial } from './konveyorEffectMaterialAdapter.js
 
 const SUN_DISTANCE = 3000;
 const SUN_QUAD_SIZE = 110;
-const KONVEYOR_SUN_QUAD_SIZE = 620;
+const KONVEYOR_SUN_QUAD_SIZE = 520;
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -144,7 +144,7 @@ export class SunBillboard {
         // sit dimly visible underground in dusk presets.
         const elevation = Math.max(0, this._tmpDir.y);
         const intensity = this.konveyorMaterialSummary?.applied
-            ? Math.max(1.28, Math.min(1.62, 1.10 + elevation * 1.75))
+            ? Math.max(0.82, Math.min(1.12, 0.70 + elevation * 1.25))
             : Math.min(1, elevation * 4.0);
         this._lastIntensity = intensity;
 
@@ -152,11 +152,16 @@ export class SunBillboard {
             // Bias the halo slightly warmer than the core so the disc reads
             // as warm without losing the cleaner near-white center.
             if (this.materialControls?.update) {
-                const coreBlend = this.konveyorMaterialSummary?.applied ? 0.72 : 0.4;
+                const coreColor = this.konveyorMaterialSummary?.applied
+                    ? new THREE.Color().copy(sunColor).lerp(new THREE.Color(1.0, 0.62, 0.24), 0.38)
+                    : new THREE.Color().copy(sunColor).lerp(new THREE.Color(1.0, 1.0, 1.0), 0.4);
+                const haloColor = this.konveyorMaterialSummary?.applied
+                    ? new THREE.Color().copy(sunColor).lerp(new THREE.Color(1.0, 0.36, 0.08), 0.24)
+                    : sunColor;
                 this._lastSunColor.copy(sunColor);
                 this.materialControls.update({
-                    haloColor: sunColor,
-                    coreColor: new THREE.Color().copy(sunColor).lerp(new THREE.Color(1.0, 1.0, 1.0), coreBlend),
+                    haloColor,
+                    coreColor,
                     intensity,
                 });
             } else if (this.material.uniforms) {

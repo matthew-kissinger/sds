@@ -236,10 +236,14 @@ describe('konveyor grass material adapter', () => {
             expect(material.userData.konveyorGrassBladeInteractors).toMatchObject({
                 maxNodeInteractors: 4,
                 source: 'dog-plus-nearest-sheep-unrolled',
-                displacement: 'world-proximity-laydown-plus-horizontal-push',
-                visualScale: 5.2,
-                laydownStrength: 1.9,
-                shadowStrength: 0.72,
+                displacement: 'anchored-tip-splay-plus-local-laydown',
+                coordinateSource: 'instanceWorldOffset-instanced-attribute',
+                overlapMode: 'dominant-contact-capped-vector',
+                visualScale: 6.4,
+                maxDisplacement: 0.95,
+                laydownStrength: 0.85,
+                shadowStrength: 0.22,
+                shadowUniform: true,
             });
             expect(grass.konveyorGrassBladeMaterialSummary).toMatchObject({
                 kind: 'grass-blade',
@@ -248,6 +252,34 @@ describe('konveyor grass material adapter', () => {
             expect(contexts).toHaveLength(1);
         } finally {
             material.dispose();
+        }
+    });
+
+    it('adds per-clump world offsets to WebGPU grass chunks for contact bending', () => {
+        const scene = new THREE.Scene();
+        const grass = new GrassSystem(scene, false, null, {
+            meshSampleY: () => 7,
+        });
+        grass.random = () => 0.5;
+        grass.clumpGeometry = grass.createClumpGeometry();
+        grass.grassMaterial = createMaterial('konveyor-grass-blade');
+        grass.konveyorGrassBladeMaterialSummary = { applied: true };
+
+        const chunk = grass.createChunk(0, 0, -5, -5, 5, 5, 3);
+
+        try {
+            expect(chunk).toBeTruthy();
+            expect(chunk.ownsGeometry).toBe(true);
+            expect(chunk.mesh.geometry).not.toBe(grass.clumpGeometry);
+            const attr = chunk.mesh.geometry.getAttribute('instanceWorldOffset');
+            expect(attr).toBeTruthy();
+            expect(attr.itemSize).toBe(3);
+            expect(attr.count).toBe(chunk.clumpCount);
+            expect(attr.array[0]).toBeCloseTo(0);
+            expect(attr.array[1]).toBeCloseTo(7);
+            expect(attr.array[2]).toBeCloseTo(0);
+        } finally {
+            grass.dispose();
         }
     });
 
@@ -323,10 +355,33 @@ describe('konveyor grass material adapter', () => {
             expect(nodes.sheepInteractionRadius.value).toBeCloseTo(5.0);
             expect(nodes.sheepInteractionStrength.value).toBeCloseTo(0.62);
             expect(material.userData.konveyorGrassBladeInteractors).toMatchObject({
-                visualScale: 5.6,
-                laydownStrength: 2.1,
-                shadowStrength: 0.78,
+                visualScale: 6.8,
+                laydownStrength: 0.95,
+                shadowStrength: 0.26,
             });
+        } finally {
+            material.dispose();
+        }
+    });
+
+    it('can disable WebGPU grass contact darkening for geometry-only proof captures', () => {
+        const nodeFactories = createKonveyorGrassNodeMaterialFactories(
+            { MeshBasicNodeMaterial, MeshLambertNodeMaterial, MeshStandardNodeMaterial, DoubleSide, TSL },
+            {
+                fogNear: 18,
+                fogFar: 74,
+            }
+        );
+        const material = nodeFactories.createGrassBladeMaterial();
+
+        try {
+            const controls = material.userData.konveyorGrassBladeMaterialControls;
+            const nodes = controls.nodes;
+            expect(nodes.interactionShadowStrength.value).toBeCloseTo(0.22);
+            controls.setInteractionShadowStrength({ strength: 0 });
+            expect(nodes.interactionShadowStrength.value).toBe(0);
+            controls.setInteractionShadowStrength({ strength: 4 });
+            expect(nodes.interactionShadowStrength.value).toBe(1);
         } finally {
             material.dispose();
         }

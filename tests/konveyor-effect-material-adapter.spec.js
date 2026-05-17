@@ -5,6 +5,7 @@ import {
   DoubleSide,
   LineBasicNodeMaterial,
   MeshBasicNodeMaterial,
+  NormalBlending,
   PointsNodeMaterial,
   TSL,
 } from 'three/webgpu';
@@ -103,7 +104,7 @@ describe('konveyor effect material adapter', () => {
 
   it('can route production effects through reusable WebGPU node material candidates', () => {
     const factories = createKonveyorEffectNodeMaterialFactories(
-      { MeshBasicNodeMaterial, PointsNodeMaterial, LineBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL },
+      { MeshBasicNodeMaterial, PointsNodeMaterial, LineBasicNodeMaterial, AdditiveBlending, NormalBlending, DoubleSide, TSL },
       {
         sun: { depthTest: true },
         portal: { depthTest: true },
@@ -170,9 +171,15 @@ describe('konveyor effect material adapter', () => {
       expect(sun.material.transparent).toBe(true);
       expect(sun.material.depthWrite).toBe(false);
       expect(sun.material.depthTest).toBe(true);
-      expect(sun.material.blending).toBe(THREE.AdditiveBlending);
+      expect(sun.material.blending).toBe(THREE.NormalBlending);
       expect(sun.material.colorNode).toBeTruthy();
       expect(sun.material.opacityNode).toBeTruthy();
+      expect(sun.material.userData.konveyorSunBillboardOwnership).toMatchObject({
+        owns: 'readable-disc-and-near-halo',
+        skyOwns: 'broad-horizon-glow',
+        boundedIntensity: true,
+        blending: 'normal-bounded',
+      });
       expect(sun.summary).toMatchObject({ kind: 'sun-billboard', applied: true, hasControls: true });
 
       expect(portal.material.name).toBe('konveyor-node-portal-ring');
@@ -280,13 +287,13 @@ describe('konveyor effect material adapter', () => {
     sun.update(camera, new THREE.Vector3(0, 1, 0), new THREE.Color(0.8, 0.7, 0.6));
 
     expect(updates).toHaveLength(1);
-    expect(updates[0]).toMatchObject({ intensity: 1.62 });
+    expect(updates[0]).toMatchObject({ intensity: 1.12 });
     expect(updates[0].haloColor).toBeInstanceOf(THREE.Color);
     expect(updates[0].coreColor).toBeInstanceOf(THREE.Color);
     expect(sun.getDiagnostics()).toMatchObject({
-      size: 620,
+      size: 520,
       distance: 3000,
-      intensity: 1.62,
+      intensity: 1.12,
       materialName: 'konveyor-sun',
       applied: true,
     });

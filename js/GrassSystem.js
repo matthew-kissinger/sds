@@ -1121,9 +1121,17 @@ export class GrassSystem {
 
         if (validPositions.length === 0) return null;
 
+        const usesKonveyorBladeMaterial = this.konveyorGrassBladeMaterialSummary?.applied === true;
+        const chunkGeometry = usesKonveyorBladeMaterial
+            ? this.clumpGeometry.clone()
+            : this.clumpGeometry;
+        const instanceWorldOffsets = usesKonveyorBladeMaterial
+            ? new Float32Array(validPositions.length * 3)
+            : null;
+
         // Create instanced mesh for this chunk
         const instancedMesh = new THREE.InstancedMesh(
-            this.clumpGeometry,
+            chunkGeometry,
             this.grassMaterial,
             validPositions.length
         );
@@ -1149,6 +1157,12 @@ export class GrassSystem {
             // amplitude bug at the root (`scripts/bake-heightmap.mjs` writes
             // pre-multiplied metres) instead of clamping the symptom.
             if (!Number.isFinite(baseY) || baseY > 50 || baseY < -10) baseY = 0;
+            if (instanceWorldOffsets) {
+                const offsetIndex = i * 3;
+                instanceWorldOffsets[offsetIndex] = pos.x;
+                instanceWorldOffsets[offsetIndex + 1] = baseY;
+                instanceWorldOffsets[offsetIndex + 2] = pos.z;
+            }
             dummy.position.set(pos.x, baseY, pos.z);
 
             // Random rotation and scale
@@ -1164,6 +1178,12 @@ export class GrassSystem {
             instancedMesh.setMatrixAt(i, dummy.matrix);
         });
 
+        if (instanceWorldOffsets) {
+            chunkGeometry.setAttribute(
+                'instanceWorldOffset',
+                new THREE.InstancedBufferAttribute(instanceWorldOffsets, 3)
+            );
+        }
         instancedMesh.instanceMatrix.needsUpdate = true;
         instancedMesh.frustumCulled = false; // We handle culling per-chunk
         instancedMesh.castShadow = !this.isMobile;
@@ -1183,7 +1203,8 @@ export class GrassSystem {
             clumpCount: validPositions.length,
             fullCount: validPositions.length, // Full instance count for LOD decimation
             visible: true,
-            lodLevel: 0 // 0 = full, 1 = 50%, 2 = 25%
+            lodLevel: 0, // 0 = full, 1 = 50%, 2 = 25%
+            ownsGeometry: chunkGeometry !== this.clumpGeometry,
         };
 
         this.scene.add(instancedMesh);
@@ -1755,6 +1776,17 @@ export class GrassSystem {
         }
     }
 
+    setInteractionShadowStrength(strength) {
+        if (this.konveyorGrassBladeMaterialControls?.setInteractionShadowStrength) {
+            this.konveyorGrassBladeMaterialControls.setInteractionShadowStrength({
+                strength,
+                material: this.grassMaterial,
+            });
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Cleanup
      */
@@ -1764,7 +1796,7 @@ export class GrassSystem {
             // Cycle 23 Phase D2: meadow-quad chunks share geometry + material
             // across all far-ring chunks; don't dispose per-chunk or we'd
             // disposeOnce-many-times. Standalone disposal at the bottom.
-            if (!chunk.isMeadowQuad && chunk.mesh.geometry) {
+            if (!chunk.isMeadowQuad && chunk.ownsGeometry === true && chunk.mesh.geometry) {
                 chunk.mesh.geometry.dispose();
             }
         }
