@@ -88,6 +88,18 @@ WebGPU-specific material, animation, and scene-composition defects below.
   after cross-zone canopy spacing and tighter scale jitter floors. Desktop
   WebGPU tree-occluded visual proof lives at
   `cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json`.
+- Latest visual review status: grass, sheep, wool, and sun/atmosphere are open
+  again as first-principles gates. The current grass proof can show localized
+  pixel changes, but the visible read may be darkening around the dog instead of
+  bent blades. Sheep legs may be projecting upward in WebGPU screenshots, wool
+  still lacks a convincing fleece read, and Open Country still feels like high
+  afternoon with a clipped white sun. The aligned spike is
+  [`archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md`](archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md).
+- Older WebGL screenshot reference: Matt supplied a legacy image where the grass
+  visibly bends through parted blade silhouettes, the sun has a warm structured
+  halo, the water reflection aligns with the sun, and sheep bodies have more
+  wool breakup. Use those cues as the reference target without reverting the
+  whole renderer or accepting an uncontrolled clipped sun core.
 
 ## Original Findings And Current Status
 
@@ -99,8 +111,10 @@ WebGPU-specific material, animation, and scene-composition defects below.
      selection by dog distance, but the screenshot still does not make the bend
      obvious enough. Keep this open.
    - Later desktop installed-Chrome proof added a discrete off/on/diff harness
-     and now shows localized dog/sheep blade movement. Keep normal-play and
-     mobile proof open until the phone is connected again.
+      and now shows localized dog/sheep crop changes. Matt's latest review says
+      this still reads as darkening rather than blade bending. Keep this open
+      until a shadow-disabled deformation proof shows geometry movement, not
+      only color or luma changes.
 
 2. Water shader is bland compared with the target look.
    - Addressed in the mobile-readiness pass at the material/control level:
@@ -116,8 +130,10 @@ WebGPU-specific material, animation, and scene-composition defects below.
 
 4. The sun is not visible enough in the explicit WebGPU scene.
    - Cycle 37 enlarged and clarified the WebGPU sun/atmosphere read.
-   - Cycle 38 glint screenshots should verify the sun remains readable without
-     overdriving water highlights.
+   - Latest review flips the risk: the sun is visible but reads as a bright
+      white splotch. Cycle 38 must separate sky broad glow from the billboard
+      disc/halo and clamp the combined contribution before more brightness
+      tweaks.
 
 5. Leaves sway while branches stay still.
    - Addressed in the mobile-readiness pass at the material/control level:
@@ -136,20 +152,37 @@ WebGPU-specific material, animation, and scene-composition defects below.
    - Earlier WebGPU terrain/material work addressed the major mapping defects.
    - Cycle 38 reduced the worst Open Country center seam with the mobile
      terrain split, height-sampled shared-material skirt, and continuous WebGPU
-     terrain material, but broad terrain bands/lines remain visible on the
-     phone. Keep horizon/terrain-seam screenshot gates open.
+      terrain material, but broad terrain bands/lines remain visible on the
+      phone. Keep horizon/terrain-seam screenshot gates open.
+
+8. Sheep legs and wool are not credible enough on WebGPU.
+   - WebGPU material metadata now says animation and body-only wool are wired,
+     but current screenshots must be audited. Add fixed-phase WebGPU captures
+     for gait side/front/three-quarter views and prove no leg silhouette sticks
+     upward toward the sky.
+   - Wool acceptance needs a close crop where the body reads as fleece through
+     silhouette, normal, and color variation while face, legs, eyes, and nose
+     keep their intended vertex colors.
+
+9. Open Country time of day feels wrong.
+   - Open Country currently uses the `golden-hour` preset, whose sun elevation
+     is higher than the latest target read. Test a low-sun scene-specific preset
+     or narrow override so Open Country feels dawn/late-day without changing
+     Field's pastoral-noon or Rolling Hills' dusk contract by accident.
 
 ## Priority Order
 
-1. Rebuild over-budget tree/rock author-time assets and finish the true
+1. Repair the first-principles visual proof surface for grass deformation,
+   sheep leg/wool correctness, and sun/atmosphere ownership.
+2. Rebuild over-budget tree/rock author-time assets and finish the true
    octahedral impostor contract.
-2. Fix water grid/alignment lines and glint sync.
-3. Rerun phone/mobile grass and sheep proof when hardware is connected.
-4. Run Cycle 38 visual screenshot gates across the same camera poses as the perf
+3. Fix water grid/alignment lines and glint sync.
+4. Rerun phone/mobile grass and sheep proof when hardware is connected.
+5. Run Cycle 38 visual screenshot gates across the same camera poses as the perf
    matrix.
-5. Wire remaining `QualityGovernor` knobs so mobile frame pacing can degrade and
+6. Wire remaining `QualityGovernor` knobs so mobile frame pacing can degrade and
    recover gracefully.
-6. Expand device/browser proof beyond one Android phone.
+7. Expand device/browser proof beyond one Android phone.
 
 ## Validation Expectation
 
@@ -158,4 +191,6 @@ Hills, and Open Country across follow-close, classic-max, tree-occluded,
 shoreline/glint, and horizon/terrain-seam poses. WebGL screenshots can remain
 reference controls, but production acceptance should be based on readable,
 performant WebGPU output and real-device frame pacing. Do not accept perf/pass
-status alone as visual readiness.
+status alone as visual readiness. Do not accept grass interaction from a dark
+contact patch alone; capture geometry deformation with the contact shadow path
+disabled.

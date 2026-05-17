@@ -2,7 +2,8 @@
 
 Status: active/in progress - not mobile-ready yet; tree-impostor packet
 captured, desktop WebGPU sheep/grass proof refreshed, tree placement fix
-authorized, and phone validation deferred
+shipped, first-principles grass/sheep/sun visual spike aligned, and phone
+validation deferred
 Date: 2026-05-16  
 Branch: current `main` checkout unless a scoped follow-up branch is created
 
@@ -94,15 +95,31 @@ Current truth:
   `61`, Open Country `204`. Desktop installed-Chrome WebGPU screenshot proof
   lives at
   `cycle38-validation/runtime/desktop-webgpu-tree-placement-after.json`.
+- Matt's latest review keeps grass, sheep, wool, and atmosphere open. The
+  current grass proof is contested because the visible read can be darkening
+  around the dog rather than actual blade deformation. Sheep need a WebGPU
+  fixed-phase leg audit because screenshots may show legs projecting upward, and
+  the wool still does not read wooly enough. The sun still reads as a white
+  splotch, and Open Country should move toward a lower dawn/late-day feel
+  instead of a high 3pm read. First-principles research and the next acceptance
+  plan are recorded in
+  [`archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md`](archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md).
+- Matt supplied an older WebGL screenshot as the visual target reference. Use it
+  for specific cues now missing in WebGPU: grass deformation must read through
+  bent and parted blade silhouettes, the sun needs a warm structured halo
+  instead of a shapeless white blob, water glint should align with sun
+  direction, and sheep bodies should show wool breakup at the silhouette.
 
 Fresh-agent implementation order:
 
-1. Production tree octahedral impostors for PC/mobile.
-2. Water grid/alignment line fix plus sun/camera-synced glint proof.
-3. Phone/mobile validation for the desktop sheep/grass fixes when hardware is
+1. Repair the first-principles visual proof surface for grass, sheep, wool, and
+   sun/atmosphere before more subjective screenshot tuning.
+2. Production tree octahedral impostors for PC/mobile.
+3. Water grid/alignment line fix plus sun/camera-synced glint proof.
+4. Phone/mobile validation for the desktop sheep/grass fixes when hardware is
    available.
-4. Open Country terrain seam/band proof.
-5. Mobile/desktop quality-governor and perf budget closeout.
+5. Open Country terrain seam/band proof.
+6. Mobile/desktop quality-governor and perf budget closeout.
 
 ## Current Baseline
 
@@ -267,6 +284,45 @@ Current connected-phone blockers:
 - The water visual gate remains open. In addition to glint sync/strength,
   Matt now reports grid-like lines where the water texture/ripple field appears
   misaligned or visibly tiled.
+- The grass visual gate remains open even after desktop material repairs.
+  Evidence must prove geometry deformation with contact shadow disabled; a
+  darker contact patch is not sufficient.
+- The sheep visual gate remains open until WebGPU fixed-phase captures prove
+  legs stay under the body and wool reads as body-only fleece instead of smooth
+  color noise.
+- The sun/atmosphere gate remains open until Rolling Hills and Open Country have
+  warm bounded sun discs and Open Country reads low-sun dawn/late-day rather
+  than high afternoon.
+
+## Grass, Sheep, Wool, and Sun First-Principles Amendment
+
+Research and repo evidence are recorded in
+[`archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md`](archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md).
+
+This amendment is now part of Cycle 38 acceptance:
+
+- Grass contact is not accepted if the proof only shows localized darkening.
+  The next proof must capture off/on contact with shadow/albedo darkening
+  disabled, plus a quiet bend-vector or edge overlay, so blade geometry movement
+  is visible on its own.
+- Grass deformation should be treated from first principles: anchored base,
+  mid-blade bend, stronger tip bend, local flattening, and body-footprint push
+  away from the dog or sheep. The current uniform-array interactor path may stay
+  for the first repair.
+- Sheep WebGPU animation must get a fixed-phase audit. The proof must show no
+  leg silhouette projecting upward toward the sky, and it must record the
+  material/vertex-id contract for body, head, legs, eyes, and nose.
+- Sheep wool must remain body-only and improve silhouette/normal/color read
+  without corrupting non-body vertex colors.
+- Sun ownership must be explicit: sky owns broad glow and horizon warmth;
+  `SunBillboard` owns the readable disc and near halo. Do not solve the white
+  splotch by simply making the sun larger or brighter.
+- Open Country needs a low-sun retune, preferably a scene-specific preset or
+  narrow override, before changing shared sky preset behavior.
+- Older WebGL screenshots are now explicit art-direction references for these
+  cues. Do not chase exact WebGL parity wholesale, but do recover the visible
+  bend, warm low-sun gradient, synced water reflection, and wool silhouette
+  breakup shown there.
 
 ## WebGPU Impostor Spike Update
 
@@ -342,7 +398,20 @@ cycle:
 - Glint varies with sun direction and camera angle and is clamped enough to avoid
   a fixed overblown sparkle.
 - Sheep and dog visibly bend grass on rolling hills.
-- Sheep legs visibly animate in the WebGPU sheep material path.
+- Sheep and dog grass proof includes a shadow-disabled deformation crop; darker
+  grass around an actor does not close this gate.
+- Grass proof compares against the older WebGL reference for silhouette-level
+  blade bend, not only against pixel-diff thresholds.
+- Sheep legs visibly animate in the WebGPU sheep material path, and fixed-phase
+  WebGPU crops show no upward leg-spike silhouette.
+- Sheep wool reads as body-only fleece in a close WebGPU crop without changing
+  face, leg, eye, or nose colors.
+- Rolling Hills and Open Country show a warm bounded sun disc, not a large
+  clipped white patch.
+- Open Country reads low-sun dawn/late-day rather than high afternoon.
+- Sun/water proof recovers the older WebGL reference's structured warm halo plus
+  sun-aligned water reflection without accepting an uncontrolled clipped white
+  blob.
 - Terrain has no obvious flat seams from mobile camera angles.
 
 Acceptance:
@@ -351,6 +420,8 @@ Acceptance:
   matrix.
 - Visual fixes are not considered closed only because material controls exist;
   they must be visible in captured frames.
+- Visual fixes are not considered closed by screenshot pixel deltas alone; the
+  captured proof must show the intended physical read.
 
 ## Phase 3 - Production Tree Octahedral Impostors And Asset Budgets
 
@@ -465,7 +536,8 @@ for the tree-clumping/undersized-tree fix described in the amendment above.
 - Any required scene/camera matrix repeatedly misses the target budget after
   governor degradation.
 - Screenshot gates show dog readability, tree coherence, shoreline water,
-  glint, grass interaction, or terrain seam regressions.
+  glint, grass interaction, sheep leg/wool correctness, sun/atmosphere read, or
+  terrain seam regressions.
 - Asset budget specs fail without an explicit exception.
 - The fix requires touching frozen deterministic files.
 
@@ -491,7 +563,7 @@ for the tree-clumping/undersized-tree fix described in the amendment above.
 - WebGPU draw calls stay under `250`.
 - High-mobile visible geometry stays near or below `1M` estimated triangles.
 - Dog-through-tree readability, coherent tree wind, shoreline water, synced
-  glint, grass interaction, and terrain seam screenshots pass or have explicit
-  blockers recorded.
+  glint, grass interaction, sheep leg/wool correctness, sun/atmosphere read,
+  and terrain seam screenshots pass or have explicit blockers recorded.
 - Tree/rock production assets have committed LOD and impostor sidecars with
   encoded budget tests.

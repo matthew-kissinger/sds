@@ -17,8 +17,8 @@ The full migration campaign originally ran on `exp/konveyor-webgpu-migration`.
 PR #52 has since merged the progressive WebGPU packet to `main`. Cycle 38 work
 continues from the current checkout unless a scoped branch is created for a
 follow-up. The tree-impostor packet, desktop sheep/grass repair, discrete
-grass proof, and tree-placement readability patch are now evidence, not a
-mobile-readiness claim. Numbered cycle
+grass proof, tree-placement readability patch, and first-principles visual spike
+alignment are now evidence, not a mobile-readiness claim. Numbered cycle
 plans are evidence and checkpoints, not stopping points. Agents should keep
 moving until the full objective is reached or a documented hard stop is hit. Use
 [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) as the control
@@ -222,9 +222,19 @@ hatch, and the settings UI exposes an experimental WebGPU toggle backed by
   sheep wool metadata using geometry vertex colors, and grass displacement
   `world-proximity-laydown-plus-horizontal-push`. `desktop-webgpu-grass-interaction-evidence.json`
   freezes wind/sim, isolates dog and sheep contact, and writes off/on/diff
-  triptychs with localized blade changes. This is desktop installed-Chrome
-  evidence only; phone validation was deferred because the phone was not
-  connected.
+  triptychs with localized blade changes. Matt's latest review keeps this gate
+  open because the visible read can still be darkening around the dog rather
+  than clear blade deformation. This is desktop installed-Chrome evidence only;
+  phone validation was deferred because the phone was not connected.
+- The current first-principles visual repair contract is
+  `docs/archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md`.
+  It requires shadow-disabled grass deformation proof, WebGPU fixed-phase sheep
+  leg/wool captures, and sun/atmosphere proof that separates sky broad glow from
+  the sun billboard disc. Open Country should be retuned toward a lower
+  dawn/late-day read instead of a high-afternoon feel. Matt's older WebGL
+  screenshot is now an art-direction reference for the specific cues to recover:
+  parted blade silhouettes, warm structured sun halo, sun-aligned water
+  reflection, and sheep wool silhouette breakup.
 - The first real multiplayer WebGPU proof now exists at
   `cycle36-validation/runtime/production-webgpu-mp-proof.json` (captured
   2026-05-16T01:42:30.718Z on installed Chrome against local Vite + Wrangler).
@@ -743,6 +753,12 @@ contradicting it:
   coherent sky/cloud/fog horizon tuning, final screenshots, and isolated perf
   proof now exist. Future atmosphere work should extend from those artifacts,
   not restart the packet.
+- The current grass/sheep/wool/sun review is aligned in
+  [`archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md`](archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md).
+  Future visual work should start with that proof contract: grass geometry
+  deformation must be visible without contact darkening, sheep leg/wool
+  correctness must be captured at fixed WebGPU gait phases, and Open Country
+  must get a low-sun atmosphere proof before more subjective brightness tuning.
 
 ## Objective
 
@@ -1071,5 +1087,5 @@ Use this goal after Cycle 37 and the first Android WebGPU mobile-readiness
 proof, including the later Cycle 38 connected-phone findings:
 
 ```text
-/goal On the current SDS checkout, continue Cycle 38 after the completed Cycle 37 packet, approved progressive WebGPU default, first connected-Android WebGPU mobile-readiness proof, and the later Open Country connected-phone findings. Read NEXT_SESSION.md, docs/cycle-38-plan.md, docs/cycle-37-plan.md, docs/konveyor-autonomous-run.md, and docs/konveyor-sds.md. Do not rerun Cycle 37 or treat the one-phone Rolling Hills proof as full mobile certification. Continue the WebGPU mobile scene/camera/system matrix, close visual screenshot gates for terrain seams, grass interaction, tree grounding/readability, water/glint, and dog-through-tree readability, rebuild over-budget author-time tree/rock assets with real LOD/impostor sidecars, and wire the remaining QualityGovernor knobs. Treat current native LOD1 mobile trees as containment only; implement proper view-dependent WebGPU octahedral impostors in a lab before production. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Create a scoped codex/ branch before committing if branch isolation is desired. Do not touch shared/**, sim-baseline goldens, worker migrations, paid-store submission, signing, Steam/App Store/Google Play, production deploy, or native-shell dependencies without explicit approval.
+/goal On the current SDS checkout, continue Cycle 38 after the completed Cycle 37 packet, approved progressive WebGPU default, first connected-Android WebGPU mobile-readiness proof, later Open Country connected-phone findings, tree-placement readability patch, and first-principles visual spike alignment. Read NEXT_SESSION.md, docs/cycle-38-plan.md, docs/archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md, docs/cycle-37-plan.md, docs/konveyor-autonomous-run.md, and docs/konveyor-sds.md. Do not rerun Cycle 37 or treat the one-phone Rolling Hills proof as full mobile certification. First repair the WebGPU visual proof surface: grass geometry deformation must be visible without contact darkening, sheep fixed-phase captures must rule out upward leg silhouettes and prove body-only wool read, and sun/atmosphere proof must separate sky glow from billboard disc while retuning Open Country toward low dawn/late-day light. Then continue the WebGPU mobile scene/camera/system matrix, close visual screenshot gates for terrain seams, tree grounding/readability, water/glint, and dog-through-tree readability, rebuild over-budget author-time tree/rock assets with real LOD/impostor sidecars, and wire the remaining QualityGovernor knobs. Treat current native LOD1 mobile trees as containment only; implement proper view-dependent WebGPU octahedral impostors in a lab before production. Preserve WebGL fallback, forced ?renderer=webgl, the experimental settings toggle, and existing migration gates. Create a scoped codex/ branch before committing if branch isolation is desired. Do not touch shared/**, sim-baseline goldens, worker migrations, paid-store submission, signing, Steam/App Store/Google Play, production deploy, or native-shell dependencies without explicit approval.
 ```
