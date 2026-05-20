@@ -234,8 +234,9 @@ Start from the current checkout; do not restart Cycle 37. The repo now contains
 implemented Cycle 38 tree work and proof artifacts, with mobile readiness still
 open. Before editing, inspect `git status --short`, then read this section and
 [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md). Keep changes scoped, create a
-`codex/` branch before committing if desired, and do not touch `shared/**`,
-sim-baseline goldens, or worker migrations without explicit acceptance.
+scoped working branch (e.g. `cycle-38-work`) before committing if isolation is
+desired, and do not touch `shared/**`, sim-baseline goldens, or worker
+migrations without explicit acceptance.
 
 Implementation order:
 
@@ -562,8 +563,9 @@ The cycle delivered:
 
 ## Pickup Priority
 
-Work from the current `main` checkout or create a scoped `codex/` branch before
-committing. Cycle 37 and the first Android mobile-readiness proof are complete;
+Work from the current `main` checkout or create a scoped working branch (e.g.
+`cycle-38-work`) before committing. Cycle 37 and the first Android
+mobile-readiness proof are complete;
 do not restart either as an active plan. Read the closeout packet above, then start
 [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md) unless Matt explicitly changes
 direction.

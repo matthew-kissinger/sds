@@ -56,7 +56,8 @@ octahedral impostoring.
 The web default remains progressive WebGPU after this packet. The deploy
 acceptance is:
 
-1. A PR from `codex/cycle-38-tree-impostors` is squash-merged to `main`.
+1. The Cycle 38 release packet is merged to `main` (either directly on `main`
+   or via a scoped working branch + PR).
 2. GitHub Actions Deploy on `main` is green.
 3. `https://sheepdogsim.com/` serves the deployed commit hash or matching asset
    manifest.

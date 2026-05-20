@@ -1,7 +1,7 @@
 # Konveyor Visual Polish QA - 2026-05-16
 
 Original branch: `exp/konveyor-webgpu-migration`. Current follow-up work is on
-the post-merge `main` checkout unless a scoped `codex/` branch is created before
+the post-merge `main` checkout unless a scoped working branch is created before
 commit.
 
 Context: local Chrome review of the explicit WebGPU route at
