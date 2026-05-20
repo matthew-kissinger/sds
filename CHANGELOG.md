@@ -4,6 +4,60 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.7] - 2026-05-20 (Cycle 38 - WebGPU visual recovery)
+
+Patch release covering the first-principles WebGPU visual repair after
+review of the v2.1.6 tree-placement build showed darkened grass contact,
+unreadable sun, sheep wool reading as a flat body, and out-of-sync sun glint
+on water. Pairs with a minor zen-UI cleanup on the start-screen sandbox
+pickers.
+
+### Fixed
+
+- WebGPU grass contact now has shadow-disabled geometry-deformation
+  evidence. Dog contact changes 0.961% of the test crop and sheep contact
+  0.992%; grass coordinate source is
+  `instanceWorldOffset-instanced-attribute` with
+  `overlapMode=dominant-contact-capped-vector` and `maxDisplacement=0.95`.
+- WebGPU sheep gait fixed via fixed-phase constrained leg motion. Wool now
+  reads as wool on the body silhouette without corrupting non-body colors.
+- Sun/atmosphere ownership split: the sky owns broad glow + horizon warmth;
+  `SunBillboard` owns the readable disc + near halo. Sun clipped-white
+  percentages: Field 0.059, Rolling Hills 0.059, Open Country 0.1443.
+- Open Country `golden-hour` preset retuned lower to stop the over-bright
+  sky/atmosphere read at horizon poses.
+
+### Changed
+
+- Sandbox-setup decorative emojis removed from `FieldConfig` custom shape
+  entry and the three `SCENE_OPTIONS` scene buttons (pencil + sheaf-of-rice
+  + water-wave + evergreen). Aligns the start screen with the "no
+  decorative emojis in zen UI" rule already applied to PlayerIdentitySetup.
+  Functional UI glyphs (language flags, settings tab symbols, fence-editor
+  tool palette) intentionally untouched.
+
+### Validation
+
+- Desktop installed-Chrome WebGPU visual recovery proof:
+  `cycle38-validation/runtime/desktop-webgpu-visual-recovery-proof.json`
+  (`ok=true` across sun, sheep, water, and tree-occluded regressions).
+- Grass interaction evidence:
+  `cycle38-validation/runtime/desktop-webgpu-grass-interaction-evidence.json`.
+- First-principles spike rationale:
+  `docs/archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md`.
+- `npm test` - 476 passed / 7 skipped.
+- `npm run lint` - clean.
+- `npm run build` - clean.
+- Targeted Chromium e2e smoke - 2 specs passed.
+
+### Notes
+
+- Phone (Android + iOS) validation for the WebGPU visual recovery is
+  deferred to Cycle 38 mobile-readiness closeout; the desktop proof above is
+  not Android or iOS acceptance evidence.
+- Water grid/alignment lines + sticky sun-glint sync on PC remain open
+  Cycle 38 follow-ups.
+
 ## [2.1.6] - 2026-05-16 (Cycle 38 - tree placement readability)
 
 Patch release for the Cycle 38 tree layout after review showed clumped,
