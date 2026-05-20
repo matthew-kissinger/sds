@@ -86,10 +86,10 @@ npx wrangler tail           # live logs from the deployed worker
 npx wrangler tail --format=json > /tmp/w.log   # for grepping structured fields
 ```
 
-The synthetic end-to-end client at `sds-test.mjs` (repo root) exercises register → create-room → WS upgrade → startGame → state-frame count against the live worker:
+The synthetic end-to-end client at `tools/sds-test.mjs` exercises register → create-room → WS upgrade → startGame → state-frame count against the live worker:
 
 ```bash
-node sds-test.mjs
+node tools/sds-test.mjs
 ```
 
 ### Inspect D1

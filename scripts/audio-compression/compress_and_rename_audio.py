@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 class AudioCompressor:
-    def __init__(self, source_dir: str = "../assets/sounds", output_dir: str = "../assets/sounds_compressed"):
+    def __init__(self, source_dir: str = "../../assets/sounds", output_dir: str = "../../assets/sounds_compressed"):
         self.source_dir = Path(source_dir)
         self.output_dir = Path(output_dir)
         self.backup_dir = Path(output_dir) / "original_backup"

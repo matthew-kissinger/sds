@@ -32,7 +32,7 @@ def main():
     print("✓ ffmpeg found")
     
     # Check source directory
-    source_dir = Path("../assets/sounds")
+    source_dir = Path("../../assets/sounds")
     if not source_dir.exists():
         print(f"Error: Source directory {source_dir} not found")
         return 1

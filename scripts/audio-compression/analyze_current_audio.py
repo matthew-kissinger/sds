@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 class AudioAnalyzer:
-    def __init__(self, source_dir: str = "../assets/sounds"):
+    def __init__(self, source_dir: str = "../../assets/sounds"):
         self.source_dir = Path(source_dir)
     
     def get_file_info(self, file_path: Path):

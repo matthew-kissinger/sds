@@ -27,7 +27,7 @@ Guide your sheepdog through peaceful meadows. A free, relaxing browser herding g
 
 **Option 2 - Upload ZIP:**
 - File: `sheep-dog-sim-itchio.zip` (55.66 MB)
-- Run `build-itchio.ps1` to regenerate
+- Run `scripts/build-itchio.ps1` to regenerate
 
 ---
 

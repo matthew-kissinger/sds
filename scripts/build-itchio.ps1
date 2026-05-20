@@ -3,9 +3,11 @@
 
 $ErrorActionPreference = "Stop"
 
-$projectRoot = $PSScriptRoot
+# Script lives in scripts/; project root is one level up.
+$projectRoot = Split-Path $PSScriptRoot -Parent
 $distFolder = Join-Path $projectRoot "dist"
 $zipFile = Join-Path $projectRoot "sheep-dog-sim-itchio.zip"
+Set-Location $projectRoot
 
 Write-Host "Building Sheep Dog Sim for itch.io..." -ForegroundColor Cyan
 Write-Host ""

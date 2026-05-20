@@ -63,7 +63,7 @@ Convenience script that runs the compression pipeline.
 
 ## Audio Files
 
-All optimized files are stored in `../assets/sounds_compressed/`:
+All optimized files are stored in `../../assets/sounds_compressed/`:
 
 **UI Sounds**: `ui_click.mp3`, `rewarding_chime.mp3`
 **Sheep Sounds**: `sheep_bleat_agitated.mp3`, `sheep_bleat_cartoon.mp3`, `sheep_bleat_cheerful.mp3`, `sheep_bleat_short.mp3`
@@ -81,7 +81,7 @@ assets/
     ├── music_start.mp3
     └── ...
 
-audio_compression_scripts/
+scripts/audio-compression/
 ├── compress_and_rename_audio.py
 ├── analyze_current_audio.py
 ├── run_compression.py
