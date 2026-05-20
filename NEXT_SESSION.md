@@ -1,12 +1,22 @@
 # Next Session - Polished WebGPU Production Readiness Pickup
 
-> **Updated:** 2026-05-16 local / 2026-05-17 UTC after the Cycle 38 desktop
-> WebGPU grass/sheep/sun first-principles visual repair, discrete
-> shadow-disabled grass proof, sheep jitter spike, and tree-placement
-> readability patch.
+> **Updated:** 2026-05-20 after a repo-housekeeping pass (cycle*-validation
+> moved to .gitignore + 491 files untracked, stale branches deleted,
+> sandbox-setup decorative emojis cherry-picked to main, .git/ collapsed
+> 1.45 GiB → 637 MiB). Underlying Cycle 38 pickup content is unchanged from
+> the 2026-05-16/17 refresh after the Cycle 38 desktop WebGPU grass/sheep/sun
+> first-principles visual repair, shadow-disabled grass proof, sheep jitter
+> spike, and tree-placement readability patch.
 > **For:** current `main` checkout unless a scoped follow-up branch is needed.
 > **Merged PR:** [#52](https://github.com/matthew-kissinger/sds/pull/52).
 > **Pickup priority:** continue Cycle 38 toward a polished production game.
+
+> **Process gap to resolve before Cycle 38 close:** `docs/cycle-36-plan.md`
+> and `docs/cycle-37-plan.md` are not archived under `docs/archive/cycles/`
+> despite both cycles being treated as closed below. Either `/cycle-close`
+> didn't run for them or the archive step was skipped. Decide whether to
+> retroactively archive (and append BACKLOG entries) or treat both as still
+> open.
 > The top implementation priority is still production-ready tree octahedral
 > impostors for PC and mobile. The desktop first-principles visual proof repair
 > for grass, sheep, wool, and sun/atmosphere is now implemented; water
