@@ -373,7 +373,7 @@ Plan archived at [`docs/archive/cycles/cycle-27-plan.md`](archive/cycles/cycle-2
 - Cycle was too large because the autonomous-vs-paired split was at phase level, not cycle level. Cycle 28 enforces ≤ 8 phases per cycle and "fully autonomous or fully paired, no mixing."
 - Phase I overshot test target (+63 vs +30) because uncovered worker `d1.ts` surface was larger than estimated.
 - Bundle -247 KB on `main-*.js` is the cycle's clearest win and is locked in as a Cycle 28 acceptance floor.
-- Mid-cycle alignment audit produced [`AGENTS.md`](../AGENTS.md), [`CLAUDE.md`](../CLAUDE.md), [`docs/cycle-28-plan.md`](cycle-28-plan.md), `.claude/settings.json` Stop hook, and `.gitignore` inversion as the foundation for Cycle 28's autonomous overnight run.
+- Mid-cycle alignment audit produced [`AGENTS.md`](../AGENTS.md), [`CLAUDE.md`](../CLAUDE.md), [`docs/cycle-28-plan.md`](archive/cycles/cycle-28-plan.md), `.claude/settings.json` Stop hook, and `.gitignore` inversion as the foundation for Cycle 28's autonomous overnight run.
 
 ### Cycle 26 — `player-facing-layer` (closed 2026-05-08, multi-version `v2.0.3` → `v2.1.2` + scene-picker auto-load)
 
@@ -904,7 +904,7 @@ Carry-over to Cycle 8 (`playtest-sweep`):
 
 ### Cycle 6 — Trees as obstacles + woods density + Open Country portal (closed 2026-04-25)
 
-Plan: [`docs/cycle-6-plan.md`](cycle-6-plan.md). Headline:
+Plan: [`docs/cycle-6-plan.md`](archive/cycles/cycle-6-plan.md). Headline:
 
 - **Phase 1: `shared/TreePlacement.js`.** Lifted Poisson-disk tree placement out of `TerrainBuilder.createTrees` into a pure shared module driven by `mulberry32(scene.terrain.seed)`. Same seed → identical `TreeInstance[]` across V8 instances; client (mesh spawn) + Worker (collision data) compute the same positions independently. Existing exclusions preserved (island safe radius, corral keep-out, farmhouse exclusion, rock footprint padding, default-pasture rect). 12 new specs (`tests/tree-placement.spec.js`).
 - **Phase 2: SceneObstacles wiring.** `gameState.obstacles` built once after terrain creation in `main.js` (and rebuilt on competitive-mode tree refresh). Sheep apply `obstacleAvoidance` per-tick in `OptimizedSheep.updateBehavior` (30m kdbush query, strength 6.0). Dog applies a hard position push-out + inward velocity reflection in `Sheepdog.move` (treats trunks like fences). The `obstacles.trees.length > 0` guard preserves Field's solo behavior — sheep stay inside the ±100 play area, all rect-scene trees are at ≥120m, queries return empty within 30m, no force applied.
@@ -926,7 +926,7 @@ Carry-over to next cycle (need playtest verification):
 
 ### Cycle 5 — Island + Woods (closed 2026-04-25)
 
-Plan: [`docs/cycle-5-plan.md`](cycle-5-plan.md). Headline:
+Plan: [`docs/cycle-5-plan.md`](archive/cycles/cycle-5-plan.md). Headline:
 
 - **Foundation** (Phase 1): discriminated `Boundary` schema (`rect | island`), `BoundaryCollision` accepts both, sim-baseline preserved bit-identical, heightmap bake gains `--boundary island --radius --falloff --seaLevel`, `kdbush` dependency + new `shared/SceneObstacles.js` primitive with canonical-sort determinism contract, anime water `ShaderMaterial` (depth-pre-pass + foam + simplex ripples + cel sparkles + fog match), z-fighting fix on terrain. 25 new specs (76→99), build clean.
 - **Rolling Hills** (Phase 2): migrated to island per playtest feedback — final radius **180m** with **40m** falloff (was 90m/15m, too cliffy + cramped), corral with tall flag pillar at (110, 60), `corral`-based retirement replacing gate-passage, `CorralCompass` HUD with off-screen arrow + distance, `defaultCamera: 'follow'`, lightning + particle "zap" effect on corral entry (`CorralZapEffect` pool), farmhouse removed, trees + rocks confined to land disk via inverted Poisson predicate.
@@ -944,10 +944,10 @@ Deferred from Cycle 5 — **all picked up by Cycle 6** (see "In flight" section 
 
 For prior cycle history before this file existed, see:
 - [`DECISIONS.md`](../DECISIONS.md) §§ Cycle 1–4 — narrative + decisions
-- [`docs/cycle-2-report.md`](cycle-2-report.md) — Cloudflare migration closeout
-- [`docs/cycle-2-todo.md`](cycle-2-todo.md) — droplet teardown punch list (closed 2026-04-25)
-- [`docs/cycle-3-plan.md`](cycle-3-plan.md), [`docs/cycle-3-cleanup.md`](cycle-3-cleanup.md), [`docs/cycle-3-ui-ux.md`](cycle-3-ui-ux.md) — Cycle 3 plans
-- [`docs/cycle-4-plan.md`](cycle-4-plan.md), [`docs/cycle-4-phase-b.md`](cycle-4-phase-b.md), [`docs/cycle-4-hardening.md`](cycle-4-hardening.md) — Cycle 4 plans
+- [`docs/cycle-2-report.md`](archive/cycles/cycle-2-report.md) — Cloudflare migration closeout
+- [`docs/cycle-2-todo.md`](archive/cycles/cycle-2-todo.md) — droplet teardown punch list (closed 2026-04-25)
+- [`docs/cycle-3-plan.md`](archive/cycles/cycle-3-plan.md), [`docs/cycle-3-cleanup.md`](archive/cycles/cycle-3-cleanup.md), [`docs/cycle-3-ui-ux.md`](archive/cycles/cycle-3-ui-ux.md) — Cycle 3 plans
+- [`docs/cycle-4-plan.md`](archive/cycles/cycle-4-plan.md), [`docs/cycle-4-phase-b.md`](archive/cycles/cycle-4-phase-b.md), [`docs/cycle-4-hardening.md`](archive/cycles/cycle-4-hardening.md) — Cycle 4 plans
 
 ## Deferred / not blocking
 
@@ -962,8 +962,8 @@ Items deferred from prior cycles that haven't been picked up. Move to a future c
 - **Octahedral impostors v2** for tree LOD — current 3-quad billboard impostor is solid (~99% triangle reduction past 250m). Only escalate to octahedral if a playtest specifically calls out the 3-quad version as inadequate. Carried from Cycle 4 Hardening § 4.
 - **Tree exclusion in play area verification** — `createTrees` already rejects Poisson candidates inside `playArea` with a 20m buffer; verify visually after any heightmap re-bake or zone change. Carried from Cycle 4 Hardening § 5.
 - ~~**GitHub Actions Node.js 20 deprecation**~~ Resolved 2026-05-10 (Cycle 33 Phase 1). Bumped `actions/checkout`, `actions/setup-node`, and `actions/upload-artifact` from `@v4` to `@v5` across `deploy.yml` and `macos-safari.yml` (`browserstack-ios-water.yml` was already `@v5`). `cloudflare/wrangler-action@v3` left alone — it's a separate vendor action whose v3 series remains current; revisit if Cloudflare publishes a v4.
-- **Cycle 3 Track 2 follow-through** (UI/UX polish): scene-first state machine in `App.js`, mode-shaped HUD profile, onboarding overlay, real dog PNG thumbnails, MP-joiner renderer reactivity. See [`cycle-3-ui-ux.md`](cycle-3-ui-ux.md).
-- **Cycle 3 Track 1 polish:** JSX flip (mechanical codemod), boid consolidation (needs architectural decision). See [`cycle-3-cleanup.md`](cycle-3-cleanup.md) § Remaining.
+- **Cycle 3 Track 2 follow-through** (UI/UX polish): scene-first state machine in `App.js`, mode-shaped HUD profile, onboarding overlay, real dog PNG thumbnails, MP-joiner renderer reactivity. See [`cycle-3-ui-ux.md`](archive/cycles/cycle-3-ui-ux.md).
+- **Cycle 3 Track 1 polish:** JSX flip (mechanical codemod), boid consolidation (needs architectural decision). See [`cycle-3-cleanup.md`](archive/cycles/cycle-3-cleanup.md) § Remaining.
 - **Heightfield Y full unification (mesh-aligned bake).** Cycle 9 Phase 5 shipped a defensive [`Heightfield.surfaceY`](../shared/terrain/Heightfield.js) that adds a small upward lift to entity placement to compensate for the bilinear-vs-triangle-interp mismatch. The complete fix is to bake a `displacedHeights: Float32Array` mirroring the terrain mesh vertex grid (post-displacement, post-falloff), then have all consumers (mesh, grass, sim, camera) read the same array. Triangle interpolation is what the renderer uses, so the right algorithm is: find the cell in the grid, find which triangle the point lies in (Three.js `PlaneGeometry` splits each quad along the NW-SE diagonal), compute barycentric coords against the three vertex Ys. Pick up when the +0.05m lift no longer hides the artefact (e.g., after a heightfield re-bake with steeper ridges).
 - **`ARCHITECTURE.md` Cycle 5 sections** — the doc has no entries for `Boundary` (rect/island discriminated schema), `SceneObstacles` (kdbush proxy collider), `AnimeWater` (now shoreline-boundary shader after Cycle 32), or `Random` (`mulberry32` shared PRNG). All four are load-bearing primitives. Add when next pass through ARCHITECTURE.md is warranted.
 - **Cycle 19.5 audit — expensive / unoptimized / load-bearing assumptions worth investigating.** Quick survey 2026-05-04 while addressing the impostor + culling fixes. Each is a candidate for a future investigation; none are blocking right now.

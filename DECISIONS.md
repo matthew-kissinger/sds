@@ -484,7 +484,7 @@ The Cycle 35 carryover is closed.
 
 ## Konveyor campaign supersedes WebGPU deferral (2026-05-14 · Cycle 36 scoping)
 
-[`docs/konveyor-sds.md`](docs/konveyor-sds.md) is now the campaign doctrine for
+[`docs/archive/konveyor/sds.md`](docs/archive/konveyor/sds.md) is now the campaign doctrine for
 the SDS WebGPU, optimization, and native-shipping push. This supersedes the
 Cycle 24 posture that treated `?renderer=webgpu` as a possible future spike but
 not a committed migration direction.
@@ -542,10 +542,11 @@ than by keeping the work artificially small.
 For Konveyor autonomous work:
 
 - Work on `exp/konveyor-webgpu-migration`, not `main`.
-- Use [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md) as
-  the active handoff and [`docs/konveyor-sds.md`](docs/konveyor-sds.md) as the
-  campaign doctrine.
-- Treat [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md) as completed
+- Use [`docs/archive/konveyor/autonomous-run.md`](docs/archive/konveyor/autonomous-run.md) as
+  the active handoff and [`docs/archive/konveyor/sds.md`](docs/archive/konveyor/sds.md) as the
+  campaign doctrine. (Konveyor docs moved to archive on 2026-05-20; campaign
+  merged via PR #52 on 2026-05-16. See [`docs/archive/konveyor-campaign.md`](docs/archive/konveyor-campaign.md).)
+- Treat [`docs/archive/cycles/cycle-36-plan.md`](docs/archive/cycles/cycle-36-plan.md) as completed
   foundation evidence, not the active stopping point.
 - Keep WebGL default until a fallback decision is recorded.
 - Keep WebGPU work diagnostic or feature-flagged until gates pass.
