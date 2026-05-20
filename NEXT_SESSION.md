@@ -1,14 +1,20 @@
 # Next Session - Polished WebGPU Production Readiness Pickup
 
-> **Updated:** 2026-05-20 after a repo-housekeeping pass: cycle*-validation
-> moved to .gitignore (491 files untracked), stale branches deleted,
-> sandbox-setup decorative emojis cherry-picked to main, .git/ collapsed
-> 1.45 GiB → 637 MiB, Cycle 36 + 37 plans retroactively archived with BACKLOG
-> entries, GitHub Pages + Wiki disabled, v2.1.7 tagged. Underlying Cycle 38
-> pickup content is unchanged from the 2026-05-16/17 refresh after the Cycle
-> 38 desktop WebGPU grass/sheep/sun first-principles visual repair,
-> shadow-disabled grass proof, sheep jitter spike, and tree-placement
-> readability patch.
+> **Updated:** 2026-05-20 after a connected-phone spot-check rerun on
+> `R5CX4028VGJ` confirmed the desktop visual contracts (grass interactor
+> coordinate/overlap mode, sheep lower-leg-weighted gait + body-only wool,
+> water ripple-normal-sun-camera-v2 glint, `SunBillboard` ownership) carry on
+> Android with 0 console/page errors and 6/6 nonblank screenshots, but
+> high-mobile frame budgets remain red and the water grid-band artifact
+> reproduces on RH/shoreline-glint. Earlier on 2026-05-20 a repo-housekeeping
+> pass moved cycle*-validation to .gitignore (491 files untracked), deleted
+> stale branches, cherry-picked sandbox-setup decorative emojis to main,
+> collapsed .git/ 1.45 GiB to 637 MiB, retroactively archived Cycle 36 + 37
+> plans with BACKLOG entries, disabled GitHub Pages + Wiki, and tagged v2.1.7.
+> Underlying Cycle 38 pickup content is unchanged from the 2026-05-16/17
+> refresh after the Cycle 38 desktop WebGPU grass/sheep/sun first-principles
+> visual repair, shadow-disabled grass proof, sheep jitter spike, and
+> tree-placement readability patch.
 > **For:** current `main` checkout unless a scoped follow-up branch is needed.
 > **Merged PR:** [#52](https://github.com/matthew-kissinger/sds/pull/52).
 > **Pickup priority:** continue Cycle 38 toward a polished production game.
@@ -20,6 +26,187 @@
 > Do not call SDS mobile-ready yet.
 
 Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then the completed Cycle 37 plan [`docs/cycle-37-plan.md`](docs/cycle-37-plan.md), then the next plan [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md), then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completion audit [`docs/konveyor-completion-audit-2026-05-16.md`](docs/konveyor-completion-audit-2026-05-16.md). Cycle 36 is completed foundation evidence at [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
+
+## Autonomous Completion Brief for Cycle 38
+
+When Matt opens the next session and authorizes autonomous completion (e.g.
+"run cycle 38 autonomously" or "ship it, I'll review when complete"), absorb
+the brief below and do not pause for normal-engineering blockers. Treat
+mid-session directives from Matt as scope clarifications, not pause requests
+([memory `feedback_autonomous_cycle`](../.claude/projects/C--Users-Mattm-X-games-3d-sds/memory/feedback_autonomous_cycle.md);
+this path is relative to `~/.claude`).
+
+### Authorization scope (autonomous)
+
+- Continue Cycle 38 work without check-ins between phases or between tasks
+  inside a phase.
+- May edit anything under `js/`, `tools/`, `tests/`, `docs/`, `assets/`,
+  `public/`, and `scripts/`.
+- May create new validation tools and artifacts.
+- May regenerate `tests/refactor-baseline/__fixtures__/bundle-sizes.json` if
+  bundle ratchets are explained and recorded (current cap `590 KiB`; cycle
+  plan allows `591 KiB` for the tree-impostor runtime split if needed).
+- May regenerate `tests/tree-placement.spec.js` fixtures only inside the
+  scope of the 2026-05-16 placement amendment.
+- May commit and push doc-only or asset-only changes. May commit code
+  changes locally without pushing unless Matt opened the session with
+  push/deploy authorization.
+
+### Out of scope without explicit additional approval
+
+- `shared/**` deterministic-sim source (the `shared/TreePlacement.js`
+  exception is already exercised).
+- `tests/sim-baseline/__fixtures__/*.json` regeneration.
+- `worker/migrations/*.sql` edits or D1 migrations.
+- Version bump (`package.json#version`), tag, or `CHANGELOG.md` player-line
+  entry.
+- Production deploy, Cloudflare API changes beyond read, Steam/App Store/
+  Google Play submission, store fees, signing, paid services.
+- Native-shell dependency commitment (Tauri/Electron/Capacitor).
+- Mass deletion of `cycle*-validation/**` artifacts (they are gitignored;
+  leave on disk for audit).
+
+### Definition of Done for Cycle 38
+
+Treat the cycle as ready-to-close when every box below either flips to done
+or is explicitly carried over to a successor cycle with a reason. Phase 6
+items that require Matt or a deploy are carryovers by definition.
+
+Phase 2 - Visual screenshot gates (autonomous-implementable):
+
+- [ ] Water grid/alignment lines fixed on Rolling Hills and Open Country
+      shoreline-glint poses (reproduced 2026-05-20 on phone capture
+      `cycle38-validation/screenshots/android-webgpu-phone-reconnect-spotcheck/rolling-hills-classic-shoreline-glint-full.png`).
+      Root cause likely UV tiling or normal/ripple sampling alignment.
+      Acceptance: desktop and phone capture for the same pose show no
+      visible horizontal banded ripple.
+- [ ] Sun glint sync: glint position tracks sun direction and camera angle
+      without a fixed overblown sparkle. Acceptance: rotating the camera
+      changes glint position in capture pairs.
+- [ ] Open Country terrain seams: capture three OC camera angles
+      (follow-close, classic-max, horizon-terrain-seam) and prove no
+      visible flat bands at the inner/skirt boundary.
+- [ ] Dog-through-tree readability: Follow + Classic poses behind dense
+      Open Country trees show the dog silhouette without losing it in
+      leaf alpha.
+- [ ] Tree coherence: branches and leaves move together on Rolling Hills
+      and Open Country, no detached leaf flutter.
+- [ ] WebGL-reference comparison artifact for grass deformation, sun
+      halo, and sheep wool silhouette (the older WebGL screenshot Matt
+      supplied). Side-by-side image saved under
+      `cycle38-validation/screenshots/webgl-reference-comparison/`.
+
+Phase 3 - Production tree octahedral impostors (autonomous-implementable):
+
+- [ ] True octahedral sidecar v2 baked through `tools/bake-tree-impostors.mjs`
+      (extend or replace the current 4x4 lat/lon-hemi bake). Acceptance:
+      bake artifact records octahedral encoding; shader-side projection
+      consumes octahedral atlas.
+- [ ] WebGPU Kiln node material handles octahedral projection,
+      depth/parallax, and depth discard parity with WebGL.
+- [ ] `tree2` rebake under LOD0 `<= 8k` triangles and LOD1 `<= 25%` of
+      LOD0 (current `tree2.glb=7700`, `tree2_lod1.glb=1924`, already
+      within budget; verify and lock with a test).
+- [ ] Android matrix at `?konveyorNativeTreeImpostors=1` shows
+      view-dependent tile selection, terrain-grounded pivots, no
+      sunk-tree read, and Open Country horizon/terrain-seam at or under
+      mid-mobile `p95 <= 34 ms` / `p99 <= 45 ms` (current
+      `p95=100.0 ms` / `p99=133.5 ms`).
+- [ ] Desktop installed-Chrome WebGPU matrix at the same flag shows
+      transition quality (no popping at LOD0->LOD1->impostor boundaries).
+
+Phase 4 - Quality governor hysteresis (autonomous-implementable):
+
+- [ ] Five-to-ten-second over-budget window degrades quality with
+      hysteresis (no single-frame oscillation). Proof artifact records a
+      synthetic over-budget scenario and the governor's response.
+- [ ] Quality recovers after sustained stable windows. Proof artifact
+      records the recovery path.
+- [ ] `fallbackReason='webgpu-frame-budget'` is recorded only after the
+      minimum quality floor still misses stable 30 fps for repeated
+      windows.
+
+Phase 1 - Real-device matrix (already mostly closed):
+
+- [x] Cost-report shape, secure-localhost Android, failure payload shape.
+- [ ] Connected-Android matrix passes high-mobile `p95 <= 18.5 ms` /
+      `p99 <= 25 ms` on Rolling Hills follow-close / tree-occluded full
+      scenes after the Phase 3 + Phase 4 work lands. Open Country may
+      remain mid-mobile only; cycle close acceptable if mid-mobile gates
+      pass and the gap is documented.
+
+Phase 5 - Broader device proof (defer to a successor cycle):
+
+- [ ] Multi-Android profiles (high/mid/low) need hardware Matt does not
+      currently have. Carryover to a successor cycle, do not block close.
+- [ ] iOS Safari WebGPU canary stays separate from the Android Chrome
+      proof. Existing `npm run test:ios-water` only covers water
+      regressions; WebGPU coverage on iOS Safari is a successor task.
+
+Phase 6 - Release and ops carryovers (require Matt or a deploy):
+
+- [ ] OC paired two-client sheep-driving playtest. Matt at the keyboard,
+      two browser tabs, OC cooperative room, drive sheep into the
+      round-up zone, confirm portal opens server-side. Cannot run
+      autonomously; surface to Matt before close.
+- [ ] Post-deploy iOS water canary via `npm run test:ios-water` against
+      the deployed origin. Requires a deploy to happen first.
+- [ ] Renderer telemetry readout via
+      `npm run konveyor:renderer-telemetry -- --days=7` after traffic
+      hits a deployed build. Requires deploy + traffic.
+
+### Validation gates (run before /cycle-close)
+
+- `npm test` clean (last known: 476 pass / 7 skipped after 2026-05-17).
+- `npm run lint` clean.
+- `npm run build` clean (chunk warnings OK if pre-existing).
+- Targeted Chromium e2e smoke green:
+  `npx playwright test tests/e2e/scene-swap-stability.spec.ts --project=chromium`.
+- All cycle 38 acceptance artifacts present and `ok: true` where applicable.
+- `git diff --check` only reports LF/CRLF working-copy notices.
+
+### Close-out ritual
+
+When the Definition-of-Done checklist is satisfied (or carried over for
+the Phase 5 + Phase 6 items above):
+
+1. Run the validation gates. Any red blocks close per
+   [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md).
+2. Run `/cycle-close` (path
+   [`.claude/commands/cycle-close.md`](.claude/commands/cycle-close.md)).
+   This archives `docs/cycle-38-plan.md`, appends `docs/BACKLOG.md`,
+   scaffolds `docs/cycle-39-plan.md`, and rewrites
+   [`NEXT_SESSION.md`](NEXT_SESSION.md) for cycle 39.
+3. Do not bump `package.json#version` and do not push a player-visible
+   release without an explicit Matt approval inside this session.
+4. Leave new commits unpushed unless Matt opened the session with push
+   authorization. Surface the cycle close summary, the list of carryovers,
+   and the explicit ask before pushing.
+
+### Hard stops during autonomous run
+
+Pause and surface to Matt only on:
+
+- Any [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) condition.
+- Frozen-file violation request without authorization
+  ([`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md)).
+- Sim-baseline or refactor-baseline drift the cycle plan does not
+  explicitly authorize.
+- `npm test` or `npm run build` red at cycle close.
+- Bundle-size regression above `591 KiB`.
+- Visual regression on a previously-passing scene.
+- A required external action (deploy, store submission, paid service,
+  credential rotation, native-shell commitment).
+- The connected Android phone becomes unavailable mid-run and the
+  remaining work requires phone evidence.
+
+### Save artifacts under predictable paths
+
+Per the iteration-save framing ([memory `feedback_iteration_save`](../.claude/projects/C--Users-Mattm-X-games-3d-sds/memory/feedback_iteration_save.md)),
+write proof artifacts under `cycle38-validation/runtime/` for JSON and
+`cycle38-validation/screenshots/<probe-name>/` for image evidence. These
+paths are gitignored but kept on disk for audit. Name probes descriptively
+(e.g. `android-webgpu-water-grid-fix-after.json`).
 
 Matt approved README/docs alignment, commit, push, and deploy for the Cycle 38
 packet on 2026-05-16. Use
@@ -65,9 +252,12 @@ Implementation order:
 3. Preserve fallback behavior until the production impostor gates pass. Do not
    describe the current lat/lon-hemi sidecars as octahedral.
 4. Continue active visual gates with current truth: desktop WebGPU dog/sheep
-   grass contact now has shadow-disabled geometry proof, but mobile/phone proof
-   for those fixes is still deferred; water grid/alignment lines, sticky glint,
-   Open Country terrain bands/seams, and tree grounding/read remain open.
+   grass contact now has shadow-disabled geometry proof, and 2026-05-20
+   connected-phone evidence proves the same visual contracts (grass
+   interactor, sheep leg/wool, water glint v2, `SunBillboard`) carry on
+   Android with 0 errors and 6/6 nonblank screenshots; budget gates and the
+   water grid/alignment lines, sticky glint, Open Country terrain bands/seams,
+   and tree grounding/read still remain open.
 5. Continue using installed Chrome for desktop WebGPU proof and the connected
    Android runner through `adb reverse tcp:3000 tcp:3000`. The current desktop
    tree matrix is valid; the current Android tree matrix is screenshot-valid
@@ -77,10 +267,36 @@ Latest focused evidence:
 
 - Android phone `R5CX4028VGJ` is reachable when USB debugging is authorized.
   Restore secure localhost with `adb reverse tcp:3000 tcp:3000` before Android
-  probes.
-- Phone validation was not rerun for the sheep/grass pass because Matt said the
-  phone is not connected. Do not cite the desktop grass/sheep artifacts as
-  Android or iOS acceptance evidence.
+  probes. Vite must be bound to IPv4 (`vite --port 3000 --host 127.0.0.1`) for
+  the reverse to reach it; default `npm run dev:client` may bind IPv6 only.
+  CDP port `9222` may already be held by a desktop Chrome process; pass
+  `--cdpPort=9333` to the Android runner to side-step.
+- Phone validation reran on 2026-05-20 against `R5CX4028VGJ` (Galaxy S24+, SM-S926U,
+  Android 16). Artifact
+  `cycle38-validation/runtime/android-webgpu-phone-reconnect-spotcheck.json`
+  covers Rolling Hills + Open Country across follow-close, tree-occluded, and
+  shoreline-glint poses, full-scene, with screenshots under
+  `cycle38-validation/screenshots/android-webgpu-phone-reconnect-spotcheck/`.
+  All 6 rows record `renderer="webgpu-production"`, 0 console/page errors,
+  nonblank screenshots, grass `coordinateSource="instanceWorldOffset-instanced-attribute"`
+  / `overlapMode="dominant-contact-capped-vector"` /
+  `visualScale=6.8` / `laydownStrength=0.95`, sheep
+  `legMotion="lower-leg-weighted-fore-aft-constrained-lift"` /
+  `vertexId-instanceData-instanceAnimation` / `animationSpeed=1`, sheep
+  `woolContract.bodyOnlyWoolShading=true` /
+  `silhouetteBreakup="normal-offset-plus-rim-color-breakup"`, water
+  `glintMode="ripple-normal-sun-camera-v2"`, and `sunBillboard.applied=true`
+  with `presetName="dusk"` on RH and `presetName="golden-hour"` on OC. The
+  desktop visual contracts carry to the phone. Budgets remain red against the
+  high-mobile gate (`p95 <= 18.5 ms`, `p99 <= 25 ms`): RH follow-close /
+  tree-occluded / shoreline-glint all land at `p95=33.4-33.5 ms` /
+  `p99=33.5 ms`; OC follow-close / tree-occluded at `p95=33.4-33.5 ms` /
+  `p99=33.5 ms`; OC shoreline-glint at `p95=50.2 ms` / `p99=66.8 ms`. Draw
+  calls 52-114, estimated visible triangles 0.96M-1.82M. Most rows pin at the
+  30Hz vsync cap; OC shoreline-glint pushes past it. The artifact is a focused
+  spot-check that proves carry-over of the desktop fixes, not a mobile
+  readiness claim. Matt's reported water grid/alignment lines reproduce on the
+  phone in RH/shoreline-glint capture.
 - `cycle38-validation/runtime/tree-placement-spacing-diagnostics.json` is the
   current deterministic placement evidence for the tree readability patch. It
   records Field `count=1359`, Rolling Hills `count=61`, Open Country
