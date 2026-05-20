@@ -60,7 +60,7 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - **Hosek-Wilkie analytic sky** with day/night presets, parallax cloud layer, shoreline-aware water with sun-glint, billboarded sun disc
 - **Hundreds of thousands of grass blades** with directional wind shader, dog-bends-grass-along-its-facing interaction, per-scene density tuning, stochastic-dither LOD
 - **Apple-correct tone mapping** — Mac/iPhone/iPad use Neutral instead of ACES so the sky doesn't wash white on Metal-ANGLE
-- Per-scene tree LOD + impostor atlases. Cycle 38 adds the first explicit WebGPU three-tier tree route behind `?konveyorNativeTreeImpostors=1`; proper mobile octahedral impostors are still active work.
+- Per-scene tree LOD + impostor atlases. The WebGPU three-tier tree route is opt-in behind `?konveyorNativeTreeImpostors=1`; proper mobile octahedral impostor sidecars remain on the cycle-39 carryover list.
 - Three camera modes: **Classic** (top-down isometric), **Follow** (cinematic chase with ridge-clearance lift), **Free** (mouse-yaw orbit)
 
 ### 🌐 Mobile + i18n + accessibility
