@@ -25,7 +25,7 @@
 > phone validation remain active gates.
 > Do not call SDS mobile-ready yet.
 
-Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then the completed Cycle 37 plan [`docs/cycle-37-plan.md`](docs/cycle-37-plan.md), then the next plan [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md), then [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md), then [`docs/konveyor-sds.md`](docs/konveyor-sds.md), then the completion audit [`docs/konveyor-completion-audit-2026-05-16.md`](docs/konveyor-completion-audit-2026-05-16.md). Cycle 36 is completed foundation evidence at [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md). Cycle 35's closed plan is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md).
+Cold-start orientation: read [`AGENTS.md`](AGENTS.md), then [`CLAUDE.md`](CLAUDE.md), then this file, then the active cycle plan at [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md). The completed Cycle 36 foundation evidence is at [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md), the completed Cycle 37 plan at [`docs/cycle-37-plan.md`](docs/cycle-37-plan.md), and Cycle 35 is archived at [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md). The Konveyor campaign archive index is [`docs/archive/konveyor-campaign.md`](docs/archive/konveyor-campaign.md); read only if researching the WebGPU migration arc.
 
 ## Autonomous Completion Brief for Cycle 38
 
@@ -210,7 +210,7 @@ paths are gitignored but kept on disk for audit. Name probes descriptively
 
 Matt approved README/docs alignment, commit, push, and deploy for the Cycle 38
 packet on 2026-05-16. Use
-[`docs/konveyor-release-decision-checklist.md`](docs/konveyor-release-decision-checklist.md)
+[`docs/archive/konveyor/release-decision-checklist.md`](docs/archive/konveyor/release-decision-checklist.md)
 as the release gate. PR #52 is now historical merged evidence, not a current
 approval to deploy future mobile-readiness work.
 
@@ -753,7 +753,7 @@ Rerun this after any deploy that carries the WebGPU packet.
 Matt's local WebGPU visual review after opening
 `?renderer=webgpu&scene=open-country&autostart=1&mode=classic` found that the
 route works but is not production-polished. Record of findings:
-[`docs/konveyor-visual-polish-qa-2026-05-16.md`](docs/konveyor-visual-polish-qa-2026-05-16.md).
+[`docs/archive/konveyor/visual-polish-qa-2026-05-16.md`](docs/archive/konveyor/visual-polish-qa-2026-05-16.md).
 Key issues: non-interactive grass, bland water, sky/cloud cutoff line, missing
 or unreadable sun, leaf wind detaching from static branches, and
 incorrect/black/palette ground material mapping. The prior look, WebGL, old
@@ -855,9 +855,9 @@ Durable fence applies in full ([`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.
 
 | Area | Source of truth |
 |---|---|
-| Active autonomous brief | [`docs/konveyor-autonomous-run.md`](docs/konveyor-autonomous-run.md) |
+| Active cycle plan | [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md) |
 | Foundation evidence | [`docs/cycle-36-plan.md`](docs/cycle-36-plan.md) |
-| Konveyor campaign doctrine | [`docs/konveyor-sds.md`](docs/konveyor-sds.md) |
+| Konveyor campaign archive | [`docs/archive/konveyor-campaign.md`](docs/archive/konveyor-campaign.md) |
 | Latest closed cycle | [`docs/archive/cycles/cycle-35-plan.md`](docs/archive/cycles/cycle-35-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Security advisory acceptance log | [`docs/security-acceptance.md`](docs/security-acceptance.md) |

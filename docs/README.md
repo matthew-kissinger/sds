@@ -10,12 +10,11 @@ You're a fresh agent (Claude / Codex / Cursor / etc.) on this repo with no sessi
 
 1. **[`../NEXT_SESSION.md`](../NEXT_SESSION.md)** — current pickup state. Tells you which cycle is active, when the snapshot was taken, and where to start.
 2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open, typically [`cycle-N-plan.md`](.). If NEXT_SESSION says the next cycle is not drafted yet, pick the goal with Matt before creating it. Top-to-bottom. EARS-format Acceptance lines tell you what "done" means.
-3. **[`konveyor-autonomous-run.md`](konveyor-autonomous-run.md)** — active brief for the Konveyor WebGPU/mobile campaign.
-4. **[`konveyor-sds.md`](konveyor-sds.md)** — required when the active scope is the WebGPU / native-shipping campaign.
-5. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
-6. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
-7. **[`../.claude/rules/`](../.claude/rules/)** — durable project rules (deterministic-sim boundary, scene/render rules, cycle process, multiplayer contract).
-8. **[`INTERFACE_FENCE.md`](INTERFACE_FENCE.md)** — only if you need to touch one of the frozen files.
+3. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
+4. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
+5. **[`../.claude/rules/`](../.claude/rules/)** — durable project rules (deterministic-sim boundary, scene/render rules, cycle process, multiplayer contract).
+6. **[`INTERFACE_FENCE.md`](INTERFACE_FENCE.md)** — only if you need to touch one of the frozen files.
+7. **[`archive/konveyor-campaign.md`](archive/konveyor-campaign.md)** — only if researching the WebGPU migration arc; the campaign already merged via PR #52.
 
 Don't write code until you've confirmed direction with the user or until the
 active cycle plan / autonomous handoff directs you.
@@ -47,16 +46,13 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`content-campaign-2026-05.md`](content-campaign-2026-05.md) | How-to / Reference | May 2026 content pack, capture pipeline, publish caveats, and media validation gates. |
 | [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md) | How-to / Reference | Browser recording research, cloned OSS examples, Remotion assessment, and chosen capture architecture. |
 | [`multiplayer-ux.md`](multiplayer-ux.md) | How-to / Reference | Multiplayer UX flow + lobby state diagrams. |
-| [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md) | Reference / Explanation | Active experimental-branch handoff for the full autonomous Konveyor campaign. |
-| [`konveyor-sds.md`](konveyor-sds.md) | Reference / Explanation | WebGPU, optimization, and native-shipping campaign doctrine. Read before any Konveyor cycle. |
 | [`cycle-38-plan.md`](cycle-38-plan.md) | Reference / Explanation | Active Cycle 38: WebGPU mobile scene/camera/system matrix, visual gates, asset budgets, opt-in three-tier tree route, and current connected-phone blockers. |
 | [`archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md`](archive/research/cycle-38-webgpu-visual-first-principles-spike-2026-05-16.md) | Explanation | Current grass/sheep/wool/sun spike: why grass darkening is not bend proof, why WebGPU sheep needs fixed-phase leg/wool captures, and why Open Country needs low-sun atmosphere proof. |
 | [`archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md`](archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md) | Explanation | Current WebGPU tree-impostor spike: why the fixed-tile Kiln node path is not production octahedral impostor readiness. |
 | [`cycle-37-plan.md`](cycle-37-plan.md) | Reference / Explanation | Completed Cycle 37: isolated WebGPU perf, sun/sky atmosphere repair, Native Packaging Proof 0, and store/Steam checklist. |
 | [`native-packaging-proof-0.md`](native-packaging-proof-0.md) | Reference | Cycle 37 native packaging proof matrix for Electron, Tauri, Capacitor, PWA/TWA, Steam, stores, and true-native paths. |
 | [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md) | Reference | Docs-only readiness gates for Steam, App Store, Google Play, and optional PWA/TWA distribution. |
-| [`konveyor-completion-audit-2026-05-16.md`](konveyor-completion-audit-2026-05-16.md) | Reference | Current prompt-to-artifact audit for the Konveyor WebGPU branch packet and remaining hard stops. |
-| [`konveyor-release-decision-checklist.md`](konveyor-release-decision-checklist.md) | Reference | Human-approved merge/deploy/default-renderer checklist for the current Cycle 38 `2.1.6` review packet. |
+| [`archive/konveyor-campaign.md`](archive/konveyor-campaign.md) | Reference | Index for the archived Konveyor WebGPU/mobile campaign docs (post-PR-#52). |
 | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | Reference | Module map + render pipeline + network protocol. The "where does X live" doc. |
 | [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) | Reference | Which files are frozen + how authorization works. |
 | [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) | Reference | Cycle plan stub. New cycle plans inherit from this. |
@@ -71,11 +67,10 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 
 After Cycle 28 Stream A3's consolidation, the only files at `docs/` root are:
 
-- The **active cycle plan** (`cycle-N-plan.md`) and any active campaign handoff
-  such as [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md).
+- The **active cycle plan** (`cycle-N-plan.md`).
 - The **append-only [`BACKLOG.md`](BACKLOG.md)** — closed-cycle log + deferred items.
 - The **fence + template + contract triad**: [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md), [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md).
-- A small set of **stable how-tos and campaign references**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md), [`konveyor-autonomous-run.md`](konveyor-autonomous-run.md), [`konveyor-sds.md`](konveyor-sds.md).
+- A small set of **stable how-tos and references**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md).
 - This index ([`README.md`](README.md)).
 
 Everything else lives under [`archive/`](archive/):
