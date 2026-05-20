@@ -4,6 +4,39 @@
 
 ## Recently Completed
 
+### Cycle 37 - `atmosphere-perf-and-native-packaging-proof-0` (closed 2026-05-16, no version bump at close; progressive WebGPU default approved post-close)
+
+Plan archived at [`docs/archive/cycles/cycle-37-plan.md`](archive/cycles/cycle-37-plan.md). Retroactively archived 2026-05-20 — the cycle was treated as closed by NEXT_SESSION but the archive step was skipped at the time. Cycle 37 itself preserved WebGL as the default and did not cross merge, deploy, default-renderer, Steam, App Store, Google Play, paid-store, signing, or submission gates.
+
+**Closeout outcomes:**
+
+- **Phase 1 — isolated WebGPU perf recapture.** Final perf proof at `cycle36-validation/runtime/cycle37-final-webgpu-perf.json`: Rolling Hills `avgFrameTime=6.993 ms` / `p95=7.29 ms` / 1144 samples; Open Country `avgFrameTime=6.944 ms` / `p95=6.958 ms` / 1151 samples. Both well under the 22 ms avg / 30 ms p95 budget.
+- **Atmosphere ownership.** `AtmosphereFrame.v1` shared sun/sky/fog/cloud packet introduced; `SunBillboard` owns the readable disc; WebGPU sun materially larger; final request proof + screenshots under `cycle36-validation/runtime/cycle37-final-webgpu-request/`.
+- **Native packaging proof 0.** [`docs/native-packaging-proof-0.md`](native-packaging-proof-0.md) and [`docs/native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md) written; preflight passed at `2026-05-16T06:36:27.879Z` (`cycle36-validation/native/preflight.json`).
+- **Renderer telemetry seam.** `BUILD_TARGET=native`, `SDS_WORKER_BASE`, `js/runtimeConfig.js`, `npm run native:check` landed for native-shaped perf/profiling without committing to Tauri/Electron/Capacitor.
+
+**Post-close release-policy update (approved by Matt 2026-05-16):**
+
+Progressive WebGPU as the web default with WebGL fallback and an experimental user-facing settings toggle. Proof at `cycle36-validation/runtime/progressive-webgpu-default-request-proof.json` and `progressive-webgpu-default-perf-proof.json`. First connected-Android WebGPU baseline at `cycle37-validation/runtime/android-webgpu-rolling-hills-final-2026-05-16.json`: device `R5CX4028VGJ`, Rolling Hills follow-close `p95=16.733 ms` / `p99=16.871 ms` / 37 draw calls. Mobile WebGPU cost-report + `QualityGovernor` + Android ADB/CDP runner + mobile tree-impostor culling shipped to support real-device mobile WebGPU governance (mainKB delta 576 → 577).
+
+**Carryover into Cycle 38 (still active):** true octahedral impostor sidecar v2, Android mid-mobile budget closeout, Open Country terrain seams, water grid/glint, paired OC MP playtest, iOS Safari foam canary.
+
+### Cycle 36 - `konveyor-phase-0-readiness` (closed 2026-05-15, no version bump)
+
+Plan archived at [`docs/archive/cycles/cycle-36-plan.md`](archive/cycles/cycle-36-plan.md). Retroactively archived 2026-05-20 — same gap as Cycle 37. The cycle prepared SDS for a WebGPU and native-shipping campaign by repairing the measurement loop, reconciling validation gates with actual tooling, proving native runtime assumptions, and opening the smallest flag-gated WebGPU hero-scene path the evidence supported.
+
+**Closeout outcomes:**
+
+- **Perf baseline repaired.** `tests/perf-baseline/baseline.json` passes 6/6 default configs with 900 samples each. Desktop and mobile-profile latency gates executable. Runtime proof at [`docs/archive/research/cycle-36-konveyor-runtime-proof.md`](archive/research/cycle-36-konveyor-runtime-proof.md).
+- **Screenshot diff enforcement.** Committed 12-cell goldens + deterministic capture contract; `npm run validation:screenshots -- --diff` passes with mean SSIM 0.9945.
+- **Renderer-boundary seam extracted.** Production renderer setup moved to [`js/rendering/sceneRendererSetup.js`](../js/rendering/sceneRendererSetup.js): `SceneManager` still creates a WebGL renderer by default, but its WebGL capability probes, context handlers, shadow/pixel-ratio setup, and tonemapping choice are explicit and test-covered. The module can also consume an explicit renderer/configure factory for proof runs.
+- **First WebGPU `SceneManager` proof.** Opt-in `WebGPURenderer` injection through `SceneManager.whenRendererReady()` validated at `cycle36-validation/runtime/scene-manager-webgpu-renderer-proof.json`. Routes production `Atmosphere`, `SunBillboard`, `TerrainBuilder`, `AnimeWater`, `PortalEffect`, `CorralZapEffectPool`, tree/rock GLB material-replacement, `GrassSystem`, `OptimizedSheepSystem`, and Kiln impostor slice via diagnostic-installed factories. Nonblank 320x180 screenshot.
+- **Guarded production WebGPU boot scouts** for Home Field, Rolling Hills, and Open Country (`cycle36-validation/runtime/production-webgpu-gameplay-scout-*.json`). All three `ok: true`, no console/page errors, nonblank gameplay canvases.
+- **Plain non-diagnostic production WebGPU request proof** at `cycle36-validation/runtime/production-webgpu-request-proof.json`: default URL remains `effective: "webgl"` with no fallback; simulated browsers without `navigator.gpu` fall back to WebGL; explicit `?renderer=webgpu&autostart=1&mode=classic` runs production WebGPU on all three scenes with successful device preflight, centralized factory suite, native InstancedMesh routing, applied terrain/grass/sheep/water/tree-rock materials.
+- **Two-client multiplayer WebGPU proof** at `cycle36-validation/runtime/production-webgpu-mp-proof.json`: both clients `effective: "webgpu-production"`, `roomState: "in-game"`, connected two-player room state, nonblank screenshots.
+
+**Hero-scene blocker recorded** at [`docs/archive/research/cycle-36-webgpu-hero-blocker.md`](archive/research/cycle-36-webgpu-hero-blocker.md) — broad GLSL shader surface still gates a Rolling Hills WebGPU spike.
+
 ### Post-Cycle-35 leaderboard solo-tab correction (2026-05-13)
 
 - **Scene leaderboards now show solo modes on every scene.** Cycle 35 correctly made leaderboards `(scene × mode)` partitions, but the UI kept a stale Field-only solo-tab rule. [`GlobalLeaderboard.js`](../js/components/Multiplayer/GlobalLeaderboard.js) now shows `soloClassic`, `soloExtreme`, `soloInsane`, and `soloChaos` for Home Field, Sheep Dog Island, and Open Country, while multiplayer tabs still honor each scene's `allowedModes` so Open Country does not expose unsupported competitive MP. Added [`tests/leaderboard-modes.spec.js`](../tests/leaderboard-modes.spec.js).
