@@ -62,10 +62,20 @@ export function createKonveyorAnimeWaterNodeMaterial(
   const viewDir = normalize(cameraPosition.sub(positionWorld));
   const sunDir = normalize(sunDirection);
   const halfVector = normalize(sunDir.add(viewDir));
-  const slopeX = sin(waterWorld.x.mul(0.052).add(time.mul(0.21)))
-    .add(sin(waterWorld.z.mul(0.037).sub(time.mul(0.17))).mul(0.55));
-  const slopeZ = sin(waterWorld.z.mul(0.046).add(time.mul(0.19)))
-    .add(sin(waterWorld.x.mul(0.033).add(time.mul(0.13))).mul(0.45));
+  const ROT_A = vec2(1.0, 0.0);
+  const ROT_B = vec2(0.5, 0.8660254);
+  const ROT_C = vec2(-0.5, 0.8660254);
+  const projA = dot(waterWorld, ROT_A);
+  const projB = dot(waterWorld, ROT_B);
+  const projC = dot(waterWorld, ROT_C);
+  const waveA = sin(projA.mul(0.052).add(time.mul(0.21)))
+    .add(sin(projA.mul(0.033).sub(time.mul(0.13))).mul(0.55));
+  const waveB = sin(projB.mul(0.046).add(time.mul(0.19)))
+    .add(sin(projB.mul(0.029).add(time.mul(0.11))).mul(0.5));
+  const waveC = sin(projC.mul(0.041).sub(time.mul(0.17)))
+    .add(sin(projC.mul(0.026).add(time.mul(0.09))).mul(0.45));
+  const slopeX = waveA.mul(ROT_A.x).add(waveB.mul(ROT_B.x)).add(waveC.mul(ROT_C.x)).mul(0.6667);
+  const slopeZ = waveA.mul(ROT_A.y).add(waveB.mul(ROT_B.y)).add(waveC.mul(ROT_C.y)).mul(0.6667);
   const rippleNormal = normalize(vec3(slopeX.mul(0.055), 1.0, slopeZ.mul(0.055)));
   const ndh = max(dot(rippleNormal, halfVector), 0.0);
   const spec = pow(ndh, 104.0);

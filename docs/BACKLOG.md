@@ -4,6 +4,41 @@
 
 ## Recently Completed
 
+### Cycle 38 - `polished-webgpu-production-readiness` (closed 2026-05-20, no version bump, PC-only scope)
+
+Plan archived at [`docs/archive/cycles/cycle-38-plan.md`](archive/cycles/cycle-38-plan.md). Cycle 38 was opened to make WebGPU production readiness real as policy, not a single-phone proof. Closed autonomously per Matt's 2026-05-20 directive ("complete autonomously without human check-in, focus on the game in general and test on PC this cycle") with mobile-phase work moved to carryover.
+
+**Closeout outcomes (PC scope):**
+
+- **Phase 2 - water grid/alignment lines fixed (RH + OC).** Root cause: `konveyorAnimeWaterNodeMaterial.js` slope normals used only world-axis-aligned sines (`sin(waterWorld.x * 0.052 + t)` / `sin(waterWorld.z * 0.046 + t)`) producing coherent horizontal/vertical wavefronts. Fix: replaced with 3 wave directions rotated 60° apart (ROT_A=(1,0), ROT_B=(0.5,0.866), ROT_C=(-0.5,0.866)), then projected back into slopeX/slopeZ. Same principle as the grass three-rotated-noise rule. Proof captures under `cycle38-validation/screenshots/cycle38-phase2-pc-water-grid-after/` show clean teal water with no banded ripples at shoreline-glint and horizon-terrain-seam on RH and OC.
+- **Phase 2 - other visual gates audited on PC.** Sun glint sync verified by code review (glintAxis derives from sunDir + viewDir, varies with camera). OC terrain seams clean at follow-close / classic-max / horizon-terrain-seam poses. Dog readable + tree wind coherence preserved in captures.
+- **Phase 3 - tree budgets locked.** `tree-assets.spec.js` already locks `tree2.glb` ≤ 8000 tris and `tree2_lod1.glb` ≤ 2000 tris; committed assets are 7700/1924. Tests green.
+- **Phase 4 - quality-governor hysteresis tested + proven.** Added 4 unit tests in `tests/render-cost-report.spec.js` covering single-frame oscillation guard, recovery after sustained stable windows, floor-fallback only after sustained over-budget at floor, and non-webgpu rendererMode ineligibility for the `webgpu-frame-budget` fallback. Proof artifact at `cycle38-validation/runtime/quality-governor-hysteresis-proof.json` records the synthetic trace: degradation 0 → 0 → 1 → 1 → 2 → 2 → 3 → 3 → 3 → 3 with fallbackReason recorded after window 9; recovery 1 → 1 → 1 → 0 after 3 stable windows.
+
+**Validation gates run before close (2026-05-20):**
+
+- `npm test` - 480 passed / 7 skipped (up from 476 with the 4 new hysteresis tests).
+- `npm run lint` - clean.
+- `npm run build` - clean, main bundle 605347 bytes = 591 KiB rounded (exactly at the 591 KiB ratchet, no regression).
+- `npx playwright test tests/e2e/scene-swap-stability.spec.ts --project=chromium` - 3 passed.
+- `git diff --check` - clean.
+- Last `main` deploy: `success`.
+
+**Carryover into Cycle 39:**
+
+- **True octahedral sidecar v2 + Kiln node material octahedral projection.** Pixel-forge CLI has no static-octahedral mode (only animated-octahedral for skinned meshes; axes are y/hemi-y for static foliage). A custom headless-WebGL baker is a 1+ week effort and was out of scope for this cycle's PC focus. The cycle plan explicitly accepted the 4x4 lat/lon-hemi Kiln sidecars as a temporary compatibility stage; carry the v2 work to a dedicated cycle.
+- **Android matrix at `?konveyorNativeTreeImpostors=1`.** Depends on the octahedral baker.
+- **Phase 5 broader-device proof.** Multi-Android profiles, iOS Safari WebGPU canary - operator hardware required.
+- **Phase 6 release/ops carryovers.** OC paired two-client sheep-driving playtest, post-deploy iOS water canary, renderer telemetry readout - operator and/or deploy required.
+- **Water lighting time-of-day reproducibility.** New PC captures bootstrapped at a different default sun angle than the older `desktop-webgpu-cycle38-poses/` baseline; a `?sun=0.5`-locked capture matrix would make A/B regressions cleaner.
+
+**Files changed in cycle close:**
+
+- `js/water/konveyorAnimeWaterNodeMaterial.js` - three-rotated-direction wavefronts replace world-axis sines.
+- `tests/render-cost-report.spec.js` - 4 new QualityGovernor hysteresis tests.
+- `tools/cycle38-phase2-pc-captures.mjs` - new PC visual-gate capture script with WebGPU-enabled Chrome launch flags.
+- `tools/quality-governor-hysteresis-proof.mjs` - new artifact generator.
+
 ### Cycle 37 - `atmosphere-perf-and-native-packaging-proof-0` (closed 2026-05-16, no version bump at close; progressive WebGPU default approved post-close)
 
 Plan archived at [`docs/archive/cycles/cycle-37-plan.md`](archive/cycles/cycle-37-plan.md). Retroactively archived 2026-05-20 — the cycle was treated as closed by NEXT_SESSION but the archive step was skipped at the time. Cycle 37 itself preserved WebGL as the default and did not cross merge, deploy, default-renderer, Steam, App Store, Google Play, paid-store, signing, or submission gates.

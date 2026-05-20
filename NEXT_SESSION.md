@@ -1,63 +1,57 @@
-# Next Session - Cycle 38 (`polished-webgpu-production-readiness`)
+# Next Session - Cycle 39 (TBD)
 
 > **Updated:** 2026-05-20
-> **For:** Cycle 38
-> **Pickup priority:** continue Cycle 38 toward shippable WebGPU production readiness. The autonomous Definition-of-Done checklist lives in the cycle plan; top concrete next steps are water grid/alignment fix, sun glint sync, Open Country terrain seams, true octahedral sidecar v2, and Android matrix close.
+> **For:** Cycle 39
+> **Pickup priority:** Cycle 39 plan is scaffolded as a stub. Fill in Goal + Phases before running `/cycle-start`. Seed scope from Cycle 38 carryover: octahedral tree-impostor sidecar v2 + Kiln material projection (PC-implementable), OR a paired mobile-readiness cycle for Phases 5/6 (Android matrix, iOS Safari canary, OC MP playtest).
 
 ## Cold-start orientation
 
 Read in order: [`AGENTS.md`](AGENTS.md) → [`CLAUDE.md`](CLAUDE.md) → this
-file → the active cycle plan at [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md).
-The plan carries the Autonomous Completion Brief (authorization scope,
-Definition of Done, validation gates, close-out ritual, hard stops, artifact
-paths). Closed-cycle plans and the Konveyor campaign archive are under
-[`docs/archive/`](docs/archive/); read only if a regression points there.
+file → the active cycle plan at [`docs/cycle-39-plan.md`](docs/cycle-39-plan.md).
+Closed-cycle plans live under [`docs/archive/cycles/`](docs/archive/cycles/).
 
-Don't write code until orientation is complete. When invoked autonomously
-("run cycle 38 autonomously" or equivalent), follow the brief end-to-end
-without check-ins; pause only on hard stops or for the Phase 5 + 6
-carryovers that require the operator or a deploy.
+Don't write code until orientation is complete. The cycle-39 plan is a
+stub - it needs Goal + Phases filled in before any work begins.
 
-## Current state (recent activity, not durable contract)
+## Cycle 38 close summary (2026-05-20)
 
-- 2026-05-20: connected-phone spot-check on `R5CX4028VGJ` (Galaxy S24+,
-  Android 16) confirmed the desktop visual contracts (grass interactor
-  coordinate/overlap mode, sheep lower-leg gait + body-only wool, water
-  `ripple-normal-sun-camera-v2` glint, `SunBillboard` ownership) carry on
-  Android with 0 console/page errors and 6/6 nonblank screenshots. Budgets
-  remain red against high-mobile (`p95 <= 18.5 ms`): RH 33.4-33.5 p95, OC
-  shoreline-glint 50.2 p95 / 66.8 p99. Water grid/alignment-line artifact
-  reproduces on phone. Artifact:
-  `cycle38-validation/runtime/android-webgpu-phone-reconnect-spotcheck.json`.
-- 2026-05-20 housekeeping: cycle*-validation moved to .gitignore (491
-  files), stale branches deleted, `.git/` collapsed 1.45 GiB → 637 MiB,
-  v2.1.7 tagged, Konveyor campaign docs folded into
-  [`docs/archive/konveyor-campaign.md`](docs/archive/konveyor-campaign.md),
-  `progress.md` archived, NEXT_SESSION + cycle plan slimmed to contract
-  shape.
+Closed autonomously per Matt's directive "complete autonomously without
+human check-in, focus on the game in general and test on PC this cycle."
+PC-scope phases shipped, mobile-scope phases carried over.
 
-PR [#52](https://github.com/matthew-kissinger/sds/pull/52) is historical
-merged evidence, not a current approval to deploy future mobile-readiness
-work. Do not call SDS mobile-ready yet.
+PC-scope shipped:
 
-## Open carryovers (require operator or deploy)
+- **Phase 2 water grid/alignment fix.** Root cause and fix in
+  [`js/water/konveyorAnimeWaterNodeMaterial.js`](js/water/konveyorAnimeWaterNodeMaterial.js)
+  (three-rotated wavefront directions replace world-axis sines). Captures
+  under `cycle38-validation/screenshots/cycle38-phase2-pc-water-grid-after/`.
+- **Phase 2 other visual gates.** Sun glint sync verified by code review;
+  OC terrain seams clean across follow-close / classic-max /
+  horizon-terrain-seam; dog readable + tree coherence preserved.
+- **Phase 3 tree budgets.** `tree-assets.spec.js` locks 7700/1924 tris on
+  tree2 LOD0/LOD1.
+- **Phase 4 quality-governor hysteresis.** 4 new tests in
+  [`tests/render-cost-report.spec.js`](tests/render-cost-report.spec.js)
+  plus proof artifact at
+  `cycle38-validation/runtime/quality-governor-hysteresis-proof.json`.
 
-1. **OC paired two-client sheep-driving playtest.** Operator at the
-   keyboard, two browser tabs, OC cooperative room, drive sheep into the
-   round-up zone at `(0, 50)`, confirm `roundup → drive` flips server-side
-   at `hold=2.0s` and the portal at `z=295` opens. Carryover from Cycle 35.
-2. **Post-deploy iOS Safari water canary.**
-   `IOS_WATER_BASE_URL=https://sheepdogsim.com npm run test:ios-water`
-   after the next deploy. Hard stop if `nearFoamWhite: true`.
-3. **Renderer telemetry readout.**
-   `npm run konveyor:renderer-telemetry -- --days=7` after deployed traffic.
+Mobile-scope carryover (operator hardware or deploy required):
+
+- Octahedral tree-impostor sidecar v2 + Kiln node material octahedral
+  projection (pixel-forge has no static-octahedral mode; needs a custom
+  baker, ~1+ week).
+- Android matrix at `?konveyorNativeTreeImpostors=1` (depends on the
+  octahedral baker).
+- Multi-Android profiles + iOS Safari WebGPU canary (Phase 5).
+- OC paired two-client sheep-driving playtest; post-deploy iOS water
+  canary; renderer telemetry readout (Phase 6).
+- Water lighting time-of-day reproducibility (`?sun=0.5`-locked capture
+  matrix for cleaner A/B regression baselines).
 
 ## Frozen files
 
 Durable fence applies in full ([`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md)).
-Cycle-38-specific exception: `shared/TreePlacement.js` +
-`tests/refactor-baseline/__fixtures__/scatter-positions.json` for the
-2026-05-16 tree-placement amendment (see cycle plan).
+No cycle-39 specific exceptions until the plan stub is filled in.
 
 ## Operational notes
 
@@ -69,19 +63,18 @@ Cycle-38-specific exception: `shared/TreePlacement.js` +
 - **D1:** `npx wrangler d1 execute sds-db --remote --command "..." --json`
   for read-only inspection. Database id
   `513aa937-e60a-4fb6-b499-9f3814149e88`.
-- **Android phone:** plug in `R5CX4028VGJ`, authorize USB debugging, then
-  `adb reverse tcp:3000 tcp:3000`. Vite must bind IPv4
-  (`vite --port 3000 --host 127.0.0.1`) or the reverse can't reach it. CDP
-  port `9222` may already be held; pass `--cdpPort=9333` to
-  `tools/android-webgpu-perf.mjs`.
+- **Android phone (when mobile work resumes):** plug in `R5CX4028VGJ`,
+  authorize USB debugging, then `adb reverse tcp:3000 tcp:3000`. Vite must
+  bind IPv4 (`vite --port 3000 --host 127.0.0.1`) or the reverse can't
+  reach it.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan | [`docs/cycle-38-plan.md`](docs/cycle-38-plan.md) |
+| Active cycle plan | [`docs/cycle-39-plan.md`](docs/cycle-39-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-37-plan.md`](docs/archive/cycles/cycle-37-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-38-plan.md`](docs/archive/cycles/cycle-38-plan.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
 | Durable rules | [`.claude/rules/`](.claude/rules/) |
@@ -91,7 +84,6 @@ Cycle-38-specific exception: `shared/TreePlacement.js` +
 | Portable agent context | [`AGENTS.md`](AGENTS.md) |
 | Claude overlay | [`CLAUDE.md`](CLAUDE.md) |
 | NEXT_SESSION contract | [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md) |
-| Konveyor campaign archive | [`docs/archive/konveyor-campaign.md`](docs/archive/konveyor-campaign.md) |
 
 ## Running locally
 

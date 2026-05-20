@@ -99,4 +99,83 @@ describe('WebGPU mobile render cost reporting', () => {
             sheepAnimationRate: 1.0,
         });
     });
+
+    it('does not degrade quality from a single over-budget frame inside the window', () => {
+        const renderer = { setPixelRatioCalls: [], setPixelRatio(value) { this.setPixelRatioCalls.push(value); } };
+        const governor = new QualityGovernor({
+            isMobile: true,
+            tier: 'high',
+            sampleWindowMs: 7000,
+        });
+        const state = governor.sample({ frameTime: 60, renderer, rendererMode: 'webgpu-production', sceneId: 'field' });
+        expect(state.qualityIndex).toBe(0);
+        expect(state.renderScale).toBe(1);
+        expect(renderer.setPixelRatioCalls.length).toBe(0);
+    });
+
+    it('recovers quality after sustained stable windows', () => {
+        const renderer = { setPixelRatioCalls: [], setPixelRatio(value) { this.setPixelRatioCalls.push(value); } };
+        const governor = new QualityGovernor({
+            isMobile: true,
+            tier: 'high',
+            sampleWindowMs: 1,
+        });
+        for (let i = 0; i < 2; i++) {
+            governor.windowStartedAt = performance.now() - 2;
+            governor.samples = [30, 31, 32, 33, 34];
+            governor.sample({ frameTime: 34, renderer, rendererMode: 'webgpu-production', sceneId: 'field' });
+        }
+        expect(governor.getState().qualityIndex).toBe(1);
+
+        for (let i = 0; i < 3; i++) {
+            governor.windowStartedAt = performance.now() - 2;
+            governor.samples = [14, 15, 15, 16, 16];
+            governor.sample({ frameTime: 16, renderer, rendererMode: 'webgpu-production', sceneId: 'field' });
+        }
+        const recovered = governor.getState();
+        expect(recovered.qualityIndex).toBe(0);
+        expect(recovered.renderScale).toBe(1);
+        expect(renderer.setPixelRatioCalls.at(-1)).toBeCloseTo(1);
+    });
+
+    it('records fallback only after the floor still misses budget for repeated windows', () => {
+        const renderer = { setPixelRatio() {} };
+        try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
+        const governor = new QualityGovernor({
+            isMobile: true,
+            tier: 'high',
+            sampleWindowMs: 1,
+        });
+        const pushOverBudget = () => {
+            governor.windowStartedAt = performance.now() - 2;
+            governor.samples = [30, 31, 32, 33, 34];
+            return governor.sample({ frameTime: 34, renderer, rendererMode: 'webgpu-production', sceneId: 'field' });
+        };
+        for (let i = 0; i < 2; i++) pushOverBudget();
+        expect(governor.getState().qualityIndex).toBe(1);
+        for (let i = 0; i < 2; i++) pushOverBudget();
+        expect(governor.getState().qualityIndex).toBe(2);
+        for (let i = 0; i < 2; i++) pushOverBudget();
+        expect(governor.getState().qualityIndex).toBe(3);
+        expect(governor.getState().fallbackReason).toBeNull();
+        for (let i = 0; i < 3; i++) pushOverBudget();
+        expect(governor.getState().fallbackReason).toBe('webgpu-frame-budget');
+    });
+
+    it('treats non-webgpu rendererMode as ineligible for the webgpu-frame-budget fallback', () => {
+        const renderer = { setPixelRatio() {} };
+        try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
+        const governor = new QualityGovernor({
+            isMobile: true,
+            tier: 'high',
+            sampleWindowMs: 1,
+        });
+        const pushOverBudget = () => {
+            governor.windowStartedAt = performance.now() - 2;
+            governor.samples = [60, 60, 60, 60, 60];
+            return governor.sample({ frameTime: 60, renderer, rendererMode: 'webgl', sceneId: 'field' });
+        };
+        for (let i = 0; i < 12; i++) pushOverBudget();
+        expect(governor.getState().fallbackReason).toBeNull();
+    });
 });
