@@ -30,15 +30,15 @@ const SKY_FOG_PRESET_TUNING = Object.freeze({
     },
     effects: {
       sun: {
-        depthTest: false,
+        // Cycle 39 Phase D: re-enabled depth test (was `false` for the legacy
+        // haloed-disc that needed to always read through foreground). Now
+        // that the disc is a small bright thing and bloom paints the glow,
+        // proper terrain occlusion matters (sun behind a hill is OCCLUDED).
+        depthTest: true,
         intensity: 0.98,
-        haloStrength: 0.72,
-        haloPower: 1.35,
-        alphaHaloMix: 0.72,
-        coreRadius: 0.16,
-        coreFeather: 0.34,
+        coreRadius: 0.04,
+        coreFeather: 0.12,
         coreColor: [1.0, 0.88, 0.54],
-        haloColor: [1.0, 0.46, 0.18],
       },
     },
     treeLeaf: {
@@ -79,15 +79,11 @@ const SKY_FOG_PRESET_TUNING = Object.freeze({
     },
     effects: {
       sun: {
-        depthTest: false,
+        depthTest: true,
         intensity: 1.0,
-        haloStrength: 0.78,
-        haloPower: 1.32,
-        alphaHaloMix: 0.74,
-        coreRadius: 0.16,
-        coreFeather: 0.35,
+        coreRadius: 0.04,
+        coreFeather: 0.12,
         coreColor: [1.0, 0.86, 0.50],
-        haloColor: [1.0, 0.38, 0.14],
       },
     },
     treeLeaf: {

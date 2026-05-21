@@ -119,11 +119,21 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 - When `npm test` runs after Phase C, all vitest specs shall pass.
 - When Phase C ships, then [`tests/refactor-baseline/__fixtures__/bundle-sizes.json`](../tests/refactor-baseline/__fixtures__/bundle-sizes.json) shall be bumped from `mainKB: 591` to `mainKB: 592` to absorb the 1 KB intentional growth from Phase B's HG aureole math + grep-discoverable comments inside the GLSL template literal in [`skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js). Three.js bundle is unchanged (`threeKB: 603`). Future cleanup item (cycle 40 candidate): strip GLSL template-literal comments at build time so explanatory comments don't ship to the browser.
 
-## Phase D follow-up surfaced during Phase C
+## Phase D — Sun depth-test fix + bloom-audit precondition cleanup (~2hr, shipped)
 
-During Phase C live verification a divergence was observed: after a scene rebuild (e.g. clicking "Just Play"), the konveyor sun-disc material's `konveyorCoreColorUniform` and `konveyorIntensityUniform` stay at preset construction defaults (e.g. `coreColor: [1.0, 0.88, 0.54]`, `intensity: 0.98` for dusk) while [`Atmosphere.sun.light.color`](../js/atmosphere/Atmosphere.js) correctly tracks `sky.getSun()` (e.g. `[1.0, 0.31, 0.02]` for dusk at the same time). Pre-existing — SunBillboard.update propagation after scene rebuild isn't writing through to the konveyor material's uniforms. **Investigate in Phase D** before running the bloom audit (a stuck-on-preset-defaults disc will skew bloom-threshold tuning).
+**What landed.** [`konveyorNodeMaterialFactorySuite.js`](../js/konveyorNodeMaterialFactorySuite.js) dusk + golden-hour `effects.sun` blocks: flipped `depthTest: false` → `depthTest: true` and stripped the dead halo* fields (`haloStrength`, `haloPower`, `alphaHaloMix`, `haloColor`) that Phase A orphaned. The remaining `coreRadius` + `coreFeather` defaults aligned with [`konveyorSunNodeMaterial.js`](../js/effects/konveyorSunNodeMaterial.js) (`0.04` / `0.12`).
 
-## Phase D — Bloom audit + tune (~1hr)
+**Why.** Matt flagged the sun was visible *through* terrain — a legacy `depthTest: false` from the haloed-disc era where the soft warm glow was meant to always read. Now that the disc is a small bright thing and bloom paints the glow, proper terrain occlusion matters.
+
+**Verified.** Tests pass (491/491), build clean. Headless WebGPU captures via [`tools/capture-webgpu-scene-sky.mjs`](../tools/capture-webgpu-scene-sky.mjs) (`--channel=chrome` to work around bundled-Playwright dxil.dll error on this Windows box) for all three scenes confirm the disc renders as a small crisp warm-white dot, not the prior splotchy halo. Synthetic diagnostic scenes don't have terrain in front of the sun direction, so direct depth-test occlusion proof is deferred to Phase E captures against the actual gameplay scenes.
+
+## Open items deferred to Phase E
+
+- **Bloom audit (the actual 12-PNG matrix).** Driving the dev preview to controlled ToD captures across {field, rolling-hills, open-country} × {0.20, 0.35, 0.50, 0.75} requires either a working live-preview rig at gameplay state or a custom Playwright capture against the gameplay path (not the diagnostic synthetic scene). The dev preview got into a stuck-renderer state post-`/?ui=off → Just Play` flow during Phase C/D verification (eval responsive, but `sceneManager.render()` / `getCamera()` / per-frame loop hits 0 times in 1 second), so manual rig work is needed.
+- **Disc-uniform propagation after scene rebuild.** Surfaced during Phase C: after `disposeScene` + `rebuildScene`, the new SunBillboard's konveyorCoreColorUniform / konveyorIntensityUniform stay at construction defaults; `sun.light.color` (the Phase C contract) is correct but doesn't propagate to the disc. Hypothesis: the same per-frame loop that stops calling render/getCamera also stops calling `_sunBillboard.update`. Likely pre-existing post-rebuild issue, surfaced (not caused) by Phase D's verification flow.
+- **Phase D's original bloom-config tuning.** Not run because the precondition (a steady gameplay-scene capture rig) isn't in place. The depth-test fix + dead-halo cleanup ship as Phase D's scoped wins; the bloom tuning carries into Phase E.
+
+## Phase D — Original bloom-audit plan (deferred into Phase E)
 
 **Depends on Phase A–C.** With the disc small and the aureole physical, verify bloom delivers the warm glow the principles say it should. If it doesn't, tune.
 
