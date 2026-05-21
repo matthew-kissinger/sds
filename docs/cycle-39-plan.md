@@ -113,9 +113,15 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 
 **Acceptance (EARS):**
 
-- When Phase C ships, then `grep -rc "sunColorAtElevation" js/effects/ js/atmosphere/` shall return ≥ 4 (sun billboard WebGL, sun billboard WebGPU, sky WebGPU, sky WebGL).
-- When Phase C ships, then no `sunColor: \[` literal shall remain in [`skyPresets.js`](../js/atmosphere/skyPresets.js).
+- When Phase C ships, then no `sunColor:` literal shall remain in [`skyPresets.js`](../js/atmosphere/skyPresets.js).
+- When Phase C ships, then the `preset.sunColor` short-circuit in [`Atmosphere.applyPreset`](../js/atmosphere/Atmosphere.js) shall be removed; `sun.setColor` always reads from `sky.getSun()` (the physical Hosek-Wilkie source).
+- When Phase C ships, then `sunColorAtElevation` in [`js/atmosphere/sunChromaticity.js`](../js/atmosphere/sunChromaticity.js) shall produce values within RGB-distance 0.25 of `sky.getSun()` at elevations 0.1, 0.3, 0.6, 0.9 (the standalone-helper agreement contract; pinned by `tests/sun-chromaticity.spec.js`).
 - When `npm test` runs after Phase C, all vitest specs shall pass.
+- When Phase C ships, then [`tests/refactor-baseline/__fixtures__/bundle-sizes.json`](../tests/refactor-baseline/__fixtures__/bundle-sizes.json) shall be bumped from `mainKB: 591` to `mainKB: 592` to absorb the 1 KB intentional growth from Phase B's HG aureole math + grep-discoverable comments inside the GLSL template literal in [`skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js). Three.js bundle is unchanged (`threeKB: 603`). Future cleanup item (cycle 40 candidate): strip GLSL template-literal comments at build time so explanatory comments don't ship to the browser.
+
+## Phase D follow-up surfaced during Phase C
+
+During Phase C live verification a divergence was observed: after a scene rebuild (e.g. clicking "Just Play"), the konveyor sun-disc material's `konveyorCoreColorUniform` and `konveyorIntensityUniform` stay at preset construction defaults (e.g. `coreColor: [1.0, 0.88, 0.54]`, `intensity: 0.98` for dusk) while [`Atmosphere.sun.light.color`](../js/atmosphere/Atmosphere.js) correctly tracks `sky.getSun()` (e.g. `[1.0, 0.31, 0.02]` for dusk at the same time). Pre-existing — SunBillboard.update propagation after scene rebuild isn't writing through to the konveyor material's uniforms. **Investigate in Phase D** before running the bloom audit (a stuck-on-preset-defaults disc will skew bloom-threshold tuning).
 
 ## Phase D — Bloom audit + tune (~1hr)
 

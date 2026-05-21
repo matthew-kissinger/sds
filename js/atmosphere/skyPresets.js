@@ -13,13 +13,18 @@ import * as THREE from 'three';
  * and an optional cloud-coverage default + per-feature scale.
  *
  * Auxiliary fields:
- * - `sunColor` / `ambientColor`: hint colors used by SunSystem and the
- *   Atmosphere orchestrator's optional ambient-light binding. They are
- *   independent of the analytic-sky transmittance computation, which the
- *   sky backend derives from sun angle + atmosphere state.
+ * - `ambientColor`: hint color used by the Atmosphere orchestrator's
+ *   optional ambient-light binding. Independent of the analytic-sky
+ *   transmittance computation.
  * - `fogColor`: optional override hint. The runtime usually pulls fog
  *   color from the live sky horizon, but presets carry a fallback so the
  *   orchestrator can stamp something reasonable before the LUT is baked.
+ *
+ * Cycle 39 Phase C dropped per-preset `sunColor:` overrides. The runtime
+ * source of truth for sun chromaticity is `HosekWilkieSky.getSun()`,
+ * which derives RGB physically from the analytic atmospheric model. Per-
+ * preset hand-tuned sun-color overrides were an ad-hoc bypass of that
+ * source; removed for single-source-of-truth.
  *
  * `todCycle` (when present) lets a preset participate in the day/night
  * controller's keyframe interpolation.
@@ -44,7 +49,6 @@ import * as THREE from 'three';
  * @property {number} exposure        Linear exposure multiplier on dome out.
  * @property {number} fogDensity      `THREE.FogExp2` density fallback.
  * @property {THREE.Color} [fogColor] Optional fog color hint.
- * @property {THREE.Color} [sunColor] Hint sun-light tint.
  * @property {THREE.Color} [ambientColor] Hint ambient/hemisphere tint.
  * @property {number} [ambientIntensity] Hint ambient multiplier in [0..1].
  * @property {number} [cloudCoverageDefault] Per-preset cloud coverage [0..1].
@@ -75,7 +79,6 @@ export const SKY_PRESETS = {
     exposure: 0.08,
     fogDensity: 0.0006,
     fogColor: new THREE.Color(0xcfd9e8),
-    sunColor: new THREE.Color(0xfff0d8),
     ambientColor: new THREE.Color(0xc8d4e0),
     ambientIntensity: 0.55,
     cloudCoverageDefault: 0.30,
@@ -92,7 +95,6 @@ export const SKY_PRESETS = {
     exposure: 0.18,
     fogDensity: 0.0014,
     fogColor: new THREE.Color(0xd8b888),
-    sunColor: new THREE.Color(0xff9a55),
     ambientColor: new THREE.Color(0xb88a66),
     ambientIntensity: 0.42,
     cloudCoverageDefault: 0.50,
@@ -109,7 +111,6 @@ export const SKY_PRESETS = {
     exposure: 0.20,
     fogDensity: 0.0011,
     fogColor: new THREE.Color(0xbac2c8),
-    sunColor: new THREE.Color(0xd8d8d0),
     ambientColor: new THREE.Color(0xb4b8be),
     ambientIntensity: 0.65,
     cloudCoverageDefault: 1.00,
@@ -126,7 +127,6 @@ export const SKY_PRESETS = {
     exposure: 0.18,
     fogDensity: 0.0009,
     fogColor: new THREE.Color(0xc8c2c0),
-    sunColor: new THREE.Color(0xffc89a),
     ambientColor: new THREE.Color(0x9aa4b4),
     ambientIntensity: 0.45,
     cloudCoverageDefault: 0.45,
@@ -143,7 +143,6 @@ export const SKY_PRESETS = {
     exposure: 0.16,
     fogDensity: 0.0012,
     fogColor: new THREE.Color(0xe0b48a),
-    sunColor: new THREE.Color(0xff9a55),
     ambientColor: new THREE.Color(0xb58c72),
     ambientIntensity: 0.42,
     cloudCoverageDefault: 0.46,

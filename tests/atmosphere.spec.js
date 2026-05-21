@@ -71,8 +71,18 @@ describe('skyPresets', () => {
 
   it('keeps Open Country golden-hour low enough to read as late-day light', () => {
     expect(SKY_PRESETS['golden-hour'].sunElevationRad).toBeCloseTo(9 * Math.PI / 180, 5);
-    expect(SKY_PRESETS['golden-hour'].sunColor.r).toBeGreaterThan(SKY_PRESETS['golden-hour'].sunColor.b);
     expect(SKY_PRESETS['golden-hour'].ambientIntensity).toBeLessThan(SKY_PRESETS['pastoral-noon'].ambientIntensity);
+    // Cycle 39 Phase C: sunColor moved off the preset onto HosekWilkieSky.
+    // The warm-late-day check now reads from the actual physical chromaticity
+    // after applyPreset, since that's where the value lives now.
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, { initialPreset: 'golden-hour' });
+    try {
+      const lightColor = atmo.sun.light.color;
+      expect(lightColor.r).toBeGreaterThan(lightColor.b);
+    } finally {
+      atmo.dispose();
+    }
   });
 });
 

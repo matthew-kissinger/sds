@@ -182,14 +182,15 @@ export class Atmosphere {
     this.sky.applyPreset(preset);
     this.sun.setAngles(preset.sunElevationRad, preset.sunAzimuthRad);
 
-    // Sun color hint takes effect immediately so a cold-start frame
-    // doesn't paint a white sun on a warm-toned preset.
-    if (preset.sunColor) {
-      this.sun.setColor(preset.sunColor);
-    } else {
-      this.sky.getSun(this.scratchSunColor);
-      this.sun.setColor(this.scratchSunColor);
-    }
+    // Cycle 39 Phase C: single source of truth for sun chromaticity is
+    // `HosekWilkieSky.getSun()`, which derives RGB from the analytic
+    // atmospheric model (turbidity + path length at elevation). The
+    // previous `preset.sunColor` short-circuit was an ad-hoc override
+    // that bypassed the physical source. `getSun()` triggers `ensureLUT`
+    // internally, so calling it immediately after `sky.applyPreset()`
+    // returns the correct cold-start value.
+    this.sky.getSun(this.scratchSunColor);
+    this.sun.setColor(this.scratchSunColor);
 
     this.baseFogDensity = preset.fogDensity;
     this.applyFogDensity();
