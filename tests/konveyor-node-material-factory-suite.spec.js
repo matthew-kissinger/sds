@@ -143,8 +143,8 @@ describe('konveyor node material factory suite', () => {
       });
       expect(sun.userData.konveyorIntensityUniform.value).toBeCloseTo(1.0);
       expect(sun.userData.konveyorSunBillboardOwnership).toMatchObject({
-        owns: 'readable-disc-and-near-halo',
-        skyOwns: 'broad-horizon-glow',
+        owns: 'disc-body-only',
+        skyOwns: 'aureole-and-horizon-glow',
       });
     } finally {
       sky.dispose();

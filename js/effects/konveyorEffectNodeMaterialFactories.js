@@ -52,18 +52,13 @@ export function createKonveyorEffectNodeMaterialFactories(webGpuModules, options
           'depthTest',
           'blending',
           'intensity',
-          'haloStrength',
-          'haloPower',
-          'alphaHaloMix',
           'coreRadius',
           'coreFeather',
           'coreColor',
-          'haloColor',
         ])
       );
       const intensityUniform = material.userData?.konveyorIntensityUniform ?? null;
       const coreColorUniform = material.userData?.konveyorCoreColorUniform ?? null;
-      const haloColorUniform = material.userData?.konveyorHaloColorUniform ?? null;
       return {
         material,
         controls: {
@@ -72,7 +67,6 @@ export function createKonveyorEffectNodeMaterialFactories(webGpuModules, options
               intensityUniform.value = state.intensity;
             }
             copyNodeValue(coreColorUniform, state.coreColor);
-            copyNodeValue(haloColorUniform, state.haloColor);
           },
         },
       };
