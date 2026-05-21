@@ -139,6 +139,14 @@ float rayleighPhase( float cosTheta ) {
   return THREE_OVER_SIXTEENPI * ( 1.0 + pow( cosTheta, 2.0 ) );
 }
 
+// Henyey-Greenstein phase function. Forward-peaked at g ~ 0.76-0.85; in the
+// Preetham pipeline below this drives the Mie scattering term — which is
+// exactly the bright Mie aureole around the sun and the warm horizon glow
+// (same function, evaluated at different cosTheta along the horizon). The
+// konveyor WebGPU sky in js/atmosphere/konveyorSkyNodeMaterial.js mirrors
+// this for parity; mieAureolePhaseHG in js/atmosphere/sunChromaticity.js
+// is the CPU-side helper for any consumer that needs the same value off
+// the GPU.
 float hgPhase( float cosTheta, float g ) {
   float g2 = pow( g, 2.0 );
   float inverse = 1.0 / pow( 1.0 - 2.0 * g * cosTheta + g2, 1.5 );

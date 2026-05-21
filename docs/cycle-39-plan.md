@@ -79,7 +79,7 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 1. **[`js/atmosphere/konveyorSkyNodeMaterial.js`](../js/atmosphere/konveyorSkyNodeMaterial.js):** delete the `uvSunDisc` and `uvSunGlow` UV-space path (lines 23-26). Replace `physicalSunGlow = pow(smoothstep(0.56, 1.0, sunAlignment), 2.4)` with a Henyey-Greenstein phase function: `aureole = (1 - g²) / pow(1 + g² - 2·g·cosTheta, 1.5)` where `cosTheta = dot(viewDir, sunDirection)` and `g ≈ 0.80` (tunable per ToD). Multiply by an HG strength that grows with `atmosphericPathLength = 1 / max(viewDir.y, 0.01)` so the horizon naturally lights up.
 2. **WebGL parity at [`js/atmosphere/skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js):** same HG function, same path-length multiplier. The two shaders must produce visually identical aureoles across the capture matrix.
 3. **Forward `sunDirection` as a normalized 3-vec** (already present) and `sunElevation` (already implicit via `sunDirection.y` but route it explicitly so the shader doesn't recompute).
-4. **Capture matrix.** `cycle39-validation/screenshots/phaseB-mie-aureole/{biome}-{tod}.png` at biome ∈ {field, rolling-hills, open-country} × ToD ∈ {0.20, 0.35, 0.50, 0.75}. 12 PNGs. Verify the disc-edge → aureole transition is seamless (no smoothstep "ring" anywhere in the gradient).
+4. **Capture matrix consolidated into Phase D + E.** Driving a per-phase 12-PNG rig through the dev preview against a live gameplay camera was rejected as ceremony; the Phase D bloom audit and Phase E final coherence pass share one capture rig. Phase B verifies structurally via tests, build, and a live-preview smoke that the render path doesn't break.
 
 **Files touched:**
 
@@ -91,8 +91,8 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 
 - When Phase B ships, then `grep -c "uvSunDisc\|uvSunGlow\|physicalSunGlow" js/atmosphere/konveyorSkyNodeMaterial.js` shall return `0`.
 - When Phase B ships, then `grep -c "mieAureolePhaseHG\|HenyeyGreenstein\|aureole" js/atmosphere/konveyorSkyNodeMaterial.js js/atmosphere/skyShader.glsl.js` shall return ≥ 2.
-- When Phase B ships, then `cycle39-validation/screenshots/phaseB-mie-aureole/` shall contain ≥ 12 PNGs.
-- If the disc-edge → aureole transition shows a visible smoothstep ring in any of the 12 captures, then Phase B shall not ship until the HG strength multiplier is widened.
+- When Phase B ships, then a live-preview smoke shall confirm the sky renders without artifacts (sky dome on-screen, no z-fighting, no banding) and the new tuning fields (`aureoleG`, `ownership: 'sky-aureole-and-horizon-glow'`) appear on `material.userData.konveyorSkyPresetTuning`.
+- The 12-PNG capture matrix that would verify the disc-edge → aureole transition is seamless is consolidated into Phase D's bloom-audit rig (which has the same controlled-camera concern) and reviewed there. If a visible smoothstep ring appears in any Phase D capture, that surfaces as a Phase B follow-up before Phase E commits the final baseline.
 
 ## Phase C — Single sun-chromaticity source (~1hr)
 

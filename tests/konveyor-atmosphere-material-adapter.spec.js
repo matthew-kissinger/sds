@@ -123,7 +123,8 @@ describe('konveyor atmosphere material adapter', () => {
       sunGlowStrength: 0.12,
       sunDiscStrength: 0,
       sunDiscOwner: 'SunBillboard',
-      ownership: 'sky-broad-glow-and-horizon-warmth',
+      ownership: 'sky-aureole-and-horizon-glow',
+      aureoleG: 0.80,
     });
   });
 
