@@ -51,6 +51,7 @@ describe('konveyor water material adapter', () => {
             expect(material.uniforms.uShoreCenter.value.x).toBe(3);
             expect(material.uniforms.uShoreCenter.value.y).toBe(-2);
             expect(material.uniforms.uShoreRadius.value).toBe(180);
+            expect(material.uniforms.uSunColor.value.toArray()).toEqual([1, 1, 1]);
             expect(material.userData.konveyorWaterMaterialSummary).toMatchObject({
                 kind: 'anime-water',
                 applied: false,
@@ -92,6 +93,8 @@ describe('konveyor water material adapter', () => {
             expect(contexts[0].foamColor.getHex()).toBe(0xeaf6ff);
             expect(contexts[0].rippleStrength).toBe(1);
             expect(contexts[0].sparkleStrength).toBe(0.7);
+            expect(contexts[0].sunColor.toArray()).toEqual([1, 1, 1]);
+            expect(contexts[0].sunColorSource).toBe('skyFog.sunColor');
         } finally {
             material.dispose();
         }
@@ -130,7 +133,13 @@ describe('konveyor water material adapter', () => {
             expect(material.userData.konveyorWaterSunCameraGlint).toBe(true);
             expect(material.userData.konveyorWaterGlintMode).toBe('ripple-normal-sun-camera-v2');
             expect(material.userData.konveyorWaterGlintGain).toBe(0.16);
+            expect(material.userData.konveyorWaterSunColorSource).toBe('skyFog.sunColor');
+            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()).toEqual([1, 1, 1]);
             expect(material.userData.konveyorWaterMaterialControls?.update).toBeInstanceOf(Function);
+            material.userData.konveyorWaterMaterialControls.update({
+                sunColor: new THREE.Color(1, 0.5, 0.25),
+            });
+            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()).toEqual([1, 0.5, 0.25]);
             expect(material.userData.konveyorWaterMaterialSummary).toMatchObject({
                 kind: 'anime-water',
                 applied: true,
@@ -179,10 +188,12 @@ describe('konveyor water material adapter', () => {
             });
 
             const sunDirection = new THREE.Vector3(0, 1, 0);
-            water.update(1.25, sunDirection);
+            const sunColor = new THREE.Color(1, 0.5, 0.25);
+            water.update(1.25, sunDirection, sunColor);
             expect(updates).toHaveLength(1);
             expect(updates[0]).toMatchObject({ timeSec: 1.25 });
             expect(updates[0].sunDirection).toBe(sunDirection);
+            expect(updates[0].sunColor).toBe(sunColor);
             expect(updates[0].material).toBe(water.material);
         } finally {
             water.dispose();

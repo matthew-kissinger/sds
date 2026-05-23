@@ -36,8 +36,8 @@ const SKY_FOG_PRESET_TUNING = Object.freeze({
         // proper terrain occlusion matters (sun behind a hill is OCCLUDED).
         depthTest: true,
         intensity: 0.98,
-        coreRadius: 0.04,
-        coreFeather: 0.12,
+        coreRadius: 0.065,
+        coreFeather: 0.13,
         coreColor: [1.0, 0.88, 0.54],
       },
     },
@@ -81,8 +81,8 @@ const SKY_FOG_PRESET_TUNING = Object.freeze({
       sun: {
         depthTest: true,
         intensity: 1.0,
-        coreRadius: 0.04,
-        coreFeather: 0.12,
+        coreRadius: 0.065,
+        coreFeather: 0.13,
         coreColor: [1.0, 0.86, 0.50],
       },
     },

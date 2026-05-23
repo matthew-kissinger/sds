@@ -268,6 +268,64 @@ describe('konveyor native tree instancing adapter', () => {
     mesh.material.dispose();
   });
 
+  it('syncs octahedral tree impostor tiles from v2 sidecar metadata', () => {
+    const sidecar = {
+      version: 2,
+      layout: 'octahedral',
+      axis: 'octahedral',
+      hemi: false,
+      directionEncoding: 'octahedral',
+      tilesX: 8,
+      tilesY: 8,
+      directions: Array.from({ length: 64 }, () => [0, 1, 0]),
+      bbox: {
+        min: [0, 0, 0],
+        max: [0, 1, 0],
+      },
+      yOffset: 0.5,
+    };
+    const instances = [{
+      position: new THREE.Vector3(0, 0, 0),
+      rotation: new THREE.Euler(0, 0, 0),
+      scale: new THREE.Vector3(1, 1, 1),
+      groundY: 0,
+      scaleScalar: 1,
+    }];
+    const runtime = createKonveyorTreeImpostorGeometry(new THREE.PlaneGeometry(1, 1), instances, sidecar);
+    const mesh = new THREE.InstancedMesh(runtime.geometry, new THREE.MeshBasicMaterial(), instances.length);
+    installKonveyorTreeImpostorRuntime(mesh, {
+      ...runtime,
+      sidecar,
+      treeType: 'tree1',
+      chunkKey: '0:0',
+    });
+
+    const camera = { position: new THREE.Vector3(0, 1, 10) };
+    expect(syncKonveyorTreeImpostorMesh(mesh, camera)).toBe(true);
+    const firstOffset = [
+      runtime.attributes.tileOffsets[0].getX(0),
+      runtime.attributes.tileOffsets[0].getY(0),
+    ];
+    camera.position.set(10, 1, 0);
+    expect(syncKonveyorTreeImpostorMesh(mesh, camera)).toBe(true);
+    const nextOffset = [
+      runtime.attributes.tileOffsets[0].getX(0),
+      runtime.attributes.tileOffsets[0].getY(0),
+    ];
+
+    expect(nextOffset).not.toEqual(firstOffset);
+    expect(mesh.userData.konveyorNativeTreeImpostor).toMatchObject({
+      source: 'kiln-v2-octahedral-sidecar',
+      version: 2,
+      layout: 'octahedral',
+      lastSelectionLayout: 'octahedral',
+      syncCount: 2,
+    });
+
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+  });
+
   it('keeps near tree chunks geometric and switches far chunks to impostors', () => {
     const nearMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial(), 1);
     const midMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial(), 1);

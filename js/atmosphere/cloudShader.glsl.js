@@ -95,25 +95,16 @@ void main() {
   float nz = fbm(uv + vec2(0.0, e)) - fbm(uv - vec2(0.0, e));
   vec3 puffNormal = normalize(vec3(-nx, 0.5, -nz));
   float sunLight = max(0.0, dot(puffNormal, normalize(uSunDirection)));
-  float shade = mix(0.55, 1.15, sunLight);
+  float rim = pow(1.0 - clamp(dot(normalize(vWorldPos - cameraPosition), puffNormal), 0.0, 1.0), 2.0);
+  float shade = mix(0.52, 1.08, sunLight) + rim * sunLight * 0.12;
 
   vec3 baseColor = vec3(0.95, 0.95, 0.98);
-  vec3 color = baseColor * mix(uSunColor, vec3(1.0), 0.5) * shade;
+  vec3 color = baseColor * uSunColor * shade;
 
   float alpha = mask * mix(0.55, 0.95, clamp(uCoverage, 0.0, 1.0));
-  // Footprint feather widened from 0.035 -> 0.08 so the finite plane edge
-  // never reads as a tile seam at any view angle. Pair with the tilted
-  // mesh in CloudLayer.js to spread the seam across multiple horizon
-  // cells.
   float edgeDist = min(min(vPlaneUv.x, 1.0 - vPlaneUv.x), min(vPlaneUv.y, 1.0 - vPlaneUv.y));
   float footprintFade = smoothstep(0.0, 0.08, edgeDist);
   vec3 viewDir = normalize(vWorldPos - cameraPosition);
-  // Cycle 7 Phase 1.5 (round 4): horizonFade upper end widened from 0.18
-  // to 0.85 so the smoothstep never saturates within the visible upper
-  // hemisphere. The prior 0.18 value created a sharp horizontal "line"
-  // at ~10° elevation where the planar cloud layer slammed to full
-  // opacity; now alpha grows continuously from 0 at horizon to ~1 near
-  // zenith, hiding the fact that the layer is a flat plane.
   float horizonFade = smoothstep(0.02, 0.85, abs(viewDir.y));
   alpha *= uEdgeFade * footprintFade * horizonFade;
 

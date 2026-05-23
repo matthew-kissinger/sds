@@ -100,6 +100,7 @@ const FRAG = /* glsl */ `
   uniform float uSparkleStrength;
 
   uniform vec3 uSunDirection;
+  uniform vec3 uSunColor;
   uniform float uSunSpecularIntensity;
 
   // Cycle 35 Phase 6: heightfield-driven shoreline foam. When uHasHeight is
@@ -190,7 +191,7 @@ const FRAG = /* glsl */ `
     float sparkles = step(0.85, spec) * step(0.55, sparkleMask) * uSparkleStrength;
 
     float sunGlint = pow(NdotH, 8.0) * uSunSpecularIntensity;
-    vec3 sunGlintColor = vec3(1.0, 0.95, 0.82);
+    vec3 sunGlintColor = uSunColor;
 
     vec3 color = baseColor + vec3(sparkles) + sunGlintColor * sunGlint;
     color = mix(color, uFoamColor, foamMask);
@@ -257,6 +258,7 @@ export function createAnimeWaterMaterial({
             uSparkleStrength: { value: 0.7 },
 
             uSunDirection: { value: new THREE.Vector3(0.4, 0.6, 0.7).normalize() },
+            uSunColor: { value: new THREE.Color(1, 1, 1) },
             uSunSpecularIntensity: { value: 0.6 },
 
             // Cycle 35 Phase 6 heightfield-driven foam.
@@ -312,6 +314,8 @@ export function createAnimeWaterMaterial({
             rippleStrength: uniforms.uRippleStrength.value,
             sparkleStrength: uniforms.uSparkleStrength.value,
             sunDirection: uniforms.uSunDirection.value.clone(),
+            sunColor: uniforms.uSunColor.value.clone(),
+            sunColorSource: 'skyFog.sunColor',
             sunSpecularIntensity: uniforms.uSunSpecularIntensity.value,
         },
     });
@@ -355,11 +359,12 @@ export function createAnimeWater({ boundary, heightfield = null, size = 4000, y 
                 material.uniforms.uSparkleStrength.value = sparkleStrength;
             }
         },
-        update(timeSec, sunDirection) {
+        update(timeSec, sunDirection, sunColor) {
             if (waterControls?.update) {
                 waterControls.update({
                     timeSec,
                     sunDirection,
+                    sunColor,
                     sparkleStrength: baseSparkleStrength * qualitySparkleScale,
                     material
                 });
@@ -370,6 +375,9 @@ export function createAnimeWater({ boundary, heightfield = null, size = 4000, y 
             }
             if (sunDirection && material.uniforms?.uSunDirection) {
                 material.uniforms.uSunDirection.value.copy(sunDirection);
+            }
+            if (sunColor && material.uniforms?.uSunColor) {
+                material.uniforms.uSunColor.value.copy(sunColor);
             }
             if (material.uniforms?.uSparkleStrength) {
                 material.uniforms.uSparkleStrength.value = baseSparkleStrength * qualitySparkleScale;

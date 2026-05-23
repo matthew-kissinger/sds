@@ -4,6 +4,52 @@
 
 ## Recently Completed
 
+### Cycle 40 - `sun-coherence-octahedral-tree-lab` (closed 2026-05-22, v2.1.8 release)
+
+Plan recorded at [`docs/cycle-40-plan.md`](cycle-40-plan.md). Cycle 40 finished the Cycle 39 visual follow-through and staged the first SDS lab route for Pixel Forge v2 octahedral tree sidecars without changing production defaults.
+
+**Closeout outcomes:**
+
+- **Sun/water/cloud coherence.** Water runtime updates now receive the atmosphere frame `sunColor`; WebGL water routes it through `uSunColor`; WebGPU water routes it through a live node uniform. Runtime metadata reports `skyFog.sunColor` as the water sun-color source. Cloud highlight/rim chroma now comes from the same atmosphere-provided sun color instead of separate amber literals.
+- **Visible sun-disc tuning.** The sun billboard core was tuned so captures show an actual small sun disc, not just a brighter sky patch at the sun location.
+- **Pixel Forge v2 sidecar staging.** Additive octahedral sidecars for `tree1` and `tree2` live under `assets/models/trees/octahedral/`, with base-color, normal, and depth atlases plus v2 JSON metadata.
+- **Lab-only octahedral runtime route.** `?renderer=webgpu&konveyorNativeTreeImpostors=octahedral` loads the v2 sidecars and selects octahedral tiles by camera direction. `?konveyorNativeTreeImpostors=1` remains the v1 `latlon` / `hemi-y` production route.
+
+**Validation gates run before close (2026-05-22):**
+
+- Pixel Forge CLI build passed.
+- Pixel Forge `kiln validate-imposter` passed for both staged octahedral SDS sidecars.
+- Desktop WebGPU sun/water/cloud matrix captured locally under `cycle40-validation/screenshots/sun-water-cloud-matrix/`.
+- Desktop WebGPU octahedral lab proof captured locally at `cycle40-validation/runtime/octahedral-tree-lab-proof.json`.
+- `npm run build` - clean; main bundle stayed within the existing `mainKB=592` ratchet.
+- `npm test` - 54 passed files, 1 skipped; 498 passed specs, 7 skipped.
+- `npm run lint` - clean.
+
+**Carryover:**
+
+- Android/iOS proof remains deferred by instruction.
+- Octahedral tree impostors remain lab-only until a future cycle proves device budget and visual quality.
+- Broader tree art/species variety remains deferred.
+- Open Country paired two-client playtest remains deferred.
+
+### Cycle 39 - `sun-scorched-earth` (closed 2026-05-22, rolled into v2.1.8 release)
+
+Plan remains at [`docs/cycle-39-plan.md`](cycle-39-plan.md). Cycle 39 ripped out the radial-splotch sun and rebuilt the sun/sky relationship on physical principles: the billboard owns only the visible disc, the sky shader owns the broad Mie aureole and horizon glow, bloom paints the perceived glow, and disc/sky chromaticity come from one source.
+
+**Closeout outcomes:**
+
+- Sun billboard halo/corona/aureole math was removed from both renderer paths.
+- WebGL and WebGPU sky paths use a Mie aureole term instead of the old UV-space glow band.
+- Disc and sky chromaticity share the same Hosek-Wilkie-derived sun color.
+- The Phase E gameplay baseline was captured locally under `cycle39-validation/screenshots/phase5-painterly-final/` with 12 PNGs across three biomes and four sun elevations. The older `phaseD-bloom` captures remain diagnostic only.
+
+**Validation gates run before close (2026-05-22):**
+
+- `npm test` - passed.
+- `npm run lint` - clean.
+- `npm run build` - clean.
+- Final baseline captures used the gameplay path with `?ui=off` and no footer/HUD/debug overlays.
+
 ### Cycle 38 - `polished-webgpu-production-readiness` (closed 2026-05-20, no version bump, PC-only scope)
 
 Plan archived at [`docs/archive/cycles/cycle-38-plan.md`](archive/cycles/cycle-38-plan.md). Cycle 38 was opened to make WebGPU production readiness real as policy, not a single-phone proof. Closed autonomously per Matt's 2026-05-20 directive ("complete autonomously without human check-in, focus on the game in general and test on PC this cycle") with mobile-phase work moved to carryover.

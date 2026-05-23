@@ -502,25 +502,29 @@ export function createKilnImpostorMaterial({
   konveyorImpostorFactories,
   tileSelectionMode,
 } = {}) {
-  if (sidecar.tilesX !== TILES_X || sidecar.tilesY !== TILES_Y) {
+  const layoutTilesX = sidecar.tilesX ?? TILES_X;
+  const layoutTilesY = sidecar.tilesY ?? TILES_Y;
+  if (sidecar.layout !== 'octahedral' && (layoutTilesX !== TILES_X || layoutTilesY !== TILES_Y)) {
     console.warn(
-      `[KILN] sidecar is ${sidecar.tilesX}×${sidecar.tilesY}, shader compiled for ${TILES_X}×${TILES_Y}. ` +
+      `[KILN] sidecar is ${layoutTilesX}×${layoutTilesY}, shader compiled for ${TILES_X}×${TILES_Y}. ` +
       `Re-bake or update the shader constants.`
     );
   }
 
   // Sidecar arrays are ascending azimuth + descending elevation, length 4 each.
+  const azimuths = Array.isArray(sidecar.azimuths) ? sidecar.azimuths : [];
+  const elevations = Array.isArray(sidecar.elevations) ? sidecar.elevations : [];
   const azPad = [
-    sidecar.azimuths[0] ?? 0,
-    sidecar.azimuths[1] ?? 0,
-    sidecar.azimuths[2] ?? 0,
-    sidecar.azimuths[3] ?? 0,
+    azimuths[0] ?? 0,
+    azimuths[1] ?? 0,
+    azimuths[2] ?? 0,
+    azimuths[3] ?? 0,
   ];
   const elPad = [
-    sidecar.elevations[0] ?? 0,
-    sidecar.elevations[1] ?? 0,
-    sidecar.elevations[2] ?? 0,
-    sidecar.elevations[3] ?? 0,
+    elevations[0] ?? 0,
+    elevations[1] ?? 0,
+    elevations[2] ?? 0,
+    elevations[3] ?? 0,
   ];
 
   // Anchor at the bbox center on all three axes — this is the point Pixel
@@ -533,8 +537,8 @@ export function createKilnImpostorMaterial({
   const zCenter = (sidecar.bbox.min[2] + sidecar.bbox.max[2]) * 0.5;
   const tileSize = sidecar.tileSize ?? null;
   const atlasSize = [
-    sidecar.atlasWidth ?? sidecar.tilesX * (tileSize ?? 512),
-    sidecar.atlasHeight ?? sidecar.tilesY * (tileSize ?? 512),
+    sidecar.atlasWidth ?? layoutTilesX * (tileSize ?? 512),
+    sidecar.atlasHeight ?? layoutTilesY * (tileSize ?? 512),
   ];
 
   const uniforms = {
@@ -628,8 +632,13 @@ export function createKilnImpostorMaterial({
         fragmentShader: FRAGMENT_SHADER,
       },
       layout: {
-        tilesX: TILES_X,
-        tilesY: TILES_Y,
+        layout: sidecar.layout ?? null,
+        axis: sidecar.axis ?? null,
+        version: sidecar.version ?? 1,
+        tilesX: layoutTilesX,
+        tilesY: layoutTilesY,
+        shaderTilesX: TILES_X,
+        shaderTilesY: TILES_Y,
         sidecarTilesX: sidecar.tilesX,
         sidecarTilesY: sidecar.tilesY,
         tileSize,

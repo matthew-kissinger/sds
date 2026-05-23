@@ -96,7 +96,8 @@ export function createKonveyorKilnImpostorNodeMaterial(
   material.alphaTest = kilnImpostor.alphaTest;
   material.userData.konveyorImpostorTileSelection = {
     mode: selectionMode,
-    layout: 'latlon-hemi-y',
+    layout: kilnImpostor.layoutName ?? 'latlon-hemi-y',
+    sidecarVersion: kilnImpostor.sidecarVersion ?? 1,
     tilesX: kilnImpostor.tilesX,
     tilesY: kilnImpostor.tilesY,
     source: useInstancedSelection ? 'instanced-attributes' : 'uniform-controls',

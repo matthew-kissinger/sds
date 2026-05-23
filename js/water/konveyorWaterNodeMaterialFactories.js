@@ -29,6 +29,7 @@ export function createKonveyorWaterNodeMaterialFactories(webGpuModules, options 
         foamColor: toArray(context.foamColor ?? waterDefaults.foamColor, DEFAULT_WATER_COLORS.foamColor),
         fogColor: toArray(context.fogColor ?? waterDefaults.fogColor ?? options.fogColor, DEFAULT_WATER_COLORS.fogColor),
         sunColor: toArray(context.sunColor ?? waterDefaults.sunColor ?? options.sunColor, DEFAULT_WATER_COLORS.sunColor),
+        sunColorSource: context.sunColorSource ?? waterDefaults.sunColorSource ?? options.sunColorSource ?? 'skyFog.sunColor',
         rippleStrength: context.rippleStrength ?? waterDefaults.rippleStrength ?? 1,
         sparkleStrength: context.sparkleStrength ?? waterDefaults.sparkleStrength ?? 0.7,
         sunDirection: toArray(context.sunDirection ?? waterDefaults.sunDirection ?? options.sunDirection, [0.4, 0.6, 0.7]),

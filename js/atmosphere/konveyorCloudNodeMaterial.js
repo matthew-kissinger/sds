@@ -2,7 +2,7 @@ export function createKonveyorCloudLayerNodeMaterial(
   { MeshBasicNodeMaterial, DoubleSide, TSL },
   { name = 'konveyor-node-cloud-layer', uniforms = null } = {}
 ) {
-  const { abs, cameraPosition, dot, float, floor, fract, max, min, mix, normalize, positionWorld, smoothstep, time, uniform, uv, vec2, vec3 } = TSL;
+  const { abs, cameraPosition, clamp, dot, float, floor, fract, max, min, mix, normalize, positionWorld, pow, smoothstep, time, uniform, uv, vec2, vec3 } = TSL;
   const hash21 = (p) => {
     const q = fract(p.mul(vec2(123.34, 456.21)));
     const r = q.add(dot(q, q.add(45.32)));
@@ -52,11 +52,12 @@ export function createKonveyorCloudLayerNodeMaterial(
   const nz = fbm(noiseUv.add(vec2(0.0, e))).sub(fbm(noiseUv.sub(vec2(0.0, e))));
   const puffNormal = normalize(vec3(nx.negate(), 0.5, nz.negate()));
   const sunLight = max(0.0, dot(puffNormal, sunDirection));
-  const shade = mix(0.55, 1.15, sunLight);
-  const cloudColor = vec3(0.95, 0.95, 0.98).mul(mix(sunColor, vec3(1.0, 1.0, 1.0), 0.5)).mul(shade);
+  const viewDir = normalize(positionWorld.sub(cameraPosition));
+  const rim = pow(float(1.0).sub(clamp(dot(viewDir, puffNormal), 0.0, 1.0)), 2.0);
+  const shade = mix(0.52, 1.08, sunLight).add(rim.mul(sunLight).mul(0.12));
+  const cloudColor = vec3(0.95, 0.95, 0.98).mul(sunColor).mul(shade);
   const edgeDist = min(min(planeUv.x, planeUv.x.oneMinus()), min(planeUv.y, planeUv.y.oneMinus()));
   const footprintFade = smoothstep(0.0, 0.08, edgeDist);
-  const viewDir = normalize(positionWorld.sub(cameraPosition));
   const horizonFade = smoothstep(0.22, 0.72, abs(viewDir.y));
   const alpha = mask.mul(mix(0.08, 0.28, coverage)).mul(footprintFade).mul(edgeFade).mul(horizonFade);
 
@@ -77,6 +78,7 @@ export function createKonveyorCloudLayerNodeMaterial(
     sunDirection,
     sunColor,
   };
+  material.userData.konveyorCloudSunColorSource = 'skyFog.sunColor';
   return material;
 }
 

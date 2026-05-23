@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 
-import { selectLatLonHemiYImpostorTiles } from '../impostors/impostorTileSelection.js';
+import {
+    selectLatLonHemiYImpostorTiles,
+    selectOctahedralImpostorTiles,
+} from '../impostors/impostorTileSelection.js';
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const FALLBACK_RIGHT = new THREE.Vector3(1, 0, 0);
@@ -35,6 +38,22 @@ function offsetForTile([azIdx = 0, elIdx = 0], tilesX, tilesY) {
         azIdx / tilesX,
         (tilesY - 1 - elIdx) / tilesY,
     ];
+}
+
+function getSidecarLayout(sidecar = {}) {
+    if (sidecar.layout === 'octahedral' || sidecar.axis === 'octahedral' || sidecar.directionEncoding === 'octahedral') {
+        return 'octahedral';
+    }
+    if (sidecar.layout === 'latlon' && sidecar.axis === 'hemi-y') {
+        return 'latlon-hemi-y';
+    }
+    return `${sidecar.layout ?? 'unknown'}-${sidecar.axis ?? 'unknown'}`;
+}
+
+function selectImpostorTiles(direction, sidecar = {}) {
+    return getSidecarLayout(sidecar) === 'octahedral'
+        ? selectOctahedralImpostorTiles(direction, sidecar)
+        : selectLatLonHemiYImpostorTiles(direction, sidecar);
 }
 
 function buildInstanceState(inst, sidecar) {
@@ -153,13 +172,13 @@ export function installKonveyorTreeImpostorRuntime(mesh, {
     treeType = 'unknown',
     chunkKey = '0:0',
 } = {}) {
+    const layout = getSidecarLayout(sidecar);
     mesh.userData.konveyorNativeTreeImpostor = {
-        source: 'kiln-latlon-hemi-sidecar',
+        source: layout === 'octahedral' ? 'kiln-v2-octahedral-sidecar' : 'kiln-latlon-hemi-sidecar',
         treeType,
         chunkKey,
-        layout: sidecar.layout === 'latlon' && sidecar.axis === 'hemi-y'
-            ? 'latlon-hemi-y'
-            : `${sidecar.layout ?? 'unknown'}-${sidecar.axis ?? 'unknown'}`,
+        version: sidecar.version ?? 1,
+        layout,
         selection: 'camera-driven-per-instance-instanced-attributes',
         billboardProjection: 'cpu-world-up-locked-camera-facing',
         terrainGroundedPivots: true,
@@ -172,6 +191,7 @@ export function installKonveyorTreeImpostorRuntime(mesh, {
         attributes,
         states,
         sidecar,
+        layout,
     };
     return mesh.userData.konveyorNativeTreeImpostor;
 }
@@ -220,12 +240,14 @@ export function syncKonveyorTreeImpostorMesh(mesh, camera) {
     const tilesX = sidecar.tilesX ?? 4;
     const tilesY = sidecar.tilesY ?? 4;
     scratchCamera.copy(camera.position);
+    let firstSelection = null;
 
     for (let i = 0; i < states.length; i++) {
         const state = states[i];
         const origin = computeOrigin(scratchOrigin, state);
         const directionObj = worldToTreeDirection(scratchView, scratchCamera, origin, state);
-        const selection = selectLatLonHemiYImpostorTiles(directionObj, sidecar);
+        const selection = selectImpostorTiles(directionObj, sidecar);
+        if (!firstSelection) firstSelection = selection;
         writeSelectionAttributes(attributes, i, selection, tilesX, tilesY);
         writeBillboardMatrix(mesh, i, origin, scratchCamera, directionObj, state.scale);
     }
@@ -242,6 +264,10 @@ export function syncKonveyorTreeImpostorMesh(mesh, camera) {
             +scratchCamera.y.toFixed(3),
             +scratchCamera.z.toFixed(3),
         ];
+        if (firstSelection) {
+            summary.lastSelectionLayout = firstSelection.layout;
+            summary.lastDominantTiles = firstSelection.tiles;
+        }
     }
     return true;
 }

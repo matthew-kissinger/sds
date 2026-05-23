@@ -228,6 +228,9 @@ describe('HosekWilkieSky', () => {
         size: 390,
         distance: 3000,
         intensity: 1.45,
+        disc: {
+          angularCoreDiameterDeg: 0.646,
+        },
         materialName: 'konveyor-node-sun-billboard',
         applied: true,
       },
@@ -250,6 +253,9 @@ describe('HosekWilkieSky', () => {
       size: 390,
       distance: 3000,
       intensity: 1.45,
+      disc: {
+        angularCoreDiameterDeg: 0.646,
+      },
       materialName: 'konveyor-node-sun-billboard',
       applied: true,
     });

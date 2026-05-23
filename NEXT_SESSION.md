@@ -1,73 +1,73 @@
-# Next Session - Cycle 39 (sun, scorched-earth)
+# Next Session - Cycle 40 closeout
 
-> **Updated:** 2026-05-21
-> **For:** Cycle 39
-> **Pickup priority:** Execute [`docs/cycle-39-plan.md`](docs/cycle-39-plan.md) Phase A (strip the disc to a disc). Rip the halo math, dual color uniforms, camera-warp visualDirection block, and WebGL/WebGPU renderer-path divergence out of [`js/effects/SunBillboard.js`](js/effects/SunBillboard.js) and [`js/effects/konveyorSunNodeMaterial.js`](js/effects/konveyorSunNodeMaterial.js). The disc becomes one small soft-edged radial falloff with a single color uniform; the broad glow moves to the sky shader as a Mie aureole in Phase B.
+> **Updated:** 2026-05-22
+> **For:** Cycle 40 closeout / Cycle 41 pickup
+> **Pickup priority:** If the commit containing Cycle 40 is already deployed to `sheepdogsim.com`, draft the next cycle from the carryovers below. If it is not deployed yet, push that commit, run the deploy workflow, and verify the live HTML points at the new production chunk before starting new feature work.
 
 ## Cold-start orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) → [`CLAUDE.md`](CLAUDE.md) → this file → the active cycle plan at [`docs/cycle-39-plan.md`](docs/cycle-39-plan.md). Closed-cycle plans live under [`docs/archive/cycles/`](docs/archive/cycles/).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-40-plan.md`](docs/cycle-40-plan.md). Closed-cycle plans live under [`docs/archive/cycles/`](docs/archive/cycles/).
 
-## Cycle 39 shape
+## Current state
 
-Goal: rip the radial-splotch sun and rebuild on physical principles. The disc is just the disc; the broad glow lives in the sky shader as Mie scattering near the sun direction; bloom paints the warm halo. Render-only cycle. PC desktop scope. No `shared/` sim, no `SunSystem.js` directional-light changes. Bloom config IS in scope (lifted from the original cycle-39 stop after Matt's scorched-earth call on 2026-05-21).
+Cycle 39 Phase E is closed. The final gameplay baseline was captured locally at `cycle39-validation/screenshots/phase5-painterly-final/` with 12 PNGs across `{field, rolling-hills, open-country} x {sun=0.20, 0.35, 0.50, 0.75}`. The `cycle*-validation/` folders are intentionally gitignored; treat those paths as local proof artifacts, not committed source.
 
-Phases (≤ 4hr each, all autonomous):
+Cycle 40 is locally complete. Water, clouds, the visible sun disc, and the WebGPU octahedral tree-impostor lab route landed together:
 
-A. **Strip the disc to a disc** (Phase A). Delete halo math, dual color uniforms, camera-warp, renderer-path divergence. New stub `js/atmosphere/sunChromaticity.js`.
-B. **Mie aureole in the sky shader** (Phase B, depends on A). Henyey-Greenstein phase function on `dot(viewDir, sunDirection)` replaces the ad-hoc `physicalSunGlow` smoothstep. Horizon glow falls out at low altitude.
-C. **Single sun-chromaticity source** (Phase C, depends on B). Disc and sky both read from `sunChromaticity.js`. No duplicated literals.
-D. **Bloom audit + tune** (Phase D, depends on C). 12-PNG capture matrix; tune bloom threshold/strength if golden-hour reads anemic.
-E. **Coherence + final 12-PNG baseline** (Phase E, integration).
+- Water update shape is now `update(timeSec, sunDirection, sunColor)`.
+- WebGL water uses `uSunColor`; WebGPU water uses a live `sunColor` node uniform.
+- Water probe metadata reports `konveyorWaterSunColorSource = 'skyFog.sunColor'`.
+- Clouds keep the existing sun-color plumbing but no longer carry independent amber rim/highlight literals.
+- The sun disc is tuned to read as an actual small sun disc instead of only a brighter patch of sky.
+- Pixel Forge v2 octahedral sidecars live beside existing tree assets under `assets/models/trees/octahedral/`.
+- `?renderer=webgpu&konveyorNativeTreeImpostors=octahedral` is the lab-only v2 route.
+- `?konveyorNativeTreeImpostors=1` remains the current production v1 `latlon` / `hemi-y` route.
 
-Hard stops specific to this cycle:
+## Validation state
 
-1. If bloom can't deliver the warm-at-golden-hour read after tuning, surface to Matt before shipping. Do **not** bake a halo back into the disc shader.
-2. If any phase reaches into `shared/` to chase a visual difference, stop and surface.
-3. No `?sunMode` query-param scaffolding. Replace legacy outright; git diff is the A/B.
-4. No `painterlyPalette.js` reintroduction. The single source of truth is `sunChromaticity.js` + the Mie phase function in the sky shader.
+Local validation passed before close:
 
-Cloud rim-light + water glint were in the original cycle-39 plan; they are **deferred to cycle 40**. If the principles in this cycle hold, they become single-line reads from `sunChromaticity.js` later.
+- Pixel Forge CLI build for the imposter baker.
+- Pixel Forge `kiln validate-imposter` for both staged octahedral SDS tree sidecars.
+- Focused specs for water/cloud/material adapters, runtime mode, impostor selection, v1 sidecars, and v2 sidecars.
+- `npm run build` - clean. The bundle ratchet stayed at `mainKB=592` after trimming shipped GLSL comments; no fixture bump was needed.
+- `npm test` - 54 passed files, 1 skipped; 498 passed specs, 7 skipped.
+- `npm run lint` - clean (`eslint shared/`).
 
-## Cycle 38 close summary (2026-05-20)
+Local visual proof artifacts:
 
-Closed autonomously per Matt's directive "complete autonomously without human check-in, focus on the game in general and test on PC this cycle." PC-scope phases shipped, mobile-scope phases carried over.
+- Cycle 39 baseline runtime JSONs: `cycle39-validation/runtime/phase5-painterly-final-sun-*.json`.
+- Cycle 39 baseline screenshots: `cycle39-validation/screenshots/phase5-painterly-final/`.
+- Cycle 40 sun/water/cloud matrix JSONs: `cycle40-validation/runtime/sun-water-cloud-matrix-sun-*.json`.
+- Cycle 40 sun/water/cloud screenshots: `cycle40-validation/screenshots/sun-water-cloud-matrix/`.
+- Octahedral lab proof JSON: `cycle40-validation/runtime/octahedral-tree-lab-proof.json`.
+- Octahedral lab screenshots: `cycle40-validation/screenshots/octahedral-tree-lab/`.
 
-PC-scope shipped:
+The octahedral proof confirmed WebGPU production renderer, nonblank screenshots, zero fatal page errors, active v2 sidecars (`layout: "octahedral"`, `version: 2`), tile variation across camera poses, and no production default switch.
 
-- **Phase 2 water grid/alignment fix.** Three-rotated wavefront directions replace world-axis sines in [`js/water/konveyorAnimeWaterNodeMaterial.js`](js/water/konveyorAnimeWaterNodeMaterial.js). Captures under `cycle38-validation/screenshots/cycle38-phase2-pc-water-grid-after/`.
-- **Phase 2 other visual gates.** Sun glint sync verified by code review; OC terrain seams clean; dog readable; tree coherence preserved.
-- **Phase 3 tree budgets.** `tree-assets.spec.js` locks 7700/1924 tris on tree2 LOD0/LOD1.
-- **Phase 4 quality-governor hysteresis.** 4 new tests in [`tests/render-cost-report.spec.js`](tests/render-cost-report.spec.js) plus proof at `cycle38-validation/runtime/quality-governor-hysteresis-proof.json`.
+## Carryovers
 
-Mobile-scope carryover (deferred past cycle 39's render-only scope; revisit in cycle 40 or later):
+- Android/iOS proof remains deferred by Cycle 40 instruction.
+- Octahedral tree impostors are lab-only. Do not call them production-ready until a later cycle proves device budget and visual quality.
+- Existing v1 `latlon` / `hemi-y` tree sidecars remain the production contract.
+- Broader tree art variety remains a later art/content cycle.
+- Open Country paired two-client playtest remains outside Cycle 40.
 
-- Octahedral tree-impostor sidecar v2 + Kiln node material octahedral projection.
-- Android matrix at `?konveyorNativeTreeImpostors=1`.
-- Multi-Android profiles + iOS Safari WebGPU canary.
-- OC paired two-client sheep-driving playtest; post-deploy iOS water canary; renderer telemetry readout.
-- Water lighting time-of-day reproducibility (`?sun=0.5` locked capture matrix for cleaner A/B baselines).
+## Hard stops
 
-## Frozen files
+- No `shared/` changes without explicit cycle-plan authorization and sim-baseline acceptance.
+- No Worker, D1, migration, or production tree-default changes from Cycle 40.
+- If the build-size ratchet fails, stop and surface; do not silently bump fixtures.
+- Do not treat local ignored validation artifacts as committed evidence unless a future cycle explicitly changes that repo policy.
 
-Durable fence applies in full ([`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md)). No cycle-39 specific exceptions. The four materials this cycle touches (`SunBillboard.js`, `konveyorSunNodeMaterial.js`, `konveyorSkyNodeMaterial.js`, `konveyorCloudNodeMaterial.js`, `konveyorAnimeWaterNodeMaterial.js`) and the new `painterlyPalette.js` are all outside the durable fence.
-
-## Operational notes
-
-- **Cloudflare creds:** `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in `~/.config/mk-agent/env` (load via `set -a && source ~/.config/mk-agent/env && set +a`). Token scopes: `Zone Settings:Edit`, `D1:Read`, `Workers Scripts:Read`. For Web Analytics / RUM lifecycle, use the dashboard cookie session (Claude in Chrome).
-- **D1:** `npx wrangler d1 execute sds-db --remote --command "..." --json` for read-only inspection. Database id `513aa937-e60a-4fb6-b499-9f3814149e88`.
-- **Android phone (when mobile work resumes):** plug in `R5CX4028VGJ`, authorize USB debugging, then `adb reverse tcp:3000 tcp:3000`. Vite must bind IPv4 (`vite --port 3000 --host 127.0.0.1`) or the reverse can't reach it.
-
-## Reference Table
+## Reference table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan | [`docs/cycle-39-plan.md`](docs/cycle-39-plan.md) |
+| Current cycle closeout | [`docs/cycle-40-plan.md`](docs/cycle-40-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-38-plan.md`](docs/archive/cycles/cycle-38-plan.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
-| Durable rules | [`.claude/rules/`](.claude/rules/) |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Decisions log | [`DECISIONS.md`](DECISIONS.md) |
 | Player changelog | [`CHANGELOG.md`](CHANGELOG.md) |
@@ -87,4 +87,4 @@ npm run test:ios-water
 npm run test:integration
 ```
 
-Useful URL params: `?scene=field|rolling-hills|open-country`, `?debug=gl`, `?cinematic=1`, `?ui=off`, `?sun=0.5`, `?perfMode=1`, `?tier=low|med|high`, `?tonemap=aces|neutral|linear|none`.
+Useful URL params: `?scene=field|rolling-hills|open-country`, `?renderer=webgpu`, `?konveyorNativeTreeImpostors=1`, `?konveyorNativeTreeImpostors=octahedral`, `?debug=gl`, `?cinematic=1`, `?ui=off`, `?sun=0.5`, `?perfMode=1`, `?tier=low|med|high`, `?tonemap=aces|neutral|linear|none`.

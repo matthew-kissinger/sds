@@ -89,7 +89,7 @@ export function selectOctahedralImpostorTiles(direction, sidecar = {}) {
         oy = (1 - Math.abs(oldX)) * Math.sign(oy || 1);
     }
     const gridX = clamp((ox * 0.5 + 0.5) * (tilesX - 1), 0, tilesX - 1);
-    const gridY = clamp((oy * 0.5 + 0.5) * (tilesY - 1), 0, tilesY - 1);
+    const gridY = clamp((0.5 - oy * 0.5) * (tilesY - 1), 0, tilesY - 1);
     const x0 = Math.floor(gridX);
     const y0 = Math.floor(gridY);
     const x1 = Math.min(tilesX - 1, x0 + 1);

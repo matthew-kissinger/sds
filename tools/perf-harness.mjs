@@ -64,8 +64,12 @@ const HEADED = !!args.headed;
 const BROWSER_CHANNEL = args.channel ?? null;
 const URL_BASE = args.url ?? 'http://localhost:3000';
 const RENDERER_MODE = args.renderer ?? 'webgl';
+const REQUESTED_SUN = args.sun ?? null;
+const UI_MODE = args.ui ?? null;
+const NATIVE_TREE_IMPOSTORS = args.nativeTreeImpostors ?? null;
 const OUT_PATH = args.out ? resolve(ROOT, args.out) : RESULTS_PATH;
 const SCREENSHOTS = !!args.screenshots;
+const VISUAL_ONLY = !!args.visualOnly;
 const SCREENSHOT_DIR = args.screenshotDir
     ? resolve(ROOT, args.screenshotDir)
     : resolve(ROOT, 'cycle38-validation/screenshots/desktop');
@@ -222,8 +226,14 @@ async function navigateAndWait(page, cfg) {
     url.searchParams.set('mode', cfg.mode);
     if (cfg.cameraPose) url.searchParams.set('perfPose', cfg.cameraPose);
     if (cfg.systemIsolation) url.searchParams.set('perfSystem', cfg.systemIsolation);
-    if (args.nativeTreeImpostors === '1' || args.nativeTreeImpostors === true) {
-        url.searchParams.set('konveyorNativeTreeImpostors', '1');
+    if (NATIVE_TREE_IMPOSTORS) {
+        url.searchParams.set('konveyorNativeTreeImpostors', String(NATIVE_TREE_IMPOSTORS));
+    }
+    if (REQUESTED_SUN !== null) {
+        url.searchParams.set('sun', String(REQUESTED_SUN));
+    }
+    if (UI_MODE) {
+        url.searchParams.set('ui', String(UI_MODE));
     }
     if (RENDERER_MODE !== 'default') {
         url.searchParams.set('renderer', RENDERER_MODE);
@@ -258,13 +268,15 @@ async function captureSummary(page, durationMs) {
 }
 
 async function applyPerfAxes(page, cfg) {
-    await page.evaluate(({ cameraPose, systemIsolation }) => {
+    await page.evaluate(({ cameraPose, systemIsolation, sun }) => {
         const h = window.__perfHarness;
         if (cameraPose) h?.setCameraPose?.(cameraPose);
         if (systemIsolation) h?.setSystemIsolation?.(systemIsolation);
+        if (sun !== null && sun !== undefined) h?.setSun?.(Number(sun));
     }, {
         cameraPose: cfg.cameraPose ?? 'follow-close',
         systemIsolation: cfg.systemIsolation ?? 'full',
+        sun: REQUESTED_SUN,
     });
 }
 
@@ -313,7 +325,8 @@ async function runConfig(browser, cfg) {
         }
         if (SCREENSHOTS) {
             await mkdir(SCREENSHOT_DIR, { recursive: true });
-            const screenshotPath = resolve(SCREENSHOT_DIR, `${safeName(cfg.id)}.png`);
+            const sunSuffix = REQUESTED_SUN !== null ? `--sun-${safeName(REQUESTED_SUN)}` : '';
+            const screenshotPath = resolve(SCREENSHOT_DIR, `${safeName(cfg.id)}${sunSuffix}.png`);
             const buffer = await page.screenshot({ path: screenshotPath, fullPage: true });
             screenshot = {
                 path: relativeArtifactPath(screenshotPath),
@@ -333,7 +346,10 @@ async function runConfig(browser, cfg) {
         mode: cfg.mode,
         cameraPose: cfg.cameraPose ?? 'follow-close',
         systemIsolation: cfg.systemIsolation ?? 'full',
-        ok: !!summary && errors.length === 0 && !warningStr,
+        ok: errors.length === 0
+            && !warningStr
+            && (!!summary || (VISUAL_ONLY && screenshot?.stats?.nonBlank === true && !!visualProbe)),
+        visualOnly: VISUAL_ONLY,
         summary,
         rendererInfo,
         visualProbe,

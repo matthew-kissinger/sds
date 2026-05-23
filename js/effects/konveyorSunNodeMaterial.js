@@ -7,7 +7,9 @@ export function createKonveyorSunBillboardNodeMaterial({ MeshBasicNodeMaterial, 
   );
   const d = uv().sub(vec2(0.5, 0.5));
   const r = length(d).mul(2.0);
-  const disc = float(1.0).sub(smoothstep(sun.coreRadius ?? 0.04, sun.coreFeather ?? 0.12, r));
+  const coreRadius = sun.coreRadius ?? 0.065;
+  const coreFeather = sun.coreFeather ?? 0.13;
+  const disc = float(1.0).sub(smoothstep(coreRadius, coreFeather, r));
   const intensity = uniform(sun.intensity ?? 1.0);
   const coreColor = makeColorUniform(sun.coreColor, [1.0, 0.97, 0.88]);
   const coreColorNode = coreColor ?? vec3(...(sun.coreColor ?? [1.0, 0.97, 0.88]));
@@ -27,6 +29,10 @@ export function createKonveyorSunBillboardNodeMaterial({ MeshBasicNodeMaterial, 
   material.userData.konveyorSunBillboardOwnership = {
     owns: 'disc-body-only',
     skyOwns: 'aureole-and-horizon-glow',
+  };
+  material.userData.konveyorSunBillboardShape = {
+    coreRadius,
+    coreFeather,
   };
   return material;
 }

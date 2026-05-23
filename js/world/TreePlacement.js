@@ -52,7 +52,12 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     const totalTrees = Object.values(treeInstances).reduce((s, a) => s + a.length, 0);
     const params = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
     const useMobileNativeLod1 = hwTier === 'low';
-    const useProductionNativeImpostor = params.get('konveyorNativeTreeImpostors') === '1';
+    const nativeTreeImpostorMode = params.get('konveyorNativeTreeImpostors');
+    const useOctahedralTreeImpostorLab = nativeTreeImpostorMode === 'octahedral';
+    const useProductionNativeImpostor = nativeTreeImpostorMode === '1' || useOctahedralTreeImpostorLab;
+    const treeImpostorBaseDir = useOctahedralTreeImpostorLab
+        ? 'assets/models/trees/octahedral'
+        : 'assets/models/trees';
     const treeImpostorRuntime = useProductionNativeImpostor ? await loadTreeImpostorRuntime() : null;
     builder._konveyorTreeImpostorSync = treeImpostorRuntime?.syncKonveyorTreeImpostorMeshes ?? null;
     const chunkSize = useProductionNativeImpostor ? 160 : (builder.isMobile ? 320 : 192);
@@ -62,7 +67,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
 
         const meshDefs = [];
         const kiln = useProductionNativeImpostor
-            ? await loadKilnImpostor(`assets/models/trees/${treeType}.imposter`, {
+            ? await loadKilnImpostor(`${treeImpostorBaseDir}/${treeType}.imposter`, {
                 tileSelectionMode: 'production-instanced-attributes',
             })
             : null;
@@ -202,6 +207,8 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
                     hybridRole: meshDef.hybridRole ?? null,
                     baseOffset: meshDef.baseOffset ?? null,
                     tileSelection: im.userData.konveyorNativeTreeImpostor?.selection ?? null,
+                    sidecarVersion: im.userData.konveyorNativeTreeImpostor?.version ?? null,
+                    sidecarLayout: im.userData.konveyorNativeTreeImpostor?.layout ?? null,
                     billboardProjection: im.userData.konveyorNativeTreeImpostor?.billboardProjection ?? null,
                     terrainGroundedPivots: im.userData.konveyorNativeTreeImpostor?.terrainGroundedPivots ?? null,
                     vertexCount: meshDef.geometry.attributes?.position?.count ?? 0,
@@ -232,14 +239,22 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
             && impostorGroupsOk,
         source: 'THREE.InstancedMesh',
         route: 'konveyor-production-scene-body',
-        lod: useProductionNativeImpostor ? 'production-hybrid-lod0-latlon-hemi-impostor-explicit' : (useMobileNativeLod1 ? 'low-tier-lod1-native' : 'lod0-only'),
+        lod: useOctahedralTreeImpostorLab
+            ? 'lab-hybrid-lod0-octahedral-v2-impostor-explicit'
+            : useProductionNativeImpostor ? 'production-hybrid-lod0-latlon-hemi-impostor-explicit' : (useMobileNativeLod1 ? 'low-tier-lod1-native' : 'lod0-only'),
         culling: 'chunked-instanced-bounds',
         chunkSize,
         impostor: {
             active: useProductionNativeImpostor,
             ok: impostorGroupsOk,
+            mode: useOctahedralTreeImpostorLab ? 'octahedral-lab' : useProductionNativeImpostor ? 'latlon-hemi-production' : null,
             groupCount: impostorGroups.length,
-            sidecarLayout: useProductionNativeImpostor ? 'latlon-hemi-y' : null,
+            sidecarLayout: useProductionNativeImpostor
+                ? (useOctahedralTreeImpostorLab ? 'octahedral' : 'latlon-hemi-y')
+                : null,
+            sidecarVersion: useProductionNativeImpostor
+                ? (useOctahedralTreeImpostorLab ? 2 : 1)
+                : null,
             selection: useProductionNativeImpostor ? 'camera-driven-per-instance-instanced-attributes' : null,
             billboardProjection: useProductionNativeImpostor ? 'cpu-world-up-locked-camera-facing' : null,
             terrainGroundedPivots: useProductionNativeImpostor,

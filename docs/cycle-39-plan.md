@@ -47,6 +47,27 @@ A cycle has **≤ 8 phases**. Each is **fully autonomous** for this cycle. Each 
 
 Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/specs/) so the lines are testable by construction.
 
+## 2026-05-22 status review addendum
+
+Current status after direct repo and runtime review:
+
+- Phases A-C are on `main`: the sun billboard is a disc, the sky owns the Mie aureole, and sun chromaticity has one source.
+- Phase D shipped the depth-test fix plus dead halo* cleanup, but not the original bloom-audit matrix. `cycle39-validation/screenshots/phaseD-bloom/` currently contains 3 diagnostic WebGPU sky captures, not the 12-PNG gameplay matrix.
+- `npm test`, `npm run lint`, and `npm run build` are green as of the review. Build warnings are the existing large chunks and `shared/SceneObstacles.js` mixed static/dynamic import warning.
+- Live preview rendered gameplay scenes, but the in-app browser probe did not expose the usual `window.__sds`, `window.__sdsCinema`, or `window.__perfHarness` globals. Treat this as a capture-rig problem to verify with the repo Playwright tooling before calling it an app regression.
+- `?ui=off` still left the static `#site-footer` links visible at the bottom of screenshots. Final acceptance captures must hide that footer as well as HUD/debug overlays.
+- Console warnings observed during live preview: repeated `THREE.LightsNode.setupNodeLights: Light node not found...`, `THREE.WARNING: Multiple instances of Three.js being imported`, and `THREE.Renderer: "renderAsync()" has been deprecated...`. Phase E should either clean these up or explicitly record why they are non-blocking.
+- Visual read: the ugly clipped radial-splotch sun is gone, but the scene still needs a real gameplay capture matrix to judge bloom, horizon/water glint, and whether the sun feels inspiring rather than merely less wrong.
+- Pixel Forge's static octahedral imposter pipeline appears ready for a follow-up lab import, but SDS is still on v1 `latlon` / `hemi-y` tree sidecars and an explicit `?konveyorNativeTreeImpostors=1` gate. Do not fold a tree production swap into Cycle 39.
+
+## 2026-05-22 closeout addendum
+
+Cycle 39 Phase E is closed. The final gameplay baseline is local-only evidence under `cycle39-validation/screenshots/phase5-painterly-final/` with 12 PNGs across `{field, rolling-hills, open-country} x {sun=0.20, 0.35, 0.50, 0.75}`; matching runtime JSONs live at `cycle39-validation/runtime/phase5-painterly-final-sun-*.json`. The `cycle*-validation/` folders are intentionally ignored by git and remain local proof artifacts.
+
+The capture rig used the actual gameplay path with `?ui=off`; the final matrix excluded the static footer, React HUD, and debug overlays. The three older diagnostic PNGs in `cycle39-validation/screenshots/phaseD-bloom/` remain diagnostic only and did not count toward close acceptance.
+
+The Cycle 40 carryovers listed below were consumed by [`cycle-40-plan.md`](cycle-40-plan.md) where in scope: water sun-color coherence, cloud highlight/rim coherence, and a lab-only Pixel Forge v2 octahedral tree route. Device proof, production tree defaulting, broader tree art variety, and the Open Country paired playtest remain deferred.
+
 ## Phase A — Strip the disc to a disc (~2hr)
 
 **Independently testable.** Tear the halo math out of both renderer paths. The disc becomes one small soft-edged radial falloff with a single color uniform.
@@ -79,7 +100,7 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 1. **[`js/atmosphere/konveyorSkyNodeMaterial.js`](../js/atmosphere/konveyorSkyNodeMaterial.js):** delete the `uvSunDisc` and `uvSunGlow` UV-space path (lines 23-26). Replace `physicalSunGlow = pow(smoothstep(0.56, 1.0, sunAlignment), 2.4)` with a Henyey-Greenstein phase function: `aureole = (1 - g²) / pow(1 + g² - 2·g·cosTheta, 1.5)` where `cosTheta = dot(viewDir, sunDirection)` and `g ≈ 0.80` (tunable per ToD). Multiply by an HG strength that grows with `atmosphericPathLength = 1 / max(viewDir.y, 0.01)` so the horizon naturally lights up.
 2. **WebGL parity at [`js/atmosphere/skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js):** same HG function, same path-length multiplier. The two shaders must produce visually identical aureoles across the capture matrix.
 3. **Forward `sunDirection` as a normalized 3-vec** (already present) and `sunElevation` (already implicit via `sunDirection.y` but route it explicitly so the shader doesn't recompute).
-4. **Capture matrix consolidated into Phase D + E.** Driving a per-phase 12-PNG rig through the dev preview against a live gameplay camera was rejected as ceremony; the Phase D bloom audit and Phase E final coherence pass share one capture rig. Phase B verifies structurally via tests, build, and a live-preview smoke that the render path doesn't break.
+4. **Capture matrix consolidated into Phase E.** Driving a per-phase 12-PNG rig through the dev preview against a live gameplay camera was rejected as ceremony; after the Phase D subset shipped, the bloom audit and final coherence pass share the Phase E gameplay capture rig. Phase B verifies structurally via tests, build, and a live-preview smoke that the render path doesn't break.
 
 **Files touched:**
 
@@ -92,7 +113,7 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 - When Phase B ships, then `grep -c "uvSunDisc\|uvSunGlow\|physicalSunGlow" js/atmosphere/konveyorSkyNodeMaterial.js` shall return `0`.
 - When Phase B ships, then `grep -c "mieAureolePhaseHG\|HenyeyGreenstein\|aureole" js/atmosphere/konveyorSkyNodeMaterial.js js/atmosphere/skyShader.glsl.js` shall return ≥ 2.
 - When Phase B ships, then a live-preview smoke shall confirm the sky renders without artifacts (sky dome on-screen, no z-fighting, no banding) and the new tuning fields (`aureoleG`, `ownership: 'sky-aureole-and-horizon-glow'`) appear on `material.userData.konveyorSkyPresetTuning`.
-- The 12-PNG capture matrix that would verify the disc-edge → aureole transition is seamless is consolidated into Phase D's bloom-audit rig (which has the same controlled-camera concern) and reviewed there. If a visible smoothstep ring appears in any Phase D capture, that surfaces as a Phase B follow-up before Phase E commits the final baseline.
+- The 12-PNG capture matrix that would verify the disc-edge → aureole transition is seamless is consolidated into Phase E's gameplay rig (which has the same controlled-camera concern) and reviewed there. If a visible smoothstep ring appears in any final capture, that surfaces as a Phase B follow-up before the cycle closes.
 
 ## Phase C — Single sun-chromaticity source (~1hr)
 
@@ -125,19 +146,22 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 
 **Why.** Matt flagged the sun was visible *through* terrain — a legacy `depthTest: false` from the haloed-disc era where the soft warm glow was meant to always read. Now that the disc is a small bright thing and bloom paints the glow, proper terrain occlusion matters.
 
-**Verified.** Tests pass (491/491), build clean. Headless WebGPU captures via [`tools/capture-webgpu-scene-sky.mjs`](../tools/capture-webgpu-scene-sky.mjs) (`--channel=chrome` to work around bundled-Playwright dxil.dll error on this Windows box) for all three scenes confirm the disc renders as a small crisp warm-white dot, not the prior splotchy halo. Synthetic diagnostic scenes don't have terrain in front of the sun direction, so direct depth-test occlusion proof is deferred to Phase E captures against the actual gameplay scenes.
+**Verified.** Tests pass (491 passed, 7 skipped specs), build clean. Headless WebGPU captures via [`tools/capture-webgpu-scene-sky.mjs`](../tools/capture-webgpu-scene-sky.mjs) (`--channel=chrome` to work around bundled-Playwright dxil.dll error on this Windows box) for all three scenes confirm the disc renders as a small crisp warm-white dot, not the prior splotchy halo. Synthetic diagnostic scenes don't have terrain in front of the sun direction, so direct depth-test occlusion proof is deferred to Phase E captures against the actual gameplay scenes. The 3 PNGs under `cycle39-validation/screenshots/phaseD-bloom/` are diagnostic evidence only and do not satisfy the original 12-PNG gameplay bloom acceptance.
 
 ## Open items deferred to Phase E
 
-- **Bloom audit (the actual 12-PNG matrix).** Driving the dev preview to controlled ToD captures across {field, rolling-hills, open-country} × {0.20, 0.35, 0.50, 0.75} requires either a working live-preview rig at gameplay state or a custom Playwright capture against the gameplay path (not the diagnostic synthetic scene). The dev preview got into a stuck-renderer state post-`/?ui=off → Just Play` flow during Phase C/D verification (eval responsive, but `sceneManager.render()` / `getCamera()` / per-frame loop hits 0 times in 1 second), so manual rig work is needed.
+- **Bloom audit (the actual 12-PNG matrix).** Driving the dev preview to controlled ToD captures across {field, rolling-hills, open-country} x {0.20, 0.35, 0.50, 0.75} requires either a working live-preview rig at gameplay state or a custom Playwright capture against the gameplay path (not the diagnostic synthetic scene). The dev preview got into a stuck-renderer state post-`/?ui=off -> Just Play` flow during Phase C/D verification (eval responsive, but `sceneManager.render()` / `getCamera()` / per-frame loop hits 0 times in 1 second), so manual rig work is needed.
+- **Capture-rig verification.** The 2026-05-22 in-app browser review rendered gameplay, but `window.__sds`, `window.__sdsCinema`, and `window.__perfHarness` were not visible even with `?perfMode=1&probeRender=1`. Verify this with the repo Playwright path before treating it as an app bug. If the in-app browser remains unsuitable, use existing Playwright tooling instead of lowering the acceptance bar.
+- **`?ui=off` footer leakage.** The static `#site-footer` still appears at the bottom of captures. Final Phase E images must hide it, along with HUD and debug overlays.
 - **Disc-uniform propagation after scene rebuild.** Surfaced during Phase C: after `disposeScene` + `rebuildScene`, the new SunBillboard's konveyorCoreColorUniform / konveyorIntensityUniform stay at construction defaults; `sun.light.color` (the Phase C contract) is correct but doesn't propagate to the disc. Hypothesis: the same per-frame loop that stops calling render/getCamera also stops calling `_sunBillboard.update`. Likely pre-existing post-rebuild issue, surfaced (not caused) by Phase D's verification flow.
 - **Phase D's original bloom-config tuning.** Not run because the precondition (a steady gameplay-scene capture rig) isn't in place. The depth-test fix + dead-halo cleanup ship as Phase D's scoped wins; the bloom tuning carries into Phase E.
+- **Console warning hygiene.** Before close, either clean or explicitly record the observed `THREE.LightsNode.setupNodeLights`, multiple Three.js instance, and `renderAsync()` deprecation warnings. Any fatal console error blocks close.
 
 ## Phase D — Original bloom-audit plan (deferred into Phase E)
 
 **Depends on Phase A–C.** With the disc small and the aureole physical, verify bloom delivers the warm glow the principles say it should. If it doesn't, tune.
 
-1. **Capture matrix.** `cycle39-validation/screenshots/phaseD-bloom/{biome}-{tod}.png`. 12 PNGs.
+1. **Capture matrix.** Original target was `cycle39-validation/screenshots/phaseD-bloom/{biome}-{tod}.png`; after the Phase D subset shipped, the acceptance matrix moves to `cycle39-validation/screenshots/phase5-painterly-final/{biome}-{tod}.png`. The old `phaseD-bloom` folder may contain diagnostic captures only.
 2. **Read each capture.** At golden hour the small disc should show as a warm peach-white core with a bloom-painted warm halo extending well past the disc edge. At midday the disc should be a tight punch with minimal bloom spread.
 3. **If midday reads cold or golden-hour reads anemic,** tune bloom `threshold` and `strength` in [`js/postprocess/BloomPass.js`](../js/postprocess/BloomPass.js) or the equivalent konveyor bloom config. Record the before/after numbers in the cycle close commit.
 4. **Hard stop check (cycle-39 amended #1):** if no bloom tuning gets the warm-at-golden-hour read, surface to Matt rather than reverting to a baked-in halo. The principle is non-negotiable.
@@ -145,22 +169,25 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 **Files touched:**
 
 - Possibly [`js/postprocess/BloomPass.js`](../js/postprocess/BloomPass.js) or konveyor bloom config (touch only if captures demand it)
-- `cycle39-validation/screenshots/phaseD-bloom/**`
+- `cycle39-validation/screenshots/phase5-painterly-final/**`
 
 **Acceptance (EARS):**
 
-- When Phase D ships, then `cycle39-validation/screenshots/phaseD-bloom/` shall contain ≥ 12 PNGs.
+- When the deferred bloom audit ships in Phase E, then `cycle39-validation/screenshots/phase5-painterly-final/` shall contain >= 12 gameplay PNGs.
 - While the sun is below `elev = 0.2` (golden hour) in any biome capture, bloom shall paint a visible warm halo extending ≥ 3× the disc radius beyond the disc edge.
 - While the sun is above `elev = 0.7` (midday) in any biome capture, the disc shall read as a tight bright punch with bloom spread ≤ 1.5× the disc radius.
-- If neither bloom default nor a tuned threshold/strength gets the warm-at-golden-hour read, then Phase D shall surface to Matt before shipping (no baked-in halo as fallback).
+- If neither bloom default nor a tuned threshold/strength gets the warm-at-golden-hour read, then Phase E shall surface to Matt before shipping (no baked-in halo as fallback).
 
-## Phase E — Coherence + final 12-PNG baseline (~1hr)
+## Phase E — Coherence + final 12-PNG baseline (~2hr)
 
 **Depends on Phase A–D.** Final capture matrix, validate, prep cycle close.
 
-1. **Final captures.** `cycle39-validation/screenshots/phase5-painterly-final/{biome}-{tod}.png`. 12 PNGs. Same matrix shape as the other phases for direct A/B comparison.
-2. **`/validate`** — all tests + build + last-deploy check.
-3. **Cycle close prep.** Walk every Acceptance line in this plan; surface any that didn't ship.
+1. **Stabilize the gameplay capture path.** Final captures must come from the actual gameplay scene path, not `webgpu-diagnostic`. `?ui=off` must hide React HUD, debug overlays, and the static `#site-footer`. If `window.__sdsCinema` / `window.__perfHarness` are unavailable in the in-app browser, verify with the repo Playwright tooling and document the capture path used.
+2. **Final captures.** `cycle39-validation/screenshots/phase5-painterly-final/{biome}-{tod}.png`. 12 PNGs: {field, rolling-hills, open-country} x {0.20, 0.35, 0.50, 0.75}. Same matrix shape as the other phases for direct A/B comparison.
+3. **Review each capture.** Inspect the small sun disc, sky aureole, bloom spread, water horizon/glint readability, tree silhouette coherence, terrain occlusion, and absence of footer/HUD/debug overlays.
+4. **Tune only if captures prove it.** Bloom config is in scope if golden-hour reads anemic or midday reads cold/flat. Do not reintroduce a baked disc halo.
+5. **`/validate`** - all tests + build + last-deploy check.
+6. **Cycle close prep.** Walk every Acceptance line in this plan; surface any that didn't ship, and record Cycle 40 carryovers.
 
 **Files touched:**
 
@@ -169,9 +196,22 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 **Acceptance (EARS):**
 
 - When Phase E ships, then `cycle39-validation/screenshots/phase5-painterly-final/` shall contain ≥ 12 PNGs.
+- When Phase E ships, then those PNGs shall be captured from the gameplay scene path, not the diagnostic synthetic sky scene.
+- When Phase E ships, then final captures shall not show `#site-footer`, React HUD, or debug overlays under `?ui=off`.
+- When Phase E ships, then the 3 existing diagnostic PNGs in `cycle39-validation/screenshots/phaseD-bloom/` shall not count toward the final 12-PNG matrix.
+- When Phase E ships, then [`js/effects/SunBillboard.js`](../js/effects/SunBillboard.js) shall still contain no halo/corona/aureole math.
+- When Phase E ships, then console errors during the capture run shall be zero; known warnings shall be cleaned up or explicitly recorded as non-blocking.
 - When `npm test` runs at Phase E close, all vitest specs shall pass.
 - When `npm run build` runs at Phase E close, production build shall be clean.
 - When the cycle close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
+
+## Cycle 40 carryovers from the status review
+
+- **Water glint and horizon chroma.** Closed in Cycle 40 by feeding atmosphere `sunColor` into water and cloud material updates.
+- **Pixel Forge static octahedral tree lab import.** Closed as a lab route in Cycle 40: v2 sidecars are staged under `assets/models/trees/octahedral/`, `layout: "octahedral"` is accepted in tests, and runtime tile selection branches by layout. Production defaulting is still deferred.
+- **Tree asset art pass.** Once the v2 import is proven, add more species/shape variety and material tuning. Preserve dog-through-tree readability and low-tier budget before raising density or variety.
+- **Mobile tree budget matrix.** Re-run Android captures and perf at `?konveyorNativeTreeImpostors=1` before defaulting native impostors on mobile.
+- **Open Country paired playtest.** Run the deferred two-client sheep-driving playtest after visual closeout so gameplay readability is validated in the heaviest scene.
 
 ## Dependencies
 
@@ -209,13 +249,16 @@ Durable hard stops apply on every cycle ([`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, Phases A–E shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, production build shall be clean.
+- [x] When the cycle closes, Phases A-E shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass.
+- [x] When `npm run build` runs at cycle close, production build shall be clean.
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When cycle 39 closes, [`js/effects/SunBillboard.js`](../js/effects/SunBillboard.js) shall contain zero halo / corona / aureole math (verified by grep) and the broad glow shall live in [`konveyorSkyNodeMaterial.js`](../js/atmosphere/konveyorSkyNodeMaterial.js) + [`skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js).
-- [ ] When cycle 39 closes, disc and sky shall read sun chromaticity from `js/atmosphere/sunChromaticity.js` (no duplicated color literals).
-- [ ] When cycle 39 closes, `cycle39-validation/screenshots/phase5-painterly-final/` shall have a 12-PNG capture matrix (3 biomes × 4 ToD) Matt has reviewed and accepted as the new baseline.
+- [x] When cycle 39 closes, [`js/effects/SunBillboard.js`](../js/effects/SunBillboard.js) shall contain zero halo / corona / aureole math (verified by grep) and the broad glow shall live in [`konveyorSkyNodeMaterial.js`](../js/atmosphere/konveyorSkyNodeMaterial.js) + [`skyShader.glsl.js`](../js/atmosphere/skyShader.glsl.js).
+- [x] When cycle 39 closes, disc and sky shall read sun chromaticity from `js/atmosphere/sunChromaticity.js` (no duplicated color literals).
+- [x] When cycle 39 closes, `cycle39-validation/screenshots/phase5-painterly-final/` shall have a 12-PNG gameplay capture matrix (3 biomes x 4 ToD) Matt has reviewed and accepted as the new baseline.
+- [x] When cycle 39 closes, that final capture matrix shall show no `#site-footer`, HUD, or debug overlays under `?ui=off`.
+- [x] When cycle 39 closes, the 3 diagnostic WebGPU sky captures in `cycle39-validation/screenshots/phaseD-bloom/` shall be documented as diagnostic evidence only, not baseline acceptance.
+- [x] When cycle 39 closes, water/glint, Pixel Forge octahedral tree import, Android tree budget, and Open Country paired playtest carryovers shall be recorded for Cycle 40/backlog routing.
 
 ## References
 
@@ -228,4 +271,7 @@ Durable hard stops apply on every cycle ([`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.
 - [`js/effects/SunBillboard.js`](../js/effects/SunBillboard.js) — current WebGL sun billboard (to be stripped)
 - [`js/effects/konveyorSunNodeMaterial.js`](../js/effects/konveyorSunNodeMaterial.js) — current WebGPU node sun billboard (to be stripped)
 - [`js/atmosphere/konveyorSkyNodeMaterial.js`](../js/atmosphere/konveyorSkyNodeMaterial.js) — sky shader that gains the Mie aureole
+- [`js/impostors/impostorTileSelection.js`](../js/impostors/impostorTileSelection.js) — existing octahedral selector to wire in a future tree lab import
+- [`tests/imposter-sidecar.spec.js`](../tests/imposter-sidecar.spec.js) — current v1 latlon/hemi-y sidecar contract
+- Sibling repo `C:\Users\Mattm\X\games-3d\pixel-forge` — static octahedral imposter pipeline source for a future tree import
 - [Henyey-Greenstein phase function](https://en.wikipedia.org/wiki/Henyey%E2%80%93Greenstein_phase_function) — Mie scattering approximation used in Phase B

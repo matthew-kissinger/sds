@@ -26,6 +26,7 @@ export function createKonveyorAnimeWaterNodeMaterial(
 
   const vector3 = (value) => new ThreeVector3(value[0], value[1], value[2]);
   const sunDirection = uniform(vector3(water.sunDirection));
+  const sunColor = uniform(vector3(water.sunColor));
   const sparkleStrength = uniform(water.sparkleStrength);
   const waterWorld = vec2(positionWorld.x, positionWorld.z);
   const heightUvRaw = waterWorld.div(water.heightfieldTexture.worldSize).add(vec2(0.5, 0.5));
@@ -95,7 +96,7 @@ export function createKonveyorAnimeWaterNodeMaterial(
   const baseColor = mix(vec3(...water.shallowColor), vec3(...water.deepColor), depthT)
     .add(vec3(ripple, ripple, ripple).mul(0.78))
     .add(vec3(0.02, 0.08, 0.10).mul(slowSwell.mul(0.34)))
-    .add(vec3(...water.sunColor).mul(glint))
+    .add(sunColor.mul(glint))
     .mul(water.colorScale);
   const colorWithFoam = mix(baseColor, vec3(...water.foamColor).mul(water.foamScale), foamBand);
 
@@ -112,8 +113,10 @@ export function createKonveyorAnimeWaterNodeMaterial(
   material.userData.konveyorWaterSunCameraGlint = true;
   material.userData.konveyorWaterGlintMode = 'ripple-normal-sun-camera-v2';
   material.userData.konveyorWaterGlintGain = 0.16;
+  material.userData.konveyorWaterSunColorSource = water.sunColorSource ?? 'skyFog.sunColor';
   material.userData.konveyorWaterNodeUniforms = {
     sunDirection,
+    sunColor,
     sparkleStrength,
   };
   material.userData.konveyorWaterMaterialControls = createAnimeWaterNodeMaterialControls(material);
@@ -128,10 +131,23 @@ function createAnimeWaterNodeMaterialControls(material) {
       if (state.sunDirection && nodes.sunDirection?.value) {
         nodes.sunDirection.value.copy(state.sunDirection);
       }
+      if (state.sunColor && nodes.sunColor?.value) {
+        copyColorLike(nodes.sunColor.value, state.sunColor);
+      }
       if (Number.isFinite(state.sparkleStrength)) {
         nodes.sparkleStrength.value = state.sparkleStrength;
       }
     },
     dispose() {},
   };
+}
+
+function copyColorLike(target, value) {
+  if (Number.isFinite(value?.x) && Number.isFinite(value?.y) && Number.isFinite(value?.z)) {
+    target.copy?.(value);
+    return;
+  }
+  if (Number.isFinite(value?.r) && Number.isFinite(value?.g) && Number.isFinite(value?.b)) {
+    target.set?.(value.r, value.g, value.b);
+  }
 }

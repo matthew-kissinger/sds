@@ -32,8 +32,15 @@ export function createKonveyorImpostorNodeMaterialFactories(webGpuModules, optio
       const fog = context.fog ?? {};
       const material = context.material ?? {};
       const tunables = context.tunables ?? {};
+      const layoutName = layout.layout === 'octahedral' || layout.axis === 'octahedral'
+        ? 'octahedral'
+        : layout.layout === 'latlon' && layout.axis === 'hemi-y'
+          ? 'latlon-hemi-y'
+          : impostorDefaults.layoutName ?? 'latlon-hemi-y';
 
       return createKonveyorKilnImpostorNodeMaterial(webGpuModules, {
+        layoutName,
+        sidecarVersion: layout.version ?? context.sidecar?.version ?? 1,
         tilesX: layout.tilesX ?? context.tilesX ?? impostorDefaults.tilesX ?? 4,
         tilesY: layout.tilesY ?? context.tilesY ?? impostorDefaults.tilesY ?? 4,
         atlasSize: layout.atlasSize ?? context.atlasSize ?? impostorDefaults.atlasSize ?? [2048, 2048],

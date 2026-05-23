@@ -39,6 +39,10 @@ describe('cycle-39 sun disc — renderer-path divergence sentinel', () => {
       owns: 'disc-body-only',
       skyOwns: 'aureole-and-horizon-glow',
     });
+    expect(material.userData.konveyorSunBillboardShape).toMatchObject({
+      coreRadius: 0.065,
+      coreFeather: 0.13,
+    });
     // No halo bookkeeping anywhere in userData.
     expect(material.userData.konveyorHaloColorUniform).toBeUndefined();
     expect(Object.keys(material.userData)).not.toContain('konveyorHaloColorUniform');
@@ -58,6 +62,8 @@ describe('cycle-39 sun disc — renderer-path divergence sentinel', () => {
       expect(uniforms.uIntensity).toBeTruthy();
       expect(uniforms.uCoreRadius).toBeTruthy();
       expect(uniforms.uCoreFeather).toBeTruthy();
+      expect(uniforms.uCoreRadius.value).toBe(0.065);
+      expect(uniforms.uCoreFeather.value).toBe(0.13);
       // Halo uniform must not exist.
       expect(uniforms.uHaloColor).toBeUndefined();
       // Same blending mode as the konveyor path.
@@ -90,6 +96,7 @@ describe('cycle-39 sun disc — renderer-path divergence sentinel', () => {
       // Diagnostics report visualDirection === physicalDirection.
       const diag = sun.getDiagnostics();
       expect(diag.visualDirection).toEqual(diag.physicalDirection);
+      expect(diag.disc.angularCoreDiameterDeg).toBeGreaterThan(0.4);
     } finally {
       sun.dispose();
     }

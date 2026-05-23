@@ -21,5 +21,7 @@ export function shouldUseKonveyorProductionNativeInstancing(search = getWindowSe
         && params.get('konveyorProductionBootScout') === '1'
         && params.get('konveyorProductionSceneBody') === '1'
         && params.get('konveyorNativeInstancing') === '1';
-    return explicitScoutRoute || isKonveyorProductionWebGpuActive();
+    const explicitTreeImpostorRoute = params.get('renderer') === 'webgpu'
+        && params.has('konveyorNativeTreeImpostors');
+    return explicitScoutRoute || explicitTreeImpostorRoute || isKonveyorProductionWebGpuActive();
 }

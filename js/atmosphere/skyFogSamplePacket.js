@@ -62,6 +62,7 @@ export function sampleSkyFogPacketFromSky({
     size: finiteNumber(sunBillboard?.size, DEFAULT_KONVEYOR_SUN_BILLBOARD_SIZE),
     distance: finiteNumber(sunBillboard?.distance, 3000),
     intensity: finiteNumber(sunBillboard?.intensity, DEFAULT_KONVEYOR_SUN_BILLBOARD_INTENSITY),
+    disc: sunBillboard?.disc ?? null,
     materialName: sunBillboard?.materialName ?? null,
     applied: sunBillboard?.applied ?? null,
   };

@@ -4,6 +4,54 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.8] - 2026-05-22 (Cycles 39-40 - sun coherence and tree lab)
+
+Patch release for the sun/sky rebuild follow-through and a PC-only lab route
+for Pixel Forge v2 octahedral tree impostors.
+
+### Added
+
+- Lab-only WebGPU octahedral tree-impostor route behind
+  `?renderer=webgpu&konveyorNativeTreeImpostors=octahedral`.
+- Additive Pixel Forge v2 octahedral sidecars for `tree1` and `tree2`, staged
+  beside the existing v1 tree assets without changing production defaults.
+- Runtime summaries now report tree-impostor sidecar layout/version so proof
+  captures can distinguish v1 `latlon` / `hemi-y` from v2 `octahedral`.
+
+### Changed
+
+- Water glint now receives the atmosphere frame sun color each update; WebGL
+  routes it through `uSunColor`, and WebGPU routes it through a live node
+  uniform.
+- Cloud highlight/rim chroma now comes from the atmosphere-provided sun color
+  instead of separate amber literals.
+- The visible sun disc was tuned to read as an actual small sun in gameplay
+  captures, not just a brighter sky patch at the sun location.
+- Cycle 39 sun ownership is preserved: the billboard owns the disc, while the
+  sky shader owns the broad aureole and horizon glow.
+
+### Validation
+
+- Cycle 39 final gameplay baseline:
+  `cycle39-validation/screenshots/phase5-painterly-final/` locally contains
+  the 12-PNG matrix.
+- Cycle 40 desktop WebGPU sun/water/cloud matrix:
+  `cycle40-validation/screenshots/sun-water-cloud-matrix/`.
+- Octahedral lab proof:
+  `cycle40-validation/runtime/octahedral-tree-lab-proof.json` locally records
+  nonblank renders, zero fatal page errors, active v2 sidecars, tile variation
+  across camera poses, and no production default switch.
+- `npm run build` - clean, main bundle stayed within the existing `mainKB=592`
+  ratchet.
+- `npm test` - 54 passed files, 1 skipped; 498 passed specs, 7 skipped.
+- `npm run lint` - clean.
+
+### Notes
+
+- Android/iOS proof is deferred by Cycle 40 instruction.
+- Octahedral tree impostors are lab-only in this release; the current v1
+  `latlon` / `hemi-y` sidecars remain the production contract.
+
 ## [2.1.7] - 2026-05-20 (Cycle 38 - WebGPU visual recovery)
 
 Patch release covering the first-principles WebGPU visual repair after

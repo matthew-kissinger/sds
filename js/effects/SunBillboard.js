@@ -13,8 +13,10 @@ import { createKonveyorEffectMaterial } from './konveyorEffectMaterialAdapter.js
  */
 
 const SUN_DISTANCE = 3000;
-const SUN_QUAD_SIZE = 110;
+const SUN_QUAD_SIZE = 360;
 const KONVEYOR_SUN_QUAD_SIZE = 520;
+const SUN_CORE_RADIUS = 0.065;
+const SUN_CORE_FEATHER = 0.13;
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -45,8 +47,8 @@ function makeSunBillboardMaterial() {
         uniforms: {
             uCoreColor: { value: new THREE.Color(1.0, 0.97, 0.88) },
             uIntensity: { value: 1.0 },
-            uCoreRadius: { value: 0.04 },
-            uCoreFeather: { value: 0.12 }
+            uCoreRadius: { value: SUN_CORE_RADIUS },
+            uCoreFeather: { value: SUN_CORE_FEATHER }
         },
         vertexShader: VERT,
         fragmentShader: FRAG,
@@ -58,7 +60,7 @@ function makeSunBillboardMaterial() {
 }
 
 function sunIntensityAtElevation(elevation) {
-    return Math.max(0, Math.min(1.5, elevation * 4.0));
+    return Math.max(0.65, Math.min(2.2, 0.65 + elevation * 3.1));
 }
 
 export class SunBillboard {
@@ -138,11 +140,23 @@ export class SunBillboard {
 
     getDiagnostics() {
         const dir = this._sunDir.toArray().map((value) => Number(value.toFixed(4)));
+        const coreRadius = this.material?.userData?.konveyorSunBillboardShape?.coreRadius
+            ?? this.material?.uniforms?.uCoreRadius?.value
+            ?? null;
+        const coreFeather = this.material?.userData?.konveyorSunBillboardShape?.coreFeather
+            ?? this.material?.uniforms?.uCoreFeather?.value
+            ?? null;
+        const angularDiameter = (radius) => Number((2 * Math.atan((this.size * radius * 0.5) / this.distance) * 180 / Math.PI).toFixed(3));
         return {
             size: this.size,
             distance: this.distance,
             intensity: this._lastIntensity,
             elevation: Number(this._lastElevation.toFixed(4)),
+            disc: {
+                coreRadius,
+                coreFeather,
+                angularCoreDiameterDeg: Number.isFinite(coreRadius) ? angularDiameter(coreRadius) : null,
+            },
             materialName: this.material?.name ?? null,
             applied: this.konveyorMaterialSummary?.applied ?? false,
             physicalDirection: dir,

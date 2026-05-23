@@ -41,6 +41,41 @@ function createSidecar() {
   };
 }
 
+function createOctahedralSidecar() {
+  return {
+    version: 2,
+    angles: 64,
+    tilesX: 8,
+    tilesY: 8,
+    tileSize: 256,
+    atlasWidth: 2048,
+    atlasHeight: 2048,
+    worldSize: 1.4,
+    yOffset: 0.65,
+    projection: 'orthographic',
+    bbox: {
+      min: [-0.1, 0, -0.2],
+      max: [0.3, 1.2, 0.4],
+    },
+    source: {
+      path: 'tree.glb',
+      bytes: 1024,
+      tris: 64,
+    },
+    auxLayers: ['albedo', 'normal', 'depth'],
+    bgColor: 'transparent',
+    colorLayer: 'baseColor',
+    normalSpace: 'capture-view',
+    edgeBleedPx: 2,
+    textureColorSpace: 'srgb',
+    axis: 'octahedral',
+    hemi: false,
+    layout: 'octahedral',
+    directionEncoding: 'octahedral',
+    directions: Array.from({ length: 64 }, () => [0, 1, 0]),
+  };
+}
+
 function createParams(overrides = {}) {
   return {
     albedoAtlas: createTexture('albedo'),
@@ -119,8 +154,13 @@ describe('konveyor impostor material adapter', () => {
       expect(contexts[0].depthAtlas).toBe(params.depthAtlas);
       expect(contexts[0].sidecar).toBe(params.sidecar);
       expect(contexts[0].layout).toMatchObject({
+        layout: 'latlon',
+        axis: 'hemi-y',
+        version: 1,
         tilesX: 4,
         tilesY: 4,
+        shaderTilesX: 4,
+        shaderTilesY: 4,
         sidecarTilesX: 4,
         sidecarTilesY: 4,
         tileSize: 512,
@@ -239,6 +279,47 @@ describe('konveyor impostor material adapter', () => {
       })).toBe(false);
       expect(controls.setTint).toBeTypeOf('function');
       expect(controls.nodes.tint.sunDirection.value).toBeInstanceOf(THREE.Vector3);
+    } finally {
+      material.dispose();
+    }
+  });
+
+  it('routes v2 octahedral sidecars through the WebGPU node material layout metadata', () => {
+    const nodeFactories = createKonveyorImpostorNodeMaterialFactories(
+      { MeshBasicNodeMaterial, DoubleSide, Vector2: THREE.Vector2, Vector3: THREE.Vector3, TSL },
+      {}
+    );
+    const sidecar = createOctahedralSidecar();
+    const material = createKilnImpostorMaterial(createParams({
+      sidecar,
+      search: '?renderer=webgpu&konveyorImpostors=1',
+      tileSelectionMode: 'production-instanced-attributes',
+      konveyorImpostorFactories: {
+        createKilnImpostorMaterial: (context) => {
+          expect(context.layout).toMatchObject({
+            layout: 'octahedral',
+            axis: 'octahedral',
+            version: 2,
+            tilesX: 8,
+            tilesY: 8,
+            shaderTilesX: 4,
+            shaderTilesY: 4,
+          });
+          return nodeFactories.createKilnImpostorMaterial(context);
+        },
+      },
+    }));
+
+    try {
+      expect(material.name).toBe('konveyor-node-kiln-impostor');
+      expect(material.userData.konveyorImpostorTileSelection).toMatchObject({
+        mode: 'production-instanced-attributes',
+        source: 'instanced-attributes',
+        layout: 'octahedral',
+        sidecarVersion: 2,
+        tilesX: 8,
+        tilesY: 8,
+      });
     } finally {
       material.dispose();
     }

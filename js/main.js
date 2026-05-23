@@ -311,6 +311,13 @@ class SheepDogSimulation {
                 getVisualProbe() {
                     return gameInstanceRef.getCycle38VisualProbe?.() ?? null;
                 },
+                setSun(t = 0.5) {
+                    const value = Number(t);
+                    if (!Number.isFinite(value) || !gameInstanceRef.atmosphere?.setSun) return null;
+                    const clamped = Math.max(0, Math.min(1, value));
+                    gameInstanceRef.atmosphere.setSun({ elevation: clamped * Math.PI * 0.5 });
+                    return clamped;
+                },
                 setDogDrive(state = {}) {
                     const dir = state.direction ?? {};
                     const x = Number(dir.x);
@@ -678,14 +685,16 @@ class SheepDogSimulation {
             if (isCinematicMode()) {
                 const { installCinemaApi } = await import('./cinematic.js');
                 installCinemaApi(this);
-                if (isUiHidden()) {
-                    const overlay = document.getElementById('react-overlay');
-                    if (overlay) overlay.style.display = 'none';
-                }
                 const sunT = getRequestedSun();
                 if (sunT != null && this.atmosphere?.setSun) {
                     this.atmosphere.setSun({ elevation: sunT * Math.PI * 0.5 });
                 }
+            }
+            if (isUiHidden()) {
+                const overlay = document.getElementById('react-overlay');
+                if (overlay) overlay.style.display = 'none';
+                const footer = document.getElementById('site-footer');
+                if (footer) footer.style.display = 'none';
             }
 
             logStep('Initialization complete!');
@@ -976,6 +985,12 @@ class SheepDogSimulation {
         const waterMaterial = this._animeWater?.material;
         const sheepSystem = this.gameState?.optimizedSheepSystem;
         const atmosphereFrame = this.atmosphere?.getFrame?.({ sunBillboard: this._sunBillboard }) ?? null;
+        const treeImpostorRuntimeSamples = Array.isArray(this.terrainBuilder?.trees)
+            ? this.terrainBuilder.trees
+                .map((tree) => tree?.userData?.konveyorNativeTreeImpostor)
+                .filter(Boolean)
+                .slice(0, 12)
+            : [];
         return {
             sceneId: this.currentScene?.id ?? window.__currentSceneId ?? 'unknown',
             renderer: window.__sdsRendererMode?.effective ?? null,
@@ -992,6 +1007,7 @@ class SheepDogSimulation {
             trees: {
                 native: this.terrainBuilder?.konveyorNativeTreeInstancingSummary ?? null,
                 impostorRuntime: this.terrainBuilder?.konveyorNativeTreeInstancingSummary?.impostor ?? null,
+                impostorRuntimeSamples: treeImpostorRuntimeSamples,
                 lodBias: this.terrainBuilder?.konveyorQualityState?.treeLodBias ?? 0,
                 materialSummary: this.terrainBuilder?.konveyorTreeRockMaterialSummary ?? null,
                 groundingSample: this.terrainBuilder?.konveyorTreeGroundingSample ?? [],
@@ -1002,6 +1018,10 @@ class SheepDogSimulation {
                 sunCameraGlint: waterMaterial?.userData?.konveyorWaterSunCameraGlint === true,
                 glintMode: waterMaterial?.userData?.konveyorWaterGlintMode ?? null,
                 glintGain: waterMaterial?.userData?.konveyorWaterGlintGain ?? null,
+                sunColorSource: waterMaterial?.userData?.konveyorWaterSunColorSource ?? null,
+                sunColor: waterMaterial?.userData?.konveyorWaterNodeUniforms?.sunColor?.value?.toArray?.()
+                    ?? waterMaterial?.uniforms?.uSunColor?.value?.toArray?.()
+                    ?? null,
                 sparkleScale: this._animeWater?.qualitySparkleScale ?? 1,
             },
             grass: {
@@ -2011,8 +2031,9 @@ class SheepDogSimulation {
 
         // Cycle 5+: animate water uniforms (uTime drives ripples + foam noise)
         const sunDir = this.atmosphere?.getSunDirection?.();
+        const sunLightColor = this.atmosphere?.sun?.light?.color;
         if (this._animeWater) {
-            this._animeWater.update(performance.now() * 0.001, sunDir);
+            this._animeWater.update(performance.now() * 0.001, sunDir, sunLightColor);
         }
         // Cycle 14 Phase 2: feed sun direction to grass for fake-SSS
         // back-light. Same source as water shader so they agree on time
@@ -2025,7 +2046,6 @@ class SheepDogSimulation {
         // Cycle 17 follow-up: also tint tree-impostor cross-billboards
         // so distant trees follow time-of-day instead of staying frozen
         // at the bake's neutral lighting (Matt's gallery feedback).
-        const sunLightColor = this.atmosphere?.sun?.light?.color;
         if (sunLightColor) {
             this.terrainBuilder?.setRockRimColor?.(sunLightColor);
             // Cycle 20 Phase 2: kiln impostors do per-fragment relighting,
