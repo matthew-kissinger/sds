@@ -6,6 +6,10 @@
 
 Finish the visual follow-through from Cycle 39 and start the Pixel Forge v2 tree-impostor path as a PC lab only. The player-visible target is that the water glint, cloud highlights, and sun disc read from the same atmosphere-provided sun color. The tree target is a gated SDS route for Pixel Forge v2 octahedral sidecars without changing production defaults.
 
+## Post-close correction - 2026-05-27
+
+Cycle 40 shipped the shared sun-color plumbing and a readable small sun disc, but the later WebGPU/WebGL side-by-side review showed the WebGPU art direction was still not accepted: the sun was too tiny/bland, the sky and water were too washed out, and the water lacked the stronger reflected sun path present in the WebGL reference. Treat Cycle 40 as a plumbing and lab-route closeout, not final WebGPU art lock. Cycle 41 owns the painterly parity and polish follow-through in [`docs/cycle-41-plan.md`](../../cycle-41-plan.md).
+
 ## Scope rules
 
 - No `shared/` changes.

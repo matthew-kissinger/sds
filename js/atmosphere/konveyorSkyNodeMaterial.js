@@ -1,17 +1,29 @@
 export function createKonveyorSkyFogNodeMaterial(
-  { MeshBasicNodeMaterial, TSL, side = null },
+  { MeshBasicNodeMaterial, TSL, Vector3, side = null },
   skyFog,
   { name = 'konveyor-node-sky-fog', tuning = {} } = {}
 ) {
-  const { cameraPosition, clamp, dot, float, max, mix, normalize, positionWorld, pow, smoothstep, vec3 } = TSL;
+  const { cameraPosition, clamp, dot, float, max, mix, normalize, positionWorld, pow, smoothstep, uniform, vec3 } = TSL;
+  const vector3 = (value, fallback) => {
+    const source = Array.isArray(value) ? value : fallback;
+    return new Vector3(source[0], source[1], source[2]);
+  };
+  const color3 = (value, fallback) => {
+    const source = Array.isArray(value) ? value : fallback;
+    return new Vector3(
+      rawChannelToLinear(source[0]),
+      rawChannelToLinear(source[1]),
+      rawChannelToLinear(source[2])
+    );
+  };
   const linearColor = (color) => color;
   const skyY = clamp(normalize(positionWorld.sub(cameraPosition)).y, 0.0, 1.0);
   const viewDir = normalize(positionWorld.sub(cameraPosition));
-  const sunDirection = normalize(vec3(...(skyFog.sunDirection ?? [0.42, 0.78, 0.32])));
-  const horizon = vec3(...linearColor(skyFog.horizonColor));
-  const zenith = vec3(...linearColor(skyFog.zenithColor));
-  const sunColor = vec3(...linearColor(skyFog.sunColor));
-  const fogColor = vec3(...linearColor(skyFog.fogColor));
+  const sunDirection = uniform(vector3(skyFog.sunDirection, [0.42, 0.78, 0.32]).normalize());
+  const horizon = uniform(color3(linearColor(skyFog.horizonColor), [0.46, 0.50, 0.55]));
+  const zenith = uniform(color3(linearColor(skyFog.zenithColor), [0.18, 0.28, 0.40]));
+  const sunColor = uniform(color3(linearColor(skyFog.sunColor), [1.0, 0.56, 0.20]));
+  const fogColor = uniform(color3(linearColor(skyFog.fogColor), [0.30, 0.28, 0.28]));
   const lowTint = tuning.lowTint ?? [0.40, 0.66, 0.80];
   const highTint = tuning.highTint ?? [0.39, 0.56, 0.66];
   const lowLift = tuning.lowLift ?? [0.0, 0.0, 0.0];
@@ -45,8 +57,11 @@ export function createKonveyorSkyFogNodeMaterial(
   const aureoleNormalized = clamp(aureole.mul(0.04), 0.0, 1.2);
 
   const fogBand = float(1.0).sub(smoothstep(0.0, 0.38, skyY));
+  const sunMass = smoothstep(0.94, 0.998, cosTheta).mul(tuning.sunMassStrength ?? 0.38);
   const skyColor = mix(lowSky, highSky, vertical)
-    .add(sunColor.mul(aureoleNormalized.mul(tuning.sunGlowStrength ?? 0.12)));
+    .mul(tuning.skyBaseScale ?? 0.62)
+    .add(sunColor.mul(aureoleNormalized.mul((tuning.sunGlowStrength ?? 0.12) * 0.30)))
+    .add(vec3(1.0, 0.68, 0.28).mul(sunMass));
 
   const material = new MeshBasicNodeMaterial();
   material.name = name;
@@ -55,6 +70,13 @@ export function createKonveyorSkyFogNodeMaterial(
   material.depthTest = false;
   material.fog = false;
   material.toneMapped = false;
+  material.userData.konveyorSkyNodeUniforms = {
+    sunDirection,
+    horizon,
+    zenith,
+    sunColor,
+    fogColor,
+  };
   material.userData.konveyorSkyPresetTuning = {
     presetName: skyFog.presetName ?? null,
     lowTint,
@@ -67,23 +89,91 @@ export function createKonveyorSkyFogNodeMaterial(
     sunDiscStrength: 0,
     sunDiscOwner: 'SunBillboard',
     aureoleG,
+    skyBaseScale: tuning.skyBaseScale ?? 0.62,
+    sunMassStrength: tuning.sunMassStrength ?? 0.38,
     ownership: 'sky-aureole-and-horizon-glow',
     fogBandStrength: tuning.fogBandStrength ?? 0.08,
   };
   if (side !== null) {
     material.side = side;
   }
+  material.userData.konveyorSkyMaterialControls = createSkyNodeMaterialControls(material);
   return material;
 }
 
 export function createKonveyorSkyDomeMaterialFactories(webGpuModules, skyFog, tuning = {}) {
   return {
-    createSkyDomeMaterial: () => ({
-      material: createKonveyorSkyFogNodeMaterial(
+    createSkyDomeMaterial: () => {
+      const material = createKonveyorSkyFogNodeMaterial(
         { ...webGpuModules, side: webGpuModules.BackSide },
         skyFog,
         { name: 'konveyor-node-sky-dome', tuning }
-      ),
-    }),
+      );
+      return {
+        material,
+        controls: material.userData.konveyorSkyMaterialControls,
+      };
+    },
   };
+}
+
+function createSkyNodeMaterialControls(material) {
+  const nodes = material.userData.konveyorSkyNodeUniforms;
+  return {
+    nodes,
+    update(state = {}) {
+      copyVec3(nodes.sunDirection?.value, state.sunDirection);
+      nodes.sunDirection?.value?.normalize?.();
+      copyColorVec3(nodes.horizon?.value, state.horizonColor);
+      copyColorVec3(nodes.zenith?.value, state.zenithColor);
+      copyColorVec3(nodes.sunColor?.value, state.sunColor);
+      copyColorVec3(nodes.fogColor?.value, state.fogColor);
+    },
+  };
+}
+
+function copyVec3(target, value) {
+  if (!target || !value) return;
+  if (Array.isArray(value) && value.length >= 3) {
+    target.set(value[0], value[1], value[2]);
+    return;
+  }
+  if (Number.isFinite(value.x) && Number.isFinite(value.y) && Number.isFinite(value.z)) {
+    target.copy?.(value);
+    return;
+  }
+  if (Number.isFinite(value.r) && Number.isFinite(value.g) && Number.isFinite(value.b)) {
+    target.set(value.r, value.g, value.b);
+  }
+}
+
+function copyColorVec3(target, value) {
+  if (!target || !value) return;
+  if (Array.isArray(value) && value.length >= 3) {
+    target.set(
+      rawChannelToLinear(value[0]),
+      rawChannelToLinear(value[1]),
+      rawChannelToLinear(value[2])
+    );
+    return;
+  }
+  if (Number.isFinite(value.x) && Number.isFinite(value.y) && Number.isFinite(value.z)) {
+    target.set(
+      rawChannelToLinear(value.x),
+      rawChannelToLinear(value.y),
+      rawChannelToLinear(value.z)
+    );
+    return;
+  }
+  if (Number.isFinite(value.r) && Number.isFinite(value.g) && Number.isFinite(value.b)) {
+    target.set(
+      rawChannelToLinear(value.r),
+      rawChannelToLinear(value.g),
+      rawChannelToLinear(value.b)
+    );
+  }
+}
+
+function rawChannelToLinear(value) {
+  return Math.pow(Math.max(0, Number(value) || 0), 2.2);
 }

@@ -1,5 +1,5 @@
 export function createKonveyorSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, Color, TSL }, sun = {}) {
-  const { float, length, smoothstep, uniform, uv, vec2, vec3 } = TSL;
+  const { float, length, mix, smoothstep, uniform, uv, vec2, vec3 } = TSL;
   const makeColorUniform = (value, fallback) => (
     typeof Color === 'function'
       ? uniform(new Color(...(value ?? fallback)))
@@ -13,7 +13,8 @@ export function createKonveyorSunBillboardNodeMaterial({ MeshBasicNodeMaterial, 
   const intensity = uniform(sun.intensity ?? 1.0);
   const coreColor = makeColorUniform(sun.coreColor, [1.0, 0.97, 0.88]);
   const coreColorNode = coreColor ?? vec3(...(sun.coreColor ?? [1.0, 0.97, 0.88]));
-  const rgb = coreColorNode.mul(intensity);
+  const visibleCore = mix(vec3(1.0, 0.98, 0.90), coreColorNode, sun.chromaStrength ?? 0.22);
+  const rgb = visibleCore.mul(intensity);
 
   const material = new MeshBasicNodeMaterial();
   material.name = 'konveyor-node-sun-billboard';
@@ -23,7 +24,7 @@ export function createKonveyorSunBillboardNodeMaterial({ MeshBasicNodeMaterial, 
   material.depthWrite = false;
   material.depthTest = sun.depthTest ?? true;
   material.blending = sun.blending ?? AdditiveBlending;
-  material.toneMapped = true;
+  material.toneMapped = false;
   material.userData.konveyorIntensityUniform = intensity;
   material.userData.konveyorCoreColorUniform = coreColor;
   material.userData.konveyorSunBillboardOwnership = {

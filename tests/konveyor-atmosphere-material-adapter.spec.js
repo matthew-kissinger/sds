@@ -119,6 +119,10 @@ describe('konveyor atmosphere material adapter', () => {
     expect(material.isNodeMaterial).toBe(true);
     expect(material.depthWrite).toBe(false);
     expect(material.depthTest).toBe(false);
+    expect(material.userData.konveyorSkyMaterialControls?.update).toBeInstanceOf(Function);
+    expect(material.userData.konveyorSkyNodeUniforms.sunDirection.value.toArray()).toEqual(
+      new THREE.Vector3(...skyFog.sunDirection).normalize().toArray()
+    );
     expect(material.userData.konveyorSkyPresetTuning).toMatchObject({
       sunGlowStrength: 0.12,
       sunDiscStrength: 0,
@@ -139,6 +143,10 @@ describe('konveyor atmosphere material adapter', () => {
       expect(sky.material.name).toBe('konveyor-node-sky-dome');
       expect(sky.material.isNodeMaterial).toBe(true);
       expect(sky.material.side).toBe(WEBGPU.BackSide);
+      expect(sky.materialControls).toBe(sky.material.userData.konveyorSkyMaterialControls);
+      const sunDirection = new THREE.Vector3(0, 0.15, -1).normalize();
+      sky.update(0, sunDirection);
+      expect(sky.materialControls.nodes.sunDirection.value.toArray()).toEqual(sunDirection.toArray());
       expect(sky.getMesh().material).toBe(sky.material);
     } finally {
       sky.dispose();

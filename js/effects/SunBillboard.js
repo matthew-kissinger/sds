@@ -14,7 +14,7 @@ import { createKonveyorEffectMaterial } from './konveyorEffectMaterialAdapter.js
 
 const SUN_DISTANCE = 3000;
 const SUN_QUAD_SIZE = 360;
-const KONVEYOR_SUN_QUAD_SIZE = 520;
+const KONVEYOR_SUN_QUAD_SIZE = 420;
 const SUN_CORE_RADIUS = 0.065;
 const SUN_CORE_FEATHER = 0.13;
 

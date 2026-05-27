@@ -84,9 +84,12 @@ export class HosekWilkieSky {
     /** @private */
     this.scratchColor = new THREE.Color();
     /** @private */
+    this.scratchFogColor = new THREE.Color();
+    /** @private */
     this.lastSunDir = new THREE.Vector3();
 
     this.material = null;
+    this.materialControls = null;
     this.geometry = null;
     this.mesh = null;
 
@@ -124,6 +127,12 @@ export class HosekWilkieSky {
             context: { uniforms: this.uniforms },
           });
       this.material = materialResult?.material ?? materialResult ?? createDefaultMaterial();
+      this.materialControls = materialResult?.controls
+        ?? this.material?.userData?.konveyorSkyMaterialControls
+        ?? null;
+      if (this.materialControls) {
+        this.material.userData.konveyorSkyMaterialControls = this.materialControls;
+      }
 
       this.geometry = new THREE.SphereGeometry(
         DOME_RADIUS,
@@ -164,6 +173,7 @@ export class HosekWilkieSky {
     }
 
     this.lutDirty = true;
+    this.syncKonveyorMaterial();
   }
 
   /**
@@ -202,6 +212,7 @@ export class HosekWilkieSky {
         this.uniforms.uCloudTimeSeconds.value = this.cloudTimeSeconds;
       }
     }
+    this.syncKonveyorMaterial();
   }
 
   /** @param {number} value */
@@ -210,6 +221,7 @@ export class HosekWilkieSky {
     if (this.material) {
       this.uniforms.uCloudCoverage.value = this.cloudCoverage;
     }
+    this.syncKonveyorMaterial();
   }
 
   /** @param {number} metersPerFeature */
@@ -221,6 +233,7 @@ export class HosekWilkieSky {
     if (this.material) {
       this.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
     }
+    this.syncKonveyorMaterial();
   }
 
   resetCloudFeatureScale() {
@@ -228,6 +241,7 @@ export class HosekWilkieSky {
     if (this.material) {
       this.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
     }
+    this.syncKonveyorMaterial();
   }
 
   /** @returns {number} */
@@ -265,6 +279,7 @@ export class HosekWilkieSky {
       this.groundAlbedo.copy(t.groundAlbedo);
     }
     this.lutDirty = true;
+    this.syncKonveyorMaterial();
   }
 
   /**
@@ -588,5 +603,19 @@ export class HosekWilkieSky {
       Math.max(0, Math.min(8, g2c)),
       Math.max(0, Math.min(8, b))
     );
+  }
+
+  /** @private */
+  syncKonveyorMaterial() {
+    if (!this.materialControls?.update) return;
+    this.ensureLUT();
+    this.scratchFogColor.copy(this.horizonColor).multiplyScalar(0.82);
+    this.materialControls.update({
+      sunDirection: this.sunDirection,
+      horizonColor: this.horizonColor,
+      zenithColor: this.zenithColor,
+      sunColor: this.sunColor,
+      fogColor: this.scratchFogColor,
+    });
   }
 }

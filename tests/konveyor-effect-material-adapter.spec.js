@@ -289,7 +289,7 @@ describe('konveyor effect material adapter', () => {
     expect(updates[0].coreColor).toBeInstanceOf(THREE.Color);
     expect(updates[0].haloColor).toBeUndefined();
     expect(sun.getDiagnostics()).toMatchObject({
-      size: 520,
+      size: 420,
       distance: 3000,
       intensity: 2.2,
       materialName: 'konveyor-sun',

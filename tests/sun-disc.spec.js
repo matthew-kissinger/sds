@@ -31,6 +31,7 @@ describe('cycle-39 sun disc — renderer-path divergence sentinel', () => {
     expect(material.blending).toBe(AdditiveBlending);
     expect(material.depthWrite).toBe(false);
     expect(material.transparent).toBe(true);
+    expect(material.toneMapped).toBe(false);
     expect(material.colorNode).toBeTruthy();
     expect(material.opacityNode).toBeTruthy();
 

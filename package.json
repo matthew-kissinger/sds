@@ -1,6 +1,6 @@
 {
   "name": "sheep-dog-sim",
-  "version": "2.1.8",
+  "version": "2.1.9",
   "description": "An interactive herding game where players control a sheepdog to guide sheep into a pen using boid flocking algorithms",
   "type": "module",
   "main": "index.html",
@@ -53,6 +53,7 @@
     "native:check": "npm run build:native && npm run native:preflight",
     "validation:lod": "node tools/validation/lod-compare.mjs",
     "validation:screenshots": "node tools/validation/screenshot-golden.mjs",
+    "validation:cycle41-art-lock": "node tools/cycle41-art-lock.mjs",
     "validation:latency": "node tools/validation/input-latency.mjs",
     "validation:latency:mobile": "node tools/validation/input-latency.mjs --profile=mobile",
     "validation:perf": "node tools/validation/frame-time-histogram.mjs",

@@ -36,9 +36,9 @@ const SKY_FOG_PRESET_TUNING = Object.freeze({
         // proper terrain occlusion matters (sun behind a hill is OCCLUDED).
         depthTest: true,
         intensity: 0.98,
-        coreRadius: 0.065,
-        coreFeather: 0.13,
-        coreColor: [1.0, 0.88, 0.54],
+        coreRadius: 0.072,
+        coreFeather: 0.17,
+        coreColor: [1.0, 0.90, 0.62],
       },
     },
     treeLeaf: {
@@ -60,7 +60,7 @@ const SKY_FOG_PRESET_TUNING = Object.freeze({
       horizonFogStrength: 0.12,
     },
     water: {
-      colorScale: 0.66,
+      colorScale: 0.46,
       foamScale: 0.74,
       sparkleScale: 0.72,
     },
@@ -81,9 +81,9 @@ const SKY_FOG_PRESET_TUNING = Object.freeze({
       sun: {
         depthTest: true,
         intensity: 1.0,
-        coreRadius: 0.065,
-        coreFeather: 0.13,
-        coreColor: [1.0, 0.86, 0.50],
+        coreRadius: 0.070,
+        coreFeather: 0.165,
+        coreColor: [1.0, 0.88, 0.58],
       },
     },
     treeLeaf: {
@@ -105,8 +105,8 @@ const SKY_FOG_PRESET_TUNING = Object.freeze({
       horizonFogStrength: 0.10,
     },
     water: {
-      colorScale: 0.92,
-      foamScale: 0.88,
+      colorScale: 0.50,
+      foamScale: 0.76,
       sparkleScale: 0.85,
     },
   },

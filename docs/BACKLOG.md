@@ -4,9 +4,40 @@
 
 ## Recently Completed
 
+### Cycle 41 - `webgpu-painterly-parity-and-polish` (local acceptance complete 2026-05-27, v2.1.9 release prep)
+
+Plan recorded at [`docs/cycle-41-plan.md`](cycle-41-plan.md) until the `v2.1.9` release is committed, tagged, pushed, deployed, and verified live. Cycle 41 finished the WebGPU painterly parity follow-up opened by the WebGL/WebGPU side-by-side review: the WebGPU sun now reads as a warm visible mass instead of a tiny pale dot, low-sun water views have an intentional reflected sun path, and sky/water tuning is less washed out while staying inside the renderer-only scope.
+
+**Closeout outcomes:**
+
+- **Renderer-only WebGPU sun/sky/water polish.** The patch stays out of `shared/`, Worker, D1, migrations, production tree defaults, and sim-baseline goldens. It retunes the WebGPU sun billboard/material, feeds live Hosek-Wilkie colors through the WebGPU sky node material, preserves partial `Atmosphere.setSun()` updates, and adds a broad low-sun water glint path.
+- **Repeatable art-lock proof.** `npm run validation:cycle41-art-lock` captures paired WebGL/WebGPU screenshots for Field, Rolling Hills, and Open Country across sun elevations `0.20`, `0.35`, `0.50`, and `0.75`, plus low-sun water-facing proofs. Artifacts are written under `cycle41-validation/runtime/art-lock-matrix.json`, `cycle41-validation/screenshots/art-lock-matrix/`, and `cycle41-validation/screenshots/cycle41-webgl-webgpu-contact-sheet.png`.
+- **E2E gate clarified.** The release-safe local browser lane is `npx playwright test --project=chromium --grep-invert @local-only --reporter=line`; full all-project `npm run test:e2e` remains broader than this release gate and can include slow local-only specs.
+- **Release prep.** `CHANGELOG.md`, `package.json`, and `package-lock.json` are prepared for `2.1.9`, but live release proof is intentionally not claimed until the git/deploy actions happen.
+
+**Validation gates run before local acceptance (2026-05-27):**
+
+- `npm test` - 54 passed files, 1 skipped; 498 specs passed, 7 skipped.
+- `npm run lint` - clean.
+- `npm run build` - clean with existing Vite large-chunk/dynamic-import warnings; main bundle ratchet accepted at `593 KiB`.
+- `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --reporter=line` - 2 passed.
+- `npx playwright test --project=chromium --grep-invert @local-only --reporter=line` - 6 passed.
+- `npm run validation:cycle41-art-lock` - passed.
+- Cleanup proof after browser probes: no listeners on ports `3000`, `4173`, or `8787`; no localhost Chrome tabs for ports `3000` or `4173`.
+
+**Carryover:**
+
+- Commit, tag, push, deploy, and live-verify `v2.1.9` if the contact sheet is accepted for release.
+- Mobile/iOS water and WebGPU proof remains deferred.
+- Octahedral tree impostors remain lab-only until a separate device-budget and visual-quality proof promotes them.
+- Open Country paired two-client playtest remains deferred.
+- Broader WebGPU terrain/foliage material parity with WebGL remains a separate future polish item.
+
 ### Cycle 40 - `sun-coherence-octahedral-tree-lab` (closed 2026-05-22, v2.1.8 release)
 
-Plan recorded at [`docs/cycle-40-plan.md`](cycle-40-plan.md). Cycle 40 finished the Cycle 39 visual follow-through and staged the first SDS lab route for Pixel Forge v2 octahedral tree sidecars without changing production defaults.
+Plan recorded at [`docs/archive/cycles/cycle-40-plan.md`](archive/cycles/cycle-40-plan.md). Cycle 40 finished the Cycle 39 visual follow-through and staged the first SDS lab route for Pixel Forge v2 octahedral tree sidecars without changing production defaults.
+
+**Post-close correction (2026-05-27):** Cycle 40 should not be read as final WebGPU art lock. A later WebGPU/WebGL side-by-side review found that WebGPU still had a tiny/bland sun, washed-out sky/water, and insufficient reflected water glint compared with the WebGL reference. Cycle 41 reopens that work as painterly parity/polish in [`docs/cycle-41-plan.md`](cycle-41-plan.md).
 
 **Closeout outcomes:**
 
@@ -34,7 +65,7 @@ Plan recorded at [`docs/cycle-40-plan.md`](cycle-40-plan.md). Cycle 40 finished 
 
 ### Cycle 39 - `sun-scorched-earth` (closed 2026-05-22, rolled into v2.1.8 release)
 
-Plan remains at [`docs/cycle-39-plan.md`](cycle-39-plan.md). Cycle 39 ripped out the radial-splotch sun and rebuilt the sun/sky relationship on physical principles: the billboard owns only the visible disc, the sky shader owns the broad Mie aureole and horizon glow, bloom paints the perceived glow, and disc/sky chromaticity come from one source.
+Plan remains at [`docs/archive/cycles/cycle-39-plan.md`](archive/cycles/cycle-39-plan.md). Cycle 39 ripped out the radial-splotch sun and rebuilt the sun/sky relationship on physical principles: the billboard owns only the visible disc, the sky shader owns the broad Mie aureole and horizon glow, bloom paints the perceived glow, and disc/sky chromaticity come from one source.
 
 **Closeout outcomes:**
 

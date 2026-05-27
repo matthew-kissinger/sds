@@ -4,6 +4,52 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.9] - 2026-05-27 (Cycle 41 - WebGPU painterly parity)
+
+Patch release prep for the WebGPU sun, sky, and water art-direction follow-up.
+
+### Added
+
+- Repeatable Cycle 41 WebGL/WebGPU art-lock matrix via
+  `npm run validation:cycle41-art-lock`.
+- Local contact-sheet proof at
+  `cycle41-validation/screenshots/cycle41-webgl-webgpu-contact-sheet.png`.
+
+### Changed
+
+- WebGPU sun billboard now reads as a larger warm sun mass without the
+  previous tiny pale-dot presentation.
+- WebGPU sky material now receives live Hosek-Wilkie sky colors through node
+  uniforms and uses a darker, less washed-out painterly response.
+- WebGPU water now uses a broad sun-path glint plus ripple glint, with
+  linearized sun and palette colors.
+- `Atmosphere.setSun()` now preserves the existing axis when callers update
+  only elevation or only azimuth.
+- Main bundle characterization ratchet accepted at `593 KiB` for the added
+  renderer material controls and art-lock support.
+
+### Validation
+
+- Cycle 41 WebGL/WebGPU art-lock matrix:
+  `cycle41-validation/runtime/art-lock-matrix.json` (`ok=true`) and the
+  contact sheet above.
+- `npm test` - 54 passed files, 1 skipped; 498 passed specs, 7 skipped.
+- `npm run lint` - clean.
+- `npm run build` - clean with existing Vite large-chunk/dynamic-import
+  warnings.
+- `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --reporter=line`
+  - 2 passed.
+- `npx playwright test --project=chromium --grep-invert @local-only --reporter=line`
+  - 6 passed.
+
+### Notes
+
+- Full all-project `npm run test:e2e` is not the Cycle 41 release gate; it
+  includes local-only slow specs. Use the grep-inverted Chromium command above
+  for release-safe e2e.
+- Mobile/iOS water proof, octahedral tree production promotion, and Open
+  Country paired two-client playtest remain deferred.
+
 ## [2.1.8] - 2026-05-22 (Cycles 39-40 - sun coherence and tree lab)
 
 Patch release for the sun/sky rebuild follow-through and a PC-only lab route

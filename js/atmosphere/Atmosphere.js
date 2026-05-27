@@ -281,8 +281,13 @@ export class Atmosphere {
    * @param {{ elevation: number, azimuth: number }} angles
    */
   setSun({ elevation, azimuth }) {
-    if (!Number.isFinite(elevation) || !Number.isFinite(azimuth)) return;
-    this.sun.setAngles(elevation, azimuth);
+    const nextElevation = Number.isFinite(elevation)
+      ? elevation
+      : this.sun.getElevation();
+    const nextAzimuth = Number.isFinite(azimuth)
+      ? azimuth
+      : this.sun.getAzimuth();
+    this.sun.setAngles(nextElevation, nextAzimuth);
   }
 
   /**

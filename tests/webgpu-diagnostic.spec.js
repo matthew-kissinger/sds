@@ -169,6 +169,7 @@ describe('webgpu diagnostic sky fog state', () => {
       AdditiveBlending: WEBGPU.AdditiveBlending,
       BackSide: WEBGPU.BackSide,
       DoubleSide: WEBGPU.DoubleSide,
+      Vector3: THREE.Vector3,
       TSL: WEBGPU.TSL,
     };
     const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, { skyFog });

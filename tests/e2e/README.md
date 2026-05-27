@@ -19,11 +19,11 @@ The `npx playwright install chromium` step downloads the Chromium binary
 into the per-user Playwright cache. On Windows that lives at
 `%LOCALAPPDATA%\ms-playwright\`. It is not committed.
 
-Server-side deps also need to be present so `npm run dev:full` can start
-the Geckos server alongside Vite:
+Worker-side deps also need to be present so `npm run dev` can start
+Wrangler alongside Vite:
 
 ```bash
-cd server && npm install && cd ..
+cd worker && npm install && cd ..
 ```
 
 ## Running
@@ -34,10 +34,20 @@ npm run test:e2e:headed    # run with a visible browser
 npm run test:e2e:ui        # Playwright UI mode for interactive debugging
 ```
 
-The `webServer` block in `playwright.config.ts` will boot
-`npm run dev:full` if nothing is listening on port 3000 yet. If you
-already have `npm run dev:full` running in another terminal, Playwright
-reuses it (`reuseExistingServer: true`).
+The `webServer` block in `playwright.config.ts` will boot `npm run dev`
+if nothing is listening on port 3000 yet. If you already have `npm run dev`
+running in another terminal, Playwright reuses it (`reuseExistingServer: true`).
+
+Release validation should use the Chromium smoke lane and exclude local-only
+workstation probes:
+
+```bash
+npx playwright test --project=chromium --grep-invert @local-only --reporter=line
+```
+
+`npm run test:e2e` runs the broader local suite across configured projects and
+can include slow `@local-only` specs; do not use a timeout there as proof that
+release smoke failed.
 
 ## Debugging
 
@@ -74,7 +84,7 @@ Both directories are in `.gitignore`.
   tab. Playwright's `webServer` runs with stdout/stderr piped, so the
   popped tab is harmless (it goes to the default browser, not to the
   Playwright-controlled Chromium instance).
-- If port 3000 or 9208 is occupied by a previous aborted run, kill the
+- If port 3000 or 8787 is occupied by a previous aborted run, kill the
   process (`netstat -ano | findstr :3000` then `taskkill /PID <pid> /F`)
   before retrying.
 
@@ -139,7 +149,7 @@ Harness is scaffolded and attempts a real end-to-end run. See the parent
 PR description for the most recent run output. If you see unexpected
 breakage on a fresh clone, the most likely causes in order are:
 
-1. `server/node_modules` missing - run `cd server && npm install`.
+1. `worker/node_modules` missing - run `cd worker && npm install`.
 2. Chromium not installed - run `npx playwright install chromium`.
 3. Port 3000 already in use - kill the occupying process.
 4. Vite `server.open: true` popping a browser on your default monitor -

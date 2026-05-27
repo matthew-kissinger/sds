@@ -93,6 +93,7 @@ describe('konveyor water material adapter', () => {
             expect(contexts[0].foamColor.getHex()).toBe(0xeaf6ff);
             expect(contexts[0].rippleStrength).toBe(1);
             expect(contexts[0].sparkleStrength).toBe(0.7);
+            expect(contexts[0].sunSpecularIntensity).toBe(0.6);
             expect(contexts[0].sunColor.toArray()).toEqual([1, 1, 1]);
             expect(contexts[0].sunColorSource).toBe('skyFog.sunColor');
         } finally {
@@ -131,15 +132,22 @@ describe('konveyor water material adapter', () => {
             expect(material.depthWrite).toBe(true);
             expect(material.userData.konveyorWaterWorldSpaceHeightfield).toBe(true);
             expect(material.userData.konveyorWaterSunCameraGlint).toBe(true);
-            expect(material.userData.konveyorWaterGlintMode).toBe('ripple-normal-sun-camera-v2');
-            expect(material.userData.konveyorWaterGlintGain).toBe(0.16);
+            expect(material.userData.konveyorWaterGlintMode).toBe('flat-normal-broad-sun-path-plus-ripple-v3');
+            expect(material.userData.konveyorWaterGlintGain).toBe(0.70);
+            expect(material.userData.konveyorWaterRippleGlintGain).toBe(0.22);
+            expect(material.userData.konveyorWaterSunSpecularIntensity).toBe(0.6);
             expect(material.userData.konveyorWaterSunColorSource).toBe('skyFog.sunColor');
             expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()).toEqual([1, 1, 1]);
+            expect(material.userData.konveyorWaterNodeUniforms.sunSpecularIntensity.value).toBe(0.6);
             expect(material.userData.konveyorWaterMaterialControls?.update).toBeInstanceOf(Function);
             material.userData.konveyorWaterMaterialControls.update({
                 sunColor: new THREE.Color(1, 0.5, 0.25),
+                sunSpecularIntensity: 0.8,
             });
-            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()).toEqual([1, 0.5, 0.25]);
+            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()[0]).toBeCloseTo(1);
+            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()[1]).toBeCloseTo(Math.pow(0.5, 2.2));
+            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()[2]).toBeCloseTo(Math.pow(0.25, 2.2));
+            expect(material.userData.konveyorWaterNodeUniforms.sunSpecularIntensity.value).toBe(0.8);
             expect(material.userData.konveyorWaterMaterialSummary).toMatchObject({
                 kind: 'anime-water',
                 applied: true,
