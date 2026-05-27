@@ -1,66 +1,74 @@
-# Next Session - Cycle 41 (`webgpu-painterly-parity-and-polish`)
+# Next Session - Cycle 42 Draft (`webgpu-scene-material-parity-and-device-proof`)
 
 > **Updated:** 2026-05-27
-> **For:** Cycle 41
-> **Pickup priority:** Cycle 41 is locally implemented and validated. Review the final contact sheet, then either commit/tag/deploy `v2.1.9` or start the next cycle from the deferred carryovers.
+> **For:** Cycle 42 planning
+> **Pickup priority:** Cycle 42 is drafted but not approved. Review [`docs/cycle-42-plan.md`](docs/cycle-42-plan.md), answer the approval questions, then start implementation only after Matt approves or edits the plan.
 
-## Cold-start Orientation
+## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-41-plan.md`](docs/cycle-41-plan.md). Closed-cycle context for the prior sun/tree work is in [`docs/archive/cycles/cycle-40-plan.md`](docs/archive/cycles/cycle-40-plan.md) and [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-42-plan.md`](docs/cycle-42-plan.md). Closed-cycle context is in [`docs/archive/cycles/cycle-41-plan.md`](docs/archive/cycles/cycle-41-plan.md), [`docs/archive/cycles/cycle-40-plan.md`](docs/archive/cycles/cycle-40-plan.md), and [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Current State
 
-Cycle 40 shipped as v2.1.8, but the 2026-05-27 visual review showed the WebGPU path still missed the intended WebGL art direction: the sun read too tiny/bland, the sky was too bright, the water lacked a strong reflected sun path, and the overall scene was not zen/painterly enough.
+Cycle 41 is closed and shipped:
 
-The working tree now contains a renderer-only Cycle 41 patch prepared as `v2.1.9` that:
+- Commit: `c1fd5c0` (`feat(cycle-41): ship webgpu painterly parity`).
+- Tag: `v2.1.9`.
+- Deploy run: `26541935987` passed.
+- Live HTML: `https://sheepdogsim.com/` returned HTTP 200 and referenced `assets/main-Cm7rDWr0.js`.
+- Live asset: `https://sheepdogsim.com/assets/main-Cm7rDWr0.js` returned HTTP 200.
 
-- Enlarges the WebGPU sun disc/mass and whitens the core so it reads closer to the WebGL reference.
-- Makes the WebGPU sun billboard untone-mapped.
-- Feeds live Hosek-Wilkie sky colors into the WebGPU sky node material.
-- Retunes the WebGPU sky and water response so the image is less pastel/washed out without returning to a dead-black dome.
-- Adds a broad flat-normal water glint path plus ripple glint.
-- Fixes `Atmosphere.setSun()` partial updates so callers can change elevation or azimuth independently.
-- Adds `npm run validation:cycle41-art-lock`, which captures paired WebGL/WebGPU screenshots and a contact sheet.
+Cycle 41 fixed the immediate WebGPU sun/sky/water art complaint. The accepted local proof remains:
 
-No `shared/`, Worker, D1, migration, or sim-baseline files are touched.
+- `cycle41-validation/runtime/art-lock-matrix.json`
+- `cycle41-validation/screenshots/cycle41-webgl-webgpu-contact-sheet.png`
+- `cycle41-validation/screenshots/art-lock-matrix/`
 
-## Validation State
+Those proof artifacts are local and gitignored. They are evidence, not release assets.
 
-Current local gates for the Cycle 41 patch:
+## Cycle 42 Draft
 
-- `npm run validation:cycle41-art-lock` passed and wrote:
-  - `cycle41-validation/runtime/art-lock-matrix.json`
-  - `cycle41-validation/screenshots/cycle41-webgl-webgpu-contact-sheet.png`
-  - `cycle41-validation/screenshots/art-lock-matrix/`
-- `npm test` passed: 54 files, 1 skipped; 498 specs passed, 7 skipped.
-- `npm run lint` passed (`eslint shared/`).
-- `npm run build` passed with the existing Vite chunk-size/dynamic-import warnings; main bundle ratchet accepted at `593 KiB`.
-- `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --reporter=line` passed: 2 tests.
-- `npx playwright test --project=chromium --grep-invert @local-only --reporter=line` passed: 6 tests.
-- Cleanup proof after browser probes: no listeners on ports `3000`, `4173`, or `8787`; no localhost Chrome tabs for ports `3000` or `4173`.
+The proposed Cycle 42 scope is WebGPU scene material parity and device proof. It should not start until approved.
 
-Full all-project `npm run test:e2e` is not the Cycle 41 release gate because it includes slow local-only suites; keep using the grep-inverted Chromium release lane above unless a later cycle reworks the e2e project split.
+The draft promotes these carryovers:
 
-## Active Carryovers
+- Broader WebGPU terrain, grass, foliage, sheep, and dog material parity against the WebGL style reference.
+- Mobile/BrowserStack/iOS water proof as available.
+- Octahedral tree lab route decision, without production promotion unless proof supports it.
+- Open Country paired two-client playtest as a focused gameplay regression surface.
+- Dependabot moderate advisory triage as release hygiene, not as a visual-scope blocker.
 
-- Commit, tag, push, and deploy `v2.1.9` if the final contact sheet is accepted for release.
-- Keep octahedral tree impostors lab-only until device budget and visual quality are proven.
-- Mobile/iOS water and WebGPU proof remains deferred until explicitly picked up.
-- Open Country paired two-client playtest remains deferred.
-- Broader WebGPU terrain/foliage parity with WebGL material contrast remains a separate future polish item.
+## Last Known Validation
+
+Local Cycle 41 validation before release:
+
+- `npm test` - 54 files passed, 1 skipped; 498 specs passed, 7 skipped.
+- `npm run lint` - clean.
+- `npm run build` - passed with existing Vite large-chunk/dynamic-import warnings; main bundle ratchet accepted at `593 KiB`.
+- `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --reporter=line` - 2 passed.
+- `npx playwright test --project=chromium --grep-invert @local-only --reporter=line` - 6 passed.
+- `npm run validation:cycle41-art-lock` - passed.
+- Cleanup proof after browser probes: no listeners on ports `3000`, `4173`, or `8787`; no localhost Chrome/Edge tabs for ports `3000` or `4173`.
+
+Push-triggered CI/deploy after commit `c1fd5c0`:
+
+- `deploy.yml` run `26541935987` - success.
+- Jobs passed: Test, E2E (Chromium), Deploy Pages, Deploy Worker.
 
 ## Hard Stops
 
+- Do not implement Cycle 42 until Matt approves or edits [`docs/cycle-42-plan.md`](docs/cycle-42-plan.md).
 - No `shared/` changes without explicit cycle-plan authorization and sim-baseline acceptance.
-- No Worker, D1, migration, or production tree-default changes in this visual cycle.
-- Do not claim `v2.1.9` is live until commit/tag/push/deploy/live verification is complete.
-- Do not use full all-project `npm run test:e2e` timeout language as release failure without naming the specific slow/failing spec; the release-safe Chromium lane is documented in [`tests/e2e/README.md`](tests/e2e/README.md).
+- No Worker, D1, or migration changes for visual material parity.
+- Do not promote octahedral tree impostors to production defaults without device-budget and visual-quality proof.
+- Do not claim mobile/iOS proof from desktop-only captures.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-41-plan.md`](docs/cycle-41-plan.md) |
+| Draft cycle | [`docs/cycle-42-plan.md`](docs/cycle-42-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-41-plan.md`](docs/archive/cycles/cycle-41-plan.md) |
 | Prior sun/tree closeout | [`docs/archive/cycles/cycle-40-plan.md`](docs/archive/cycles/cycle-40-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
@@ -72,16 +80,16 @@ Full all-project `npm run test:e2e` is not the Cycle 41 release gate because it 
 | Claude overlay | [`CLAUDE.md`](CLAUDE.md) |
 | NEXT_SESSION contract | [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md) |
 
-## Running Locally
+## Useful Commands
 
 ```bash
 npm run dev
 npm test
 npm run lint
 npm run build
-npm run validation:cycle41-art-lock
 npx playwright test tests/e2e/smoke.spec.ts --project=chromium
 npx playwright test --project=chromium --grep-invert @local-only --reporter=line
+npm run validation:cycle41-art-lock
 ```
 
 Useful visual-review params: `?scene=field|rolling-hills|open-country`, `?renderer=webgpu`, `?renderer=webgl`, `?autostart=1`, `?mode=classic`, `?sun=0.20|0.35|0.50|0.75`, `?ui=off`, `?tonemap=aces|neutral|linear|none`.

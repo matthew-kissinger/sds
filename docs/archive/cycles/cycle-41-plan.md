@@ -1,14 +1,14 @@
 # Cycle 41 - WebGPU Painterly Parity and Polish
 
-> Drafted 2026-05-27 after the WebGPU sun/water visual review. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
+> Drafted 2026-05-27 after the WebGPU sun/water visual review. Closed and archived 2026-05-27 as `v2.1.9`.
 
 ## Goal
 
 Make the WebGPU renderer read like the intended Sheep Dog Sim art direction, not just a technically functional renderer path. The user-visible target is a calmer, warmer, painterly scene closer to the WebGL reference: a readable warm sun mass, a convincing water reflection path, less washed-out sky/water color, and a stable visual language across Field, Rolling Hills, and Open Country.
 
-## Current Working-Tree State
+## Closeout State
 
-Cycle 41 is locally implemented and validated as a renderer-only patch:
+Cycle 41 shipped as a renderer-only patch in commit `c1fd5c0` with tag `v2.1.9`:
 
 - WebGPU sun billboard is larger, warmer, whiter at the core, and untone-mapped.
 - WebGPU sky node material receives live Hosek-Wilkie sun/sky/fog colors.
@@ -17,7 +17,7 @@ Cycle 41 is locally implemented and validated as a renderer-only patch:
 - `Atmosphere.setSun()` now preserves the existing axis when callers update only elevation or only azimuth.
 - `npm run validation:cycle41-art-lock` captures the WebGL/WebGPU review matrix and contact sheet.
 - Tests cover the new sky controls, water glint metadata, linearized sun-color updates, and sun billboard tone-mapping contract.
-- Version/changelog prep is staged for `2.1.9`; commit, tag, push, and deploy proof are still separate git/release actions.
+- Deploy run `26541935987` passed. Live HTML serves `assets/main-Cm7rDWr0.js`, and the direct asset URL returns HTTP 200.
 
 No `shared/`, Worker, D1, migration, or sim-baseline files are touched.
 
@@ -123,7 +123,6 @@ This phase decides what stays in visual polish and what becomes a separate techn
 
 - No `shared/` edits without explicit authorization and sim-baseline acceptance.
 - No Worker, D1, migration, or production tree-default changes.
-- No deployed-release claim until the patch is committed, tagged, pushed, deployed, and verified live.
 - Do not mark this cycle complete from unit tests alone; visual acceptance is part of the goal.
 
 ## Success Criteria
@@ -138,9 +137,9 @@ This phase decides what stays in visual polish and what becomes a separate techn
 
 ## References
 
-- [`../NEXT_SESSION.md`](../NEXT_SESSION.md) - current pickup state
-- [`archive/cycles/cycle-40-plan.md`](archive/cycles/cycle-40-plan.md) - prior sun/water/cloud and octahedral tree lab closeout
-- [`BACKLOG.md`](BACKLOG.md) - closed cycles and deferred work
-- [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) - durable frozen files
-- [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) - durable hard stops
-- [`archive/research/sun-sky-atmosphere-perf-spike-2026-05-16.md`](archive/research/sun-sky-atmosphere-perf-spike-2026-05-16.md) - atmosphere ownership research
+- [`../../../NEXT_SESSION.md`](../../../NEXT_SESSION.md) - current pickup state
+- [`cycle-40-plan.md`](cycle-40-plan.md) - prior sun/water/cloud and octahedral tree lab closeout
+- [`../../BACKLOG.md`](../../BACKLOG.md) - closed cycles and deferred work
+- [`../../INTERFACE_FENCE.md`](../../INTERFACE_FENCE.md) - durable frozen files
+- [`../../EMERGENCY_STOPS.md`](../../EMERGENCY_STOPS.md) - durable hard stops
+- [`../research/sun-sky-atmosphere-perf-spike-2026-05-16.md`](../research/sun-sky-atmosphere-perf-spike-2026-05-16.md) - atmosphere ownership research

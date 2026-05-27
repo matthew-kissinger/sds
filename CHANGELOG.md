@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [2.1.9] - 2026-05-27 (Cycle 41 - WebGPU painterly parity)
 
-Patch release prep for the WebGPU sun, sky, and water art-direction follow-up.
+Patch release for the WebGPU sun, sky, and water art-direction follow-up.
 
 ### Added
 
