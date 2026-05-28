@@ -4,7 +4,7 @@
 
 ## Goal
 
-(Needs a one-paragraph goal before `/cycle-start`.) This is a consolidation cycle: gather the loose ends carried across Cycles 40-43 and anything else worth clearing before a full release, then ship a coherent slice of them. The candidate scope below is a triage list, **not** a ready single-cycle plan. At `/cycle-start`, shape it into one coherent goal and **≤ 8 phases**. The candidate set is larger than one cycle and mixes autonomous and paired/real-device work, so expect to either (a) pick one autonomous theme and defer the rest, or (b) split the paired real-device proofs into their own paired-track cycle. Do not author all of the buckets below as phases of a single cycle.
+Cycle 44 is an autonomous hygiene + cleanup sweep. It clears the dependency/security and build-bloat carryover that has accrued since Cycle 40 and finishes two long-tail code/doc cleanups, without touching the deterministic sim, the scene schema, or player-visible behavior. Concretely: resolve the moderate `uuid` Dependabot advisory (dev-tooling-only, transitive through `browserstack-node-sdk`, never in `dist/`); bring the main bundle back under its accepted ratchet or re-baseline that ratchet with a written rationale; dedup the triplicated `pointToSegmentDistance` / `isPointInPolygon` helpers onto the canonical [`js/gamestate/polygonSpawn.js`](../js/gamestate/polygonSpawn.js); and give the four undocumented Cycle 5 primitives first-class [`ARCHITECTURE.md`](../ARCHITECTURE.md) entries. The paired taste / real-device / playtest buckets (C, D, E below) are deferred to a separate paired-track cycle, since they cannot ship without Matt at the keyboard. No version bump; this cycle ships no player-visible change.
 
 ## How to read this plan
 
@@ -41,9 +41,9 @@ Grouped by theme and execution mode. Mode matters: autonomous buckets can ship w
 - Cross-module polygon-spawn dedup: [`js/OptimizedSheep.js`](../js/OptimizedSheep.js), [`js/SandboxConfig.js`](../js/SandboxConfig.js), and [`js/StructureBuilder.js`](../js/StructureBuilder.js) each keep their own `pointToSegmentDistance` / `isPointInPolygon` copies. Cycle 29 B2 extracted the canonical pair to [`js/gamestate/polygonSpawn.js`](../js/gamestate/polygonSpawn.js) but only repointed GameState. Note: `OptimizedSheep.js` is cohesive-by-design (see [`DECISIONS.md`](../DECISIONS.md)) so dedup there means importing the shared helper, not decomposing the file.
 - `ARCHITECTURE.md` has no entries for four load-bearing Cycle 5 primitives: `Boundary` (rect/island discriminated schema), `SceneObstacles` (kdbush proxy collider), `AnimeWater` (shoreline-boundary shader post-Cycle 32), and `Random` (`mulberry32` shared PRNG). Add them on the next ARCHITECTURE pass.
 
-## Open questions to resolve before writing code
+## Open questions (resolved at /cycle-start)
 
-1. **Q1: Which single theme (or autonomous + paired split) is Cycle 44?** Author lean: bundle A + B + F as one autonomous "hygiene + cleanup" cycle; spin C + D + E into a separate paired-track cycle, since real-device and taste work can't ship without Matt and shouldn't be mixed into an autonomous phase.
+1. **Q1 [RESOLVED 2026-05-28]: Which single theme (or autonomous + paired split) is Cycle 44?** Resolved with Matt: bundle A + B + F as this autonomous "hygiene + cleanup" cycle (Phases 1-4 below). Buckets C + D + E (paired taste, real-device proofs, multiplayer playtest) are deferred to a separate paired-track cycle and stay recorded in the candidate scope above + carried into [`BACKLOG.md`](BACKLOG.md) at close.
 
 ## Phase shape rules
 
@@ -51,29 +51,80 @@ A cycle has **≤ 8 phases**. If you find yourself drafting a 9th, the work is t
 
 Each phase is either **fully autonomous** or **fully paired** — never mixed. A phase has a **single sharp goal** and **≤ 4 hours** of work.
 
-## Phase 1 — <name> (~Xhr)
+## Phase 1 — Resolve the `uuid` Dependabot advisory (A, autonomous, ~1.5hr)
 
-(Fill in at `/cycle-start` after triaging the candidate scope.)
+`security/dependabot/25` flags the moderate `uuid` advisory. `npm ls uuid` confirms the only path is dev tooling: `browserstack-node-sdk@1.55.3 → googleapis@126.0.1 → google-auth-library → gaxios → uuid@9.0.1` (and `googleapis-common → uuid@9.0.1`); `browserstack-node-sdk` also pulls a current `uuid@11.1.1` directly. None of this reaches the browser bundle (`dist/`). Decide and apply one of: (a) an npm `overrides` entry forcing the transitive `uuid` to a patched version, (b) bump `browserstack-node-sdk` to a release whose `googleapis` chain no longer pulls the flagged `uuid`, or (c) document why it stays (dev-only, never shipped) with a dated [`DECISIONS.md`](../DECISIONS.md) entry and annotate/dismiss the alert.
+
+**Files touched:** `package.json`, `package-lock.json`, possibly [`DECISIONS.md`](../DECISIONS.md) (append-only).
 
 **Acceptance (EARS):**
 
-- When Phase 1 ships, then `<system>` shall `<response>`.
+- When Phase 1 ships, then either the GitHub alert `security/dependabot/25` shall be resolved (no flagged `uuid` in `npm ls uuid`), or [`DECISIONS.md`](../DECISIONS.md) shall carry a dated entry recording why the dev-only transitive `uuid` stays.
+- When Phase 1 ships, then `npm test` shall stay green and `npm run build` shall stay clean.
+- If a dependency change reddens `npm test` or `npm run build`, then the agent shall stop and surface; it shall not pin past a real break.
+
+## Phase 2 — Resolve the main-bundle ratchet (B, autonomous, ~3hr)
+
+The Vite main chunk is ~607 kB raw vs the 593 KiB ratchet accepted in Cycle 41; the durable bundle-size emergency stop is effectively already tripped. Measure both raw and gzip transfer size of the `main-*.js` chunk, then either (a) reduce it under the recorded baseline via `manualChunks` / dynamic-import code-splitting, or (b) re-baseline the ratchet with a written rationale (what grew, why it is justified, gzip transfer impact). Gzip transfer size is what players pay; measure it, not raw alone.
+
+**Frozen-file authorization (this phase only):** Phase 2 MAY edit [`tests/refactor-baseline/__fixtures__/bundle-sizes.json`](../tests/refactor-baseline/__fixtures__/bundle-sizes.json) — **only if** the decision is re-baseline. Migration story: the file is a characterization ratchet with no runtime consumer; re-baselining updates the recorded chunk sizes and records the rationale in this phase's Acceptance + a dated [`DECISIONS.md`](../DECISIONS.md) entry. No other consumer changes.
+
+**Files touched:** `vite.config.js` (if code-split), [`tests/refactor-baseline/__fixtures__/bundle-sizes.json`](../tests/refactor-baseline/__fixtures__/bundle-sizes.json) (if re-baseline, fence-authorized above), possibly [`DECISIONS.md`](../DECISIONS.md).
+
+**Acceptance (EARS):**
+
+- When Phase 2 ships, then either `npm run build`'s `main-*.js` chunk shall be ≤ the recorded baseline, or [`tests/refactor-baseline/__fixtures__/bundle-sizes.json`](../tests/refactor-baseline/__fixtures__/bundle-sizes.json) shall be re-baselined with a dated rationale in [`DECISIONS.md`](../DECISIONS.md).
+- When Phase 2 ships, then the gzip transfer size of the `main-*.js` chunk shall be measured and recorded (not raw size alone).
+- When Phase 2 ships, then `npm test` shall stay green and `npm run build` shall stay clean.
+- If the bundle work pushes the `main-*.js` chunk further over baseline instead of resolving it, then the agent shall stop and surface.
+
+## Phase 3 — Dedup polygon-spawn helpers (F1, autonomous, ~2hr)
+
+[`js/OptimizedSheep.js`](../js/OptimizedSheep.js), [`js/StructureBuilder.js`](../js/StructureBuilder.js), and [`js/SandboxConfig.js`](../js/SandboxConfig.js) each carry their own `pointToSegmentDistance` / `isPointInPolygon` copies. Cycle 29 B2 extracted the canonical pair to [`js/gamestate/polygonSpawn.js`](../js/gamestate/polygonSpawn.js) but repointed only GameState. Repoint the three remaining consumers to import the shared helpers and delete the local copies. The dedup must be **behavior-preserving**: confirm the canonical implementation is numerically identical to the copies before deleting (scatter placement feeds the refactor-baseline scatter-positions golden). [`js/OptimizedSheep.js`](../js/OptimizedSheep.js) is cohesive-by-design — import the helper, do **not** decompose the file.
+
+**Files touched:** [`js/OptimizedSheep.js`](../js/OptimizedSheep.js), [`js/StructureBuilder.js`](../js/StructureBuilder.js), [`js/SandboxConfig.js`](../js/SandboxConfig.js).
+
+**Acceptance (EARS):**
+
+- When Phase 3 ships, then a grep for a local `function pointToSegmentDistance` / `function isPointInPolygon` definition across the three consumer files shall return 0 (each imports from [`js/gamestate/polygonSpawn.js`](../js/gamestate/polygonSpawn.js)).
+- When Phase 3 ships, then `npm test` shall stay green, including the refactor-baseline scatter-positions golden (behavior unchanged).
+- If the refactor-baseline scatter-positions or terrain fixtures drift after the repoint, then the agent shall stop and surface before regenerating — the dedup must be behavior-preserving.
+
+## Phase 4 — Document the four Cycle 5 primitives in ARCHITECTURE.md (F2, autonomous, ~1hr)
+
+[`ARCHITECTURE.md`](../ARCHITECTURE.md) lacks first-class entries for four load-bearing Cycle 5 primitives: `Boundary` (rect/island discriminated schema), `SceneObstacles` (kdbush proxy collider), `AnimeWater` (shoreline-boundary shader, post-Cycle 32), and `Random` (`mulberry32` shared PRNG). Add concise entries placing each in the repo's module map.
+
+**Files touched:** [`ARCHITECTURE.md`](../ARCHITECTURE.md) (soft fence — additive update).
+
+**Acceptance (EARS):**
+
+- When Phase 4 ships, then [`ARCHITECTURE.md`](../ARCHITECTURE.md) shall contain entries for `Boundary`, `SceneObstacles`, `AnimeWater`, and `Random`.
 
 ## Dependencies
 
 ```
-(Fill in once phases are chosen.)
+Phase 1 (uuid)         ─┐
+Phase 2 (bundle)       ─┤  all four independent (disjoint files); any order or parallel
+Phase 3 (poly dedup)   ─┤
+Phase 4 (ARCHITECTURE) ─┘
 ```
+
+Each phase ends green (`npm test` + `npm run build`) before the next starts. Phases 1 and 2 both touch the package/build surface but different files, so there is no ordering constraint between them.
 
 ## Frozen files (cycle-specific additions)
 
-- (Likely `ARCHITECTURE.md` soft-fence if bucket F is in scope; the durable fence in [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) otherwise covers it.)
+- **[`tests/refactor-baseline/__fixtures__/bundle-sizes.json`](../tests/refactor-baseline/__fixtures__/bundle-sizes.json)** — **Phase 2 only**, **only if** the decision is re-baseline. Migration story is in Phase 2 (characterization ratchet, no runtime consumer, rationale recorded in Phase 2 Acceptance + a dated [`DECISIONS.md`](../DECISIONS.md) entry).
+- **[`ARCHITECTURE.md`](../ARCHITECTURE.md)** — soft fence; Phase 4 additive entries only.
+- **[`DECISIONS.md`](../DECISIONS.md)** — append-only; Phases 1 and 2 may append a dated decision. Never rewrite prior entries.
+- All [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) deterministic-sim cores and [`shared/scenes/types.js`](../shared/scenes/types.js) stay untouched this cycle.
 
 ## Hard stops
 
 Durable hard stops apply on every cycle — see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md). Cycle-specific additions:
 
-1. If a dependency change (bucket A) reddens `npm test` or `npm run build`, stop and surface; do not pin past a real break.
+1. If a dependency change (Phase 1) reddens `npm test` or `npm run build`, stop and surface; do not pin past a real break.
+2. If Phase 2's bundle work pushes the `main-*.js` chunk further over baseline rather than resolving it, stop and surface (durable bundle-size stop).
+3. If Phase 3's polygon-spawn dedup drifts the refactor-baseline scatter-positions or terrain fixtures, stop and surface before regenerating — the dedup must be behavior-preserving (it touches no `shared/` sim core but feeds visible scatter placement).
 
 ## What NOT to do during this cycle
 
