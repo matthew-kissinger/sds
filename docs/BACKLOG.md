@@ -4,9 +4,9 @@
 
 ## Recently Completed
 
-### Cycle 42 - `webgpu-scene-material-parity-and-device-proof` (local closeout 2026-05-28, v2.1.10 pending release)
+### Cycle 42 - `webgpu-scene-material-parity-and-device-proof` (closed 2026-05-28, v2.1.10 release)
 
-Plan remains at [`docs/cycle-42-plan.md`](cycle-42-plan.md) until release proof is recorded. Cycle 42 implemented the visual-first WebGPU scene-material parity pass requested after Cycle 41: sun/sky interaction, grass/terrain separation, and deeper blue water were treated as close criteria before release.
+Plan archived at [`docs/archive/cycles/cycle-42-plan.md`](archive/cycles/cycle-42-plan.md). Cycle 42 implemented the visual-first WebGPU scene-material parity pass requested after Cycle 41: sun/sky interaction, grass/terrain separation, and deeper blue water were treated as close criteria before release.
 
 **Closeout outcomes:**
 
@@ -16,6 +16,7 @@ Plan remains at [`docs/cycle-42-plan.md`](cycle-42-plan.md) until release proof 
 - **Repeatable Cycle 42 proof.** `npm run validation:cycle42-material-lock` writes `cycle42-validation/runtime/material-lock.json`, per-shot screenshots, and `cycle42-validation/screenshots/cycle42-material-contact-sheet.png`. The runner passes but still reports six low-sun actor/Open Country material-parity manual-review classifications.
 - **Octahedral production route proof.** `npm run validation:cycle42-octahedral-proof` writes `cycle42-validation/runtime/octahedral-proof.json` and `cycle42-validation/screenshots/cycle42-octahedral-contact-sheet.png`. The explicit WebGPU production tree-impostor route now resolves to octahedral v2; rollback is `?renderer=webgpu&konveyorNativeTreeImpostors=latlon`.
 - **Dependabot hygiene.** Low-risk dev-scope `tmp` and `qs` advisories were handled. The remaining `uuid` advisory is transitive through Google/BrowserStack tooling and stays maintenance carryover.
+- **Release proof.** Shipped as commit `fb78851`, tag `v2.1.10`, deploy run `26595530924`. Live HTML at sheepdogsim.com serves `assets/main-CZelhZcJ.js`; the direct asset URL returns HTTP 200.
 
 **Validation gates run before release approval (2026-05-28):**
 
@@ -33,7 +34,6 @@ Plan remains at [`docs/cycle-42-plan.md`](cycle-42-plan.md) until release proof 
 - BrowserStack iOS water proof remains blocked locally by missing BrowserStack credentials.
 - Open Country paired two-client playtest remains deferred.
 - The six material-lock manual-review items stay visible for Matt approval and future painterly parity work.
-- Final release proof is still pending: commit, push, tag `v2.1.10`, deploy run, live HTML asset, and direct asset URL.
 
 ### Cycle 41 - `webgpu-painterly-parity-and-polish` (closed 2026-05-27, v2.1.9 release)
 

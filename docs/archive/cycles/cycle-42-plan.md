@@ -91,7 +91,7 @@ Keep the release train honest while avoiding unrelated churn.
 
 - [x] When local validation closes, `npm test`, `npm run lint`, `npm run build`, Chromium smoke, and the release-safe Chromium e2e lane shall pass or have named blockers.
 - [x] When GitHub Dependabot advisories are triaged, safe patch-level dependency updates shall be applied only if they do not expand runtime scope; otherwise open a separate security-maintenance cycle.
-- [ ] When the cycle ships, `CHANGELOG.md`, version/tag, deploy run, live HTML asset, and direct asset URL shall be recorded.
+- [x] When the cycle ships, `CHANGELOG.md`, version/tag, deploy run, live HTML asset, and direct asset URL shall be recorded.
 
 ## Implementation Closeout
 
@@ -136,3 +136,10 @@ Keep the release train honest while avoiding unrelated churn.
 - Chosen priority was visual material parity first.
 - Dependabot hygiene stayed small and dev-scope.
 - Octahedral v2 was promoted for the explicit production tree-impostor route after PC proof, with the `latlon` rollback query documented.
+
+## Release
+
+- Cycle 42 shipped as commit `fb78851`, tag `v2.1.10`, deploy run `26595530924`.
+- Live HTML at `https://sheepdogsim.com/` serves `assets/main-CZelhZcJ.js`.
+- Direct asset `https://sheepdogsim.com/assets/main-CZelhZcJ.js` returns HTTP 200.
+- Deploy `Test`, `Deploy Pages`, and `Deploy Worker` jobs passed; perf jobs are workflow_dispatch-only and did not run.

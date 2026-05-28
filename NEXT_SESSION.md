@@ -1,73 +1,64 @@
-# Next Session - Cycle 42 Release Approval
+# Next Session - Cycle 43 Scaffolding
 
 > **Updated:** 2026-05-28
-> **For:** Cycle 42 closeout / release approval
-> **Pickup priority:** Review [`docs/cycle-42-plan.md`](docs/cycle-42-plan.md), the current material-lock contact sheet, and the blockers below. Cycle 42 is implemented locally for `v2.1.10`; commit, push, tag, deploy, and live proof are still pending approval.
+> **For:** Cycle 43
+> **Pickup priority:** Fill in the [`docs/cycle-43-plan.md`](docs/cycle-43-plan.md) Goal + Phases for the WebGPU boot-scout scaffolding retirement (scope below), then run `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-42-plan.md`](docs/cycle-42-plan.md). Closed-cycle context is in [`docs/archive/cycles/cycle-41-plan.md`](docs/archive/cycles/cycle-41-plan.md), [`docs/archive/cycles/cycle-40-plan.md`](docs/archive/cycles/cycle-40-plan.md), and [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-43-plan.md`](docs/cycle-43-plan.md). Closed-cycle context is in [`docs/archive/cycles/cycle-42-plan.md`](docs/archive/cycles/cycle-42-plan.md), [`docs/archive/cycles/cycle-41-plan.md`](docs/archive/cycles/cycle-41-plan.md), and [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Current State
 
-Cycle 42 implements the approved visual-first WebGPU scene-material parity pass:
+Cycle 42 shipped as `v2.1.10` and is closed. WebGPU is the proven production default; the migration scaffolding that was only ever a stepping-stone is now dead weight. Cycle 43 retires the WebGPU boot-scout scaffolding while preserving all load-bearing production WebGPU code.
 
-- WebGPU sun/sky now paints a warmer sun body with a hot core and separate corona instead of the prior faded moon-like disc.
-- WebGPU grass is less brown, uses more green/yellow tip separation, and reads apart from terrain better in Rolling Hills and Open Country.
-- WebGPU water is darker blue and uses a masked sun-glint path so low-sun water no longer becomes a whole-surface purple wash.
-- WebGPU terrain, grass, sheep, impostor, sky, sun, and water material controls were tuned locally without touching `shared/`, Worker, D1, migrations, or sim-baseline goldens.
-- `?renderer=webgpu&konveyorNativeTreeImpostors=1` now resolves to octahedral v2 after PC proof; rollback remains `?renderer=webgpu&konveyorNativeTreeImpostors=latlon`.
+The Cycle 43 plan is scaffolded as a stub. It needs a Goal paragraph and EARS phases before `/cycle-start`.
 
-## Proof Artifacts
+## Proposed Cycle 43 scope (confirm in /cycle-start)
 
-- Cycle 42 material lock:
-  - `cycle42-validation/runtime/material-lock.json`
-  - `cycle42-validation/screenshots/material-lock/`
-  - `cycle42-validation/screenshots/cycle42-material-contact-sheet.png`
-- Focused sun/water proof:
-  - `cycle42-validation/runtime/material-lock-sun-water-focus.json`
-  - `cycle42-validation/screenshots/cycle42-sun-water-focus-contact-sheet.png`
-- Issue-focused grass/water proof:
-  - `cycle42-validation/runtime/material-lock-issue-focus.json`
-  - `cycle42-validation/screenshots/cycle42-issue-focus-contact-sheet.png`
-- Octahedral proof:
-  - `cycle42-validation/runtime/octahedral-proof.json`
-  - `cycle42-validation/screenshots/cycle42-octahedral-contact-sheet.png`
+Retire the obsolete WebGPU boot-scout recorder and dead `konveyor*` proof routes/flags. Keep the production WebGPU path intact. Disjoint from the v2.1.10 release file set, so no conflation risk.
 
-These proof artifacts are local and gitignored. They are evidence, not release assets.
+**Remove (scout-only):**
 
-## Validation
+- [`index.html`](index.html) bootstrap (lines ~405-466): drop the `productionBootScout` request parse, the `effective: 'webgpu-production-boot-scout'` branch, and `__sdsG.productionBootScout`. Keep `productionWebGpu` and the `webgpu-production` effective mode.
+- [`js/main.js`](js/main.js) DOMContentLoaded dispatch (~2549-2601): drop the `if (window.__sdsG?.productionBootScout)` branch and the `recordProductionBootScoutSequence` var + call. Keep the `else if (window.__sdsG?.productionWebGpu)` production path verbatim.
+- [`js/diagnostics/konveyorProductionBootScoutRecorder.js`](js/diagnostics/konveyorProductionBootScoutRecorder.js): delete the whole file (557 lines, diagnostic-only).
+- [`js/rendering/konveyorRuntimeMode.js`](js/rendering/konveyorRuntimeMode.js): drop only the `explicitScoutRoute` clause from `shouldUseKonveyorProductionNativeInstancing()`. Keep `explicitTreeImpostorRoute` (`konveyorNativeTreeImpostors`) and the `isKonveyorProductionWebGpuActive()` gate.
+- [`js/rendering/konveyorProductionWebGpuBoot.js`](js/rendering/konveyorProductionWebGpuBoot.js): remove `dataset.konveyorProductionBootScout = '1'` (line ~139). Keep `dataset.konveyorProductionWebGpu = '1'` (line ~138) and every exported function.
+- [`tools/konveyor-production-boot-scout.mjs`](tools/konveyor-production-boot-scout.mjs) and [`tools/konveyor-production-gameplay-parity-proof.mjs`](tools/konveyor-production-gameplay-parity-proof.mjs): delete. One-time proof runners; no `package.json` script references.
 
-- `npm test` - passed, 54 files passed and 1 skipped; 499 specs passed and 7 skipped.
-- `npm run lint` - passed.
-- `npm run build` - passed with existing Vite large-chunk/dynamic-import warnings.
-- `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --reporter=line` - passed, 2 tests.
-- `npx playwright test --project=chromium --grep-invert @local-only --reporter=line` - passed, 6 tests. One earlier parallel run was invalid because another Playwright server had already taken port `3000`; the standalone rerun passed.
-- `npm run validation:cycle42-material-lock` - passed. It still classifies six low-sun actor/Open Country comparisons as material-parity manual-review items.
-- `npm run validation:cycle42-octahedral-proof` - passed.
+**Tests (careful, do not just delete):**
 
-## Blockers / Carryover
+- [`tests/konveyor-instancing-adapter.spec.js`](tests/konveyor-instancing-adapter.spec.js): `NATIVE_INSTANCING_SEARCH` (line ~19) uses the scout query as the activation fixture for three production native-instancing tests (placeTrees, placeEnvironmentDetails x2). Repoint these to a surviving production route (likely `?renderer=webgpu&konveyorNativeTreeImpostors=octahedral`) after verifying `TreePlacement`/`RockPlacement` gating. Do not delete the coverage.
+- [`tests/konveyor-runtime-mode.spec.js`](tests/konveyor-runtime-mode.spec.js): remove the "keeps the guarded scout native-instancing route intact" test (lines ~37-41).
+
+**Docs:**
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) (~144-164): remove the boot-scout paragraph.
+- [`DECISIONS.md`](DECISIONS.md): add a NEW dated entry recording the retirement. Do not rewrite the existing boot-scout entry (history is append-only).
+- [`tools/validation/README.md`](tools/validation/README.md): drop the scout-runner references.
+
+**Why this is safe:** production native instancing rides `isKonveyorProductionWebGpuActive()` + `konveyorNativeTreeImpostors`, not the scout route. The scout pieces are a stepping-stone from the migration and have no production consumer.
+
+## Release reference (Cycle 42 / v2.1.10)
+
+- Commit `fb78851`, tag `v2.1.10`, deploy run `26595530924` (success on `main`).
+- Live HTML at sheepdogsim.com serves `assets/main-CZelhZcJ.js`; the direct asset URL returns HTTP 200.
+
+## Blockers / Carryover (from Cycle 42)
 
 - Android WebGPU device proof is blocked locally: `adb devices` returned no authorized devices.
 - BrowserStack iOS water proof is blocked locally: no `BROWSERSTACK_*` / `BS_*` env vars were present.
 - Open Country paired two-client playtest remains carryover unless explicitly promoted.
-- `uuid` advisory remains a dev-tooling transitive carryover through Google/BrowserStack packages; `tmp` and `qs` were resolved via low-risk hygiene.
-- The material-lock classifier still lists six metric deltas in low-sun actor/Open Country views. Manual review is the authority; the contact sheet is recorded for approval.
-
-## Release Steps Remaining
-
-1. Rerun `npm test`, `npm run lint`, `npm run build`, smoke, and release-safe Chromium e2e after any doc-only edits if required by the releaser.
-2. Commit as the Cycle 42 `v2.1.10` release.
-3. Push, tag `v2.1.10`, and watch `deploy.yml`.
-4. Verify live HTML and direct asset URL before claiming production release.
-5. Update this file and [`docs/cycle-42-plan.md`](docs/cycle-42-plan.md) with commit, tag, deploy run, live HTML asset, and direct asset proof.
+- `uuid` advisory remains a dev-tooling transitive carryover through Google/BrowserStack packages.
+- Six low-sun actor/Open Country material-lock manual-review classifications stay visible for Matt approval and future painterly parity work.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-42-plan.md`](docs/cycle-42-plan.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-41-plan.md`](docs/archive/cycles/cycle-41-plan.md) |
+| Active cycle | [`docs/cycle-43-plan.md`](docs/cycle-43-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-42-plan.md`](docs/archive/cycles/cycle-42-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
