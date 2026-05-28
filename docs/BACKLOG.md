@@ -4,6 +4,35 @@
 
 ## Recently Completed
 
+### Cycle 44 - `release-readiness-sweep` (closed 2026-05-28)
+
+Plan archived at [`docs/archive/cycles/cycle-44-plan.md`](archive/cycles/cycle-44-plan.md). Cycle 44 was an autonomous hygiene + cleanup sweep: clear the dependency/security and bundle-bloat carryover accrued since Cycle 40 and finish two long-tail code/doc cleanups, without touching the deterministic sim, the scene schema, or player-visible behavior. No version bump; no user-visible change.
+
+**Closeout outcomes:**
+
+- Shipped 4/4 autonomous phases (buckets A + B + F). The paired buckets C (WebGPU taste parity), D (mobile/real-device proofs), and E (multiplayer playtest) were split out at `/cycle-start` and carried forward (see Carryover).
+- **Phase 1 (uuid advisory).** Resolved `security/dependabot/25` via an npm `overrides` pin forcing the transitive `uuid` to `^11.1.1` (also pinned `protobufjs ^7.5.8`). `npm ls uuid` now resolves the whole tree to `uuid@11.1.1`; the flagged dev-only `9.0.1` is gone, and it never reached `dist/`. Commit `1128f19`.
+- **Phase 2 (main-bundle ratchet).** Split a `vendor` chunk (`@three.ez/instanced-mesh`, `kdbush`) out of `main` in `vite.config.js`, pulling `main` from 607 to 533 KiB (raw 545.72 kB / gzip 159.6 kB). Re-baselined `tests/refactor-baseline/__fixtures__/bundle-sizes.json` mainKB 593 to 534 with a dated rationale in DECISIONS.md; `three` unchanged at 603 KiB. Commit `65b50bb`.
+- **Phase 3 (polygon-spawn dedup).** Repointed `js/SandboxConfig.js`, `js/StructureBuilder.js`, and `js/OptimizedSheep.js` onto the canonical `js/gamestate/polygonSpawn.js`, deleting 5 local copies of `pointToSegmentDistance` / `isPointInPolygon`. Behavior-preserving: 4 copies were byte-identical and StructureBuilder's differing degenerate-case branch was proven unreachable (its single call site is guarded by `borderPoints.length >= 3`). No refactor-baseline drift. `OptimizedSheep.js` stayed cohesive (imported the helper, did not decompose). Commit `3874dd5`.
+- **Phase 4 (ARCHITECTURE entries).** Added first-class entries for the four undocumented Cycle 5 primitives: `Random` (mulberry32 seeded PRNG), `SceneObstacles` (kdbush proxy colliders), the `Boundary` rect/island discriminated schema, and `AnimeWater` (cel-shaded shoreline water). Additive only. Commit `e6b3685`.
+- Shipped as 5 direct-to-main commits (no PRs): `65ca5c7` (plan triage), `1128f19`, `65b50bb`, `3874dd5`, `e6b3685`. Deploy run `26604025545` (success on `main`).
+
+**Validation gates (2026-05-28):**
+
+- `npm test` - 54 passed files, 1 skipped; 498 specs passed, 7 skipped.
+- `npm run build` - clean with the existing Vite large-chunk warnings; `main` 533 KiB <= 534 baseline, `three` 603 KiB unchanged.
+- Deploy run `26604025545` green on `main` (build, Cloudflare Pages, E2E Chromium).
+
+**Carryover (deferred to Cycle 45 `paired-parity-and-proofs`):**
+
+- **C. WebGPU painterly parity (paired, taste).** The six low-sun actor / Open Country material-lock manual-review items from `npm run validation:cycle42-material-lock`; broader WebGPU/WebGL terrain-foliage parity.
+- **D. Mobile / real-device proofs (paired, blocked locally).** Android WebGPU water/device proof (needs an authorized ADB device); BrowserStack iOS Safari water canary (needs `BROWSERSTACK_*` creds).
+- **E. Multiplayer playtest (paired).** Open Country paired two-client playtest, deferred since Cycle 40.
+
+**Notes:**
+
+- The Cycle 41 bundle ratchet looked tripped partly from raw-vs-gzip and KiB-vs-kB confusion. The harness fixture is 1024-based KiB; Vite's build log is 1000-based kB. `three` at 617.79 kB (log) is exactly 603 KiB (harness), so there was no `three` regression; only `main` needed action, resolved cleanly by the vendor split rather than by loosening the baseline.
+
 ### Cycle 43 - `retire-webgpu-scaffolding` (closed 2026-05-28)
 
 Plan archived at [`docs/archive/cycles/cycle-43-plan.md`](archive/cycles/cycle-43-plan.md). Cycle 43 deleted the WebGPU boot-scout scaffolding left over from the migration, after Cycle 42 shipped plain `?renderer=webgpu` as the proven production default. No user-visible change: the same WebGPU game ships.
