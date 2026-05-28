@@ -17,11 +17,7 @@ export function shouldApplyKonveyorRendererFlag(search = getWindowSearch(), flag
 
 export function shouldUseKonveyorProductionNativeInstancing(search = getWindowSearch()) {
     const params = new URLSearchParams(search);
-    const explicitScoutRoute = params.get('renderer') === 'webgpu'
-        && params.get('konveyorProductionBootScout') === '1'
-        && params.get('konveyorProductionSceneBody') === '1'
-        && params.get('konveyorNativeInstancing') === '1';
     const explicitTreeImpostorRoute = params.get('renderer') === 'webgpu'
         && params.has('konveyorNativeTreeImpostors');
-    return explicitScoutRoute || explicitTreeImpostorRoute || isKonveyorProductionWebGpuActive();
+    return explicitTreeImpostorRoute || isKonveyorProductionWebGpuActive();
 }

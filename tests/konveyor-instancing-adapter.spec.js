@@ -16,10 +16,12 @@ import {
 } from '../js/world/TreeImpostorRuntime.js';
 import { loadScene } from '../shared/scenes/index.js';
 
-const NATIVE_INSTANCING_SEARCH = '?renderer=webgpu&diagnostic=1&konveyorProductionBootScout=1&konveyorProductionSceneBody=1&konveyorNativeInstancing=1&konveyorRocks=1';
-
-function setWindowSearch(search) {
-  globalThis.window = { location: { search } };
+function setProductionWebGpuWindow() {
+  globalThis.window = {
+    location: { search: '?renderer=webgpu&konveyorProduction=1' },
+    __sdsRendererMode: { effective: 'webgpu-production' },
+    __sdsG: { productionWebGpu: { enabled: true } },
+  };
 }
 
 afterEach(() => {
@@ -195,7 +197,7 @@ describe('konveyor native tree instancing adapter', () => {
   });
 
   it('uses native Three instancing for production scene-body tree placement under the guarded flag', async () => {
-    setWindowSearch(NATIVE_INSTANCING_SEARCH);
+    setProductionWebGpuWindow();
     const scene = new THREE.Scene();
     const builder = {
       modelsLoaded: true,
@@ -412,7 +414,7 @@ describe('konveyor native tree instancing adapter', () => {
   });
 
   it('uses native Three instancing for production scene-body rock placement under the guarded flag', async () => {
-    setWindowSearch(NATIVE_INSTANCING_SEARCH);
+    setProductionWebGpuWindow();
     const sceneDef = loadScene('field');
     const scene = new THREE.Scene();
     const builder = {
@@ -449,7 +451,7 @@ describe('konveyor native tree instancing adapter', () => {
   });
 
   it('accepts empty native rock placement when an island scene filters every rock candidate', async () => {
-    setWindowSearch(NATIVE_INSTANCING_SEARCH);
+    setProductionWebGpuWindow();
     const scene = new THREE.Scene();
     const sceneDef = {
       id: 'zero-rock-island',

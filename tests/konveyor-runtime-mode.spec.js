@@ -34,12 +34,6 @@ describe('konveyor runtime mode gates', () => {
         expect(shouldUseKonveyorProductionNativeInstancing()).toBe(true);
     });
 
-    it('keeps the guarded scout native-instancing route intact', () => {
-        expect(shouldUseKonveyorProductionNativeInstancing(
-            '?renderer=webgpu&diagnostic=1&konveyorProductionBootScout=1&konveyorProductionSceneBody=1&konveyorNativeInstancing=1',
-        )).toBe(true);
-    });
-
     it('lets the guarded native tree impostor route enter native instancing without changing defaults', () => {
         expect(shouldUseKonveyorProductionNativeInstancing(
             '?renderer=webgpu&konveyorNativeTreeImpostors=octahedral',

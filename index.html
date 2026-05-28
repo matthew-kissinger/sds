@@ -435,18 +435,14 @@
             const productionWebGpu = requested === 'webgpu' &&
                 !diagnostic &&
                 webgpuApiAvailable;
-            const productionBootScout = requested === 'webgpu' &&
-                diagnostic &&
-                params.get('konveyorProductionBootScout') === '1';
-            const webgpuDiagnostic = requested === 'webgpu' && diagnostic && !productionBootScout;
+            const webgpuDiagnostic = requested === 'webgpu' && diagnostic;
             window.__sdsRendererMode = {
                 requested,
                 diagnostic,
                 productionWebGpu,
                 productionGate,
                 webgpuApiAvailable,
-                productionBootScout,
-                effective: productionBootScout ? 'webgpu-production-boot-scout' : (webgpuDiagnostic ? 'webgpu-diagnostic' : (productionWebGpu ? 'webgpu-production' : 'webgl')),
+                effective: webgpuDiagnostic ? 'webgpu-diagnostic' : (productionWebGpu ? 'webgpu-production' : 'webgl'),
                 fallbackReason: recentFallbackReason || (requested === 'webgpu' && !diagnostic && !productionWebGpu ? 'webgpu-unavailable' : null)
             };
             window.__sdsG = {
@@ -454,11 +450,6 @@
                 productionWebGpu: productionWebGpu ? {
                     requested: true,
                     enabled: false,
-                    ok: false,
-                    error: null
-                } : null,
-                productionBootScout: productionBootScout ? {
-                    requested: true,
                     ok: false,
                     error: null
                 } : null

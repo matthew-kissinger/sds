@@ -136,7 +136,6 @@ export async function createKonveyorProductionWebGpuSceneManagerOptions(state = 
                 alpha: false,
             });
             renderer.domElement.dataset.konveyorProductionWebGpu = '1';
-            renderer.domElement.dataset.konveyorProductionBootScout = '1';
             if (state) {
                 state.rendererCreated = true;
                 state.rendererClassName = renderer.constructor?.name ?? null;
@@ -246,7 +245,7 @@ export function installKonveyorProductionWebGpuLightingBridge(sceneManager, stat
     sceneManager.getScene().add(ambient);
     sceneManager.getScene().add(directional);
     const proof = {
-        source: 'production-boot-scout-webgpu-lighting-bridge',
+        source: 'production-webgpu-lighting-bridge',
         proofOnlyBridge: true,
         ambientAdded: sceneManager.getScene().children.includes(ambient),
         directionalAdded: sceneManager.getScene().children.includes(directional),

@@ -141,27 +141,6 @@ Extracted helpers under [`js/boot/`](js/boot/):
   diagnostic proof adds WebGPU-module lights because that harness mixes the
   vendored WebGPU Three module with default production Three; normal production
   lighting is unchanged.
-  A separate guarded production boot scout route,
-  `?renderer=webgpu&diagnostic=1&konveyorProductionBootScout=1&testNoCanvas=1`,
-  proves the normal `main.js` entry can construct `SheepDogSimulation` with
-  injected WebGPU `SceneManager` options and wait for async renderer readiness.
-  With `konveyorProductionSceneBody=1`, the same guarded route installs the
-  centralized WebGPU factory globals, runs Home Field scene-body init once, and
-  renders a single nonblank WebGPU frame for terrain, grass, atmosphere/cloud,
-  sheep, trees, and rocks. With `konveyorNativeInstancing=1`, the guarded route
-  uses native `THREE.InstancedMesh` for production tree/rock placement and
-  records an empty WebGL-only suppression list. With
-  `konveyorProductionLoopScout=1`, it advances a controlled 12-frame async
-  WebGPU scene-loop scout through `SheepDogSimulation.runFrame(deltaTime)` and
-  verifies grass animation/performance-monitor advancement. With
-  `konveyorProductionRafScout=1`, it then advances a bounded 12-frame
-  `requestAnimationFrame` scout through the same shared frame step with
-  monotonic browser timestamps. A separate
-  `konveyorProductionGameplayScout=1` route omits `testNoCanvas=1`, uses normal
-  constructor `init()` plus `animate()`, autostarts solo Classic play, creates
-  the dog plus 200 sheep, and records normal animation-loop advancement under
-  the injected WebGPU renderer. These scouts are still diagnostic-gated and are
-  not a default production WebGPU claim.
 - Mobile detection with separate near/far plane (near 0.1/2.0m, far 4500/3700m). The far plane is sized to cover the terrain plane's diagonal at max zoom-out plus camera offset. Atmosphere skybox glues to the far plane in its shader (`gl_Position = clip.xyww`), so this also controls how far the visible sky reaches; bumping the far plane to grow the visible terrain automatically grows the skybox to match.
 - **Camera state moved out** (Cycle 4 Unit M) — all camera positioning, follow smoothing, and competitive-mode offset now live in `CameraController`. SceneManager keeps `getCamera()` (still used widely) plus thin pass-throughs for legacy methods (`setCompetitiveCameraPosition`, `transformMovementForCompetitive`, etc.) so `main.js` call sites did not need rewriting.
 - Hardcoded `scene.background` and `scene.fog` were removed in Cycle 4 Phase B; `Atmosphere` is now wired into the render path and owns sky/fog per-scene.

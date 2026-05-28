@@ -13,12 +13,6 @@
 
 `npm run validation:all` runs all four sequentially.
 
-Konveyor WebGPU parity uses
-`node tools/konveyor-production-gameplay-parity-proof.mjs --enforce-default-parity`
-against a built production preview on `127.0.0.1:4173`. That proof records
-full-frame SSIM as advisory and gates default-readiness on runtime/capture plus
-semantic sky, horizon, and ground regions.
-
 Explicit production WebGPU request proof uses
 `node tools/konveyor-production-webgpu-request-proof.mjs` against the same built
 preview. It validates that default URLs enter production WebGPU on supported

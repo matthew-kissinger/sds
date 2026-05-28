@@ -602,11 +602,6 @@ class SheepDogSimulation {
                     }
                 }).catch((error) => {
                     console.error('[GAME] Game initialization failed:', error);
-                    const scout = window.__sdsG?.productionBootScout;
-                    if (scout) {
-                        scout.ok = false;
-                        scout.error = String(error?.message || error);
-                    }
                 });
             this.animate();
         }
@@ -2559,14 +2554,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const urlParams = new URLSearchParams(location.search);
     let rendererOptions = {};
-    let recordProductionBootScoutSequence = async () => {};
     let recordProductionWebGpuBoot = async () => {};
-    if (window.__sdsG?.productionBootScout) {
-        const scoutRecorder = await import('./diagnostics/konveyorProductionBootScoutRecorder.js');
-        rendererOptions = await scoutRecorder.createProductionBootScoutOptions(urlParams);
-        if (rendererOptions.blocked) return;
-        recordProductionBootScoutSequence = scoutRecorder.recordProductionBootScoutSequence;
-    } else if (window.__sdsG?.productionWebGpu) {
+    if (window.__sdsG?.productionWebGpu) {
         const productionWebGpu = await import('./rendering/konveyorProductionWebGpuBoot.js');
         try {
             const preflight = await productionWebGpu.preflightKonveyorProductionWebGpuDevice(
@@ -2596,7 +2585,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     const gameInstance = new SheepDogSimulation(rendererOptions);
-    await recordProductionBootScoutSequence(gameInstance);
     await recordProductionWebGpuBoot(gameInstance);
     emitRendererModeTelemetry(gameInstance);
 

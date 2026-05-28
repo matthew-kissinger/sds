@@ -938,3 +938,51 @@ tree-impostor release packet is version `2.1.5` on
 - After any deploy carrying this packet, rerun the iOS Safari water canary and
   review renderer-resolution telemetry before making a stronger public default
   or mobile-readiness claim.
+
+---
+
+## Production WebGPU boot scout scaffolding is retired (2026-05-28 · Cycle 43)
+
+The boot scout described above (2026-05-15) was diagnostic-only shell evidence:
+a guarded `?renderer=webgpu&diagnostic=1&konveyorProductionBootScout=1` route
+that constructed the simulation shell, recorded renderer setup, and (under
+further query extensions) ran scene-body, loop, raf, and gameplay scouts. It was
+the staging ground for moving production scene-body rendering onto WebGPU.
+
+Cycle 42 shipped plain `?renderer=webgpu` as the proven production default
+(v2.1.10). The scout's job was finished. Its routes, recorder, and tool runners
+were dead weight that still parsed query params, branched boot, and imported a
+557-line recorder on a path no shipped URL takes.
+
+### What was removed
+
+- `js/diagnostics/konveyorProductionBootScoutRecorder.js` (the 557-line recorder).
+- `tools/konveyor-production-boot-scout.mjs` and
+  `tools/konveyor-production-gameplay-parity-proof.mjs` (scout-only runners).
+- The `productionBootScout` query parse, the `webgpu-production-boot-scout`
+  effective mode, and `__sdsG.productionBootScout` in `index.html`.
+- The scout dispatch branch and dead scout-error block in `js/main.js`.
+- The `konveyorProductionBootScout` dataset marker in
+  `js/rendering/konveyorProductionWebGpuBoot.js`.
+- The `explicitScoutRoute` clause in
+  `shouldUseKonveyorProductionNativeInstancing` and the scout-route test.
+
+### Why it was safe
+
+Production native tree/rock instancing never depended on the scout query. It
+rides `isKonveyorProductionWebGpuActive()` (the shipped
+`effective === 'webgpu-production'` window state) plus the explicit
+`konveyorNativeTreeImpostors` opt-in route. The instancing-adapter tests were
+repointed to simulate the real production WebGPU window rather than the dead
+scout query, which tightened coverage onto the actual ship gate. All affected
+tests pass unchanged in behavior.
+
+### What stayed
+
+- `isKonveyorProductionWebGpuActive()` and the production WebGPU window state.
+- The `konveyorNativeTreeImpostors` opt-in review route.
+- The `konveyorNativeInstancing` userData marker in `js/world` (the production
+  native-instancing signal, not scout-only).
+- `tools/konveyor-production-webgpu-request-proof.mjs` and
+  `tools/konveyor-production-webgpu-perf-proof.mjs` (the surviving production
+  WebGPU proofs).
