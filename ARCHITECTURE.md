@@ -218,6 +218,12 @@ What `TerrainBuilder` retains: terrain mesh construction, heightfield displaceme
 - **Terrain fog driven by `scene.fog`** (Atmosphere-managed, FogExp2 density 0.0006). The terrain shader uses Three.js's standard fog chunks (`fog_pars_*` + `fog_*`) with `material.fog = true` and `THREE.UniformsLib.fog` merged into the material — same fog colour as the sky's horizon at the same distance, so the terrain-sky transition is seamless across every preset. An earlier hardening pass had a custom warm-grey-green fog at fixed near/far, but it didn't match the dynamic sky and produced a visible cutoff at the horizon (white at noon, dark at night).
 - `addMountains()` is a no-op as of 2026-04-25 — the previous procedural ring read as paper-thin shells. The `ProceduralMountains` class is left on disk for future revisit; use a real height-displaced skirt blending into the play-area heightfield, not the annulus shader.
 
+#### water/AnimeWater.js — Cel-shaded water (Cycle 32)
+Single `ShaderMaterial` for the island water surface. Shoreline foam and the two-band water color are derived from scene **boundary** data (the `island` variant's `radius`/`falloff`), not from a per-frame depth render target — so there is no depth pre-pass cost.
+- Two-band shoreline gradient from boundary `radius`/`falloff`; sharp foam from distance-to-shore + `step()`; painted ripples (2 octaves of animated simplex, `step()`-quantized); cel sparkles (quantized Blinn step masked by high-frequency simplex).
+- Fog match via `<fog_pars_fragment>`/`<fog_fragment>` chunks (atmosphere-driven, same source as terrain). Pure `ShaderMaterial`: authors colors in linear and writes `gl_FragColor` raw, skipping `<colorspace_fragment>` to avoid a tonemap double-apply.
+- `createAnimeWater()` builds the mesh (wired in via `initWorld`/`SceneManager`). `computeShorelineMetrics()` + `mixWaterBaseColor()` are exported pure helpers so the shoreline math is unit-testable off the GPU.
+
 #### StructureBuilder.js — Fences, gates, pens
 - Owns the structure tree for each scene: perimeter fences (when scene allows), gate, pen, corner flags.
 - **`_surfaceToTerrain(group)`** — post-process that walks the group, finds nodes tagged with `userData.surfaceToTerrain`, and lifts each to terrain Y. Per-piece tagging on posts/individual rails so they ride hills independently; gate group tagged as a single rigid unit so the two posts stay coplanar and the arch doesn't shear.
@@ -241,6 +247,25 @@ What `TerrainBuilder` retains: terrain mesh construction, heightfield displaceme
 - **Velocity extrapolation:** sheep extrapolated from server `vx`/`vz` when packets are late
 - **Dog blend:** 8-frame lerp toward server-authoritative stop when `interpolatingToClient=true`
 - Auto-registers returning users from localStorage identity on first room action
+
+### Shared (deterministic primitives)
+
+These live in `shared/` so the Worker imports them without pulling Three.js, and run bit-identically on client and Worker (see [`.claude/rules/shared-sim.md`](.claude/rules/shared-sim.md)). `Heightfield` (documented above) is the fourth shared primitive.
+
+#### shared/Random.js — Seeded PRNG
+- `mulberry32(seed) → () => number` — deterministic floats in [0, 1); same seed yields the same sequence on any V8 instance (browser, Worker, Node test). Public-domain reference constants; do not change.
+- `withSeededRandom(seed, fn)` — monkey-patches `Math.random` for the duration of `fn()` and always restores, even on throw. Only for wrapping legacy `Math.random`-using code; new code takes an explicit `rng` argument.
+- Why it exists: scene generators (`SceneObstacles`, `TreePlacement`) run independently on client (visual mesh) and Worker (collision data). Raw `Math.random()` diverges between V8 instances; a seeded sequence keeps the two builds from drifting. Lifted from `tests/sim-baseline/harness.js`.
+
+#### shared/SceneObstacles.js — Proxy collider primitive
+Visual meshes are decoration; the sim sees only logical shapes — tree trunks and rocks become 2D circles `{x, z, radiusXZ}`, buildings become AABBs. Built once at scene load on both client and Worker from the same scene def + seeded placement, so collision data and visual placement cannot drift.
+- Trees/rocks are indexed via `kdbush` — an ArrayBuffer-backed static k-d tree, radius queries O(log N + k). Deterministic across V8 versions **iff** input order is canonical, so `canonicalSort` orders obstacles by `(x, z)` before indexing and `within` results are id-sorted before return. Buildings are a brute-forced AABB array (small count).
+- Exports: `buildSceneObstacles({trees, rocks, buildings})` → `{trees, treeIndex, rocks, rockIndex, buildings, queryTrees, queryRocks}`; `emptyObstacles()`; `canonicalSort`; `obstacleAvoidance(pos, radius, nearby)` (linear push-out steer consumed by `MovementPhysics`); `pointInsideBuilding(point, buildings, margin)` (spawn/target rejection inside the farmhouse footprint).
+
+#### Boundary schema (`shared/scenes/types.js`)
+Discriminated boundary shape introduced in Cycle 5: `RectBoundary {kind:'rect', minX, maxX, minZ, maxZ}` | `IslandBoundary {kind:'island', center:{x,z}, radius, falloff}`.
+- `SceneDef.boundary` takes precedence over the legacy rect-only `bounds` field. `createGameState` synthesises `{kind:'rect', ...bounds}` for scenes that ship only `bounds`, so pre-Cycle-5 rect scenes need no migration.
+- The `island` variant's `radius`/`falloff` are read by `BoundaryCollision` (sheep/dog containment) and by `AnimeWater` (shoreline gradient + foam), keeping the water edge and the play-area edge on the same circle.
 
 ### Server — `worker/`
 
@@ -405,6 +430,8 @@ The server-to-client state snapshot is the same shape the legacy Geckos server u
 │   ├── FlockingAlgorithms.js
 │   ├── GameStateValidation.js
 │   ├── MovementPhysics.js
+│   ├── Random.js           Seeded PRNG (mulberry32) for cross-V8 determinism
+│   ├── SceneObstacles.js   Proxy colliders (kdbush circles + AABBs)
 │   ├── Vector2D.js
 │   ├── scenes/             Scene-as-data registry (field, rolling-hills, open-country)
 │   └── terrain/            Heightfield runtime module (bilinear-sampled R32F maps)
