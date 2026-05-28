@@ -29,8 +29,12 @@ export function createKonveyorTerrainHeightfieldNodeMaterial(
   const midBlend = clamp(n1.mul(0.78).add(heightLift.mul(0.22)), 0.0, 1.0);
   const highBlend = clamp(n2.mul(0.38).add(heightLift.mul(0.24)), 0.0, 0.78);
   const dirtMask = smoothstep(0.54, 0.74, n1.mul(n2));
-  const detail = float(0.88).add(n3.mul(0.20));
-  const ao = float(0.86).add(n1.mul(0.14));
+  const detailBase = terrain.detailBase ?? 0.88;
+  const detailStrength = terrain.detailStrength ?? 0.20;
+  const aoFloor = terrain.aoFloor ?? 0.86;
+  const aoStrength = terrain.aoStrength ?? 0.14;
+  const detail = float(detailBase).add(n3.mul(detailStrength));
+  const ao = float(aoFloor).add(n1.mul(aoStrength));
   const baseColor = mix(
     mix(mix(low, mid, midBlend), high, highBlend),
     dirt,
@@ -45,18 +49,41 @@ export function createKonveyorTerrainHeightfieldNodeMaterial(
       length(worldXZ)
     ).mul(terrain.horizonFogStrength ?? 0.14)
     : float(0.0);
-  const fogBlend = max(distantFog, horizonFog);
+  const fogBlend = max(distantFog, horizonFog).mul(terrain.fogBlendScale ?? 1);
 
   const material = new MeshLambertNodeMaterial();
   material.name = 'konveyor-node-terrain-heightfield';
   const colorScale = terrain.colorScale ?? 0.92;
-  material.colorNode = mix(baseColor.mul(float(colorScale)), vec3(...linearColor(terrain.fogColor)), fogBlend);
+  const contrast = terrain.contrast ?? 1;
+  const polishedColor = clamp(
+    baseColor
+      .mul(vec3(...(terrain.colorTint ?? [1, 1, 1])))
+      .mul(float(colorScale))
+      .sub(vec3(0.5, 0.5, 0.5))
+      .mul(contrast)
+      .add(vec3(0.5, 0.5, 0.5)),
+    0.0,
+    1.4
+  );
+  material.colorNode = mix(polishedColor, vec3(...linearColor(terrain.fogColor)), fogBlend);
   material.side = terrain.side ?? DoubleSide;
   material.polygonOffset = terrain.polygonOffset?.enabled ?? false;
   material.polygonOffsetFactor = terrain.polygonOffset?.factor ?? 0;
   material.polygonOffsetUnits = terrain.polygonOffset?.units ?? 0;
   material.toneMapped = true;
   material.userData.konveyorTerrainColorScale = colorScale;
+  material.userData.konveyorTerrainMaterialControls = {
+    contrast,
+    detailBase,
+    detailStrength,
+    aoFloor,
+    aoStrength,
+    dirtStrength: terrain.dirtStrength ?? 0.26,
+    fogStrength: terrain.fogStrength ?? 0.34,
+    horizonFogStrength: terrain.horizonFogStrength ?? 0.14,
+    fogBlendScale: terrain.fogBlendScale ?? 1,
+    colorTint: terrain.colorTint ?? [1, 1, 1],
+  };
   material.userData.konveyorTerrainVisualPolish = 'continuous-world-heightfield-blend';
   material.userData.konveyorTerrainHeightTextureMapping = terrain.heightfieldWorldSize
     ? 'world-space-heightfield'

@@ -318,10 +318,11 @@ export class OptimizedSheepSystem {
         });
         this.material = materialResult.material;
         this.material.userData = this.material.userData ?? {};
-        this.material.userData.konveyorSheepMaterialControls = materialResult.controls;
+        this.material.userData.konveyorSheepMaterialControls =
+            materialResult.controls ?? this.material.userData.konveyorSheepMaterialControls ?? null;
         this.material.userData.konveyorSheepMaterialSummary = materialResult.summary;
         this.konveyorSheepMaterialSummary = materialResult.summary;
-        this.konveyorSheepMaterialControls = materialResult.controls;
+        this.konveyorSheepMaterialControls = this.material.userData.konveyorSheepMaterialControls;
     }
     
     /**

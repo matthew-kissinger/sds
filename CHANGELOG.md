@@ -4,6 +4,53 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.10] - 2026-05-28 (Cycle 42 - WebGPU material parity)
+
+Patch release for WebGPU scene-material parity after the Cycle 41 sun/water fix.
+
+### Added
+
+- Repeatable Cycle 42 WebGL/WebGPU material-lock runner via
+  `npm run validation:cycle42-material-lock`.
+- Repeatable octahedral tree-impostor proof via
+  `npm run validation:cycle42-octahedral-proof`.
+
+### Changed
+
+- WebGPU sky now paints a warm sun body plus hot core before the outer corona,
+  so the sun reads less like a faded moon and closer to the WebGL painterly
+  reference.
+- WebGPU grass now avoids the prior brown/double-darkened look and separates
+  more clearly from terrain in low-sun scenes.
+- WebGPU water is darker blue, with a masked sun-glint path instead of a
+  broad purple wash.
+- The explicit production WebGPU tree-impostor route now uses octahedral v2;
+  rollback remains `?renderer=webgpu&konveyorNativeTreeImpostors=latlon`.
+- Dev dependency hygiene resolves the low-risk `tmp` and `qs` advisories.
+
+### Validation
+
+- `npm test` - 54 passed files, 1 skipped; 499 specs passed, 7 skipped.
+- `npm run lint` - clean.
+- `npm run build` - clean with existing Vite warnings.
+- `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --reporter=line`
+  - 2 passed.
+- `npx playwright test --project=chromium --grep-invert @local-only --reporter=line`
+  - 6 passed.
+- `npm run validation:cycle42-material-lock` - passed; contact sheet recorded
+  at `cycle42-validation/screenshots/cycle42-material-contact-sheet.png`.
+- `npm run validation:cycle42-octahedral-proof` - passed.
+
+### Notes
+
+- The material-lock runner still reports six low-sun actor/Open Country
+  material-parity classifications for manual review; the contact sheet is the
+  approval artifact.
+- Android proof was blocked locally by no authorized ADB device. BrowserStack
+  iOS water proof was blocked locally by missing credentials.
+- A remaining transitive `uuid` advisory through Google/BrowserStack tooling is
+  carried as separate maintenance work.
+
 ## [2.1.9] - 2026-05-27 (Cycle 41 - WebGPU painterly parity)
 
 Patch release for the WebGPU sun, sky, and water art-direction follow-up.

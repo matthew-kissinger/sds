@@ -38,7 +38,7 @@ describe('cycle-39 sun disc — renderer-path divergence sentinel', () => {
     const ownership = material.userData.konveyorSunBillboardOwnership;
     expect(ownership).toMatchObject({
       owns: 'disc-body-only',
-      skyOwns: 'aureole-and-horizon-glow',
+      skyOwns: 'painted-sun-body-aureole-and-horizon-glow',
     });
     expect(material.userData.konveyorSunBillboardShape).toMatchObject({
       coreRadius: 0.065,

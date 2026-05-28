@@ -995,7 +995,8 @@ export class TerrainBuilder {
         });
         const terrainMaterial = terrainMaterialResult.material;
         terrainMaterial.userData = terrainMaterial.userData ?? {};
-        terrainMaterial.userData.konveyorTerrainMaterialControls = terrainMaterialResult.controls;
+        terrainMaterial.userData.konveyorTerrainMaterialControls =
+            terrainMaterialResult.controls ?? terrainMaterial.userData.konveyorTerrainMaterialControls ?? null;
         terrainMaterial.userData.konveyorTerrainMaterialSummary = terrainMaterialResult.summary;
         this.konveyorTerrainMaterialSummary = terrainMaterialResult.summary;
 

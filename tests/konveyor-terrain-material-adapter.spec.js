@@ -183,6 +183,14 @@ describe('konveyor terrain material adapter', () => {
             expect(terrain.material.userData.heightTexture.magFilter).toBe(THREE.LinearFilter);
             expect(terrain.material.userData.heightTexture.minFilter).toBe(THREE.LinearFilter);
             expect(terrain.material.userData.konveyorTerrainHeightTextureMapping).toBe('world-space-heightfield');
+            expect(terrain.material.userData.konveyorTerrainMaterialControls).toMatchObject({
+                contrast: 1,
+                detailBase: 0.88,
+                detailStrength: 0.20,
+                aoFloor: 0.86,
+                aoStrength: 0.14,
+                fogBlendScale: 1,
+            });
             expect(builder.konveyorTerrainGeometryBudget.skirtTriangles).toBe(0);
         } finally {
             disposeTerrain(builder);

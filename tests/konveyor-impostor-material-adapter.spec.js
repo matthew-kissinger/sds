@@ -238,6 +238,11 @@ describe('konveyor impostor material adapter', () => {
         mode: 'dynamic-uniform-lab',
         layout: 'latlon-hemi-y',
       });
+      expect(material.userData.konveyorImpostorMaterialControlsSummary).toMatchObject({
+        colorScale: 1,
+        fogStrength: 0.62,
+        foliageLightingFloor: [0.42, 0.46, 0.32],
+      });
       expect(material.userData.konveyorImpostorMaterialControls?.setTileBlend).toBeTypeOf('function');
       expect(material.userData.isKilnImpostor).toBe(true);
       expect(material.userData.sidecar).toBe(params.sidecar);

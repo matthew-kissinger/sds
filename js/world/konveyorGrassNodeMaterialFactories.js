@@ -31,6 +31,7 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
         baseColor: colorValue(context.baseColor, meadowDefaults.baseColor, DEFAULT_GRASS_COLORS.baseColor),
         midColor: colorValue(context.midColor, meadowDefaults.midColor, DEFAULT_GRASS_COLORS.midColor),
         tipColor: colorValue(context.tipColor, meadowDefaults.tipColor, DEFAULT_GRASS_COLORS.tipColor),
+        colorTint: colorValue(context.colorTint, meadowDefaults.colorTint ?? options.colorTint, [1, 1, 1]),
         uvCellsPerChunk: context.uvCellsPerChunk ?? meadowDefaults.uvCellsPerChunk ?? 5,
         noiseHashVector: context.noiseHashVector ?? meadowDefaults.noiseHashVector ?? [127.1, 311.7],
         fogColor: toArray(context.fog?.color ?? context.fogColor ?? meadowDefaults.fogColor ?? options.fogColor, DEFAULT_FOG_COLOR),
@@ -60,6 +61,7 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
         baseColor: colorValue(colors.baseColor, context.baseColor ?? bladeDefaults.baseColor, DEFAULT_GRASS_COLORS.baseColor),
         midColor: colorValue(colors.midColor, context.midColor ?? bladeDefaults.midColor, DEFAULT_GRASS_COLORS.midColor),
         tipColor: colorValue(colors.tipColor, context.tipColor ?? bladeDefaults.tipColor, DEFAULT_GRASS_COLORS.tipColor),
+        colorTint: colorValue(context.colorTint, bladeDefaults.colorTint ?? options.colorTint, [1, 1, 1]),
         windDirection: toArray(wind.direction ?? context.windDirection ?? bladeDefaults.windDirection, DEFAULT_WIND_DIRECTION),
         windStrength: wind.strength ?? context.windStrength ?? bladeDefaults.windStrength ?? 0,
         windSpeed: wind.speed ?? context.windSpeed ?? bladeDefaults.windSpeed ?? 0,
@@ -93,6 +95,14 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
         fogColor: toArray(fog.color ?? context.fogColor ?? bladeDefaults.fogColor ?? options.fogColor, DEFAULT_FOG_COLOR),
         fogNear: fog.near ?? context.fogNear ?? bladeDefaults.fogNear ?? options.fogNear ?? 18,
         fogFar: fog.far ?? context.fogFar ?? bladeDefaults.fogFar ?? options.fogFar ?? 74,
+        fogStrength: fog.strength ?? context.fogStrength ?? bladeDefaults.fogStrength ?? options.fogStrength,
+        backlightStrength: lighting.backlightStrength ?? context.backlightStrength ?? bladeDefaults.backlightStrength ?? options.backlightStrength,
+        rimStrength: lighting.rimStrength ?? context.rimStrength ?? bladeDefaults.rimStrength ?? options.rimStrength,
+        hueVariation: context.hueVariation ?? bladeDefaults.hueVariation ?? options.hueVariation,
+        viewBacklightStrength: lighting.viewBacklightStrength
+          ?? context.viewBacklightStrength
+          ?? bladeDefaults.viewBacklightStrength
+          ?? options.viewBacklightStrength,
         colorScale: context.colorScale ?? bladeDefaults.colorScale ?? options.colorScale ?? 1,
         alphaHash: material.alphaHash ?? context.alphaHash ?? bladeDefaults.alphaHash ?? true,
         alphaTest: material.alphaTest ?? context.alphaTest ?? bladeDefaults.alphaTest ?? 0.06,

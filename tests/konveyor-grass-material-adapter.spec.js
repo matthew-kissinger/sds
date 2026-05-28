@@ -245,6 +245,12 @@ describe('konveyor grass material adapter', () => {
                 shadowStrength: 0.22,
                 shadowUniform: true,
             });
+            expect(material.userData.konveyorGrassMaterialControls).toMatchObject({
+                tipDampen: 0.36,
+                backlightStrength: 0.7,
+                rimStrength: 0.2,
+                fogStrength: 0.55,
+            });
             expect(grass.konveyorGrassBladeMaterialSummary).toMatchObject({
                 kind: 'grass-blade',
                 applied: true,

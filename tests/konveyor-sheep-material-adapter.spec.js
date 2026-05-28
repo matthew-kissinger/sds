@@ -124,6 +124,9 @@ describe('konveyor sheep material adapter', () => {
                 bodyOnlyWoolDisplacement: true,
                 silhouetteBreakup: 'normal-offset-plus-rim-color-breakup',
                 fog: 'scene-synced-controls',
+                rimStrength: 0.48,
+                edgeDarkening: 0.14,
+                fogStrength: 0.65,
             });
             expect(sheep.material.userData.konveyorSheepAnimation).toMatchObject({
                 source: 'vertexId-instanceData-instanceAnimation',

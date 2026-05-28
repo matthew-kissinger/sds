@@ -51,6 +51,8 @@ export function createKonveyorAnimeWaterNodeMaterial(
   const rippleB = valueNoise(rippleUv.mul(2.35).add(vec2(time.mul(0.05), time.mul(-0.03))));
   const ripple = smoothstep(0.56, 0.66, rippleA.mul(0.68).add(rippleB.mul(0.32)))
     .mul(water.rippleStrength * 0.13);
+  const rippleLightScale = water.rippleLightScale ?? 0.78;
+  const colorTint = water.colorTint ?? [1, 1, 1];
   const slowSwell = valueNoise(waterWorld.mul(0.012).add(vec2(time.mul(0.025), time.mul(-0.018))));
   const foamNoise = valueNoise(waterWorld.mul(vec2(0.12, 0.055)).add(vec2(time.mul(0.10), 0.0)));
   const foamThickness = water.foamThickness ?? 2.5;
@@ -96,10 +98,16 @@ export function createKonveyorAnimeWaterNodeMaterial(
   );
   const horizonSuppression = smoothstep(0.08, 0.55, depthT);
   const rippleGlint = spec.mul(glintMask.mul(0.72).add(0.28)).mul(horizonSuppression).mul(sparkleStrength).mul(water.sparkleScale).mul(0.22);
-  const glint = broadSunPath.mul(0.70).add(rippleGlint);
-  const fogBlend = smoothstep(0.7, 1.0, depthT).mul(0.24);
+  const broadGlintGain = water.broadGlintGain ?? 0.70;
+  const rippleGlintGain = water.rippleGlintGain ?? 0.22;
+  const broadGlintPath = broadSunPath
+    .mul(glintMask.mul(0.65).add(0.20))
+    .mul(horizonSuppression);
+  const glint = broadGlintPath.mul(broadGlintGain).add(rippleGlint.mul(rippleGlintGain / 0.22));
+  const fogBlend = smoothstep(0.7, 1.0, depthT).mul(water.fogStrength ?? 0.10);
   const baseColor = mix(vec3(...colorArray(water.shallowColor)), vec3(...colorArray(water.deepColor)), depthT)
-    .add(vec3(ripple, ripple, ripple).mul(0.78))
+    .mul(vec3(...colorTint))
+    .add(vec3(ripple, ripple, ripple).mul(rippleLightScale))
     .add(vec3(0.02, 0.08, 0.10).mul(slowSwell.mul(0.34)))
     .add(sunColor.mul(glint))
     .mul(water.colorScale);
@@ -111,16 +119,20 @@ export function createKonveyorAnimeWaterNodeMaterial(
   material.side = DoubleSide;
   material.depthWrite = true;
   material.depthTest = true;
+  material.toneMapped = false;
   material.userData.konveyorWaterColorScale = water.colorScale;
   material.userData.konveyorWaterFoamScale = water.foamScale;
   material.userData.konveyorWaterSparkleScale = water.sparkleScale;
   material.userData.konveyorWaterMinDepthT = 0.82;
   material.userData.konveyorWaterWorldSpaceHeightfield = true;
   material.userData.konveyorWaterSunCameraGlint = true;
-  material.userData.konveyorWaterGlintMode = 'flat-normal-broad-sun-path-plus-ripple-v3';
-  material.userData.konveyorWaterGlintGain = 0.70;
-  material.userData.konveyorWaterRippleGlintGain = 0.22;
+  material.userData.konveyorWaterGlintMode = 'masked-flat-normal-broad-sun-path-plus-ripple-v4';
+  material.userData.konveyorWaterGlintGain = broadGlintGain;
+  material.userData.konveyorWaterRippleGlintGain = rippleGlintGain;
+  material.userData.konveyorWaterFogStrength = water.fogStrength ?? 0.10;
   material.userData.konveyorWaterSunSpecularIntensity = water.sunSpecularIntensity ?? 0.6;
+  material.userData.konveyorWaterRippleLightScale = rippleLightScale;
+  material.userData.konveyorWaterColorTint = colorTint;
   material.userData.konveyorWaterSunColorSource = water.sunColorSource ?? 'skyFog.sunColor';
   material.userData.konveyorWaterNodeUniforms = {
     sunDirection,
@@ -166,5 +178,5 @@ function copyColorLike(target, value, linearize = false) {
 }
 
 function rawChannelToLinear(value) {
-  return Math.pow(Math.max(0, Number(value) || 0), 2.2);
+  return Math.max(0, Number(value) || 0);
 }

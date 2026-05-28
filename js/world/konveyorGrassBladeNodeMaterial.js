@@ -4,12 +4,8 @@ export function createKonveyorGrassBladeNodeMaterial(
   { MeshBasicNodeMaterial, MeshStandardNodeMaterial, DoubleSide, Vector2 = ThreeVector2, Vector3 = ThreeVector3, TSL },
   grassBlade
 ) {
-  const { abs, attribute, cameraPosition, clamp, dot, float, length, max, mix, normalize, positionLocal, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
-  const linearColor = (color) => color.map((value) => (
-    value <= 0.04045
-      ? value / 12.92
-      : ((value + 0.055) / 1.055) ** 2.4
-  ));
+  const { abs, attribute, cameraPosition, clamp, cos, dot, float, fract, length, max, mix, normalize, positionLocal, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
+  const linearColor = (color) => color;
   const vector2 = (value) => (
     typeof Vector2 === 'function'
       ? new Vector2(value[0], value[1])
@@ -109,29 +105,45 @@ export function createKonveyorGrassBladeNodeMaterial(
     tipColor,
     smoothstep(0.4, 1.0, height01)
   );
-  const colorVariation = smoothstep(-1.0, 1.0, sin(worldX.mul(0.2).add(worldZ.mul(0.15))));
+  const colorVariation = sin(worldX.mul(0.2)).mul(cos(worldZ.mul(0.15))).mul(0.5).add(0.5);
   const variation = vec3(
     colorVariation.mul(0.08),
     colorVariation.mul(0.05).sub(0.02),
     colorVariation.mul(-0.03)
   );
+  const hueOffset = fract(sin(worldX.mul(12.9898).add(worldZ.mul(78.233))).mul(43758.5453123))
+    .sub(0.5)
+    .mul(grassBlade.hueVariation ?? 0.04);
+  const hueNudge = vec3(hueOffset.negate(), hueOffset, hueOffset.mul(0.5));
   const ao = mix(0.7, 1.0, height01);
   const toCamera = normalize(cameraPosition.sub(bladeWorld));
   const toSun = normalize(sunDirection);
+  const backlightStrength = grassBlade.backlightStrength ?? 0.7;
+  const rimStrength = grassBlade.rimStrength ?? 0.2;
+  const fogStrength = grassBlade.fogStrength ?? 0.55;
+  const viewBacklightStrength = grassBlade.viewBacklightStrength ?? 0.15;
+  const viewBacklight = float(1.0).add(
+    float(1.0)
+      .sub(abs(dot(toCamera, vec3(0.0, 1.0, 0.0))))
+      .mul(height01)
+      .mul(viewBacklightStrength)
+  );
   const backlitSun = pow(max(dot(toCamera, toSun.mul(-1.0)), 0.0), 4.0);
-  const sunTip = tipColor.mul(backlitSun.mul(0.7).mul(tipMask));
+  const sunTip = tipColor.mul(backlitSun.mul(backlightStrength).mul(tipMask));
   const verticalRim = pow(max(dot(toCamera, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
   const viewDistance = length(cameraPosition.sub(bladeWorld));
-  const fogBlend = smoothstep(grassBlade.fogNear, grassBlade.fogFar, viewDistance).mul(0.55);
+  const fogBlend = smoothstep(grassBlade.fogNear, grassBlade.fogFar, viewDistance).mul(fogStrength);
   const densityFade = float(1.0).sub(
     smoothstep(grassBlade.grassFadeStart, grassBlade.grassFadeEnd, viewDistance)
       .mul(grassBlade.distanceFadeStrength)
   );
   const colorScale = grassBlade.colorScale ?? 1;
+  const colorTint = grassBlade.colorTint ?? [1, 1, 1];
   const interactionShadow = float(1.0).sub(bodyFalloffTotal.mul(interactionShadowStrength).mul(smoothstep(0.15, 1.0, height01)));
-  const grassColor = gradient.add(variation).mul(ao).mul(interactionShadow)
+  const grassColor = gradient.add(hueNudge).add(variation).mul(interactionShadow).mul(ao).mul(viewBacklight)
     .add(sunTip)
-    .add(tipColor.mul(verticalRim.mul(0.2).mul(tipMask)))
+    .add(tipColor.mul(verticalRim.mul(rimStrength).mul(tipMask)))
+    .mul(vec3(...linearColor(colorTint)))
     .mul(colorScale);
 
   const MaterialClass = MeshBasicNodeMaterial ?? MeshStandardNodeMaterial;
@@ -167,6 +179,15 @@ export function createKonveyorGrassBladeNodeMaterial(
     far: grassBlade.fogFar,
   };
   material.userData.konveyorGrassColorScale = colorScale;
+  material.userData.konveyorGrassMaterialControls = {
+    tipDampen: grassBlade.tipDampen ?? 0.36,
+    backlightStrength,
+    rimStrength,
+    fogStrength,
+    hueVariation: grassBlade.hueVariation ?? 0.04,
+    viewBacklightStrength,
+    colorTint,
+  };
   material.userData.konveyorGrassLighting = material.isMeshBasicNodeMaterial
     ? 'shader-owned-unlit'
     : 'standard-fallback';

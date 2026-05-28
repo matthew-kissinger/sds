@@ -50,7 +50,9 @@ export function createKonveyorKilnImpostorNodeMaterial(
   const sunDirectionNode = uniform(vector3(kilnImpostor.sunDirection));
   const sunColorNode = uniform(vector3(kilnImpostor.sunColor));
   const ambientColorNode = uniform(vector3(kilnImpostor.ambientColor));
-  const foliageLightingFloor = vec3(0.42, 0.46, 0.32);
+  const foliageLightingFloor = vec3(...(kilnImpostor.foliageLightingFloor ?? [0.42, 0.46, 0.32]));
+  const colorScale = kilnImpostor.colorScale ?? 1;
+  const fogStrength = kilnImpostor.fogStrength ?? 0.62;
   const tileUv = (tileOffsetNode) => tileLocalUv.mul(tileScale).add(tileOffsetNode);
   const albedo0 = texture(albedoAtlas, tileUv(tileOffsets[0]));
   const albedo1 = texture(albedoAtlas, tileUv(tileOffsets[1]));
@@ -82,11 +84,11 @@ export function createKonveyorKilnImpostorNodeMaterial(
     foliageLightingFloor
   ));
   const viewDistance = length(positionView);
-  const fogBlend = smoothstep(kilnImpostor.fogNear, kilnImpostor.fogFar, viewDistance).mul(0.62);
+  const fogBlend = smoothstep(kilnImpostor.fogNear, kilnImpostor.fogFar, viewDistance).mul(fogStrength);
 
   const material = new MeshBasicNodeMaterial();
   material.name = 'konveyor-node-kiln-impostor';
-  material.colorNode = mix(relitColor.mul(depthShade), vec3(...kilnImpostor.fogColor), fogBlend);
+  material.colorNode = mix(relitColor.mul(depthShade).mul(colorScale), vec3(...kilnImpostor.fogColor), fogBlend);
   material.opacityNode = alphaBlend;
   material.transparent = kilnImpostor.transparent ?? true;
   material.depthWrite = kilnImpostor.depthWrite ?? true;
@@ -101,6 +103,11 @@ export function createKonveyorKilnImpostorNodeMaterial(
     tilesX: kilnImpostor.tilesX,
     tilesY: kilnImpostor.tilesY,
     source: useInstancedSelection ? 'instanced-attributes' : 'uniform-controls',
+  };
+  material.userData.konveyorImpostorMaterialControlsSummary = {
+    colorScale,
+    fogStrength,
+    foliageLightingFloor: kilnImpostor.foliageLightingFloor ?? [0.42, 0.46, 0.32],
   };
   material.userData.konveyorImpostorMaterialControls = createKonveyorKilnImpostorNodeMaterialControls({
     tileOffsets,

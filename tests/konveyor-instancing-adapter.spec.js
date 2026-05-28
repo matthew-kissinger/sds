@@ -6,7 +6,7 @@ import {
   createKonveyorNativeTreeInstancingPreview,
 } from '../js/world/konveyorNativeInstancingAdapter.js';
 import { placeEnvironmentDetails } from '../js/world/RockPlacement.js';
-import { placeTrees } from '../js/world/TreePlacement.js';
+import { placeTrees, resolveKonveyorNativeTreeImpostorRoute } from '../js/world/TreePlacement.js';
 import {
   createKonveyorTreeImpostorGeometry,
   installKonveyorTreeHybridRuntime,
@@ -59,6 +59,35 @@ function rockRoot() {
 }
 
 describe('konveyor native tree instancing adapter', () => {
+  it('promotes the explicit production tree impostor route to octahedral v2 with a latlon rollback', () => {
+    expect(resolveKonveyorNativeTreeImpostorRoute('?renderer=webgpu&konveyorNativeTreeImpostors=1')).toMatchObject({
+      active: true,
+      useOctahedral: true,
+      baseDir: 'assets/models/trees/octahedral',
+      lod: 'production-hybrid-lod0-octahedral-v2-impostor-explicit',
+      runtimeMode: 'octahedral-production',
+      sidecarLayout: 'octahedral',
+      sidecarVersion: 2,
+      rollbackQuery: '?renderer=webgpu&konveyorNativeTreeImpostors=latlon',
+    });
+
+    expect(resolveKonveyorNativeTreeImpostorRoute('?renderer=webgpu&konveyorNativeTreeImpostors=latlon')).toMatchObject({
+      active: true,
+      useLatLonRollback: true,
+      baseDir: 'assets/models/trees',
+      lod: 'rollback-hybrid-lod0-latlon-hemi-impostor-explicit',
+      runtimeMode: 'latlon-hemi-rollback',
+      sidecarLayout: 'latlon-hemi-y',
+      sidecarVersion: 1,
+    });
+
+    expect(resolveKonveyorNativeTreeImpostorRoute('?renderer=webgpu')).toMatchObject({
+      active: false,
+      sidecarLayout: null,
+      sidecarVersion: null,
+    });
+  });
+
   it('builds native Three instanced groups without depending on InstancedMesh2', () => {
     const scene = new THREE.Scene();
     const plan = {

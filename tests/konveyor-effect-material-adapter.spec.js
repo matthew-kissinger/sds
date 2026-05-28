@@ -176,7 +176,7 @@ describe('konveyor effect material adapter', () => {
       expect(sun.material.opacityNode).toBeTruthy();
       expect(sun.material.userData.konveyorSunBillboardOwnership).toMatchObject({
         owns: 'disc-body-only',
-        skyOwns: 'aureole-and-horizon-glow',
+        skyOwns: 'painted-sun-body-aureole-and-horizon-glow',
       });
       expect(sun.summary).toMatchObject({ kind: 'sun-billboard', applied: true, hasControls: true });
 
@@ -289,7 +289,7 @@ describe('konveyor effect material adapter', () => {
     expect(updates[0].coreColor).toBeInstanceOf(THREE.Color);
     expect(updates[0].haloColor).toBeUndefined();
     expect(sun.getDiagnostics()).toMatchObject({
-      size: 420,
+      size: 720,
       distance: 3000,
       intensity: 2.2,
       materialName: 'konveyor-sun',

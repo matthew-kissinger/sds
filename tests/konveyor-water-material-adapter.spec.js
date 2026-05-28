@@ -132,7 +132,7 @@ describe('konveyor water material adapter', () => {
             expect(material.depthWrite).toBe(true);
             expect(material.userData.konveyorWaterWorldSpaceHeightfield).toBe(true);
             expect(material.userData.konveyorWaterSunCameraGlint).toBe(true);
-            expect(material.userData.konveyorWaterGlintMode).toBe('flat-normal-broad-sun-path-plus-ripple-v3');
+            expect(material.userData.konveyorWaterGlintMode).toBe('masked-flat-normal-broad-sun-path-plus-ripple-v4');
             expect(material.userData.konveyorWaterGlintGain).toBe(0.70);
             expect(material.userData.konveyorWaterRippleGlintGain).toBe(0.22);
             expect(material.userData.konveyorWaterSunSpecularIntensity).toBe(0.6);
@@ -145,8 +145,8 @@ describe('konveyor water material adapter', () => {
                 sunSpecularIntensity: 0.8,
             });
             expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()[0]).toBeCloseTo(1);
-            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()[1]).toBeCloseTo(Math.pow(0.5, 2.2));
-            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()[2]).toBeCloseTo(Math.pow(0.25, 2.2));
+            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()[1]).toBeCloseTo(0.5);
+            expect(material.userData.konveyorWaterNodeUniforms.sunColor.value.toArray()[2]).toBeCloseTo(0.25);
             expect(material.userData.konveyorWaterNodeUniforms.sunSpecularIntensity.value).toBe(0.8);
             expect(material.userData.konveyorWaterMaterialSummary).toMatchObject({
                 kind: 'anime-water',

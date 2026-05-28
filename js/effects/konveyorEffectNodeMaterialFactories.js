@@ -54,6 +54,14 @@ export function createKonveyorEffectNodeMaterialFactories(webGpuModules, options
           'intensity',
           'coreRadius',
           'coreFeather',
+          'hotCoreRadius',
+          'hotCoreFeather',
+          'hotCoreColor',
+          'hotCoreGain',
+          'bodyGain',
+          'bodyOpacity',
+          'bodyColor',
+          'hotCoreOpacity',
           'coreColor',
         ])
       );

@@ -137,14 +137,19 @@ describe('konveyor node material factory suite', () => {
     try {
       expect(sky.userData.konveyorSkyPresetTuning).toMatchObject({
         presetName: 'golden-hour',
-        sunGlowStrength: 0.38,
+        sunGlowStrength: 0.58,
         sunDiscStrength: 0,
         sunDiscOwner: 'SunBillboard',
+        aureoleColor: [0.92, 0.58, 0.26],
+        sunMassStart: 0.982,
+        sunMassEnd: 0.9992,
+        sunMassPaintColor: [1.0, 0.60, 0.22],
+        sunMassPaintStrength: 0.90,
       });
-      expect(sun.userData.konveyorIntensityUniform.value).toBeCloseTo(1.0);
+      expect(sun.userData.konveyorIntensityUniform.value).toBeCloseTo(1.04);
       expect(sun.userData.konveyorSunBillboardOwnership).toMatchObject({
         owns: 'disc-body-only',
-        skyOwns: 'aureole-and-horizon-glow',
+        skyOwns: 'painted-sun-body-aureole-and-horizon-glow',
       });
     } finally {
       sky.dispose();

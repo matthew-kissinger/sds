@@ -615,10 +615,11 @@ export class GrassSystem {
         });
         const material = materialResult.material;
         material.userData = material.userData ?? {};
-        material.userData.konveyorGrassBladeMaterialControls = materialResult.controls;
+        material.userData.konveyorGrassBladeMaterialControls =
+            materialResult.controls ?? material.userData.konveyorGrassBladeMaterialControls ?? null;
         material.userData.konveyorGrassBladeMaterialSummary = materialResult.summary;
         this.konveyorGrassBladeMaterialSummary = materialResult.summary;
-        this.konveyorGrassBladeMaterialControls = materialResult.controls;
+        this.konveyorGrassBladeMaterialControls = material.userData.konveyorGrassBladeMaterialControls;
         return material;
     }
 

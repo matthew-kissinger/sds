@@ -4,6 +4,37 @@
 
 ## Recently Completed
 
+### Cycle 42 - `webgpu-scene-material-parity-and-device-proof` (local closeout 2026-05-28, v2.1.10 pending release)
+
+Plan remains at [`docs/cycle-42-plan.md`](cycle-42-plan.md) until release proof is recorded. Cycle 42 implemented the visual-first WebGPU scene-material parity pass requested after Cycle 41: sun/sky interaction, grass/terrain separation, and deeper blue water were treated as close criteria before release.
+
+**Closeout outcomes:**
+
+- **WebGPU sun/sky art lock.** The sky node material now paints a warm sun body before adding the hot core, so the large visible mass no longer reads as a dull grey-white moon. The WebGPU sun billboard is larger and remains additive, while the sky owns the painted sun body, aureole, and horizon glow.
+- **WebGPU grass and terrain separation.** Grass color handling no longer double-darkens/browns the palette; low-sun grass uses more green/yellow tip and backlight separation so it does not collapse into the terrain color.
+- **Deeper blue WebGPU water.** Water uses darker blue tuning and a masked broad-glint path so low-sun water keeps an intentional reflection path without washing the whole surface purple.
+- **Repeatable Cycle 42 proof.** `npm run validation:cycle42-material-lock` writes `cycle42-validation/runtime/material-lock.json`, per-shot screenshots, and `cycle42-validation/screenshots/cycle42-material-contact-sheet.png`. The runner passes but still reports six low-sun actor/Open Country material-parity manual-review classifications.
+- **Octahedral production route proof.** `npm run validation:cycle42-octahedral-proof` writes `cycle42-validation/runtime/octahedral-proof.json` and `cycle42-validation/screenshots/cycle42-octahedral-contact-sheet.png`. The explicit WebGPU production tree-impostor route now resolves to octahedral v2; rollback is `?renderer=webgpu&konveyorNativeTreeImpostors=latlon`.
+- **Dependabot hygiene.** Low-risk dev-scope `tmp` and `qs` advisories were handled. The remaining `uuid` advisory is transitive through Google/BrowserStack tooling and stays maintenance carryover.
+
+**Validation gates run before release approval (2026-05-28):**
+
+- `npm test` - 54 passed files, 1 skipped; 499 specs passed, 7 skipped.
+- `npm run lint` - clean.
+- `npm run build` - clean with existing Vite large-chunk/dynamic-import warnings.
+- `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --reporter=line` - 2 passed.
+- `npx playwright test --project=chromium --grep-invert @local-only --reporter=line` - 6 passed after rerunning standalone; an earlier parallel run was invalid because Vite moved to port `3001`.
+- `npm run validation:cycle42-material-lock` - passed with six manual-review material classifications.
+- `npm run validation:cycle42-octahedral-proof` - passed.
+
+**Carryover:**
+
+- Android WebGPU water/device proof remains blocked locally by no authorized ADB device.
+- BrowserStack iOS water proof remains blocked locally by missing BrowserStack credentials.
+- Open Country paired two-client playtest remains deferred.
+- The six material-lock manual-review items stay visible for Matt approval and future painterly parity work.
+- Final release proof is still pending: commit, push, tag `v2.1.10`, deploy run, live HTML asset, and direct asset URL.
+
 ### Cycle 41 - `webgpu-painterly-parity-and-polish` (closed 2026-05-27, v2.1.9 release)
 
 Plan archived at [`docs/archive/cycles/cycle-41-plan.md`](archive/cycles/cycle-41-plan.md). Cycle 41 finished the WebGPU painterly parity follow-up opened by the WebGL/WebGPU side-by-side review: the WebGPU sun now reads as a warm visible mass instead of a tiny pale dot, low-sun water views have an intentional reflected sun path, and sky/water tuning is less washed out while staying inside the renderer-only scope.

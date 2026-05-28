@@ -57,11 +57,18 @@ export function createKonveyorSkyFogNodeMaterial(
   const aureoleNormalized = clamp(aureole.mul(0.04), 0.0, 1.2);
 
   const fogBand = float(1.0).sub(smoothstep(0.0, 0.38, skyY));
-  const sunMass = smoothstep(0.94, 0.998, cosTheta).mul(tuning.sunMassStrength ?? 0.38);
-  const skyColor = mix(lowSky, highSky, vertical)
+  const aureoleColor = tuning.aureoleColor ?? [1.0, 0.92, 0.76];
+  const sunMassColor = tuning.sunMassColor ?? [1.0, 0.68, 0.28];
+  const sunMassPaintColor = tuning.sunMassPaintColor ?? sunMassColor;
+  const sunMassShape = smoothstep(tuning.sunMassStart ?? 0.94, tuning.sunMassEnd ?? 0.998, cosTheta);
+  const sunMassPaint = clamp(sunMassShape.mul(tuning.sunMassPaintStrength ?? 0.0), 0.0, 1.0);
+  const sunMass = pow(sunMassShape, tuning.sunMassPower ?? 1.0)
+    .mul(tuning.sunMassStrength ?? 0.38);
+  const skyBaseWithAureole = mix(lowSky, highSky, vertical)
     .mul(tuning.skyBaseScale ?? 0.62)
-    .add(sunColor.mul(aureoleNormalized.mul((tuning.sunGlowStrength ?? 0.12) * 0.30)))
-    .add(vec3(1.0, 0.68, 0.28).mul(sunMass));
+    .add(vec3(...aureoleColor).mul(aureoleNormalized.mul(tuning.sunGlowStrength ?? 0.12)));
+  const skyColor = mix(skyBaseWithAureole, vec3(...sunMassPaintColor), sunMassPaint)
+    .add(vec3(...sunMassColor).mul(sunMass));
 
   const material = new MeshBasicNodeMaterial();
   material.name = name;
@@ -91,7 +98,14 @@ export function createKonveyorSkyFogNodeMaterial(
     aureoleG,
     skyBaseScale: tuning.skyBaseScale ?? 0.62,
     sunMassStrength: tuning.sunMassStrength ?? 0.38,
-    ownership: 'sky-aureole-and-horizon-glow',
+    sunMassStart: tuning.sunMassStart ?? 0.94,
+    sunMassEnd: tuning.sunMassEnd ?? 0.998,
+    sunMassPower: tuning.sunMassPower ?? 1.0,
+    sunMassColor,
+    sunMassPaintColor,
+    sunMassPaintStrength: tuning.sunMassPaintStrength ?? 0.0,
+    aureoleColor,
+    ownership: 'sky-painted-sun-body-aureole-and-horizon-glow',
     fogBandStrength: tuning.fogBandStrength ?? 0.08,
   };
   if (side !== null) {
@@ -175,5 +189,5 @@ function copyColorVec3(target, value) {
 }
 
 function rawChannelToLinear(value) {
-  return Math.pow(Math.max(0, Number(value) || 0), 2.2);
+  return Math.max(0, Number(value) || 0);
 }

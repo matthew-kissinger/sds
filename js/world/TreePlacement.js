@@ -30,6 +30,30 @@ const HYBRID_TREE_LOD1_SWITCH_DISTANCE = 56;
 const HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE = 144;
 let treeImpostorRuntimePromise = null;
 
+export function resolveKonveyorNativeTreeImpostorRoute(search = (typeof window === 'undefined' ? '' : window.location.search)) {
+    const params = new URLSearchParams(search);
+    const mode = params.get('konveyorNativeTreeImpostors');
+    const useOctahedral = mode === '1' || mode === 'octahedral';
+    const useLatLonRollback = mode === 'latlon';
+    const active = useOctahedral || useLatLonRollback;
+    return {
+        mode,
+        active,
+        useOctahedral,
+        useLatLonRollback,
+        baseDir: useOctahedral ? 'assets/models/trees/octahedral' : 'assets/models/trees',
+        lod: useOctahedral
+            ? 'production-hybrid-lod0-octahedral-v2-impostor-explicit'
+            : useLatLonRollback ? 'rollback-hybrid-lod0-latlon-hemi-impostor-explicit' : null,
+        runtimeMode: useOctahedral
+            ? 'octahedral-production'
+            : useLatLonRollback ? 'latlon-hemi-rollback' : null,
+        sidecarLayout: active ? (useOctahedral ? 'octahedral' : 'latlon-hemi-y') : null,
+        sidecarVersion: active ? (useOctahedral ? 2 : 1) : null,
+        rollbackQuery: '?renderer=webgpu&konveyorNativeTreeImpostors=latlon',
+    };
+}
+
 function loadTreeImpostorRuntime() {
     if (!treeImpostorRuntimePromise) {
         treeImpostorRuntimePromise = import('./TreeImpostorRuntime.js');
@@ -50,14 +74,10 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     const dummy = new THREE.Object3D();
     const hwTier = getSceneManager()?.getTier?.() ?? (builder.isMobile ? 'low' : 'med');
     const totalTrees = Object.values(treeInstances).reduce((s, a) => s + a.length, 0);
-    const params = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
     const useMobileNativeLod1 = hwTier === 'low';
-    const nativeTreeImpostorMode = params.get('konveyorNativeTreeImpostors');
-    const useOctahedralTreeImpostorLab = nativeTreeImpostorMode === 'octahedral';
-    const useProductionNativeImpostor = nativeTreeImpostorMode === '1' || useOctahedralTreeImpostorLab;
-    const treeImpostorBaseDir = useOctahedralTreeImpostorLab
-        ? 'assets/models/trees/octahedral'
-        : 'assets/models/trees';
+    const impostorRoute = resolveKonveyorNativeTreeImpostorRoute();
+    const useProductionNativeImpostor = impostorRoute.active;
+    const treeImpostorBaseDir = impostorRoute.baseDir;
     const treeImpostorRuntime = useProductionNativeImpostor ? await loadTreeImpostorRuntime() : null;
     builder._konveyorTreeImpostorSync = treeImpostorRuntime?.syncKonveyorTreeImpostorMeshes ?? null;
     const chunkSize = useProductionNativeImpostor ? 160 : (builder.isMobile ? 320 : 192);
@@ -239,22 +259,16 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
             && impostorGroupsOk,
         source: 'THREE.InstancedMesh',
         route: 'konveyor-production-scene-body',
-        lod: useOctahedralTreeImpostorLab
-            ? 'lab-hybrid-lod0-octahedral-v2-impostor-explicit'
-            : useProductionNativeImpostor ? 'production-hybrid-lod0-latlon-hemi-impostor-explicit' : (useMobileNativeLod1 ? 'low-tier-lod1-native' : 'lod0-only'),
+        lod: useProductionNativeImpostor ? impostorRoute.lod : (useMobileNativeLod1 ? 'low-tier-lod1-native' : 'lod0-only'),
         culling: 'chunked-instanced-bounds',
         chunkSize,
         impostor: {
             active: useProductionNativeImpostor,
             ok: impostorGroupsOk,
-            mode: useOctahedralTreeImpostorLab ? 'octahedral-lab' : useProductionNativeImpostor ? 'latlon-hemi-production' : null,
+            mode: impostorRoute.runtimeMode,
             groupCount: impostorGroups.length,
-            sidecarLayout: useProductionNativeImpostor
-                ? (useOctahedralTreeImpostorLab ? 'octahedral' : 'latlon-hemi-y')
-                : null,
-            sidecarVersion: useProductionNativeImpostor
-                ? (useOctahedralTreeImpostorLab ? 2 : 1)
-                : null,
+            sidecarLayout: impostorRoute.sidecarLayout,
+            sidecarVersion: impostorRoute.sidecarVersion,
             selection: useProductionNativeImpostor ? 'camera-driven-per-instance-instanced-attributes' : null,
             billboardProjection: useProductionNativeImpostor ? 'cpu-world-up-locked-camera-facing' : null,
             terrainGroundedPivots: useProductionNativeImpostor,
@@ -263,6 +277,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
             midLod: useProductionNativeImpostor ? 'lod1' : null,
             nearDistance: useProductionNativeImpostor ? HYBRID_TREE_LOD1_SWITCH_DISTANCE : null,
             switchDistance: useProductionNativeImpostor ? HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE : null,
+            rollbackQuery: impostorRoute.rollbackQuery,
         },
         productionReference: 'TerrainBuilder InstancedMesh2.addInstances',
         treeInstances: totalTrees,

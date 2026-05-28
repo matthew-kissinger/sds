@@ -27,7 +27,10 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
   const sss = pow(max(dot(lightDir.negate(), viewDir), 0.0), 3.0).mul(0.12);
   const edge = float(1.0).sub(pow(abs(dot(viewDir, normal)), 0.7));
   const viewDistance = length(positionView);
-  const fogBlend = smoothstep(fogNear, fogFar, viewDistance).mul(0.65);
+  const rimStrength = sheepWool.rimStrength ?? 0.48;
+  const edgeDarkening = sheepWool.edgeDarkening ?? 0.14;
+  const fogStrength = sheepWool.fogStrength ?? 0.65;
+  const fogBlend = smoothstep(fogNear, fogFar, viewDistance).mul(fogStrength);
   const bodyMask = float(1.0).sub(step(50.0, vertexId));
   const headMask = step(50.0, vertexId).mul(float(1.0).sub(step(100.0, vertexId)));
   const legMask = step(100.0, vertexId).mul(float(1.0).sub(step(140.0, vertexId)));
@@ -65,9 +68,9 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
     .mul(bodyMask);
   const partColor = vertexColor();
   const bodyWoolColor = woolColor.mul(toon).mul(colorShift)
-    .add(vec3(...sheepWool.rimColor).mul(fresnel.mul(0.48)))
+    .add(vec3(...sheepWool.rimColor).mul(fresnel.mul(rimStrength)))
     .add(vec3(...sheepWool.sssColor).mul(sss))
-    .mul(float(1.0).sub(edge.mul(0.14)))
+    .mul(float(1.0).sub(edge.mul(edgeDarkening)))
     .sub(vec3(0.045, 0.045, 0.045).mul(woolNoise.mul(1.6)))
     .add(vec3(0.035, 0.035, 0.03).mul(float(1.0).sub(woolNoise)).mul(fresnel));
   const partShade = float(0.66).add(toon.mul(0.34));
@@ -100,6 +103,9 @@ export function createKonveyorSheepWoolNodeMaterial({ MeshStandardNodeMaterial, 
     bodyOnlyWoolDisplacement: true,
     silhouetteBreakup: 'normal-offset-plus-rim-color-breakup',
     fog: 'scene-synced-controls',
+    rimStrength,
+    edgeDarkening,
+    fogStrength,
   };
   material.userData.konveyorSheepMaterialControls = createKonveyorSheepWoolNodeMaterialControls({
     fogColor,

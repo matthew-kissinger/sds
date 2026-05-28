@@ -1,6 +1,6 @@
 {
   "name": "sheep-dog-sim",
-  "version": "2.1.9",
+  "version": "2.1.10",
   "description": "An interactive herding game where players control a sheepdog to guide sheep into a pen using boid flocking algorithms",
   "type": "module",
   "main": "index.html",
@@ -54,6 +54,8 @@
     "validation:lod": "node tools/validation/lod-compare.mjs",
     "validation:screenshots": "node tools/validation/screenshot-golden.mjs",
     "validation:cycle41-art-lock": "node tools/cycle41-art-lock.mjs",
+    "validation:cycle42-material-lock": "node tools/cycle42-material-lock.mjs",
+    "validation:cycle42-octahedral-proof": "node tools/cycle42-octahedral-proof.mjs",
     "validation:latency": "node tools/validation/input-latency.mjs",
     "validation:latency:mobile": "node tools/validation/input-latency.mjs --profile=mobile",
     "validation:perf": "node tools/validation/frame-time-histogram.mjs",
@@ -81,12 +83,12 @@
     "@types/node": "^25.6.0",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.1",
-    "browserstack-node-sdk": "^1.53.2",
+    "browserstack-node-sdk": "^1.55.3",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "eslint": "^10.3.0",
     "mediabunny": "^1.44.2",
-    "selenium-webdriver": "^4.27.0",
+    "selenium-webdriver": "^4.44.0",
     "sharp": "^0.34.5",
     "simplex-noise": "^4.0.3",
     "tailwindcss": "^4.1.17",
@@ -110,6 +112,8 @@
     "three": "^0.184.0"
   },
   "overrides": {
-    "@tootallnate/once": "^3.0.0"
+    "@tootallnate/once": "^3.0.0",
+    "qs": "6.15.2",
+    "tmp": "0.2.7"
   }
 }
