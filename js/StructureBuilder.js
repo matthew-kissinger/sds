@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FencePresets, FenceConfigBuilder } from './FencePresets.js';
 import { sumObjectTreeTriangles } from './utils/TriangleCount.js';
+import { isPointInPolygon } from './gamestate/polygonSpawn.js';
 
 /**
  * StructureBuilder - Structure builder with modular fence system
@@ -570,7 +571,7 @@ export class StructureBuilder {
             const testZ = gapCenter.z + perpDz * testDist;
 
             // If test point is INSIDE the polygon, we're pointing inward - flip it
-            if (this.isPointInPolygon(testX, testZ, points)) {
+            if (isPointInPolygon(testX, testZ, points)) {
                 perpDx = -perpDx;
                 perpDz = -perpDz;
                 console.log(`[BUILD] Flipped pasture direction - was pointing into polygon`);
@@ -672,25 +673,6 @@ export class StructureBuilder {
             z: start.z + t * dz,
             t: t
         };
-    }
-
-    /**
-     * Check if a point is inside a polygon using ray casting
-     */
-    isPointInPolygon(x, z, points) {
-        if (!points || points.length < 3) return false;
-
-        let inside = false;
-        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-            const xi = points[i].x, zi = points[i].z;
-            const xj = points[j].x, zj = points[j].z;
-
-            if (((zi > z) !== (zj > z)) &&
-                (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) {
-                inside = !inside;
-            }
-        }
-        return inside;
     }
 
     /**

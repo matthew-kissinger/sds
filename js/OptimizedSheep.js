@@ -10,6 +10,7 @@ import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { createKonveyorSheepMaterial } from './konveyorSheepMaterialAdapter.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
+import { pointToSegmentDistance, isPointInPolygon } from './gamestate/polygonSpawn.js';
 
 // Cycle 6 Phase 2 — sheep obstacle avoidance.
 //   - 30m query radius matches the cycle-6 plan budget (kdbush O(log N + k)).
@@ -465,25 +466,6 @@ export class OptimizedSheepSystem {
     }
 
     /**
-     * Check if a point is inside a polygon using ray casting algorithm
-     */
-    isPointInPolygon(x, z, points) {
-        if (!points || points.length < 3) return true;
-
-        let inside = false;
-        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-            const xi = points[i].x, zi = points[i].z;
-            const xj = points[j].x, zj = points[j].z;
-
-            if (((zi > z) !== (zj > z)) &&
-                (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) {
-                inside = !inside;
-            }
-        }
-        return inside;
-    }
-
-    /**
      * Get the centroid of a polygon
      */
     getPolygonCentroid(points) {
@@ -496,38 +478,16 @@ export class OptimizedSheepSystem {
     }
 
     /**
-     * Calculate distance from a point to a line segment
-     */
-    pointToSegmentDistance(px, pz, start, end) {
-        const dx = end.x - start.x;
-        const dz = end.z - start.z;
-        const length = Math.sqrt(dx * dx + dz * dz);
-
-        if (length === 0) {
-            return Math.sqrt(Math.pow(px - start.x, 2) + Math.pow(pz - start.z, 2));
-        }
-
-        const t = Math.max(0, Math.min(1,
-            ((px - start.x) * dx + (pz - start.z) * dz) / (length * length)
-        ));
-
-        const closestX = start.x + t * dx;
-        const closestZ = start.z + t * dz;
-
-        return Math.sqrt(Math.pow(px - closestX, 2) + Math.pow(pz - closestZ, 2));
-    }
-
-    /**
      * Check if a point is safely inside the polygon with margin from edges
      */
     isPointSafelyInside(x, z, points, margin = 3) {
-        if (!this.isPointInPolygon(x, z, points)) return false;
+        if (!isPointInPolygon(x, z, points)) return false;
 
         // Check distance from all edges
         for (let i = 0; i < points.length; i++) {
             const start = points[i];
             const end = points[(i + 1) % points.length];
-            const dist = this.pointToSegmentDistance(x, z, start, end);
+            const dist = pointToSegmentDistance(x, z, start, end);
             if (dist < margin) return false;
         }
         return true;
