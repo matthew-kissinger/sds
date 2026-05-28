@@ -986,3 +986,31 @@ tests pass unchanged in behavior.
 - `tools/konveyor-production-webgpu-request-proof.mjs` and
   `tools/konveyor-production-webgpu-perf-proof.mjs` (the surviving production
   WebGPU proofs).
+
+## Cycle 44 Phase 1 — dependency-security overrides (2026-05-28)
+
+Two moderate, dev-only transitive npm advisories were resolved with top-level
+`overrides` rather than parent bumps, matching the existing `qs` / `tmp` /
+`@tootallnate/once` override pattern.
+
+- **uuid** (GHSA-w5hq-g745-h8pq, "missing buffer bounds check in v3/v5/v6 when
+  buf is provided", Dependabot alert 25). The flagged copy was `uuid@9.0.1`,
+  pulled transitively through `browserstack-node-sdk -> googleapis ->
+  google-auth-library -> gaxios` (and `googleapis-common`). Pinned `uuid` to
+  `^11.1.1`, the patched line. `^11.1.1` stays inside 11.x and deliberately does
+  not float to 12.0.0 / 13.0.0, which are themselves in vulnerable ranges per
+  the advisory. The direct `browserstack` uuid was already 11.1.1, so the tree
+  dedupes to one patched copy.
+- **protobufjs** (GHSA-jggg-4jg4-v7c6, "DoS via unbounded recursive JSON
+  descriptor expansion"). The flagged copy was `protobufjs@7.5.7`, pulled
+  through `browserstack-node-sdk -> @grpc/*` / `@google-cloud/compute`. Pinned
+  to `^7.5.8` (resolves to 7.6.1), staying in the 7.x line that
+  `@grpc/proto-loader` expects rather than jumping to 8.x.
+
+Both packages are `devDependencies` only (BrowserStack test tooling) and never
+reach the browser bundle in `dist/`. Override was chosen over a parent bump
+because the parents (`browserstack-node-sdk` and the deep google/grpc chain)
+had no newer release that drops the flagged versions, and over "document and
+leave" because a one-line override is cheaper to carry and takes `npm audit` to
+zero. Verified: `npm audit` reports 0 vulnerabilities, `npm test` 498/505 green,
+`npm run build` clean.
