@@ -1014,3 +1014,36 @@ had no newer release that drops the flagged versions, and over "document and
 leave" because a one-line override is cheaper to carry and takes `npm audit` to
 zero. Verified: `npm audit` reports 0 vulnerabilities, `npm test` 498/505 green,
 `npm run build` clean.
+
+## Cycle 44 Phase 2 — main-bundle ratchet via vendor chunk split (2026-05-28)
+
+The Vite `main-*.js` chunk had grown to ~607 kB (Vite's 1000-based display),
+tripping the Cycle 41 bundle-size ratchet. Resolved by extending `manualChunks`
+in `vite.config.js` with a `vendor` group for two eager leaf node_modules deps
+that were being folded into `main`: `@three.ez/instanced-mesh` (used by
+TerrainBuilder / RockPlacement / TreePlacement) and `kdbush` (used by
+shared/SceneObstacles). This mirrors the existing `react` / `three` / `i18n`
+chunk groups: leaf deps, one-way `main -> chunk` import, no circular risk.
+
+Result (Vite 1000-based raw display / gzip / harness 1024-based KiB):
+
+- `main-*.js`: 607 -> 546.42 kB raw, gzip 159.85 kB. Harness KiB: 593 -> 534.
+- `vendor-*.js`: new, 60.79 kB raw, gzip 18.65 kB. Splitting it out also lets it
+  cache across deploys independently of the churnier `main`.
+- `three-*.js`: unchanged at 617.79 kB raw, gzip 157.33 kB. In the harness's
+  1024-based KiB this is 603, exactly the recorded baseline. The "~617 kB"
+  figure in the Cycle 44 plan was Vite's 1000-based raw display, not the
+  1024-based KiB the ratchet records, so `three` never actually crossed its
+  ratchet and no `three` re-baseline was needed.
+
+Gzip transfer (what players actually pay): main 159.85 kB, vendor 18.65 kB,
+three 157.33 kB.
+
+Re-baselined `tests/refactor-baseline/__fixtures__/bundle-sizes.json` `mainKB`
+593 -> 534 to record the new post-build actual. The refactor-baseline README
+convention is "recorded post-build", and Cycle 41 set the ratchet at the actual
+with zero headroom; recording 534 restores an honest floor so `main` cannot
+silently re-bloat from 534 back to the stale 593 before tripping. `threeKB`
+stays 603 (unchanged). The fixture is a characterization ratchet with no runtime
+consumer, so re-baselining changes no behavior. Verified: `npm run build` clean,
+`npm test` green including the refactor-baseline bundle-size assertions.

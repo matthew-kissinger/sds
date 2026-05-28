@@ -113,7 +113,8 @@ export default defineConfig({
         manualChunks: {
           react: ['react', 'react-dom'],
           three: ['three'],
-          i18n: ['i18next', 'react-i18next', 'i18next-browser-languagedetector']
+          i18n: ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+          vendor: ['@three.ez/instanced-mesh', 'kdbush']
         }
       }
     }
