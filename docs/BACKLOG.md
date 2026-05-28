@@ -4,6 +4,29 @@
 
 ## Recently Completed
 
+### Cycle 43 - `retire-webgpu-scaffolding` (closed 2026-05-28)
+
+Plan archived at [`docs/archive/cycles/cycle-43-plan.md`](archive/cycles/cycle-43-plan.md). Cycle 43 deleted the WebGPU boot-scout scaffolding left over from the migration, after Cycle 42 shipped plain `?renderer=webgpu` as the proven production default. No user-visible change: the same WebGPU game ships.
+
+**Closeout outcomes:**
+
+- Shipped 4/4 phases. Removed the `productionBootScout` runtime route (index.html parse, `webgpu-production-boot-scout` effective mode, main.js dispatch + dead error block, the `dataset.konveyorProductionBootScout` marker, and the `explicitScoutRoute` gate clause), deleted three scout-only files (`konveyorProductionBootScoutRecorder.js` at 557 lines plus the `konveyor-production-boot-scout.mjs` and `konveyor-production-gameplay-parity-proof.mjs` tool runners), repointed the three scene-body instancing tests onto the real `webgpu-production` window, and updated docs.
+- Net diff: 125 insertions, 1713 deletions across 13 files.
+- Production native instancing was confirmed to ride `isKonveyorProductionWebGpuActive()` plus the `konveyorNativeTreeImpostors` route, never the scout query, so the deletion cannot regress the shipped renderer. The `konveyorNativeInstancing` userData marker survives in `js/world`.
+- Commit `5e149ab` (`refactor(cycle-43): retire webgpu boot-scout scaffolding`), deploy run `26597359915` (success on `main`; build, Cloudflare Pages, and E2E Chromium all green).
+
+**Validation gates (2026-05-28):**
+
+- `npm test` - 54 passed files, 1 skipped; 498 specs passed, 7 skipped (one dead scout-route test removed, so 498 vs the 499 baseline).
+- `npm run build` - clean with the existing Vite large-chunk warnings.
+- `grep -rn "productionBootScout" index.html js/ tests/ tools/` - 0 matches.
+- DECISIONS.md retirement entry appended (2026-05-28 Cycle 43); the prior 2026-05-15 boot-scout entry left unmodified (append-only).
+
+**Carryover:**
+
+- All Cycle 42 carryover stands (Android WebGPU device proof, BrowserStack iOS water proof, Open Country paired playtest, the `uuid` / moderate Dependabot advisory, the six material-lock manual-review items). Gathered into the Cycle 44 candidate-scope scaffold.
+- Build large-chunk warning is creeping (main ~607 kB vs the 593 KiB ratchet accepted in Cycle 41); added to Cycle 44 candidate scope.
+
 ### Cycle 42 - `webgpu-scene-material-parity-and-device-proof` (closed 2026-05-28, v2.1.10 release)
 
 Plan archived at [`docs/archive/cycles/cycle-42-plan.md`](archive/cycles/cycle-42-plan.md). Cycle 42 implemented the visual-first WebGPU scene-material parity pass requested after Cycle 41: sun/sky interaction, grass/terrain separation, and deeper blue water were treated as close criteria before release.

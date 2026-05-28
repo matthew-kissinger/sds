@@ -1,64 +1,43 @@
-# Next Session - Cycle 43 Scaffolding
+# Next Session - Cycle 44 Scaffolding
 
 > **Updated:** 2026-05-28
-> **For:** Cycle 43
-> **Pickup priority:** Fill in the [`docs/cycle-43-plan.md`](docs/cycle-43-plan.md) Goal + Phases for the WebGPU boot-scout scaffolding retirement (scope below), then run `/cycle-start`.
+> **For:** Cycle 44
+> **Pickup priority:** Triage the [`docs/cycle-44-plan.md`](docs/cycle-44-plan.md) candidate scope into one coherent goal and ≤ 8 phases (author lean: bundle the autonomous hygiene + cleanup buckets A/B/F as Cycle 44, split the paired C/D/E real-device and taste work into a separate paired-track cycle), then run `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-43-plan.md`](docs/cycle-43-plan.md). Closed-cycle context is in [`docs/archive/cycles/cycle-42-plan.md`](docs/archive/cycles/cycle-42-plan.md), [`docs/archive/cycles/cycle-41-plan.md`](docs/archive/cycles/cycle-41-plan.md), and [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-44-plan.md`](docs/cycle-44-plan.md). Closed-cycle context is in [`docs/archive/cycles/cycle-43-plan.md`](docs/archive/cycles/cycle-43-plan.md), [`docs/archive/cycles/cycle-42-plan.md`](docs/archive/cycles/cycle-42-plan.md), and [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Current State
 
-Cycle 42 shipped as `v2.1.10` and is closed. WebGPU is the proven production default; the migration scaffolding that was only ever a stepping-stone is now dead weight. Cycle 43 retires the WebGPU boot-scout scaffolding while preserving all load-bearing production WebGPU code.
+Cycle 43 closed: the WebGPU boot-scout scaffolding is retired (commit `5e149ab`, deploy run `26597359915` green on `main`). No user-visible change. WebGPU remains the proven production default shipped as `v2.1.10` in Cycle 42.
 
-The Cycle 43 plan is scaffolded as a stub. It needs a Goal paragraph and EARS phases before `/cycle-start`.
+Cycle 44 is scaffolded as a candidate-scope sweep, not a ready single cycle. The plan holds a triage list of loose ends carried across Cycles 40-43 plus found items. It needs a Goal paragraph and EARS phases before `/cycle-start`.
 
-## Proposed Cycle 43 scope (confirm in /cycle-start)
+## Cycle 44 candidate scope (triage at /cycle-start)
 
-Retire the obsolete WebGPU boot-scout recorder and dead `konveyor*` proof routes/flags. Keep the production WebGPU path intact. Disjoint from the v2.1.10 release file set, so no conflation risk.
+Full detail with file links is in [`docs/cycle-44-plan.md`](docs/cycle-44-plan.md). Summary by theme and mode:
 
-**Remove (scout-only):**
+- **A. Dependency / security (autonomous).** Resolve the moderate Dependabot advisory `security/dependabot/25` (the `uuid` advisory, transitive through Google / BrowserStack tooling).
+- **B. Build / bundle (autonomous).** Main bundle is creeping (~607 kB vs the 593 KiB ratchet accepted in Cycle 41); investigate code-splitting or re-baseline with a rationale.
+- **C. WebGPU painterly parity (paired, taste).** The six low-sun actor / Open Country material-lock manual-review items; broader WebGPU/WebGL terrain-foliage parity.
+- **D. Mobile / real-device proofs (paired, blocked locally).** Android WebGPU device proof (needs authorized ADB device); BrowserStack iOS water canary (needs `BROWSERSTACK_*` creds).
+- **E. Multiplayer playtest (paired).** Open Country paired two-client playtest.
+- **F. Code / doc cleanup (autonomous).** Cross-module polygon-spawn dedup (OptimizedSheep / SandboxConfig / StructureBuilder); add the four undocumented Cycle 5 primitives to ARCHITECTURE.md.
 
-- [`index.html`](index.html) bootstrap (lines ~405-466): drop the `productionBootScout` request parse, the `effective: 'webgpu-production-boot-scout'` branch, and `__sdsG.productionBootScout`. Keep `productionWebGpu` and the `webgpu-production` effective mode.
-- [`js/main.js`](js/main.js) DOMContentLoaded dispatch (~2549-2601): drop the `if (window.__sdsG?.productionBootScout)` branch and the `recordProductionBootScoutSequence` var + call. Keep the `else if (window.__sdsG?.productionWebGpu)` production path verbatim.
-- [`js/diagnostics/konveyorProductionBootScoutRecorder.js`](js/diagnostics/konveyorProductionBootScoutRecorder.js): delete the whole file (557 lines, diagnostic-only).
-- [`js/rendering/konveyorRuntimeMode.js`](js/rendering/konveyorRuntimeMode.js): drop only the `explicitScoutRoute` clause from `shouldUseKonveyorProductionNativeInstancing()`. Keep `explicitTreeImpostorRoute` (`konveyorNativeTreeImpostors`) and the `isKonveyorProductionWebGpuActive()` gate.
-- [`js/rendering/konveyorProductionWebGpuBoot.js`](js/rendering/konveyorProductionWebGpuBoot.js): remove `dataset.konveyorProductionBootScout = '1'` (line ~139). Keep `dataset.konveyorProductionWebGpu = '1'` (line ~138) and every exported function.
-- [`tools/konveyor-production-boot-scout.mjs`](tools/konveyor-production-boot-scout.mjs) and [`tools/konveyor-production-gameplay-parity-proof.mjs`](tools/konveyor-production-gameplay-parity-proof.mjs): delete. One-time proof runners; no `package.json` script references.
-
-**Tests (careful, do not just delete):**
-
-- [`tests/konveyor-instancing-adapter.spec.js`](tests/konveyor-instancing-adapter.spec.js): `NATIVE_INSTANCING_SEARCH` (line ~19) uses the scout query as the activation fixture for three production native-instancing tests (placeTrees, placeEnvironmentDetails x2). Repoint these to a surviving production route (likely `?renderer=webgpu&konveyorNativeTreeImpostors=octahedral`) after verifying `TreePlacement`/`RockPlacement` gating. Do not delete the coverage.
-- [`tests/konveyor-runtime-mode.spec.js`](tests/konveyor-runtime-mode.spec.js): remove the "keeps the guarded scout native-instancing route intact" test (lines ~37-41).
-
-**Docs:**
-
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) (~144-164): remove the boot-scout paragraph.
-- [`DECISIONS.md`](DECISIONS.md): add a NEW dated entry recording the retirement. Do not rewrite the existing boot-scout entry (history is append-only).
-- [`tools/validation/README.md`](tools/validation/README.md): drop the scout-runner references.
-
-**Why this is safe:** production native instancing rides `isKonveyorProductionWebGpuActive()` + `konveyorNativeTreeImpostors`, not the scout route. The scout pieces are a stepping-stone from the migration and have no production consumer.
+The standing long-tail of deferred items is in [`docs/BACKLOG.md`](docs/BACKLOG.md) under "Deferred / not blocking" - pull from there if a chosen theme has room.
 
 ## Release reference (Cycle 42 / v2.1.10)
 
 - Commit `fb78851`, tag `v2.1.10`, deploy run `26595530924` (success on `main`).
 - Live HTML at sheepdogsim.com serves `assets/main-CZelhZcJ.js`; the direct asset URL returns HTTP 200.
 
-## Blockers / Carryover (from Cycle 42)
-
-- Android WebGPU device proof is blocked locally: `adb devices` returned no authorized devices.
-- BrowserStack iOS water proof is blocked locally: no `BROWSERSTACK_*` / `BS_*` env vars were present.
-- Open Country paired two-client playtest remains carryover unless explicitly promoted.
-- `uuid` advisory remains a dev-tooling transitive carryover through Google/BrowserStack packages.
-- Six low-sun actor/Open Country material-lock manual-review classifications stay visible for Matt approval and future painterly parity work.
-
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-43-plan.md`](docs/cycle-43-plan.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-42-plan.md`](docs/archive/cycles/cycle-42-plan.md) |
+| Active cycle | [`docs/cycle-44-plan.md`](docs/cycle-44-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-43-plan.md`](docs/archive/cycles/cycle-43-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
