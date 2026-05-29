@@ -28,21 +28,24 @@ function readSource(rel) {
 
 describe('Practice Paddock contract', () => {
     it('Practice tile is first in MODES (position 0)', () => {
-        const src = readSource('js/components/StartScreen/SinglePlayerModes.js');
-        const modesMatch = src.match(/const MODES = \[([\s\S]*?)\];/);
+        const src = readSource('js/components/StartScreen/SinglePlayerModes.tsx');
+        // The .tsx declaration carries a `: ModeDef[]` type annotation between
+        // the name and the `=`, so match anything up to the assignment.
+        const modesMatch = src.match(/const MODES[^=]*=\s*\[([\s\S]*?)\];/);
         expect(modesMatch).not.toBeNull();
         const block = modesMatch[1];
         const firstId = block.match(/id:\s*'(\w+)'/);
         expect(firstId?.[1]).toBe('practice');
     });
 
-    it('Practice tile uses cyan-500 accent color', () => {
-        const src = readSource('js/components/StartScreen/SinglePlayerModes.js');
-        // The first id:'practice' entry pairs with color: '#06b6d4'
+    it('Practice tile uses the cyan hue token (cyan-500)', () => {
+        const src = readSource('js/components/StartScreen/SinglePlayerModes.tsx');
+        // The first id:'practice' entry pairs with color: color.hueCyan, the
+        // Cycle 48 P2 design-token mirror of the old '#06b6d4' literal.
         const idx = src.indexOf("id: 'practice'");
         expect(idx).toBeGreaterThan(0);
         const slice = src.slice(idx, idx + 240);
-        expect(slice).toMatch(/color:\s*'#06b6d4'/);
+        expect(slice).toMatch(/color:\s*color\.hueCyan/);
     });
 
     it('i18n English locale exposes modes.practice + modes.practiceDesc', () => {
@@ -52,7 +55,7 @@ describe('Practice Paddock contract', () => {
     });
 
     it('first-visit localStorage flag uses dot-namespaced sds.has-played', () => {
-        const src = readSource('js/components/StartScreen/SinglePlayerModes.js');
+        const src = readSource('js/components/StartScreen/SinglePlayerModes.tsx');
         expect(src).toMatch(/['"]sds\.has-played['"]/);
         const gameState = readSource('js/GameState.js');
         expect(gameState).toMatch(/sds\.has-played/);

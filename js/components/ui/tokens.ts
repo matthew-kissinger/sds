@@ -39,6 +39,14 @@ export const color = {
   hintBorder: 'var(--color-hint-border)',
   hintText: 'var(--color-hint-text)',
 
+  // Cycle 48 P2: menu + dog selection accent hues. Decorative per-tile brand
+  // colors. Emerald/red/amber/orange/blue reuse accent/danger/staminaAmber/
+  // staminaOrange/infoStrong; only these four needed a new token.
+  hueCyan: 'var(--color-hue-cyan)',
+  huePurple: 'var(--color-hue-purple)',
+  huePink: 'var(--color-hue-pink)',
+  hueViolet: 'var(--color-hue-violet)',
+
   // Foreground text/icon on dark + glass surfaces.
   text: 'var(--color-text)',
   onAccent: 'var(--color-on-accent)',
@@ -60,6 +68,16 @@ export const color = {
 
   brandIndigo: 'var(--color-brand-indigo)',
 } as const;
+
+/**
+ * A color at `percent`% opacity composited over transparent. The token-safe
+ * replacement for an 8-digit `#rrggbbaa` hex suffix: color-mix() resolves a
+ * `var(--color-x)` token, which the old string concatenation (`${hex}22`)
+ * could not. Byte-to-percent for the common suffixes: 0x11≈7, 0x22≈13,
+ * 0x33≈20, 0x44≈27, 0x66≈40, 0x88≈53, 0xdd≈87.
+ */
+export const alpha = (c: string, percent: number): string =>
+  `color-mix(in srgb, ${c} ${percent}%, transparent)`;
 
 export const radius = {
   pill: 'var(--radius-pill)',
