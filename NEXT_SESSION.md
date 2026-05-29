@@ -28,10 +28,10 @@ Dependency: Phase 1 -> Phase 2 -> Phase 3 -> Phase 5 (optional). Phase 4 runs pa
 
 Five are listed in the plan. The one that gates Phase 1 is **Q1 (zen-field aesthetic)** - boids over a neutral gradient sky and light fog with gentle open drift is the author lean, but the look is a paired taste call. Q2-Q5 (picker placement, deep-link behavior, boid budget, whether any `SceneDef` metadata is needed) have author leans in the plan and can be confirmed inline.
 
-## Carryover owed from Cycle 45
+## Carryover from Cycle 45 (resolved post-close)
 
-- **Grass body-deform (Cycle 45 Phase 4, paired).** Not part of Cycle 46. Carry the bend down the full blade and push along the body-oval normal in `js/world/konveyorGrassBladeNodeMaterial.js`; validate via `window.__sdsGrassProof`. Needs Matt's taste check and a headed browser (the preview tab runs hidden, so WebGPU does not composite and screenshots time out).
-- **Phase 3 treeline taste review.** Matt can load `/?scene=field` to eyeball the baked treeline (429.949 m) against the old procedural look.
+- **Grass body-deform (Cycle 45 Phase 4).** Shipped post-close on Matt's explicit authorization. `js/world/konveyorGrassBladeNodeMaterial.js` now carries the contact bend down the full blade (mid-dominant 0.62, tip 0.38), pushes along the body-oval outward normal instead of radially from the entity centre, and saturates the laydown by ~78% height. Validated structurally (the adapter spec builds the real `three/webgpu` TSL graph; `npm test` + `npm run build` green). Open: a visual taste check in a headed browser whenever Matt is at the keyboard. The preview tab runs hidden (WebGPU does not composite, screenshots time out), so headless eyeballing stays blocked. Matt pre-accepted the look.
+- **Phase 3 treeline taste review.** Matt accepted the baked treeline (429.949 m) on trust. Optional eyeball at `/?scene=field` against the old procedural look if he wants it later.
 
 ## Release reference (Cycle 42 / v2.1.10)
 

@@ -41,9 +41,12 @@ export function createKonveyorGrassBladeNodeMaterial(
   const windDir = normalize(windDirection);
   const windPerp = vec2(windDir.y.negate(), windDir.x);
   const windPower = height01.mul(height01);
-  const baseAnchor = smoothstep(0.10, 0.24, height01);
-  const midBend = smoothstep(0.18, 0.70, height01).mul(0.38);
-  const tipBend = smoothstep(0.48, 1.0, height01).mul(0.62);
+  // Carry the contact bend down the full blade rather than flicking only the tip:
+  // the mid-blade term dominates and both ramps start lower, so a pressed blade
+  // folds along its length into a body-depth dent. The base stays anchored.
+  const baseAnchor = smoothstep(0.06, 0.18, height01);
+  const midBend = smoothstep(0.12, 0.52, height01).mul(0.62);
+  const tipBend = smoothstep(0.45, 1.0, height01).mul(0.38);
   const contactBendPower = baseAnchor.mul(midBend.add(tipBend));
   const worldX = bladeWorld.x;
   const worldZ = bladeWorld.z;
@@ -71,7 +74,8 @@ export function createKonveyorGrassBladeNodeMaterial(
     const pushDirection = interactorDelta.div(interactorDistance);
     const facing = normalize(interactorFacings[i]);
     const side = vec2(facing.y.negate(), facing.x);
-    const along = abs(dot(interactorDelta, facing));
+    const signedAlong = dot(interactorDelta, facing);
+    const along = abs(signedAlong);
     const signedAcross = dot(interactorDelta, side);
     const across = abs(signedAcross);
     const halfLen = mix(1.65, 0.72, entityType);
@@ -83,8 +87,16 @@ export function createKonveyorGrassBladeNodeMaterial(
     const bodyFalloff = float(1.0).sub(smoothstep(0.72, 1.55, bodyDistance));
     const proximityFalloff = float(1.0).sub(smoothstep(0.0, radius, interactorDistance));
     const contactFalloff = max(bodyFalloff, proximityFalloff.mul(0.78)).mul(activeInteractor);
-    const sideDirection = side.mul(signedAcross.div(max(across, 0.001)));
-    const splayDirection = normalize(pushDirection.mul(0.72).add(sideDirection.mul(0.28)).add(facing.mul(0.001)));
+    // Push along the body-oval outward normal rather than radially from the
+    // entity centre. The ellipse implicit gradient (signedAlong/halfLen^2,
+    // signedAcross/halfWidth^2) elongates the pressed ring to the body
+    // silhouette; pushDirection is a tiny tie-breaker so a blade at the exact
+    // centre still resolves to a finite direction.
+    const splayDirection = normalize(
+      facing.mul(signedAlong.div(halfLen.mul(halfLen)))
+        .add(side.mul(signedAcross.div(halfWidth.mul(halfWidth))))
+        .add(pushDirection.mul(0.04))
+    );
     const candidateStrength = contactFalloff.mul(strength);
     const dominance = smoothstep(
       interactionStrengthTotal.mul(0.92),
@@ -159,7 +171,7 @@ export function createKonveyorGrassBladeNodeMaterial(
     .mul(clamp(interactionStrengthTotal, 0.0, interactionMaxDisplacement))
     .mul(contactBendPower);
   const totalDisp = windDisp.add(interactionDisp);
-  const laydownMask = smoothstep(0.16, 1.0, height01);
+  const laydownMask = smoothstep(0.10, 0.78, height01);
   const interactionLaydown = bodyFalloffTotal.mul(-interactionLaydownStrength).mul(laydownMask);
   material.positionNode = positionLocal.add(vec3(totalDisp.x, interactionLaydown, totalDisp.y));
   if (material.isMeshStandardNodeMaterial) {
@@ -209,7 +221,7 @@ export function createKonveyorGrassBladeNodeMaterial(
   material.userData.konveyorGrassBladeInteractors = {
     maxNodeInteractors,
     source: 'dog-plus-nearest-sheep-unrolled',
-    displacement: 'anchored-tip-splay-plus-local-laydown',
+    displacement: 'anchored-fullblade-bend-along-oval-normal-plus-laydown',
     coordinateSource: 'instanceWorldOffset-instanced-attribute',
     overlapMode: 'dominant-contact-capped-vector',
     visualScale: interactionVisualScaleValue,
@@ -218,10 +230,11 @@ export function createKonveyorGrassBladeNodeMaterial(
     shadowStrength: interactionShadowStrengthValue,
     shadowUniform: true,
     contactBend: {
-      baseAnchor: [0.10, 0.24],
-      midBlade: [0.18, 0.70, 0.38],
-      tipBlade: [0.48, 1.0, 0.62],
+      baseAnchor: [0.06, 0.18],
+      midBlade: [0.12, 0.52, 0.62],
+      tipBlade: [0.45, 1.0, 0.38],
     },
+    pushModel: 'body-oval-normal',
   };
   material.userData.konveyorGrassBladeMaterialControls = createKonveyorGrassBladeNodeMaterialControls(material);
   return material;

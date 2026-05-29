@@ -236,7 +236,7 @@ describe('konveyor grass material adapter', () => {
             expect(material.userData.konveyorGrassBladeInteractors).toMatchObject({
                 maxNodeInteractors: 4,
                 source: 'dog-plus-nearest-sheep-unrolled',
-                displacement: 'anchored-tip-splay-plus-local-laydown',
+                displacement: 'anchored-fullblade-bend-along-oval-normal-plus-laydown',
                 coordinateSource: 'instanceWorldOffset-instanced-attribute',
                 overlapMode: 'dominant-contact-capped-vector',
                 visualScale: 6.4,
