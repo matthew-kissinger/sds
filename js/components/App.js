@@ -77,7 +77,9 @@ export async function initReactUI() {
             { GlobalLeaderboard },
             { Button },
             { LanguageSelector },
-            { SandboxConfig }
+            { SandboxConfig },
+            { motion, AnimatePresence },
+            { useReducedMotion }
         ] = await Promise.all([
             import('./hooks/usePlatform.js'),
             import('./hooks/useGameState.js'),
@@ -115,7 +117,9 @@ export async function initReactUI() {
             import('./Multiplayer/GlobalLeaderboard.js'),
             import('./ui/Button.js'),
             import('./ui/LanguageSelector.js'),
-            import('../SandboxConfig.js')
+            import('../SandboxConfig.js'),
+            import('motion/react'),
+            import('./ui/useReducedMotion.js')
         ]);
 
         // Expose CompletionScreen globally for main.js to use
@@ -201,6 +205,7 @@ export async function initReactUI() {
         // ==================== START SCREEN ====================
         function StartScreen() {
             const [screen, setScreen] = useState('playerSetup');
+            const reduce = useReducedMotion();
             const [selectedDog, setSelectedDog] = useState('jep');
             const [selectedMode, setSelectedMode] = useState(null);
             const [roomSettings, setRoomSettings] = useState(null);
@@ -825,9 +830,16 @@ export async function initReactUI() {
                     WebkitBackdropFilter: 'blur(8px)',
                     animation: 'fadeIn 0.4s ease-out'
                 }
-            }, createElement('div', {
-                className: 'start-screen-content'
-            }, renderContent()));
+            }, createElement(AnimatePresence, { mode: 'wait', initial: false },
+                createElement(motion.div, {
+                    key: screen,
+                    className: 'start-screen-content',
+                    initial: reduce ? false : { opacity: 0, y: 10 },
+                    animate: { opacity: 1, y: 0 },
+                    exit: reduce ? { opacity: 0 } : { opacity: 0, y: -8 },
+                    transition: { duration: reduce ? 0 : 0.2, ease: [0.2, 0.8, 0.2, 1] }
+                }, renderContent())
+            ));
         }
 
         // ==================== GAME HUD ====================

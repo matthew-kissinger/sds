@@ -112,6 +112,7 @@
     "kdbush": "^4.0.2",
     "lucide-react": "^1.17.0",
     "lz-string": "^1.5.0",
+    "motion": "^12.40.0",
     "nipplejs": "^0.10.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

@@ -117,8 +117,8 @@ export default defineConfig({
           vendor: ['@three.ez/instanced-mesh', 'kdbush'],
           // Cycle 47: UI-layer libraries (icons, transitions) stay out of the
           // measured main-*.js ratchet. lucide-react lands here in P3; motion
-          // joins in P7.
-          ui: ['lucide-react']
+          // (and its motion-dom / motion-utils deps) join in P7.
+          ui: ['lucide-react', 'motion']
         }
       }
     }
