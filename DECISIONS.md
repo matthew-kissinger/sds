@@ -1047,3 +1047,34 @@ silently re-bloat from 534 back to the stale 593 before tripping. `threeKB`
 stays 603 (unchanged). The fixture is a characterization ratchet with no runtime
 consumer, so re-baselining changes no behavior. Verified: `npm run build` clean,
 `npm test` green including the refactor-baseline bundle-size assertions.
+
+## Cycle 45 Phase 3 — main-bundle ratchet 534 -> 536 for load optimizations (2026-05-28)
+
+Phase 3 ("bake the measured load hog") shipped two load-time optimizations that
+each add a small amount of static plumbing to `main`:
+
+- **Dog lazy-load** (`TerrainBuilder.loadAnimal` + eager-Jep preload + main.js
+  await-site changes): defers non-default dog GLB loads off the scene-load
+  critical path. This is the bulk of the growth (~186 changed lines).
+- **Tree-placement manifest** (`shared/scenes/field.js` `placementManifest`,
+  `js/world/TreePlacement.js` wiring): Field loads pre-scattered tree positions
+  from `public/placement/field.json` instead of running the ~489ms Poisson
+  scatter at scene-load (Phase 1's one measured progen hot cost). The loader
+  (`js/world/placementManifest.js`) is dynamically imported so it code-splits
+  into its own ~0.67 kB chunk rather than landing in `main`; its net `main`
+  cost is ~0.24 kB (only the wiring in TreePlacement.js).
+
+Result (Vite 1000-based raw display / harness 1024-based KiB):
+
+- `main-*.js`: 546.42 -> 548.51 kB raw (+2.09 kB). Harness KiB: 534 -> 536.
+- `three-*.js`: unchanged at 617.79 kB raw, 603 KiB. No re-baseline.
+- New `placementManifest-*.js`: 0.67 kB raw, 0.43 kB gzip (lazy chunk).
+
+Re-baselined `tests/refactor-baseline/__fixtures__/bundle-sizes.json` `mainKB`
+534 -> 536 to record the new post-build actual, same zero-headroom honest-floor
+convention as the Cycle 44 re-baseline above. Unlike that one (a reduction after
+a vendor split), this is genuine growth: the +2 KiB is the static cost of two
+optimizations whose payoff is at load time (deferred GLB loads, no field scatter),
+not in `main` byte size. The growth is documented here, not silent, so the ratchet
+keeps doing its job (catching unexplained re-bloat) from the new floor. Verified:
+`npm run build` clean, `npm test` green including the refactor-baseline assertions.

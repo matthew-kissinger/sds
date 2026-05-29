@@ -203,6 +203,11 @@
  * @property {FarmHouseDef} [farmHouse]
  * @property {SkyDef} [sky]
  * @property {FogDef|null} [fog]
+ * @property {string} [placementManifest]   Cycle 45 Phase 3 — optional URL of a
+ *   build-time-baked placement manifest (JSON of pre-scattered tree positions).
+ *   When set, the renderer loads these positions instead of running the seeded
+ *   Poisson scatter at scene-load. Render-only; the Worker sim never reads it.
+ *   Scenes without it fall back to runtime `generateTrees` unchanged.
  *
  * Gameplay:
  * @property {GameMode[]} allowedModes

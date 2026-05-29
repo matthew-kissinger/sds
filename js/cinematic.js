@@ -526,7 +526,9 @@ export function installCinemaApi(game) {
                 cinema._showcaseBackdrop = plane;
             }
 
-            // Mount the requested dog clone at origin.
+            // Mount the requested dog clone at origin. Dogs other than jep
+            // load on demand now, so ensure the rig is present first.
+            await tb.loadAnimal?.(dogId);
             const original = tb.models?.animals?.[dogId];
             if (!original) throw new Error(`mountDogShowcase: model not found for ${dogId}`);
             if (cinema._showcaseDog) {

@@ -754,7 +754,7 @@ class SheepDogSimulation {
         try {
             const newSceneDef = loadScene(toId);
             await this.disposeScene();
-            await this.rebuildScene(newSceneDef);
+            const swapBuildResult = await this.rebuildScene(newSceneDef);
 
             // Update the URL bar only on success. If rebuildScene threw, the
             // user's URL still reflects the original scene — they reload and
@@ -768,7 +768,12 @@ class SheepDogSimulation {
             // Cycle 11 Phase 5: telemetry.
             try {
                 import('./telemetry.js').then(({ emitEvent }) => {
-                    emitEvent('scene_swapped', { from: fromId || null, to: toId, elapsedMs: elapsed });
+                    emitEvent('scene_swapped', {
+                        from: fromId || null,
+                        to: toId,
+                        elapsedMs: elapsed,
+                        stages: swapBuildResult?.stages ?? null,
+                    });
                 });
             } catch {}
         } catch (err) {
@@ -859,7 +864,7 @@ class SheepDogSimulation {
         this.terrainBuilder.setSceneDef(sceneDef);
 
         // 4. Run the same body init() uses on first run.
-        await buildSceneBody(this);
+        const sceneBuildResult = await buildSceneBody(this);
 
         // 5. Re-register triangle estimates for the new scene.
         this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
@@ -881,6 +886,10 @@ class SheepDogSimulation {
 
         this.lastTime = performance.now();
         this._sceneRebuilding = false;
+
+        // Cycle 45 Phase 1: hand the per-stage load breakdown back to swapScene
+        // so it rides the scene_swapped telemetry payload.
+        return sceneBuildResult;
     }
 
     async createSunBillboard(initialPreset) {
@@ -1146,7 +1155,19 @@ class SheepDogSimulation {
         // Get the selected dog type from the start screen
         const selectedDogType = this.menuController.getSelectedDog();
         console.log(`Selected dog type: ${selectedDogType}`);
-        
+
+        // Dogs other than jep load on demand (Cycle 45 Phase 3). Ensure the
+        // selected rig is in the registry before constructing the dog.
+        await this.terrainBuilder.loadAnimal(selectedDogType);
+
+        // In multiplayer, remote players may run any rig. Warm the rest in the
+        // background so updateOtherPlayer finds them ready; the remote-dog path
+        // guards on model presence until each arrives, so this stays off the
+        // local dog's critical path.
+        if (this.isMultiplayer) {
+            void this.terrainBuilder.preloadAllDogs();
+        }
+
         // Remove the old sheepdog and its indicator from scene if it exists
         if (this.sheepdog) {
             this.sheepdog.removeDistanceIndicator();
@@ -1335,6 +1356,10 @@ class SheepDogSimulation {
         // Get dog start position from config
         const dogStart = sandboxConfig.dog?.startPosition || { x: 0, z: -30 };
 
+        // Ensure the selected rig is loaded (dogs other than jep load on
+        // demand — Cycle 45 Phase 3).
+        await this.terrainBuilder.loadAnimal(dogType);
+
         // Create new sheepdog with selected type at configured position
         const sheepdog = new Sheepdog(dogStart.x, dogStart.z, dogType, this.heightfield);
         this.sheepdog = sheepdog;
@@ -1506,6 +1531,11 @@ class SheepDogSimulation {
         if (this.sheepdogMesh2) {
             this.sceneManager.remove(this.sheepdogMesh2);
         }
+
+        // Ensure both selected rigs are loaded (dogs other than jep load on
+        // demand — Cycle 45 Phase 3).
+        await this.terrainBuilder.loadAnimal(localConfig.player1Dog);
+        await this.terrainBuilder.loadAnimal(localConfig.player2Dog);
 
         // Create Player 1 sheepdog (WASD)
         const p1StartX = localConfig.mode === 'versus' ? -30 : -15;
@@ -2118,10 +2148,29 @@ class SheepDogSimulation {
 
         // 1. Create the Sheepdog instance if it's a new player
         if (!remoteDog) {
-            console.log(`[DOG] Creating visualization for new player ${playerId}`);
-            // Create a new Sheepdog instance at the initial position
-            // Use dog type from server data, or fall back to 'jep'
+            // Use dog type from server data, or fall back to 'jep'.
             const dogType = dogData.dogType || 'jep';
+
+            // Dogs other than jep load on demand (Cycle 45 Phase 3). startGame
+            // warms every rig in the background for multiplayer, but if this
+            // one isn't ready yet, kick a load and skip this update — the dog
+            // constructs on the next server tick once the model arrives. A
+            // per-player guard stops duplicate loads/dogs across the gap. This
+            // is visual-only: the authoritative DO sim and the local predictor
+            // never depend on a remote dog's mesh existing, so a rig arriving a
+            // frame or two late cannot desync anything.
+            if (!this.terrainBuilder.models.animals[dogType]) {
+                if (!this._remoteDogLoading) this._remoteDogLoading = new Set();
+                if (!this._remoteDogLoading.has(playerId)) {
+                    this._remoteDogLoading.add(playerId);
+                    this.terrainBuilder.loadAnimal(dogType).finally(() => {
+                        this._remoteDogLoading.delete(playerId);
+                    });
+                }
+                return;
+            }
+
+            console.log(`[DOG] Creating visualization for new player ${playerId}`);
             console.log(`Creating remote dog with type: ${dogType} for player ${playerId}`);
             remoteDog = new Sheepdog(dogData.x, dogData.z, dogType, this.heightfield);
             

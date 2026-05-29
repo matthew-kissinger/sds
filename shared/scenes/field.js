@@ -1,8 +1,9 @@
 /**
- * Home Field — the flat starter scene. Mountains ring the perimeter as
- * visual backdrop; the play area itself is flat. This captures every
- * currently-hardcoded constant that shapes sim + renderer behavior so
- * a second scene can diverge by file swap alone.
+ * Home Field — the flat starter scene. A flat fenced pasture; the
+ * treeline plus horizon fog frame the perimeter (no terrain relief, no
+ * mountain ring). This captures every currently-hardcoded constant that
+ * shapes sim + renderer behavior so a second scene can diverge by file
+ * swap alone.
  *
  * Sim-critical constants are consumed today (Step 1). Renderer constants
  * are captured here but still read from TerrainBuilder/GrassSystem
@@ -55,6 +56,13 @@ export const field = {
             horizon: { minX: -800, maxX: 800, minZ: -800, maxZ: 800 }
         }
     },
+
+    // Cycle 45 Phase 3: trees are pre-scattered at build time (tools/bake-placement.mjs)
+    // and loaded from this manifest, skipping the Poisson scatter that was Field's one
+    // measured progen hot cost at scene-load. The treeline is pulled inward; zones above
+    // stay at +/-800 so the ground still reaches the horizon (fog veils the treeless
+    // outer ring). Render-only: the Worker sim never reads this field.
+    placementManifest: '/placement/field.json',
 
     grass: {
         clumpsPerChunk: { desktop: 1800, mobile: 800 },

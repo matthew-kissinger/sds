@@ -78,7 +78,11 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     const impostorRoute = resolveKonveyorNativeTreeImpostorRoute();
     const useProductionNativeImpostor = impostorRoute.active;
     const treeImpostorBaseDir = impostorRoute.baseDir;
+    const _tRuntime = useProductionNativeImpostor ? performance.now() : 0;
     const treeImpostorRuntime = useProductionNativeImpostor ? await loadTreeImpostorRuntime() : null;
+    if (useProductionNativeImpostor) {
+        builder._sdsImpostorMs = (builder._sdsImpostorMs ?? 0) + (performance.now() - _tRuntime);
+    }
     builder._konveyorTreeImpostorSync = treeImpostorRuntime?.syncKonveyorTreeImpostorMeshes ?? null;
     const chunkSize = useProductionNativeImpostor ? 160 : (builder.isMobile ? 320 : 192);
 
@@ -86,11 +90,15 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
         if (instances.length === 0 || !builder.models.trees[treeType]) continue;
 
         const meshDefs = [];
+        const _tKiln = useProductionNativeImpostor ? performance.now() : 0;
         const kiln = useProductionNativeImpostor
             ? await loadKilnImpostor(`${treeImpostorBaseDir}/${treeType}.imposter`, {
                 tileSelectionMode: 'production-instanced-attributes',
             })
             : null;
+        if (useProductionNativeImpostor) {
+            builder._sdsImpostorMs = (builder._sdsImpostorMs ?? 0) + (performance.now() - _tKiln);
+        }
         if (kiln?.geometry && kiln?.material) {
             builder.models.trees[treeType].traverse(child => {
                 if (!child.isMesh || !child.geometry) return;
@@ -307,10 +315,31 @@ export async function placeTrees(builder, competitivePastures = null) {
     // per-model base offset) stays here on the client because it's a renderer
     // concern.
     const seed = builder.sceneDef?.terrain?.seed ?? 0;
-    const flatTrees = generateTrees(builder.sceneDef, mulberry32(seed), {
-        competitivePastures,
-        rockPositions: builder.rockPositions,
-    });
+    // Cycle 45 Phase 3: scenes with a baked placement manifest skip the
+    // ~489ms scatter and load pre-scattered positions instead, then re-reject
+    // against this load's rocks (rocks are Math.random, so they can't bake in).
+    // Competitive mode re-scatters with its pastures, so it always takes the
+    // runtime path; a failed manifest fetch falls back to the scatter too.
+    const manifestUrl = builder.sceneDef?.placementManifest;
+    let flatTrees;
+    if (manifestUrl && !competitivePastures) {
+        try {
+            // Lazy-loaded: the manifest path is optional and scene-gated, so it
+            // code-splits out of the main chunk (only field declares one today).
+            const { loadPlacementTrees, rejectTreesOnRocks } =
+                await import('./placementManifest.js');
+            const baked = await loadPlacementTrees(manifestUrl);
+            flatTrees = rejectTreesOnRocks(baked, builder.rockPositions);
+        } catch (err) {
+            console.warn(`[TERRAIN] Placement manifest load failed; using runtime scatter:`, err);
+        }
+    }
+    if (!flatTrees) {
+        flatTrees = generateTrees(builder.sceneDef, mulberry32(seed), {
+            competitivePastures,
+            rockPositions: builder.rockPositions,
+        });
+    }
 
     builder.treeInstances = flatTrees;
 
@@ -406,9 +435,11 @@ export async function placeTrees(builder, competitivePastures = null) {
     const kilnTreeTypes = Object.entries(treeInstances)
         .filter(([type, list]) => list.length > 0 && builder.models.trees[type])
         .map(([type]) => type);
+    const _tKilnPreload = performance.now();
     const kilnLoadResults = await Promise.all(
         kilnTreeTypes.map((type) => loadKilnImpostor(`assets/models/trees/${type}.imposter`))
     );
+    builder._sdsImpostorMs = (builder._sdsImpostorMs ?? 0) + (performance.now() - _tKilnPreload);
     for (let i = 0; i < kilnTreeTypes.length; i++) {
         const triple = kilnLoadResults[i];
         if (!triple) continue;
@@ -437,7 +468,9 @@ export async function placeTrees(builder, competitivePastures = null) {
         let impostor = kiln ? null : builder._bakeImpostorCache.get(treeType);
         const impostorWasCached = !!impostor;
         if (!kiln && !impostor && renderer) {
+            const _tBake = performance.now();
             impostor = bakeTreeImpostor(builder, lod0Model, renderer);
+            builder._sdsImpostorMs = (builder._sdsImpostorMs ?? 0) + (performance.now() - _tBake);
             if (impostor) builder._bakeImpostorCache.set(treeType, impostor);
         }
         if (probe) {

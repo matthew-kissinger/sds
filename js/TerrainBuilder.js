@@ -53,6 +53,21 @@ import {
 import { createKonveyorTerrainMaterial } from './world/konveyorTerrainMaterialAdapter.js';
 import { shouldApplyKonveyorRendererFlag } from './rendering/konveyorRuntimeMode.js';
 
+// Dog (animal) rig GLBs, keyed by dogType. Only `jep` — the pre-game default
+// dog buildSceneBody constructs synchronously — is loaded eagerly in
+// loadModels(). The other four load on demand via loadAnimal() the moment a
+// game actually selects them. Phase 1 (Cycle 45) measured all five rigs
+// loading on the boot critical path though a solo game ever uses one, making
+// `models` the single heaviest load stage; lazy-loading the unused four cuts
+// that without changing any sim or wire behavior.
+const ANIMAL_MODEL_PATHS = {
+    jep: 'assets/models/Jep.glb',
+    pip: 'assets/models/Pip.glb',
+    sally: 'assets/models/Sally.glb',
+    shiloh: 'assets/models/Shiloh.glb',
+    george_washington: 'assets/models/George_Washington.glb',
+};
+
 function createKonveyorTerrainHeightTexture(heightfield) {
     const texture = new THREE.DataTexture(
         heightfield.getRawArray(),
@@ -398,15 +413,9 @@ export class TerrainBuilder {
             ],
             buildings: [
                 { name: 'farmhouse', path: 'assets/models/Farm house.glb' }
-            ],
-            // Optimized dog models (19 animations, fast load)
-            animals: [
-                { name: 'jep', path: 'assets/models/Jep.glb', critical: true },
-                { name: 'pip', path: 'assets/models/Pip.glb', critical: true },
-                { name: 'sally', path: 'assets/models/Sally.glb', critical: true },
-                { name: 'shiloh', path: 'assets/models/Shiloh.glb', critical: true },
-                { name: 'george_washington', path: 'assets/models/George_Washington.glb', critical: true }
             ]
+            // Dog rigs are no longer eager-loaded here — see ANIMAL_MODEL_PATHS
+            // and loadAnimal(). loadModels() loads only jep below.
         };
 
         const loadPromises = [];
@@ -646,25 +655,18 @@ export class TerrainBuilder {
             );
         }
 
-        // Load animal models - CRITICAL for gameplay
-        for (const model of modelPaths.animals) {
-            loadPromises.push(
-                this.loader.loadAsync(model.path)
-                    .then(gltf => {
-                        this.models.animals[model.name] = gltf.scene;
-                        this.models.animals[model.name + '_animations'] = gltf.animations;
-                        console.log(`[OK] Loaded ${model.name} with ${gltf.animations.length} animations from ${model.path}`);
-                    })
-                    .catch(err => {
-                        const errMsg = `animal/${model.name} (${model.path}): ${err.message || err}`;
-                        console.error(`[CRITICAL ERROR] Failed to load ${errMsg}`);
-                        loadErrors.push(errMsg);
-                        if (model.critical) {
-                            criticalErrors.push(errMsg);
-                        }
-                    })
-            );
-        }
+        // Load only the pre-game default dog (jep) eagerly. It's the rig
+        // buildSceneBody constructs synchronously before the menu picks a dog,
+        // so it must be in the registry when loadModels() resolves. The other
+        // four dogs load on demand via loadAnimal(). jep stays CRITICAL — a
+        // failure here aborts boot exactly as the old 5-dog loop did.
+        loadPromises.push(
+            this._loadAnimalModel('jep', ANIMAL_MODEL_PATHS.jep).catch((err) => {
+                const errMsg = `animal/jep (${ANIMAL_MODEL_PATHS.jep}): ${err.message || err}`;
+                loadErrors.push(errMsg);
+                criticalErrors.push(errMsg);
+            })
+        );
 
         await Promise.all(loadPromises);
         this.modelsLoaded = true;
@@ -679,7 +681,7 @@ export class TerrainBuilder {
 
         // Report loading results
         const loadedAnimals = Object.keys(this.models.animals).filter(k => !k.endsWith('_animations'));
-        console.log(`[ASSET] Loaded ${loadedAnimals.length}/5 animal models:`, loadedAnimals);
+        console.log(`[ASSET] Eager dog rig(s) loaded:`, loadedAnimals, '(others load on demand via loadAnimal)');
 
         if (loadErrors.length > 0) {
             console.error(`[ASSET] ${loadErrors.length} models failed to load:`, loadErrors);
@@ -693,6 +695,71 @@ export class TerrainBuilder {
         }
 
         console.log('[ASSET] All critical models loaded successfully!');
+    }
+
+    /**
+     * Load one dog rig GLB into the animal registry. Shared by the eager jep
+     * load in loadModels() and the on-demand loadAnimal() path. Resolves once
+     * `models.animals[name]` + `[name + '_animations']` are populated; rejects
+     * (after logging) if the GLB fails so callers can decide whether the
+     * failure is fatal.
+     * @param {string} name
+     * @param {string} path
+     * @returns {Promise<void>}
+     */
+    _loadAnimalModel(name, path) {
+        return this.loader.loadAsync(path)
+            .then((gltf) => {
+                this.models.animals[name] = gltf.scene;
+                this.models.animals[name + '_animations'] = gltf.animations;
+                console.log(`[OK] Loaded ${name} with ${gltf.animations.length} animations from ${path}`);
+            })
+            .catch((err) => {
+                console.error(`[ERROR] Failed to load animal/${name} (${path}): ${err.message || err}`);
+                // Drop the cached promise so a later loadAnimal() can retry.
+                if (this._animalLoadPromises) delete this._animalLoadPromises[name];
+                throw err;
+            });
+    }
+
+    /**
+     * Idempotently load a dog rig on demand. Returns immediately if the rig is
+     * already in the registry; otherwise fetches it once (concurrent callers
+     * share the in-flight promise) and resolves when the model is ready to
+     * clone in Sheepdog.loadSheepdogModel(). Best-effort: a failed load logs
+     * and resolves so a missing rig degrades to the same "model not available"
+     * path Sheepdog already handles rather than throwing into a frame loop.
+     * @param {string} name dogType key (e.g. 'pip', 'sally').
+     * @returns {Promise<void>}
+     */
+    async loadAnimal(name) {
+        if (this.models.animals[name]) return;
+        const path = ANIMAL_MODEL_PATHS[name];
+        if (!path) {
+            console.error(`[ASSET] Unknown dog type '${name}' — no GLB path registered`);
+            return;
+        }
+        if (!this._animalLoadPromises) this._animalLoadPromises = {};
+        if (!this._animalLoadPromises[name]) {
+            this._animalLoadPromises[name] = this._loadAnimalModel(name, path);
+        }
+        try {
+            await this._animalLoadPromises[name];
+        } catch {
+            // _loadAnimalModel already logged and cleared the cached promise.
+        }
+    }
+
+    /**
+     * Load every dog rig (idempotent). Used by the multiplayer start path,
+     * where any remote player may run any of the five rigs. Returns a promise
+     * that resolves once all rigs are loaded, but callers may fire-and-forget
+     * it and lean on the per-rig loadAnimal() guard at each construction site.
+     * @returns {Promise<void>}
+     */
+    preloadAllDogs() {
+        return Promise.all(Object.keys(ANIMAL_MODEL_PATHS).map((name) => this.loadAnimal(name)))
+            .then(() => undefined);
     }
 
     _getKonveyorMaterialSearch() {

@@ -60,7 +60,8 @@
     "validation:latency:mobile": "node tools/validation/input-latency.mjs --profile=mobile",
     "validation:perf": "node tools/validation/frame-time-histogram.mjs",
     "validation:all": "npm run validation:lod && npm run validation:screenshots -- --capture && npm run validation:latency && npm run validation:perf",
-    "bake-heightmaps": "node scripts/bake-heightmap.mjs --scene rolling-hills --peakHeight 6 --seed 1 --out public/terrain/rolling-hills.bin && node scripts/bake-heightmap.mjs --scene field --peakHeight 0 --seed 0 --out public/terrain/field.bin && node scripts/bake-heightmap.mjs --scene open-country --peakHeight 5 --seed 42 --out public/terrain/open-country.bin"
+    "bake-heightmaps": "node scripts/bake-heightmap.mjs --scene rolling-hills --peakHeight 6 --seed 1 --out public/terrain/rolling-hills.bin && node scripts/bake-heightmap.mjs --scene field --peakHeight 0 --seed 0 --out public/terrain/field.bin && node scripts/bake-heightmap.mjs --scene open-country --peakHeight 5 --seed 42 --out public/terrain/open-country.bin",
+    "bake-placement": "node tools/bake-placement.mjs"
   },
   "keywords": [
     "game",

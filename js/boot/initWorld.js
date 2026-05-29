@@ -18,11 +18,65 @@ import { Sheepdog } from '../Sheepdog.js';
 import { resolveAssetUrl } from '../utils/assetUrl.js';
 import { log as probeLog } from '../diagnostics/glProbe.js';
 
+/** Maps the existing logStep boundary labels to friendly per-stage keys. */
+const STAGE_KEYS = {
+    'Loading 3D models': 'models',
+    'Models loaded': '_modelsVerify',
+    'Loading heightfield': 'heightfield',
+    'Creating terrain': 'terrain',
+    'Creating grass': 'grass',
+    'Adding environment details': 'rocks',
+    'Creating trees': 'trees',
+    'Adding mountains': 'mountains',
+    'Adding farm house': 'farmHouse',
+    'Loading fence models': 'fenceModels',
+    'Building structures': 'structures',
+    'Building anime water': 'water',
+    'Creating sheepdog': 'sheepdog',
+    'Creating sheep flock': 'flock',
+    'Scene body complete': '_end',
+};
+
+/**
+ * Cycle 45 Phase 1: turn the ordered logStep marks into per-stage durations.
+ * A stage's duration is the gap from its own mark to the next mark, so the
+ * existing build-step labels double as timing boundaries with zero new
+ * instrumentation in the call sites. `impostorMs` is a subset of `trees`
+ * (kiln-impostor load inside createTrees), surfaced separately so Phase 3
+ * can tell tree-placement cost from impostor-load cost.
+ */
+function summarizeLoadStages(marks, impostorMs) {
+    const stages = {};
+    for (let i = 0; i < marks.length - 1; i++) {
+        const key = STAGE_KEYS[marks[i].label] ?? marks[i].label;
+        if (key.startsWith('_')) continue;
+        stages[key] = (stages[key] ?? 0) + Math.round(marks[i + 1].t - marks[i].t);
+    }
+    if (Number.isFinite(impostorMs) && impostorMs > 0) {
+        stages.impostors = Math.round(impostorMs);
+    }
+    if (marks.length > 1) {
+        stages.total = Math.round(marks[marks.length - 1].t - marks[0].t);
+    }
+    return stages;
+}
+
 /**
  * @param {object} game SheepDogSimulation instance.
  * @param {(step: string, detail?: string) => void} [logStep]
+ * @returns {Promise<{ stages: Record<string, number> }>}
  */
 export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD] ${s}`)) {
+    // Cycle 45 Phase 1: record a timestamp at every build-step boundary, then
+    // forward to the caller's logger. Wrapping the param keeps the 15 call
+    // sites untouched.
+    const marks = [];
+    const baseLogStep = logStep;
+    logStep = (label, detail) => {
+        marks.push({ label, t: performance.now() });
+        baseLogStep(label, detail);
+    };
+    if (game?.terrainBuilder) game.terrainBuilder._sdsImpostorMs = 0;
     try {
         // Load all 3D models first (idempotent — cached after first run).
         logStep('Loading 3D models');
@@ -89,8 +143,9 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
 
         // Cycle 6 Phase 2: build the SceneObstacles bundle once trees +
         // rocks have been placed. Attached to gameState so sheep + dog
-        // can query it per-tick. Field has no obstacles (rect-scene path
-        // skips island trees) so the empty-set guard preserves baseline.
+        // can query it per-tick. Field's trees all sit outside the +/-100
+        // play area, so its bundle is effectively empty for gameplay; the
+        // build runs uniformly across scenes (one code path).
         {
             const { buildSceneObstacles } = await import('../../shared/SceneObstacles.js');
             const treeInstances = game.terrainBuilder.treeInstances || [];
@@ -302,6 +357,20 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         game.gameState.createSheepFlock(game.sceneManager.getScene());
 
         logStep('Scene body complete');
+
+        // Cycle 45 Phase 1: per-stage load breakdown. The dev console summary
+        // (sorted heaviest-first) is the human-readable artifact; the returned
+        // `stages` rides the scene_swapped telemetry payload via swapScene.
+        const stages = summarizeLoadStages(marks, game?.terrainBuilder?._sdsImpostorMs);
+        if (import.meta.env?.DEV) {
+            const breakdown = Object.entries(stages)
+                .filter(([k]) => k !== 'total')
+                .sort((a, b) => b[1] - a[1])
+                .map(([k, v]) => `${k} ${v}ms`)
+                .join(', ');
+            console.log(`[LOAD] ${game?.currentScene?.id ?? '?'} total ${stages.total ?? 0}ms | ${breakdown}`);
+        }
+        return { stages };
 
     } catch (error) {
         console.error('[BUILD] Fatal error during scene build:', error);
