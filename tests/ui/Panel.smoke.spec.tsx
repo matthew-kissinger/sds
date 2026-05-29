@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup, screen } from '@testing-library/react';
-import { Panel, PanelTitle } from '../../js/components/ui/Panel.js';
+import { Panel, PanelTitle } from '../../js/components/ui/Panel';
 
 afterEach(cleanup);
 

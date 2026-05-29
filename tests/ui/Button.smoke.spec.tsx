@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup, screen } from '@testing-library/react';
-import { Button, BackButton } from '../../js/components/ui/Button.js';
+import { Button, BackButton } from '../../js/components/ui/Button';
 
 afterEach(cleanup);
 

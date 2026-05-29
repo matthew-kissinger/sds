@@ -28,6 +28,12 @@ export const color = {
   info: 'var(--color-info)',
   infoStrong: 'var(--color-info-strong)',
 
+  // Foreground text/icon on dark + glass surfaces.
+  text: 'var(--color-text)',
+  onAccent: 'var(--color-on-accent)',
+  dangerText: 'var(--color-danger-text)',
+  dangerTextStrong: 'var(--color-danger-text-strong)',
+
   rankGold: 'var(--color-rank-gold)',
   rankSilver: 'var(--color-rank-silver)',
   rankBronze: 'var(--color-rank-bronze)',
