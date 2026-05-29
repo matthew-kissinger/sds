@@ -4,6 +4,35 @@
 
 ## Recently Completed
 
+### Cycle 46 - `entrance-zen-boids-and-cleanup` (closed 2026-05-29)
+
+Plan archived at [`docs/archive/cycles/cycle-46-plan.md`](archive/cycles/cycle-46-plan.md). Cycle 46 replaced the boot-time full-scene build and auto-loading card picker with a zen attract field as first paint: a cheap drifting-dart field over a gradient sky, with the picker overlay live on top. Selecting a scene streams the real scene in while the field keeps rendering and crossfades it out in-engine, with no DOM flash. The cycle also cleared 632 lines / ~58 KiB of dead CSS and the stale "Step 1 scaffolding" swap comments. No version bump; v2.1.10 stands. This is the first half of the approved entrance + UI split (Cycle 47 is the UI foundation overhaul).
+
+**Closeout outcomes:**
+
+- Shipped 4/5 phases (P1 zen first paint, P2 pick-then-stream + crossfade, P3 deep-link + MP fallback + guard spec, P4 dead-code cleanup). P5 (polish) was explicitly deferred to Cycle 47 (see Carryover). This satisfies the close criterion that every phase ships or is explicitly deferred.
+- **Phase 1 (zen attract field as first paint).** Commit `c93201a`. New `js/attract/ZenAttract.js`: an InstancedMesh dart field on a renderer-agnostic CPU drift, drawn by the persistent renderer over the existing atmosphere. The boot path no longer runs `buildSceneBody` for the default scene on a plain open; the field mounts instead and the picker overlay floats on top. A `webgpu-threejs-tsl` GPU-compute boids version was scoped, but the main bundle uses the WebGL `THREE` while WebGPU + TSL come from a separately vendored build injected as material-factory globals, so a `three/tsl` import would pull a second copy of three and break the renderer or blow the bundle ratchet. The render-agnostic CPU drift over a standard MeshBasicMaterial is the version that runs on both renderers; deviation documented honestly in `cycle46-validation/entrance-timing.md`.
+- **Phase 2 (pick-then-stream + in-engine crossfade).** Commit `b640587`. The first pick out of the field awaits an idle GLB prefetch (kicked at field mount via `requestIdleCallback`), keeps the field alive through `disposeScene`, holds the last field frame while the real scene builds (no black, no pop-in), then dissolves the darts out over 0.8s ease-out (`renderOrder` 10000, `depthTest` off, `material.opacity` 1 to 0). A true two-layer `uAlpha` blend would have needed render-to-texture, which is high-risk on the untestable production WebGPU renderer; the dart-dissolve is a real in-engine alpha crossfade using only material opacity and render order. No View Transitions API (Hard stop 2). `SceneSwapOverlay` skips its DOM cover for this path via a `window.__sdsAttractCrossfadeActive` flag so the in-engine hand-off is visible. The main-bundle ratchet was re-baselined 539 to 541 KiB.
+- **Phase 3 (deep-link + MP fallback + guard spec).** Commit `47e502d`. Extracted the boot-time entrance predicate into a pure, importable `shouldBootAttract()` (new `js/boot/bootAttract.js`) as the single source of truth: a plain open mounts the field; `?scene=`, an `#/r/` room invite, an `#s/` or `#/s/` sandbox deep-link, `?autostart=1`, `?testNoCanvas=1`, and cinematic mode each build a scene directly. New `tests/entrance-attract-gate.spec.js` imports the real helper and pins each case, plus an inline mirror of the MP-swap hard-reload contract so the gate (keeps MP out of attract) and the swap path (hard-reloads) cannot drift apart.
+- **Phase 4 (dead-code and drift cleanup).** Commit `5e6de9d`. Deleted three dead CSS files (`css/production.css`, `css/multiplayer-react.css`, `css/components/index-styles.css`; only `css/main.css` is live, linked at `index.html:273`) and fixed the stale "Step 1 scaffolding / hard-reload fallback" comments in `js/main.js` and `js/App.js` that no longer described the code.
+
+**Validation gates (2026-05-29):**
+
+- `npm test` - 56 passed files, 1 skipped; 521 specs passed, 7 skipped (adds the 14-case `tests/entrance-attract-gate.spec.js`).
+- `npm run build` - clean with the existing Vite large-chunk warning; main 541 KiB at the re-baselined ratchet, three 603 KiB unchanged.
+- Last deploy on `main` green before close; the four phase commits were unpushed at close, so the close commit deploys the whole cycle together.
+
+**Carryover (deferred to Cycle 47 `ui-foundation-overhaul`):**
+
+- **Phase 5 polish (deferred whole).** Scene preview affordance, load-overlay progress affordance, and combined scene + mode gate are all picker-overlay UI work. Q2 of the Cycle 46 plan already defers picker restyling to Cycle 47 (the UI foundation overhaul: TSX, design tokens, component library, Motion), and the load-overlay progress item is moot for the attract path (Phase 2 deliberately skips the DOM cover there and shows live sky + darts). Shipping shallow UI now that Cycle 47 would immediately rewrite is a half-integration, so P5 carries forward whole.
+- **Q1 zen-field aesthetic sign-off (paired, blocked headless).** The field look is a paired taste call. Headless WebGPU does not composite (the preview tab runs `visibilityState: hidden`, screenshots time out), so Matt verifies the aesthetic visually post-deploy.
+- **Crossfade-shape + prefetch-win feel-check (paired, post-deploy).** The dart-dissolve shape and the "feels faster than the Cycle 45 baseline" claim are Matt's post-deploy calls; the prefetch win in `cycle46-validation/entrance-timing.md` is a derived figure (about 61% of swap cost pre-paid, from the Cycle 45 baseline) pending a live measurement.
+
+**Notes:**
+
+- The persistent-renderer architecture (SceneManager keeps renderer, canvas, scene, and GLB cache alive across swaps) made the whole entrance cheap: the field is just a cheap first body on the already-up renderer, and the crossfade reuses the existing `swapScene` seam rather than rewriting the swap machinery.
+- Two deviations from the plan's named techniques (CPU-drift darts instead of TSL GPU-compute boids; dart-dissolve instead of a two-layer `uAlpha` render-to-texture blend) were both forced by the same constraint: the production WebGPU renderer is vendored separately and is not headless-testable, so the lowest-risk renderer-agnostic mechanism won. Both are documented in `cycle46-validation/entrance-timing.md`.
+
 ### Cycle 45 - `entry-load-and-grass-feel` (closed 2026-05-29)
 
 Plan archived at [`docs/archive/cycles/cycle-45-plan.md`](archive/cycles/cycle-45-plan.md). Cycle 45 was re-scoped from the empty `paired-parity-and-proofs` scaffold after Matt raised three issues: scene-entry UX is backwards (the game boots into Rolling Hills behind the menu instead of letting you pick first), scene loading is slow (too much runtime procedural generation), and the grass press around the dog and sheep reads as a thin tip-only silhouette instead of a body-shaped dent. The cycle measured the load cost, baked the measured hog, and set up the entrance and grass follow-on work. No version bump; v2.1.10 stands.
