@@ -23,9 +23,19 @@
  * No element-factory calls, no raw hex, no inline style-tag injection, no
  * per-file accent constant. The Cycle 46 attract-crossfade swap contract is
  * preserved exactly.
+ *
+ * Cycle 48 P5: the flip slide moved off the sds-slide-in-* CSS keyframes onto
+ * Motion (the same dependency the StartScreen screen-state transitions use). The
+ * slide is enter-only by construction: the content div is keyed on visibleIndex,
+ * so each flip remounts it and replays its initial -> animate offset, matching
+ * the old keyframe's instant-replace-then-slide-in. Reduced motion collapses the
+ * enter to an instant cut via the Cycle 47 useReducedMotion hook (the CSS
+ * keyframe path used the global prefers-reduced-motion block; Motion can't, so
+ * it reads the preference directly). Swap timing/coalescing is unchanged.
  */
 
 import { useState, useEffect, useCallback, useRef, type CSSProperties, type TouchEvent } from 'react';
+import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { listScenes, DEFAULT_SCENE_ID } from '../../../shared/scenes/index.js';
 import { getGameInstance, subscribeGameEvent } from '../../GameBridge.js';
@@ -33,6 +43,7 @@ import { useResponsive } from '../hooks/usePlatform.js';
 import { SceneGlyph } from './SceneGlyph';
 import { Card, Badge, IconButton } from '../ui';
 import { color, radius, duration } from '../ui/tokens';
+import { useReducedMotion } from '../ui/useReducedMotion';
 import { sceneChrome } from './sceneChrome';
 import { orderScenes, resolveSceneId, shouldCommit, commitAction, pendingDispatch, flipIndex, swipeDirection } from './scenePickerLogic';
 
@@ -134,9 +145,8 @@ export function ScenePicker() {
     // Visible index = which card the player is browsing right now (may
     // differ from activeIndex briefly while a swap is mid-flight).
     const [visibleIndex, setVisibleIndex] = useState(activeIndex);
-    const [slideDir, setSlideDir] = useState(0); // -1 = slide left, +1 = slide right, 0 = no anim
-    const [anim, setAnim] = useState(false);
-    const animTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const [slideDir, setSlideDir] = useState(0); // -1 = slide left, +1 = slide right
+    const reduce = useReducedMotion();
     const containerRef = useRef<HTMLDivElement>(null);
     const touchRef = useRef({ x: 0, t: 0, active: false });
 
@@ -175,6 +185,10 @@ export function ScenePicker() {
             return;
         }
         setVisibleIndex(activeIndex);
+        // Reset the slide direction so an external/programmatic scene sync
+        // remounts the content card without replaying the flip slide — the
+        // old anim flag only fired on a user gesture, never on this path.
+        setSlideDir(0);
     }, [activeIndex]);
 
     // Schedule a debounced commit. Called from every navigation gesture.
@@ -203,10 +217,7 @@ export function ScenePicker() {
         const next = flipIndex(visibleIndex, delta, scenes.length);
         if (next === visibleIndex) return;
         setSlideDir(delta > 0 ? 1 : -1);
-        setAnim(true);
         setVisibleIndex(next);
-        clearTimeout(animTimer.current);
-        animTimer.current = setTimeout(() => setAnim(false), TRANSITION_MS);
         scheduleCommit(scenes[next].id);
     }, [visibleIndex, scenes, scheduleCommit]);
 
@@ -266,11 +277,6 @@ export function ScenePicker() {
         justifyContent: 'space-between',
         padding: compact ? '0.85rem 3rem 0.85rem 0.95rem' : '1rem 3.5rem 1rem 1.25rem',
         color: color.text,
-        transform: anim ? `translateX(${slideDir > 0 ? -8 : 8}px)` : 'translateX(0)',
-        opacity: anim ? 0 : 1,
-        animation: anim
-            ? `sds-slide-in-${slideDir > 0 ? 'right' : 'left'} ${TRANSITION_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards`
-            : undefined,
     };
 
     return (
@@ -292,8 +298,20 @@ export function ScenePicker() {
                 <div style={{ position: 'absolute', inset: 0, background: chrome.gradient, transition: `background ${TRANSITION_MS}ms ease` }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.22) 100%)', pointerEvents: 'none' }} />
 
-                {/* Slide content (title + desc + glyph). Animated on flip. */}
-                <div style={contentStyle}>
+                {/* Slide content (title + desc + glyph). Cycle 48 P5: Motion-
+                    driven flip slide. Keyed on visibleIndex so each flip remounts
+                    and replays initial -> animate (enter-only, like the old
+                    keyframe). slideDir picks the enter offset; slideDir === 0
+                    means first paint or an external/programmatic scene sync, which
+                    the old anim-flag code never animated, so the enter offset is
+                    suppressed there. Reduced motion drops the offset entirely. */}
+                <motion.div
+                    key={visibleIndex}
+                    style={contentStyle}
+                    initial={reduce || slideDir === 0 ? false : { x: slideDir > 0 ? 28 : -28, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: reduce ? 0 : TRANSITION_MS / 1000, ease: [0.2, 0.8, 0.2, 1] }}
+                >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
                         <div style={{ flex: '0 0 auto' }}>
                             <SceneGlyph scene={visibleScene.id} />
@@ -311,7 +329,7 @@ export function ScenePicker() {
                             {visibleScene.description}
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Prev / next chevrons. */}
                 <IconButton
@@ -341,10 +359,7 @@ export function ScenePicker() {
                         onClick={() => {
                             if (i === visibleIndex) return;
                             setSlideDir(i > visibleIndex ? 1 : -1);
-                            setAnim(true);
                             setVisibleIndex(i);
-                            clearTimeout(animTimer.current);
-                            animTimer.current = setTimeout(() => setAnim(false), TRANSITION_MS);
                             scheduleCommit(s.id);
                         }}
                         aria-label={`Show ${s.name}`}

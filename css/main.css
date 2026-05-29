@@ -154,17 +154,9 @@
   to { transform: rotate(360deg); }
 }
 
-/* Cycle 47: scene-picker card slide, moved out of ScenePicker's injected
-   <style> (was dangerouslySetInnerHTML) into the shared sheet. The picker
-   references these by name in its card animation. */
-@keyframes sds-slide-in-right {
-  from { transform: translateX(28px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-@keyframes sds-slide-in-left {
-  from { transform: translateX(-28px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
+/* Cycle 48 P5: the scene-picker card-slide keyframes that lived here moved off
+   CSS onto Motion (see js/components/StartScreen/ScenePicker.tsx) and were
+   removed with that conversion. */
 
 /* Cycle 48 P2: pointer-tour fade in/out, moved out of PointerTour's injected
    <style> (was dangerouslySetInnerHTML) into the shared sheet, matching the
