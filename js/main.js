@@ -140,6 +140,15 @@ class SheepDogSimulation {
             !isCinematicMode();
         this._attractMode = false;
         this._zenAttract = null;
+        // Cycle 46 Phase 2: pick-out-of-attract crossfade + idle prefetch state.
+        // `_attractCrossfade` arms the per-frame dart dissolve in runFrame;
+        // `_keepZenForCrossfade` tells disposeScene to spare the field for it;
+        // `_attractPrefetchPromise` is the idle GLB warm-up the first pick awaits.
+        this._attractCrossfade = false;
+        this._keepZenForCrossfade = false;
+        this._zenCrossfadeT = 0;
+        this._zenCrossfadeDur = 0.8;
+        this._attractPrefetchPromise = null;
         // Cycle 26 v2.1.0: per-scene SEO meta (title + OG + Twitter) for
         // deep-link sharing previews. index.html ships rolling-hills as
         // default; this updates if the URL requested a different scene.
@@ -786,6 +795,28 @@ class SheepDogSimulation {
             return new Promise(() => {});
         }
 
+        // Cycle 46 Phase 2: out of the zen attract field, let the idle GLB
+        // prefetch finish before building so the build reuses the warmed dog +
+        // sheep + fence caches (models/fenceModels stages drop to ~0, no double
+        // fetch). The field keeps drifting during this await — no black frame.
+        if (this._attractMode && this._attractPrefetchPromise) {
+            try { await this._attractPrefetchPromise; } catch {}
+        }
+
+        // Cycle 46 Phase 2: a pick out of attract crossfades in-engine — the
+        // dart field is kept through teardown and dissolved over the streaming
+        // scene (no DOM cover). The start path opts out (`noCrossfade`): it
+        // disposes the field and rides the standard SceneSwapOverlay swap.
+        const attractCrossfade = this._attractMode && !opts.noCrossfade && !!this._zenAttract;
+        if (attractCrossfade) {
+            this._keepZenForCrossfade = true;
+            this._attractCrossfade = true;
+            this._zenCrossfadeT = 0;
+            this._zenCrossfadeDur = 0.8;
+            this._zenAttract.beginCrossfade();
+            if (typeof window !== 'undefined') window.__sdsAttractCrossfadeActive = true;
+        }
+
         console.log(`[SWAP] swapScene(${fromId} -> ${toId}) — in-process`);
         emitGameEvent('scene-swap-start');
         const t0 = performance.now();
@@ -793,7 +824,17 @@ class SheepDogSimulation {
         try {
             const newSceneDef = loadScene(toId);
             await this.disposeScene();
+            // Field survived teardown (above) for the crossfade; release the
+            // guard now so any later dispose cleans up a lingering field.
+            this._keepZenForCrossfade = false;
             const swapBuildResult = await this.rebuildScene(newSceneDef);
+
+            // Build done: stop suppressing the DOM overlay (the dissolve itself
+            // runs in runFrame and needs no cover). `_attractCrossfade` stays
+            // armed so runFrame ramps the darts out, then disposes the field.
+            if (attractCrossfade && typeof window !== 'undefined') {
+                window.__sdsAttractCrossfadeActive = false;
+            }
 
             // Update the URL bar only on success. If rebuildScene threw, the
             // user's URL still reflects the original scene — they reload and
@@ -956,6 +997,51 @@ class SheepDogSimulation {
         this._attractMode = true;
         if (typeof window !== 'undefined') window.__sdsAttractActive = true;
         this.menuController.updateCinematicCamera?.();
+
+        // Cycle 46 Phase 2: warm the scene-independent GLB caches while the
+        // field idles so the first pick streams faster (acceptance: post-pick
+        // stream below the Phase-1 baseline).
+        this._prefetchSceneAssets();
+    }
+
+    /**
+     * Cycle 46 Phase 2: while the zen field idles, prefetch the GLB caches the
+     * first scene build needs regardless of which scene is picked — the dog
+     * rigs + sheep (TerrainBuilder) and the fence kit (StructureBuilder). Both
+     * loadModels() are idempotent (a `modelsLoaded` guard), so the post-pick
+     * build reuses the warmed caches instead of re-fetching. swapScene awaits
+     * this promise before building, so an early pick pays the load once (no
+     * double fetch) and a patient pick pays nothing.
+     *
+     * Idle-scheduled and best-effort: a failed warm-up just means the build
+     * loads normally. One-shot via the stored promise.
+     */
+    _prefetchSceneAssets() {
+        if (this._attractPrefetchPromise) return;
+        const run = () => Promise.allSettled([
+            this.terrainBuilder?.loadModels?.(),
+            this.structureBuilder?.loadModels?.(),
+        ]);
+        this._attractPrefetchPromise = new Promise((resolve) => {
+            const kick = () => { run().then(resolve, resolve); };
+            if (typeof window !== 'undefined' && window.requestIdleCallback) {
+                window.requestIdleCallback(kick, { timeout: 2500 });
+            } else {
+                setTimeout(kick, 300);
+            }
+        });
+    }
+
+    /**
+     * Cycle 46 Phase 2: finish the zen dissolve — clear the crossfade flags
+     * and dispose the dart field. Idempotent; safe if the field was already
+     * torn down by a second swap that interrupted the dissolve.
+     */
+    _endZenCrossfade() {
+        this._attractCrossfade = false;
+        if (typeof window !== 'undefined') window.__sdsAttractCrossfadeActive = false;
+        try { this._zenAttract?.dispose(); } catch {}
+        this._zenAttract = null;
     }
 
     /**
@@ -966,7 +1052,10 @@ class SheepDogSimulation {
      */
     async _ensureSceneBuiltForStart() {
         if (!this._attractMode) return;
-        await this.swapScene(this.currentScene?.id ?? DEFAULT_SCENE_ID);
+        // Starting a game (not returning to the menu backdrop): skip the dart
+        // dissolve and ride the standard SceneSwapOverlay swap so the darts
+        // don't float over the opening gameplay frame.
+        await this.swapScene(this.currentScene?.id ?? DEFAULT_SCENE_ID, { noCrossfade: true });
     }
 
     /**
@@ -2013,8 +2102,34 @@ class SheepDogSimulation {
         // Game-logic update path is skipped — half-disposed references would
         // otherwise crash the rAF loop.
         if (this._sceneRebuilding) {
+            // Cycle 46 Phase 2: a pick out of attract HOLDS the last zen frame
+            // (no render) through the build, so the canvas keeps showing the
+            // sky + drifting darts — no black frame, no half-built pop-in —
+            // until the dissolve below takes over. Normal swaps render under
+            // the SceneSwapOverlay as before.
+            if (this._attractCrossfade) return false;
             try { return this.sceneManager?.render?.(); } catch {}
             return false;
+        }
+
+        // Cycle 46 Phase 2: advance the zen dissolve after a pick out of
+        // attract. The real scene is built and renders via the normal path
+        // below; here we only ramp the still-mounted dart field's opacity to 0
+        // over ~0.8s, then dispose it. Render-suppression during the build kept
+        // the canvas on the last zen frame, so this dissolve is the visible
+        // hand-off — an in-engine alpha crossfade, no DOM cover. This is a
+        // guarded mode-dispatch block, not a change to the loop's shape.
+        if (this._attractCrossfade) {
+            if (!this._zenAttract) {
+                this._endZenCrossfade();
+            } else {
+                this._zenCrossfadeT += deltaTime;
+                const dur = this._zenCrossfadeDur || 0.8;
+                const t = Math.min(this._zenCrossfadeT / dur, 1);
+                const eased = 1 - (1 - t) * (1 - t); // ease-out
+                this._zenAttract.setOpacity(1 - eased);
+                if (t >= 1) this._endZenCrossfade();
+            }
         }
 
         // Cycle 46 Phase 1: zen attract field. Before any scene is built, drive

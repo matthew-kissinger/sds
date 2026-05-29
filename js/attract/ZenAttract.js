@@ -272,6 +272,22 @@ export class ZenAttract {
     }
 
     /**
+     * Phase 2 crossfade setup. Lift the darts above the freshly-built scene
+     * and drop depth-test so they dissolve cleanly on top as `setOpacity`
+     * ramps the field to 0. Called once when a pick out of attract starts
+     * streaming the real scene; the per-frame opacity ramp lives in
+     * `SheepDogSimulation.runFrame`.
+     */
+    beginCrossfade() {
+        if (!this._material || !this.mesh) return;
+        this._material.transparent = true;
+        this._material.depthTest = false;   // draw over the streaming scene
+        this._material.depthWrite = false;
+        this._material.needsUpdate = true;
+        this.mesh.renderOrder = 10000;       // last in the draw order
+    }
+
+    /**
      * Set the field's global opacity (Phase 2 crossfade hook).
      * @param {number} a  0..1
      */

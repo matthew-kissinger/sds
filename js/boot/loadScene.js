@@ -18,10 +18,15 @@ export async function disposeScene(game) {
     console.log('[SWAP] disposeScene() — full teardown');
     game._sceneRebuilding = true;
 
-    // Cycle 46 Phase 1: tear down the boot-time zen attract field if present.
-    // Only set while attract mode is live (first pick out of the attract
-    // field); a no-op on every normal scene-to-scene swap.
-    if (game._zenAttract) {
+    // Cycle 46: tear down the boot-time zen attract field if present. Only
+    // set while attract mode is live (first pick out of the attract field); a
+    // no-op on every normal scene-to-scene swap.
+    //
+    // Phase 2 exception: a pick that crossfades (vs the start path) keeps the
+    // field alive through teardown so it can dissolve over the streaming
+    // scene. main.js clears `_keepZenForCrossfade` right after this returns and
+    // disposes the field when the dissolve completes (`_endZenCrossfade`).
+    if (game._zenAttract && !game._keepZenForCrossfade) {
         try { game._zenAttract.dispose(); } catch (err) { console.warn('[SWAP] zenAttract dispose:', err); }
         game._zenAttract = null;
     }

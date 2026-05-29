@@ -36,6 +36,13 @@ export function SceneSwapOverlay() {
         };
 
         const unsubStart = subscribeGameEvent('scene-swap-start', () => {
+            // Cycle 46 Phase 2: a pick out of the zen attract field crossfades
+            // in-engine (the darts dissolve over the streaming scene). Skip the
+            // DOM cover for that path so the in-engine hand-off is visible — no
+            // DOM flash. Normal scene-to-scene swaps still get the overlay.
+            if (typeof window !== 'undefined' && window.__sdsAttractCrossfadeActive === true) {
+                return;
+            }
             setError(false);
             visibleSinceRef.current = 0;
             pendingEndRef.current = false;
