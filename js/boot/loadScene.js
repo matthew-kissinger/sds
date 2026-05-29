@@ -18,6 +18,14 @@ export async function disposeScene(game) {
     console.log('[SWAP] disposeScene() — full teardown');
     game._sceneRebuilding = true;
 
+    // Cycle 46 Phase 1: tear down the boot-time zen attract field if present.
+    // Only set while attract mode is live (first pick out of the attract
+    // field); a no-op on every normal scene-to-scene swap.
+    if (game._zenAttract) {
+        try { game._zenAttract.dispose(); } catch (err) { console.warn('[SWAP] zenAttract dispose:', err); }
+        game._zenAttract = null;
+    }
+
     // Cycle 12 Phase 1 A8: optional per-subsystem renderer.info snapshot
     // for diagnosing texture/program drift. Enable from DevTools with
     // `window.__sdsSwapDriftLog = true`. Off in production swaps to keep

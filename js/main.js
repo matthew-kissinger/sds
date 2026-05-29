@@ -36,6 +36,7 @@ import { installStressTestHarness, installMpProbe } from './boot/debugProbes.js'
 import { installMpEventHandlers, handleMultiplayerGameState as runMpStateHandoff } from './boot/initNetwork.js';
 import { buildSceneBody } from './boot/initWorld.js';
 import { disposeScene as runDisposeScene } from './boot/loadScene.js';
+import { ZenAttract } from './attract/ZenAttract.js';
 import {
     showCompletionOverlay as renderCompletionOverlay,
     showLocalCompletionOverlay as renderLocalCompletionOverlay
@@ -116,6 +117,29 @@ class SheepDogSimulation {
         // leaderboard submission path can include it as a partition key.
         this.gameState.sceneId = activeSceneId;
         if (typeof window !== 'undefined') window.__currentSceneId = activeSceneId;
+        // Cycle 46 Phase 1: boot-time zen attract field. On a plain open (no
+        // explicit scene/room/sandbox/cinematic/test intent) the app paints a
+        // cheap drifting-boid field as first frame instead of building the
+        // hero scene; the picker overlay floats on top and the real scene
+        // streams in on the first pick. Any deep-link that needs a built scene
+        // opts out: ?scene=, an #/r/ room invite, an #s/ sandbox config, or the
+        // ?autostart / ?testNoCanvas / ?cinematic harness flags. `_attractMode`
+        // flips true in init() once the field actually mounts; rebuildScene
+        // clears it when the first real scene is built.
+        const _bootHash = typeof location !== 'undefined' ? location.hash : '';
+        const _needsBuiltScene =
+            _bootHash.startsWith('#/r/') ||  // multiplayer room invite
+            _bootHash.startsWith('#s/') ||   // sandbox deep-link
+            _bootHash.startsWith('#/s/');    // sandbox deep-link (alt form)
+        const _bootParams = new URLSearchParams(location.search);
+        this._bootAttract =
+            !requestedSceneId &&
+            !_needsBuiltScene &&
+            _bootParams.get('autostart') !== '1' &&
+            _bootParams.get('testNoCanvas') !== '1' &&
+            !isCinematicMode();
+        this._attractMode = false;
+        this._zenAttract = null;
         // Cycle 26 v2.1.0: per-scene SEO meta (title + OG + Twitter) for
         // deep-link sharing previews. index.html ships rolling-hills as
         // default; this updates if the URL requested a different scene.
@@ -653,21 +677,33 @@ class SheepDogSimulation {
             logStep('Loading critical assets');
             await this.gameAssetLoader.loadCriticalAssets();
 
-            // Per-scene construction. Cycle 11 Phase 1 extracted this body into
-            // buildSceneBody so rebuildScene() can reuse it.
-            await this.createSunBillboard(this.currentScene.sky?.preset ?? 'pastoral-noon');
-            await buildSceneBody(this, logStep);
+            // Cycle 46 Phase 1: zen attract field as first paint. Skip the
+            // heavy per-scene construction (sun billboard + buildSceneBody)
+            // entirely and mount the cheap drifting-boid field instead; the
+            // picker overlay (React) is already live on top. Picking a scene
+            // routes through swapScene, which disposes the field and streams
+            // the real scene in. The dev `[LOAD]` summary (logged inside
+            // buildSceneBody) therefore does not fire at startup.
+            if (this._bootAttract) {
+                this._mountZenAttract();
+                logStep('Zen attract field mounted', 'scene build deferred to first pick');
+            } else {
+                // Per-scene construction. Cycle 11 Phase 1 extracted this body
+                // into buildSceneBody so rebuildScene() can reuse it.
+                await this.createSunBillboard(this.currentScene.sky?.preset ?? 'pastoral-noon');
+                await buildSceneBody(this, logStep);
+
+                // Set grass instance count for performance monitoring
+                this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
+
+                // Register per-system triangle estimates for the PERF overlay.
+                this.registerSystemTriangleCounts();
+            }
 
             // First-run-only: setup persistent input listeners (mouse wheel).
             // Not repeated on scene swaps — the renderer canvas persists.
             logStep('Setting up controls');
             this.sceneManager.setupMouseControls();
-
-            // Set grass instance count for performance monitoring
-            this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
-
-            // Register per-system triangle estimates for the PERF overlay.
-            this.registerSystemTriangleCounts();
 
             // Cycle 11 Phase 1: stress test harness. Always installed (small);
             // call from DevTools as `await window.__sdsStressTestSwaps(5)`.
@@ -702,27 +738,28 @@ class SheepDogSimulation {
 
     // _buildSceneBody extracted to js/boot/initWorld.js#buildSceneBody.
 
-    // -------- Cycle 10 Phase 1 — scene lifecycle (Step 1 plumbing) --------
-    // Step 1 ships these as scaffolding: swapScene + restartToMenu fall back
-    // to the legacy hard-reload behaviour. disposeScene wires up the
-    // AbortController teardown for scene-coupled window listeners (the leak
-    // class flagged in cycle-10-plan.md §"Highest-risk subtasks") so future
-    // steps land without listener leaks. rebuildScene is a no-op until
-    // Step 3. The four legacy reload callsites already route through these
-    // methods so future steps can land without re-touching plumbing.
+    // -------- Scene lifecycle: in-process swap + teardown --------
+    // swapScene and restartToMenu run in-process for solo / sandbox /
+    // start-screen (dispose + rebuild against the persistent renderer);
+    // multiplayer still hard-reloads because rooms lock the scene at creation.
+    // disposeScene wires the AbortController teardown for scene-coupled window
+    // listeners (the leak class flagged in cycle-10-plan.md) so swaps don't
+    // leak; rebuildScene reconstructs the scene body via
+    // initWorld.buildSceneBody.
 
     /**
      * Canonical scene-transition entry point.
      *
-     * Step 1: hard-reloads via location.href (today's behaviour).
-     * Step 3: dispose + rebuild in-process; URL via history.replaceState.
+     * Solo / sandbox / start-screen: dispose + rebuild in-process against the
+     * persistent renderer; URL updated via history.replaceState. Multiplayer
+     * hard-reloads via location.href (rooms lock the scene at creation).
      *
      * @param {string} toId  Target scene id (e.g. 'field', 'rolling-hills').
      * @param {{ hash?: string }} [opts]  hash: raw hash payload to preserve
-     *   across the reload (no leading '#'), e.g. 's/<encoded>' or '/r/<code>'.
-     * @returns {Promise<void>}  Same-scene branch resolves immediately;
-     *   cross-scene branch returns a never-resolving Promise because the
-     *   page is reloading. Callers fire-and-forget — do not await.
+     *   across an MP reload (no leading '#'), e.g. 's/<encoded>' or '/r/<code>'.
+     * @returns {Promise<void>}  In-process branch resolves when the rebuild
+     *   completes; the MP hard-reload branch returns a never-resolving Promise
+     *   because the page is reloading. Callers fire-and-forget — do not await.
      */
     async swapScene(toId, opts = {}) {
         if (!toId) {
@@ -730,8 +767,10 @@ class SheepDogSimulation {
             return;
         }
         const fromId = this.currentScene?.id;
-        if (fromId === toId && !opts.hash) {
-            // Same-scene no-op. Step 3 may add an opts.force escape hatch.
+        if (fromId === toId && !opts.hash && !this._attractMode) {
+            // Same-scene no-op (no opts.hash payload to honor). In attract mode
+            // the scene def is loaded but its body was never built, so a pick
+            // of the default scene must still fall through and build it.
             return;
         }
 
@@ -887,6 +926,11 @@ class SheepDogSimulation {
         this.lastTime = performance.now();
         this._sceneRebuilding = false;
 
+        // Cycle 46 Phase 1: a real scene is now built — leave attract mode.
+        // (disposeScene already tore down the zen field on the way in.)
+        this._attractMode = false;
+        if (typeof window !== 'undefined') window.__sdsAttractActive = false;
+
         // Cycle 45 Phase 1: hand the per-stage load breakdown back to swapScene
         // so it rides the scene_swapped telemetry payload.
         return sceneBuildResult;
@@ -899,9 +943,36 @@ class SheepDogSimulation {
     }
 
     /**
+     * Cycle 46 Phase 1: mount the boot-time zen attract field. Adds the
+     * drifting-dart InstancedMesh to the persistent scene, arms attract mode
+     * (so runFrame drives the orbit-camera + atmosphere + darts and skips all
+     * game logic), and parks the cinematic camera at its orbit start so the
+     * first frame is composed. Disposed in disposeScene() on the first pick.
+     */
+    _mountZenAttract() {
+        this._zenAttract = new ZenAttract(this.sceneManager.getScene(), {
+            isMobile: this.sceneManager.isMobile,
+        });
+        this._attractMode = true;
+        if (typeof window !== 'undefined') window.__sdsAttractActive = true;
+        this.menuController.updateCinematicCamera?.();
+    }
+
+    /**
+     * Cycle 46 Phase 1: when boot mounted the zen attract field instead of a
+     * scene, stream the current (default) scene in before gameplay starts so
+     * startGame / startLocalGame / startSandboxGame run against a built world.
+     * No-op once a real scene exists. Resolves when the scene is ready.
+     */
+    async _ensureSceneBuiltForStart() {
+        if (!this._attractMode) return;
+        await this.swapScene(this.currentScene?.id ?? DEFAULT_SCENE_ID);
+    }
+
+    /**
      * Return to start screen on the current scene without changing scenes.
-     * Step 1: window.location.reload() (today's handleMainMenu behaviour).
-     * Step 3: in-process menu re-mount, no audio cut, no canvas flash.
+     * Single-player: in-process menu re-mount, no audio cut, no canvas flash.
+     * Multiplayer: hard reload (rooms lock the scene at creation).
      */
     async restartToMenu() {
         // Cycle 11 Phase 1: in-process menu remount. Same-scene dispose +
@@ -1139,6 +1210,10 @@ class SheepDogSimulation {
             await this.waitForInitialization();
         }
 
+        // Cycle 46 Phase 1: if still on the zen attract field, stream the
+        // current scene in before gameplay runs against a built world.
+        await this._ensureSceneBuiltForStart();
+
         console.log(`Starting game in ${mode} mode`, {
             roomCode: roomData?.roomCode || 'none',
             playerCount: roomData?.players?.length || 0,
@@ -1329,6 +1404,10 @@ class SheepDogSimulation {
             await this.waitForInitialization();
         }
 
+        // Cycle 46 Phase 1: if still on the zen attract field, stream the
+        // current scene in before the sandbox runs against a built world.
+        await this._ensureSceneBuiltForStart();
+
         console.log('[SANDBOX] Starting sandbox game', {
             dogType,
             sheepCount: sandboxConfig.sheep?.count,
@@ -1483,6 +1562,10 @@ class SheepDogSimulation {
             console.log('[LOCAL] Waiting for initialization to complete...');
             await this.waitForInitialization();
         }
+
+        // Cycle 46 Phase 1: if still on the zen attract field, stream the
+        // current scene in before the 2-player game runs against a built world.
+        await this._ensureSceneBuiltForStart();
 
         console.log('[LOCAL] Starting local 2-player game:', localConfig);
 
@@ -1933,7 +2016,26 @@ class SheepDogSimulation {
             try { return this.sceneManager?.render?.(); } catch {}
             return false;
         }
-        
+
+        // Cycle 46 Phase 1: zen attract field. Before any scene is built, drive
+        // only the orbit camera + atmosphere + drifting darts, then render.
+        // Skips all game-logic + grass/terrain updates — those subsystems don't
+        // exist until the first pick streams a real scene in.
+        if (this._attractMode) {
+            try {
+                this.menuController.updateCinematicCamera?.();
+                if (this.atmosphere) {
+                    this.atmosphere.syncCamera(this.sceneManager.getCamera().position);
+                    this.atmosphere.update(deltaTime);
+                }
+                this._zenAttract?.update(deltaTime);
+                return this.sceneManager.render();
+            } catch (err) {
+                console.error('[ATTRACT] frame failed:', err);
+                return false;
+            }
+        }
+
         // Check if game is paused
         const isPaused = this.inputHandler.isPausedState();
         
@@ -2634,7 +2736,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     const gameInstance = new SheepDogSimulation(rendererOptions);
-    await recordProductionWebGpuBoot(gameInstance);
+    // Cycle 46 Phase 1: in attract mode there is no scene body yet, so the
+    // WebGPU-boot scene-body gates would record a misleading failure. Defer
+    // the first accurate record to rebuildScene() on the first scene pick.
+    if (!gameInstance._bootAttract) {
+        await recordProductionWebGpuBoot(gameInstance);
+    }
     emitRendererModeTelemetry(gameInstance);
 
     // Delegate menu/network flows from gameInstance to menuController for GameBridge

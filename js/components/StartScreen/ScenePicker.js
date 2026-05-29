@@ -185,7 +185,13 @@ export function ScenePicker() {
     const scheduleCommit = useCallback((targetId) => {
         clearTimeout(commitTimer.current);
         commitTimer.current = setTimeout(() => {
-            if (!targetId || targetId === currentSceneId()) return;
+            // Cycle 46 Phase 1: while the zen attract field is up, the scene
+            // def matches the picker's "current" id but nothing is built yet,
+            // so a pick of the default scene must still commit (swapScene
+            // builds it and leaves attract mode). The same-scene no-op only
+            // applies once a real scene is on screen.
+            const attractActive = typeof window !== 'undefined' && window.__sdsAttractActive === true;
+            if (!targetId || (targetId === currentSceneId() && !attractActive)) return;
             if (swapInFlightRef.current) {
                 // Latest-wins: don't fire a concurrent swap; queue and
                 // let scene-swap-end pick it up.
