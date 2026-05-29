@@ -19,5 +19,6 @@ export { Badge } from './Badge';
 export type { BadgeProps, BadgeTone } from './Badge';
 export { IconButton } from './IconButton';
 export type { IconButtonProps } from './IconButton';
+export { useReducedMotion } from './useReducedMotion';
 export { MenuOption, MenuOptionGrid } from './MenuOption.js';
 export { SceneSwapOverlay } from './SceneSwapOverlay.js';
