@@ -24,14 +24,13 @@ export class FencePresets {
 
         // GLB Model loader (Draco + Meshopt decoders for Phase A Unit B compressed GLBs).
         this.loader = configureGLTFLoader(new GLTFLoader());
+        // The four pieces actually assembled at runtime. All four come from a
+        // single shared-texture kit GLB (Fence_Kit) - see loadModels().
         this.models = {
             fencePost: null,
             fenceRail: null,
-            fenceSegment: null,
             gatePost: null,
-            gateComplete: null,
-            gateArch: null,
-            cornerPost: null
+            gateArch: null
         };
         this.modelsLoaded = false;
         this.useGLBModels = true; // Toggle to use GLB vs procedural
@@ -72,34 +71,41 @@ export class FencePresets {
     async loadModels() {
         if (this.modelsLoaded) return;
 
-        const modelPaths = {
-            fencePost: 'assets/models/Fence_Post-v1.0.0.glb',
-            fenceRail: 'assets/models/Fence_Rail-v1.0.0.glb',
-            fenceSegment: 'assets/models/Fence_Segment-v1.0.0.glb',
-            gatePost: 'assets/models/Gate_Post-v1.0.0.glb',
-            gateComplete: 'assets/models/Gate_Complete-v1.0.0.glb',
-            gateArch: 'assets/models/Gate_Arch-v1.0.0.glb',
-            cornerPost: 'assets/models/Corner_Post-v1.0.0.glb'
+        // One shared-texture kit GLB instead of four standalone files that each
+        // re-embedded the same wood texture set. The kit's default scene holds
+        // four identity-wrapper nodes; cloning a wrapper reproduces exactly what
+        // cloning the old per-file gltf.scene produced. Built by
+        // tools/merge-fence-kit.mjs; pre-merge pieces live in assets/_originals.
+        const KIT_PATH = 'assets/models/Fence_Kit-v1.0.0.glb';
+        const kitNodeNames = {
+            fencePost: 'Fence_Post',
+            fenceRail: 'Fence_Rail',
+            gatePost: 'Gate_Post',
+            gateArch: 'Gate_Arch'
         };
 
-        const loadPromises = Object.entries(modelPaths).map(async ([name, path]) => {
-            try {
-                const gltf = await this.loader.loadAsync(path);
-                this.models[name] = gltf.scene;
-                // Enable shadows on all meshes in the model
-                gltf.scene.traverse(child => {
+        try {
+            const gltf = await this.loader.loadAsync(KIT_PATH);
+            for (const [name, nodeName] of Object.entries(kitNodeNames)) {
+                const node = gltf.scene.getObjectByName(nodeName);
+                if (!node) {
+                    console.warn(`[WARN] Fence kit missing node: ${nodeName}`);
+                    continue;
+                }
+                // Enable shadows on every mesh in the piece.
+                node.traverse(child => {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
                     }
                 });
-                console.log(`[OK] Loaded fence model: ${name}`);
-            } catch (err) {
-                console.warn(`[WARN] Failed to load fence model ${name}:`, err);
+                this.models[name] = node;
+                console.log(`[OK] Loaded fence kit piece: ${name}`);
             }
-        });
+        } catch (err) {
+            console.warn('[WARN] Failed to load fence kit:', err);
+        }
 
-        await Promise.all(loadPromises);
         this.modelsLoaded = true;
         console.log('[OK] Fence models loaded');
     }
@@ -593,64 +599,6 @@ export class FencePresets {
             bottomFence.position.z = -width/2;
             bottomFence.position.x = -depth/2;
             group.add(bottomFence);
-        }
-        
-        return group;
-    }
-    
-    /**
-     * Create a corner connection piece for diagonal gates
-     * @param {string} cornerType - 'northeast', 'northwest', 'southeast', 'southwest'
-     * @param {number} gateWidth - Width of the gate opening
-     * @param {Object} gateConfig - Gate configuration
-     * @returns {THREE.Group} - Corner structure group
-     */
-    createCornerWithGate(cornerType, gateWidth = 8, gateConfig = {}) {
-        const group = new THREE.Group();
-        
-        // Create two fence segments that meet at corner
-        const segment1 = this.createBorderSegment(50, 'horizontal');
-        const segment2 = this.createBorderSegment(50, 'vertical');
-        
-        // Position based on corner type
-        switch(cornerType) {
-            case 'northeast':
-                segment1.position.set(-25, 0, 0);
-                segment2.position.set(0, 0, -25);
-                break;
-            case 'northwest':
-                segment1.position.set(25, 0, 0);
-                segment2.position.set(0, 0, -25);
-                break;
-            case 'southeast':
-                segment1.position.set(-25, 0, 0);
-                segment2.position.set(0, 0, 25);
-                break;
-            case 'southwest':
-                segment1.position.set(25, 0, 0);
-                segment2.position.set(0, 0, 25);
-                break;
-        }
-        
-        group.add(segment1);
-        group.add(segment2);
-        
-        // Add corner post
-        const cornerPost = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.2, 0.2, this.fenceHeight + 0.5, 8),
-            this.materials.post
-        );
-        cornerPost.position.y = (this.fenceHeight + 0.5) / 2;
-        cornerPost.castShadow = true;
-        cornerPost.receiveShadow = true;
-        group.add(cornerPost);
-        
-        // Add diagonal gate if needed
-        if (gateConfig.diagonal) {
-            const diagonalGate = this.createGateStructure(gateWidth, 'diagonal', gateConfig);
-            // Position gate at 45-degree angle
-            diagonalGate.rotation.y = Math.PI / 4 * (cornerType.includes('east') ? 1 : -1);
-            group.add(diagonalGate);
         }
         
         return group;

@@ -49,14 +49,8 @@ export class GameAssetLoader {
             // Additional dog model
             'assets/models/George_Washington.glb',
 
-            // Fence and gate models
-            'assets/models/Fence_Post-v1.0.0.glb',
-            'assets/models/Fence_Rail-v1.0.0.glb',
-            'assets/models/Fence_Segment-v1.0.0.glb',
-            'assets/models/Gate_Post-v1.0.0.glb',
-            'assets/models/Gate_Complete-v1.0.0.glb',
-            'assets/models/Gate_Arch-v1.0.0.glb',
-            'assets/models/Corner_Post-v1.0.0.glb',
+            // Fence and gate kit (one shared-texture GLB for all four pieces)
+            'assets/models/Fence_Kit-v1.0.0.glb',
 
             // Environment details
             'assets/models/Farm house.glb',
