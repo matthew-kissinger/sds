@@ -84,7 +84,7 @@ export async function initReactUI() {
             import('./shared/playerIdentity.js'),
             import('./shared/settings.js'),
             import('./StartScreen/ModeSelection.js'),
-            import('./StartScreen/ScenePicker.js'),
+            import('./StartScreen/ScenePicker'),
             import('./StartScreen/PointerTour.js'),
             import('./StartScreen/DogSelection.js'),
             import('./StartScreen/PlayerIdentitySetup.js'),
