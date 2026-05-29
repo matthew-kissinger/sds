@@ -18,9 +18,11 @@
  */
 
 import React, { createElement, useState, useEffect, useCallback, useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { listScenes, DEFAULT_SCENE_ID } from '../../../shared/scenes/index.js';
 import { getGameInstance, subscribeGameEvent } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
+import { SceneGlyph } from './SceneGlyph';
 
 const ACCENT = '#10b981';
 const ORDER = ['rolling-hills', 'open-country', 'field'];
@@ -30,61 +32,23 @@ const TRANSITION_MS = 320;
 // a single tap.
 const COMMIT_DEBOUNCE_MS = 300;
 
-// Per-scene visual chrome — gradient + accent + NEW badge + SVG.
+// Per-scene visual chrome: gradient, accent, NEW badge. The scene
+// illustration lives in SceneGlyph (Cycle 47 P3).
 const SCENE_CHROME = {
     'rolling-hills': {
         gradient: 'linear-gradient(135deg, #4a8db8 0%, #6fbf99 60%, #d6c082 100%)',
         accent: '#4a8db8',
         badge: 'NEW',
-        icon: createElement('svg', {
-            viewBox: '0 0 64 40', width: '96', height: '60', fill: 'none',
-            stroke: 'rgba(255,255,255,0.92)', strokeWidth: '1.6', strokeLinecap: 'round', strokeLinejoin: 'round'
-        }, [
-            createElement('circle', { key: 'sun', cx: '50', cy: '12', r: '4', fill: 'rgba(255,235,180,0.78)', stroke: 'none' }),
-            createElement('path', { key: 'island', d: 'M6 28 Q14 18, 26 22 T48 24 Q56 24, 58 28', fill: 'rgba(255,255,255,0.2)' }),
-            createElement('path', { key: 'water1', d: 'M2 33 Q8 31, 14 33 T26 33 T38 33 T50 33 T62 33' }),
-            createElement('path', { key: 'water2', d: 'M2 37 Q8 35, 14 37 T26 37 T38 37 T50 37 T62 37', strokeOpacity: '0.5' }),
-            createElement('path', { key: 'tree1', d: 'M22 22 v-3 M22 19 q-2 -3 0 -5 q2 2 0 5', fill: 'rgba(255,255,255,0.32)', stroke: 'rgba(255,255,255,0.85)' }),
-            createElement('path', { key: 'tree2', d: 'M34 23 v-2 M34 21 q-1.5 -2.5 0 -4 q1.5 1.5 0 4', fill: 'rgba(255,255,255,0.32)', stroke: 'rgba(255,255,255,0.85)' })
-        ]),
     },
     'open-country': {
         gradient: 'linear-gradient(135deg, #355e3b 0%, #6b8e5a 50%, #d9b779 100%)',
         accent: '#6b8e5a',
         badge: 'NEW',
-        icon: createElement('svg', {
-            viewBox: '0 0 64 40', width: '96', height: '60', fill: 'none',
-            stroke: 'rgba(255,255,255,0.92)', strokeWidth: '1.6', strokeLinecap: 'round', strokeLinejoin: 'round'
-        }, [
-            createElement('path', { key: 'mtn1', d: 'M2 28 L14 12 L26 28 Z', fill: 'rgba(255,255,255,0.2)' }),
-            createElement('path', { key: 'mtn2', d: 'M20 28 L34 8 L48 28 Z', fill: 'rgba(255,255,255,0.24)' }),
-            createElement('path', { key: 'mtn3', d: 'M40 28 L52 14 L62 28 Z', fill: 'rgba(255,255,255,0.2)' }),
-            createElement('line', { key: 'ground', x1: '2', y1: '32', x2: '62', y2: '32' }),
-            createElement('path', { key: 't1', d: 'M10 32 v-3 M10 29 q-1.6 -2.5 0 -4 q1.6 1.5 0 4', fill: 'rgba(255,255,255,0.32)', stroke: 'rgba(255,255,255,0.92)' }),
-            createElement('path', { key: 't2', d: 'M22 32 v-3 M22 29 q-1.6 -2.5 0 -4 q1.6 1.5 0 4', fill: 'rgba(255,255,255,0.32)', stroke: 'rgba(255,255,255,0.92)' }),
-            createElement('path', { key: 't3', d: 'M40 32 v-3 M40 29 q-1.6 -2.5 0 -4 q1.6 1.5 0 4', fill: 'rgba(255,255,255,0.32)', stroke: 'rgba(255,255,255,0.92)' }),
-            createElement('path', { key: 't4', d: 'M54 32 v-3 M54 29 q-1.6 -2.5 0 -4 q1.6 1.5 0 4', fill: 'rgba(255,255,255,0.32)', stroke: 'rgba(255,255,255,0.92)' })
-        ]),
     },
     field: {
         gradient: 'linear-gradient(135deg, #6b8e23 0%, #9ab35e 60%, #d6c082 100%)',
         accent: '#6b8e23',
         badge: null,
-        icon: createElement('svg', {
-            viewBox: '0 0 64 40', width: '96', height: '60', fill: 'none',
-            stroke: 'rgba(255,255,255,0.92)', strokeWidth: '1.6', strokeLinecap: 'round', strokeLinejoin: 'round'
-        }, [
-            createElement('line', { key: 'ground', x1: '2', y1: '32', x2: '62', y2: '32' }),
-            createElement('rect', { key: 'wall', x: '34', y: '20', width: '14', height: '12', fill: 'rgba(255,255,255,0.24)' }),
-            createElement('path', { key: 'roof', d: 'M32 20 L41 12 L50 20 Z', fill: 'rgba(255,255,255,0.34)' }),
-            createElement('rect', { key: 'door', x: '39', y: '25', width: '4', height: '7', fill: 'rgba(255,255,255,0.45)', stroke: 'none' }),
-            createElement('line', { key: 'rail-top', x1: '6', y1: '28', x2: '28', y2: '28' }),
-            createElement('line', { key: 'rail-bot', x1: '6', y1: '31', x2: '28', y2: '31' }),
-            createElement('line', { key: 'p1', x1: '8', y1: '26', x2: '8', y2: '32' }),
-            createElement('line', { key: 'p2', x1: '14', y1: '26', x2: '14', y2: '32' }),
-            createElement('line', { key: 'p3', x1: '20', y1: '26', x2: '20', y2: '32' }),
-            createElement('line', { key: 'p4', x1: '26', y1: '26', x2: '26', y2: '32' })
-        ]),
     },
 };
 
@@ -369,7 +333,7 @@ export function ScenePicker() {
                     createElement('div', {
                         key: 'icon',
                         style: { flex: '0 0 auto' }
-                    }, chrome.icon),
+                    }, createElement(SceneGlyph, { scene: visibleScene.id })),
                     createElement('div', { key: 'badges', style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' } }, [
                         chrome.badge && createElement('span', {
                             key: 'badge',
@@ -431,14 +395,14 @@ export function ScenePicker() {
                 onClick: (e) => { e.stopPropagation(); flip(-1); },
                 'aria-label': 'Previous scene',
                 style: chevronStyle('left', compact),
-            }, chevronSvg('left', compact)),
+            }, chevronIcon('left', compact)),
             createElement('button', {
                 key: 'next',
                 type: 'button',
                 onClick: (e) => { e.stopPropagation(); flip(1); },
                 'aria-label': 'Next scene',
                 style: chevronStyle('right', compact),
-            }, chevronSvg('right', compact)),
+            }, chevronIcon('right', compact)),
         ]),
         // Indicator dots.
         createElement('div', {
@@ -504,12 +468,11 @@ function chevronStyle(side, compact) {
     };
 }
 
-function chevronSvg(side, compact) {
+// Prev/next chevrons are lucide-react icons (Cycle 47 P3). Color inherits
+// the button's `color: #fff` via lucide's `currentColor` default; strokeWidth
+// 2.4 matches the heavier weight of the old hand-rolled paths.
+function chevronIcon(side, compact) {
     const size = compact ? 16 : 18;
-    const d = side === 'left' ? 'M14 6l-6 6 6 6' : 'M10 6l6 6-6 6';
-    return createElement('svg', {
-        width: String(size), height: String(size), viewBox: '0 0 24 24',
-        fill: 'none', stroke: 'currentColor', strokeWidth: '2.4',
-        strokeLinecap: 'round', strokeLinejoin: 'round',
-    }, createElement('path', { d }));
+    const Icon = side === 'left' ? ChevronLeft : ChevronRight;
+    return createElement(Icon, { size, strokeWidth: 2.4 });
 }

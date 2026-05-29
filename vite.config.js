@@ -114,7 +114,11 @@ export default defineConfig({
           react: ['react', 'react-dom'],
           three: ['three'],
           i18n: ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
-          vendor: ['@three.ez/instanced-mesh', 'kdbush']
+          vendor: ['@three.ez/instanced-mesh', 'kdbush'],
+          // Cycle 47: UI-layer libraries (icons, transitions) stay out of the
+          // measured main-*.js ratchet. lucide-react lands here in P3; motion
+          // joins in P7.
+          ui: ['lucide-react']
         }
       }
     }
