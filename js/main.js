@@ -36,6 +36,7 @@ import { installStressTestHarness, installMpProbe } from './boot/debugProbes.js'
 import { installMpEventHandlers, handleMultiplayerGameState as runMpStateHandoff } from './boot/initNetwork.js';
 import { buildSceneBody } from './boot/initWorld.js';
 import { disposeScene as runDisposeScene } from './boot/loadScene.js';
+import { shouldBootAttract } from './boot/bootAttract.js';
 import { ZenAttract } from './attract/ZenAttract.js';
 import {
     showCompletionOverlay as renderCompletionOverlay,
@@ -126,18 +127,11 @@ class SheepDogSimulation {
         // ?autostart / ?testNoCanvas / ?cinematic harness flags. `_attractMode`
         // flips true in init() once the field actually mounts; rebuildScene
         // clears it when the first real scene is built.
-        const _bootHash = typeof location !== 'undefined' ? location.hash : '';
-        const _needsBuiltScene =
-            _bootHash.startsWith('#/r/') ||  // multiplayer room invite
-            _bootHash.startsWith('#s/') ||   // sandbox deep-link
-            _bootHash.startsWith('#/s/');    // sandbox deep-link (alt form)
-        const _bootParams = new URLSearchParams(location.search);
-        this._bootAttract =
-            !requestedSceneId &&
-            !_needsBuiltScene &&
-            _bootParams.get('autostart') !== '1' &&
-            _bootParams.get('testNoCanvas') !== '1' &&
-            !isCinematicMode();
+        this._bootAttract = shouldBootAttract({
+            hash: typeof location !== 'undefined' ? location.hash : '',
+            search: typeof location !== 'undefined' ? location.search : '',
+            cinematic: isCinematicMode(),
+        });
         this._attractMode = false;
         this._zenAttract = null;
         // Cycle 46 Phase 2: pick-out-of-attract crossfade + idle prefetch state.
