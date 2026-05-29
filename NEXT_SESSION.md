@@ -1,53 +1,57 @@
-# Next Session - Cycle 47
+# Next Session - Cycle 48
 
 > **Updated:** 2026-05-29
-> **For:** Cycle 47
-> **Pickup priority:** Cycle 47 (`ui-foundation-overhaul`) is scaffolded but not authored. Fill in Goal + Phases in [`docs/cycle-47-plan.md`](docs/cycle-47-plan.md) from the entrance/UI spike, then run `/cycle-start`. First, verify the Cycle 46 entrance post-deploy (see "Cycle 46 post-deploy verification" below).
+> **For:** Cycle 48
+> **Pickup priority:** Cycle 48 (`ui-conversion-sweep`) is scaffolded but not authored. Fill in Goal + Phases in [`docs/cycle-48-plan.md`](docs/cycle-48-plan.md) from the Cycle 47 carryover (the deferred Phase 8 picker affordances, the remaining ~49 createElement component conversions, the inline-hex drift sweep), then run `/cycle-start`. First, verify the Cycle 47 UI look post-deploy (see "Cycle 47 post-deploy verification" below).
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-47-plan.md`](docs/cycle-47-plan.md). The research Cycle 47 is authored from is in [`cycle45-validation/entrance-ui-spike.md`](cycle45-validation/entrance-ui-spike.md). Closed-cycle context is in [`docs/archive/cycles/cycle-46-plan.md`](docs/archive/cycles/cycle-46-plan.md) and [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-48-plan.md`](docs/cycle-48-plan.md). The UI-foundation work this cycle builds on is in [`docs/archive/cycles/cycle-47-plan.md`](docs/archive/cycles/cycle-47-plan.md); the research both cycles draw from is the entrance/UI spike at [`cycle45-validation/entrance-ui-spike.md`](cycle45-validation/entrance-ui-spike.md). Closed-cycle context is in [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Current State
 
-Cycle 46 (`entrance-zen-boids-and-cleanup`) closed 2026-05-29: shipped 4/5 phases. The app now paints a zen attract field (a cheap drifting-dart field over a gradient sky) as first paint instead of building Rolling Hills behind the menu, with the scene picker live on top. Picking a scene prefetches assets during the field idle, holds the last field frame while the real scene builds, then dissolves the darts out in-engine (no DOM flash, no View Transitions API). Phase 4 deleted 632 lines / ~58 KiB of dead CSS and fixed the stale "Step 1 scaffolding" swap comments. Phase 5 (polish) was deferred whole to Cycle 47. The four phase commits were unpushed at close, so the close commit deploys the whole cycle together. v2.1.10 still stands; no version bump.
+Cycle 47 (`ui-foundation-overhaul`) closed 2026-05-29: shipped 7/8 phases. The UI now has a design-token palette (Tailwind `@theme` plus a typed `js/components/ui/tokens.ts` mirror), JSX/TSX turned on globally, a set of hand-owned token-driven `.tsx` primitives (Button, Panel, Card, Badge, IconButton, Surface), lucide-react for generic icons, a `SceneGlyph` component holding the bespoke scene art, and Motion driving the StartScreen screen-state transitions. The scene picker was converted to `ScenePicker.tsx` as the exemplar leaf (zero createElement, zero raw hex, zero `dangerouslySetInnerHTML`). The HUD no longer re-renders every frame: `useGameState` is now a change-gated `useSyncExternalStore` store, and a `prefers-reduced-motion` path (the `useReducedMotion` hook plus a `main.css` reduced-motion block) makes both Motion and the CSS keyframes honor the OS setting. The cycle deliberately converted one leaf, not all ~50 components. No version bump; v2.1.10 stands.
 
-Cycle 47 is the second half of the approved entrance + UI split: the UI foundation overhaul (TSX, design tokens, component library, Motion). It is scaffolded from the template but not yet authored. The full research is in the entrance/UI spike (see Reference Table). Fill in the plan's Goal + Phases before running `/cycle-start`.
+Cycle 48 (`ui-conversion-sweep`) is the natural continuation: sweep the leaf-first TSX conversion across more of the remaining createElement components, finish the deferred Phase 8 picker affordances, and retire the remaining inline hex. It is scaffolded from the template but not yet authored. Fill in the plan's Goal + Phases before running `/cycle-start`.
 
-## Cycle 46 post-deploy verification (Matt-pickup, blocked headless)
+## Cycle 47 post-deploy verification (Matt-pickup, blocked headless)
 
 These could not be verified locally because headless WebGPU does not composite (the preview tab runs `visibilityState: hidden`, so screenshots time out). Verify on the live site after the close deploy:
 
-- **Q1 zen-field aesthetic.** The drifting-dart field over the gradient sky is a paired taste call. Sign off on the look, or note what to change.
-- **Crossfade feel + speed.** Confirm the pick-to-scene hand-off reads as a smooth in-engine dissolve (no black frame, no pop-in) and feels faster than the old Cycle 45 swap. The prefetch win in [`cycle46-validation/entrance-timing.md`](cycle46-validation/entrance-timing.md) is a derived figure (about 61% of swap cost pre-paid) pending a live measurement.
-- **Deep-link + MP smoke.** `?scene=rolling-hills` should build directly with no field; an `#/r/` room invite should still hard-reload into its locked scene.
+- **Menu + picker look.** Confirm the token-driven primitives and the converted scene picker read the same or slightly cleaner than before. No color drift, no broken spacing.
+- **Motion feel.** The StartScreen screen-state transitions (main / dogSelection / modes / settings) should fade and slide smoothly through Motion. Confirm no jarring pop or layout shift at rest.
+- **Reduced-motion.** With the OS "reduce motion" setting on, the transitions should collapse to a plain near-instant swap and the CSS keyframes should not animate.
+- **HUD smoothness.** In-game, confirm the HUD (timer, sheep counter, stamina) still updates correctly once per second / on real change, with no visible stutter from the store change-gate.
 
-## Cycle 46 deviations (documented, for context)
+## Cycle 47 deviations (documented, for context)
 
-Both deviations were forced by the same constraint: the production WebGPU renderer is vendored separately (injected as material-factory globals) and is not headless-testable, so the lowest-risk renderer-agnostic mechanism won.
+Both were forced by the local visual-validation block (headless WebGPU does not composite):
 
-- **CPU-drift darts, not TSL GPU-compute boids.** A `three/tsl` import in a main-bundle module would pull a second copy of three and break the renderer or blow the bundle ratchet. The darts drift on the CPU over a standard MeshBasicMaterial that runs on both renderers.
-- **Dart-dissolve, not a two-layer `uAlpha` render-to-texture blend.** A true two-layer blend needs render-to-texture, high-risk on the untestable production renderer. The dissolve is a real in-engine alpha crossfade using only `material.opacity` + render order.
+- **Scene-card slide stayed on CSS keyframes.** Motion was applied to the StartScreen screen-state transitions (the EARS target). The ScenePicker scene-card content slide kept its `sds-slide-in-*` keyframes (already reduced-motion-aware via the P6 block) rather than moving to Motion, since the card slide could not be visually validated locally and migrating it risked the picker behavior under hard-stop #2. Card-Motion is available as Cycle 48 carryover.
+- **App.js hex drift-sweep deferred.** The converted surface (ScenePicker.tsx and all six `ui` primitives) is already at zero hex. The 7 inline hex in `App.js` (an unconverted createElement component) and `MenuOption.js` `DEFAULT_ACCENT` were left rather than edited blind, since changing inline color values without composite validation risks unvalidatable visual drift.
 
-## Carryover into Cycle 47
+## Carryover into Cycle 48
 
-- **Phase 5 polish (deferred whole from Cycle 46).** Scene preview affordance, load-overlay progress affordance, combined scene + mode gate. All picker-overlay UI work that the UI foundation overhaul should absorb rather than ship shallow first.
-- **Grass body-deform visual taste check (from Cycle 45).** `js/world/konveyorGrassBladeNodeMaterial.js` shipped post-Cycle-45-close on Matt's authorization; structurally validated, visual eyeball still open (same headless-WebGPU block). Matt pre-accepted the look.
+- **Phase 8 picker affordances (deferred whole from Cycle 47).** Scene-preview affordance, load-overlay stream-progress affordance, combined scene-plus-mode gate. All need composite validation (blocked headless) and two touch picker behavior / the Cycle 46 crossfade contract; defer rather than ship shallow.
+- **Remaining ~49 component conversions.** The leaf-first conversion was proved on ScenePicker; the other createElement components are the sweep target for this cycle.
+- **Inline-hex drift sweep.** `App.js` (7) and `MenuOption.js` `DEFAULT_ACCENT` still carry raw hex; retire them to tokens as the files convert.
+- **Card-slide Motion.** Move the ScenePicker scene-card slide from CSS keyframes to Motion once it can be visually validated.
+- **Cycle 46 post-deploy checks** still open and Matt-pickup: Q1 zen-field aesthetic sign-off, crossfade feel/speed, deep-link + MP smoke. Same headless-WebGPU block.
+- **Grass body-deform visual taste check (from Cycle 45).** `js/world/konveyorGrassBladeNodeMaterial.js` shipped post-Cycle-45-close; structurally validated, visual eyeball still open (same block). Matt pre-accepted the look.
 - **Cycle 44 paired buckets C/D/E** (WebGPU painterly parity, mobile/real-device proofs, multiplayer playtest) stay under "Deferred / not blocking" for a later paired cycle.
 
 ## Release reference (Cycle 42 / v2.1.10)
 
-- Commit `fb78851`, tag `v2.1.10`, deploy run `26595530924` (success on `main`). Cycles 43, 44, 45, and 46 shipped no version bump, so v2.1.10 is still the current release. Do not bump the version unless Matt calls a release.
+- Commit `fb78851`, tag `v2.1.10`, deploy run `26595530924` (success on `main`). Cycles 43 through 47 shipped no version bump, so v2.1.10 is still the current release. Do not bump the version unless Matt calls a release.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-47-plan.md`](docs/cycle-47-plan.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-46-plan.md`](docs/archive/cycles/cycle-46-plan.md) |
+| Active cycle | [`docs/cycle-48-plan.md`](docs/cycle-48-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-47-plan.md`](docs/archive/cycles/cycle-47-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Entrance/UI research spike | [`cycle45-validation/entrance-ui-spike.md`](cycle45-validation/entrance-ui-spike.md) |
-| Cycle 46 entrance timing | [`cycle46-validation/entrance-timing.md`](cycle46-validation/entrance-timing.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
