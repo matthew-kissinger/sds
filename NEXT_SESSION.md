@@ -2,7 +2,7 @@
 
 > **Updated:** 2026-05-29
 > **For:** Cycle 48
-> **Pickup priority:** Cycle 48 (`ui-conversion-sweep`) is scaffolded but not authored. Fill in Goal + Phases in [`docs/cycle-48-plan.md`](docs/cycle-48-plan.md) from the Cycle 47 carryover (the deferred Phase 8 picker affordances, the remaining ~49 createElement component conversions, the inline-hex drift sweep), then run `/cycle-start`. First, verify the Cycle 47 UI look post-deploy (see "Cycle 47 post-deploy verification" below).
+> **Pickup priority:** Cycle 48 (`ui-conversion-sweep`) is authored ([`docs/cycle-48-plan.md`](docs/cycle-48-plan.md)): 6 phases, leaf-first TSX conversion of the HUD readouts (P1), the StartScreen menu screens (P2), the Multiplayer screens (P3), and the `ui` leftovers plus the `App.js` / `MenuOption` hex retirement (P4), then the ScenePicker card-slide onto Motion (P5); P6 (picker affordances) is optional/paired and defaults to deferral. Run `/cycle-start` to begin Phase 1. First, verify the Cycle 47 UI look post-deploy (see "Cycle 47 post-deploy verification" below).
 
 ## Cold-Start Orientation
 
@@ -12,7 +12,7 @@ Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file
 
 Cycle 47 (`ui-foundation-overhaul`) closed 2026-05-29: shipped 7/8 phases. The UI now has a design-token palette (Tailwind `@theme` plus a typed `js/components/ui/tokens.ts` mirror), JSX/TSX turned on globally, a set of hand-owned token-driven `.tsx` primitives (Button, Panel, Card, Badge, IconButton, Surface), lucide-react for generic icons, a `SceneGlyph` component holding the bespoke scene art, and Motion driving the StartScreen screen-state transitions. The scene picker was converted to `ScenePicker.tsx` as the exemplar leaf (zero createElement, zero raw hex, zero `dangerouslySetInnerHTML`). The HUD no longer re-renders every frame: `useGameState` is now a change-gated `useSyncExternalStore` store, and a `prefers-reduced-motion` path (the `useReducedMotion` hook plus a `main.css` reduced-motion block) makes both Motion and the CSS keyframes honor the OS setting. The cycle deliberately converted one leaf, not all ~50 components. No version bump; v2.1.10 stands.
 
-Cycle 48 (`ui-conversion-sweep`) is the natural continuation: sweep the leaf-first TSX conversion across more of the remaining createElement components, finish the deferred Phase 8 picker affordances, and retire the remaining inline hex. It is scaffolded from the template but not yet authored. Fill in the plan's Goal + Phases before running `/cycle-start`.
+Cycle 48 (`ui-conversion-sweep`) is the natural continuation and is now authored. It sweeps the leaf-first TSX conversion across the leaf-tier createElement components (HUD readouts, StartScreen menu screens, Multiplayer screens, `ui` leftovers), retires the named inline hex (`App.js`'s 7 literals and `MenuOption.js`'s `DEFAULT_ACCENT`) as those files convert, and moves the ScenePicker scene-card slide off CSS keyframes onto Motion. Q1 scopes it to leaves only (the stateful containers - `App.js` body, PauseMenu, SettingsPanel, SandboxSetup, the editors, MobileHUD, Lobby, RoomCreation - carry over to a later cycle); Q2 keeps the picker affordances paired/optional. Run `/cycle-start` to begin Phase 1.
 
 ## Cycle 47 post-deploy verification (Matt-pickup, blocked headless)
 
