@@ -304,13 +304,12 @@ export async function initReactUI() {
                 console.log('[UI] Starting sandbox game:', selectedDog, sandboxConfig);
                 if (!getGameInstance()) return;
 
-                // Cycle 8 Phase 4 / Cycle 10 Phase 1: if the sandbox's sceneId
-                // differs from the currently-loaded scene, route through
-                // SheepDogSimulation.swapScene with the encoded config in the
-                // hash so we land back on the sandbox setup screen on the
-                // correct scene. Step 1's swapScene still hard-reloads, so
-                // behaviour is identical to the previous inline reload.
-                // Step 3 will flip swapScene to in-process.
+                // If the sandbox's sceneId differs from the currently-loaded
+                // scene, route through SheepDogSimulation.swapScene with the
+                // encoded config in the hash so we land back on the sandbox
+                // setup screen on the correct scene. swapScene rebuilds
+                // in-process against the persistent renderer for single-player
+                // (multiplayer hard-reloads).
                 const desiredScene = sandboxConfig.sceneId || 'field';
                 const currentSceneId = (typeof window !== 'undefined' && window.__currentSceneId) || 'field';
                 if (desiredScene !== currentSceneId) {
@@ -973,12 +972,11 @@ export async function initReactUI() {
                     onReturnToMenu();
                 }
 
-                // Cycle 10 Phase 1: route through restartToMenu so Step 3 can
-                // flip return-to-menu to in-process without re-touching
-                // handleMainMenu. Step 1 still does window.location.reload(),
-                // so behaviour is unchanged. The gameState/menuController
-                // resets above stay here for Step 1; Step 3 will pull them
-                // into restartToMenu itself.
+                // Route return-to-menu through restartToMenu, which disposes
+                // and rebuilds in-process against the persistent renderer for
+                // single-player (multiplayer still hard-reloads). The
+                // gameState/menuController resets above remain the UI-side
+                // reset; restartToMenu owns the scene-side teardown.
                 getGameInstance()?.restartToMenu();
             }, [handleResume, onReturnToMenu]);
 
