@@ -27,6 +27,9 @@ export const color = {
   success: 'var(--color-success)',
   info: 'var(--color-info)',
   infoStrong: 'var(--color-info-strong)',
+  // Cycle 48 P3: lighter info (blue-300) for the leaderboard player-row
+  // highlight + clear-filter affordance; distinct from info (#60a5fa).
+  infoSoft: 'var(--color-info-soft)',
 
   // Cycle 48 P1: HUD readout accents. The stamina ramp green/red stops reuse
   // accent/success/danger/dangerSoft; only the amber + orange mid-stops need
@@ -65,6 +68,9 @@ export const color = {
   surfaceGlass: 'var(--color-surface-glass)',
   surfaceGlassBorder: 'var(--color-surface-glass-border)',
   surfaceScrim: 'var(--color-surface-scrim)',
+  // Cycle 48 P3: opaque slate backing for native <select><option> menus, which
+  // ignore translucent surfaces and would render near-white on the dark page.
+  surfaceSelect: 'var(--color-surface-select)',
 
   brandIndigo: 'var(--color-brand-indigo)',
 } as const;
