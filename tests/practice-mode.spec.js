@@ -90,7 +90,7 @@ describe('Practice Paddock contract', () => {
     it('PracticeHint component exists and is exported from GameHUD index', () => {
         const idx = readSource('js/components/GameHUD/index.js');
         expect(idx).toMatch(/PracticeHint/);
-        const comp = readSource('js/components/GameHUD/PracticeHint.js');
+        const comp = readSource('js/components/GameHUD/PracticeHint.tsx');
         expect(comp).toMatch(/export function PracticeHint/);
     });
 });

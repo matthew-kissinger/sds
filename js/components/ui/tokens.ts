@@ -28,6 +28,17 @@ export const color = {
   info: 'var(--color-info)',
   infoStrong: 'var(--color-info-strong)',
 
+  // Cycle 48 P1: HUD readout accents. The stamina ramp green/red stops reuse
+  // accent/success/danger/dangerSoft; only the amber + orange mid-stops need
+  // their own token. Objective progress fills + the practice-hint glass too.
+  staminaAmber: 'var(--color-stamina-amber)',
+  staminaOrange: 'var(--color-stamina-orange)',
+  objectiveHold: 'var(--color-objective-hold)',
+  objectiveGather: 'var(--color-objective-gather)',
+  hintSurface: 'var(--color-hint-surface)',
+  hintBorder: 'var(--color-hint-border)',
+  hintText: 'var(--color-hint-text)',
+
   // Foreground text/icon on dark + glass surfaces.
   text: 'var(--color-text)',
   onAccent: 'var(--color-on-accent)',
