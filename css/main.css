@@ -19,6 +19,65 @@
   --animate-slide-up: slideUp 0.6s ease-out;
   --animate-slide-down: slideDown 0.5s ease-out;
   --animate-title-bounce: titleBounce 2s ease-in-out infinite;
+
+  /* ===== Cycle 47 design tokens =====
+     One source of truth for the React overlay palette + motion. The typed
+     mirror for inline-style call sites is js/components/ui/tokens.ts; keep
+     the two in lockstep. Tailwind v4 emits every @theme var to :root, so
+     var(--color-x) works in inline styles whether or not a utility is used. */
+
+  /* Brand / UI accent (retires the per-file ACCENT = '#10b981' constant). */
+  --color-accent: #10b981;
+  --color-accent-strong: #059669;
+  --color-accent-soft: #6ee7b7;
+
+  /* Per-scene accents (mirror SCENE_CHROME in ScenePicker). */
+  --color-scene-rolling-hills: #4a8db8;
+  --color-scene-open-country: #6b8e5a;
+  --color-scene-field: #6b8e23;
+
+  /* Semantic. */
+  --color-danger: #ef4444;
+  --color-danger-soft: #f87171;
+  --color-warn: #fbbf24;
+  --color-warn-strong: #fb923c;
+  --color-success: #34d399;
+  --color-info: #60a5fa;
+  --color-info-strong: #3b82f6;
+
+  /* Leaderboard rank badges (mirror .rank-1/2/3). */
+  --color-rank-gold: #ffd700;
+  --color-rank-gold-deep: #ffa500;
+  --color-rank-silver: #c0c0c0;
+  --color-rank-silver-deep: #a0a0a0;
+  --color-rank-bronze: #cd7f32;
+  --color-rank-bronze-deep: #b8860b;
+
+  /* Title greens (mirror the inline title styles in App.js). */
+  --color-title-bright: #86efac;
+  --color-title-mid: #166534;
+  --color-title-deep: #14532d;
+  --color-title-shadow: #0f3d22;
+
+  /* Surfaces. */
+  --color-surface-glass: rgba(255, 255, 255, 0.08);
+  --color-surface-glass-border: rgba(255, 255, 255, 0.12);
+  --color-surface-scrim: rgba(0, 0, 0, 0.32);
+
+  /* Spinner / brand indigo (mirror .spinner). */
+  --color-brand-indigo: #667eea;
+
+  /* Radii. */
+  --radius-pill: 9999px;
+
+  /* Motion durations. */
+  --duration-instant: 160ms;
+  --duration-fast: 200ms;
+  --duration-base: 240ms;
+  --duration-slow: 320ms;
+
+  /* Easing. */
+  --ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* ==================== KEYFRAMES ==================== */
@@ -44,6 +103,18 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Cycle 47: scene-picker card slide, moved out of ScenePicker's injected
+   <style> (was dangerouslySetInnerHTML) into the shared sheet. The picker
+   references these by name in its card animation. */
+@keyframes sds-slide-in-right {
+  from { transform: translateX(28px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes sds-slide-in-left {
+  from { transform: translateX(-28px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 /* Cycle 26 v2.1.0: first-visit Practice tile recommendation pulse.

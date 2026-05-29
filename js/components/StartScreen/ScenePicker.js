@@ -474,23 +474,9 @@ export function ScenePicker() {
                 cursor: i === visibleIndex ? 'default' : 'pointer',
                 transition: 'width 200ms ease, background 200ms ease',
             }
-        }))),
-        // Keyframes injected once.
-        createElement('style', {
-            key: 'kf',
-            dangerouslySetInnerHTML: {
-                __html: [
-                    '@keyframes sds-slide-in-right {',
-                    '  from { transform: translateX(28px); opacity: 0; }',
-                    '  to { transform: translateX(0); opacity: 1; }',
-                    '}',
-                    '@keyframes sds-slide-in-left {',
-                    '  from { transform: translateX(-28px); opacity: 0; }',
-                    '  to { transform: translateX(0); opacity: 1; }',
-                    '}',
-                ].join('\n')
-            }
-        })
+        })))
+        // Slide keyframes moved to css/main.css (Cycle 47 P1); the card
+        // animation above references them by name.
     ]);
 }
 
