@@ -19,9 +19,10 @@ import { fileURLToPath } from 'node:url';
 
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { dedup, draco, meshopt, prune, weld } from '@gltf-transform/functions';
+import { dedup, draco, meshopt, prune, textureCompress, weld } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
+import sharp from 'sharp';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,6 +30,19 @@ const REPO_ROOT = resolve(__dirname, '..');
 const ASSETS_DIR = join(REPO_ROOT, 'assets');
 const ORIGINALS_DIR = join(ASSETS_DIR, '_originals');
 const SKIP_THRESHOLD = 0.7; // Skip if current is already <70% of original.
+
+// Per-asset texture-dimension caps. Some source GLBs ship maps far larger than
+// their on-screen footprint warrants. The 7 fence/gate pieces each embed the
+// identical 1024^2 baseColor+normal+ORM set (~4 MB) on trivial perimeter meshes
+// (Cycle 45 Phase 3 probe). Everything else keeps native resolution: hero dog
+// rigs and silhouette-critical foliage cards must not be downscaled here.
+const TEXTURE_CAPS = [{ match: /(Fence|Gate|Corner)_/i, maxDim: 512 }];
+
+/** Largest allowed texture dimension for `relPath`, or null to preserve native. */
+function textureCapFor(relPath) {
+  const base = relPath.split(/[\\/]/).pop();
+  return TEXTURE_CAPS.find((c) => c.match.test(base))?.maxDim ?? null;
+}
 
 /** Recursively collect every .glb under `dir`, skipping the originals backup. */
 async function findGlbs(dir) {
@@ -97,14 +111,17 @@ async function main() {
     try {
       // Always re-read from the pristine backup so transforms compose cleanly.
       const document = await io.read(backup);
-      await document.transform(
-        dedup(),
-        weld(),
-        prune(),
+      const maxDim = textureCapFor(rel);
+      const transforms = [dedup(), weld(), prune()];
+      if (maxDim) {
+        transforms.push(textureCompress({ encoder: sharp, resize: [maxDim, maxDim] }));
+      }
+      transforms.push(
         // encodeSpeed=0 = best compression (level 7-equivalent), decodeSpeed=5 = balanced runtime.
         draco({ method: 'edgebreaker', encodeSpeed: 0, decodeSpeed: 5 }),
         meshopt({ encoder: MeshoptEncoder, level: 'medium' }),
       );
+      await document.transform(...transforms);
 
       const bytes = await io.writeBinary(document);
       await writeFile(glb, bytes);
