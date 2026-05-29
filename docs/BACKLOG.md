@@ -4,6 +4,36 @@
 
 ## Recently Completed
 
+### Cycle 45 - `entry-load-and-grass-feel` (closed 2026-05-29)
+
+Plan archived at [`docs/archive/cycles/cycle-45-plan.md`](archive/cycles/cycle-45-plan.md). Cycle 45 was re-scoped from the empty `paired-parity-and-proofs` scaffold after Matt raised three issues: scene-entry UX is backwards (the game boots into Rolling Hills behind the menu instead of letting you pick first), scene loading is slow (too much runtime procedural generation), and the grass press around the dog and sheep reads as a thin tip-only silhouette instead of a body-shaped dent. The cycle measured the load cost, baked the measured hog, and set up the entrance and grass follow-on work. No version bump; v2.1.10 stands.
+
+**Closeout outcomes:**
+
+- Shipped 2/5 phases (P1 load-time measurement, P3 bake the measured hog). P2 (scene-select-before-load gate) was superseded mid-cycle by the approved Cycle 46 zen-boids entrance; P4 (grass body-deform) and P5 (polish) are carried forward (see Carryover). This satisfies the close criterion that every phase ships or is explicitly deferred.
+- **Phase 1 (load-time measurement).** Instrumented [`js/boot/initWorld.js`](../js/boot/initWorld.js) with per-stage timing and threaded a `stages` breakdown into the `scene_swapped` telemetry in [`js/main.js`](../js/main.js); captured cold and warm baselines. The measured load hog was synchronous main-thread tree placement, not WebGPU init or asset I/O. The renderer, canvas, `THREE.Scene`, and GLB cache already persist across swaps, so the cost was the procedural rebuild, not GPU setup.
+- **Phase 3 (bake the measured hog).** Moved field tree placement to a build-time bake: new [`tools/bake-placement.mjs`](../tools/bake-placement.mjs) writes a deterministic manifest to `public/placement/`, loaded at runtime by new [`js/world/placementManifest.js`](../js/world/placementManifest.js) and consumed in [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) and [`js/world/TreePlacement.js`](../js/world/TreePlacement.js). The tree-placement stage dropped from 489/532 ms to ~31 ms; total warm Field swap dropped from 1904 ms to 430 ms. The bake reduced 1359 candidate trees to 371 placed (treeline at 429.949 m). The dog rig was made lazy (`TerrainBuilder.loadAnimal`, awaited at the main.js mount sites and the cinematic showcase mount) so it no longer blocks first build.
+- **Schema (authorized, additive).** Added an optional `placementManifest` field to the fence-frozen [`shared/scenes/types.js`](../shared/scenes/types.js) `SceneDef` with a default; scenes without it fall back to runtime procedural placement, so no existing scene or consumer breaks. Used by [`shared/scenes/field.js`](../shared/scenes/field.js). Placement is render-only (the cycle's Q2 resolved this way), so [`shared/SceneObstacles.js`](../shared/SceneObstacles.js) and the sim-baseline fixtures were not touched. The main-bundle ratchet was re-baselined 534 to 536 KiB in `tests/refactor-baseline/__fixtures__/bundle-sizes.json` with a dated rationale in DECISIONS.md.
+- This cycle's phase work was committed at close rather than per-phase, so the implementation and the close bookkeeping land together on `main`.
+
+**Validation gates (2026-05-29):**
+
+- `npm test` - 55 passed files, 1 skipped; 507 specs passed, 7 skipped (adds the new `tests/placement-manifest.spec.js`).
+- `npm run build` - clean with the existing Vite large-chunk warning.
+- Last deploy on `main` green before close; the close commit redeploys.
+
+**Carryover (deferred to Cycle 46 `entrance-zen-boids-and-cleanup`):**
+
+- **Phase 2 superseded.** The scene-select-before-load gate is replaced by Cycle 46's zen-boids attract scene (pick-then-stream), the richer version of "let the player pick before we build a scene." Plan pre-authored at [`docs/cycle-46-plan.md`](cycle-46-plan.md).
+- **Phase 4 grass body-deform (paired, blocked headless).** Carry the bend down the full blade and push along the body-oval normal in [`js/world/konveyorGrassBladeNodeMaterial.js`](../js/world/konveyorGrassBladeNodeMaterial.js); validate via `window.__sdsGrassProof` with before/after captures. Needs Matt's taste check and a headed browser: the preview tab runs `visibilityState: hidden`, so WebGPU does not composite and screenshots time out.
+- **Phase 5 polish.** Folded into Cycle 46 Phase 5 (scene preview affordance, load-overlay progress affordance, combined scene + mode gate).
+- The Cycle 44 paired buckets C/D/E (WebGPU painterly parity, mobile and real-device proofs, multiplayer playtest) stay under "Deferred / not blocking" for a later paired cycle; they were out of Cycle 45 scope after the re-scope.
+
+**Notes:**
+
+- The slow-load root cause was synchronous rebuild on the main thread, not renderer or GPU init. The persistent-renderer architecture (SceneManager keeps the renderer, canvas, and scene alive across swaps) was already correct; the fix was to remove main-thread procedural work, which the bake does for free because placement is render-only.
+- The next cycle (46) is pre-authored from the entrance/UI spike: a zen TSL compute-boids attract scene as first paint, pick-then-stream with an in-engine crossfade, plus a dead-CSS and stale-comment cleanup. The UI foundation overhaul (TSX, design tokens, component library, Motion) is split out to a later Cycle 47 and is intentionally not scaffolded yet.
+
 ### Cycle 44 - `release-readiness-sweep` (closed 2026-05-28)
 
 Plan archived at [`docs/archive/cycles/cycle-44-plan.md`](archive/cycles/cycle-44-plan.md). Cycle 44 was an autonomous hygiene + cleanup sweep: clear the dependency/security and bundle-bloat carryover accrued since Cycle 40 and finish two long-tail code/doc cleanups, without touching the deterministic sim, the scene schema, or player-visible behavior. No version bump; no user-visible change.
@@ -1147,6 +1177,10 @@ For prior cycle history before this file existed, see:
 
 Items deferred from prior cycles that haven't been picked up. Move to a future cycle plan's Phase N when work starts.
 
+- **Paired-track buckets C / D / E (carried from Cycle 44, re-deferred when Cycle 45 took the entry-load-and-grass-feel shape instead of `paired-parity-and-proofs`).** All three need Matt's taste, a real device, or credentials, so they stay paired.
+  - **C. WebGPU painterly parity (paired, taste).** The six low-sun actor / Open Country material-lock manual-review items from `npm run validation:cycle42-material-lock`; broader WebGPU/WebGL terrain-foliage parity (Cycle 41 carryover).
+  - **D. Mobile / real-device proofs (paired, blocked locally).** Android WebGPU water/device proof (needs an authorized ADB device or the Hub's ADB path); BrowserStack iOS Safari water canary (needs `BROWSERSTACK_*` / `BS_*` creds wired into the local env).
+  - **E. Multiplayer playtest (paired).** Open Country paired two-client playtest, deferred since Cycle 40 (needs two clients and Matt's eyes).
 - ~~**`docs/CYCLE_TEMPLATE.md` cycle-close-reconcile collision.**~~ Resolved 2026-05-10 (Cycle 33 Phase 4). Fixed in [`.claude/hooks/cycle-close-reconcile.mjs`](../.claude/hooks/cycle-close-reconcile.mjs) — the hook now iterates over every matching `## (Success|Acceptance) criteria` heading and picks the first section that contains `- [ ]` items. The template stays untouched (it's fence-frozen and the heading is appropriate). Verified against archived cycle-31 plan (returns 8 items, was 0).
 - **Cross-module polygon-spawn dedup.** Cycle 29 B2 extracted `pointToSegmentDistance` + `isPointInPolygon` to [`js/gamestate/polygonSpawn.js`](../js/gamestate/polygonSpawn.js) but only updated GameState's callers. Three other files keep their own copies: [`js/OptimizedSheep.js`](../js/OptimizedSheep.js), [`js/SandboxConfig.js`](../js/SandboxConfig.js), [`js/StructureBuilder.js`](../js/StructureBuilder.js). Out of scope for Cycle 29 (the cycle's goal was GameState decomp, not cross-module dedup). Pick up in a future "duplication-cleanup" pass alongside any other ripple-of-helpers.
 - **Bespoke pixel-forge rock assets (Q3 author lean from Cycle 6).** Cycle 6 shipped the fallback (`scale ≥ 0.8` filter on existing cluster rocks → colliders with `finalScale * 0.55` radius). The cleaner long-term path is to author 2-3 purpose-made rock GLBs in [`pixel-forge`](file:///C:/Users/Mattm/X/games-3d/pixel-forge) at obstacle-readable sizes and replace the cluster system. Pick up when next OC playtest flags rock collision as awkward.
