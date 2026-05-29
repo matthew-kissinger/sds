@@ -32,6 +32,10 @@ import {
     subscribeGameEvent
 } from '../GameBridge.js';
 import { SceneSwapOverlay } from './ui/SceneSwapOverlay.js';
+// Cycle 48 P4: retire the App.js inline hex (error-boundary heading red, the
+// title greens, the subtitle ambers) to the shared design-token palette. App.js
+// stays an element-factory .js; only the raw color literals move to tokens.
+import { color } from './ui/tokens';
 
 // Initialize React UI with dynamic imports
 export async function initReactUI() {
@@ -163,7 +167,7 @@ export async function initReactUI() {
                     }, [
                         createElement('h1', {
                             key: 'title',
-                            style: { fontSize: '1.5rem', marginBottom: '1rem', color: '#ff6b6b' }
+                            style: { fontSize: '1.5rem', marginBottom: '1rem', color: color.dangerBright }
                         }, 'Something went wrong'),
                         createElement('p', {
                             key: 'message',
@@ -515,12 +519,12 @@ export async function initReactUI() {
                             lineHeight: 1,
                             margin: 0,
                             padding: 0,
-                            color: '#86efac',
+                            color: color.titleBright,
                             // Responsive shadow - uses em units to scale with font
                             textShadow: `
-                                0.04em 0.04em 0 #166534,
-                                0.08em 0.08em 0 #14532d,
-                                0.12em 0.12em 0 #0f3d22,
+                                0.04em 0.04em 0 ${color.titleMid},
+                                0.08em 0.08em 0 ${color.titleDeep},
+                                0.12em 0.12em 0 ${color.titleShadow},
                                 0.16em 0.16em 0.3em rgba(0,0,0,0.4)
                             `.replace(/\s+/g, ' ').trim(),
                             animation: 'titleBounce 2.5s ease-in-out infinite'
@@ -533,11 +537,11 @@ export async function initReactUI() {
                             fontWeight: 600,
                             // Fluid scaling: min 0.65rem, preferred 3vw, max 1.6rem
                             fontSize: 'clamp(0.65rem, 3vw, 1.6rem)',
-                            color: '#fef3c7',
+                            color: color.subtitleBright,
                             letterSpacing: 'clamp(0.2em, 1vw, 0.4em)',
                             textTransform: 'uppercase',
                             textShadow: `
-                                0.05em 0.05em 0 #92400e,
+                                0.05em 0.05em 0 ${color.subtitleShadow},
                                 0.1em 0.1em 0.15em rgba(0,0,0,0.3)
                             `.replace(/\s+/g, ' ').trim(),
                             marginTop: 'clamp(0.15rem, 1vw, 0.4rem)',

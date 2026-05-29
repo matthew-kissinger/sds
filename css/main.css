@@ -99,6 +99,15 @@
   --color-title-deep: #14532d;
   --color-title-shadow: #0f3d22;
 
+  /* Cycle 48 P4: the App.js subtitle ambers, the error-boundary heading red,
+     and the scene-swap overlay spinner. The title greens above already
+     existed; these close the App.js inline-hex retirement (Phase 4) and the
+     two ui-leftover conversions. Mirror js/components/ui/tokens.ts. */
+  --color-subtitle-bright: #fef3c7;  /* amber-100: subtitle "Simulator" fill */
+  --color-subtitle-shadow: #92400e;  /* amber-800: subtitle drop shadow */
+  --color-danger-bright: #ff6b6b;    /* coral red: error-boundary heading */
+  --color-swap-spinner: #00bfff;     /* deepskyblue: scene-swap loading spinner */
+
   /* Surfaces. */
   --color-surface-glass: rgba(255, 255, 255, 0.08);
   --color-surface-glass-border: rgba(255, 255, 255, 0.12);
@@ -167,6 +176,40 @@
 }
 @keyframes sds-pointer-tour-fadeout {
   to { opacity: 0; }
+}
+
+/* Cycle 48 P4: LanguageSelector dropdown fade, moved out of its module-load
+   injected <style> (was document.createElement('style')) into the shared
+   sheet, matching the picker/pointer-tour precedents above. The selector
+   references this by name in its dropdown animation. */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cycle 48 P4: SceneSwapOverlay shimmer-skeleton + spinner, moved out of the
+   overlay's injected <style> (was dangerouslySetInnerHTML) into the shared
+   sheet. The overlay applies .sds-skel to its hero/row placeholders and
+   sds-swap-spin to the trailing spinner. */
+@keyframes sds-swap-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes sds-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sds-skel {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.12) 40%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0.12) 60%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: sds-shimmer 1.6s ease-in-out infinite;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* Cycle 26 v2.1.0: first-visit Practice tile recommendation pulse.

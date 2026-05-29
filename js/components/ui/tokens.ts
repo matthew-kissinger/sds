@@ -22,6 +22,9 @@ export const color = {
 
   danger: 'var(--color-danger)',
   dangerSoft: 'var(--color-danger-soft)',
+  // Cycle 48 P4: coral red for the App.js error-boundary heading; brighter
+  // than danger (#ef4444) / dangerSoft (#f87171).
+  dangerBright: 'var(--color-danger-bright)',
   warn: 'var(--color-warn)',
   warnStrong: 'var(--color-warn-strong)',
   success: 'var(--color-success)',
@@ -64,6 +67,9 @@ export const color = {
   titleMid: 'var(--color-title-mid)',
   titleDeep: 'var(--color-title-deep)',
   titleShadow: 'var(--color-title-shadow)',
+  // Cycle 48 P4: the App.js subtitle ("Simulator") amber fill + drop shadow.
+  subtitleBright: 'var(--color-subtitle-bright)',
+  subtitleShadow: 'var(--color-subtitle-shadow)',
 
   surfaceGlass: 'var(--color-surface-glass)',
   surfaceGlassBorder: 'var(--color-surface-glass-border)',
@@ -73,6 +79,9 @@ export const color = {
   surfaceSelect: 'var(--color-surface-select)',
 
   brandIndigo: 'var(--color-brand-indigo)',
+  // Cycle 48 P4: SceneSwapOverlay loading spinner (distinct from the
+  // brand-indigo .spinner; this is the scene-swap cover's deepskyblue ring).
+  swapSpinner: 'var(--color-swap-spinner)',
 } as const;
 
 /**
