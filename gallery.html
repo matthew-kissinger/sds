@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>SDS UI Gallery</title>
+    <!-- Cycle 49 P3: standalone UI gallery. Renders the pastoral palette,
+         primitives, and (P4/P5) the entrance/loading mockups WITHOUT booting
+         the WebGPU game, so the look is reviewable headlessly and provable by
+         the build (dist/gallery.html). It links the shared sheet and mounts
+         React via js/gallery/gallery.jsx. It imports no game-runtime module
+         (no renderer, no scene builder, no attract field). -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <div id="gallery-root"></div>
+    <script type="module" src="/js/gallery/index.jsx"></script>
+</body>
+</html>
