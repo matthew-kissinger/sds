@@ -8,7 +8,7 @@
  * mount it, and the look is signed off on the deployed /gallery. It imports no
  * game-runtime module (no renderer, scene builder, or attract field).
  */
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { pastoral } from '../components/ui/tokens';
 import { Button } from '../components/ui/Button';
@@ -92,6 +92,90 @@ const pastoralTheme: CSSProperties = {
   borderRadius: 16,
 };
 
+// Cycle 49 P5: static mockups of the instant entrance and the pastoral loading
+// experience specified in docs/entrance-loading-spec.md. Pure React + CSS + SVG,
+// no WebGPU. The title uses a serif fallback (the Fraunces display face loads in
+// Cycle 50). EntranceMock shows the painterly backdrop + scene picker; LoadingMock
+// shows the eased real-stage progress that replaces the shimmer-skeleton cover.
+function EntranceMock() {
+  return (
+    <div
+      data-testid="gallery-entrance-mock"
+      style={{
+        ...(pastoralVars as CSSProperties),
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: 16,
+        minHeight: 320,
+        background: 'linear-gradient(180deg, var(--color-pasture-dawn) 0%, var(--color-pasture-gold) 52%, var(--color-pasture-dusk) 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '2rem',
+        color: 'var(--color-ink)',
+      }}
+    >
+      <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true"
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%', height: '55%' }}>
+        <path d="M0,120 C150,70 300,150 450,90 C520,60 580,100 600,90 L600,200 L0,200 Z" fill="var(--color-hill-shadow)" opacity="0.55" />
+        <path d="M0,150 C120,110 280,170 430,130 C520,108 580,140 600,135 L600,200 L0,200 Z" fill="var(--color-meadow)" opacity="0.85" />
+        <circle cx="300" cy="120" r="5" fill="var(--color-ink)" opacity="0.7" />
+        <circle cx="330" cy="125" r="6" fill="var(--color-cream)" opacity="0.9" />
+        <circle cx="348" cy="125" r="6" fill="var(--color-cream)" opacity="0.9" />
+      </svg>
+      <div style={{ position: 'relative', textAlign: 'center' }}>
+        <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: '2rem', fontWeight: 600 }}>Sheepdog Simulator</div>
+        <div style={{ opacity: 0.7, marginTop: 4, fontSize: '0.9rem' }}>Pick a pasture</div>
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Card style={{ padding: '0.7rem 1rem', minWidth: 108 }}>Home Field</Card>
+          <Card active style={{ padding: '0.7rem 1rem', minWidth: 108 }}>Rolling Hills</Card>
+          <Card style={{ padding: '0.7rem 1rem', minWidth: 108 }}>Open Country</Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const LOAD_STAGES = ['Heightfield', 'Terrain', 'Grass', 'Trees', 'Flock'];
+function LoadingMock() {
+  const [p, setP] = useState(0.12);
+  useEffect(() => {
+    const id = setInterval(() => setP((x) => (x >= 1 ? 0.12 : Math.min(1, x + 0.07))), 320);
+    return () => clearInterval(id);
+  }, []);
+  const stage = LOAD_STAGES[Math.min(LOAD_STAGES.length - 1, Math.floor(p * LOAD_STAGES.length))];
+  const pct = Math.round(p * 100);
+  return (
+    <div
+      data-testid="gallery-loading-mock"
+      style={{
+        ...(pastoralVars as CSSProperties),
+        background: 'linear-gradient(180deg, var(--color-pasture-gold) 0%, var(--color-pasture-dusk) 100%)',
+        borderRadius: 16,
+        padding: '2.5rem 2rem',
+        minHeight: 200,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1.1rem',
+        color: 'var(--color-ink)',
+      }}
+    >
+      <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: '1.3rem' }}>Settling the flock</div>
+      <div style={{ width: '100%', maxWidth: 360 }}>
+        <div style={{ height: 10, borderRadius: 999, background: 'var(--color-glass-warm)', border: '1px solid var(--color-glass-warm-border)', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: 'var(--color-accent-meadow)', borderRadius: 999, transition: 'width 320ms cubic-bezier(0.25, 0.8, 0.35, 1)' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: '0.8rem', opacity: 0.85 }}>
+          <span>{stage}</span>
+          <span>{pct}%</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Gallery() {
   return (
     <div style={page}>
@@ -120,6 +204,14 @@ export function Gallery() {
           <div style={pastoralTheme}>
             <PrimitivesDemo />
           </div>
+        </Section>
+
+        <Section id="gallery-entrance" title="Entrance mockup (instant lightweight menu)">
+          <EntranceMock />
+        </Section>
+
+        <Section id="gallery-loading" title="Loading mockup (eased stage progress)">
+          <LoadingMock />
         </Section>
       </div>
     </div>

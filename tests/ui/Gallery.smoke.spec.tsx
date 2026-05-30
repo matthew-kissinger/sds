@@ -33,4 +33,10 @@ describe('UI Gallery (smoke)', () => {
     // variants plus the IconButton are present as <button> elements).
     expect(section?.querySelectorAll('button').length ?? 0).toBeGreaterThanOrEqual(4);
   });
+
+  it('renders the entrance and loading mockups (P5)', () => {
+    const { container } = render(<Gallery />);
+    expect(container.querySelector('[data-testid="gallery-entrance-mock"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="gallery-loading-mock"]')).toBeTruthy();
+  });
 });
