@@ -4,6 +4,31 @@
 
 ## Recently Completed
 
+### Cycle 49 - `pastoral-vision` (closed 2026-05-29)
+
+Plan archived at [`docs/archive/cycles/cycle-49-plan.md`](archive/cycles/cycle-49-plan.md). Cycle 49 opened the Pastoral UI/UX rework program with a vision/spec cycle: it defined the calm-pastoral / painterly design language and shipped the reviewable artifacts the implementation cycles execute against, with zero behavior change to the running game. The headless-validation keystone is a standalone `/gallery` route that renders the UI without booting the WebGPU game, so the look is reviewable despite the headless-WebGPU compositing block. No version bump; v2.1.10 stands.
+
+**Closeout outcomes:**
+
+- Shipped 6/6 phases. P1 design-language doc (`docs/ui-design-language.md`, commit `25251d3`); P2 v2 pastoral token palette (additive `@theme` + `tokens.ts` mirror + parity spec, `e1c2d39`); P3 the standalone `/gallery` route (`gallery.html` + `js/gallery/`, wired into `vite.config.js`, `5d4f3b9`); P4 the six primitives previewed under the pastoral palette via a gallery-only theming wrapper (`eaf2f48`); P5 the entrance/loading spec (`docs/entrance-loading-spec.md`) + `EntranceMock`/`LoadingMock` (`4f3bd30`); P6 the container migration map (`docs/ui-migration-map.md`, `4a2c0f7`).
+- The taste calls baked in for post-deploy review: an instant lightweight menu on a painterly pastoral backdrop (replacing the zen-boids entrance), build-on-commit loading driven by real eased stage marks, and a full pastoral type system led by Fraunces.
+
+**Validation gates (2026-05-29):**
+
+- `npm test` 601 passed / 7 skipped (+3 token-parity, +4 gallery smoke vs Cycle 48).
+- `npm run build` clean; `dist/gallery.html` emitted; main chunk 540.4 KiB within the 541 KiB ratchet.
+- Deploy on `main` green (`4a2c0f7`); `/gallery` live at sheepdogsim.com/gallery.
+- `git diff` vs cycle-start (`54da9f3`) shows `shared/`, `tests/sim-baseline/`, the Worker, and every live game-runtime file untouched (render/UI/doc-only).
+
+**Carryover (the Pastoral UI program continues at Cycles 51+):**
+
+- The program's implementation cycles (the entrance/loading rework that was the original "Cycle 50", and the container restyle batches) shift to Cycles 51+ because the object-driven impostor render cycle is inserted as Cycle 50 (Matt's reprioritization). The deferred scope lives in `docs/entrance-loading-spec.md` + `docs/ui-migration-map.md`.
+- The pastoral look (menu/backdrop, primitives, entrance/loading mockups) is Matt's post-deploy visual call on `/gallery` (headless WebGPU does not composite).
+
+**Notes:**
+
+- Cycle 50 is the object-driven impostor pipeline (`object-impostor-plumbing`), a render cycle inserted ahead of the UI program's remaining work. See `docs/cycle-50-plan.md` plus the 2-cycle program reference `docs/object-impostor-cycle-plan.md`.
+
 ### Cycle 48 - `ui-conversion-sweep` (closed 2026-05-29)
 
 Plan archived at [`docs/archive/cycles/cycle-48-plan.md`](archive/cycles/cycle-48-plan.md). Cycle 48 swept the Cycle 47 leaf-first TSX conversion across the leaf-tier createElement components: the HUD readouts, the presentational StartScreen menu screens, the presentational Multiplayer screens, and the `ui` leftovers. It retired the named inline hex in every file it touched (App.js's 7 literals and MenuOption's `DEFAULT_ACCENT`) and moved the ScenePicker scene-card slide off CSS keyframes onto Motion. The user-visible difference is small by design (HUD, menus, and multiplayer screens look the same, the card slide animates a touch more smoothly, reduced-motion honored everywhere); the win is internal, the next HUD or menu change edits a typed `.tsx` reading one palette. No version bump; v2.1.10 stands.
