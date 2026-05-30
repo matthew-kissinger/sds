@@ -24,4 +24,13 @@ describe('UI Gallery (smoke)', () => {
     // 14 pastoral color tokens in tokens.pastoral.
     expect(swatches.length).toBe(14);
   });
+
+  it('renders the six primitives under the pastoral palette (P4)', () => {
+    const { container } = render(<Gallery />);
+    const section = container.querySelector('[data-testid="gallery-pastoral-primitives"]');
+    expect(section).toBeTruthy();
+    // The pastoral wrapper renders the same PrimitivesDemo (the four Button
+    // variants plus the IconButton are present as <button> elements).
+    expect(section?.querySelectorAll('button').length ?? 0).toBeGreaterThanOrEqual(4);
+  });
 });

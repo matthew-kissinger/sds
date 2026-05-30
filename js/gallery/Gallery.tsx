@@ -49,6 +49,49 @@ function Swatch({ name, value }: { name: string; value: string }) {
 
 const row: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-start' };
 
+function PrimitivesDemo() {
+  return (
+    <>
+      <div style={row}>
+        <Button variant="primary">Primary</Button>
+        <Button variant="secondary">Secondary</Button>
+        <Button variant="ghost">Ghost</Button>
+        <Button variant="danger">Danger</Button>
+        <IconButton aria-label="next"><ChevronRight size={18} /></IconButton>
+        <Badge tone="accent">Accent</Badge>
+        <Badge tone="danger">Danger</Badge>
+        <Badge tone="neutral">Neutral</Badge>
+      </div>
+      <div style={{ ...row, marginTop: '1.25rem' }}>
+        <Surface style={{ padding: '1rem', maxWidth: 240 }}>Surface glass</Surface>
+        <Card style={{ padding: '1rem', maxWidth: 240 }}>Card (inactive)</Card>
+        <Card active style={{ padding: '1rem', maxWidth: 240 }}>Card (active)</Card>
+        <Panel size="sm"><PanelTitle>Panel</PanelTitle><div>Panel body</div></Panel>
+      </div>
+    </>
+  );
+}
+
+// Cycle 49 P4: remap the tokens the primitives consume to pastoral values on a
+// wrapper only, so the six primitives render warm with zero change to their
+// source. This is the gallery-only theming wrapper the plan calls for; the live
+// primitive APIs are untouched.
+const pastoralVars: Record<string, string> = {
+  '--color-accent': 'var(--color-accent-meadow)',
+  '--color-accent-strong': 'var(--color-accent-gold)',
+  '--color-accent-soft': 'var(--color-meadow)',
+  '--color-text': 'var(--color-ink)',
+  '--color-on-accent': 'var(--color-cream)',
+  '--color-surface-glass': 'var(--color-glass-warm)',
+  '--color-surface-glass-border': 'var(--color-glass-warm-border)',
+};
+const pastoralTheme: CSSProperties = {
+  ...(pastoralVars as CSSProperties),
+  background: 'linear-gradient(160deg, var(--color-pasture-dawn) 0%, var(--color-pasture-gold) 45%, var(--color-pasture-dusk) 82%, var(--color-pasture-horizon) 100%)',
+  padding: '2rem',
+  borderRadius: 16,
+};
+
 export function Gallery() {
   return (
     <div style={page}>
@@ -70,21 +113,12 @@ export function Gallery() {
         </Section>
 
         <Section id="gallery-primitives" title="Primitives (current theme)">
-          <div style={row}>
-            <Button variant="primary">Primary</Button>
-            <Button variant="secondary">Secondary</Button>
-            <Button variant="ghost">Ghost</Button>
-            <Button variant="danger">Danger</Button>
-            <IconButton aria-label="next"><ChevronRight size={18} /></IconButton>
-            <Badge tone="accent">Accent</Badge>
-            <Badge tone="danger">Danger</Badge>
-            <Badge tone="neutral">Neutral</Badge>
-          </div>
-          <div style={{ ...row, marginTop: '1.25rem' }}>
-            <Surface style={{ padding: '1rem', maxWidth: 240 }}>Surface glass</Surface>
-            <Card style={{ padding: '1rem', maxWidth: 240 }}>Card (inactive)</Card>
-            <Card active style={{ padding: '1rem', maxWidth: 240 }}>Card (active)</Card>
-            <Panel size="sm"><PanelTitle>Panel</PanelTitle><div>Panel body</div></Panel>
+          <PrimitivesDemo />
+        </Section>
+
+        <Section id="gallery-pastoral-primitives" title="Primitives (pastoral palette)">
+          <div style={pastoralTheme}>
+            <PrimitivesDemo />
           </div>
         </Section>
       </div>
