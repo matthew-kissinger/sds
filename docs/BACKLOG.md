@@ -4,6 +4,36 @@
 
 ## Recently Completed
 
+### Cycle 48 - `ui-conversion-sweep` (closed 2026-05-29)
+
+Plan archived at [`docs/archive/cycles/cycle-48-plan.md`](archive/cycles/cycle-48-plan.md). Cycle 48 swept the Cycle 47 leaf-first TSX conversion across the leaf-tier createElement components: the HUD readouts, the presentational StartScreen menu screens, the presentational Multiplayer screens, and the `ui` leftovers. It retired the named inline hex in every file it touched (App.js's 7 literals and MenuOption's `DEFAULT_ACCENT`) and moved the ScenePicker scene-card slide off CSS keyframes onto Motion. The user-visible difference is small by design (HUD, menus, and multiplayer screens look the same, the card slide animates a touch more smoothly, reduced-motion honored everywhere); the win is internal, the next HUD or menu change edits a typed `.tsx` reading one palette. No version bump; v2.1.10 stands.
+
+**Closeout outcomes:**
+
+- Shipped 5/6 phases (P1 HUD readout leaves, P2 StartScreen menu leaves, P3 Multiplayer leaves, P4 `ui` leftovers + named hex retirement, P5 card-slide Motion). P6 (picker affordances) was optional/paired and deferred whole to carryover, exactly as the plan's EARS line directs.
+- **Phase 1 (HUD readout leaves, commit `52e782f`).** Converted GameTimer, SheepCounter, CompactStaminaBar, ObjectiveBanner, CameraModeIndicator, CorralCompass, PracticeHint, HudLayout to token-driven `.tsx`, render-spec'd in jsdom. Zero createElement, zero raw hex.
+- **Phase 2 (StartScreen menu leaves, commit `19797d9`).** Converted SinglePlayerModes, ModeSelection, DogSelection, PlayerIdentitySetup, PointerTour to `.tsx` on Card / Button / Badge / tokens + lucide icons, preserving each screen's behavior.
+- **Phase 3 (Multiplayer leaves, commit `0143c06`).** Converted MultiplayerOptions, RoomJoining, PublicLobbyList, MultiplayerScoreboard, GlobalLeaderboard to `.tsx`; rank colors read the Cycle 47 tokens. Lobby and RoomCreation left as stateful-container carryover. No NetworkManager or wire change.
+- **Phase 4 (`ui` leftovers + named hex retirement, commit `977f136`).** Converted MenuOption (retiring `DEFAULT_ACCENT` to a token), LanguageSelector, SceneSwapOverlay to `.tsx`, preserving the Cycle 46 `window.__sdsAttractCrossfadeActive` crossfade-skip contract. Retired the 7 inline hex in App.js to tokens (hex-to-token only; App.js's createElement body stays).
+- **Phase 5 (card-slide Motion, commit `149e423`).** Moved the ScenePicker scene-card slide from the `sds-slide-in-*` CSS keyframes to Motion (`motion/react`), reduced-motion-aware via the Cycle 47 `useReducedMotion` hook, preserving the picker swap contract (crossfade handoff, latest-wins coalescing, debounce, swipe, arrow keys).
+
+**Validation gates (2026-05-29):**
+
+- `npm test` - 594 specs passed, 7 skipped (66 files passed, 1 skipped).
+- `npm run build` - clean with the existing Vite large-chunk warning (three 617 KiB).
+- `grep` confirms zero createElement and zero raw 6-digit hex across the converted leaves; App.js hex count 0; MenuOption has no `DEFAULT_ACCENT`; ScenePicker imports motion.
+- `git diff` against the cycle-start commit shows `shared/` and `tests/sim-baseline/` untouched (render/UI-only cycle).
+- Last deploy on `main` (Phase 5, `149e423`) green before close; the close commit redeploys.
+
+**Carryover (deferred to Cycle 49 `pastoral-vision` and the broader UI rework program):**
+
+- **Phase 6 picker affordances (deferred whole, optional/paired).** Scene-preview affordance, load-overlay stream-progress affordance, combined scene-plus-mode gate. Need composite validation (blocked headless) and two touch the Cycle 46 crossfade contract; the plan's EARS line directs deferral rather than shipping shallow. These fold into the Pastoral UI/UX rework program (entrance and loading land in Cycle 50).
+- **The big stateful containers.** App.js body, PauseMenu, CompletionScreen, SettingsPanel, SandboxSetup, FenceEditor, ShapeEditor, LocalModeSetup, MobileHUD, MobileControls, ExtremeTuningPanel, Lobby, RoomCreation stay on the createElement path. They are the restyle-and-convert target for Cycles 51-52 of the rework program.
+
+**Notes:**
+
+- Cycle 48 closes alongside the authoring of Cycle 49 (`pastoral-vision`), the first cycle of the new Pastoral UI/UX rework program (Cycles 49-52). The program supersedes the zen-boids entrance with an instant lightweight menu, reworks styling from first principles toward calm-pastoral / painterly, and defers the 3D scene build until the player commits to a scene. The program's headless-validation keystone is a standalone `/gallery` route (built in Cycle 49) that renders the UI without booting the WebGPU game. See [`docs/cycle-49-plan.md`](cycle-49-plan.md).
+
 ### Cycle 47 - `ui-foundation-overhaul` (closed 2026-05-29)
 
 Plan archived at [`docs/archive/cycles/cycle-47-plan.md`](archive/cycles/cycle-47-plan.md). Cycle 47 is the second half of the entrance + UI split (Cycle 46 shipped the entrance). It laid the UI foundation: turned on JSX/TSX globally, defined a design-token palette in the Tailwind `@theme` layer with a typed mirror, stood up a set of hand-owned token-driven `.tsx` primitives, adopted lucide-react for generic icons and Motion for transitions, converted the scene picker as the exemplar leaf, and isolated the HUD from per-frame React reconciliation. The user-visible difference is small (menus and picker look the same or slightly cleaner, animate a little more smoothly, and the HUD stops re-rendering every frame); the win is internal, the next UI change reads from one palette instead of guessing a hex code. The cycle deliberately did not convert all ~50 components. No version bump; v2.1.10 stands.
