@@ -1,17 +1,23 @@
 /**
- * Cycle 20 Phase 1 — bake tree impostors via Pixel Forge / Kiln.
+ * Cycle 20 Phase 1 — bake object impostors via Pixel Forge / Kiln.
+ * Cycle 50 Phase 1 — generalized from a hardcoded `['tree1','tree2']` list to a
+ * manifest-driven enumerator. Reads `assets/objects.manifest.json` and bakes
+ * every impostor-enabled object across its declared layouts and variants. The
+ * base variant of the `latlon-hemi-y` layout emits byte-identical output paths
+ * to the pre-Cycle-50 bake (`assets/models/trees/<id>.imposter.png`), so this
+ * generalization is byte-neutral for tree1/tree2.
  *
- * For each of `tree1.glb`, `tree2.glb` in `assets/_originals/models/trees/`,
- * shells out to the Pixel Forge `kiln bake-imposter` CLI to produce:
- *   <name>.imposter.png         — albedo atlas (4×4 lat/lon hemi-y, baseColor unlit)
- *   <name>.imposter.normal.png  — capture-view-space normal aux atlas
- *   <name>.imposter.depth.png   — depth aux atlas (used by Phase 2 for parallax)
- *   <name>.imposter.json        — Kiln sidecar (azimuths, elevations, worldSize, yOffset, ...)
+ * For each (object, layout, variant) it shells out to the Pixel Forge
+ * `kiln bake-imposter` CLI to produce:
+ *   <base>.imposter.png         — albedo atlas
+ *   <base>.imposter.normal.png  — capture-view-space normal aux atlas
+ *   <base>.imposter.depth.png   — depth aux atlas
+ *   <base>.imposter.json        — Kiln sidecar (Phase 2 augments it with
+ *                                 objectId/category/variant/layoutId)
  *
- * Output: `assets/models/trees/`. Q2 verdict (16 hemi-y) is locked per
- * `cycle20-validation/phase0/AUDIT.md`. Bake from `_originals/` because
- * the runtime `assets/models/trees/*.glb` are Draco-compressed and Pixel
- * Forge's harness has no DRACOLoader.
+ * Bake from `_originals/` because the runtime GLBs under `assets/models` are
+ * Draco-compressed and Pixel Forge's harness has no DRACOLoader. The Kiln knobs
+ * (angles, axis, tile size, aux layers) live in the manifest's `layoutPresets`.
  *
  * Windows install gotcha: `bun run` of pixelforge hangs on Playwright's
  * CDP-pipe handshake. Invoke through Node + tsx instead. The pixel-forge
@@ -22,8 +28,8 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { resolve, basename } from 'node:path';
-import { existsSync, statSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { existsSync, statSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const execFileP = promisify(execFile);
@@ -38,14 +44,7 @@ const PF_CLI = resolve(PF_ROOT, 'packages/cli/src/index.ts');
 const PF_TSX_WIN_EXE = `${PF_TSX}.exe`;
 const PF_TSX_WIN_CMD = `${PF_TSX}.cmd`;
 
-const SOURCE_DIR = resolve(SDS_ROOT, 'assets/_originals/models/trees');
-const OUT_DIR = resolve(SDS_ROOT, 'assets/models/trees');
-const TREES = ['tree1', 'tree2'];
-
-// Q2 verdict — see cycle20-validation/phase0/AUDIT.md.
-const ANGLES = '16';
-const AXIS = 'hemi-y';
-const TILE_SIZE = '512';
+const MANIFEST_PATH = resolve(SDS_ROOT, 'assets/objects.manifest.json');
 
 function pickTsxBin() {
   if (process.platform === 'win32') {
@@ -59,27 +58,51 @@ function pickTsxBin() {
   );
 }
 
-async function bakeOne(name, tsxBin) {
-  const src = resolve(SOURCE_DIR, `${name}.glb`);
+/** Load + lightly validate the object manifest. */
+function loadManifest() {
+  const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+  if (!Array.isArray(manifest.objects)) throw new Error('manifest.objects must be an array');
+  if (!manifest.layoutPresets || typeof manifest.layoutPresets !== 'object') {
+    throw new Error('manifest.layoutPresets must be an object');
+  }
+  return manifest;
+}
+
+/**
+ * Albedo-atlas output path for an (object, layout-preset, variant). The base
+ * variant of an empty-subdir layout reproduces the pre-Cycle-50 path exactly
+ * (`assets/models/<category-dir>/<id>.imposter.png`). Non-default variants get
+ * a `.<variantId>` suffix; layouts with a subdir (e.g. octahedral) nest under
+ * it. The impostor lives beside the object's runtime model.
+ */
+function impostorAssetBase(obj, preset, variant) {
+  const modelDir = resolve(SDS_ROOT, dirname(obj.runtimeModel));
+  const dir = preset.subdir ? resolve(modelDir, preset.subdir) : modelDir;
+  const variantSuffix = variant.default ? '' : `.${variant.id}`;
+  return resolve(dir, `${obj.id}${variantSuffix}.imposter.png`);
+}
+
+async function bakeOne(obj, layoutId, preset, variant, tsxBin) {
+  const src = resolve(SDS_ROOT, obj.source);
   if (!existsSync(src)) throw new Error(`missing source GLB: ${src}`);
-  const out = resolve(OUT_DIR, `${name}.imposter.png`);
+  const out = impostorAssetBase(obj, preset, variant);
 
   const args = [
     PF_CLI,
     'kiln', 'bake-imposter', src,
     '--out', out,
-    '--angles', ANGLES,
-    '--axis', AXIS,
-    '--tile-size', TILE_SIZE,
-    '--aux-layers', 'normal,depth',
-    '--bg', 'transparent',
-    '--color-layer', 'baseColor',
-    '--edge-bleed', '2',
+    '--angles', String(preset.angles),
+    '--axis', preset.axis,
+    '--tile-size', String(preset.tileSize),
+    '--aux-layers', (preset.auxLayers ?? ['normal', 'depth']).join(','),
+    '--bg', preset.bg ?? 'transparent',
+    '--color-layer', preset.colorLayer ?? 'baseColor',
+    '--edge-bleed', String(preset.edgeBleed ?? 2),
     '--json',
   ];
 
   const t0 = Date.now();
-  console.log(`[bake] ${name} (${ANGLES} ${AXIS}, tile ${TILE_SIZE})…`);
+  console.log(`[bake] ${obj.id} / ${layoutId} / ${variant.id} (${preset.angles} ${preset.axis}, tile ${preset.tileSize})…`);
   const { stdout, stderr } = await execFileP(tsxBin, args, {
     cwd: PF_ROOT,
     maxBuffer: 16 * 1024 * 1024,
@@ -97,21 +120,31 @@ async function bakeOne(name, tsxBin) {
   } else {
     console.warn(`  → bake returned ok=false. stderr: ${stderr}`);
     console.warn(`  raw stdout: ${stdout}`);
-    throw new Error(`bake failed for ${name}`);
+    throw new Error(`bake failed for ${obj.id} / ${layoutId} / ${variant.id}`);
   }
 }
 
 (async () => {
   const tsxBin = pickTsxBin();
-  console.log(`pixel-forge tsx: ${tsxBin}`);
-  console.log(`source dir:      ${SOURCE_DIR}`);
-  console.log(`output dir:      ${OUT_DIR}\n`);
+  const manifest = loadManifest();
+  const targets = manifest.objects.filter((o) => o.impostor?.enabled);
+  console.log(`pixel-forge tsx:  ${tsxBin}`);
+  console.log(`manifest:         ${MANIFEST_PATH}`);
+  console.log(`impostor objects: ${targets.map((o) => o.id).join(', ') || '(none)'}\n`);
 
-  for (const t of TREES) {
-    await bakeOne(t, tsxBin);
+  let count = 0;
+  for (const obj of targets) {
+    for (const layoutId of obj.impostor.layouts) {
+      const preset = manifest.layoutPresets[layoutId];
+      if (!preset) throw new Error(`object ${obj.id} references unknown layout "${layoutId}"`);
+      for (const variant of obj.impostor.variants) {
+        await bakeOne(obj, layoutId, preset, variant, tsxBin);
+        count++;
+      }
+    }
   }
 
-  console.log(`\n[bake] all ${TREES.length} trees done.`);
+  console.log(`\n[bake] all ${count} object-impostor bakes done.`);
 })().catch((err) => {
   console.error('[bake] FAILED:', err.message);
   process.exit(1);

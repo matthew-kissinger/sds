@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "comment": "Object-driven impostor catalog (Cycle 50). Drives the offline impostor bake (tools/bake-tree-impostors.mjs) and, from Phase 3, the runtime impostor route (js/world/objectImpostorManifest.js). Replaces the hardcoded tree list: adding an object or an impostor variant is a manifest edit plus a bake, not a code edit. impostor.enabled gates which objects bake; layouts/variants drive the bake matrix. layoutPresets centralize the Kiln CLI knobs.",
+  "layoutPresets": {
+    "latlon-hemi-y": {
+      "angles": 16,
+      "axis": "hemi-y",
+      "tileSize": 512,
+      "auxLayers": ["normal", "depth"],
+      "bg": "transparent",
+      "colorLayer": "baseColor",
+      "edgeBleed": 2,
+      "subdir": ""
+    }
+  },
+  "objects": [
+    {
+      "id": "tree1",
+      "category": "tree",
+      "source": "assets/_originals/models/trees/tree1.glb",
+      "runtimeModel": "assets/models/trees/tree1.glb",
+      "lod1": "assets/models/trees/tree1_lod1.glb",
+      "impostor": {
+        "enabled": true,
+        "layouts": ["latlon-hemi-y"],
+        "variants": [{ "id": "base", "default": true, "modulation": {} }]
+      }
+    },
+    {
+      "id": "tree2",
+      "category": "tree",
+      "source": "assets/_originals/models/trees/tree2.glb",
+      "runtimeModel": "assets/models/trees/tree2.glb",
+      "lod1": "assets/models/trees/tree2_lod1.glb",
+      "impostor": {
+        "enabled": true,
+        "layouts": ["latlon-hemi-y"],
+        "variants": [{ "id": "base", "default": true, "modulation": {} }]
+      }
+    },
+    {
+      "id": "rock1",
+      "category": "rock",
+      "source": "assets/_originals/models/rocks/rock1.glb",
+      "runtimeModel": "assets/models/rocks/rock1.glb",
+      "impostor": { "enabled": false }
+    },
+    {
+      "id": "rock2",
+      "category": "rock",
+      "source": "assets/_originals/models/rocks/rock2.glb",
+      "runtimeModel": "assets/models/rocks/rock2.glb",
+      "impostor": { "enabled": false }
+    },
+    {
+      "id": "rock3",
+      "category": "rock",
+      "source": "assets/_originals/models/rocks/rock3.glb",
+      "runtimeModel": "assets/models/rocks/rock3.glb",
+      "impostor": { "enabled": false }
+    }
+  ]
+}
