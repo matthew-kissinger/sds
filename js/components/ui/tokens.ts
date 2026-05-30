@@ -85,6 +85,38 @@ export const color = {
 } as const;
 
 /**
+ * Cycle 49 pastoral palette v2 (docs/ui-design-language.md). The calm-pastoral
+ * mirror of the `=== Cycle 49 pastoral palette v2 ===` block in css/main.css.
+ * ADDITIVE: the live UI still reads the `color` tokens above; components migrate
+ * onto these in Cycles 50-52. Kept in lockstep with the CSS, enforced by
+ * tests/ui/tokens.parity.spec.ts.
+ */
+export const pastoral = {
+  pastureDawn: 'var(--color-pasture-dawn)',
+  pastureGold: 'var(--color-pasture-gold)',
+  pastureDusk: 'var(--color-pasture-dusk)',
+  pastureHorizon: 'var(--color-pasture-horizon)',
+  meadow: 'var(--color-meadow)',
+  hillShadow: 'var(--color-hill-shadow)',
+  glassWarm: 'var(--color-glass-warm)',
+  glassWarmBorder: 'var(--color-glass-warm-border)',
+  scrimWarm: 'var(--color-scrim-warm)',
+  ink: 'var(--color-ink)',
+  inkSoft: 'var(--color-ink-soft)',
+  cream: 'var(--color-cream)',
+  accentMeadow: 'var(--color-accent-meadow)',
+  accentGold: 'var(--color-accent-gold)',
+} as const;
+
+/** Cycle 49 pastoral motion: the calmer dusk pace (see the ## Motion section). */
+export const pastoralMotion = {
+  durationCalm: 'var(--duration-calm)',
+  durationCalmMs: 420,
+  easePastoral: 'var(--ease-pastoral)',
+  easePastoralValue: 'cubic-bezier(0.25, 0.8, 0.35, 1)',
+} as const;
+
+/**
  * A color at `percent`% opacity composited over transparent. The token-safe
  * replacement for an 8-digit `#rrggbbaa` hex suffix: color-mix() resolves a
  * `var(--color-x)` token, which the old string concatenation (`${hex}22`)
@@ -137,6 +169,8 @@ export const tokens = {
   easing,
   easingValue,
   sceneAccent,
+  pastoral,
+  pastoralMotion,
 } as const;
 
 export default tokens;

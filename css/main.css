@@ -127,6 +127,42 @@
 
   /* Easing. */
   --ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ===== Cycle 49 pastoral palette v2 =====
+     The calm-pastoral / painterly palette for the UI/UX rework program
+     (docs/ui-design-language.md). ADDITIVE: no token above is removed or
+     repointed, so the live look is unchanged until Cycles 50-52 migrate
+     components onto these. Mirrored one-to-one in js/components/ui/tokens.ts
+     under `pastoral` and kept in lockstep (tests/ui/tokens.parity.spec.ts
+     enforces it). Hex is golden-hour intent, confirmed on the /gallery. */
+
+  /* Golden-hour sky / backdrop gradient (entrance backdrop, large warm fields). */
+  --color-pasture-dawn: #f6d8a8;     /* warm apricot, high sky */
+  --color-pasture-gold: #f0b878;     /* soft gold, mid sky */
+  --color-pasture-dusk: #d99a8f;     /* dusty rose, low sky */
+  --color-pasture-horizon: #b9a6c4;  /* faint lavender, horizon band */
+
+  /* Land. */
+  --color-meadow: #8aa66a;        /* warm sage, sunlit pasture */
+  --color-hill-shadow: #4f6b52;   /* cooler green, slope in shade */
+
+  /* Warm glass surfaces (morning-haze glass, never cold slate). */
+  --color-glass-warm: rgba(255, 248, 236, 0.10);
+  --color-glass-warm-border: rgba(255, 244, 224, 0.22);
+  --color-scrim-warm: rgba(40, 28, 18, 0.45);
+
+  /* Text on warm/light vs dark or photographic surfaces. */
+  --color-ink: #2b2620;       /* warm espresso, text on light */
+  --color-ink-soft: #6b5f4f;  /* muted warm brown, secondary text */
+  --color-cream: #f7f1e6;     /* warm off-white, text on dark or photo */
+
+  /* Accents: primary action + low-sun highlight. */
+  --color-accent-meadow: #5e9e6e;  /* warmed meadow green, primary */
+  --color-accent-gold: #e0a458;    /* low-sun gold, secondary highlight */
+
+  /* Calmer pastoral motion (unhurried dusk pace; see ## Motion). */
+  --duration-calm: 420ms;
+  --ease-pastoral: cubic-bezier(0.25, 0.8, 0.35, 1);
 }
 
 /* ==================== KEYFRAMES ==================== */
