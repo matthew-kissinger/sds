@@ -47,7 +47,7 @@ A real-time 3D herding game with GPU-accelerated rendering, edge-hosted multipla
 - **State:** Durable Objects (`RoomDO` per room, `LobbyDO` as a singleton)
 - **Database:** Cloudflare D1 (`sds-db`) — materialized leaderboards + append-only submission log
 
-See [docs/cycle-2-report.md](docs/cycle-2-report.md) for the full cutover record.
+See [docs/archive/c-retry/contract.md](docs/archive/c-retry/contract.md) for the backend contract reference.
 
 ## System architecture
 
@@ -100,7 +100,7 @@ See [docs/cycle-2-report.md](docs/cycle-2-report.md) for the full cutover record
 ### Client
 
 #### main.js — Game orchestrator
-Central coordination hub (Mediator pattern). Cycle 28 Stream B1 trimmed `main.js` from 3,529 → 2,188 LOC by extracting one-time module wiring and post-game UI to [`js/boot/`](js/boot/) + [`js/utils/`](js/utils/). Class methods on `SheepDogSimulation` remain as thin shims so the public API binding (React, ScenePicker, cinematic API, e2e specs) stays byte-identical.
+Central coordination hub (Mediator pattern). Cycle 28 Stream B1 trimmed `main.js` from 3,529 to 2,188 LOC by extracting one-time module wiring and post-game UI to [`js/boot/`](js/boot/) + [`js/utils/`](js/utils/); subsequent cycles have grown it back to 2,900 LOC. Class methods on `SheepDogSimulation` remain as thin shims so the public API binding (React, ScenePicker, cinematic API, e2e specs) stays byte-identical.
 - Module lifecycle (init → start → update → cleanup) — boot sequence in [`js/boot/initWorld.js`](js/boot/initWorld.js)
 - Mode detection (single-player vs. multiplayer)
 - Fixed-timestep physics with interpolated rendering — *retained on `main.js`*
@@ -200,7 +200,7 @@ Pattern ported from `terror-in-the-jungle/src/systems/terrain/BakedHeightProvide
 
 #### TerrainBuilder.js — Environment
 
-Cycle 28 Stream B2 trimmed `TerrainBuilder.js` from 2,785 → 1,387 LOC by extracting placement + shader-patch helpers to [`js/world/`](js/world/). Class methods remain as thin shims so the public API (`createTerrain`, `createGrass`, `createTrees`, `addEnvironmentDetails`, `addMountains`, `addFarmHouse`, `setDynamicBounds`, `setRockRimColor`, `setImpostorTint`, etc.) stays byte-identical.
+Cycle 28 Stream B2 trimmed `TerrainBuilder.js` from 2,785 to 1,387 LOC by extracting placement + shader-patch helpers to [`js/world/`](js/world/); subsequent cycles have grown it back to 1,779 LOC. Class methods remain as thin shims so the public API (`createTerrain`, `createGrass`, `createTrees`, `addEnvironmentDetails`, `addMountains`, `addFarmHouse`, `setDynamicBounds`, `setRockRimColor`, `setImpostorTint`, etc.) stays byte-identical.
 
 Extracted to [`js/world/`](js/world/):
 - `RockPlacement.js` — `placeEnvironmentDetails` (Math.random()-driven Poisson formations + InstancedMesh2 + BVH)
@@ -445,7 +445,6 @@ The server-to-client state snapshot is the same shape the legacy Geckos server u
 ├── css/                    Production + multiplayer styles
 ├── public/                 Pages static assets (favicon, _headers)
 ├── docs/                   Design docs, cycle reports
-│   ├── cycle-2-report.md   ← CURRENT STATE
 │   ├── cycle-2-todo.md     ← WHAT'S LEFT
 │   ├── multiplayer-ux.md   MP design doc
 │   └── archive/            Historical: cycle-1-audit, POSTMORTEM, c-retry, AGENT_PLAN…
@@ -522,7 +521,7 @@ See the "Roadmap — where the game is going" section in [README.md](README.md) 
 
 ## Project docs
 
-- [docs/cycle-2-report.md](docs/cycle-2-report.md) — what the current backend does and how we got here
+- [docs/archive/c-retry/contract.md](docs/archive/c-retry/contract.md) - the backend HTTP/WS contract reference
 - [docs/cycle-2-todo.md](docs/cycle-2-todo.md) — the punch list to finish the migration
 - [DECISIONS.md](DECISIONS.md) — architectural decision log (cycle-by-cycle)
 - [docs/archive/POSTMORTEM.md](docs/archive/POSTMORTEM.md) — Cycle 1 rollback retrospective (process lessons)

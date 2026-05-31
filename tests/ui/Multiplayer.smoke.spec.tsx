@@ -55,7 +55,10 @@ describe('RoomJoining (smoke)', () => {
 describe('PublicLobbyList (smoke)', () => {
     it('renders the panel chrome on the no-network path', async () => {
         render(<PublicLobbyList onBack={vi.fn()} onJoinRoom={vi.fn()} />);
-        expect(await screen.findByText('Public Lobbies')).toBeTruthy();
+        // Cycle 50: title now wired through t('multiplayer.publicLobbies'); the
+        // mocked useTranslation echoes the key, matching the MultiplayerOptions
+        // assertion above. The 'Back' BackButton label stays hardcoded.
+        expect(await screen.findByText('multiplayer.publicLobbies')).toBeTruthy();
         expect(screen.getByText('Back')).toBeTruthy();
     });
 });

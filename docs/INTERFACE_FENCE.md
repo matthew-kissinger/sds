@@ -45,8 +45,8 @@ Changes to any of these require sim-baseline regeneration with **explicit accept
 
 ### Test ratchets
 
-- **[`tests/sim-baseline/*.json`](../tests/sim-baseline/)** — captured 60Hz traces from the deterministic sim.
-- **[`tests/refactor-baseline/*.json`](../tests/refactor-baseline/)** — characterization-test goldens for god-module refactors.
+- **[`tests/sim-baseline/__fixtures__/*.json`](../tests/sim-baseline/__fixtures__/)** - captured 60Hz traces from the deterministic sim.
+- **[`tests/refactor-baseline/__fixtures__/*.json`](../tests/refactor-baseline/__fixtures__/)** - characterization-test goldens for god-module refactors.
 
 Don't regenerate as a shortcut to make tests pass. Read the diff, decide, regenerate with the decision recorded in the cycle plan's Acceptance section.
 
