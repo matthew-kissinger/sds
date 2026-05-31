@@ -6,6 +6,31 @@ import { Vector2D } from './Vector2D.js';
  */
 
 /**
+ * Per-tick allocation pool (P-PERF-1). These module-level scratch vectors
+ * replace per-call `new Vector2D(0,0)` accumulators and `.clone()` temporaries
+ * in the hot flocking path. Each is reset (`.set(...)`) at the top of its use
+ * so no state leaks across calls. The math is byte-identical: `.set(a.x, a.z)`
+ * assigns the same components a `clone()` copy would, and the accumulators start
+ * from `(0,0)` exactly as the originals did.
+ *
+ * Instances MUST stay distinct where their lifetimes overlap. Inside
+ * `calculateFlockingForce`, the separation/alignment/cohesion results and the
+ * combined total are all live at once, so they use four different scratches.
+ * `calculateSeek`'s `_seekDesired` is distinct from `_cohesionSum` because
+ * `calculateCohesion` passes its sum in as `target`, which is read on the same
+ * line `desired` is written. `calculateFlee` uses its own `_fleeDesired`.
+ * Single-threaded by contract (Worker DO tick + client predictor), so reuse is
+ * safe; each function fully consumes its scratch before any sibling call runs.
+ */
+const _sepDiff = new Vector2D(0, 0);
+const _sepSteer = new Vector2D(0, 0);
+const _alignSum = new Vector2D(0, 0);
+const _cohesionSum = new Vector2D(0, 0);
+const _seekDesired = new Vector2D(0, 0);
+const _fleeDesired = new Vector2D(0, 0);
+const _totalForce = new Vector2D(0, 0);
+
+/**
  * Apply flocking behavior (separation, alignment, cohesion) to a boid
  * @param {Object} boid - The boid to apply flocking to (with position, velocity)
  * @param {Array} neighbors - Array of neighboring boids
@@ -36,11 +61,11 @@ export function calculateFlockingForce(boid, neighbors, config) {
     alignment.multiply(alignmentWeight);
     cohesion.multiply(cohesionWeight);
     
-    const totalForce = new Vector2D(0, 0);
+    const totalForce = _totalForce.set(0, 0);
     totalForce.add(separation);
     totalForce.add(alignment);
     totalForce.add(cohesion);
-    
+
     return totalForce;
 }
 
@@ -54,15 +79,15 @@ export function calculateFlockingForce(boid, neighbors, config) {
  * @returns {Vector2D} - Separation force
  */
 export function calculateSeparation(boid, neighbors, desiredSeparation, maxSpeed, maxForce) {
-    const steer = new Vector2D(0, 0);
+    const steer = _sepSteer.set(0, 0);
     let count = 0;
 
     for (let neighbor of neighbors) {
         const distance = boid.position.distanceTo(neighbor.position);
-        
+
         if (distance > 0 && distance < desiredSeparation) {
             // Calculate vector pointing away from neighbor
-            const diff = boid.position.clone().subtract(neighbor.position);
+            const diff = _sepDiff.set(boid.position.x, boid.position.z).subtract(neighbor.position);
             diff.normalize();
             diff.divide(distance); // Weight by distance (closer = stronger)
             steer.add(diff);
@@ -90,8 +115,8 @@ export function calculateSeparation(boid, neighbors, desiredSeparation, maxSpeed
  * @returns {Vector2D} - Alignment force
  */
 export function calculateAlignment(boid, neighbors, maxSpeed, maxForce) {
-    const sum = new Vector2D(0, 0);
-    
+    const sum = _alignSum.set(0, 0);
+
     for (let neighbor of neighbors) {
         sum.add(neighbor.velocity);
     }
@@ -115,8 +140,8 @@ export function calculateAlignment(boid, neighbors, maxSpeed, maxForce) {
  * @returns {Vector2D} - Cohesion force
  */
 export function calculateCohesion(boid, neighbors, maxSpeed, maxForce) {
-    const sum = new Vector2D(0, 0);
-    
+    const sum = _cohesionSum.set(0, 0);
+
     for (let neighbor of neighbors) {
         sum.add(neighbor.position);
     }
@@ -134,7 +159,7 @@ export function calculateCohesion(boid, neighbors, maxSpeed, maxForce) {
  * @returns {Vector2D} - Seek force
  */
 export function calculateSeek(boid, target, maxSpeed, maxForce) {
-    const desired = target.clone().subtract(boid.position);
+    const desired = _seekDesired.set(target.x, target.z).subtract(boid.position);
     desired.normalize();
     desired.multiply(maxSpeed);
     
@@ -157,7 +182,7 @@ export function calculateFlee(boid, target, fleeRadius, maxSpeed, maxForce) {
     const distance = boid.position.distanceTo(target);
     
     if (distance < fleeRadius) {
-        const desired = boid.position.clone().subtract(target);
+        const desired = _fleeDesired.set(boid.position.x, boid.position.z).subtract(target);
         desired.normalize();
         desired.multiply(maxSpeed);
         
