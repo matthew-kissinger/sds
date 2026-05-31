@@ -469,7 +469,9 @@ export default {
         if (token) {
           try {
             const claims = await verifyJwt(token, env.JWT_SECRET);
-            pid = (claims?.sub as string) || null;
+            // The JWT carries persistent_id (see signJwt + every other consumer);
+            // reading claims.sub here left 100% of authenticated events null.
+            pid = (claims?.persistent_id as string) || null;
           } catch { /* invalid token: stay anonymous */ }
         }
         try {

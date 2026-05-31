@@ -334,8 +334,12 @@ export class GameSimulation {
         if (clientPosition && targetVelocity.magnitude() === 0) {
             const dx = clientPosition.x - sheepdog.position.x;
             const dz = clientPosition.z - sheepdog.position.z;
-            if (dx * dx + dz * dz > 25) {
-                console.warn(`[CHEAT] clientPosition ignored for ${playerId}: delta=${Math.sqrt(dx*dx+dz*dz).toFixed(2)}`);
+            const d2 = dx * dx + dz * dz;
+            // Fail closed: NaN/Infinity (or a >5m jump) rejects. Phrasing the
+            // guard as !(d2 <= 25) means a non-finite clientPosition can't slip
+            // past the clamp and latch isInterpolatingToClient on a NaN target.
+            if (!(d2 <= 25)) {
+                console.warn(`[CHEAT] clientPosition ignored for ${playerId}: delta=${Math.sqrt(d2).toFixed(2)}`);
                 return;
             }
             // Client is stopping and sent their final position

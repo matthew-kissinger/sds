@@ -70,6 +70,11 @@ export class OptimizedSheepSystem {
         this.animationUpdateRate = 1;
         this._animationUpdateFrame = 0;
 
+        // Reusable scratch transform for per-frame instance-matrix composition,
+        // hoisted out of update() (a fresh THREE.Object3D allocates ~8 objects).
+        this._dummy = new THREE.Object3D();
+        this._dummy.rotation.order = 'YXZ';
+
         // Extreme boids optimization flag
         this.useExtremeBoids = useExtremeBoids;
         this.extremeBoidSystemInitialized = false;
@@ -552,8 +557,7 @@ export class OptimizedSheepSystem {
      * Update all sheep behaviors and animations
      */
     update(deltaTime, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null) {
-        const dummy = new THREE.Object3D();
-        dummy.rotation.order = 'YXZ';
+        const dummy = this._dummy;
 
         const sceneFog = this.scene && this.scene.fog;
         if (this.konveyorSheepMaterialControls?.update) {

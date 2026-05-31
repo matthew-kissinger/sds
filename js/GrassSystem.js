@@ -254,6 +254,9 @@ export class GrassSystem {
         // Frustum culling
         this.frustum = new THREE.Frustum();
         this.frustumMatrix = new THREE.Matrix4();
+        // Reusable scratch sphere for per-frame frustum culling, hoisted out of
+        // updateFrustumCulling (THREE.Sphere also default-allocates a Vector3).
+        this._cullSphere = new THREE.Sphere();
 
         // Cycle 22 Phase D: grass auto-LOD. Tracks recent frame times in a
         // ring buffer; if the rolling average exceeds the high-water mark
@@ -1629,9 +1632,9 @@ export class GrassSystem {
         this.stats.visibleClumps = 0;
         this.stats.chunksVisible = 0;
 
-        const boundingSphere = new THREE.Sphere();
+        const boundingSphere = this._cullSphere;
 
-        for (const [key, chunk] of this.chunks) {
+        for (const chunk of this.chunks.values()) {
             boundingSphere.center.copy(chunk.center);
             boundingSphere.radius = chunk.radius;
 
@@ -1660,7 +1663,7 @@ export class GrassSystem {
         const { lodDecimateMid, lodDecimateFar, lodHysteresis } = this.config;
         const halfBand = lodHysteresis * 0.5;
 
-        for (const [, chunk] of this.chunks) {
+        for (const chunk of this.chunks.values()) {
             if (!chunk.visible) continue;
             // Cycle 23 Phase D2: meadow-quad chunks are LOD4 — fixed, don't
             // step. Skip the LOD walker for them.
