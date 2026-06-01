@@ -183,6 +183,18 @@ export class CameraController {
         this._tmpOffset = new THREE.Vector3();
         this._tmpDest = new THREE.Vector3();
         this._tmpLook = new THREE.Vector3();
+
+        // Scratch vectors reused by transformMovement() so the per-frame
+        // input rotation does not allocate. The single caller (main.js)
+        // consumes the result synchronously the same frame. One scratch per
+        // branch (FREE / FOLLOW / competitive) so two results held live at
+        // once across a mode switch stay distinct instances (production only
+        // ever hits one branch per frame; this preserves the prior
+        // allocate-fresh semantics for any consumer that compares two
+        // successive returns).
+        this._tmpMoveFree = new Vector2D(0, 0);
+        this._tmpMoveFollow = new Vector2D(0, 0);
+        this._tmpMoveCompetitive = new Vector2D(0, 0);
     }
 
     getMode() { return this.mode; }
@@ -471,7 +483,8 @@ export class CameraController {
             const yaw = this.mode === CameraMode.FREE ? this.freeYaw : this.followYaw;
             const cos = Math.cos(yaw);
             const sin = Math.sin(yaw);
-            return new Vector2D(
+            const out = this.mode === CameraMode.FREE ? this._tmpMoveFree : this._tmpMoveFollow;
+            return out.set(
                 direction.x * cos + direction.z * sin,
                 -direction.x * sin + direction.z * cos
             );
@@ -481,7 +494,7 @@ export class CameraController {
             const fn = COMPETITIVE_INPUT_ROT[this.competitiveDirection];
             if (fn) {
                 const [x, z] = fn([direction.x, direction.z]);
-                return new Vector2D(x, z);
+                return this._tmpMoveCompetitive.set(x, z);
             }
         }
 
