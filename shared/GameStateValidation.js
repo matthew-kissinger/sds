@@ -859,9 +859,9 @@ export function checkCompetitiveCompletion(playerScores, playerCount, totalSheep
     const maxScore = Math.max(...scores);
     const totalRetired = scores.reduce((sum, score) => sum + score, 0);
     
-    // 2 players: First to 101 sheep wins (or 50.5% of total)
+    // 2 players: First to ceil(totalSheep/2) sheep wins (100 of 200, i.e. 50% of total)
     if (playerCount === 2) {
-        const winThreshold = Math.ceil(totalSheep / 2); // 101 for 200 sheep
+        const winThreshold = Math.ceil(totalSheep / 2); // 100 for 200 sheep
         if (maxScore >= winThreshold) {
             const winner = Object.keys(playerScores).find(playerId => playerScores[playerId] === maxScore);
             return {
