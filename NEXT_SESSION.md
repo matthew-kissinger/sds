@@ -1,8 +1,8 @@
 # Next Session - Cycle 50
 
-> **Updated:** 2026-05-29
+> **Updated:** 2026-06-01
 > **For:** Cycle 50
-> **Pickup priority:** Cycle 50 (`object-impostor-plumbing`) is authored ([`docs/cycle-50-plan.md`](docs/cycle-50-plan.md)): Cycle A of the object-driven impostor program, inserted ahead of the Pastoral UI program's remaining work. It is a pure refactor with zero visual change. Four phases: a data-driven `assets/objects.manifest.json` + generalized baker holding tree1/tree2 byte-identical (P1), sidecar generalization + a determinism golden (P2), the runtime route reading the manifest (P3), and octahedral made reproducible through the committed baker (P4). The Pixel Forge Kiln bake tool is present at `../pixel-forge`. Run `/cycle-start` to begin, or pick up Phase 1 directly.
+> **Pickup priority:** Cycle 50 (`object-impostor-plumbing`) Phase 1 shipped on `main` (commits `374c7a4` + `26e214f`): `assets/objects.manifest.json` exists, the baker reads it (manifest loop + an `impostorAssetBase` helper), the hardcoded `TREES=['tree1','tree2']` list is gone, and `tests/objects-manifest.spec.js` passes (5/5). Pickup is **Phase 2** (sidecar generalization + determinism golden): the baker writes `objectId/category/variant/layoutId` into each sidecar (additive) and regenerates `tree1/tree2.imposter.json`, `tests/imposter-sidecar.spec.js` generalizes off its hardcoded `TREES` onto the manifest, and a new `tests/objects-impostor-parity.spec.js` asserts a re-bake of the unchanged manifest yields byte-identical sidecars. Phase 2 then unblocks Phase 3 (runtime route) and Phase 4 (octahedral), which run in parallel. The Pixel Forge Kiln bake tool is present at `../pixel-forge`. Run `/cycle-start` to re-orient, or pick up Phase 2 directly.
 
 ## Cold-Start Orientation
 
@@ -12,7 +12,7 @@ Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file
 
 Cycle 49 (`pastoral-vision`) closed 2026-05-29: shipped 6/6 phases. It opened the Pastoral UI/UX rework program with a vision/spec cycle (zero in-game change): the design-language doc, the v2 pastoral token palette, the standalone `/gallery` route (the headless review surface, live at sheepdogsim.com/gallery), the pastoral primitive preview, the entrance/loading spec + mockups, and the container migration map. The pastoral look is Matt's post-deploy visual call on `/gallery`. No version bump; v2.1.10 stands.
 
-Cycle 50 (`object-impostor-plumbing`) is the next cycle, a render refactor inserted ahead of the UI program's remaining work (Matt's reprioritization). It makes the tree impostor pipeline object-driven (manifest-driven offline bake, generalized sidecar + runtime route, octahedral reproducible) while holding tree1/tree2 byte-identical. It is render/asset-only: no `shared/` edits, no sim-baseline regeneration, no SceneDef change, no Worker change, no version bump. Run `/cycle-start` to begin Phase 1.
+Cycle 50 (`object-impostor-plumbing`) is the active cycle, a render refactor inserted ahead of the UI program's remaining work (Matt's reprioritization). It makes the tree impostor pipeline object-driven (manifest-driven offline bake, generalized sidecar + runtime route, octahedral reproducible) while holding tree1/tree2 byte-identical. It is render/asset-only: no `shared/` edits, no sim-baseline regeneration, no SceneDef change, no Worker change, no version bump. Phase 1 (manifest + generalized baker) shipped on `main`; pickup is Phase 2 (sidecar generalization + determinism golden).
 
 ## Program threads in flight
 
