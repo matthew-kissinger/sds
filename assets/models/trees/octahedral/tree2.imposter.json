@@ -361,5 +361,9 @@
       -0.9733285267845752,
       -0.16222142113076252
     ]
-  ]
+  ],
+  "objectId": "tree2",
+  "category": "tree",
+  "variant": "base",
+  "layoutId": "octahedral"
 }

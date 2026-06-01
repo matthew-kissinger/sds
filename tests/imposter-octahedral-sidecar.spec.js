@@ -1,29 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync, existsSync, statSync } from 'node:fs';
+import { loadManifest, enabledImpostorTargets } from '../tools/bake-tree-impostors.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const OCTA_DIR = resolve(__dirname, '../assets/models/trees/octahedral');
-const TREES = ['tree1', 'tree2'];
+/**
+ * Kiln v2 octahedral tree impostor lab contract.
+ * Cycle 50 Phase 4 — generalized from a hardcoded ['tree1','tree2'] list to the
+ * object manifest's octahedral targets, and extended to assert the Cycle 50
+ * identity fields. Runtime octahedral stays lab-gated (behind
+ * ?konveyorNativeTreeImpostors=octahedral); latlon-hemi-y is the production
+ * default. This pins the v2 octahedral sidecar contract so the lab atlas can't
+ * drift silently.
+ */
 
-function loadSidecar(name) {
-  const path = resolve(OCTA_DIR, `${name}.imposter.json`);
-  expect(existsSync(path), `sidecar missing: ${path}`).toBe(true);
-  expect(statSync(path).size, `sidecar empty: ${path}`).toBeGreaterThan(0);
-  return JSON.parse(readFileSync(path, 'utf-8'));
+const octaTargets = [...enabledImpostorTargets(loadManifest())]
+  .filter((t) => t.layoutId === 'octahedral' && t.variant.default);
+
+function loadSidecar(sidecarPath) {
+  expect(existsSync(sidecarPath), `sidecar missing: ${sidecarPath}`).toBe(true);
+  expect(statSync(sidecarPath).size, `sidecar empty: ${sidecarPath}`).toBeGreaterThan(0);
+  return JSON.parse(readFileSync(sidecarPath, 'utf-8'));
 }
 
-function expectPng(name, suffix) {
-  const path = resolve(OCTA_DIR, `${name}.imposter${suffix}.png`);
-  expect(existsSync(path), `atlas missing: ${path}`).toBe(true);
-  expect(statSync(path).size, `atlas empty: ${path}`).toBeGreaterThan(0);
+function expectPng(atlasPath, suffix, label) {
+  const path = atlasPath.replace(/\.png$/, `${suffix}.png`);
+  expect(existsSync(path), `${label} missing: ${path}`).toBe(true);
+  expect(statSync(path).size, `${label} empty: ${path}`).toBeGreaterThan(0);
 }
 
 describe('Kiln v2 octahedral tree impostor lab contract', () => {
-  describe.each(TREES)('%s.imposter', (name) => {
+  it('the manifest declares octahedral for the production trees', () => {
+    const ids = octaTargets.map((t) => t.obj.id);
+    expect(ids).toEqual(expect.arrayContaining(['tree1', 'tree2']));
+  });
+
+  describe.each(octaTargets.map((t) => [t.obj.id, t]))('%s.imposter (octahedral)', (id, t) => {
     it('keeps v2 octahedral sidecar metadata explicit and lab-only', () => {
-      const m = loadSidecar(name);
+      const m = loadSidecar(t.sidecarPath);
 
       expect(m.version).toBe(2);
       expect(m.layout).toBe('octahedral');
@@ -49,10 +61,18 @@ describe('Kiln v2 octahedral tree impostor lab contract', () => {
       expect(m.edgeBleedPx).toBeGreaterThanOrEqual(2);
     });
 
+    it('carries the Cycle 50 manifest identity (objectId/category/variant/layoutId)', () => {
+      const m = loadSidecar(t.sidecarPath);
+      expect(m.objectId).toBe(t.obj.id);
+      expect(m.category).toBe(t.obj.category);
+      expect(m.variant).toBe(t.variant.id);
+      expect(m.layoutId).toBe('octahedral');
+    });
+
     it('commits albedo, normal, and depth atlases beside the v2 sidecar', () => {
-      expectPng(name, '');
-      expectPng(name, '.normal');
-      expectPng(name, '.depth');
+      expectPng(t.atlasPath, '', 'albedo');
+      expectPng(t.atlasPath, '.normal', 'normal');
+      expectPng(t.atlasPath, '.depth', 'depth');
     });
   });
 });

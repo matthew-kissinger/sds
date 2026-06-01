@@ -11,6 +11,17 @@
       "colorLayer": "baseColor",
       "edgeBleed": 2,
       "subdir": ""
+    },
+    "octahedral": {
+      "layout": "octahedral",
+      "axis": "octahedral",
+      "grid": "8x8",
+      "tileSize": 256,
+      "auxLayers": ["normal", "depth"],
+      "bg": "transparent",
+      "colorLayer": "baseColor",
+      "edgeBleed": 2,
+      "subdir": "octahedral"
     }
   },
   "objects": [
@@ -22,7 +33,7 @@
       "lod1": "assets/models/trees/tree1_lod1.glb",
       "impostor": {
         "enabled": true,
-        "layouts": ["latlon-hemi-y"],
+        "layouts": ["latlon-hemi-y", "octahedral"],
         "variants": [{ "id": "base", "default": true, "modulation": {} }]
       }
     },
@@ -34,7 +45,7 @@
       "lod1": "assets/models/trees/tree2_lod1.glb",
       "impostor": {
         "enabled": true,
-        "layouts": ["latlon-hemi-y"],
+        "layouts": ["latlon-hemi-y", "octahedral"],
         "variants": [{ "id": "base", "default": true, "modulation": {} }]
       }
     },

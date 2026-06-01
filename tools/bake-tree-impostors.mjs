@@ -146,12 +146,19 @@ async function bakeOne(obj, layoutId, preset, variant, tsxBin) {
   if (!existsSync(src)) throw new Error(`missing source GLB: ${src}`);
   const out = impostorAssetBase(obj, preset, variant);
 
+  // Octahedral uses `--layout octahedral` + `--grid` (angles ignored); latlon
+  // uses `--angles` + `--axis`. The shared flags (tile size, aux layers, bg,
+  // color layer, edge bleed) follow. Latlon's flags are unchanged from
+  // pre-Cycle-50 so the production tree1/tree2 bake stays byte-identical.
+  const isOctahedral = preset.layout === 'octahedral';
+  const layoutArgs = isOctahedral
+    ? ['--layout', 'octahedral', '--grid', preset.grid ?? '8x8']
+    : ['--angles', String(preset.angles), '--axis', preset.axis];
   const args = [
     PF_CLI,
     'kiln', 'bake-imposter', src,
     '--out', out,
-    '--angles', String(preset.angles),
-    '--axis', preset.axis,
+    ...layoutArgs,
     '--tile-size', String(preset.tileSize),
     '--aux-layers', (preset.auxLayers ?? ['normal', 'depth']).join(','),
     '--bg', preset.bg ?? 'transparent',
@@ -161,7 +168,8 @@ async function bakeOne(obj, layoutId, preset, variant, tsxBin) {
   ];
 
   const t0 = Date.now();
-  console.log(`[bake] ${obj.id} / ${layoutId} / ${variant.id} (${preset.angles} ${preset.axis}, tile ${preset.tileSize})…`);
+  const layoutDesc = isOctahedral ? `octahedral ${preset.grid ?? '8x8'}` : `${preset.angles} ${preset.axis}`;
+  console.log(`[bake] ${obj.id} / ${layoutId} / ${variant.id} (${layoutDesc}, tile ${preset.tileSize})…`);
   const { stdout, stderr } = await execFileP(tsxBin, args, {
     cwd: PF_ROOT,
     maxBuffer: 16 * 1024 * 1024,

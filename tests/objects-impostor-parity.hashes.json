@@ -6,6 +6,12 @@
     "assets/models/trees/tree1.imposter.depth.png": "3f5a157b55de2e7d73cbbe1bb9907e973f8ad66e251bfcf9568bef003de63b01",
     "assets/models/trees/tree2.imposter.png": "565c56660dbb707e836ebf3610b9c58f45ac1492ae93a2dd704821d6af119e8f",
     "assets/models/trees/tree2.imposter.normal.png": "5ab4c7c4327eed8635c61ec87f8da06ccbb04d0a0136d0c803dff0e33157052a",
-    "assets/models/trees/tree2.imposter.depth.png": "cccb3d5b966f71e63df8c311184d7568bc68c606137e7fcde84582882bebe65e"
+    "assets/models/trees/tree2.imposter.depth.png": "cccb3d5b966f71e63df8c311184d7568bc68c606137e7fcde84582882bebe65e",
+    "assets/models/trees/octahedral/tree1.imposter.png": "e280e93fab5cc5d9444938dd7d5c7b2bcbb7979c5d0f92e52c93fbdacfb77235",
+    "assets/models/trees/octahedral/tree1.imposter.normal.png": "ee6e8dd7a7c48a540d3780cf1594d3d99db95441a75b11c5ce6a0d87e3b4f445",
+    "assets/models/trees/octahedral/tree1.imposter.depth.png": "95a5651ebfc524f7e5ae4f0c8fd300db78da9aa1225ad78ef14c758742ebee87",
+    "assets/models/trees/octahedral/tree2.imposter.png": "04f1b55f8a45c2ab81be35ebc23a03199c258c2b5e40ed3acccef79e213d604e",
+    "assets/models/trees/octahedral/tree2.imposter.normal.png": "28ac5168f5e0eb2abbc79d1f84b230b8418a958062d682a3f964b3cc77423d39",
+    "assets/models/trees/octahedral/tree2.imposter.depth.png": "a1871143e3017bb14e33ba26eab2c41f87d7b552830a603dec3f8e5fcd4a8c91"
   }
 }
