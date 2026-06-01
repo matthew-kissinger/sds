@@ -9,9 +9,9 @@
 - **Per-frame perf: a handful of genuinely high-leverage allocations** (Worker O(N^2) loop-invariant filter, per-frame `Object3D`, a 5000-wide grass gather). Most of the larger "critical" list is the `shared/` boid path, which only runs on the Worker DO + offline harness (Solo Chaos uses the pooled client `ExtremeBoidSystem`).
 - **Coverage: 41 gaps, keystone first.** The sim-baseline harness hand-mirrors `GameSim` with no drift check, so today every fixture asserts the harness matches itself, not the authoritative Worker.
 
-## Execution status (branch `audit-followups-2026-05`, updated 2026-05-31)
+## Execution status (branch `audit-followups-2026-05`, updated 2026-06-01 - SHIPPED + DEPLOYED)
 
-All roadmap waves are implemented, validated green (864 tests, build + `eslint shared/` clean), committed on `audit-followups-2026-05`, and merged into `main`. No deploy, no remote D1 migration applied. Commits:
+All roadmap waves are implemented, validated green (864 tests, build + `eslint shared/` clean), committed on `audit-followups-2026-05`, merged into `main`, and DEPLOYED to production on 2026-06-01 (CI `deploy.yml` run 26741298731: Worker + Pages both succeeded). Commits:
 
 - Quick wins (`78a198c`) + this roadmap and the drafted P-SEC-1 plan (`e0a387a`).
 - Wave 1 (`d4f9fab`): read-only characterization specs (Vector2D, Random, MovementPhysics, flocking, CameraController, StructureBuilder), doc-drift fixes, knip report, locale-parity ratchet. +123 tests.
@@ -25,7 +25,7 @@ All roadmap waves are implemented, validated green (864 tests, build + `eslint s
 
 Test count over this effort: 606 -> 864.
 
-**Deploy coupling (Matt's explicit step, not done here):** P-SEC-1 + P-SEC-2 require the worker AND client deployed TOGETHER (a worker-only deploy would bind secrets / demand upgrade tickets the old client cannot satisfy). Run `wrangler migrations apply` for `0007` at deploy. Nothing in this program is live until that deploy.
+**Deployed 2026-06-01:** migration `0007` was applied to remote D1 first (additive nullable columns, safe for the still-live old worker), then the branch merged to `main` and CI (`deploy.yml`) deployed the Worker + Pages **together** (the P-SEC-1/P-SEC-2 coupling requirement). The first push was blocked by a pre-existing Cycle 50 `objects-manifest` CI test (it asserted gitignored GLB originals exist); fixed with a CI-portability gate (`26e214f`), after which CI went green and deployed. Smoke-tested live on `sds-worker.matt-m-kissinger.workers.dev`: `GET /healthz` ok; `POST /api/register` (new identity) returns a server-minted UUID `persistent_id` + JWT + one-time `authSecret`; `GET /api/leaderboard?...&scene=...` returns 200. Auth rebuild + migration confirmed aligned in production.
 
 **Deferred follow-ups:** account-code recovery (cross-device identity, the rejected options b/c of P-SEC-1); the cosmetic `animationPhase`/`facingDirection` + timed-respawn global-RNG draws (around `GameSim.js:172`, outside P-DET-1's five-function scope); the pre-existing `d1.ts scoreColumn` TS2366 exhaustiveness gap; and a stale source comment (`GameStateValidation.js` says the 2p completion threshold is 101, actual is `Math.ceil(totalSheep/2)` = 100 for 200 sheep).
 
