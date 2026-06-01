@@ -1,0 +1,11 @@
+{
+  "_comment": "Recorded sha256 of the committed Kiln impostor atlas PNGs (Cycle 50 Phase 2 determinism golden). A real re-bake must reproduce these byte-for-byte; tests/objects-impostor-parity.spec.js fails on drift. Regenerating these hashes is the explicit, reviewed act of accepting a new bake (see docs/cycle-50-plan.md hard stops and .claude/rules/scene-and-render.md).",
+  "atlases": {
+    "assets/models/trees/tree1.imposter.png": "2b5fb0bb67afd90a138133dd10e5cd8bb90653b6c86434499da0f575a67205e4",
+    "assets/models/trees/tree1.imposter.normal.png": "df71f73d3475ea7462b004a7a81ac001b07720e96cb53a7f42ad7cc00d5a3944",
+    "assets/models/trees/tree1.imposter.depth.png": "3f5a157b55de2e7d73cbbe1bb9907e973f8ad66e251bfcf9568bef003de63b01",
+    "assets/models/trees/tree2.imposter.png": "565c56660dbb707e836ebf3610b9c58f45ac1492ae93a2dd704821d6af119e8f",
+    "assets/models/trees/tree2.imposter.normal.png": "5ab4c7c4327eed8635c61ec87f8da06ccbb04d0a0136d0c803dff0e33157052a",
+    "assets/models/trees/tree2.imposter.depth.png": "cccb3d5b966f71e63df8c311184d7568bc68c606137e7fcde84582882bebe65e"
+  }
+}

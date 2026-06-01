@@ -50,5 +50,9 @@
   "colorLayer": "baseColor",
   "normalSpace": "capture-view",
   "edgeBleedPx": 2,
-  "textureColorSpace": "srgb"
+  "textureColorSpace": "srgb",
+  "objectId": "tree2",
+  "category": "tree",
+  "variant": "base",
+  "layoutId": "latlon-hemi-y"
 }

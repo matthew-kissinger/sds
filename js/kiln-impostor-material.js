@@ -635,6 +635,11 @@ export function createKilnImpostorMaterial({
         layout: sidecar.layout ?? null,
         axis: sidecar.axis ?? null,
         version: sidecar.version ?? 1,
+        // Cycle 50 Phase 2: manifest identity stamped on the sidecar. Surfaced
+        // for the konveyor summary / inspector only — not a shader-math input.
+        objectId: sidecar.objectId ?? null,
+        variant: sidecar.variant ?? null,
+        layoutId: sidecar.layoutId ?? null,
         tilesX: layoutTilesX,
         tilesY: layoutTilesY,
         shaderTilesX: TILES_X,
@@ -683,6 +688,12 @@ export function createKilnImpostorMaterial({
   material.userData.isKilnImpostor = true;
   // Stash sidecar for downstream consumers (e.g. the inspector page).
   material.userData.sidecar = sidecar;
+  // Cycle 50 Phase 2: manifest identity (objectId/variant/layoutId), summary-only.
+  material.userData.impostorIdentity = {
+    objectId: sidecar.objectId ?? null,
+    variant: sidecar.variant ?? null,
+    layoutId: sidecar.layoutId ?? null,
+  };
   material.userData.konveyorImpostorMaterialControls = materialResult.controls;
   material.userData.konveyorImpostorMaterialSummary = materialResult.summary;
   return material;

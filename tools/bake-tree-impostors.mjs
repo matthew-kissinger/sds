@@ -29,8 +29,8 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve, dirname } from 'node:path';
-import { existsSync, statSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { existsSync, statSync, readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const execFileP = promisify(execFile);
 
@@ -59,7 +59,7 @@ function pickTsxBin() {
 }
 
 /** Load + lightly validate the object manifest. */
-function loadManifest() {
+export function loadManifest() {
   const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
   if (!Array.isArray(manifest.objects)) throw new Error('manifest.objects must be an array');
   if (!manifest.layoutPresets || typeof manifest.layoutPresets !== 'object') {
@@ -75,11 +75,70 @@ function loadManifest() {
  * a `.<variantId>` suffix; layouts with a subdir (e.g. octahedral) nest under
  * it. The impostor lives beside the object's runtime model.
  */
-function impostorAssetBase(obj, preset, variant) {
+export function impostorAssetBase(obj, preset, variant) {
   const modelDir = resolve(SDS_ROOT, dirname(obj.runtimeModel));
   const dir = preset.subdir ? resolve(modelDir, preset.subdir) : modelDir;
   const variantSuffix = variant.default ? '' : `.${variant.id}`;
   return resolve(dir, `${obj.id}${variantSuffix}.imposter.png`);
+}
+
+/** Sidecar path beside the atlas: `<base>.imposter.png` -> `<base>.imposter.json`. */
+export function sidecarPathFor(obj, preset, variant) {
+  return impostorAssetBase(obj, preset, variant).replace(/\.png$/, '.json');
+}
+
+/**
+ * Every (object, layout, variant) the manifest marks impostor-enabled, with the
+ * derived atlas + sidecar paths. Single source of truth for the bake matrix,
+ * shared by the CLI here and the parity/sidecar specs so they cannot drift.
+ */
+export function* enabledImpostorTargets(manifest) {
+  for (const obj of manifest.objects) {
+    if (!obj.impostor?.enabled) continue;
+    for (const layoutId of obj.impostor.layouts) {
+      const preset = manifest.layoutPresets[layoutId];
+      if (!preset) throw new Error(`object ${obj.id} references unknown layout "${layoutId}"`);
+      for (const variant of obj.impostor.variants) {
+        yield {
+          obj,
+          layoutId,
+          preset,
+          variant,
+          atlasPath: impostorAssetBase(obj, preset, variant),
+          sidecarPath: sidecarPathFor(obj, preset, variant),
+        };
+      }
+    }
+  }
+}
+
+/** Manifest-derived identity fields stamped onto each sidecar (Cycle 50 Phase 2). */
+export function impostorIdentity(obj, layoutId, variant) {
+  return { objectId: obj.id, category: obj.category, variant: variant.id, layoutId };
+}
+
+/**
+ * Merge the identity fields onto a parsed sidecar. Additive + idempotent:
+ * re-applying to an already-stamped sidecar reproduces it byte-for-byte (the
+ * determinism golden in tests/objects-impostor-parity.spec.js relies on this).
+ */
+export function withImpostorIdentity(sidecar, identity) {
+  return { ...sidecar, ...identity };
+}
+
+/** Canonical sidecar serialization (2-space, no trailing newline). */
+export function serializeSidecar(sidecar) {
+  return JSON.stringify(sidecar, null, 2);
+}
+
+/**
+ * Read a Kiln-written sidecar, stamp the manifest identity onto it, write it
+ * back canonically. The PNG atlases are never touched, so this is byte-safe for
+ * the tree1/tree2 production atlases (Cycle 50 holds them byte-identical).
+ */
+export function augmentSidecarFile(sidecarPath, identity) {
+  const sidecar = JSON.parse(readFileSync(sidecarPath, 'utf8'));
+  writeFileSync(sidecarPath, serializeSidecar(withImpostorIdentity(sidecar, identity)));
 }
 
 async function bakeOne(obj, layoutId, preset, variant, tsxBin) {
@@ -124,28 +183,46 @@ async function bakeOne(obj, layoutId, preset, variant, tsxBin) {
   }
 }
 
-(async () => {
-  const tsxBin = pickTsxBin();
+/**
+ * Bake (or, with `--augment-only`, just re-stamp sidecars for) every
+ * impostor-enabled object in the manifest. `--augment-only` skips the Kiln
+ * render entirely: it reads each committed sidecar, stamps the manifest
+ * identity, and rewrites it, leaving the PNG atlases untouched. That is how the
+ * Cycle 50 Phase 2 identity fields land on tree1/tree2 without a re-render (CI
+ * has neither the source GLBs nor a browser, so it can never render here).
+ */
+export async function bakeAll({ augmentOnly = false } = {}) {
   const manifest = loadManifest();
-  const targets = manifest.objects.filter((o) => o.impostor?.enabled);
-  console.log(`pixel-forge tsx:  ${tsxBin}`);
+  const targets = [...enabledImpostorTargets(manifest)];
+  const tsxBin = augmentOnly ? null : pickTsxBin();
+  if (!augmentOnly) console.log(`pixel-forge tsx:  ${tsxBin}`);
   console.log(`manifest:         ${MANIFEST_PATH}`);
-  console.log(`impostor objects: ${targets.map((o) => o.id).join(', ') || '(none)'}\n`);
+  console.log(`mode:             ${augmentOnly ? 'augment-only (no render)' : 'full bake'}`);
+  console.log(`impostor targets: ${targets.map((t) => `${t.obj.id}/${t.layoutId}/${t.variant.id}`).join(', ') || '(none)'}\n`);
 
   let count = 0;
-  for (const obj of targets) {
-    for (const layoutId of obj.impostor.layouts) {
-      const preset = manifest.layoutPresets[layoutId];
-      if (!preset) throw new Error(`object ${obj.id} references unknown layout "${layoutId}"`);
-      for (const variant of obj.impostor.variants) {
-        await bakeOne(obj, layoutId, preset, variant, tsxBin);
-        count++;
-      }
+  for (const t of targets) {
+    if (!augmentOnly) {
+      await bakeOne(t.obj, t.layoutId, t.preset, t.variant, tsxBin);
+    } else if (!existsSync(t.sidecarPath)) {
+      throw new Error(
+        `--augment-only: sidecar missing for ${t.obj.id}/${t.layoutId}/${t.variant.id} ` +
+        `(${t.sidecarPath}). Run a full bake first.`
+      );
     }
+    // Stamp identity in both modes: a full bake also re-runs this after Kiln
+    // writes the raw sidecar, so the committed file is always baker output.
+    augmentSidecarFile(t.sidecarPath, impostorIdentity(t.obj, t.layoutId, t.variant));
+    if (augmentOnly) console.log(`[augment] ${t.obj.id} / ${t.layoutId} / ${t.variant.id}`);
+    count++;
   }
 
-  console.log(`\n[bake] all ${count} object-impostor bakes done.`);
-})().catch((err) => {
-  console.error('[bake] FAILED:', err.message);
-  process.exit(1);
-});
+  console.log(`\n[bake] all ${count} object-impostor ${augmentOnly ? 'sidecar augments' : 'bakes'} done.`);
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  bakeAll({ augmentOnly: process.argv.includes('--augment-only') }).catch((err) => {
+    console.error('[bake] FAILED:', err.message);
+    process.exit(1);
+  });
+}
