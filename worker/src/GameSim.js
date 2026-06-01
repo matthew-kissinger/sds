@@ -38,6 +38,49 @@ import {
 } from '../../shared/index.js';
 import { mulberry32 } from '../../shared/Random.js';
 
+// P-SEC-3: server input trust boundary. The DO is authoritative, but a client
+// can send any MessagePack payload it likes over the playerInput channel. Two
+// shapes are hostile and were not previously rejected:
+//   - a `direction` that is missing, non-object, or carries a non-finite x/z
+//     (NaN/Infinity) propagates straight into the physics and poisons the
+//     sheepdog's position with NaN, which then desyncs every client.
+//   - a non-finite `inputSequence` (Infinity slipped through the `?? 0` chain
+//     in RoomDO) latches `sheepdog.inputSequence` at Infinity, so every
+//     subsequent finite input fails the `<=` freshness check and the dog
+//     freezes for the rest of the game.
+// These two helpers are the single validation point shared by the RoomDO
+// message handler (drop at ingress) and applyPlayerInput (defence in depth).
+
+// A valid movement direction is an object with finite numeric x and z.
+export function isValidInputDirection(direction) {
+    return (
+        !!direction &&
+        typeof direction === 'object' &&
+        typeof direction.x === 'number' && Number.isFinite(direction.x) &&
+        typeof direction.z === 'number' && Number.isFinite(direction.z)
+    );
+}
+
+// Coerce a wire-supplied input sequence to a finite, non-negative integer.
+// Returns null when the value can't be made into one (NaN, Infinity, non-
+// numeric) so the caller can reject the input instead of latching a poisoned
+// sequence number. Fractional values floor; negatives clamp to 0.
+export function coerceInputSequence(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    return Math.max(0, Math.floor(n));
+}
+
+// P-SEC-4 (b): DoS cap on the per-dog pending-input queue. A hostile client can
+// push playerInput frames far faster than the 60Hz tick drains them; without a
+// bound the queue grows without limit (memory) and a single tick that drained
+// the whole backlog would do unbounded work. We keep only the most recent
+// MAX_PENDING_INPUTS at enqueue (newest wins — stale inputs are worthless to an
+// authoritative sim that already advanced past them) and process at most one per
+// dog per tick. A legitimate client at 144Hz only ever has ~2-3 queued between
+// 60Hz ticks, so this cap is generous: it only bites a flooder.
+export const MAX_PENDING_INPUTS = 8;
+
 export class GameSimulation {
     constructor(room) {
         this.room = room;
@@ -283,44 +326,64 @@ export class GameSimulation {
 
     tick() {
         if (!this.isRunning) return;
-        
+
         const currentTime = Date.now();
-        
-        // Process player inputs
-        this.processPlayerInputs();
-        
-        // Update sheepdog physics
-        this.updateSheepdogs();
-        
-        // Update sheep behavior and movement
-        this.updateSheep();
 
-        // Cycle 34 Phase 2: advance the multi-stage objective. No-op when
-        // there's no objective or stage is already 'drive'. Mutates
-        // this.objective in place — `createGameStateSnapshot` reads the
-        // post-tick state for the optional `objective` wire field.
-        if (this.objective) {
-            tickObjective(this.objective, this.gameState.sheep, this.deltaTime, null);
+        // P-SEC-3: wrap the whole tick body so a single malformed input (or any
+        // unexpected throw in a per-tick subsystem) can never abort the broadcast
+        // loop for the entire room. Before this, an exception anywhere in
+        // processPlayerInputs/updateSheep/etc. propagated out of the setInterval
+        // callback and the room silently stopped advancing for everyone. We log
+        // and let the next tick try again; the input validation above means a
+        // hostile input is dropped long before it reaches here, so this is the
+        // backstop, not the primary defence.
+        try {
+            // Process player inputs
+            this.processPlayerInputs();
+
+            // Update sheepdog physics
+            this.updateSheepdogs();
+
+            // Update sheep behavior and movement
+            this.updateSheep();
+
+            // Cycle 34 Phase 2: advance the multi-stage objective. No-op when
+            // there's no objective or stage is already 'drive'. Mutates
+            // this.objective in place — `createGameStateSnapshot` reads the
+            // post-tick state for the optional `objective` wire field.
+            if (this.objective) {
+                tickObjective(this.objective, this.gameState.sheep, this.deltaTime, null);
+            }
+
+            // Update timed mode specific logic
+            if (this.isTimedMode) {
+                this.updateTimedMode(currentTime);
+            }
+
+            // Check game completion
+            this.checkGameCompletion();
+
+            // Broadcast state to all clients in room
+            this.broadcastGameState();
+        } catch (e) {
+            console.error(`[GameSim ${this.room?.roomCode}] tick error (continuing loop):`, e?.stack || e);
         }
 
-        // Update timed mode specific logic
-        if (this.isTimedMode) {
-            this.updateTimedMode(currentTime);
-        }
-
-        // Check game completion
-        this.checkGameCompletion();
-        
-        // Broadcast state to all clients in room
-        this.broadcastGameState();
-        
         this.lastTickTime = currentTime;
     }
 
     processPlayerInputs() {
         for (const [playerId, sheepdog] of this.sheepdogs.entries()) {
-            // Process any pending inputs for this player
-            while (sheepdog.pendingInputs.length > 0) {
+            // P-SEC-4 (b): process at most ONE input per dog per tick. Draining
+            // the whole queue per tick (the old `while`) let a flooder's backlog
+            // do work proportional to how fast they sent, turning the input
+            // channel into a per-tick CPU-amplification lever. One-per-tick caps
+            // per-dog work at O(1) regardless of queue depth; the freshness
+            // (`seq <= inputSequence`) check in applyPlayerInput already makes
+            // superseded queued inputs no-ops, and we keep the newest at enqueue,
+            // so dropping older queued frames here costs nothing a client relies
+            // on. The 60Hz tick still consumes one fresh input every ~16ms.
+            if (sheepdog.pendingInputs.length > 0) {
                 const input = sheepdog.pendingInputs.shift();
                 this.applyPlayerInput(playerId, input);
             }
@@ -332,13 +395,31 @@ export class GameSimulation {
         if (!sheepdog) return;
 
         const { direction, sprint, inputSequence, timestamp, clientPosition } = input;
-        
+
+        // P-SEC-3: trust boundary. Reject a missing/non-finite direction before
+        // it reaches Vector2D — a NaN here latches into sheepdog.position and
+        // desyncs the room. Defence in depth: RoomDO already drops this shape at
+        // ingress, but applyPlayerInput is also reachable from pendingInputs and
+        // from tests, so guard here too.
+        if (!isValidInputDirection(direction)) {
+            return;
+        }
+
+        // P-SEC-3: coerce the sequence to a finite integer. Without this an
+        // Infinity (which slipped through RoomDO's `?? 0` chain) would pass the
+        // `<=` freshness check once and then pin sheepdog.inputSequence at
+        // Infinity, freezing the dog for the rest of the game. null => reject.
+        const seq = coerceInputSequence(inputSequence);
+        if (seq === null) {
+            return;
+        }
+
         // Validate input sequence to prevent old/duplicate inputs
-        if (inputSequence <= sheepdog.inputSequence) {
+        if (seq <= sheepdog.inputSequence) {
             return; // Ignore old input
         }
-        
-        sheepdog.inputSequence = inputSequence;
+
+        sheepdog.inputSequence = seq;
         sheepdog.lastInputTime = timestamp;
 
         // Apply movement input
@@ -1019,6 +1100,17 @@ export class GameSimulation {
             ...inputData,
             timestamp: Date.now()
         });
+
+        // P-SEC-4 (b): bound the queue to the most recent MAX_PENDING_INPUTS.
+        // A flooder pushing thousands of frames between ticks would otherwise
+        // grow this array without limit. Newest-wins: an authoritative sim only
+        // cares about the freshest input (it already advanced past older ones),
+        // so shifting the oldest off is lossless for legitimate play. Combined
+        // with one-per-tick draining in processPlayerInputs, total queued work
+        // is hard-capped.
+        while (sheepdog.pendingInputs.length > MAX_PENDING_INPUTS) {
+            sheepdog.pendingInputs.shift();
+        }
     }
     
     // Cleanup simulation resources

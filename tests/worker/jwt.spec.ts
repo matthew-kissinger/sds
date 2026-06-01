@@ -6,7 +6,7 @@
 // crypto.subtle (used by jwt.ts hmac) is available in the Node test runtime,
 // same as on the Worker V8 isolate - no polyfill needed.
 import { describe, it, expect } from 'vitest';
-import { signJwt, verifyJwt } from '../../worker/src/jwt';
+import { signJwt, verifyJwt, signTicket, verifyTicket } from '../../worker/src/jwt';
 
 const SECRET = 'test-jwt-secret-do-not-ship';
 
@@ -69,5 +69,64 @@ describe('verifyJwt rejects', () => {
   it('a token signed with a different secret', async () => {
     const token = await signJwt({ persistent_id: 'pid-123' }, SECRET);
     expect(await verifyJwt(token, 'a-different-secret')).toBeNull();
+  });
+});
+
+// P-SEC-2: the WS admission ticket. It rides the /ws handshake query string (a
+// browser WebSocket can't set Authorization) and binds the verified identity to
+// the exact room + session it was minted for, so a leaked session id can't open
+// a socket. verifyTicket layers four checks over verifyJwt: kind, persistent_id
+// presence, sessionId match, and case-insensitive roomCode match.
+describe('signTicket / verifyTicket', () => {
+  const EXPECT = { roomCode: 'ROOM42', sessionId: 'sess-abc' };
+
+  it('round-trips a ticket bound to the matching room + session', async () => {
+    const t = await signTicket({ persistent_id: 'pid-1', sessionId: 'sess-abc', roomCode: 'ROOM42' }, SECRET);
+    const claims = await verifyTicket(t, SECRET, EXPECT);
+    expect(claims).not.toBeNull();
+    expect(claims!.persistent_id).toBe('pid-1');
+    expect(claims!.sessionId).toBe('sess-abc');
+    expect(claims!.roomCode).toBe('ROOM42');
+  });
+
+  it('matches roomCode case-insensitively (router upper-cases the code)', async () => {
+    const t = await signTicket({ persistent_id: 'pid-1', sessionId: 'sess-abc', roomCode: 'room42' }, SECRET);
+    expect(await verifyTicket(t, SECRET, { roomCode: 'ROOM42', sessionId: 'sess-abc' })).not.toBeNull();
+  });
+
+  it('rejects a ticket minted for a different session id', async () => {
+    const t = await signTicket({ persistent_id: 'pid-1', sessionId: 'other-sess', roomCode: 'ROOM42' }, SECRET);
+    expect(await verifyTicket(t, SECRET, EXPECT)).toBeNull();
+  });
+
+  it('rejects a ticket minted for a different room', async () => {
+    const t = await signTicket({ persistent_id: 'pid-1', sessionId: 'sess-abc', roomCode: 'OTHER1' }, SECRET);
+    expect(await verifyTicket(t, SECRET, EXPECT)).toBeNull();
+  });
+
+  it('rejects a plain session JWT replayed as a ticket (missing kind: ws)', async () => {
+    // A normal /api token has no `kind` claim, so it can't be used to open a WS.
+    const sessionToken = await signJwt({ persistent_id: 'pid-1', sessionId: 'sess-abc', roomCode: 'ROOM42' }, SECRET);
+    expect(await verifyTicket(sessionToken, SECRET, EXPECT)).toBeNull();
+  });
+
+  it('rejects a ticket signed with a different secret', async () => {
+    const t = await signTicket({ persistent_id: 'pid-1', sessionId: 'sess-abc', roomCode: 'ROOM42' }, SECRET);
+    expect(await verifyTicket(t, 'a-different-secret', EXPECT)).toBeNull();
+  });
+
+  it('rejects an expired ticket', async () => {
+    const t = await signTicket({ persistent_id: 'pid-1', sessionId: 'sess-abc', roomCode: 'ROOM42' }, SECRET, -10);
+    expect(await verifyTicket(t, SECRET, EXPECT)).toBeNull();
+  });
+
+  it('a ticket cannot be replayed as a session token, but verifyJwt still reads its identity', async () => {
+    // The reverse direction: a ws ticket IS a valid JWT (verifyJwt accepts it),
+    // but it carries kind:'ws'. Consumers that mint session tokens never set
+    // kind, so this asymmetry is what keeps the two token classes separate.
+    const t = await signTicket({ persistent_id: 'pid-1', sessionId: 'sess-abc', roomCode: 'ROOM42' }, SECRET);
+    const asJwt = await verifyJwt(t, SECRET);
+    expect(asJwt!.persistent_id).toBe('pid-1');
+    expect(asJwt!.kind).toBe('ws');
   });
 });

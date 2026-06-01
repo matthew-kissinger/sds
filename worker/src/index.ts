@@ -3,7 +3,7 @@
 
 import { RoomDO } from './RoomDO';
 import { LobbyDO } from './LobbyDO';
-import { signJwt, verifyJwt } from './jwt';
+import { signJwt, verifyJwt, signTicket, verifyTicket } from './jwt';
 import {
   registerPlayer,
   getPlayer,
@@ -11,6 +11,8 @@ import {
   getLeaderboard,
   getAllLeaderboards,
   isValidGameMode,
+  isDailyMode,
+  validateDailySubmission,
   AuthError,
   type GameMode,
 } from './d1';
@@ -39,6 +41,101 @@ const ALLOWED_ORIGINS = new Set([
   'http://127.0.0.1:3000',
   'http://127.0.0.1:5173',
 ]);
+
+// P-SEC-4 (g): front-door rate limiter. A best-effort per-isolate token bucket
+// keyed by the client IP (cf-connecting-ip). Cloudflare keeps isolates warm and
+// pins a given client to a colo, so the overwhelming majority of one IP's
+// requests hit the same isolate — enough to blunt a register/event/room-create
+// flood without standing up a per-request DO round-trip on the hot path (which
+// the multiplayer contract warns against). It is intentionally NOT a global
+// counter: a determined distributed flood needs Cloudflare's edge WAF, not app
+// code. Buckets refill continuously at REFILL_PER_SEC up to BUCKET_CAPACITY.
+// The cap is generous: a real client makes a handful of these calls per session
+// (register once, create/join a room, poll leaderboards), nowhere near 60/min.
+const RATE_BUCKET_CAPACITY = 60;       // burst allowance per IP
+const RATE_REFILL_PER_SEC = 1;         // sustained 60/min steady-state
+const RATE_BUCKET_MAX_ENTRIES = 10_000; // cap the map so it can't grow unbounded
+interface TokenBucket { tokens: number; last: number; }
+const rateBuckets = new Map<string, TokenBucket>();
+
+// P-SEC-5: per-persistent_id score-submission limiter. The front-door limiter
+// above is IP-keyed and the /api/score route is intentionally NOT in its list
+// (score POSTs are authenticated, low-frequency, and we want the limit pinned
+// to the identity, not the colo). A legitimate client posts one score at the
+// end of a run — a handful per session at most — so a tight bucket blunts a
+// script replaying a forged time hundreds of times under one stolen token.
+const SCORE_BUCKET_CAPACITY = 10;       // burst allowance per persistent_id
+const SCORE_REFILL_PER_SEC = 0.2;       // sustained 12/min steady-state
+const scoreBuckets = new Map<string, TokenBucket>();
+
+// P-SEC-5: modes the public POST /api/score must never accept. 'competitive'
+// and 'timed' are multiplayer outcomes written ONLY by RoomDO.onSubmitScores
+// after a DO-validated match; a client posting them is forging a result.
+const PUBLIC_SCORE_FORBIDDEN_MODES: ReadonlySet<string> = new Set(['competitive', 'timed']);
+
+// Shared token-bucket arithmetic. Refills `bucket` continuously since its last
+// touch (capped at `capacity`), consumes one token if available, and returns
+// whether the call is allowed. Mutates `bucket` in place.
+function consumeToken(
+  bucket: TokenBucket,
+  now: number,
+  capacity: number,
+  refillPerSec: number,
+): boolean {
+  const elapsedSec = (now - bucket.last) / 1000;
+  bucket.tokens = Math.min(capacity, bucket.tokens + elapsedSec * refillPerSec);
+  bucket.last = now;
+  if (bucket.tokens < 1) return false;
+  bucket.tokens -= 1;
+  return true;
+}
+
+// Opportunistic eviction so a key-spoofing flood can't grow `map` without
+// bound: when oversized, drop fully-refilled (idle) buckets.
+function evictIdleBuckets(
+  map: Map<string, TokenBucket>,
+  now: number,
+  capacity: number,
+  refillPerSec: number,
+  maxEntries: number,
+): void {
+  if (map.size <= maxEntries) return;
+  for (const [k, b] of map) {
+    const refilled = Math.min(capacity, b.tokens + ((now - b.last) / 1000) * refillPerSec);
+    if (refilled >= capacity) map.delete(k);
+    if (map.size <= maxEntries) break;
+  }
+}
+
+// Returns true if the request is allowed, false if the IP is over budget. A
+// missing IP (local dev, internal call) is always allowed — we never want to
+// hard-fail a request we can't attribute. Consumes one token on success.
+function frontDoorAllowed(ip: string | null): boolean {
+  if (!ip) return true;
+  const now = Date.now();
+  evictIdleBuckets(rateBuckets, now, RATE_BUCKET_CAPACITY, RATE_REFILL_PER_SEC, RATE_BUCKET_MAX_ENTRIES);
+  let b = rateBuckets.get(ip);
+  if (!b) {
+    b = { tokens: RATE_BUCKET_CAPACITY, last: now };
+    rateBuckets.set(ip, b);
+  }
+  return consumeToken(b, now, RATE_BUCKET_CAPACITY, RATE_REFILL_PER_SEC);
+}
+
+// P-SEC-5: returns true if this persistent_id may submit another score now,
+// false if it has exhausted its bucket. A missing pid never reaches here (the
+// route requires a verified token before calling this). Consumes one token on
+// success.
+function scoreSubmitAllowed(persistentId: string): boolean {
+  const now = Date.now();
+  evictIdleBuckets(scoreBuckets, now, SCORE_BUCKET_CAPACITY, SCORE_REFILL_PER_SEC, RATE_BUCKET_MAX_ENTRIES);
+  let b = scoreBuckets.get(persistentId);
+  if (!b) {
+    b = { tokens: SCORE_BUCKET_CAPACITY, last: now };
+    scoreBuckets.set(persistentId, b);
+  }
+  return consumeToken(b, now, SCORE_BUCKET_CAPACITY, SCORE_REFILL_PER_SEC);
+}
 
 function corsHeaders(origin: string | null): Record<string, string> {
   const allow =
@@ -78,6 +175,23 @@ function roomStub(env: Env, roomCode: string): DurableObjectStub {
   return env.ROOM_DO.get(id);
 }
 
+// P-SEC-4 (e): release a previously-claimed room slot on the singleton lobby.
+// Best-effort; a swallowed failure only means a slot lingers until the lobby's
+// stale sweep reclaims it.
+async function releaseRoomClaim(env: Env, roomCode: string): Promise<void> {
+  try {
+    await lobbyStub(env).fetch(
+      new Request('https://do/release-room', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ roomCode }),
+      }),
+    );
+  } catch {
+    /* best-effort */
+  }
+}
+
 async function extractToken(request: Request, env: Env, body: any): Promise<any | null> {
   const auth = request.headers.get('Authorization');
   const token = (auth?.startsWith('Bearer ') ? auth.slice(7) : body?.token) ?? null;
@@ -89,6 +203,14 @@ function makeSessionId(): string {
   // 16 hex chars — ephemeral per-WS session id. Not to be confused with persistent_id.
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// P-SEC-2: mint the WS admission ticket that binds the just-authenticated
+// persistent_id to the room + session the REST handler allocated. The client
+// rides it on the /ws upgrade URL; the upgrade router verifies it before
+// forwarding. Short TTL — it's consumed at the immediately-following upgrade.
+function makeWsTicket(env: Env, persistentId: string, sessionId: string, roomCode: string): Promise<string> {
+  return signTicket({ persistent_id: persistentId, sessionId, roomCode }, env.JWT_SECRET);
 }
 
 export default {
@@ -107,11 +229,49 @@ export default {
     const wsMatch = path.match(/^\/r\/([A-Z0-9]{3,8})\/ws$/i);
     if (wsMatch) {
       const code = wsMatch[1].toUpperCase();
+      // P-SEC-2: the upgrade must carry the WS admission ticket minted by the
+      // REST create/join handler. A browser WebSocket can't set an Authorization
+      // header, so the ticket rides the query string. We verify signature +
+      // expiry + that it was minted for this exact (room, session) BEFORE
+      // forwarding to the DO, then hand the DO the verified persistent_id via an
+      // internal header so it never has to re-derive identity from a bare id.
+      const sessionId = url.searchParams.get('playerId');
+      const ticket = url.searchParams.get('ticket');
+      if (!sessionId) return err('missing playerId', 401, cors);
+      if (!ticket) return err('missing ticket', 401, cors);
+      const claims = await verifyTicket(ticket, env.JWT_SECRET, { roomCode: code, sessionId });
+      if (!claims) return err('invalid ticket', 401, cors);
+
       const stub = roomStub(env, code);
-      // Forward with original URL so DO sees query params.
+      // Forward with original URL so DO sees query params, plus the verified
+      // persistent_id on an internal header the client can't forge (the DO is
+      // only reachable through this Worker).
       const doUrl = new URL(url);
       doUrl.pathname = '/ws';
-      return stub.fetch(new Request(doUrl.toString(), request));
+      const fwd = new Request(doUrl.toString(), request);
+      fwd.headers.set('X-Auth-Persistent-Id', claims.persistent_id);
+      return stub.fetch(fwd);
+    }
+
+    // P-SEC-4 (g): front-door rate limit on the public mutation + heavy-read
+    // endpoints. Applied AFTER the WS upgrade (which has its own per-connection
+    // limiter) and the OPTIONS preflight, but before any route work or D1 hit,
+    // so a flood is rejected at the cheapest point. Scoped to the abuse-prone
+    // routes: register (account creation), event (telemetry firehose), rooms*
+    // (room creation / join / quick-match — each spins up DO work), and
+    // leaderboards (the heavy GROUP-BY read). Healthz + the admin readout are
+    // intentionally exempt. Returns 429 with a Retry-After hint.
+    const rateLimited =
+      path === '/api/register' ||
+      path === '/api/event' ||
+      path === '/api/leaderboard' ||
+      path === '/api/leaderboards' ||
+      path.startsWith('/api/rooms');
+    if (rateLimited) {
+      const clientIp = request.headers.get('cf-connecting-ip');
+      if (!frontDoorAllowed(clientIp)) {
+        return err('rate limit exceeded', 429, { ...cors, 'retry-after': '1' });
+      }
     }
 
     // --- HTTP API ---
@@ -185,6 +345,21 @@ export default {
         );
         const { roomCode } = await codeRes.json<{ roomCode: string }>();
 
+        // P-SEC-4 (e): charge this room against the host's per-pid concurrent-
+        // room cap BEFORE spinning up the DO. A 429 here means the identity
+        // already holds the max open rooms — refuse the create rather than leak
+        // another live DO.
+        const claimRes = await lobbyStub(env).fetch(
+          new Request('https://do/claim-room', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ persistentId: pid, roomCode }),
+          }),
+        );
+        if (!claimRes.ok) {
+          return err('too many open rooms for this player', 429, cors);
+        }
+
         const sessionId = makeSessionId();
         const initRes = await roomStub(env, roomCode).fetch(
           new Request('https://do/init', {
@@ -203,6 +378,10 @@ export default {
         );
 
         if (!initRes.ok) {
+          // P-SEC-4 (e): init failed after we charged the claim — release it so
+          // the failed create doesn't permanently consume one of the host's
+          // concurrent-room slots.
+          await releaseRoomClaim(env, roomCode);
           const body = await initRes.text();
           return err(body || 'room init failed', initRes.status, cors);
         }
@@ -231,7 +410,8 @@ export default {
           );
         }
 
-        return json({ ...initBody, sessionId }, 200, cors);
+        const wsTicket = await makeWsTicket(env, pid, sessionId, roomCode);
+        return json({ ...initBody, sessionId, wsTicket }, 200, cors);
       }
 
       const joinMatch = path.match(/^\/api\/rooms\/([A-Z0-9]{3,8})\/join$/i);
@@ -284,7 +464,8 @@ export default {
           );
         }
 
-        return json({ ...joinBody, sessionId }, 200, cors);
+        const wsTicket = await makeWsTicket(env, pid, sessionId, code);
+        return json({ ...joinBody, sessionId, wsTicket }, 200, cors);
       }
 
       if (path === '/api/rooms/quick-match' && method === 'POST') {
@@ -339,7 +520,8 @@ export default {
                 }),
               }),
             );
-            return json({ ...joinBody, sessionId, isQuickMatch: true }, 200, cors);
+            const wsTicket = await makeWsTicket(env, pid, sessionId, match.roomCode);
+            return json({ ...joinBody, sessionId, wsTicket, isQuickMatch: true }, 200, cors);
           }
         }
 
@@ -348,6 +530,17 @@ export default {
           new Request('https://do/allocate-code', { method: 'POST', body: '{}' }),
         );
         const { roomCode } = await codeRes.json<{ roomCode: string }>();
+        // P-SEC-4 (e): charge the per-pid concurrent-room cap before init.
+        const qmClaimRes = await lobbyStub(env).fetch(
+          new Request('https://do/claim-room', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ persistentId: pid, roomCode }),
+          }),
+        );
+        if (!qmClaimRes.ok) {
+          return err('too many open rooms for this player', 429, cors);
+        }
         const sessionId = makeSessionId();
         const initRes = await roomStub(env, roomCode).fetch(
           new Request('https://do/init', {
@@ -364,7 +557,10 @@ export default {
             }),
           }),
         );
-        if (!initRes.ok) return err('quick-match init failed', 500, cors);
+        if (!initRes.ok) {
+          await releaseRoomClaim(env, roomCode);
+          return err('quick-match init failed', 500, cors);
+        }
         const initBody = await initRes.json<any>();
         await lobbyStub(env).fetch(
           new Request('https://do/register', {
@@ -384,7 +580,8 @@ export default {
             }),
           }),
         );
-        return json({ ...initBody, sessionId, isQuickMatch: true }, 200, cors);
+        const wsTicket = await makeWsTicket(env, pid, sessionId, roomCode);
+        return json({ ...initBody, sessionId, wsTicket, isQuickMatch: true }, 200, cors);
       }
 
       if (path === '/api/score' && method === 'POST') {
@@ -395,6 +592,38 @@ export default {
         const gameMode = body.gameMode as GameMode;
         const score = Number(body.score);
         if (!gameMode || Number.isNaN(score)) return err('missing gameMode or score', 400, cors);
+
+        // P-SEC-5: 'competitive' and 'timed' are MULTIPLAYER outcomes. The only
+        // legitimate writer of those rows is RoomDO.onSubmitScores, after the
+        // authoritative DO has validated the match. A client posting them on
+        // the public route is forging a multiplayer result, so refuse them
+        // here outright (the DO path calls submitScore() directly, never this
+        // HTTP route, so this does not affect real MP score writes).
+        if (PUBLIC_SCORE_FORBIDDEN_MODES.has(gameMode)) {
+          return err('mode not accepted on public score endpoint', 403, cors);
+        }
+
+        // P-SEC-5: per-identity submission rate limit. Pinned to persistent_id
+        // (not IP) since the route is authenticated; blunts a script replaying
+        // a forged time under one token. 429 with a Retry-After hint.
+        if (!scoreSubmitAllowed(pid)) {
+          return err('score submission rate limit exceeded', 429, { ...cors, 'retry-after': '5' });
+        }
+
+        // P-SEC-5: daily-* date + sheep-count authority. Reject a forged
+        // partition (stale/future date) or a sheep count that doesn't match
+        // the seed for that date with a clean 400 at the boundary. submitScore
+        // re-checks this server-side as a backstop (and logs to score_errors),
+        // but the boundary check gives the truthful status code rather than
+        // surfacing as a 500. The effective sheep count mirrors d1's default
+        // (additionalData.sheepCount, else 200 for the daily window).
+        if (isDailyMode(gameMode)) {
+          const ad = body.additionalData || {};
+          const claimedSheep = Number.isInteger(ad.sheepCount) ? (ad.sheepCount as number) : 200;
+          const daily = validateDailySubmission(gameMode, claimedSheep, Date.now());
+          if (!daily.ok) return err(daily.reason || 'invalid daily submission', 400, cors);
+        }
+
         const result = await submitScore(env.DB, pid, gameMode, score, body.additionalData || {});
         return json(
           {

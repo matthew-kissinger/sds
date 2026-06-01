@@ -117,9 +117,17 @@ export class NetworkManager {
         this.notifyConnectionStateChange('disconnected');
     }
 
-    _openRoomSocket(roomCode, playerId) {
+    _openRoomSocket(roomCode, playerId, ticket = null) {
         return new Promise((resolve, reject) => {
-            const url = `${this.wsBase}/r/${encodeURIComponent(roomCode)}/ws?playerId=${encodeURIComponent(playerId)}`;
+            // P-SEC-2: ride the WS admission ticket (minted by the REST
+            // create/join handler) on the upgrade URL. The Worker verifies it
+            // before forwarding to the room DO; without it the upgrade is 401.
+            // Fall back to the pending-session ticket so reconnect paths that
+            // re-call this with two args still authenticate.
+            const wsTicket = ticket ?? this.pendingSession?.ticket ?? null;
+            const params = new URLSearchParams({ playerId });
+            if (wsTicket) params.set('ticket', wsTicket);
+            const url = `${this.wsBase}/r/${encodeURIComponent(roomCode)}/ws?${params.toString()}`;
             const ws = new WebSocket(url);
             ws.binaryType = 'arraybuffer';
 
@@ -392,9 +400,9 @@ export class NetworkManager {
         this.currentRoom = data.room;
         this.playerId = data.playerId;
         this.isHost = true;
-        this.pendingSession = { roomCode: data.roomCode, playerId: data.playerId };
+        this.pendingSession = { roomCode: data.roomCode, playerId: data.playerId, ticket: data.wsTicket };
 
-        await this._openRoomSocket(data.roomCode, data.playerId);
+        await this._openRoomSocket(data.roomCode, data.playerId, data.wsTicket);
         this.notifyRoomUpdate(this.currentRoom);
 
         return {
@@ -417,9 +425,9 @@ export class NetworkManager {
         this.currentRoom = data.room;
         this.playerId = data.playerId;
         this.isHost = !!data.isHost;
-        this.pendingSession = { roomCode: data.roomCode, playerId: data.playerId };
+        this.pendingSession = { roomCode: data.roomCode, playerId: data.playerId, ticket: data.wsTicket };
 
-        await this._openRoomSocket(data.roomCode, data.playerId);
+        await this._openRoomSocket(data.roomCode, data.playerId, data.wsTicket);
         this.notifyRoomUpdate(this.currentRoom);
 
         return {
@@ -448,8 +456,8 @@ export class NetworkManager {
         this.currentRoom = data.room;
         this.playerId = data.playerId;
         this.isHost = !!data.isHost;
-        this.pendingSession = { roomCode: data.roomCode, playerId: data.playerId };
-        await this._openRoomSocket(data.roomCode, data.playerId);
+        this.pendingSession = { roomCode: data.roomCode, playerId: data.playerId, ticket: data.wsTicket };
+        await this._openRoomSocket(data.roomCode, data.playerId, data.wsTicket);
         this.notifyRoomUpdate(this.currentRoom);
         return {
             success: true,

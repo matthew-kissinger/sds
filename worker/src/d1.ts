@@ -118,6 +118,111 @@ export function isValidGameMode(mode: unknown): mode is GameMode {
   return typeof mode === 'string' && (ALL_GAME_MODES_SET.has(mode) || isDailyMode(mode));
 }
 
+// ---------------------------------------------------------------------------
+// P-SEC-5: daily-challenge authority.
+//
+// The daily mode partitions the leaderboard by date (`daily-YYYY-MM-DD`) and
+// each date deterministically fixes the sheep count via the same FNV-1a hash
+// the client uses (js/utils/dailySeed.js). Because the partition + sheep count
+// are forgeable by a client (it posts the mode string + sheepCount), the
+// server re-derives the canonical sheep count for the claimed date and refuses
+// a submission whose date is outside today's window or whose sheep count does
+// not match.
+//
+// The FNV-1a constants + lerp here are duplicated from js/utils/dailySeed.js by
+// design: the shared-sim boundary forbids worker imports from js/ (which pulls
+// Three.js transitively). This is a one-shot integrity check at submit time,
+// not a per-tick sim path, so the small duplication is acceptable; the paired
+// spec pins it against the client module's outputs so the two cannot drift.
+// ---------------------------------------------------------------------------
+
+const DAILY_SHEEP_SEED_MIN = 50;
+const DAILY_SHEEP_SEED_MAX = 200;
+
+/** FNV-1a 32-bit. Byte-identical to js/utils/dailySeed.js fnv1a. */
+export function dailyFnv1a(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/**
+ * The canonical sheep count for a `YYYY-MM-DD` date key, reproducing
+ * dailySeedFor(date).sheepCount. `dateKey` is the bare date (no `daily-`
+ * prefix).
+ */
+export function dailySheepCountForDate(dateKey: string): number {
+  const hSheep = (dailyFnv1a(`${dateKey}:sheep`) % 1000) / 1000;
+  // lerp(min, max, t), rounded — matches dailySeed.js exactly.
+  return Math.round(DAILY_SHEEP_SEED_MIN + (DAILY_SHEEP_SEED_MAX - DAILY_SHEEP_SEED_MIN) * hSheep);
+}
+
+/** UTC `YYYY-MM-DD` for a ms-epoch. Mirrors dailySeed.js dailyKey (UTC-rooted). */
+export function utcDateKey(nowMs: number): string {
+  const d = new Date(nowMs);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export interface DailyValidationResult {
+  ok: boolean;
+  reason?: string;
+}
+
+/**
+ * P-SEC-5: validate a `daily-YYYY-MM-DD` submission against the server clock
+ * and the deterministic sheep count for that date.
+ *
+ *  - The claimed date must equal today's UTC date, or fall within
+ *    `graceDays` on either side (default 1 day) to absorb UTC-midnight skew
+ *    between a client that started a run just before rollover and a server
+ *    that stamps the POST just after. Anything further past/future is a
+ *    forged partition.
+ *  - The claimed sheep count must equal dailySheepCountForDate(date). A
+ *    mismatch means the client lied about the challenge it played.
+ *
+ * Returns { ok: true } on success, or { ok: false, reason } describing the
+ * first failed check. Non-daily modes are not the caller's concern here.
+ */
+export function validateDailySubmission(
+  mode: `daily-${string}`,
+  sheepCount: number,
+  nowMs: number,
+  graceDays = 1,
+): DailyValidationResult {
+  const dateKey = mode.slice('daily-'.length); // 'YYYY-MM-DD'
+  // Parse as a UTC midnight epoch so the day delta is timezone-stable.
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const claimedMidnightUtc = Date.UTC(y, m - 1, d);
+  if (!Number.isFinite(claimedMidnightUtc)) {
+    return { ok: false, reason: 'daily partition date unparseable' };
+  }
+  const todayKey = utcDateKey(nowMs);
+  const [ty, tm, td] = todayKey.split('-').map(Number);
+  const todayMidnightUtc = Date.UTC(ty, tm - 1, td);
+  const dayMs = 86_400_000;
+  const dayDelta = Math.round((todayMidnightUtc - claimedMidnightUtc) / dayMs);
+  if (dayDelta > graceDays) {
+    return { ok: false, reason: `daily partition ${dateKey} is in the past beyond grace` };
+  }
+  if (dayDelta < -graceDays) {
+    return { ok: false, reason: `daily partition ${dateKey} is in the future` };
+  }
+  const expectedSheep = dailySheepCountForDate(dateKey);
+  if (sheepCount !== expectedSheep) {
+    return {
+      ok: false,
+      reason: `daily sheep_count ${sheepCount} does not match seed (${expectedSheep}) for ${dateKey}`,
+    };
+  }
+  return { ok: true };
+}
+
 // Cycle 35 Phase 4: solo + timed modes have a fixed intrinsic sheep count
 // per mode (soloClassic = 200, soloExtreme = 1000, soloInsane = 3000,
 // soloChaos = 5000, timed = 200). Multiplayer modes (competitive,
@@ -538,6 +643,18 @@ async function submitScoreInner(
     throw new Error(`score ${score} implausibly low for ${gameMode} at ${sheepCount} sheep`);
   }
 
+  // P-SEC-5: daily-challenge authority. A daily submission claims a date
+  // partition AND a sheep count; both are forgeable on the wire. Re-derive the
+  // canonical sheep count for the claimed UTC date and reject a stale/future
+  // partition or a mismatched count. The throw lands in score_errors via the
+  // submitScore wrapper, same as every other hard reject.
+  if (isDailyMode(gameMode)) {
+    const daily = validateDailySubmission(gameMode, sheepCount, now);
+    if (!daily.ok) {
+      throw new Error(daily.reason || `invalid daily submission for ${gameMode}`);
+    }
+  }
+
   // Cycle 10 Phase 6: soft signals. Stored on the audit row; do NOT reject.
   const clientStartedAt = typeof additionalData.clientStartedAt === 'number'
     ? (additionalData.clientStartedAt as number)
@@ -692,6 +809,11 @@ export interface LeaderboardEntry {
 export interface LeaderboardFilters {
   sceneId?: string;
   sheepCount?: number;
+  // P-SEC-5: the public READ path leaves this unset so anomaly-flagged rows
+  // (score_anomalies IS NOT NULL — see detectScoreAnomalies + migration 0003)
+  // are hidden from the board. Only a trusted/admin caller passes `true` to
+  // include flagged rows for review. Default = false = exclude flagged.
+  includeFlagged?: boolean;
 }
 
 /**
@@ -701,6 +823,11 @@ export interface LeaderboardFilters {
  * distributions, so cross-scene boards never composed. Always queries
  * `score_submissions` with GROUP BY; the materialized fast path (queried
  * scene-blind on `players.*`) is gone.
+ *
+ * P-SEC-5: by default the query excludes rows whose `score_anomalies` column
+ * is non-null (flagged by detectScoreAnomalies at submit time). The
+ * migration-0003 partial index makes the predicate cheap. Pass
+ * `filters.includeFlagged = true` only from a trusted admin readout.
  */
 export async function getLeaderboard(
   db: D1Database,
@@ -723,6 +850,13 @@ export async function getLeaderboard(
 
   const where: string[] = ['s.game_mode = ?'];
   const binds: any[] = [mode];
+  // P-SEC-5: hide flagged submissions from the public board by default. A
+  // submission that tripped any anomaly heuristic carries a non-null
+  // score_anomalies blob; excluding it here keeps a forged-but-bounds-passing
+  // time off the leaderboard without a hard reject at submit time.
+  if (!filters.includeFlagged) {
+    where.push('s.score_anomalies IS NULL');
+  }
   if (filters.sceneId && filters.sceneId !== 'any') {
     where.push('s.scene_id = ?');
     binds.push(filters.sceneId);
@@ -779,8 +913,11 @@ export async function getAllLeaderboards(
   // even though those modes never partition by that count.
   const results = await Promise.all(
     ALL_GAME_MODES.map(m => {
+      // P-SEC-5: preserve includeFlagged when we strip the sheepCount filter
+      // for fixed-count modes — otherwise an admin readout would silently
+      // re-hide flagged rows for solo/timed boards.
       const perMode: LeaderboardFilters = MODES_WITH_FIXED_SHEEP_COUNT.has(m)
-        ? { sceneId: filters.sceneId }
+        ? { sceneId: filters.sceneId, includeFlagged: filters.includeFlagged }
         : filters;
       return getLeaderboard(db, m, limit, perMode);
     }),
