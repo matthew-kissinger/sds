@@ -59,15 +59,22 @@ export async function submitGameScore(gameMode, score, additionalData = {}) {
         // Always ensure player is registered in the current session
         console.log('[SCORE] Ensuring player registration in current session...');
         try {
+            // P-SEC-1: pass the stored authSecret so the worker recognizes this
+            // returning device. A persistent_id without its secret is rejected.
             const registrationResult = await networkManager.registerPlayer(
                 identity.persistentId,
                 identity.displayName,
-                identity.nameType || 'custom'
+                identity.nameType || 'custom',
+                identity.authSecret || null
             );
             console.log('[SCORE] Player registered/re-registered for score submission:', registrationResult);
 
-            // Update identity to mark as registered
+            // Update identity to mark as registered. Capture a freshly-issued
+            // secret (trust-on-first-use bind of a pre-auth legacy row) and any
+            // canonical persistent_id the worker assigned.
             identity.isRegistered = true;
+            if (registrationResult?.authSecret) identity.authSecret = registrationResult.authSecret;
+            if (registrationResult?.persistentId) identity.persistentId = registrationResult.persistentId;
             savePlayerIdentity(identity);
         } catch (regError) {
             console.warn('[SCORE] Player registration failed:', regError);

@@ -11,6 +11,7 @@ import {
   getLeaderboard,
   getAllLeaderboards,
   isValidGameMode,
+  AuthError,
   type GameMode,
 } from './d1';
 // Cycle 35 Phase 4: scene-id validation at the API boundary.
@@ -117,18 +118,36 @@ export default {
     try {
       if (path === '/api/register' && method === 'POST') {
         const body = await request.json<any>();
-        const { persistent_id, persistentId, display_name, displayName, name_type, nameType } = body || {};
-        const pid = persistent_id ?? persistentId;
+        const { persistent_id, persistentId, display_name, displayName, name_type, nameType, auth_secret, authSecret } = body || {};
         const name = display_name ?? displayName ?? 'Player';
         const nt = (name_type ?? nameType ?? 'custom') as 'custom' | 'random' | 'anonymous';
-        if (!pid || typeof pid !== 'string') return err('missing persistent_id', 400, cors);
 
-        const player = await registerPlayer(env.DB, pid, name, nt);
-        const token = await signJwt({ persistent_id: pid }, env.JWT_SECRET, 86400);
+        // P-SEC-1: a returning client proves its identity with persistent_id +
+        // auth_secret. A NEW client sends no persistent_id - we mint it
+        // server-side via crypto.randomUUID and IGNORE any client-supplied
+        // value, so an attacker can no longer choose another player's id.
+        const claimedId = persistent_id ?? persistentId;
+        const providedSecret = (auth_secret ?? authSecret ?? null) as string | null;
+        const isReturning = typeof claimedId === 'string' && claimedId.length > 0;
+        const pid = isReturning ? (claimedId as string) : crypto.randomUUID();
+
+        let result;
+        try {
+          result = await registerPlayer(env.DB, pid, name, nt, isReturning ? providedSecret : null);
+        } catch (e) {
+          // A leaked persistent_id without the matching secret lands here.
+          if (e instanceof AuthError) return err('auth required', 401, cors);
+          throw e;
+        }
+        const { player, authSecret: issuedSecret } = result;
+        const token = await signJwt({ persistent_id: player.persistent_id }, env.JWT_SECRET, 86400);
 
         return json(
           {
             token,
+            // P-SEC-1: present only when freshly issued (new row or TOFU bind).
+            // The client persists it; on a matching re-register it is omitted.
+            ...(issuedSecret ? { authSecret: issuedSecret } : {}),
             playerProfile: {
               persistent_id: player.persistent_id,
               persistentId: player.persistent_id,

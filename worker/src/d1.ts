@@ -18,6 +18,62 @@ export interface PlayerRow {
   timed_best: number | null;
   competitive_wins: number;
   cooperative_best: number | null;
+  // P-SEC-1: device-local auth. hex(SHA-256(authSecret)); NULL = not yet bound
+  // (grandfather-eligible). Set once on first register, then required to match
+  // on every subsequent register. auth_bound_at is the ms-epoch it was bound.
+  auth_secret_hash?: string | null;
+  auth_bound_at?: number | null;
+}
+
+// P-SEC-1: thrown by registerPlayer when a row's secret is already bound and
+// the caller does not present a matching secret. The route handler maps this to
+// a 401 so a leaked persistent_id alone can never mint an impersonating token.
+export class AuthError extends Error {
+  constructor(message = 'auth required') {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
+const _hexEnc = new TextEncoder();
+
+/**
+ * P-SEC-1: hex(SHA-256(secret)) via the Workers-native WebCrypto digest. No new
+ * dependency - crypto.subtle is available on the Worker (V8 isolate) and in the
+ * Node test runtime. Only the hash is persisted to D1; the plaintext secret
+ * lives client-side in localStorage.
+ */
+export async function hashSecret(secret: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', _hexEnc.encode(secret));
+  const bytes = new Uint8Array(digest);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, '0');
+  return hex;
+}
+
+/**
+ * P-SEC-1: constant-time comparison of two hex strings. Reuses the
+ * XOR-accumulate pattern from jwt.ts verifyJwt so a length-mismatch or any
+ * differing byte fails without an early-exit timing side channel. Inputs are
+ * the lowercase hex digests produced by hashSecret.
+ */
+export function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * P-SEC-1: mint a fresh device secret - base64url of 32 random bytes from the
+ * CSPRNG. Returned to the client exactly once (on issue); only its hash is
+ * stored. base64url so it rides JSON / localStorage without escaping.
+ */
+export function generateAuthSecret(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export type GameMode =
@@ -116,26 +172,83 @@ async function allocateDiscriminator(db: D1Database, displayName: string): Promi
   return '9999';
 }
 
+// P-SEC-1: result of the auth-aware register. `authSecret` is the plaintext
+// device secret and is present ONLY when freshly issued (new row, or a
+// trust-on-first-use bind of a legacy NULL-hash row). On a successful
+// re-register with a matching secret it is omitted - the client already holds
+// it. The route handler surfaces it to the JSON body only when present.
+export interface RegisterResult {
+  player: PlayerRow;
+  authSecret?: string;
+}
+
+/**
+ * P-SEC-1: auth-aware player registration. Three-way fork on the existing row
+ * and its auth_secret_hash:
+ *
+ *   1. row ABSENT - the caller supplies a server-minted persistentId (the
+ *      route mints it via crypto.randomUUID, never trusting a client value).
+ *      Mint a fresh authSecret, INSERT with auth_secret_hash = hash(secret),
+ *      and return { player, authSecret }.
+ *   2. row PRESENT, hash IS NULL (legacy / grandfather) - trust-on-first-use:
+ *      mint a fresh authSecret, UPDATE auth_secret_hash + auth_bound_at, and
+ *      return { player, authSecret } so the device captures it.
+ *   3. row PRESENT, hash NOT NULL - require the provided secret. Missing, or a
+ *      non-matching hash (constant-time compare), throws AuthError. On match,
+ *      return { player } with NO authSecret.
+ *
+ * `providedSecret` is the secret the returning client claims to hold; ignored
+ * for the absent / grandfather paths.
+ */
 export async function registerPlayer(
   db: D1Database,
   persistentId: string,
   requestedName: string,
   nameType: 'custom' | 'random' | 'anonymous',
-): Promise<PlayerRow> {
+  providedSecret?: string | null,
+): Promise<RegisterResult> {
   const existing = await db
     .prepare('SELECT * FROM players WHERE persistent_id = ?')
     .bind(persistentId)
     .first<PlayerRow>();
+
   if (existing) {
     const now = Date.now();
+
+    // Fork 3: secret already bound - the returning client must prove it holds
+    // the matching secret. A leaked persistent_id alone gets nothing.
+    if (existing.auth_secret_hash != null) {
+      if (!providedSecret) throw new AuthError();
+      const providedHash = await hashSecret(providedSecret);
+      if (!timingSafeEqualHex(providedHash, existing.auth_secret_hash)) {
+        throw new AuthError();
+      }
+      await db
+        .prepare('UPDATE players SET last_active = ? WHERE persistent_id = ?')
+        .bind(now, persistentId)
+        .run();
+      existing.last_active = now;
+      return { player: existing };
+    }
+
+    // Fork 2: legacy row with no secret yet - trust-on-first-use bind. The
+    // first caller to register this id claims it by receiving a fresh secret.
+    const authSecret = generateAuthSecret();
+    const authHash = await hashSecret(authSecret);
     await db
-      .prepare('UPDATE players SET last_active = ? WHERE persistent_id = ?')
-      .bind(now, persistentId)
+      .prepare(
+        'UPDATE players SET last_active = ?, auth_secret_hash = ?, auth_bound_at = ? WHERE persistent_id = ?',
+      )
+      .bind(now, authHash, now, persistentId)
       .run();
     existing.last_active = now;
-    return existing;
+    existing.auth_secret_hash = authHash;
+    existing.auth_bound_at = now;
+    return { player: existing, authSecret };
   }
 
+  // Fork 1: brand-new row. The persistentId here was server-minted by the
+  // route. Mint a fresh secret and store only its hash.
   let displayName = requestedName;
   if (nameType === 'random') displayName = generateRandomName();
   else if (nameType === 'anonymous') displayName = 'Player';
@@ -143,32 +256,39 @@ export async function registerPlayer(
   const discriminator = await allocateDiscriminator(db, displayName);
   const fullName = `${displayName}#${discriminator}`;
   const now = Date.now();
+  const authSecret = generateAuthSecret();
+  const authHash = await hashSecret(authSecret);
 
   await db
     .prepare(
       `INSERT INTO players
        (persistent_id, display_name, discriminator, full_name, created_at, last_active,
         solo_classic_best, solo_extreme_best, solo_insane_best, solo_chaos_best,
-        timed_best, competitive_wins, cooperative_best)
-       VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, 0, NULL)`,
+        timed_best, competitive_wins, cooperative_best, auth_secret_hash, auth_bound_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, 0, NULL, ?, ?)`,
     )
-    .bind(persistentId, displayName, discriminator, fullName, now, now)
+    .bind(persistentId, displayName, discriminator, fullName, now, now, authHash, now)
     .run();
 
   return {
-    persistent_id: persistentId,
-    display_name: displayName,
-    discriminator,
-    full_name: fullName,
-    created_at: now,
-    last_active: now,
-    solo_classic_best: null,
-    solo_extreme_best: null,
-    solo_insane_best: null,
-    solo_chaos_best: null,
-    timed_best: null,
-    competitive_wins: 0,
-    cooperative_best: null,
+    player: {
+      persistent_id: persistentId,
+      display_name: displayName,
+      discriminator,
+      full_name: fullName,
+      created_at: now,
+      last_active: now,
+      solo_classic_best: null,
+      solo_extreme_best: null,
+      solo_insane_best: null,
+      solo_chaos_best: null,
+      timed_best: null,
+      competitive_wins: 0,
+      cooperative_best: null,
+      auth_secret_hash: authHash,
+      auth_bound_at: now,
+    },
+    authSecret,
   };
 }
 

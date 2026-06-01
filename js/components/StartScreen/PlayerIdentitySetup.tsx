@@ -34,7 +34,16 @@ interface ServerProfile {
     displayName?: string;
     fullName?: string;
     discriminator?: string;
+    persistentId?: string;
+    persistent_id?: string;
     playerProfile?: ServerProfile;
+}
+
+// P-SEC-1: the worker now also returns a freshly-minted authSecret and the
+// canonical (server-minted) persistentId on a new registration.
+interface ServerRegisterResponse extends ServerProfile {
+    authSecret?: string;
+    persistentId?: string;
 }
 
 interface PlayerIdentity {
@@ -45,20 +54,28 @@ interface PlayerIdentity {
     nameType: string;
     createdAt: number;
     isRegistered: boolean;
+    // P-SEC-1: device-local secret proving ownership of this persistentId on
+    // re-register. Present only when the server issued one (online path);
+    // undefined for an offline-only identity.
+    authSecret?: string;
 }
 
 // Best-effort server registration. Failure paths log + return null so
 // the caller falls back to an offline identity. Same shape for all
 // three identity types — the only difference is the (displayName,
 // nameType) tuple sent to the server.
-async function registerWithServer(persistentId: string, displayName: string, nameType: string) {
+//
+// P-SEC-1: for a NEW identity we pass persistentId=null so the worker mints the
+// id server-side and ignores any client-chosen value. The server-returned id +
+// authSecret are adopted by buildIdentity.
+async function registerWithServer(displayName: string, nameType: string): Promise<ServerRegisterResponse | null> {
     const nm = getNetworkManager();
     if (!nm) return null;
     try {
         await nm.connect();
-        const response = await nm.registerPlayer(persistentId, displayName, nameType);
+        const response = await nm.registerPlayer(null, displayName, nameType);
         console.log(`[PLAYER] ${nameType} player registered with server:`, response);
-        return response;
+        return response as ServerRegisterResponse;
     } catch (err) {
         console.warn('[PLAYER] Server registration failed, proceeding offline:', err);
         return null;
@@ -66,27 +83,35 @@ async function registerWithServer(persistentId: string, displayName: string, nam
 }
 
 // Build the persisted identity record. Server-supplied fields win;
-// `fallbackName` covers the offline path.
+// `fallbackName` + `fallbackId` cover the offline path.
+//
+// P-SEC-1: when the server responded, adopt its canonical persistentId (it
+// minted the id, not the client) and persist the issued authSecret. The local
+// `fallbackId` is used only when the server was unreachable.
 function buildIdentity({
-    persistentId,
+    fallbackId,
     nameType,
     fallbackName,
     serverResponse,
 }: {
-    persistentId: string;
+    fallbackId: string;
     nameType: string;
     fallbackName?: string;
-    serverResponse: ServerProfile | null;
+    serverResponse: ServerRegisterResponse | null;
 }): PlayerIdentity {
     const profile: ServerProfile = serverResponse?.playerProfile ?? serverResponse ?? {};
+    const serverId = serverResponse?.persistentId
+        ?? profile.persistentId
+        ?? profile.persistent_id;
     return {
-        persistentId,
+        persistentId: serverId || fallbackId,
         displayName: profile.displayName || fallbackName || 'Player',
         fullName: profile.fullName || fallbackName || 'Player#0001',
         discriminator: profile.discriminator || '0001',
         nameType,
         createdAt: Date.now(),
         isRegistered: !!serverResponse,
+        ...(serverResponse?.authSecret ? { authSecret: serverResponse.authSecret } : {}),
     };
 }
 
@@ -176,9 +201,11 @@ export function PlayerIdentitySetup({ onComplete }: PlayerIdentitySetupProps) {
         setIsSubmitting(true);
         setError('');
         try {
-            const persistentId = generatePersistentId();
-            const serverResponse = await registerWithServer(persistentId, registerName, type);
-            const identity = buildIdentity({ persistentId, nameType: type, fallbackName, serverResponse });
+            // P-SEC-1: local id is only the offline fallback. Online, the worker
+            // mints the canonical persistentId and we adopt it in buildIdentity.
+            const fallbackId = generatePersistentId();
+            const serverResponse = await registerWithServer(registerName, type);
+            const identity = buildIdentity({ fallbackId, nameType: type, fallbackName, serverResponse });
             savePlayerIdentity(identity);
             console.log(`[PLAYER] ${type} identity created:`, identity);
             onComplete(identity);

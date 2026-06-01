@@ -258,17 +258,34 @@ export class NetworkManager {
     }
 
     // ---------- Leaderboard / registration (REST) ----------
-    async registerPlayer(persistentId, displayName, nameType = 'custom') {
+    // P-SEC-1: device-local identity. A returning client passes its stored
+    // persistentId + authSecret to prove ownership; the worker rejects a
+    // persistent_id presented without its matching secret (401). A NEW client
+    // passes persistentId=null so the worker mints the id server-side - the
+    // server-returned persistent_id + authSecret are surfaced here for the
+    // caller (PlayerIdentitySetup) to persist. authSecret is returned only when
+    // freshly issued (new identity or a trust-on-first-use bind of a legacy
+    // row); on a matching re-register the worker omits it and we keep ours.
+    async registerPlayer(persistentId, displayName, nameType = 'custom', authSecret = null) {
         const data = await this._postJson('/api/register', {
-            persistent_id: persistentId,
+            // Omit persistent_id entirely for a brand-new identity so the
+            // worker mints it (and ignores any attacker-chosen value).
+            ...(persistentId ? { persistent_id: persistentId } : {}),
+            ...(authSecret ? { auth_secret: authSecret } : {}),
             display_name: displayName,
             name_type: nameType,
         });
         this.token = data.token || this.token;
-        // Surface the same shape the old client stored.
+        // Surface the same shape the old client stored, plus the freshly-issued
+        // authSecret (undefined on a matching re-register) and the canonical
+        // persistent_id the worker assigned.
         return {
             success: true,
             playerProfile: data.playerProfile,
+            authSecret: data.authSecret,
+            persistentId: data.playerProfile?.persistentId
+                ?? data.playerProfile?.persistent_id
+                ?? persistentId,
         };
     }
 
@@ -326,11 +343,23 @@ export class NetworkManager {
         if (!identity || !identity.persistentId) {
             throw new Error('Register the player before creating a room.');
         }
-        await this.registerPlayer(
+        // P-SEC-1: returning identity - send the stored authSecret so the
+        // worker re-issues a token. A persistent_id without its secret is 401.
+        const result = await this.registerPlayer(
             identity.persistentId,
             identity.displayName || 'Player',
             identity.nameType || 'custom',
+            identity.authSecret || null,
         );
+        // Capture a freshly-issued secret (trust-on-first-use bind of a legacy
+        // row that predated device-local auth) back into localStorage.
+        if (result?.authSecret && typeof localStorage !== 'undefined') {
+            try {
+                identity.authSecret = result.authSecret;
+                if (result.persistentId) identity.persistentId = result.persistentId;
+                localStorage.setItem('playerIdentity', JSON.stringify(identity));
+            } catch {}
+        }
     }
 
     // ---------- Room Management ----------
