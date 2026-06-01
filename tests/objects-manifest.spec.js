@@ -33,7 +33,18 @@ describe('object manifest', () => {
     }
   });
 
-  it('every object source GLB exists on disk', () => {
+  it('every object source GLB exists on disk (where the source art is checked out)', () => {
+    // Source GLBs live under assets/_originals/** which is gitignored (large,
+    // local-only art), so on CI / fresh checkouts they are absent. Only run the
+    // on-disk guard where the art is present: if NO source resolves, the
+    // originals are not checked out, so skip rather than fail (the other cases
+    // still validate the manifest structure). If SOME resolve, run the full
+    // check so a genuinely-broken reference is still caught locally.
+    const anyPresent = manifest.objects.some((o) => existsSync(resolve(root, o.source)));
+    if (!anyPresent) {
+      console.warn('[objects-manifest] source art not checked out (assets/_originals absent); skipping on-disk existence guard');
+      return;
+    }
     for (const obj of manifest.objects) {
       expect(existsSync(resolve(root, obj.source)), `source for ${obj.id}: ${obj.source}`).toBe(true);
     }
