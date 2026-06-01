@@ -11,14 +11,23 @@
 
 ## Execution status (branch `audit-followups-2026-05`, updated 2026-05-31)
 
-Implementing the roadmap in validated waves on a branch. Not yet merged or pushed; no deploy, no D1 migration applied. Committed so far:
+All roadmap waves are implemented, validated green (864 tests, build + `eslint shared/` clean), committed on `audit-followups-2026-05`, and merged into `main`. No deploy, no remote D1 migration applied. Commits:
 
 - Quick wins (`78a198c`) + this roadmap and the drafted P-SEC-1 plan (`e0a387a`).
 - Wave 1 (`d4f9fab`): read-only characterization specs (Vector2D, Random, MovementPhysics, flocking, CameraController, StructureBuilder), doc-drift fixes, knip report, locale-parity ratchet. +123 tests.
-- Wave 3 / P-PERF-1 (`f669313`): byte-identical `shared/` scratch-pooling, sim-baseline verified unchanged.
-- P-DET-1 (option c): per-game seed drawn once server-side at `GameSimulation` construction, persisted in `RoomMeta` (not broadcast, so no wire touch), injected into the five `GameStateValidation` draw sites via an `rng = <global random>` default param so existing fixtures stay byte-identical. Adds the `harness-parity` keystone spec. **Decision (Matt): option (c)** - per-game seed preserves spawn variety and gives replay-reproducibility.
+- P-PERF-1 (`f669313`): byte-identical `shared/` scratch-pooling, sim-baseline verified unchanged.
+- P-DET-1 / option (c) (`0e4e9c1`): per-game seed drawn once server-side at `GameSimulation` construction, persisted in `RoomMeta` (not broadcast, no wire touch), injected into the five `GameStateValidation` draw sites via an `rng` default param so existing fixtures stay byte-identical; adds the `harness-parity` keystone spec. Per-game seed preserves spawn variety and gives replay-reproducibility.
+- P-SEC-1 (`9ed1e3e`): closes the live CRITICAL identity-takeover - server-minted ids + per-player `auth_secret` (trust-on-first-use grandfather), new append-only migration `0007`, coordinated client change. Device-local (option a); account-code recovery deferred.
+- P-SEC-2..5 (`6f75b97`): WS signed-ticket identity binding + host authority, input trust boundary + tick try/catch, DoS caps (decode/queue/rate-limit/room-lifecycle), leaderboard score authority + anomaly-filter-on-read + daily validation.
+- P-PERF-2 (`ba1dfbe`): hoist the O(N^2) worker filter + `validateEntityState` fallback consts; snapshot wire-shape locked by a new spec.
+- P-PERF-3 (`5bdfe89`): client per-frame allocation reductions (grass gather, boid scratch, dog move byte-identical, camera).
+- Bundle ratchet bump 541->543 KB (`810cd3a`) + P-COV-1 worker competitive/timed + gate/flee coverage (`3c2b230`). +29 tests.
 
-Pending on the branch: Wave 4 (worker security P-SEC-1..5 + worker perf P-PERF-2), Wave 5 (client perf P-PERF-3), Wave 6 (worker competitive/timed coverage), then merge to `main` + push. Deferred follow-up: the cosmetic `animationPhase`/`facingDirection` and timed-respawn random draws (around `GameSim.js:172`) stay on the global RNG, outside P-DET-1's five-function scope.
+Test count over this effort: 606 -> 864.
+
+**Deploy coupling (Matt's explicit step, not done here):** P-SEC-1 + P-SEC-2 require the worker AND client deployed TOGETHER (a worker-only deploy would bind secrets / demand upgrade tickets the old client cannot satisfy). Run `wrangler migrations apply` for `0007` at deploy. Nothing in this program is live until that deploy.
+
+**Deferred follow-ups:** account-code recovery (cross-device identity, the rejected options b/c of P-SEC-1); the cosmetic `animationPhase`/`facingDirection` + timed-respawn global-RNG draws (around `GameSim.js:172`, outside P-DET-1's five-function scope); the pre-existing `d1.ts scoreColumn` TS2366 exhaustiveness gap; and a stale source comment (`GameStateValidation.js` says the 2p completion threshold is 101, actual is `Math.ceil(totalSheep/2)` = 100 for 200 sheep).
 
 ## Audit results at a glance
 
