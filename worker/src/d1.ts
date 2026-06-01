@@ -778,6 +778,10 @@ export function scoreColumn(mode: GameMode): string {
     case 'competitive': return 'competitive_wins';
     case 'cooperative': return 'cooperative_best';
   }
+  // The only remaining GameMode member is `daily-${string}`, which has no
+  // materialized player-row column (it partitions by date in score_submissions).
+  // It has no fixed column to return, so this is unreachable for any real caller.
+  throw new Error(`scoreColumn: no column for game mode ${mode}`);
 }
 
 export function formatScore(mode: GameMode, score: number | null): string {
