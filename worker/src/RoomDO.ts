@@ -30,6 +30,13 @@ interface RoomMeta {
   // worker GameSim is sized to this value at start. 200 (current default)
   // remains the back-compat default for rooms persisted before Cycle 8.
   sheepCount: number;
+  // P-DET-1 (option c): per-game seed for reproducible spawn + retirement
+  // placement. Drawn once at room creation, persisted here so a replay can
+  // reproduce the exact layout. Server-side only — deliberately absent from
+  // getSerializableState() and every wire payload (clients copy positions
+  // from the snapshot, so they never need it). Backfilled on hydration for
+  // rooms persisted before P-DET-1.
+  seed: number;
   modeLocked: boolean;
   state: 'waiting' | 'in-game' | 'finished';
   createdAt: number;
@@ -56,6 +63,14 @@ interface Env {
 }
 
 const DOG_TYPES = new Set(['jep', 'pip', 'sally', 'shiloh', 'george_washington']);
+
+// P-DET-1 (option c): draw a per-game seed. This is the single intentionally
+// non-deterministic entropy draw — it seeds the GameSim's mulberry32 so spawn
+// + retirement placement are reproducible for replay while still differing per
+// game. Returns an unsigned 32-bit int (the domain mulberry32 expects).
+function generateSeed(): number {
+  return ((Date.now() ^ Math.floor(Math.random() * 0x100000000)) >>> 0);
+}
 
 function encodeMsg(t: string, data: Record<string, unknown> = {}): ArrayBuffer {
   const buf = encode({ t, ...data });
@@ -103,6 +118,12 @@ export class RoomDO {
         // Backfill sheepCount for rooms persisted before Cycle 8 Phase 5.
         if (typeof (this.meta as any).sheepCount !== 'number') {
           this.meta.sheepCount = DEFAULT_SHEEP_COUNT;
+        }
+        // P-DET-1: backfill seed for rooms persisted before this shipped.
+        // A hydrated room with no seed gets a fresh one so the next game it
+        // starts is still reproducible (and so RoomMeta always carries one).
+        if (typeof (this.meta as any).seed !== 'number') {
+          this.meta.seed = generateSeed();
         }
         this.players = new Map(stored.players);
         // If a sim was running, it's lost; snap back to 'waiting'.
@@ -212,6 +233,8 @@ export class RoomDO {
       gameMode,
       sceneId,
       sheepCount,
+      // P-DET-1: per-game seed drawn at creation, persisted for replay.
+      seed: generateSeed(),
       modeLocked: !!s.modeLocked,
       state: 'waiting',
       createdAt: Date.now(),
@@ -481,6 +504,10 @@ export class RoomDO {
       sceneId: this.meta.sceneId,
       // Cycle 8 Phase 5: pass room-level sheepCount through to GameSim.
       sheepCount: this.meta.sheepCount,
+      // P-DET-1: pass the persisted per-game seed so GameSim seeds its
+      // mulberry32 deterministically. NOT added to getSerializableState() —
+      // it stays server-side and never reaches the wire.
+      seed: this.meta.seed,
       state: this.meta.state,
       lastActivity: this.meta.lastActivity,
       simulation: null,

@@ -9,6 +9,17 @@
 - **Per-frame perf: a handful of genuinely high-leverage allocations** (Worker O(N^2) loop-invariant filter, per-frame `Object3D`, a 5000-wide grass gather). Most of the larger "critical" list is the `shared/` boid path, which only runs on the Worker DO + offline harness (Solo Chaos uses the pooled client `ExtremeBoidSystem`).
 - **Coverage: 41 gaps, keystone first.** The sim-baseline harness hand-mirrors `GameSim` with no drift check, so today every fixture asserts the harness matches itself, not the authoritative Worker.
 
+## Execution status (branch `audit-followups-2026-05`, updated 2026-05-31)
+
+Implementing the roadmap in validated waves on a branch. Not yet merged or pushed; no deploy, no D1 migration applied. Committed so far:
+
+- Quick wins (`78a198c`) + this roadmap and the drafted P-SEC-1 plan (`e0a387a`).
+- Wave 1 (`d4f9fab`): read-only characterization specs (Vector2D, Random, MovementPhysics, flocking, CameraController, StructureBuilder), doc-drift fixes, knip report, locale-parity ratchet. +123 tests.
+- Wave 3 / P-PERF-1 (`f669313`): byte-identical `shared/` scratch-pooling, sim-baseline verified unchanged.
+- P-DET-1 (option c): per-game seed drawn once server-side at `GameSimulation` construction, persisted in `RoomMeta` (not broadcast, so no wire touch), injected into the five `GameStateValidation` draw sites via an `rng = <global random>` default param so existing fixtures stay byte-identical. Adds the `harness-parity` keystone spec. **Decision (Matt): option (c)** - per-game seed preserves spawn variety and gives replay-reproducibility.
+
+Pending on the branch: Wave 4 (worker security P-SEC-1..5 + worker perf P-PERF-2), Wave 5 (client perf P-PERF-3), Wave 6 (worker competitive/timed coverage), then merge to `main` + push. Deferred follow-up: the cosmetic `animationPhase`/`facingDirection` and timed-respawn random draws (around `GameSim.js:172`) stay on the global RNG, outside P-DET-1's five-function scope.
+
 ## Audit results at a glance
 
 | Audit | Confirmed | Cleared | Run |

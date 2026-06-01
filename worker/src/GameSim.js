@@ -36,6 +36,7 @@ import {
     tickObjective,
     isCorralOpen
 } from '../../shared/index.js';
+import { mulberry32 } from '../../shared/Random.js';
 
 export class GameSimulation {
     constructor(room) {
@@ -53,7 +54,24 @@ export class GameSimulation {
 
         // Load scene (biome data). Room can override via `room.sceneId`; falls back to default.
         this.scene = loadScene(room.sceneId || DEFAULT_SCENE_ID);
-        
+
+        // P-DET-1 (option c): per-game seed for reproducible spawn + retirement
+        // placement. Drawn ONCE here (the only intentionally non-deterministic
+        // draw — it's the per-game variety source, recorded for replay, NOT in
+        // the per-tick path). Prefer the seed the DO persisted in RoomMeta so a
+        // replay reproduces the exact layout; fall back to a fresh in-memory
+        // draw when the adapter didn't supply one (tests, standalone sims).
+        // This seed is server-side only: it is never written into
+        // getSerializableState / createGameStateSnapshot / any wire payload —
+        // clients copy positions from the snapshot, so they never need it.
+        this.seed = (typeof room.seed === 'number' && Number.isFinite(room.seed))
+            ? (room.seed >>> 0)
+            : ((Date.now() ^ Math.floor(Math.random() * 0x100000000)) >>> 0);
+        // One stateful mulberry32 reused across the whole game. The single-
+        // threaded DO tick order makes the draw sequence deterministic given
+        // the seed; passed into every spawn/retirement call in shared/.
+        this.rng = mulberry32(this.seed);
+
         // Timed mode specific properties
         if (this.isTimedMode) {
             this.gameStartTime = null;
@@ -144,7 +162,8 @@ export class GameSimulation {
         const sheepPositions = generateInitialSheepPositions(
             this.gameState.totalSheep,
             this.gameState.bounds,
-            sheepSpawnConfig
+            sheepSpawnConfig,
+            this.rng
         );
 
         // Initialize sheep entities
@@ -623,7 +642,8 @@ export class GameSimulation {
                 ) :
                 updateCompetitiveSheepRetirements(
                     this.gameState.sheep,
-                    this.gameState.competitiveGates
+                    this.gameState.competitiveGates,
+                    this.rng
                 );
             
             // Update player scores
@@ -646,7 +666,8 @@ export class GameSimulation {
             if (isCorralOpen(this.objective)) {
                 const retirementResult = updateSheepCorralRetirements(
                     this.gameState.sheep,
-                    this.gameState.corral
+                    this.gameState.corral,
+                    this.rng
                 );
                 this.gameState.sheepRetired = retirementResult.totalRetired;
             }
@@ -655,7 +676,8 @@ export class GameSimulation {
             const retirementResult = updateSheepRetirements(
                 this.gameState.sheep,
                 this.gameState.gate,
-                this.gameState.pasture
+                this.gameState.pasture,
+                this.rng
             );
 
             this.gameState.sheepRetired = retirementResult.totalRetired;
