@@ -108,6 +108,17 @@ export class Sheepdog {
         this.position = new Vector2D(x, z);
         this.velocity = new Vector2D(0, 0);
         this.targetVelocity = new Vector2D(0, 0);
+        // Per-frame scratch reused inside move() to compute the velocity
+        // delta in place (targetVelocity - velocity) * (accel * dt). Avoids
+        // two Vector2D allocations per frame. Math is identical: same
+        // operands, same operation order.
+        this._scratchVel = new Vector2D(0, 0);
+        // Per-frame scratch reused by updateTerrainTilt to hold the surface
+        // normal read from the heightfield. Inlining the central-difference
+        // normal here (instead of Heightfield.normal returning a fresh
+        // {x,y,z}) drops one allocation per frame without touching the
+        // shared heightfield. Same sample calls, same math, same order.
+        this._normalScratch = { x: 0, y: 1, z: 0 };
         this.dogType = dogType;
         /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
         this.heightfield = heightfield;
@@ -631,12 +642,16 @@ export class Sheepdog {
         // velocity magnitude in one frame. Without this, the camera's
         // speedNorm + look-ahead would still pop even though the safety
         // clamp at the bottom of the function was already smoothed.
-        this.targetVelocity = direction.clone().normalize().multiply(this.smoothMaxSpeed);
+        this.targetVelocity.set(direction.x, direction.z).normalize().multiply(this.smoothMaxSpeed);
 
         // Smooth acceleration/deceleration
         const accelerationRate = direction.magnitude() > 0 ? this.acceleration : this.deceleration;
-        const velocityDiff = this.targetVelocity.clone().subtract(this.velocity);
-        const velocityChange = velocityDiff.clone().multiply(accelerationRate * deltaTime);
+        // velocityChange = (targetVelocity - velocity) * (accelerationRate * deltaTime),
+        // computed in a reused scratch to avoid two clones per frame.
+        const velocityChange = this._scratchVel
+            .set(this.targetVelocity.x, this.targetVelocity.z)
+            .subtract(this.velocity)
+            .multiply(accelerationRate * deltaTime);
 
         // Apply velocity change
         this.velocity.add(velocityChange);
@@ -680,9 +695,11 @@ export class Sheepdog {
             this.velocity.normalize().multiply(this.smoothMaxSpeed);
         }
 
-        // Calculate new position
-        const newPosition = this.position.clone().add(this.velocity.clone().multiply(deltaTime));
-        this.position = newPosition;
+        // Calculate new position. Integrate in place — identical to
+        // position + velocity * deltaTime, same operands and order — and
+        // keeps the same object the hard push-out below already mutates.
+        this.position.x += this.velocity.x * deltaTime;
+        this.position.z += this.velocity.z * deltaTime;
 
         // Cycle 6 Phase 2: hard push-out from tree trunks + large rocks.
         // Treats obstacles like fences — corrects position directly, then
@@ -783,7 +800,30 @@ export class Sheepdog {
     updateTerrainTilt(deltaTime) {
         if (!this.heightfield || !this.mesh) return;
 
-        const n = this.heightfield.normal(this.position.x, this.position.z);
+        // Inlined copy of Heightfield.normal (central finite differences,
+        // eps = 1m) writing into a reused scratch instead of allocating a
+        // fresh {x,y,z} every frame. The sample calls, operands, and order
+        // are byte-identical to Heightfield.normal; sample() is read-only,
+        // so the shared heightfield is untouched.
+        const n = this._normalScratch;
+        {
+            const eps = 1;
+            const hL = this.heightfield.sample(this.position.x - eps, this.position.z);
+            const hR = this.heightfield.sample(this.position.x + eps, this.position.z);
+            const hD = this.heightfield.sample(this.position.x, this.position.z - eps);
+            const hU = this.heightfield.sample(this.position.x, this.position.z + eps);
+
+            const nx = -(hR - hL);
+            const ny = 2 * eps;
+            const nz = -(hU - hD);
+
+            const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+            if (len < 1e-9) {
+                n.x = 0; n.y = 1; n.z = 0;
+            } else {
+                n.x = nx / len; n.y = ny / len; n.z = nz / len;
+            }
+        }
 
         // Slope vector in XZ plane: where would a ball roll? That's -(nx, nz)
         // scaled by 1/ny. Pitch+roll come from this vector projected against

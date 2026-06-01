@@ -580,6 +580,51 @@ class SheepDogSimulation {
         this.isMultiplayer = false;
         this.otherPlayers = new Map(); // playerId -> Sheepdog instance
         this.playerWasMoving = false; // Track movement state from previous frame
+        // Per-frame render-loop scratch (hoisted to kill allocations in runFrame).
+        // The grass-interaction gather, the interaction-entity wrapper list, the
+        // perf-visible-counts breakdown, and the MP input payload all run every
+        // frame over up to 5,000 sheep; reusing these buffers keeps the hot path
+        // allocation-free. None of the consumers retain these across frames:
+        // GrassSystem.updateInteractors copies fields into typed arrays
+        // synchronously, and NetworkManager.sendPlayerInput msgpack-encodes the
+        // payload synchronously before returning.
+        // Site 1 — grass candidate gather. Pooled {sheep, d2} slots; sorted in
+        // place by distance-to-dog then read up to sheepLimit (identical to the
+        // old filter().filter().sort().slice()).
+        this._grassCandidates = []; // live slots this frame (length reset each frame)
+        this._grassCandidatePool = []; // backing pool of reusable {sheep, d2} slots
+        // Hoisted comparator (was an inline closure allocated per sort call).
+        this._grassCandidateCmp = (a, b) => a.d2 - b.d2;
+        // Site 2 — interaction-entity wrappers. The array is reused (length reset
+        // each frame); the per-sheep wrappers (with nested {x,y,z}) are pooled,
+        // as are the single player slot and the remote-dog slots.
+        this._interactionEntities = [];
+        this._grassSheepSlotPool = []; // reusable sheep wrappers: { position:{x,y,z}, type, facingDirection }
+        this._grassPlayerSlot = { position: null, type: 'player', currentRotation: 0 };
+        this._grassDogSlotPool = []; // reusable remote-dog wrappers: { position, type:'dog', currentRotation }
+        // Site 3 — perf visible-counts scratch. Reused arrays + one reused stats
+        // object replace the fresh Object.values().flat()/filter() literals.
+        this._perfStructureScratch = []; // flattened structure objects
+        this._perfVisibleCounts = {
+            Terrain: 0, Trees: 0, Rocks: 0, Mountains: 0, Grass: 0,
+            Structures: 0, Sheep: 0, Water: 0, Atmosphere: 0,
+        };
+        // Site 4 — MP input payload. Reused object with persistent nested
+        // direction/clientPosition (safe: sendPlayerInput consumes it
+        // synchronously via msgpack encode before returning).
+        // `clientPosition` is non-null only on the stop frame, so the payload's
+        // slot toggles between `_mpClientPos` and null; the object itself lives
+        // here so the reference survives null frames.
+        this._mpClientPos = { x: 0, z: 0 };
+        this._mpInputPayload = {
+            direction: { x: 0, z: 0 },
+            sprint: false,
+            timestamp: 0,
+            clientPosition: null,
+        };
+        // Reused snapshot of the pre-transform movement direction (only read by
+        // the competitive-mode debug log, synchronously, same frame).
+        this._dbgOriginalDir = { x: 0, z: 0 };
         this.serverIsInterpolatingToClient = false; // Track when server is interpolating to our position
         this.competitiveStructuresCreated = false; // Track if we've built competitive structures
         
@@ -1241,45 +1286,73 @@ class SheepDogSimulation {
             const sheepVisible = systemVisible('sheep') && sheepSystem?.instancedMesh?.visible !== false;
             const sheepTriangles = sheepVisible ? (sheepSystem?.getTotalTriangleEstimate?.() ?? 0) : 0;
             this.performanceMonitor?.addSystemTriangles?.('Sheep', sheepTriangles);
-            const structureObjects = Object.values(this.structureBuilder?.structures ?? {}).flat();
-            const structuresVisible = systemVisible('structures') && structureObjects.some((obj) => obj?.visible !== false);
+            // Flatten structures into reused scratch (replaces a fresh
+            // Object.values().flat() + two .some()/.filter() arrays each frame).
+            // Mirrors Array.flat() depth-1: array values spread, non-arrays pushed.
+            const structureObjects = this._perfStructureScratch;
+            structureObjects.length = 0;
+            const structureMap = this.structureBuilder?.structures;
+            if (structureMap) {
+                for (const key in structureMap) {
+                    if (!Object.prototype.hasOwnProperty.call(structureMap, key)) continue;
+                    const val = structureMap[key];
+                    if (Array.isArray(val)) {
+                        for (let i = 0; i < val.length; i++) structureObjects.push(val[i]);
+                    } else {
+                        structureObjects.push(val);
+                    }
+                }
+            }
+            let structuresAnyVisible = false;
+            let structures = 0;
+            for (let i = 0; i < structureObjects.length; i++) {
+                if (structureObjects[i]?.visible !== false) {
+                    structuresAnyVisible = true;
+                    structures++;
+                }
+            }
+            const structuresVisible = systemVisible('structures') && structuresAnyVisible;
             this.performanceMonitor?.addSystemTriangles?.(
                 'Structures',
                 structuresVisible ? this.structureBuilder.getTotalTriangleEstimate() : 0
             );
-            const terrain = [tb.terrainMesh, tb.terrainSkirtMesh]
-                .filter((mesh) => mesh && mesh.visible !== false)
-                .length;
+            let terrain = 0;
+            if (tb.terrainMesh && tb.terrainMesh.visible !== false) terrain++;
+            if (tb.terrainSkirtMesh && tb.terrainSkirtMesh.visible !== false) terrain++;
             const treeGroups = Array.isArray(tb.trees)
                 ? tb.trees.filter((obj) => obj?.visible !== false).length
                 : (systemVisible('trees') ? (tb.konveyorNativeTreeInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
             const rockGroups = Array.isArray(tb.rocks)
                 ? tb.rocks.filter((obj) => obj?.visible !== false).length
                 : (systemVisible('rocks') ? (tb.konveyorNativeRockInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
-            const structures = structureObjects.filter((obj) => obj?.visible !== false).length;
+            // `structures` counted above during the flatten pass.
             const grassChunks = systemVisible('grass') ? (gs.chunksVisible ?? 0) : 0;
             const water = this._animeWater?.mesh?.visible === false ? 0 : (this._animeWater?.mesh ? 1 : 0);
-            const atmosphere = [
-                this.atmosphere?.sky?.getMesh?.(),
-                this.atmosphere?.cloudLayer?.getMesh?.(),
-                this._sunBillboard?.mesh,
-            ].filter((obj) => obj?.visible !== false).length;
+            const skyMesh = this.atmosphere?.sky?.getMesh?.();
+            const cloudMesh = this.atmosphere?.cloudLayer?.getMesh?.();
+            const sunMesh = this._sunBillboard?.mesh;
+            let atmosphere = 0;
+            if (skyMesh?.visible !== false) atmosphere++;
+            if (cloudMesh?.visible !== false) atmosphere++;
+            if (sunMesh?.visible !== false) atmosphere++;
             const sheep = sheepVisible ? (this.gameState.getSheep?.()?.length ?? 0) : 0;
-            this.performanceMonitor?.setVisibleCountsBySystem?.({
-                Terrain: terrain,
-                Trees: systemVisible('trees')
-                    ? (tb.treeInstances?.length ?? tb.konveyorNativeTreeInstancingSummary?.treeInstances ?? 0)
-                    : 0,
-                Rocks: systemVisible('rocks')
-                    ? (tb.konveyorRockPlacementPlan?.totalRocks ?? tb.konveyorNativeRockInstancingSummary?.rockInstances ?? 0)
-                    : 0,
-                Mountains: systemVisible('mountains') ? (tb.mountains?.filter?.((obj) => obj?.visible !== false).length ?? 0) : 0,
-                Grass: systemVisible('grass') ? (gs.visibleClumps ?? gs.totalClumps ?? 0) : 0,
-                Structures: structures,
-                Sheep: sheep,
-                Water: water,
-                Atmosphere: atmosphere,
-            });
+            // Reuse the stats object; setVisibleCountsBySystem spreads into a new
+            // object synchronously, so mutating our copy next frame is safe.
+            const counts = this._perfVisibleCounts;
+            counts.Terrain = terrain;
+            counts.Trees = systemVisible('trees')
+                ? (tb.treeInstances?.length ?? tb.konveyorNativeTreeInstancingSummary?.treeInstances ?? 0)
+                : 0;
+            counts.Rocks = systemVisible('rocks')
+                ? (tb.konveyorRockPlacementPlan?.totalRocks ?? tb.konveyorNativeRockInstancingSummary?.rockInstances ?? 0)
+                : 0;
+            counts.Mountains = systemVisible('mountains') ? (tb.mountains?.filter?.((obj) => obj?.visible !== false).length ?? 0) : 0;
+            counts.Grass = systemVisible('grass') ? (gs.visibleClumps ?? gs.totalClumps ?? 0) : 0;
+            counts.Structures = structures;
+            counts.Sheep = sheep;
+            counts.Water = water;
+            counts.Atmosphere = atmosphere;
+            this.performanceMonitor?.setVisibleCountsBySystem?.(counts);
             this.performanceMonitor?.setEstimatedDrawCalls?.(
                 terrain + treeGroups + rockGroups + grassChunks + structures + water + (sheep > 0 ? 1 : 0) + atmosphere
             );
@@ -1881,8 +1954,11 @@ class SheepDogSimulation {
             let wantsSprint = this.inputHandler.isSprinting();
             const sheepdog = this.gameState.getSheepdog();
             
-            // Store original direction for debugging
-            const originalDirection = { x: movementDirection.x, z: movementDirection.z };
+            // Store original direction for debugging (reused object — only read
+            // synchronously by the competitive-mode log below).
+            const originalDirection = this._dbgOriginalDir;
+            originalDirection.x = movementDirection.x;
+            originalDirection.z = movementDirection.z;
             
             // Transform movement direction for competitive mode camera orientation
             movementDirection = this.sceneManager.transformMovementForCompetitive(movementDirection);
@@ -1917,21 +1993,28 @@ class SheepDogSimulation {
                 
                 const isMovingNow = movementDirection.magnitude() > 0 || wantsSprint;
 
-                // 2. SEND: Send input if moving now, OR if we just stopped moving
+                // 2. SEND: Send input if moving now, OR if we just stopped moving.
+                // Reuse a persistent payload (with persistent nested direction +
+                // clientPosition). Safe: sendPlayerInput consumes it synchronously
+                // (msgpack-encodes before returning), so mutating it next frame
+                // can't alter an already-sent value. Same shape/values as before:
+                // clientPosition is the position object only when stopping, else null.
                 if (isMovingNow || this.playerWasMoving) {
-                    this.networkManager.sendPlayerInput({
-                        direction: {
-                            x: movementDirection.x,
-                            z: movementDirection.z
-                        },
-                        sprint: wantsSprint,
-                        timestamp: performance.now(),
-                        // Send client position when stopping for server reconciliation
-                        clientPosition: !isMovingNow && this.playerWasMoving ? {
-                            x: sheepdog.position.x,
-                            z: sheepdog.position.z
-                        } : null
-                    });
+                    const payload = this._mpInputPayload;
+                    payload.direction.x = movementDirection.x;
+                    payload.direction.z = movementDirection.z;
+                    payload.sprint = wantsSprint;
+                    payload.timestamp = performance.now();
+                    // Send client position when stopping for server reconciliation
+                    if (!isMovingNow && this.playerWasMoving) {
+                        const cp = this._mpClientPos;
+                        cp.x = sheepdog.position.x;
+                        cp.z = sheepdog.position.z;
+                        payload.clientPosition = cp;
+                    } else {
+                        payload.clientPosition = null;
+                    }
+                    this.networkManager.sendPlayerInput(payload);
                 }
                 
                 // Update the state for the next frame
@@ -2150,18 +2233,21 @@ class SheepDogSimulation {
         
         // Update grass animation and LOD (only if not paused and initialized)
         if (!isPaused && this.isInitialized) {
-            // Gather entities for grass interaction
-            const interactionEntities = [];
+            // Gather entities for grass interaction. The entity list and all
+            // per-sheep/dog wrappers are reused across frames (hoisted scratch);
+            // GrassSystem.updateInteractors copies every field into typed arrays
+            // synchronously and retains no reference, so in-place reuse is safe.
+            const interactionEntities = this._interactionEntities;
+            interactionEntities.length = 0;
 
             // Add player sheepdog. `currentRotation` (yaw) feeds the
             // grass shader's oriented body footprint so the bend zone follows
             // the dog's facing direction, not a world-axis ellipse.
             if (this.sheepdog && this.sheepdog.mesh) {
-                interactionEntities.push({
-                    position: this.sheepdog.mesh.position,
-                    type: 'player',
-                    currentRotation: this.sheepdog.currentRotation
-                });
+                const playerSlot = this._grassPlayerSlot;
+                playerSlot.position = this.sheepdog.mesh.position;
+                playerSlot.currentRotation = this.sheepdog.currentRotation;
+                interactionEntities.push(playerSlot);
             }
 
             // Add sheep visible in scene (much larger range)
@@ -2174,45 +2260,83 @@ class SheepDogSimulation {
                     // Get active sheep within camera view range, then keep the
                     // nearest sheep to the dog so the bounded WebGPU uniform
                     // packet drives visible grass deformation around gameplay.
-                    const visibleSheep = this.gameState.sheep
-                        .filter(s => s && s.position && s.state !== 2)
-                        .filter(s => {
-                            const dx = s.position.x - cameraPos.x;
-                            const dz = s.position.z - cameraPos.z;
-                            return dx * dx + dz * dz < 90000; // Within 300 units of camera
-                        })
-                        .sort((a, b) => {
-                            if (!dogPos) return 0;
-                            const adx = a.position.x - dogPos.x;
-                            const adz = a.position.z - dogPos.z;
-                            const bdx = b.position.x - dogPos.x;
-                            const bdz = b.position.z - dogPos.z;
-                            return (adx * adx + adz * adz) - (bdx * bdx + bdz * bdz);
-                        })
-                        .slice(0, sheepLimit);
+                    // Single manual pass into a pooled scratch (replaces
+                    // filter().filter().sort().slice() — three throwaway arrays +
+                    // a per-call comparator closure every frame over up to 5,000
+                    // sheep). Selection stays byte-identical: same state/radius
+                    // tests, same distance-to-dog ordering (V8 sort is stable, so
+                    // the no-dog case keeps gather order exactly as a () => 0
+                    // sort did), same nearest-`sheepLimit` slice.
+                    const candidates = this._grassCandidates;
+                    candidates.length = 0;
+                    const sheep = this.gameState.sheep;
+                    const camX = cameraPos.x;
+                    const camZ = cameraPos.z;
+                    const dogX = dogPos ? dogPos.x : 0;
+                    const dogZ = dogPos ? dogPos.z : 0;
+                    for (let i = 0; i < sheep.length; i++) {
+                        const s = sheep[i];
+                        if (!s || !s.position || s.state === 2) continue;
+                        const dx = s.position.x - camX;
+                        const dz = s.position.z - camZ;
+                        if (dx * dx + dz * dz >= 90000) continue; // Within 300 units of camera
+                        // Pooled {sheep, d2} slot; grow the pool only when this
+                        // frame has more candidates than any prior frame.
+                        let slot = this._grassCandidatePool[candidates.length];
+                        if (!slot) {
+                            slot = { sheep: null, d2: 0 };
+                            this._grassCandidatePool[candidates.length] = slot;
+                        }
+                        slot.sheep = s;
+                        if (dogPos) {
+                            const adx = s.position.x - dogX;
+                            const adz = s.position.z - dogZ;
+                            slot.d2 = adx * adx + adz * adz;
+                        } else {
+                            slot.d2 = 0;
+                        }
+                        candidates.push(slot);
+                    }
+                    // Only sort when there's a dog to measure against; with no
+                    // dog the old comparator returned 0 for every pair (no-op on
+                    // a stable sort), so we preserve gather order by skipping it.
+                    if (dogPos) candidates.sort(this._grassCandidateCmp);
 
-                    visibleSheep.forEach(sheep => {
-                        interactionEntities.push({
-                            position: { x: sheep.position.x, y: 0, z: sheep.position.z },
-                            type: 'sheep',
-                            // Sheep facingDirection is a scalar angle (radians)
-                            // matching the convention in OptimizedSheep.
-                            facingDirection: sheep.renderFacingDirection ?? sheep.facingDirection ?? 0
-                        });
-                    });
+                    const sheepCount = Math.min(candidates.length, sheepLimit);
+                    for (let i = 0; i < sheepCount; i++) {
+                        const cs = candidates[i].sheep;
+                        // Pooled sheep wrapper with persistent nested {x,y,z}
+                        // (preserves the y:0 ground flatten). Grow the pool lazily.
+                        let slot = this._grassSheepSlotPool[i];
+                        if (!slot) {
+                            slot = { position: { x: 0, y: 0, z: 0 }, type: 'sheep', facingDirection: 0 };
+                            this._grassSheepSlotPool[i] = slot;
+                        }
+                        slot.position.x = cs.position.x;
+                        slot.position.z = cs.position.z;
+                        // Sheep facingDirection is a scalar angle (radians)
+                        // matching the convention in OptimizedSheep.
+                        slot.facingDirection = cs.renderFacingDirection ?? cs.facingDirection ?? 0;
+                        interactionEntities.push(slot);
+                    }
                 }
             }
 
             // Add other players' dogs in multiplayer (type: 'dog' for
-            // elongated body footprint).
+            // elongated body footprint). Pooled per-remote-dog wrappers.
             if (this.otherPlayers) {
+                let dogIdx = 0;
                 for (const [playerId, remoteDog] of this.otherPlayers) {
                     if (remoteDog && remoteDog.mesh) {
-                        interactionEntities.push({
-                            position: remoteDog.mesh.position,
-                            type: 'dog',
-                            currentRotation: remoteDog.currentRotation
-                        });
+                        let slot = this._grassDogSlotPool[dogIdx];
+                        if (!slot) {
+                            slot = { position: null, type: 'dog', currentRotation: 0 };
+                            this._grassDogSlotPool[dogIdx] = slot;
+                        }
+                        slot.position = remoteDog.mesh.position;
+                        slot.currentRotation = remoteDog.currentRotation;
+                        interactionEntities.push(slot);
+                        dogIdx++;
                     }
                 }
             }

@@ -13,9 +13,13 @@ import { isWithinArea, checkGatePassage } from './BoundaryCollision.js';
  *
  * @param {Array} sheep - Array of sheep entities
  * @param {Object} corral - Corral configuration {center: {x, z}, radius}
+ * @param {() => number} [rng=Math.random] - PRNG returning [0,1). Defaults to
+ *   the global Math.random so existing callers (and the client, which never
+ *   passes this) stay byte-identical. The Worker passes a per-game seeded
+ *   mulberry32 so retirement placement is reproducible for replay.
  * @returns {Object} - Retirement status {newRetirements, totalRetired}
  */
-export function updateSheepCorralRetirements(sheep, corral) {
+export function updateSheepCorralRetirements(sheep, corral, rng = Math.random) {
     let newRetirements = 0;
     let totalRetired = 0;
 
@@ -34,8 +38,8 @@ export function updateSheepCorralRetirements(sheep, corral) {
                 // Retirement target: random point inside the corral with margin
                 const margin = 1;
                 const usableR = Math.max(0, r - margin);
-                const angle = Math.random() * Math.PI * 2;
-                const dist = Math.sqrt(Math.random()) * usableR;
+                const angle = rng() * Math.PI * 2;
+                const dist = Math.sqrt(rng()) * usableR;
                 sheepEntity.retirementTarget = new Vector2D(
                     cx + Math.cos(angle) * dist,
                     cz + Math.sin(angle) * dist
@@ -68,9 +72,12 @@ export function updateSheepCorralRetirements(sheep, corral) {
  * @param {Array} sheep - Array of sheep entities
  * @param {Object} gate - Gate configuration
  * @param {Object} pasture - Pasture configuration
+ * @param {() => number} [rng=Math.random] - PRNG returning [0,1). Defaults to
+ *   Math.random for byte-identical legacy behavior; the Worker passes a
+ *   per-game seeded mulberry32 (see updateSheepCorralRetirements).
  * @returns {Object} - Retirement status {newRetirements, totalRetired}
  */
-export function updateSheepRetirements(sheep, gate, pasture) {
+export function updateSheepRetirements(sheep, gate, pasture, rng = Math.random) {
     let newRetirements = 0;
     let totalRetired = 0;
     
@@ -84,8 +91,8 @@ export function updateSheepRetirements(sheep, gate, pasture) {
                 // Set retirement target in pasture (with margin from edges)
                 const margin = 3; // Keep 3 units away from edges
                 sheepEntity.retirementTarget = new Vector2D(
-                    pasture.minX + margin + Math.random() * (pasture.maxX - pasture.minX - 2 * margin),
-                    pasture.minZ + margin + Math.random() * (pasture.maxZ - pasture.minZ - 2 * margin)
+                    pasture.minX + margin + rng() * (pasture.maxX - pasture.minX - 2 * margin),
+                    pasture.minZ + margin + rng() * (pasture.maxZ - pasture.minZ - 2 * margin)
                 );
                 
                 newRetirements++;
@@ -269,9 +276,14 @@ export function calculateGameProgress(sheep, totalSheep, pasture) {
  * @param {number} sheepCount - Number of sheep to position
  * @param {Object} bounds - Field boundaries
  * @param {Object} config - Configuration options
+ * @param {() => number} [rng=Math.random] - PRNG returning [0,1). Defaults to
+ *   Math.random so existing callers + the client stay byte-identical. The
+ *   Worker passes a per-game seeded mulberry32 so the spawn layout is
+ *   reproducible for a given seed (variety still comes from a fresh seed
+ *   per game). Forwarded to generateCompetitiveBalancedSpawns.
  * @returns {Array} - Array of initial positions
  */
-export function generateInitialSheepPositions(sheepCount, bounds, config = {}) {
+export function generateInitialSheepPositions(sheepCount, bounds, config = {}, rng = Math.random) {
     const {
         spreadRadius = 30,
         centerX = -30,
@@ -288,7 +300,7 @@ export function generateInitialSheepPositions(sheepCount, bounds, config = {}) {
     
     // For competitive mode, use balanced cluster spawning
     if (competitiveMode && competitiveGates.length > 0) {
-        return generateCompetitiveBalancedSpawns(sheepCount, bounds, competitiveGates, config);
+        return generateCompetitiveBalancedSpawns(sheepCount, bounds, competitiveGates, config, rng);
     }
     
     // Use cluster centers if provided, otherwise single center
@@ -307,8 +319,8 @@ export function generateInitialSheepPositions(sheepCount, bounds, config = {}) {
             
             do {
                 // Random position in this cluster
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * spreadRadius;
+                const angle = rng() * Math.PI * 2;
+                const distance = rng() * spreadRadius;
                 const x = center.x + Math.cos(angle) * distance;
                 const z = center.z + Math.sin(angle) * distance;
                 
@@ -349,9 +361,12 @@ export function generateInitialSheepPositions(sheepCount, bounds, config = {}) {
  * @param {Object} bounds - Field boundaries
  * @param {Array} competitiveGates - Array of competitive gate configurations
  * @param {Object} config - Additional configuration
+ * @param {() => number} [rng=Math.random] - PRNG returning [0,1). Defaults to
+ *   Math.random for byte-identical legacy behavior; the Worker passes a
+ *   per-game seeded mulberry32.
  * @returns {Array} - Array of balanced spawn positions
  */
-export function generateCompetitiveBalancedSpawns(sheepCount, bounds, competitiveGates, config = {}) {
+export function generateCompetitiveBalancedSpawns(sheepCount, bounds, competitiveGates, config = {}, rng = Math.random) {
     const {
         spreadRadius = 25,
         minDistanceFromGates = 35,
@@ -378,8 +393,8 @@ export function generateCompetitiveBalancedSpawns(sheepCount, bounds, competitiv
             
             do {
                 // Random position within this cluster
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * spreadRadius;
+                const angle = rng() * Math.PI * 2;
+                const distance = rng() * spreadRadius;
                 const x = cluster.x + Math.cos(angle) * distance;
                 const z = cluster.z + Math.sin(angle) * distance;
                 
@@ -766,9 +781,12 @@ export function assignGatesToPlayers(gates, playerIds) {
  * Update sheep retirements for competitive mode with multiple gates
  * @param {Array} sheep - Array of sheep entities
  * @param {Array} competitiveGates - Array of competitive gate configurations
+ * @param {() => number} [rng=Math.random] - PRNG returning [0,1). Defaults to
+ *   Math.random for byte-identical legacy behavior; the Worker passes a
+ *   per-game seeded mulberry32 so retirement placement is reproducible.
  * @returns {Object} - Retirement status {playerRetirements, totalRetired}
  */
-export function updateCompetitiveSheepRetirements(sheep, competitiveGates) {
+export function updateCompetitiveSheepRetirements(sheep, competitiveGates, rng = Math.random) {
     let totalRetired = 0;
     const playerRetirements = new Map(); // playerId -> retirement count
     
@@ -791,8 +809,8 @@ export function updateCompetitiveSheepRetirements(sheep, competitiveGates) {
                     // Set retirement target in the appropriate pasture (with margin from edges)
                     const margin = 3; // Keep 3 units away from edges
                     sheepEntity.retirementTarget = new Vector2D(
-                        gate.pasture.minX + margin + Math.random() * (gate.pasture.maxX - gate.pasture.minX - 2 * margin),
-                        gate.pasture.minZ + margin + Math.random() * (gate.pasture.maxZ - gate.pasture.minZ - 2 * margin)
+                        gate.pasture.minX + margin + rng() * (gate.pasture.maxX - gate.pasture.minX - 2 * margin),
+                        gate.pasture.minZ + margin + rng() * (gate.pasture.maxZ - gate.pasture.minZ - 2 * margin)
                     );
                     
                     // Award point to the gate's player

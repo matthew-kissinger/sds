@@ -22,6 +22,24 @@ const SHEEP_OBSTACLE_QUERY_RADIUS = 30;
 const SHEEP_OBSTACLE_STRENGTH = 6.0;
 const SHEEP_RADIUS = 0.6;
 
+// Module-level scratch Vector2Ds for the per-sheep gate-attraction block in
+// updateBehavior(). Reused via .set() instead of allocating fresh Vector2Ds
+// (and .clone()s) per sheep per frame. Safe to share because the sim is
+// single-threaded and these are written then consumed entirely within one
+// synchronous updateBehavior() call, never retained across calls or sheep.
+//   _gateScratch:   gate position, passed to this.seek() (seek clones it).
+//   _toGateScratch: (gate - position), only its components are read.
+//   _toDogScratch:  (dog  - position), only its components are read.
+// Dog position needs no Vector2D: the dot-product reads scalar components, so
+// the toDog delta is computed directly from closestDog.position.{x,z}.
+const _gateScratch = new Vector2D(0, 0);
+const _toGateScratch = new Vector2D(0, 0);
+const _toDogScratch = new Vector2D(0, 0);
+
+// Hoisted predicate for the active-sheep (state 0) filter so the per-frame
+// rebuild in OptimizedSheepSystem.update doesn't allocate a fresh closure.
+const _isActiveSheep = (sheep) => sheep.state === 0;
+
 // Shader cache for sync access after async load
 let sheepVertexShader = null;
 let sheepFragmentShader = null;
@@ -69,6 +87,19 @@ export class OptimizedSheepSystem {
         this.konveyorSheepMaterialControls = null;
         this.animationUpdateRate = 1;
         this._animationUpdateFrame = 0;
+
+        // Reusable scratch transform for per-frame instance-matrix composition,
+        // hoisted out of update() (a fresh THREE.Object3D allocates ~8 objects).
+        this._dummy = new THREE.Object3D();
+        this._dummy.rotation.order = 'YXZ';
+
+        // Reusable scratch array for the per-frame active-sheep (state 0) list.
+        // Rebuilt once at the top of update() (length=0 + push) and shared by
+        // every sheep's flocking pass that frame. Replaces a per-sheep
+        // allSheep.filter() that was O(N^2) and allocated a list + closure per
+        // sheep per frame. This matches the deterministic sim-baseline harness,
+        // which likewise filters the active list once per frame before the loop.
+        this._activeSheepScratch = [];
 
         // Extreme boids optimization flag
         this.useExtremeBoids = useExtremeBoids;
@@ -552,8 +583,7 @@ export class OptimizedSheepSystem {
      * Update all sheep behaviors and animations
      */
     update(deltaTime, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null) {
-        const dummy = new THREE.Object3D();
-        dummy.rotation.order = 'YXZ';
+        const dummy = this._dummy;
 
         const sceneFog = this.scene && this.scene.fog;
         if (this.konveyorSheepMaterialControls?.update) {
@@ -621,6 +651,22 @@ export class OptimizedSheepSystem {
         const animationUpdateStride = Math.max(1, Math.round(1 / this.animationUpdateRate));
         const animationFrame = this._animationUpdateFrame;
 
+        // skipFlocking is constant across the whole sheep loop this frame, so
+        // resolve it once. When per-sheep flocking runs, build the active-sheep
+        // (state 0) list a single time into the reused scratch array instead of
+        // re-filtering this.sheep inside every sheep's updateBehavior (O(N^2) +
+        // a fresh list/closure per sheep). The scratch is passed to
+        // updateBehavior, which reads it only on the !skipFlocking path.
+        const skipFlocking = this.useExtremeBoids && this.extremeBoidSystemInitialized;
+        const activeSheepList = this._activeSheepScratch;
+        if (!skipFlocking) {
+            activeSheepList.length = 0;
+            for (let s = 0; s < this.sheepCount; s++) {
+                const candidate = this.sheep[s];
+                if (candidate.state === 0) activeSheepList.push(candidate);
+            }
+        }
+
         // Update each sheep
         for (let i = 0; i < this.sheepCount; i++) {
             const sheep = this.sheep[i];
@@ -662,7 +708,8 @@ export class OptimizedSheepSystem {
             }
 
             // Update behavior (flocking, movement, etc.)
-            // Pass skipFlocking=true when extreme boid system handles flocking
+            // Pass skipFlocking=true when extreme boid system handles flocking.
+            // activeSheepList is the once-per-frame state-0 list (see above).
             sheep.updateBehavior(
                 this.sheep,
                 sheepdog,
@@ -673,8 +720,9 @@ export class OptimizedSheepSystem {
                 enableIndividualBleating,
                 isMultiplayer,
                 sheepdog2,
-                this.useExtremeBoids && this.extremeBoidSystemInitialized,
-                isHighDifficultyMode
+                skipFlocking,
+                isHighDifficultyMode,
+                activeSheepList
             );
             sheep.updatePosition(deltaTime);
 
@@ -1288,7 +1336,7 @@ export class OptimizedSheepInstance extends Boid {
         this.wasBeingChased = false;
     }
     
-    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null, skipFlocking = false, isHighDifficultyMode = false) {
+    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null, skipFlocking = false, isHighDifficultyMode = false, activeSheep = null) {
         // If retiring, seek retirement target or graze
         if (this.isRetiring) {
             if (this.retirementTarget) {
@@ -1400,10 +1448,12 @@ export class OptimizedSheepInstance extends Boid {
         }
 
         // Normal flocking behavior - only consider active sheep (state 0)
-        // Skip if ExtremeBoidSystem is handling flocking (for performance)
+        // Skip if ExtremeBoidSystem is handling flocking (for performance).
+        // The active list is built once per frame by the system and passed in;
+        // fall back to the per-call filter if a caller omits it (value-identical).
         if (!skipFlocking) {
-            const activeSheep = allSheep.filter(sheep => sheep.state === 0);
-            this.flock(activeSheep, params.separationDistance);
+            const flockNeighbors = activeSheep !== null ? activeSheep : allSheep.filter(_isActiveSheep);
+            this.flock(flockNeighbors, params.separationDistance);
         }
 
         // Add gentle wandering during pre-game state (when no sheepdog)
@@ -1478,9 +1528,10 @@ export class OptimizedSheepInstance extends Boid {
             let closestGateDistance = Infinity;
 
             for (const currentGate of gates) {
-                // Create Vector2D from gate position for distance calculation
-                const gatePos = new Vector2D(currentGate.position.x, currentGate.position.z);
-                const distanceToGate = this.position.distanceTo(gatePos);
+                // Reuse module scratch for the distance probe (distanceTo only
+                // reads .x/.z, so no fresh Vector2D is needed per gate).
+                _gateScratch.set(currentGate.position.x, currentGate.position.z);
+                const distanceToGate = this.position.distanceTo(_gateScratch);
                 if (distanceToGate < closestGateDistance) {
                     closestGateDistance = distanceToGate;
                     closestGate = currentGate;
@@ -1513,16 +1564,20 @@ export class OptimizedSheepInstance extends Boid {
                     const fleeRadius = closestDog.fleeRadius || this.fleeRadius || 8;
 
                     if (closestDogDistance < fleeRadius * 1.5 && closestGateDistance < 30) {
-                        // Create Vector2D objects from position data
-                        const gatePos = new Vector2D(closestGate.position.x, closestGate.position.z);
-                        const dogPos = new Vector2D(closestDog.position.x, closestDog.position.z);
+                        // Reuse module scratch instead of allocating up to 5
+                        // Vector2Ds per sheep per frame. _gateScratch holds the
+                        // gate position (also handed to this.seek below); the
+                        // to-gate / to-dog deltas only feed the scalar dot
+                        // product, so their components are computed in place.
+                        const px = this.position.x;
+                        const pz = this.position.z;
+                        _gateScratch.set(closestGate.position.x, closestGate.position.z);
+                        _toGateScratch.set(_gateScratch.x - px, _gateScratch.z - pz);
+                        _toDogScratch.set(closestDog.position.x - px, closestDog.position.z - pz);
 
-                        const toGate = gatePos.clone().subtract(this.position);
-                        const toDog = dogPos.clone().subtract(this.position);
-
-                        const dotProduct = toGate.x * toDog.x + toGate.z * toDog.z;
+                        const dotProduct = _toGateScratch.x * _toDogScratch.x + _toGateScratch.z * _toDogScratch.z;
                         if (dotProduct < 0) {
-                            const gateForce = this.seek(gatePos);
+                            const gateForce = this.seek(_gateScratch);
                             gateForce.multiply(this.gateAttraction);
                             this.applyForce(gateForce);
                         }
@@ -1537,21 +1592,23 @@ export class OptimizedSheepInstance extends Boid {
 
         // Cycle 6 Phase 2: route around tree trunks + large rocks. The
         // length-guard preserves Field's sim-baseline byte-identical path
-        // (Field has zero obstacles).
+        // (Field has zero obstacles). obstacleAvoidance returns a fresh {x,z}
+        // each call and applyForce only reads .x/.z (never retains the arg), so
+        // the force object is passed straight through (no throwaway Vector2D).
         const obstacles = getGameState()?.obstacles;
         if (obstacles && (obstacles.trees.length > 0 || obstacles.rocks.length > 0)) {
             if (obstacles.trees.length > 0) {
                 const nearbyTrees = obstacles.queryTrees(this.position, SHEEP_OBSTACLE_QUERY_RADIUS);
                 if (nearbyTrees.length > 0) {
                     const f = obstacleAvoidance(this.position, SHEEP_RADIUS, nearbyTrees, { strength: SHEEP_OBSTACLE_STRENGTH });
-                    if (f.x !== 0 || f.z !== 0) this.applyForce(new Vector2D(f.x, f.z));
+                    if (f.x !== 0 || f.z !== 0) this.applyForce(f);
                 }
             }
             if (obstacles.rocks.length > 0) {
                 const nearbyRocks = obstacles.queryRocks(this.position, SHEEP_OBSTACLE_QUERY_RADIUS);
                 if (nearbyRocks.length > 0) {
                     const f = obstacleAvoidance(this.position, SHEEP_RADIUS, nearbyRocks, { strength: SHEEP_OBSTACLE_STRENGTH });
-                    if (f.x !== 0 || f.z !== 0) this.applyForce(new Vector2D(f.x, f.z));
+                    if (f.x !== 0 || f.z !== 0) this.applyForce(f);
                 }
             }
         }

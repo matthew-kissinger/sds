@@ -62,3 +62,51 @@ export async function verifyJwt(token: string, secret: string): Promise<Record<s
     return null;
   }
 }
+
+// P-SEC-2: short-lived WebSocket admission ticket. The /ws upgrade can't carry
+// an Authorization header from a browser WebSocket constructor, so the REST
+// create/join handlers mint this ticket and the client rides it on the WS URL.
+// It binds the verified identity to the exact session + room it was issued for,
+// so a leaked session id alone can't open a socket. This is NOT a wire-protocol
+// (MessagePack) change - it rides the WS handshake query string only.
+//
+// Reuses the same HMAC-SHA256 machinery as signJwt/verifyJwt; the `kind: 'ws'`
+// claim keeps a session JWT from being replayed as a ticket and vice-versa, and
+// the short TTL (default 120s) bounds the replay window: the ticket is consumed
+// immediately at upgrade, long before a 24h session token would expire.
+export interface WsTicketClaims {
+  persistent_id: string;
+  sessionId: string;
+  roomCode: string;
+}
+
+export async function signTicket(
+  claims: WsTicketClaims,
+  secret: string,
+  ttlSeconds = 120,
+): Promise<string> {
+  return signJwt({ ...claims, kind: 'ws' }, secret, ttlSeconds);
+}
+
+// Verifies signature + expiry (via verifyJwt) AND the `kind: 'ws'` discriminator
+// AND that the ticket was minted for this exact room + session. Returns the
+// claims on success, null on any mismatch. roomCode comparison is
+// case-insensitive to match the room-stub normalization in index.ts.
+export async function verifyTicket(
+  token: string,
+  secret: string,
+  expect: { roomCode: string; sessionId: string },
+): Promise<WsTicketClaims | null> {
+  const payload = await verifyJwt(token, secret);
+  if (!payload) return null;
+  if (payload.kind !== 'ws') return null;
+  if (typeof payload.persistent_id !== 'string' || !payload.persistent_id) return null;
+  if (typeof payload.sessionId !== 'string' || payload.sessionId !== expect.sessionId) return null;
+  if (typeof payload.roomCode !== 'string') return null;
+  if (payload.roomCode.toUpperCase() !== expect.roomCode.toUpperCase()) return null;
+  return {
+    persistent_id: payload.persistent_id,
+    sessionId: payload.sessionId,
+    roomCode: payload.roomCode,
+  };
+}

@@ -18,6 +18,62 @@ export interface PlayerRow {
   timed_best: number | null;
   competitive_wins: number;
   cooperative_best: number | null;
+  // P-SEC-1: device-local auth. hex(SHA-256(authSecret)); NULL = not yet bound
+  // (grandfather-eligible). Set once on first register, then required to match
+  // on every subsequent register. auth_bound_at is the ms-epoch it was bound.
+  auth_secret_hash?: string | null;
+  auth_bound_at?: number | null;
+}
+
+// P-SEC-1: thrown by registerPlayer when a row's secret is already bound and
+// the caller does not present a matching secret. The route handler maps this to
+// a 401 so a leaked persistent_id alone can never mint an impersonating token.
+export class AuthError extends Error {
+  constructor(message = 'auth required') {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
+const _hexEnc = new TextEncoder();
+
+/**
+ * P-SEC-1: hex(SHA-256(secret)) via the Workers-native WebCrypto digest. No new
+ * dependency - crypto.subtle is available on the Worker (V8 isolate) and in the
+ * Node test runtime. Only the hash is persisted to D1; the plaintext secret
+ * lives client-side in localStorage.
+ */
+export async function hashSecret(secret: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', _hexEnc.encode(secret));
+  const bytes = new Uint8Array(digest);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, '0');
+  return hex;
+}
+
+/**
+ * P-SEC-1: constant-time comparison of two hex strings. Reuses the
+ * XOR-accumulate pattern from jwt.ts verifyJwt so a length-mismatch or any
+ * differing byte fails without an early-exit timing side channel. Inputs are
+ * the lowercase hex digests produced by hashSecret.
+ */
+export function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * P-SEC-1: mint a fresh device secret - base64url of 32 random bytes from the
+ * CSPRNG. Returned to the client exactly once (on issue); only its hash is
+ * stored. base64url so it rides JSON / localStorage without escaping.
+ */
+export function generateAuthSecret(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export type GameMode =
@@ -60,6 +116,111 @@ export function isDailyMode(mode: unknown): mode is `daily-${string}` {
 
 export function isValidGameMode(mode: unknown): mode is GameMode {
   return typeof mode === 'string' && (ALL_GAME_MODES_SET.has(mode) || isDailyMode(mode));
+}
+
+// ---------------------------------------------------------------------------
+// P-SEC-5: daily-challenge authority.
+//
+// The daily mode partitions the leaderboard by date (`daily-YYYY-MM-DD`) and
+// each date deterministically fixes the sheep count via the same FNV-1a hash
+// the client uses (js/utils/dailySeed.js). Because the partition + sheep count
+// are forgeable by a client (it posts the mode string + sheepCount), the
+// server re-derives the canonical sheep count for the claimed date and refuses
+// a submission whose date is outside today's window or whose sheep count does
+// not match.
+//
+// The FNV-1a constants + lerp here are duplicated from js/utils/dailySeed.js by
+// design: the shared-sim boundary forbids worker imports from js/ (which pulls
+// Three.js transitively). This is a one-shot integrity check at submit time,
+// not a per-tick sim path, so the small duplication is acceptable; the paired
+// spec pins it against the client module's outputs so the two cannot drift.
+// ---------------------------------------------------------------------------
+
+const DAILY_SHEEP_SEED_MIN = 50;
+const DAILY_SHEEP_SEED_MAX = 200;
+
+/** FNV-1a 32-bit. Byte-identical to js/utils/dailySeed.js fnv1a. */
+export function dailyFnv1a(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/**
+ * The canonical sheep count for a `YYYY-MM-DD` date key, reproducing
+ * dailySeedFor(date).sheepCount. `dateKey` is the bare date (no `daily-`
+ * prefix).
+ */
+export function dailySheepCountForDate(dateKey: string): number {
+  const hSheep = (dailyFnv1a(`${dateKey}:sheep`) % 1000) / 1000;
+  // lerp(min, max, t), rounded — matches dailySeed.js exactly.
+  return Math.round(DAILY_SHEEP_SEED_MIN + (DAILY_SHEEP_SEED_MAX - DAILY_SHEEP_SEED_MIN) * hSheep);
+}
+
+/** UTC `YYYY-MM-DD` for a ms-epoch. Mirrors dailySeed.js dailyKey (UTC-rooted). */
+export function utcDateKey(nowMs: number): string {
+  const d = new Date(nowMs);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export interface DailyValidationResult {
+  ok: boolean;
+  reason?: string;
+}
+
+/**
+ * P-SEC-5: validate a `daily-YYYY-MM-DD` submission against the server clock
+ * and the deterministic sheep count for that date.
+ *
+ *  - The claimed date must equal today's UTC date, or fall within
+ *    `graceDays` on either side (default 1 day) to absorb UTC-midnight skew
+ *    between a client that started a run just before rollover and a server
+ *    that stamps the POST just after. Anything further past/future is a
+ *    forged partition.
+ *  - The claimed sheep count must equal dailySheepCountForDate(date). A
+ *    mismatch means the client lied about the challenge it played.
+ *
+ * Returns { ok: true } on success, or { ok: false, reason } describing the
+ * first failed check. Non-daily modes are not the caller's concern here.
+ */
+export function validateDailySubmission(
+  mode: `daily-${string}`,
+  sheepCount: number,
+  nowMs: number,
+  graceDays = 1,
+): DailyValidationResult {
+  const dateKey = mode.slice('daily-'.length); // 'YYYY-MM-DD'
+  // Parse as a UTC midnight epoch so the day delta is timezone-stable.
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const claimedMidnightUtc = Date.UTC(y, m - 1, d);
+  if (!Number.isFinite(claimedMidnightUtc)) {
+    return { ok: false, reason: 'daily partition date unparseable' };
+  }
+  const todayKey = utcDateKey(nowMs);
+  const [ty, tm, td] = todayKey.split('-').map(Number);
+  const todayMidnightUtc = Date.UTC(ty, tm - 1, td);
+  const dayMs = 86_400_000;
+  const dayDelta = Math.round((todayMidnightUtc - claimedMidnightUtc) / dayMs);
+  if (dayDelta > graceDays) {
+    return { ok: false, reason: `daily partition ${dateKey} is in the past beyond grace` };
+  }
+  if (dayDelta < -graceDays) {
+    return { ok: false, reason: `daily partition ${dateKey} is in the future` };
+  }
+  const expectedSheep = dailySheepCountForDate(dateKey);
+  if (sheepCount !== expectedSheep) {
+    return {
+      ok: false,
+      reason: `daily sheep_count ${sheepCount} does not match seed (${expectedSheep}) for ${dateKey}`,
+    };
+  }
+  return { ok: true };
 }
 
 // Cycle 35 Phase 4: solo + timed modes have a fixed intrinsic sheep count
@@ -116,26 +277,83 @@ async function allocateDiscriminator(db: D1Database, displayName: string): Promi
   return '9999';
 }
 
+// P-SEC-1: result of the auth-aware register. `authSecret` is the plaintext
+// device secret and is present ONLY when freshly issued (new row, or a
+// trust-on-first-use bind of a legacy NULL-hash row). On a successful
+// re-register with a matching secret it is omitted - the client already holds
+// it. The route handler surfaces it to the JSON body only when present.
+export interface RegisterResult {
+  player: PlayerRow;
+  authSecret?: string;
+}
+
+/**
+ * P-SEC-1: auth-aware player registration. Three-way fork on the existing row
+ * and its auth_secret_hash:
+ *
+ *   1. row ABSENT - the caller supplies a server-minted persistentId (the
+ *      route mints it via crypto.randomUUID, never trusting a client value).
+ *      Mint a fresh authSecret, INSERT with auth_secret_hash = hash(secret),
+ *      and return { player, authSecret }.
+ *   2. row PRESENT, hash IS NULL (legacy / grandfather) - trust-on-first-use:
+ *      mint a fresh authSecret, UPDATE auth_secret_hash + auth_bound_at, and
+ *      return { player, authSecret } so the device captures it.
+ *   3. row PRESENT, hash NOT NULL - require the provided secret. Missing, or a
+ *      non-matching hash (constant-time compare), throws AuthError. On match,
+ *      return { player } with NO authSecret.
+ *
+ * `providedSecret` is the secret the returning client claims to hold; ignored
+ * for the absent / grandfather paths.
+ */
 export async function registerPlayer(
   db: D1Database,
   persistentId: string,
   requestedName: string,
   nameType: 'custom' | 'random' | 'anonymous',
-): Promise<PlayerRow> {
+  providedSecret?: string | null,
+): Promise<RegisterResult> {
   const existing = await db
     .prepare('SELECT * FROM players WHERE persistent_id = ?')
     .bind(persistentId)
     .first<PlayerRow>();
+
   if (existing) {
     const now = Date.now();
+
+    // Fork 3: secret already bound - the returning client must prove it holds
+    // the matching secret. A leaked persistent_id alone gets nothing.
+    if (existing.auth_secret_hash != null) {
+      if (!providedSecret) throw new AuthError();
+      const providedHash = await hashSecret(providedSecret);
+      if (!timingSafeEqualHex(providedHash, existing.auth_secret_hash)) {
+        throw new AuthError();
+      }
+      await db
+        .prepare('UPDATE players SET last_active = ? WHERE persistent_id = ?')
+        .bind(now, persistentId)
+        .run();
+      existing.last_active = now;
+      return { player: existing };
+    }
+
+    // Fork 2: legacy row with no secret yet - trust-on-first-use bind. The
+    // first caller to register this id claims it by receiving a fresh secret.
+    const authSecret = generateAuthSecret();
+    const authHash = await hashSecret(authSecret);
     await db
-      .prepare('UPDATE players SET last_active = ? WHERE persistent_id = ?')
-      .bind(now, persistentId)
+      .prepare(
+        'UPDATE players SET last_active = ?, auth_secret_hash = ?, auth_bound_at = ? WHERE persistent_id = ?',
+      )
+      .bind(now, authHash, now, persistentId)
       .run();
     existing.last_active = now;
-    return existing;
+    existing.auth_secret_hash = authHash;
+    existing.auth_bound_at = now;
+    return { player: existing, authSecret };
   }
 
+  // Fork 1: brand-new row. The persistentId here was server-minted by the
+  // route. Mint a fresh secret and store only its hash.
   let displayName = requestedName;
   if (nameType === 'random') displayName = generateRandomName();
   else if (nameType === 'anonymous') displayName = 'Player';
@@ -143,32 +361,39 @@ export async function registerPlayer(
   const discriminator = await allocateDiscriminator(db, displayName);
   const fullName = `${displayName}#${discriminator}`;
   const now = Date.now();
+  const authSecret = generateAuthSecret();
+  const authHash = await hashSecret(authSecret);
 
   await db
     .prepare(
       `INSERT INTO players
        (persistent_id, display_name, discriminator, full_name, created_at, last_active,
         solo_classic_best, solo_extreme_best, solo_insane_best, solo_chaos_best,
-        timed_best, competitive_wins, cooperative_best)
-       VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, 0, NULL)`,
+        timed_best, competitive_wins, cooperative_best, auth_secret_hash, auth_bound_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, 0, NULL, ?, ?)`,
     )
-    .bind(persistentId, displayName, discriminator, fullName, now, now)
+    .bind(persistentId, displayName, discriminator, fullName, now, now, authHash, now)
     .run();
 
   return {
-    persistent_id: persistentId,
-    display_name: displayName,
-    discriminator,
-    full_name: fullName,
-    created_at: now,
-    last_active: now,
-    solo_classic_best: null,
-    solo_extreme_best: null,
-    solo_insane_best: null,
-    solo_chaos_best: null,
-    timed_best: null,
-    competitive_wins: 0,
-    cooperative_best: null,
+    player: {
+      persistent_id: persistentId,
+      display_name: displayName,
+      discriminator,
+      full_name: fullName,
+      created_at: now,
+      last_active: now,
+      solo_classic_best: null,
+      solo_extreme_best: null,
+      solo_insane_best: null,
+      solo_chaos_best: null,
+      timed_best: null,
+      competitive_wins: 0,
+      cooperative_best: null,
+      auth_secret_hash: authHash,
+      auth_bound_at: now,
+    },
+    authSecret,
   };
 }
 
@@ -418,6 +643,18 @@ async function submitScoreInner(
     throw new Error(`score ${score} implausibly low for ${gameMode} at ${sheepCount} sheep`);
   }
 
+  // P-SEC-5: daily-challenge authority. A daily submission claims a date
+  // partition AND a sheep count; both are forgeable on the wire. Re-derive the
+  // canonical sheep count for the claimed UTC date and reject a stale/future
+  // partition or a mismatched count. The throw lands in score_errors via the
+  // submitScore wrapper, same as every other hard reject.
+  if (isDailyMode(gameMode)) {
+    const daily = validateDailySubmission(gameMode, sheepCount, now);
+    if (!daily.ok) {
+      throw new Error(daily.reason || `invalid daily submission for ${gameMode}`);
+    }
+  }
+
   // Cycle 10 Phase 6: soft signals. Stored on the audit row; do NOT reject.
   const clientStartedAt = typeof additionalData.clientStartedAt === 'number'
     ? (additionalData.clientStartedAt as number)
@@ -572,6 +809,11 @@ export interface LeaderboardEntry {
 export interface LeaderboardFilters {
   sceneId?: string;
   sheepCount?: number;
+  // P-SEC-5: the public READ path leaves this unset so anomaly-flagged rows
+  // (score_anomalies IS NOT NULL — see detectScoreAnomalies + migration 0003)
+  // are hidden from the board. Only a trusted/admin caller passes `true` to
+  // include flagged rows for review. Default = false = exclude flagged.
+  includeFlagged?: boolean;
 }
 
 /**
@@ -581,6 +823,11 @@ export interface LeaderboardFilters {
  * distributions, so cross-scene boards never composed. Always queries
  * `score_submissions` with GROUP BY; the materialized fast path (queried
  * scene-blind on `players.*`) is gone.
+ *
+ * P-SEC-5: by default the query excludes rows whose `score_anomalies` column
+ * is non-null (flagged by detectScoreAnomalies at submit time). The
+ * migration-0003 partial index makes the predicate cheap. Pass
+ * `filters.includeFlagged = true` only from a trusted admin readout.
  */
 export async function getLeaderboard(
   db: D1Database,
@@ -603,6 +850,13 @@ export async function getLeaderboard(
 
   const where: string[] = ['s.game_mode = ?'];
   const binds: any[] = [mode];
+  // P-SEC-5: hide flagged submissions from the public board by default. A
+  // submission that tripped any anomaly heuristic carries a non-null
+  // score_anomalies blob; excluding it here keeps a forged-but-bounds-passing
+  // time off the leaderboard without a hard reject at submit time.
+  if (!filters.includeFlagged) {
+    where.push('s.score_anomalies IS NULL');
+  }
   if (filters.sceneId && filters.sceneId !== 'any') {
     where.push('s.scene_id = ?');
     binds.push(filters.sceneId);
@@ -659,8 +913,11 @@ export async function getAllLeaderboards(
   // even though those modes never partition by that count.
   const results = await Promise.all(
     ALL_GAME_MODES.map(m => {
+      // P-SEC-5: preserve includeFlagged when we strip the sheepCount filter
+      // for fixed-count modes — otherwise an admin readout would silently
+      // re-hide flagged rows for solo/timed boards.
       const perMode: LeaderboardFilters = MODES_WITH_FIXED_SHEEP_COUNT.has(m)
-        ? { sceneId: filters.sceneId }
+        ? { sceneId: filters.sceneId, includeFlagged: filters.includeFlagged }
         : filters;
       return getLeaderboard(db, m, limit, perMode);
     }),

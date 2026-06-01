@@ -53,7 +53,7 @@ function sceneLabel(sceneId?: string): string | null {
 }
 
 export function PublicLobbyList({ onBack, onJoinRoom }: PublicLobbyListProps) {
-    useTranslation();
+    const { t } = useTranslation();
     const [lobbies, setLobbies] = useState<Lobby[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -247,7 +247,7 @@ export function PublicLobbyList({ onBack, onJoinRoom }: PublicLobbyListProps) {
             }}
         >
             <Panel size="md" maxWidth="40rem" style={{ animation: 'slideUp 0.5s ease-out' }}>
-                <PanelTitle>Public Lobbies</PanelTitle>
+                <PanelTitle>{t('multiplayer.publicLobbies')}</PanelTitle>
 
                 <div style={{ maxHeight: isCompact ? '50vh' : '60vh', overflowY: 'auto', marginBottom: '1rem' }}>
                     {renderLobbies()}

@@ -6,6 +6,22 @@ import { Vector2D } from './Vector2D.js';
  */
 
 /**
+ * Per-tick allocation pool (P-PERF-1) for `applyAcceleration`. These two
+ * module-level scratch vectors replace the `targetVelocity.clone()` and
+ * `velocityDiff.clone()` temporaries in the acceleration lerp. The math is
+ * byte-identical: `_velocityDiff.set(targetVelocity.x, targetVelocity.z)`
+ * holds the same components a `clone()` would before the same `.subtract`, and
+ * `_velocityChange` does the same on the diff before the same `.multiply`.
+ * Single-threaded by contract (Worker DO tick + client predictor); each call
+ * fully consumes both scratches (folding `_velocityChange` into
+ * `entity.velocity`) before returning, so no state leaks across calls. The
+ * returned `entity.velocity.clone()` is deliberately left un-pooled so callers
+ * keep a non-aliased velocity snapshot.
+ */
+const _velocityDiff = new Vector2D(0, 0);
+const _velocityChange = new Vector2D(0, 0);
+
+/**
  * Update entity position and velocity based on forces and constraints
  * @param {Object} entity - Entity with position, velocity, acceleration
  * @param {number} deltaTime - Time step
@@ -75,8 +91,8 @@ export function applyAcceleration(entity, targetVelocity, deltaTime, config = {}
     const accelerationRate = isAccelerating ? acceleration : deceleration;
     
     // Calculate velocity change
-    const velocityDiff = targetVelocity.clone().subtract(entity.velocity);
-    const velocityChange = velocityDiff.clone().multiply(accelerationRate * deltaTime);
+    const velocityDiff = _velocityDiff.set(targetVelocity.x, targetVelocity.z).subtract(entity.velocity);
+    const velocityChange = _velocityChange.set(velocityDiff.x, velocityDiff.z).multiply(accelerationRate * deltaTime);
     
     // Apply velocity change
     entity.velocity.add(velocityChange);
