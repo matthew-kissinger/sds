@@ -25,6 +25,7 @@ import { loadKilnImpostor } from '../kiln-impostor-material.js';
 import { getSceneManager } from '../GameBridge.js';
 import { TIER_PRESETS } from '../HardwareTier.js';
 import { shouldUseKonveyorProductionNativeInstancing } from '../rendering/konveyorRuntimeMode.js';
+import { resolveImpostorBase } from './objectImpostorManifest.js';
 
 const HYBRID_TREE_LOD1_SWITCH_DISTANCE = 56;
 const HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE = 144;
@@ -77,7 +78,6 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     const useMobileNativeLod1 = hwTier === 'low';
     const impostorRoute = resolveKonveyorNativeTreeImpostorRoute();
     const useProductionNativeImpostor = impostorRoute.active;
-    const treeImpostorBaseDir = impostorRoute.baseDir;
     const _tRuntime = useProductionNativeImpostor ? performance.now() : 0;
     const treeImpostorRuntime = useProductionNativeImpostor ? await loadTreeImpostorRuntime() : null;
     if (useProductionNativeImpostor) {
@@ -92,7 +92,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
         const meshDefs = [];
         const _tKiln = useProductionNativeImpostor ? performance.now() : 0;
         const kiln = useProductionNativeImpostor
-            ? await loadKilnImpostor(`${treeImpostorBaseDir}/${treeType}.imposter`, {
+            ? await loadKilnImpostor(await resolveImpostorBase(treeType, { octahedral: impostorRoute.useOctahedral }), {
                 tileSelectionMode: 'production-instanced-attributes',
             })
             : null;
@@ -437,7 +437,7 @@ export async function placeTrees(builder, competitivePastures = null) {
         .map(([type]) => type);
     const _tKilnPreload = performance.now();
     const kilnLoadResults = await Promise.all(
-        kilnTreeTypes.map((type) => loadKilnImpostor(`assets/models/trees/${type}.imposter`))
+        kilnTreeTypes.map(async (type) => loadKilnImpostor(await resolveImpostorBase(type)))
     );
     builder._sdsImpostorMs = (builder._sdsImpostorMs ?? 0) + (performance.now() - _tKilnPreload);
     for (let i = 0; i < kilnTreeTypes.length; i++) {
