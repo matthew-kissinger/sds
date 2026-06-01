@@ -81,6 +81,27 @@ export function coerceInputSequence(value) {
 // 60Hz ticks, so this cap is generous: it only bites a flooder.
 export const MAX_PENDING_INPUTS = 8;
 
+// P-PERF-2: per-tick allocation reduction.
+//
+// `validateEntityState` (shared/MovementPhysics.js) only ever reads its
+// fallback by calling `fallbackPosition.clone()` when an entity's position
+// went non-finite — it never aliases or mutates the argument. So the two
+// hot-loop call sites can share a single frozen module-level constant each
+// instead of constructing a fresh `new Vector2D(...)` every entity, every
+// tick. The clone-on-use contract keeps this aliasing-safe and the produced
+// position byte-identical to the old per-call literal.
+const DOG_VALIDATE_FALLBACK = new Vector2D(0, 0);
+const SHEEP_VALIDATE_FALLBACK = new Vector2D(-20, -20);
+
+// Hoisted named predicate for the per-tick "active sheep" filter in
+// updateSheep(). Defined once at module scope so the filter does not allocate
+// a fresh closure every tick (and so the filter itself runs once per tick
+// rather than once per sheep — see updateSheep()). state === 0 is the active
+// state (1 = retiring, 2 = grazing).
+function isActiveSheep(s) {
+    return s.state === 0;
+}
+
 export class GameSimulation {
     constructor(room) {
         this.room = room;
@@ -500,8 +521,10 @@ export class GameSimulation {
             
             sheepdog.position = constrainedPosition;
             
-            // Validate state to prevent NaN/Infinity
-            validateEntityState(sheepdog, new Vector2D(0, 0));
+            // Validate state to prevent NaN/Infinity. P-PERF-2: shared frozen
+            // fallback constant — validateEntityState clones it on use, never
+            // aliases, so this is byte-identical to a fresh literal per call.
+            validateEntityState(sheepdog, DOG_VALIDATE_FALLBACK);
         }
     }
 
@@ -574,6 +597,15 @@ export class GameSimulation {
     }
 
     updateSheep() {
+        // P-PERF-2: compute the active-sheep set ONCE per tick before the loop,
+        // using the hoisted `isActiveSheep` predicate (no per-iteration closure).
+        // Previously this filter ran inside the per-sheep loop, allocating a
+        // fresh O(N) array (and closure) for every active sheep — O(N^2) garbage
+        // per tick at flock scale. `getNeighbors` only reads `allBoids` and
+        // skips `boid === otherBoid`, so a single shared array reused for every
+        // sheep's neighbor query is behavior-identical to the per-sheep rebuild.
+        const activeSheep = this.gameState.sheep.filter(isActiveSheep);
+
         // Update each sheep using shared flocking logic
         for (let sheep of this.gameState.sheep) {
             // Skip sheep that are retiring or grazing (client handles these)
@@ -586,7 +618,6 @@ export class GameSimulation {
 
 
             // Get neighboring sheep for flocking (only consider active sheep)
-            const activeSheep = this.gameState.sheep.filter(s => s.state === 0);
             const neighbors = getNeighbors(sheep, activeSheep, this.sheepConfig.perceptionRadius);
             
             // Apply flocking behavior
@@ -709,8 +740,9 @@ export class GameSimulation {
                 sheep.facingDirection = sheep.velocity.angle();
             }
 
-            // Validate entity state
-            validateEntityState(sheep, new Vector2D(-20, -20));
+            // Validate entity state. P-PERF-2: shared frozen fallback constant
+            // (cloned on use inside validateEntityState, never aliased).
+            validateEntityState(sheep, SHEEP_VALIDATE_FALLBACK);
         }
 
         // Check for sheep retirement
