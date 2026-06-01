@@ -1,36 +1,51 @@
-# Next Session - Cycle 50
+# Next Session - Cycle 51
 
 > **Updated:** 2026-06-01
-> **For:** Cycle 50
-> **Pickup priority:** Cycle 50 (`object-impostor-plumbing`) all 4 phases shipped on `main` (P1 `374c7a4`+`26e214f`, P2 `911e329`, P4 `457a32e`, P3 `ceeed4e`): `assets/objects.manifest.json` drives both the offline bake and the runtime route; every sidecar (latlon + octahedral) carries `objectId/category/variant/layoutId`; the baker has an `--augment-only` mode and emits octahedral via `--layout octahedral --grid 8x8`; a CI-portable determinism golden (`tests/objects-impostor-parity.spec.js` + `.hashes.json`: 12 atlas hashes + sidecar idempotency) guards drift; and `js/world/TreePlacement.js` resolves impostor paths through `js/world/objectImpostorManifest.js` (degrade-not-crash), removing the `tree1/tree2` string templates. Octahedral stays lab-gated; latlon-hemi-y stays the production default. tree1/tree2 latlon + octahedral atlases are byte-identical (no PNG bytes changed). Tests 903 pass, build clean. **Pickup is `/cycle-close`**, pending two deferred gates: (1) hard-stop #1 full Kiln re-bake byte-identity is unverified-by-execution -- run `npm run bake-tree-impostors` and confirm the latlon atlases re-bake byte-identical to committed; (2) the committed octahedral atlas was baked from the runtime `tree1.glb` (3783 tris), not the manifest `_originals` source (5880 tris), so an octahedral re-bake will NOT reproduce it -- decide whether to reconcile the source or accept a new octahedral bake (needs visual revalidation). 7 commits are unpushed (a push to `main` triggers the production deploy). Kiln tool at `../pixel-forge`.
+> **For:** Cycle 51
+> **Pickup priority:** Cycle 51 (`frontend-loading-and-assets-redesign`) opens with an **alignment check-in and a first-principles brainstorm, before any code.** The plan ([`docs/cycle-51-plan.md`](docs/cycle-51-plan.md)) has the Goal and Open Questions seeded from Matt's brief; the Phases are intentionally unauthored. This is a "step back and rethink the whole frontend shell" cycle: the stack, the component structure and instantiation, the loading sequence, the entrance, the scene-switch backdrop, the style and icon system, and non-scene art. Do not start phases. Run the brainstorm (Q1-Q6), converge, author the plan, then `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-50-plan.md`](docs/cycle-50-plan.md). The full 2-cycle impostor design (Cycle A here, Cycle B is the variation + new-object-types capability cycle) is in [`docs/object-impostor-cycle-plan.md`](docs/object-impostor-cycle-plan.md). The impostor architecture map and constraints live in [`.claude/rules/scene-and-render.md`](.claude/rules/scene-and-render.md) and [`DECISIONS.md`](DECISIONS.md) (far-tree impostors, octahedral lab-only, the polish-program offline-bake decision). Closed-cycle context is in [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-51-plan.md`](docs/cycle-51-plan.md). The brainstorm inputs are the Pastoral UI program docs ([`docs/ui-design-language.md`](docs/ui-design-language.md), [`docs/entrance-loading-spec.md`](docs/entrance-loading-spec.md), [`docs/ui-migration-map.md`](docs/ui-migration-map.md)) and the standalone `/gallery` headless review route.
 
-## Current State
+## The redesign brief (Matt, 2026-06-01)
 
-Cycle 49 (`pastoral-vision`) closed 2026-05-29: shipped 6/6 phases. It opened the Pastoral UI/UX rework program with a vision/spec cycle (zero in-game change): the design-language doc, the v2 pastoral token palette, the standalone `/gallery` route (the headless review surface, live at sheepdogsim.com/gallery), the pastoral primitive preview, the entrance/loading spec + mockups, and the container migration map. The pastoral look is Matt's post-deploy visual call on `/gallery`. No version bump; v2.1.10 stands.
+First-principles, not incremental. Specific pain points to resolve:
 
-Cycle 50 (`object-impostor-plumbing`) is the active cycle, a render refactor inserted ahead of the UI program's remaining work (Matt's reprioritization). It makes the tree impostor pipeline object-driven (manifest-driven offline bake, generalized sidecar + runtime route, octahedral reproducible) while holding tree1/tree2 byte-identical. It is render/asset-only: no `shared/` edits, no sim-baseline regeneration, no SceneDef change, no Worker change, no version bump. All 4 phases shipped on `main` (tests 903 pass, build clean); pickup is `/cycle-close` (pending the deferred full-rebake gate + the octahedral-source decision noted in the pickup priority above).
+- **Vestigial skeleton loader** on Play (an artifact from an old sequence where skeleton loading made sense; it does not fit the current flow).
+- **Degraded zen entrance** - we used to load the full selected scene at entrance; we stopped because scene + assets are heavier and slower now (larger files). Decide the entrance model given asset weight.
+- **Void scene-switch backdrop** - scene switching works, but the backdrop is a basic void that serves no purpose.
+- **Style drift and ugly icons** - establish a coherent style and icon system.
+- **Frontend stack and structure** - open to reworking instantiation/implementation from first principles.
+- **Non-scene art** - likely introduce new concepts and art.
+
+The Pastoral UI/UX program (Cycle 49 vision/spec) already captured a lot of this; the brainstorm decides how much to adopt vs revisit from scratch.
+
+## Cycle 50 carryover (closed 2026-06-01)
+
+Cycle 50 (`object-impostor-plumbing`) shipped 4/4 phases (see [`docs/BACKLOG.md`](docs/BACKLOG.md)). Two items were deferred at close by explicit decision:
+
+- The full Kiln re-bake byte-identity (hard-stop #1) is unverified-by-execution; the CI determinism golden is green. Run `npm run bake-tree-impostors` and confirm the latlon atlases re-bake byte-identical.
+- The committed octahedral atlas was baked from the runtime `tree1.glb` (3783 tris), not the manifest `_originals` source (5880 tris), so an octahedral re-bake will not reproduce it. Reconcile the source or accept a new octahedral bake.
 
 ## Program threads in flight
 
-- **Object-driven impostor program (active).** Cycle 50 = Cycle A (plumbing + parity, this cycle). Cycle B (per-instance variation + rocks/structures + polish) follows as a later cycle. Full design: [`docs/object-impostor-cycle-plan.md`](docs/object-impostor-cycle-plan.md).
-- **Pastoral UI/UX program (paused, resumes after the impostor work).** Cycle 49 shipped the vision/spec. The remaining implementation cycles shift to Cycles 51+: the entrance/loading rework ([`docs/entrance-loading-spec.md`](docs/entrance-loading-spec.md)) and the container restyle batches ([`docs/ui-migration-map.md`](docs/ui-migration-map.md), the 13 stateful containers). The `/gallery` route is the durable headless review surface for that work.
+- **Frontend redesign (active, Cycle 51).** The Pastoral UI/UX program (Cycle 49 vision/spec) feeds this; Cycle 51 may adopt or revisit it from first principles.
+- **Object-driven impostor program.** Cycle 50 (Cycle A, plumbing) shipped. Cycle B (per-instance variation + rocks/structures) remains a candidate future cycle: [`docs/object-impostor-cycle-plan.md`](docs/object-impostor-cycle-plan.md).
+- **Security / perf / coverage audit roadmap.** A 14-phase Cycles 51+ program in [`docs/audit-roadmap-2026-05.md`](docs/audit-roadmap-2026-05.md), not yet scheduled against a cycle.
 
 ## Release reference (Cycle 42 / v2.1.10)
 
-- Commit `fb78851`, tag `v2.1.10`, deploy run `26595530924` (success on `main`). Cycles 43 through 49 shipped no version bump, so v2.1.10 is still the current release. Do not bump the version unless Matt calls a release.
+- Commit `fb78851`, tag `v2.1.10`, deploy run `26595530924`. Cycles 43 through 50 shipped no version bump, so v2.1.10 is still the current release. Do not bump the version unless Matt calls a release.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-50-plan.md`](docs/cycle-50-plan.md) |
+| Active cycle | [`docs/cycle-51-plan.md`](docs/cycle-51-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-50-plan.md`](docs/archive/cycles/cycle-50-plan.md) |
+| Pastoral UI program | [`docs/ui-design-language.md`](docs/ui-design-language.md), [`docs/entrance-loading-spec.md`](docs/entrance-loading-spec.md), [`docs/ui-migration-map.md`](docs/ui-migration-map.md) |
 | Impostor program (2-cycle) | [`docs/object-impostor-cycle-plan.md`](docs/object-impostor-cycle-plan.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-49-plan.md`](docs/archive/cycles/cycle-49-plan.md) |
-| Paused UI program | [`docs/ui-migration-map.md`](docs/ui-migration-map.md), [`docs/entrance-loading-spec.md`](docs/entrance-loading-spec.md), [`docs/ui-design-language.md`](docs/ui-design-language.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |

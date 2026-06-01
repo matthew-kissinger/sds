@@ -4,6 +4,35 @@
 
 ## Recently Completed
 
+### Cycle 50 - `object-impostor-plumbing` (closed 2026-06-01)
+
+Plan archived at [`docs/archive/cycles/cycle-50-plan.md`](archive/cycles/cycle-50-plan.md). Cycle 50 made the tree-impostor (billboard far-LOD) pipeline object-driven instead of preset/fixture-driven, as a pure refactor with zero visual change. A data-driven `assets/objects.manifest.json` now drives the offline bake, the sidecar contract, and the runtime route; octahedral is reproducible through the same baker; tree1/tree2 atlases stay byte-identical (no PNG bytes changed). Adding an object or impostor variant is now a manifest edit plus a bake, not a code edit. No version bump; v2.1.10 stands.
+
+**Closeout outcomes:**
+
+- Shipped 4/4 phases. P1 manifest + generalized baker (`374c7a4`, CI-portability `26e214f`); P2 sidecar identity + CI-portable determinism golden (`911e329`); P4 octahedral reproducible through the manifest (`457a32e`); P3 runtime route reads the manifest (`ceeed4e`); plus a ratchet bump for P3's footprint (`909b1fd`).
+- **P1:** the manifest catalogs tree1/tree2 (impostor-enabled) plus rocks (disabled); the baker reads it (object x layout x variant loop + an `impostorAssetBase` helper); the hardcoded `TREES=['tree1','tree2']` list is gone.
+- **P2:** each sidecar carries `objectId/category/variant/layoutId` (additive, via a new baker `--augment-only` mode that re-stamps without a Kiln render); `tests/imposter-sidecar.spec.js` generalized off its hardcoded list; new `tests/objects-impostor-parity.spec.js` + `.hashes.json` golden (tilesX*tilesY===angles invariant, sidecar re-stamp idempotency, recorded sha256 per atlas).
+- **P4:** an octahedral layoutPreset (`--layout octahedral --grid 8x8`) listed in tree layouts; the baker emits octahedral args while latlon args stay byte-identical; octahedral sidecars stamped and the golden extended to 12 atlas hashes; the octahedral spec generalized. Octahedral stays lab-gated; latlon-hemi-y is the production default.
+- **P3:** new `js/world/objectImpostorManifest.js` (client loader, degrade-not-crash on fetch failure); `js/world/TreePlacement.js` resolves impostor paths via `resolveImpostorBase()` instead of `tree1/tree2` string templates.
+
+**Validation gates (2026-06-01):**
+
+- `npm test` 903 passed / 7 skipped (added the manifest, sidecar, parity, octahedral, and resolver specs).
+- `npm run build` clean; main chunk 544 KiB at the bumped ratchet (P3's always-used runtime module), three-*.js unchanged.
+- No cycle-50 commit touched `shared/`, `tests/sim-baseline/`, the Worker, or the frozen `SceneDef`. The audit follow-up program plus two unrelated housekeeping commits account for all sim/worker diff in the since-author range.
+
+**Carryover (deferred at close, criterion 6 left open by explicit decision):**
+
+- **Full Kiln re-bake byte-identity is unverified-by-execution.** The CI-portable golden (sidecar idempotency + 12 recorded atlas hashes) is green, but no real `npm run bake-tree-impostors` ran this cycle. Hard-stop #1's full-Kiln byte-identity proof is a deferred manual gate: run the baker and confirm the latlon atlases re-bake byte-identical.
+- **Octahedral atlas source mismatch.** The committed octahedral atlas was baked from the runtime `tree1.glb` (3783 tris), not the manifest's `_originals` source (5880 tris), so an octahedral re-bake from the manifest source will not reproduce it. Reconcile the true octahedral source, or accept a fresh octahedral bake with visual revalidation, before relying on octahedral reproducibility.
+- **Impostor program Cycle B** (per-instance variation + new object categories) remains a candidate future cycle; see `docs/object-impostor-cycle-plan.md`.
+
+**Notes:**
+
+- Render/asset-only by construction. The byte-safe approach (augment sidecars in place via `--augment-only`, never re-rendering PNGs) kept every atlas byte-identical.
+- Two unrelated housekeeping commits rode along at session start: `30f1e3a` (comment-only fix in `shared/GameStateValidation.js`) and `61dbe67` (an exhaustiveness throw in `worker/src/d1.ts`). Neither is cycle-50 scope.
+
 ### Cycle 49 - `pastoral-vision` (closed 2026-05-29)
 
 Plan archived at [`docs/archive/cycles/cycle-49-plan.md`](archive/cycles/cycle-49-plan.md). Cycle 49 opened the Pastoral UI/UX rework program with a vision/spec cycle: it defined the calm-pastoral / painterly design language and shipped the reviewable artifacts the implementation cycles execute against, with zero behavior change to the running game. The headless-validation keystone is a standalone `/gallery` route that renders the UI without booting the WebGPU game, so the look is reviewable despite the headless-WebGPU compositing block. No version bump; v2.1.10 stands.
