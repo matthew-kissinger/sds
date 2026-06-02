@@ -1,70 +1,127 @@
 # Cycle 51 - frontend-loading-and-assets-redesign
 
-> Drafted 2026-06-01 after Cycle 50 closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
-
-> **NOT AUTHORED YET. This cycle opens with an alignment check-in and a first-principles brainstorm, not phase execution.** The Goal and Open Questions below are seeded from Matt's brief at Cycle 50 close. Do not start writing phases or code until the brainstorm converges and this plan's Phases / Acceptance sections are filled in. Run the brainstorm, author the plan, then `/cycle-start`.
+> Drafted 2026-06-01 after Cycle 50 closed. Authored 2026-06-02 after the alignment brainstorm converged. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
 
 ## Goal
 
-A first-principles redesign of the frontend: the stack, the component structure, and how every UI component is instantiated and implemented, plus the loading sequence, the entrance, the visual style and icon system, and the non-scene art. This is a "step back and rethink the whole shell" cycle, not an incremental restyle. The user-visible target is a coherent, intentional entrance + loading + scene-switch experience that replaces the current drift, with a style and art direction we chose on purpose rather than accreted.
+A first-principles redesign of the frontend: the stack, the component structure, and how every UI component is instantiated and implemented, plus the loading sequence, the entrance, the visual style and icon system, and the non-scene art. This is a "step back and rethink the whole shell" cycle, not an incremental restyle. The user-visible target is a coherent, intentional entrance + loading + scene-switch experience that replaces the current drift, with a style and art direction chosen on purpose rather than accreted.
 
-Concrete pain points to resolve (Matt's brief, 2026-06-01):
+The method is a **10-way mockup bake-off**: build ten interactive entrance-and-flow prototypes as isolated test scenes, ship them for Matt to try in a browser, keep one (or call a rework round), then wire the winner into the real boot and delete the old shell. The bake-off forces a real rewrite: the prototypes are greenfield, so picking a winner is picking new code, and the old flow gets removed rather than re-skinned.
 
-- **Vestigial skeleton loader.** Clicking Play shows a skeleton-loading "motor" before the game starts. It is an artifact from an earlier sequence where skeleton loading made sense; in the current flow it does not. Decide whether to remove it or replace it with a loading affordance that fits the actual sequence.
-- **Degraded zen entrance.** We once had a nice zen-like entrance that loaded the full selected scene. It degraded: we no longer load the full selected scene at entrance because the scene plus its assets cost more and take longer (larger file sizes). Decide the entrance model given asset weight (lightweight preview, full-scene, a non-scene backdrop, or a new concept).
-- **Void scene-switch backdrop.** Scene switching works now, but the background behind the picker is a basic "void" that serves no purpose. Decide what the picker/switch backdrop should be (art, a concept, a live preview).
-- **Style drift and ugly icons.** The visual style has drifted and some icons are unattractive. Establish a coherent style and icon system.
-- **Frontend stack and structure.** Open to reworking the stack, the component structure, and the instantiation/implementation patterns from first principles, not just reskinning.
-- **Non-scene assets and art.** Likely introduce new concepts and art (non-scene assets) as part of the look.
+## Converged decisions (brainstorm, 2026-06-02)
 
-## How to read this plan
+The brainstorm answered the seeded open questions. The decisions below are the cycle's contract; the bake-off resolves what remains a taste call.
 
-This cycle is unusual: it begins **paired** (the brainstorm and alignment are Matt-on-keyboard), and only the autonomous implementation phases get authored afterward. See [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) for the standard structure once phases exist.
+- **Q1 Stack: keep it.** React 19 + Vite 7 + Tailwind v4 + the typed `tokens.ts` mirror is the right modern stack. The rework is discipline (finish the `.tsx`/token migration, build a real icon system, rebuild the entrance/loading architecture), not a framework swap.
+- **Q2 Entrance model: decided by the bake-off.** The real option space is static pre-rendered scene image, painterly illustration, a lightweight live diorama, full live scene, or minimal/typographic. The ten prototypes put these in front of Matt rather than picking in the abstract.
+- **Q3 Loading: kill both skeletons, one real bar.** Replace the boot skeleton ([`public/components/skeleton-loader.html`](../public/components/skeleton-loader.html)) and the scene-swap shimmer ([`js/components/ui/SceneSwapOverlay.tsx`](../js/components/ui/SceneSwapOverlay.tsx)) with a pastoral loading surface whose bar is driven by the real per-stage `logStep` marks in [`js/boot/initWorld.js`](../js/boot/initWorld.js).
+- **Q4 Scene-switch backdrop: the target world's render**, not the void. Crossfade to live via the existing in-engine dissolve.
+- **Q5 Style: pastoral base, mostly pastoral with a few wildcards.** Adopt the Cycle 49 pastoral language and tokens as the base; the bake-off spread is mostly pastoral variations plus a small number of deliberate outliers (warm-dark, alternative flows).
+- **Q6 Non-scene art: in-repo renders + Pixel Forge.** Scene backdrops come from the in-repo cinematic capture harness ([`tools/cinematic/run.mjs`](../tools/cinematic/run.mjs)); the icon set and illustration art come from Pixel Forge (`../pixel-forge`, Matt's tool, greenlit this cycle). External-AI image generation is in-bounds for this cycle by Matt's explicit call, against the usual in-repo-bake default.
 
-## Open questions to resolve in the brainstorm
+### Information architecture (first-principles reframe)
 
-The brainstorm exists to answer these. Author leans are deliberately left blank for the alignment session.
+The current flow is a 13-screen state machine in [`js/components/App.js`](../js/components/App.js) that mixes games with destinations, builds the scene on browse, and gates a dog pick and a name screen before play. The reframe:
 
-1. **Q1: Stack and structure.** Keep the current React + Vite + token/primitive stack, or rework it? What is the component instantiation/implementation model?
-2. **Q2: Entrance model.** Given scene + asset weight, what does first paint show? Full selected scene, a lightweight preview, a non-scene art backdrop, or a new concept?
-3. **Q3: Loading sequence.** What replaces the vestigial skeleton loader? What does the Play to in-game transition actually show, and is it driven by real load progress?
-4. **Q4: Scene-switch backdrop.** What sits behind the scene picker instead of the void?
-5. **Q5: Style and icon system.** What is the coherent style direction and icon set? How much of the Cycle 49 pastoral design language do we adopt vs revisit?
-6. **Q6: Non-scene art.** What new art and concepts get introduced, and how are they sourced (in-repo primitive bakes per the asset-pipeline preference, or otherwise)?
+- **World-first spine.** The three worlds (Home Field, Rolling Hills, Open Country) are the hero of the entrance. The centered world is "armed" with its difficulty and the player's dog and a primary Play. This is the lead, tested against two flow wildcards (mode-first, one-tap Play).
+- **Dog is a persistent avatar**, preselected to last-used, swapped inline, not a full-screen gate every run.
+- **Scene builds once, on the Play commit**, never on browse. Browsing worlds swaps a static render.
+- **Settings and Leaderboard leave the play grid.** Settings is a corner gear; Leaderboard is contextual (per world + completion). Multiplayer host hangs off the armed world; join/public is a destination. The exact Multiplayer prominence is resolved by the bake-off.
+- **Identity deferred** until it matters (leaderboard submit, multiplayer join). No first-run name gate.
 
-## Inputs to the brainstorm
+## Scope
 
-- The Pastoral UI/UX program already captured a vision for much of this: [`ui-design-language.md`](ui-design-language.md), [`entrance-loading-spec.md`](entrance-loading-spec.md), [`ui-migration-map.md`](ui-migration-map.md), and the standalone `/gallery` headless review route (sheepdogsim.com/gallery). Decide how much to adopt vs redo from first principles.
-- Entrance history: the zen-boids attract entrance (Cycle 46) and its later degradation are relevant prior art.
-
-## Architecture / shared changes
-
-(To be decided in the brainstorm. Expected client-only / render-only; this cycle should not touch the deterministic sim, sim-baseline, SceneDef, or the Worker unless the brainstorm explicitly decides otherwise with a migration story.)
+All of it: the entrance, the loading sequence, the scene-switch, the icon and style system, finishing the component/token migration, and the in-game HUD. The bake-off (P1-P4) and the review gate (P5) run first; the winner-wiring and cleanup (P6-P8) follow Matt's pick.
 
 ## Phase shape rules
 
-Standard (see [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md)): <= 8 phases, each fully autonomous or fully paired, single sharp goal, <= 4 hours.
+Standard (see [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md)): <= 8 phases, each fully autonomous or fully paired, single sharp goal. P1-P4 are autonomous; P5 is paired (Matt decides); P6-P8 are autonomous, authored against the winner.
 
 ## Phases
 
-(Unauthored. Fill in after the brainstorm converges. The brainstorm is the paired opener; implementation phases that follow are autonomous unless flagged paired.)
+### P1 - Mockup harness + shared shell (autonomous)
+
+Build the isolated `/mockups` route and the shared flow shell every skin reads. Clone the gallery pattern: a `mockups.html` Vite entry, a `MockupHarness` index that lists all ten with deep-links, and a `MockShell` providing the mock data (3 worlds with renders, 5 dogs with portraits, the modes/difficulties) and a `useMockFlow` hook implementing arm-world -> set-difficulty -> swap-dog -> commit -> loading -> in-game -> back. Shared sub-components (world render, dog avatar, difficulty chip, loading bar calibrated to the measured stage timings) live here so skins are presentation-only.
+
+- **Files:** `mockups.html`, `js/mockups/index.jsx`, `js/mockups/MockupHarness.tsx`, `js/mockups/shell/*` (data, flow hook, shared sub-components), `vite.config.js` (third Rollup input).
+- **Acceptance:**
+  - When `npm run build` runs, then `dist/mockups.html` shall be emitted and the main chunk ratchet shall be unchanged (the route is a separate entry).
+  - When `/mockups` is opened, then an index of ten named prototypes with working deep-links (`#/1`..`#/10`) shall render with no WebGPU boot.
+  - When a skin reads `useMockFlow`, then the full arm -> commit -> loading -> in-game -> back sequence shall be drivable without touching `js/main.js`, `App.js`, or any game-runtime module.
+
+### P2 - Reference skins (autonomous)
+
+Build two structurally different reference skins (Golden Pasture, plus one that flexes the shell differently, e.g. Biome Cards or Wide-Open) to set the quality bar and prove the shell API before the rest. Each implements EntranceView, LoadingView, InGameView over the shared flow, responsive at PC and mobile.
+
+- **Files:** `js/mockups/skins/golden-pasture/*`, `js/mockups/skins/<second>/*`.
+- **Acceptance:**
+  - When a reference skin is opened at desktop and mobile widths, then the entrance, loading, and in-game frames shall render with pastoral tokens and no inline hex.
+  - When Play is pressed in a reference skin, then a real-feeling loading bar calibrated to the measured stage timings shall animate, then reveal the in-game HUD frame.
+
+### P3 - Remaining eight skins (autonomous)
+
+Build the other eight skins against the fixed shell API, using the references as templates. The full spread: Golden Pasture, Storybook, Living Diorama, Wide-Open, Launcher, Biome Cards, Zen Type, Warm Cinematic, Mode-First, One-Tap Hero.
+
+- **Files:** `js/mockups/skins/*/*`, harness registration.
+- **Acceptance:**
+  - When `/mockups` is opened, then all ten prototypes shall be reachable and each shall run its full flow at PC and mobile widths.
+  - When any skin runs, then it shall import only the shared shell and the design tokens, never the old `App.js` flow, `ZenAttract`, or the skeleton loaders.
+
+### P4 - Capture + deploy (autonomous)
+
+Screenshot every skin at PC (1920x1080) and mobile (390x844) for offline review, save them under `cycle51-validation/`, and deploy the `/mockups` route so Matt can try them on any device.
+
+- **Files:** `cycle51-validation/screenshots/*`, capture notes.
+- **Acceptance:**
+  - When the capture pass runs, then PC and mobile screenshots of every skin's entrance, loading, and in-game frames shall exist under `cycle51-validation/`.
+  - When the branch deploys, then `sheepdogsim.com/mockups` shall serve the index and all ten prototypes.
+
+### P5 - Bake-off review (paired)
+
+Matt tries the ten, keeps one, or calls a rework round. No code in this phase; it is the decision gate.
+
+- **Acceptance:**
+  - When Matt picks a winner (or a rework direction), then P6-P8 shall be authored against that choice before any winner-wiring begins.
+
+### P6 - Wire the winner (autonomous, post-decision)
+
+Promote the winning skin's components into the real boot path: the instant entrance, the world-first IA, the loading bar driven by real `logStep` stages, the in-engine crossfade reveal, scene-build-on-commit. Hand off to the live engine.
+
+- **Acceptance (authored at P5 close):** behavior-preserving for the deterministic sim, `shared/`, SceneDef, and the Worker; the multiplayer scene-lock and hard-reload fallback intact; `npm test` and `npm run build` pass.
+
+### P7 - Remove dead code (autonomous, post-decision)
+
+Delete the old shell the winner replaces: the unused nine skins, `ZenAttract`, both skeleton loaders, the dead `assets/icons/*`, and the retired screens of the old `App.js` flow. Net-negative diff.
+
+- **Acceptance (authored at P5 close):** the removed modules have zero remaining imports; `npm test` and `npm run build` pass.
+
+### P8 - In-game HUD restyle (autonomous, post-decision)
+
+Bring the in-game HUD and overlays onto the winning style and the new icon set; finish the `.tsx`/token migration of the remaining `createElement` containers.
+
+- **Acceptance (authored at P5 close):** the converted containers are `.tsx` with zero `createElement` and zero inline hex; behavior preserved; gallery sections updated.
 
 ## Frozen files (cycle-specific additions)
 
-(To be set when phases are authored. The durable fence in [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) applies regardless.)
+The durable fence in [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) applies. P1-P4 touch no frozen file: the bake-off is a new isolated route plus `vite.config.js` (a build-config add, not a fenced interface). P6-P8 will name any frozen-file edits (e.g. `js/main.js` boot path, `App.js`) with a migration story when they are authored at P5 close.
 
 ## Hard stops
 
-Durable hard stops apply (see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md)). One standing stop for this cycle: do not start implementation phases before the brainstorm converges and this plan is authored. Cycle-specific stops get added with the phases.
+Durable hard stops apply (see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md)). Cycle-specific:
+
+- Do not touch `shared/`, sim-baseline, SceneDef, or the Worker during P1-P4. The bake-off is client render only, fully isolated from the live game.
+- Do not begin P6 (winner-wiring) before P5 converges on a pick.
+- Do not bump the version. `/mockups` is a hidden review route, not a player-visible release.
 
 ## What NOT to do during this cycle
 
-- Do not start coding before the alignment brainstorm. The whole point of this cycle is to rethink first, then build.
-- Do not touch `shared/`, sim-baseline, SceneDef, or the Worker unless the brainstorm explicitly decides to, with a migration story.
+- Do not wire the live WebGPU engine into the ten prototypes. They prove flow and look; the engine handoff is the winner-wiring phase (P6) only.
+- Do not let a skin import the old `App.js` flow, `ZenAttract`, or the skeleton loaders. The point is a clean rewrite.
+- Do not delete old code before the winner is picked and wired (P7 follows P6).
 
 ## Success criteria (cycle close)
 
-`/cycle-close` reads this section. Don't pre-check. Refine when phases are authored.
+`/cycle-close` reads this section. Don't pre-check. Refine when P6-P8 are authored.
 
 - [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
 - [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
@@ -75,4 +132,5 @@ Durable hard stops apply (see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md)). One s
 
 - [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md), [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md), [`BACKLOG.md`](BACKLOG.md).
 - Pastoral UI program: [`ui-design-language.md`](ui-design-language.md), [`entrance-loading-spec.md`](entrance-loading-spec.md), [`ui-migration-map.md`](ui-migration-map.md).
-- [EARS notation](https://kiro.dev/docs/specs/) for the acceptance lines once phases are authored.
+- Gallery pattern the bake-off clones: [`../gallery.html`](../gallery.html), [`../js/gallery/Gallery.tsx`](../js/gallery/Gallery.tsx).
+- [EARS notation](https://kiro.dev/docs/specs/) for the acceptance lines.
