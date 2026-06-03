@@ -111,11 +111,7 @@ export default defineConfig({
         // Cycle 49 P3: standalone UI gallery (gallery.html). A pure React + CSS
         // review surface that renders no WebGPU game, so the pastoral look is
         // verifiable headlessly. Separate entry; does not touch the main chunk.
-        gallery: 'gallery.html',
-        // Cycle 51 P1: the frontend mockup bake-off (mockups.html). Ten
-        // interactive entrance/flow prototypes over a shared headless shell,
-        // also no WebGPU. Separate entry; does not touch the main chunk.
-        mockups: 'mockups.html'
+        gallery: 'gallery.html'
       },
       output: {
         manualChunks: {

@@ -37,7 +37,6 @@ import { installMpEventHandlers, handleMultiplayerGameState as runMpStateHandoff
 import { buildSceneBody } from './boot/initWorld.js';
 import { disposeScene as runDisposeScene } from './boot/loadScene.js';
 import { shouldBootAttract } from './boot/bootAttract.js';
-import { ZenAttract } from './attract/ZenAttract.js';
 import {
     showCompletionOverlay as renderCompletionOverlay,
     showLocalCompletionOverlay as renderLocalCompletionOverlay
@@ -733,8 +732,8 @@ class SheepDogSimulation {
             // the real scene in. The dev `[LOAD]` summary (logged inside
             // buildSceneBody) therefore does not fire at startup.
             if (this._bootAttract) {
-                this._mountZenAttract();
-                logStep('Zen attract field mounted', 'scene build deferred to first pick');
+                this._enterAttractMode();
+                logStep('Boot entrance mode', 'scene build deferred to the Play commit');
             } else {
                 // Per-scene construction. Cycle 11 Phase 1 extracted this body
                 // into buildSceneBody so rebuildScene() can reuse it.
@@ -1029,16 +1028,16 @@ class SheepDogSimulation {
     }
 
     /**
-     * Cycle 46 Phase 1: mount the boot-time zen attract field. Adds the
-     * drifting-dart InstancedMesh to the persistent scene, arms attract mode
-     * (so runFrame drives the orbit-camera + atmosphere + darts and skips all
-     * game logic), and parks the cinematic camera at its orbit start so the
-     * first frame is composed. Disposed in disposeScene() on the first pick.
+     * Cycle 46 Phase 1 / Cycle 51 P7: enter boot-entrance mode. On a plain open
+     * the heavy per-scene build is deferred; the world-first React entrance
+     * (js/components/entrance/) covers the canvas and the armed scene streams in
+     * on the Play commit. Arms attract mode (runFrame drives only the orbit
+     * camera + atmosphere, no game logic) and idle-prefetches the
+     * scene-independent GLB caches so the first build streams faster. Cycle 51
+     * retired the drifting-dart attract field that used to fill the canvas here;
+     * the opaque entrance makes it redundant.
      */
-    _mountZenAttract() {
-        this._zenAttract = new ZenAttract(this.sceneManager.getScene(), {
-            isMobile: this.sceneManager.isMobile,
-        });
+    _enterAttractMode() {
         this._attractMode = true;
         if (typeof window !== 'undefined') window.__sdsAttractActive = true;
         this.menuController.updateCinematicCamera?.();

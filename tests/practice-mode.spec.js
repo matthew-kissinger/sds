@@ -27,10 +27,13 @@ function readSource(rel) {
 }
 
 describe('Practice Paddock contract', () => {
-    it('Practice tile is first in MODES (position 0)', () => {
-        const src = readSource('js/components/StartScreen/SinglePlayerModes.tsx');
-        // The .tsx declaration carries a `: ModeDef[]` type annotation between
-        // the name and the `=`, so match anything up to the assignment.
+    it('Practice is first in the entrance MODES (position 0)', () => {
+        // Cycle 51 P7: the world-first entrance (js/components/entrance/worlds.ts)
+        // replaced the old SinglePlayerModes picker; Practice (no timer, no fail
+        // state) stays the first difficulty so it reads as the default. The
+        // per-mode cyan hue and the first-visit pulse were intentionally retired
+        // with the old picker (the entrance chips use one meadow accent).
+        const src = readSource('js/components/entrance/worlds.ts');
         const modesMatch = src.match(/const MODES[^=]*=\s*\[([\s\S]*?)\];/);
         expect(modesMatch).not.toBeNull();
         const block = modesMatch[1];
@@ -38,27 +41,10 @@ describe('Practice Paddock contract', () => {
         expect(firstId?.[1]).toBe('practice');
     });
 
-    it('Practice tile uses the cyan hue token (cyan-500)', () => {
-        const src = readSource('js/components/StartScreen/SinglePlayerModes.tsx');
-        // The first id:'practice' entry pairs with color: color.hueCyan, the
-        // Cycle 48 P2 design-token mirror of the old '#06b6d4' literal.
-        const idx = src.indexOf("id: 'practice'");
-        expect(idx).toBeGreaterThan(0);
-        const slice = src.slice(idx, idx + 240);
-        expect(slice).toMatch(/color:\s*color\.hueCyan/);
-    });
-
     it('i18n English locale exposes modes.practice + modes.practiceDesc', () => {
         const src = readSource('js/locales/en/index.js');
         expect(src).toMatch(/practice:\s*['"][^'"]+['"]/);
         expect(src).toMatch(/practiceDesc:\s*['"][^'"]+['"]/);
-    });
-
-    it('first-visit localStorage flag uses dot-namespaced sds.has-played', () => {
-        const src = readSource('js/components/StartScreen/SinglePlayerModes.tsx');
-        expect(src).toMatch(/['"]sds\.has-played['"]/);
-        const gameState = readSource('js/GameState.js');
-        expect(gameState).toMatch(/sds\.has-played/);
     });
 
     it('SOLO_MODE_SHEEP_COUNT registers practice: 30', () => {

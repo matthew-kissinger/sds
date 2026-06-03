@@ -7,7 +7,8 @@
  * Component Structure:
  * - hooks/       - Custom React hooks (usePlatform, useGameState)
  * - shared/      - Shared utilities (playerIdentity, settings)
- * - StartScreen/ - Start screen components (ModeSelection, DogSelection, etc.)
+ * - entrance/    - World-first entrance + pastoral loading (Cycle 51 P6)
+ * - StartScreen/ - Secondary destinations (Settings, Sandbox, editors, local)
  * - GameHUD/     - In-game HUD components (GameTimer, SheepCounter, MobileHUD)
  * - Multiplayer/ - Multiplayer UI (Lobby, Leaderboard, Scoreboard)
  */
@@ -49,12 +50,6 @@ export async function initReactUI() {
             { useGameState },
             { getPlayerIdentity, savePlayerIdentity, generatePersistentId },
             { loadSettings, saveSettings, applySettingsToGame },
-            { ModeSelection },
-            { ScenePicker },
-            { PointerTour },
-            { DogSelection },
-            { PlayerIdentitySetup },
-            { SinglePlayerModes },
             { SettingsPanel },
             { SandboxSetup },
             { FenceEditor },
@@ -80,7 +75,6 @@ export async function initReactUI() {
             { MultiplayerScoreboard },
             { GlobalLeaderboard },
             { Button },
-            { LanguageSelector },
             { SandboxConfig },
             { motion, AnimatePresence },
             { useReducedMotion },
@@ -92,12 +86,6 @@ export async function initReactUI() {
             import('./hooks/useGameState.js'),
             import('./shared/playerIdentity.js'),
             import('./shared/settings.js'),
-            import('./StartScreen/ModeSelection.js'),
-            import('./StartScreen/ScenePicker'),
-            import('./StartScreen/PointerTour.js'),
-            import('./StartScreen/DogSelection.js'),
-            import('./StartScreen/PlayerIdentitySetup.js'),
-            import('./StartScreen/SinglePlayerModes.js'),
             import('./StartScreen/SettingsPanel.js'),
             import('./StartScreen/SandboxSetup.js'),
             import('./StartScreen/FenceEditor.js'),
@@ -123,7 +111,6 @@ export async function initReactUI() {
             import('./Multiplayer/MultiplayerScoreboard.js'),
             import('./Multiplayer/GlobalLeaderboard.js'),
             import('./ui/Button.js'),
-            import('./ui/LanguageSelector.js'),
             import('../SandboxConfig.js'),
             import('motion/react'),
             import('./ui/useReducedMotion.js'),
@@ -220,7 +207,6 @@ export async function initReactUI() {
             const [screen, setScreen] = useState('entrance');
             const reduce = useReducedMotion();
             const [selectedDog, setSelectedDog] = useState('jep');
-            const [selectedMode, setSelectedMode] = useState(null);
             const [roomSettings, setRoomSettings] = useState(null);
             const [lobbyData, setLobbyData] = useState(null);
             const [playerIdentity, setPlayerIdentity] = useState(null);
@@ -323,56 +309,6 @@ export async function initReactUI() {
                     setScreen('entrance');
                 }
             }, []);
-
-            const handlePlayerSetupComplete = (identity) => {
-                setPlayerIdentity(identity);
-                setScreen('entrance');
-            };
-
-            const handleModeSelect = (mode) => {
-                // Cycle 11 Phase 5: emit mode_selected for analytics.
-                try {
-                    import('../telemetry.js').then(({ emitEvent }) => {
-                        emitEvent('mode_selected', { mode });
-                    });
-                } catch {}
-                if (mode === 'leaderboard') setScreen('leaderboard');
-                else if (mode === 'settings') setScreen('settings');
-                else if (mode === 'local') setScreen('localModeSetup');
-                else {
-                    setSelectedMode(mode);
-                    setScreen('entrance');
-                }
-            };
-
-            const handleDogConfirm = async () => {
-                if (selectedMode === 'solo') {
-                    setScreen('singlePlayerModes');
-                } else if (selectedMode === 'sandbox') {
-                    setScreen('sandboxSetup');
-                } else {
-                    const nm = getNetworkManager();
-                    if (nm && !nm.connected && !nm.connecting) {
-                        try {
-                            await nm.connect();
-                        } catch (error) {
-                            console.error('[UI] Failed to connect:', error);
-                            alert('Unable to connect to multiplayer server.');
-                            return;
-                        }
-                    }
-                    setScreen('multiplayer');
-                }
-            };
-
-            const handleStartSolo = (mode = 'classic') => {
-                console.log('[UI] Starting solo game:', selectedDog, mode);
-                if (!getGameInstance()) return;
-
-                selectDog(selectedDog);
-                const dog = getSelectedDog() || selectedDog;
-                startSoloGame(dog, mode);
-            };
 
             const handleStartSandbox = () => {
                 console.log('[UI] Starting sandbox game:', selectedDog, sandboxConfig);
@@ -551,212 +487,6 @@ export async function initReactUI() {
 
             const renderContent = () => {
                 switch (screen) {
-                    case 'playerSetup':
-                        return createElement(PlayerIdentitySetup, { onComplete: handlePlayerSetupComplete });
-
-                    case 'main':
-                        // Return array directly - .start-screen-content handles centering
-                        // Language selector positioned in top-right corner
-                        const languageSelectorStyle = {
-                            position: 'fixed',
-                            top: platform.isMobile ? 'max(env(safe-area-inset-top, 12px), 12px)' : '20px',
-                            right: platform.isMobile ? 'max(env(safe-area-inset-right, 12px), 12px)' : '20px',
-                            zIndex: 100
-                        };
-
-                        // 3D Extruded Title Styles - Fully responsive
-                        const titleContainerStyle = {
-                            textAlign: 'center',
-                            marginBottom: 'clamp(0.5rem, 2vw, 1rem)',
-                            maxWidth: '100%',
-                            padding: '0 1rem'
-                        };
-
-                        // Main title "Sheepdog" - scales with viewport
-                        const mainTitleStyle = {
-                            display: 'block',
-                            fontFamily: '"Fredoka", system-ui, sans-serif',
-                            fontWeight: 700,
-                            // Fluid scaling: min 2rem, preferred 10vw, max 5.5rem
-                            fontSize: 'clamp(2rem, 10vw, 5.5rem)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.02em',
-                            lineHeight: 1,
-                            margin: 0,
-                            padding: 0,
-                            color: color.titleBright,
-                            // Responsive shadow - uses em units to scale with font
-                            textShadow: `
-                                0.04em 0.04em 0 ${color.titleMid},
-                                0.08em 0.08em 0 ${color.titleDeep},
-                                0.12em 0.12em 0 ${color.titleShadow},
-                                0.16em 0.16em 0.3em rgba(0,0,0,0.4)
-                            `.replace(/\s+/g, ' ').trim(),
-                            animation: 'titleBounce 2.5s ease-in-out infinite'
-                        };
-
-                        // Subtitle "Simulator" - scales proportionally
-                        const subtitleStyle = {
-                            display: 'block',
-                            fontFamily: '"Fredoka", system-ui, sans-serif',
-                            fontWeight: 600,
-                            // Fluid scaling: min 0.65rem, preferred 3vw, max 1.6rem
-                            fontSize: 'clamp(0.65rem, 3vw, 1.6rem)',
-                            color: color.subtitleBright,
-                            letterSpacing: 'clamp(0.2em, 1vw, 0.4em)',
-                            textTransform: 'uppercase',
-                            textShadow: `
-                                0.05em 0.05em 0 ${color.subtitleShadow},
-                                0.1em 0.1em 0.15em rgba(0,0,0,0.3)
-                            `.replace(/\s+/g, ' ').trim(),
-                            marginTop: 'clamp(0.15rem, 1vw, 0.4rem)',
-                            animation: 'subtitleBounce 2.5s ease-in-out infinite 0.15s'
-                        };
-
-                        // Wrap everything in a column layout: centered content fills, footer parks at bottom
-                        return createElement('div', {
-                            key: 'main-menu-wrapper',
-                            style: {
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                width: '100%',
-                                height: '100%'
-                            }
-                        }, [
-                            // Language selector in top-right corner (positioned fixed, so outside flow)
-                            createElement('div', {
-                                key: 'lang-selector',
-                                style: languageSelectorStyle
-                            }, createElement(LanguageSelector, { variant: 'icon' })),
-                            // Centered content region — claims all available space, footer can't overlap
-                            createElement('div', {
-                                key: 'menu-center',
-                                style: {
-                                    flex: '1 1 auto',
-                                    minHeight: 0,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '100%',
-                                    gap: '0.5rem',
-                                    // Reserve space below the centered content so the
-                                    // mode-grid buttons don't bleed into the credits
-                                    // footer on short mobile viewports. Pairs with
-                                    // explicit padding on the credits div below.
-                                    paddingBottom: platform.isMobile ? '0.75rem' : '0.5rem'
-                                }
-                            }, [
-                                // 3D Title
-                                createElement('div', {
-                                    key: 'title-container',
-                                    style: titleContainerStyle
-                                }, [
-                                    createElement('span', { key: 'main', style: mainTitleStyle }, 'Sheepdog'),
-                                    createElement('span', { key: 'sub', style: subtitleStyle }, 'Simulator')
-                                ]),
-                                playerIdentity && createElement('p', {
-                                    key: 'greeting',
-                                    style: {
-                                        color: 'rgba(255, 255, 255, 0.8)',
-                                        marginBottom: '1rem',
-                                        fontSize: platform.isMobile ? '0.9rem' : '1.125rem',
-                                        animation: 'fadeIn 0.6s ease-out 0.3s both'
-                                    }
-                                }, `Welcome back, ${playerIdentity.displayName}!`),
-                                createElement(ScenePicker, { key: 'scenes' }),
-                                createElement(ModeSelection, { key: 'modes', onSelectMode: handleModeSelect }),
-                                createElement(PointerTour, { key: 'tour', isMobile: platform.isMobile })
-                            ]),
-                            // Credits footer — flows at the bottom of the column, no fixed positioning.
-                            // Cycle 16 mobile fix: explicit padding-top guards a buffer between
-                            // the mode-grid buttons above and these links; padding-bottom respects
-                            // iOS safe-area-inset (home-indicator devices) so links never tuck
-                            // under the system gesture area. The text also bumps slightly larger
-                            // on mobile so tap targets are reachable.
-                            createElement('div', {
-                                key: 'credits',
-                                style: {
-                                    flex: '0 0 auto',
-                                    width: '100%',
-                                    paddingTop: platform.isMobile ? '14px' : '8px',
-                                    paddingBottom: 'max(0.6rem, env(safe-area-inset-bottom))',
-                                    color: 'rgba(255, 255, 255, 0.4)',
-                                    fontSize: platform.isMobile ? '0.78rem' : '0.7rem',
-                                    lineHeight: '1.4',
-                                    textAlign: 'center',
-                                    pointerEvents: 'auto'
-                                }
-                            }, [
-                                'Made by ',
-                                createElement('a', {
-                                    key: 'name',
-                                    href: '/about.html',
-                                    target: '_blank',
-                                    rel: 'noopener',
-                                    style: {
-                                        color: 'rgba(255, 255, 255, 0.5)',
-                                        textDecoration: 'none'
-                                    }
-                                }, 'Matthew Kissinger'),
-                                ' · ',
-                                createElement('a', {
-                                    key: 'about',
-                                    href: '/about.html',
-                                    target: '_blank',
-                                    rel: 'noopener',
-                                    style: {
-                                        color: 'rgba(255, 255, 255, 0.5)',
-                                        textDecoration: 'none'
-                                    }
-                                }, 'About / GitHub')
-                            ])
-                        ]);
-
-                    case 'dogSelection':
-                        return createElement('div', {
-                            style: {
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }
-                        }, [
-                            createElement(DogSelection, { key: 'selection', selectedDog, onSelect: setSelectedDog }),
-                            createElement('div', {
-                                key: 'buttons',
-                                style: {
-                                    display: 'flex',
-                                    gap: '1rem',
-                                    justifyContent: 'center',
-                                    marginTop: '2rem',
-                                    animation: 'slideUp 0.8s ease-out 0.2s both'
-                                }
-                            }, [
-                                createElement(Button, {
-                                    key: 'back',
-                                    variant: 'secondary',
-                                    onClick: () => setScreen('entrance'),
-                                    style: { padding: '1rem 2rem', fontSize: '1.125rem' }
-                                }, '\u2190 Back'),
-                                createElement(Button, {
-                                    key: 'confirm',
-                                    variant: 'primary',
-                                    onClick: handleDogConfirm,
-                                    style: { padding: '1rem 2rem', fontSize: '1.125rem' }
-                                }, 'Confirm Selection')
-                            ])
-                        ]);
-
-                    case 'singlePlayerModes':
-                        return createElement(SinglePlayerModes, {
-                            onSelectMode: handleStartSolo,
-                            onBack: () => setScreen('entrance')
-                        });
-
                     case 'sandboxSetup':
                         return createElement(SandboxSetup, {
                             config: sandboxConfig,
