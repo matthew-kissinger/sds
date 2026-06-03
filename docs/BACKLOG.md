@@ -4,6 +4,34 @@
 
 ## Recently Completed
 
+### Cycle 52 - `pastoral-polish` (closed 2026-06-03)
+
+Plan archived at [`docs/archive/cycles/cycle-52-plan.md`](archive/cycles/cycle-52-plan.md). The cleanup tail of the pastoral UI program: it landed the two Cycle 51 deferrals (the in-engine dissolve reveal; the `ExtremeTuningPanel` `.tsx` migration), retired the orphaned zen-crossfade scaffold, and ran a bounded prose/token hygiene sweep. The user-visible change: pressing Play now melts the still entrance backdrop into the living scene in one continuous in-engine motion instead of a DOM opacity fade. No version bump; v2.1.10 stands.
+
+**Closeout outcomes:**
+
+- Shipped 4/4 phases. Committed directly on `main`; pushed at close.
+- **Pre-cycle hotfix (`6411bf8`):** the Cycle 51 shell deletion left the Playwright e2e helpers driving the removed UI (Solo Play / Confirm Selection / Classic Mode). They run only in CI, not under `npm test`, so the cycle-51 close passed on vitest but the deploy run went red. Rewrote smoke / mobile-asset-visibility / oc-perf / scene-swap-stability to drive the world-first entrance (arm the world via the switcher, pick Classic, Play); verified green locally on real GPU and on the next CI run.
+- **P1 (`b20bc4b`):** generalized the in-engine reveal seam. Renamed the orphaned zen-attract crossfade scaffold (dead since ZenAttract was deleted in C51 P7) to a backend-agnostic `RevealLayer` contract (`_revealLayer` / `_revealActive` / `_endReveal`). No behavior change; the scaffold was already unreachable.
+- **P2 (`bd2abe2`):** the in-engine backdrop dissolve. A fullscreen `BackdropReveal` quad (`js/effects/BackdropReveal.js`) textured with the armed world's entrance backdrop is held over the freshly built scene, then ramped opacity 1 to 0 over 0.8s when the loading surface hands off. Opacity-and-render-order based (MeshBasicMaterial, no shader) so it survives the WebGPU migration. Reduced motion skips to an instant reveal; a failed backdrop load fails loud and shows the scene instantly (no blank cover). Bundle baseline +1 KiB (541 to 542).
+- **P3 (`c0381bd`):** migrated `ExtremeTuningPanel` `.js` (createElement) to `.tsx` + pastoral tokens (the last element-factory HUD holdout). Purple accents to gold/meadow, white text to cream, shared Icon close. Behavior identical (same FIELDS, same live `gameState.params` write).
+- **P4:** bounded polish sweep (plan prose hygiene, em-dashes to hyphens; token consistency) + validation + close.
+
+**Validation gates (2026-06-03):**
+
+- `npm test` 866 passed / 7 skipped. `npm run build` clean. `main` 542 KiB (+1 from `BackdropReveal`). 6 chromium e2e green.
+- The reveal arm/dissolve/dispose verified in a live browser (desktop, mobile 390x844, and reduced-motion): the quad appears over the built scene then disposes, `__sdsRevealArmed` clears, the canvas renders, no console errors.
+- No cycle-52 commit touched `shared/`, `tests/sim-baseline/`, the Worker, or the frozen `SceneDef`. Client render + boot + UI only.
+
+**Carryover (deferred):**
+
+- none.
+
+**Notes:**
+
+- **The deploy-red root cause was a test-suite gap, not a code regression.** The e2e suite is CI-only (not in `npm test`), so a cold `/cycle-close` acceptance check (which runs `npm test`) cannot catch a stale e2e helper. Worth folding an e2e smoke into the local close gate in a future cycle.
+- **The reveal reuses Cycle 46's crossfade structure** (render-order overlay + a runFrame opacity ramp + the DOM-cover skip flag) rather than a new post-processing pass, honoring the entrance-loading spec's "reuse the existing in-engine dissolve" intent.
+
 ### Cycle 51 - `frontend-loading-and-assets-redesign` (closed 2026-06-03)
 
 Plan archived at [`docs/archive/cycles/cycle-51-plan.md`](archive/cycles/cycle-51-plan.md). A first-principles redesign of the frontend: a 10-way mockup bake-off picked the world-first Golden Pasture entrance, which was wired into the real boot; the old 13-screen shell was deleted; and the pastoral look was carried through the in-game HUD, the icon system, the mobile joystick, the loading sequence, and the project links. No version bump; v2.1.10 stands.
