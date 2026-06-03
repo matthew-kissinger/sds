@@ -1078,3 +1078,13 @@ optimizations whose payoff is at load time (deferred GLB loads, no field scatter
 not in `main` byte size. The growth is documented here, not silent, so the ratchet
 keeps doing its job (catching unexplained re-bloat) from the new floor. Verified:
 `npm run build` clean, `npm test` green including the refactor-baseline assertions.
+
+---
+
+## Cycle 51 — frontend redesign: new captures only, no old images; Pixel Forge for game assets (2026-06-03)
+
+The frontend redesign (Cycle 51, branch `cycle-51-mockups`) makes three asset and render decisions:
+
+- **New world backdrops are freshly captured WebGPU scene renders; no old images.** The redesigned entrance, loading, and scene-switch surfaces use new captures from the in-repo cinematic harness plus the cycle-51 `cycle51-validation/frame.mjs` harness (the matched-series camera-angle work). The old marketing OG cards (`assets/marketing/og/og-*.webp`) and any other legacy imagery are NOT reused in the new frontend. Every backdrop is a new capture. The animated-backdrop technique is a browser crossfade of pre-rendered WebPs (fast-loading, crisp, no GIF and no video), proven in `cycle51-validation/angles.html`.
+- **Pixel Forge is greenlit for generating any game assets.** Pixel Forge (`C:\Users\Mattm\X\games-3d\pixel-forge`, Matt's tool) may generate icons, sprites, textures, or other game assets for this work. External-AI image generation is in-bounds for this cycle by Matt's explicit call, against the usual in-repo-bake default (see the asset-pipeline preference).
+- **The meadow-quad far-grass LOD is disabled** (`js/HardwareTier.js`, commit `98be647`). The Cycle 23 flat-quad far-grass LOD only ever fired on Open Country, where its 260m-from-center band sits inside the 380m playable island, so the player walks into flat color carpets that read as a lighter-green checkerboard against the instanced grass. A static center-distance flat LOD cannot work inside the play area; it is off by tier config until a camera-relative version exists. The whole field now uses instanced grass. The material factory and chunk constructor stay for the konveyor WebGPU node-material catalog and its tests. (Earlier attempt `e9b5f6e` conformed the quad to the terrain, but the flat-carpet look remained up close.)

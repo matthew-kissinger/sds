@@ -17,7 +17,7 @@ The brainstorm answered the seeded open questions. The decisions below are the c
 - **Q3 Loading: kill both skeletons, one real bar.** Replace the boot skeleton ([`public/components/skeleton-loader.html`](../public/components/skeleton-loader.html)) and the scene-swap shimmer ([`js/components/ui/SceneSwapOverlay.tsx`](../js/components/ui/SceneSwapOverlay.tsx)) with a pastoral loading surface whose bar is driven by the real per-stage `logStep` marks in [`js/boot/initWorld.js`](../js/boot/initWorld.js).
 - **Q4 Scene-switch backdrop: the target world's render**, not the void. Crossfade to live via the existing in-engine dissolve.
 - **Q5 Style: pastoral base, mostly pastoral with a few wildcards.** Adopt the Cycle 49 pastoral language and tokens as the base; the bake-off spread is mostly pastoral variations plus a small number of deliberate outliers (warm-dark, alternative flows).
-- **Q6 Non-scene art: in-repo renders + Pixel Forge.** Scene backdrops come from the in-repo cinematic capture harness ([`tools/cinematic/run.mjs`](../tools/cinematic/run.mjs)); the icon set and illustration art come from Pixel Forge (`../pixel-forge`, Matt's tool, greenlit this cycle). External-AI image generation is in-bounds for this cycle by Matt's explicit call, against the usual in-repo-bake default.
+- **Q6 Art and assets: new captures only, no old images; Pixel Forge for game assets.** The new frontend's world backdrops are freshly captured WebGPU scene renders (the matched-series angle work, via [`tools/cinematic/run.mjs`](../tools/cinematic/run.mjs) plus the cycle-51 `cycle51-validation/frame.mjs` harness). The old marketing OG cards (`assets/marketing/og/og-*.webp`) and any other legacy imagery are NOT reused in the new frontend; every backdrop is a new capture (Matt, 2026-06-03). Pixel Forge (`C:\Users\Mattm\X\games-3d\pixel-forge`, Matt's tool, greenlit) generates any game assets we want (icons, sprites, textures), and external-AI image generation is in-bounds this cycle by Matt's explicit call, against the usual in-repo-bake default.
 
 ### Information architecture (first-principles reframe)
 
@@ -28,6 +28,15 @@ The current flow is a 13-screen state machine in [`js/components/App.js`](../js/
 - **Scene builds once, on the Play commit**, never on browse. Browsing worlds swaps a static render.
 - **Settings and Leaderboard leave the play grid.** Settings is a corner gear; Leaderboard is contextual (per world + completion). Multiplayer host hangs off the armed world; join/public is a destination. The exact Multiplayer prominence is resolved by the bake-off.
 - **Identity deferred** until it matters (leaderboard submit, multiplayer join). No first-run name gate.
+
+## Progress (2026-06-03)
+
+The bake-off and the scene-art work are underway on branch `cycle-51-mockups` (unpushed; the live game is untouched).
+
+- **P1-P4 shipped (commit `301a03e`).** All ten interactive prototypes are live on the isolated `/mockups` route, each running the full world-first flow (arm a world, set difficulty, swap dog, Play, loading bar, in-game HUD), responsive PC and mobile. 903 tests pass, build clean, the main bundle ratchet holds (separate chunk). Awaiting Matt's pick (P5).
+- **Scene-art harness built** (local, gitignored under `cycle51-validation/`). `frame.mjs` poses the dog upright and sweeps camera techniques per world in real WebGPU; `assemble.mjs` lays each technique across the three worlds as a matched series; `angles.html` slow-crossfades a scene's angles in the browser. That crossfade of pre-rendered WebPs (no GIF, no video) is the fast-loading animated-backdrop technique and a candidate answer to Q2/Q4. These produce the new world backdrops that replace the old OG images.
+- **Render fix shipped (commit `98be647`).** The Cycle 23 meadow-quad far-grass LOD was disabled. It only ever fired on Open Country, where its flat color carpets sat inside the 380m playable island and read as a lighter-green checkerboard the player walked into at the shore. The whole field now uses instanced grass. Surfaced during the scene-art prep; render-only, 903 tests pass. (A first pass, commit `e9b5f6e`, conformed the quad to the terrain but the flat-carpet look remained, so the LOD was disabled by tier config.)
+- **Pending decisions (Matt, P5).** Pick the winning mockup direction, the matched-shot angle, and the dog treatment (silhouette vs side-lit); decide whether the entrance backdrop is the animated WebP angle-cycle or a single still. Then P6-P8 wire the winner, swap in the new captured backdrops (no old images), and remove the old shell.
 
 ## Scope
 
