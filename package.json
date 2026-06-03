@@ -112,7 +112,6 @@
     "kdbush": "^4.0.2",
     "lz-string": "^1.5.0",
     "motion": "^12.40.0",
-    "nipplejs": "^0.10.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-i18next": "^16.3.5",
