@@ -33,6 +33,7 @@ import { resolveAssetUrl } from './utils/assetUrl.js';
 import { startReplay as runStartReplay, stopReplay as runStopReplay } from './utils/replay.js';
 import { WebVitalsMonitor } from './boot/WebVitalsMonitor.js';
 import { installStressTestHarness, installMpProbe } from './boot/debugProbes.js';
+import { BackdropReveal } from './effects/BackdropReveal.js';
 import { installMpEventHandlers, handleMultiplayerGameState as runMpStateHandoff } from './boot/initNetwork.js';
 import { buildSceneBody } from './boot/initWorld.js';
 import { disposeScene as runDisposeScene } from './boot/loadScene.js';
@@ -873,6 +874,14 @@ class SheepDogSimulation {
             this._keepRevealLayer = false;
             const swapBuildResult = await this.rebuildScene(newSceneDef);
 
+            // Cycle 52 P2: the boot reveal arms its backdrop layer post-build
+            // (the DOM loading surface covered the build; the in-engine dissolve
+            // is the hand-off from that surface to the live scene). Held at full
+            // opacity here; the UI calls beginRevealRamp() when it uncovers.
+            if (opts.revealBackdrop) {
+                await this._armRevealLayer(opts.revealBackdrop);
+            }
+
             // Build done: stop suppressing the DOM overlay (the dissolve itself
             // runs in runFrame and needs no cover). `_revealActive` stays armed
             // so runFrame ramps the layer out, then disposes it.
@@ -1089,9 +1098,63 @@ class SheepDogSimulation {
      */
     _endReveal() {
         this._revealActive = false;
-        if (typeof window !== 'undefined') window.__sdsAttractCrossfadeActive = false;
+        if (typeof window !== 'undefined') {
+            window.__sdsAttractCrossfadeActive = false;
+            window.__sdsRevealArmed = false;
+        }
         try { this._revealLayer?.dispose(); } catch {}
         this._revealLayer = null;
+    }
+
+    /**
+     * Cycle 52 P2: arm the in-engine backdrop reveal. Loads the armed world's
+     * entrance backdrop (the same webp the menu showed), builds a fullscreen
+     * BackdropReveal quad over the freshly built scene at full opacity, and
+     * holds it. The dissolve does not start here: beginRevealRamp() (called the
+     * moment the DOM loading surface hands off) starts the ramp, so the whole
+     * dissolve is visible rather than running behind the cover.
+     *
+     * No silent fallback: if the backdrop fails to load, log loudly and leave
+     * the layer unarmed so the scene shows instantly via the UI's hand-off,
+     * never a blank in-engine cover that masks the failure.
+     *
+     * @param {string} url backdrop image URL (assets/scenes/entrance/<id>.webp).
+     */
+    async _armRevealLayer(url) {
+        if (typeof window === 'undefined' || !url) return;
+        let texture;
+        try {
+            texture = await new THREE.TextureLoader().loadAsync(url);
+        } catch (err) {
+            console.error('[REVEAL] backdrop load failed; showing scene instantly:', url, err);
+            return;
+        }
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const layer = new BackdropReveal(this.sceneManager.getScene(), texture);
+        layer.update(0, this.sceneManager.getCamera());
+        this._revealLayer = layer;
+        this._revealActive = false; // hold at full opacity until the UI hands off
+        window.__sdsRevealArmed = true;
+        window.__sdsAttractCrossfadeActive = true; // suppress the DOM swap cover
+    }
+
+    /**
+     * Cycle 52 P2: start the in-engine dissolve. Called once the DOM loading
+     * surface uncovers so the full ramp is visible. No-op if nothing is armed.
+     */
+    beginRevealRamp() {
+        if (!this._revealLayer) return;
+        this._revealActive = true;
+        this._revealT = 0;
+        if (typeof window !== 'undefined') window.__sdsRevealArmed = false;
+    }
+
+    /**
+     * Cycle 52 P2: skip the dissolve (reduced-motion, or any caller that wants
+     * an instant reveal). Disposes the armed layer immediately.
+     */
+    skipReveal() {
+        this._endReveal();
     }
 
     /**
@@ -2227,6 +2290,7 @@ class SheepDogSimulation {
                 const dur = this._revealDur || 0.8;
                 const t = Math.min(this._revealT / dur, 1);
                 const eased = 1 - (1 - t) * (1 - t); // ease-out
+                this._revealLayer.update(deltaTime, this.sceneManager.getCamera());
                 this._revealLayer.setOpacity(1 - eased);
                 if (t >= 1) this._endReveal();
             }

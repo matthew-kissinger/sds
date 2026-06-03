@@ -228,8 +228,11 @@ export async function initReactUI() {
                     // Build the armed world's scene on commit (the pastoral
                     // loading bar fills from its per-stage marks). swapScene
                     // early-returns if it's already the live scene; noCrossfade
-                    // rides the loading surface, not the attract dissolve.
-                    await getGameInstance()?.swapScene(world.id, { noCrossfade: true });
+                    // rides the loading surface, not the legacy pre-build path.
+                    // Cycle 52 P2: revealBackdrop arms the in-engine dissolve -
+                    // the same backdrop webp dissolves into the built scene when
+                    // the loading surface hands off (see App's reveal hand-off).
+                    await getGameInstance()?.swapScene(world.id, { noCrossfade: true, revealBackdrop: world.render });
                 } catch (err) {
                     console.error('[UI] scene build for Play failed:', err);
                 }
@@ -937,12 +940,29 @@ export async function initReactUI() {
         // ==================== MAIN APP ====================
         function App() {
             const [gameStarted, setGameStarted] = useState(false);
+            // Cycle 52 P2: true when the in-engine backdrop dissolve owns the
+            // reveal, so the start surface unmounts instantly (the quad covers
+            // the frame) instead of running the DOM opacity fade over the scene.
+            const [revealHandoff, setRevealHandoff] = useState(false);
             const reduce = useReducedMotion();
 
             useEffect(() => {
                 const check = setInterval(() => {
                     if (getGameState()?.isGameActive?.()) {
                         console.log('[UI] Game started');
+                        // Cycle 52 P2: hand off to the in-engine dissolve. If a
+                        // backdrop layer was armed at build time, start its ramp
+                        // (or skip straight to the scene under reduced motion) and
+                        // unmount the start surface instantly - the quad already
+                        // covers the frame, so there is no flash and the dissolve
+                        // is the visible reveal. With nothing armed, the DOM
+                        // opacity fade below still runs (return to menu, MP, etc.).
+                        const game = getGameInstance();
+                        if (typeof window !== 'undefined' && window.__sdsRevealArmed && game) {
+                            const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+                            if (prefersReduced) game.skipReveal?.(); else game.beginRevealRamp?.();
+                            setRevealHandoff(true);
+                        }
                         setGameStarted(true);
                         // Cycle 51 P6: the build is done; let SceneSwapOverlay
                         // resume covering any later mid-game scene swaps.
@@ -966,8 +986,11 @@ export async function initReactUI() {
             }, []);
 
             return createElement(Fragment, null, [
-                // Cycle 51 P6: fade the start surface out as the live scene
-                // becomes active — the loading->live reveal. A plain opacity fade,
+                // Cycle 51 P6 / Cycle 52 P2: hand the start surface off to the
+                // live scene. When the in-engine backdrop dissolve owns the
+                // reveal (revealHandoff), the surface unmounts instantly - the
+                // BackdropReveal quad already covers the frame and dissolves to
+                // the scene. Otherwise (no armed reveal) a plain opacity fade,
                 // safe on every device and OS; reduced-motion makes it instant.
                 createElement(AnimatePresence, { key: 'start-presence', mode: 'wait' },
                     !gameStarted && createElement(motion.div, {
@@ -975,7 +998,7 @@ export async function initReactUI() {
                         style: { position: 'fixed', inset: 0, zIndex: 5 },
                         initial: false,
                         exit: { opacity: 0 },
-                        transition: { duration: reduce ? 0 : 0.45, ease: [0.25, 0.8, 0.35, 1] }
+                        transition: { duration: (reduce || revealHandoff) ? 0 : 0.45, ease: [0.25, 0.8, 0.35, 1] }
                     }, createElement(StartScreen))
                 ),
                 gameStarted && createElement(GameHUD, { key: 'hud' }),
