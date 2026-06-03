@@ -1,8 +1,8 @@
 # Next Session - Cycle 51
 
-> **Updated:** 2026-06-02
+> **Updated:** 2026-06-03
 > **For:** Cycle 51 (`frontend-loading-and-assets-redesign`)
-> **Pickup priority:** **P6 + P7 SHIPPED and verified; P8 PAUSED by Matt to settle scope.** The world-first Golden Pasture entrance + the real per-stage loading bar are wired into the live boot (`0d401f2`), and the old shell is removed (`b4bb362`, net -7700 lines). Resume by **getting Matt's scope call** on the open concerns he raised mid-P8 (old HUD/icons, the `nipplejs` joystick, unused Pixel Forge, loading optimization, the misplaced in-game `#site-footer`) - all documented in [`docs/cycle-51-plan.md`](docs/cycle-51-plan.md) under "Open concerns" with a close-now-vs-extend-P8 question. Then either close Cycle 51 or continue P8.
+> **Pickup priority:** **Cycle 51 is work-complete - run `/cycle-close`.** All 12 phases shipped and verified: P6-P7 (world-first entrance + real loading bar + the -7700-line dead-shell removal) and P8-P12 (the pastoral finish - bespoke hand-authored icon set, in-game HUD restyle, the `nipplejs`->custom pointer-events joystick swap, loading optimization, footer relocation). On branch `cycle-51-mockups` (unpushed; `main` untouched); `npm test` (866 pass) + `npm run build` green; `main` held at 541 KiB. `/cycle-close` should walk the Success criteria with Matt, archive the plan, and carry the two named deferrals (in-engine dissolve reveal; `ExtremeTuningPanel` `.tsx` migration) to BACKLOG. Per-phase commit list is in [`docs/cycle-51-plan.md`](docs/cycle-51-plan.md) Progress.
 
 ## Cold-Start Orientation
 
@@ -10,7 +10,7 @@ Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file
 
 ## Where it stands
 
-P5 resolved; **P6 and P7 are shipped and verified; P8 is investigated but not started in code** (working tree clean after the P7 commit). The hero of the cycle - a coherent, intentional entrance + loading + scene-switch - is delivered. Full detail in [`docs/cycle-51-plan.md`](docs/cycle-51-plan.md) Progress + Open-concerns sections.
+**All 12 phases are shipped and verified - the cycle is work-complete, ready for `/cycle-close`.** The hero (entrance + loading + scene-switch) landed in P6-P7; the pastoral finish (icons, HUD restyle, joystick, loading, footer) landed in P8-P12. Authoritative per-phase detail + commit hashes are now in [`docs/cycle-51-plan.md`](docs/cycle-51-plan.md) Progress; the P6/P7/P8 bullets below are historical (P8 was the pre-expansion single phase and is superseded by P8-P12).
 
 - **P6 shipped (`0d401f2`).** World-first Golden Pasture entrance in the real boot: instant entrance over the armed world's fresh `close-eye` backdrop (`assets/scenes/entrance/*.webp`), a **real per-stage loading bar** (the boot emits `scene-load-step` marks; `js/components/entrance/loadStages.ts` maps them to pastoral captions + a calibrated fraction - no fixed timer), scene-build-on-commit, a CSS crossfade reveal, deferred identity (no first-run name gate), and the destinations (settings/leaderboard/sandbox/2-player/multiplayer) reachable. Verified desktop + mobile (390x844), no console errors, 903 tests pass.
 - **P7 shipped (`b4bb362`, net -7700 lines).** The bake-off `/mockups` route, ZenAttract, the 9 retired entrance leaves, both dead skeletons, the dead `assets/icons/*`, and 4 obsolete specs are all gone. main chunk 544 -> 541 KB. Boot re-verified working. 866 tests pass.
