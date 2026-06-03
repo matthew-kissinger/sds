@@ -132,15 +132,20 @@ class SheepDogSimulation {
             cinematic: isCinematicMode(),
         });
         this._attractMode = false;
-        this._zenAttract = null;
-        // Cycle 46 Phase 2: pick-out-of-attract crossfade + idle prefetch state.
-        // `_attractCrossfade` arms the per-frame dart dissolve in runFrame;
-        // `_keepZenForCrossfade` tells disposeScene to spare the field for it;
-        // `_attractPrefetchPromise` is the idle GLB warm-up the first pick awaits.
-        this._attractCrossfade = false;
-        this._keepZenForCrossfade = false;
-        this._zenCrossfadeT = 0;
-        this._zenCrossfadeDur = 0.8;
+        // Cycle 52 P1: the in-engine scene-reveal scaffold. A RevealLayer is any
+        // object with beginCrossfade() / setOpacity(a) / update(dt) / dispose();
+        // the renderer holds it over the freshly built scene and ramps its
+        // opacity to 0 in runFrame, an in-engine dissolve with no DOM cover.
+        // Generalized from the Cycle 46 zen-attract dart field (retired in Cycle
+        // 51 P7); Cycle 52 P2 plugs the menu backdrop into the same seam.
+        // `_revealActive` arms the per-frame ramp; `_keepRevealLayer` tells
+        // disposeScene to spare the layer through teardown; `_attractPrefetchPromise`
+        // is the idle GLB warm-up the first build awaits.
+        this._revealLayer = null;
+        this._revealActive = false;
+        this._keepRevealLayer = false;
+        this._revealT = 0;
+        this._revealDur = 0.8;
         this._attractPrefetchPromise = null;
         // Cycle 26 v2.1.0: per-scene SEO meta (title + OG + Twitter) for
         // deep-link sharing previews. index.html ships rolling-hills as
@@ -841,17 +846,18 @@ class SheepDogSimulation {
             try { await this._attractPrefetchPromise; } catch {}
         }
 
-        // Cycle 46 Phase 2: a pick out of attract crossfades in-engine — the
-        // dart field is kept through teardown and dissolved over the streaming
-        // scene (no DOM cover). The start path opts out (`noCrossfade`): it
-        // disposes the field and rides the standard SceneSwapOverlay swap.
-        const attractCrossfade = this._attractMode && !opts.noCrossfade && !!this._zenAttract;
-        if (attractCrossfade) {
-            this._keepZenForCrossfade = true;
-            this._attractCrossfade = true;
-            this._zenCrossfadeT = 0;
-            this._zenCrossfadeDur = 0.8;
-            this._zenAttract.beginCrossfade();
+        // Cycle 46 Phase 2 / Cycle 52 P1: when a reveal layer is armed it is kept
+        // through teardown and dissolved over the streaming scene in-engine (no
+        // DOM cover). This pre-build arm is the legacy path; the boot reveal
+        // (Cycle 52 P2) arms its backdrop layer post-build instead. Inert unless a
+        // reveal layer is present and the caller did not opt out (`noCrossfade`).
+        const revealArmed = this._attractMode && !opts.noCrossfade && !!this._revealLayer;
+        if (revealArmed) {
+            this._keepRevealLayer = true;
+            this._revealActive = true;
+            this._revealT = 0;
+            this._revealDur = 0.8;
+            this._revealLayer.beginCrossfade();
             if (typeof window !== 'undefined') window.__sdsAttractCrossfadeActive = true;
         }
 
@@ -862,15 +868,15 @@ class SheepDogSimulation {
         try {
             const newSceneDef = loadScene(toId);
             await this.disposeScene();
-            // Field survived teardown (above) for the crossfade; release the
-            // guard now so any later dispose cleans up a lingering field.
-            this._keepZenForCrossfade = false;
+            // Layer survived teardown (above) for the dissolve; release the
+            // guard now so any later dispose cleans up a lingering layer.
+            this._keepRevealLayer = false;
             const swapBuildResult = await this.rebuildScene(newSceneDef);
 
             // Build done: stop suppressing the DOM overlay (the dissolve itself
-            // runs in runFrame and needs no cover). `_attractCrossfade` stays
-            // armed so runFrame ramps the darts out, then disposes the field.
-            if (attractCrossfade && typeof window !== 'undefined') {
+            // runs in runFrame and needs no cover). `_revealActive` stays armed
+            // so runFrame ramps the layer out, then disposes it.
+            if (revealArmed && typeof window !== 'undefined') {
                 window.__sdsAttractCrossfadeActive = false;
             }
 
@@ -1077,15 +1083,15 @@ class SheepDogSimulation {
     }
 
     /**
-     * Cycle 46 Phase 2: finish the zen dissolve — clear the crossfade flags
-     * and dispose the dart field. Idempotent; safe if the field was already
-     * torn down by a second swap that interrupted the dissolve.
+     * Cycle 46 Phase 2 / Cycle 52 P1: finish the in-engine dissolve — clear the
+     * reveal flags and dispose the reveal layer. Idempotent; safe if the layer
+     * was already torn down by a second swap that interrupted the dissolve.
      */
-    _endZenCrossfade() {
-        this._attractCrossfade = false;
+    _endReveal() {
+        this._revealActive = false;
         if (typeof window !== 'undefined') window.__sdsAttractCrossfadeActive = false;
-        try { this._zenAttract?.dispose(); } catch {}
-        this._zenAttract = null;
+        try { this._revealLayer?.dispose(); } catch {}
+        this._revealLayer = null;
     }
 
     /**
@@ -2197,40 +2203,41 @@ class SheepDogSimulation {
         // Game-logic update path is skipped — half-disposed references would
         // otherwise crash the rAF loop.
         if (this._sceneRebuilding) {
-            // Cycle 46 Phase 2: a pick out of attract HOLDS the last zen frame
-            // (no render) through the build, so the canvas keeps showing the
-            // sky + drifting darts — no black frame, no half-built pop-in —
-            // until the dissolve below takes over. Normal swaps render under
-            // the SceneSwapOverlay as before.
-            if (this._attractCrossfade) return false;
+            // Cycle 46 Phase 2 / Cycle 52 P1: the legacy pre-build reveal HOLDS
+            // the last menu frame (no render) through the build until the dissolve
+            // below takes over. The boot reveal (Cycle 52 P2) arms its backdrop
+            // layer post-build and does not suppress here; normal swaps render
+            // under the SceneSwapOverlay as before.
+            if (this._revealActive) return false;
             try { return this.sceneManager?.render?.(); } catch {}
             return false;
         }
 
-        // Cycle 46 Phase 2: advance the zen dissolve after a pick out of
-        // attract. The real scene is built and renders via the normal path
-        // below; here we only ramp the still-mounted dart field's opacity to 0
-        // over ~0.8s, then dispose it. Render-suppression during the build kept
-        // the canvas on the last zen frame, so this dissolve is the visible
-        // hand-off — an in-engine alpha crossfade, no DOM cover. This is a
-        // guarded mode-dispatch block, not a change to the loop's shape.
-        if (this._attractCrossfade) {
-            if (!this._zenAttract) {
-                this._endZenCrossfade();
+        // Cycle 46 Phase 2 / Cycle 52 P1: advance the in-engine reveal dissolve.
+        // The real scene is built and renders via the normal path below; here we
+        // ramp the still-mounted reveal layer's opacity to 0 over ~_revealDur,
+        // then dispose it. The layer renders on top of the scene, so this is the
+        // visible hand-off — an in-engine alpha crossfade, no DOM cover. A guarded
+        // mode-dispatch block, not a change to the loop's shape.
+        if (this._revealActive) {
+            if (!this._revealLayer) {
+                this._endReveal();
             } else {
-                this._zenCrossfadeT += deltaTime;
-                const dur = this._zenCrossfadeDur || 0.8;
-                const t = Math.min(this._zenCrossfadeT / dur, 1);
+                this._revealT += deltaTime;
+                const dur = this._revealDur || 0.8;
+                const t = Math.min(this._revealT / dur, 1);
                 const eased = 1 - (1 - t) * (1 - t); // ease-out
-                this._zenAttract.setOpacity(1 - eased);
-                if (t >= 1) this._endZenCrossfade();
+                this._revealLayer.setOpacity(1 - eased);
+                if (t >= 1) this._endReveal();
             }
         }
 
-        // Cycle 46 Phase 1: zen attract field. Before any scene is built, drive
-        // only the orbit camera + atmosphere + drifting darts, then render.
-        // Skips all game-logic + grass/terrain updates — those subsystems don't
-        // exist until the first pick streams a real scene in.
+        // Cycle 46 Phase 1 / Cycle 51 P7: boot attract mode. Before any scene is
+        // built, drive only the orbit camera + atmosphere, then render. The
+        // drifting-dart field was retired in Cycle 51 P7; the opaque entrance
+        // covers the canvas, so this render just keeps it warm. Skips all
+        // game-logic + grass/terrain updates — those subsystems don't exist until
+        // the first Play streams a real scene in.
         if (this._attractMode) {
             try {
                 this.menuController.updateCinematicCamera?.();
@@ -2238,7 +2245,6 @@ class SheepDogSimulation {
                     this.atmosphere.syncCamera(this.sceneManager.getCamera().position);
                     this.atmosphere.update(deltaTime);
                 }
-                this._zenAttract?.update(deltaTime);
                 return this.sceneManager.render();
             } catch (err) {
                 console.error('[ATTRACT] frame failed:', err);

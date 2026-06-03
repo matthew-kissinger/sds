@@ -18,17 +18,17 @@ export async function disposeScene(game) {
     console.log('[SWAP] disposeScene() — full teardown');
     game._sceneRebuilding = true;
 
-    // Cycle 46: tear down the boot-time zen attract field if present. Only
-    // set while attract mode is live (first pick out of the attract field); a
-    // no-op on every normal scene-to-scene swap.
+    // Cycle 46 / Cycle 52 P1: tear down an in-engine reveal layer if present.
+    // Only set while a reveal is armed; a no-op on every normal scene-to-scene
+    // swap.
     //
-    // Phase 2 exception: a pick that crossfades (vs the start path) keeps the
-    // field alive through teardown so it can dissolve over the streaming
-    // scene. main.js clears `_keepZenForCrossfade` right after this returns and
-    // disposes the field when the dissolve completes (`_endZenCrossfade`).
-    if (game._zenAttract && !game._keepZenForCrossfade) {
-        try { game._zenAttract.dispose(); } catch (err) { console.warn('[SWAP] zenAttract dispose:', err); }
-        game._zenAttract = null;
+    // Exception: a reveal that dissolves over the streaming scene keeps the
+    // layer alive through teardown. main.js clears `_keepRevealLayer` right
+    // after this returns and disposes the layer when the dissolve completes
+    // (`_endReveal`).
+    if (game._revealLayer && !game._keepRevealLayer) {
+        try { game._revealLayer.dispose(); } catch (err) { console.warn('[SWAP] revealLayer dispose:', err); }
+        game._revealLayer = null;
     }
 
     // Cycle 12 Phase 1 A8: optional per-subsystem renderer.info snapshot
