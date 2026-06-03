@@ -4,6 +4,40 @@
 
 ## Recently Completed
 
+### Cycle 51 - `frontend-loading-and-assets-redesign` (closed 2026-06-03)
+
+Plan archived at [`docs/archive/cycles/cycle-51-plan.md`](archive/cycles/cycle-51-plan.md). A first-principles redesign of the frontend: a 10-way mockup bake-off picked the world-first Golden Pasture entrance, which was wired into the real boot; the old 13-screen shell was deleted; and the pastoral look was carried through the in-game HUD, the icon system, the mobile joystick, the loading sequence, and the project links. No version bump; v2.1.10 stands.
+
+**Closeout outcomes:**
+
+- Shipped 12/12 phases (P1-P5 bake-off + decisions, P6-P12 build). Committed directly on branch `cycle-51-mockups` (no PRs); pushed to `main` at close.
+- **P1-P5 (`301a03e`, `f59ad6e`):** 10-way interactive entrance/flow bake-off; Matt picked Golden Pasture (world-first, photo-real warm glass); autonomous sub-decisions close-eye angle / side-lit dog / single still + CSS Ken Burns.
+- **P6 (`0d401f2`):** world-first entrance in the real boot - instant entrance over the armed world's fresh close-eye backdrop, a REAL per-stage loading bar (boot emits `scene-load-step`; no fixed timer), scene-build-on-commit, CSS crossfade reveal, deferred identity.
+- **P7 (`b4bb362`, net -7700 lines):** removed the `/mockups` route, ZenAttract, the 9 retired entrance leaves, both dead skeletons, dead `assets/icons/*`, 4 obsolete specs.
+- **P8 (`6ea2059`):** bespoke hand-authored vector icon set (one cohesive family, 24+ glyphs); `lucide-react` dropped entirely + the `?? Play` fallback removed (a missing name throws, per the no-fallbacks rule).
+- **Entrance fixes (`87480ed`):** the entrance always lands on Rolling Hills (the hero); the MoteField "white dots" overlay removed.
+- **P9 (`5e1a12b`):** in-game HUD restyle - `.ui-panel`/`.mobile-control` warmed to pastoral glass, readouts off blue/cyan + inline SVG onto cream/gold + the shared Icon; MobileHUD/PauseMenu/CompletionScreen migrated `.js` -> `.tsx`.
+- **P10 (`b597095`):** `nipplejs` retired for a custom pointer-events joystick (`MobileControls.tsx`, window-listener pattern so release never sticks); the movement-vector contract is byte-identical so the sim is unchanged.
+- **P11 (`a56bce6`):** loading - high-priority `<link rel=preload fetchpriority=high>` on the armed backdrop, idle sibling-backdrop prefetch, blur-up image decode.
+- **P12 (`90af525`):** the in-game `#site-footer` removed from the game scene; its links relocated to an entrance corner-nav info menu; `/devlog/` confirmed live; SEO `#seo-content` links retained.
+
+**Validation gates (2026-06-03):**
+
+- `npm test` 866 passed / 7 skipped. `npm run build` clean. `main` held at 541 KiB (no regression - all UI work in lazy chunks); `bundle-sizes.json` mainKB reset 545 -> 541 to the true value.
+- No cycle-51 commit touched `shared/`, `tests/sim-baseline/`, the Worker, or the frozen `SceneDef`. Client render + boot + UI only.
+- Verified in a live browser (desktop + 375x812 mobile): warm HUD glass `rgba(255,248,236,0.1)` + cream text + bespoke glyphs; joystick drag -> correct movement, release zeroes it; preload link present; info-menu links correct; no console errors.
+
+**Carryover (deferred to Cycle 52 `pastoral-polish`):**
+
+- **In-engine dissolve reveal.** P11 kept the verified CSS crossfade reveal; a true WebGPU dissolve (Q4's original intent) is a high-risk boot-reveal change deferred as a refinement.
+- **`ExtremeTuningPanel` `.tsx` migration.** The remaining `createElement` HUD holdout is a dev-only tuning panel, not player-facing; migration deferred.
+
+**Notes:**
+
+- **Pixel Forge evaluated, not used for icons.** It's an AI raster + 3D asset pipeline (Gemini sprite/icon PNGs, FAL textures, Kiln LLM-to-GLB). For 16-28px tintable HUD chrome, raster is the wrong tool (no `currentColor`, DPR variants, payload, aesthetic clash), so the icons are hand-authored vector. Pixel Forge's genuine first job here is raster-appropriate art - dog-portrait avatars or in-world props - teed up, not forced.
+- **"No fallbacks" rule (Matt, mid-cycle):** a silent default-on-missing masks failures in testing. Applied to new/converted code (the icon resolver throws on a bad name; the joystick warns loudly if the input bridge is missing).
+- **12 phases, past the <=8 soft cap, by deliberate Matt-authorized expansion** (the original single P8 expanded into P8-P12 to finish the frontend rework in one cycle).
+
 ### Cycle 50 - `object-impostor-plumbing` (closed 2026-06-01)
 
 Plan archived at [`docs/archive/cycles/cycle-50-plan.md`](archive/cycles/cycle-50-plan.md). Cycle 50 made the tree-impostor (billboard far-LOD) pipeline object-driven instead of preset/fixture-driven, as a pure refactor with zero visual change. A data-driven `assets/objects.manifest.json` now drives the offline bake, the sidecar contract, and the runtime route; octahedral is reproducible through the same baker; tree1/tree2 atlases stay byte-identical (no PNG bytes changed). Adding an object or impostor variant is now a manifest edit plus a bake, not a code edit. No version bump; v2.1.10 stands.
