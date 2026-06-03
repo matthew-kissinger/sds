@@ -116,7 +116,14 @@ export const TIER_PRESETS = {
         clumpsPerChunkScale: 1.0, // applied to scene's desktop value
         bladesPerClump:      7,
         windOctaves:         2,
-        meadowQuadEnabled:   true,
+        // Cycle 51: meadow-quad far-grass LOD disabled. It only ever fired on
+        // Open Country (the one scene whose grass reaches 260m from center),
+        // where that band sits INSIDE the 380m playable island, so the player
+        // walks into flat color carpets that read as a lighter-green
+        // checkerboard against the instanced grass. A static center-distance
+        // flat LOD can't work inside the play area; off until a camera-relative
+        // version exists. The material factory stays for the konveyor catalog.
+        meadowQuadEnabled:   false,
         // Cycle 25 Phase B: drop LOD1 on med + high desktop. The mid-band
         // mesh's silhouette mismatch with LOD0 is what
         // AtmosphericDesatPatch was hiding; replacing the seam with a
@@ -128,7 +135,7 @@ export const TIER_PRESETS = {
         clumpsPerChunkScale: 1.0,
         bladesPerClump:      7,
         windOctaves:         3,
-        meadowQuadEnabled:   true,
+        meadowQuadEnabled:   false, // Cycle 51: disabled, see the med-tier note
         usesLod1ForFoliage:  false,
         lod0CrossfadeBand:   [180, 200],
     },
