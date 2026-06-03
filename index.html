@@ -44,7 +44,11 @@
     <meta name="theme-color" content="#00BFFF">
     <meta name="msapplication-TileColor" content="#00BFFF">
     <meta name="application-name" content="Sheep Dog Sim">
-    
+
+    <!-- Cycle 51 P11: high-priority preload of the entrance's first backdrop.
+         The entrance always lands on Rolling Hills, so the first frame is instant. -->
+    <link rel="preload" as="image" href="/assets/scenes/entrance/rolling-hills.webp" fetchpriority="high">
+
     <!-- Open Graph Tags -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Sheep Dog Sim">

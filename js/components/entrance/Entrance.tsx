@@ -10,7 +10,7 @@
  * settings is the corner gear, leaderboard the corner trophy, and the ways to
  * play route to multiplayer / sandbox / 2-player).
  */
-import { useState, type CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { pastoral, alpha } from '../ui/tokens';
 import { WorldImage, DogAvatar } from './sceneComponents';
 import { Icon } from '../ui/Icon';
@@ -59,11 +59,22 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
   const { compact } = useViewport();
   const [dogOpen, setDogOpen] = useState(false);
 
+  // P11: prefetch the sibling worlds' backdrops during idle so switching is
+  // instant (the armed world's backdrop is preloaded with fetchpriority=high in
+  // index.html). Best-effort, cancelled if the entrance unmounts first.
+  useEffect(() => {
+    let cancelled = false;
+    const preload = () => { if (!cancelled) for (const w of flow.worlds) { const img = new Image(); img.src = w.render; } };
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+    if (ric) ric(preload, { timeout: 2000 }); else window.setTimeout(preload, 400);
+    return () => { cancelled = true; };
+  }, [flow.worlds]);
+
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       {/* Armed world backdrop with a slow zoom and a warm legibility gradient. */}
       <div style={{ position: 'absolute', inset: 0, animation: flow.reducedMotion ? 'none' : 'sds-kenburns 26s ease-in-out infinite alternate' }}>
-        <WorldImage world={flow.world} />
+        <WorldImage world={flow.world} reducedMotion={flow.reducedMotion} />
       </div>
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(43,38,32,0.28) 0%, rgba(43,38,32,0) 26%, rgba(43,38,32,0) 52%, rgba(43,38,32,0.55) 100%)' }} />
 

@@ -3,22 +3,39 @@
  * entrance, promoted from the bake-off shell. The world render, the dog
  * avatar, the loading bar, and the dusk motes. Pastoral tokens, no inline hex.
  */
-import { type CSSProperties } from 'react';
+import { useState, useRef, useEffect, type CSSProperties } from 'react';
 import { pastoral } from '../ui/tokens';
 import type { World, Dog } from './worlds';
 
 /** Absolute-fill scene backdrop: the fresh render over a gradient fallback. */
 export function WorldImage({
-  world, radius = 0, overlay, style,
-}: { world: World; radius?: number; overlay?: string; style?: CSSProperties }) {
+  world, radius = 0, overlay, style, reducedMotion = false,
+}: { world: World; radius?: number; overlay?: string; style?: CSSProperties; reducedMotion?: boolean }) {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  // Cycle 51 P11 blur-up: hold the gradient until the render decodes, then fade
+  // it in. A cached/preloaded image is already `complete` on mount, so it shows
+  // instantly with no gradient flash - which is the case on world switches (the
+  // siblings are prefetched on idle) and on first paint (the armed backdrop is
+  // <link rel=preload fetchpriority=high>ed in index.html).
+  useEffect(() => {
+    const img = imgRef.current;
+    setLoaded(!!(img && img.complete && img.naturalWidth > 0));
+  }, [world.render]);
   return (
     <div style={{ position: 'absolute', inset: 0, borderRadius: radius, overflow: 'hidden', background: world.gradient, ...style }}>
       <img
+        ref={imgRef}
         src={world.render}
         alt=""
         aria-hidden="true"
         draggable={false}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        onLoad={() => setLoaded(true)}
+        style={{
+          width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+          opacity: reducedMotion || loaded ? 1 : 0,
+          transition: reducedMotion ? 'none' : 'opacity 500ms ease',
+        }}
       />
       {overlay && <div style={{ position: 'absolute', inset: 0, background: overlay }} />}
     </div>
