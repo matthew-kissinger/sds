@@ -2,7 +2,7 @@
 
 > **Updated:** 2026-06-03
 > **For:** Cycle 51 (`frontend-loading-and-assets-redesign`)
-> **Pickup priority:** Review the ten frontend mockups at `/mockups` and the scene-angle shots, pick a winning direction plus the matched-shot angle and dog treatment (P5), then wire the winner, swap in the new captured backdrops (no old images), and remove the old shell (P6-P8).
+> **Pickup priority:** **Golden Pasture is the chosen frontend direction (P5 resolved, Matt 2026-06-03)** - it is the anchor, not the finish line; much of the frontend remains. Next: pick the matched-shot angle and dog treatment, then wire Golden Pasture into the real boot with the new captured backdrops (no old images, P6), remove the old shell (P7), and restyle the in-game HUD plus finish the component/token migration (P8).
 
 ## Cold-Start Orientation
 

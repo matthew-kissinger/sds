@@ -85,12 +85,12 @@ Screenshot every skin at PC (1920x1080) and mobile (390x844) for offline review,
   - When the capture pass runs, then PC and mobile screenshots of every skin's entrance, loading, and in-game frames shall exist under `cycle51-validation/`.
   - When the branch deploys, then `sheepdogsim.com/mockups` shall serve the index and all ten prototypes.
 
-### P5 - Bake-off review (paired)
+### P5 - Bake-off review (paired) - RESOLVED 2026-06-03
 
-Matt tries the ten, keeps one, or calls a rework round. No code in this phase; it is the decision gate.
+**Winner: Golden Pasture** (world-first, photo-real warm glass). Matt picked it as the anchor for the frontend direction. The matched-shot angle and dog treatment are still to settle, but the design direction is locked. P6-P8 author against Golden Pasture.
 
 - **Acceptance:**
-  - When Matt picks a winner (or a rework direction), then P6-P8 shall be authored against that choice before any winner-wiring begins.
+  - When Matt picks a winner (or a rework direction), then P6-P8 shall be authored against that choice before any winner-wiring begins. (Met: Golden Pasture.)
 
 ### P6 - Wire the winner (autonomous, post-decision)
 
