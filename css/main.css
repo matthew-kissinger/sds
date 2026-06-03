@@ -190,6 +190,31 @@
   to { transform: rotate(360deg); }
 }
 
+/* ==================== Cycle 51 P6: world-first entrance ====================
+   Keyframes + display-font var for the promoted Golden Pasture entrance and
+   the pastoral loading surface (js/components/entrance/*). The entrance uses
+   inline token styles; these globals give it the Ken Burns drift, the dusk
+   motes, and the panel rise. They are gated by the reduced-motion prop in the
+   components, and the loading->live reveal is a plain opacity fade in App so it
+   is safe on every mobile device and OS. */
+:root {
+  /* Pastoral display face. Fraunces (self-hosted woff2) is the design-language
+     target; Georgia stands in until it lands, matching the gallery + bake-off. */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', 'Iowan Old Style', serif;
+}
+@keyframes sds-kenburns {
+  0%   { transform: scale(1.02); }
+  100% { transform: scale(1.1); }
+}
+@keyframes sds-mote {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
+  50%      { transform: translateY(-14px) translateX(6px); opacity: 0.7; }
+}
+@keyframes sds-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Cycle 48 P5: the scene-picker card-slide keyframes that lived here moved off
    CSS onto Motion (see js/components/StartScreen/ScenePicker.tsx) and were
    removed with that conversion. */

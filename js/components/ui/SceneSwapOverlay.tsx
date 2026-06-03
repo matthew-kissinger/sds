@@ -59,6 +59,12 @@ export function SceneSwapOverlay() {
             if (typeof window !== 'undefined' && (window as { __sdsAttractCrossfadeActive?: boolean }).__sdsAttractCrossfadeActive === true) {
                 return;
             }
+            // Cycle 51 P6: while the world-first Play is building the armed scene,
+            // the pastoral LoadingScreen owns the cover (one real bar, not the
+            // shimmer). Skip the DOM overlay so the two don't stack.
+            if (typeof window !== 'undefined' && (window as { __sdsBootLoading?: boolean }).__sdsBootLoading === true) {
+                return;
+            }
             setError(false);
             visibleSinceRef.current = 0;
             pendingEndRef.current = false;

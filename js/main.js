@@ -739,7 +739,7 @@ class SheepDogSimulation {
                 // Per-scene construction. Cycle 11 Phase 1 extracted this body
                 // into buildSceneBody so rebuildScene() can reuse it.
                 await this.createSunBillboard(this.currentScene.sky?.preset ?? 'pastoral-noon');
-                await buildSceneBody(this, logStep);
+                await buildSceneBody(this, (label, detail) => { logStep(label, detail); this._reportLoadStep(label); });
 
                 // Set grass instance count for performance monitoring
                 this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
@@ -982,8 +982,14 @@ class SheepDogSimulation {
         //    so its GLB models cache (modelsLoaded) is preserved.
         this.terrainBuilder.setSceneDef(sceneDef);
 
-        // 4. Run the same body init() uses on first run.
-        const sceneBuildResult = await buildSceneBody(this);
+        // 4. Run the same body init() uses on first run. Cycle 51 P6: forward
+        //    each build-step mark to the scene-load progress signal so the
+        //    pastoral loading bar fills from real per-stage cost (the world-first
+        //    Play builds the armed scene through here).
+        const sceneBuildResult = await buildSceneBody(this, (label, detail) => {
+            console.log(`[BUILD] ${label}${detail ? ': ' + detail : ''}`);
+            this._reportLoadStep(label);
+        });
 
         // 5. Re-register triangle estimates for the new scene.
         this.performanceMonitor.setGrassInstanceCount(this.terrainBuilder.getGrassInstanceCount());
@@ -1081,6 +1087,19 @@ class SheepDogSimulation {
         if (typeof window !== 'undefined') window.__sdsAttractCrossfadeActive = false;
         try { this._zenAttract?.dispose(); } catch {}
         this._zenAttract = null;
+    }
+
+    /**
+     * Cycle 51 P6: publish the current build-step label so the pastoral loading
+     * surface can fill its bar from real per-stage progress. A bare event over
+     * the existing GameBridge bus (the label rides a window global) keeps the
+     * stage -> friendly-label + weight table on the UI side, out of the main
+     * chunk. No-op outside the browser.
+     */
+    _reportLoadStep(label) {
+        if (typeof window === 'undefined') return;
+        window.__sdsLoadStep = label;
+        emitGameEvent('scene-load-step');
     }
 
     /**

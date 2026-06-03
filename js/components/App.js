@@ -83,7 +83,10 @@ export async function initReactUI() {
             { LanguageSelector },
             { SandboxConfig },
             { motion, AnimatePresence },
-            { useReducedMotion }
+            { useReducedMotion },
+            { Entrance },
+            { LoadingScreen },
+            { useBootFlow }
         ] = await Promise.all([
             import('./hooks/usePlatform.js'),
             import('./hooks/useGameState.js'),
@@ -123,7 +126,10 @@ export async function initReactUI() {
             import('./ui/LanguageSelector.js'),
             import('../SandboxConfig.js'),
             import('motion/react'),
-            import('./ui/useReducedMotion.js')
+            import('./ui/useReducedMotion.js'),
+            import('./entrance/Entrance'),
+            import('./entrance/LoadingScreen'),
+            import('./entrance/useBootFlow')
         ]);
 
         // Expose CompletionScreen globally for main.js to use
@@ -208,7 +214,10 @@ export async function initReactUI() {
 
         // ==================== START SCREEN ====================
         function StartScreen() {
-            const [screen, setScreen] = useState('playerSetup');
+            // Cycle 51 P6: the world-first entrance is the lead screen (no
+            // first-run name gate). Deep-links still route past it in the effect
+            // below (sandbox -> sandboxSetup, room invite -> joinRoom).
+            const [screen, setScreen] = useState('entrance');
             const reduce = useReducedMotion();
             const [selectedDog, setSelectedDog] = useState('jep');
             const [selectedMode, setSelectedMode] = useState(null);
@@ -219,6 +228,56 @@ export async function initReactUI() {
             const [sandboxConfig, setSandboxConfig] = useState(() => SandboxConfig.createDefault());
             const [pendingInviteCode, setPendingInviteCode] = useState(null);
             const platform = usePlatform();
+
+            // Cycle 51 P6: world-first Play commits here. Build the armed world's
+            // scene (the pastoral loading bar fills from the real per-stage marks),
+            // then start the solo game on it. The armed difficulty maps 1:1 to the
+            // canonical solo singlePlayerMode (js/gamestate/modes.js).
+            const handleEntrancePlay = useCallback(async (world, dog, mode) => {
+                if (!getGameInstance()) return;
+                try { window.__sdsBootLoading = true; } catch {}
+                setScreen('loading');
+                selectDog(dog.id);
+                try {
+                    // Build the armed world's scene on commit (the pastoral
+                    // loading bar fills from its per-stage marks). swapScene
+                    // early-returns if it's already the live scene; noCrossfade
+                    // rides the loading surface, not the attract dissolve.
+                    await getGameInstance()?.swapScene(world.id, { noCrossfade: true });
+                } catch (err) {
+                    console.error('[UI] scene build for Play failed:', err);
+                }
+                startSoloGame(getSelectedDog() || dog.id, mode.id);
+            }, []);
+
+            const bootFlow = useBootFlow({ onPlay: handleEntrancePlay });
+
+            // Keep selectedDog (read by the MP / sandbox / lobby handlers) synced
+            // to the entrance's armed dog so a swap in the entrance carries through.
+            useEffect(() => { setSelectedDog(bootFlow.dog.id); }, [bootFlow.dog.id]);
+
+            // The secondary destinations stay reachable from the entrance: settings
+            // is the corner gear, leaderboard the corner trophy, and the ways to
+            // play route to multiplayer / sandbox / 2-player.
+            const entranceNav = {
+                onLeaderboard: () => setScreen('leaderboard'),
+                onSettings: () => setScreen('settings'),
+                onSandbox: () => setScreen('sandboxSetup'),
+                onLocal: () => setScreen('localModeSetup'),
+                onMultiplayer: async () => {
+                    const nm = getNetworkManager();
+                    if (nm && !nm.connected && !nm.connecting) {
+                        try {
+                            await nm.connect();
+                        } catch (error) {
+                            console.error('[UI] Failed to connect:', error);
+                            alert('Unable to connect to multiplayer server.');
+                            return;
+                        }
+                    }
+                    setScreen('multiplayer');
+                },
+            };
 
             useEffect(() => {
                 // Check for sandbox share URL (#s/...) or invite URL (#/r/ROOMCODE)
@@ -245,23 +304,29 @@ export async function initReactUI() {
                     history.replaceState(null, '', location.pathname);
                 }
 
-                const existingIdentity = getPlayerIdentity();
-                if (existingIdentity) {
-                    setPlayerIdentity(existingIdentity);
-                    if (pendingSandboxConfig) {
-                        setScreen('sandboxSetup');
-                    } else if (inviteCode) {
-                        // Navigate directly to join room with code pre-filled
-                        setScreen('joinRoom');
-                    } else {
-                        setScreen('main');
-                    }
+                // Cycle 51 P6: identity is deferred — no first-run name gate.
+                // Auto-create a default identity so leaderboard registration and
+                // submission keep working; the player can clear it from Settings.
+                // The visible name prompt is gone with the old flow.
+                let identity = getPlayerIdentity();
+                if (!identity) {
+                    identity = { persistentId: generatePersistentId(), displayName: 'Shepherd', nameType: 'auto' };
+                    savePlayerIdentity(identity);
+                }
+                setPlayerIdentity(identity);
+                if (pendingSandboxConfig) {
+                    setScreen('sandboxSetup');
+                } else if (inviteCode) {
+                    // Navigate directly to join room with code pre-filled
+                    setScreen('joinRoom');
+                } else {
+                    setScreen('entrance');
                 }
             }, []);
 
             const handlePlayerSetupComplete = (identity) => {
                 setPlayerIdentity(identity);
-                setScreen('main');
+                setScreen('entrance');
             };
 
             const handleModeSelect = (mode) => {
@@ -276,7 +341,7 @@ export async function initReactUI() {
                 else if (mode === 'local') setScreen('localModeSetup');
                 else {
                     setSelectedMode(mode);
-                    setScreen('dogSelection');
+                    setScreen('entrance');
                 }
             };
 
@@ -369,7 +434,7 @@ export async function initReactUI() {
                     const nm = getNetworkManager();
                     if (!nm) {
                         alert('Game not fully loaded.');
-                        setScreen('main');
+                        setScreen('entrance');
                         return;
                     }
                     if (!nm.connected && !nm.connecting) await nm.connect();
@@ -410,7 +475,7 @@ export async function initReactUI() {
                     const nm = getNetworkManager();
                     if (!nm?.currentRoom) {
                         clearInterval(window.currentLobbyInterval);
-                        setScreen('main');
+                        setScreen('entrance');
                         return;
                     }
 
@@ -451,7 +516,7 @@ export async function initReactUI() {
                     const nm = getNetworkManager();
                     if (!nm) {
                         alert('Game not fully loaded.');
-                        setScreen('main');
+                        setScreen('entrance');
                         return;
                     }
                     if (!nm.connected && !nm.connecting) await nm.connect();
@@ -470,7 +535,7 @@ export async function initReactUI() {
                     const nm = getNetworkManager();
                     if (!nm) {
                         alert('Game not fully loaded.');
-                        setScreen('main');
+                        setScreen('entrance');
                         return;
                     }
                     if (!nm.connected && !nm.connecting) await nm.connect();
@@ -674,7 +739,7 @@ export async function initReactUI() {
                                 createElement(Button, {
                                     key: 'back',
                                     variant: 'secondary',
-                                    onClick: () => setScreen('main'),
+                                    onClick: () => setScreen('entrance'),
                                     style: { padding: '1rem 2rem', fontSize: '1.125rem' }
                                 }, '\u2190 Back'),
                                 createElement(Button, {
@@ -689,7 +754,7 @@ export async function initReactUI() {
                     case 'singlePlayerModes':
                         return createElement(SinglePlayerModes, {
                             onSelectMode: handleStartSolo,
-                            onBack: () => setScreen('dogSelection')
+                            onBack: () => setScreen('entrance')
                         });
 
                     case 'sandboxSetup':
@@ -704,7 +769,7 @@ export async function initReactUI() {
                                     setScreen('fenceEditor');
                                 }
                             },
-                            onBack: () => setScreen('dogSelection')
+                            onBack: () => setScreen('entrance')
                         });
 
                     case 'fenceEditor':
@@ -726,12 +791,12 @@ export async function initReactUI() {
                     case 'localModeSetup':
                         return createElement(LocalModeSetup, {
                             onStart: handleStartLocal,
-                            onBack: () => setScreen('main')
+                            onBack: () => setScreen('entrance')
                         });
 
                     case 'multiplayer':
                         return createElement(MultiplayerOptions, {
-                            onBack: () => setScreen('dogSelection'),
+                            onBack: () => setScreen('entrance'),
                             onSelectOption: (opt) => {
                                 if (opt === 'create') setScreen('createRoom');
                                 else if (opt === 'join') setScreen('joinRoom');
@@ -776,7 +841,7 @@ export async function initReactUI() {
                             onLeave: () => {
                                 const leaveNm = getNetworkManager();
                                 if (leaveNm) leaveNm.leaveRoom();
-                                setScreen('dogSelection');
+                                setScreen('entrance');
                             },
                             onSetModeLock: (locked) => {
                                 const lockNm = getNetworkManager();
@@ -808,7 +873,7 @@ export async function initReactUI() {
 
                     case 'leaderboard':
                         return createElement(GlobalLeaderboard, {
-                            onBack: () => setScreen('main'),
+                            onBack: () => setScreen('entrance'),
                             playerIdentity
                         });
 
@@ -816,13 +881,23 @@ export async function initReactUI() {
                         return createElement(SettingsPanel, {
                             settings: gameSettings,
                             onSettingsChange: setGameSettings,
-                            onBack: () => setScreen('main')
+                            onBack: () => setScreen('entrance')
                         });
 
                     default:
                         return null;
                 }
             };
+
+            // Cycle 51 P6: the world-first entrance and the pastoral loading
+            // surface are full-bleed (their own backdrop), not centered menu
+            // cards, so they render outside the start-screen-content max-width box.
+            if (screen === 'entrance') {
+                return createElement(Entrance, { flow: bootFlow, nav: entranceNav });
+            }
+            if (screen === 'loading') {
+                return createElement(LoadingScreen, { flow: bootFlow });
+            }
 
             // Container handles: positioning, centering, overlay background, padding
             // Content handles: max-width
@@ -1132,12 +1207,16 @@ export async function initReactUI() {
         // ==================== MAIN APP ====================
         function App() {
             const [gameStarted, setGameStarted] = useState(false);
+            const reduce = useReducedMotion();
 
             useEffect(() => {
                 const check = setInterval(() => {
                     if (getGameState()?.isGameActive?.()) {
                         console.log('[UI] Game started');
                         setGameStarted(true);
+                        // Cycle 51 P6: the build is done; let SceneSwapOverlay
+                        // resume covering any later mid-game scene swaps.
+                        try { window.__sdsBootLoading = false; } catch {}
                         clearInterval(check);
                         document.getElementById('react-overlay')?.style.setProperty('display', '');
                     }
@@ -1157,7 +1236,18 @@ export async function initReactUI() {
             }, []);
 
             return createElement(Fragment, null, [
-                !gameStarted && createElement(StartScreen, { key: 'start' }),
+                // Cycle 51 P6: fade the start surface out as the live scene
+                // becomes active — the loading->live reveal. A plain opacity fade,
+                // safe on every device and OS; reduced-motion makes it instant.
+                createElement(AnimatePresence, { key: 'start-presence', mode: 'wait' },
+                    !gameStarted && createElement(motion.div, {
+                        key: 'start',
+                        style: { position: 'fixed', inset: 0, zIndex: 5 },
+                        initial: false,
+                        exit: { opacity: 0 },
+                        transition: { duration: reduce ? 0 : 0.45, ease: [0.25, 0.8, 0.35, 1] }
+                    }, createElement(StartScreen))
+                ),
                 gameStarted && createElement(GameHUD, { key: 'hud' }),
                 createElement(SceneSwapOverlay, { key: 'swap-overlay' })
             ]);
