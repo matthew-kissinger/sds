@@ -29,18 +29,18 @@ The current flow is a 13-screen state machine in [`js/components/App.js`](../js/
 - **Settings and Leaderboard leave the play grid.** Settings is a corner gear; Leaderboard is contextual (per world + completion). Multiplayer host hangs off the armed world; join/public is a destination. The exact Multiplayer prominence is resolved by the bake-off.
 - **Identity deferred** until it matters (leaderboard submit, multiplayer join). No first-run name gate.
 
-## Progress (2026-06-02, mid-P8)
+## Progress (2026-06-02, P8-P12 authored - finishing in-cycle)
 
-P5 resolved; **P6 and P7 are shipped and verified; P8 is investigated but NOT started in code.** Work is on branch `cycle-51-mockups` (unpushed; the live game on `main` is untouched). Working tree is clean after the P7 commit.
+P5 resolved; **P6 and P7 are shipped and verified.** Matt's call (2026-06-02): **finish Cycle 51 in place** - fold the five open concerns into the cycle (do NOT split to a Cycle 52), and **do the joystick pass this cycle**. He also set a cycle-wide engineering rule: **no fallbacks** (silent defaults mask failures in testing - fail loud). The original single "HUD restyle" P8 is therefore expanded into **P8-P12** (icons, HUD restyle, joystick, loading, footer). Work is on branch `cycle-51-mockups` (unpushed; the live game on `main` is untouched); working tree clean after P7.
 
 - **P1-P5 done.** The bake-off (`301a03e`) picked Golden Pasture. P5 sub-decisions (autonomous, against the `cycle51-validation` art): matched-shot angle `close-eye`; dog side-lit/legible (not silhouette); single still per world + CSS Ken Burns (not the animated angle-cycle). The three `close-eye` 1920x1080 renders are the production backdrops, committed to `assets/scenes/entrance/`.
 - **P6 SHIPPED + verified (commit `0d401f2`).** The world-first Golden Pasture entrance is wired into the real boot: instant entrance over the armed world's fresh backdrop, a **real per-stage loading bar** (driven by the boot's `scene-load-step` marks, not a fixed timer), scene-build-on-commit, a CSS crossfade reveal, deferred identity (no first-run name gate), and the secondary destinations (settings gear, leaderboard trophy, sandbox, 2-player, multiplayer) reachable. New modules: `js/components/entrance/*` (Entrance, LoadingScreen, useBootFlow, worlds, loadStages, sceneComponents), `js/components/ui/Icon.tsx`, `js/components/hooks/useViewport.ts`. The `shouldBootAttract` gate + MP hard-reload swap are unchanged. Verified in-browser on desktop (1280/1920) and mobile (390x844): entrance, world switch, Play -> loading -> reveal -> live game + HUD, last-used persistence, no console errors. 903 tests pass. (Bundle: the one boot-side load signal added 198 bytes to main; see the P6 acceptance + the net result below.)
 - **P7 SHIPPED + verified (commit `b4bb362`, net -7700 lines).** Removed the bake-off route (10 skins + shell + `mockups.html` + the Rollup input), the ZenAttract dart field, the 9 retired entrance leaves (ModeSelection, DogSelection, PlayerIdentitySetup, SinglePlayerModes, ScenePicker + SceneGlyph/sceneChrome/scenePickerLogic, PointerTour + pointerTourState), both dead skeleton loaders, the dead `assets/icons/*`, and 4 obsolete specs. App.js lost the retired screens/handlers/imports. **Removing ZenAttract shrank main from the original 544 KB to 541 KB** (so the cycle NET-reduces the main chunk; the `bundle-sizes.json` mainKB baseline currently reads 545 from the P6 bump and should be reset to the true final value at close). Boot re-verified working (entrance -> Play -> build -> reveal -> game, no errors). 866 tests pass.
-- **P8 NOT STARTED in code (investigated only).** Remaining per the authored acceptance: restyle the in-game HUD onto the pastoral language + the shared `Icon` set, and finish the `createElement` -> `.tsx` container migration (defer overflow to BACKLOG). **Matt paused P8 (2026-06-02) to flag that the remaining scope is bigger than a restyle - see "Open concerns" below.**
+- **P8-P12 AUTHORED, executing (2026-06-02).** The remaining work is split into five sharp phases (below): P8 bespoke pastoral icon set (hand-authored vector SVG, drops `lucide` + the `?? Play` fallback), P9 in-game HUD restyle + migration tail, P10 mobile joystick replacement (retire `nipplejs`), P11 loading "all the tricks", P12 in-game footer relocation + devlog fix. This pushes Cycle 51 to 12 phases total (P1-P5 planning/mockup + P6-P12 build), past the <=8 soft cap - a deliberate, Matt-authorized expansion (see Phase shape rules).
 
-## Open concerns raised by Matt (2026-06-02, mid-P8) - DOCUMENTED, NOT YET ACTIONED
+## Open concerns raised by Matt (2026-06-02) - RESOLVED: now P8-P12, finishing in-cycle
 
-Matt paused P8 to flag that "making the frontend proper" is more than an in-game HUD restyle. Captured here verbatim so the scope decision survives context compaction. **Nothing below is implemented yet.**
+Matt paused P8 to flag that "making the frontend proper" is more than an in-game HUD restyle, then decided to **finish all of it inside Cycle 51** (not a Cycle 52 split), joystick included. The five concerns map to phases P8-P12. Captured here so the mapping survives context compaction.
 
 1. **In-game HUD + icons still old/outdated.** The HUD (`SheepCounter`, `GameTimer`, `CameraModeIndicator`, `ObjectiveBanner`, `CompactStaminaBar`, `CorralCompass`, `PauseMenu`, `MobileHUD`, `CompletionScreen`) still uses the cool-white `.ui-panel` glass (`css/main.css` ~L428: `rgba(255,255,255,0.08)`), blue accents (`text-blue-300`), and **bespoke hand-drawn inline SVG icons** (e.g. `SheepCounter`'s `SheepIcon`/`PauseIcon`). It does NOT yet use the pastoral warm-glass tokens (`--color-glass-warm`, `--color-ink`, `--color-accent-meadow`) or the new shared `js/components/ui/Icon.tsx`. This is the core of P8.
 2. **Mobile joystick uses `nipplejs ^0.10.2`** (`package.json`; `js/components/GameHUD/MobileControls.js`). nipplejs is old and not actively maintained. Candidate: replace with a custom pointer-events touch joystick (pastoral look, better feel, one fewer stale dep). Gameplay-critical input - needs its own scope and careful mobile-compat verification (iOS Safari + Android Chrome).
@@ -48,13 +48,11 @@ Matt paused P8 to flag that "making the frontend proper" is more than an in-game
 4. **Loading/UX optimization - honest but not maximal.** The bar is real (per-stage) and the Cycle 46 idle GLB prefetch (`_prefetchSceneAssets`) is preserved. NOT done: preloading the other worlds' backdrops + the armed world's heightfield/assets during entrance idle, `<link rel=preload>` / `fetchpriority` on the armed backdrop, progressive/blur-up backdrop decode, and the in-engine dissolve reveal option. "All the game-dev tricks" for an instant-feeling load are not fully pulled.
 5. **`#site-footer` (About / Scenes / Devlog / Source / Press kit) is in the game scene.** `index.html` ~L335: a desktop-only thin strip at the bottom of the canvas (hidden on mobile), shown during gameplay. Matt: poorly placed (should not sit over gameplay) and the links read as dead. Target status: `/about` -> `about.html` (ok), `/devlog/` -> `public/devlog/index.html` exists but sparse (2 entries; may read as dead or have a clean-URL issue worth confirming), `/scenes/home-field` -> `public/scenes/` (ok), Source/Press kit -> GitHub (ok). Action wanted: remove from the game scene; surface the links from the menu instead (entrance corner nav or a menu/info affordance), and confirm/repair the devlog route.
 
-### Scope question (awaiting Matt's call)
+### Scope decision - RESOLVED (Matt, 2026-06-02)
 
-Concerns 1-5 together are a coherent "pastoral in-game + assets + mobile-input" program, larger than Cycle 51's remaining P8. Options:
-- **A) Keep Cycle 51 tight - close it now** with P6/P7 shipped (the hero: entrance + loading + scene-switch + a -7700-line dead-shell removal, all verified). Move P8's HUD restyle and concerns 1-5 into a new **Cycle 52 "Pastoral in-game + assets"** program with its own acceptance (HUD restyle, Pixel Forge icon set, nipplejs replacement, loading optimization, footer relocation). This matches `docs/ui-migration-map.md`'s own Cycle 51/52 split.
-- **B) Extend Cycle 51 P8** to land the small safe wins now (pastoral `.ui-panel` glass warming + footer relocation) and still defer the bigger items (Pixel Forge icons, nipplejs swap, deep loading opt) to Cycle 52.
+**Finish Cycle 51 in place.** Fold concerns 1-5 into the cycle as phases P8-P12, joystick included (Matt explicitly overrode the earlier "defer the gameplay-critical input swap to Cycle 52" lean). The earlier close-now option is not taken. A future cycle, if needed, carries only true overflow (e.g. the `ExtremeTuningPanel` dev-panel migration, deeper Pixel Forge in-world asset work) listed as explicit BACKLOG carryover at close.
 
-Lean: **A.** The core is delivered and verified; the remaining items each deserve real acceptance (especially the gameplay-critical mobile-input swap), and bundling a rushed half-restyle into the close would be the kind of half-integration this project avoids.
+**Pixel Forge evaluation (2026-06-02):** Pixel Forge (`../pixel-forge`) is an AI *raster + 3D* asset pipeline - Gemini 2D sprite/icon PNGs, FAL textures, and the Kiln LLM-to-GLB 3D path (it has a `gen_icon` MCP tool, but the output is raster PNG). For 16-28px HUD chrome, raster is the wrong tool: no `currentColor` tinting, needs @2x/@3x DPR variants (a mobile-compat cost), heavier payload, and a painterly read that clashes with the line-art warm-glass language. So P8's icon set is **hand-authored cohesive vector SVG** (drops `lucide-react` and the `?? Play` fallback - one bespoke family, crisp on every device/OS). Pixel Forge's right first job for this project is raster-appropriate bespoke art - the entrance dog-portrait avatars and/or in-world Kiln props - teed up in P8 as a bounded, separable sub-goal and documented either way.
 
 ## Scope
 
@@ -62,7 +60,7 @@ All of it: the entrance, the loading sequence, the scene-switch, the icon and st
 
 ## Phase shape rules
 
-Standard (see [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md)): <= 8 phases, each fully autonomous or fully paired, single sharp goal. P1-P4 are autonomous; P5 is paired (Matt decides); P6-P8 are autonomous, authored against the winner.
+Standard (see [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md)): <= 8 phases, each fully autonomous or fully paired, single sharp goal. P1-P4 are autonomous; P5 is paired (Matt decides); P6-P12 are autonomous, authored against the winner. **Exception (Matt-authorized, 2026-06-02):** the original P8 (HUD restyle) is expanded into P8-P12 to finish the frontend rework in one cycle (icons, HUD, joystick, loading, footer), taking the total to 12 phases. This is past the <=8 soft cap by deliberate decision, not drift.
 
 ## Phases
 
@@ -139,14 +137,60 @@ Delete the old shell the winner replaces: the unused nine skins, `ZenAttract`, b
   - When P7 lands, then `git diff --stat` for the phase shall show more lines removed than added (net-negative).
   - When `npm test` and `npm run build` run, then all specs pass (specs that referenced removed leaves are updated in the same phase) and the build is clean.
 
-### P8 - In-game HUD restyle (autonomous, post-decision)
+### P8 - Bespoke pastoral icon set (autonomous, post-decision)
 
-Bring the in-game HUD and overlays onto the winning style and the new icon set; finish the `.tsx`/token migration of the remaining `createElement` containers.
+Replace the `lucide-react` + 2-glyph `Icon.tsx` with one complete, hand-authored pastoral vector SVG family covering every `IconName` the app uses (HUD + entrance + chrome). Drop the `lucide-react` dependency and the `LUCIDE[name] ?? Play` fallback - a missing name fails loud, it does not silently render Play (the no-fallbacks rule). Pixel Forge is evaluated as a raster/3D tool and teed up for raster-appropriate art (dog portraits / in-world props) as a bounded, separable sub-goal, not forced into tintable chrome.
 
+- **Files:** `js/components/ui/Icon.tsx`, `package.json` (remove `lucide-react`), any HUD/entrance importers that name an icon.
 - **Acceptance:**
-  - When the in-game HUD renders after P8, then its warm-glass surfaces shall use the pastoral tokens and the shared `Icon` set, with zero inline hex in the converted HUD files.
-  - When the HUD smoke specs run, then the readout text and roles shall be unchanged (the restyle is token/color only): `tests/ui/GameHUD.smoke.spec.tsx` stays green.
-  - When a `createElement` container is migrated, then the converted file shall be `.tsx` with zero `createElement` and zero inline hex; any container not migrated this cycle shall be listed as explicit BACKLOG carryover (the migration map already schedules some for Cycle 52).
+  - When `Icon.tsx` renders after P8, then every `IconName` shall resolve to a hand-authored bespoke glyph in one cohesive pastoral family (consistent stroke weight, rounded caps), with no `lucide-react` import and no `?? Play` fallback.
+  - When the repo is grepped after P8, then `lucide-react` shall have zero `import` references and shall be removed from `package.json`.
+  - When an unknown icon name reaches `Icon`, then it shall fail loud (throw in dev / render a visibly-wrong marker), never silently substitute a default.
+  - When `npm run build` runs, then the icon set shall ride the lazy `ui`/`App` chunks (not `main`), and `main-*.js` shall not regress past its post-P7 size; `npm test` passes and the build is clean.
+
+### P9 - In-game HUD restyle + migration tail (autonomous, post-decision)
+
+Bring the in-game HUD and overlays onto the pastoral warm-glass language and the P8 `Icon` set; warm the shared `.ui-panel` surface centrally; migrate the player-facing `createElement` holdouts to `.tsx`. Defer the `ExtremeTuningPanel` dev panel to BACKLOG explicitly.
+
+- **Files:** `css/main.css` (`.ui-panel` warm-glass tokens), the `.tsx` HUD readouts (SheepCounter, GameTimer, CompactStaminaBar, ObjectiveBanner, CameraModeIndicator, CorralCompass, PracticeHint), and the migrated holdouts `PauseMenu.tsx`, `CompletionScreen.tsx`, `MobileHUD.tsx`.
+- **Acceptance:**
+  - When the in-game HUD renders after P9, then its surfaces shall use the pastoral tokens (`--color-glass-warm`, `--color-ink`, `--color-accent-meadow`) and the shared `Icon` set, with zero inline hex and zero blue-accent (`text-blue-*`, `rgba(59,130,246,*)`) and zero bespoke inline SVG in the converted HUD files.
+  - When the HUD smoke specs run, then readout text and roles shall be unchanged (restyle is token/color + icon only): `tests/ui/GameHUD.smoke.spec.tsx` stays green.
+  - When a `createElement` container is migrated, then the converted file shall be `.tsx` with zero `createElement` and zero inline hex; `ExtremeTuningPanel` (dev-only) is the named BACKLOG carryover.
+  - When `npm test` and `npm run build` run, then all specs pass and the build is clean.
+
+### P10 - Mobile joystick replacement (autonomous, post-decision)
+
+Replace `nipplejs` with a custom pointer-events touch joystick in a migrated `MobileControls.tsx`; remove the dependency. Same `movementVector` contract so the sim sees no change. Pastoral look, no silent fallback if the input bridge is missing (it surfaces, per the no-fallbacks rule). Careful mobile-compat verification (iOS Safari + Android Chrome + desktop mouse fallback).
+
+- **Files:** `js/components/GameHUD/MobileControls.tsx` (new, replaces `.js`), `js/components/GameHUD/index.js`, `package.json` (remove `nipplejs`).
+- **Acceptance:**
+  - When the mobile joystick is driven after P10, then it shall set `getMobileControls().movementVector` with the same axis convention and force clamping as the `nipplejs` version (border-collie still moves identically), using only pointer events (no `nipplejs`).
+  - When the repo is grepped after P10, then `nipplejs` shall have zero `import` references and shall be removed from `package.json`.
+  - When the joystick mounts and the input bridge is unavailable, then it shall surface the condition (loud), not silently no-op or default-move.
+  - When the entrance/HUD is exercised at mobile widths (390x844 portrait + landscape) with touch, then the joystick, sprint, and zoom controls shall sit inside `env(safe-area-inset-*)` with no clipping or horizontal scroll, on iOS Safari and Android Chrome (per the cycle directive).
+  - When `npm test` and `npm run build` run, then all specs pass and the build is clean.
+
+### P11 - Loading: pull all the tricks (autonomous, post-decision)
+
+Make the load feel instant and complete Q4's in-engine dissolve. Preload the sibling worlds' backdrops + the armed world's heightfield/GLB during entrance idle; `<link rel=preload fetchpriority=high>` the armed backdrop; progressive/blur-up decode on the world images; and finish the in-engine dissolve as the reveal (P6 shipped a CSS crossfade stand-in).
+
+- **Files:** `js/components/entrance/*` (Entrance, useBootFlow, sceneComponents, loadStages), `index.html` (preload hint), `js/main.js` / `js/boot/*` (dissolve reveal seam), `css/main.css` (blur-up).
+- **Acceptance:**
+  - When the entrance is idle, then the sibling worlds' backdrops and the armed world's heightfield/GLB shall prefetch (the existing `_prefetchSceneAssets` extended), without blocking interaction.
+  - When the page boots, then the armed world's backdrop shall carry a `<link rel=preload>` with `fetchpriority=high` and decode progressively (blur-up), with no layout shift.
+  - When Play commits and the build completes, then the reveal shall use the in-engine dissolve (not only the CSS crossfade), and shall be reduced-motion-safe and mobile-safe.
+  - When `npm run build` runs, then `main-*.js` shall not regress past its post-P7 size; `npm test` passes and the build is clean.
+
+### P12 - In-game footer relocation + devlog fix (autonomous, post-decision)
+
+Remove the `#site-footer` strip from the game scene; surface About / Scenes / Devlog / Source / Press kit from the entrance corner nav instead; confirm and repair the `/devlog/` route.
+
+- **Files:** `index.html` (remove `#site-footer`), `css/main.css` (drop `#site-footer` styles), `js/components/entrance/Entrance.tsx` (menu/info affordance), the `/devlog/` route under `public/devlog/`.
+- **Acceptance:**
+  - When the game scene renders after P12, then no `#site-footer` shall overlay the canvas (the strip is gone from `index.html`).
+  - When the entrance/menu renders, then About / Scenes / Devlog / Source / Press kit shall be reachable from a quiet corner-nav/info affordance (not over gameplay).
+  - When `/devlog/` is opened, then it shall resolve to a real page (route confirmed/repaired), not a dead link.
   - When `npm test` and `npm run build` run, then all specs pass and the build is clean.
 
 ## Frozen files (cycle-specific additions)
@@ -160,6 +204,7 @@ Durable hard stops apply (see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md)). Cycle
 - Do not touch `shared/`, sim-baseline, SceneDef, or the Worker during P1-P4. The bake-off is client render only, fully isolated from the live game.
 - Do not begin P6 (winner-wiring) before P5 converges on a pick.
 - Do not bump the version. `/mockups` is a hidden review route, not a player-visible release.
+- **No fallbacks that mask failures (Matt, 2026-06-02).** No silent default-on-missing, no error-swallowing catch that renders a safe default. In new or converted code (Icon resolution, the joystick input bridge, loading-stage mapping) a missing/invalid case fails loud, it does not silently substitute. The bespoke icon set is complete (no `lucide` backfill, no `?? Play`). Scoped to code written/converted in P8-P12, not a crusade through unrelated defensive init.
 
 ## What NOT to do during this cycle
 
