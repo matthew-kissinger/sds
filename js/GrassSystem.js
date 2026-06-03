@@ -1243,18 +1243,36 @@ export class GrassSystem {
         if (centerY < SHORELINE_Y_MIN) return null;
 
         const size = maxX - minX;
-        // Lazy-init the shared geometry + material so cost is paid once.
-        if (!this._meadowQuadGeo) {
-            this._meadowQuadGeo = new THREE.PlaneGeometry(size, size, 1, 1);
+        // Cycle 51 fix: the far-ring meadow quad must FOLLOW the terrain, not
+        // sit as a single flat plane pinned to the center height. On a relief
+        // island (Open Country) a flat 40m quad floats above the dips and
+        // sinks into the rises, reading as detached planes near the shore.
+        // Give each chunk a lightly subdivided plane and displace every vertex
+        // to the heightfield, so it conforms while staying a couple-dozen tris
+        // (still far cheaper than clump-instancing thousands of blades).
+        // The plane is rotated -PI/2 about X to lie horizontal, so local
+        // (lx, ly, lz) maps to world (lx, lz, -ly): world Y is the local Z we
+        // set, and the vertex's world XZ is (centerX + lx, centerZ - ly).
+        const SEG = 4; // 10m spans, matching the ~10.4m terrain tessellation
+        const geo = new THREE.PlaneGeometry(size, size, SEG, SEG);
+        const pos = geo.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+            const wx = centerX + pos.getX(i);
+            const wz = centerZ - pos.getY(i);
+            let y = this.heightfield ? this.heightfield.meshSampleY(wx, wz) : 0;
+            if (!Number.isFinite(y) || y > 50 || y < -10) y = centerY;
+            pos.setZ(i, y - centerY); // world Y = mesh.position.y + localZ
         }
+        pos.needsUpdate = true;
+        geo.computeVertexNormals();
+
         if (!this._meadowQuadMaterial) {
             this._meadowQuadMaterial = this.createMeadowQuadMaterial();
         }
 
-        const mesh = new THREE.Mesh(this._meadowQuadGeo, this._meadowQuadMaterial);
+        const mesh = new THREE.Mesh(geo, this._meadowQuadMaterial);
         mesh.rotation.x = -Math.PI / 2;
-        // Slight Y lift to clear the terrain mesh and avoid z-fighting with
-        // the displaced ground.
+        // Slight Y lift to clear the terrain mesh and avoid z-fighting.
         mesh.position.set(centerX, centerY + 0.05, centerZ);
         mesh.receiveShadow = true;
         mesh.frustumCulled = false; // Per-chunk culling handled by GrassSystem.
@@ -1797,10 +1815,11 @@ export class GrassSystem {
     dispose() {
         for (const [key, chunk] of this.chunks) {
             this.scene.remove(chunk.mesh);
-            // Cycle 23 Phase D2: meadow-quad chunks share geometry + material
-            // across all far-ring chunks; don't dispose per-chunk or we'd
-            // disposeOnce-many-times. Standalone disposal at the bottom.
-            if (!chunk.isMeadowQuad && chunk.ownsGeometry === true && chunk.mesh.geometry) {
+            // Cycle 51: meadow-quad chunks now own a per-chunk displaced
+            // geometry (each conforms to the terrain), so dispose them
+            // per-chunk like any clump chunk that owns its geometry. The
+            // shared material is still disposed standalone below.
+            if (chunk.mesh.geometry && (chunk.isMeadowQuad || chunk.ownsGeometry === true)) {
                 chunk.mesh.geometry.dispose();
             }
         }
@@ -1820,10 +1839,6 @@ export class GrassSystem {
             this.clumpGeometry.dispose();
         }
 
-        if (this._meadowQuadGeo) {
-            this._meadowQuadGeo.dispose();
-            this._meadowQuadGeo = null;
-        }
         if (this._meadowQuadMaterial) {
             this._meadowQuadMaterial.dispose();
             this._meadowQuadMaterial = null;
