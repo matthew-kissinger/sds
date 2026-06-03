@@ -13,6 +13,7 @@
  */
 import * as THREE from 'three';
 import { getSceneManager, getGameState } from '../../GameBridge.js';
+import { pastoral, alpha } from '../ui/tokens';
 
 const _projectVec = new THREE.Vector3();
 
@@ -122,12 +123,12 @@ export function CorralCompass({ platform = 'desktop' }: { platform?: string }) {
                         height: 0,
                         borderLeft: '10px solid transparent',
                         borderRight: '10px solid transparent',
-                        borderBottom: '18px solid rgba(234, 246, 255, 0.95)',
+                        borderBottom: `18px solid ${pastoral.cream}`,
                         transform: `rotate(${angleDeg}deg)`,
-                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
+                        filter: 'drop-shadow(0 1px 2px rgba(43,38,32,0.55))',
                     }}
                 />
-                <div className="ui-panel py-0.5 px-2 text-white/90 text-xs font-medium" style={{ whiteSpace: 'nowrap' }}>
+                <div className="ui-panel py-0.5 px-2 text-xs font-medium" style={{ whiteSpace: 'nowrap', color: alpha(pastoral.cream, 92) }}>
                     {view.distance}m
                 </div>
             </div>

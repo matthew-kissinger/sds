@@ -10,7 +10,7 @@
  */
 import { useEffect, useState } from 'react';
 import { getGameState, subscribeGameEvent } from '../../GameBridge.js';
-import { color } from '../ui/tokens';
+import { color, pastoral, alpha } from '../ui/tokens';
 import { HudPanel } from './HudPanel';
 
 interface ObjectiveSnapshot {
@@ -86,12 +86,11 @@ export function ObjectiveBanner() {
 
     return (
         <HudPanel className="py-2 px-4 text-center">
-            <div className="text-white text-md font-semibold whitespace-nowrap">{headline}</div>
+            <div className="text-md font-semibold whitespace-nowrap" style={{ color: pastoral.cream }}>{headline}</div>
             {subline && (
                 <div
-                    className={meetingThreshold
-                        ? 'text-cyan-300 text-sm mt-1 whitespace-nowrap'
-                        : 'text-white/70 text-sm mt-1 whitespace-nowrap'}
+                    className="text-sm mt-1 whitespace-nowrap"
+                    style={{ color: meetingThreshold ? pastoral.accentGold : alpha(pastoral.cream, 70) }}
                 >
                     {subline}
                 </div>
@@ -99,7 +98,7 @@ export function ObjectiveBanner() {
             {/* Gather-progress mini-bar: fills as sheepInZone approaches
                 requiredSheep, then morphs into the hold-progress bar. */}
             {isRoundup && (
-                <div className="mt-2 h-1 w-full bg-white/15 rounded-full overflow-hidden">
+                <div className="mt-2 h-1 w-full rounded-full overflow-hidden" style={{ background: alpha(pastoral.cream, 15) }}>
                     <div
                         style={{
                             height: '100%',

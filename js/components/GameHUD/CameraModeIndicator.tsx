@@ -8,6 +8,7 @@
  * the .ui-panel surface only). Positioning lives in HudLayout (Cycle 35 P8).
  */
 import { getSceneManager } from '../../GameBridge.js';
+import { pastoral, alpha } from '../ui/tokens';
 
 const MODE_LABEL: Record<string, string> = {
     classic: 'Classic',
@@ -33,18 +34,18 @@ export function CameraModeIndicator({ mode, platform = 'desktop' }: CameraModeIn
             <button
                 type="button"
                 onClick={handleCycle}
-                className="ui-panel py-1.5 px-3 flex items-center gap-2 cursor-pointer hover:bg-white/5 active:scale-95 transition-transform"
-                style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
+                className="ui-panel py-1.5 px-3 flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+                style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation', color: pastoral.cream }}
                 aria-label={`Camera mode: ${label}. Tap to cycle.`}
             >
-                <span className="text-white/90 text-sm font-medium">{label}</span>
-                <span className="text-white/30 text-xs">·</span>
+                <span className="text-sm font-medium" style={{ color: pastoral.cream }}>{label}</span>
+                <span className="text-xs" style={{ color: alpha(pastoral.cream, 35) }}>·</span>
                 {isMobile ? (
-                    <span className="text-white/60 text-xs">Tap</span>
+                    <span className="text-xs" style={{ color: alpha(pastoral.cream, 65) }}>Tap</span>
                 ) : (
                     <>
-                        <span className="text-white/60 text-xs">Press</span>
-                        <kbd className="inline-block px-1.5 py-0.5 rounded bg-white/15 border border-white/25 text-white/90 text-xs font-mono leading-none">C</kbd>
+                        <span className="text-xs" style={{ color: alpha(pastoral.cream, 65) }}>Press</span>
+                        <kbd className="inline-block px-1.5 py-0.5 rounded text-xs font-mono leading-none" style={{ background: alpha(pastoral.cream, 15), border: `1px solid ${pastoral.glassWarmBorder}`, color: alpha(pastoral.cream, 92) }}>C</kbd>
                     </>
                 )}
             </button>

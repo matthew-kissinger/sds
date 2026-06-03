@@ -422,20 +422,24 @@
 @layer components {
   /* Glassmorphism panel - the core UI container */
   .ui-panel {
-    background: rgba(255, 255, 255, 0.08);
+    /* Cycle 51 P9: warm pastoral glass (was cool rgba(255,255,255,*)). HUD
+       panels sit translucent over live gameplay, so this is a warm-tinted
+       low-opacity frost + warm hairline, not the entrance's opaque cream card. */
+    background: var(--color-glass-warm);
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-glass-warm-border);
     border-radius: 1rem;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 24px rgba(43, 38, 32, 0.18);
   }
 
   /* Mobile control button */
   .mobile-control {
-    background: rgba(255, 255, 255, 0.08);
+    /* Cycle 51 P9: warm pastoral glass, matching .ui-panel. */
+    background: var(--color-glass-warm);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-glass-warm-border);
     border-radius: 50%;
     display: flex;
     align-items: center;

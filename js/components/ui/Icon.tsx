@@ -43,6 +43,13 @@ const GLYPHS = {
   close: <path d="M7 7l10 10M17 7L7 17" />,
   check: <path d="M6 12.4l3.8 3.8L18 7.6" />,
   menu: <path d="M5 8h14M5 12h14M5 16h14" />,
+  home: (
+    <>
+      <path d="M4 11.5 12 5l8 6.5" />
+      <path d="M6 10.5V19h12v-8.5" />
+      <path d="M10.5 19v-4.5h3V19" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
