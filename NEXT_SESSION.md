@@ -1,8 +1,8 @@
 # Next Session - Cycle 51
 
-> **Updated:** 2026-06-03
+> **Updated:** 2026-06-02
 > **For:** Cycle 51 (`frontend-loading-and-assets-redesign`)
-> **Pickup priority:** **Golden Pasture is the chosen frontend direction (P5 resolved, Matt 2026-06-03)** - it is the anchor, not the finish line; much of the frontend remains. Next: pick the matched-shot angle and dog treatment, then wire Golden Pasture into the real boot with the new captured backdrops (no old images, P6), remove the old shell (P7), and restyle the in-game HUD plus finish the component/token migration (P8).
+> **Pickup priority:** **P6 + P7 SHIPPED and verified; P8 PAUSED by Matt to settle scope.** The world-first Golden Pasture entrance + the real per-stage loading bar are wired into the live boot (`0d401f2`), and the old shell is removed (`b4bb362`, net -7700 lines). Resume by **getting Matt's scope call** on the open concerns he raised mid-P8 (old HUD/icons, the `nipplejs` joystick, unused Pixel Forge, loading optimization, the misplaced in-game `#site-footer`) - all documented in [`docs/cycle-51-plan.md`](docs/cycle-51-plan.md) under "Open concerns" with a close-now-vs-extend-P8 question. Then either close Cycle 51 or continue P8.
 
 ## Cold-Start Orientation
 
@@ -10,11 +10,11 @@ Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file
 
 ## Where it stands
 
-The brainstorm converged and the plan is authored. P1-P4 shipped; P5 (Matt's pick) is the gate.
+P5 resolved; **P6 and P7 are shipped and verified; P8 is investigated but not started in code** (working tree clean after the P7 commit). The hero of the cycle - a coherent, intentional entrance + loading + scene-switch - is delivered. Full detail in [`docs/cycle-51-plan.md`](docs/cycle-51-plan.md) Progress + Open-concerns sections.
 
-- **Ten mockups live on `/mockups`** (commit `301a03e`). Each is an interactive entrance-and-flow prototype over a shared headless shell: world-first IA (arm a world, set difficulty, swap the persistent dog, Play, real-stage loading bar, in-game HUD), responsive PC and mobile. The ten: Golden Pasture, Storybook, Living Diorama, Wide-Open, Launcher, Biome Cards, Zen Type, Warm Cinematic, Mode-First, One-Tap Hero. 903 tests pass, build clean, main-bundle ratchet holds (separate chunk). Run `npm run dev:client`, open `http://localhost:3000/mockups.html`.
-- **Scene-art harness built** (local, gitignored under `cycle51-validation/`). `frame.mjs` poses the dog upright and sweeps camera techniques per world in real WebGPU; `assemble.mjs` builds per-technique matched series across the three worlds; `angles.html` slow-crossfades a scene's angles in the browser (the fast-loading animated-backdrop technique: crossfading pre-rendered WebPs, no GIF, no video). These produce the new world backdrops.
-- **Render fix shipped (commit `98be647`).** The Cycle 23 meadow-quad far-grass LOD was disabled by tier config; it only fired on Open Country, where its flat carpets sat inside the playable island and read as a checkerboard at the shore. The whole field now uses instanced grass. Render-only, 903 tests pass. (Earlier conform attempt: `e9b5f6e`.)
+- **P6 shipped (`0d401f2`).** World-first Golden Pasture entrance in the real boot: instant entrance over the armed world's fresh `close-eye` backdrop (`assets/scenes/entrance/*.webp`), a **real per-stage loading bar** (the boot emits `scene-load-step` marks; `js/components/entrance/loadStages.ts` maps them to pastoral captions + a calibrated fraction - no fixed timer), scene-build-on-commit, a CSS crossfade reveal, deferred identity (no first-run name gate), and the destinations (settings/leaderboard/sandbox/2-player/multiplayer) reachable. Verified desktop + mobile (390x844), no console errors, 903 tests pass.
+- **P7 shipped (`b4bb362`, net -7700 lines).** The bake-off `/mockups` route, ZenAttract, the 9 retired entrance leaves, both dead skeletons, the dead `assets/icons/*`, and 4 obsolete specs are all gone. main chunk 544 -> 541 KB. Boot re-verified working. 866 tests pass.
+- **P8 not started (investigated only).** In-game HUD + icon restyle to the pastoral language, plus the `createElement` -> `.tsx` container migration. **Paused by Matt - see the Open concerns + scope question in the plan.** (The `/mockups` route was removed in P7, so the old "open `localhost:3000/mockups.html`" instruction no longer applies; run `npm run dev:client` and open `http://localhost:3000/` to see the live entrance.)
 
 ## Decisions to honor (Matt, 2026-06-03)
 
