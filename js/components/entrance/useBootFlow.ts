@@ -11,11 +11,10 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useReducedMotion } from '../ui/useReducedMotion';
-import { WORLDS, DOGS, MODES, WAYS, defaultWorldIndex, type World, type Dog, type Mode, type Way } from './worlds';
+import { WORLDS, DOGS, MODES, WAYS, DEFAULT_WORLD_INDEX, type World, type Dog, type Mode, type Way } from './worlds';
 import { subscribeGameEvent } from '../../GameBridge.js';
 import { mapLoadStep, FIRST_LOAD_LABEL } from './loadStages';
 
-const LAST_WORLD = 'sds.last-world';
 const LAST_DOG = 'sds.last-dog';
 const LAST_MODE = 'sds.last-mode';
 
@@ -59,7 +58,9 @@ export interface BootFlowOptions {
 export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   const reducedMotion = useReducedMotion();
 
-  const [worldIndex, setWorldIndex] = useState(() => defaultWorldIndex(readLS(LAST_WORLD)));
+  // The entrance always lands on Rolling Hills (the hero); only dog + mode
+  // persist per-player. Browsing worlds is session-local.
+  const [worldIndex, setWorldIndex] = useState(DEFAULT_WORLD_INDEX);
   const [modeId, setModeId] = useState(() => readLS(LAST_MODE) ?? MODES[0].id);
   const [dogId, setDogId] = useState(() => readLS(LAST_DOG) ?? DOGS[0].id);
 
@@ -79,18 +80,10 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
 
   const armWorld = useCallback((id: string) => {
     const i = WORLDS.findIndex((w) => w.id === id);
-    if (i >= 0) { setWorldIndex(i); writeLS(LAST_WORLD, id); }
+    if (i >= 0) setWorldIndex(i);
   }, []);
-  const nextWorld = useCallback(() => setWorldIndex((i) => {
-    const next = (i + 1) % WORLDS.length;
-    writeLS(LAST_WORLD, WORLDS[next].id);
-    return next;
-  }), []);
-  const prevWorld = useCallback(() => setWorldIndex((i) => {
-    const next = (i - 1 + WORLDS.length) % WORLDS.length;
-    writeLS(LAST_WORLD, WORLDS[next].id);
-    return next;
-  }), []);
+  const nextWorld = useCallback(() => setWorldIndex((i) => (i + 1) % WORLDS.length), []);
+  const prevWorld = useCallback(() => setWorldIndex((i) => (i - 1 + WORLDS.length) % WORLDS.length), []);
   const setMode = useCallback((id: string) => { setModeId(id); writeLS(LAST_MODE, id); }, []);
   const setDog = useCallback((id: string) => { setDogId(id); writeLS(LAST_DOG, id); }, []);
 

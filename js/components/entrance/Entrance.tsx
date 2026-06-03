@@ -12,7 +12,7 @@
  */
 import { useState, type CSSProperties } from 'react';
 import { pastoral, alpha } from '../ui/tokens';
-import { WorldImage, DogAvatar, MoteField } from './sceneComponents';
+import { WorldImage, DogAvatar } from './sceneComponents';
 import { Icon } from '../ui/Icon';
 import { useViewport } from '../hooks/useViewport';
 import { formatSheep } from './worlds';
@@ -66,7 +66,6 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
         <WorldImage world={flow.world} />
       </div>
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(43,38,32,0.28) 0%, rgba(43,38,32,0) 26%, rgba(43,38,32,0) 52%, rgba(43,38,32,0.55) 100%)' }} />
-      <MoteField count={14} reducedMotion={flow.reducedMotion} />
 
       {/* Top: title + corner nav */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: compact ? 'max(16px, env(safe-area-inset-top)) 16px 16px' : '22px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

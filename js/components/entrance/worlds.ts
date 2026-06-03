@@ -103,8 +103,9 @@ export const WAYS: Way[] = [
 /** Format a sheep count with a thousands separator. */
 export const formatSheep = (n: number): string => n.toLocaleString('en-US');
 
-/** Default to last-used (or Rolling Hills, the hero) for the armed world. */
-export function defaultWorldIndex(lastWorldId: string | null): number {
-  const i = WORLDS.findIndex((w) => w.id === lastWorldId);
-  return i >= 0 ? i : 1;
-}
+/**
+ * The entrance always leads with Rolling Hills, the hero scene (Matt, 2026-06-03).
+ * Dog and difficulty persist per-player, but the landing world is fixed so the
+ * prettiest biome is always the first frame.
+ */
+export const DEFAULT_WORLD_INDEX = Math.max(0, WORLDS.findIndex((w) => w.id === 'rolling-hills'));

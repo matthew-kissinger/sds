@@ -3,7 +3,7 @@
  * entrance, promoted from the bake-off shell. The world render, the dog
  * avatar, the loading bar, and the dusk motes. Pastoral tokens, no inline hex.
  */
-import { useMemo, type CSSProperties } from 'react';
+import { type CSSProperties } from 'react';
 import { pastoral } from '../ui/tokens';
 import type { World, Dog } from './worlds';
 
@@ -67,32 +67,6 @@ export function LoadingBar({
   );
 }
 
-/** Faint drift of dusk motes. Decorative, collapses to still on reduced motion. */
-export function MoteField({
-  count = 16, reducedMotion = false, color = 'rgba(255,255,255,0.55)',
-}: { count?: number; reducedMotion?: boolean; color?: string }) {
-  const motes = useMemo(
-    () => Array.from({ length: count }, (_, i) => ({
-      left: (i * 37) % 100,
-      top: (i * 53) % 100,
-      size: 2 + (i % 3),
-      delay: (i % 7) * 0.8,
-      dur: 8 + (i % 5) * 2,
-    })),
-    [count],
-  );
-  return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }} aria-hidden="true">
-      {motes.map((m, i) => (
-        <span
-          key={i}
-          style={{
-            position: 'absolute', left: `${m.left}%`, top: `${m.top}%`,
-            width: m.size, height: m.size, borderRadius: '50%', background: color,
-            animation: reducedMotion ? 'none' : `sds-mote ${m.dur}s ease-in-out ${m.delay}s infinite`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+// MoteField (decorative dusk motes) removed 2026-06-03 (Matt: "random white
+// dots"). The entrance leads with the world render + the warm legibility
+// gradient; no overlaid particle field.
