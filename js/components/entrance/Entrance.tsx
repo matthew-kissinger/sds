@@ -41,16 +41,54 @@ const chipRound: CSSProperties = {
   border: `1px solid ${pastoral.glassWarmBorder}`, background: alpha(pastoral.ink, 5), color: pastoral.ink, cursor: 'pointer',
 };
 
+// Cycle 51 P12: the project links that used to sit in the in-game #site-footer
+// (removed from the game scene) now live in the entrance info menu.
+const SITE_LINKS: { label: string; href: string; external?: boolean }[] = [
+  { label: 'About', href: '/about' },
+  { label: 'Scenes', href: '/scenes/home-field' },
+  { label: 'Devlog', href: '/devlog/' },
+  { label: 'Source', href: 'https://github.com/matthew-kissinger/sds', external: true },
+  { label: 'Press kit', href: 'https://github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md', external: true },
+];
+
 function CornerNav({ nav }: { nav: EntranceNav }) {
+  const [infoOpen, setInfoOpen] = useState(false);
   const btn: CSSProperties = {
     width: 40, height: 40, borderRadius: '50%', display: 'grid', placeItems: 'center',
     background: alpha(pastoral.cream, 70), border: `1px solid ${pastoral.glassWarmBorder}`,
     color: pastoral.ink, cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
   };
   return (
-    <div style={{ display: 'flex', gap: 10 }}>
+    <div style={{ position: 'relative', display: 'flex', gap: 10 }}>
       <button style={btn} title="Leaderboard" aria-label="Leaderboard" onClick={nav.onLeaderboard}><Icon name="trophy" size={18} /></button>
       <button style={btn} title="Settings" aria-label="Settings" onClick={nav.onSettings}><Icon name="settings" size={18} /></button>
+      <button style={btn} title="About this project" aria-label="About this project" aria-expanded={infoOpen} onClick={() => setInfoOpen((o) => !o)}><Icon name="info" size={18} /></button>
+      {infoOpen && (
+        <>
+          <div onClick={() => setInfoOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+          <div style={{
+            position: 'absolute', top: 48, right: 0, minWidth: 168, padding: 6, zIndex: 41,
+            background: alpha(pastoral.cream, 92), border: `1px solid ${pastoral.glassWarmBorder}`,
+            borderRadius: 14, boxShadow: '0 10px 30px rgba(43,38,32,0.24)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            {SITE_LINKS.map((l) => (
+              <a
+                key={l.label}
+                href={l.href}
+                {...(l.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                onClick={() => setInfoOpen(false)}
+                style={{ padding: '9px 12px', borderRadius: 9, color: pastoral.ink, textDecoration: 'none', fontSize: 14, fontWeight: 500 }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = alpha(pastoral.accentMeadow, 14); }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                {l.label}
+              </a>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

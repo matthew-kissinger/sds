@@ -326,23 +326,10 @@
         <!-- Skeleton loader will be dynamically loaded here -->
     </div>
 
-    <!--
-        Cycle 31 Phase 6: visible internal-link footer.
-
-        Subtle thin strip at bottom-center of the canvas. Gives crawlers
-        more discoverable in-page links AND gives returning players a
-        quiet way to find About / Devlog / Scenes without changing the
-        gameplay-first first-frame feel. Hidden on mobile so it can't
-        compete with the joystick (bottom-left) or sprint button
-        (bottom-right). Style is in css/main.css under #site-footer.
-    -->
-    <footer id="site-footer">
-        <a href="/about">About</a>
-        <a href="/scenes/home-field">Scenes</a>
-        <a href="/devlog/">Devlog</a>
-        <a href="https://github.com/matthew-kissinger/sds">Source</a>
-        <a href="https://github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md">Press kit</a>
-    </footer>
+    <!-- Cycle 51 P12: the in-game #site-footer was removed (it overlapped
+         gameplay and read as dead). About / Scenes / Devlog / Source / Press kit
+         now live in the entrance info menu (js/components/entrance/Entrance.tsx).
+         Crawler-discoverable copies of these links remain in #seo-content above. -->
 
     <!-- React is bundled by Vite from node_modules -->
 

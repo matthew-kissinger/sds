@@ -50,6 +50,13 @@ const GLYPHS = {
       <path d="M10.5 19v-4.5h3V19" />
     </>
   ),
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <path d="M12 7.6h.01" strokeWidth={2.2} />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
