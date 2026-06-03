@@ -110,7 +110,6 @@
     "i18next": "^25.6.3",
     "i18next-browser-languagedetector": "^8.2.0",
     "kdbush": "^4.0.2",
-    "lucide-react": "^1.17.0",
     "lz-string": "^1.5.0",
     "motion": "^12.40.0",
     "nipplejs": "^0.10.2",

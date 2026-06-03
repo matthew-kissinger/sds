@@ -9,8 +9,8 @@
  * game-runtime module (no renderer, scene builder, or attract field).
  */
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
 import { pastoral } from '../components/ui/tokens';
+import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Panel, PanelTitle } from '../components/ui/Panel';
 import { Surface } from '../components/ui/Surface';
@@ -57,7 +57,7 @@ function PrimitivesDemo() {
         <Button variant="secondary">Secondary</Button>
         <Button variant="ghost">Ghost</Button>
         <Button variant="danger">Danger</Button>
-        <IconButton aria-label="next"><ChevronRight size={18} /></IconButton>
+        <IconButton aria-label="next"><Icon name="next" size={18} /></IconButton>
         <Badge tone="accent">Accent</Badge>
         <Badge tone="danger">Danger</Badge>
         <Badge tone="neutral">Neutral</Badge>

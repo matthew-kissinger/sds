@@ -119,10 +119,11 @@ export default defineConfig({
           three: ['three'],
           i18n: ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
           vendor: ['@three.ez/instanced-mesh', 'kdbush'],
-          // Cycle 47: UI-layer libraries (icons, transitions) stay out of the
-          // measured main-*.js ratchet. lucide-react lands here in P3; motion
-          // (and its motion-dom / motion-utils deps) join in P7.
-          ui: ['lucide-react', 'motion']
+          // Cycle 47: UI-layer libraries (transitions) stay out of the
+          // measured main-*.js ratchet. motion (and its motion-dom /
+          // motion-utils deps) live here. Cycle 51 P8 dropped lucide-react
+          // for the hand-authored Icon set, so it is no longer chunked here.
+          ui: ['motion']
         }
       }
     }

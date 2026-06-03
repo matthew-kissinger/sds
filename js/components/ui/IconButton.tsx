@@ -2,7 +2,7 @@
  * IconButton Component
  *
  * A circular glass button sized for a single icon (the picker chevrons, close
- * affordances, HUD toggles). Pairs with a lucide-react icon as its child. The
+ * affordances, HUD toggles). Pairs with an Icon glyph as its child. The
  * scrim background and hairline border read tokens; the border alpha is a
  * color-mix() of the text token rather than a baked rgba.
  *
