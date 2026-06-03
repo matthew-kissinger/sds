@@ -1,0 +1,17 @@
+{
+  "name": "sds-native-electron-proof",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Isolated Electron proof shell for Sheep Dog Simulator native packaging.",
+  "main": "main.cjs",
+  "scripts": {
+    "package:win": "electron-packager . SheepdogSimulatorNativeProof --platform=win32 --arch=x64 --out=../../cycle53-validation/native/electron/package --overwrite --extra-resource=../../dist --prune=true",
+    "start": "electron .",
+    "proof": "node validate.mjs",
+    "proof:packaged": "node validate.mjs --packaged=../../cycle53-validation/native/electron/package/SheepdogSimulatorNativeProof-win32-x64/SheepdogSimulatorNativeProof.exe"
+  },
+  "devDependencies": {
+    "@electron/packager": "latest",
+    "electron": "42.3.3"
+  }
+}

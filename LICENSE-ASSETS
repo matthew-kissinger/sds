@@ -1,0 +1,30 @@
+# Asset License
+
+Copyright (c) 2026 Matthew Kissinger
+
+All non-code assets in this repository are licensed under the Creative Commons
+Attribution-ShareAlike 4.0 International license (CC BY-SA 4.0), including:
+
+- Everything under `assets/`
+- 3D models and scene assets such as `.glb` and `.blend`
+- Images and textures such as `.png`, `.webp`, `.jpg`, `.jpeg`, and `.svg`
+- Audio files such as `.mp3`, `.ogg`, and `.wav`
+- Baked asset data such as `.bin`
+
+To view a copy of this license, visit:
+
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Plain-language summary:
+
+- You may share and adapt the assets, including for commercial purposes.
+- You must give appropriate credit to Matthew Kissinger and Sheep Dog Simulator.
+- If you remix, transform, or build upon the assets, you must distribute your
+  contributions under the same CC BY-SA 4.0 license.
+- You may not apply legal terms or technological measures that restrict others
+  from doing anything the license permits.
+
+This summary is not a substitute for the license text. If there is any conflict
+between this summary and the Creative Commons license, the license controls.
+
+For source code licensing, see `LICENSE` and `LICENSING.md`.

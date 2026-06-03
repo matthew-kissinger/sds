@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sheep Dog Simulator Native Proof</string>
+    <string name="title_activity_main">Sheep Dog Simulator Native Proof</string>
+    <string name="package_name">com.sheepdogsim.nativeproof</string>
+    <string name="custom_url_scheme">com.sheepdogsim.nativeproof</string>
+</resources>

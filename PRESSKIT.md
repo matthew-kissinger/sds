@@ -4,7 +4,7 @@ A free, browser-based herding game where you guide your sheepdog across three bi
 
 ## Tagline
 
-**Herd 5,000 sheep in your browser. No install. Free. MIT-licensed.**
+**Herd 5,000 sheep in your browser. No install. Free. Source-available under AGPL-3.0.**
 
 ## Headline features
 
@@ -26,7 +26,7 @@ The codebase is also deliberately easy to read — ~10k lines of vanilla JavaScr
 - **Studio:** solo developer, Matthew Kissinger.
 - **Engine:** vanilla JavaScript + Three.js 0.184 (no game engine, no JSX, no codegen, no wasm).
 - **Backend:** Cloudflare Pages + Worker + Durable Objects + D1.
-- **License:** [MIT](LICENSE) — free to play, free to fork, free to teach with. Credit appreciated.
+- **License:** [AGPL-3.0-or-later](LICENSE) source code, [CC BY-SA 4.0](LICENSE-ASSETS) assets. Free to play; forks and hosted modifications must preserve attribution and publish corresponding source. Releases through v2.1.10 remain MIT; see [LICENSING.md](LICENSING.md).
 - **Platforms:** Web (any modern browser), PWA-installable on mobile, full gamepad support on desktop.
 - **Languages:** English, Spanish, Portuguese, Japanese, Simplified Chinese.
 

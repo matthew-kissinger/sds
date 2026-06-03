@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 25 Phase A — LOD silhouette / colour comparison tool.
  *

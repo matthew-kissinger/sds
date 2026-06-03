@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // Main worker router: HTTP API + WS upgrade routing to RoomDO.
 // Contracts come from docs/archive/c-retry/contract.md and docs/archive/c-retry/authority.md.
 

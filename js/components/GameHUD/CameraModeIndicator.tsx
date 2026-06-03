@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * CameraModeIndicator — persistent HUD chip showing the current camera mode and
  * how to cycle it. Tappable on every platform; desktop also exposes the `C` key.

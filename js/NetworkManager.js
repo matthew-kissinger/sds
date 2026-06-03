@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // Native WebSocket + MessagePack + fetch client for the Cloudflare Workers backend.
 // Preserves the external API that js/main.js and the UI components rely on —
 // `on*` callback surface, room/join/leave methods, leaderboard methods, and

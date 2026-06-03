@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { createKonveyorGrassBladeNodeMaterial } from './konveyorGrassBladeNodeMaterial.js';
 import { createKonveyorMeadowQuadNodeMaterial } from './konveyorMeadowQuadNodeMaterial.js';
 

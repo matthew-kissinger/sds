@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * One-shot GLB bbox inspector. Reads a GLB via @gltf-transform/core and
  * prints scene-bbox + per-mesh bbox so we can spot pivot-at-centroid vs

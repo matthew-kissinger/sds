@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 47 P6: the HUD store's change-gate, exercised without React.
  *

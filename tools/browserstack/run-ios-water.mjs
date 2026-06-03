@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { existsSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 

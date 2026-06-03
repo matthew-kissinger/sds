@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * resolveAssetUrl — turn an absolute-root asset path into one that
  * works under any deployment base.

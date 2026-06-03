@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // Two-client end-to-end flow per POSTMORTEM 5.3. Every test here is
 // `test.skip` on the current codebase because the worker endpoint does not
 // yet exist. The C-retry agent should unskip these one at a time as the

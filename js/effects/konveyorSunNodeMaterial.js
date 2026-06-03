@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 export function createKonveyorSunBillboardNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, Color, TSL }, sun = {}) {
   const { clamp, float, length, max, mix, smoothstep, uniform, uv, vec2, vec3 } = TSL;
   const makeColorUniform = (value, fallback) => (

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * P-SEC-4: DoS / resource-exhaustion caps on the live game path.
  *

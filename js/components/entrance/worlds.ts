@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 51 P6: the world-first entrance data, promoted from the bake-off shell
  * into the live app. Three worlds (one fenced pasture and two islands), five

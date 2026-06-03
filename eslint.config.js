@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * ESLint flat config — only enforces the deterministic-sim boundary
  * (Cycle 28 Stream B5). The full codebase has not opted into linting;

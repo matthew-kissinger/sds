@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
 // Cycle 27 Phase C: React imports moved to a runtime dynamic import in
 // onGameComplete (the only main.js code path that touches React). Static

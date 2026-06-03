@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { describe, it, expect } from 'vitest';
 import { Vector2D } from '../shared/Vector2D.js';
 

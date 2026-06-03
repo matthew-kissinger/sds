@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 51 P6: the pastoral loading surface, promoted from the Golden Pasture
  * bake-off skin. Replaces both old skeletons (the boot skeleton-loader.html and
@@ -21,6 +23,9 @@ const glass: CSSProperties = {
   boxShadow: '0 10px 34px rgba(43,38,32,0.22)',
 };
 
+const SOURCE_URL = 'https://github.com/matthew-kissinger/sds';
+const SOURCE_LABEL = 'github.com/matthew-kissinger/sds';
+
 export function LoadingScreen({ flow }: { flow: BootFlow }) {
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -34,6 +39,12 @@ export function LoadingScreen({ flow }: { flow: BootFlow }) {
           <div style={{ fontSize: 13, color: pastoral.inkSoft, marginTop: 4, marginBottom: 22 }}>{flow.dog.name} · {flow.mode.name}</div>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <LoadingBar pct={flow.loading.pct} label={flow.loading.label} accent={pastoral.accentMeadow} />
+          </div>
+          <div style={{ marginTop: 18, fontSize: 11, lineHeight: 1.25, color: pastoral.inkSoft }}>
+            (c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0):{' '}
+            <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" style={{ color: pastoral.ink, textDecoration: 'underline' }}>
+              {SOURCE_LABEL}
+            </a>
           </div>
         </div>
       </div>

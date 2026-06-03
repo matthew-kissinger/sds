@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * ExtremeTuningPanel - developer-facing live tuning for extreme/insane solo
  * modes. Adjusts flocking/difficulty params on the live gameState without

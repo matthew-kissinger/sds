@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * App.js - Main React Application Component
  *
@@ -921,6 +923,28 @@ export async function initReactUI() {
                     bottomSafe: bottomSafeSlot,
                     mobileControls: mobileControlsSlot
                 }),
+                createElement('a', {
+                    key: 'source-notice',
+                    href: 'https://github.com/matthew-kissinger/sds',
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                    style: {
+                        position: 'fixed',
+                        right: '8px',
+                        bottom: isMobilePlatform ? 'max(env(safe-area-inset-bottom, 0px), 4px)' : '8px',
+                        zIndex: 12,
+                        pointerEvents: 'auto',
+                        maxWidth: isMobilePlatform ? '56vw' : '420px',
+                        padding: '3px 6px',
+                        borderRadius: '6px',
+                        background: 'rgba(0,0,0,0.28)',
+                        color: 'rgba(255,255,255,0.72)',
+                        fontSize: '10px',
+                        lineHeight: 1.2,
+                        textAlign: 'right',
+                        textDecoration: 'none'
+                    }
+                }, '(c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0): github.com/matthew-kissinger/sds'),
                 // Pause menu (shown on all platforms when paused). Full-screen
                 // overlay; sits outside HudLayout because it is its own modal.
                 createElement(PauseMenu, {

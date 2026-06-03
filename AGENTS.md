@@ -4,7 +4,7 @@
 
 ## Project summary
 
-Production 3D web game shipped at [sheepdogsim.com](https://sheepdogsim.com). Three.js + React 19 (createElement, no JSX) + Vite 7 + Tailwind 4 client. Cloudflare Worker + Durable Objects + D1 backend. Shared deterministic boid + obstacle modules in [`shared/`](shared/) imported byte-identically by both runtimes. Vitest 4 (300 specs) + Playwright e2e + sim-baseline goldens + refactor-baseline characterization goldens + ESLint boundary on `shared/`. MIT-licensed.
+Production 3D web game shipped at [sheepdogsim.com](https://sheepdogsim.com). Three.js + React 19 (createElement, no JSX) + Vite 7 + Tailwind 4 client. Cloudflare Worker + Durable Objects + D1 backend. Shared deterministic boid + obstacle modules in [`shared/`](shared/) imported byte-identically by both runtimes. Vitest 4 (300 specs) + Playwright e2e + sim-baseline goldens + refactor-baseline characterization goldens + ESLint boundary on `shared/`. Current source is AGPL-3.0-or-later; non-code assets are CC BY-SA 4.0. Releases through v2.1.10 remain MIT.
 
 ## Quick commands
 

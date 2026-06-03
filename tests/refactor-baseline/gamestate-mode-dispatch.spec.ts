@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * GameState mode-dispatch refactor-baseline (Cycle 29 Stream A0).
  *

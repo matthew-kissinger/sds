@@ -15,7 +15,7 @@ Herd 5,000 sheep across three biomes in your browser, with friends, WebGPU, and 
 Variants if you want a different angle:
 
 - `A zen 3D herding game. Three biomes, six modes, 5,000 sheep, real-time multiplayer. Free in your browser.`
-- `Border collie. 5,000 sheep. Cloudflare-edge multiplayer. Open the tab and herd. No install, no signup, MIT-licensed.`
+- `Border collie. 5,000 sheep. Cloudflare-edge multiplayer. Open the tab and herd. No install, no signup, source-available.`
 - `Three biomes, six modes, real boid flocking, browser-native multiplayer. The whole game open-source.`
 
 ---
@@ -50,7 +50,7 @@ A free, browser-based **herding sim** where you guide a sheepdog across three ha
 ### Free, open-source, no strings
 
 - **Free.** No ads, no microtransactions, no energy meters, no notifications. Just the game.
-- **MIT-licensed.** Free to play, free to fork, free to teach with. Source: [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds).
+- **Open source.** Free to play, source-readable, and forkable under AGPL-3.0; assets are CC BY-SA 4.0. Modified or hosted versions must preserve attribution and publish corresponding source. Source: [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds).
 - **Five languages.** English, Spanish, Portuguese, Japanese, Simplified Chinese — auto-detected via i18next.
 - **Mobile controls.** Touch joystick, responsive HUD, gamepad support, and PWA installability are in place; Android WebGPU performance work remains active.
 

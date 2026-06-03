@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * resolveAssetUrl — guards the absolute-root path → BASE_URL prefix
  * resolution that lets the same scene defs work on Cloudflare Pages

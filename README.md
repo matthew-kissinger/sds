@@ -1,10 +1,10 @@
 # Sheep Dog Simulator
 
-[![Play now](https://img.shields.io/badge/play-sheepdogsim.com-2563eb?style=for-the-badge)](https://sheepdogsim.com) &nbsp; [![MIT License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](LICENSE) &nbsp; [![Star on GitHub](https://img.shields.io/github/stars/matthew-kissinger/sds?style=for-the-badge&logo=github&color=eab308)](https://github.com/matthew-kissinger/sds)
+[![Play now](https://img.shields.io/badge/play-sheepdogsim.com-2563eb?style=for-the-badge)](https://sheepdogsim.com) &nbsp; [![AGPL-3.0 Code](https://img.shields.io/badge/code-AGPL--3.0-22c55e?style=for-the-badge)](LICENSE) &nbsp; [![CC BY-SA 4.0 Assets](https://img.shields.io/badge/assets-CC%20BY--SA%204.0-f97316?style=for-the-badge)](LICENSE-ASSETS) &nbsp; [![Star on GitHub](https://img.shields.io/github/stars/matthew-kissinger/sds?style=for-the-badge&logo=github&color=eab308)](https://github.com/matthew-kissinger/sds)
 
 [![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 469](https://img.shields.io/badge/tests-469%20passing-22c55e)](tests/)
 
-**Herd up to 5,000 sheep across three biomes in a modern browser, with progressive WebGPU on supported hardware and WebGL fallback everywhere else.** No install, no signup, no ads. Free. MIT-licensed. Built to be forked.
+**Herd up to 5,000 sheep across three biomes in a modern browser, with progressive WebGPU on supported hardware and WebGL fallback everywhere else.** No install, no signup, no ads. Free to play, source-readable, and forkable under AGPL-3.0. Modified or hosted versions must publish corresponding source under AGPL and preserve attribution.
 
 > [Play it now → sheepdogsim.com](https://sheepdogsim.com)
 
@@ -253,7 +253,11 @@ We use squash-merge with a `[type](scope): summary` first-line convention (see `
 
 ## License
 
-MIT. Fork it, mod it, ship it, sell it, teach with it. Credit appreciated but not required.
+Source code is licensed under [GNU AGPL-3.0-or-later](LICENSE). Non-code assets are licensed under [Creative Commons Attribution-ShareAlike 4.0](LICENSE-ASSETS).
+
+All versions up to and including `v2.1.10` were released under MIT and remain available under MIT from their historical commits, tags, and releases. From the next release on, code is AGPL-3.0-or-later and assets are CC BY-SA 4.0. See [LICENSING.md](LICENSING.md) for the forward-only transition details.
+
+The in-app notice appears on the about page, the start/loading flow, and the in-game HUD. Modified versions must preserve these notices in reasonably visible locations.
 
 If you build something with this codebase — a fork, a mod, an academic project, a stream — we'd love to hear about it. [Open an issue](https://github.com/matthew-kissinger/sds/issues/new) and we'll link it from this README.
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Shared Simulation Logic
  * Pure functions with no dependencies on DOM/Three.js

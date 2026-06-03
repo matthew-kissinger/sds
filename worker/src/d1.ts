@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // D1 leaderboard operations. Ports server/LeaderboardManager.js semantics:
 //   - register inserts a players row (bug 3 fix)
 //   - submitScore updates materialized best in one statement (bug 2 fix)

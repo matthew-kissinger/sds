@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { test, expect, devices, type Page, type BrowserContext } from '@playwright/test';
 
 /**

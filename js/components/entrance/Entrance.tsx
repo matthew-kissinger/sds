@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 51 P6: the world-first entrance, promoted from the Golden Pasture
  * bake-off skin into the live boot. The armed world fills the frame (a fresh
@@ -50,6 +52,9 @@ const SITE_LINKS: { label: string; href: string; external?: boolean }[] = [
   { label: 'Source', href: 'https://github.com/matthew-kissinger/sds', external: true },
   { label: 'Press kit', href: 'https://github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md', external: true },
 ];
+
+const SOURCE_URL = 'https://github.com/matthew-kissinger/sds';
+const SOURCE_LABEL = 'github.com/matthew-kissinger/sds';
 
 function CornerNav({ nav }: { nav: EntranceNav }) {
   const [infoOpen, setInfoOpen] = useState(false);
@@ -204,6 +209,12 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
             <button onClick={nav.onMultiplayer} style={wayBtn}><Icon name="users" size={14} /> Play online</button>
             <button onClick={nav.onSandbox} style={wayBtn}><Icon name="sandbox" size={14} /> Sandbox</button>
             <button onClick={nav.onLocal} style={wayBtn}><Icon name="local" size={14} /> 2-player</button>
+          </div>
+          <div style={{ marginTop: 12, textAlign: 'center', fontSize: compact ? 10 : 11, lineHeight: 1.25, color: pastoral.inkSoft }}>
+            (c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0):{' '}
+            <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" style={{ color: pastoral.ink, textDecoration: 'underline' }}>
+              {SOURCE_LABEL}
+            </a>
           </div>
         </div>
       </div>

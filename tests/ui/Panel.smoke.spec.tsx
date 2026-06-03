@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /** @vitest-environment jsdom */
 /**
  * Cycle 47 P2: component-render smoke harness (Panel family).

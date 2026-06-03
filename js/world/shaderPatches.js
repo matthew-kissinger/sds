@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Material/shader patches extracted from `TerrainBuilder` in Cycle 28
  * Stream B2: tree wind sway, rock fresnel rim-light, and per-frame

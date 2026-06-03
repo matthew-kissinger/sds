@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Re-export Vector2D from shared module
  * This file exists for backwards compatibility with existing imports.

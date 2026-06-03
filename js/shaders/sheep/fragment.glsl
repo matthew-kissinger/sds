@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Sheep Fragment Shader - Premium Wool Edition
  * Enhanced toon shading with wool texture, rim lighting, and SSS

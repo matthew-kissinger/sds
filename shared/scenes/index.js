@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Scene registry. One entry per biome file. Consumers call loadScene(id)
  * to get a SceneDef; unknown ids throw so typos surface loudly.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Multiplayer event-handler wiring + per-broadcast state hand-off
  * extracted from `main.js` in Cycle 28 Stream B1.

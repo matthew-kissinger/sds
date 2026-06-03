@@ -1,6 +1,6 @@
 {
   "name": "sheep-dog-sim",
-  "version": "2.1.10",
+  "version": "2.2.0",
   "description": "An interactive herding game where players control a sheepdog to guide sheep into a pen using boid flocking algorithms",
   "type": "module",
   "main": "index.html",
@@ -72,7 +72,7 @@
     "herding"
   ],
   "author": "Matthew Kissinger",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "devDependencies": {
     "@dgreenheck/ez-tree": "^1.1.0",
     "@gltf-transform/cli": "^4.3.0",

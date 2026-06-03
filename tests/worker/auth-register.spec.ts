@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // P-SEC-1: the auth rebuild that closes the impersonation exploit. Before this,
 // /api/register handed a session token to anyone who presented a known
 // persistent_id. Now a row is bound to a device secret (hash stored in D1,

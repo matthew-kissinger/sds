@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Rock placement extracted from `TerrainBuilder.addEnvironmentDetails`
  * in Cycle 28 Stream B2. Reads `builder.zones`, `builder.sceneDef`,

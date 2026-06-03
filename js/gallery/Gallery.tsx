@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 49 standalone UI gallery (P3 scaffold). P4 adds the pastoral primitive
  * preview; P5 adds the entrance/loading mockups.

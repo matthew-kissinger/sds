@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { existsSync } from 'node:fs';
-import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,12 +23,26 @@ function parseArgs(argv) {
   return args;
 }
 
-async function findMainBundle(distDir) {
-  const assetsDir = resolve(distDir, 'assets');
-  const files = await readdir(assetsDir);
-  const main = files.find((name) => /^main-.*\.js$/.test(name));
-  if (!main) throw new Error('No main-*.js bundle found in dist/assets');
-  return resolve(assetsDir, main);
+function getHtmlAttr(tag, name) {
+  const m = tag.match(new RegExp(`\\s${name}=("|')([^"']+)\\1`, 'i'));
+  return m ? m[2] : null;
+}
+
+function moduleScripts(html) {
+  return html
+    .match(/<script\b[^>]*>/gi)
+    ?.filter((tag) => getHtmlAttr(tag, 'type') === 'module')
+    .map((tag) => getHtmlAttr(tag, 'src'))
+    .filter(Boolean) ?? [];
+}
+
+function findMainBundle(distDir, indexHtml) {
+  const scripts = moduleScripts(indexHtml);
+  const main = scripts.find((src) => /^\.\/assets\/main-[^/?#]+\.js(?:[?#].*)?$/.test(src));
+  if (!main) {
+    throw new Error(`No module entry main-*.js script found in dist/index.html. Found: ${scripts.join(', ') || '(none)'}`);
+  }
+  return resolve(distDir, main.replace(/[?#].*$/, ''));
 }
 
 function check(condition, message, details = null) {
@@ -46,9 +62,9 @@ async function run() {
   const distDir = resolve(ROOT, args.dist);
   const indexPath = resolve(distDir, 'index.html');
   const aboutPath = resolve(distDir, 'about.html');
-  const mainBundlePath = await findMainBundle(distDir);
   const index = await readFile(indexPath, 'utf8');
   const about = await readFile(aboutPath, 'utf8');
+  const mainBundlePath = findMainBundle(distDir, index);
   const mainBundle = await readFile(mainBundlePath, 'utf8');
   const expectedWorkerBase = process.env.SDS_WORKER_BASE || DEFAULT_WORKER_BASE;
   const swPath = resolve(distDir, 'sw.js');

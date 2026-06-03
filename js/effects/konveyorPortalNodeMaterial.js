@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 export function createKonveyorPortalRingNodeMaterial({ MeshBasicNodeMaterial, AdditiveBlending, DoubleSide, TSL }, portal = {}) {
   const { abs, float, mix, sin, smoothstep, uniform, uv, vec3 } = TSL;
   const ringUv = uv();

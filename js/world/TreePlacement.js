@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Tree placement, impostor baking, and cross-billboard helpers extracted
  * from `TerrainBuilder` in Cycle 28 Stream B2.

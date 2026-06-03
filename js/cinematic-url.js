@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 17 Phase 7 — synchronous URL-param helpers split out of cinematic.js
  * so main.js can probe `?cinematic=1` without pulling the three.js-dependent

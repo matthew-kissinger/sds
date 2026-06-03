@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { WEBGPU_MOBILE_BUDGETS, percentile } from './RenderCostReport.js';
 
 const QUALITY_STEPS = Object.freeze([

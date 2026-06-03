@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * GameBridge — façade over the game instance so React + other modules don't
  * reach into window.gameInstance directly. Accessors return null when the

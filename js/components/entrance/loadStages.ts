@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 51 P6: the scene-load stage table for the pastoral loading bar. The
  * boot path (main.js) emits each build-step label over the GameBridge bus; this

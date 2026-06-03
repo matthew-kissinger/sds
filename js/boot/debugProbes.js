@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Test-only debug surfaces installed on `window` for Playwright specs and
  * DevTools-driven exploration. Extracted from `main.js` in Cycle 28 Stream

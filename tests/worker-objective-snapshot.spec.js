@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 34 Phase 3: wire-format additive contract for the optional
  * `objective` block in `gameStateUpdate` snapshots.

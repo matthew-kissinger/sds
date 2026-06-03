@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Home Field — the flat starter scene. A flat fenced pasture; the
  * treeline plus horizon fog frame the perimeter (no terrain relief, no

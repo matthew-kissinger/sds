@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Verbatim port of Terror in the Jungle's `hosekWilkie.glsl.ts`. The shader
  * implements a Preetham 1999 analytic sky model (the de facto standard used

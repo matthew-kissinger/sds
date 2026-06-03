@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Procedural cloud shader source for `CloudLayer.js`. Ported from Terror
  * in the Jungle's `CloudLayer.ts` (planar fbm field) with one structural

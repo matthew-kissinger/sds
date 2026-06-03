@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { mulberry32 } from '../../shared/Random.js';
 import { isKonveyorProductionWebGpuActive } from '../rendering/konveyorRuntimeMode.js';
 

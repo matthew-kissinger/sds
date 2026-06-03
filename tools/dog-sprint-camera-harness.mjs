@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { chromium } from 'playwright';
 import { execFile } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';

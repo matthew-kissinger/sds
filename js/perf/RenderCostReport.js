@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 export const WEBGPU_MOBILE_BUDGETS = Object.freeze({
     high: {
         frameP95: 18.5,

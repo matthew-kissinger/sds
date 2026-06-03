@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Desktop probe v2 — generous timeouts, captures both renderer state +
  * full page screenshot for visual diagnosis.

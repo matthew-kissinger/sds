@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * MobileHUD — compact mobile status bar (sheep count, timer, stamina, pause).
  *

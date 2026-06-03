@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
 import { loadShaderWithReplacements } from './shaders/ShaderLoader.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';

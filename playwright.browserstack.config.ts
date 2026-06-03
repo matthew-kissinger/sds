@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { defineConfig } from '@playwright/test';
 
 const baseURL = process.env.IOS_WATER_BASE_URL || 'http://localhost:3000';

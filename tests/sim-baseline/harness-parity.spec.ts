@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * P-DET-1 (option c) — harness-vs-GameSim parity + per-game-seed determinism.
  *

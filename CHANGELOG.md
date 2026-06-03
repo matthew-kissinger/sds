@@ -4,6 +4,26 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-06-03 (Forward license transition)
+
+### Added
+
+- `LICENSE-ASSETS` for CC BY-SA 4.0 asset licensing.
+- `LICENSING.md` documenting the forward-only split between code and assets.
+- Visible AGPL source notices on the about page, start/loading flow, and in-game HUD.
+
+### Changed
+
+- Source code for new versions is now AGPL-3.0-or-later.
+- Non-code assets for new versions are now CC BY-SA 4.0.
+- Root package metadata now reports version `2.2.0` and license
+  `AGPL-3.0-or-later`.
+
+### Notes
+
+- All versions up to and including `v2.1.10` were released under MIT and remain
+  available under MIT from their historical commits, tags, and releases.
+
 ## [2.1.10] - 2026-05-28 (Cycle 42 - WebGPU material parity)
 
 Patch release for WebGPU scene-material parity after the Cycle 41 sun/water fix.

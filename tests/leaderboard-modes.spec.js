@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { describe, expect, it } from 'vitest';
 import { leaderboardModesForScene } from '../js/components/Multiplayer/GlobalLeaderboard.js';
 

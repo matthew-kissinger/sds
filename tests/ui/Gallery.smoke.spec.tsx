@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /** @vitest-environment jsdom */
 /**
  * Cycle 49 P3: gallery render smoke. Mounts <Gallery/> and asserts the palette

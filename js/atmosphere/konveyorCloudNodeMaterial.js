@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 export function createKonveyorCloudLayerNodeMaterial(
   { MeshBasicNodeMaterial, DoubleSide, TSL },
   { name = 'konveyor-node-cloud-layer', uniforms = null } = {}

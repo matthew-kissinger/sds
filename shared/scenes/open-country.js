@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Open Country — Cycle 5 island, Cycle 6 portal.
  * A wild island of meadow and woods. Drive the flock through the trees

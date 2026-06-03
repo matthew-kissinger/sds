@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // LobbyDO: singleton. Tracks public rooms for /api/lobbies and quick-match.
 // Rooms push metadata updates here via register/update/remove.
 

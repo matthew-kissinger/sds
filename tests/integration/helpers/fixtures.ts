@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // Shared fixtures for the two-client integration harness.
 //
 // These are synthetic personas used to drive the worker through a full

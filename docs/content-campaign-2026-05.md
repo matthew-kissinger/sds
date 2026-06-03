@@ -29,7 +29,7 @@ Do not overclaim multiplayer. The correct caveat is:
 - Real iOS Safari water regression canary exists and passed against production on 2026-05-12.
 - Leaderboards are now scene-scoped; score errors and telemetry are observable through D1.
 - Cloudflare Pages + Worker + Durable Objects + D1 replaced the older hosting stack.
-- Code is MIT licensed and public.
+- Current source code is AGPL-3.0-or-later and public; releases through v2.1.10 remain MIT.
 
 ## Asset Pack
 

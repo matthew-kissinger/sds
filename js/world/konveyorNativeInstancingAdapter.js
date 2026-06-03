@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 function collectInstancedMeshSources(root, { Matrix4 }) {
     root.updateMatrixWorld(true);
     const rootInverse = new Matrix4().copy(root.matrixWorld).invert();

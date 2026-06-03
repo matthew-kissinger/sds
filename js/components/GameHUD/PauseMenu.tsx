@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * PauseMenu Component
  * Full-featured pause screen with resume, restart, settings, and menu options

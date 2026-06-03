@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Meshy AI text-to-3D batch generator (Cycle 15 Phase 1).
  *

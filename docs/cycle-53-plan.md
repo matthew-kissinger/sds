@@ -1,130 +1,162 @@
-# Cycle 53 - security-hardening
+# Cycle 53 - native-shell-proof-1
 
 > Drafted 2026-06-03 after Cycle 52 closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
 
-> **SCAFFOLD STUB - Goal + Phases not yet authored.** Fill these in at `/cycle-start`. Candidate scope below. The slug is a recommendation, not a lock: confirm or revise the focus before authoring.
-
 ## Goal
 
-One paragraph. What's this cycle for? What's the **user-visible** (or operator-visible) difference between "before" and "after"? If you can't write this paragraph clearly, the cycle isn't ready to start.
+Prove SDS can boot and play from packaged native shells without changing the core web game architecture. Before this cycle, SDS has a native build seam but no current shell proof. After this cycle, `npm run native:check` is green, a Windows Electron proof boots the built `dist/` without a Vite/source server, a Capacitor Android proof boots and plays from a debug APK on an API 35 emulator, explicit WebGL/WebGPU renderer behavior is recorded for both proof shells, and the repo has a go/no-go handoff for Steam/mobile store preparation.
 
-**Candidate scope (recommended - confirm/revise before starting):** close the live CRITICAL backend auth hole and start working the security/perf/coverage audit roadmap.
+## Current truth
 
-- **P-SEC-1: `/api/register` auth fix (CRITICAL).** The audit (2026-05-31) found `/api/register` mints a valid JWT for any client-supplied id, so any client can forge identity. A drafted P-SEC-1 plan exists. This is a live production vulnerability and the strongest reason to make this the next cycle. See [`docs/audit-roadmap-2026-05.md`](audit-roadmap-2026-05.md) and the security-audit memory.
-- **Roadmap follow-ons.** The audit is a 14-phase Cycles 51+ program; pick the next 1-2 phases (e.g. token lifetime, rate limiting) that pair cleanly with the auth fix.
+The previous Cycle 53 scaffold pointed at P-SEC-1 security-hardening work. That was stale: [`audit-roadmap-2026-05.md`](audit-roadmap-2026-05.md) records P-SEC-1 through P-SEC-5 as implemented, validated, merged, and deployed on 2026-06-01. This cycle does not reopen Worker auth, D1 migrations, or the deterministic sim boundary.
 
-**Alternatives Matt may prefer instead (the pastoral/render programs are still queued):**
+Existing native seams:
 
-- **`pastoral-assets`** - the Pixel Forge bespoke-asset program (dog-portrait avatars, in-world props). The genuine first job for the `../pixel-forge` raster/3D pipeline. See the Cycle 51 closeout notes.
-- **`object-impostor-B`** - per-instance impostor variation + rocks/structures, the second half of the object-driven impostor program ([`docs/object-impostor-cycle-plan.md`](object-impostor-cycle-plan.md)).
-
-(A security fix and a wire/Worker change touch the deterministic boundary and the append-only migration contract: read [`.claude/rules/multiplayer.md`](../.claude/rules/multiplayer.md) and [`.claude/rules/shared-sim.md`](../.claude/rules/shared-sim.md) before authoring those phases.)
+- `BUILD_TARGET=native npm run build` emits relative assets for shell packaging.
+- Native builds keep service-worker registration disabled.
+- `SDS_WORKER_BASE` configures the packaged app Worker origin.
+- `tools/native-preflight.mjs` verifies the built `dist/`.
+- [`native-packaging-proof-0.md`](native-packaging-proof-0.md) already picked Electron first, Tauri second, and Capacitor mobile first.
 
 ## How to read this plan
 
-This doc fixes the *shape* of the changes (data contracts, where new code slots into the existing module map, acceptance criteria), **not the implementation choices**. Where it suggests a specific technique, treat it as a starting point for research, not the final answer.
+This cycle proves packaging boundaries only. It does not pick a final store strategy, add Steamworks, change renderer policy, or rewrite the web app. Shell code lives under `sandbox/` proof folders and consumes the built `dist/` artifact.
 
-Each agent picking up a phase should:
+## Open questions resolved
 
-- **Research current best practice** for the specific sub-problem before writing code. The ecosystem evolves; what was "the" solution last cycle may not be optimal now.
-- **Measure on the actual target** (RTX 3070 desktop, mid-tier mobile, the Worker's CPU budget) before committing to a technique.
-- **Pick the simplest thing that meets the budget** rather than the most impressive. If the simple version is correct, ship it; escalate only on demonstrated need.
-
-## Open questions to resolve before writing code
-
-(Prefix with **Q1**, **Q2**, ... so phases can refer to them.)
-
-1. **Q1: <Question>?** Author lean: <answer>.
-2. **Q2: <Question>?** Author lean: <answer>.
-
-These don't block scaffolding (Phase 1) but should be resolved before the security-sensitive phases.
+1. **Q1: Desktop proof shell?** Author lean: Electron first, because pinned Chromium removes platform-WebView variability from the first PC proof.
+2. **Q2: Mobile proof shell?** Author lean: Capacitor Android first, WebGL default only. Outcome: local proof-only Temurin JDK plus the existing Android SDK/AVD allowed a full Android boot-and-play proof. Explicit WebGL passes; explicit WebGPU falls back because the emulator WebView cannot acquire a WebGPU adapter.
+3. **Q3: Tauri this cycle?** Author lean: no. Add Tauri only after Electron evidence shows a concrete package-size, memory, or installer problem worth comparing.
 
 ## Architecture / shared changes
 
-(If the cycle introduces a primitive or schema change shared across phases, describe it here. Otherwise delete this section. A token-format or migration change is append-only: new migration file, never an edit to an applied one.)
+No `shared/` changes are authorized. No Worker wire change, D1 migration, renderer default change, or player-visible UI redesign is in scope.
 
-## Phase shape rules
+Proof folders:
 
-A cycle has **≤ 8 phases**. If you find yourself drafting a 9th, the work is two cycles, not one.
+- `sandbox/native-electron-proof/` - Electron shell, Playwright/Electron validation, and explicit renderer checks.
+- `sandbox/native-capacitor-proof/` - Capacitor Android shell scaffold, validation notes, and WebView renderer probe.
+- `cycle53-validation/native/` - local proof output, screenshots, and JSON evidence.
 
-Each phase is either **fully autonomous** (the agent ships without Matt's pairing) or **fully paired** (Matt's hands on the keyboard for it). **Don't mix modes within a phase.** A security phase that needs Matt to rotate a secret or run a remote wrangler migration is paired.
+## Phase 1 - handoff reconcile (~1hr)
 
-A phase has a **single sharp goal** (one new file, one extraction, one decision codified) and **≤ 4 hours** of work. Larger means split.
+**Independently testable.** Prevents agents from reopening shipped security work.
 
-## Acceptance criteria - EARS format
-
-Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/specs/) so the lines are testable by construction:
-
-- **Event-driven**: `When [trigger], the [system] shall [response].`
-- **State-driven**: `While [precondition], the [system] shall [response].`
-- **Unwanted-event**: `If [unwanted], then the [system] shall [response].`
-
-Each line should be **grep-testable**. The `/cycle-close` reconciliation hook walks every Acceptance line and tries to grep its predicate against shipped commits + test output.
-
-## Phase 1 - <name> (~Xhr)
-
-**Independently testable.** <Why this phase comes first.>
-
-1. **Step.** Description + [`file path`](path).
-2. **Step.** Description.
+1. Replace the stale Cycle 53 security stub with this native-shell proof plan.
+2. Update [`../NEXT_SESSION.md`](../NEXT_SESSION.md) so the pickup priority points at native proof.
 
 **Acceptance (EARS):**
 
-- When Phase 1 ships, then `<system>` shall `<response>`.
-- If `<unwanted>`, then the `<system>` shall `<response>`.
+- When a cold-start agent reads `NEXT_SESSION.md`, the active cycle shall be `native-shell-proof-1`.
+- When a cold-start agent reads this plan, P-SEC-1 shall be described as shipped history, not active scope.
 
-## Phase 2 - <name> (~Xhr)
+## Phase 2 - native preflight repair (~1hr)
 
-**Depends on:** <Phase 1 / nothing / etc.>
+**Independently testable.** The previous preflight selected the first `main-*.js` asset, which can be a preload chunk instead of the HTML entry.
 
-1. ...
+1. Parse the actual module entry script from `dist/index.html`.
+2. Keep the existing checks for service-worker gating, relative assets, build target injection, and Worker runtime config.
 
-**Acceptance (EARS):** ...
+**Acceptance (EARS):**
+
+- When `npm run native:check` runs, the native preflight shall inspect the entry bundle referenced by `dist/index.html`.
+- When `npm run native:check` runs, all native preflight checks shall pass.
+
+## Phase 3 - Electron Windows proof shell (~3hr)
+
+**Depends on:** Phase 2.
+
+1. Add an isolated Electron proof under `sandbox/native-electron-proof/`.
+2. Serve `dist/` through a privileged app protocol rather than `file://`.
+3. Add a validation script that launches Electron, clicks through the entrance, confirms a gameplay canvas, captures a screenshot, and records proof JSON.
+4. Record explicit `renderer=webgl` and `renderer=webgpu` proof from the packaged executable.
+
+**Acceptance (EARS):**
+
+- When the Electron proof launches, SDS shall boot from built `dist/` assets without a Vite/source server.
+- When the Electron proof starts Classic play, the app shall attach a nonblank gameplay canvas.
+- When the Electron proof requests WebGL, the app shall resolve to WebGL with no fallback.
+- When the Electron proof requests WebGPU on a capable Windows host, the app shall resolve to production WebGPU with device preflight green and no fallback.
+- If Electron emits a fatal page error, then the validation script shall fail.
+
+## Phase 4 - Capacitor Android proof (~2hr)
+
+**Depends on:** Phase 2.
+
+1. Add an isolated Capacitor proof under `sandbox/native-capacitor-proof/`.
+2. Configure Capacitor to use `../../dist` as `webDir` and target the production Worker origin.
+3. Run Capacitor sync/build as far as the local Android host prerequisites allow.
+4. If host prerequisites can be satisfied, install the debug APK on an Android emulator/device, capture menu/loading/gameplay/touch-input screenshots, and record proof JSON.
+5. Probe explicit WebGL/WebGPU renderer behavior through the debug WebView.
+
+**Acceptance (EARS):**
+
+- When Capacitor sync runs, the Android shell shall consume the built `dist/` artifact.
+- When the Android proof runs on a prepared host, the debug APK shall boot to the SDS menu, start Rolling Hills, reach the in-game HUD, and accept touch joystick input.
+- When the Android WebView proof requests WebGL, the app shall resolve to WebGL with no fallback.
+- When the Android WebView proof requests WebGPU, the proof shall record either production WebGPU or the exact fallback reason.
+- If Java, Gradle, an emulator, or a connected device is unavailable on a later host, then the proof shall record the missing prerequisite instead of claiming Android boot acceptance.
+
+## Phase 5 - package-readiness handoff (~1hr)
+
+**Depends on:** Phases 3 and 4.
+
+1. Write a go/no-go memo for Steam/mobile preparation.
+2. Record proof commands, screenshots, JSON evidence, and blocked gates.
+
+**Acceptance (EARS):**
+
+- When the handoff is read, Steam readiness shall have a clear go/no-go based on Electron proof evidence.
+- When the handoff is read, mobile readiness shall distinguish Capacitor scaffold/sync proof from real Android device boot proof.
+- When the handoff is read, next-cycle work shall be concrete and bounded.
 
 ## Dependencies
 
-Prose ordering. Mostly serial, occasional parallelism:
-
 ```
-Phase 1 -> Phase 2 + Phase 3 (parallel) -> Phase 4 (optional)
+Phase 1 -> Phase 2 -> Phase 3 + Phase 4 -> Phase 5
 ```
 
-When two phases can run in parallel, say so. When one depends on another's specific output, say what.
+Phase 3 and Phase 4 can run in either order after the native build/preflight is reliable.
 
 ## Frozen files (cycle-specific additions)
 
-These files require explicit task-brief authorization to modify within this cycle. The durable fence list is in [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md); add cycle-specific freezes here only if the work pattern requires extra discipline.
-
-- (Cycle-specific additions, if any. A wire-protocol or migration change names the file here with a migration story per `.claude/rules/multiplayer.md`.)
+- `shared/**` - not in scope.
+- `worker/**` - not in scope.
+- `js/**` - not in scope unless a native-shell proof exposes a boot blocker that cannot be fixed in the shell.
 
 ## Hard stops
 
-Durable hard stops apply on every cycle - see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md). The list below adds **cycle-specific** stops that aren't covered by the durable list:
-
-1. (Cycle-specific addition. e.g. a security change must not weaken an existing check to make a test pass.)
-2. (Cycle-specific addition.)
+1. If a shell proof requires changing deterministic sim behavior, stop and rescope.
+2. If a shell proof requires changing the default renderer away from WebGL, stop and rescope.
+3. If Android host prerequisites are missing, record the blocker; do not fake a real-device proof.
 
 ## What NOT to do during this cycle
 
-(Cycle-specific list. Things that look like next-cycle scope creep, refactors that should wait, ideas that have been decided against.)
+- Do not add Steamworks, achievements, cloud saves, app-store submission, signing, or paid store setup.
+- Do not add Tauri unless Electron proof creates a specific comparator need.
+- Do not claim iOS proof without a real iOS target.
+- Do not move shell dependencies into the main app package.
+- Do not change service-worker behavior for web builds.
 
 ## Success criteria (cycle close)
 
-`/cycle-close` reads this section and asks the user to confirm each item. Don't pre-check. Each item should be EARS-form so the cycle-close reconciliation hook can grep its predicate.
-
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, production build shall be clean.
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] (Cycle-specific qualitative criteria.)
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
+- [x] When `npm run native:check` runs at cycle close, native preflight shall pass.
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass.
+- [x] When `npm run build` runs at cycle close, production build shall be clean.
+- [x] When Electron proof runs at cycle close, SDS shall boot and start Classic play from packaged `dist/`.
+- [x] When Electron renderer proof runs at cycle close, explicit WebGL and true production WebGPU shall both pass from the packaged executable on this Windows host.
+- [x] When Capacitor Android proof closes, Android status shall be either boot-proven or blocked with exact missing host prerequisites.
+- [x] When Capacitor Android renderer proof runs at cycle close, explicit WebGL shall pass and explicit WebGPU shall record either true WebGPU or exact fallback; on the API 35 emulator it records `webgpu-adapter-unavailable`.
+- [x] When the close handoff is read, Steam/mobile store preparation shall have a clear go/no-go recommendation.
 
 ## References
 
-- [`docs/audit-roadmap-2026-05.md`](audit-roadmap-2026-05.md) - the security/perf/coverage audit roadmap (candidate scope source)
-- [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) - the cycle template
-- [`docs/INTERFACE_FENCE.md`](INTERFACE_FENCE.md) - durable frozen files
-- [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) - durable hard-stop list
-- [`.claude/rules/multiplayer.md`](../.claude/rules/multiplayer.md) - Worker / DO / migration contract
-- [`.claude/rules/shared-sim.md`](../.claude/rules/shared-sim.md) - deterministic-sim boundary
-- [`docs/NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md) - pickup-state contract
-- [EARS notation](https://kiro.dev/docs/specs/) - testable acceptance lines
+- [`native-packaging-proof-0.md`](native-packaging-proof-0.md) - Cycle 37 native proof matrix
+- [`native-shell-proof-cycle-53.md`](native-shell-proof-cycle-53.md) - Cycle 53 proof handoff and go/no-go memo
+- [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md) - store and shell gates
+- [`audit-roadmap-2026-05.md`](audit-roadmap-2026-05.md) - shipped security roadmap status
+- [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) - cycle template
+- [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) - durable frozen files
+- [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) - durable hard-stop list
+- [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md) - pickup-state contract

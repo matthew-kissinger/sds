@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // P-SEC-1: coverage for the HMAC-SHA256 JWT signer/verifier that mints the
 // short-lived session tokens. The auth rebuild leans on these tokens being
 // unforgeable, so this locks down the round-trip plus the four rejection paths:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Tiny diagnostic probe — load a scene, capture whatever's there after
  * 30s, dump the global state. Used to triage why __sdsCinema isn't

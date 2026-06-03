@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // Cycle 35 Phase 2: score_errors observability path. Verifies that every
 // throw from submitScore lands a row in score_errors before re-throwing.
 // Three failure modes covered: validation reject (bounds), sheep-count

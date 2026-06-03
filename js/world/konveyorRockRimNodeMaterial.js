@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 export function createKonveyorRockRimNodeMaterial({ MeshStandardNodeMaterial, TSL }, rockRim = {}) {
   const { dot, float, max, normalize, normalView, positionView, pow, vec3 } = TSL;
   const linearColor = (color) => color.map((value) => (

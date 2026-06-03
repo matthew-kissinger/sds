@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * CorralZapEffect — lightning bolt + particle burst when a sheep enters
  * the corral. The sheep gets "zapped into the sky" before its retirement

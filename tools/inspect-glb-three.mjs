@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Three.js-based GLB inspector. Unlike the gltf-transform-based version,
  * this dequantizes meshopt-compressed positions before reading bbox so

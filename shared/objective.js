@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Multi-stage objective state machine — Cycle 29 Stream B4 (extracted
  * from GameState), Cycle 34 Phase 2 (promoted from `js/gamestate/` to

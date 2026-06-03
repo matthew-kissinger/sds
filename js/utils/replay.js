@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Replay-recording helpers extracted from `main.js` in Cycle 28 Stream
  * B1. Start/stop wrappers around `ReplayRecorder` that capture the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // Minimal HMAC-SHA256 JWT signer/verifier for short-lived session tokens.
 
 const enc = new TextEncoder();

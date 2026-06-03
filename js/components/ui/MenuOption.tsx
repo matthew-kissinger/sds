@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * MenuOption Component
  * Clickable menu item with optional icon, label, description, and arrow.

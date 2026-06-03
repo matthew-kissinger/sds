@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { shouldApplyKonveyorRendererFlag } from './rendering/konveyorRuntimeMode.js';
 
 const FLAG_PARAM = 'konveyorImpostors';

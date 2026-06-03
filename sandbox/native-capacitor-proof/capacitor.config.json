@@ -1,0 +1,8 @@
+{
+  "appId": "com.sheepdogsim.nativeproof",
+  "appName": "Sheep Dog Simulator Native Proof",
+  "webDir": "../../dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

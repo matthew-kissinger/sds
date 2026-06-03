@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for considering a contribution. This repo is MIT-licensed and built to be forked — issues and PRs of any size are welcome.
+Thanks for considering a contribution. This repo is free to play and source-readable. Contributions are accepted under AGPL-3.0-or-later for code and CC BY-SA 4.0 for assets, so issues and PRs of any size are welcome.
 
 ## Getting set up
 
@@ -38,7 +38,7 @@ The [README "Places a PR would be genuinely useful" section](README.md#places-a-
 
 ## Mods / forks
 
-Shipping a mod or fork of the game? Open an issue and I'll link it from the README. The sandbox format uses lz-string-encoded URL hashes, so a custom layout ships as a shareable link today; biome-level mods are a planned seam in the roadmap.
+Shipping a mod or fork of the game? Open an issue and I'll link it from the README. Modified or hosted versions must publish corresponding source under AGPL-3.0 and preserve the attribution/source notices in reasonably visible locations. The sandbox format uses lz-string-encoded URL hashes, so a custom layout ships as a shareable link today; biome-level mods are a planned seam in the roadmap.
 
 ## Security
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /** @vitest-environment jsdom */
 /**
  * Cycle 48 P1: render smoke harness for the converted HUD readout leaves

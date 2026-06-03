@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // .claude/hooks/check-acceptance.mjs
 //
 // Stop-hook: surface unchecked acceptance items in the active cycle plan.

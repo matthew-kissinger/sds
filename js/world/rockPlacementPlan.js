@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 export const ROCK_Y_SCALE = 0.7;
 export const ROCK_Z_SCALE = 1.2;
 

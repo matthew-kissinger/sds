@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // Test-only WebSocket client for the two-client integration harness.
 //
 // Wraps the node `ws` library and speaks MessagePack so tests can exercise

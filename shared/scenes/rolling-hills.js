@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Rolling Hills — Cycle 5: an island bounded by water, with an off-centre
  * corral the player must drive sheep into. No perimeter fence, no gate;

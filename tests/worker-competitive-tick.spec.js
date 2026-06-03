@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Characterization spec for the authoritative COMPETITIVE path in the Worker
  * GameSimulation. This path (multi-gate layout, per-gate scoring via

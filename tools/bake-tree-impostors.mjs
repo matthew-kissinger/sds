@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 20 Phase 1 — bake object impostors via Pixel Forge / Kiln.
  * Cycle 50 Phase 1 — generalized from a hardcoded `['tree1','tree2']` list to a

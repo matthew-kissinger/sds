@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 const WORKER_BASE = typeof __SDS_WORKER_BASE__ !== 'undefined'
     ? __SDS_WORKER_BASE__
     : 'https://sds-worker.matt-m-kissinger.workers.dev';

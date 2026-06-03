@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 import { generateTrees } from '../../shared/TreePlacement.js';
 import { mulberry32 } from '../../shared/Random.js';
 import { loadScene as loadSceneDef } from '../../shared/scenes/index.js';

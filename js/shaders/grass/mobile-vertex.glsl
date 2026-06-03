@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 /**
  * Grass Mobile Vertex Shader
  * Simplified version - no wind animation for better performance

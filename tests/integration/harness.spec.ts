@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 Matthew Kissinger
 // Harness self-tests. These validate the integration scaffolding itself
 // (MessagePack round-trip, waitFor semantics, fixture shape) without talking
 // to a real worker. They MUST pass on the current codebase.
