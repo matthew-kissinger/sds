@@ -36,16 +36,37 @@ async function seedIdentity(ctx: BrowserContext) {
     });
 }
 
-async function startSoloClassic(page: Page) {
-    const soloPlay = page.getByRole('button', { name: /Solo Play/i });
-    await expect(soloPlay).toBeVisible({ timeout: 30_000 });
-    await soloPlay.dispatchEvent('click');
-    const confirm = page.getByRole('button', { name: /Confirm Selection/i });
-    await expect(confirm).toBeVisible({ timeout: 15_000 });
-    await confirm.dispatchEvent('click');
-    const classic = page.getByRole('button', { name: /Classic Mode/i });
-    await expect(classic).toBeVisible({ timeout: 15_000 });
+const WORLD_NAME: Record<string, string> = {
+    'field': 'Home Field',
+    'rolling-hills': 'Rolling Hills',
+    'open-country': 'Open Country',
+};
+
+// Cycle 51 world-first entrance: the world is armed via the prev/next switcher
+// (default Rolling Hills), not a ?scene= deep-link. Cycle the Next-world chip
+// until the target biome name shows; the switcher wraps, so the target is
+// reached in <= N clicks regardless of the default.
+async function armWorld(page: Page, sceneId: string) {
+    const wanted = WORLD_NAME[sceneId];
+    const nameLoc = page.getByText(wanted, { exact: true });
+    const nextBtn = page.getByRole('button', { name: /Next world/i });
+    await expect(nextBtn).toBeVisible({ timeout: 30_000 });
+    for (let i = 0; i < SCENES.length; i++) {
+        if (await nameLoc.isVisible().catch(() => false)) return;
+        await nextBtn.dispatchEvent('click');
+        await page.waitForTimeout(200);
+    }
+    await expect(nameLoc).toBeVisible({ timeout: 5_000 });
+}
+
+async function startSoloClassic(page: Page, sceneId: string) {
+    await armWorld(page, sceneId);
+    const classic = page.getByRole('button', { name: /Classic/i });
+    await expect(classic).toBeVisible({ timeout: 30_000 });
     await classic.dispatchEvent('click');
+    const play = page.getByRole('button', { name: 'Play', exact: true });
+    await expect(play).toBeVisible({ timeout: 15_000 });
+    await play.dispatchEvent('click');
 }
 
 // Emulate iPhone 14 at the file level — mobile UA + hasTouch + isMobile so
@@ -87,8 +108,11 @@ test.describe('mobile asset visibility', () => {
         test(`${scene}: cross-billboard impostors sized + scene draws at max zoom`, async ({ page }) => {
             test.setTimeout(180_000);
 
-            await page.goto(`/?scene=${scene}&perfMode=1&probeRender=1`, { waitUntil: 'domcontentloaded' });
-            await startSoloClassic(page);
+            // Enter via the world-first entrance (a ?scene= deep-link would
+            // bypass it). probeRender + perfMode install the probes at boot; the
+            // scene builds when Play commits the armed world.
+            await page.goto(`/?perfMode=1&probeRender=1`, { waitUntil: 'domcontentloaded' });
+            await startSoloClassic(page, scene);
 
             await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 90_000 });
 

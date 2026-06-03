@@ -31,40 +31,50 @@ async function seedIdentity(page: Page) {
   });
 }
 
-async function bootSolo(page: Page, scene = 'field') {
+async function bootSolo(page: Page) {
   await seedIdentity(page);
-  await page.goto(`/?scene=${scene}`, { waitUntil: 'domcontentloaded' });
+  // Cycle 51: enter via the world-first entrance (a ?scene= deep-link bypasses
+  // it). The swap harness (window.__sdsSwapTo) installs on the first scene
+  // build, which now happens on Play - startSoloClassic waits for it there.
+  await page.goto('/?perfMode=1', { waitUntil: 'domcontentloaded' });
+  const play = page.getByRole('button', { name: 'Play', exact: true });
+  await expect(play).toBeVisible({ timeout: 30_000 });
+}
 
-  // Wait for the start screen + the swap harness to be installed
-  // (window.__sdsSwapTo is set inside _installStressTestHarness, which
-  // runs at the end of init()).
-  const soloPlay = page.getByRole('button', { name: /Solo Play/i });
-  await expect(soloPlay).toBeVisible({ timeout: 30_000 });
+const WORLD_NAME: Record<string, string> = {
+  'field': 'Home Field',
+  'rolling-hills': 'Rolling Hills',
+  'open-country': 'Open Country',
+};
 
-  // Generous timeout — scene init on swiftshader CI clears 60-90s once the
-  // Cycle 18 octahedral bake is added on top of the existing terrain + grass +
-  // tree LOD setup. 150s leaves headroom on slow runners.
+async function startSoloClassic(page: Page, sceneId = 'field') {
+  // Cycle 51 world-first entrance: arm the requested world via the switcher,
+  // pick the Classic difficulty chip, then Play.
+  const nameLoc = page.getByText(WORLD_NAME[sceneId] ?? 'Home Field', { exact: true });
+  const nextBtn = page.getByRole('button', { name: /Next world/i });
+  await expect(nextBtn).toBeVisible({ timeout: 30_000 });
+  for (let i = 0; i < 3; i++) {
+    if (await nameLoc.isVisible().catch(() => false)) break;
+    await nextBtn.dispatchEvent('click');
+    await page.waitForTimeout(200);
+  }
+
+  const classic = page.getByRole('button', { name: /Classic/i });
+  await expect(classic).toBeVisible({ timeout: 15_000 });
+  await classic.dispatchEvent('click');
+
+  const play = page.getByRole('button', { name: 'Play', exact: true });
+  await expect(play).toBeVisible({ timeout: 15_000 });
+  await play.dispatchEvent('click');
+
+  // Game canvas should mount. The swap harness (window.__sdsSwapTo) installs on
+  // the first scene build. Generous timeout - scene init on swiftshader CI
+  // clears 60-90s with the octahedral bake on top of terrain + grass + tree LOD.
+  await expect(page.locator('#canvas-container canvas')).toBeAttached({ timeout: 60_000 });
   await expect(async () => {
     const ready = await page.evaluate(() => typeof (window as any).__sdsSwapTo === 'function');
     expect(ready).toBe(true);
   }).toPass({ timeout: 150_000 });
-}
-
-async function startSoloClassic(page: Page) {
-  const soloPlay = page.getByRole('button', { name: /Solo Play/i });
-  await expect(soloPlay).toBeVisible({ timeout: 15_000 });
-  await soloPlay.dispatchEvent('click');
-
-  const confirm = page.getByRole('button', { name: /Confirm Selection/i });
-  await expect(confirm).toBeVisible({ timeout: 15_000 });
-  await confirm.dispatchEvent('click');
-
-  const classic = page.getByRole('button', { name: /Classic Mode/i });
-  await expect(classic).toBeVisible({ timeout: 15_000 });
-  await classic.dispatchEvent('click');
-
-  // Game canvas should mount
-  await expect(page.locator('#canvas-container canvas')).toBeAttached({ timeout: 60_000 });
   // Wait for sheep flock to populate before reading positions.
   await expect(async () => {
     const hasSheep = await page.evaluate(() => {
@@ -143,7 +153,8 @@ test.describe('Cycle 18 Phase 2 — scene-swap + mode-restart hygiene @local-onl
   });
 
   test('open country objective event opens portal and hides roundup decal @local-only', async ({ page }) => {
-    await bootSolo(page, 'open-country');
+    await bootSolo(page);
+    await startSoloClassic(page, 'open-country');
 
     const initialProbe = await page.evaluate(() => (window as any).__sdsSwapProbe());
     expect(initialProbe.scene).toBe('open-country');

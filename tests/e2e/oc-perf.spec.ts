@@ -16,7 +16,9 @@ import { test, expect, type Page } from '@playwright/test';
  * Adjust as needed once the harness has run on real target hardware.
  */
 
-const PERF_MODE_URL = '/?scene=open-country&perfMode=1';
+// Cycle 51: enter via the world-first entrance (a ?scene= deep-link would
+// bypass it) and arm Open Country there. perfMode installs __perfHarness at boot.
+const PERF_MODE_URL = '/?perfMode=1';
 
 // Headless desktop budget. Real-target gates (RTX 3070, mid-tier mobile)
 // should run with their own values; this is a CI sanity check.
@@ -42,19 +44,26 @@ async function seedIdentity(page: Page) {
 }
 
 async function startSoloClassic(page: Page) {
-  // Start screen → Solo → Confirm dog → Classic Mode. dispatchEvent('click')
+  // Cycle 51 world-first entrance: arm Open Country via the prev/next switcher,
+  // pick the Classic difficulty chip, then Play. dispatchEvent('click')
   // sidesteps the hover-transform stability issue documented in smoke.spec.ts.
-  const soloPlay = page.getByRole('button', { name: /Solo Play/i });
-  await expect(soloPlay).toBeVisible({ timeout: 30_000 });
-  await soloPlay.dispatchEvent('click');
+  const ocName = page.getByText('Open Country', { exact: true });
+  const nextBtn = page.getByRole('button', { name: /Next world/i });
+  await expect(nextBtn).toBeVisible({ timeout: 30_000 });
+  for (let i = 0; i < 3; i++) {
+    if (await ocName.isVisible().catch(() => false)) break;
+    await nextBtn.dispatchEvent('click');
+    await page.waitForTimeout(200);
+  }
+  await expect(ocName).toBeVisible({ timeout: 5_000 });
 
-  const confirm = page.getByRole('button', { name: /Confirm Selection/i });
-  await expect(confirm).toBeVisible({ timeout: 15_000 });
-  await confirm.dispatchEvent('click');
-
-  const classic = page.getByRole('button', { name: /Classic Mode/i });
+  const classic = page.getByRole('button', { name: /Classic/i });
   await expect(classic).toBeVisible({ timeout: 15_000 });
   await classic.dispatchEvent('click');
+
+  const play = page.getByRole('button', { name: 'Play', exact: true });
+  await expect(play).toBeVisible({ timeout: 15_000 });
+  await play.dispatchEvent('click');
 }
 
 test.describe('OC frametime harness', () => {

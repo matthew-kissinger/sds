@@ -45,7 +45,7 @@ function collectConsoleErrors(page: Page): string[] {
 }
 
 test.describe('SDS smoke', () => {
-  test('launches and renders start screen', async ({ page }) => {
+  test('launches and renders the entrance', async ({ page }) => {
     const errors = collectConsoleErrors(page);
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -56,18 +56,12 @@ test.describe('SDS smoke', () => {
     // The React overlay mount point exists in the HTML shell.
     await expect(page.locator('#react-overlay')).toBeAttached();
 
-    // Either the identity setup appears (fresh localStorage) or the main
-    // menu appears (returning user). Both are acceptable "start screen"
-    // signals. Use getByText with a generous timeout - React loads modules
-    // dynamically and the start screen can take a few seconds on cold boot.
-    const identityHeading = page.getByText(/Welcome to Sheep Dog Sim/i).first();
-    const modeHeading = page.getByText(/Solo Play/i).first();
-
-    await expect(async () => {
-      const identityVisible = await identityHeading.isVisible().catch(() => false);
-      const modeVisible = await modeHeading.isVisible().catch(() => false);
-      expect(identityVisible || modeVisible).toBeTruthy();
-    }).toPass({ timeout: 30_000 });
+    // Cycle 51 world-first entrance: identity is deferred (no name gate), so
+    // the armed-world panel is the first interactive surface. Its Play button
+    // is the reliable "entrance is up" signal. Generous timeout - React loads
+    // modules dynamically and the entrance can take a few seconds on cold boot.
+    const play = page.getByRole('button', { name: 'Play', exact: true });
+    await expect(play).toBeVisible({ timeout: 30_000 });
 
     // No unexpected console errors so far.
     expect(errors, `Unexpected console errors: ${errors.join('\n')}`).toEqual([]);
@@ -96,25 +90,16 @@ test.describe('SDS smoke', () => {
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    // Wait for the main menu "Solo Play" option. The MenuOption renders
-    // the label inside a <button>, so target the button by accessible name.
-    const soloPlay = page.getByRole('button', { name: /Solo Play/i });
-    await expect(soloPlay).toBeVisible({ timeout: 30_000 });
-    // Use dispatchEvent('click') rather than a physical mouse click.
-    // The MenuOption button uses hover state to animate its transform,
-    // which defeats Playwright's stability heuristic; dispatchEvent
-    // fires the React onClick synchronously without moving the mouse.
-    await soloPlay.dispatchEvent('click');
-
-    // Dog selection screen - confirm whichever dog is default.
-    const confirm = page.getByRole('button', { name: /Confirm Selection/i });
-    await expect(confirm).toBeVisible({ timeout: 15_000 });
-    await confirm.dispatchEvent('click');
-
-    // Mode picker - pick Classic Mode (the emerald one, 200 sheep).
-    const classic = page.getByRole('button', { name: /Classic Mode/i });
-    await expect(classic).toBeVisible({ timeout: 15_000 });
+    // Cycle 51 world-first entrance: pick the Classic difficulty chip on the
+    // armed-world panel, then Play. dispatchEvent('click') fires React onClick
+    // synchronously without depending on Playwright's hover/stability heuristic.
+    const classic = page.getByRole('button', { name: /Classic/i });
+    await expect(classic).toBeVisible({ timeout: 30_000 });
     await classic.dispatchEvent('click');
+
+    const play = page.getByRole('button', { name: 'Play', exact: true });
+    await expect(play).toBeVisible({ timeout: 15_000 });
+    await play.dispatchEvent('click');
 
     // The game injects a <canvas> into #canvas-container once the scene
     // is ready. Asset loading can take a while (models, textures, shaders).
