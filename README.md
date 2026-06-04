@@ -186,11 +186,11 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 ---
 
-## Recent ships and current branch
+## Current state
 
 We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANGELOG entry. The last cycles delivered everything you see today; here's where the surface is moving right now:
 
-- **Cycle 54, active** - Windows Electron distributor path: installer/portable artifacts, app identity, logs/crash paths, signing-ready posture, packaged WebGL/WebGPU proofs, native resize proof, and Steam/store handoff.
+- **Cycle 54 closed** (2026-06-04) - Windows Electron distributor path: installer/portable/unpacked artifacts, app identity, logs/crash paths, signing-ready posture, packaged WebGL/WebGPU proofs, native resize proof, and Steam/store handoff. Local Steam depot dry-run is plausible; public store submission is still gated on signing policy, metadata, install QA, screenshots/capsules, controller/cloud-save policy, and release-channel decisions.
 - **`v2.2.0`** (2026-06-03) - forward-only license transition: current source is AGPL-3.0-or-later, current assets are CC BY-SA 4.0, visible AGPL source notices are in the app, and the first Windows Electron / Capacitor Android native-shell proof is documented.
 - **`v2.1.10`** (2026-05-28) - Cycle 42 WebGPU material parity: warmer sun/sky, darker water, and octahedral tree-impostor proof.
 - **`v2.1.6`** (2026-05-16) — Cycle 38 tree-placement readability patch: deterministic cross-zone canopy spacing removes stacked tree clumps, and tighter scale jitter keeps production trees from reading as saplings.
@@ -212,6 +212,7 @@ We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANG
 
 The backend on Cloudflare's edge is solved-as-far-as-it-needs-to-be. The visual layer is now progressively WebGPU-backed on supported browsers while retaining WebGL fallback. Android WebGPU frame budgets and tree representation quality are still active engineering work. **Each item below is a real PR-able piece of work** — issue numbers welcome.
 
+- **Steam/desktop release lane.** The Windows Electron package boots and plays from built web assets in both WebGL and WebGPU. The useful next step is not a new shell; it is release discipline: signing choice, installer/uninstaller QA, Steam depot dry-run, store metadata, capsule/screenshots, controller/cloud-save policy, and a repeatable native preflight.
 - **Dynamic weather + time-of-day as gameplay levers.** The Hosek-Wilkie sky already supports dawn/noon/dusk/golden/overcast presets; wiring a `DayNightCycle` driver where sheep flocking tightens at dusk and visibility drops in fog turns atmosphere into mechanic.
 - **More multi-stage objectives** beyond Open Country's gather→drive. River crossings, predator-flushing, lost-sheep recovery, scattered sub-flocks at multiple cardinal directions — each unlocked by data in `shared/scenes/*.js` rather than new code paths.
 - **Predators + NPCs.** Wolves/strays as obstacle-aware boids using the same `SceneObstacles` index sheep already query. A second AI shepherd that competes or assists.

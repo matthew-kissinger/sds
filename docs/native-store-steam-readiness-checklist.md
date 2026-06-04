@@ -1,10 +1,10 @@
 # Native Store and Steam Readiness Checklist
 
-Status: updated after Cycle 54 desktop packaging work, 2026-06-04. This is
-documentation only. No Steam submission, App Store submission, Google Play
-submission, signing, Steamworks feature integration, paid fee, deploy, public
-unsigned release, or default-renderer policy change is authorized by this
-cycle.
+Status: updated after Cycle 54 desktop packaging closed and deployed,
+2026-06-04. This is documentation only. No Steam submission, App Store
+submission, Google Play submission, signing, Steamworks feature integration,
+paid fee, public unsigned release, or default-renderer policy change is
+authorized by this handoff.
 
 ## Universal Gates
 
@@ -33,14 +33,16 @@ cycle.
 ## Steam
 
 - Steam Direct / app admin work is not started by this cycle.
-- Cycle 54 picks Electron plus electron-builder as the first desktop distributor
-  path; Steam is still not the shell decision.
+- Cycle 54 picked Electron plus electron-builder as the first desktop
+  distributor path; Steam prep now starts from that shell instead of reopening
+  the shell-choice decision.
 - Local Steam depot dry-run is plausible if accepted: the Windows installer,
   portable executable, and unpacked executable exist; packaged WebGL and WebGPU
   boot and play; Worker health and SDS WebSocket proof pass.
-- Public Steam submission is no-go until signing, store metadata, install/
-  uninstall pass, screenshots/capsules, controller notes, and release-channel
-  policy are resolved.
+- Public Steam submission is no-go until signing policy, store metadata,
+  install/uninstall pass, screenshots/capsules, controller notes,
+  cloud-save policy, privacy/support URLs, and release-channel policy are
+  resolved.
 - Prepare Store Presence checklist inputs: short description, long description,
   genres/tags, capsule art, screenshots, trailer if used, controller notes,
   languages, OS requirements, privacy/support links, and age/content fields.

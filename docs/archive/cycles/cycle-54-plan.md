@@ -1,14 +1,14 @@
 # Cycle 54 - `native-desktop-package-1`
 
-> Drafted 2026-06-03 after Cycle 53 and `v2.2.0` closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
+> Drafted 2026-06-03 after Cycle 53 and `v2.2.0` closed. Closed and archived 2026-06-04. Cold-start agents should read [`../../../NEXT_SESSION.md`](../../../NEXT_SESSION.md) first, then this archived plan only for completed scope and acceptance history.
 
 ## Goal
 
 Turn the green Cycle 53 Windows Electron proof into the first distributor-grade desktop path for SDS. By cycle close, SDS shall build a Windows Electron package with real app identity, icon, installer and portable targets, signing-ready posture, log/crash paths, packaged-shell gameplay proof, explicit WebGL/WebGPU proof, and a Steam preparation handoff that names what is still missing before store submission.
 
-## Current status - 2026-06-04
+## Closeout status - 2026-06-04
 
-Phases 1 through 4 are implemented. The packaged WebGL runtime proof is green. The packaged WebGPU runtime proof is green on this Windows host. The desktop package proof now also verifies native window resize: Electron content size changes to `1040x640`, the page viewport follows it, the canvas matches the viewport, and the camera aspect matches the resized window.
+Phases 1 through 4 shipped. The close commit `d9da08a` was pushed to `main`, and the GitHub Deploy workflow completed successfully. The packaged WebGL runtime proof is green. The packaged WebGPU runtime proof is green on this Windows host. The desktop package proof also verifies native window resize: Electron content size changes to `1040x640`, the page viewport follows it, the canvas matches the viewport, and the camera aspect matches the resized window.
 
 Current package outputs exist under `cycle54-validation/desktop-electron/artifacts/`:
 
@@ -23,11 +23,11 @@ Current renderer proof:
 
 Steam handoff result: local Steam depot dry-run is plausible if that scope is accepted. Public Steam submission remains no-go until signing decision, metadata, install/uninstall QA, screenshots/capsules, controller notes, cloud-save policy, and release-channel policy are resolved.
 
-## Open questions to resolve before writing code
+## Resolved questions
 
-1. **Q1: Electron Forge or electron-builder?** Author lean: electron-builder for this cycle because it directly supports Windows `nsis` and `portable` targets, target-specific artifact names, app metadata, and Windows signing knobs without replacing the core Vite web architecture.
-2. **Q2: Signed now or signing-ready now?** Author lean: signing-ready now. Local validation should build unsigned artifacts with auto-discovery disabled; public release waits for an explicit code-signing certificate or unsigned-release decision.
-3. **Q3: Steamworks SDK now?** Author lean: no. First prove plain packaged play, logs, installer/portable behavior, and Cloudflare WebSocket multiplayer. Steamworks features come after depot dry-run.
+1. **Q1: Electron Forge or electron-builder?** Resolved: electron-builder for this cycle because it directly supports Windows `nsis` and `portable` targets, target-specific artifact names, app metadata, and Windows signing knobs without replacing the core Vite web architecture.
+2. **Q2: Signed now or signing-ready now?** Resolved: signing-ready now. Local validation builds unsigned artifacts with auto-discovery disabled; public release waits for an explicit code-signing certificate or unsigned-release decision.
+3. **Q3: Steamworks SDK now?** Resolved: no. First prove plain packaged play, logs, installer/portable behavior, and Cloudflare WebSocket multiplayer. Steamworks features come after depot dry-run.
 
 ## Architecture / shared changes
 
@@ -77,7 +77,7 @@ No deterministic `shared/` changes are authorized. The desktop package lives und
 
 **Depends on:** Phase 3.
 
-1. Update NEXT_SESSION and docs index to reflect Cycle 54's active handoff state.
+1. Update NEXT_SESSION and docs index to reflect Cycle 54's closeout and handoff state.
 2. Add a desktop package proof report and Steam prep checklist deltas.
 
 **Acceptance (EARS):**
@@ -94,7 +94,7 @@ Phase 1 -> Phase 2 -> Phase 3 -> Phase 4
 
 ## Frozen files (cycle-specific additions)
 
-No additional frozen files. Durable frozen files in [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) still apply. `shared/` and sim-baseline goldens are not authorized for this cycle.
+No additional frozen files. Durable frozen files in [`../../INTERFACE_FENCE.md`](../../INTERFACE_FENCE.md) still apply. `shared/` and sim-baseline goldens are not authorized for this cycle.
 
 ## Hard stops
 
@@ -112,20 +112,20 @@ No additional frozen files. Durable frozen files in [`INTERFACE_FENCE.md`](INTER
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
 - [x] When `npm run lint` runs at cycle close, the deterministic shared boundary shall pass.
 - [x] When `npm test` runs at cycle close, all vitest specs shall pass.
 - [x] When `npm run build` runs at cycle close, production build shall be clean.
 - [x] When `npm run desktop:dist` runs, Windows installer and portable artifacts shall be generated.
 - [x] When `npm --prefix native/desktop-electron run proof:webgl` runs, the packaged WebGL desktop proof shall pass.
 - [x] When `npm --prefix native/desktop-electron run proof:webgpu` runs, the packaged WebGPU desktop proof shall pass on this Windows host.
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions if the branch is merged to `main`.
+- [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions if the branch is merged to `main`.
 
 ## References
 
-- [`docs/native-shell-proof-cycle-53.md`](native-shell-proof-cycle-53.md) - prior native shell proof
-- [`docs/native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md) - store gates
-- [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) - this template
-- [`docs/INTERFACE_FENCE.md`](INTERFACE_FENCE.md) - durable frozen files
-- [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) - durable hard-stop list
-- [`docs/NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md) - pickup-state contract
+- [`../../native-shell-proof-cycle-53.md`](../../native-shell-proof-cycle-53.md) - prior native shell proof
+- [`../../native-store-steam-readiness-checklist.md`](../../native-store-steam-readiness-checklist.md) - store gates
+- [`../../CYCLE_TEMPLATE.md`](../../CYCLE_TEMPLATE.md) - this template
+- [`../../INTERFACE_FENCE.md`](../../INTERFACE_FENCE.md) - durable frozen files
+- [`../../EMERGENCY_STOPS.md`](../../EMERGENCY_STOPS.md) - durable hard-stop list
+- [`../../NEXT_SESSION_CONTRACT.md`](../../NEXT_SESSION_CONTRACT.md) - pickup-state contract

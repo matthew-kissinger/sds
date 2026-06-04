@@ -18,6 +18,7 @@ The site is the game. Open the URL, herd some sheep, close the tab. Single-playe
 ## Devlog
 
 - [Devlog index](https://sheepdogsim.com/devlog/): plain-language behind-the-scenes notes on what's changing under the hood.
+- [v2.2 native shell proof and license transition](https://sheepdogsim.com/devlog/v2-2-native-license): the AGPL/CC BY-SA transition, native shell proof, and desktop package follow-up.
 - [Polish under the hood: the terrain math gets one home](https://sheepdogsim.com/devlog/cycle-30-heightfield-unify): Cycle 30, May 2026. A floating-point quirk fix.
 - [Reorganising the game-mode plumbing](https://sheepdogsim.com/devlog/cycle-29-gamestate-decomp): Cycle 29, May 2026. Internal refactor.
 

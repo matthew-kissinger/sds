@@ -1,6 +1,6 @@
 # Native Desktop Package - Cycle 54
 
-Status: WebGL and WebGPU distributor proofs pass on 2026-06-04. This document records the Windows desktop distributor path added after the Cycle 53 shell proof. It does not authorize Steam submission, signing release controls, paid store setup, Steamworks SDK features, public unsigned distribution, or a default-renderer change.
+Status: WebGL and WebGPU distributor proofs passed and deployed on 2026-06-04. This document records the Windows desktop distributor path added after the Cycle 53 shell proof. It does not authorize Steam submission, signing release controls, paid store setup, Steamworks SDK features, public unsigned distribution, or a default-renderer change.
 
 ## Summary
 
@@ -93,6 +93,6 @@ Both proofs sample the first 40 sheep after gameplay starts. The final WebGL pro
 
 ## Go / No-Go Handoff
 
-Go for a local Steam depot dry-run if that scope is accepted: the package artifacts exist, WebGL and WebGPU boot and play, resize/fullscreen/input/audio/storage work, logs/crash paths exist, and Cloudflare Worker/WebSocket proof passes.
+Go for a local Steam depot dry-run in the next store-prep cycle if that scope is accepted: the package artifacts exist, WebGL and WebGPU boot and play, resize/fullscreen/input/audio/storage work, logs/crash paths exist, and Cloudflare Worker/WebSocket proof passes.
 
 No-go for public Steam submission. Remaining Steam work: signed build decision, support/privacy URLs, store metadata, screenshots and capsule assets, depot layout, install/uninstall pass, controller notes, cloud-save decision, and whether multiplayer stays on Cloudflare Worker/Durable Objects without Steam networking.

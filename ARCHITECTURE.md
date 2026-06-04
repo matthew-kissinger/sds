@@ -503,13 +503,13 @@ npx wrangler pages deploy dist --project-name=sds-frontend --branch=main
 - **Registry** — `shared/scenes/index.js`. Exports `loadScene(id)`, `listScenes()`, `DEFAULT_SCENE_ID`. Unknown ids throw; the helpers are re-exported from `shared/index.js` for convenience.
 - **Worker** — `worker/src/RoomDO.ts` stores `sceneId` on `RoomMeta` (validated against `listScenes()` at `initRoom`, defaults to `DEFAULT_SCENE_ID`; backfilled on rehydrate of pre-Cycle-3 rooms). `worker/src/GameSim.js` calls `loadScene(room.sceneId || DEFAULT_SCENE_ID)` once in the constructor. Both cooperative (`createGameState`) and competitive/timed (`createCompetitiveGameState`) paths read `bounds` and `sheepSpawn` from the resulting scene.
 - **Client** — `js/main.js` picks the scene (`?scene=<id>` URL param; selectable via `ScenePicker` strip above the menu) and threads the `SceneDef` into `TerrainBuilder`, which reads `zones` and `farmHouse`, and through to `GrassSystem`, which reads `grass.clumpsPerChunk`. `js/NetworkManager.js createRoom` sends the current `sceneId` to the Worker in `roomSettings`. Joiners whose URL-param scene differs from the room's sceneId currently render mismatched visuals — Track 2 follow-up.
-- **Shipped biomes (2026-04-25)** — `field` ("Home Field" — the flat fenced play area, classic loop), `rolling-hills` ("Rolling Hills" — heightfield-displaced terrain, dusk lighting, 250 sheep scattered; gameplay loop still mirrors field, intended island-redesign tracked in [`docs/cycle-4-hardening.md`](docs/cycle-4-hardening.md) § 1), `open-country` ("Open Country" — heightfield-displaced terrain, golden-hour lighting, **no perimeter fence** (`perimeterFence: false` on the scene def — gate + pen stand alone), 200 sheep scattered across a 80 m radius). All three have `Atmosphere` wired and surface their fences/structures to terrain via `StructureBuilder._surfaceToTerrain`.
+- **Shipped biomes** — `field` ("Home Field" - flat fenced starter pasture with a perimeter pen), `rolling-hills` ("Rolling Hills" - 180 m heightfield island with water, sunset atmosphere, and lightning corral), and `open-country` ("Open Country" - 380 m island with a multi-stage round-up then portal objective). All three have `Atmosphere` wired; island scenes use scene-defined boundaries, terrain-aware structure placement, water/shoreline behavior, and obstacle-aware tree/rock placement.
 
 See [`docs/adding-a-biome.md`](docs/adding-a-biome.md) for the step-by-step, and [`docs/cycle-3-scene-arch.md`](docs/cycle-3-scene-arch.md) for the design rationale and open questions (notably: harmonizing the client's `FieldConfig` + `SandboxConfig` with `SceneDef`).
 
 ## Designed for expansion
 
-The single Home Field — a flat fenced play area with mountain props ringing the perimeter — plus a fenced pasture, is the shipped starting point. The modules are designed to be extended into new biomes and modes, not rebuilt.
+The shipped content is now three differentiated biomes, not a single field prototype. Home Field teaches the classic pen loop, Rolling Hills proves the island/corral/water atmosphere stack, and Open Country proves larger-scale multi-stage objectives. The modules are designed to add scenes and modes by data plus narrow render hooks, not by rebuilding the orchestrator.
 
 - **`TerrainBuilder.js`** is zone-keyed (`playArea`, `nearField`, `midField`, `farField`) and scene-aware (reads `zones` + `farmHouse` from its `sceneDef` argument). Parameterizing terrain displacement and prop placement from the scene def is the next extension point.
 - **`StructureBuilder.js`** owns fence / gate geometry and is independent of gameplay rules, so a canyon-pass or river-crossing scene can reuse the collision/rendering without competing-gate assumptions.
@@ -517,7 +517,7 @@ The single Home Field — a flat fenced play area with mountain props ringing th
 - **`worker/src/RoomDO.ts`** is mode-agnostic — the `gameMode` field is passed through to `GameSim.js`; mode-specific sim logic already branches there (`isCompetitive`, `isTimedMode`). Adding new modes is an additive change.
 - **`shared/`** is deterministic and scene-driven. New scenes add a file and a registry entry; neither the sim code nor the core render code changes.
 
-See the "Roadmap — where the game is going" section in [README.md](README.md) for the content direction beyond the Home Field.
+See the "Roadmap — where help would move the game" section in [README.md](README.md) for the current content and native-release direction.
 
 ## Project docs
 

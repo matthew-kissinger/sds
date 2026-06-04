@@ -108,13 +108,16 @@ Defer. Electron already proves the Windows packaged-shell baseline. Tauri is sti
 
 ## Next cycle recommendation
 
-Run `native-desktop-package-1` if PC/Steam is the priority:
+2026-06-04 update: `native-desktop-package-1` ran as Cycle 54 and closed green. The next PC/Steam cycle should start from [`native-desktop-package-cycle-54.md`](native-desktop-package-cycle-54.md) rather than from this proof shell.
 
-1. Replace proof packager with Electron Forge or electron-builder.
-2. Add app metadata, icon, Windows artifact target, and crash/log path.
-3. Measure cold start, memory, frame pacing, fullscreen, pointer lock, keyboard/mouse, gamepad, audio unlock, storage, and WebSocket multiplayer in the packaged app.
-4. Keep the explicit WebGL/WebGPU packaged checks as release preflight gates.
-5. Produce a Steam-prep checklist with exact remaining assets and store fields.
+Run `steam-desktop-store-prep-1` if PC/Steam is the priority:
+
+1. Decide signed-release, unsigned-proof-only, or blocked signing policy.
+2. Run installer, portable, reinstall, uninstall, log, and crash-path QA.
+3. Produce a local Steam depot dry-run or record the exact Steamworks blocker.
+4. Draft store metadata, screenshots/capsules, OS requirements, support/privacy URLs, language/controller notes, and age/content fields.
+5. Keep the explicit WebGL/WebGPU packaged checks as release preflight gates.
+6. Decide cloud-save, multiplayer networking, and release-channel policy.
 
 Run `native-android-store-hardening-1` if mobile is the priority:
 

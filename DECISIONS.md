@@ -1095,8 +1095,16 @@ The frontend redesign (Cycle 51, branch `cycle-51-mockups`) makes three asset an
 
 Cycle 53 proved native shells without changing SDS's core web architecture. The chosen first proofs were Electron for Windows desktop and Capacitor for Android mobile because they reuse the existing Vite `dist/` artifact while keeping the production web game, `shared/` deterministic boundary, Worker protocol, and renderer defaults intact.
 
-The release also closes the forward-only license transition. `v2.2.0` and later source code is AGPL-3.0-or-later, and `v2.2.0` and later non-code assets are CC BY-SA 4.0. Releases through `v2.1.10` remain MIT from their historical commits, tags, and release artifacts. The in-app source notices are part of the project contract: hosted or modified versions must keep reasonably visible source/attribution notices.
+The release also closes the forward-only license transition. `v2.2.0` and later source code is AGPL-3.0-or-later, and `v2.2.0` and later non-code assets are CC BY-SA 4.0. Releases through `v2.1.10` retain the terms recorded in their historical commits, tags, and release artifacts. The in-app source notices are part of the project contract: hosted or modified versions must keep reasonably visible source/attribution notices.
 
 The renderer result is intentionally asymmetric. Packaged Windows Electron passed explicit WebGL and true production WebGPU. Capacitor Android passed explicit WebGL, but explicit WebGPU fell back to WebGL on the API 35 emulator because no adapter was available. That is sufficient for Android shell feasibility and fallback behavior, but not sufficient for true mobile WebGPU readiness or store submission.
 
 The next native cycle should harden one distribution lane instead of broadening proofs: either desktop/Steam packaging from the Electron proof or Android store hardening from the Capacitor proof.
+
+## Cycle 54 - desktop distributor path before Steam controls (2026-06-04)
+
+Cycle 54 chose to harden the Windows desktop lane first. The isolated Cycle 53 Electron proof was promoted into `native/desktop-electron/` with electron-builder, app identity, Windows icons, installer/portable/unpacked targets, explicit local signing posture, logs/crash paths, and packaged proof commands. The shell still consumes `BUILD_TARGET=native` `dist/` output over `sds://app`; no renderer default, Worker protocol, or deterministic `shared/` simulation contract changed.
+
+The proof bar moved from "native shell can boot" to "distributor package can be validated." Both `proof:webgl` and `proof:webgpu` pass from the packaged executable on the Windows host, including native resize, fullscreen, pointer lock, audio unlock, storage, virtual gamepad API, Worker health, authenticated WebSocket, startup flock motion, and zero fatal console errors.
+
+The next step is not another shell comparison. The useful desktop cycle is Steam/store preparation: signing policy, install/uninstall QA, Steam depot dry-run, store metadata, capsule/screenshots, controller/cloud-save policy, privacy/support URLs, and release-channel decisions. Public release controls remain explicitly out of scope until those gates are green.

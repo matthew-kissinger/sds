@@ -4,7 +4,7 @@ A free, browser-based herding game where you guide your sheepdog across three bi
 
 ## Tagline
 
-**Herd 5,000 sheep in your browser. No install. Free. Source-available under AGPL-3.0.**
+**Herd 5,000 sheep in your browser. No install. Free to play. Source-readable under AGPL-3.0.**
 
 ## Headline features
 
@@ -12,7 +12,7 @@ A free, browser-based herding game where you guide your sheepdog across three bi
 - **Six modes:** Practice (30 sheep, no timer), Classic (200), Extreme (1,000), Insane (3,000), Chaos (5,000), plus 2–4 player multiplayer co-op + competitive + timed.
 - **Authoritative 60 Hz multiplayer:** Cloudflare Workers + Durable Objects + D1, MessagePack-over-WebSocket state frames, adaptive jitter buffer.
 - **5 languages:** auto-detected via i18next — English, Spanish, Portuguese, Japanese, Simplified Chinese. (Community PRs welcome for more.)
-- **Mobile-ready:** touch joystick, responsive HUD, gamepad support, installable as a PWA.
+- **Mobile-capable web controls:** touch joystick, responsive HUD, gamepad support, and PWA installability. Native mobile store releases are still proof-level work, not a current launch claim.
 - **Cinematic visuals:** Hosek-Wilkie analytic sky with day/night presets, parallax cloud layer, anime-style water with sun-glint, hundreds of thousands of grass blades with directional wind, real obstacle-aware boid flocking.
 
 ## Why it exists
@@ -26,7 +26,7 @@ The codebase is also deliberately easy to read — ~10k lines of vanilla JavaScr
 - **Studio:** solo developer, Matthew Kissinger.
 - **Engine:** vanilla JavaScript + Three.js 0.184 (no game engine, no JSX, no codegen, no wasm).
 - **Backend:** Cloudflare Pages + Worker + Durable Objects + D1.
-- **License:** [AGPL-3.0-or-later](LICENSE) source code, [CC BY-SA 4.0](LICENSE-ASSETS) assets. Free to play; forks and hosted modifications must preserve attribution and publish corresponding source. Releases through v2.1.10 remain MIT; see [LICENSING.md](LICENSING.md).
+- **License:** [AGPL-3.0-or-later](LICENSE) source code, [CC BY-SA 4.0](LICENSE-ASSETS) assets. Free to play; forks and hosted modifications must preserve attribution and publish corresponding source. Earlier releases retain the terms recorded in their historical artifacts; see [LICENSING.md](LICENSING.md).
 - **Platforms:** Web (any modern browser), PWA-installable on mobile, full gamepad support on desktop.
 - **Languages:** English, Spanish, Portuguese, Japanese, Simplified Chinese.
 

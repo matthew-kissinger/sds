@@ -1,6 +1,6 @@
 # SDS Desktop Electron Distributor
 
-Cycle 54 promotes the Cycle 53 proof shell into the first real Windows desktop distributor path for Sheep Dog Simulator. The shell still serves the built web game from `dist/` through the privileged `sds://app` protocol; the core web game architecture stays browser-first.
+Cycle 54 promoted the Cycle 53 proof shell into the first real Windows desktop distributor path for Sheep Dog Simulator. The shell still serves the built web game from `dist/` through the privileged `sds://app` protocol; the core web game architecture stays browser-first.
 
 ## Commands
 
@@ -44,7 +44,7 @@ The artifacts are local validation output and intentionally gitignored.
 
 Proof JSON and screenshots are written under `../../cycle54-validation/desktop-electron/reports/`.
 
-Current Cycle 54 evidence: `proof:webgl` and `proof:webgpu` are green from the packaged app. Both renderer proofs boot to gameplay, exercise native resize, and verify that the canvas and camera aspect follow the resized window.
+Current evidence: `proof:webgl` and `proof:webgpu` are green from the packaged app. Both renderer proofs boot to gameplay, exercise native resize, and verify that the canvas and camera aspect follow the resized window. The next release lane is Steam/store prep, not another shell proof.
 
 ## Signing
 

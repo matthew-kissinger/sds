@@ -4,6 +4,30 @@
 
 ## Recently Completed
 
+### Cycle 54 - `native-desktop-package-1` (closed 2026-06-04)
+
+Plan archived at [`docs/archive/cycles/cycle-54-plan.md`](archive/cycles/cycle-54-plan.md). Cycle 54 promoted the Cycle 53 Electron shell proof into the first Windows desktop distributor path while preserving SDS's browser-first core architecture.
+
+**Closeout outcomes:**
+
+- **Desktop distributor path:** `native/desktop-electron/` now builds through electron-builder with app identity, generated Windows icons, `sds://app` packaged boot, `nsis` installer, portable executable, and unpacked executable targets.
+- **Signing-ready posture:** local proof builds force `CSC_IDENTITY_AUTO_DISCOVERY=false`; setup, portable, and unpacked executables remain intentionally unsigned until a code-signing certificate or explicit unsigned-release decision exists.
+- **Packaged proof:** WebGL and true production WebGPU both boot and play from the packaged executable on this Windows host. Proof covers nonblank gameplay, sheep startup motion, fullscreen, native window resize, pointer lock, keyboard/mouse response, gamepad API, audio unlock, localStorage, Worker health, authenticated SDS WebSocket, logs, crash path, and zero fatal console errors.
+- **Runtime fixes folded in:** startup flock motion is now visibly alive from the first playable moments, Follow camera A/D movement no longer spins the dog in circles, and the HUD sheep glyph is cleaner.
+- **Steam/store handoff:** local Steam depot dry-run is plausible. Public store submission remains blocked on signing policy, metadata, install/uninstall QA, capsule/screenshots, controller/cloud-save policy, privacy/support URLs, and release-channel decisions.
+
+**Validation gates (2026-06-04):**
+
+- `npm run lint`, `npm test`, and `npm run build` passed.
+- `npm run native:preflight`, `npm run desktop:dist`, `npm --prefix native/desktop-electron run proof:webgl`, and `npm --prefix native/desktop-electron run proof:webgpu` passed.
+- GitHub Deploy run `26928995293` passed on `main` at commit `d9da08a`.
+- Direct live fetches confirmed the deployed game, about page, and v2.2 devlog page expose current AGPL/source notices.
+
+**Carryover (deferred):**
+
+- **Steam/desktop store-prep cycle:** signing decision, installer/install-uninstall QA, Steam depot dry-run, metadata, screenshots/capsules, controller notes, cloud-save decision, multiplayer networking policy, release-channel policy, and small-window HUD comfort acceptance.
+- **Android native hardening:** signed release/AAB path, physical-device proof, real-device WebGPU probe, audio/storage/WebSocket/offline behavior, and store-compliance metadata.
+
 ### Cycle 53 - `native-shell-proof-1` + `v2.2.0` release close (closed 2026-06-03)
 
 Plan archived at [`docs/archive/cycles/cycle-53-plan.md`](archive/cycles/cycle-53-plan.md). Cycle 53 proved SDS can boot and play from packaged native shells without changing the core web game architecture, then closed the forward-only `v2.2.0` license transition.

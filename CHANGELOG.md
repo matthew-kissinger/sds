@@ -4,6 +4,32 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Windows Electron distributor path with installer, portable, and unpacked
+  artifacts, app identity, generated Windows icons, logs/crash paths, and
+  signing-ready local build posture.
+- Packaged desktop proof commands for explicit WebGL and true production
+  WebGPU, including native window resize, fullscreen, pointer lock, audio
+  unlock, storage, gamepad API, Worker health, authenticated WebSocket, and
+  sheep startup motion checks.
+
+### Fixed
+
+- Startup flock visuals now move from the first playable moments in both WebGL
+  and WebGPU instead of reading as a half-frozen first frame.
+- Follow-camera A/D movement no longer turns the dog in circles.
+- Native Electron resize now keeps viewport, canvas, and camera aspect aligned
+  to the resized window.
+
+### Notes
+
+- Steam/store release remains a separate prep cycle: signing policy,
+  install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
+  controller/cloud-save policy, and release-channel decisions are still open.
+
 ## [2.2.0] - 2026-06-03 (Forward license transition)
 
 ### Added
