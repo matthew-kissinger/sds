@@ -4,6 +4,30 @@
 
 ## Recently Completed
 
+### Cycle 53 - `native-shell-proof-1` + `v2.2.0` release close (closed 2026-06-03)
+
+Plan archived at [`docs/archive/cycles/cycle-53-plan.md`](archive/cycles/cycle-53-plan.md). Cycle 53 proved SDS can boot and play from packaged native shells without changing the core web game architecture, then closed the forward-only `v2.2.0` license transition.
+
+**Closeout outcomes:**
+
+- **Native preflight:** `npm run native:check` is green and now inspects the actual Vite entry bundle referenced by `dist/index.html`.
+- **Windows Electron proof:** a packaged Windows Electron executable boots the built `dist/` from an app protocol, starts Classic play, captures gameplay, and passes explicit WebGL plus true production WebGPU checks.
+- **Capacitor Android proof:** a Capacitor debug APK boots on an API 35 emulator, reaches Rolling Hills gameplay, accepts touch joystick input, and passes explicit WebGL. Explicit WebGPU falls back cleanly to WebGL with `webgpu-adapter-unavailable`; true mobile WebGPU is not claimed.
+- **Forward-only licensing:** current source is AGPL-3.0-or-later, current non-code assets are CC BY-SA 4.0, prior releases through `v2.1.10` remain MIT, and the running game exposes visible source notices for AGPL network-use compliance.
+- **Release handoff:** `v2.2.0` is the release marker for the license transition and native-shell proof. Next native work should choose either Steam/desktop packaging hardening or Android store hardening before opening Cycle 54.
+
+**Validation gates (2026-06-03):**
+
+- `npm run lint`, `npm test`, and `npm run build` passed at release close.
+- Prior native proof gates passed and are recorded in [`docs/native-shell-proof-cycle-53.md`](native-shell-proof-cycle-53.md).
+- The only `shared/` touches in the release were licensing metadata headers; native proof did not change deterministic sim behavior or regenerate sim-baseline goldens.
+
+**Carryover (deferred):**
+
+- **Desktop/Steam readiness:** real installer/portable target, app identity, icons, signing posture, crash/log path, frame/memory/startup budgets, gamepad/audio/storage/WebSocket proof, and Steam store/depot checklist.
+- **Android store readiness:** signed release/AAB path, physical-device performance, audio unlock, persistence/offline/online behavior, Worker/WebSocket proof, orientation/fullscreen policy, and renderer fallback policy.
+- **True mobile WebGPU:** not proven. Current Android WebView emulator has the API surface but no adapter.
+
 ### Cycle 52 - `pastoral-polish` (closed 2026-06-03)
 
 Plan archived at [`docs/archive/cycles/cycle-52-plan.md`](archive/cycles/cycle-52-plan.md). The cleanup tail of the pastoral UI program: it landed the two Cycle 51 deferrals (the in-engine dissolve reveal; the `ExtremeTuningPanel` `.tsx` migration), retired the orphaned zen-crossfade scaffold, and ran a bounded prose/token hygiene sweep. The user-visible change: pressing Play now melts the still entrance backdrop into the living scene in one continuous in-engine motion instead of a DOM opacity fade. No version bump; v2.1.10 stands.

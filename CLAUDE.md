@@ -12,7 +12,7 @@ Work is organized in numbered **development cycles**, each with a plan in [`docs
 
 **Cold-start agents read this order:**
 1. [`NEXT_SESSION.md`](NEXT_SESSION.md) — current pickup state.
-2. The active cycle plan it points to ([`docs/cycle-N-plan.md`](docs/)).
+2. The active cycle plan it points to ([`docs/cycle-N-plan.md`](docs/)), if a cycle is already open.
 3. This file + [`AGENTS.md`](AGENTS.md) for context.
 4. [`ARCHITECTURE.md`](ARCHITECTURE.md) only if the work touches an unfamiliar module.
 
@@ -50,7 +50,7 @@ Domain-scoped durable rules live in [`.claude/rules/`](.claude/rules/) and are l
 
 ## NEXT_SESSION contract
 
-[`NEXT_SESSION.md`](NEXT_SESSION.md) is **always current-only**: a snapshot of the active cycle's pickup point. Rules:
+[`NEXT_SESSION.md`](NEXT_SESSION.md) is **always current-only**: a snapshot of the active cycle's pickup point, or the next-cycle intake when no active cycle is open. Rules:
 
 - Required header: `Updated: <ISO date>` + `For: Cycle N` + `Pickup priority: <single sentence>`.
 - On `/cycle-close`, NEXT_SESSION is fully rewritten for cycle N+1 — not edited incrementally.

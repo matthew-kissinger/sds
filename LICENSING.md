@@ -4,9 +4,9 @@
 
 Sheep Dog Simulator uses separate licenses for source code and assets.
 
-- **Code, from the next release after v2.1.10:** GNU Affero General Public
-  License v3.0 or later (AGPL-3.0-or-later).
-- **Assets, from the next release after v2.1.10:** Creative Commons
+- **Code, from v2.2.0 onward:** GNU Affero General Public License v3.0 or
+  later (AGPL-3.0-or-later).
+- **Assets, from v2.2.0 onward:** Creative Commons
   Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
 
 ## Forward-Only Relicense
@@ -15,8 +15,8 @@ All versions up to and including **v2.1.10** were released under the MIT License
 and remain available under the MIT License from their historical commits and
 release artifacts.
 
-Starting with the next release after **v2.1.10**, source code is licensed under
-AGPL-3.0-or-later and non-code assets are licensed under CC BY-SA 4.0.
+Starting with **v2.2.0**, source code is licensed under AGPL-3.0-or-later and
+non-code assets are licensed under CC BY-SA 4.0.
 
 This is a forward-only licensing change. It does not rewrite or alter any
 historical commits, tags, releases, or license grants.

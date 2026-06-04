@@ -46,7 +46,9 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`content-campaign-2026-05.md`](content-campaign-2026-05.md) | How-to / Reference | May 2026 content pack, capture pipeline, publish caveats, and media validation gates. |
 | [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md) | How-to / Reference | Browser recording research, cloned OSS examples, Remotion assessment, and chosen capture architecture. |
 | [`multiplayer-ux.md`](multiplayer-ux.md) | How-to / Reference | Multiplayer UX flow + lobby state diagrams. |
-| [`cycle-42-plan.md`](cycle-42-plan.md) | Reference / Explanation | Cycle 42 local closeout: WebGPU scene-material parity, darker water, sun/sky repaint, octahedral proof, and `v2.1.10` release approval state. |
+| [`native-shell-proof-cycle-53.md`](native-shell-proof-cycle-53.md) | Reference | Cycle 53 native shell proof: green native preflight, packaged Windows Electron proof, Capacitor Android proof, and WebGL/WebGPU result matrix. |
+| [`archive/cycles/cycle-53-plan.md`](archive/cycles/cycle-53-plan.md) | Reference / Explanation | Closed Cycle 53: native shell proof 1, WebGL/WebGPU shell evidence, and `v2.2.0` release close. |
+| [`archive/cycles/cycle-42-plan.md`](archive/cycles/cycle-42-plan.md) | Reference / Explanation | Closed Cycle 42: WebGPU scene-material parity, darker water, sun/sky repaint, octahedral proof, and `v2.1.10` release approval state. |
 | [`archive/cycles/cycle-41-plan.md`](archive/cycles/cycle-41-plan.md) | Reference / Explanation | Closed Cycle 41: WebGPU painterly sun/sky/water parity, art-lock matrix, and v2.1.9 release proof. |
 | [`archive/cycles/cycle-40-plan.md`](archive/cycles/cycle-40-plan.md) | Reference / Explanation | Closed Cycle 40: sun/water/cloud coherence from the atmosphere sun color, plus the lab-only Pixel Forge v2 octahedral tree-impostor route. |
 | [`archive/cycles/cycle-38-plan.md`](archive/cycles/cycle-38-plan.md) | Reference / Explanation | Closed Cycle 38: polished WebGPU production readiness (PC scope). Shipped water grid fix, quality-governor hysteresis, tree budget locks. Mobile work carried over. |
@@ -70,10 +72,10 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 
 After Cycle 28 Stream A3's consolidation, the only files at `docs/` root are:
 
-- The **active cycle plan** (`cycle-N-plan.md`).
+- The **active cycle plan**, when a cycle is open (`cycle-N-plan.md`).
 - The **append-only [`BACKLOG.md`](BACKLOG.md)** — closed-cycle log + deferred items.
 - The **fence + template + contract triad**: [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md), [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md).
-- A small set of **stable how-tos and references**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md).
+- A small set of **stable how-tos and references**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`native-shell-proof-cycle-53.md`](native-shell-proof-cycle-53.md), [`native-packaging-proof-0.md`](native-packaging-proof-0.md), [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md).
 - This index ([`README.md`](README.md)).
 
 Everything else lives under [`archive/`](archive/):

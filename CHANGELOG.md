@@ -11,13 +11,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `LICENSE-ASSETS` for CC BY-SA 4.0 asset licensing.
 - `LICENSING.md` documenting the forward-only split between code and assets.
 - Visible AGPL source notices on the about page, start/loading flow, and in-game HUD.
+- Green native-shell proof scaffolds for Windows Electron and Capacitor Android.
 
 ### Changed
 
-- Source code for new versions is now AGPL-3.0-or-later.
-- Non-code assets for new versions are now CC BY-SA 4.0.
+- Source code for `v2.2.0` and later is now AGPL-3.0-or-later.
+- Non-code assets for `v2.2.0` and later are now CC BY-SA 4.0.
 - Root package metadata now reports version `2.2.0` and license
   `AGPL-3.0-or-later`.
+- Native preflight now validates the actual Vite entry bundle referenced by
+  `dist/index.html`.
+
+### Validation
+
+- `npm run lint`, `npm test`, and `npm run build` passed.
+- `npm run native:check` passed.
+- Windows Electron packaged proof passed for gameplay, explicit WebGL, and true
+  production WebGPU.
+- Capacitor Android debug APK proof passed on an API 35 emulator for gameplay,
+  touch input, and explicit WebGL. Explicit Android WebGPU fell back cleanly to
+  WebGL with `webgpu-adapter-unavailable`.
 
 ### Notes
 

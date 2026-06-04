@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
@@ -138,7 +137,7 @@ async function main() {
     console.log(`               ${counts.map((c) => String(c).padStart(4)).join('  ')}  ${String(beyond).padStart(4)}`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
     main().catch((err) => {
         console.error(err);
         process.exit(1);

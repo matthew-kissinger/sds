@@ -16,7 +16,7 @@ import {
  * two things:
  *   1. The committed public/placement/field.json is well-formed and its treeline
  *      lands in the intended 380-450m band (the "pull the treeline inward" call).
- *   2. The committed file is exactly reproducible from source — re-running the
+ *   2. The committed file is exactly reproducible from source - re-running the
  *      bake produces byte-identical output. If someone hand-edits the manifest or
  *      changes the bake without re-running it, this fails loudly.
  */
@@ -27,7 +27,7 @@ const committedRaw = readFileSync(
 );
 const committed = JSON.parse(committedRaw);
 
-describe('field placement manifest — committed shape', () => {
+describe('field placement manifest - committed shape', () => {
     it('has the expected top-level fields', () => {
         expect(committed.version).toBe(1);
         expect(committed.scene).toBe('field');
@@ -54,7 +54,7 @@ describe('field placement manifest — committed shape', () => {
     });
 });
 
-describe('field placement manifest — pulled-in treeline', () => {
+describe('field placement manifest - pulled-in treeline', () => {
     it('thins the scatter well below the full +/-800 zone count', () => {
         // Full-zone Field scatters ~1359 trees; the pulled-in treeline must be
         // a clear reduction without being pathologically sparse.
@@ -82,7 +82,7 @@ describe('field placement manifest — pulled-in treeline', () => {
     });
 });
 
-describe('field placement manifest — reproducible from source', () => {
+describe('field placement manifest - reproducible from source', () => {
     it('re-running the bake reproduces the committed trees exactly', () => {
         const rebuilt = buildFieldPlacementManifest();
         expect(rebuilt.treeCount).toBe(committed.treeCount);

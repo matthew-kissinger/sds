@@ -1,64 +1,52 @@
-# Next Session - Cycle 53
+# Next Session - Cycle 54 Intake
 
 > **Updated:** 2026-06-03
-> **For:** Cycle 53 (`native-shell-proof-1`)
-> **Pickup priority:** Cycle 53 native-shell proof is implemented locally. Read [`docs/native-shell-proof-cycle-53.md`](docs/native-shell-proof-cycle-53.md) for proof results, then decide whether to close the cycle or continue into a desktop/mobile follow-up. The active plan is [`docs/cycle-53-plan.md`](docs/cycle-53-plan.md).
+> **For:** Post-`v2.2.0` release handoff; Cycle 54 is not drafted yet.
+> **Pickup priority:** Choose the next native/store-readiness direction with Matt, then draft `docs/cycle-54-plan.md` from `docs/CYCLE_TEMPLATE.md` before coding.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-53-plan.md`](docs/cycle-53-plan.md) -> [`docs/native-packaging-proof-0.md`](docs/native-packaging-proof-0.md) -> [`docs/native-store-steam-readiness-checklist.md`](docs/native-store-steam-readiness-checklist.md). `main` is the live branch; Cycle 52 is merged.
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/BACKLOG.md`](docs/BACKLOG.md) -> [`docs/native-shell-proof-cycle-53.md`](docs/native-shell-proof-cycle-53.md) -> [`docs/native-store-steam-readiness-checklist.md`](docs/native-store-steam-readiness-checklist.md).
 
-## Where it stands
+There is no active root `docs/cycle-N-plan.md` after the `v2.2.0` close. Open Cycle 54 only after the next goal is selected.
 
-**Cycle 52 closed 2026-06-03 - the cleanup tail of the pastoral UI program, 4/4 phases shipped.** The two Cycle 51 deferrals both landed: the in-engine backdrop dissolve and the `ExtremeTuningPanel` `.tsx` migration. A pre-cycle hotfix fixed stale Playwright e2e helpers left by the Cycle 51 shell deletion. Local handoff state before Cycle 53: `npm test` was green at 866 pass, build clean, `main` about 542 KiB.
+## Where It Stands
 
-**Cycle 53 is now `native-shell-proof-1`, and the local proof pass is recorded.** [`docs/native-shell-proof-cycle-53.md`](docs/native-shell-proof-cycle-53.md) records a green native preflight, a packaged Windows Electron executable that boots and starts Classic play from embedded `resources/dist`, and a Capacitor Android debug APK that boots on an API 35 emulator, reaches the Rolling Hills in-game HUD, and accepts touch joystick input. Electron explicit WebGL and true production WebGPU both pass from the packaged executable. Android explicit WebGL passes; Android explicit WebGPU falls back to WebGL on the API 35 emulator with `webgpu-adapter-unavailable`. Android feasibility is proven; Android store readiness and true mobile WebGPU readiness are not.
+**Cycle 53 closed 2026-06-03 as `native-shell-proof-1`.** The archived plan is [`docs/archive/cycles/cycle-53-plan.md`](docs/archive/cycles/cycle-53-plan.md), and the proof report is [`docs/native-shell-proof-cycle-53.md`](docs/native-shell-proof-cycle-53.md). SDS now has a green native preflight, a packaged Windows Electron proof, and a Capacitor Android debug APK proof without changing the core web game architecture.
 
-## Stale-stub correction
+**Renderer status is split by shell.** Electron on this Windows host passed explicit WebGL and true production WebGPU from the packaged executable. Capacitor Android passed explicit WebGL on an API 35 emulator; explicit WebGPU detected the API but fell back to WebGL because no adapter was available. That is a clean fallback proof, not true mobile WebGPU readiness.
 
-The prior Cycle 53 scaffold recommended `security-hardening` and described P-SEC-1 as a live `/api/register` auth hole. That handoff text was stale. [`docs/audit-roadmap-2026-05.md`](docs/audit-roadmap-2026-05.md) records the audit roadmap, including P-SEC-1 through P-SEC-5, as implemented, validated, merged, and deployed on 2026-06-01. Current worker code/tests also include P-SEC coverage. Do not reopen Worker auth unless new evidence contradicts that shipped status.
+**`v2.2.0` is the forward-only license transition release.** Current source is AGPL-3.0-or-later. Current non-code assets are CC BY-SA 4.0. All versions up to and including `v2.1.10` were released under MIT and remain available under MIT from their historical commits, tags, and releases. The running game has visible AGPL source notices on the about page, start/loading flow, and HUD.
 
-## Cycle 53 working contract
+## Recommended Cycle 54 Choices
 
-- Shell proof code stays under `sandbox/` and consumes built `dist/`.
-- Proof output goes to `cycle53-validation/native/` and remains local/gitignored.
-- The main web app architecture, `shared/`, Worker wire protocol, D1 migrations, and renderer default stay unchanged.
-- Electron is the first desktop proof because pinned Chromium gives the most controlled Windows/Steam-style baseline.
-- Capacitor Android is the first mobile proof; WebGL remains the mobile default. This cycle proved Android with a local proof-only Temurin JDK plus the existing Android SDK/AVD. If that host setup is unavailable in a later pickup, treat missing toolchain/device checks as host drift, not as a core SDS architecture failure. Re-run `npm run proof:renderers` under `sandbox/native-capacitor-proof/` before claiming Android WebGPU; the current emulator result is graceful WebGL fallback, not true WebGPU.
-- Tauri is deferred unless Electron exposes a concrete comparator need.
+Pick one primary direction before writing the plan:
 
-## Cycle 52 carryover
+1. **`native-desktop-package-1` if PC/Steam is the priority.** Convert the Electron proof into a real desktop package path: Electron Forge or electron-builder, app identity/icons, Windows artifact target, signing posture, crash/log path, fullscreen/input/audio/storage/WebSocket proof, startup/memory/frame budgets, and Steam prep checklist.
+2. **`native-android-store-hardening-1` if mobile is the priority.** Convert the Capacitor proof into store hardening: release build/AAB, signing path, physical Android proof, audio unlock, persistence, offline/online behavior, Worker/WebSocket proof, orientation/fullscreen policy, renderer fallback policy, and performance budgets.
+3. **Non-native backlog if the release needs a pause.** Good candidates are object-impostor Cycle B, pastoral asset work with Pixel Forge, or an e2e-local-close-gate pass so deploy-only browser tests stop surprising release close.
 
-- **none.** Both Cycle 51 deferrals shipped in Cycle 52.
-- Process note: e2e is CI-only, not part of `npm test`; use native/e2e proof scripts explicitly when packaging work depends on browser behavior.
+## Working Contract
 
-## Program threads in flight
-
-- **Native packaging / store readiness (active).** Cycle 37 documented the native seams and recommended Electron first, Tauri second, Capacitor mobile first. Cycle 53 converts that into current proof.
-- **Pastoral UI/UX program (cleanup tail done).** Cycle 49 (vision/spec) -> Cycle 51 (frontend redesign + pastoral finish) -> Cycle 52 (`pastoral-polish`, closed). The remaining thread is `pastoral-assets`: Pixel Forge bespoke-asset work at [`../pixel-forge`].
-- **Object-driven impostor program.** Cycle 50 (plumbing) shipped. Cycle B (per-instance variation + rocks/structures) remains a candidate: [`docs/object-impostor-cycle-plan.md`](docs/object-impostor-cycle-plan.md).
-- **Security / perf / coverage audit roadmap (shipped).** See [`docs/audit-roadmap-2026-05.md`](docs/audit-roadmap-2026-05.md). Deferred follow-ups exist, but they are not the active Cycle 53 focus.
-
-## Release reference
-
-Commit `fb78851`, tag `v2.1.10`, deploy run `26595530924` is the latest tagged release. This branch stages `v2.2.0` for the forward-only AGPL-3.0-or-later code / CC BY-SA 4.0 asset license transition; it is not tagged or deployed until release close. Releases through v2.1.10 remain MIT.
+- Do not reopen Worker auth from the stale Cycle 53 security stub. [`docs/audit-roadmap-2026-05.md`](docs/audit-roadmap-2026-05.md) records P-SEC-1 through P-SEC-5 as shipped on 2026-06-01.
+- Do not touch `shared/` or sim-baseline goldens for native packaging unless the new cycle plan explicitly authorizes it.
+- Shell proof code remains under `sandbox/` unless the chosen Cycle 54 goal intentionally promotes it into production packaging.
+- Treat `cycle53-validation/` as local proof output only; it is gitignored and not release artifact storage.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-53-plan.md`](docs/cycle-53-plan.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-52-plan.md`](docs/archive/cycles/cycle-52-plan.md) |
-| Native proof matrix | [`docs/native-packaging-proof-0.md`](docs/native-packaging-proof-0.md) |
-| Cycle 53 proof handoff | [`docs/native-shell-proof-cycle-53.md`](docs/native-shell-proof-cycle-53.md) |
-| Store readiness gates | [`docs/native-store-steam-readiness-checklist.md`](docs/native-store-steam-readiness-checklist.md) |
-| Security audit roadmap | [`docs/audit-roadmap-2026-05.md`](docs/audit-roadmap-2026-05.md) |
-| Pastoral UI program | [`docs/ui-design-language.md`](docs/ui-design-language.md), [`docs/entrance-loading-spec.md`](docs/entrance-loading-spec.md) |
+| Active cycle | None drafted after `v2.2.0` close |
+| Latest closed cycle | [`docs/archive/cycles/cycle-53-plan.md`](docs/archive/cycles/cycle-53-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
+| Native proof report | [`docs/native-shell-proof-cycle-53.md`](docs/native-shell-proof-cycle-53.md) |
+| Native packaging Proof 0 | [`docs/native-packaging-proof-0.md`](docs/native-packaging-proof-0.md) |
+| Store readiness gates | [`docs/native-store-steam-readiness-checklist.md`](docs/native-store-steam-readiness-checklist.md) |
+| Licensing policy | [`LICENSING.md`](LICENSING.md), [`LICENSE`](LICENSE), [`LICENSE-ASSETS`](LICENSE-ASSETS) |
+| Changelog | [`CHANGELOG.md`](CHANGELOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
-| Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Decisions log | [`DECISIONS.md`](DECISIONS.md) |
 | Portable agent context | [`AGENTS.md`](AGENTS.md) |
-| Claude overlay | [`CLAUDE.md`](CLAUDE.md) |
 | NEXT_SESSION contract | [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md) |

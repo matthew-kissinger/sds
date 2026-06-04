@@ -18,7 +18,7 @@ Renderer-specific result: packaged Electron works in both explicit `renderer=web
 - `sandbox/native-electron-proof/` contains the isolated Electron proof shell, Windows packaging command, packaged executable validator, and explicit WebGL/WebGPU renderer checks.
 - `sandbox/native-capacitor-proof/` contains the isolated Capacitor Android scaffold, proof validator, and WebView renderer probe.
 - A local proof-only Android host toolchain was assembled under `cycle53-validation/native/android-host/`: portable Temurin JDK 21.0.11+10 plus Android command-line-tools setup for the existing SDK.
-- `NEXT_SESSION.md` and `docs/cycle-53-plan.md` now point at native proof instead of the stale security-hardening stub.
+- `NEXT_SESSION.md` and the archived Cycle 53 plan now record native proof instead of the stale security-hardening stub.
 
 No `shared/`, Worker, D1 migration, renderer default, or main web-game runtime change was made.
 
