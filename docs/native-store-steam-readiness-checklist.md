@@ -1,19 +1,25 @@
 # Native Store and Steam Readiness Checklist
 
-Status: Cycle 37 checklist draft, 2026-05-16. This is documentation only. No
-Steam submission, App Store submission, Google Play submission, signing,
-Steamworks feature integration, paid fee, deploy, or default-renderer policy
-change is authorized by this cycle.
+Status: updated after Cycle 54 desktop packaging work, 2026-06-04. This is
+documentation only. No Steam submission, App Store submission, Google Play
+submission, signing, Steamworks feature integration, paid fee, deploy, public
+unsigned release, or default-renderer policy change is authorized by this
+cycle.
 
 ## Universal Gates
 
 - Native shell proof boots the built SDS `dist/` without source-server coupling.
+  Cycle 53 proved Electron and Capacitor shells; Cycle 54 promotes Electron to
+  a Windows distributor path.
 - Default app launch remains WebGL unless a later explicit renderer policy
   decision changes it.
 - Explicit WebGPU launch records device preflight, success/fallback reason, and
-  frame-time evidence.
+  frame-time evidence. Current Cycle 54 desktop package result is no-go:
+  WebGPU device and renderer are ready, but the loading surface does not hand
+  off to gameplay HUD.
 - Field, Rolling Hills, and Open Country all have nonblank screenshots and
-  passing frame-time proof.
+  passing frame-time proof for any store-targeted build. Cycle 54's packaged
+  WebGL proof covers Rolling Hills only.
 - Fullscreen, pointer lock, keyboard/mouse, gamepad, audio unlock, storage, and
   WebSocket multiplayer are tested in the shell.
 - Crash/log capture path exists and does not require a developer console.
@@ -27,13 +33,23 @@ change is authorized by this cycle.
 ## Steam
 
 - Steam Direct / app admin work is not started by this cycle.
-- Pick desktop shell first; Steam is not the shell decision.
+- Cycle 54 picks Electron plus electron-builder as the first desktop distributor
+  path; Steam is still not the shell decision.
+- Local WebGL-only Steam depot dry-run is plausible if accepted: the Windows
+  installer, portable executable, and unpacked executable exist; packaged WebGL
+  boots and plays; Worker health and SDS WebSocket proof pass.
+- Public Steam submission is no-go until signing, store metadata, install/
+  uninstall pass, and the packaged WebGPU handoff decision are resolved.
 - Prepare Store Presence checklist inputs: short description, long description,
   genres/tags, capsule art, screenshots, trailer if used, controller notes,
   languages, OS requirements, privacy/support links, and age/content fields.
 - Prepare Game Build checklist inputs: Windows build package, launch command,
   depot layout, default branch, build description, save/config directories, and
-  install/uninstall behavior.
+  install/uninstall behavior. Cycle 54's local package outputs are
+  `cycle54-validation/desktop-electron/artifacts/win-unpacked/Sheep Dog Simulator.exe`,
+  `SheepDogSimulator-2.2.0-setup-x64.exe` (242,117,516 bytes), and
+  `SheepDogSimulator-2.2.0-portable-x64.exe` (218,426,698 bytes). Current
+  Authenticode status is `NotSigned`.
 - Test build outside Steam before any SteamPipe upload.
 - Defer Steamworks SDK features until after plain packaged play works:
   achievements, cloud saves, overlay, rich presence, leaderboards, and
@@ -90,7 +106,8 @@ change is authorized by this cycle.
 
 ## Native Shell Handoff
 
-The next implementation cycle should start with one isolated Windows Electron
-proof folder, then run the same built `dist/` in a Tauri WebView2 proof folder.
-Only after that comparison should the repo pick a primary desktop shell or move
-to Capacitor mobile proof.
+Cycle 53 completed the shell proof. Cycle 54 promotes Electron into the primary
+Windows desktop package path for Steam prep, with WebGL packaged proof green and
+packaged WebGPU no-go at the loading handoff. Tauri remains a future comparator
+if Electron package size, memory footprint, signing, or installer behavior
+becomes the limiting factor.
