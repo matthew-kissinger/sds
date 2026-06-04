@@ -58,6 +58,13 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
       const sheepInteractionStrength = interaction.sheepStrength ?? context.sheepInteractionStrength ?? bladeDefaults.sheepInteractionStrength ?? 0.4;
       const interactionRadiusScale = context.isMobile ? 2.0 : 1.6;
       const interactionStrengthScale = context.isMobile ? 1.55 : 1.25;
+      // Cycle 55: unified body-footprint extents. Fall back to the prior
+      // hardcoded node values when a caller does not supply them, so existing
+      // factory-default callers (and their tests) are unaffected.
+      const dogHalfLen = interaction.dogHalfLen ?? context.dogHalfLen ?? bladeDefaults.dogHalfLen ?? 1.65;
+      const sheepHalfLen = interaction.sheepHalfLen ?? context.sheepHalfLen ?? bladeDefaults.sheepHalfLen ?? 0.72;
+      const dogHalfWidth = interaction.dogHalfWid ?? context.dogHalfWidth ?? bladeDefaults.dogHalfWidth ?? 0.78;
+      const sheepHalfWidth = interaction.sheepHalfWid ?? context.sheepHalfWidth ?? bladeDefaults.sheepHalfWidth ?? 0.56;
 
       return createKonveyorGrassBladeNodeMaterial(webGpuModules, {
         baseColor: colorValue(colors.baseColor, context.baseColor ?? bladeDefaults.baseColor, DEFAULT_GRASS_COLORS.baseColor),
@@ -79,6 +86,10 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
         interactionStrength: interactionStrength * interactionStrengthScale,
         sheepInteractionRadius: sheepInteractionRadius * interactionRadiusScale,
         sheepInteractionStrength: sheepInteractionStrength * interactionStrengthScale,
+        dogHalfLen,
+        sheepHalfLen,
+        dogHalfWidth,
+        sheepHalfWidth,
         interactionVisualScale: interaction.visualScale
           ?? context.interactionVisualScale
           ?? bladeDefaults.interactionVisualScale

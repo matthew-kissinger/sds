@@ -4,6 +4,27 @@
 
 ## Recently Completed
 
+### Cycle 55 - `grass-interaction-tuning` (closed 2026-06-04)
+
+Plan archived at [`docs/archive/cycles/cycle-55-plan.md`](archive/cycles/cycle-55-plan.md). Render-only cycle: the grass-parting effect around the dog and sheep was too wide (dog parted a ~4.0m by 6.0m swath, sheep ~2.8m by 3.0m, far larger than either body). Cycle 55 narrowed the parted footprint to hug the body and borrowed the tight push-curve feel from the starred reference repo [boona13/threejs-grass-water-shaders](https://github.com/boona13/threejs-grass-water-shaders).
+
+**Closeout outcomes:**
+
+- **One source of truth.** Added `GrassSystem.config.interaction` (dog/sheep `{halfLen, halfWid, falloff}`, `pushFalloffPower`, `flattenAmount`). The inline WebGL desktop and mobile shaders interpolate it instead of hardcoded extents, and the WebGPU node material reads the same extents through the adapter context and node factory. The two `.glsl` files were marked NON-LIVE BACKUP so they stop drifting.
+- **Narrowed footprint.** Dog `1.1 / 0.45 / 0.6`, sheep `0.4 / 0.3 / 0.4`; dog swath ~4.0m to ~2.3m, sheep ~2.8m to ~1.6m. The outside-body push is now `pow(1 - smoothstep, pushFalloffPower)` with `pushFalloffPower 2.0` (the reference's squared-falloff concentration) plus a `flattenAmount 0.18` press. WebGPU node proximity narrowed via `interactionRadius 2.2 -> 0.9` / `sheepInteractionRadius 2.5 -> 0.62` (these feed only the node proximity and the non-live backup; the live WebGL SDF uses `interaction.*.falloff`).
+- **No rewrite.** Hard Stop #3 respected: the WebGPU node material was parameterized with `?? prior-value` fallbacks, not rewritten; its ellipse model and tuned bend/laydown are intact, and the factory-default node tests stayed green.
+- **Scope held.** No `shared/` change, no SceneDef change, no Worker change, no sim-baseline regeneration. Render-only.
+
+**Validation gates (2026-06-04):**
+
+- `npm test` passed (869 passed, 7 skipped, 0 failed); `npm run build` clean.
+- The `tests/refactor-baseline/__fixtures__/bundle-sizes.json` `mainKB` ratchet was reconciled 542 -> 546. This is **not** a Cycle 55 regression: building `main-*.js` from HEAD (Cycle 55 edits stashed) and from the Cycle 55 tree both produce 558,853 bytes identically. The Cycle 55 edits land only in the lazy-loaded `GrassSystem` chunk (+1.2 KB there, no ratchet); `main.js` grew to ~546 KiB during Cycle 53/54 native-packaging/license work, but the size assertion skips when `dist/` is absent, so those closes never tripped it. `threeKB` (603) unchanged.
+
+**Carryover (deferred):**
+
+- **In-browser visual taste-match** of the narrowed footprint across WebGL desktop, WebGL mobile, and WebGPU (Matt's review). The autonomous run could not composite WebGPU headless to taste-tune; dial `GrassSystem.config.interaction.*` if the swath wants tightening or loosening.
+- **Physical dog-to-sheep / sheep-to-sheep collision** (the "make collision mesh?" idea). Today entity interaction is soft steering only; there is no hard-body collision except dog-to-obstacle. Adding it is a deterministic `shared/` change with sim-baseline and multiplayer cost. Open as a separate `entity-collision` cycle when desired.
+
 ### Cycle 54 - `native-desktop-package-1` (closed 2026-06-04)
 
 Plan archived at [`docs/archive/cycles/cycle-54-plan.md`](archive/cycles/cycle-54-plan.md). Cycle 54 promoted the Cycle 53 Electron shell proof into the first Windows desktop distributor path while preserving SDS's browser-first core architecture.

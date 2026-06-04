@@ -4,6 +4,14 @@
  * Grass Desktop Vertex Shader
  * Full wind animation and entity interaction
  *
+ * NON-LIVE BACKUP. The live desktop grass shader is the inline string built by
+ * GrassSystem.getDesktopVertexShader(); createGrassMaterial() never wires this
+ * file. It uses an older world-axis ellipse interaction model and is kept only
+ * as a fallback load path. Cycle 55 narrowed the live footprint and unified the
+ * extents into GrassSystem.config.interaction; this backup was intentionally
+ * NOT migrated to the oriented rounded-rect SDF, so do not treat it as the
+ * source of truth for interaction width.
+ *
  * Placeholders replaced at runtime:
  * - %MAX_INTERACTORS% - Maximum number of interactors (entities)
  * - %INTERACTION_RADIUS% - Player/dog interaction radius

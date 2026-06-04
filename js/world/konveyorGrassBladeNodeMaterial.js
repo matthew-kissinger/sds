@@ -33,6 +33,13 @@ export function createKonveyorGrassBladeNodeMaterial(
   const interactionStrength = uniform(grassBlade.interactionStrength ?? 0.6);
   const sheepInteractionRadius = uniform(grassBlade.sheepInteractionRadius ?? 2.5);
   const sheepInteractionStrength = uniform(grassBlade.sheepInteractionStrength ?? 0.4);
+  // Cycle 55: body half-extents sourced from the unified GrassSystem.interaction
+  // config (routed via the grass material factory). Fall back to the prior
+  // hardcoded values so callers that omit them keep the previous footprint.
+  const dogHalfLen = grassBlade.dogHalfLen ?? 1.65;
+  const sheepHalfLen = grassBlade.sheepHalfLen ?? 0.72;
+  const dogHalfWidth = grassBlade.dogHalfWidth ?? 0.78;
+  const sheepHalfWidth = grassBlade.sheepHalfWidth ?? 0.56;
   const interactionVisualScaleValue = grassBlade.interactionVisualScale ?? 6.4;
   const interactionLaydownStrength = grassBlade.interactionLaydownStrength ?? 0.85;
   const interactionMaxDisplacementValue = grassBlade.interactionMaxDisplacement ?? 0.95;
@@ -80,8 +87,8 @@ export function createKonveyorGrassBladeNodeMaterial(
     const along = abs(signedAlong);
     const signedAcross = dot(interactorDelta, side);
     const across = abs(signedAcross);
-    const halfLen = mix(1.65, 0.72, entityType);
-    const halfWidth = mix(0.78, 0.56, entityType);
+    const halfLen = mix(dogHalfLen, sheepHalfLen, entityType);
+    const halfWidth = mix(dogHalfWidth, sheepHalfWidth, entityType);
     const bodyDistance = length(vec2(along.div(halfLen), across.div(halfWidth)));
     const activeInteractor = smoothstep(i + 0.5, i + 0.95, interactorCount);
     const radius = mix(interactionRadius, sheepInteractionRadius, entityType);

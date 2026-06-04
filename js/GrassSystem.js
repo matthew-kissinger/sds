@@ -187,11 +187,35 @@ export class GrassSystem {
             windSpeed: 0.6,
             gustStrength: 0.05,
 
-            // Interaction - subtle natural push effect
-            interactionRadius: 2.2,
+            // Interaction - subtle natural push effect.
+            // Cycle 55: the parting-footprint extents and the falloff curve are
+            // the single source of truth here, consumed by the inline WebGL
+            // shaders (getDesktop/MobileVertexShader) and routed to the WebGPU
+            // node material via the adapter context below. Narrowed from the
+            // old ~4m-wide dog / ~2.8m-wide sheep swaths so the parted band hugs
+            // the body, and the falloff is sharpened (pushFalloffPower) so the
+            // push concentrates near the body the way the boona13 reference
+            // push field reads. interactionRadius/sheepInteractionRadius now
+            // feed only the WebGPU node proximity reach (scaled x1.6 desktop /
+            // x2.0 mobile in the node factory) and the non-live .glsl backup;
+            // the live WebGL SDF uses interaction.*.falloff, not these.
+            interactionRadius: 0.9,
             interactionStrength: 0.6,
-            sheepInteractionRadius: 2.5,
+            sheepInteractionRadius: 0.62,
             sheepInteractionStrength: 0.4,
+            interaction: {
+                // Oriented rounded-rect body footprint per entity (metres).
+                // halfLen = along facing, halfWid = sideways, falloff = push
+                // ring outside the body box.
+                dog: { halfLen: 1.1, halfWid: 0.45, falloff: 0.6 },
+                sheep: { halfLen: 0.4, halfWid: 0.3, falloff: 0.4 },
+                // Curve sharpness on the outside-body push. 1.0 == the old
+                // 1-smoothstep falloff; 2.0 == the reference squared falloff
+                // that keeps the parting tight near the body.
+                pushFalloffPower: 2.0,
+                // Downward press applied to bent blades (the "pressed" read).
+                flattenAmount: 0.18,
+            },
             recoverySpeed: 3.0,
             // iOS Safari has ~128 vec4 uniform limit - use small array for mobile
             maxInteractors: isMobile ? 10 : 220,
@@ -598,6 +622,13 @@ export class GrassSystem {
                     strength: this.config.interactionStrength,
                     sheepRadius: this.config.sheepInteractionRadius,
                     sheepStrength: this.config.sheepInteractionStrength,
+                    // Cycle 55: route the unified body-footprint extents so the
+                    // WebGPU node material reads the same source of truth as the
+                    // inline WebGL shaders instead of its own hardcoded extents.
+                    dogHalfLen: this.config.interaction.dog.halfLen,
+                    dogHalfWid: this.config.interaction.dog.halfWid,
+                    sheepHalfLen: this.config.interaction.sheep.halfLen,
+                    sheepHalfWid: this.config.interaction.sheep.halfWid,
                 },
                 fog: {
                     color: this.config.fogColor.clone(),
@@ -632,6 +663,9 @@ export class GrassSystem {
      * Desktop vertex shader with full wind and interaction
      */
     getDesktopVertexShader() {
+        const I = this.config.interaction;
+        const dog = I.dog;
+        const sheep = I.sheep;
         return `
             uniform float time;
             uniform sampler2D noiseTexture;
@@ -777,9 +811,11 @@ export class GrassSystem {
 
                     // Body half-extents per entity type. Dog is elongated
                     // along its facing axis; sheep are roughly square.
-                    float halfLen = entityType < 0.5 ? 1.6 : 0.6; // along forward
-                    float halfWid = entityType < 0.5 ? 0.6 : 0.5; // along right
-                    float falloff = entityType < 0.5 ? 1.4 : 0.9; // outside-body push radius
+                    // Cycle 55: sourced from this.config.interaction (one source
+                    // of truth shared with mobile + the WebGPU node material).
+                    float halfLen = entityType < 0.5 ? ${dog.halfLen.toFixed(2)} : ${sheep.halfLen.toFixed(2)}; // along forward
+                    float halfWid = entityType < 0.5 ? ${dog.halfWid.toFixed(2)} : ${sheep.halfWid.toFixed(2)}; // along right
+                    float falloff = entityType < 0.5 ? ${dog.falloff.toFixed(2)} : ${sheep.falloff.toFixed(2)}; // outside-body push radius
 
                     // Rounded-rect SDF: distance from blade XZ to the body box.
                     // Negative inside, zero on edge, positive outside.
@@ -794,13 +830,16 @@ export class GrassSystem {
                             ? ${this.config.interactionStrength.toFixed(1)}
                             : ${this.config.sheepInteractionStrength.toFixed(1)};
                         // Inside body: full push. Outside: smooth fade to 0.
+                        // pushFalloffPower sharpens the curve so displacement
+                        // concentrates near the body (boona13 squared-falloff
+                        // feel); 1.0 reproduces the old 1-smoothstep falloff.
                         float t = clamp(sdf / falloff, 0.0, 1.0);
-                        float pushStrength = (1.0 - t * t * (3.0 - 2.0 * t)) * strength;
+                        float pushStrength = pow(1.0 - t * t * (3.0 - 2.0 * t), ${I.pushFalloffPower.toFixed(2)}) * strength;
                         vec2 pushDir = length(fromEntity) > 0.001
                             ? normalize(fromEntity)
                             : right;
                         totalPush.xz += pushDir * pushStrength * windPower;
-                        totalPush.y -= pushStrength * 0.1 * windPower;
+                        totalPush.y -= pushStrength * ${I.flattenAmount.toFixed(2)} * windPower;
                     }
                 }
 
@@ -824,6 +863,8 @@ export class GrassSystem {
      * Mobile vertex shader - simplified, no wind animation
      */
     getMobileVertexShader() {
+        const I = this.config.interaction;
+        const dog = I.dog;
         return `
             attribute vec4 bladeData;
 
@@ -891,19 +932,20 @@ export class GrassSystem {
                     vec2 right = vec2(fwd.y, -fwd.x);
                     vec2 fromEntity = vWorldPos.xz - entityPos.xz;
                     vec2 local = vec2(dot(fromEntity, right), dot(fromEntity, fwd));
-                    float halfLen = 1.6;
-                    float halfWid = 0.6;
-                    float falloff = 1.4;
+                    // Cycle 55: dog footprint sourced from this.config.interaction.
+                    float halfLen = ${dog.halfLen.toFixed(2)};
+                    float halfWid = ${dog.halfWid.toFixed(2)};
+                    float falloff = ${dog.falloff.toFixed(2)};
                     vec2 q = abs(local) - vec2(halfWid, halfLen);
                     float sdf = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
                     if (sdf < falloff) {
                         float t = clamp(sdf / falloff, 0.0, 1.0);
-                        float pushStrength = (1.0 - t * t * (3.0 - 2.0 * t)) * interactionStrength;
+                        float pushStrength = pow(1.0 - t * t * (3.0 - 2.0 * t), ${I.pushFalloffPower.toFixed(2)}) * interactionStrength;
                         vec2 pushDir = length(fromEntity) > 0.001
                             ? normalize(fromEntity)
                             : right;
                         totalPush.xz += pushDir * pushStrength * windPower;
-                        totalPush.y -= pushStrength * 0.15 * windPower;
+                        totalPush.y -= pushStrength * ${I.flattenAmount.toFixed(2)} * windPower;
                     }
                 }
 

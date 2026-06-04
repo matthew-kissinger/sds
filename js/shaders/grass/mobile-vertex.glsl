@@ -4,6 +4,13 @@
  * Grass Mobile Vertex Shader
  * Simplified version - no wind animation for better performance
  *
+ * NON-LIVE BACKUP. The live mobile grass shader is the inline string built by
+ * GrassSystem.getMobileVertexShader(); createGrassMaterial() never wires this
+ * file. It uses an older interaction-radius model and is kept only as a
+ * fallback load path. Cycle 55 narrowed the live footprint and unified the
+ * extents into GrassSystem.config.interaction; this backup was intentionally
+ * NOT migrated, so do not treat it as the source of truth for interaction width.
+ *
  * Placeholders replaced at runtime:
  * - %MAX_INTERACTORS% - Maximum number of interactors (entities)
  */
