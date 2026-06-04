@@ -470,6 +470,7 @@ class SheepDogSimulation {
         // without the cinematic flag's preserveDrawingBuffer side-effect.
         // Read-only references; no mutation hooks.
         window.__sds = window.__sds || {};
+        window.__sds.gameInstanceRef = this;
         window.__sds.sceneManagerRef = this.sceneManager;
         window.__sds.atmosphereRef = this.atmosphere;
         window.__sds.terrainBuilderRef = this.terrainBuilder;
@@ -579,6 +580,8 @@ class SheepDogSimulation {
         
         // Animation timing
         this.lastTime = performance.now();
+        this._lastFrameTickAt = this.lastTime;
+        this._frameWatchdogId = null;
         
         // Multiplayer state — networkManager is now assigned earlier (right
         // after MenuController creation, alongside the MP probe install) so
@@ -683,6 +686,7 @@ class SheepDogSimulation {
                     console.error('[GAME] Game initialization failed:', error);
                 });
             this.animate();
+            this.startFrameWatchdog();
         }
     }
     
@@ -1518,7 +1522,7 @@ class SheepDogSimulation {
         
         // Start the game state (this will set the correct sheep count)
         // For multiplayer games, we'll set the specific game mode (competitive/timed) later when we have the data
-        this.gameState.startGame(mode, null, singlePlayerMode);
+        this.gameState.startGame(mode, null, singlePlayerMode, { skipVisibleFlockReset: true });
 
         // Reset terrain builder to default bounds (in case switching from sandbox)
         if (this.terrainBuilder) {
@@ -1528,9 +1532,9 @@ class SheepDogSimulation {
             );
         }
 
-        // Check if we need to recreate the sheep flock due to count change
+        // Check if we need to recreate the sheep flock after the mode handoff
         if (this.gameState.needsFlockRecreation) {
-            console.log(`Recreating sheep flock due to count change`);
+            console.log('Recreating sheep flock for mode start');
             this.gameState.recreateSheepFlock(this.sceneManager.getScene());
             this.gameState.needsFlockRecreation = false; // Reset flag
             // Refresh sheep triangle estimate for the PERF overlay.
@@ -2242,18 +2246,36 @@ class SheepDogSimulation {
         }
     }
     
+    startFrameWatchdog() {
+        if (this._frameWatchdogId != null) return;
+        this._frameWatchdogId = window.setInterval(() => {
+            const now = performance.now();
+            if (now - (this._lastFrameTickAt ?? now) < 120) return;
+            if (!this.gameState?.gameActive && !this._attractMode && !this._sceneRebuilding) return;
+
+            const deltaTime = Math.min((now - this.lastTime) / 1000, 0.05);
+            this.lastTime = now;
+            this._lastFrameTickAt = now;
+            const renderInFlight = this.sceneManager.renderStatus.inFlight;
+            const frameResult = this.runFrame(deltaTime, { skipRender: renderInFlight });
+            if (frameResult && typeof frameResult.catch === 'function') {
+                frameResult.catch((err) => {
+                    console.error('[RENDER] Watchdog frame step failed:', err);
+                });
+            }
+        }, 50);
+    }
+
     animate() {
         requestAnimationFrame(() => this.animate());
-
-        if (this.sceneManager.renderStatus.inFlight) {
-            return;
-        }
 
         const currentTime = performance.now();
         const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.05);
         this.lastTime = currentTime;
+        this._lastFrameTickAt = currentTime;
 
-        const frameResult = this.runFrame(deltaTime);
+        const renderInFlight = this.sceneManager.renderStatus.inFlight;
+        const frameResult = this.runFrame(deltaTime, { skipRender: renderInFlight });
         if (frameResult && typeof frameResult.catch === 'function') {
             frameResult.catch((err) => {
                 console.error('[RENDER] Frame step failed:', err);
@@ -2261,7 +2283,7 @@ class SheepDogSimulation {
         }
     }
 
-    runFrame(deltaTime) {
+    runFrame(deltaTime, options = {}) {
         // Cycle 11 Phase 1: hard early-out while disposeScene/rebuildScene is
         // mid-flight. Renderer + scene + camera persist across swaps, so a
         // single render keeps the canvas alive under the SceneSwapOverlay.
@@ -2273,7 +2295,7 @@ class SheepDogSimulation {
             // below takes over. The boot reveal (Cycle 52 P2) arms its backdrop
             // layer post-build and does not suppress here; normal swaps render
             // under the SceneSwapOverlay as before.
-            if (this._revealActive) return false;
+            if (this._revealActive || options.skipRender) return false;
             try { return this.sceneManager?.render?.(); } catch {}
             return false;
         }
@@ -2311,7 +2333,7 @@ class SheepDogSimulation {
                     this.atmosphere.syncCamera(this.sceneManager.getCamera().position);
                     this.atmosphere.update(deltaTime);
                 }
-                return this.sceneManager.render();
+                return options.skipRender ? false : this.sceneManager.render();
             } catch (err) {
                 console.error('[ATTRACT] frame failed:', err);
                 return false;
@@ -2528,7 +2550,7 @@ class SheepDogSimulation {
         }
 
         // Render the scene (always render to show pause indicator)
-        const renderResult = this.sceneManager.render();
+        const renderResult = options.skipRender ? false : this.sceneManager.render();
 
         // Cycle 9 Phase 4: framebuffer samples to detect the "ground
         // rendered white" failure mode on Safari/Metal. Take two:

@@ -1,18 +1,18 @@
 # Native Desktop Package - Cycle 54
 
-Status: WebGL distributor proof pass with WebGPU no-go handoff on 2026-06-04. This document records the Windows desktop distributor path added after the Cycle 53 shell proof. It does not authorize Steam submission, signing release controls, paid store setup, Steamworks SDK features, public unsigned distribution, or a default-renderer change.
+Status: WebGL and WebGPU distributor proofs pass on 2026-06-04. This document records the Windows desktop distributor path added after the Cycle 53 shell proof. It does not authorize Steam submission, signing release controls, paid store setup, Steamworks SDK features, public unsigned distribution, or a default-renderer change.
 
 ## Summary
 
 Cycle 54 promotes SDS's Electron shell from proof-only packaging to a Windows distributor path. The package lives in `native/desktop-electron/`, uses electron-builder, and still runs the built web game from `dist/` through the privileged `sds://app` protocol.
 
-Current result: the package path is real and WebGL play proof is green. Packaged WebGPU is a no-go handoff, not a green gate. The WebGPU report shows the renderer and scene body reach production WebGPU without fallback, but the UI remains on the loading surface and never reaches the gameplay HUD.
+Current result: the package path is real, WebGL play proof is green, and packaged production WebGPU play proof is green on this Windows host. The proof also verifies that the native window is resizable and that SDS resizes with it: Electron content size changes to `1040x640`, the page viewport follows, the canvas matches the viewport, and the camera aspect matches the resized window.
 
 The intended Windows artifacts are local proof outputs under `cycle54-validation/desktop-electron/artifacts/`:
 
 - `win-unpacked/Sheep Dog Simulator.exe`
-- `SheepDogSimulator-2.2.0-setup-x64.exe` - 242,117,516 bytes
-- `SheepDogSimulator-2.2.0-portable-x64.exe` - 218,426,698 bytes
+- `SheepDogSimulator-2.2.0-setup-x64.exe` - 242,122,782 bytes
+- `SheepDogSimulator-2.2.0-portable-x64.exe` - 218,431,930 bytes
 
 ## Package Path
 
@@ -64,31 +64,35 @@ The proof writes:
 
 | Gate | WebGL package result | WebGPU package result |
 |---|---|---|
-| Installer artifact | Pass: `artifacts.setup` present | Present in failure report |
-| Portable artifact | Pass: `artifacts.portable` present | Present in failure report |
-| Unpacked executable | Pass: `artifacts.unpackedExeExists=true` | Present in failure report |
+| Installer artifact | Pass: `artifacts.setup` present | Pass: `artifacts.setup` present |
+| Portable artifact | Pass: `artifacts.portable` present | Pass: `artifacts.portable` present |
+| Unpacked executable | Pass: `artifacts.unpackedExeExists=true` | Pass: `artifacts.unpackedExeExists=true` |
 | Signing posture | Pass: `signing.mode=unsigned-local-signing-ready` | Same |
 | Packaged boot | Pass: `packaged=true`, `protocol=sds://app` | Pass: `packaged=true`, `protocol=sds://app` |
-| Renderer | Pass: `effective=webgl`, no fallback | Partial: `effective=webgpu-production`, `devicePreflight.ok=true`, no fallback |
-| Nonblank gameplay | Pass: `screenshotNonblank=true` | No-go: gameplay HUD never appears |
-| Fullscreen | Pass: `fullscreen.entered=true`, `fullscreen.exited=true` | Not reached |
-| Pointer lock | Pass: `pointerLock.locked=true` | Not reached |
-| Keyboard/mouse response | Pass: visual diff changed | Not reached |
-| Gamepad surface | Pass: `gamepad.apiAvailable=true` | Not reached |
-| Audio unlock | Pass: `audio.resumed=true` | Not reached |
-| Storage persistence | Pass: `storage.beforeReloadValue=before-reload` | Not reached |
-| Worker health | Pass: `workerHealth.ok=true` | Not reached |
-| SDS WebSocket | Pass: `webSocket.ok=true` | Not reached |
-| Logs/crash path | Pass: `logs.logExists=true`, `logs.crashDumpDirExists=true` | Pass: logs/crash path exists in failure report |
+| Renderer | Pass: `effective=webgl`, no fallback | Pass: `effective=webgpu-production`, `devicePreflight.ok=true`, no fallback |
+| Nonblank gameplay | Pass: `screenshotNonblank=true` | Pass: `screenshotNonblank=true` |
+| Fullscreen | Pass: `fullscreen.entered=true`, `fullscreen.exited=true` | Pass: same |
+| Native resize | Pass: `resize.viewportMatchesRequested=true`, `resize.canvasMatchesWindow=true`, `resize.cameraAspectMatchesWindow=true` | Pass: same |
+| Sheep startup motion | Pass: `sheepMotion.motionAdvancedEnough=true` | Pass: `sheepMotion.motionAdvancedEnough=true` |
+| Pointer lock | Pass: `pointerLock.locked=true` | Pass: `pointerLock.locked=true` |
+| Keyboard/mouse response | Pass: visual diff changed | Pass: visual diff changed |
+| Gamepad surface | Pass: `gamepad.apiAvailable=true` | Pass: `gamepad.apiAvailable=true` |
+| Audio unlock | Pass: `audio.resumed=true` | Pass: `audio.resumed=true` |
+| Storage persistence | Pass: `storage.beforeReloadValue=before-reload` | Pass: same |
+| Worker health | Pass: `workerHealth.ok=true` | Pass: `workerHealth.ok=true` |
+| SDS WebSocket | Pass: `webSocket.ok=true` | Pass: `webSocket.ok=true` |
+| Logs/crash path | Pass: `logs.logExists=true`, `logs.crashDumpDirExists=true` | Pass: same |
 
 ## Current Evidence
 
-`desktop-electron-proof-webgl.json` records `ok=true`, `sceneId=rolling-hills`, WebGL renderer, nonblank screenshot standard deviation `64.0861`, p95 frame time `14ms`, Worker health `200`, and an authenticated SDS room WebSocket open.
+`desktop-electron-proof-webgl.json` records `ok=true` at `2026-06-04T03:31:29.259Z`, `sceneId=rolling-hills`, WebGL renderer, nonblank gameplay, native resize pass, p95 frame time `21ms`, Worker health `200`, authenticated SDS room WebSocket open, and zero fatal console errors.
 
-`desktop-electron-proof-webgpu.json` records `ok=false`. The runtime snapshot is useful: `effective=webgpu-production`, `productionWebGpu.ok=true`, `devicePreflight.ok=true`, `rendererReady=true`, `rendererIsWebGpu=true`, `canvasAttached=true`, and no fatal console errors. The visible overlay text remains `Rolling Hills / Jep - Classic / Gathering the flock / 100%`, `overlayHasHud=false`, `overlayHasPlayControl=false`, and no buttons are visible. Treat this as a WebGPU loading handoff bug in the packaged distributor path.
+`desktop-electron-proof-webgpu.json` records `ok=true` at `2026-06-04T03:30:57.983Z`. It proves `effective=webgpu-production`, `productionWebGpu.ok=true`, `devicePreflight.ok=true`, `rendererReady=true`, `rendererIsWebGpu=true`, no fallback, gameplay HUD present, nonblank screenshot, native resize pass, Worker health `200`, authenticated SDS room WebSocket open, and zero fatal console errors.
+
+Both proofs sample the first 40 sheep after gameplay starts. The final WebGL proof records `startupVisualReady=40`, `simMoved=39`, `renderMoved=39`, `visualAdvanced=40`, and `motionAdvancedEnough=true`. The final WebGPU proof records `startupVisualReady=40`, `simMoved=40`, `renderMoved=40`, `visualAdvanced=40`, and `motionAdvancedEnough=true`.
 
 ## Go / No-Go Handoff
 
-Go for a local WebGL-only Steam depot dry-run if that scope is accepted: the package artifacts exist, WebGL boots and plays, logs/crash paths exist, and Cloudflare Worker/WebSocket proof passes.
+Go for a local Steam depot dry-run if that scope is accepted: the package artifacts exist, WebGL and WebGPU boot and play, resize/fullscreen/input/audio/storage work, logs/crash paths exist, and Cloudflare Worker/WebSocket proof passes.
 
-No-go for explicit desktop WebGPU readiness and no-go for public Steam submission. Remaining Steam work: WebGPU loading handoff decision/fix, signed build decision, support/privacy URLs, store metadata, screenshots and capsule assets, depot layout, install/uninstall pass, controller notes, cloud-save decision, and whether multiplayer stays on Cloudflare Worker/Durable Objects without Steam networking.
+No-go for public Steam submission. Remaining Steam work: signed build decision, support/privacy URLs, store metadata, screenshots and capsule assets, depot layout, install/uninstall pass, controller notes, cloud-save decision, and whether multiplayer stays on Cloudflare Worker/Durable Objects without Steam networking.

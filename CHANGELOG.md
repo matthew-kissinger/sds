@@ -32,11 +32,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   touch input, and explicit WebGL. Explicit Android WebGPU fell back cleanly to
   WebGL with `webgpu-adapter-unavailable`.
 
-### Notes
-
-- All versions up to and including `v2.1.10` were released under MIT and remain
-  available under MIT from their historical commits, tags, and releases.
-
 ## [2.1.10] - 2026-05-28 (Cycle 42 - WebGPU material parity)
 
 Patch release for WebGPU scene-material parity after the Cycle 41 sun/water fix.

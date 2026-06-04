@@ -133,7 +133,7 @@ This is mostly sequential (the tree LOD work gates everything else). Phases 2 + 
 
 - **Don't touch sim physics** — same boundary as Cycle 14, 15.
 - **Don't migrate to TSL or WebGPU** — still deferred. The tree LOD math + leaf shaders port cleanly when the time comes, but the port is its own cycle.
-- **Don't replace EZ-Tree with the [Procedural Instanced Forest](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610)** unless Phase 1's `addLOD` approach demonstrably fails to hit the perf target. PIF is in the long-tail bucket — interesting, MIT-licensed, has WebGPU port, but a different pipeline + aesthetic from the EZ-Tree investment.
+- **Don't replace EZ-Tree with the [Procedural Instanced Forest](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610)** unless Phase 1's `addLOD` approach demonstrably fails to hit the perf target. PIF is in the long-tail bucket - interesting, permissively licensed, has WebGPU port, but a different pipeline + aesthetic from the EZ-Tree investment.
 - **Don't rebuild flora from scratch** until Q4's tuning-first approach is tried — bumping `oversampleFraction` + `targetHeight` is 5min of code; building `bake-flora.mjs` is 3-4hr.
 - **Don't tag `v1.1.0` until Phases 1-4 land cleanly** — the marketing surface has to land on a perf-clean polished world.
 - **Don't ship hero cards from a regressed-perf build** — the OG cards are the user's first impression; they have to load fast on a marginal device.
@@ -160,5 +160,5 @@ This is mostly sequential (the tree LOD work gates everything else). Phases 2 + 
 - [`docs/archive/cycles/cycle-15-plan.md`](archive/cycles/cycle-15-plan.md) — prior cycle plan (visuals polish + harness scaffold).
 - [`docs/tree-pipeline.md`](tree-pipeline.md) — Cycle 15's seed→GLB tree pipeline contract (still applies; LOD authoring extends but doesn't replace it).
 - [`tools/asset-gallery/README.md`](../tools/asset-gallery/README.md) — bake-and-pick workflow.
-- [Procedural Instanced Forest (red-reddington)](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610) — alternative path; MIT-licensed; vertex-shader leaf cull is a clever trick worth borrowing even if we keep EZ-Tree.
+- [Procedural Instanced Forest (red-reddington)](https://discourse.threejs.org/t/procedural-instanced-forest-high-performance-real-trees/88610) - alternative path; permissively licensed; vertex-shader leaf cull is a clever trick worth borrowing even if we keep EZ-Tree.
 - [@three.ez/instanced-mesh `addLOD` API](https://github.com/agargaro/instanced-mesh) — the LOD primitive Phase 1 wires in.

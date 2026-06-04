@@ -2,7 +2,7 @@
 
 > **Updated:** 2026-06-04
 > **For:** Active `native-desktop-package-1` cycle after the `v2.2.0` release close.
-> **Pickup priority:** Decide whether to fix the packaged WebGPU loading handoff next or run a WebGL-only Steam depot dry-run. Start from [`docs/cycle-54-plan.md`](docs/cycle-54-plan.md) and [`docs/native-desktop-package-cycle-54.md`](docs/native-desktop-package-cycle-54.md).
+> **Pickup priority:** Move from native desktop proof to Steam/store preparation: signing decision, Steam depot dry-run, install/uninstall QA, metadata, screenshots/capsules, controller notes, and release-channel policy. Start from [`docs/cycle-54-plan.md`](docs/cycle-54-plan.md), [`docs/native-desktop-package-cycle-54.md`](docs/native-desktop-package-cycle-54.md), and [`docs/native-store-steam-readiness-checklist.md`](docs/native-store-steam-readiness-checklist.md).
 
 ## Cold-Start Orientation
 
@@ -14,13 +14,13 @@ Cycle 54 is open as `native-desktop-package-1`. Do not touch `shared/` or sim-ba
 
 **Cycle 53 closed 2026-06-03 as `native-shell-proof-1`.** The archived plan is [`docs/archive/cycles/cycle-53-plan.md`](docs/archive/cycles/cycle-53-plan.md), and the proof report is [`docs/native-shell-proof-cycle-53.md`](docs/native-shell-proof-cycle-53.md). SDS now has a green native preflight, a packaged Windows Electron proof, and a Capacitor Android debug APK proof without changing the core web game architecture.
 
-**Renderer status is split by cycle and shell.** Cycle 53's proof-only Electron shell passed explicit WebGL and true production WebGPU. Cycle 54's distributor-grade Electron package now passes explicit WebGL, but packaged WebGPU is a current no-go: the report records `effective=webgpu-production`, `devicePreflight.ok=true`, `rendererReady=true`, and `canvasAttached=true`, then the UI remains on `Gathering the flock 100%` with no HUD. Capacitor Android passed explicit WebGL on an API 35 emulator; explicit WebGPU detected the API but fell back to WebGL because no adapter was available. Do not claim current packaged desktop WebGPU readiness until the Cycle 54 loading handoff is fixed and `proof:webgpu` is green.
+**Renderer status is green for the packaged Windows desktop path.** Cycle 54's distributor-grade Electron package now passes explicit WebGL and true production WebGPU from the packaged executable. Both reports cover app protocol boot, gameplay HUD, sheep startup motion, fullscreen, native window resize, pointer lock, audio unlock, storage, virtual gamepad API, Worker health, authenticated SDS WebSocket, logs/crash paths, and zero fatal console errors. Capacitor Android passed explicit WebGL on an API 35 emulator; explicit WebGPU detected the API but fell back to WebGL because no adapter was available. True mobile WebGPU is still not claimed.
 
-**`v2.2.0` is the forward-only license transition release.** Current source is AGPL-3.0-or-later. Current non-code assets are CC BY-SA 4.0. All versions up to and including `v2.1.10` were released under MIT and remain available under MIT from their historical commits, tags, and releases. The running game has visible AGPL source notices on the about page, start/loading flow, and HUD.
+**`v2.2.0` is the forward-only license transition release.** Current source is AGPL-3.0-or-later. Current non-code assets are CC BY-SA 4.0. Earlier versions retain the license terms recorded in their historical commits, tags, and releases. The running game has visible AGPL source notices on the about page, start/loading flow, and HUD.
 
 ## Active Cycle 54 Work
 
-**Primary direction:** Desktop/Steam preparation. The Windows Electron distributor path exists with app identity, icon, electron-builder outputs, signing-ready posture, logs/crash paths, packaged WebGL proof, and Steam-prep handoff. The remaining blocker is packaged WebGPU loading handoff proof.
+**Primary direction:** Desktop/Steam preparation. The Windows Electron distributor path exists with app identity, icon, electron-builder outputs, signing-ready posture, logs/crash paths, packaged WebGL/WebGPU proof, resize proof, and Steam-prep handoff. The remaining blockers are store/release work: signing decision, Steam metadata, depot layout, install/uninstall QA, screenshots/capsules, controller notes, cloud-save decision, and release-channel policy.
 
 **Implementation surface:** [`native/desktop-electron/`](native/desktop-electron/) plus root npm scripts:
 
@@ -31,9 +31,9 @@ npm --prefix native/desktop-electron run proof:webgl
 npm --prefix native/desktop-electron run proof:webgpu
 ```
 
-**Generated local artifacts:** `cycle54-validation/desktop-electron/artifacts/win-unpacked/Sheep Dog Simulator.exe`, `SheepDogSimulator-2.2.0-setup-x64.exe` (242,117,516 bytes), and `SheepDogSimulator-2.2.0-portable-x64.exe` (218,426,698 bytes). Local Authenticode status is `NotSigned` by design.
+**Generated local artifacts:** `cycle54-validation/desktop-electron/artifacts/win-unpacked/Sheep Dog Simulator.exe`, `SheepDogSimulator-2.2.0-setup-x64.exe` (242,122,782 bytes), and `SheepDogSimulator-2.2.0-portable-x64.exe` (218,431,930 bytes). Local Authenticode status is `NotSigned` by design.
 
-**Latest proof reports:** `cycle54-validation/desktop-electron/reports/desktop-electron-proof-webgl.json` is green. `cycle54-validation/desktop-electron/reports/desktop-electron-proof-webgpu.json` is a no-go handoff with a runtime snapshot; WebGPU is available, but gameplay HUD never appears.
+**Latest proof reports:** `cycle54-validation/desktop-electron/reports/desktop-electron-proof-webgl.json` and `cycle54-validation/desktop-electron/reports/desktop-electron-proof-webgpu.json` are green. The latest WebGL report was captured at `2026-06-04T03:31:29.259Z`; the latest WebGPU report was captured at `2026-06-04T03:30:57.983Z`.
 
 ## Working Contract
 

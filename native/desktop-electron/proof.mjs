@@ -31,6 +31,7 @@ const preInputPath = resolve(reportRoot, `desktop-electron-input-before-${render
 const postInputPath = resolve(reportRoot, `desktop-electron-input-after-${rendererArg}.png`);
 let activePage = null;
 let activeFatalErrors = [];
+let activeConsoleMessages = [];
 let activeUserData = null;
 
 function rel(path) {
@@ -204,10 +205,52 @@ async function collectRuntimeSnapshot(page) {
     const overlayText = document.querySelector('#react-overlay')?.textContent || '';
     const sceneManager = window.__sds?.sceneManagerRef ?? null;
     const renderer = sceneManager?.getRenderer?.() ?? null;
+    const game = window.__sds?.gameInstanceRef ?? null;
+    const gameState = game?.gameState ?? null;
+    const menuController = game?.menuController ?? null;
+    const sheepSystem = gameState?.optimizedSheepSystem ?? null;
+    const sheep = Array.isArray(sheepSystem?.sheep) ? sheepSystem.sheep : [];
+    const sampleSheep = sheep.slice(0, 20).map((entry) => ({
+      id: entry?.id ?? null,
+      state: entry?.state ?? null,
+      x: entry?.position?.x ?? null,
+      z: entry?.position?.z ?? null,
+      renderX: entry?.renderPosition?.x ?? null,
+      renderZ: entry?.renderPosition?.z ?? null,
+      speed: entry?.velocity?.magnitude?.() ?? null,
+      currentSpeed: entry?.currentSpeed ?? null,
+      walkCycle: entry?.walkCycle ?? null
+    }));
     return {
       sceneId: window.__currentSceneId || null,
       rendererMode: window.__sdsRendererMode ?? null,
       productionWebGpu: window.__sdsG?.productionWebGpu ?? null,
+      boot: {
+        loadStep: window.__sdsLoadStep ?? null,
+        bootLoading: window.__sdsBootLoading ?? null,
+        revealArmed: window.__sdsRevealArmed ?? null,
+        attractActive: window.__sdsAttractActive ?? null,
+        attractCrossfadeActive: window.__sdsAttractCrossfadeActive ?? null
+      },
+      game: {
+        gameInstanceExposed: !!game,
+        initialized: game?.isInitialized ?? null,
+        gameMode: game?.gameMode ?? null,
+        singlePlayerMode: game?.singlePlayerMode ?? null,
+        sceneRebuilding: game?._sceneRebuilding ?? null,
+        gameActive: gameState?.isGameActive?.() ?? null,
+        gameActiveFlag: gameState?.gameActive ?? null,
+        totalSheep: gameState?.totalSheep ?? null,
+        sheepRetired: gameState?.sheepRetired ?? null,
+        sheepCount: sheep.length,
+        menuActive: menuController?.isActive ?? null,
+        menuGameStarted: menuController?.gameStarted ?? null,
+        menuSelectedMode: menuController?.selectedMode ?? null,
+        menuSinglePlayerMode: menuController?.singlePlayerMode ?? null,
+        sheepMeshCount: sheepSystem?.instancedMesh?.count ?? null,
+        sheepMaterialSummary: sheepSystem?.konveyorSheepMaterialSummary ?? null,
+        sampleSheep
+      },
       renderer: {
         className: renderer?.constructor?.name ?? null,
         isWebGLRenderer: renderer?.isWebGLRenderer === true,
@@ -254,6 +297,7 @@ async function writeFailure(err, context = {}) {
       logExists: existsSync(resolve(userData, 'logs/sds-desktop.log')),
       crashDumpDirExists: existsSync(resolve(userData, 'crash-dumps'))
     } : null,
+    consoleMessages: activeConsoleMessages.slice(-200),
     fatalErrors: activeFatalErrors,
     ok: false,
     error: String(err?.stack || err)
@@ -373,6 +417,207 @@ async function installVirtualGamepad(page) {
   });
 }
 
+async function focusNativeWindow(app, page) {
+  await app.evaluate(async ({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    win.show();
+    win.focus();
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    return win.isFocused();
+  });
+  await page.bringToFront();
+  await page.evaluate(() => window.focus());
+}
+
+async function proveNativeResize(app, page) {
+  const requested = { width: 1040, height: 640 };
+  const restoredSize = { width: 1280, height: 720 };
+  const before = await app.evaluate(async ({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (win.isFullScreen()) {
+      win.setFullScreen(false);
+      for (let i = 0; i < 20 && win.isFullScreen(); i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+    return {
+      bounds: win.getBounds(),
+      contentBounds: win.getContentBounds(),
+      contentSize: win.getContentSize(),
+      fullScreen: win.isFullScreen(),
+      resizable: win.isResizable()
+    };
+  });
+
+  const resizedWindow = await app.evaluate(async ({ BrowserWindow }, size) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (win.isFullScreen()) {
+      win.setFullScreen(false);
+      for (let i = 0; i < 20 && win.isFullScreen(); i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+    win.setContentSize(size.width, size.height, true);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    return {
+      bounds: win.getBounds(),
+      contentBounds: win.getContentBounds(),
+      contentSize: win.getContentSize(),
+      fullScreen: win.isFullScreen(),
+      resizable: win.isResizable()
+    };
+  }, requested);
+
+  await page.waitForFunction((size) => (
+    Math.abs(window.innerWidth - size.width) <= 4
+    && Math.abs(window.innerHeight - size.height) <= 4
+  ), requested, { timeout: 5000 }).catch(() => null);
+  const resizedCanvas = await page.evaluate(() => new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      const canvas = document.querySelector('#canvas-container canvas');
+      const rect = canvas?.getBoundingClientRect();
+      const game = window.__sds?.gameInstanceRef;
+      const camera = game?.sceneManager?.getCamera?.();
+      resolve({
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio,
+        canvasWidth: canvas?.width ?? null,
+        canvasHeight: canvas?.height ?? null,
+        rectWidth: rect ? Math.round(rect.width) : null,
+        rectHeight: rect ? Math.round(rect.height) : null,
+        cameraAspect: camera?.aspect ?? null
+      });
+    });
+  }));
+
+  const restoredWindow = await app.evaluate(async ({ BrowserWindow }, size) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    win.setContentSize(size.width, size.height, true);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    return {
+      bounds: win.getBounds(),
+      contentBounds: win.getContentBounds(),
+      contentSize: win.getContentSize()
+    };
+  }, restoredSize);
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+
+  const widthDelta = Math.abs((resizedCanvas.rectWidth ?? 0) - resizedCanvas.innerWidth);
+  const heightDelta = Math.abs((resizedCanvas.rectHeight ?? 0) - resizedCanvas.innerHeight);
+  const viewportWidthDelta = Math.abs(resizedCanvas.innerWidth - requested.width);
+  const viewportHeightDelta = Math.abs(resizedCanvas.innerHeight - requested.height);
+  const expectedAspect = resizedCanvas.innerWidth / resizedCanvas.innerHeight;
+  const cameraAspectDelta = Math.abs((resizedCanvas.cameraAspect ?? 0) - expectedAspect);
+
+  return {
+    requested,
+    restoredSize,
+    before,
+    resized: resizedWindow,
+    restored: restoredWindow,
+    canvas: resizedCanvas,
+    changed: Math.abs(resizedWindow.contentSize[0] - before.contentSize[0]) >= 20
+      || Math.abs(resizedWindow.contentSize[1] - before.contentSize[1]) >= 20,
+    viewportMatchesRequested: viewportWidthDelta <= 4 && viewportHeightDelta <= 4,
+    canvasMatchesWindow: widthDelta <= 2 && heightDelta <= 2,
+    cameraAspectMatchesWindow: cameraAspectDelta < 0.01
+  };
+}
+
+async function sampleSheepMotion(page) {
+  const readSample = async () => page.evaluate(() => {
+    const sheep = window.__sds?.gameInstanceRef?.gameState?.optimizedSheepSystem?.sheep;
+    const frameCount = window.__sds?.gameInstanceRef?.performanceMonitor?.frameCount ?? null;
+    if (!Array.isArray(sheep)) return [];
+    return {
+      frameCount,
+      sheep: sheep.slice(0, 40).map((entry) => ({
+        id: entry?.id ?? null,
+        x: entry?.position?.x ?? null,
+        z: entry?.position?.z ?? null,
+        renderX: entry?.renderPosition?.x ?? null,
+        renderZ: entry?.renderPosition?.z ?? null,
+        speed: entry?.velocity?.magnitude?.() ?? null,
+        currentSpeed: entry?.currentSpeed ?? null,
+        visualSpeed: entry?.visualSpeed ?? null,
+        visualBounceAmount: entry?.visualBounceAmount ?? null,
+        walkCycle: entry?.walkCycle ?? null,
+        startupVisualTime: entry?.startupVisualTime ?? null
+      }))
+    };
+  });
+
+  const attempts = [];
+  let lastResult = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const before = await readSample();
+    await page.waitForTimeout(1200);
+    const after = await readSample();
+    const beforeSheep = before.sheep || [];
+    const afterSheep = after.sheep || [];
+    const afterById = new Map(afterSheep.map((entry) => [entry.id, entry]));
+    let simMoved = 0;
+    let renderMoved = 0;
+    let visualAdvanced = 0;
+    let startupVisualReady = 0;
+    for (const entry of beforeSheep) {
+      const next = afterById.get(entry.id);
+      if (!next) continue;
+      const dx = (next.x ?? 0) - (entry.x ?? 0);
+      const dz = (next.z ?? 0) - (entry.z ?? 0);
+      const rdx = (next.renderX ?? 0) - (entry.renderX ?? 0);
+      const rdz = (next.renderZ ?? 0) - (entry.renderZ ?? 0);
+      const walkDelta = (next.walkCycle ?? 0) - (entry.walkCycle ?? 0);
+      if (Math.hypot(dx, dz) > 0.005) simMoved += 1;
+      if (Math.hypot(rdx, rdz) > 0.005) renderMoved += 1;
+      if ((entry.visualSpeed ?? 0) > 0.02 && (entry.visualBounceAmount ?? 0) > 0.002) startupVisualReady += 1;
+      if (Math.abs(walkDelta) > 0.02) visualAdvanced += 1;
+    }
+    const sampleCount = beforeSheep.length;
+    const minimumVisual = sampleCount > 0 ? Math.ceil(sampleCount * 0.75) : 1;
+    const frameAdvanced = Number.isFinite(before.frameCount)
+      && Number.isFinite(after.frameCount)
+      && after.frameCount > before.frameCount;
+    lastResult = {
+      durationMs: 1200,
+      sampleCount,
+      frameCountBefore: before.frameCount,
+      frameCountAfter: after.frameCount,
+      frameAdvanced,
+      simMoved,
+      renderMoved,
+      visualAdvanced,
+      startupVisualReady,
+      startupVisualReadyEnough: startupVisualReady >= minimumVisual,
+      visualAdvancedEnough: visualAdvanced >= minimumVisual,
+      motionAdvancedEnough: frameAdvanced
+        && renderMoved >= minimumVisual
+        && visualAdvanced >= minimumVisual,
+      before: beforeSheep.slice(0, 10),
+      after: afterSheep.slice(0, 10)
+    };
+    attempts.push({
+      frameCountBefore: lastResult.frameCountBefore,
+      frameCountAfter: lastResult.frameCountAfter,
+      frameAdvanced,
+      simMoved,
+      renderMoved,
+      visualAdvanced,
+      startupVisualReady,
+      startupVisualReadyEnough: lastResult.startupVisualReadyEnough,
+      visualAdvancedEnough: lastResult.visualAdvancedEnough,
+      motionAdvancedEnough: lastResult.motionAdvancedEnough
+    });
+    if (lastResult.motionAdvancedEnough) break;
+  }
+
+  return {
+    ...lastResult,
+    attempts
+  };
+}
+
 async function run() {
   await mkdir(reportRoot, { recursive: true });
 
@@ -410,10 +655,17 @@ async function run() {
 
   const fatalErrors = [];
   activeFatalErrors = fatalErrors;
+  activeConsoleMessages = [];
   try {
     const page = await app.firstWindow();
     activePage = page;
     page.on('console', (msg) => {
+      activeConsoleMessages.push({
+        type: msg.type(),
+        text: msg.text(),
+        time: new Date().toISOString()
+      });
+      if (activeConsoleMessages.length > 300) activeConsoleMessages.shift();
       if (msg.type() !== 'error') return;
       const text = msg.text();
       if (!ignored(text)) fatalErrors.push(text);
@@ -453,10 +705,7 @@ async function run() {
     const play = page.getByRole('button', { name: 'Play', exact: true });
     await expect(play).toBeVisible({ timeout: 15_000 });
     await waitForRuntimeReady(page, rendererArg);
-    await play.evaluate((button) => button.click());
-    if (rendererArg === 'webgpu') {
-      await page.waitForTimeout(20_000);
-    }
+    await play.click({ force: true, timeout: 15_000 });
 
     const canvas = page.locator('#canvas-container canvas');
     await expect(canvas).toBeAttached({ timeout: 90_000 });
@@ -473,7 +722,8 @@ async function run() {
       expect(state.width).toBeGreaterThan(100);
       expect(state.height).toBeGreaterThan(100);
     }).toPass({ timeout: 60_000 });
-
+    const resize = await proveNativeResize(app, page);
+    await focusNativeWindow(app, page);
     const browserWindowState = await app.evaluate(async ({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0];
       win.setFullScreen(true);
@@ -488,28 +738,65 @@ async function run() {
         appName: win.getTitle()
       };
     });
+    await focusNativeWindow(app, page);
+    const sheepMotion = await sampleSheepMotion(page);
 
     const unlockProof = page.evaluate(() => new Promise((resolve) => {
       const canvas = document.querySelector('#canvas-container canvas');
       const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
       let done = false;
+      let running = false;
       const finish = (result) => {
         if (done) return;
         done = true;
         resolve(result);
       };
-      const run = async () => {
+      const requestPointerLock = async () => {
         const pointerLock = { supported: !!canvas?.requestPointerLock, locked: false, error: null };
-        const audio = { supported: !!AudioContextCtor, state: null, resumed: false, error: null };
+        if (!canvas?.requestPointerLock) return pointerLock;
         try {
-          if (canvas?.requestPointerLock) {
-            await canvas.requestPointerLock();
-            pointerLock.locked = document.pointerLockElement === canvas;
-            document.exitPointerLock?.();
+          const eventResult = new Promise((resolveEvent) => {
+            const cleanup = () => {
+              document.removeEventListener('pointerlockchange', onChange);
+              document.removeEventListener('pointerlockerror', onError);
+            };
+            const onChange = () => {
+              cleanup();
+              resolveEvent({ error: null });
+            };
+            const onError = () => {
+              cleanup();
+              resolveEvent({ error: 'pointerlockerror' });
+            };
+            document.addEventListener('pointerlockchange', onChange, { once: true });
+            document.addEventListener('pointerlockerror', onError, { once: true });
+            setTimeout(() => {
+              cleanup();
+              resolveEvent({ error: 'pointerlock-timeout' });
+            }, 1500);
+          });
+          const result = canvas.requestPointerLock();
+          if (result && typeof result.then === 'function') {
+            try {
+              await result;
+            } catch (err) {
+              pointerLock.error = String(err?.message || err);
+            }
           }
+          const event = await eventResult;
+          pointerLock.locked = document.pointerLockElement === canvas;
+          if (!pointerLock.locked && !pointerLock.error) pointerLock.error = event.error;
+          if (pointerLock.locked) document.exitPointerLock?.();
         } catch (err) {
           pointerLock.error = String(err?.message || err);
         }
+        return pointerLock;
+      };
+      const run = async () => {
+        if (running || done) return;
+        running = true;
+        const pointerLock = await requestPointerLock();
+        const audio = { supported: !!AudioContextCtor, state: null, resumed: false, error: null };
         try {
           if (AudioContextCtor) {
             const ctx = new AudioContextCtor();
@@ -523,13 +810,21 @@ async function run() {
         }
         finish({ pointerLock, audio });
       };
+      canvas?.addEventListener('pointerdown', run, { once: true });
+      canvas?.addEventListener('mousedown', run, { once: true });
+      canvas?.addEventListener('click', run, { once: true });
+      document.addEventListener('pointerdown', run, { once: true });
+      document.addEventListener('mousedown', run, { once: true });
       document.addEventListener('click', run, { once: true });
       setTimeout(() => finish({
         pointerLock: { supported: !!canvas?.requestPointerLock, locked: false, error: 'activation-timeout' },
         audio: { supported: !!AudioContextCtor, state: null, resumed: false, error: 'activation-timeout' }
       }), 5000);
     }));
-    await page.mouse.click(640, 360);
+    await focusNativeWindow(app, page);
+    const canvasBox = await canvas.boundingBox();
+    if (!canvasBox) throw new Error('Canvas bounding box unavailable for native unlock proof.');
+    await page.mouse.click(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height / 2);
     const { pointerLock, audio } = await unlockProof;
 
     const gamepad = await installVirtualGamepad(page);
@@ -602,9 +897,11 @@ async function run() {
       url: page.url(),
       storage,
       fullscreen: browserWindowState,
+      resize,
       pointerLock,
       audio,
       gamepad,
+      sheepMotion,
       input: {
         keyboardMouseVisualDiff: inputDiff,
         changedEnough: inputDiff.meanAbs > 0.2 || inputDiff.changedRatio > 0.005
@@ -627,11 +924,20 @@ async function run() {
         && storage.beforeReloadValue === 'before-reload'
         && browserWindowState.entered
         && browserWindowState.exited
+        && resize.before.resizable
+        && resize.resized.resizable
+        && !resize.resized.fullScreen
+        && resize.changed
+        && resize.viewportMatchesRequested
+        && resize.canvasMatchesWindow
+        && resize.cameraAspectMatchesWindow
         && pointerLock.supported
         && pointerLock.locked
         && audio.supported
         && audio.resumed
         && gamepad.apiAvailable
+        && sheepMotion.startupVisualReadyEnough
+        && sheepMotion.motionAdvancedEnough
         && inputDiff.changedRatio > 0.001
         && workerHealth.ok
         && webSocket.ok

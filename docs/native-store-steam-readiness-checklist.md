@@ -14,14 +14,14 @@ cycle.
 - Default app launch remains WebGL unless a later explicit renderer policy
   decision changes it.
 - Explicit WebGPU launch records device preflight, success/fallback reason, and
-  frame-time evidence. Current Cycle 54 desktop package result is no-go:
-  WebGPU device and renderer are ready, but the loading surface does not hand
-  off to gameplay HUD.
+  frame-time evidence. Current Cycle 54 desktop package result is green on this
+  Windows host: WebGPU device and renderer are ready, no fallback occurs, and
+  gameplay HUD appears from the packaged executable.
 - Field, Rolling Hills, and Open Country all have nonblank screenshots and
   passing frame-time proof for any store-targeted build. Cycle 54's packaged
   WebGL proof covers Rolling Hills only.
-- Fullscreen, pointer lock, keyboard/mouse, gamepad, audio unlock, storage, and
-  WebSocket multiplayer are tested in the shell.
+- Fullscreen, native resize, pointer lock, keyboard/mouse, gamepad, audio
+  unlock, storage, and WebSocket multiplayer are tested in the shell.
 - Crash/log capture path exists and does not require a developer console.
 - Privacy policy URL and support URL exist and match actual telemetry,
   multiplayer, and data practices.
@@ -35,11 +35,12 @@ cycle.
 - Steam Direct / app admin work is not started by this cycle.
 - Cycle 54 picks Electron plus electron-builder as the first desktop distributor
   path; Steam is still not the shell decision.
-- Local WebGL-only Steam depot dry-run is plausible if accepted: the Windows
-  installer, portable executable, and unpacked executable exist; packaged WebGL
-  boots and plays; Worker health and SDS WebSocket proof pass.
+- Local Steam depot dry-run is plausible if accepted: the Windows installer,
+  portable executable, and unpacked executable exist; packaged WebGL and WebGPU
+  boot and play; Worker health and SDS WebSocket proof pass.
 - Public Steam submission is no-go until signing, store metadata, install/
-  uninstall pass, and the packaged WebGPU handoff decision are resolved.
+  uninstall pass, screenshots/capsules, controller notes, and release-channel
+  policy are resolved.
 - Prepare Store Presence checklist inputs: short description, long description,
   genres/tags, capsule art, screenshots, trailer if used, controller notes,
   languages, OS requirements, privacy/support links, and age/content fields.
@@ -47,8 +48,8 @@ cycle.
   depot layout, default branch, build description, save/config directories, and
   install/uninstall behavior. Cycle 54's local package outputs are
   `cycle54-validation/desktop-electron/artifacts/win-unpacked/Sheep Dog Simulator.exe`,
-  `SheepDogSimulator-2.2.0-setup-x64.exe` (242,117,516 bytes), and
-  `SheepDogSimulator-2.2.0-portable-x64.exe` (218,426,698 bytes). Current
+  `SheepDogSimulator-2.2.0-setup-x64.exe` (242,122,782 bytes), and
+  `SheepDogSimulator-2.2.0-portable-x64.exe` (218,431,930 bytes). Current
   Authenticode status is `NotSigned`.
 - Test build outside Steam before any SteamPipe upload.
 - Defer Steamworks SDK features until after plain packaged play works:
@@ -107,7 +108,7 @@ cycle.
 ## Native Shell Handoff
 
 Cycle 53 completed the shell proof. Cycle 54 promotes Electron into the primary
-Windows desktop package path for Steam prep, with WebGL packaged proof green and
-packaged WebGPU no-go at the loading handoff. Tauri remains a future comparator
-if Electron package size, memory footprint, signing, or installer behavior
-becomes the limiting factor.
+Windows desktop package path for Steam prep, with WebGL and WebGPU packaged
+proofs green on this Windows host. Tauri remains a future comparator if
+Electron package size, memory footprint, signing, or installer behavior becomes
+the limiting factor.

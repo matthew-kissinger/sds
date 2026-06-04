@@ -470,23 +470,18 @@ export class CameraController {
 
     /**
      * Rotate an input movement vector into world axes for the active camera.
-     * For Free mode: rotates by freeYaw so W = "away from camera".
-     * For Classic + competitive: rotates by gate direction (legacy behavior).
+     * Free mode rotates by freeYaw so W = "away from camera". Follow keeps the
+     * same stable screen/world axes as Classic; rotating by the dog-facing yaw
+     * makes single-key lateral input spiral as the follow camera tracks it.
      */
     transformMovement(direction) {
         if (!direction) return direction;
 
-        // FREE and FOLLOW both rotate input by the camera's look-yaw so
-        // W is "forward in the direction the camera is facing." Without
-        // this in Follow mode, WASD stays world-axis and feels disconnected
-        // when the dog turns. followYaw is the smoothed dog facing (=
-        // camera look direction); freeYaw is user-controlled.
-        if (this.mode === CameraMode.FREE || this.mode === CameraMode.FOLLOW) {
-            const yaw = this.mode === CameraMode.FREE ? this.freeYaw : this.followYaw;
+        if (this.mode === CameraMode.FREE) {
+            const yaw = this.freeYaw;
             const cos = Math.cos(yaw);
             const sin = Math.sin(yaw);
-            const out = this.mode === CameraMode.FREE ? this._tmpMoveFree : this._tmpMoveFollow;
-            return out.set(
+            return this._tmpMoveFree.set(
                 direction.x * cos + direction.z * sin,
                 -direction.x * sin + direction.z * cos
             );

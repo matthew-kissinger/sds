@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v2.2: native shell proof and a clearer license. Sheep Dog Sim Devlog.</title>
+    <meta name="description" content="Sheep Dog Sim v2.2 records the AGPL and CC BY-SA license transition, plus the first native Electron and Android shell proof.">
+    <meta name="author" content="Matthew Kissinger">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://sheepdogsim.com/devlog/v2-2-native-license">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="v2.2: native shell proof and a clearer license">
+    <meta property="og:description" content="The game is still browser-first. v2.2 proves the same web build can boot inside native shells, and moves current code/assets to AGPL plus CC BY-SA.">
+    <meta property="og:url" content="https://sheepdogsim.com/devlog/v2-2-native-license">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/marketing/og/og-rh-sunset.webp">
+    <meta property="article:published_time" content="2026-06-04">
+    <meta property="article:author" content="Matthew Kissinger">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="v2.2: native shell proof and a clearer license">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/marketing/og/og-rh-sunset.webp">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "v2.2: native shell proof and a clearer license",
+        "description": "Sheep Dog Sim v2.2 records the AGPL and CC BY-SA license transition, plus the first native Electron and Android shell proof.",
+        "author": {
+            "@type": "Person",
+            "name": "Matthew Kissinger"
+        },
+        "datePublished": "2026-06-04",
+        "image": "https://sheepdogsim.com/assets/marketing/og/og-rh-sunset.webp",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https://sheepdogsim.com/devlog/v2-2-native-license"
+        },
+        "publisher": {
+            "@type": "Person",
+            "name": "Matthew Kissinger"
+        }
+    }
+    </script>
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1a2e1a 0%, #0f1a0f 100%);
+            color: #e8f5e8;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 680px; margin: 0 auto; padding: 3rem 1.5rem; }
+        h1 { font-size: 1.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #a7f3d0; }
+        .meta { color: #6ee7b7; font-size: 0.95rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 0.75rem; color: #86efac; }
+        p, li { color: #d1fae5; }
+        p { margin-bottom: 1rem; }
+        ul { margin: 0 0 1rem 1.2rem; }
+        a { color: #34d399; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code { color: #fef3c7; }
+        .note {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border-left: 3px solid #f59e0b;
+            background: rgba(245, 158, 11, 0.09);
+            color: #fef3c7;
+        }
+        .footer-nav {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #2d4a2d;
+            font-size: 0.95rem;
+        }
+        .footer-nav a { margin-right: 1rem; }
+        .legal-notice {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #a7f3d0;
+        }
+        .back { display: inline-block; margin-top: 2.5rem; color: #6ee7b7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>v2.2: native shell proof and a clearer license</h1>
+        <div class="meta">June 4, 2026 - by Matthew Kissinger</div>
+
+        <p>
+            Sheep Dog Sim is still a browser game first. The important part of v2.2
+            is that the same built web game now has proof that it can boot inside
+            native shells without rewriting the game into a different engine.
+        </p>
+
+        <p>
+            The first Windows Electron proof boots the packaged <code>dist/</code>
+            output from an app protocol, starts a real Classic run, and records
+            renderer behavior for WebGL and WebGPU. The first Android Capacitor proof
+            boots a debug APK on an emulator and reaches gameplay on WebGL. That is
+            not a store release yet. It is the first useful native handoff.
+        </p>
+
+        <div class="note">
+            Current claim: native shells are plausible. Not current claim: Steam,
+            Google Play, App Store, or signed Windows public release readiness.
+        </div>
+
+        <h2>What changed legally</h2>
+        <p>
+            v2.2 is also the forward-only license transition. Current source code is
+            AGPL-3.0-or-later. Current non-code assets are CC BY-SA 4.0. Earlier
+            releases retain the license terms recorded in their historical artifacts.
+        </p>
+
+        <p>
+            In plain terms: the game is still free to play, study, fork, and modify.
+            If you host or distribute a modified version, keep visible attribution and
+            publish the corresponding source. The running game now shows a source
+            notice on the about page, start/loading flow, and HUD.
+        </p>
+
+        <h2>What this unlocks</h2>
+        <ul>
+            <li>A Windows desktop package path that can become a Steam depot dry-run.</li>
+            <li>A mobile proof path for Android WebView behavior without changing the core game architecture.</li>
+            <li>A cleaner public repo story: readable source, explicit asset terms, and honest native readiness gates.</li>
+        </ul>
+
+        <h2>What still has to be proven</h2>
+        <p>
+            Signed Windows builds, installer/uninstaller QA, Steam metadata, store
+            screenshots, controller expectations, cloud-save decisions, and real-device
+            mobile proof are still future work. WebGPU also stays evidence-driven:
+            if a shell or browser cannot create a stable WebGPU device, the WebGL path
+            remains the fallback.
+        </p>
+
+        <p>
+            <a href="/">Play Sheep Dog Sim</a>
+        </p>
+
+        <div class="footer-nav">
+            <a href="/devlog/">All devlog entries</a>
+            <a href="/about">About</a>
+            <a href="https://github.com/matthew-kissinger/sds">Source</a>
+            <a href="https://github.com/matthew-kissinger/sds/blob/main/LICENSING.md">Licensing</a>
+        </div>
+
+        <p class="legal-notice">
+            (c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0):
+            <a href="https://github.com/matthew-kissinger/sds">github.com/matthew-kissinger/sds</a>.
+            Assets are licensed under CC BY-SA 4.0.
+        </p>
+
+        <a href="/" class="back">Back to game</a>
+    </div>
+</body>
+</html>

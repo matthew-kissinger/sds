@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for considering a contribution. This repo is free to play and source-readable. Contributions are accepted under AGPL-3.0-or-later for code and CC BY-SA 4.0 for assets, so issues and PRs of any size are welcome.
+Thanks for considering a contribution. Sheep Dog Sim is free to play and source-readable. Contributions are accepted under AGPL-3.0-or-later for code and CC BY-SA 4.0 for assets, so issues and PRs of any size are welcome.
 
 ## Getting set up
 
@@ -21,10 +21,10 @@ Full dev workflow, mobile testing, and troubleshooting are in [DEVELOPMENT.md](D
 
 ## Good first PRs
 
-The [README "Places a PR would be genuinely useful" section](README.md#places-a-pr-would-be-genuinely-useful) is the curated list. Beyond that:
+The [README good-first-issues section](README.md#good-first-issues--concrete-things-a-pr-could-fix) is the curated list. Beyond that:
 
-- Any of the content expansion items in the [Roadmap](README.md#roadmap--where-the-game-is-going) — new scenes, new modes, weather, predators.
-- Any P3 item in [docs/cycle-2-todo.md](docs/cycle-2-todo.md).
+- Any of the content expansion items in the [roadmap](README.md#roadmap--where-help-would-move-the-game) — new scenes, new modes, weather, predators.
+- Small documentation fixes where current public copy has drifted from source or validation truth.
 - Any open [issue](https://github.com/matthew-kissinger/sds/issues) labeled `good-first-issue`.
 
 ## Ground rules

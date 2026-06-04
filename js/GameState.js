@@ -115,11 +115,7 @@ export class GameState {
         this.optimizedSheepSystem = null;
     }
     
-    createSheepFlock(scene) {
-        // Create optimized sheep system with correct sheep count
-        console.log(`Creating sheep flock with ${this.totalSheep} sheep`);
-
-        // Calculate spawn position - use polygon-aware spawning for non-rectangular shapes
+    getSheepSpawnConfig() {
         let spawnConfig;
 
         // Cycle 8 Phase 2: derive maxRadius (the cap on density-driven spawn
@@ -188,6 +184,15 @@ export class GameState {
         if (this.borderPoints && this.borderPoints.length >= 3) {
             spawnConfig.borderPoints = this.borderPoints;
         }
+
+        return spawnConfig;
+    }
+
+    createSheepFlock(scene) {
+        // Create optimized sheep system with correct sheep count
+        console.log(`Creating sheep flock with ${this.totalSheep} sheep`);
+
+        const spawnConfig = this.getSheepSpawnConfig();
 
         // Enable extreme boid optimization for extreme/insane/chaos mode or sandbox with useExtremeBoids flag
         const useExtremeBoids = isExtremeBoidMode(this.singlePlayerMode) || this.useExtremeBoids === true;
@@ -521,7 +526,7 @@ export class GameState {
         return this.gameCompleted;
     }
     
-    startGame(mode = 'solo', competitiveData = null, singlePlayerMode = 'classic') {
+    startGame(mode = 'solo', competitiveData = null, singlePlayerMode = 'classic', options = {}) {
         this.gameMode = mode; // Store the game mode
         this.singlePlayerMode = singlePlayerMode; // Store single player mode
         this.gameActive = true;
@@ -569,11 +574,14 @@ export class GameState {
         // stickiness — observed as sheep stuck out-of-bounds on OC after a
         // restart from another scene/mode. Fresh recreation costs ~ms in the
         // common case and is bulletproof across mode-cycle paths.
+        const needsFlockRecreation = !!this.optimizedSheepSystem
+            && (previousSheepCount !== this.totalSheep || options.forceFlockRecreation === true);
+        const skipVisibleFlockReset = options.skipVisibleFlockReset === true && needsFlockRecreation;
         if (this.optimizedSheepSystem) {
             if (previousSheepCount !== this.totalSheep) {
                 console.log(`Sheep count changed from ${previousSheepCount} to ${this.totalSheep} - needs recreation`);
             }
-            this.needsFlockRecreation = true;
+            this.needsFlockRecreation = needsFlockRecreation;
         }
 
         // Cycle 17 Phase 6: now that totalSheep reflects the chosen mode,
@@ -597,23 +605,14 @@ export class GameState {
         // Clear fence collision system (remove any sandbox fences from previous game)
         resetFenceCollisionSystem();
 
-        // Reset all sheep to their starting positions and states
-        if (this.optimizedSheepSystem) {
-            // Reset spawn config to default for classic/extreme (in case user previously played sandbox)
-            this.optimizedSheepSystem.setSpawnConfig({
-                centerX: -30,
-                centerZ: -30,
-                spreadRadius: 30,
-                borderPoints: null
-            });
+        if (this.optimizedSheepSystem && !skipVisibleFlockReset) {
+            this.optimizedSheepSystem.setSpawnConfig(this.getSheepSpawnConfig());
             this.optimizedSheepSystem.resetAllSheep();
 
-            // Clear borderPoints on each sheep (sandbox mode setting)
             this.sheep.forEach(sheep => {
                 sheep.setBorderPoints(null);
             });
 
-            // Enable/disable extreme boid system based on mode
             this.optimizedSheepSystem.setUseExtremeBoids(this.useExtremeBoids, this.bounds);
         }
 

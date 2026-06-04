@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-const { app, BrowserWindow, Menu, crashReporter, net, protocol } = require('electron');
+const { app, BrowserWindow, Menu, crashReporter, net, protocol, session } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -95,12 +95,23 @@ function buildDefaultUrl() {
   return url.href;
 }
 
+function registerPermissionHandler() {
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const pageUrl = webContents.getURL() || '';
+    const requestingUrl = details?.requestingUrl || pageUrl;
+    const localApp = pageUrl.startsWith('sds://app') || requestingUrl.startsWith('sds://app');
+    const localGamePermission = permission === 'pointerLock' || permission === 'fullscreen';
+    callback(localApp && localGamePermission);
+  });
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
     height: 720,
     minWidth: 960,
     minHeight: 540,
+    resizable: true,
     title: productName,
     backgroundColor: '#111111',
     show: process.env.SDS_DESKTOP_SHOW !== '0',
@@ -150,6 +161,7 @@ app.whenReady().then(async () => {
     packaged: app.isPackaged
   });
   await registerDistProtocol();
+  registerPermissionHandler();
   createWindow();
 });
 

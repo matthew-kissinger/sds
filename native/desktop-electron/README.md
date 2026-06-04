@@ -38,13 +38,13 @@ The artifacts are local validation output and intentionally gitignored.
 - `sds://app` packaged boot from built `dist/`;
 - WebGL and WebGPU renderer requests, including a runtime snapshot when a renderer proof fails;
 - nonblank gameplay screenshot;
-- fullscreen, pointer lock, keyboard/mouse visual response, virtual gamepad API path, audio context unlock, and localStorage persistence;
+- fullscreen, native window resize, pointer lock, keyboard/mouse visual response, virtual gamepad API path, audio context unlock, and localStorage persistence;
 - production Worker health and authenticated SDS room WebSocket open;
 - log and crash-dump paths under Electron `userData`.
 
 Proof JSON and screenshots are written under `../../cycle54-validation/desktop-electron/reports/`.
 
-Current Cycle 54 evidence: `proof:webgl` is green from the packaged app. `proof:webgpu` is a no-go handoff: production WebGPU is available and the scene body completes, but the loading surface does not hand off to the gameplay HUD.
+Current Cycle 54 evidence: `proof:webgl` and `proof:webgpu` are green from the packaged app. Both renderer proofs boot to gameplay, exercise native resize, and verify that the canvas and camera aspect follow the resized window.
 
 ## Signing
 

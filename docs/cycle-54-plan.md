@@ -8,20 +8,20 @@ Turn the green Cycle 53 Windows Electron proof into the first distributor-grade 
 
 ## Current status - 2026-06-04
 
-Phases 1, 2, and 4 are implemented. The packaged WebGL runtime proof is green. The packaged WebGPU runtime proof is not green and is the active handoff blocker.
+Phases 1 through 4 are implemented. The packaged WebGL runtime proof is green. The packaged WebGPU runtime proof is green on this Windows host. The desktop package proof now also verifies native window resize: Electron content size changes to `1040x640`, the page viewport follows it, the canvas matches the viewport, and the camera aspect matches the resized window.
 
 Current package outputs exist under `cycle54-validation/desktop-electron/artifacts/`:
 
 - `win-unpacked/Sheep Dog Simulator.exe`
-- `SheepDogSimulator-2.2.0-setup-x64.exe` - 242,117,516 bytes
-- `SheepDogSimulator-2.2.0-portable-x64.exe` - 218,426,698 bytes
+- `SheepDogSimulator-2.2.0-setup-x64.exe` - 242,122,782 bytes
+- `SheepDogSimulator-2.2.0-portable-x64.exe` - 218,431,930 bytes
 
 Current renderer proof:
 
-- `proof:webgl`: pass. `desktop-electron-proof-webgl.json` records `ok=true`, `packaged=true`, `protocol=sds://app`, WebGL renderer, nonblank gameplay, fullscreen, pointer lock, audio unlock, storage persistence, Worker health, and SDS WebSocket proof.
-- `proof:webgpu`: no-go. `desktop-electron-proof-webgpu.json` records `ok=false`; runtime snapshot shows `effective=webgpu-production`, `devicePreflight.ok=true`, `rendererReady=true`, `canvasAttached=true`, and no fallback, but the UI remains on `Rolling Hills / Jep - Classic / Gathering the flock / 100%` with no gameplay HUD.
+- `proof:webgl`: pass. `desktop-electron-proof-webgl.json` records `ok=true`, `packaged=true`, `protocol=sds://app`, WebGL renderer, nonblank gameplay, fullscreen, resize, pointer lock, audio unlock, storage persistence, Worker health, and SDS WebSocket proof.
+- `proof:webgpu`: pass. `desktop-electron-proof-webgpu.json` records `ok=true`, `effective=webgpu-production`, `devicePreflight.ok=true`, `rendererReady=true`, `rendererIsWebGpu=true`, no fallback, nonblank gameplay, fullscreen, resize, sheep startup motion, and zero fatal console errors.
 
-Steam handoff result: local WebGL-only depot dry-run is plausible if that scope is accepted. Public Steam submission and explicit desktop WebGPU readiness are no-go until signing and WebGPU handoff are resolved.
+Steam handoff result: local Steam depot dry-run is plausible if that scope is accepted. Public Steam submission remains no-go until signing decision, metadata, install/uninstall QA, screenshots/capsules, controller notes, cloud-save policy, and release-channel policy are resolved.
 
 ## Open questions to resolve before writing code
 
@@ -69,7 +69,7 @@ No deterministic `shared/` changes are authorized. The desktop package lives und
 **Acceptance (EARS):**
 
 - When `npm --prefix native/desktop-electron run proof:webgl` runs after `desktop:dist`, then `cycle54-validation/desktop-electron/reports/desktop-electron-proof-webgl.json` shall record `"ok": true`.
-- When `npm --prefix native/desktop-electron run proof:webgpu` runs after `desktop:dist`, then `cycle54-validation/desktop-electron/reports/desktop-electron-proof-webgpu.json` shall record `"ok": true` on a WebGPU-capable Windows host, or record a no-go runtime snapshot that names the failed handoff state without claiming WebGPU readiness.
+- When `npm --prefix native/desktop-electron run proof:webgpu` runs after `desktop:dist`, then `cycle54-validation/desktop-electron/reports/desktop-electron-proof-webgpu.json` shall record `"ok": true` on this WebGPU-capable Windows host.
 - When the proof JSON is written, then it shall record `workerHealth.ok=true` and `webSocket.ok=true`.
 - When the proof JSON is written, then it shall record `audio.resumed=true`, `pointerLock.locked=true`, `storage.beforeReloadValue="before-reload"`, and `gamepad.apiAvailable=true`.
 
@@ -118,7 +118,7 @@ No additional frozen files. Durable frozen files in [`INTERFACE_FENCE.md`](INTER
 - [x] When `npm run build` runs at cycle close, production build shall be clean.
 - [x] When `npm run desktop:dist` runs, Windows installer and portable artifacts shall be generated.
 - [x] When `npm --prefix native/desktop-electron run proof:webgl` runs, the packaged WebGL desktop proof shall pass.
-- [x] When `npm --prefix native/desktop-electron run proof:webgpu` runs, the packaged WebGPU desktop proof shall pass or record a no-go runtime snapshot.
+- [x] When `npm --prefix native/desktop-electron run proof:webgpu` runs, the packaged WebGPU desktop proof shall pass on this Windows host.
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions if the branch is merged to `main`.
 
 ## References

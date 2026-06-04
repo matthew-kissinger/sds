@@ -159,12 +159,19 @@ const GLYPHS = {
     </>
   ),
 
-  // creature marks (canonical sheep + dog, carried from the prior bespoke pair)
+  // creature marks
   sheep: (
     <>
-      <path d="M7.5 10.5c-1.4 0-2.5-1-2.5-2.3 0-1.2 1-2.2 2.3-2.2.3-1 1.3-1.8 2.5-1.8.7 0 1.3.3 1.8.7.5-.4 1.1-.7 1.9-.7 1.2 0 2.2.8 2.5 1.8 1.3 0 2.3 1 2.3 2.2 0 1.3-1.1 2.3-2.5 2.3" />
-      <ellipse cx="12" cy="13.5" rx="5.2" ry="4.3" />
-      <path d="M8.5 17.5v2M15.5 17.5v2M10.7 11.8c.4.4 1 .6 1.3.6s.9-.2 1.3-.6" />
+      <path
+        d="M6.4 13.1c0-2.1 1.8-3.9 4-3.9h5.2c2.1 0 3.8 1.6 3.8 3.6v.6c0 1.9-1.6 3.4-3.6 3.4H9.1c-1.6 0-2.7-1.2-2.7-2.7z"
+        fill="currentColor"
+        fillOpacity={0.16}
+      />
+      <path d="M7.7 10.1c-1.3 0-2.3-.9-2.3-2.1 0-1 .8-1.9 1.9-2.1.3-1.1 1.3-1.9 2.5-1.9.8 0 1.5.3 2 .9.5-.6 1.2-.9 2.1-.9 1.2 0 2.3.8 2.6 1.9 1.1.2 1.9 1.1 1.9 2.1 0 1.2-1 2.1-2.3 2.1" />
+      <path d="M15.8 10.2h1.8c1.2 0 2.2 1 2.2 2.2v.9c0 1-.8 1.8-1.8 1.8h-1.1" />
+      <path d="M18 12.7h.01" strokeWidth={2.3} />
+      <path d="M9.3 16.8v2.5M14.9 16.8v2.5" />
+      <path d="M8.5 19.3h2.2M14.1 19.3h2.2" />
     </>
   ),
   dog: (
@@ -202,7 +209,7 @@ export function Icon({ name, size = 18, color = 'currentColor', style, strokeWid
       strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={style}
+      style={{ color, ...style }}
       aria-hidden="true"
     >
       {glyph}

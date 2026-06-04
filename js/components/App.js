@@ -29,7 +29,6 @@ import {
     getInputHandler,
     selectDog,
     getSelectedDog,
-    startSoloGame,
     startSandboxGame,
     startMultiplayerGame,
     subscribeGameEvent
@@ -222,10 +221,22 @@ export async function initReactUI() {
             // then start the solo game on it. The armed difficulty maps 1:1 to the
             // canonical solo singlePlayerMode (js/gamestate/modes.js).
             const handleEntrancePlay = useCallback(async (world, dog, mode) => {
-                if (!getGameInstance()) return;
+                const game = getGameInstance();
+                if (!game) return;
                 try { window.__sdsBootLoading = true; } catch {}
                 setScreen('loading');
                 selectDog(dog.id);
+                const chosenDogId = getSelectedDog() || dog.id;
+                const chosenModeId = mode.id;
+                let started = false;
+                let unsubscribeSceneEnd = null;
+                const startCommittedSolo = () => {
+                    if (started) return;
+                    started = true;
+                    unsubscribeSceneEnd?.();
+                    unsubscribeSceneEnd = null;
+                    game.menuController?.selectSolo?.(chosenDogId, chosenModeId);
+                };
                 try {
                     // Build the armed world's scene on commit (the pastoral
                     // loading bar fills from its per-stage marks). swapScene
@@ -234,11 +245,15 @@ export async function initReactUI() {
                     // Cycle 52 P2: revealBackdrop arms the in-engine dissolve -
                     // the same backdrop webp dissolves into the built scene when
                     // the loading surface hands off (see App's reveal hand-off).
-                    await getGameInstance()?.swapScene(world.id, { noCrossfade: true, revealBackdrop: world.render });
+                    unsubscribeSceneEnd = subscribeGameEvent('scene-swap-end', startCommittedSolo);
+                    await game.swapScene(world.id, { noCrossfade: true, revealBackdrop: world.render });
                 } catch (err) {
                     console.error('[UI] scene build for Play failed:', err);
+                } finally {
+                    unsubscribeSceneEnd?.();
+                    unsubscribeSceneEnd = null;
                 }
-                startSoloGame(getSelectedDog() || dog.id, mode.id);
+                startCommittedSolo();
             }, []);
 
             const bootFlow = useBootFlow({ onPlay: handleEntrancePlay });
@@ -760,8 +775,9 @@ export async function initReactUI() {
                         // Restart sandbox with current config
                         gameState.startSandboxGame(gameInstance.currentSandboxConfig || {});
                     } else {
-                        // Restart solo difficulties (classic/extreme/insane)
-                        gameState.startGame('solo', null, singlePlayerMode || 'classic');
+                        void gameInstance.startGame('solo', null, singlePlayerMode || 'classic')
+                            .catch(err => console.error('[GameHUD] restart failed:', err));
+                        return;
                     }
 
                     // Reset timer

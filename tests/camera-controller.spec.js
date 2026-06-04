@@ -230,7 +230,7 @@ describe('CLASSIC mode look-at target Y', () => {
 });
 
 describe('transformMovement yaw differs between FOLLOW and FREE', () => {
-    it('rotates the input vector by freeYaw in FREE and followYaw in FOLLOW', () => {
+    it('rotates the input vector by freeYaw in FREE but keeps FOLLOW screen-stable', () => {
         const c = new CameraController(makeCamera(), { isMobile: false });
 
         // FREE: rotate (0,1) by freeYaw = PI/2.
@@ -241,9 +241,10 @@ describe('transformMovement yaw differs between FOLLOW and FREE', () => {
         expect(free.x).toBeCloseTo(1, 6);
         expect(free.z).toBeCloseTo(0, 6);
 
-        // FOLLOW: same input but rotated by followYaw = 0 -> identity.
+        // FOLLOW: single-key lateral/forward input must not feed back through
+        // the dog's facing yaw, otherwise A/D spiral as the camera tracks.
         c.setMode(CameraMode.FOLLOW);
-        c.followYaw = 0;
+        c.followYaw = Math.PI / 2;
         const follow = c.transformMovement(new Vector2D(0, 1));
         expect(follow.x).toBeCloseTo(0, 6);
         expect(follow.z).toBeCloseTo(1, 6);
@@ -261,9 +262,8 @@ describe('transformMovement yaw differs between FOLLOW and FREE', () => {
         c.followYaw = Math.PI / 2;
         c.freeYaw = 0; // should be ignored in FOLLOW
         const follow = c.transformMovement(input);
-        // rotate (1,0) by PI/2: (cos*1, -sin*1) = (~0, -1).
-        expect(follow.x).toBeCloseTo(0, 6);
-        expect(follow.z).toBeCloseTo(-1, 6);
+        expect(follow.x).toBeCloseTo(1, 6);
+        expect(follow.z).toBeCloseTo(0, 6);
 
         c.setMode(CameraMode.FREE);
         c.freeYaw = Math.PI / 2;

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Sheep Dog Sim</title>
-    <meta name="description" content="Sheep Dog Sim is a browser-based herding simulation by Matthew Kissinger, a solo developer from Virginia exploring simulations and emergent behavior.">
+    <meta name="description" content="Sheep Dog Sim is a browser-based herding game by Matthew Kissinger: flocking simulation, Three.js rendering, Cloudflare-edge multiplayer, and source you can study.">
     <meta name="author" content="Matthew Kissinger">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://sheepdogsim.com/about">
@@ -12,7 +12,7 @@
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="About Sheep Dog Sim">
-    <meta property="og:description" content="A herding simulation by Matthew Kissinger, solo developer from Virginia.">
+    <meta property="og:description" content="A browser-based herding game by Matthew Kissinger: flocking simulation, Three.js rendering, and Cloudflare-edge multiplayer.">
     <meta property="og:url" content="https://sheepdogsim.com/about">
     <meta property="og:image" content="https://sheepdogsim.com/assets/marketing/og/og-field.webp">
     <meta property="og:image:width" content="1200">
@@ -21,7 +21,7 @@
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="About Sheep Dog Sim">
-    <meta name="twitter:description" content="A herding simulation by Matthew Kissinger, solo developer from Virginia.">
+    <meta name="twitter:description" content="A browser-based herding game by Matthew Kissinger: flocking simulation, Three.js rendering, and Cloudflare-edge multiplayer.">
     <meta name="twitter:image" content="https://sheepdogsim.com/assets/marketing/og/og-field.webp">
 
     <!-- JSON-LD -->
@@ -31,7 +31,7 @@
         "@type": "AboutPage",
         "url": "https://sheepdogsim.com/about",
         "name": "About Sheep Dog Sim",
-        "description": "About page for Sheep Dog Sim, a browser-based herding simulation by Matthew Kissinger.",
+        "description": "About page for Sheep Dog Sim, a browser-based herding game by Matthew Kissinger.",
         "isPartOf": {
             "@type": "WebSite",
             "name": "Sheep Dog Sim",
@@ -94,6 +94,10 @@
         p {
             margin-bottom: 1rem;
             color: #d1fae5;
+        }
+
+        code {
+            color: #fef3c7;
         }
 
         a {
@@ -163,38 +167,54 @@
 <body>
     <div class="container">
         <h1>Sheep Dog Sim</h1>
-        <p class="tagline">A herding simulation</p>
+        <p class="tagline">A browser herding game with real flock behavior.</p>
 
         <p>
-            I'm Matthew Kissinger, a solo developer from Virginia. I build simulations
-            that explore emergent behavior and systems that feel alive.
+            I'm Matthew Kissinger. Sheep Dog Sim is my browser-first herding game:
+            a flocking simulation, a pastoral 3D scene, and a small multiplayer
+            backend all shipped as one playable site.
         </p>
 
         <p>
             Sheep Dog Sim started as an entry for a Three.js game jam and turned into
-            ongoing experimentation with flocking simulations. 200 sheep, each following
-            simple rules: stay together, don't collide, move as a group. Add a dog and
-            suddenly you have something that feels like real herding. The complexity
-            emerges from simplicity.
+            an ongoing experiment in making simple rules feel alive. Each sheep tries
+            to stay with the flock, avoid collisions, route around obstacles, and move
+            away from the dog. Push those rules through a few hundred or a few thousand
+            animals and the flock starts creating problems the code never scripted.
         </p>
 
         <h2>The Game</h2>
         <p>
-            Guide your sheepdog to herd sheep through gates and into pastures.
-            No tutorials, no hand-holding. Figure out how the sheep react,
-            learn to read the flock, find your rhythm.
+            Guide your sheepdog across a flat starter pasture, a sunset island with a
+            lightning corral, or a larger wild island with a gather-and-portal objective.
+            There are no ads, no signup flow, and no energy meters. Open the tab, herd
+            some sheep, close the tab.
         </p>
         <p>
-            Classic mode is pure zen. Timed mode is for when you want a challenge.
-            Multiplayer lets you herd with friends or race against them.
+            Just Play is the quiet mode. Classic is the leaderboard run. Extreme,
+            Insane, and Chaos scale the flock until it becomes the antagonist.
+            Multiplayer lets 2-4 players herd together or race the same system.
         </p>
 
         <h2>Tech</h2>
         <p>
-            Built with Three.js for 3D rendering, React for UI, and Cloudflare
-            Workers + Durable Objects + D1 for multiplayer over WebSockets.
-            GPU-instanced rendering keeps 200 animated sheep running smoothly.
-            Works in any modern browser, desktop or mobile.
+            Built with Three.js, React, Vite, and Cloudflare Workers + Durable Objects
+            + D1. The sheep are GPU-instanced in one draw call, the multiplayer sim is
+            authoritative at the edge, and the deterministic modules under <code>shared/</code>
+            are imported byte-identically by client and worker.
+        </p>
+        <p>
+            WebGL remains the fallback path. WebGPU is progressive: when a browser or
+            native shell can create a real device, the game can take that route, but
+            readiness claims are tied to proof reports, not vibes.
+        </p>
+
+        <h2>Source and License</h2>
+        <p>
+            The current code is AGPL-3.0-or-later and the current non-code assets are
+            CC BY-SA 4.0. Earlier releases retain the license terms recorded in
+            their historical releases. Hosted or modified versions need to keep
+            visible source/attribution notices and publish corresponding source.
         </p>
 
         <div class="links">
@@ -226,7 +246,8 @@
             <a href="/scenes/rolling-hills">Rolling Hills</a> ·
             <a href="/scenes/open-country">Open Country</a>
             <br>
-            <a href="/devlog/">Devlog</a>
+            <a href="/devlog/">Devlog</a> ·
+            <a href="https://github.com/matthew-kissinger/sds/blob/main/LICENSING.md">Licensing</a>
         </div>
     </div>
 </body>

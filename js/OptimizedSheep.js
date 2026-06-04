@@ -23,6 +23,11 @@ import { pointToSegmentDistance, isPointInPolygon } from './gamestate/polygonSpa
 const SHEEP_OBSTACLE_QUERY_RADIUS = 30;
 const SHEEP_OBSTACLE_STRENGTH = 6.0;
 const SHEEP_RADIUS = 0.6;
+const SHEEP_STARTUP_VISUAL_SECONDS = 1.6;
+const SHEEP_STARTUP_VISUAL_SPEED = 0.1;
+const SHEEP_STARTUP_VISUAL_BOUNCE = 0.018;
+const SHEEP_IDLE_VISUAL_SPEED = 0.025;
+const SHEEP_IDLE_VISUAL_BOUNCE = 0.006;
 
 // Module-level scratch Vector2Ds for the per-sheep gate-attraction block in
 // updateBehavior(). Reused via .set() instead of allocating fresh Vector2Ds
@@ -539,7 +544,7 @@ export class OptimizedSheepSystem {
         instanceData.setXYZW(
             index,
             sheep.animationPhase,
-            sheep.currentSpeed,
+            sheep.visualSpeed ?? sheep.currentSpeed,
             sheep.state, // 0: active, 1: retiring, 2: retired
             index
         );
@@ -548,7 +553,7 @@ export class OptimizedSheepSystem {
         instanceAnimation.setXYZW(
             index,
             sheep.walkCycle,
-            sheep.bounceAmount,
+            sheep.visualBounceAmount ?? sheep.bounceAmount,
             sheep.facingDirection,
             sheep.blinkTimer
         );
@@ -1021,7 +1026,7 @@ export class OptimizedSheepSystem {
             
             // Reset animation properties
             sheep.animationPhase = Math.random() * Math.PI * 2;
-            sheep.walkCycle = 0;
+            sheep.resetStartupVisualMotion();
             sheep.bounceAmount = 0;
             sheep.currentSpeed = 0;
             sheep.facingDirection = Math.random() * Math.PI * 2;
@@ -1317,8 +1322,18 @@ export class OptimizedSheepInstance extends Boid {
         this.walkCycle = 0;
         this.bounceAmount = 0;
         this.currentSpeed = 0;
+        this.visualSpeed = 0;
+        this.visualBounceAmount = 0;
         this.facingDirection = 0;
         this.blinkTimer = Math.random() * 5;
+        this.startupVisualTime = 0;
+        this.startupVisualDuration = 0;
+        this.startupVisualSpeed = 0;
+        this.startupVisualBounce = 0;
+        this.activeAmbientMotion = false;
+        this.ambientWanderAngle = ((this.id * 137) % 360) * Math.PI / 180;
+        this.ambientWanderTimer = 0.35 + (this.id % 11) * 0.07;
+        this.resetStartupVisualMotion();
         
         // Interpolation properties for smooth visual movement
         this.renderPosition = new Vector2D(x, z); // Smoothed position for rendering
@@ -1336,6 +1351,17 @@ export class OptimizedSheepInstance extends Boid {
         
         // Audio tracking
         this.wasBeingChased = false;
+    }
+
+    resetStartupVisualMotion() {
+        const phase = (this.id * 1.61803398875) % 1;
+        this.walkCycle = phase * Math.PI * 2;
+        this.startupVisualDuration = SHEEP_STARTUP_VISUAL_SECONDS + (this.id % 7) * 0.05;
+        this.startupVisualTime = this.startupVisualDuration;
+        this.startupVisualSpeed = SHEEP_STARTUP_VISUAL_SPEED + (this.id % 5) * 0.01;
+        this.startupVisualBounce = SHEEP_STARTUP_VISUAL_BOUNCE + (this.id % 3) * 0.004;
+        this.visualSpeed = this.startupVisualSpeed;
+        this.visualBounceAmount = this.startupVisualBounce;
     }
     
     updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null, skipFlocking = false, isHighDifficultyMode = false, activeSheep = null) {
@@ -1458,8 +1484,30 @@ export class OptimizedSheepInstance extends Boid {
             this.flock(flockNeighbors, params.separationDistance);
         }
 
+        let closestSheepdog = null;
+        let closestDistance = Infinity;
+        if (sheepdog) {
+            const dist = this.position.distanceTo(sheepdog.position);
+            if (dist < closestDistance) {
+                closestDistance = dist;
+                closestSheepdog = sheepdog;
+            }
+        }
+        if (sheepdog2) {
+            const dist = this.position.distanceTo(sheepdog2.position);
+            if (dist < closestDistance) {
+                closestDistance = dist;
+                closestSheepdog = sheepdog2;
+            }
+        }
+
+        const ambientFleeRadius = closestSheepdog?.fleeRadius || this.fleeRadius || 8;
+        this.activeAmbientMotion = this.state === 0
+            && !isMultiplayer
+            && closestDistance > ambientFleeRadius * 1.75;
+
         // Add gentle wandering during pre-game state (when no sheepdog)
-        if (!sheepdog) {
+        if (!sheepdog && !sheepdog2) {
             // Gentle wandering to make the start screen more lively
             if (Math.random() < 0.01) { // 1% chance per frame for gentle movement
                 const wanderDirection = Vector2D.random();
@@ -1471,26 +1519,6 @@ export class OptimizedSheepInstance extends Boid {
         // Flee from sheepdog(s) (only if sheepdog exists - game is active)
         // For local 2-player mode, flee from the closer dog
         if (sheepdog || sheepdog2) {
-            // Find the closer sheepdog
-            let closestSheepdog = null;
-            let closestDistance = Infinity;
-
-            if (sheepdog) {
-                const dist = this.position.distanceTo(sheepdog.position);
-                if (dist < closestDistance) {
-                    closestDistance = dist;
-                    closestSheepdog = sheepdog;
-                }
-            }
-
-            if (sheepdog2) {
-                const dist = this.position.distanceTo(sheepdog2.position);
-                if (dist < closestDistance) {
-                    closestDistance = dist;
-                    closestSheepdog = sheepdog2;
-                }
-            }
-
             if (closestSheepdog) {
                 // Use closest sheepdog's fleeRadius for dog-specific interaction distances
                 const fleeRadius = closestSheepdog.fleeRadius || this.fleeRadius || 8;
@@ -1618,9 +1646,27 @@ export class OptimizedSheepInstance extends Boid {
         this.maxSpeed = params.speed;
         this.cohesionWeight = params.cohesion;
     }
+
+    updateAmbientMotion(deltaTime) {
+        if (!this.activeAmbientMotion || this.state !== 0 || this.isRetiring) return;
+        const speed = this.velocity.magnitude();
+        if (speed > this.maxSpeed * 0.45) return;
+
+        this.ambientWanderTimer -= deltaTime;
+        if (this.ambientWanderTimer <= 0) {
+            const turn = (((this.id * 53 + Math.floor(this.walkCycle * 10)) % 100) / 100 - 0.5) * 1.1;
+            this.ambientWanderAngle += turn;
+            this.ambientWanderTimer = 0.55 + (this.id % 9) * 0.08;
+        }
+
+        const strength = this.maxForce * (speed < this.maxSpeed * 0.08 ? 0.72 : 0.32);
+        this.forceAccumulator.x += Math.cos(this.ambientWanderAngle) * strength;
+        this.forceAccumulator.z += Math.sin(this.ambientWanderAngle) * strength;
+    }
     
     updatePosition(deltaTime) {
         // Standard Boid update
+        this.updateAmbientMotion(deltaTime);
         super.update(deltaTime); // This updates this.position and this.velocity
         
         // HARD BOUNDARY CONSTRAINT - Apply different logic based on sheep state
@@ -1745,7 +1791,20 @@ export class OptimizedSheepInstance extends Boid {
             this.bounceAmount = Math.min(speed * 15, 0.15);
         }
         
-        this.walkCycle += this.currentSpeed * deltaTime * 10; // Use currentSpeed which is now NaN-checked
+        const startupBlend = this.startupVisualDuration > 0
+            ? Math.min(1, Math.max(0, this.startupVisualTime / this.startupVisualDuration))
+            : 0;
+        if (this.startupVisualTime > 0) {
+            this.startupVisualTime = Math.max(0, this.startupVisualTime - deltaTime);
+        }
+        const startupSpeed = this.startupVisualSpeed * startupBlend;
+        const startupBounce = this.startupVisualBounce * startupBlend;
+        const idleSpeed = this.state === 0 && !this.isRetiring ? SHEEP_IDLE_VISUAL_SPEED : 0;
+        const idleBounce = this.state === 0 && !this.isRetiring ? SHEEP_IDLE_VISUAL_BOUNCE : 0;
+        this.visualSpeed = Math.max(this.currentSpeed, startupSpeed, idleSpeed);
+        this.visualBounceAmount = Math.max(this.bounceAmount, startupBounce, idleBounce);
+
+        this.walkCycle += this.visualSpeed * deltaTime * 10;
         
         if (this.currentSpeed > 0.001) {
             this.facingDirection = Math.atan2(this.velocity.z, this.velocity.x);

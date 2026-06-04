@@ -34,4 +34,4 @@ Sprint drains stamina - use it wisely
 
 Also at: sheepdogsim.com
 
-Started as a Three.js game jam entry. Made with Three.js. Free forever.
+Started as a Three.js game jam entry. Made with Three.js. Free to play, no ads or signup. Current source is AGPL-3.0-or-later and current assets are CC BY-SA 4.0; hosted or modified versions must preserve attribution and publish corresponding source.

@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Devlog. Sheep Dog Sim.</title>
-    <meta name="description" content="Behind-the-scenes notes on Sheep Dog Sim - what's changed, what broke, what got fixed. Written in plain language by the developer.">
+    <meta name="description" content="Plain-language Sheep Dog Sim devlog notes: native shell proof, licensing, renderer work, refactors, fixes, and what is still being validated.">
     <meta name="author" content="Matthew Kissinger">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://sheepdogsim.com/devlog/">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="Devlog. Sheep Dog Sim.">
-    <meta property="og:description" content="Behind-the-scenes notes on Sheep Dog Sim - what's changed, what broke, what got fixed.">
+    <meta property="og:description" content="Plain-language notes on what shipped, what broke, what got fixed, and what is still being validated.">
     <meta property="og:url" content="https://sheepdogsim.com/devlog/">
     <meta property="og:image" content="https://sheepdogsim.com/assets/marketing/og/og-rh-sunset.webp">
 
@@ -56,13 +56,30 @@
         }
         .entry-title a { color: inherit; }
         .entry-teaser { color: #d1fae5; }
+        .legal-notice {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #a7f3d0;
+        }
         .back { display: inline-block; margin-top: 2rem; color: #6ee7b7; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Devlog</h1>
-        <p class="tagline">Notes on what's changed under the hood.</p>
+        <p class="tagline">Field notes on what shipped, what broke, and what is still being proven.</p>
+
+        <div class="entry">
+            <div class="entry-date">2026-06-04</div>
+            <div class="entry-title">
+                <a href="/devlog/v2-2-native-license">v2.2: native shell proof and a clearer license</a>
+            </div>
+            <div class="entry-teaser">
+                The same browser-first game now has Windows Electron and Android
+                Capacitor shell proof, plus the forward-only AGPL / CC BY-SA license
+                transition. Store readiness is still a separate gate.
+            </div>
+        </div>
 
         <div class="entry">
             <div class="entry-date">2026-05-09</div>
@@ -89,7 +106,19 @@
             </div>
         </div>
 
-        <a href="/" class="back">← Back to game</a>
+        <p>
+            <a href="/about">About</a> ·
+            <a href="https://github.com/matthew-kissinger/sds">Source</a> ·
+            <a href="https://github.com/matthew-kissinger/sds/blob/main/LICENSING.md">Licensing</a>
+        </p>
+
+        <p class="legal-notice">
+            (c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0):
+            <a href="https://github.com/matthew-kissinger/sds">github.com/matthew-kissinger/sds</a>.
+            Assets are licensed under CC BY-SA 4.0.
+        </p>
+
+        <a href="/" class="back">Back to game</a>
     </div>
 </body>
 </html>

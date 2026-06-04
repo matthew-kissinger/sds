@@ -2,9 +2,9 @@
 
 [![Play now](https://img.shields.io/badge/play-sheepdogsim.com-2563eb?style=for-the-badge)](https://sheepdogsim.com) &nbsp; [![AGPL-3.0 Code](https://img.shields.io/badge/code-AGPL--3.0-22c55e?style=for-the-badge)](LICENSE) &nbsp; [![CC BY-SA 4.0 Assets](https://img.shields.io/badge/assets-CC%20BY--SA%204.0-f97316?style=for-the-badge)](LICENSE-ASSETS) &nbsp; [![Star on GitHub](https://img.shields.io/github/stars/matthew-kissinger/sds?style=for-the-badge&logo=github&color=eab308)](https://github.com/matthew-kissinger/sds)
 
-[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 866](https://img.shields.io/badge/tests-866%20passing-22c55e)](tests/)
+[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 868](https://img.shields.io/badge/tests-868%20passing-22c55e)](tests/)
 
-**Herd up to 5,000 sheep across three biomes in a modern browser, with progressive WebGPU on supported hardware and WebGL fallback everywhere else.** No install, no signup, no ads. Free to play, source-readable, and forkable under AGPL-3.0. Modified or hosted versions must publish corresponding source under AGPL and preserve attribution.
+**Herd up to 5,000 sheep across three biomes in a modern browser, with progressive WebGPU on supported hardware and WebGL fallback everywhere else.** No install, no signup, no ads. Free to play, source-readable, and forkable under AGPL-3.0; hosted or modified versions must publish corresponding source and preserve attribution.
 
 > [Play it now → sheepdogsim.com](https://sheepdogsim.com)
 
@@ -14,14 +14,14 @@
 
 ## Why this exists
 
-Most browser 3D games are tech demos with no game inside, or closed-source mobile-clone ports with no tech to learn from. **This is neither.** It's a polished, fully playable 3D game whose source you can read end-to-end in an afternoon and ship a personal mod of by the weekend.
+Most browser 3D games are tech demos with no game inside, or closed-source mobile-clone ports with no tech to learn from. **This is neither.** It's a fully playable 3D game whose source you can read end-to-end, study, fork, and reshape under a license that keeps hosted improvements open.
 
 The whole stack:
 
 - **Client engine:** vanilla JavaScript, Three.js, progressive WebGPU on supported browsers, and WebGL fallback
 - **Server:** ~600-line TypeScript Cloudflare Worker with Durable Objects and D1
 - **Shared sim:** deterministic boid + obstacle modules imported byte-identically by both
-- **Tests:** 866 passing / 7 skipped (Vitest 4) covering renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode, SEO, and water shoreline math
+- **Tests:** 868 passing / 7 skipped (Vitest 4) covering renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode, SEO, and water shoreline math
 
 If you're learning 3D web games, real-time multiplayer on edge compute, or large-scale boid simulation, this codebase is a rare opportunity to read a complete shipped product instead of yet another minimal example.
 
@@ -60,7 +60,7 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - **Hosek-Wilkie analytic sky** with day/night presets, parallax cloud layer, shoreline-aware water with sun-glint, billboarded sun disc
 - **Hundreds of thousands of grass blades** with directional wind shader, dog-bends-grass-along-its-facing interaction, per-scene density tuning, stochastic-dither LOD
 - **Apple-correct tone mapping** — Mac/iPhone/iPad use Neutral instead of ACES so the sky doesn't wash white on Metal-ANGLE
-- Per-scene tree LOD + impostor atlases. The WebGPU three-tier tree route is opt-in behind `?konveyorNativeTreeImpostors=1`; proper mobile octahedral impostor sidecars remain on the cycle-39 carryover list.
+- Per-scene tree LOD + impostor atlases. The WebGPU tree route now has explicit material-parity and octahedral sidecar proof, but it still stays opt-in until mobile frame budgets and transition quality justify making it the default.
 - Three camera modes: **Classic** (top-down isometric), **Follow** (cinematic chase with ridge-clearance lift), **Free** (mouse-yaw orbit)
 
 ### 🌐 Mobile + i18n + accessibility
@@ -95,7 +95,7 @@ npm run dev:client     # just Vite (no multiplayer worker)
 npm run dev:worker     # just wrangler
 npm run dev:lan        # vite --host + wrangler (LAN-accessible — for mobile testing)
 
-npm test               # Vitest — 866 passing / 7 skipped in ~2s on the current branch
+npm test               # Vitest — 868 passing / 7 skipped in ~2s on the current branch
 npm run test:ios-water # BrowserStack real iOS Safari water canary
 npm run build          # production output to dist/
 ```
@@ -182,7 +182,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 **Shared:** `shared/` deterministic boid + physics + obstacle modules, imported by both runtimes
 
-**Testing:** Vitest 4.1 (866 passing / 7 skipped · 86 files · ~2 s full run) covering renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode contracts, SEO, and water shoreline math. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright covers browser smoke and perf-baseline harnesses; BrowserStack covers the real iOS Safari water canary.
+**Testing:** Vitest 4.1 (868 passing / 7 skipped · 87 files · ~2 s full run) covering renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode contracts, SEO, and water shoreline math. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright covers browser smoke and perf-baseline harnesses; BrowserStack covers the real iOS Safari water canary.
 
 ---
 
@@ -190,8 +190,9 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANGELOG entry. The last cycles delivered everything you see today; here's where the surface is moving right now:
 
+- **Cycle 54, active** - Windows Electron distributor path: installer/portable artifacts, app identity, logs/crash paths, signing-ready posture, packaged WebGL/WebGPU proofs, native resize proof, and Steam/store handoff.
 - **`v2.2.0`** (2026-06-03) - forward-only license transition: current source is AGPL-3.0-or-later, current assets are CC BY-SA 4.0, visible AGPL source notices are in the app, and the first Windows Electron / Capacitor Android native-shell proof is documented.
-- **`v2.1.10`** (2026-05-28) - Cycle 42 WebGPU material parity: warmer sun/sky, darker water, octahedral tree-impostor proof, and the latest MIT-era release.
+- **`v2.1.10`** (2026-05-28) - Cycle 42 WebGPU material parity: warmer sun/sky, darker water, and octahedral tree-impostor proof.
 - **`v2.1.6`** (2026-05-16) — Cycle 38 tree-placement readability patch: deterministic cross-zone canopy spacing removes stacked tree clumps, and tighter scale jitter keeps production trees from reading as saplings.
 - **`v2.1.5`** (2026-05-16) — Cycle 38 WebGPU tree-impostor packet: branch/leaf-preserving tree rebakes, explicit three-tier WebGPU tree route behind `?konveyorNativeTreeImpostors=1`, dynamic impostor tile plumbing, and refreshed desktop/Android proof artifacts. Desktop proof is green; Android WebGPU remains budget-red and is not a mobile-ready claim.
 - **`v2.1.4`** (2026-05-10) — real iOS Safari water validation via BrowserStack + shoreline-based water shader, removing the fragile depth pre-pass.
@@ -207,7 +208,7 @@ We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANG
 
 ---
 
-## Roadmap — where we'd love help
+## Roadmap — where help would move the game
 
 The backend on Cloudflare's edge is solved-as-far-as-it-needs-to-be. The visual layer is now progressively WebGPU-backed on supported browsers while retaining WebGL fallback. Android WebGPU frame budgets and tree representation quality are still active engineering work. **Each item below is a real PR-able piece of work** — issue numbers welcome.
 
@@ -238,8 +239,8 @@ This codebase is **deliberately easy to read**. Whether you want to mod the game
 - **Better Android WebGPU perf.** The Cycle 38 connected-phone matrix is screenshot-valid but budget-red. Reducing Field draw calls, Open Country terrain/tree cost, and sprint-start spikes comes before any mobile-readiness claim.
 - **MP joiner renderer sync.** Joiners whose URL-param scene differs from the room's see correct sim but mismatched visuals.
 - **LOD2 → LOD0 cross-fade** at the 100 m boundary. The hard pop is visible — alpha-dither / fade across a 5–10 m hysteresis band would soften it.
-- **Resize behavior audit.** Sometimes camera/HUD don't reseat correctly after a window resize.
-- **Mod gallery.** If you ship a fork or mod, open an issue and we'll link it from this README — the goal is for this section to grow into a *gallery* of community-built variants.
+- **Small-window HUD polish.** Native resize is proven, but very small desktop windows still deserve a dedicated HUD comfort pass before public desktop release.
+- **Mod gallery.** If you ship a fork or mod and comply with the AGPL/asset notice requirements, open an issue and we can link it from this README.
 
 ### How to ship a PR
 
@@ -255,9 +256,7 @@ We use squash-merge with a `[type](scope): summary` first-line convention (see `
 
 ## License
 
-Source code is licensed under [GNU AGPL-3.0-or-later](LICENSE). Non-code assets are licensed under [Creative Commons Attribution-ShareAlike 4.0](LICENSE-ASSETS).
-
-All versions up to and including `v2.1.10` were released under MIT and remain available under MIT from their historical commits, tags, and releases. From `v2.2.0` onward, code is AGPL-3.0-or-later and assets are CC BY-SA 4.0. See [LICENSING.md](LICENSING.md) for the forward-only transition details.
+Source code is licensed under [GNU AGPL-3.0-or-later](LICENSE). Non-code assets are licensed under [Creative Commons Attribution-ShareAlike 4.0](LICENSE-ASSETS). See [LICENSING.md](LICENSING.md) for the forward-only transition details.
 
 The in-app notice appears on the about page, the start/loading flow, and the in-game HUD. Modified versions must preserve these notices in reasonably visible locations.
 
