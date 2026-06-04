@@ -199,7 +199,7 @@ const SHOTS = [
         waitForFlockSize: 200,
         camera: { pos: { x: -82, y: 38, z: 94 }, target: { x: 0, y: 5, z: 8 } },
         dogPose: { x: -12, z: -20, velocity: { x: 8, z: 6 } },
-        notes: 'Wide devlog hero image: island, water, flock, and dog all visible.',
+        notes: 'Wide long-form hero image: island, water, flock, and dog all visible.',
     },
     {
         id: 'sdi-dog-action',
@@ -225,7 +225,7 @@ const SHOTS = [
         waitForFlockSize: 200,
         camera: { pos: { x: -78, y: 32, z: 208 }, target: { x: 0, y: 4, z: 292 } },
         dogPose: { x: -18, z: 104, velocity: { x: 5, z: 12 } },
-        notes: 'Portal and scale shot for devlog body copy.',
+        notes: 'Portal and scale shot for long-form body copy.',
     },
     {
         id: 'field-grass-scale',

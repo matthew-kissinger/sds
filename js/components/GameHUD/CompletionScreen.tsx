@@ -642,9 +642,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                         </button>
                     )}
 
-                    {/* Cycle 27 Phase E: download the rolling-tail clip if
-                        the recorder produced one (browsers without
-                        MediaRecorder + canvas.captureStream skip this). */}
+                    {/* Explicit local developer capture only. */}
                     {data?.replayBlobUrl && (
                         <a
                             href={data.replayBlobUrl}
@@ -673,7 +671,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                                 e.currentTarget.style.transform = 'translateY(0)';
                             }}
                         >
-                            {t('completion.saveClip', 'Save clip')}
+                            {t('completion.saveClip', 'Save dev clip')}
                         </a>
                     )}
                 </div>

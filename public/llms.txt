@@ -1,31 +1,25 @@
 # Sheep Dog Sim
 
-> A free, browser-based herding game where you guide your sheepdog across one fenced pasture and two hand-built islands. No signup, no microtransactions. Current source is AGPL-3.0-or-later and current assets are CC BY-SA 4.0.
+> A free browser-based herding game where you guide a sheepdog across one fenced pasture and two hand-built islands. No signup, no microtransactions. Current source is AGPL-3.0-or-later and current assets are CC BY-SA 4.0.
 
 The site is the game. Open the URL, herd some sheep, close the tab. Single-player and 2-4 player real-time multiplayer. Built on Three.js with WebGL fallback, progressive WebGPU on supported hardware, and a Cloudflare Workers + Durable Objects + D1 backend. The full source is public on GitHub; hosted or modified versions must publish corresponding source under AGPL and preserve attribution.
 
 ## Game
 
 - [Play Sheep Dog Sim](https://sheepdogsim.com/): the game. Three.js + WebGL canvas; mobile + desktop; gamepad supported.
-- [About](https://sheepdogsim.com/about): solo developer Matthew Kissinger, the why-it-exists, the tech stack.
+- [About](https://sheepdogsim.com/about): project origin, proof status, tech stack, source, and license.
 
 ## Biomes
 
-- [Home Field](https://sheepdogsim.com/scenes/home-field): flat fenced pasture with a single perimeter pen. The starter biome.
-- [Rolling Hills](https://sheepdogsim.com/scenes/rolling-hills): 180-metre sunset island with rolling heightfield and a lightning-zap corral.
+- [Home Field](https://sheepdogsim.com/scenes/home-field): flat fenced pasture with a single gate. The starter biome.
+- [Rolling Hills](https://sheepdogsim.com/scenes/rolling-hills): 180-metre sunset island with rolling heightfield and a lightning corral.
 - [Open Country](https://sheepdogsim.com/scenes/open-country): 380-metre wild island with a multi-stage gather-and-portal objective.
-
-## Devlog
-
-- [Devlog index](https://sheepdogsim.com/devlog/): plain-language behind-the-scenes notes on what's changing under the hood.
-- [v2.2 native shell proof and license transition](https://sheepdogsim.com/devlog/v2-2-native-license): the AGPL/CC BY-SA transition, native shell proof, and desktop package follow-up.
-- [Polish under the hood: the terrain math gets one home](https://sheepdogsim.com/devlog/cycle-30-heightfield-unify): Cycle 30, May 2026. A floating-point quirk fix.
-- [Reorganising the game-mode plumbing](https://sheepdogsim.com/devlog/cycle-29-gamestate-decomp): Cycle 29, May 2026. Internal refactor.
 
 ## Source and reuse
 
-- [GitHub repository](https://github.com/matthew-kissinger/sds): source, docs, native-shell proof work, and license files. ~10k lines of vanilla JavaScript on the client, ~600-line TypeScript Cloudflare Worker on the server, deterministic boid + physics modules shared byte-identically by both.
-- [Press kit](https://github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md): screenshots, social cards, taglines, creator bio. Reuse permitted under fair use; please credit "Sheep Dog Sim by Matthew Kissinger" with a link to sheepdogsim.com.
+- [GitHub repository](https://github.com/matthew-kissinger/sds): source, docs, native-shell proof work, and license files.
+- [License details](https://github.com/matthew-kissinger/sds/blob/main/LICENSING.md): current code is AGPL-3.0-or-later; current assets are CC BY-SA 4.0.
+- [Press kit](https://github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md): screenshots, social cards, taglines, creator bio.
 
 ## Contact
 

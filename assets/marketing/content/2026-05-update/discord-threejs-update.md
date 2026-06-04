@@ -3,8 +3,8 @@
 Asset to attach:
 
 ```text
-assets/marketing/og/og-rh-sunset.webp
-C:\Users\Mattm\X\games-3d\sds\assets\marketing\og\og-rh-sunset.webp
+assets/scenes/entrance/rolling-hills.webp
+C:\Users\Mattm\X\games-3d\sds\assets\scenes\entrance\rolling-hills.webp
 ```
 
 Do not attach the older screenshots under `assets/images/` or historical `cycle*-validation/` folders for this update. They show previous visual states and should be treated as archive/reference material, not current promotion.
@@ -34,4 +34,4 @@ Caveats, because this is a dev update and not a victory lap:
 - I am using one current image for this update because the video capture pass was not good enough yet. I would rather post one honest screenshot than a bad trailer.
 - Very open to criticism, especially the Three.js/browser stuff: mobile perf, controls, readability, render choices, scene density, anything that looks like I am fighting the platform instead of using it well.
 
-Attached image is the current Sheep Dog Island look. Older screenshots are basically archaeological at this point, so I am keeping this one image-only for now and saving clips/devlog for after the optimization, tree, and capture pipeline pass.
+Attached image is the current Sheep Dog Island look. Older screenshots are basically archaeological at this point, so I am keeping this one image-only for now and saving clips or long-form notes for after the optimization, tree, and capture pipeline pass.

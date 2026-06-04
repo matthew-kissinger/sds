@@ -8,7 +8,11 @@
 
 > [Play it now → sheepdogsim.com](https://sheepdogsim.com)
 
-![Sheep Dog Sim — Rolling Hills sunset with sheepdog and dispersed flock](assets/marketing/og/og-rh-sunset.webp)
+Current WebGPU scene captures:
+
+| Home Field | Rolling Hills | Open Country |
+|---|---|---|
+| ![Sheep Dog Sim Home Field capture with the sheepdog and flock in grass](assets/scenes/entrance/field.webp) | ![Sheep Dog Sim Rolling Hills capture with the sheepdog by the shoreline](assets/scenes/entrance/rolling-hills.webp) | ![Sheep Dog Sim Open Country capture with the sheepdog facing the portal objective](assets/scenes/entrance/open-country.webp) |
 
 ---
 
@@ -196,7 +200,7 @@ We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANG
 - **`v2.1.6`** (2026-05-16) — Cycle 38 tree-placement readability patch: deterministic cross-zone canopy spacing removes stacked tree clumps, and tighter scale jitter keeps production trees from reading as saplings.
 - **`v2.1.5`** (2026-05-16) — Cycle 38 WebGPU tree-impostor packet: branch/leaf-preserving tree rebakes, explicit three-tier WebGPU tree route behind `?konveyorNativeTreeImpostors=1`, dynamic impostor tile plumbing, and refreshed desktop/Android proof artifacts. Desktop proof is green; Android WebGPU remains budget-red and is not a mobile-ready claim.
 - **`v2.1.4`** (2026-05-10) — real iOS Safari water validation via BrowserStack + shoreline-based water shader, removing the fragile depth pre-pass.
-- **`v2.1.3`** (2026-05-09) — public-surface pass: crawler body content, per-scene landing pages, devlog scaffold, sitemap fix, footer links, and repo topic refresh.
+- **`v2.1.3`** (2026-05-09) — public-surface pass: crawler body content, per-scene landing pages, sitemap fix, footer links, and repo topic refresh.
 - **`v2.1.1`** (2026-05-08) — OG card refresh: new Rolling Hills dusk + Field farmhouse social-share images. `_headers` cache TTL added so future asset refreshes propagate fast at the CF edge.
 - **`v2.1.0`** (2026-05-08) — **Practice Paddock** (30-sheep no-pressure mode at position 0 of the mode picker, with first-visit pulsing-glow nudge gated by `localStorage`) + **per-scene SEO** (`document.title` + full `og:*` + `twitter:*` switch on every scene change).
 - **`v2.0.5`** — deleted dead `AtmosphericDesatPatch` machinery (~190 LOC) — final piece of the Cycle 25 polish-program cleanup.

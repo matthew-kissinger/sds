@@ -1,13 +1,13 @@
 # Entrance and Loading Spec
 
-> Cycle 49 (`pastoral-vision`), Phase 5. The behavior spec for the instant entrance and the pastoral loading experience that Cycle 50 builds. It fixes the shape and the contracts, not the implementation. The look is reviewed on the gallery mockups (`EntranceMock`, `LoadingMock`) and on the deployed `/gallery`. Aligned with [`ui-design-language.md`](ui-design-language.md).
+> Cycle 49 (`pastoral-vision`), Phase 5. The behavior spec for the instant entrance and the pastoral loading experience that Cycle 50 builds. It fixes the shape and the contracts, not the implementation. The look is reviewed through internal gallery mockups (`EntranceMock`, `LoadingMock`). Aligned with [`ui-design-language.md`](ui-design-language.md).
 
 ## Entrance
 
 A plain open mounts an instant lightweight menu, not a built scene. No heavy 3D at entry: no WebGPU renderer pass for a hero scene, no `buildSceneBody`, no attract field. First paint is the menu on a painterly pastoral backdrop, and it is interactive immediately.
 
 - **The boot gate flips.** Today `shouldBootAttract()` in [`js/boot/bootAttract.js`](../js/boot/bootAttract.js) gates a plain open into the drifting-boid attract field. Cycle 50 re-points that plain-open branch to mount the instant menu and to NOT call `buildSceneBody` or mount the attract field at boot. The deep-link and multiplayer branches are unchanged (see Deep-link below).
-- **Backdrop (Q1 resolved).** A layered 2D / CSS / SVG painterly pastoral scene: a golden-hour sky gradient that drifts on a long loop, soft rolling-hill silhouette layers with a light parallax on pointer move, a faint drift of dusk motes, and a small dog-and-sheep silhouette on the ridge so it reads unmistakably as this game. It is cheap to render and composites headlessly (no WebGPU), so it previews on the gallery. With `prefers-reduced-motion`, the backdrop is a still painterly frame.
+- **Backdrop (Q1 resolved).** A layered 2D / CSS / SVG painterly pastoral scene: a golden-hour sky gradient that drifts on a long loop, soft rolling-hill silhouette layers with a light parallax on pointer move, a faint drift of dusk motes, and a small dog-and-sheep silhouette on the ridge so it reads unmistakably as this game. It is cheap to render and composites headlessly (no WebGPU), so it previews in the gallery smoke surface. With `prefers-reduced-motion`, the backdrop is a still painterly frame.
 - **Foreground.** The game title (display face) and the scene picker float over the backdrop on warm glass. The picker is the primary control. The picker keeps its current behavior (ordering, keyboard, swipe); only its surround changes to the pastoral backdrop.
 - **Why this replaces the zen field.** The drifting-boid (zen) field read as abstract birds, disconnected from herding, and building a heavy scene behind the menu made entry slow. The instant menu is unmistakably the game and is fast. The zen field code is archived behind a flag in Cycle 50, not deleted.
 

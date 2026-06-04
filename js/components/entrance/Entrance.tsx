@@ -43,14 +43,12 @@ const chipRound: CSSProperties = {
   border: `1px solid ${pastoral.glassWarmBorder}`, background: alpha(pastoral.ink, 5), color: pastoral.ink, cursor: 'pointer',
 };
 
-// Cycle 51 P12: the project links that used to sit in the in-game #site-footer
-// (removed from the game scene) now live in the entrance info menu.
+// Project links that used to sit in the in-game #site-footer now live in this
+// quiet entrance menu.
 const SITE_LINKS: { label: string; href: string; external?: boolean }[] = [
   { label: 'About', href: '/about' },
   { label: 'Scenes', href: '/scenes/home-field' },
-  { label: 'Devlog', href: '/devlog/' },
   { label: 'Source', href: 'https://github.com/matthew-kissinger/sds', external: true },
-  { label: 'Press kit', href: 'https://github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md', external: true },
 ];
 
 const SOURCE_URL = 'https://github.com/matthew-kissinger/sds';

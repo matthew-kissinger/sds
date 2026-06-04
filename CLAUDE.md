@@ -94,7 +94,7 @@ Don't write to memory: code patterns (derivable from current state), git history
 - **Surface drift before acting on it.** If you find yourself wanting to expand scope, stop and ask.
 - **Run `/validate` before any cycle close.** Acceptance is non-negotiable.
 - **Don't auto-bump versions.** Player-visible releases are explicit.
-- **Don't auto-post devlog or marketing content.** Matt's voice.
+- **Don't auto-post marketing content.** Matt's voice.
 
 ## What NOT to do (Claude-specific)
 

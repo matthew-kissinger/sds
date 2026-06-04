@@ -32,11 +32,11 @@ Cycle 48 swept the leaf-tier components to token-driven `.tsx`. What remains are
 
 ## Per-container acceptance shape (Cycles 51 and 52)
 
-Each container conversion lands as a restyle to pastoral token-driven `.tsx`, validated the same way the Cycle 48 leaves were, with the gallery as the headless review surface:
+Each container conversion lands as a restyle to pastoral token-driven `.tsx`, validated the same way the Cycle 48 leaves were, with the internal gallery component as the headless review surface:
 
 - The container exists as `.tsx` and `grep -c createElement` over it returns 0.
 - `grep -cE '#[0-9a-fA-F]{6}'` over it returns 0 (inline hex retired to pastoral tokens).
-- The container gets a section in the gallery (rendered under the pastoral palette) so the look is reviewable headlessly.
+- The container gets a section in the gallery component (rendered under the pastoral palette) so the look is reviewable headlessly.
 - A jsdom render spec mounts it and pins its behavior contracts (selection callbacks, keyboard, pointer-events gating, the multiplayer scene-lock and hard-reload fallback where relevant).
 - Behavior is preserved exactly: no `shared/` change, no SceneDef change, no NetworkManager or wire-protocol change. If a conversion appears to need one, stop and surface (fence).
 - `npm test` and `npm run build` pass, and the `main-*.js` chunk stays within the bundle ratchet.

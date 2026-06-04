@@ -134,7 +134,7 @@
      repointed, so the live look is unchanged until Cycles 50-52 migrate
      components onto these. Mirrored one-to-one in js/components/ui/tokens.ts
      under `pastoral` and kept in lockstep (tests/ui/tokens.parity.spec.ts
-     enforces it). Hex is golden-hour intent, confirmed on the /gallery. */
+     enforces it). Hex is golden-hour intent, confirmed through the gallery smoke surface. */
 
   /* Golden-hour sky / backdrop gradient (entrance backdrop, large warm fields). */
   --color-pasture-dawn: #f6d8a8;     /* warm apricot, high sky */
@@ -378,9 +378,8 @@
     border: 0;
   }
 
-  /* Cycle 51 P12: the #site-footer (About/Scenes/Devlog/Source/Press kit) was
-     removed from the game scene; those links now live in the entrance info menu
-     (js/components/entrance/Entrance.tsx). Crawler copies stay in #seo-content. */
+  /* The old #site-footer was removed from the game scene; durable project
+     links live in the entrance info menu, with crawler copies in #seo-content. */
 }
 
 /* ==================== COMPONENTS LAYER ==================== */

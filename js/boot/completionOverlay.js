@@ -24,9 +24,8 @@ export async function showCompletionOverlay(game, mode, data = {}) {
     const existing = document.getElementById('game-completion-overlay');
     if (existing) existing.remove();
 
-    // Cycle 27 Phase E: capture the rolling-tail clip BEFORE the React
-    // render so the completion screen can render the Save-clip download
-    // in its first paint.
+    // Explicit local developer capture only. Normal players should never
+    // see a download affordance on the completion screen.
     const replayBlobUrl = await game._stopReplay();
 
     // Submit score to leaderboard for all single-player solo modes

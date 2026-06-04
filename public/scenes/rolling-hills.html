@@ -3,178 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rolling Hills. Sheep Dog Sim.</title>
-    <meta name="description" content="A 180-metre sunset island with rolling heightfield and a lightning-zap corral. The hero biome in Sheep Dog Sim. Free, browser-based, no install.">
+    <title>Rolling Hills. Sheep Dog Sim sunset island.</title>
+    <meta name="description" content="Rolling Hills is Sheep Dog Sim's golden-hour island biome with rolling terrain, shoreline water, and a lightning corral objective.">
     <meta name="author" content="Matthew Kissinger">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://sheepdogsim.com/scenes/rolling-hills">
 
-    <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="Rolling Hills. Sheep Dog Sim.">
-    <meta property="og:description" content="A 180-metre sunset island with a lightning-zap corral. The hero biome in Sheep Dog Sim.">
+    <meta property="og:description" content="A golden-hour island with rolling terrain, shoreline water, and a lightning corral.">
     <meta property="og:url" content="https://sheepdogsim.com/scenes/rolling-hills">
-    <meta property="og:image" content="https://sheepdogsim.com/assets/marketing/og/og-rh-sunset.webp">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp">
+    <meta property="og:image:type" content="image/webp">
+    <meta property="og:image:width" content="1920">
+    <meta property="og:image:height" content="1080">
+    <meta property="og:image:alt" content="Current Sheep Dog Sim Rolling Hills renderer capture with the sheepdog by the shoreline.">
 
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Rolling Hills. Sheep Dog Sim.">
-    <meta name="twitter:description" content="A 180-metre sunset island with a lightning-zap corral. The hero biome in Sheep Dog Sim.">
-    <meta name="twitter:image" content="https://sheepdogsim.com/assets/marketing/og/og-rh-sunset.webp">
+    <meta name="twitter:description" content="A golden-hour island with rolling terrain, shoreline water, and a lightning corral.">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp">
+    <meta name="twitter:image:alt" content="Current Sheep Dog Sim Rolling Hills renderer capture with the sheepdog by the shoreline.">
 
-    <!-- JSON-LD -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "VideoGame",
-        "name": "Sheep Dog Sim. Rolling Hills.",
+        "name": "Sheep Dog Sim - Rolling Hills",
         "alternateName": "Rolling Hills biome",
-        "description": "Rolling Hills is a 180-metre island biome in Sheep Dog Sim, with a rolling heightfield, golden-hour lighting, and a lightning-zap corral as the scoring objective.",
+        "description": "Rolling Hills is a 180-metre island in Sheep Dog Sim, with rolling terrain, golden-hour lighting, shoreline water, and a lightning corral objective.",
         "genre": ["Simulation", "Casual", "Relaxing"],
         "gamePlatform": "Web Browser",
         "operatingSystem": "Any",
         "applicationCategory": "Game",
         "url": "https://sheepdogsim.com/scenes/rolling-hills",
-        "image": "https://sheepdogsim.com/assets/marketing/og/og-rh-sunset.webp",
+        "image": "https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp",
         "isAccessibleForFree": true,
         "playMode": ["SinglePlayer", "MultiPlayer"],
         "gameLocation": {
             "@type": "Place",
-            "name": "Rolling Hills - 180-metre sunset island"
+            "name": "Rolling Hills - golden-hour island"
         },
         "mainEntityOfPage": {
             "@type": "WebPage",
-            "@id": "https://sheepdogsim.com/"
+            "@id": "https://sheepdogsim.com/scenes/rolling-hills"
         },
         "author": { "@type": "Person", "name": "Matthew Kissinger" }
     }
     </script>
 
     <link rel="icon" type="image/png" href="/assets/images/favicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #1a2e1a 0%, #0f1a0f 100%);
-            color: #e8f5e8;
-            min-height: 100vh;
-            line-height: 1.6;
-        }
-        .container { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
-        h1 { font-size: 2rem; font-weight: 600; margin-bottom: 0.5rem; color: #a7f3d0; }
-        .tagline { color: #6ee7b7; font-size: 1.1rem; margin-bottom: 2rem; }
-        h2 { font-size: 1.25rem; font-weight: 600; margin: 2rem 0 0.75rem; color: #86efac; }
-        p { margin-bottom: 1rem; color: #d1fae5; }
-        a { color: #34d399; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .play-cta {
-            display: inline-block;
-            margin-top: 1.5rem;
-            padding: 0.85rem 1.6rem;
-            background: #234d23;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1.05rem;
-            transition: background 0.2s;
-        }
-        .play-cta:hover { background: #2d5a2d; text-decoration: none; }
-        .other-scenes {
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid #2d4a2d;
-            font-size: 0.95rem;
-            color: #9ca3af;
-        }
-        .other-scenes a { margin: 0 0.5rem; }
-        .legal-notice {
-            margin-top: 1.5rem;
-            font-size: 0.9rem;
-            color: #a7f3d0;
-        }
-        .back { display: inline-block; margin-top: 2rem; color: #6ee7b7; }
-    </style>
+    <link rel="stylesheet" href="/css/static-pages.css">
 </head>
-<body>
-    <div class="container">
-        <h1>Rolling Hills</h1>
-        <p class="tagline">180-metre island. Golden hour. Lightning-zap corral.</p>
-
-        <p>
-            Rolling Hills is the hero scene. A small island, ringed by water, lit by a
-            permanent late-afternoon sun. The terrain isn't flat; it rolls. There are
-            ridges that block your sightline to the flock, dips that catch sheep and
-            slow them down, a shoreline that defines where the playable space ends.
-        </p>
-
-        <p>
-            On a flat pasture, herding is a 2D problem. On Rolling Hills, you have to
-            read the landscape too. A flock cresting a ridge can scatter on the descent.
-            A dog sprinting up a slope eats more stamina than the same sprint on level
-            ground. The terrain becomes part of the puzzle.
-        </p>
-
-        <h2>The corral</h2>
-        <p>
-            On the north side of the island sits a small corral framed by dark stones.
-            Drive sheep into it and they get pulled in by a lightning effect - a
-            Tesla-coil zap that scores them. The corral is the objective in scored modes
-            here. Get the flock there, hold the line, watch the score climb.
-        </p>
-
-        <p>
-            On a 5,000-sheep Chaos run, the corral is a chokepoint. The flock won't all
-            fit through the entrance at once and the back of the herd starts spilling
-            sideways. Managing the spill is the late-game.
-        </p>
-
-        <h2>Visual style</h2>
-        <p>
-            Hosek-Wilkie analytic sky tuned to a warm sunset preset, parallax cloud
-            layer, anime-style water with sun-glint where it meets the shore. The grass
-            field uses three rotated noise octaves for wind so the breeze reads as flow,
-            not a single wavefront. EZ-Tree foliage and Pixel-Forge rocks are scattered
-            with deterministic seeds so the scene composition is the same every load.
-        </p>
-
-        <p>
-            Rolling Hills is the scene that ends up on the OG cards and trailers because
-            it's the one that does the most work visually.
-        </p>
-
-        <h2>How to play</h2>
-        <p>
-            WASD / arrows to move, Shift to sprint, mouse-wheel or pinch to zoom. On
-            mobile: joystick + sprint button. The camera defaults to a top-down isometric
-            (Classic); press <strong>C</strong> to cycle through Follow (close cinematic)
-            and Free (yaw-orbit). All three are useful on Rolling Hills, depending on
-            whether you're trying to read the whole flock or chase one stragglers.
-        </p>
-
-        <a class="play-cta" href="/?scene=rolling-hills">Play Rolling Hills →</a>
-
-        <div class="other-scenes">
-            Other biomes:
-            <a href="/scenes/home-field">Home Field</a> ·
-            <a href="/scenes/open-country">Open Country</a>
-            <br>
-            <a href="/about">About</a> ·
-            <a href="/devlog/">Devlog</a> ·
-            <a href="https://github.com/matthew-kissinger/sds">Source</a>
+<body class="public-page">
+    <header class="site-hero" style="--hero-image: url('/assets/scenes/entrance/rolling-hills.webp'); --hero-position: center;">
+        <nav class="site-nav" aria-label="Primary">
+            <a class="brand-link" href="/">Sheep Dog Sim</a>
+            <div class="nav-links">
+                <a href="/about">About</a>
+                <a href="https://github.com/matthew-kissinger/sds">Source</a>
+            </div>
+        </nav>
+        <div class="hero-inner">
+            <p class="kicker">Hero biome</p>
+            <h1>Rolling Hills</h1>
+            <p class="hero-copy">
+                A 180-metre island at golden hour. The terrain rolls, the water
+                frames the boundary, and the scoring corral pulls sheep in with a
+                lightning effect.
+            </p>
         </div>
+    </header>
 
-        <p class="legal-notice">
+    <main class="page-main">
+        <section>
+            <h2>Terrain changes the problem</h2>
+            <p>
+                On a flat pasture, herding is mostly about position. Rolling Hills adds
+                ridges, dips, and shoreline pressure. Sheep can crest a hill and break
+                on the descent; the dog spends stamina climbing; the camera has to read
+                both flock shape and land shape.
+            </p>
+            <p>
+                The objective sits on the north side of the island. Push sheep into the
+                stone-framed corral and the effect pulls them out of play. At high flock
+                counts, the corral becomes a chokepoint and the spill is the challenge.
+            </p>
+        </section>
+
+        <section class="split">
+            <div>
+                <h2>Scene shape</h2>
+                <ul class="fact-list">
+                    <li>180-metre island with rolling heightfield terrain.</li>
+                    <li>Golden-hour sky, shoreline water, grass wind, trees, and rocks.</li>
+                    <li>Corral objective for scored modes.</li>
+                </ul>
+            </div>
+            <div>
+                <h2>Best for</h2>
+                <p>
+                    Rolling Hills is the main visual read of Sheep Dog Sim: strong enough
+                    for screenshots, small enough for quick rounds, and varied enough to
+                    expose the flock behavior beyond the starter pasture.
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Play the island</h2>
+            <div class="action-row">
+                <a class="button" href="/?scene=rolling-hills">Play Rolling Hills</a>
+                <a class="text-link" href="/scenes/home-field">Home Field</a>
+                <a class="text-link" href="/scenes/open-country">Open Country</a>
+            </div>
+            <p class="quiet-note">Use Classic for the full map read, Follow for close chase play, and Free when you want to scout the next ridge.</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <p class="license-note">
             (c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0):
             <a href="https://github.com/matthew-kissinger/sds">github.com/matthew-kissinger/sds</a>.
             Assets are licensed under CC BY-SA 4.0.
         </p>
-
-        <a href="/" class="back">Back to game</a>
-    </div>
+    </footer>
 </body>
 </html>

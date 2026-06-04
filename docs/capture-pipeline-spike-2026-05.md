@@ -62,7 +62,7 @@ That is good Remotion architecture, but it is not how SDS currently renders game
 
 Use Remotion after gameplay capture exists:
 
-- Assemble clips into Discord/devlog cuts.
+- Assemble clips into Discord and long-form update cuts.
 - Add title cards, captions, trims, and layout variants.
 - Use `<Video>`, `<Img>`, `<Sequence>`, `staticFile()`, and frame-driven transitions.
 - Use Remotion CLI/ffmpeg helpers for exact trims and final social crops.
@@ -146,7 +146,7 @@ Acceptance for keeping it:
 Once gameplay clips pass validation, add Remotion only as an editorial project if needed:
 
 - Place generated clips/stills in a Remotion `public/` folder or point to them from a dedicated composition project.
-- Define compositions for `discord-clip-720p`, `devlog-hero-16x9`, and `social-square`.
+- Define compositions for `discord-clip-720p`, `longform-hero-16x9`, and `social-square`.
 - Use frame-driven Remotion animation only; no CSS animation or self-running Three loops.
 
 ## Next Implementation Slice

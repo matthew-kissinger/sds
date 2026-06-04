@@ -109,11 +109,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
-        about: 'about.html',
-        // Cycle 49 P3: standalone UI gallery (gallery.html). A pure React + CSS
-        // review surface that renders no WebGPU game, so the pastoral look is
-        // verifiable headlessly. Separate entry; does not touch the main chunk.
-        gallery: 'gallery.html'
+        about: 'about.html'
       },
       output: {
         manualChunks: {

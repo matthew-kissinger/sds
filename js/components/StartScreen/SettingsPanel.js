@@ -723,7 +723,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                 }, t('common.backToMenu')),
                 createElement('a', {
                     key: 'about',
-                    href: '/about.html',
+                    href: '/about',
                     target: '_blank',
                     rel: 'noopener',
                     style: {

@@ -4,7 +4,7 @@
  * Cycle 26 v2.1.0 — per-scene SEO meta updater.
  *
  * Asserts the contract: each canonical scene id has full meta, the OG
- * image points at an existing webp under assets/marketing/og/, and the
+ * image points at an existing current scene webp, and the
  * updateSceneMetadata function mutates the right meta tags on the DOM.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -24,7 +24,7 @@ describe('per-scene SEO meta', () => {
         expect(ids).toContain('open-country');
     });
 
-    it('every registered OG image exists on disk under assets/marketing/og/', () => {
+    it('every registered social image exists on disk under assets/scenes/entrance/', () => {
         for (const [id, meta] of Object.entries(__TEST_ONLY__.SCENE_META)) {
             const rel = meta.ogImage.replace(/^\//, '');
             const abs = resolve(repoRoot, rel);

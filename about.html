@@ -3,39 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Sheep Dog Sim</title>
-    <meta name="description" content="Sheep Dog Sim is a browser-based herding game by Matthew Kissinger: flocking simulation, Three.js rendering, Cloudflare-edge multiplayer, and source you can study.">
+    <title>About Sheep Dog Sim. Browser herding game by Matthew Kissinger.</title>
+    <meta name="description" content="About Sheep Dog Sim: a browser-first herding game by Matthew Kissinger with real flock behavior, Three.js rendering, edge multiplayer, and public source.">
     <meta name="author" content="Matthew Kissinger">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://sheepdogsim.com/about">
 
-    <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="About Sheep Dog Sim">
-    <meta property="og:description" content="A browser-based herding game by Matthew Kissinger: flocking simulation, Three.js rendering, and Cloudflare-edge multiplayer.">
+    <meta property="og:description" content="A browser-first herding game by Matthew Kissinger: real flock behavior, Three.js rendering, edge multiplayer, and public source.">
     <meta property="og:url" content="https://sheepdogsim.com/about">
-    <meta property="og:image" content="https://sheepdogsim.com/assets/marketing/og/og-field.webp">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp">
+    <meta property="og:image:type" content="image/webp">
+    <meta property="og:image:width" content="1920">
+    <meta property="og:image:height" content="1080">
+    <meta property="og:image:alt" content="Current Sheep Dog Sim Rolling Hills renderer capture with the sheepdog by the shoreline.">
 
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="About Sheep Dog Sim">
-    <meta name="twitter:description" content="A browser-based herding game by Matthew Kissinger: flocking simulation, Three.js rendering, and Cloudflare-edge multiplayer.">
-    <meta name="twitter:image" content="https://sheepdogsim.com/assets/marketing/og/og-field.webp">
+    <meta name="twitter:description" content="A browser-first herding game by Matthew Kissinger with real flock behavior, edge multiplayer, and public source.">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp">
+    <meta name="twitter:image:alt" content="Current Sheep Dog Sim Rolling Hills renderer capture with the sheepdog by the shoreline.">
 
-    <!-- JSON-LD -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "AboutPage",
         "url": "https://sheepdogsim.com/about",
         "name": "About Sheep Dog Sim",
-        "description": "About page for Sheep Dog Sim, a browser-based herding game by Matthew Kissinger.",
+        "description": "About page for Sheep Dog Sim, a browser-first herding game by Matthew Kissinger.",
+        "primaryImageOfPage": {
+            "@type": "ImageObject",
+            "url": "https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp",
+            "width": 1920,
+            "height": 1080
+        },
         "isPartOf": {
             "@type": "WebSite",
             "name": "Sheep Dog Sim",
             "url": "https://sheepdogsim.com/"
+        },
+        "about": {
+            "@type": "VideoGame",
+            "name": "Sheep Dog Sim",
+            "url": "https://sheepdogsim.com/",
+            "gamePlatform": "Web Browser",
+            "applicationCategory": "Game"
         },
         "mainEntity": {
             "@type": "Person",
@@ -49,206 +62,116 @@
     }
     </script>
 
-    <link rel="icon" type="image/png" href="assets/images/favicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #1a2e1a 0%, #0f1a0f 100%);
-            color: #e8f5e8;
-            min-height: 100vh;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 640px;
-            margin: 0 auto;
-            padding: 3rem 1.5rem;
-        }
-
-        h1 {
-            font-size: 2rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #a7f3d0;
-        }
-
-        .tagline {
-            color: #6ee7b7;
-            font-size: 1.1rem;
-            margin-bottom: 2rem;
-        }
-
-        h2 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 2rem 0 0.75rem;
-            color: #86efac;
-        }
-
-        p {
-            margin-bottom: 1rem;
-            color: #d1fae5;
-        }
-
-        code {
-            color: #fef3c7;
-        }
-
-        a {
-            color: #34d399;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid #2d4a2d;
-        }
-
-        .links a {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.6rem 1rem;
-            background: #234d23;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-
-        .links a:hover {
-            background: #2d5a2d;
-            text-decoration: none;
-        }
-
-        .back {
-            display: inline-block;
-            margin-top: 2rem;
-            color: #6ee7b7;
-        }
-
-        .tech {
-            font-size: 0.9rem;
-            color: #9ca3af;
-            margin-top: 2rem;
-        }
-
-        .legal-notice {
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid #2d4a2d;
-            font-size: 0.9rem;
-            color: #d1fae5;
-        }
-
-        .other-pages {
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid #2d4a2d;
-            font-size: 0.95rem;
-            color: #9ca3af;
-        }
-        .other-pages a { margin: 0 0.5rem; }
-    </style>
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+    <link rel="stylesheet" href="/css/static-pages.css">
 </head>
-<body>
-    <div class="container">
-        <h1>Sheep Dog Sim</h1>
-        <p class="tagline">A browser herding game with real flock behavior.</p>
-
-        <p>
-            I'm Matthew Kissinger. Sheep Dog Sim is my browser-first herding game:
-            a flocking simulation, a pastoral 3D scene, and a small multiplayer
-            backend all shipped as one playable site.
-        </p>
-
-        <p>
-            Sheep Dog Sim started as an entry for a Three.js game jam and turned into
-            an ongoing experiment in making simple rules feel alive. Each sheep tries
-            to stay with the flock, avoid collisions, route around obstacles, and move
-            away from the dog. Push those rules through a few hundred or a few thousand
-            animals and the flock starts creating problems the code never scripted.
-        </p>
-
-        <h2>The Game</h2>
-        <p>
-            Guide your sheepdog across a flat starter pasture, a sunset island with a
-            lightning corral, or a larger wild island with a gather-and-portal objective.
-            There are no ads, no signup flow, and no energy meters. Open the tab, herd
-            some sheep, close the tab.
-        </p>
-        <p>
-            Just Play is the quiet mode. Classic is the leaderboard run. Extreme,
-            Insane, and Chaos scale the flock until it becomes the antagonist.
-            Multiplayer lets 2-4 players herd together or race the same system.
-        </p>
-
-        <h2>Tech</h2>
-        <p>
-            Built with Three.js, React, Vite, and Cloudflare Workers + Durable Objects
-            + D1. The sheep are GPU-instanced in one draw call, the multiplayer sim is
-            authoritative at the edge, and the deterministic modules under <code>shared/</code>
-            are imported byte-identically by client and worker.
-        </p>
-        <p>
-            WebGL remains the fallback path. WebGPU is progressive: when a browser or
-            native shell can create a real device, the game can take that route, but
-            readiness claims are tied to proof reports, not vibes.
-        </p>
-
-        <h2>Source and License</h2>
-        <p>
-            The current code is AGPL-3.0-or-later and the current non-code assets are
-            CC BY-SA 4.0. Earlier releases retain the license terms recorded in
-            their historical releases. Hosted or modified versions need to keep
-            visible source/attribution notices and publish corresponding source.
-        </p>
-
-        <div class="links">
-            <a href="https://github.com/matthew-kissinger/sds" target="_blank" rel="noopener noreferrer">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                </svg>
-                Source
-            </a>
-            <a href="https://sheepdogsim.com" target="_blank">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-                Play the Game
-            </a>
+<body class="public-page">
+    <header class="site-hero" style="--hero-image: url('/assets/scenes/entrance/rolling-hills.webp'); --hero-position: center;">
+        <nav class="site-nav" aria-label="Primary">
+            <a class="brand-link" href="/">Sheep Dog Sim</a>
+            <div class="nav-links">
+                <a href="/scenes/home-field">Scenes</a>
+                <a href="https://github.com/matthew-kissinger/sds">Source</a>
+            </div>
+        </nav>
+        <div class="hero-inner">
+            <p class="kicker">About the project</p>
+            <h1>A browser herding game built around flock behavior.</h1>
+            <p class="hero-copy">
+                Sheep Dog Sim is Matthew Kissinger's browser-first 3D game:
+                one pasture, two islands, thousands of sheep, and multiplayer
+                running on Cloudflare's edge.
+            </p>
         </div>
+    </header>
 
-        <a href="/" class="back">Back to game</a>
+    <main class="page-main">
+        <section>
+            <h2>What it is</h2>
+            <p>
+                The game starts with a simple job: get behind the flock and move it
+                where it needs to go. The sheep are not scripted props. They stay
+                together, avoid obstacles, react to pressure from the dog, and make
+                mistakes that create new problems.
+            </p>
+            <p>
+                Just Play is quiet. Classic is the leaderboard run. Extreme, Insane,
+                and Chaos scale the flock until the flock itself becomes the main
+                obstacle. Multiplayer lets 2-4 players herd together or compete over
+                the same live simulation.
+            </p>
+        </section>
 
-        <p class="legal-notice">
+        <section>
+            <h2>Where it came from</h2>
+            <p>
+                Sheep Dog Sim started as a Three.js game-jam entry and turned into an
+                ongoing production experiment: how far can a small browser game push
+                pastoral scale, readable animal behavior, and web-native deployment
+                without turning into a tech demo?
+            </p>
+            <p>
+                The answer so far is a playable game with WebGL fallback, progressive
+                WebGPU where a real device is available, native-shell proofs, and the
+                same deterministic simulation shared by browser and server.
+            </p>
+        </section>
+
+        <section class="split">
+            <div>
+                <h2>Stack</h2>
+                <ul class="fact-list">
+                    <li>Three.js rendering with WebGL fallback and progressive WebGPU.</li>
+                    <li>React 19 UI, Vite 7, and a browser-first asset pipeline.</li>
+                    <li>Cloudflare Workers, Durable Objects, and D1 for multiplayer and scores.</li>
+                    <li><code>shared/</code> simulation modules imported byte-identically by client and worker.</li>
+                </ul>
+            </div>
+            <div>
+                <h2>Current proof</h2>
+                <ul class="fact-list">
+                    <li>The web game is live at sheepdogsim.com.</li>
+                    <li>Windows Electron WebGL and true production WebGPU proofs are green.</li>
+                    <li>Capacitor Android WebGL proof is green; true mobile WebGPU is not claimed yet.</li>
+                    <li>Repo gates cover Vitest, ESLint, Playwright E2E, and build output.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>Source and license</h2>
+            <p>
+                Current source code is AGPL-3.0-or-later. Current non-code assets are
+                CC BY-SA 4.0. Earlier releases retain the terms recorded in their
+                historical release artifacts.
+            </p>
+            <p>
+                Hosted or modified versions must preserve visible source and
+                attribution notices and publish corresponding source.
+            </p>
+            <div class="action-row">
+                <a class="button" href="/">Play Sheep Dog Sim</a>
+                <a class="text-link" href="https://github.com/matthew-kissinger/sds">Browse the source</a>
+                <a class="text-link" href="https://github.com/matthew-kissinger/sds/blob/main/LICENSING.md">Read licensing details</a>
+            </div>
+        </section>
+
+        <section>
+            <h2>Biomes</h2>
+            <div class="scene-links">
+                <a href="/scenes/home-field">Home Field</a>
+                <a href="/scenes/rolling-hills">Rolling Hills</a>
+                <a href="/scenes/open-country">Open Country</a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <p class="license-note">
             (c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0):
-            <a href="https://github.com/matthew-kissinger/sds" target="_blank" rel="noopener noreferrer">github.com/matthew-kissinger/sds</a>.
+            <a href="https://github.com/matthew-kissinger/sds">github.com/matthew-kissinger/sds</a>.
             Assets are licensed under CC BY-SA 4.0.
         </p>
-
-        <div class="other-pages">
-            Biomes:
-            <a href="/scenes/home-field">Home Field</a> ·
-            <a href="/scenes/rolling-hills">Rolling Hills</a> ·
-            <a href="/scenes/open-country">Open Country</a>
-            <br>
-            <a href="/devlog/">Devlog</a> ·
-            <a href="https://github.com/matthew-kissinger/sds/blob/main/LICENSING.md">Licensing</a>
-        </div>
-    </div>
+    </footer>
 </body>
 </html>

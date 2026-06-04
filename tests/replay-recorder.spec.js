@@ -15,6 +15,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ReplayRecorder, isReplaySupported, __TEST_ONLY__ } from '../js/utils/ReplayRecorder.js';
+import { isDevReplayEnabled } from '../js/utils/replay.js';
 
 class MockMediaRecorder {
     constructor(stream, opts) {
@@ -81,6 +82,15 @@ describe('isReplaySupported', () => {
         delete globalThis.MediaRecorder;
         expect(isReplaySupported()).toBe(false);
         globalThis.MediaRecorder = saved;
+    });
+});
+
+describe('isDevReplayEnabled', () => {
+    it('requires localhost and an explicit devClip query flag', () => {
+        expect(isDevReplayEnabled({ hostname: 'localhost', search: '?devClip=1' })).toBe(true);
+        expect(isDevReplayEnabled({ hostname: '127.0.0.1', search: '?devClip=1' })).toBe(true);
+        expect(isDevReplayEnabled({ hostname: 'sheepdogsim.com', search: '?devClip=1' })).toBe(false);
+        expect(isDevReplayEnabled({ hostname: 'localhost', search: '' })).toBe(false);
     });
 });
 

@@ -33,18 +33,18 @@ The codebase is also deliberately easy to read — ~10k lines of vanilla JavaScr
 ## URLs
 
 - **Play:** [sheepdogsim.com](https://sheepdogsim.com)
-- **About:** [sheepdogsim.com/about.html](https://sheepdogsim.com/about.html)
+- **About:** [sheepdogsim.com/about](https://sheepdogsim.com/about)
 - **Source / contact:** [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds)
 
 ## Screenshots & social cards
 
-Headline social cards (1200×630, refreshed 2026-05-08):
+Current 1920×1080 WebGPU scene captures:
 
-- [`assets/marketing/og/og-rh-sunset.webp`](assets/marketing/og/og-rh-sunset.webp) — Rolling Hills hero (sunset, dog + flock + tree framing). Default OG card.
-- [`assets/marketing/og/og-field.webp`](assets/marketing/og/og-field.webp) — Home Field (noon, dog + farmhouse + 3,000 sheep arc).
-- [`assets/marketing/og/og-open-country.webp`](assets/marketing/og/og-open-country.webp) — Open Country wide.
+- [`assets/scenes/entrance/field.webp`](assets/scenes/entrance/field.webp) — Home Field with the sheepdog and flock in grass.
+- [`assets/scenes/entrance/rolling-hills.webp`](assets/scenes/entrance/rolling-hills.webp) — Rolling Hills shoreline capture. Default public social image.
+- [`assets/scenes/entrance/open-country.webp`](assets/scenes/entrance/open-country.webp) — Open Country with the sheepdog facing the portal objective.
 
-Source 1920×1080 captures + raw PNGs under [`assets/marketing/captures/cycle26/raw/`](assets/marketing/captures/cycle26/raw/).
+Older 1200×630 social-card assets remain under [`assets/marketing/og/`](assets/marketing/og/) for historical release material.
 
 Legacy in-game screenshots also still in [`assets/images/`](assets/images/):
 - `sds-zoomedout.png` — overhead pasture shot

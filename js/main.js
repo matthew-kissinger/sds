@@ -100,11 +100,8 @@ class SheepDogSimulation {
         this.sceneManager = new SceneManager(options.sceneManagerOptions);
         this.gameState = new GameState();
         this.gameTimer = new GameTimer();
-        // Cycle 27 Phase E: rolling 10-second WebM tail of gameplay.
-        // Started in startGame, stopped in showCompletionOverlay so the
-        // completion screen can offer a Save-clip download. Browsers
-        // without MediaRecorder + canvas.captureStream get null and
-        // the completion screen falls back to share-card-only.
+        // Optional local developer capture. Production and ordinary local
+        // play keep this null so completion UX stays score/navigation-only.
         this.replayRecorder = null;
         // Scene selection: ?scene=<id> URL param (pre-UI). Invalid ids fall back to default.
         const requestedSceneId = new URLSearchParams(location.search).get('scene');
@@ -783,8 +780,6 @@ class SheepDogSimulation {
             if (isUiHidden()) {
                 const overlay = document.getElementById('react-overlay');
                 if (overlay) overlay.style.display = 'none';
-                const footer = document.getElementById('site-footer');
-                if (footer) footer.style.display = 'none';
             }
 
             logStep('Initialization complete!');
@@ -1569,7 +1564,7 @@ class SheepDogSimulation {
             this.audioManager.playGameplayMusic();
         }
 
-        // Start the rolling replay tail (Phase E).
+        // Optional local developer replay capture (?devClip=1 on localhost).
         this._startReplay();
 
         // Initialize multiplayer if needed
@@ -1795,7 +1790,7 @@ class SheepDogSimulation {
             }, 900);
         }
 
-        // Start the rolling replay tail (Phase E).
+        // Optional local developer replay capture (?devClip=1 on localhost).
         this._startReplay();
 
         console.log('[SANDBOX] Game started successfully');
@@ -1968,7 +1963,7 @@ class SheepDogSimulation {
             }, 900);
         }
 
-        // Start the rolling replay tail (Phase E).
+        // Optional local developer replay capture (?devClip=1 on localhost).
         this._startReplay();
 
         console.log('[LOCAL] Game started successfully');
@@ -3004,11 +2999,6 @@ class SheepDogSimulation {
     
 
     
-    // Cycle 27 Phase E — start a fresh ReplayRecorder bound to the
-    // WebGL canvas. Idempotent (drops any prior recorder first); safe
-    // to call from every game-start path. No-op when the browser
-    // can't record (mobile Safari < 14.5, etc.); the completion screen
-    // falls back to share-card-only on those.
     // Replay recording — bodies in js/utils/replay.js.
     _startReplay() { runStartReplay(this); }
     async _stopReplay() { return runStopReplay(this); }

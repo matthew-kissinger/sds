@@ -361,7 +361,7 @@ export default {
         finalStandings: 'Final Standings',
         playAgain: 'Play Again',
         nextChallenge: 'Next Challenge',
-        saveClip: 'Save clip',
+        saveClip: 'Save dev clip',
         stats: {
             time: 'Time',
             yourScore: 'Your Score',

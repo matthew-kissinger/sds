@@ -3,9 +3,11 @@ Allow: /
 
 Disallow: /dev/
 Disallow: /test/
+Disallow: /server/
 Disallow: /user-saves/
 
 Allow: /assets/
+Allow: /css/
 Allow: /textures/
 
 Sitemap: https://sheepdogsim.com/sitemap.xml

@@ -6,9 +6,9 @@
  *
  * A pure React + CSS surface that renders the pastoral palette and the six
  * owned primitives WITHOUT booting the WebGPU game. It is the program's
- * headless review surface: `npm run build` emits dist/gallery.html, jsdom specs
- * mount it, and the look is signed off on the deployed /gallery. It imports no
- * game-runtime module (no renderer, scene builder, or attract field).
+ * headless review surface: jsdom specs mount it without publishing a production
+ * route. It imports no game-runtime module (no renderer, scene builder, or
+ * attract field).
  */
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { pastoral } from '../components/ui/tokens';

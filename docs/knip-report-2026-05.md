@@ -1,6 +1,6 @@
 # Knip report (2026-05)
 
-> **Caveat.** An earlier audit of this mixed `.js` / `.ts` / `.tsx` / `.mjs` codebase found roughly **zero true orphans**, so treat every line below as a *candidate* and confirm it manually before deleting anything. Knip was run with **no config file**, so it only sees the entry points it can infer. It does not know about the wrangler `main`, the service-worker registration, the `gallery.html` script entry, the `.claude` hooks, or the many `tools/*.mjs` scripts wired to `package.json` run-scripts and CI. Spot-checks (below) confirmed several "unused" files are in fact live. **Delete nothing on the strength of this report alone.**
+> **Caveat.** An earlier audit of this mixed `.js` / `.ts` / `.tsx` / `.mjs` codebase found roughly **zero true orphans**, so treat every line below as a *candidate* and confirm it manually before deleting anything. Knip was run with **no config file**, so it only sees the entry points it can infer. It does not know about the wrangler `main`, the service-worker registration, the `.claude` hooks, or the many `tools/*.mjs` scripts wired to `package.json` run-scripts and CI. Spot-checks (below) confirmed several "unused" files are in fact live. **Delete nothing on the strength of this report alone.**
 
 ## How it was run
 
@@ -27,7 +27,7 @@ Four flagged "unused files" were checked and are all reachable via entry points 
 
 - `worker/src/index.ts` -> declared as `main = "src/index.ts"` in `worker/wrangler.toml` (Durable Object / Worker entry).
 - `sw.js` -> registered via `navigator.serviceWorker` in `index.html`.
-- `js/gallery/index.jsx` -> the `<script type="module" src="/js/gallery/index.jsx">` entry in `gallery.html`.
+- `js/gallery/Gallery.tsx` -> mounted directly by `tests/ui/Gallery.smoke.spec.tsx` as the internal UI review surface.
 - `.claude/hooks/check-acceptance.mjs` -> wired as a `Stop` hook command in `.claude/settings.json`.
 
 A knip config that registers these entry-point globs (worker, extra HTML entries, `tools/**`, `.claude/hooks/**`, service worker) would collapse a large share of the 63-file list. That config work is out of scope for this report (report-only).
@@ -97,7 +97,7 @@ Barrel/`index` files and entry modules; some are HTML-entry or barrel re-exports
 - `js/components/Multiplayer/index.js`
 - `js/components/shared/index.js`
 - `js/components/StartScreen/index.js`
-- `js/gallery/index.jsx` (confirmed: `gallery.html` entry)
+- `js/gallery/Gallery.tsx` (confirmed: jsdom smoke-test entry)
 - `shared/terrain/index.js`
 - `js/capture/mediabunny-recorder.js`
 

@@ -2,15 +2,22 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * Replay-recording helpers extracted from `main.js` in Cycle 28 Stream
- * B1. Start/stop wrappers around `ReplayRecorder` that capture the
- * rolling-tail clip used by the completion overlay's "Save clip" button.
+ * B1. Start/stop wrappers around `ReplayRecorder` for explicit local
+ * developer capture sessions.
  *
- * Behavior is unchanged from the original `_startReplay` / `_stopReplay`
- * methods. The class keeps thin shim methods that forward to these so
- * existing call sites keep working.
+ * The class keeps thin shim methods that forward to these so existing
+ * call sites keep working.
  */
 
 import { ReplayRecorder, isReplaySupported } from './ReplayRecorder.js';
+
+export function isDevReplayEnabled(locationLike = globalThis.location) {
+    if (!locationLike) return false;
+    const host = locationLike.hostname || '';
+    const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    if (!isLocalHost) return false;
+    return new URLSearchParams(locationLike.search || '').get('devClip') === '1';
+}
 
 /**
  * @param {object} game SheepDogSimulation instance.
@@ -20,6 +27,7 @@ export function startReplay(game) {
         try { game.replayRecorder.stop(); } catch {}
         game.replayRecorder = null;
     }
+    if (!isDevReplayEnabled()) return;
     if (!isReplaySupported()) return;
     const canvas = game.sceneManager?.renderer?.domElement;
     if (!canvas) return;

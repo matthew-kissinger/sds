@@ -1,6 +1,6 @@
 # SDS UI Design Language
 
-> Cycle 49 (`pastoral-vision`), Phase 1. The written north star for the Pastoral UI/UX rework program (Cycles 49-52). It defines the calm-pastoral / painterly look the implementation cycles build toward. Color names here are intent; the real `@theme` tokens land in Phase 2. The look is reviewed on the standalone `/gallery` route (Phase 3 onward), since headless WebGPU does not composite.
+> Cycle 49 (`pastoral-vision`), Phase 1. The written north star for the Pastoral UI/UX rework program (Cycles 49-52). It defines the calm-pastoral / painterly look the implementation cycles build toward. Color names here are intent; the real `@theme` tokens land in Phase 2. The look is reviewed through the internal gallery smoke surface, since headless WebGPU does not composite.
 
 This document supersedes the zen-boids entrance direction from the entrance/UI spike ([`../cycle45-validation/entrance-ui-spike.md`](../cycle45-validation/entrance-ui-spike.md)). The drifting-boid attract field is retired as the default entrance (the code is kept, archived behind a flag, in Cycle 50). The new entrance is an instant lightweight menu on a painterly pastoral backdrop.
 
@@ -21,7 +21,7 @@ Touchstones: golden-hour light, hand-painted storybook landscapes, soft watercol
 
 ## Palette
 
-A warm golden-hour palette. Names below are the intent; Phase 2 lands them as `--color-*` tokens in `css/main.css` and mirrors them in `tokens.ts`. Representative hex is a starting point for the gallery, not final.
+A warm golden-hour palette. Names below are the intent; Phase 2 lands them as `--color-*` tokens in `css/main.css` and mirrors them in `tokens.ts`. Representative hex is a starting point for the gallery smoke surface, not final.
 
 - **Sky / backdrop (the golden-hour gradient).** `pasture-dawn` warm apricot high in the sky (around #f6d8a8), `pasture-gold` soft gold mid (around #f0b878), `pasture-dusk` dusty rose low (around #d99a8f), settling into a faint lavender horizon (around #b9a6c4). These drive the entrance backdrop and any large warm field behind glass.
 - **Land.** `meadow` warm sage green (around #8aa66a) for healthy pasture, `hill-shadow` a deeper cooler green for slopes in shade (around #4f6b52). Used in the entrance hill silhouettes and any pastoral illustration.
@@ -37,11 +37,11 @@ The discipline: a converted component reads `tokens.pastoral.*`, never a raw hex
 A full pastoral type system: a warm display face paired with a clean humanist text face, self-hosted and subset, used consistently across the UI.
 
 - **Display (titles, screen headers, the game title).** Lead proposal: **Fraunces**, a soft old-style display serif with a painterly warmth (variable, with optical-size and softness axes, SIL Open Font License, self-hostable). Carries the storybook-pasture character. Used for the title, screen headings, and large numbers (timer, sheep count) where character helps.
-- **Text / UI (body, labels, buttons, dense readouts).** A clean warm humanist sans for legibility at small sizes. Candidates to compare on the gallery: Inter (neutral, dense-UI-proven), Nunito Sans or Mulish (softer and warmer). Lead: Inter for legibility, with a warmer humanist sans as the alternative if the UI wants more softness.
+- **Text / UI (body, labels, buttons, dense readouts).** A clean warm humanist sans for legibility at small sizes. Candidates to compare in the gallery smoke surface: Inter (neutral, dense-UI-proven), Nunito Sans or Mulish (softer and warmer). Lead: Inter for legibility, with a warmer humanist sans as the alternative if the UI wants more softness.
 - **Scale and weight.** A modest type scale (roughly 0.8 / 1 / 1.25 / 1.6 / 2.5 / clamp for the title). Display in a heavier optical weight for titles, regular for headings. Text face at regular and medium only. Generous line-height for the calm feel.
-- **Loading.** Fonts are self-hosted woff2, subset to the glyphs the UI uses, with the display face preloaded. Font-display strategy (swap versus optional) and the exact faces are confirmed on the gallery and wired in Cycle 50. Until a face loads, fall back to a system serif (display) and system sans (text) so there is no invisible-text flash.
+- **Loading.** Fonts are self-hosted woff2, subset to the glyphs the UI uses, with the display face preloaded. Font-display strategy (swap versus optional) and the exact faces are confirmed in the gallery smoke surface and wired in Cycle 50. Until a face loads, fall back to a system serif (display) and system sans (text) so there is no invisible-text flash.
 
-The actual faces are a taste call confirmed by eyeballing the gallery, not committed blind here.
+The actual faces are a taste call confirmed by eyeballing the gallery smoke surface, not committed blind here.
 
 ## Motion
 
@@ -66,7 +66,7 @@ Airy warm glass over warm backdrops, like morning haze, not dark frosted slate.
 
 An instant lightweight menu on a painterly pastoral backdrop. No heavy 3D at entry: no WebGPU renderer, no `buildSceneBody`, no attract field. The 3D world appears only when the player commits to a scene (Cycle 50 builds the handoff).
 
-- **Backdrop.** A layered 2D / CSS / SVG painterly pastoral scene: a golden-hour sky gradient that slowly drifts, soft rolling-hill silhouette layers with a light parallax on pointer move, a faint drift of dusk motes, and a small dog-and-sheep silhouette on the ridge so it reads unmistakably as this game. Reduced-motion collapses it to a still painterly frame. Cheap to render and composites headlessly, so it previews on the gallery.
+- **Backdrop.** A layered 2D / CSS / SVG painterly pastoral scene: a golden-hour sky gradient that slowly drifts, soft rolling-hill silhouette layers with a light parallax on pointer move, a faint drift of dusk motes, and a small dog-and-sheep silhouette on the ridge so it reads unmistakably as this game. Reduced-motion collapses it to a still painterly frame. Cheap to render and composites headlessly, so it previews in the gallery smoke surface.
 - **Foreground.** The game title (display face) and the scene picker float over the backdrop on warm glass. The picker is the primary control. Choosing a scene commits and streams the real scene in.
 - **Why not the boids.** The drifting-boid field read as abstract birds, disconnected from herding, and the heavy-scene-behind-the-menu approach made entry slow. The instant menu fixes both: it is unmistakably the game and it is fast.
 
@@ -84,4 +84,4 @@ The full entrance and loading behavior (commit-to-build, idle prefetch, in-engin
 
 ---
 
-**References.** Program plan: the Matt-approved Pastoral UI/UX rework (Cycles 49-52). This cycle's plan: [`cycle-49-plan.md`](cycle-49-plan.md). Research the program draws from: [`../cycle45-validation/entrance-ui-spike.md`](../cycle45-validation/entrance-ui-spike.md). Prose rules: [`../.claude/rules/prose-and-voice.md`](../.claude/rules/prose-and-voice.md). Palette and type land as tokens in Phase 2; the look is reviewed on the `/gallery` route from Phase 3.
+**References.** Program plan: the Matt-approved Pastoral UI/UX rework (Cycles 49-52). This cycle's plan: [`cycle-49-plan.md`](cycle-49-plan.md). Research the program draws from: [`../cycle45-validation/entrance-ui-spike.md`](../cycle45-validation/entrance-ui-spike.md). Prose rules: [`../.claude/rules/prose-and-voice.md`](../.claude/rules/prose-and-voice.md). Palette and type land as tokens in Phase 2; the look is reviewed through the internal gallery smoke surface.

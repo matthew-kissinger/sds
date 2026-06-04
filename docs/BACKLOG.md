@@ -21,7 +21,7 @@ Plan archived at [`docs/archive/cycles/cycle-54-plan.md`](archive/cycles/cycle-5
 - `npm run lint`, `npm test`, and `npm run build` passed.
 - `npm run native:preflight`, `npm run desktop:dist`, `npm --prefix native/desktop-electron run proof:webgl`, and `npm --prefix native/desktop-electron run proof:webgpu` passed.
 - GitHub Deploy run `26928995293` passed on `main` at commit `d9da08a`.
-- Direct live fetches confirmed the deployed game, about page, and v2.2 devlog page expose current AGPL/source notices.
+- Direct live fetches confirmed the deployed game and about page expose current AGPL/source notices.
 
 **Carryover (deferred):**
 

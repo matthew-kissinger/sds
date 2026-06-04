@@ -1108,3 +1108,30 @@ Cycle 54 chose to harden the Windows desktop lane first. The isolated Cycle 53 E
 The proof bar moved from "native shell can boot" to "distributor package can be validated." Both `proof:webgl` and `proof:webgpu` pass from the packaged executable on the Windows host, including native resize, fullscreen, pointer lock, audio unlock, storage, virtual gamepad API, Worker health, authenticated WebSocket, startup flock motion, and zero fatal console errors.
 
 The next step is not another shell comparison. The useful desktop cycle is Steam/store preparation: signing policy, install/uninstall QA, Steam depot dry-run, store metadata, capsule/screenshots, controller/cloud-save policy, privacy/support URLs, and release-channel decisions. Public release controls remain explicitly out of scope until those gates are green.
+
+## Public surface trim - keep only durable pages live (2026-06-04)
+
+The public HTML surface is intentionally narrowed to the game, About, and the
+three biome pages. The old devlog route was useful during the first SEO pass,
+but it created a maintenance burden and read like a thin side channel beside the
+actual product. It is removed from live navigation, `llms.txt`, and the sitemap.
+
+The About and scene pages now share one static stylesheet and use image-led
+pastoral layouts instead of one-off dark-green SEO stubs. Historical changelog
+and archive references remain historical records; the live discoverable surface
+is now the five durable URLs in `public/sitemap.xml`.
+
+The previous deployed `/gallery` route is also retired from production output.
+The gallery component remains as an internal jsdom smoke surface, but public
+routes should be player-facing or durable project pages, not development review
+fixtures.
+
+Public hero/social imagery now uses the current `assets/scenes/entrance/*.webp`
+captures instead of the older `assets/marketing/og/*.webp` cards. The older
+cards remain as historical marketing assets but are no longer the visible face
+of the current site.
+
+The completion-screen WebM clip download is local-developer-only behind
+`?devClip=1` on localhost. Normal player completion UX is score submission,
+Play Again, and Main Menu only; the app should never surprise players with a
+download from a victory screen.

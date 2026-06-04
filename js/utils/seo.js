@@ -16,27 +16,27 @@
  * tab-title clarity for the player.
  *
  * Source of truth: `shared/scenes/*.js` `name` + `description` fields.
- * OG images at `assets/marketing/og/og-{field|rh-sunset|open-country}.webp`.
+ * Social images at `assets/scenes/entrance/*.webp`.
  */
 
 const SCENE_META = {
     field: {
         title: 'Sheep Dog Sim · Home Field — Relaxing Free Herding Game',
         description: 'Flat fenced pasture. The classic scene. Guide your sheepdog through peaceful meadows in this free, relaxing browser game.',
-        ogImage: '/assets/marketing/og/og-field.webp',
-        ogImageAlt: 'Sheep Dog Sim — Home Field, the flat fenced classic scene'
+        ogImage: '/assets/scenes/entrance/field.webp',
+        ogImageAlt: 'Sheep Dog Sim — Home Field current renderer capture with sheepdog and flock'
     },
     'rolling-hills': {
         title: 'Sheep Dog Sim · Sheep Dog Island — Relaxing Free Herding Game',
         description: 'An island home with rolling hills and a hidden corral. Find it. Drive the flock home before they wander into the water.',
-        ogImage: '/assets/marketing/og/og-rh-sunset.webp',
-        ogImageAlt: 'Sheep Dog Sim — Sheep Dog Island sunset with sheepdog and 1000-sheep flock'
+        ogImage: '/assets/scenes/entrance/rolling-hills.webp',
+        ogImageAlt: 'Sheep Dog Sim — Rolling Hills current renderer capture with sheepdog by the shoreline'
     },
     'open-country': {
         title: 'Sheep Dog Sim · Open Country — Relaxing Free Herding Game',
         description: 'A wild island of meadow and woods. Drive the flock through the trees to the portal.',
-        ogImage: '/assets/marketing/og/og-open-country.webp',
-        ogImageAlt: 'Sheep Dog Sim — Open Country wild island with meadow, woods, and portal'
+        ogImage: '/assets/scenes/entrance/open-country.webp',
+        ogImageAlt: 'Sheep Dog Sim — Open Country current renderer capture with sheepdog facing the portal'
     }
 };
 

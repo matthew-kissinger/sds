@@ -61,7 +61,7 @@ For the smoothest experience — including native-resolution displays, lower lat
 ### Source / about / press
 
 - Source: [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds)
-- About: [sheepdogsim.com/about.html](https://sheepdogsim.com/about.html)
+- About: [sheepdogsim.com/about](https://sheepdogsim.com/about)
 - Press kit: [github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md](https://github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md)
 - Contact: matt.m.kissinger@gmail.com
 
@@ -86,9 +86,9 @@ Paste into the "Tags" field, comma-separated:
 - **Accessibility:** Configurable text size, color blind friendly (no critical state encoded only in colour), keyboard-only playable.
 - **Multiplayer:** Server-based networked multiplayer + local multiplayer on same device.
 
-## Devlog post (optional, separate from description)
+## Itch.io update post (optional, separate from description)
 
-If you want a short devlog post to flag the new build — itch.io's devlog feed nudges followers/community-feed traffic. Suggested title + body (you'd post this from the project's "Edit game → Devlog" tab):
+If you want a short update post to flag the new build, itch.io's update feed can nudge followers/community-feed traffic. Suggested title + body:
 
 **Title:** `Heightfield fix shipped to itch — terrain renders correctly on RH and Open Country again`
 
@@ -104,7 +104,7 @@ If you want a short devlog post to flag the new build — itch.io's devlog feed 
 
 ## What's NOT in this draft
 
-- **A "what's new" / "changelog" section.** itch.io's description field is mostly read by first-time visitors. Devlog posts are the better channel for "since the last build" notes — covered above as optional.
+- **A "what's new" / "changelog" section.** itch.io's description field is mostly read by first-time visitors. Update posts are the better channel for "since the last build" notes - covered above as optional.
 - **Pricing widget config.** Project is set free, presumably with optional tip — leave that alone.
 - **Cover image / screenshots.** Already in place; not refreshing as part of this push.
 - **Embed options / display orientation.** Existing iframe size + landscape preference should stay as-is.

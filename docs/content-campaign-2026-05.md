@@ -1,6 +1,6 @@
 # Content Campaign — May 2026 Update
 
-Goal: produce a small, honest content pack for the post-Cycle-35 state of Sheep Dog Sim: Three.js Discord update, devlog post, screenshots, short gameplay clips, and later social crops. This is not a version-release plan. It is a media and writing plan for showing the current game clearly in Matt's voice: candid, a little self-aware, technically specific, and not corporate. For the immediate Discord update, use the current image only; do not wait on MP4s.
+Goal: produce a small, honest content pack for the post-Cycle-35 state of Sheep Dog Sim: Three.js Discord update, long-form notes, screenshots, short gameplay clips, and later social crops. This is not a version-release plan. It is a media and writing plan for showing the current game clearly in Matt's voice: candid, a little self-aware, technically specific, and not corporate. For the immediate Discord update, use the current image only; do not wait on MP4s.
 
 ## Positioning
 
@@ -13,7 +13,7 @@ Tone rules:
 - Leave the caveats in the post; they make the update more credible.
 - Prefer concrete phrases like "WebGL water on iPhones became its own little side quest" over generic polish language.
 - Aim at the Three.js Discord culture: technical enough to be useful, honest enough to invite real criticism, not a marketing victory lap.
-- Do not over-explain the capture failures in the Discord post. Save that detail for docs/devlog.
+- Do not over-explain the capture failures in the Discord post. Save that detail for internal docs or long-form notes.
 
 Do not overclaim multiplayer. The correct caveat is:
 
@@ -36,11 +36,11 @@ Do not overclaim multiplayer. The correct caveat is:
 Current Discord image:
 
 ```text
-assets/marketing/og/og-rh-sunset.webp
-C:\Users\Mattm\X\games-3d\sds\assets\marketing\og\og-rh-sunset.webp
+assets/scenes/entrance/rolling-hills.webp
+C:\Users\Mattm\X\games-3d\sds\assets\scenes\entrance\rolling-hills.webp
 ```
 
-Treat older screenshots under `assets/images/`, `cycle*-validation/`, and old capture folders as historical/reference material unless they are explicitly recaptured for the current visual state. The current screenshot-led Discord post should use the Sheep Dog Island sunset OG image above.
+Treat older screenshots under `assets/images/`, `assets/marketing/og/`, `cycle*-validation/`, and old capture folders as historical/reference material unless they are explicitly recaptured for the current visual state. The current screenshot-led Discord post should use the Rolling Hills scene capture above.
 
 Generated assets live under:
 
@@ -130,7 +130,7 @@ Primary clips:
 
 Still images:
 
-- `sdi-hero-overlook.webp/png` — devlog hero image.
+- `sdi-hero-overlook.webp/png` — long-form hero image.
 - `sdi-dog-action.webp/png` — dog and sheep action shot.
 - `oc-portal-poster.webp/png` — Open Country portal scene.
 - `field-grass-scale.webp/png` — classic field fallback context.
@@ -151,9 +151,9 @@ If a clip feels flat, adjust `dogPath` before camera path. The user ask is speci
 ## Publish Order
 
 1. Three.js Discord update with the current Sheep Dog Island sunset image only.
-2. Devlog draft stays image-led until the optimization, EZ-Tree, spacing, and capture-lab work above produces clean new media.
-3. Later devlog post with 3-4 images, optional embedded clips, and a transparent "what is still being validated" section.
-4. Update README or public devlog only after the devlog copy feels accurate.
+2. Long-form update draft stays image-led until the optimization, EZ-Tree, spacing, and capture-lab work above produces clean new media.
+3. Later long-form post with 3-4 images, optional embedded clips, and a transparent "what is still being validated" section.
+4. Update README only after the long-form copy feels accurate.
 
 Do not post a generated clip until it passes the capture-lab validation above. The current Discord update is intentionally screenshot-led.
 
