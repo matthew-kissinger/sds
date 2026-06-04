@@ -4,6 +4,30 @@
 
 ## Recently Completed
 
+### Cycle 56 - `entity-collision` (closed 2026-06-04)
+
+Plan archived at [`docs/archive/cycles/cycle-56-plan.md`](archive/cycles/cycle-56-plan.md). The deferred physical-collision half of the session's original notes ("make dog grass and sheep collision better, make collision mesh?") - Cycle 55 did the grass half. Gives the dog a hard body the sheep cannot occupy: a sheep the dog overlaps is pushed out to the sum of body radii, so the dog plows a tight flock instead of ghosting through it. Scoped conservatively to dog-to-sheep; sheep-to-sheep hard-body deferred.
+
+**Closeout outcomes:**
+
+- **Pure deterministic resolver.** New `shared/EntityCollision.js`: `resolveDogSheepCollision` / `resolveDogSheepCollisions`, body radii 1.1 (dog) / 0.6 (sheep), 0.35m/tick push cap. Positional correction along the contact normal + removal of the into-the-dog velocity component (mirrors the dog-to-tree/rock push-out in `js/Sheepdog.js`). Math.sqrt only - no trig, no Math.random, no DOM, no `js/` import.
+- **Three parity paths.** Wired identically into the Worker authoritative tick (`worker/src/GameSim.js`, after integration, before the boundary clamp), the client predictor/solo path (`js/OptimizedSheep.js`, per active sheep after `updatePosition`), and both sim-baseline harness tick functions. One pure function keeps the three sheep loops in lockstep.
+- **Determinism proven.** `harness-parity.spec.ts` confirms `GameSim.updateSheep` is bit-identical to the harness tick with collision present. The committed sim-baseline fixtures stayed byte-identical (the baselines never bring a sheep within 1.7m of a dog, so collision is a no-op on them) - no regeneration needed, no golden churn.
+- **No fence-frozen file touched.** Added a new deterministic-core module + one `shared/index.js` export line; `MovementPhysics.js` et al. untouched. No wire-format change (collision only moves existing position fields), so no protocol version tag needed.
+- **One-directional.** The dog pushes sheep; sheep never shove the player-controlled dog.
+
+**Validation gates (2026-06-04):**
+
+- `npm run lint` clean (the new `shared/` module passes the no-restricted-imports + no-undef rules); `npm test` 879 passed / 7 skipped / 0 failed (+10 from the new `tests/entity-collision.spec.js`); `npm run build` clean. Bundle ratchet held (main 546 KiB; the resolver lands in the worker build + the lazy `OptimizedSheep` chunk, not `main.js`).
+
+**Migration story (MP in-flight):** no wire change; during the deploy window an old client (no collision) reconciles to the authoritative Worker's collision-resolved broadcast, so no desync break. Consumer updates (worker, client, harness) all in the same commit.
+
+**Carryover (deferred):**
+
+- **In-browser feel review** of the dog-to-sheep collision (Matt) - confirm it reads as solid plowing, not jitter; tune `DOG_BODY_RADIUS` / `MAX_DOG_SHEEP_PUSH_PER_TICK` in `shared/EntityCollision.js` if needed.
+- **Sheep-to-sheep hard-body collision** - deferred (mutual-push jitter needs visual tuning; perf-risky at 5,000 sheep without a spatial grid). Its own future cycle.
+- **Optional regression-net strengthening:** add a sim-baseline fixture that starts a sheep under the dog so the goldens exercise the collision path directly (the unit test + parity test cover it for now).
+
 ### Cycle 55 - `grass-interaction-tuning` (closed 2026-06-04)
 
 Plan archived at [`docs/archive/cycles/cycle-55-plan.md`](archive/cycles/cycle-55-plan.md). Render-only cycle: the grass-parting effect around the dog and sheep was too wide (dog parted a ~4.0m by 6.0m swath, sheep ~2.8m by 3.0m, far larger than either body). Cycle 55 narrowed the parted footprint to hug the body and borrowed the tight push-curve feel from the starred reference repo [boona13/threejs-grass-water-shaders](https://github.com/boona13/threejs-grass-water-shaders).

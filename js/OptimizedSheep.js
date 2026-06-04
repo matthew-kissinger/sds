@@ -12,6 +12,7 @@ import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { createKonveyorSheepMaterial } from './konveyorSheepMaterialAdapter.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
+import { resolveDogSheepCollision } from '../shared/EntityCollision.js';
 import { pointToSegmentDistance, isPointInPolygon } from './gamestate/polygonSpawn.js';
 
 // Cycle 6 Phase 2 — sheep obstacle avoidance.
@@ -732,6 +733,15 @@ export class OptimizedSheepSystem {
                 activeSheepList
             );
             sheep.updatePosition(deltaTime);
+
+            // Cycle 56: dog<->sheep hard separation (client predictor / solo).
+            // After per-sheep integration so the dog can't ghost through the
+            // flock; the Worker runs the identical pass and stays authoritative
+            // in multiplayer, so any prediction drift self-corrects on reconcile.
+            if (sheep.state === 0 && !sheep.isAscending && sheep.position) {
+                if (sheepdog) resolveDogSheepCollision(sheep, sheepdog.position);
+                if (sheepdog2) resolveDogSheepCollision(sheep, sheepdog2.position);
+            }
 
             // Cycle 5+ corral ascend: float upward along the lightning bolt,
             // shrink as it rises, dispatch a spark event at the top.

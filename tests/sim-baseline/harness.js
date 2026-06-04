@@ -39,7 +39,8 @@ import {
     loadScene,
     createObjective,
     tickObjective,
-    isCorralOpen
+    isCorralOpen,
+    resolveDogSheepCollisions
 } from '../../shared/index.js';
 
 /**
@@ -252,6 +253,10 @@ export function tickSheepIslandCoop(sheepArray, sheepdogs, gameState, deltaTime,
         }
         sheep.acceleration.multiply(0);
 
+        // Cycle 56: dog<->sheep hard separation, between integration and the
+        // boundary clamp (mirrors GameSim.updateSheep order).
+        resolveDogSheepCollisions(sheep, sheepdogs);
+
         if (!sheep.hasPassedGate && !sheep.isRetiring) {
             sheep.position = applyHardBoundaryConstraints(
                 sheep,
@@ -367,6 +372,10 @@ export function tickSheepCoop(sheepArray, sheepdogs, gameState, deltaTime) {
             sheep.velocity.multiply(0);
         }
         sheep.acceleration.multiply(0);
+
+        // Cycle 56: dog<->sheep hard separation, between integration and the
+        // boundary clamp (mirrors GameSim.updateSheep order).
+        resolveDogSheepCollisions(sheep, sheepdogs);
 
         if (!sheep.hasPassedGate && !sheep.isRetiring) {
             sheep.position = applyHardBoundaryConstraints(

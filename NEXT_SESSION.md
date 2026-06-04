@@ -1,37 +1,40 @@
-# Next Session - Post-Cycle-55 intake
+# Next Session - Post-Cycle-56 intake
 
 > **Updated:** 2026-06-04
-> **For:** Post-Cycle-55 pickup. No active numbered cycle is open.
-> **Pickup priority:** Confirm the Cycle 56 focus (steam store-prep, entity-collision, or a grass visual finish), author [`docs/cycle-56-plan.md`](docs/cycle-56-plan.md) from the template, then `/cycle-start`.
+> **For:** Post-Cycle-56 pickup. No active numbered cycle is open.
+> **Pickup priority:** Confirm the Cycle 57 focus (steam store-prep, sheep-to-sheep collision, or a feel-review follow-up), author [`docs/cycle-57-plan.md`](docs/cycle-57-plan.md) from the template, then `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-56-plan.md`](docs/cycle-56-plan.md) (scaffolded stub) -> the chosen focus's source docs.
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-57-plan.md`](docs/cycle-57-plan.md) (scaffolded stub) -> the chosen focus's source docs.
 
 ## Where It Stands
 
-**Cycle 55 `grass-interaction-tuning` closed 2026-06-04.** Plan archived at [`docs/archive/cycles/cycle-55-plan.md`](docs/archive/cycles/cycle-55-plan.md); full closeout in [`docs/BACKLOG.md`](docs/BACKLOG.md). Render-only cycle. It narrowed the too-wide grass-parting footprint around the dog and sheep (dog swath ~4.0m -> ~2.3m, sheep ~2.8m -> ~1.6m) and borrowed the tight push-curve feel (squared falloff + flatten) from the starred reference repo [boona13/threejs-grass-water-shaders](https://github.com/boona13/threejs-grass-water-shaders).
+**Cycle 56 `entity-collision` closed 2026-06-04.** Plan archived at [`docs/archive/cycles/cycle-56-plan.md`](docs/archive/cycles/cycle-56-plan.md); full closeout in [`docs/BACKLOG.md`](docs/BACKLOG.md). It gave the dog a hard body the sheep cannot occupy (the dog now plows a tight flock instead of ghosting through it) - the deferred physical half of the original collision notes that Cycle 55 began on the grass side.
 
-- The parting footprint now lives in one place: `GrassSystem.config.interaction` (dog/sheep `{halfLen, halfWid, falloff}`, `pushFalloffPower`, `flattenAmount`). The inline WebGL shaders and the WebGPU node material both read it; the two `.glsl` files are marked NON-LIVE BACKUP.
-- No `shared/` change, no SceneDef change, no Worker change, no sim-baseline regeneration.
-- `npm test` 869 pass / 0 fail, `npm run build` clean. The `bundle-sizes.json` `mainKB` ratchet was reconciled 542 -> 546 (stale fixture from prior-cycle native/license work; Cycle 55 adds 0 bytes to `main.js`, proven by an identical HEAD-vs-change build).
+- New pure deterministic resolver `shared/EntityCollision.js` (`resolveDogSheepCollision` / `resolveDogSheepCollisions`, body radii 1.1 dog / 0.6 sheep, 0.35m/tick cap), wired identically into the three sheep-integration paths the codebase keeps: the Worker tick (`worker/src/GameSim.js`), the client predictor/solo path (`js/OptimizedSheep.js`), and the sim-baseline harness.
+- `harness-parity.spec.ts` proves the Worker tick is bit-identical to the harness with collision present; the committed sim-baseline fixtures stayed byte-identical (collision is a no-op on baseline scenarios), so no regeneration was needed.
+- No fence-frozen algorithm file touched; no wire-format change. `npm run lint` clean, `npm test` 879 pass / 0 fail, `npm run build` clean.
 
-**Open from Cycle 55 (carryover):**
+**Cycle 55 `grass-interaction-tuning` closed 2026-06-04** (the cycle before). Render-only; narrowed the too-wide grass-parting footprint and unified the extents into `GrassSystem.config.interaction`. See [`docs/archive/cycles/cycle-55-plan.md`](docs/archive/cycles/cycle-55-plan.md).
 
-- **Grass visual taste-match** across WebGL desktop, WebGL mobile, and WebGPU is Matt's in-browser review. The autonomous close could not composite WebGPU headless to taste-tune. Dial `GrassSystem.config.interaction.*` if the swath wants tightening or loosening; the values are one edit, one place.
-- **Physical dog-to-sheep / sheep-to-sheep collision** (the "make collision mesh?" idea) is teed up as a candidate `entity-collision` cycle. It is a deterministic `shared/` change with sim-baseline + multiplayer cost; scope it as its own cycle.
+## Open carryover (Matt review + deferred)
+
+- **Dog-to-sheep collision feel** (Cycle 56) is Matt's in-browser review: confirm it reads as solid plowing, not jitter. Tune `DOG_BODY_RADIUS` / `MAX_DOG_SHEEP_PUSH_PER_TICK` in [`shared/EntityCollision.js`](shared/EntityCollision.js) if needed (one edit, one place; deterministic so it stays in sync across worker/client/harness).
+- **Grass footprint feel** (Cycle 55) is Matt's in-browser review: dial `GrassSystem.config.interaction.*` if the swath wants tightening or loosening.
+- **Sheep-to-sheep hard-body collision** (deferred from Cycle 56): its own future cycle. Needs visual jitter tuning + a spatial grid for 5,000-sheep perf (current flocking is brute-force O(n^2)).
 
 ## Recommended Next Cycle
 
-Pick one (see [`docs/cycle-56-plan.md`](docs/cycle-56-plan.md) for detail):
+Pick one (see [`docs/cycle-57-plan.md`](docs/cycle-57-plan.md) for detail):
 
-1. **`steam-desktop-store-prep-1`** - queued since Cycle 54; turn the green desktop distributor proof into a Steam-ready release-candidate lane (signing, install/uninstall QA, depot dry-run, store metadata, capsule/screenshots, controller/cloud-save policy). Source docs: [`docs/archive/cycles/cycle-54-plan.md`](docs/archive/cycles/cycle-54-plan.md), [`docs/native-store-steam-readiness-checklist.md`](docs/native-store-steam-readiness-checklist.md).
-2. **`entity-collision`** - hard-body dog/sheep collision in `shared/`, with the full migration story + sim-baseline regen + acceptance.
-3. **Grass visual finish** - a short follow-up if Matt's review wants the Cycle 55 footprint retuned.
+1. **`steam-desktop-store-prep-1`** - queued since Cycle 54; mostly gated on Matt (signing, Steam account, store voice, release decisions).
+2. **`sheep-collision`** - sheep-to-sheep hard-body separation; deterministic `shared/` change with the sim-baseline discipline + a spatial grid for perf.
+3. **Feel-review follow-up** - short cycle to tune the Cycle 55 grass and/or Cycle 56 collision constants after Matt's review.
 
 ## Working Contract
 
-- Do not touch `shared/` or sim-baseline goldens unless the new cycle plan explicitly authorizes it (candidate 2 would).
+- The deterministic-sim discipline applies to any `shared/` change ([`.claude/rules/shared-sim.md`](.claude/rules/shared-sim.md)): name files, migration story, consumer updates in the same commit, regenerate sim-baseline goldens only with recorded acceptance.
 - Do not reopen Worker auth from the stale Cycle 53 security stub; [`docs/audit-roadmap-2026-05.md`](docs/audit-roadmap-2026-05.md) records P-SEC-1 through P-SEC-5 as shipped 2026-06-01.
 - Run `/validate` before any cycle close. Close via `/cycle-close`.
 
@@ -39,12 +42,12 @@ Pick one (see [`docs/cycle-56-plan.md`](docs/cycle-56-plan.md) for detail):
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | None open; next recommended in [`docs/cycle-56-plan.md`](docs/cycle-56-plan.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-55-plan.md`](docs/archive/cycles/cycle-55-plan.md) |
+| Active cycle | None open; next recommended in [`docs/cycle-57-plan.md`](docs/cycle-57-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-56-plan.md`](docs/archive/cycles/cycle-56-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Grass discipline | [`.claude/rules/scene-and-render.md`](.claude/rules/scene-and-render.md) |
+| Deterministic-sim rules | [`.claude/rules/shared-sim.md`](.claude/rules/shared-sim.md) |
+| Multiplayer contract | [`.claude/rules/multiplayer.md`](.claude/rules/multiplayer.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Decisions log | [`DECISIONS.md`](DECISIONS.md) |
-| Portable agent context | [`AGENTS.md`](AGENTS.md) |
 | NEXT_SESSION contract | [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md) |

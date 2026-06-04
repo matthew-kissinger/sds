@@ -61,6 +61,19 @@ export {
     generateRandomPositionInBounds
 } from './BoundaryCollision.js';
 
+// Cycle 56: deterministic dog<->sheep hard-body separation. Pushes sheep out
+// of the dog's body so the dog can't ghost through the flock. Called from the
+// Worker authoritative tick, the client predictor/solo path, and the
+// sim-baseline harness so all three agree.
+export {
+    resolveDogSheepCollision,
+    resolveDogSheepCollisions,
+    DOG_BODY_RADIUS,
+    SHEEP_BODY_RADIUS,
+    DOG_SHEEP_MIN_DISTANCE,
+    MAX_DOG_SHEEP_PUSH_PER_TICK
+} from './EntityCollision.js';
+
 // Game state validation and management
 export {
     updateSheepRetirements,

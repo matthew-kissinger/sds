@@ -36,7 +36,8 @@ import {
     DEFAULT_SCENE_ID,
     createObjective,
     tickObjective,
-    isCorralOpen
+    isCorralOpen,
+    resolveDogSheepCollisions
 } from '../../shared/index.js';
 import { mulberry32 } from '../../shared/Random.js';
 
@@ -703,6 +704,11 @@ export class GameSimulation {
             // Update movement using time-based physics calibrated to 144 FPS
             // This ensures consistent movement speed with client at all frame rates
             this.updateSheepMovementClientStyle(sheep);
+
+            // Cycle 56: dog<->sheep hard separation. Runs after integration and
+            // before the boundary clamp so the clamp re-contains any push. The
+            // dog is authoritative; sheep never shove the player-controlled dog.
+            resolveDogSheepCollisions(sheep, this.sheepdogs.values());
 
             // Apply hard boundary constraints (except for retiring sheep)
             if (!sheep.hasPassedGate && !sheep.isRetiring) {
