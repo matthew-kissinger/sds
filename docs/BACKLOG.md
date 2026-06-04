@@ -13,7 +13,7 @@ Plan archived at [`docs/archive/cycles/cycle-54-plan.md`](archive/cycles/cycle-5
 - **Desktop distributor path:** `native/desktop-electron/` now builds through electron-builder with app identity, generated Windows icons, `sds://app` packaged boot, `nsis` installer, portable executable, and unpacked executable targets.
 - **Signing-ready posture:** local proof builds force `CSC_IDENTITY_AUTO_DISCOVERY=false`; setup, portable, and unpacked executables remain intentionally unsigned until a code-signing certificate or explicit unsigned-release decision exists.
 - **Packaged proof:** WebGL and true production WebGPU both boot and play from the packaged executable on this Windows host. Proof covers nonblank gameplay, sheep startup motion, fullscreen, native window resize, pointer lock, keyboard/mouse response, gamepad API, audio unlock, localStorage, Worker health, authenticated SDS WebSocket, logs, crash path, and zero fatal console errors.
-- **Runtime fixes folded in:** startup flock motion is now visibly alive from the first playable moments, Follow camera A/D movement no longer spins the dog in circles, and the HUD sheep glyph is cleaner.
+- **Runtime fixes folded in:** startup flock motion is now visibly alive from the first playable moments, and the HUD sheep glyph is cleaner.
 - **Steam/store handoff:** local Steam depot dry-run is plausible. Public store submission remains blocked on signing policy, metadata, install/uninstall QA, capsule/screenshots, controller/cloud-save policy, privacy/support URLs, and release-channel decisions.
 
 **Validation gates (2026-06-04):**

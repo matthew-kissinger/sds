@@ -20,7 +20,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Startup flock visuals now move from the first playable moments in both WebGL
   and WebGPU instead of reading as a half-frozen first frame.
-- Follow-camera A/D movement no longer turns the dog in circles.
 - Native Electron resize now keeps viewport, canvas, and camera aspect aligned
   to the resized window.
 
