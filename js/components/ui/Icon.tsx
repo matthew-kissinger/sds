@@ -160,18 +160,16 @@ const GLYPHS = {
   ),
 
   // creature marks
+  // Zen sheep: a soft three-bump woolly body, a solid little head with one ear,
+  // two legs in a standing stance. The filled head reads as a face (not a cloud)
+  // and stays legible at 12-26px, where the old body/ear/eye/feet glyph turned
+  // to noise.
   sheep: (
     <>
-      <path
-        d="M6.4 13.1c0-2.1 1.8-3.9 4-3.9h5.2c2.1 0 3.8 1.6 3.8 3.6v.6c0 1.9-1.6 3.4-3.6 3.4H9.1c-1.6 0-2.7-1.2-2.7-2.7z"
-        fill="currentColor"
-        fillOpacity={0.16}
-      />
-      <path d="M7.7 10.1c-1.3 0-2.3-.9-2.3-2.1 0-1 .8-1.9 1.9-2.1.3-1.1 1.3-1.9 2.5-1.9.8 0 1.5.3 2 .9.5-.6 1.2-.9 2.1-.9 1.2 0 2.3.8 2.6 1.9 1.1.2 1.9 1.1 1.9 2.1 0 1.2-1 2.1-2.3 2.1" />
-      <path d="M15.8 10.2h1.8c1.2 0 2.2 1 2.2 2.2v.9c0 1-.8 1.8-1.8 1.8h-1.1" />
-      <path d="M18 12.7h.01" strokeWidth={2.3} />
-      <path d="M9.3 16.8v2.5M14.9 16.8v2.5" />
-      <path d="M8.5 19.3h2.2M14.1 19.3h2.2" />
+      <path d="M10 14.6a2.4 2.4 0 0 1-.4-4.7 2.1 2.1 0 0 1 3-2 2.1 2.1 0 0 1 3.1 0 2.1 2.1 0 0 1 3 2 2.4 2.4 0 0 1-.4 4.7z" />
+      <ellipse cx="7.3" cy="12.5" rx="1.9" ry="2.1" fill="currentColor" stroke="none" />
+      <path d="M5.8 10.9c-.8-.5-1.7-.2-1.9.7" />
+      <path d="M11.2 14.6v2.4M16.4 14.6v2.4" />
     </>
   ),
   dog: (

@@ -63,12 +63,25 @@ function StarGlyph({ size = 24, color = 'currentColor', filled = false }: { size
     );
 }
 
-// Medal colors for rankings (semantic/decorative - kept as-is).
+// Medal colors for rankings (semantic/decorative - kept as-is: gold/silver/
+// bronze are a universal rank convention, only shown in the MP standings list).
 const MEDAL_COLORS: Record<number, { bg: string; text: string; glow: string }> = {
     1: { bg: 'linear-gradient(135deg, #FFD700, #FFA500)', text: '#000', glow: 'rgba(255, 215, 0, 0.4)' },
     2: { bg: 'linear-gradient(135deg, #E8E8E8, #B8B8B8)', text: '#000', glow: 'rgba(192, 192, 192, 0.4)' },
     3: { bg: 'linear-gradient(135deg, #CD7F32, #8B4513)', text: '#fff', glow: 'rgba(205, 127, 50, 0.4)' }
 };
+
+// Cycle 58 close: pastoral result palette. The Cycle 51 P9 conversion warmed the
+// glass + text but left the accents/gradients on the old tech palette (emerald
+// #10b981, amber #f59e0b), so the win screen drifted from the cream/gold/meadow
+// look of the entrance + HUD. These route every result accent through the
+// pastoral tokens: warm meadow green for a win, low-sun gold for a runner-up,
+// sunlit gold for the trophy + winner highlights.
+const VICTORY_ACCENT = pastoral.accentMeadow;   // #5e9e6e warm meadow, primary
+const RUNNERUP_ACCENT = pastoral.accentGold;    // #e0a458 low-sun gold
+const TROPHY_GOLD = pastoral.accentGold;        // calm sunlit gold (was #FFD700)
+const VICTORY_BG = `linear-gradient(135deg, ${alpha(pastoral.accentMeadow, 20)}, ${alpha(pastoral.accentGold, 10)})`;
+const RUNNERUP_BG = `linear-gradient(135deg, ${alpha(pastoral.accentGold, 18)}, ${alpha(pastoral.pastureDusk, 10)})`;
 
 // Animated counter component
 function AnimatedNumber({ value, duration = 1000 }: { value: number; duration?: number }) {
@@ -111,10 +124,16 @@ function Confetti() {
     const [particles, setParticles] = useState<Particle[]>([]);
 
     useEffect(() => {
-        const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+        // Cycle 58 close: warm pastoral petals (pasture dawn/gold, sunlit gold,
+        // sage meadow, cream, dusty rose) instead of the old teal/pink/purple
+        // rainbow, so the celebration reads calm and matches the palette.
+        const colors = [
+            pastoral.pastureDawn, pastoral.pastureGold, pastoral.accentGold,
+            pastoral.meadow, pastoral.cream, pastoral.pastureDusk,
+        ];
         const newParticles: Particle[] = [];
 
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 40; i++) {
             newParticles.push({
                 id: i,
                 x: Math.random() * 100,
@@ -237,7 +256,7 @@ function ScoreRow({
             </div>
             <div
                 style={{
-                    color: isWinner ? '#FFD700' : pastoral.cream,
+                    color: isWinner ? TROPHY_GOLD : pastoral.cream,
                     fontWeight: '600',
                     fontSize: '16px'
                 }}
@@ -339,9 +358,9 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
             return {
                 title: t('completion.victory'),
                 subtitle: t('completion.allSheepHerded', { count: data.totalSheep || 20 }),
-                icon: <Icon name="trophy" size={64} color="#FFD700" />,
-                accentColor: '#10b981',
-                bgGradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1))',
+                icon: <Icon name="trophy" size={64} color={TROPHY_GOLD} />,
+                accentColor: VICTORY_ACCENT,
+                bgGradient: VICTORY_BG,
                 showConfetti: true,
                 stats: [
                     { label: t('completion.stats.time'), value: formatTime(data.finalTime || 0), icon: <Icon name="timer" size={20} color={pastoral.cream} /> }
@@ -354,11 +373,9 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
             return {
                 title: isWinner ? t('completion.victory') : t('completion.raceComplete'),
                 subtitle: isWinner ? t('completion.youWon') : t('completion.playerWon', { name: data.winnerName || 'Another player' }),
-                icon: isWinner ? <Icon name="trophy" size={64} color="#FFD700" /> : <MedalGlyph size={64} color="#C0C0C0" />,
-                accentColor: isWinner ? '#10b981' : '#f59e0b',
-                bgGradient: isWinner
-                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1))'
-                    : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1))',
+                icon: isWinner ? <Icon name="trophy" size={64} color={TROPHY_GOLD} /> : <MedalGlyph size={64} color="#C0C0C0" />,
+                accentColor: isWinner ? VICTORY_ACCENT : RUNNERUP_ACCENT,
+                bgGradient: isWinner ? VICTORY_BG : RUNNERUP_BG,
                 showConfetti: isWinner,
                 stats: [
                     { label: t('completion.stats.yourScore'), value: t('completion.sheepUnit', { count: data.myScore || 0 }), icon: <StarGlyph size={20} color={pastoral.cream} filled /> },
@@ -373,11 +390,9 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
             return {
                 title: isWinner ? t('completion.timesUpVictory') : t('completion.timesUp'),
                 subtitle: isWinner ? t('completion.youCollectedMost') : t('completion.playerCollectedMost', { name: data.winnerName || 'Another player' }),
-                icon: <Icon name="timer" size={64} color={isWinner ? '#FFD700' : '#C0C0C0'} />,
-                accentColor: isWinner ? '#10b981' : '#f59e0b',
-                bgGradient: isWinner
-                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1))'
-                    : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1))',
+                icon: <Icon name="timer" size={64} color={isWinner ? TROPHY_GOLD : '#C0C0C0'} />,
+                accentColor: isWinner ? VICTORY_ACCENT : RUNNERUP_ACCENT,
+                bgGradient: isWinner ? VICTORY_BG : RUNNERUP_BG,
                 showConfetti: isWinner,
                 showNewBest: data.isNewBest,
                 stats: [
@@ -393,8 +408,8 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                 title: t('completion.teamVictory'),
                 subtitle: t('completion.teamMessage'),
                 icon: <Icon name="users" size={64} color={pastoral.accentMeadow} />,
-                accentColor: pastoral.accentMeadow,
-                bgGradient: `linear-gradient(135deg, ${alpha(pastoral.accentMeadow, 20)}, ${alpha(pastoral.accentMeadow, 10)})`,
+                accentColor: VICTORY_ACCENT,
+                bgGradient: VICTORY_BG,
                 showConfetti: true,
                 stats: [
                     { label: t('completion.stats.sheepCollected'), value: `${data.sheepCount || 200}/${data.totalSheep || 200}`, icon: <StarGlyph size={20} color={pastoral.cream} filled /> },
@@ -407,9 +422,9 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
         return {
             title: t('completion.gameComplete'),
             subtitle: t('completion.wellPlayed'),
-            icon: <Icon name="trophy" size={64} color="#FFD700" />,
-            accentColor: '#10b981',
-            bgGradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1))',
+            icon: <Icon name="trophy" size={64} color={TROPHY_GOLD} />,
+            accentColor: VICTORY_ACCENT,
+            bgGradient: VICTORY_BG,
             showConfetti: false,
             stats: []
         };
@@ -461,7 +476,9 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                     style={{
                         marginBottom: '20px',
                         animation: 'bounceIn 0.6s ease-out 0.2s both',
-                        filter: `drop-shadow(0 0 20px ${content.accentColor})`
+                        // Warm sunlit halo (gold) so the trophy isn't ringed by
+                        // the green meadow accent.
+                        filter: `drop-shadow(0 0 18px ${alpha(pastoral.accentGold, 55)})`
                     }}
                 >
                     {content.icon}
@@ -496,8 +513,8 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                 {content.showNewBest && (
                     <div
                         style={{
-                            background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                            color: '#000',
+                            background: `linear-gradient(135deg, ${pastoral.accentGold}, ${pastoral.pastureGold})`,
+                            color: pastoral.ink,
                             padding: '8px 16px',
                             borderRadius: '20px',
                             fontSize: '14px',
@@ -507,7 +524,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                             animation: 'pulse 2s ease-in-out infinite'
                         }}
                     >
-                        <StarGlyph size={16} color="#000" filled />
+                        <StarGlyph size={16} color={pastoral.ink} filled />
                         {` ${t('completion.newPersonalBest')}`}
                     </div>
                 )}
