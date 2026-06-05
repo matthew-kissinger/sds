@@ -13,12 +13,13 @@
  * Behavior-identical: confetti, medal tiers, score rows, per-mode branches, and
  * all timings preserved exactly.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Icon } from '../ui/Icon';
 import { pastoral, alpha } from '../ui/tokens';
+import { useMenuNavigation } from '../hooks/useMenuNavigation';
 import { subscribeGameEvent } from '../../GameBridge.js';
 import { getPlayerIdentity } from '../shared/playerIdentity.js';
 import { NameField } from '../shared/NameField';
@@ -456,6 +457,11 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
 
     const content = getContent();
 
+    // Cycle 60 P4: controller + keyboard navigation over the completion buttons
+    // (Play Again, Main Menu). Additive; existing mouse/touch onClick preserved.
+    const navRef = useRef<HTMLDivElement>(null);
+    useMenuNavigation(navRef, { enabled: isVisible, onBack: onMainMenu });
+
     return (
         <div
             style={{
@@ -478,6 +484,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
 
             {/* Main panel */}
             <div
+                ref={navRef}
                 style={{
                     background: content.bgGradient,
                     backdropFilter: 'blur(24px)',

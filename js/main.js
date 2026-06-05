@@ -445,6 +445,33 @@ class SheepDogSimulation {
             console.log('[PERF] __perfHarness installed. Call window.__perfHarness.startSampling() to capture.');
         }
 
+        // Cycle 60 Phase 1: dependency-free on-screen perf chip for tablet /
+        // playtest baselines. `?stats=1` enables and persists to localStorage
+        // `sds.show-stats`; `?stats=0` clears it. No CDN (unlike the P-key
+        // Stats.js panel), so it works offline on a LAN tablet.
+        {
+            let showStats = false;
+            try {
+                const q = urlParams.get('stats');
+                if (q === '1') { localStorage.setItem('sds.show-stats', '1'); showStats = true; }
+                else if (q === '0') { localStorage.removeItem('sds.show-stats'); showStats = false; }
+                else { showStats = localStorage.getItem('sds.show-stats') === '1'; }
+            } catch (_) { showStats = urlParams.get('stats') === '1'; }
+            if (showStats) {
+                const sm = this.sceneManager;
+                const gs = this.gameState;
+                import('./perf/StatsChip.js').then((m) => m.mountStatsChip(() => {
+                    const info = sm?.getRenderer?.()?.info?.render;
+                    const sheep = gs?.getSheep?.();
+                    return {
+                        draws: info?.calls ?? 0,
+                        tris: info?.triangles ?? 0,
+                        sheep: Array.isArray(sheep) ? sheep.length : 0,
+                    };
+                })).catch(() => {});
+            }
+        }
+
         if (urlParams.has('grassInteractionProof')) {
             import('./diagnostics/grassInteractionProofHarness.js')
                 .then((m) => m.installGrassInteractionProofHarness(this));
@@ -2100,7 +2127,23 @@ class SheepDogSimulation {
         if (this.inputHandler.getGamepadManager().isPausePressed()) {
             this.inputHandler.togglePause();
         }
-        
+
+        // Cycle 60 P4: in-game controller buttons. Y cycles the camera mode
+        // (parity with the C key); X banks a Counting Sheep run from the pad.
+        // bankCountingScore() guards its own mode/active/completed state.
+        const gamepad = this.inputHandler.getGamepadManager();
+        if (gamepad.wasJustPressed('Y') && !this.menuController.isMenuActive()) {
+            this.sceneManager.getCameraController()?.cycleMode?.();
+        }
+        if (gamepad.wasJustPressed('X') && this.gameMode === COUNTING_GAME_MODE) {
+            this.bankCountingScore();
+        }
+        // Cycle 60 P6: SELECT opens the opt-in playtest note box (no-op unless
+        // the playtest toolkit is enabled via ?notes=1 / ?stats=1).
+        if (gamepad.wasJustPressed('SELECT')) {
+            window.dispatchEvent(new CustomEvent('sds-open-note'));
+        }
+
         // Update start screen camera if active
         if (this.menuController.isMenuActive()) {
             this.menuController.updateCinematicCamera();

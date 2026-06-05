@@ -71,6 +71,7 @@ export async function initReactUI() {
             { ExtremeTuningPanel },
             { PauseMenu },
             { CompletionScreen },
+            { PlaytestNote },
             { MultiplayerOptions },
             { RoomCreation },
             { RoomJoining },
@@ -108,6 +109,7 @@ export async function initReactUI() {
             import('./GameHUD/ExtremeTuningPanel.js'),
             import('./GameHUD/PauseMenu.js'),
             import('./GameHUD/CompletionScreen.js'),
+            import('./GameHUD/PlaytestNote.js'),
             import('./Multiplayer/MultiplayerOptions.js'),
             import('./Multiplayer/RoomCreation.js'),
             import('./Multiplayer/RoomJoining.js'),
@@ -1011,7 +1013,10 @@ export async function initReactUI() {
                     // Cycle 59 (Counting Sheep): pause-menu bank entry.
                     roundBased: gameData.roundBased,
                     onBankCounting: handleBankCounting
-                })
+                }),
+                // Cycle 60 P6: opt-in in-game playtest note capture (gated on
+                // ?notes=1 / ?stats=1; renders null otherwise).
+                createElement(PlaytestNote, { key: 'playtest-note' })
             ]);
         }
 

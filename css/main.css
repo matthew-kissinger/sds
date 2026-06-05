@@ -11,6 +11,15 @@
 @source "../js/**/*.js";
 @source "../index.html";
 
+/* Cycle 60 P2: controller / keyboard menu focus ring. Applied by
+   useMenuNavigation to the roving-focused control. A warm amber that reads on
+   both the dark in-game HUD and the light pastoral menu panels; !important
+   overrides the primitives' inline outline:none. */
+[data-navfocus] {
+  outline: 3px solid #f2a93b !important;
+  outline-offset: 2px !important;
+}
+
 /* ==================== THEME ==================== */
 @theme {
   --text-md: 1rem;

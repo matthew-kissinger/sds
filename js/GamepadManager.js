@@ -290,7 +290,21 @@ export class GamepadManager {
         // Return true only on button press (not hold)
         return currentState && !previousState;
     }
-    
+
+    /**
+     * Cycle 60 P4: edge-detect any mapped button by name (press, not hold).
+     * Shares the previousButtons array that isPausePressed relies on, so the
+     * timing matches the existing pause edge.
+     */
+    wasJustPressed(buttonName) {
+        if (!this.connected || !this.gamepad) return false;
+        const idx = this.buttonMap[buttonName];
+        if (idx === undefined) return false;
+        const current = this.gamepad.buttons[idx]?.pressed || false;
+        const previous = this.previousButtons[idx] || false;
+        return current && !previous;
+    }
+
     /**
      * Get current button state for debugging
      */

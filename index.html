@@ -338,7 +338,14 @@
         if ('serviceWorker' in navigator) {
             const buildTarget = '__SDS_BUILD_TARGET__';
             const serviceWorkerDisabledTargets = ['native', 'desktop', 'electron', 'tauri', 'capacitor', 'ios', 'android'];
-            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const host = window.location.hostname;
+            // Cycle 60 Phase 1: treat private-LAN origins (tablet / playtest
+            // over the home network) and ?nosw as dev, so the service worker
+            // never serves a stale build during iterative playtesting.
+            // Production (sheepdogsim.com) is a public origin, unaffected.
+            const isPrivateLan = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host);
+            const noSw = new URLSearchParams(window.location.search).has('nosw');
+            const isDev = host === 'localhost' || host === '127.0.0.1' || isPrivateLan || noSw;
             if (isDev || serviceWorkerDisabledTargets.includes(buildTarget)) {
                 (async () => {
                     const regs = await navigator.serviceWorker.getRegistrations();

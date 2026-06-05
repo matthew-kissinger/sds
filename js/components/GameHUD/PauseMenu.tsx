@@ -10,11 +10,12 @@
  * icons replaced with the shared <Icon> family. Form + style only - every
  * behavior is preserved.
  */
-import { useState, useEffect, type CSSProperties, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Icon } from '../ui/Icon';
 import { pastoral, alpha } from '../ui/tokens';
+import { useMenuNavigation } from '../hooks/useMenuNavigation';
 import {
     loadSettings,
     saveSettings,
@@ -444,6 +445,16 @@ export function PauseMenu({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isVisible, onResume, showSettings]);
 
+    // Cycle 60 P4: controller + keyboard navigation over the pause buttons.
+    // handleEscape:false - the Escape effect above already owns that key; this
+    // adds gamepad B (resume, or back out of settings) and d-pad/stick focus.
+    const navRef = useRef<HTMLDivElement>(null);
+    useMenuNavigation(navRef, {
+        enabled: isVisible,
+        handleEscape: false,
+        onBack: () => { if (showSettings) setShowSettings(false); else onResume?.(); },
+    });
+
     if (!isVisible) return null;
 
     // Responsive sizing
@@ -530,7 +541,7 @@ export function PauseMenu({
                 }
             }}
         >
-            <div style={panelStyle}>
+            <div ref={navRef} style={panelStyle}>
                 {showSettings ? (
                     // Settings panel
                     <InGameSettings

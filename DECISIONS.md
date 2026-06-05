@@ -1208,3 +1208,44 @@ Matt's voice/taste pass at close, like the Cycle 58 ladder counts. The bundle
 ratchet moved main 550 -> 554 KiB for the counting UI (the readout, the bank
 control, the completion branch, the pause entry, the entrance family selector);
 three.js and every terrain/tree golden are unchanged.
+
+---
+
+## Cycle 60 - controller menu nav + playtest tooling (2026-06-05)
+
+### A single additive menu-focus primitive, not per-button rewiring
+
+Gamepad gameplay already existed (`js/GamepadManager.js` drives the dog, sprint,
+camera, and Start-pause). The gap was menu navigation: the React UI had no focus
+model at all. Rather than rewire every button, Cycle 60 adds one primitive,
+`useMenuNavigation` (over `js/input/menuNav.js` + `js/input/menuGamepad.js`),
+that discovers the native focusable controls in a container and roves focus with
+the d-pad / left stick / arrow keys, activating via the element's own click
+(gamepad A) or native Enter/Space, and backing out on B / Escape. Every existing
+mouse and touch path is untouched; the amber `[data-navfocus]` ring appears only
+on the first directional input, so mouse and touch users never see it. The menu
+poll is a separate rAF loop from the gameplay poll in `main.js runFrame` (which
+does not tick on the pre-game entrance) and only runs while a menu surface is
+mounted, so there is no double-input during play. Settings, leaderboard,
+editors, and MP are explicitly deferred to mouse/touch (`docs/cycle-60-controller-parity.md`);
+the core loop (entrance, pause, completion, in-game) is controller-complete.
+
+### The tablet baseline is opt-in and dependency-free
+
+The perf chip (`?stats=1`) and the in-game playtest note capture (`?notes=1`,
+`js/playtest/noteLog.js` + `PlaytestNote.tsx`) are gated behind a flag so regular
+players never see them. The chip pulls no CDN (unlike the P-key Stats.js), so it
+works offline on a LAN tablet, and the service worker now treats private-LAN
+origins as dev so a tablet never serves a stale build mid-iteration. First
+real-device baseline (Tab S9 FE, low tier, Rolling Hills / Hard / 200 sheep):
+37 fps, ~20k draw calls. The tablet is draw-call-bound on the hero scene, a
+candidate for a future perf pass.
+
+### Client-only; the Counting naming/curve finalization is still Matt's
+
+Cycle 60 touches no `shared/` sim core, no Worker, no D1, no SceneDef, no wire
+format. The Cycle 59 reserved items (final family/curve naming, curve-feel
+constants, the live leaderboard smoke) ship with the prose-clean strawman and
+are finalized in Matt's post-deploy playtest. The bundle ratchet moved main
+554 -> 555 KiB for the inline stats + gamepad gates; the focus and note modules
+are lazy chunks.

@@ -12,8 +12,9 @@
  * settings is the corner gear, leaderboard the corner trophy, and the ways to
  * play route to multiplayer / sandbox / 2-player).
  */
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import { pastoral, alpha } from '../ui/tokens';
+import { useMenuNavigation } from '../hooks/useMenuNavigation';
 import { WorldImage, DogAvatar } from './sceneComponents';
 import { Icon } from '../ui/Icon';
 import { useViewport } from '../hooks/useViewport';
@@ -175,6 +176,10 @@ function PlayingAsField({ compact }: { compact: boolean }) {
 export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
   const { compact } = useViewport();
   const [dogOpen, setDogOpen] = useState(false);
+  // Cycle 60 P3: controller + keyboard navigation over the entrance controls.
+  // Additive - every button keeps its mouse/touch onClick.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useMenuNavigation(rootRef);
 
   // P11: prefetch the sibling worlds' backdrops during idle so switching is
   // instant (the armed world's backdrop is preloaded with fetchpriority=high in
@@ -188,7 +193,7 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
   }, [flow.worlds]);
 
   return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div ref={rootRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       {/* Armed world backdrop with a slow zoom and a warm legibility gradient. */}
       <div style={{ position: 'absolute', inset: 0, animation: flow.reducedMotion ? 'none' : 'sds-kenburns 26s ease-in-out infinite alternate' }}>
         <WorldImage world={flow.world} reducedMotion={flow.reducedMotion} />
