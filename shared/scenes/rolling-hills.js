@@ -91,6 +91,21 @@ export const rollingHills = {
     // far 650 -> 900.
     fog: { color: '#d4c4a8', near: 350, far: 900 },
 
+    // Cycle 58: the 180-metre island is harder to herd than the flat pasture,
+    // so the ranked ladder runs smaller and faster. It keeps a 200-sheep rung
+    // (Hard) so the restored incident run (id=16, 759.4s on rolling-hills/200)
+    // stays a live, comparable board, and keeps 5000 as the signature Chaos
+    // tier. Just Play is 3 sheep. (sheepSpawn.count above is the multiplayer /
+    // default spawn and is unrelated to these solo counts.)
+    soloLadder: [
+        { id: 'practice', count: 3, ranked: false, label: 'Just Play', blurb: 'No timer, no fail state.' },
+        { id: 'quick', count: 25, ranked: true, label: 'Quick', blurb: 'A small flock on the island.' },
+        { id: 'classic', count: 75, ranked: true, label: 'Classic', blurb: 'The island run.' },
+        { id: 'hard', count: 200, ranked: true, label: 'Hard', blurb: 'Two hundred across the hills.' },
+        { id: 'extreme', count: 1000, ranked: true, label: 'Extreme', blurb: 'A thousand sheep.' },
+        { id: 'chaos', count: 5000, ranked: true, label: 'Chaos', blurb: 'The flock becomes the antagonist.' },
+    ],
+
     allowedModes: ['cooperative', 'competitive', 'timed'],
     defaultMode: 'cooperative',
     defaultCamera: 'follow',  // Q6: Follow makes the island depth read

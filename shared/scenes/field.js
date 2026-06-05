@@ -90,6 +90,19 @@ export const field = {
     fog: { color: '#cfd9e8', near: 350, far: 900 },
 
     // --- Gameplay ---
+    // Cycle 58: Home Field keeps its four ranked anchors exactly (200 / 1000 /
+    // 3000 / 5000) so every existing leaderboard score stays put. Just Play
+    // drops to 3 sheep (set the hook fast), and a new 25-sheep Quick rung opens
+    // a low on-ramp. Leaderboard identity is (scene, count).
+    soloLadder: [
+        { id: 'practice', count: 3, ranked: false, label: 'Just Play', blurb: 'No timer, no fail state.' },
+        { id: 'quick', count: 25, ranked: true, label: 'Quick', blurb: 'A small flock. Learn the lines.' },
+        { id: 'classic', count: 200, ranked: true, label: 'Classic', blurb: 'The leaderboard run.' },
+        { id: 'extreme', count: 1000, ranked: true, label: 'Extreme', blurb: 'A thousand sheep.' },
+        { id: 'insane', count: 3000, ranked: true, label: 'Insane', blurb: 'Three thousand sheep.' },
+        { id: 'chaos', count: 5000, ranked: true, label: 'Chaos', blurb: 'The flock becomes the antagonist.' },
+    ],
+
     allowedModes: ['cooperative', 'competitive', 'timed'],
     defaultMode: 'cooperative'
 };

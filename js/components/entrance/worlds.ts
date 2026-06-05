@@ -16,6 +16,8 @@
  * islands, concrete numbers, Matt's voice. No em-dashes, no hype.
  */
 import { color } from '../ui/tokens';
+import { getSceneById } from '../../../shared/scenes/index.js';
+import { getSoloLadder, LEGACY_SOLO_LADDER } from '../../../shared/difficulty.js';
 
 export interface World {
   /** Scene id the engine builds on commit. */
@@ -88,13 +90,34 @@ export const DOGS: Dog[] = [
   { id: 'george_washington', name: 'George Washington', portrait: '/assets/dogs/george_washington.webp', trait: 'Stately' },
 ];
 
-export const MODES: Mode[] = [
-  { id: 'practice', name: 'Just Play', sheep: 30, blurb: 'No timer, no fail state.', ranked: false },
-  { id: 'classic', name: 'Classic', sheep: 200, blurb: 'The leaderboard run.', ranked: true },
-  { id: 'extreme', name: 'Extreme', sheep: 1000, blurb: 'A thousand sheep.', ranked: true },
-  { id: 'insane', name: 'Insane', sheep: 3000, blurb: 'Three thousand sheep.', ranked: true },
-  { id: 'chaos', name: 'Chaos', sheep: 5000, blurb: 'The flock becomes the antagonist.', ranked: true },
-];
+/** Map a scene's solo ladder (shared data) into entrance Mode rows. */
+function modesFromLadder(
+  ladder: ReadonlyArray<{ id: string; count: number; ranked: boolean; label?: string; blurb?: string }>,
+): Mode[] {
+  return ladder.map((e) => ({
+    id: e.id,
+    name: e.label ?? e.id,
+    sheep: e.count,
+    blurb: e.blurb ?? '',
+    ranked: e.ranked,
+  }));
+}
+
+/**
+ * Cycle 58: the difficulty options for a world come from that world's scene
+ * ladder (per-biome counts), not a flat global list. The entrance reads this
+ * for the armed world; an unknown id falls back to the legacy default ladder.
+ */
+export function modesForWorld(worldId: string): Mode[] {
+  return modesFromLadder(getSoloLadder(getSceneById(worldId)));
+}
+
+/**
+ * Legacy default difficulty list (Home Field-shaped: practice 30 / classic 200 /
+ * extreme 1000 / insane 3000 / chaos 5000). Retained as the fallback when no
+ * world is armed; live entrances use `modesForWorld(world.id)`.
+ */
+export const MODES: Mode[] = modesFromLadder(LEGACY_SOLO_LADDER);
 
 export const WAYS: Way[] = [
   { id: 'online', name: 'Play online' },

@@ -681,8 +681,11 @@ export default {
         // unknown mode flowed into the SQL builder and surfaced as a 500
         // D1_ERROR; now we 400 cleanly.
         const modeRaw = url.searchParams.get('mode') || 'cooperative';
-        if (!isValidGameMode(modeRaw)) return err('invalid mode', 400, cors);
-        const mode: GameMode = modeRaw;
+        // Cycle 58: 'solo' is the (scene, count) aggregate read pseudo-mode. It
+        // partitions on sheepCount, not a difficulty slug, so it is valid here
+        // even though it is not a storable GameMode.
+        if (modeRaw !== 'solo' && !isValidGameMode(modeRaw)) return err('invalid mode', 400, cors);
+        const mode = modeRaw as GameMode | 'solo';
         const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 10));
         // Cycle 35 Phase 4: scene is required. Field's 56s soloClassic record
         // and Sheep Dog Island's 600s run are different games; the cross-scene

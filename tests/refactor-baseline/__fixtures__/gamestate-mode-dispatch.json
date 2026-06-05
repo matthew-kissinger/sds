@@ -298,7 +298,7 @@
         "z": 0,
         "radius": 30
       },
-      "requiredSheep": 10,
+      "requiredSheep": 5,
       "holdRequired": 1,
       "sheepInZone": 0,
       "holdTimer": 0

@@ -8,10 +8,11 @@ import { resetExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { emptyObstacles } from '../shared/SceneObstacles.js';
 import { getCurrentRoom } from './GameBridge.js';
 import {
-    SOLO_MODE_SHEEP_COUNT,
-    isExtremeBoidMode,
+    isExtremeBoidCount,
     getModeCapabilities,
 } from './gamestate/modes.js';
+import { getSoloCount } from '../shared/difficulty.js';
+import { getSceneById } from '../shared/scenes/index.js';
 import { calculatePolygonSpawnConfig } from './gamestate/polygonSpawn.js';
 import { applySandboxConfig } from './gamestate/sandboxStart.js';
 import { isSoloComplete, isSandboxComplete, resolveCompetitiveCompletion } from './gamestate/winConditions.js';
@@ -194,8 +195,10 @@ export class GameState {
 
         const spawnConfig = this.getSheepSpawnConfig();
 
-        // Enable extreme boid optimization for extreme/insane/chaos mode or sandbox with useExtremeBoids flag
-        const useExtremeBoids = isExtremeBoidMode(this.singlePlayerMode) || this.useExtremeBoids === true;
+        // Enable extreme boid optimization for large flocks (Cycle 58: gated on
+        // the resolved count, not the difficulty id, so a 600-sheep island run
+        // gets the spatial-hash path and a 200-sheep run does not) or sandbox.
+        const useExtremeBoids = isExtremeBoidCount(this.totalSheep) || this.useExtremeBoids === true;
 
         this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig, useExtremeBoids, {
             heightfield: this.heightfield,
@@ -557,8 +560,13 @@ export class GameState {
         // spawnConfig.defaultCount for radius scaling. Multiplayer reads
         // the host-configured count from the room (server authoritative).
         if (mode === 'solo') {
-            this.totalSheep = SOLO_MODE_SHEEP_COUNT[singlePlayerMode] ?? 200;
-            console.log(`Game started in ${singlePlayerMode} mode with ${this.totalSheep} sheep`);
+            // Cycle 58: solo sheep count is resolved from the armed scene's
+            // difficulty ladder (per-biome), not a flat per-id table. The two
+            // islands run smaller, faster tiers than Home Field; an unknown
+            // scene falls back to the legacy default counts.
+            const scene = getSceneById(this.sceneId);
+            this.totalSheep = getSoloCount(scene, singlePlayerMode);
+            console.log(`Game started in ${singlePlayerMode} mode on ${this.sceneId} with ${this.totalSheep} sheep`);
             // Cycle 26 v2.1.0: first-visit flag drives the pulsing-glow
             // hint on the Practice tile in SinglePlayerModes. Set on any
             // solo start (not just practice) so the hint stops pulsing
@@ -606,8 +614,9 @@ export class GameState {
         this.borderPoints = null;
         this.customFences = [];
 
-        // Set extreme boids optimization based on mode (table in js/gamestate/modes.js)
-        this.useExtremeBoids = isExtremeBoidMode(singlePlayerMode);
+        // Set extreme boids optimization based on the resolved flock size
+        // (Cycle 58: count threshold in js/gamestate/modes.js).
+        this.useExtremeBoids = isExtremeBoidCount(this.totalSheep);
 
         // Clear fence collision system (remove any sandbox fences from previous game)
         resetFenceCollisionSystem();

@@ -4,6 +4,13 @@
 //   - register inserts a players row (bug 3 fix)
 //   - submitScore updates materialized best in one statement (bug 2 fix)
 
+// Cycle 58: solo leaderboard identity is (scene, count). The submit allow-list
+// and the leaderboard partition derive the ranked counts for a scene from its
+// soloLadder via these pure shared modules (no DOM / Three.js — safe in the
+// Worker isolate, same import the router already uses for scene validation).
+import { getSceneById } from '../../shared/scenes/index.js';
+import { getRankedCounts } from '../../shared/difficulty.js';
+
 export interface PlayerRow {
   persistent_id: string;
   display_name: string;
@@ -528,11 +535,33 @@ export function isTimeMode(mode: GameMode): boolean {
   return FIXED_TIME_MODES_SET.has(mode) || isDailyMode(mode);
 }
 
+// Cycle 58: the four solo difficulty slugs. Their leaderboard identity is
+// (scene, count) — the slug only selects the (now display-only) materialized
+// best column. Used to route submit validation + the leaderboard read through
+// the per-scene ladder instead of the fixed per-slug count table.
+const SOLO_MODES_SET: ReadonlySet<string> = new Set([
+  'soloClassic',
+  'soloExtreme',
+  'soloInsane',
+  'soloChaos',
+]);
+
+export function isSoloMode(mode: unknown): boolean {
+  return typeof mode === 'string' && SOLO_MODES_SET.has(mode);
+}
+
 // Back-compat alias used heavily inside the file.
 const TIME_MODES = { includes: (mode: GameMode) => isTimeMode(mode) };
 
 export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean {
-  if (isTimeMode(mode)) return score >= 30 && score <= 3600;
+  // Cycle 58: the lower bound on time-mode scores drops 30 -> 10. The real
+  // per-(scene, count) plausibility floor is now `plausibleScoreForCount`
+  // (graduated 12-26s for the islands' small solo tiers, unchanged 30s+ for the
+  // legacy counts), so this is only a coarse absolute-sanity bound. Existing
+  // modes are unaffected: their plausibility floor stays >= 30, so the effective
+  // floor (max of the two) is unchanged; only the new small solo tiers can land
+  // between their per-count floor and 30s.
+  if (isTimeMode(mode)) return score >= 10 && score <= 3600;
   if (mode === 'timed') return Number.isInteger(score) && score >= 0 && score <= 500;
   if (mode === 'competitive') return score === 0 || score === 1;
   return false;
@@ -544,6 +573,10 @@ export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean 
 // Cycle 27 Phase D: daily-* uses a numeric range matching the
 // dailySeed.js [50, 200] sheep window. Any count in that band is
 // accepted; outside it is hard-rejected.
+// Cycle 58: the solo entries here are retained only to satisfy the exhaustive
+// key type; solo (scene, count) validation now routes through the per-scene
+// ranked ladder (see modeSheepCountOk), not this fixed per-slug table. timed /
+// competitive / cooperative still use it.
 const ALLOWED_MODE_SHEEPCOUNT: Record<Exclude<GameMode, `daily-${string}`>, number[] | 'any'> = {
   soloClassic: [200],
   soloExtreme: [1000],
@@ -557,9 +590,23 @@ const ALLOWED_MODE_SHEEPCOUNT: Record<Exclude<GameMode, `daily-${string}`>, numb
 const DAILY_SHEEP_MIN = 50;
 const DAILY_SHEEP_MAX = 200;
 
-export function modeSheepCountOk(mode: GameMode, sheepCount: number): boolean {
+/**
+ * Cross-field plausibility: is this (mode, sheep_count) pairing allowed?
+ *
+ * Cycle 58: solo modes validate against the SUBMITTED SCENE'S ranked ladder
+ * (`getRankedCounts`) rather than a fixed per-slug count — a solo `(scene,
+ * count)` is valid iff `count` is a ranked rung on that scene. An unknown or
+ * absent scene falls back to the legacy ranked set ([200, 1000, 3000, 5000]),
+ * so a pre-scene or stale client still validates against the old anchors. daily
+ * / timed / competitive / cooperative are unchanged.
+ */
+export function modeSheepCountOk(mode: GameMode, sheepCount: number, sceneId?: string | null): boolean {
   if (isDailyMode(mode)) {
     return sheepCount >= DAILY_SHEEP_MIN && sheepCount <= DAILY_SHEEP_MAX;
+  }
+  if (isSoloMode(mode)) {
+    const scene = sceneId ? getSceneById(sceneId) : undefined;
+    return getRankedCounts(scene).includes(sheepCount);
   }
   const allowed = ALLOWED_MODE_SHEEPCOUNT[mode as Exclude<GameMode, `daily-${string}`>];
   if (allowed === 'any') return true;
@@ -580,10 +627,30 @@ const MIN_PLAUSIBLE_DURATION_BY_COUNT: Array<[number, number]> = [
   [5000, 240],   // soloChaos — 4 minute floor
 ];
 
-export function durationFloorForCount(sheepCount: number): number {
-  // Pick the largest entry whose count <= sheepCount; defaults to 30s.
+// Cycle 58: solo-mode floors, graduated down for the islands' smaller ranked
+// tiers (25 / 50 / 75 / 150 / 600) so a clean fast small-flock run is not
+// hard-rejected, while the legacy 200/1000/3000/5000 floors stay exactly as
+// before. Scoped to solo modes (see durationFloorForCount) so daily-* keeps its
+// own 30s-for-<200 floor and the 50-200 daily window is unchanged.
+const SOLO_DURATION_FLOORS: Array<[number, number]> = [
+  [25, 12],
+  [50, 16],
+  [75, 20],
+  [150, 26],
+  [200, 30],
+  [600, 60],
+  [1000, 90],
+  [3000, 180],
+  [5000, 240],
+];
+
+export function durationFloorForCount(sheepCount: number, mode?: GameMode): number {
+  // Solo modes use the graduated small-tier floors; everything else (daily,
+  // cooperative) uses the legacy table. Pick the largest entry whose
+  // count <= sheepCount; defaults to 30s.
+  const table = mode && isSoloMode(mode) ? SOLO_DURATION_FLOORS : MIN_PLAUSIBLE_DURATION_BY_COUNT;
   let floor = 30;
-  for (const [count, minSec] of MIN_PLAUSIBLE_DURATION_BY_COUNT) {
+  for (const [count, minSec] of table) {
     if (sheepCount >= count) floor = minSec;
   }
   return floor;
@@ -595,7 +662,7 @@ export function plausibleScoreForCount(
   sheepCount: number,
 ): boolean {
   if (!TIME_MODES.includes(mode)) return true;
-  return score >= durationFloorForCount(sheepCount);
+  return score >= durationFloorForCount(sheepCount, mode);
 }
 
 export interface ScoreAnomaly {
@@ -658,7 +725,7 @@ export function detectScoreAnomalies(input: {
   //    in the bottom 10% of the floor range (e.g. 95s for soloExtreme).
   //    Soft signal — informs future floor tuning.
   if (TIME_MODES.includes(input.mode)) {
-    const floor = durationFloorForCount(input.sheepCount);
+    const floor = durationFloorForCount(input.sheepCount, input.mode);
     const fastBand = floor * 1.1;
     if (input.score < fastBand) {
       anomalies.push({
@@ -748,9 +815,10 @@ async function submitScoreInner(
     ? (additionalData.sheepCount as number)
     : (gameMode === 'soloExtreme' ? 1000 : 200);
 
-  // Cycle 10 Phase 6: cross-field plausibility — hard rejects.
-  if (!modeSheepCountOk(gameMode, sheepCount)) {
-    throw new Error(`sheep_count ${sheepCount} not allowed for mode ${gameMode}`);
+  // Cycle 10 Phase 6 + Cycle 58: cross-field plausibility — hard rejects. Solo
+  // modes validate the count against the submitted scene's ranked ladder.
+  if (!modeSheepCountOk(gameMode, sheepCount, sceneId)) {
+    throw new Error(`sheep_count ${sheepCount} not allowed for mode ${gameMode} on scene ${sceneId}`);
   }
   if (!plausibleScoreForCount(gameMode, score, sheepCount)) {
     throw new Error(`score ${score} implausibly low for ${gameMode} at ${sheepCount} sheep`);
@@ -904,9 +972,11 @@ export function scoreColumn(mode: GameMode): string {
   throw new Error(`scoreColumn: no column for game mode ${mode}`);
 }
 
-export function formatScore(mode: GameMode, score: number | null): string {
+export function formatScore(mode: GameMode | 'solo', score: number | null): string {
   if (score === null || score === undefined || Number.isNaN(score)) return 'No score';
-  if (TIME_MODES.includes(mode)) {
+  // Cycle 58: 'solo' is the (scene, count) aggregate read pseudo-mode; it is
+  // time-based (lower is better), so it formats mm:ss like the slug modes.
+  if (mode === 'solo' || TIME_MODES.includes(mode as GameMode)) {
     const m = Math.floor(score / 60);
     const s = Math.floor(score % 60);
     return `${m}:${String(s).padStart(2, '0')}`;
@@ -955,7 +1025,7 @@ export interface LeaderboardFilters {
  */
 export async function getLeaderboard(
   db: D1Database,
-  mode: GameMode,
+  mode: GameMode | 'solo',
   limit = 10,
   filters: LeaderboardFilters = {},
 ): Promise<LeaderboardEntry[]> {
@@ -963,7 +1033,16 @@ export async function getLeaderboard(
   // and aggregate per player. For TIME_MODES we want MIN(score). For 'timed'
   // we want MAX(score). For 'competitive' we want COUNT of wins (score=1
   // submissions). Join back to players for display fields.
-  const isTimeMode = TIME_MODES.includes(mode);
+  //
+  // Cycle 58: 'solo' is the aggregate read pseudo-mode. Solo leaderboard
+  // identity is (scene_id, sheep_count), so a solo board spans ALL four solo
+  // slugs at the requested count and is keyed on the count, not the slug. This
+  // is behavior-preserving for existing rows: each legacy (scene, slug) is
+  // count-homogeneous (Field classic is always 200, etc.), so grouping by count
+  // across the slugs yields the identical membership the per-slug query did
+  // (proven byte-identical in tests/worker/leaderboard-partition.spec.ts).
+  const isSolo = mode === 'solo';
+  const isTimeMode = isSolo || TIME_MODES.includes(mode as GameMode);
   const isCompetitive = mode === 'competitive';
   const aggSql = isCompetitive
     ? 'SUM(s.score)'
@@ -972,8 +1051,15 @@ export async function getLeaderboard(
     ? 'DESC'
     : (isTimeMode ? 'ASC' : 'DESC');
 
-  const where: string[] = ['s.game_mode = ?'];
-  const binds: any[] = [mode];
+  const where: string[] = [];
+  const binds: any[] = [];
+  if (isSolo) {
+    // Constant slug set — inlined literals (no user input), so no bind needed.
+    where.push("s.game_mode IN ('soloClassic', 'soloExtreme', 'soloInsane', 'soloChaos')");
+  } else {
+    where.push('s.game_mode = ?');
+    binds.push(mode);
+  }
   // P-SEC-5: hide flagged submissions from the public board by default. A
   // submission that tripped any anomaly heuristic carries a non-null
   // score_anomalies blob; excluding it here keeps a forged-but-bounds-passing
@@ -1030,23 +1116,42 @@ export async function getAllLeaderboards(
   limit = 10,
   filters: LeaderboardFilters = {},
 ): Promise<Record<string, LeaderboardEntry[]>> {
-  // Cycle 12 Phase 6 + Cycle 35 Phase 4: per-mode filter dispatch. Solo +
-  // timed modes have a fixed intrinsic sheep count, so the dropdown is
-  // meaningful only for competitive/cooperative. Drop it for the others —
-  // otherwise picking "250 sheep" in the dropdown blanks every solo board
-  // even though those modes never partition by that count.
-  const results = await Promise.all(
-    ALL_GAME_MODES.map(m => {
-      // P-SEC-5: preserve includeFlagged when we strip the sheepCount filter
-      // for fixed-count modes — otherwise an admin readout would silently
-      // re-hide flagged rows for solo/timed boards.
+  const out: Record<string, LeaderboardEntry[]> = {};
+
+  // Cycle 58: solo boards are now keyed `solo:<count>` and partition by
+  // (scene, count) instead of by the four difficulty slugs — one board per
+  // ranked rung of the REQUESTED scene's ladder. The four `soloClassic` etc.
+  // keys are gone from the response (the UI builds count tabs from the ladder).
+  // For an existing anchor count (e.g. field/200) `solo:200` is byte-identical
+  // to the old `soloClassic` board.
+  const nonSolo = ALL_GAME_MODES.filter(m => !isSoloMode(m)); // timed, competitive, cooperative
+  const nonSoloResults = await Promise.all(
+    nonSolo.map(m => {
+      // Cycle 12 Phase 6 + Cycle 35 Phase 4: per-mode filter dispatch. 'timed'
+      // has a fixed intrinsic sheep count, so the dropdown is meaningful only
+      // for competitive/cooperative — strip it for timed (preserving
+      // includeFlagged) so picking "250 sheep" doesn't blank the timed board.
       const perMode: LeaderboardFilters = MODES_WITH_FIXED_SHEEP_COUNT.has(m)
         ? { sceneId: filters.sceneId, includeFlagged: filters.includeFlagged }
         : filters;
       return getLeaderboard(db, m, limit, perMode);
     }),
   );
-  const out: Record<string, LeaderboardEntry[]> = {};
-  for (let i = 0; i < ALL_GAME_MODES.length; i++) out[ALL_GAME_MODES[i]] = results[i];
+  nonSolo.forEach((m, i) => { out[m] = nonSoloResults[i]; });
+
+  // One solo board per ranked count on the requested scene's ladder.
+  const scene = filters.sceneId && filters.sceneId !== 'any'
+    ? getSceneById(filters.sceneId)
+    : undefined;
+  const counts = getRankedCounts(scene);
+  const soloResults = await Promise.all(
+    counts.map(c => getLeaderboard(db, 'solo', limit, {
+      sceneId: filters.sceneId,
+      sheepCount: c,
+      includeFlagged: filters.includeFlagged,
+    })),
+  );
+  counts.forEach((c, i) => { out[`solo:${c}`] = soloResults[i]; });
+
   return out;
 }

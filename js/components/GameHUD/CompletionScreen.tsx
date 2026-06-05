@@ -20,6 +20,8 @@ import type { TFunction } from 'i18next';
 import { Icon } from '../ui/Icon';
 import { pastoral, alpha } from '../ui/tokens';
 import { subscribeGameEvent } from '../../GameBridge.js';
+import { getPlayerIdentity } from '../shared/playerIdentity.js';
+import { NameField } from '../shared/NameField';
 
 // Decorative celebration glyphs kept inline (no clean shared equivalent): the
 // medal ribbon (gold/silver/bronze ranking) and the rating star.
@@ -288,6 +290,10 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
     const { t } = useTranslation();
     const [isVisible, setIsVisible] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<{ ok: boolean } | null>(null);
+    // Cycle 58 P8: after a saved run, offer the still-auto-named player a chance
+    // to set their own leaderboard name. Non-blocking, dismissed once saved.
+    const [nameSaved, setNameSaved] = useState(false);
+    const isAutoNamed = (getPlayerIdentity()?.nameType ?? 'auto') === 'auto';
 
     useEffect(() => {
         // Trigger entrance animation
@@ -602,6 +608,37 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                         }}
                     >
                         {submitStatus.ok ? t('completion.scoreSaved') : t('completion.scoreSaveFailed')}
+                    </div>
+                )}
+
+                {/* Cycle 58 P8: post-score naming offer. Only when the run saved
+                    and the player is still auto-named. Non-blocking; collapses to
+                    a confirmation once they set a name. */}
+                {submitStatus?.ok && isAutoNamed && !nameSaved && (
+                    <div
+                        style={{
+                            maxWidth: '360px',
+                            margin: '0 auto 12px',
+                            animation: 'slideUp 0.5s ease-out 0.65s both',
+                        }}
+                    >
+                        <div style={{ textAlign: 'center', fontSize: '13px', color: alpha(pastoral.cream, 72), marginBottom: '2px' }}>
+                            {t('identity.customNameDesc')}
+                        </div>
+                        <NameField onSaved={() => setNameSaved(true)} style={{ marginTop: '8px' }} />
+                    </div>
+                )}
+                {nameSaved && (
+                    <div
+                        style={{
+                            textAlign: 'center',
+                            marginBottom: '12px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: content.accentColor,
+                        }}
+                    >
+                        {t('identity.nameUpdated')}
                     </div>
                 )}
 

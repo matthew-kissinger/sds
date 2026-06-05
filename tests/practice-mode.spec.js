@@ -20,6 +20,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { MODES, modesForWorld } from '../js/components/entrance/worlds.js';
+import { SOLO_MODE_SHEEP_COUNT } from '../js/gamestate/modes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..');
@@ -30,17 +32,15 @@ function readSource(rel) {
 
 describe('Practice Paddock contract', () => {
     it('Practice is first in the entrance MODES (position 0)', () => {
-        // Cycle 51 P7: the world-first entrance (js/components/entrance/worlds.ts)
-        // replaced the old SinglePlayerModes picker; Practice (no timer, no fail
-        // state) stays the first difficulty so it reads as the default. The
-        // per-mode cyan hue and the first-visit pulse were intentionally retired
-        // with the old picker (the entrance chips use one meadow accent).
-        const src = readSource('js/components/entrance/worlds.ts');
-        const modesMatch = src.match(/const MODES[^=]*=\s*\[([\s\S]*?)\];/);
-        expect(modesMatch).not.toBeNull();
-        const block = modesMatch[1];
-        const firstId = block.match(/id:\s*'(\w+)'/);
-        expect(firstId?.[1]).toBe('practice');
+        // Cycle 51 P7: the world-first entrance replaced the old SinglePlayerModes
+        // picker; Practice (no timer, no fail state) stays the first difficulty so
+        // it reads as the default. Cycle 58: MODES is now derived from the legacy
+        // ladder (and per-world ladders via modesForWorld), so this asserts the
+        // resolved value, not a source literal — Practice still leads every biome.
+        expect(MODES[0].id).toBe('practice');
+        for (const worldId of ['field', 'rolling-hills', 'open-country']) {
+            expect(modesForWorld(worldId)[0].id).toBe('practice');
+        }
     });
 
     it('i18n English locale exposes modes.practice + modes.practiceDesc', () => {
@@ -49,14 +49,11 @@ describe('Practice Paddock contract', () => {
         expect(src).toMatch(/practiceDesc:\s*['"][^'"]+['"]/);
     });
 
-    it('SOLO_MODE_SHEEP_COUNT registers practice: 30', () => {
-        // Cycle 29 B1: SOLO_MODE_SHEEP_COUNT was extracted from GameState.js
-        // to js/gamestate/modes.js as part of the data-driven mode-config
-        // table. Practice's 30-sheep contract is now asserted there.
-        const src = readSource('js/gamestate/modes.js');
-        const block = src.match(/SOLO_MODE_SHEEP_COUNT\s*=\s*Object\.freeze\(\{([^}]+)\}\)/);
-        expect(block).not.toBeNull();
-        expect(block[1]).toMatch(/practice:\s*30/);
+    it('SOLO_MODE_SHEEP_COUNT registers practice: 30 (legacy default)', () => {
+        // Cycle 29 B1: SOLO_MODE_SHEEP_COUNT lives in js/gamestate/modes.js.
+        // Cycle 58: it is single-sourced from the legacy ladder (per-biome counts
+        // now live on each scene's soloLadder), so assert the resolved value.
+        expect(SOLO_MODE_SHEEP_COUNT.practice).toBe(30);
     });
 
     it('submitScoreToLeaderboard blocks practice mode', () => {

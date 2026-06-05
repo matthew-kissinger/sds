@@ -18,6 +18,7 @@ import { WorldImage, DogAvatar } from './sceneComponents';
 import { Icon } from '../ui/Icon';
 import { useViewport } from '../hooks/useViewport';
 import { formatSheep } from './worlds';
+import { useRenameField } from '../shared/useRenameField';
 import type { BootFlow } from './useBootFlow';
 
 export interface EntranceNav {
@@ -107,6 +108,67 @@ function readDisplayName(): string {
   } catch {
     return 'Shepherd';
   }
+}
+
+// Cycle 58 P8: the pre-play naming affordance. Collapsed it reads "Playing as
+// {name}"; tapping it opens an inline pastoral editor over the shared rename
+// hook (same auth-gated path as Settings). Never a gate — the player can ignore
+// it and Play. The entrance uses literal copy (it is not wired to i18n), so the
+// few rename error keys are mapped to plain English here.
+function entranceErrText(key: string): string {
+  if (key === 'identity.errorTooLong') return 'Name must be 20 characters or less.';
+  if (key === 'identity.errorEmpty') return 'Enter a name.';
+  return 'Could not save. Try again.';
+}
+
+function PlayingAsField({ compact }: { compact: boolean }) {
+  const [open, setOpen] = useState(false);
+  const { draft, setDraft, status, save, identity } = useRenameField({ onSaved: () => setOpen(false) });
+  const name = (identity?.displayName as string) || readDisplayName();
+  const saving = status === 'saving';
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        title="Set your leaderboard name"
+        style={{ display: 'block', margin: '12px auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: compact ? 11 : 12, color: pastoral.inkSoft }}
+      >
+        Playing as <span style={{ color: pastoral.ink, fontWeight: 600 }}>{name}</span>
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ margin: '12px auto 0', maxWidth: 340 }}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
+        <input
+          type="text"
+          value={draft}
+          maxLength={20}
+          autoFocus
+          placeholder="Your name"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !saving) save(); if (e.key === 'Escape') setOpen(false); }}
+          onFocus={() => { try { (window as unknown as { isTypingInInput?: boolean }).isTypingInInput = true; } catch { /* ignore */ } }}
+          onBlur={() => { try { (window as unknown as { isTypingInInput?: boolean }).isTypingInInput = false; } catch { /* ignore */ } }}
+          style={{ flex: 1, minWidth: 0, padding: '6px 10px', borderRadius: 10, border: `1px solid ${pastoral.glassWarmBorder}`, background: alpha(pastoral.cream, 70), color: pastoral.ink, fontSize: 13, outline: 'none' }}
+        />
+        <button
+          onClick={save}
+          disabled={saving}
+          style={{ padding: '6px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: pastoral.accentMeadow, color: pastoral.cream, fontSize: 13, fontWeight: 600 }}
+        >
+          {saving ? '...' : 'Save'}
+        </button>
+      </div>
+      {status && typeof status === 'object' && status.error && (
+        <div style={{ textAlign: 'center', marginTop: 4, fontSize: 11, color: pastoral.ink }}>
+          {entranceErrText(status.error)}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
@@ -221,14 +283,9 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
             <button onClick={nav.onSandbox} style={wayBtn}><Icon name="sandbox" size={14} /> Sandbox</button>
             <button onClick={nav.onLocal} style={wayBtn}><Icon name="local" size={14} /> 2-player</button>
           </div>
-          {/* Cycle 57 P7: current leaderboard name; tap to change it in Settings. */}
-          <button
-            onClick={nav.onSettings}
-            title="Change your name in Settings"
-            style={{ display: 'block', margin: '12px auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: compact ? 11 : 12, color: pastoral.inkSoft }}
-          >
-            Playing as <span style={{ color: pastoral.ink, fontWeight: 600 }}>{readDisplayName()}</span>
-          </button>
+          {/* Cycle 58 P8: current leaderboard name; tap to set it inline (no
+              gate, no leaving the entrance). Was a link to Settings (Cycle 57 P7). */}
+          <PlayingAsField compact={compact} />
           <div style={{ marginTop: 12, textAlign: 'center', fontSize: compact ? 10 : 11, lineHeight: 1.25, color: pastoral.inkSoft }}>
             (c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0):{' '}
             <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" style={{ color: pastoral.ink, textDecoration: 'underline' }}>

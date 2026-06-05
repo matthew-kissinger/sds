@@ -34,6 +34,7 @@ import {
     subscribeGameEvent
 } from '../GameBridge.js';
 import { SceneSwapOverlay } from './ui/SceneSwapOverlay.js';
+import { isHighDifficultyCount } from '../gamestate/modes.js';
 // Cycle 48 P4: retire the App.js inline hex (error-boundary heading red, the
 // title greens, the subtitle ambers) to the shared design-token palette. App.js
 // stays an element-factory .js; only the raw color literals move to tokens.
@@ -680,8 +681,9 @@ export async function initReactUI() {
 	            const [showTuningPanel, setShowTuningPanel] = useState(false);
 	            const isMultiplayer = gameData.gameMode !== 'solo' && gameData.players?.length > 0;
 	            const staminaPercentage = gameData.staminaPercentage || Math.round((gameData.stamina / (gameData.maxStamina || 100)) * 100);
+	            // Cycle 58: count-based (was singlePlayerMode === 'extreme'||'insane').
 	            const isSoloExtremeOrInsane = gameData.gameMode === 'solo' &&
-	                (gameData.singlePlayerMode === 'extreme' || gameData.singlePlayerMode === 'insane');
+	                isHighDifficultyCount(gameData.totalSheep);
 
             // Check fullscreen state
             useEffect(() => {

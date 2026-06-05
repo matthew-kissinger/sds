@@ -31,6 +31,7 @@ import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 import { listScenes, getSceneById } from '../../../shared/scenes/index.js';
+import { getSoloLadder, getRankedCounts, getLadderEntry } from '../../../shared/difficulty.js';
 import { color } from '../ui/tokens';
 
 // Cycle 35 Phase 5: three concrete scenes. The 'any' option is gone with
@@ -39,24 +40,42 @@ const SCENE_ORDER = ['field', 'rolling-hills', 'open-country'];
 const LAST_SCENE_KEY = 'sds:leaderboardLastScene';
 const FALLBACK_SCENE = 'field';
 
-// Solo completions submit the active sceneId, so every scene has its own
-// solo partitions. Multiplayer tabs still come from scene.allowedModes so
-// Open Country does not expose competitive unless the scene supports it.
-const SOLO_LEADERBOARD_MODES = ['soloClassic', 'soloExtreme', 'soloInsane', 'soloChaos'];
+// Cycle 58: solo leaderboard identity is (scene, count). The solo tabs for a
+// scene are its ranked ladder counts, keyed `solo:<count>` to match the
+// getAllLeaderboards response. Multiplayer tabs still come from
+// scene.allowedModes so Open Country does not expose competitive.
+const SOLO_TAB_PREFIX = 'solo:';
+
+/** Build the solo count tab key the worker response is keyed on. */
+const soloTabKey = (count: number): string => `${SOLO_TAB_PREFIX}${count}`;
+
+/** A solo count tab's display label: tier name + count (e.g. "Classic 200"). */
+function soloTabLabel(sceneId: string, count: number): string {
+    const scene = getSceneById(sceneId);
+    const entry = scene
+        ? getSoloLadder(scene).find((e) => e.ranked && e.count === count)
+        : undefined;
+    const name = entry?.label;
+    const num = count.toLocaleString('en-US');
+    return name ? `${name} ${num}` : `${num}`;
+}
 
 // Sheep-count filter is meaningful only on cooperative + competitive (the
 // MP modes that vary by sheep count). Solo + timed have a fixed count per
-// mode. Cycle 35 Phase 4 preserves this dropdown for MP boards.
+// board. Cycle 35 Phase 4 preserves this dropdown for MP boards.
 const SHEEP_FILTER_OPTIONS = [
     { value: 0, label: 'Any size' },
-    { value: 200, label: '200 sheep — Classic' },
+    { value: 200, label: '200 sheep, Classic' },
     { value: 250, label: '250 sheep' },
     { value: 500, label: '500 sheep' },
-    { value: 1000, label: '1000 sheep — Extreme' },
-    { value: 3000, label: '3000 sheep — Insane' },
-    { value: 5000, label: '5000 sheep — Chaos' },
+    { value: 1000, label: '1000 sheep, Extreme' },
+    { value: 3000, label: '3000 sheep, Insane' },
+    { value: 5000, label: '5000 sheep, Chaos' },
 ];
-const FIXED_COUNT_TABS = new Set(['soloClassic', 'soloExtreme', 'soloInsane', 'soloChaos', 'timed']);
+
+/** Solo count tabs and 'timed' are fixed-count: the sheep dropdown is hidden. */
+const isFixedCountTabKey = (tab: string): boolean =>
+    tab.startsWith(SOLO_TAB_PREFIX) || tab === 'timed';
 
 interface LeaderEntry {
     rank: number;
@@ -74,11 +93,34 @@ interface GlobalLeaderboardProps {
     playerIdentity?: PlayerIdentity;
 }
 
+/**
+ * The ordered tab keys for a scene: its ranked solo count tabs (`solo:<count>`)
+ * followed by the scene's multiplayer modes. Unknown scene -> []. Cycle 58: the
+ * solo tabs are the scene's ranked ladder, not the four fixed difficulty slugs.
+ */
 export function leaderboardModesForScene(sceneId: string): string[] {
     const scene = getSceneById(sceneId);
     if (!scene) return [];
+    const solo = getRankedCounts(scene).map(soloTabKey);
     const mp = Array.isArray(scene.allowedModes) ? scene.allowedModes : [];
-    return [...SOLO_LEADERBOARD_MODES, ...mp];
+    return [...solo, ...mp];
+}
+
+/**
+ * The tab to land on for a scene: prefer its 'classic' ranked rung (the
+ * signature run), else the first solo tab, else the first available tab.
+ */
+function defaultTabForScene(sceneId: string): string {
+    const scene = getSceneById(sceneId);
+    const tabs = leaderboardModesForScene(sceneId);
+    if (scene) {
+        const classic = getLadderEntry(scene, 'classic');
+        if (classic && classic.ranked) {
+            const key = soloTabKey(classic.count);
+            if (tabs.includes(key)) return key;
+        }
+    }
+    return tabs[0] || 'cooperative';
 }
 
 function initialSceneId(): string {
@@ -111,23 +153,20 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
 
     const visibleModes = useMemo(() => leaderboardModesForScene(sceneId), [sceneId]);
 
-    const scene = getSceneById(sceneId);
-    const sceneDefaultMode = (scene && scene.defaultMode) || visibleModes[0] || 'cooperative';
+    // Cycle 58: default tab is the scene's signature solo run (its 'classic'
+    // rung), so the leaderboard opens on a meaningful board rather than an MP
+    // mode that may be empty.
+    const sceneDefaultTab = useMemo(() => defaultTabForScene(sceneId), [sceneId]);
 
-    const [activeTab, setActiveTab] = useState(() => {
-        const modes = leaderboardModesForScene(initialSceneId());
-        const initScene = getSceneById(initialSceneId());
-        if (initScene && modes.includes(initScene.defaultMode)) return initScene.defaultMode;
-        return modes[0] || 'cooperative';
-    });
+    const [activeTab, setActiveTab] = useState(() => defaultTabForScene(initialSceneId()));
 
-    // When the visible mode list changes (scene swap), snap activeTab to a
-    // valid choice. Prefer scene.defaultMode, then the first visible mode.
+    // When the visible tab list changes (scene swap), snap activeTab to a valid
+    // choice: the scene's default solo tab, else the first visible tab.
     useEffect(() => {
         if (!visibleModes.includes(activeTab)) {
-            setActiveTab(visibleModes.includes(sceneDefaultMode) ? sceneDefaultMode : visibleModes[0]);
+            setActiveTab(visibleModes.includes(sceneDefaultTab) ? sceneDefaultTab : visibleModes[0]);
         }
-    }, [visibleModes, activeTab, sceneDefaultMode]);
+    }, [visibleModes, activeTab, sceneDefaultTab]);
 
     // Persist scene selection across sessions.
     useEffect(() => {
@@ -170,7 +209,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sceneId, sheepFilter]);
 
-    const isFixedCountTab = FIXED_COUNT_TABS.has(activeTab);
+    const isFixedCountTab = isFixedCountTabKey(activeTab);
     const hasActiveSheepFilter = !isFixedCountTab && sheepFilter > 0;
 
     const renderLeaderboardTable = (gameMode: string): ReactNode => {
@@ -430,11 +469,18 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
                         flexShrink: 0,
                     }}
                 >
-                    {visibleModes.map((mode) => (
-                        <button key={mode} style={tabButtonStyle(activeTab === mode)} onClick={() => setActiveTab(mode)}>
-                            {t(labelKeyForMode(mode))}
-                        </button>
-                    ))}
+                    {visibleModes.map((mode) => {
+                        // Cycle 58: solo count tabs (`solo:<count>`) label from the
+                        // scene ladder; MP tabs keep their i18n labels.
+                        const label = mode.startsWith(SOLO_TAB_PREFIX)
+                            ? soloTabLabel(sceneId, Number(mode.slice(SOLO_TAB_PREFIX.length)))
+                            : t(labelKeyForMode(mode));
+                        return (
+                            <button key={mode} style={tabButtonStyle(activeTab === mode)} onClick={() => setActiveTab(mode)}>
+                                {label}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Sheep-count filter, only meaningful on MP boards. */}

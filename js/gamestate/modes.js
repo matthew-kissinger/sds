@@ -11,23 +11,26 @@
  * Adding a new gameMode is now a one-row table edit instead of four
  * call-site edits.
  *
- * Pure data + pure helpers. No side effects. No imports from js/.
+ * Pure data + pure helpers. No side effects. The only import is the pure
+ * shared difficulty ladder (no Three.js, no DOM), so `shared/` discipline holds.
  */
 
+import { LEGACY_SOLO_LADDER } from '../../shared/difficulty.js';
+
 /**
- * Solo singlePlayerMode → totalSheep count. Cycle 9 Phase 1 lockdown:
- * the per-mode count is owned by mode (not scene def) for solo runs.
- * Multiplayer reads from room.sheepCount instead.
+ * Solo singlePlayerMode → totalSheep count.
+ *
+ * Cycle 58: this is now a back-compat re-export of the legacy default ladder
+ * (`shared/difficulty.js`). Per-biome counts live on each scene's `soloLadder`
+ * and resolve through `getSoloCount(scene, id)`; this flat table is the
+ * fallback for callers without a scene (and for opt-out scenes). Single-sourced
+ * from `LEGACY_SOLO_LADDER` so the two can never drift.
  *
  * @type {Readonly<Record<string, number>>}
  */
-export const SOLO_MODE_SHEEP_COUNT = Object.freeze({
-    practice: 30,
-    classic: 200,
-    extreme: 1000,
-    insane: 3000,
-    chaos: 5000,
-});
+export const SOLO_MODE_SHEEP_COUNT = Object.freeze(
+    Object.fromEntries(LEGACY_SOLO_LADDER.map((e) => [e.id, e.count])),
+);
 
 /**
  * Solo singlePlayerMode → leaderboard slug. Cycle 8 Phase 2b lookup
@@ -49,11 +52,58 @@ export const SOLO_MODE_TO_LEADERBOARD = Object.freeze({
  * Solo modes that opt into the spatial-hash extreme boid path.
  * Sandbox separately sets `useExtremeBoids` from its config.
  *
+ * Cycle 58: legacy id-keyed set, retained for back-compat. The live gate is now
+ * count-based (`isExtremeBoidCount`) because counts vary by biome (a 600-sheep
+ * Open Country run wants the spatial-hash path; a 200-sheep run does not), so a
+ * fixed id set no longer captures the intent.
+ *
  * @type {ReadonlySet<string>}
  */
 export const EXTREME_BOID_SOLO_MODES = Object.freeze(new Set(['extreme', 'insane', 'chaos']));
 
 /**
+ * Cycle 58: resolved-count threshold for the spatial-hash extreme-boid path.
+ * 500 reproduces the pre-Cycle-58 Home Field behavior exactly — the legacy
+ * extreme/insane/chaos counts (1000 / 3000 / 5000) clear it and classic (200) /
+ * practice do not — while also routing the islands' new mid tiers (Open
+ * Country 600) onto the spatial-hash path and keeping their small tiers off it.
+ *
+ * @type {number}
+ */
+export const EXTREME_BOID_COUNT_THRESHOLD = 500;
+
+/**
+ * Whether a resolved sheep count uses the spatial-hash extreme-boid path. This
+ * is the live gate (decoupled from the difficulty id per Cycle 58 Q3).
+ *
+ * @param {number | undefined} count
+ * @returns {boolean}
+ */
+export function isExtremeBoidCount(count) {
+    return typeof count === 'number' && count >= EXTREME_BOID_COUNT_THRESHOLD;
+}
+
+/**
+ * Cycle 58: count-based successor to the legacy `singlePlayerMode === 'extreme'
+ * || 'insane'` gate that drives the large-flock difficulty tweaks (the extra
+ * flee multiplier in OptimizedSheep, the ExtremeTuningPanel affordance). The
+ * band [1000, 5000) reproduces the legacy set exactly for the existing ladders
+ * (extreme 1000 and insane 3000 in; chaos 5000 and everything below 1000 out),
+ * so behavior is unchanged for Home Field while staying count-driven for the
+ * islands (a 600-sheep Open Country run is a smaller flock and stays normal).
+ *
+ * @param {number | undefined} count
+ * @returns {boolean}
+ */
+export function isHighDifficultyCount(count) {
+    return typeof count === 'number' && count >= 1000 && count < 5000;
+}
+
+/**
+ * Legacy id-based gate, retained for back-compat with any caller that only has
+ * the difficulty id (not the resolved count). Prefer `isExtremeBoidCount` where
+ * the count is available.
+ *
  * @param {string | undefined} singlePlayerMode
  * @returns {boolean}
  */

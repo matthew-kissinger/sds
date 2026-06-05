@@ -13,7 +13,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useReducedMotion } from '../ui/useReducedMotion';
-import { WORLDS, DOGS, MODES, WAYS, DEFAULT_WORLD_INDEX, type World, type Dog, type Mode, type Way } from './worlds';
+import { WORLDS, DOGS, MODES, WAYS, DEFAULT_WORLD_INDEX, modesForWorld, type World, type Dog, type Mode, type Way } from './worlds';
 import { subscribeGameEvent } from '../../GameBridge.js';
 import { mapLoadStep, FIRST_LOAD_LABEL } from './loadStages';
 
@@ -77,7 +77,20 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   }), []);
 
   const world = WORLDS[worldIndex] ?? WORLDS[0];
-  const mode = useMemo(() => MODES.find((m) => m.id === modeId) ?? MODES[0], [modeId]);
+  // Cycle 58: difficulty options come from the armed world's ladder (per-biome
+  // counts). When the persisted difficulty id is not a rung on the newly armed
+  // world (e.g. 'insane' is Home Field only), fall back to that world's
+  // 'classic' rung, then any ranked rung, then the first rung — so switching
+  // worlds always lands on a valid, sensible difficulty.
+  const modes = useMemo(() => modesForWorld(world.id), [world.id]);
+  const mode = useMemo(
+    () =>
+      modes.find((m) => m.id === modeId)
+      ?? modes.find((m) => m.id === 'classic')
+      ?? modes.find((m) => m.ranked)
+      ?? modes[0],
+    [modes, modeId],
+  );
   const dog = useMemo(() => DOGS.find((d) => d.id === dogId) ?? DOGS[0], [dogId]);
 
   const armWorld = useCallback((id: string) => {
@@ -97,7 +110,7 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   return {
     worlds: WORLDS,
     dogs: DOGS,
-    modes: MODES,
+    modes,
     ways: WAYS,
     world,
     mode,

@@ -14,6 +14,7 @@ import { createKonveyorSheepMaterial } from './konveyorSheepMaterialAdapter.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
 import { resolveDogSheepCollision } from '../shared/EntityCollision.js';
 import { pointToSegmentDistance, isPointInPolygon } from './gamestate/polygonSpawn.js';
+import { isHighDifficultyCount } from './gamestate/modes.js';
 
 // Cycle 6 Phase 2 — sheep obstacle avoidance.
 //   - 30m query radius matches the cycle-6 plan budget (kdbush O(log N + k)).
@@ -650,11 +651,13 @@ export class OptimizedSheepSystem {
         let sheepBeingChased = 0;
         let shouldPlayGroupBleat = false;
 
-        // Determine if we're in high-difficulty solo modes (extreme/insane).
-        // Sandbox can enable extreme boids for performance, but should not inherit difficulty tweaks.
+        // Determine if we're in a high-difficulty (large-flock) solo run.
+        // Cycle 58: gated on the resolved count, not the difficulty id, so it
+        // tracks flock size across biomes. Sandbox can enable extreme boids for
+        // performance, but should not inherit these difficulty tweaks.
         const gameState = getGameState();
         const isHighDifficultyMode = gameState?.gameMode === 'solo' &&
-            (gameState.singlePlayerMode === 'extreme' || gameState.singlePlayerMode === 'insane');
+            isHighDifficultyCount(gameState.totalSheep);
 
         const animationUpdateStride = Math.max(1, Math.round(1 / this.animationUpdateRate));
         const animationFrame = this._animationUpdateFrame;

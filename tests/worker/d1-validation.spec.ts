@@ -57,15 +57,31 @@ describe('isValidGameMode', () => {
 });
 
 describe('modeSheepCountOk', () => {
-    it('soloClassic accepts 200 only', () => {
-        expect(modeSheepCountOk('soloClassic', 200)).toBe(true);
-        expect(modeSheepCountOk('soloClassic', 199)).toBe(false);
-        expect(modeSheepCountOk('soloClassic', 1000)).toBe(false);
+    // Cycle 58: solo validation is now (scene, count) — a solo slug accepts any
+    // count that is a ranked rung on the SUBMITTED scene's ladder, and rejects
+    // anything off it. The slug itself no longer pins the count (leaderboard
+    // identity is the count, not the slug).
+    it('accepts a count that is a ranked rung on the submitted scene', () => {
+        expect(modeSheepCountOk('soloClassic', 200, 'field')).toBe(true);
+        expect(modeSheepCountOk('soloClassic', 25, 'field')).toBe(true);   // new Quick rung
+        expect(modeSheepCountOk('soloClassic', 5000, 'field')).toBe(true); // any solo slug, any ranked count
+        expect(modeSheepCountOk('soloChaos', 75, 'rolling-hills')).toBe(true);
+        expect(modeSheepCountOk('soloClassic', 50, 'open-country')).toBe(true);
     });
 
-    it('soloChaos accepts 5000 only', () => {
-        expect(modeSheepCountOk('soloChaos', 5000)).toBe(true);
-        expect(modeSheepCountOk('soloChaos', 4999)).toBe(false);
+    it('rejects a count that is not a ranked rung on the submitted scene', () => {
+        expect(modeSheepCountOk('soloClassic', 199, 'field')).toBe(false);
+        expect(modeSheepCountOk('soloClassic', 75, 'field')).toBe(false);   // 75 is Rolling Hills only
+        expect(modeSheepCountOk('soloClassic', 3, 'field')).toBe(false);    // Just Play is unranked
+        expect(modeSheepCountOk('soloClassic', 3000, 'open-country')).toBe(false); // OC tops out below 3000 (except chaos 5000)
+    });
+
+    it('falls back to the legacy ranked anchors when no scene is supplied', () => {
+        for (const c of [200, 1000, 3000, 5000]) {
+            expect(modeSheepCountOk('soloClassic', c)).toBe(true);
+        }
+        expect(modeSheepCountOk('soloClassic', 199)).toBe(false);
+        expect(modeSheepCountOk('soloClassic', 25)).toBe(false); // not a legacy anchor
     });
 
     it("'any'-allowed modes (competitive, cooperative) accept arbitrary counts", () => {
@@ -75,10 +91,14 @@ describe('modeSheepCountOk', () => {
 });
 
 describe('submissionScoreBoundsOk', () => {
-    it('time modes (soloClassic etc.) accept 30..3600s', () => {
+    it('time modes (soloClassic etc.) accept 10..3600s', () => {
+        // Cycle 58: the coarse lower bound dropped 30 -> 10 so the islands' small
+        // solo tiers can submit fast runs. The real per-count floor lives in
+        // plausibleScoreForCount (still 30s+ for the legacy counts).
         expect(submissionScoreBoundsOk('soloClassic', 30)).toBe(true);
         expect(submissionScoreBoundsOk('soloClassic', 3600)).toBe(true);
-        expect(submissionScoreBoundsOk('soloClassic', 29)).toBe(false);
+        expect(submissionScoreBoundsOk('soloClassic', 10)).toBe(true);
+        expect(submissionScoreBoundsOk('soloClassic', 9)).toBe(false);
         expect(submissionScoreBoundsOk('soloClassic', 3601)).toBe(false);
     });
 
@@ -97,7 +117,7 @@ describe('submissionScoreBoundsOk', () => {
 });
 
 describe('durationFloorForCount', () => {
-    it('returns the largest matching floor for the count', () => {
+    it('returns the largest matching floor for the count (legacy table, no mode)', () => {
         expect(durationFloorForCount(200)).toBe(30);
         expect(durationFloorForCount(1000)).toBe(90);
         expect(durationFloorForCount(3000)).toBe(180);
@@ -108,8 +128,24 @@ describe('durationFloorForCount', () => {
         expect(durationFloorForCount(50_000)).toBe(240);
     });
 
-    it('falls to 30s default for sub-tier counts', () => {
+    it('falls to 30s default for sub-tier counts without a mode (daily/cooperative path)', () => {
+        // Daily (50-200 window) and cooperative keep the legacy 30s floor for
+        // sub-200 counts — the graduated small floors are solo-scoped.
         expect(durationFloorForCount(50)).toBe(30);
+        expect(durationFloorForCount(150)).toBe(30);
+    });
+
+    it('Cycle 58: solo modes get graduated floors for the small island tiers', () => {
+        expect(durationFloorForCount(25, 'soloClassic')).toBe(12);
+        expect(durationFloorForCount(50, 'soloClassic')).toBe(16);
+        expect(durationFloorForCount(75, 'soloClassic')).toBe(20);
+        expect(durationFloorForCount(150, 'soloClassic')).toBe(26);
+        // Legacy solo counts keep their exact floors.
+        expect(durationFloorForCount(200, 'soloClassic')).toBe(30);
+        expect(durationFloorForCount(1000, 'soloExtreme')).toBe(90);
+        expect(durationFloorForCount(5000, 'soloChaos')).toBe(240);
+        // Open Country's new 600 tier gets a 60s floor.
+        expect(durationFloorForCount(600, 'soloExtreme')).toBe(60);
     });
 });
 
@@ -120,6 +156,15 @@ describe('plausibleScoreForCount', () => {
 
     it('rejects a 60s soloExtreme 1000-sheep run (under 90s floor)', () => {
         expect(plausibleScoreForCount('soloExtreme', 60, 1000)).toBe(false);
+    });
+
+    it('Cycle 58: a fast small-count solo run clears the graduated floor', () => {
+        // 25-sheep Quick floor is 12s — a clean 13s run is accepted.
+        expect(plausibleScoreForCount('soloClassic', 13, 25)).toBe(true);
+        expect(plausibleScoreForCount('soloClassic', 11, 25)).toBe(false);
+        // 50-sheep floor is 16s.
+        expect(plausibleScoreForCount('soloClassic', 16, 50)).toBe(true);
+        expect(plausibleScoreForCount('soloClassic', 15, 50)).toBe(false);
     });
 
     it('non-time modes always pass', () => {
@@ -255,9 +300,13 @@ describe('daily-mode validation (Cycle 27 Phase D)', () => {
         expect(isTimeMode('competitive')).toBe(false);
     });
 
-    it('submissionScoreBoundsOk uses time-mode bounds for daily', () => {
+    it('submissionScoreBoundsOk uses time-mode bounds for daily (Cycle 58: floor 10)', () => {
+        // Daily shares the time-mode coarse bounds (now 10..3600). Daily
+        // integrity still rests on validateDailySubmission (exact date + seed
+        // count) and the legacy 30s plausibility floor for its 50-200 window —
+        // neither of which this coarse bound replaces.
         expect(submissionScoreBoundsOk('daily-2026-05-08' as GameMode, 60)).toBe(true);
-        expect(submissionScoreBoundsOk('daily-2026-05-08' as GameMode, 29)).toBe(false);
+        expect(submissionScoreBoundsOk('daily-2026-05-08' as GameMode, 9)).toBe(false);
         expect(submissionScoreBoundsOk('daily-2026-05-08' as GameMode, 3601)).toBe(false);
     });
 

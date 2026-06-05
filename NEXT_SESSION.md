@@ -1,8 +1,8 @@
 # Next Session - Cycle 58 `solo-on-ramp`
 
 > **Updated:** 2026-06-04
-> **For:** Cycle 58 `solo-on-ramp` (OPEN, plan authored). Plan: [`docs/cycle-58-plan.md`](docs/cycle-58-plan.md).
-> **Pickup priority:** Start Phase 1 (completion-count fix) — remove the `sheepRetired` double-count in `js/GameState.js` so solo runs complete at N of N, not N-1.
+> **For:** Cycle 58 `solo-on-ramp` (IMPLEMENTED + DEPLOYED, not formally closed). Plan: [`docs/cycle-58-plan.md`](docs/cycle-58-plan.md).
+> **Pickup priority:** Feel the per-biome ladder counts in-browser (they are a tunable strawman), then run `/cycle-close` to archive the plan, append BACKLOG, scaffold Cycle 59 (the 2 new game modes), and rewrite this file.
 
 ## Cold-Start Orientation
 
@@ -12,9 +12,11 @@ Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file
 
 **Cycle 57 `playthrough-repair` closed 2026-06-04.** Plan archived at [`docs/archive/cycles/cycle-57-plan.md`](docs/archive/cycles/cycle-57-plan.md); full closeout in [`docs/BACKLOG.md`](docs/BACKLOG.md). It repaired the end-of-run loop (paused-run leaderboard hiding, menu-return overlay/freeze, username view/set, submit feedback) and shipped + deployed 8/8 phases. Worker live, prod board clean, incident run id=16 restored.
 
-**Cycle 58 `solo-on-ramp` is the active cycle, plan authored and approved.** Goal: per-biome difficulty ladders (small fast tiers on the two islands, Home Field's ranked tiers unchanged), Just Play dropped from 30 to 3 sheep, the off-by-one completion fixed, and two friction-free naming touchpoints. The load-bearing constraint: **Home Field's existing leaderboard scores stay exactly where they are** (Phase 4 proves the leaderboard partition switch is byte-identical for existing rows). The 2 new game modes are explicitly deferred to Cycle 59.
+**Cycle 58 `solo-on-ramp` is implemented and deployed (all 8 phases, one autonomous pass 2026-06-04).** Per-biome difficulty ladders (small fast tiers on the two islands, Home Field's four ranked anchors unchanged), Just Play dropped from 30 to 3 sheep, the off-by-one completion fixed, the leaderboard partition switched to `(scene, count)` (proven byte-identical for existing rows), and two friction-free naming touchpoints (post-score offer + inline entrance editor). No D1 migration, no wire change. The 2 new game modes are deferred to Cycle 59.
 
-8 phases, all autonomous. Phase 1 (completion-count fix) ships first — isolated, and it de-risks every small-count tier. Then Phase 2 (ladder as scene data) is the foundation for the worker phases (3->4->5) and the client wiring (6->7); Phase 8 (naming) is independent and lands last with `/validate`.
+Validation at ship: `npm test` 934 pass / 0 fail / 7 skipped, `npm run build` clean (main 550 KiB), worker `tsc` clean, `eslint shared/` clean, sim-baseline byte-identical. The per-phase shipped notes live in the plan's [Progress](docs/cycle-58-plan.md) section.
+
+**What is left before `/cycle-close`:** (1) feel the ladder counts in-browser (they are a tunable strawman; dial per biome if a tier reads wrong); (2) walk the plan's Success criteria with the user and run `/cycle-close`. The cycle is live on sheepdogsim.com but the Success-criteria checkboxes are intentionally left unchecked for the close ritual.
 
 ## Open carryover (Matt review + deferred)
 

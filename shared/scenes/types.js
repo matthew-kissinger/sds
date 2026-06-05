@@ -167,6 +167,29 @@
  */
 
 /**
+ * Cycle 58: one rung of a biome's solo difficulty ladder. The ladder is the
+ * source of truth for "how many sheep does difficulty X spawn on this biome",
+ * replacing the flat per-id `SOLO_MODE_SHEEP_COUNT` table so the two islands can
+ * run smaller, faster tiers than Home Field without disturbing Home Field's
+ * ranked counts. Resolved through `shared/difficulty.js` (pure, shared by the
+ * client and the Worker). `id` is the armed `singlePlayerMode` handle (stable
+ * within a biome); `count` is `totalSheep`; `ranked` gates leaderboard submit.
+ * `label` / `blurb` are render-only (entrance copy) and ignored by the Worker.
+ *
+ * Leaderboard identity is `(scene_id, count)`, not the id — so two biomes may
+ * reuse an id for different counts, and a count is comparable across the ids
+ * that happen to share it. `label` / `blurb` follow prose-and-voice.md (no
+ * em-dashes, no exclamation marks, concrete numbers).
+ *
+ * @typedef {Object} SoloLadderEntry
+ * @property {string} id        Armed singlePlayerMode handle (e.g. 'classic').
+ * @property {number} count     totalSheep spawned at this rung.
+ * @property {boolean} ranked   Whether a finished run submits to the leaderboard.
+ * @property {string} [label]   Player-facing tier name (entrance). Render-only.
+ * @property {string} [blurb]   One-line tier description (entrance). Render-only.
+ */
+
+/**
  * @typedef {Object} SkyDef
  * @property {"pastoral-noon"|"dusk"|"overcast"|"dawn"|"golden-hour"} preset
  */
@@ -212,6 +235,12 @@
  *   Scenes without it fall back to runtime `generateTrees` unchanged.
  *
  * Gameplay:
+ * @property {SoloLadderEntry[]} [soloLadder]   Cycle 58 — per-biome solo difficulty
+ *   ladder (ordered easiest-first). Optional: scenes without it fall back to the
+ *   legacy default (`practice 30 / classic 200 / extreme 1000 / insane 3000 /
+ *   chaos 5000`) via `shared/difficulty.js`, so this is the cheap additive fence
+ *   case. Consumed by `getSoloCount` (totalSheep), `getRankedCounts` (Worker
+ *   submit allow-list + leaderboard count tabs), and the entrance.
  * @property {GameMode[]} allowedModes
  * @property {GameMode} defaultMode
  * @property {'classic'|'follow'|'free'} [defaultCamera]   Cycle 5+ — initial camera mode if user has no localStorage preference

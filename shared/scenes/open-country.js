@@ -106,9 +106,11 @@ export const openCountry = {
     // Cycle 7 Phase 3 / Cycle 17 Phase 6: gather → drive multi-stage objective.
     // Player must hold (≥ 40% of total mode sheep) inside the round-up zone at
     // (0, 50) radius 30m for 2.0 seconds before the portal at (0, 295) accepts
-    // retirement. Per-mode: Classic 200→80, Extreme 1000→400, Insane 3000→1200,
-    // Chaos 5000→2000. Min clamp 10 keeps the gate meaningful at the smallest
-    // sandbox counts. Helper: `shared/ObjectiveLogic.getRequiredSheep`.
+    // retirement. Required = clamp(totalSheep, max(10, floor(0.40 * total))).
+    // Cycle 58 per-rung (this scene's solo ladder): Just Play 3→3, Quick 25→10,
+    // Classic 50→20, Hard 150→60, Extreme 600→240, Chaos 5000→2000. The Cycle 58
+    // clamp to totalSheep keeps the smallest rungs winnable (a 3-sheep flock can
+    // never hold 10). Helper: `shared/ObjectiveLogic.getRequiredSheep`.
     objective: {
         roundupZone: { x: 0, z: 50, radius: 30 },
         requiredSheepFraction: 0.40,
@@ -143,6 +145,22 @@ export const openCountry = {
         perception: 9,
         perceptionRadius: 9
     },
+
+    // Cycle 58: the 380-metre gather-and-portal island is the hardest biome to
+    // herd, so its ranked ladder runs the smallest counts of the three. It keeps
+    // 5000 as the signature Chaos tier. Just Play is 3 sheep. The gather
+    // objective's requiredSheep is clamped to <= totalSheep
+    // (shared/ObjectiveLogic.js) so these small counts stay winnable. (The
+    // sheepSpawn.count above is the multiplayer / default spawn, unrelated to
+    // these solo counts.)
+    soloLadder: [
+        { id: 'practice', count: 3, ranked: false, label: 'Just Play', blurb: 'No timer, no fail state.' },
+        { id: 'quick', count: 25, ranked: true, label: 'Quick', blurb: 'A small flock to portal home.' },
+        { id: 'classic', count: 50, ranked: true, label: 'Classic', blurb: 'The open-country run.' },
+        { id: 'hard', count: 150, ranked: true, label: 'Hard', blurb: 'A bigger gather across the woods.' },
+        { id: 'extreme', count: 600, ranked: true, label: 'Extreme', blurb: 'Six hundred sheep.' },
+        { id: 'chaos', count: 5000, ranked: true, label: 'Chaos', blurb: 'The flock becomes the antagonist.' },
+    ],
 
     allowedModes: ['cooperative', 'timed'],
     defaultMode: 'cooperative',

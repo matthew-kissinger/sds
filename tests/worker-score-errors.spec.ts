@@ -104,13 +104,15 @@ describe('submitScore observability (Cycle 35 Phase 2)', () => {
         timed_best: null, competitive_wins: 0, cooperative_best: null,
       },
     });
-    // soloClassic with 5000 sheep is rejected by modeSheepCountOk.
+    // Cycle 58: solo validation is (scene, count). 999 is not a ranked rung on
+    // Home Field's ladder ([25, 200, 1000, 3000, 5000]), so modeSheepCountOk
+    // rejects it (the count check fires before the plausibility floor).
     await expect(
-      submitScore(db, 'p1', 'soloClassic' as GameMode, 120, { sceneId: 'field', sheepCount: 5000 }),
+      submitScore(db, 'p1', 'soloClassic' as GameMode, 120, { sceneId: 'field', sheepCount: 999 }),
     ).rejects.toThrow(/sheep_count.*not allowed/i);
     const inserts = calls.filter(c => /INSERT INTO score_errors/i.test(c.sql));
     expect(inserts).toHaveLength(1);
-    expect(inserts[0].binds[3]).toBe(5000);
+    expect(inserts[0].binds[3]).toBe(999);
     expect(String(inserts[0].binds[5]).toLowerCase()).toContain('not allowed');
   });
 
