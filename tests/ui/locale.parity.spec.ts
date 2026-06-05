@@ -55,6 +55,16 @@ const EN_KEYS = flattenKeys(en as LocaleTree);
  */
 const ALLOWLIST: Record<string, readonly string[]> = {
   es: [
+    // Cycle 59 (Counting Sheep) - English-only this cycle; translate later.
+    'completion.counting.counted',
+    'completion.counting.round',
+    'completion.counting.subtitle',
+    'completion.counting.title',
+    'hud.counting.bank',
+    'hud.counting.round',
+    'leaderboard.countingExponential',
+    'leaderboard.countingIncremental',
+    'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
     'leaderboard.soloInsane',
@@ -92,6 +102,16 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'settings.tabs.graphics',
   ],
   ja: [
+    // Cycle 59 (Counting Sheep) - English-only this cycle; translate later.
+    'completion.counting.counted',
+    'completion.counting.round',
+    'completion.counting.subtitle',
+    'completion.counting.title',
+    'hud.counting.bank',
+    'hud.counting.round',
+    'leaderboard.countingExponential',
+    'leaderboard.countingIncremental',
+    'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
     'leaderboard.soloInsane',
@@ -129,6 +149,16 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'settings.tabs.graphics',
   ],
   pt: [
+    // Cycle 59 (Counting Sheep) - English-only this cycle; translate later.
+    'completion.counting.counted',
+    'completion.counting.round',
+    'completion.counting.subtitle',
+    'completion.counting.title',
+    'hud.counting.bank',
+    'hud.counting.round',
+    'leaderboard.countingExponential',
+    'leaderboard.countingIncremental',
+    'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
     'leaderboard.soloInsane',
@@ -184,6 +214,16 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'settings.tabs.graphics',
   ],
   'zh-CN': [
+    // Cycle 59 (Counting Sheep) - English-only this cycle; translate later.
+    'completion.counting.counted',
+    'completion.counting.round',
+    'completion.counting.subtitle',
+    'completion.counting.title',
+    'hud.counting.bank',
+    'hud.counting.round',
+    'leaderboard.countingExponential',
+    'leaderboard.countingIncremental',
+    'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
     'leaderboard.soloInsane',

@@ -18,6 +18,11 @@
 import { color } from '../ui/tokens';
 import { getSceneById } from '../../../shared/scenes/index.js';
 import { getSoloLadder, LEGACY_SOLO_LADDER } from '../../../shared/difficulty.js';
+import {
+  COUNTING_GAME_MODE,
+  COUNTING_HARD_CEILING,
+  sceneOffersCounting,
+} from '../../../shared/countingModes.js';
 
 export interface World {
   /** Scene id the engine builds on commit. */
@@ -54,6 +59,32 @@ export interface Way {
   id: string;
   name: string;
 }
+
+/**
+ * Cycle 59 (Counting Sheep): a mode family groups the rungs a world offers under
+ * one heading. Home Field and Rolling Hills offer Classic (the solo ladder) and
+ * Counting Sheep (the two curves). Open Country is a two-stage gather-and-portal
+ * objective, a category of its own, so it carries a single Objective family - a
+ * relabel of its solo ladder, no gameplay change. `gameMode` is the top-level
+ * mode the commit dispatches: 'solo' for Classic/Objective, 'counting' for the
+ * curves. Family + curve names here are a strawman for Matt's voice pass.
+ */
+export interface ModeFamily {
+  id: string;
+  name: string;
+  /** Top-level gameMode to dispatch on commit: 'solo' | 'counting'. */
+  gameMode: string;
+  rungs: Mode[];
+}
+
+// The Counting Sheep curves as entrance rungs. The rung id is the curve, passed
+// straight through as singlePlayerMode (the same slot the solo difficulty uses).
+// `sheep` is the shared 5000 ceiling; the chip shows the short curve hint
+// (blurb) rather than that number, since a counting run starts at one sheep.
+const COUNTING_RUNGS: Mode[] = [
+  { id: 'incremental', name: 'Incremental', sheep: COUNTING_HARD_CEILING, blurb: '+1 each round', ranked: true },
+  { id: 'exponential', name: 'Exponential', sheep: COUNTING_HARD_CEILING, blurb: 'doubles each round', ranked: true },
+];
 
 export const WORLDS: World[] = [
   {
@@ -110,6 +141,24 @@ function modesFromLadder(
  */
 export function modesForWorld(worldId: string): Mode[] {
   return modesFromLadder(getSoloLadder(getSceneById(worldId)));
+}
+
+/**
+ * The mode families a world offers, in selector order. Counting-capable scenes
+ * (Home Field, Rolling Hills) get Classic + Counting Sheep; Open Country gets a
+ * single Objective family. A single-family world renders its family as a label,
+ * not a selector (see Entrance).
+ */
+export function familiesForWorld(worldId: string): ModeFamily[] {
+  const solo = modesForWorld(worldId);
+  if (worldId === 'open-country') {
+    return [{ id: 'objective', name: 'Objective', gameMode: 'solo', rungs: solo }];
+  }
+  const families: ModeFamily[] = [{ id: 'classic', name: 'Classic', gameMode: 'solo', rungs: solo }];
+  if (sceneOffersCounting(worldId)) {
+    families.push({ id: COUNTING_GAME_MODE, name: 'Counting Sheep', gameMode: COUNTING_GAME_MODE, rungs: COUNTING_RUNGS });
+  }
+  return families;
 }
 
 /**

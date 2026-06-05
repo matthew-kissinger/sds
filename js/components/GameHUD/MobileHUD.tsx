@@ -11,11 +11,20 @@
  */
 import type { CSSProperties } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
+import { CountingReadout } from './CountingReadout';
 import { Icon } from '../ui/Icon';
 import { pastoral, alpha } from '../ui/tokens';
 
 interface MobileHUDProps {
-    gameData: { gameTime: number; sheepCount: number; totalSheep: number };
+    gameData: {
+        gameTime: number;
+        sheepCount: number;
+        totalSheep: number;
+        // Cycle 59 (Counting Sheep): round-based readout fields.
+        roundBased?: boolean;
+        round?: number;
+        counted?: number;
+    };
     stamina: number;
     onPause?: () => void;
 }
@@ -85,7 +94,11 @@ export function MobileHUD({ gameData, stamina, onPause }: MobileHUDProps) {
                     <div style={{ display: 'flex', alignItems: 'center', gap }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                             <Icon name="sheep" size={iconSize} color={alpha(pastoral.cream, 85)} />
-                            <span style={{ color: pastoral.cream, fontSize }}>{gameData.sheepCount}/{gameData.totalSheep}</span>
+                            {gameData.roundBased ? (
+                                <CountingReadout round={gameData.round ?? 0} counted={gameData.counted ?? 0} compact fontSize={fontSize} />
+                            ) : (
+                                <span style={{ color: pastoral.cream, fontSize }}>{gameData.sheepCount}/{gameData.totalSheep}</span>
+                            )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                             <Icon name="timer" size={iconSize - 2} color={alpha(pastoral.cream, 85)} />

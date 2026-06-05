@@ -394,6 +394,11 @@ interface PauseMenuProps {
     isFullscreen?: boolean;
     showFullscreenOption?: boolean;
     gameMode?: string;
+    // Cycle 59 (Counting Sheep): bank-and-finish entry, shown only for a
+    // round-based run (counting never auto-ends, so the pause menu offers a
+    // second reachable bank affordance alongside the always-visible HUD one).
+    roundBased?: boolean;
+    onBankCounting?: () => void;
 }
 
 export function PauseMenu({
@@ -404,7 +409,9 @@ export function PauseMenu({
     onToggleFullscreen,
     isFullscreen = false,
     showFullscreenOption = false,
-    gameMode = 'solo'
+    gameMode = 'solo',
+    roundBased = false,
+    onBankCounting
 }: PauseMenuProps) {
     const { t } = useTranslation();
     const { isMobile, isLandscapeMobile } = useResponsive();
@@ -552,6 +559,16 @@ export function PauseMenu({
                                 size={buttonSize}
                                 onClick={onResume}
                             />
+
+                            {/* Cycle 59 (Counting Sheep): bank-and-finish entry. */}
+                            {roundBased && onBankCounting && (
+                                <MenuButton
+                                    icon={<Icon name="trophy" size={iconSize} color={pastoral.cream} />}
+                                    label={t('pause.bankAndFinish')}
+                                    size={buttonSize}
+                                    onClick={onBankCounting}
+                                />
+                            )}
 
                             {/* Restart button */}
                             <MenuButton

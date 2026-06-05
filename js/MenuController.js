@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
 import { NetworkManager } from './NetworkManager.js';
+import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
 
 /**
  * MenuController - Modernized game logic controller for React UI integration
@@ -180,6 +181,22 @@ export class MenuController {
         this.singlePlayerMode = singlePlayerMode;
         this.playUIClick();
         console.log('[GAME] MenuController.selectSolo calling startGame()');
+        this.startGame();
+    }
+
+    /**
+     * Cycle 59 (Counting Sheep): arm a counting run. The curve
+     * ('incremental' | 'exponential') rides as singlePlayerMode, mirroring how
+     * selectSolo passes the difficulty. selectedMode = 'counting' makes
+     * startGame dispatch onGameStart('counting', null, curve), which
+     * SheepDogSimulation.startGame routes through its solo-style branch.
+     */
+    selectCounting(dogType, curve = 'incremental') {
+        console.log('[GAME] MenuController.selectCounting called with dogType:', dogType, 'curve:', curve);
+        this.selectedDog = dogType;
+        this.selectedMode = COUNTING_GAME_MODE;
+        this.singlePlayerMode = curve;
+        this.playUIClick();
         this.startGame();
     }
 

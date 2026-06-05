@@ -295,6 +295,9 @@ export interface CompletionData {
     isNewBest?: boolean;
     sheepCount?: number;
     replayBlobUrl?: string;
+    // Cycle 59 (Counting Sheep): the banked counted total + the round reached.
+    counted?: number;
+    round?: number;
 }
 
 export interface CompletionScreenProps {
@@ -325,7 +328,9 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
     // don't submit (Just Play, sandbox, practice, multiplayer) never fire it,
     // so the line stays hidden.
     useEffect(() => {
-        if (mode !== 'single') return;
+        // Cycle 59: counting also submits (the banked total), so it shows the
+        // saved/could-not-save line and the post-score naming offer too.
+        if (mode !== 'single' && mode !== 'counting') return;
         const read = () => {
             const r = typeof window !== 'undefined' ? (window as { __sdsLastSubmit?: { ok?: boolean } }).__sdsLastSubmit : null;
             if (r && typeof r.ok === 'boolean') setSubmitStatus({ ok: r.ok });
@@ -354,6 +359,25 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
 
     // Determine content based on mode
     const getContent = (): CompletionContent => {
+        if (mode === 'counting') {
+            // Cycle 59 (Counting Sheep): the run is player-banked, so this is
+            // never a fail screen - it celebrates the counted total and the
+            // round reached. counted is the submitted score.
+            const counted = data.counted || 0;
+            return {
+                title: t('completion.counting.title'),
+                subtitle: t('completion.counting.subtitle', { count: counted }),
+                icon: <Icon name="sheep" size={64} color={TROPHY_GOLD} />,
+                accentColor: VICTORY_ACCENT,
+                bgGradient: VICTORY_BG,
+                showConfetti: true,
+                stats: [
+                    { label: t('completion.counting.counted'), value: String(counted), icon: <Icon name="sheep" size={20} color={pastoral.cream} /> },
+                    { label: t('completion.counting.round'), value: String(data.round || 0), icon: <StarGlyph size={20} color={pastoral.cream} filled /> }
+                ]
+            };
+        }
+
         if (mode === 'single') {
             return {
                 title: t('completion.victory'),

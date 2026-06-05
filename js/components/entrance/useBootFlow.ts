@@ -13,12 +13,18 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useReducedMotion } from '../ui/useReducedMotion';
-import { WORLDS, DOGS, MODES, WAYS, DEFAULT_WORLD_INDEX, modesForWorld, type World, type Dog, type Mode, type Way } from './worlds';
+import { WORLDS, DOGS, MODES, WAYS, DEFAULT_WORLD_INDEX, modesForWorld, familiesForWorld, type World, type Dog, type Mode, type Way, type ModeFamily } from './worlds';
 import { subscribeGameEvent } from '../../GameBridge.js';
+import { COUNTING_GAME_MODE, COUNTING_CURVES } from '../../../shared/countingModes.js';
 import { mapLoadStep, FIRST_LOAD_LABEL } from './loadStages';
 
 const LAST_DOG = 'sds.last-dog';
 const LAST_MODE = 'sds.last-mode';
+// Cycle 59 (Counting Sheep): the chosen family and the counting curve persist
+// separately from the solo difficulty, so visiting Counting Sheep does not erase
+// the player's last solo difficulty (and vice versa).
+const LAST_FAMILY = 'sds.last-family';
+const LAST_CURVE = 'sds.last-curve';
 
 function readLS(key: string): string | null {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -42,6 +48,10 @@ export interface BootFlow {
   mode: Mode;
   dog: Dog;
   worldIndex: number;
+  /** Cycle 59: the armed world's mode families + the active one. */
+  families: ModeFamily[];
+  family: ModeFamily;
+  setFamily: (id: string) => void;
   armWorld: (id: string) => void;
   nextWorld: () => void;
   prevWorld: () => void;
@@ -53,17 +63,21 @@ export interface BootFlow {
 }
 
 export interface BootFlowOptions {
-  /** Called when Play commits; receives the armed selection. */
-  onPlay: (world: World, dog: Dog, mode: Mode) => void;
+  /** Called when Play commits; receives the armed selection + the family's
+   * top-level gameMode ('solo' | 'counting') so the caller dispatches the
+   * right start path. */
+  onPlay: (world: World, dog: Dog, mode: Mode, gameMode: string) => void;
 }
 
 export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   const reducedMotion = useReducedMotion();
 
-  // The entrance always lands on Rolling Hills (the hero); only dog + mode
-  // persist per-player. Browsing worlds is session-local.
+  // The entrance always lands on Rolling Hills (the hero); only dog + mode +
+  // family persist per-player. Browsing worlds is session-local.
   const [worldIndex, setWorldIndex] = useState(DEFAULT_WORLD_INDEX);
   const [modeId, setModeId] = useState(() => readLS(LAST_MODE) ?? MODES[0].id);
+  const [curveId, setCurveId] = useState(() => readLS(LAST_CURVE) ?? COUNTING_CURVES[0]);
+  const [familyId, setFamilyId] = useState(() => readLS(LAST_FAMILY) ?? '');
   const [dogId, setDogId] = useState(() => readLS(LAST_DOG) ?? DOGS[0].id);
 
   // The real loading bar: the boot emits 'scene-load-step' per build mark; we
@@ -77,19 +91,33 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   }), []);
 
   const world = WORLDS[worldIndex] ?? WORLDS[0];
-  // Cycle 58: difficulty options come from the armed world's ladder (per-biome
-  // counts). When the persisted difficulty id is not a rung on the newly armed
-  // world (e.g. 'insane' is Home Field only), fall back to that world's
-  // 'classic' rung, then any ranked rung, then the first rung — so switching
-  // worlds always lands on a valid, sensible difficulty.
-  const modes = useMemo(() => modesForWorld(world.id), [world.id]);
+
+  // Cycle 59: the armed world's mode families. A multi-family world (Home Field,
+  // Rolling Hills) exposes Classic + Counting Sheep; a single-family world (Open
+  // Country = Objective) renders the family as a label. The active family falls
+  // back to the world's first family when the persisted choice is not offered
+  // here (e.g. Counting Sheep on Open Country).
+  const families = useMemo(() => familiesForWorld(world.id), [world.id]);
+  const family = useMemo(
+    () => families.find((f) => f.id === familyId) ?? families[0],
+    [families, familyId],
+  );
+  const isCounting = family.gameMode === COUNTING_GAME_MODE;
+
+  // Cycle 58/59: rung options come from the ACTIVE FAMILY (the solo ladder for
+  // Classic/Objective, the two curves for Counting Sheep). The active rung is
+  // tracked per family-kind: counting uses curveId, the rest use modeId. When
+  // the tracked id is not a rung here (world or family swap), fall back to the
+  // 'classic' rung, then any ranked rung, then the first - always valid.
+  const modes = family.rungs;
+  const activeRungId = isCounting ? curveId : modeId;
   const mode = useMemo(
     () =>
-      modes.find((m) => m.id === modeId)
+      modes.find((m) => m.id === activeRungId)
       ?? modes.find((m) => m.id === 'classic')
       ?? modes.find((m) => m.ranked)
       ?? modes[0],
-    [modes, modeId],
+    [modes, activeRungId],
   );
   const dog = useMemo(() => DOGS.find((d) => d.id === dogId) ?? DOGS[0], [dogId]);
 
@@ -99,13 +127,19 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   }, []);
   const nextWorld = useCallback(() => setWorldIndex((i) => (i + 1) % WORLDS.length), []);
   const prevWorld = useCallback(() => setWorldIndex((i) => (i - 1 + WORLDS.length) % WORLDS.length), []);
-  const setMode = useCallback((id: string) => { setModeId(id); writeLS(LAST_MODE, id); }, []);
+  const setFamily = useCallback((id: string) => { setFamilyId(id); writeLS(LAST_FAMILY, id); }, []);
+  // Route the chosen rung id to the right persistence slot for the active family
+  // so the solo difficulty and the counting curve do not clobber each other.
+  const setMode = useCallback((id: string) => {
+    if (isCounting) { setCurveId(id); writeLS(LAST_CURVE, id); }
+    else { setModeId(id); writeLS(LAST_MODE, id); }
+  }, [isCounting]);
   const setDog = useCallback((id: string) => { setDogId(id); writeLS(LAST_DOG, id); }, []);
 
   const commit = useCallback(() => {
     setLoad({ pct: 0, label: FIRST_LOAD_LABEL }); // reset the bar for this build
-    onPlay(world, dog, mode);
-  }, [onPlay, world, dog, mode]);
+    onPlay(world, dog, mode, family.gameMode);
+  }, [onPlay, world, dog, mode, family.gameMode]);
 
   return {
     worlds: WORLDS,
@@ -116,6 +150,9 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
     mode,
     dog,
     worldIndex,
+    families,
+    family,
+    setFamily,
     armWorld,
     nextWorld,
     prevWorld,

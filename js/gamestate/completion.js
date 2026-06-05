@@ -15,6 +15,7 @@
 
 import { getModeCapabilities, SOLO_MODE_TO_LEADERBOARD } from './modes.js';
 import { getGameTimer } from '../GameBridge.js';
+import { COUNTING_GAME_MODE, leaderboardModeForCurve } from '../../shared/countingModes.js';
 
 /**
  * Format mm:ss for display. External callers (completionOverlay.js)
@@ -40,6 +41,12 @@ export function formatTime(timeInSeconds) {
  */
 function resolveLeaderboardMode(state, explicit) {
     if (explicit) return explicit;
+    // Cycle 59 (Counting Sheep): the curve (incremental / exponential) rides on
+    // state.countingCurve (set in startGame); it maps to the counting-<curve>
+    // board key. Falls back to singlePlayerMode, which carries the curve too.
+    if (state.gameMode === COUNTING_GAME_MODE) {
+        return leaderboardModeForCurve(state.countingCurve || state.singlePlayerMode);
+    }
     if (state.gameMode === 'solo') {
         return SOLO_MODE_TO_LEADERBOARD[state.singlePlayerMode] || 'soloClassic';
     }

@@ -24,6 +24,7 @@ import { Vector2D } from './Vector2D.js';
 import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
 import { Heightfield } from '../shared/terrain/Heightfield.js';
+import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
 import { Atmosphere } from './atmosphere/index.js';
 import { updateSceneMetadata } from './utils/seo.js';
 // Cycle 17 Phase 7: local-multiplayer modules dynamic-imported in
@@ -1263,7 +1264,10 @@ class SheepDogSimulation {
         }
 
         const spMode = this.singlePlayerMode || 'classic';
-        console.log('[SWAP] restartSameMode() — replay', spMode);
+        // Cycle 59 (Counting Sheep): replay the counting curve under its own
+        // mode, not 'solo'. spMode already carries the curve for counting.
+        const replayMode = this.gameMode === COUNTING_GAME_MODE ? COUNTING_GAME_MODE : 'solo';
+        console.log('[SWAP] restartSameMode() — replay', replayMode, spMode);
         disposeCompletionOverlay();
         emitGameEvent('scene-swap-start');
 
@@ -1271,7 +1275,7 @@ class SheepDogSimulation {
             await this._disposeAndRebuildCurrentScene();
             // Hold the cover through startGame so the dog + flock are in place
             // before it fades; no menu flash (we never emit scene-restart-to-menu).
-            await this.startGame('solo', null, spMode);
+            await this.startGame(replayMode, null, spMode);
             emitGameEvent('scene-swap-end');
         } catch (err) {
             console.error('[SWAP] restartSameMode failed; reloading:', err);
@@ -1279,6 +1283,32 @@ class SheepDogSimulation {
             window.location.reload();
             return new Promise(() => {});
         }
+    }
+
+    /**
+     * Cycle 59 (Counting Sheep): the player explicitly banks the run. Counting
+     * never auto-completes (checkCompletion is bypassed for round-based modes),
+     * so this is the single end-of-run path: freeze the sim, stop the timer, and
+     * show the counting summary which submits the counted total. Idempotent - a
+     * second call (HUD button + pause-menu entry can both fire) is a no-op once
+     * gameCompleted is set. Unpausing, when banked from the pause menu, is the
+     * React caller's job (it calls handleResume first, like restart does).
+     */
+    bankCountingScore() {
+        const gs = this.gameState;
+        if (!gs || gs.gameMode !== COUNTING_GAME_MODE) return;
+        if (!gs.gameActive || gs.gameCompleted) return;
+
+        gs.gameCompleted = true;
+        gs.gameActive = false;
+
+        const counted = gs.sheepRetired || 0;
+        const round = gs.countingState?.round ?? 0;
+        const finalTime = this.gameTimer.stop();
+        console.log(`[COUNTING] Banking run: counted=${counted}, round=${round}, time=${finalTime}`);
+
+        this.showCompletionOverlay('counting', { counted, round, finalTime });
+        this.mobileControls.disable();
     }
 
     /**
@@ -2245,6 +2275,10 @@ class SheepDogSimulation {
         // Skip for local multiplayer - handled in updateLocalMultiplayer
         if (!isPaused && !this.isLocalMultiplayer) {
             this.gameState.updateSheepBehaviors(deltaTime);
+            // Cycle 59 (Counting Sheep): once the active batch is fully penned,
+            // bring the next batch online. Self-guards to a no-op for every
+            // non-counting mode, so standard runs are untouched.
+            this.gameState.advanceCountingRound();
         }
 
         // Sheep velocity-based extrapolation (multiplayer only). After behaviors

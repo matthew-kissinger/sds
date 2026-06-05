@@ -86,6 +86,15 @@ export class OptimizedSheepSystem {
     constructor(scene, sheepCount = 200, spawnConfig = null, useExtremeBoids = false, opts = {}) {
         this.scene = scene;
         this.sheepCount = sheepCount;
+        // Cycle 59 (Counting Sheep): split the fixed allocation size from the
+        // live active count. `maxCapacity` sizes the InstancedMesh + per-instance
+        // buffers once; `activeCount` is how many instances are live (updated +
+        // drawn) this frame. Standard modes pass no `maxCapacity`, so
+        // maxCapacity === activeCount === sheepCount and every path below stays
+        // byte-identical. Counting Sheep pre-sizes to the 5000 ceiling and brings
+        // instances online in batches via activateSheepBatch().
+        this.maxCapacity = Math.max(sheepCount, opts.maxCapacity ?? sheepCount);
+        this.activeCount = sheepCount;
         this.sheep = [];
         this.audioManager = null;
         /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
@@ -321,7 +330,7 @@ export class OptimizedSheepSystem {
             search: this.konveyorSheepSearch,
             factories: this.konveyorSheepFactories,
             context: {
-                sheepCount: this.sheepCount,
+                sheepCount: this.maxCapacity,
                 vertexShader,
                 fragmentShader,
                 uniforms,
@@ -373,27 +382,32 @@ export class OptimizedSheepSystem {
         this.instancedMesh = new THREE.InstancedMesh(
             this.mergedGeometry,
             this.material,
-            this.sheepCount
+            this.maxCapacity
         );
-        
+
         // Enable shadows
         this.instancedMesh.castShadow = true;
         this.instancedMesh.receiveShadow = true;
-        
+
         // Create instance attributes for animation data
         const instanceData = new THREE.InstancedBufferAttribute(
-            new Float32Array(this.sheepCount * 4), 4
+            new Float32Array(this.maxCapacity * 4), 4
         );
         const instanceAnimation = new THREE.InstancedBufferAttribute(
-            new Float32Array(this.sheepCount * 4), 4
+            new Float32Array(this.maxCapacity * 4), 4
         );
-        
+
         this.mergedGeometry.setAttribute('instanceData', instanceData);
         this.mergedGeometry.setAttribute('instanceAnimation', instanceAnimation);
-        
+
         // Add to scene
         this.scene.add(this.instancedMesh);
-        
+
+        // Cycle 59: only the active prefix is drawn. For standard modes
+        // activeCount === maxCapacity, so this is the InstancedMesh default;
+        // Counting Sheep raises it as batches activate (see activateSheepBatch).
+        this.instancedMesh.count = this.activeCount;
+
         // Disable frustum culling so sheep never disappear due to bounding sphere issues
         this.instancedMesh.frustumCulled = false;
     }
@@ -672,14 +686,14 @@ export class OptimizedSheepSystem {
         const activeSheepList = this._activeSheepScratch;
         if (!skipFlocking) {
             activeSheepList.length = 0;
-            for (let s = 0; s < this.sheepCount; s++) {
+            for (let s = 0; s < this.activeCount; s++) {
                 const candidate = this.sheep[s];
                 if (candidate.state === 0) activeSheepList.push(candidate);
             }
         }
 
         // Update each sheep
-        for (let i = 0; i < this.sheepCount; i++) {
+        for (let i = 0; i < this.activeCount; i++) {
             const sheep = this.sheep[i];
 
             // Provide competitive gates access to individual sheep
@@ -845,10 +859,11 @@ export class OptimizedSheepSystem {
         const dummy = new THREE.Object3D();
         dummy.rotation.order = 'YXZ';
         
-        for (let i = 0; i < this.sheepCount; i++) {
+        // MP-only path: counting is solo, so here activeCount === sheepCount.
+        for (let i = 0; i < this.activeCount; i++) {
             const sheep = this.sheep[i];
-            
-            // Force render position to match physics position immediately
+
+            // Force render position to match physics position immediately (MP).
             sheep.renderPosition.x = sheep.position.x;
             sheep.renderPosition.z = sheep.position.z;
             sheep.renderFacingDirection = sheep.facingDirection;
@@ -922,7 +937,7 @@ export class OptimizedSheepSystem {
      * @returns {number}
      */
     getTotalTriangleEstimate() {
-        return Math.round(geometryTriangleCount(this.mergedGeometry) * this.sheepCount);
+        return Math.round(geometryTriangleCount(this.mergedGeometry) * this.activeCount);
     }
     
     /**
@@ -978,7 +993,7 @@ export class OptimizedSheepSystem {
             effectiveRadius = maxRadius;
         }
 
-        for (let i = 0; i < this.sheepCount; i++) {
+        for (let i = 0; i < this.activeCount; i++) {
             const sheep = this.sheep[i];
             const cluster = sceneClusters[i % sceneClusters.length];
             const clusterCx = cluster.x;
@@ -1062,6 +1077,109 @@ export class OptimizedSheepSystem {
         }
         
         this.instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    /**
+     * Find one valid spawn position: a random point within `effectiveRadius` of
+     * (clusterCx, clusterCz) that lies inside the spawn polygon with edge margin,
+     * falling back to a centroid grid-search then the centroid itself. Mirrors
+     * the inline logic in initializeSheepData / resetAllSheep; used by
+     * activateSheepBatch (Cycle 59 Counting Sheep) so new batches spawn the same
+     * way. The one-shot spawn paths keep their own inline copy so their
+     * Math.random call order is provably untouched (the byte-identical guard).
+     *
+     * @returns {{x: number, z: number}}
+     */
+    _findSpawnPosition(clusterCx, clusterCz, effectiveRadius, borderPoints, edgeMargin, spreadRadius) {
+        let x, z;
+        let attempts = 0;
+        const maxAttempts = 100;
+        do {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * effectiveRadius;
+            x = clusterCx + Math.cos(angle) * distance;
+            z = clusterCz + Math.sin(angle) * distance;
+            attempts++;
+        } while (borderPoints && !this.isPointSafelyInside(x, z, borderPoints, edgeMargin) && attempts < maxAttempts);
+
+        if (attempts >= maxAttempts && borderPoints) {
+            let found = false;
+            const centroid = this.getPolygonCentroid(borderPoints);
+            for (let searchRadius = 10; searchRadius <= spreadRadius * 2 && !found; searchRadius += 10) {
+                for (let attempt = 0; attempt < 20 && !found; attempt++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * searchRadius;
+                    const testX = centroid.x + Math.cos(angle) * distance;
+                    const testZ = centroid.z + Math.sin(angle) * distance;
+                    if (this.isPointSafelyInside(testX, testZ, borderPoints, edgeMargin)) {
+                        x = testX;
+                        z = testZ;
+                        found = true;
+                    }
+                }
+            }
+            if (!found) {
+                x = centroid.x + (Math.random() - 0.5) * 5;
+                z = centroid.z + (Math.random() - 0.5) * 5;
+            }
+        }
+        return { x, z };
+    }
+
+    /**
+     * Cycle 59 (Counting Sheep): bring `count` new sheep online at fresh spawn
+     * positions, appended densely after the current active range so id === index
+     * holds and already-penned sheep keep their slots. Raises the draw count
+     * (instancedMesh.count) so the new batch renders. Clamps at maxCapacity, so
+     * no activation happens past the 5000 ceiling.
+     *
+     * @param {number} count how many to activate this round
+     * @param {(sheep: OptimizedSheepInstance) => void} [onActivate] per-sheep
+     *        setup hook so GameState wires bounds/boundary just like the initial flock
+     * @returns {number} the number actually activated (0 at the ceiling)
+     */
+    activateSheepBatch(count, onActivate = null) {
+        const start = this.activeCount;
+        const end = Math.min(start + Math.max(0, Math.floor(count)), this.maxCapacity);
+        if (end <= start) return 0;
+
+        const dummy = new THREE.Object3D();
+        dummy.rotation.order = 'YXZ';
+        const {
+            centerX, centerZ, spreadRadius, borderPoints, clusterCenters, maxRadius,
+        } = this.spawnConfig;
+        const edgeMargin = 5;
+        const sceneClusters = (clusterCenters && clusterCenters.length > 0)
+            ? clusterCenters
+            : [{ x: centerX, z: centerZ }];
+        // A counting batch is a fresh small flock: spawn within the base radius
+        // (no count-density scaling, which would scatter a new batch across the
+        // whole map). Clamp to the scene's maxRadius like the one-shot path.
+        let effectiveRadius = spreadRadius;
+        if (maxRadius && effectiveRadius > maxRadius) effectiveRadius = maxRadius;
+
+        for (let i = start; i < end; i++) {
+            const cluster = sceneClusters[i % sceneClusters.length];
+            const { x, z } = this._findSpawnPosition(
+                cluster.x, cluster.z, effectiveRadius, borderPoints, edgeMargin, spreadRadius,
+            );
+            const sheep = new OptimizedSheepInstance(i, x, z);
+            if (onActivate) onActivate(sheep);
+            this.sheep.push(sheep);
+
+            const initY = this._surfaceY(x, z);
+            dummy.position.set(x, initY, z);
+            dummy.rotation.y = Math.random() * Math.PI * 2;
+            dummy.scale.set(1, 1, 1);
+            dummy.updateMatrix();
+            this.instancedMesh.setMatrixAt(i, dummy.matrix);
+            this.updateInstanceAttributes(i, sheep);
+        }
+
+        this.activeCount = end;
+        this.instancedMesh.count = end;
+        this.instancedMesh.instanceMatrix.needsUpdate = true;
+        return end - start;
     }
 
     _surfaceY(x, z) {

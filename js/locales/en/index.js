@@ -308,6 +308,9 @@ export default {
         timed: 'Timed (3 min)',
         competitive: 'Competitive',
         cooperative: 'Cooperative',
+        // Cycle 59 (Counting Sheep): per-curve board tabs.
+        countingIncremental: 'Counting Incremental',
+        countingExponential: 'Counting Exponential',
         updated: 'Updated {{time}}',
         loading: 'Loading leaderboards...',
         noScores: 'No scores recorded yet. Be the first!',
@@ -327,7 +330,12 @@ export default {
         time: 'Time',
         score: 'Score',
         timeRemaining: 'Time Remaining',
-        complete: 'complete'
+        complete: 'complete',
+        // Cycle 59 (Counting Sheep): round-based HUD readout.
+        counting: {
+            round: 'Round',
+            bank: 'Bank and finish'
+        }
     },
 
     // Pause menu
@@ -339,7 +347,9 @@ export default {
         restart: 'Restart',
         mainMenu: 'Main Menu',
         fullscreen: 'Fullscreen',
-        exitFullscreen: 'Exit Fullscreen'
+        exitFullscreen: 'Exit Fullscreen',
+        // Cycle 59 (Counting Sheep): pause-menu bank affordance.
+        bankAndFinish: 'Bank and finish'
     },
 
     // Completion screen
@@ -372,7 +382,14 @@ export default {
             sheepCollected: 'Sheep Collected',
             teamTime: 'Team Time'
         },
-        sheepUnit: '{{count}} sheep'
+        sheepUnit: '{{count}} sheep',
+        // Cycle 59 (Counting Sheep): player-banked summary.
+        counting: {
+            title: 'Sheep counted',
+            subtitle: 'You counted {{count}} before banking the run.',
+            counted: 'Counted',
+            round: 'Round reached'
+        }
     },
 
     // Errors and alerts

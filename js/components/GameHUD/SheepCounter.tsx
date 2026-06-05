@@ -11,6 +11,7 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CompactStaminaBar } from './CompactStaminaBar';
+import { CountingReadout } from './CountingReadout';
 import { HudPanel } from './HudPanel';
 import { Icon } from '../ui/Icon';
 import { pastoral, alpha } from '../ui/tokens';
@@ -20,6 +21,11 @@ interface SheepCounterProps {
     totalSheep: number;
     stamina: number;
     onPause?: () => void;
+    // Cycle 59 (Counting Sheep): when roundBased, the count/percentage block is
+    // replaced by the round + counted readout. Absent for every standard mode.
+    roundBased?: boolean;
+    round?: number;
+    counted?: number;
 }
 
 /**
@@ -27,7 +33,7 @@ interface SheepCounterProps {
  *  - Count: text-md (16px), primary info
  *  - Progress: text-sm (12px), secondary info
  */
-export function SheepCounter({ sheepCount, totalSheep, stamina, onPause }: SheepCounterProps) {
+export function SheepCounter({ sheepCount, totalSheep, stamina, onPause, roundBased, round, counted }: SheepCounterProps) {
     const { t } = useTranslation();
     const percentage = Math.round((sheepCount / totalSheep) * 100);
 
@@ -51,10 +57,14 @@ export function SheepCounter({ sheepCount, totalSheep, stamina, onPause }: Sheep
         <HudPanel className="p-4 min-w-[200px]">
             <div className="flex items-center gap-3">
                 <Icon name="sheep" size={26} color={alpha(pastoral.cream, 90)} />
-                <div>
-                    <div className="text-md font-semibold" style={{ color: pastoral.cream }}>{sheepCount} / {totalSheep}</div>
-                    <div className="text-sm" style={{ color: pastoral.accentGold }}>{percentage}% {t('hud.complete')}</div>
-                </div>
+                {roundBased ? (
+                    <CountingReadout round={round ?? 0} counted={counted ?? 0} />
+                ) : (
+                    <div>
+                        <div className="text-md font-semibold" style={{ color: pastoral.cream }}>{sheepCount} / {totalSheep}</div>
+                        <div className="text-sm" style={{ color: pastoral.accentGold }}>{percentage}% {t('hud.complete')}</div>
+                    </div>
+                )}
                 {onPause && (
                     <button
                         type="button"

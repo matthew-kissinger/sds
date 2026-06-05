@@ -10,6 +10,14 @@
 // Worker isolate, same import the router already uses for scene validation).
 import { getSceneById } from '../../shared/scenes/index.js';
 import { getRankedCounts } from '../../shared/difficulty.js';
+// Cycle 59 (Counting Sheep): the counting leaderboard modes + ceiling. Shared
+// with the client so the board keys (counting-incremental / counting-exponential)
+// and the 0..5000 bound cannot drift between submit and read.
+import {
+  COUNTING_LEADERBOARD_MODES,
+  isCountingLeaderboardMode,
+  COUNTING_HARD_CEILING,
+} from '../../shared/countingModes.js';
 
 export interface PlayerRow {
   persistent_id: string;
@@ -115,6 +123,12 @@ export type GameMode =
   | 'timed'
   | 'competitive'
   | 'cooperative'
+  // Cycle 59 (Counting Sheep): round-based solo modes where the COUNT is the
+  // score (higher better, ranked descending). They partition by (game_mode,
+  // scene_id), ignore sheep_count, and have no materialized players-row column
+  // (they read live from score_submissions, like the daily partition).
+  | 'counting-incremental'
+  | 'counting-exponential'
   // Cycle 27 Phase D: per-day challenge partition. The literal here is the
   // template; the actual stored value is `daily-${YYYY-MM-DD}`. Validation
   // accepts the templated form via isDailyMode + isValidGameMode below.
@@ -146,7 +160,8 @@ export function isDailyMode(mode: unknown): mode is `daily-${string}` {
 }
 
 export function isValidGameMode(mode: unknown): mode is GameMode {
-  return typeof mode === 'string' && (ALL_GAME_MODES_SET.has(mode) || isDailyMode(mode));
+  return typeof mode === 'string'
+    && (ALL_GAME_MODES_SET.has(mode) || isDailyMode(mode) || isCountingLeaderboardMode(mode));
 }
 
 // ---------------------------------------------------------------------------
@@ -554,6 +569,12 @@ export function isSoloMode(mode: unknown): boolean {
 const TIME_MODES = { includes: (mode: GameMode) => isTimeMode(mode) };
 
 export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean {
+  // Cycle 59 (Counting Sheep): the counted total is the score - an integer in
+  // [0, 5000] (the proven capacity ceiling). No upper-bound time check; counting
+  // is not duration-scored.
+  if (isCountingLeaderboardMode(mode)) {
+    return Number.isInteger(score) && score >= 0 && score <= COUNTING_HARD_CEILING;
+  }
   // Cycle 58: the lower bound on time-mode scores drops 30 -> 10. The real
   // per-(scene, count) plausibility floor is now `plausibleScoreForCount`
   // (graduated 12-26s for the islands' small solo tiers, unchanged 30s+ for the
@@ -577,7 +598,10 @@ export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean 
 // key type; solo (scene, count) validation now routes through the per-scene
 // ranked ladder (see modeSheepCountOk), not this fixed per-slug table. timed /
 // competitive / cooperative still use it.
-const ALLOWED_MODE_SHEEPCOUNT: Record<Exclude<GameMode, `daily-${string}`>, number[] | 'any'> = {
+const ALLOWED_MODE_SHEEPCOUNT: Record<
+  Exclude<GameMode, `daily-${string}` | 'counting-incremental' | 'counting-exponential'>,
+  number[] | 'any'
+> = {
   soloClassic: [200],
   soloExtreme: [1000],
   soloInsane: [3000],
@@ -601,6 +625,10 @@ const DAILY_SHEEP_MAX = 200;
  * / timed / competitive / cooperative are unchanged.
  */
 export function modeSheepCountOk(mode: GameMode, sheepCount: number, sceneId?: string | null): boolean {
+  // Cycle 59 (Counting Sheep): sheep_count is not part of the counting board
+  // identity (the count is the score, not a fixed tier), so any submitted value
+  // is accepted - the column is simply unused for these rows.
+  if (isCountingLeaderboardMode(mode)) return true;
   if (isDailyMode(mode)) {
     return sheepCount >= DAILY_SHEEP_MIN && sheepCount <= DAILY_SHEEP_MAX;
   }
@@ -670,6 +698,13 @@ export interface ScoreAnomaly {
   detail?: Record<string, unknown>;
 }
 
+// Cycle 59 (Counting Sheep): a soft lower bound on how fast a counted total can
+// physically be herded. Generous by design (0.05s per counted sheep -> a banked
+// 5000 implies >= ~250s, mirroring the Chaos duration floor), so a legitimate run
+// never trips while a forged "counted 5000 in 8 seconds" gets a soft flag and is
+// hidden from the public board. Soft signal only; never a hard reject.
+const COUNTING_MIN_SEC_PER_SHEEP = 0.05;
+
 // Cycle 10 Phase 6: telemetry-driven soft signals. Returned alongside
 // the (already-passed) bounds + plausibility checks. Anomalies are stored
 // on the audit row, NOT used to reject — leaderboard query layers gate
@@ -734,6 +769,33 @@ export function detectScoreAnomalies(input: {
           score: input.score,
           sheep_count: input.sheepCount,
           floor_seconds: floor,
+        },
+      });
+    }
+  }
+
+  // 3) Counting-too-fast: the counted total (= score) implies a physical herding
+  //    floor; an active window shorter than that is implausible. Counting is not
+  //    a TIME_MODE, so the checks above skip it - this is its dedicated soft
+  //    signal. Same pause-credit handling as the clock-skew check.
+  if (
+    isCountingLeaderboardMode(input.mode) &&
+    typeof input.clientStartedAt === 'number' &&
+    typeof input.clientFinishedAt === 'number'
+  ) {
+    const rawWindowMs = input.clientFinishedAt - input.clientStartedAt;
+    const pausedMs = typeof input.pausedMs === 'number' ? input.pausedMs : 0;
+    const guardOk = pausedMs >= 0 && pausedMs <= rawWindowMs * 0.8;
+    const creditedPauseMs = guardOk ? pausedMs : 0;
+    const activeDurationSec = (rawWindowMs - creditedPauseMs) / 1000;
+    const floorSec = input.score * COUNTING_MIN_SEC_PER_SHEEP;
+    if (activeDurationSec < floorSec) {
+      anomalies.push({
+        tag: 'counting_too_fast',
+        detail: {
+          counted: input.score,
+          active_duration_sec: Math.round(activeDurationSec * 10) / 10,
+          floor_seconds: Math.round(floorSec * 10) / 10,
         },
       });
     }
@@ -981,6 +1043,10 @@ export function formatScore(mode: GameMode | 'solo', score: number | null): stri
     const s = Math.floor(score % 60);
     return `${m}:${String(s).padStart(2, '0')}`;
   }
+  // Cycle 59 (Counting Sheep): the counted total reads as a sheep tally.
+  if (isCountingLeaderboardMode(mode)) {
+    return `${score} sheep`;
+  }
   switch (mode) {
     case 'timed':
       return `${score} sheep`;
@@ -1071,7 +1137,10 @@ export async function getLeaderboard(
     where.push('s.scene_id = ?');
     binds.push(filters.sceneId);
   }
-  if (typeof filters.sheepCount === 'number' && filters.sheepCount > 0) {
+  // Cycle 59 (Counting Sheep): counting partitions by (game_mode, scene_id) and
+  // ignores sheep_count entirely, so never narrow a counting board by it even if
+  // a caller passes a count (defensive; getAllLeaderboards already omits it).
+  if (!isCountingLeaderboardMode(mode) && typeof filters.sheepCount === 'number' && filters.sheepCount > 0) {
     where.push('s.sheep_count = ?');
     binds.push(filters.sheepCount);
   }
@@ -1152,6 +1221,20 @@ export async function getAllLeaderboards(
     })),
   );
   counts.forEach((c, i) => { out[`solo:${c}`] = soloResults[i]; });
+
+  // Cycle 59 (Counting Sheep): one board per curve, keyed by the counting mode
+  // string, partitioned by (game_mode, scene_id) and ranked by counted DESC. No
+  // sheep-count dropdown (the count is the score), so pass only the scene. This
+  // is purely additive - existing solo / non-solo boards above are untouched. For
+  // a scene that does not offer counting (Open Country) the board is simply
+  // empty; the client decides whether to surface the tabs from the scene family.
+  const countingResults = await Promise.all(
+    COUNTING_LEADERBOARD_MODES.map(m => getLeaderboard(db, m as GameMode, limit, {
+      sceneId: filters.sceneId,
+      includeFlagged: filters.includeFlagged,
+    })),
+  );
+  COUNTING_LEADERBOARD_MODES.forEach((m, i) => { out[m] = countingResults[i]; });
 
   return out;
 }

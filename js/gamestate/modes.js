@@ -16,6 +16,7 @@
  */
 
 import { LEGACY_SOLO_LADDER } from '../../shared/difficulty.js';
+import { COUNTING_GAME_MODE } from '../../shared/countingModes.js';
 
 /**
  * Solo singlePlayerMode → totalSheep count.
@@ -119,6 +120,8 @@ export function isExtremeBoidMode(singlePlayerMode) {
  * @property {boolean} usesCompetitiveGates — getGate/getPasture return the array, not the single
  * @property {'cooperative' | 'competitive' | 'timed'} uiVariant — which updateXxxUI to dispatch
  * @property {boolean} submitsToLeaderboard — false for sandbox (practice gated separately by singlePlayerMode)
+ * @property {boolean} [roundBased] - true for round-based modes (Counting Sheep); the run spawns growing batches
+ * @property {boolean} [autoCompletes] - defaults true; false for player-ended modes (Counting Sheep banks manually)
  */
 
 /**
@@ -156,6 +159,18 @@ export const MODE_CAPABILITIES = Object.freeze({
         usesCompetitiveGates: false,
         uiVariant: 'cooperative',
         submitsToLeaderboard: false,
+    }),
+    // Counting Sheep (Cycle 59): single-player, cooperative-style UI, but
+    // round-based and player-ended - the run spawns growing batches and never
+    // auto-completes; the player banks the counted total. Both curves
+    // (incremental / exponential) share this one gameMode row.
+    [COUNTING_GAME_MODE]: Object.freeze({
+        tracksPlayerScores: false,
+        usesCompetitiveGates: false,
+        uiVariant: 'cooperative',
+        submitsToLeaderboard: true,
+        roundBased: true,
+        autoCompletes: false,
     }),
 });
 

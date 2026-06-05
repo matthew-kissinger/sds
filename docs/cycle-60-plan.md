@@ -1,12 +1,12 @@
-# Cycle 59 — new-game-modes
+# Cycle 60 — next-mode-edition
 
-> Drafted 2026-06-05 after Cycle 58 closed. Slug is a placeholder pending the mode-alignment pass. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
+> Drafted 2026-06-05 after Cycle 59 closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/). **Slug is a placeholder** — align with Matt on the next mode edition, then rename and author.
 
 ## Goal
 
 One paragraph. What's this cycle for? What's the **user-visible** difference between "before" and "after"? If you can't write this paragraph clearly, the cycle isn't ready to start.
 
-_Intent (to be filled in during alignment): add two new game modes. Cycle 58 deliberately switched the solo leaderboard to count-as-identity `(scene, sheep_count)` so a new mode drops in without a D1 migration or wire change. Decide what the two modes are, whether they are solo or multiplayer, ranked or unranked, and how they slot into the entrance ladder / mode selection._
+(Cycle 59 shipped Counting Sheep as the first new edition beside the solo path. The original "two new game modes" framing narrowed to one edition; "the next after" is this cycle. Decide the second edition with Matt before writing code.)
 
 ## How to read this plan
 
@@ -22,9 +22,8 @@ Each agent picking up a phase should:
 
 (Prefix with **Q1**, **Q2**, ... so phases can refer to them.)
 
-1. **Q1: What are the two modes?** Author lean: TBD with Matt.
-2. **Q2: Solo or multiplayer? Ranked or unranked?** Author lean: TBD.
-3. **Q3: How does each mode surface in the entrance / mode selection?** Author lean: extend the ladder or the secondary "ways to play".
+1. **Q1: What is the second mode edition?** Author lean: TBD with Matt. The shelved Time Attack / Trials idea from the original Cycle 59 brainstorm is one candidate; a fresh edition is another.
+2. **Q2: Solo or MP, ranked or unranked, and how does it surface in the entrance family selector?** Author lean: follow the Counting Sheep precedent (solo + client-side keeps the deterministic-sim tax at zero; a new mode family slots into `familiesForWorld`).
 
 These don't block scaffolding (Phase 1) but should be resolved before scene-specific or content-specific phases.
 
@@ -50,6 +49,8 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 
 Each line should be **grep-testable** — the response should be something a script can verify (`wc -l`, `grep`, `npm test`, a build artifact's existence). The `/cycle-close` reconciliation hook walks every Acceptance line and tries to grep its predicate against shipped commits + test output.
 
+Example: `When Stream B1 ships, then `wc -l js/main.js` shall return ≤ 2,200.`
+
 ## Phase 1 — <name> (~Xhr)
 
 **Independently testable.** <Why this phase comes first.>
@@ -60,6 +61,7 @@ Each line should be **grep-testable** — the response should be something a scr
 **Acceptance (EARS):**
 
 - When Phase 1 ships, then `<system>` shall `<response>`.
+- While `<precondition>`, the `<system>` shall `<response>`.
 
 ## Phase 2 — <name> (~Xhr)
 
@@ -69,9 +71,19 @@ Each line should be **grep-testable** — the response should be something a scr
 
 **Acceptance (EARS):** ...
 
+## Phase N — Polish (optional, ~Xhr)
+
+Nice-to-haves once Phases 1..N-1 land. Skip any that don't move the needle in playtest.
+
 ## Dependencies
 
-Prose ordering. Mostly serial, occasional parallelism.
+Prose ordering. Mostly serial, occasional parallelism:
+
+```
+Phase 1 → Phase 1.5 → Phase 2 + Phase 3 (parallel) → Phase 4 (optional)
+```
+
+When two phases can run in parallel, say so. When one depends on another's specific output, say what.
 
 ## Frozen files (cycle-specific additions)
 
@@ -83,7 +95,8 @@ These files require explicit task-brief authorization to modify within this cycl
 
 Durable hard stops apply on every cycle — see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md). The list below adds **cycle-specific** stops that aren't covered by the durable list:
 
-1. (Cycle-specific addition.)
+1. (Cycle-specific addition — e.g. "Phase A beacon shows zero pageviews after 1hr — pull the hook.")
+2. (Cycle-specific addition.)
 
 ## What NOT to do during this cycle
 
@@ -97,7 +110,7 @@ Durable hard stops apply on every cycle — see [`EMERGENCY_STOPS.md`](EMERGENCY
 - [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
 - [ ] When `npm run build` runs at cycle close, production build shall be clean.
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] (Cycle-specific qualitative criteria.)
+- [ ] (Cycle-specific qualitative criteria — e.g. "When Cycle 5 closes, Rolling Hills shall feel meaningfully different from Field per playtest.")
 
 ## References
 

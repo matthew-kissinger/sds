@@ -1,30 +1,32 @@
-# Next Session - Cycle 59 `new-game-modes` (scaffolded stub)
+# Next Session - Cycle 60 `next-mode-edition` (scaffolded stub)
 
 > **Updated:** 2026-06-05
-> **For:** Cycle 59 `new-game-modes` (slug is a placeholder). Plan: [`docs/cycle-59-plan.md`](docs/cycle-59-plan.md) (stub - Goal + Phases unwritten).
-> **Pickup priority:** Align with Matt on what the two new game modes are (solo or MP, ranked or unranked, how each surfaces in the entrance), then author the plan and run `/cycle-start`.
+> **For:** Cycle 60 `next-mode-edition` (slug is a placeholder). Plan: [`docs/cycle-60-plan.md`](docs/cycle-60-plan.md) (stub - Goal + Phases unwritten).
+> **Pickup priority:** Decide the second mode edition with Matt (solo or MP, ranked or unranked, how it surfaces in the entrance family selector), then author the plan and run `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-59-plan.md`](docs/cycle-59-plan.md) -> the touched module's source once the plan names it.
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-60-plan.md`](docs/cycle-60-plan.md) -> the touched module's source once the plan names it.
 
 ## Where It Stands
 
-**Cycle 58 `solo-on-ramp` closed 2026-06-05.** Plan archived at [`docs/archive/cycles/cycle-58-plan.md`](docs/archive/cycles/cycle-58-plan.md); full closeout in [`docs/BACKLOG.md`](docs/BACKLOG.md). It made solo runs approachable on the two islands and fast to start everywhere (per-biome difficulty ladders, Just Play 30 to 3 sheep), fixed the off-by-one solo completion, switched the solo leaderboard to count-as-identity `(scene, sheep_count)` proven byte-identical for existing rows, and added two friction-free naming touchpoints. No D1 migration, no wire change, no version bump. Shipped + deployed all 8 phases; Matt confirmed the ladder feel in-browser. A pre-close CI fix (`9892173`) also repaired the nightly macOS Safari smoke, which had driven the removed pre-Cycle-51 start-screen buttons since the entrance rework.
+**Cycle 59 `counting-sheep` closed 2026-06-05.** Plan archived at [`docs/archive/cycles/cycle-59-plan.md`](docs/archive/cycles/cycle-59-plan.md); full closeout in [`docs/BACKLOG.md`](docs/BACKLOG.md). Shipped the first new edition beside the solo path: Counting Sheep, a round-based solo mode where the flock grows each round and the running tally is the score. Two ranked curves (Incremental = +1 each round, Exponential = doubles each round, both clamped to the 5000 ceiling) on the two objective-free biomes (Home Field, Rolling Hills); Open Country excluded as a two-stage objective. It reuses the whole herding loop and changes only when sheep appear and what ends the run. No D1 migration, no wire change, no version bump. All 8 phases shipped; built end-to-end with commits held until close (Matt's cadence). Browser smoke green (a live Exponential run on Rolling Hills advanced rounds to 127 active and banked 63). The mode-family taxonomy lives in code (`familiesForWorld` + the shared `COUNTING_SCENE_IDS`), not a `SceneDef` field - a deliberate scope reduction that avoided touching the frozen scene schema.
 
-**Cycle 59 is a scaffolded stub.** The count-as-identity leaderboard partition from Cycle 58 was built specifically so a new mode drops in without a schema change. The next step is the design conversation: pick the two modes, then author the plan.
+**Cycle 60 is a scaffolded stub.** The Counting Sheep edition proved the pattern (a new mode family slots into `familiesForWorld`, a round controller stays client-side so the deterministic-sim tax is zero, the leaderboard reads live from `score_submissions` under new game_mode strings with no migration). The next edition can follow the same shape. The next step is the design conversation: pick the second edition, then author the plan.
 
 ## What to pick up next
 
-Cycle 59 plan is scaffolded; needs Goal + Phases filled in after the mode-alignment. Run `/cycle-start` once the plan is authored.
+Cycle 60 plan is scaffolded; needs Goal + Phases filled in after the mode-alignment. Run `/cycle-start` once the plan is authored.
 
 ## Open carryover (Matt review + deferred)
 
-- **Two new game modes** are Cycle 59's whole scope. Decide them with Matt before authoring.
+- **A second mode edition** is Cycle 60's whole scope (the original "two new game modes" framing narrowed to one edition in Cycle 59; "the next after" is now). Decide it with Matt before authoring. The shelved Time Attack / Trials idea is one candidate.
+- **Counting Sheep live verification (post-deploy).** The close commit deploys automatically; after it, confirm the live prod end-to-end (the deploy itself, an Incremental-on-Home-Field live run, and the live leaderboard write client->worker->D1->board). The logic is fully proven by `tests/worker/counting-leaderboard.spec.ts` + `tests/counting-loop.spec.js`; this is the live cross-product check.
+- **Counting Sheep naming + curve-feel** are a tunable strawman (Classic / Counting Sheep / Objective family names, Incremental / Exponential, "Bank and finish", the curve constants), reserved for Matt's in-browser voice/taste pass like the Cycle 58 ladder counts.
+- **Optional `SceneDef.modeFamilies` field** - not needed (the shared constant suffices); revisit only if a scene needs a richer per-scene family structure.
 - **Sheep-to-sheep hard-body collision** (deferred from Cycle 56): its own future cycle (needs jitter tuning + a spatial grid for 5,000-sheep perf).
-- **Cycle 57 carryover:** live in-browser paused-run smoke (logic proven by `score-flow.spec.ts`); optional ownership check of `ids 2/7/8/14` ("Player") vs the incident `persistent_id`.
 - **Dog-to-sheep collision feel** (Cycle 56) and **grass footprint feel** (Cycle 55) remain Matt's in-browser review items.
-- **Pastoral container restyle** (candidate near-term cycle). The win/end screen + HUD sheep glyph were pastoralized at the Cycle 58 close (`dae8c31`), but the setup/editor screens (Sandbox, Fence, Local-2P, Settings) and the non-React fallback victory overlays are still on the old palette. This is the explicitly-paused container-restyle program (~13 stateful containers); slot it as its own cycle if the full pastoral sweep is wanted.
+- **Pastoral container restyle** (candidate near-term cycle). The setup/editor screens (Sandbox, Fence, Local-2P, Settings) and the non-React fallback victory overlays are still on the old palette. This is the explicitly-paused container-restyle program (~13 stateful containers); slot it as its own cycle if the full pastoral sweep is wanted.
 - **Minor housekeeping (not blocking):** `/api/rename` parses the JSON body before the auth check, so a no-body POST returns 500 instead of 400 (cosmetic, no auth bypass). CI `actions/upload-artifact@v5` runs on Node 20; GitHub forces Node 24 on 2026-06-16.
 
 ## Working Contract
@@ -38,8 +40,8 @@ Cycle 59 plan is scaffolded; needs Goal + Phases filled in after the mode-alignm
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-59-plan.md`](docs/cycle-59-plan.md) (`new-game-modes`, stub) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-58-plan.md`](docs/archive/cycles/cycle-58-plan.md) |
+| Active cycle | [`docs/cycle-60-plan.md`](docs/cycle-60-plan.md) (`next-mode-edition`, stub) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-59-plan.md`](docs/archive/cycles/cycle-59-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Deterministic-sim rules | [`.claude/rules/shared-sim.md`](.claude/rules/shared-sim.md) |
 | Scene-as-data contract | [`.claude/rules/scene-and-render.md`](.claude/rules/scene-and-render.md) |

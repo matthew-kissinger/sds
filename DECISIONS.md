@@ -1135,3 +1135,76 @@ The completion-screen WebM clip download is local-developer-only behind
 `?devClip=1` on localhost. Normal player completion UX is score submission,
 Play Again, and Main Menu only; the app should never surprise players with a
 download from a victory screen.
+
+---
+
+## Cycle 59 - Counting Sheep, mode families, and a no-migration counting leaderboard (2026-06-05)
+
+Cycle 59 shipped the first new edition beside the solo path: Counting Sheep, a
+round-based solo mode where the flock grows each round and the running tally is
+the score. Two ranked curves (Incremental = +1 each round, Exponential = doubles
+each round, both clamped to the proven 5000 ceiling) ship on the two
+objective-free biomes (Home Field and Rolling Hills). Open Country is excluded
+because it is a two-stage gather-and-portal objective, a different category.
+
+### Counting is solo and client-side; the round controller is not a `shared/` module
+
+The Worker Durable Object authority is multiplayer-only, so a solo run lives
+entirely on the client. The round controller ([`js/gamestate/countingMode.js`](js/gamestate/countingMode.js))
+is a plain client module, so there is no sim-baseline regeneration and no desync
+surface. The shared id scheme ([`shared/countingModes.js`](shared/countingModes.js):
+the `counting` gameMode, the two curves, the `counting-incremental` /
+`counting-exponential` board keys, the 5000 ceiling, and `COUNTING_SCENE_IDS`)
+is the one module both client and Worker import so a mode string cannot drift
+between submit and read.
+
+### The leaderboard sits beside the Cycle 58 solo path, with no D1 migration
+
+Solo boards are keyed `solo:<count>`, partition `(scene, count)`, and rank by
+time ascending. Counting is the opposite on every axis: the count is the score
+(ranked descending, up to 5000), boards partition by `(game_mode, scene_id)` and
+ignore `sheep_count`. The counted total goes in the existing
+`score_submissions.score` column under the new `counting-*` game_mode strings;
+there is no `counting_*_best` materialized players-row column (boards read live
+from `score_submissions`, exactly how the Cycle 58 `solo` pseudo-mode reads). A
+soft `counting_too_fast` anomaly (a 0.05s-per-counted-sheep floor) hides a forged
+fast bank from the public board without a hard reject, mirroring the Cycle 57
+soft-signal style. Bounds are an integer in [0, 5000]; everything else is
+additive, so every existing board is byte-identical (proven in
+`tests/worker/counting-leaderboard.spec.ts` alongside the unchanged
+`leaderboard-partition.spec.ts`).
+
+### The engine splits capacity from active count rather than recreating the flock
+
+`OptimizedSheepSystem` pre-sizes its InstancedMesh and per-instance buffers to a
+per-run `maxCapacity` (5000 for counting, the proven Chaos footprint) and brings
+instances online in batches via `activateSheepBatch`. `this.sheep` holds only the
+active sheep (dense, append-only, id === index), so every `sheep.length` consumer
+(boid system, win tally) stays correct for free. Standard modes pass no
+`maxCapacity`, default it to the exact count, and stay byte-identical (the
+refactor-baseline and completion-count fixtures are unchanged). Branch on the
+`MODE_CAPABILITIES` capability (`roundBased` / `autoCompletes: false`), never on
+the mode id; `checkCompletion` is bypassed for round-based modes so a counting run
+never auto-ends - the player banks explicitly.
+
+### The mode-family taxonomy lives in code, not in a SceneDef field
+
+The plan authorized an optional `SceneDef` family field, but `familiesForWorld`
+([`js/components/entrance/worlds.ts`](js/components/entrance/worlds.ts)) plus the
+shared `COUNTING_SCENE_IDS` constant achieve the same single-source taxonomy
+without touching the fence-frozen `SceneDef` schema, so we did NOT add the field
+(a deliberate scope reduction: lower risk, no consumer migration). Home Field and
+Rolling Hills carry a Classic family and a Counting Sheep family; Open Country
+carries a single Objective family (a relabel of its solo ladder, no gameplay
+change). A single-family world renders its family as a label, not a selector. The
+same `COUNTING_SCENE_IDS` gate drives which biomes show counting boards on the
+leaderboard, so the entrance and the leaderboard cannot disagree.
+
+### Naming and curve-feel are a paired in-browser pass with Matt
+
+The family names (Classic / Counting Sheep / Objective), the curve names, the
+bank-control copy, and the curve constants are a tunable strawman, finalized in
+Matt's voice/taste pass at close, like the Cycle 58 ladder counts. The bundle
+ratchet moved main 550 -> 554 KiB for the counting UI (the readout, the bank
+control, the completion branch, the pause entry, the entrance family selector);
+three.js and every terrain/tree golden are unchanged.

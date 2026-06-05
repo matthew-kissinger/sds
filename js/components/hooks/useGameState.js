@@ -10,6 +10,7 @@ import {
     getSceneManager,
     subscribeGameEvent,
 } from '../../GameBridge.js';
+import { getModeCapabilities } from '../../gamestate/modes.js';
 
 /**
  * Reactive game-state store for HUD components.
@@ -49,6 +50,12 @@ function makeInitialSnapshot() {
         scores: {},
         gates: {},
         timeLimit: 0,
+        // Cycle 59 (Counting Sheep): round-based readout. roundBased gates the
+        // counting HUD variant; round is the current round; counted is the
+        // running banked-score total (= penned sheep).
+        roundBased: false,
+        round: 0,
+        counted: 0,
     };
 }
 
@@ -95,6 +102,11 @@ function readGameState() {
 
     const cameraMode = getSceneManager()?.getCameraController?.()?.getMode?.() ?? 'classic';
 
+    // Cycle 59: read the real (unforced) mode's capability to drive the counting
+    // HUD variant. gameMode below stays forced to 'solo' for non-MP runs (lots of
+    // HUD code keys on that), so roundBased is the single counting signal.
+    const roundBased = getModeCapabilities(gameState.gameMode).roundBased === true;
+
     const newData = {
         stamina: Math.round(currentStamina),
         maxStamina,
@@ -112,6 +124,9 @@ function readGameState() {
         scores: {},
         gates: {},
         timeLimit: 0,
+        roundBased,
+        round: gameState.countingState?.round ?? 0,
+        counted: roundBased ? (gameState.sheepRetired || 0) : 0,
     };
 
     if (networkManager?.currentRoom) {
@@ -147,6 +162,9 @@ function hudEqual(a, b) {
         a.cameraMode === b.cameraMode &&
         a.myPlayerId === b.myPlayerId &&
         a.timeLimit === b.timeLimit &&
+        a.roundBased === b.roundBased &&
+        a.round === b.round &&
+        a.counted === b.counted &&
         JSON.stringify(a.players) === JSON.stringify(b.players) &&
         JSON.stringify(a.scores) === JSON.stringify(b.scores) &&
         JSON.stringify(a.gates) === JSON.stringify(b.gates)

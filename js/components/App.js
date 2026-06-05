@@ -35,6 +35,7 @@ import {
 } from '../GameBridge.js';
 import { SceneSwapOverlay } from './ui/SceneSwapOverlay.js';
 import { isHighDifficultyCount } from '../gamestate/modes.js';
+import { COUNTING_GAME_MODE } from '../../shared/countingModes.js';
 // Cycle 48 P4: retire the App.js inline hex (error-boundary heading red, the
 // title greens, the subtitle ambers) to the shared design-token palette. App.js
 // stays an element-factory .js; only the raw color literals move to tokens.
@@ -59,6 +60,7 @@ export async function initReactUI() {
             { LocalModeSetup },
             { GameTimer },
             { SheepCounter },
+            { CountingBankButton },
             { CameraModeIndicator },
             { CorralCompass },
             { ObjectiveBanner },
@@ -95,6 +97,7 @@ export async function initReactUI() {
             import('./StartScreen/LocalModeSetup.js'),
             import('./GameHUD/GameTimer.js'),
             import('./GameHUD/SheepCounter.js'),
+            import('./GameHUD/CountingBankButton.js'),
             import('./GameHUD/CameraModeIndicator.js'),
             import('./GameHUD/CorralCompass.js'),
             import('./GameHUD/ObjectiveBanner.js'),
@@ -221,7 +224,7 @@ export async function initReactUI() {
             // scene (the pastoral loading bar fills from the real per-stage marks),
             // then start the solo game on it. The armed difficulty maps 1:1 to the
             // canonical solo singlePlayerMode (js/gamestate/modes.js).
-            const handleEntrancePlay = useCallback(async (world, dog, mode) => {
+            const handleEntrancePlay = useCallback(async (world, dog, mode, gameMode) => {
                 const game = getGameInstance();
                 if (!game) return;
                 try { window.__sdsBootLoading = true; } catch {}
@@ -229,6 +232,10 @@ export async function initReactUI() {
                 selectDog(dog.id);
                 const chosenDogId = getSelectedDog() || dog.id;
                 const chosenModeId = mode.id;
+                // Cycle 59 (Counting Sheep): the family's gameMode selects the
+                // start path. Counting arms a counting run (the rung id is the
+                // curve); everything else arms the solo difficulty.
+                const isCounting = gameMode === COUNTING_GAME_MODE;
                 let started = false;
                 let unsubscribeSceneEnd = null;
                 const startCommittedSolo = () => {
@@ -236,7 +243,11 @@ export async function initReactUI() {
                     started = true;
                     unsubscribeSceneEnd?.();
                     unsubscribeSceneEnd = null;
-                    game.menuController?.selectSolo?.(chosenDogId, chosenModeId);
+                    if (isCounting) {
+                        game.menuController?.selectCounting?.(chosenDogId, chosenModeId);
+                    } else {
+                        game.menuController?.selectSolo?.(chosenDogId, chosenModeId);
+                    }
                 };
                 try {
                     // Build the armed world's scene on commit (the pastoral
@@ -682,7 +693,7 @@ export async function initReactUI() {
 	            const isMultiplayer = gameData.gameMode !== 'solo' && gameData.players?.length > 0;
 	            const staminaPercentage = gameData.staminaPercentage || Math.round((gameData.stamina / (gameData.maxStamina || 100)) * 100);
 	            // Cycle 58: count-based (was singlePlayerMode === 'extreme'||'insane').
-	            const isSoloExtremeOrInsane = gameData.gameMode === 'solo' &&
+	            const isSoloExtremeOrInsane = gameData.gameMode === 'solo' && !gameData.roundBased &&
 	                isHighDifficultyCount(gameData.totalSheep);
 
             // Check fullscreen state
@@ -777,7 +788,10 @@ export async function initReactUI() {
                         // Restart sandbox with current config
                         gameState.startSandboxGame(gameInstance.currentSandboxConfig || {});
                     } else {
-                        void gameInstance.startGame('solo', null, singlePlayerMode || 'classic')
+                        // Cycle 59 (Counting Sheep): restart under the counting
+                        // mode (singlePlayerMode carries the curve), not 'solo'.
+                        const startMode = mode === COUNTING_GAME_MODE ? COUNTING_GAME_MODE : 'solo';
+                        void gameInstance.startGame(startMode, null, singlePlayerMode || 'classic')
                             .catch(err => console.error('[GameHUD] restart failed:', err));
                         return;
                     }
@@ -788,6 +802,15 @@ export async function initReactUI() {
                         gameInstance.gameTimer.start();
                     }
                 }
+            }, [handleResume]);
+
+            // Cycle 59 (Counting Sheep): bank the run. Unpause first (so a bank
+            // from the pause menu tears the pause overlay down, like restart),
+            // then route to the game instance which freezes the sim, submits the
+            // counted total, and shows the summary. No-op for non-counting modes.
+            const handleBankCounting = useCallback(() => {
+                handleResume();
+                getGameInstance()?.bankCountingScore();
             }, [handleResume]);
 
             // Return to main menu
@@ -866,7 +889,10 @@ export async function initReactUI() {
                     sheepCount: gameData.sheepCount,
                     totalSheep: gameData.totalSheep,
                     stamina: staminaPercentage,
-                    onPause: handlePause
+                    onPause: handlePause,
+                    roundBased: gameData.roundBased,
+                    round: gameData.round,
+                    counted: gameData.counted
                 }),
                 isDesktop && isMultiplayer && createElement(MultiplayerScoreboard, {
                     key: 'scoreboard',
@@ -910,6 +936,13 @@ export async function initReactUI() {
                     sheepCount: gameData.sheepCount,
                     totalSheep: gameData.totalSheep,
                     stamina: staminaPercentage
+                }),
+                // Cycle 59 (Counting Sheep): always-visible bank-and-finish
+                // control. Sits under the timer on desktop, top-right on mobile
+                // (solo, so the scoreboard slot is empty there).
+                gameData.roundBased && createElement(CountingBankButton, {
+                    key: 'bank',
+                    onBank: handleBankCounting
                 })
             ].filter(Boolean);
 
@@ -974,7 +1007,10 @@ export async function initReactUI() {
                     onToggleFullscreen: handleToggleFullscreen,
                     isFullscreen,
                     showFullscreenOption,
-                    gameMode: gameData.gameMode
+                    gameMode: gameData.gameMode,
+                    // Cycle 59 (Counting Sheep): pause-menu bank entry.
+                    roundBased: gameData.roundBased,
+                    onBankCounting: handleBankCounting
                 })
             ]);
         }

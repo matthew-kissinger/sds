@@ -32,6 +32,11 @@ import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 import { listScenes, getSceneById } from '../../../shared/scenes/index.js';
 import { getSoloLadder, getRankedCounts, getLadderEntry } from '../../../shared/difficulty.js';
+import {
+    COUNTING_LEADERBOARD_MODES,
+    isCountingLeaderboardMode,
+    sceneOffersCounting,
+} from '../../../shared/countingModes.js';
 import { color } from '../ui/tokens';
 
 // Cycle 35 Phase 5: three concrete scenes. The 'any' option is gone with
@@ -73,9 +78,13 @@ const SHEEP_FILTER_OPTIONS = [
     { value: 5000, label: '5000 sheep, Chaos' },
 ];
 
-/** Solo count tabs and 'timed' are fixed-count: the sheep dropdown is hidden. */
+/**
+ * Solo count tabs, 'timed', and the counting boards are fixed-count: the sheep
+ * dropdown is hidden. Counting ignores sheep_count entirely (the count is the
+ * score), so a dropdown would be meaningless there.
+ */
 const isFixedCountTabKey = (tab: string): boolean =>
-    tab.startsWith(SOLO_TAB_PREFIX) || tab === 'timed';
+    tab.startsWith(SOLO_TAB_PREFIX) || tab === 'timed' || isCountingLeaderboardMode(tab);
 
 interface LeaderEntry {
     rank: number;
@@ -102,8 +111,12 @@ export function leaderboardModesForScene(sceneId: string): string[] {
     const scene = getSceneById(sceneId);
     if (!scene) return [];
     const solo = getRankedCounts(scene).map(soloTabKey);
+    // Cycle 59 (Counting Sheep): scenes that offer counting (Home Field, Rolling
+    // Hills) get one board per curve, after the solo rungs and before the MP
+    // modes. Open Country offers no counting, so it shows none.
+    const counting = sceneOffersCounting(sceneId) ? [...COUNTING_LEADERBOARD_MODES] : [];
     const mp = Array.isArray(scene.allowedModes) ? scene.allowedModes : [];
-    return [...solo, ...mp];
+    return [...solo, ...counting, ...mp];
 }
 
 /**
@@ -355,6 +368,9 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
             timed: 'leaderboard.timed',
             competitive: 'leaderboard.competitive',
             cooperative: 'leaderboard.cooperative',
+            // Cycle 59 (Counting Sheep): per-curve board tabs.
+            'counting-incremental': 'leaderboard.countingIncremental',
+            'counting-exponential': 'leaderboard.countingExponential',
         };
         return known[mode] || `leaderboard.${mode}`;
     };

@@ -60,7 +60,13 @@ export async function showCompletionOverlay(game, mode, data = {}) {
 
     // Submit score to leaderboard for all single-player solo modes
     // (classic / extreme / insane / chaos), NOT sandbox or practice.
-    if (mode === 'single' && data.finalTime && game.gameMode !== 'sandbox' && game.singlePlayerMode !== 'sandbox' && game.singlePlayerMode !== 'practice') {
+    if (mode === 'counting') {
+        // Cycle 59 (Counting Sheep): submit the banked counted total. The
+        // leaderboard mode (counting-incremental / counting-exponential) is
+        // resolved from the run's curve inside submitScoreToLeaderboard.
+        console.log(`[GAME] Submitting counted total to leaderboard: ${data.counted}`);
+        game.gameState.submitScoreToLeaderboard(data.counted);
+    } else if (mode === 'single' && data.finalTime && game.gameMode !== 'sandbox' && game.singlePlayerMode !== 'sandbox' && game.singlePlayerMode !== 'practice') {
         console.log(`[GAME] Submitting score to leaderboard: ${data.finalTime} seconds (mode=${game.singlePlayerMode})`);
         game.gameState.submitScoreToLeaderboard(data.finalTime);
     } else if (mode === 'single' && game.gameMode === 'sandbox') {
@@ -85,6 +91,9 @@ export async function showCompletionOverlay(game, mode, data = {}) {
             sheepCount: data.sheepCount || game.gameState?.sheepInPenCount || 0,
             scores: [],
             replayBlobUrl,
+            // Cycle 59 (Counting Sheep): the banked counted total + round reached.
+            counted: data.counted || 0,
+            round: data.round || 0,
         };
 
         // Build scores array for multiplayer modes

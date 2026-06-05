@@ -13,6 +13,8 @@ import {
 } from './gamestate/modes.js';
 import { getSoloCount } from '../shared/difficulty.js';
 import { getSceneById } from '../shared/scenes/index.js';
+import { COUNTING_GAME_MODE, COUNTING_HARD_CEILING } from '../shared/countingModes.js';
+import { createRoundState, advanceRound } from './gamestate/countingMode.js';
 import { calculatePolygonSpawnConfig } from './gamestate/polygonSpawn.js';
 import { applySandboxConfig } from './gamestate/sandboxStart.js';
 import { isSoloComplete, isSandboxComplete, resolveCompetitiveCompletion } from './gamestate/winConditions.js';
@@ -111,7 +113,14 @@ export class GameState {
         this.audioManager = null;
         this.singlePlayerMode = 'classic'; // Single player difficulty: 'classic', 'extreme', or 'insane'
         this.useExtremeBoids = false; // Flag for sandbox to enable extreme boid optimization
-        
+
+        // Cycle 59 (Counting Sheep): round-controller state. Null for every
+        // other mode. Set in startGame when mode === 'counting'; the curve rides
+        // in via singlePlayerMode ('incremental' | 'exponential').
+        /** @type {import('./gamestate/countingMode.js').CountingRoundState | null} */
+        this.countingState = null;
+        this.countingCurve = null;
+
         // Always use optimized sheep system
         this.optimizedSheepSystem = null;
     }
@@ -190,18 +199,28 @@ export class GameState {
     }
 
     createSheepFlock(scene) {
-        // Create optimized sheep system with correct sheep count
-        console.log(`Creating sheep flock with ${this.totalSheep} sheep`);
+        // Cycle 59 (Counting Sheep): a counting run pre-sizes the flock to the
+        // proven 5000 ceiling and starts with a single sheep (round 1 is 1 for
+        // both curves); later rounds bring batches online via activateSheepBatch.
+        // Standard modes pass no maxCapacity, so the system sizes to exactly
+        // totalSheep and spawns one-shot, byte-identical to before.
+        const isCounting = this.gameMode === COUNTING_GAME_MODE;
+        const initialActive = isCounting ? 1 : this.totalSheep;
+        const maxCapacity = isCounting ? COUNTING_HARD_CEILING : this.totalSheep;
+        console.log(`Creating sheep flock: ${initialActive} active / capacity ${maxCapacity} (mode=${this.gameMode})`);
 
         const spawnConfig = this.getSheepSpawnConfig();
 
         // Enable extreme boid optimization for large flocks (Cycle 58: gated on
         // the resolved count, not the difficulty id, so a 600-sheep island run
         // gets the spatial-hash path and a 200-sheep run does not) or sandbox.
-        const useExtremeBoids = isExtremeBoidCount(this.totalSheep) || this.useExtremeBoids === true;
+        // Counting gates on the capacity so the spatial-hash path is ready for
+        // the full flock from the first frame.
+        const useExtremeBoids = isExtremeBoidCount(maxCapacity) || this.useExtremeBoids === true;
 
-        this.optimizedSheepSystem = new OptimizedSheepSystem(scene, this.totalSheep, spawnConfig, useExtremeBoids, {
+        this.optimizedSheepSystem = new OptimizedSheepSystem(scene, initialActive, spawnConfig, useExtremeBoids, {
             heightfield: this.heightfield,
+            ...(isCounting ? { maxCapacity } : {}),
         });
         if (this.heightfield) {
             this.optimizedSheepSystem.heightfield = this.heightfield;
@@ -343,6 +362,14 @@ export class GameState {
     }
     
     checkCompletion() {
+        // Cycle 59 (Counting Sheep): round-based modes never auto-end. The
+        // player banks the score explicitly (bankCountingScore). Gate on the
+        // capability flag, not the mode id, so any future round-based mode
+        // inherits the bypass. checkCompletion would otherwise fire once all
+        // 5000 instances are penned.
+        if (getModeCapabilities(this.gameMode).autoCompletes === false) {
+            return false;
+        }
         // Universal completion check for all modes. Delegates the predicate
         // to js/gamestate/winConditions.js; the gameCompleted single-shot
         // mutation stays here.
@@ -353,7 +380,50 @@ export class GameState {
         }
         return false;
     }
-    
+
+    /**
+     * Cycle 59 (Counting Sheep): once every active sheep is penned, bring the
+     * next batch online. Solo + client-side only; self-guards to a no-op for
+     * every standard / MP mode and once the run hits the 5000 ceiling. Returns
+     * the number of sheep activated this tick (0 when nothing changed).
+     *
+     * The round controller and the engine's activeCount stay in lock-step:
+     * after round 1 both read 1, and each batch grows both by the same k, so
+     * `sheepRetired >= activeCount` is exactly "the current batch is fully
+     * penned". Newly-activated sheep carry hasPassedGate=false, so they do not
+     * inflate the authoritative retirement tally until the player herds them.
+     */
+    advanceCountingRound() {
+        if (this.gameMode !== COUNTING_GAME_MODE) return 0;
+        if (!this.countingState || this.countingState.done) return 0;
+        if (!this.optimizedSheepSystem) return 0;
+
+        const activeCount = this.optimizedSheepSystem.activeCount;
+        // Wait until the whole active batch is penned before spawning the next.
+        if (this.sheepRetired < activeCount) return 0;
+
+        const batch = advanceRound(this.countingState);
+        if (batch <= 0) return 0;
+
+        const activated = this.optimizedSheepSystem.activateSheepBatch(batch, (sheep) => {
+            sheep.setBounds(this.bounds);
+            if (this.boundary) {
+                sheep.setBoundary(this.boundary);
+            }
+            if (this.borderPoints && this.borderPoints.length >= 3) {
+                sheep.setBorderPoints(this.borderPoints);
+            }
+        });
+        // activateSheepBatch appends to the system's internal array in place, so
+        // this.sheep (same reference) already grew; reassign for clarity.
+        this.sheep = this.optimizedSheepSystem.getSheep();
+
+        window.dispatchEvent(new CustomEvent('counting-round-advanced', {
+            detail: { round: this.countingState.round, counted: this.sheepRetired, activated },
+        }));
+        return activated;
+    }
+
     updateUI() {
         // UI is owned by React (since Cycle 3+); main.js calls this from
         // animate() and expects a safe no-op. The Cycle 28 per-mode dispatch
@@ -537,6 +607,7 @@ export class GameState {
     }
     
     startGame(mode = 'solo', competitiveData = null, singlePlayerMode = 'classic', options = {}) {
+        const previousMode = this.gameMode; // captured before the overwrite below
         this.gameMode = mode; // Store the game mode
         this.singlePlayerMode = singlePlayerMode; // Store single player mode
         this.gameActive = true;
@@ -572,6 +643,20 @@ export class GameState {
             // solo start (not just practice) so the hint stops pulsing
             // once the player engages with any mode.
             try { localStorage.setItem('sds.has-played', '1'); } catch {}
+        } else if (mode === COUNTING_GAME_MODE) {
+            // Cycle 59 (Counting Sheep): the curve rides in via singlePlayerMode
+            // ('incremental' | 'exponential'). The flock pre-sizes to the proven
+            // 5000 ceiling (so the spatial-hash boid path and the InstancedMesh
+            // are ready for the full run from frame one) and starts with a single
+            // sheep; round 1 is 1 sheep for both curves. The round controller is
+            // advanced to round 1 here so it stays in lock-step with the one
+            // already-spawned sheep that createSheepFlock brings online.
+            this.totalSheep = COUNTING_HARD_CEILING;
+            this.countingCurve = singlePlayerMode;
+            this.countingState = createRoundState(singlePlayerMode);
+            advanceRound(this.countingState); // -> round 1, cumulative 1
+            console.log(`Counting Sheep started: ${singlePlayerMode} curve on ${this.sceneId}`);
+            try { localStorage.setItem('sds.has-played', '1'); } catch {}
         } else {
             const room = getCurrentRoom();
             const roomSheepCount = room?.sheepCount;
@@ -589,8 +674,14 @@ export class GameState {
         // stickiness — observed as sheep stuck out-of-bounds on OC after a
         // restart from another scene/mode. Fresh recreation costs ~ms in the
         // common case and is bulletproof across mode-cycle paths.
+        // Cycle 59: a counting flock has a different structure (capacity 5000,
+        // one active) than a same-count standard flock, so force recreation on
+        // any transition into or out of counting. Without this, Chaos (5000) ->
+        // Counting would skip recreation on the equal count and Counting -> Chaos
+        // would leave the 1-active counting flock in place.
+        const countingTransition = mode === COUNTING_GAME_MODE || previousMode === COUNTING_GAME_MODE;
         const needsFlockRecreation = !!this.optimizedSheepSystem
-            && (previousSheepCount !== this.totalSheep || options.forceFlockRecreation === true);
+            && (previousSheepCount !== this.totalSheep || options.forceFlockRecreation === true || countingTransition);
         const skipVisibleFlockReset = options.skipVisibleFlockReset === true && needsFlockRecreation;
         if (this.optimizedSheepSystem) {
             if (previousSheepCount !== this.totalSheep) {
@@ -754,6 +845,10 @@ export class GameState {
         // Reset extreme boid system
         resetExtremeBoidSystem();
         this.useExtremeBoids = false;
+
+        // Cycle 59: clear the counting round controller.
+        this.countingState = null;
+        this.countingCurve = null;
 
         // Reset competitive mode data
         this.gameMode = 'solo';

@@ -18,6 +18,7 @@ import { WorldImage, DogAvatar } from './sceneComponents';
 import { Icon } from '../ui/Icon';
 import { useViewport } from '../hooks/useViewport';
 import { formatSheep } from './worlds';
+import { COUNTING_GAME_MODE } from '../../../shared/countingModes.js';
 import { useRenameField } from '../shared/useRenameField';
 import type { BootFlow } from './useBootFlow';
 
@@ -226,10 +227,37 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
             ))}
           </div>
 
-          {/* Difficulty chips */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 16, overflowX: 'auto', paddingBottom: 2 }}>
+          {/* Cycle 59: mode-family selector. A multi-family world (Home Field,
+              Rolling Hills) shows Classic + Counting Sheep chips; a single-family
+              world (Open Country = Objective) renders the family as a label. */}
+          {flow.families.length > 1 ? (
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              {flow.families.map((f) => {
+                const active = f.id === flow.family.id;
+                return (
+                  <button key={f.id} onClick={() => flow.setFamily(f.id)} style={{
+                    flexShrink: 0, padding: '7px 14px', borderRadius: 999, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    border: `1px solid ${active ? 'transparent' : pastoral.glassWarmBorder}`,
+                    background: active ? pastoral.accentGold : alpha(pastoral.ink, 5),
+                    color: active ? pastoral.ink : pastoral.inkSoft,
+                  }}>
+                    {f.name}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ marginTop: 14, fontSize: 12, fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase', color: pastoral.inkSoft }}>
+              {flow.family.name}
+            </div>
+          )}
+
+          {/* Rung chips: solo difficulties (sheep count) or counting curves (a
+              short hint, since a counting run starts at one sheep). */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 2 }}>
             {flow.modes.map((m) => {
               const active = m.id === flow.mode.id;
+              const counting = flow.family.gameMode === COUNTING_GAME_MODE;
               return (
                 <button key={m.id} onClick={() => flow.setMode(m.id)} style={{
                   flexShrink: 0, padding: '8px 13px', borderRadius: 12, cursor: 'pointer',
@@ -239,7 +267,9 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
                 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{m.name}</div>
                   <div style={{ fontSize: 11, opacity: 0.85, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                    <Icon name="sheep" size={12} color={active ? pastoral.cream : pastoral.inkSoft} /> {formatSheep(m.sheep)}
+                    {counting
+                      ? <span>{m.blurb}</span>
+                      : <><Icon name="sheep" size={12} color={active ? pastoral.cream : pastoral.inkSoft} /> {formatSheep(m.sheep)}</>}
                   </div>
                 </button>
               );
