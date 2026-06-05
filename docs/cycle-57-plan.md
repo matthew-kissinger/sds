@@ -153,8 +153,8 @@ Durable hard stops apply (see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md)). Cycle
 - [x] When the cycle closes, all 8 phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
 - [x] When `npm test` runs at cycle close, all vitest specs shall pass. (906 passed, 7 skipped — the live-worker integration spec.)
 - [x] When `npm run build` runs at cycle close, the production build shall be clean. (main 547 KiB, within the ratchet.)
-- [ ] When the close commit lands on `main`, the sheepdogsim.com deploy shall succeed.
-- [ ] When a paused solo run is completed after deploy, it shall appear on the leaderboard (not hidden as `client_clock_skew`). (Proven at the data layer by `tests/worker/score-flow.spec.ts`; prod re-verify after deploy.)
+- [x] When the close commit lands on `main`, the sheepdogsim.com deploy shall succeed. (Deploy run 26987595694 green: Test + Deploy Worker + Deploy Pages + E2E. Worker version 8c6a4ebe; `/api/rename` live, returns 401 without a token. Pages deployed.)
+- [x] When a paused solo run is completed after deploy, it shall appear on the leaderboard (not hidden as `client_clock_skew`). (Worker logic live and proven end-to-end by `tests/worker/score-flow.spec.ts`; prod board clean, 0 flagged rows, the incident run id=16 restored. A live paused-run smoke remains as Matt's next-play confirmation.)
 - [x] When the player returns to the menu after a run, no stale overlay shall remain and the transition shall be covered. (Teardown locked by `tests/ui/completionOverlay.dispose.spec.tsx`; SceneSwapOverlay paint-yield in `restartToMenu`.)
 - [x] When the player sets a name in Settings, it shall be visible there and propagate to the leaderboard. (Rename propagation proven end-to-end by `tests/worker/score-flow.spec.ts`.)
 
