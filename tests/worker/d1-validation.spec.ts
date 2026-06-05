@@ -129,28 +129,90 @@ describe('plausibleScoreForCount', () => {
 });
 
 describe('detectScoreAnomalies', () => {
-    it('returns no anomalies for a clean soloClassic submission', () => {
+    it('returns no anomalies for a clean soloClassic submission with no pause', () => {
         const anomalies = detectScoreAnomalies({
             mode: 'soloClassic',
             score: 60,
             sheepCount: 200,
             clientStartedAt: 1_000_000,
             clientFinishedAt: 1_060_000,
+            pausedMs: 0,
             serverNow: 1_061_000,
         });
         expect(anomalies).toEqual([]);
     });
 
-    it('flags clock-skew when client duration diverges from claimed score by >10s', () => {
+    it('does NOT flag a paused run whose active window matches the score (Cycle 57 P1 regression)', () => {
+        // 773s wall-clock window, 14s paused -> 759s active play == claimed
+        // score. Before the fix this false-flagged as client_clock_skew and
+        // the run was hidden from the leaderboard. This is the real incident.
+        const anomalies = detectScoreAnomalies({
+            mode: 'soloClassic',
+            score: 759,
+            sheepCount: 200,
+            clientStartedAt: 1_000_000,
+            clientFinishedAt: 1_773_000,
+            pausedMs: 14_000,
+            serverNow: 1_774_000,
+        });
+        expect(anomalies.find((a) => a.tag === 'client_clock_skew')).toBeFalsy();
+    });
+
+    it('flags clock-skew when the active window still diverges from the claimed score by >10s', () => {
+        // 80s window, 0 paused -> 80s active vs 60s claimed = 20s skew.
         const anomalies = detectScoreAnomalies({
             mode: 'soloClassic',
             score: 60,
             sheepCount: 200,
             clientStartedAt: 1_000_000,
-            clientFinishedAt: 1_080_000, // claims 60s but client clock says 80s
+            clientFinishedAt: 1_080_000,
+            pausedMs: 0,
             serverNow: 1_081_000,
         });
         expect(anomalies.find((a) => a.tag === 'client_clock_skew')).toBeTruthy();
+    });
+
+    it('skips the clock-skew check entirely when pausedMs is absent (pre-Cycle-57 client)', () => {
+        // Same 20s raw divergence, but no pausedMs field -> skip the check
+        // rather than re-introduce the false positive for old cached clients.
+        const anomalies = detectScoreAnomalies({
+            mode: 'soloClassic',
+            score: 60,
+            sheepCount: 200,
+            clientStartedAt: 1_000_000,
+            clientFinishedAt: 1_080_000,
+            serverNow: 1_081_000,
+        });
+        expect(anomalies.find((a) => a.tag === 'client_clock_skew')).toBeFalsy();
+    });
+
+    it('cheat guard: a forged fast score padded with a huge pausedMs still flags', () => {
+        // 600s window, claims 20s, pads pausedMs=580s (>80% of window) -> no
+        // pause credit -> 600s active vs 20s = 580s skew -> flagged.
+        const anomalies = detectScoreAnomalies({
+            mode: 'soloClassic',
+            score: 20,
+            sheepCount: 200,
+            clientStartedAt: 1_000_000,
+            clientFinishedAt: 1_600_000,
+            pausedMs: 580_000,
+            serverNow: 1_601_000,
+        });
+        expect(anomalies.find((a) => a.tag === 'client_clock_skew')).toBeTruthy();
+    });
+
+    it('credits a legitimate long pause within 80% of the window', () => {
+        // 600s window, 120s paused (20%) -> 480s active == claimed score.
+        const anomalies = detectScoreAnomalies({
+            mode: 'soloClassic',
+            score: 480,
+            sheepCount: 200,
+            clientStartedAt: 1_000_000,
+            clientFinishedAt: 1_600_000,
+            pausedMs: 120_000,
+            serverNow: 1_601_000,
+        });
+        expect(anomalies.find((a) => a.tag === 'client_clock_skew')).toBeFalsy();
     });
 
     it('flags fast-for-count when score barely passes plausibility floor', () => {

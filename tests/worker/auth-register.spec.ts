@@ -18,10 +18,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   registerPlayer,
+  renamePlayer,
+  sanitizeDisplayName,
   hashSecret,
   timingSafeEqualHex,
   generateAuthSecret,
   AuthError,
+  ValidationError,
+  NotFoundError,
   type PlayerRow,
 } from '../../worker/src/d1';
 
@@ -91,13 +95,19 @@ function makeFakeDb(seed?: PlayerRow[]) {
             const pid = binds[binds.length - 1] as string;
             const row = state.players.get(pid);
             if (row) {
-              // TOFU-bind UPDATE: last_active, auth_secret_hash, auth_bound_at, pid
-              if (/auth_secret_hash/i.test(sql)) {
+              if (/display_name/i.test(sql)) {
+                // Cycle 57 rename UPDATE: display_name, discriminator, full_name, last_active, pid
+                row.display_name = binds[0] as string;
+                row.discriminator = binds[1] as string;
+                row.full_name = binds[2] as string;
+                row.last_active = binds[3] as number;
+              } else if (/auth_secret_hash/i.test(sql)) {
+                // TOFU-bind UPDATE: last_active, auth_secret_hash, auth_bound_at, pid
                 row.last_active = binds[0] as number;
                 row.auth_secret_hash = binds[1] as string;
                 row.auth_bound_at = binds[2] as number;
               } else {
-                // last_active-only UPDATE (matching re-register): last_active, pid
+                // last_active-only UPDATE (matching re-register / idempotent rename): last_active, pid
                 row.last_active = binds[0] as number;
               }
             }
@@ -297,5 +307,122 @@ describe('re-register requires the matching secret (exploit closed)', () => {
     expect(after.display_name).toBe('Victim');
     expect(after.solo_classic_best).toBe(31.2);
     expect(after.last_active).toBe(before.last_active);
+  });
+});
+
+// ---- display-name validation (Cycle 57) -----------------------------------
+
+describe('sanitizeDisplayName', () => {
+  it('trims and collapses internal whitespace', () => {
+    expect(sanitizeDisplayName('  Border   Collie  ')).toBe('Border Collie');
+  });
+
+  it('strips control and zero-width characters', () => {
+    const raw = 'a' + String.fromCharCode(0) + 'b' + String.fromCharCode(0x200B) + 'c' + String.fromCharCode(0xFEFF);
+    expect(sanitizeDisplayName(raw)).toBe('abc');
+  });
+
+  it('keeps Unicode letters for international names', () => {
+    expect(sanitizeDisplayName('Café')).toBe('Café');
+    expect(sanitizeDisplayName('牧羊犬')).toBe('牧羊犬');
+  });
+
+  it('rejects empty / whitespace-only / control-only as name_empty', () => {
+    expect(() => sanitizeDisplayName('')).toThrow(ValidationError);
+    expect(() => sanitizeDisplayName('   ')).toThrow(ValidationError);
+    expect(() => sanitizeDisplayName(' ')).toThrow(ValidationError);
+    let code: string | undefined;
+    try { sanitizeDisplayName(''); } catch (e) { code = (e as ValidationError).code; }
+    expect(code).toBe('name_empty');
+  });
+
+  it('rejects a non-string as name_empty', () => {
+    expect(() => sanitizeDisplayName(null as unknown)).toThrow(ValidationError);
+    expect(() => sanitizeDisplayName(42 as unknown)).toThrow(ValidationError);
+  });
+
+  it('bounds length by Unicode code points (an emoji counts as one)', () => {
+    expect(sanitizeDisplayName('a'.repeat(20))).toHaveLength(20);
+    expect(() => sanitizeDisplayName('a'.repeat(21))).toThrow(ValidationError);
+    const twentyEmoji = '\u{1F600}'.repeat(20);
+    expect(sanitizeDisplayName(twentyEmoji)).toBe(twentyEmoji);
+    expect(() => sanitizeDisplayName('\u{1F600}'.repeat(21))).toThrow(ValidationError);
+    let code: string | undefined;
+    try { sanitizeDisplayName('x'.repeat(21)); } catch (e) { code = (e as ValidationError).code; }
+    expect(code).toBe('name_too_long');
+  });
+});
+
+// ---- rename (Cycle 57) -----------------------------------------------------
+
+function boundRow(persistentId: string, overrides: Partial<PlayerRow> = {}): PlayerRow {
+  return {
+    persistent_id: persistentId,
+    display_name: 'OldName',
+    discriminator: '0001',
+    full_name: 'OldName#0001',
+    created_at: 1_700_000_000_000,
+    last_active: 1_700_000_000_000,
+    solo_classic_best: 42,
+    solo_extreme_best: null,
+    solo_insane_best: null,
+    solo_chaos_best: null,
+    timed_best: null,
+    competitive_wins: 0,
+    cooperative_best: null,
+    auth_secret_hash: 'abc123',
+    auth_bound_at: 1_700_000_000_000,
+    ...overrides,
+  };
+}
+
+describe('renamePlayer', () => {
+  it('updates display_name, discriminator, and full_name and allocates a fresh discriminator', async () => {
+    const pid = 'pid-rename-1';
+    const { db, state } = makeFakeDb([boundRow(pid)]);
+    const player = await renamePlayer(db, pid, 'Border Collie');
+    expect(player.display_name).toBe('Border Collie');
+    expect(player.discriminator).toBe('0001'); // first free for the new name
+    expect(player.full_name).toBe('Border Collie#0001');
+    expect(state.players.get(pid)!.display_name).toBe('Border Collie');
+    expect(state.discriminators.has('Border Collie#0001')).toBe(true);
+  });
+
+  it('is idempotent on the current name (no discriminator burned)', async () => {
+    const pid = 'pid-rename-2';
+    const { db, state } = makeFakeDb([boundRow(pid, { display_name: 'Keeper', discriminator: '0003', full_name: 'Keeper#0003' })]);
+    const player = await renamePlayer(db, pid, 'Keeper');
+    expect(player.display_name).toBe('Keeper');
+    expect(player.discriminator).toBe('0003');
+    expect(state.discriminators.size).toBe(0);
+  });
+
+  it('trims before the idempotency check so a padded current name is still a no-op', async () => {
+    const pid = 'pid-rename-3';
+    const { db, state } = makeFakeDb([boundRow(pid, { display_name: 'Keeper', discriminator: '0003', full_name: 'Keeper#0003' })]);
+    const player = await renamePlayer(db, pid, '  Keeper  ');
+    expect(player.discriminator).toBe('0003');
+    expect(state.discriminators.size).toBe(0);
+  });
+
+  it('allocates the next free discriminator when the new name collides', async () => {
+    const pid = 'pid-rename-4';
+    const { db, state } = makeFakeDb([boundRow(pid)]);
+    state.discriminators.add('Taken#0001');
+    const player = await renamePlayer(db, pid, 'Taken');
+    expect(player.discriminator).toBe('0002');
+    expect(player.full_name).toBe('Taken#0002');
+  });
+
+  it('throws NotFoundError when the persistent_id has no row', async () => {
+    const { db } = makeFakeDb();
+    await expect(renamePlayer(db, 'ghost', 'Whoever')).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('rejects an invalid name before touching the row', async () => {
+    const pid = 'pid-rename-5';
+    const { db } = makeFakeDb([boundRow(pid)]);
+    await expect(renamePlayer(db, pid, '')).rejects.toBeInstanceOf(ValidationError);
+    await expect(renamePlayer(db, pid, 'x'.repeat(21))).rejects.toBeInstanceOf(ValidationError);
   });
 });

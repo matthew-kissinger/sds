@@ -37,6 +37,28 @@ export class AuthError extends Error {
   }
 }
 
+// Cycle 57: thrown by renamePlayer / sanitizeDisplayName on an invalid name.
+// `code` is a stable machine string the route maps to a 400 and the client
+// maps to an identity.* i18n message. Distinct from AuthError so the route
+// can branch cleanly.
+export class ValidationError extends Error {
+  code: string;
+  constructor(code: string) {
+    super(code);
+    this.name = 'ValidationError';
+    this.code = code;
+  }
+}
+
+// Cycle 57: thrown by renamePlayer when the authenticated persistent_id has no
+// players row (e.g. a DB reset between register and rename). Route maps to 404.
+export class NotFoundError extends Error {
+  constructor(message = 'not found') {
+    super(message);
+    this.name = 'NotFoundError';
+  }
+}
+
 const _hexEnc = new TextEncoder();
 
 /**
@@ -408,6 +430,81 @@ export async function getPlayer(db: D1Database, persistentId: string): Promise<P
   );
 }
 
+/**
+ * Cycle 57: server-side display-name validation. The client gate was removed
+ * in Cycle 51, so this is now the authority. Strips C0/C1 control and
+ * zero-width / BOM characters, collapses internal whitespace, trims, and
+ * bounds length by Unicode code points (an emoji counts as one). Permissive on
+ * Unicode letters for international names. Returns the cleaned name or throws
+ * ValidationError('name_empty' | 'name_too_long').
+ */
+export function sanitizeDisplayName(raw: unknown): string {
+  if (typeof raw !== 'string') throw new ValidationError('name_empty');
+  // Drop control chars (C0/C1), zero-width chars, and BOM; collapse whitespace.
+  let cleaned = '';
+  for (const ch of raw) {
+    const cp = ch.codePointAt(0) ?? 0;
+    const isControl = cp <= 0x1f || (cp >= 0x7f && cp <= 0x9f);
+    const isZeroWidth = (cp >= 0x200b && cp <= 0x200d) || cp === 0xfeff;
+    if (!isControl && !isZeroWidth) cleaned += ch;
+  }
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  if (cleaned.length === 0) throw new ValidationError('name_empty');
+  if (Array.from(cleaned).length > 20) throw new ValidationError('name_too_long');
+  return cleaned;
+}
+
+/**
+ * Cycle 57: rename an existing player's display name. Authenticated callers
+ * only - the route derives persistentId from the verified token, never from
+ * the request body, so a player can rename only their own row. Validates the
+ * name, is idempotent on the current name (no discriminator burned), and
+ * otherwise allocates a fresh discriminator for the new name and updates
+ * display_name + discriminator + full_name. UPDATE of existing columns only -
+ * no migration. The old (name, discriminator) pair is left in `discriminators`
+ * (harmless; reclaiming it would race a concurrent allocation).
+ */
+export async function renamePlayer(
+  db: D1Database,
+  persistentId: string,
+  requestedName: string,
+): Promise<PlayerRow> {
+  const cleaned = sanitizeDisplayName(requestedName);
+  const existing = await db
+    .prepare('SELECT * FROM players WHERE persistent_id = ?')
+    .bind(persistentId)
+    .first<PlayerRow>();
+  if (!existing) throw new NotFoundError('player not found');
+
+  const now = Date.now();
+
+  // Idempotent: renaming to the current name is a no-op success - don't burn a
+  // discriminator or rewrite full_name, just bump last_active.
+  if (cleaned === existing.display_name) {
+    await db
+      .prepare('UPDATE players SET last_active = ? WHERE persistent_id = ?')
+      .bind(now, persistentId)
+      .run();
+    existing.last_active = now;
+    return existing;
+  }
+
+  const discriminator = await allocateDiscriminator(db, cleaned);
+  const fullName = `${cleaned}#${discriminator}`;
+  await db
+    .prepare(
+      'UPDATE players SET display_name = ?, discriminator = ?, full_name = ?, last_active = ? WHERE persistent_id = ?',
+    )
+    .bind(cleaned, discriminator, fullName, now, persistentId)
+    .run();
+
+  existing.display_name = cleaned;
+  existing.discriminator = discriminator;
+  existing.full_name = fullName;
+  existing.last_active = now;
+  return existing;
+}
+
 export interface SubmitScoreResult {
   updated: boolean;
   isNewRecord: boolean;
@@ -516,27 +613,41 @@ export function detectScoreAnomalies(input: {
   sheepCount: number;
   clientStartedAt?: number | null;
   clientFinishedAt?: number | null;
+  pausedMs?: number | null;
   serverNow: number;
 }): ScoreAnomaly[] {
   const anomalies: ScoreAnomaly[] = [];
 
-  // 1) Client clock skew: if start/finish timestamps were submitted, compare
-  //    their delta against the claimed score (= duration in seconds for time
-  //    modes). >10s divergence is a soft flag — could be a paused tab, could
-  //    be a tampered submission.
+  // 1) Client clock skew: the claimed `score` is pause-subtracted active play
+  //    time (the client GameTimer subtracts pausedTime), so it must be compared
+  //    against the ACTIVE wall-clock window, not the raw one. Subtract the
+  //    client-reported pause before measuring divergence — otherwise any
+  //    legitimate run with >10s of pause (pause menu, backgrounded tab) reads
+  //    as a 10s+ skew and gets hidden from the board (the leaderboard query
+  //    gates on score_anomalies IS NULL). Credit the reported pause only if it
+  //    is a sane minority of the window (<=80%); a forged fast score padded
+  //    with a huge pausedMs gets zero credit and still trips. Pre-pausedMs
+  //    clients omit the field entirely; skip the check for them rather than
+  //    re-introduce the false positive (hard rejects + fast_for_count remain).
   if (
     typeof input.clientStartedAt === 'number' &&
     typeof input.clientFinishedAt === 'number' &&
+    typeof input.pausedMs === 'number' &&
     TIME_MODES.includes(input.mode)
   ) {
-    const clientDurationSec = (input.clientFinishedAt - input.clientStartedAt) / 1000;
-    const skew = Math.abs(clientDurationSec - input.score);
+    const rawWindowMs = input.clientFinishedAt - input.clientStartedAt;
+    const guardOk = input.pausedMs >= 0 && input.pausedMs <= rawWindowMs * 0.8;
+    const creditedPauseMs = guardOk ? input.pausedMs : 0;
+    const activeDurationSec = (rawWindowMs - creditedPauseMs) / 1000;
+    const skew = Math.abs(activeDurationSec - input.score);
     if (skew > 10) {
       anomalies.push({
         tag: 'client_clock_skew',
         detail: {
           claimed_score: input.score,
-          client_duration_sec: Math.round(clientDurationSec * 10) / 10,
+          active_duration_sec: Math.round(activeDurationSec * 10) / 10,
+          paused_ms: input.pausedMs,
+          credited_pause_ms: creditedPauseMs,
           skew_sec: Math.round(skew * 10) / 10,
         },
       });
@@ -664,12 +775,19 @@ async function submitScoreInner(
   const clientFinishedAt = typeof additionalData.clientFinishedAt === 'number'
     ? (additionalData.clientFinishedAt as number)
     : null;
+  // Cycle 57 Phase 1: active-play pause window. Absent on pre-Cycle-57
+  // clients -> the skew check is skipped rather than run against the raw
+  // (pause-inclusive) window.
+  const pausedMs = typeof additionalData.pausedMs === 'number'
+    ? (additionalData.pausedMs as number)
+    : null;
   const anomalies = detectScoreAnomalies({
     mode: gameMode,
     score,
     sheepCount,
     clientStartedAt,
     clientFinishedAt,
+    pausedMs,
     serverNow: now,
   });
   const anomaliesJson = anomalies.length > 0 ? JSON.stringify(anomalies) : null;

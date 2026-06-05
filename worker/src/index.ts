@@ -8,6 +8,7 @@ import { LobbyDO } from './LobbyDO';
 import { signJwt, verifyJwt, signTicket, verifyTicket } from './jwt';
 import {
   registerPlayer,
+  renamePlayer,
   getPlayer,
   submitScore,
   getLeaderboard,
@@ -16,6 +17,8 @@ import {
   isDailyMode,
   validateDailySubmission,
   AuthError,
+  ValidationError,
+  NotFoundError,
   type GameMode,
 } from './d1';
 // Cycle 35 Phase 4: scene-id validation at the API boundary.
@@ -265,6 +268,7 @@ export default {
     // intentionally exempt. Returns 429 with a Retry-After hint.
     const rateLimited =
       path === '/api/register' ||
+      path === '/api/rename' ||
       path === '/api/event' ||
       path === '/api/leaderboard' ||
       path === '/api/leaderboards' ||
@@ -321,6 +325,39 @@ export default {
           200,
           cors,
         );
+      }
+
+      // Cycle 57: authenticated display-name change. The persistent_id is
+      // taken from the verified token, never the body, so a leaked id cannot
+      // rename another player. Name is validated server-side (the client gate
+      // was removed in Cycle 51). 400 with a machine code on a bad name.
+      if (path === '/api/rename' && method === 'POST') {
+        const body = await request.json<any>();
+        const payload = await extractToken(request, env, body);
+        if (!payload) return err('missing or invalid token', 401, cors);
+        const pid = payload.persistent_id;
+        const requested = body.display_name ?? body.displayName ?? '';
+        try {
+          const player = await renamePlayer(env.DB, pid, requested);
+          return json(
+            {
+              success: true,
+              playerProfile: {
+                persistent_id: player.persistent_id,
+                persistentId: player.persistent_id,
+                displayName: player.display_name,
+                fullName: player.full_name,
+                discriminator: player.discriminator,
+              },
+            },
+            200,
+            cors,
+          );
+        } catch (e) {
+          if (e instanceof ValidationError) return err(e.code, 400, cors);
+          if (e instanceof NotFoundError) return err('player not found', 404, cors);
+          throw e;
+        }
       }
 
       if (path === '/api/lobbies' && method === 'GET') {
