@@ -42,7 +42,8 @@ import { disposeScene as runDisposeScene } from './boot/loadScene.js';
 import { shouldBootAttract } from './boot/bootAttract.js';
 import {
     showCompletionOverlay as renderCompletionOverlay,
-    showLocalCompletionOverlay as renderLocalCompletionOverlay
+    showLocalCompletionOverlay as renderLocalCompletionOverlay,
+    disposeCompletionOverlay
 } from './boot/completionOverlay.js';
 import {
     formatTime as fmtTime,
@@ -655,6 +656,11 @@ class SheepDogSimulation {
         // Set game instance BEFORE init() so GameBridge works during initialization
         // This is critical - Sheepdog needs getTerrainBuilder() during init()
         setGameInstance(this);
+        // Cycle 57 P3: the fallback (non-React) and local-2p completion
+        // overlays call window.gameInstance.restartToMenu() inline; expose the
+        // instance so those buttons fire (and tear down their overlay via the
+        // Phase 2 teardown). React paths close over `game` directly.
+        if (typeof window !== 'undefined') window.gameInstance = this;
         console.log('[GAME] GameBridge initialized early in constructor');
 
         // Cycle 24 Phase 1: `?testNoCanvas=1` skips heavy 3D init + the
@@ -1186,6 +1192,19 @@ class SheepDogSimulation {
     }
 
     /**
+     * Cycle 57 P2: dispose + rebuild the current scene, yielding two frames
+     * first so the SceneSwapOverlay cover paints before the synchronous build
+     * seizes the main thread (otherwise the rebuild reads as a freeze). Shared
+     * by restartToMenu and restartSameMode.
+     */
+    async _disposeAndRebuildCurrentScene() {
+        const sceneDef = this.currentScene;
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        await this.disposeScene();
+        await this.rebuildScene(sceneDef);
+    }
+
+    /**
      * Return to start screen on the current scene without changing scenes.
      * Single-player: in-process menu re-mount, no audio cut, no canvas flash.
      * Multiplayer: hard reload (rooms lock the scene at creation).
@@ -1203,12 +1222,14 @@ class SheepDogSimulation {
         }
 
         console.log('[SWAP] restartToMenu() — in-process menu remount');
+        // Cycle 57 P2: the completion overlay lives in its own <body> root the
+        // React StartScreen remount can't reach; tear it down here so the menu
+        // doesn't open under a stale overlay.
+        disposeCompletionOverlay();
         emitGameEvent('scene-swap-start');
 
         try {
-            const sceneDef = this.currentScene;
-            await this.disposeScene();
-            await this.rebuildScene(sceneDef);
+            await this._disposeAndRebuildCurrentScene();
 
             // Reset gameplay flags — but NOT gameMode/competitiveGates,
             // which the menu wants to remember for "Play Again" UX.
@@ -1222,6 +1243,38 @@ class SheepDogSimulation {
             emitGameEvent('scene-restart-to-menu');
         } catch (err) {
             console.error('[SWAP] restartToMenu failed; reloading:', err);
+            emitGameEvent('scene-swap-error');
+            window.location.reload();
+            return new Promise(() => {});
+        }
+    }
+
+    /**
+     * Cycle 57 P3: "Play Again" — replay the same mode in place without a menu
+     * round-trip. Disposes the completion overlay, rebuilds a fresh world (the
+     * same dispose+rebuild the menu->Play flow relies on for a clean flock),
+     * then starts the same mode. MP rooms lock the scene and sandbox config
+     * isn't retained at the overlay, so both fall back to the menu.
+     */
+    async restartSameMode() {
+        const isMp = this.isMultiplayer || this.gameState?.gameMode === 'multiplayer';
+        if (isMp || this.gameMode === 'sandbox' || this.singlePlayerMode === 'sandbox') {
+            return this.restartToMenu();
+        }
+
+        const spMode = this.singlePlayerMode || 'classic';
+        console.log('[SWAP] restartSameMode() — replay', spMode);
+        disposeCompletionOverlay();
+        emitGameEvent('scene-swap-start');
+
+        try {
+            await this._disposeAndRebuildCurrentScene();
+            // Hold the cover through startGame so the dog + flock are in place
+            // before it fades; no menu flash (we never emit scene-restart-to-menu).
+            await this.startGame('solo', null, spMode);
+            emitGameEvent('scene-swap-end');
+        } catch (err) {
+            console.error('[SWAP] restartSameMode failed; reloading:', err);
             emitGameEvent('scene-swap-error');
             window.location.reload();
             return new Promise(() => {});

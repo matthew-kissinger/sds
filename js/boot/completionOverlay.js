@@ -13,6 +13,33 @@
  */
 
 /**
+ * The completion overlay mounts in its OWN React root appended to <body>,
+ * outside the main app tree, so React's StartScreen remount cannot unmount
+ * it. We hold the root here (Cycle 57 P2) so return-to-menu can tear it down
+ * properly; otherwise the menu opens UNDER a stale overlay and the orphaned
+ * root leaks. Null while the fallback (non-React) overlay is up.
+ */
+let completionRoot = null;
+
+/**
+ * Tear down the completion overlay: unmount its React root (if any) and
+ * remove the DOM node. Safe to call when nothing is mounted (no-op). Called
+ * by restartToMenu so every menu-return path clears the overlay.
+ */
+export function disposeCompletionOverlay() {
+    if (completionRoot) {
+        try {
+            completionRoot.unmount();
+        } catch (err) {
+            console.warn('[GAME] completion overlay unmount failed:', err);
+        }
+        completionRoot = null;
+    }
+    const node = document.getElementById('game-completion-overlay');
+    if (node) node.remove();
+}
+
+/**
  * @param {object} game SheepDogSimulation instance.
  * @param {string} mode One of: 'single', 'cooperative', 'racing', 'timed'.
  * @param {object} [data]
@@ -20,9 +47,12 @@
 export async function showCompletionOverlay(game, mode, data = {}) {
     console.log('[GAME] Creating completion overlay for mode:', mode, data);
 
-    // Remove any existing overlay
-    const existing = document.getElementById('game-completion-overlay');
-    if (existing) existing.remove();
+    // Remove any existing overlay (unmount its root too, not just the node).
+    disposeCompletionOverlay();
+
+    // Cycle 57 P6: clear the prior submit-status so a non-submitting mode (or a
+    // fresh run) starts blank; the submit path (window.submitGameScore) sets it.
+    if (typeof window !== 'undefined') window.__sdsLastSubmit = null;
 
     // Explicit local developer capture only. Normal players should never
     // see a download affordance on the completion screen.
@@ -71,14 +101,16 @@ export async function showCompletionOverlay(game, mode, data = {}) {
         // Render React component (React pulled in lazily — see Phase C note).
         Promise.all([import('react'), import('react-dom/client')]).then(
             ([{ createElement }, { createRoot }]) => {
-                const root = createRoot(container);
-                root.render(createElement(window.CompletionScreen, {
+                completionRoot = createRoot(container);
+                completionRoot.render(createElement(window.CompletionScreen, {
                     mode: mode,
                     data: screenData,
-                    // Cycle 10 Phase 1 + 2: route through restartToMenu so future
-                    // cycles can flip to in-process menu return without re-touching
-                    // the completion screen.
-                    onPlayAgain: () => game.restartToMenu(),
+                    // Cycle 10 P1+2 + Cycle 57 P3: route through the game so
+                    // menu-return tears this overlay down. Play Again replays
+                    // the same mode in place; Main Menu returns to the start
+                    // screen. Both go through methods that call
+                    // disposeCompletionOverlay() first.
+                    onPlayAgain: () => game.restartSameMode(),
                     onMainMenu: () => game.restartToMenu()
                 }));
                 console.log('[GAME] React completion overlay rendered!');
@@ -107,7 +139,7 @@ export async function showCompletionOverlay(game, mode, data = {}) {
             <div style="padding: 40px; background: rgba(16, 185, 129, 0.2); border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.4);">
                 <h1 style="font-size: 36px; margin: 0 0 20px 0;">Victory!</h1>
                 <p style="font-size: 18px; margin: 0 0 30px 0;">Time: ${timeStr}</p>
-                <button onclick="window.gameInstance?.restartToMenu()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
+                <button onclick="window.gameInstance?.restartSameMode()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
                     Play Again
                 </button>
             </div>
@@ -125,8 +157,7 @@ export async function showCompletionOverlay(game, mode, data = {}) {
 export function showLocalCompletionOverlay(game, result) {
     console.log('[LOCAL] Showing completion overlay:', result);
 
-    const existing = document.getElementById('game-completion-overlay');
-    if (existing) existing.remove();
+    disposeCompletionOverlay();
 
     const overlay = document.createElement('div');
     overlay.id = 'game-completion-overlay';
