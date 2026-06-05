@@ -44,6 +44,17 @@ licensed under CC BY-SA 4.0. This includes everything under `assets/` plus
 models, images, audio, textures, Blender files, and baked binary asset data
 committed elsewhere in the repository.
 
+## Third-Party Assets
+
+Some bundled assets originate from third-party open-source sets and retain their
+original licenses:
+
+- **Sheep icon** (`js/components/ui/Icon.tsx`, the `sheep` mark) - from Microsoft
+  Fluent Emoji ("ewe"), MIT License, (c) Microsoft Corporation. Source:
+  https://github.com/microsoft/fluentui-emoji. Recoloured to a single
+  `currentColor` fill; geometry unchanged. The MIT permission notice is
+  preserved here and in the file header.
+
 ## Notices
 
 Current copyright and source notices appear in:
