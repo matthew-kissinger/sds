@@ -14,6 +14,7 @@
  */
 
 import { getModeCapabilities, SOLO_MODE_TO_LEADERBOARD } from './modes.js';
+import { getGameTimer } from '../GameBridge.js';
 
 /**
  * Format mm:ss for display. External callers (completionOverlay.js)
@@ -101,12 +102,21 @@ export function submitScoreToLeaderboard(state, score, gameMode = null) {
             sheepCount: state.totalSheep,
             totalSheep: state.totalSheep,
             timestamp: Date.now(),
-            // Cycle 10 Phase 6: client wall-clock window. Worker compares
-            // (clientFinishedAt - clientStartedAt) against the claimed
-            // score (= duration in seconds for time modes); >10s skew
-            // flags a score_anomalies row.
+            // Cycle 10 Phase 6 + Cycle 57 P1: client wall-clock window plus
+            // the paused time it contains. The score is pause-subtracted
+            // active play time, so the worker subtracts pausedMs from the
+            // (clientFinishedAt - clientStartedAt) window before comparing
+            // against the claimed score; >10s skew flags a score_anomalies
+            // row. Sending pausedMs is what keeps a paused run from being
+            // false-flagged and hidden from the board.
             clientStartedAt: state._clientStartedAt || null,
             clientFinishedAt: Date.now(),
+            pausedMs: (() => {
+                const timer = getGameTimer();
+                return timer && Number.isFinite(timer.pausedTime)
+                    ? Math.round(timer.pausedTime)
+                    : 0;
+            })(),
         });
     } else {
         console.warn('Score submission function not available');

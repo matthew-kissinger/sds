@@ -311,6 +311,8 @@ export default {
         newPersonalBest: '新記録！',
         finalStandings: '最終結果',
         playAgain: 'もう一度プレイ',
+        scoreSaved: 'リーダーボードに保存しました',
+        scoreSaveFailed: 'スコアを保存できませんでした',
         nextChallenge: '次のチャレンジ',
         stats: {
             time: '時間',
@@ -343,6 +345,7 @@ export default {
         chooseIdentity: '表示名を選んでください：',
         welcomeBack: 'おかえりなさい、{{name}}さん！',
         confirmSelection: '選択を確認',
+        nameUpdated: '名前を更新しました',
         continue: '続ける →',
         settingUp: '設定中...',
         customName: 'カスタム名',

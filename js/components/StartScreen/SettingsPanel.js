@@ -20,6 +20,8 @@ import {
     isKeyAlreadyBound
 } from '../shared/settings.js';
 import { CameraMode } from '../../CameraController.js';
+import { getPlayerIdentity, savePlayerIdentity } from '../shared/playerIdentity.js';
+import { getNetworkManager } from '../../GameBridge.js';
 
 const CAMERA_MODE_STORAGE_KEY = 'camera-mode';
 
@@ -40,6 +42,110 @@ function persistCameraMode(mode) {
         localStorage.setItem(CAMERA_MODE_STORAGE_KEY, mode);
     } catch (_) { /* ignore */ }
     window.dispatchEvent(new CustomEvent('camera-mode-set', { detail: mode }));
+}
+
+// Cycle 57 P5: view + set the leaderboard display name. The Cycle 51 reframe
+// removed the first-run name gate (and the only name-entry UI); this is the
+// opt-in Settings surface that restores it without a blocking gate. Reads the
+// stored identity for the current name, pushes a change through the auth-gated
+// /api/rename endpoint, and mirrors the result back to localStorage.
+function DisplayNameField() {
+    const { t } = useTranslation();
+    const [identity, setIdentity] = useState(() => getPlayerIdentity());
+    const [draft, setDraft] = useState(() => getPlayerIdentity()?.displayName || '');
+    const [status, setStatus] = useState(null); // null | 'saving' | 'saved' | { error }
+
+    const labelStyle = {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: '0.75rem',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        marginBottom: '0.5rem'
+    };
+
+    const current = identity?.fullName || identity?.displayName || '';
+
+    const handleSave = useCallback(async () => {
+        const trimmed = (draft || '').trim();
+        if (trimmed.length === 0) { setStatus({ error: 'identity.errorEmpty' }); return; }
+        if (trimmed.length > 20) { setStatus({ error: 'identity.errorTooLong' }); return; }
+        const nm = getNetworkManager();
+        if (!nm || typeof nm.renamePlayer !== 'function') { setStatus({ error: 'identity.errorFailed' }); return; }
+        setStatus('saving');
+        try {
+            const res = await nm.renamePlayer(trimmed);
+            const base = getPlayerIdentity() || {};
+            const next = {
+                ...base,
+                displayName: res.displayName || trimmed,
+                fullName: res.fullName || base.fullName,
+                discriminator: res.discriminator || base.discriminator,
+                nameType: 'custom',
+                isRegistered: true
+            };
+            savePlayerIdentity(next);
+            setIdentity(next);
+            setDraft(next.displayName);
+            setStatus('saved');
+        } catch (e) {
+            const code = e && e.message;
+            const key = code === 'name_too_long' ? 'identity.errorTooLong'
+                : code === 'name_empty' ? 'identity.errorEmpty'
+                : 'identity.errorFailed';
+            setStatus({ error: key });
+        }
+    }, [draft]);
+
+    const children = [
+        createElement('div', { key: 'label', style: labelStyle }, t('identity.customName')),
+        current && createElement('div', {
+            key: 'current',
+            style: { color: 'white', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem' }
+        }, current),
+        createElement('div', {
+            key: 'row',
+            style: { display: 'flex', gap: '0.5rem', alignItems: 'center' }
+        }, [
+            createElement('input', {
+                key: 'input',
+                type: 'text',
+                maxLength: 20,
+                value: draft,
+                placeholder: t('identity.enterName'),
+                onChange: (e) => { setDraft(e.target.value); if (status) setStatus(null); },
+                onFocus: () => { try { window.isTypingInInput = true; } catch (_) { /* ignore */ } },
+                onBlur: () => { try { window.isTypingInInput = false; } catch (_) { /* ignore */ } },
+                style: {
+                    flex: 1,
+                    minWidth: 0,
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(0,0,0,0.3)',
+                    color: 'white',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                }
+            }),
+            createElement(Button, {
+                key: 'save',
+                variant: 'primary',
+                size: 'sm',
+                disabled: status === 'saving',
+                onClick: handleSave
+            }, t('identity.confirmSelection'))
+        ]),
+        status && status.error && createElement('div', {
+            key: 'err',
+            style: { color: '#ff8a8a', fontSize: '0.75rem', marginTop: '0.4rem' }
+        }, t(status.error)),
+        status === 'saved' && createElement('div', {
+            key: 'ok',
+            style: { color: '#86e0a3', fontSize: '0.75rem', marginTop: '0.4rem' }
+        }, t('identity.nameUpdated'))
+    ].filter(Boolean);
+
+    return createElement('div', { style: { marginTop: '1.25rem' } }, children);
 }
 
 // Toggle switch component
@@ -511,6 +617,9 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             }, t('settings.language')),
             createElement(LanguageSelector, { key: 'selector', variant: 'full' })
         ]),
+
+        // Cycle 57 P5: view + change the leaderboard display name.
+        createElement(DisplayNameField, { key: 'display-name' }),
 
         // Reset player profile (re-trigger onboarding) — Cycle 11 Phase 2.
         createElement('div', {

@@ -293,6 +293,8 @@ export default {
         newPersonalBest: 'NOVO RECORDE PESSOAL!',
         finalStandings: 'Classificação Final',
         playAgain: 'Jogar Novamente',
+        scoreSaved: 'Salvo no placar',
+        scoreSaveFailed: 'Não foi possível salvar sua pontuação',
         nextChallenge: 'Próximo Desafio',
         stats: {
             time: 'Tempo',
@@ -325,6 +327,7 @@ export default {
         chooseIdentity: 'Escolha como você quer ser conhecido:',
         welcomeBack: 'Bem-vindo de volta, {{name}}!',
         confirmSelection: 'Confirmar Seleção',
+        nameUpdated: 'Nome atualizado',
         continue: 'Continuar →',
         settingUp: 'Configurando...',
         customName: 'Nome Personalizado',

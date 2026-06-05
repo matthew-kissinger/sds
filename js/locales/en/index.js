@@ -360,6 +360,8 @@ export default {
         newPersonalBest: 'NEW PERSONAL BEST!',
         finalStandings: 'Final Standings',
         playAgain: 'Play Again',
+        scoreSaved: 'Saved to the leaderboard',
+        scoreSaveFailed: 'Could not save your score',
         nextChallenge: 'Next Challenge',
         saveClip: 'Save dev clip',
         stats: {
@@ -393,6 +395,7 @@ export default {
         chooseIdentity: 'Choose how you\'d like to be known:',
         welcomeBack: 'Welcome back, {{name}}!',
         confirmSelection: 'Confirm Selection',
+        nameUpdated: 'Name updated',
         continue: 'Continue →',
         settingUp: 'Setting up...',
         customName: 'Custom Name',

@@ -299,6 +299,27 @@ export class NetworkManager {
         };
     }
 
+    // Cycle 57: change the leaderboard display name. Auth-gated server-side
+    // (the worker derives persistent_id from the token, never the body), so we
+    // ensure a token first - that also TOFU-binds + captures a secret for a
+    // legacy identity. Resolves to the updated profile; rejects with
+    // Error(serverCode) for a bad name ('name_empty' / 'name_too_long') since
+    // _postJson throws the parsed error message on a non-2xx.
+    async renamePlayer(displayName) {
+        await this._ensureToken();
+        const data = await this._postJson('/api/rename', {
+            token: this.token,
+            display_name: displayName,
+        });
+        return {
+            success: !!data.success,
+            playerProfile: data.playerProfile || null,
+            displayName: data.playerProfile?.displayName,
+            fullName: data.playerProfile?.fullName,
+            discriminator: data.playerProfile?.discriminator,
+        };
+    }
+
     async submitScore(gameMode, score, additionalData = {}) {
         if (!this.token) throw new Error('Not registered; call registerPlayer first.');
         const data = await this._postJson('/api/score', {

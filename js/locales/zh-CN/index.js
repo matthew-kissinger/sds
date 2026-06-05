@@ -311,6 +311,8 @@ export default {
         newPersonalBest: '新个人最佳记录！',
         finalStandings: '最终排名',
         playAgain: '再玩一次',
+        scoreSaved: '已保存到排行榜',
+        scoreSaveFailed: '无法保存你的成绩',
         nextChallenge: '下一个挑战',
         stats: {
             time: '时间',
@@ -343,6 +345,7 @@ export default {
         chooseIdentity: '选择你想使用的名字：',
         welcomeBack: '欢迎回来，{{name}}！',
         confirmSelection: '确认选择',
+        nameUpdated: '名称已更新',
         continue: '继续 →',
         settingUp: '设置中...',
         customName: '自定义名称',

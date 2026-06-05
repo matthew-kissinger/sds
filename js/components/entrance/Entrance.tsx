@@ -96,6 +96,19 @@ function CornerNav({ nav }: { nav: EntranceNav }) {
   );
 }
 
+// Cycle 57 P7: read the stored leaderboard display name without importing the
+// identity module (which has a window.submitGameScore side effect we don't want
+// in the entrance bundle). Falls back to the Cycle 51 default name.
+function readDisplayName(): string {
+  try {
+    const raw = localStorage.getItem('playerIdentity');
+    const id = raw ? JSON.parse(raw) : null;
+    return (id && typeof id.displayName === 'string' && id.displayName) || 'Shepherd';
+  } catch {
+    return 'Shepherd';
+  }
+}
+
 export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
   const { compact } = useViewport();
   const [dogOpen, setDogOpen] = useState(false);
@@ -208,6 +221,14 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
             <button onClick={nav.onSandbox} style={wayBtn}><Icon name="sandbox" size={14} /> Sandbox</button>
             <button onClick={nav.onLocal} style={wayBtn}><Icon name="local" size={14} /> 2-player</button>
           </div>
+          {/* Cycle 57 P7: current leaderboard name; tap to change it in Settings. */}
+          <button
+            onClick={nav.onSettings}
+            title="Change your name in Settings"
+            style={{ display: 'block', margin: '12px auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: compact ? 11 : 12, color: pastoral.inkSoft }}
+          >
+            Playing as <span style={{ color: pastoral.ink, fontWeight: 600 }}>{readDisplayName()}</span>
+          </button>
           <div style={{ marginTop: 12, textAlign: 'center', fontSize: compact ? 10 : 11, lineHeight: 1.25, color: pastoral.inkSoft }}>
             (c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0):{' '}
             <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" style={{ color: pastoral.ink, textDecoration: 'underline' }}>

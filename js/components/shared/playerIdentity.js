@@ -4,7 +4,7 @@
  * Player Identity Management
  * Handles localStorage persistence and server registration of player identity
  */
-import { getNetworkManager } from '../../GameBridge.js';
+import { getNetworkManager, emitGameEvent } from '../../GameBridge.js';
 
 // Get stored player identity from localStorage
 export function getPlayerIdentity() {
@@ -33,15 +33,27 @@ export function generatePersistentId() {
 
 // Submit game score to server
 export async function submitGameScore(gameMode, score, additionalData = {}) {
+    // Cycle 57 P6: surface the submit outcome (it was fully silent before, which
+    // is how the leaderboard-hiding bug went unnoticed). The completion screen
+    // subscribes to 'leaderboard-submit-result' and reads window.__sdsLastSubmit.
+    const report = (ok, reason) => {
+        try {
+            if (typeof window !== 'undefined') window.__sdsLastSubmit = { ok, reason: reason || null };
+        } catch {}
+        try { emitGameEvent('leaderboard-submit-result'); } catch {}
+    };
+
     const identity = getPlayerIdentity();
     if (!identity) {
         console.warn('[SCORE] No player identity found for score submission');
+        report(false, 'no-identity');
         return;
     }
 
     const networkManager = getNetworkManager();
     if (!networkManager) {
         console.warn('[SCORE] NetworkManager not available for score submission');
+        report(false, 'offline');
         return;
     }
 
@@ -77,6 +89,12 @@ export async function submitGameScore(gameMode, score, additionalData = {}) {
             identity.isRegistered = true;
             if (registrationResult?.authSecret) identity.authSecret = registrationResult.authSecret;
             if (registrationResult?.persistentId) identity.persistentId = registrationResult.persistentId;
+            // Cycle 57: keep the local name fields in sync with the worker's
+            // canonical row so Settings can show name#discriminator offline.
+            const profile = registrationResult?.playerProfile;
+            if (profile?.displayName) identity.displayName = profile.displayName;
+            if (profile?.fullName) identity.fullName = profile.fullName;
+            if (profile?.discriminator) identity.discriminator = profile.discriminator;
             savePlayerIdentity(identity);
         } catch (regError) {
             console.warn('[SCORE] Player registration failed:', regError);
@@ -92,8 +110,11 @@ export async function submitGameScore(gameMode, score, additionalData = {}) {
             console.log('[SCORE] NEW RECORD!');
         }
 
+        report(result.success !== false);
+
     } catch (error) {
         console.error('[SCORE] Score submission failed:', error);
+        report(false, error?.message);
         console.log('[SCORE] Score will not be submitted - server may be unavailable');
         console.log('[SCORE] Score would have been submitted:', {
             gameMode,

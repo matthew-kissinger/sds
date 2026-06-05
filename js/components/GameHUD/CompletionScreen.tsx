@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Icon } from '../ui/Icon';
 import { pastoral, alpha } from '../ui/tokens';
+import { subscribeGameEvent } from '../../GameBridge.js';
 
 // Decorative celebration glyphs kept inline (no clean shared equivalent): the
 // medal ribbon (gold/silver/bronze ranking) and the rating star.
@@ -286,11 +287,27 @@ export interface CompletionScreenProps {
 export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: CompletionScreenProps) {
     const { t } = useTranslation();
     const [isVisible, setIsVisible] = useState(false);
+    const [submitStatus, setSubmitStatus] = useState<{ ok: boolean } | null>(null);
 
     useEffect(() => {
         // Trigger entrance animation
         setTimeout(() => setIsVisible(true), 50);
     }, []);
+
+    // Cycle 57 P6: reflect whether the score saved to the leaderboard. Only
+    // single-player solo modes submit; the submit path sets
+    // window.__sdsLastSubmit and emits 'leaderboard-submit-result'. Modes that
+    // don't submit (Just Play, sandbox, practice, multiplayer) never fire it,
+    // so the line stays hidden.
+    useEffect(() => {
+        if (mode !== 'single') return;
+        const read = () => {
+            const r = typeof window !== 'undefined' ? (window as { __sdsLastSubmit?: { ok?: boolean } }).__sdsLastSubmit : null;
+            if (r && typeof r.ok === 'boolean') setSubmitStatus({ ok: r.ok });
+        };
+        read(); // in case the submit resolved before this screen mounted
+        return subscribeGameEvent('leaderboard-submit-result', read);
+    }, [mode]);
 
     // Cycle 27 Phase E: revoke the replay blob URL when the screen
     // unmounts so we don't leak the WebM bytes after the player picks
@@ -569,6 +586,22 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                                 t={t}
                             />
                         ))}
+                    </div>
+                )}
+
+                {/* Cycle 57 P6: leaderboard submit status (single-player only). */}
+                {submitStatus && (
+                    <div
+                        style={{
+                            textAlign: 'center',
+                            marginBottom: '12px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: submitStatus.ok ? content.accentColor : alpha(pastoral.cream, 60),
+                            animation: 'slideUp 0.5s ease-out 0.6s both'
+                        }}
+                    >
+                        {submitStatus.ok ? t('completion.scoreSaved') : t('completion.scoreSaveFailed')}
                     </div>
                 )}
 
