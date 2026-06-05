@@ -4,6 +4,24 @@
 
 ## Recently Completed
 
+### Cycle 57 - `playthrough-repair` (closed 2026-06-04)
+
+Plan archived at [`docs/archive/cycles/cycle-57-plan.md`](archive/cycles/cycle-57-plan.md). Repaired the entire end-of-run loop after a real 12-minute soloClassic run on Sheep Dog Island looked lost: it never showed on the leaderboard, returning to the menu froze the screen under a stale overlay, and there was no UI to see or set a leaderboard name. Three independently-rooted prod bugs plus the observability gap that hid them.
+
+**Closeout outcomes (8/8 phases shipped + deployed):**
+
+- **Paused-run anti-cheat fix.** The `client_clock_skew` heuristic compared the pause-subtracted score against a raw wall-clock window, so any run with more than 10s of pause was false-flagged and hidden by the leaderboard `score_anomalies IS NULL` read filter. The worker now credits `pausedMs` before the skew compare (80%-of-window cheat guard, skipped when `pausedMs` is absent for pre-Cycle-57 clients). Commit `3fe441b`.
+- **Menu-return overlay + freeze.** The completion screen mounted in its own React root that nothing tore down, so the menu opened under a ghost overlay. Added `disposeCompletionOverlay()` and a `SceneSwapOverlay` paint-yield cover over the synchronous rebuild; `restartSameMode()` gives a true Play Again. Commit `439f5a5`.
+- **Username UI (gone since Cycle 51).** Auth-gated `POST /api/rename` + `sanitizeDisplayName`/`renamePlayer` on the worker; a Settings display-name view+edit, a saved/could-not-save end-screen line, and an entrance "Playing as {name}" label on the client. Commits `3fe441b` (worker) + `45082d6` (client).
+- **Real-SQLite test harness.** New reusable `tests/worker/helpers/d1-sqlite.ts` (Node `node:sqlite`, applies the committed migrations) + a mock-a-win scenario `tests/worker/score-flow.spec.ts` run the ACTUAL store->read SQL the old canned-row mocks never exercised (the gap that let the incident through), plus a client `pausedMs` payload guard. Commit `35e3036`.
+
+**Validation gates (2026-06-04):** `npm test` 906 passed / 7 skipped / 0 failed; `npm run build` clean (main 547 KiB); CI Deploy green (Test + Deploy Worker + Deploy Pages + E2E); worker live (`/api/rename` -> 401 without a token); prod board clean (0 flagged); incident run id=16 restored. Commits `3fe441b` / `439f5a5` / `45082d6` / `35e3036` + docs `4a42ad0` / `e153e95`.
+
+**Carryover (deferred):**
+
+- **Live in-browser paused-run smoke** (Matt) - the one acceptance not executed against a fresh real run. The logic is proven by the `score-flow.spec.ts` integration test (store->read with a credited pause); the live smoke is confirmation, not a gate.
+- **`ids 2/7/8/14` (display_name "Player") ownership check** - optional forensic: if they share the incident `persistent_id`, a single Settings rename would claim all of Matt's earlier runs at once.
+
 ### Cycle 56 - `entity-collision` (closed 2026-06-04)
 
 Plan archived at [`docs/archive/cycles/cycle-56-plan.md`](archive/cycles/cycle-56-plan.md). The deferred physical-collision half of the session's original notes ("make dog grass and sheep collision better, make collision mesh?") - Cycle 55 did the grass half. Gives the dog a hard body the sheep cannot occupy: a sheep the dog overlaps is pushed out to the sum of body radii, so the dog plows a tight flock instead of ghosting through it. Scoped conservatively to dog-to-sheep; sheep-to-sheep hard-body deferred.
