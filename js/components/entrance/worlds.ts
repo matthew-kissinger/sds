@@ -154,7 +154,10 @@ export function familiesForWorld(worldId: string): ModeFamily[] {
   if (worldId === 'open-country') {
     return [{ id: 'objective', name: 'Objective', gameMode: 'solo', rungs: solo }];
   }
-  const families: ModeFamily[] = [{ id: 'classic', name: 'Classic', gameMode: 'solo', rungs: solo }];
+  // Named "Solo" (not "Classic") so the family chip does not duplicate the
+  // "Classic" difficulty rung inside it - clearer for the player, and it keeps
+  // the entrance's difficulty selectors unambiguous.
+  const families: ModeFamily[] = [{ id: 'solo', name: 'Solo', gameMode: 'solo', rungs: solo }];
   if (sceneOffersCounting(worldId)) {
     families.push({ id: COUNTING_GAME_MODE, name: 'Counting Sheep', gameMode: COUNTING_GAME_MODE, rungs: COUNTING_RUNGS });
   }

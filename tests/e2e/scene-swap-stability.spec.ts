@@ -61,7 +61,9 @@ async function startSoloClassic(page: Page, sceneId = 'field') {
     await page.waitForTimeout(200);
   }
 
-  const classic = page.getByRole('button', { name: /Classic/i });
+  // Cycle 59: match the Classic rung by "Classic <count>" so the mode-family
+  // chip (Solo / Counting Sheep) never collides with this difficulty selector.
+  const classic = page.getByRole('button', { name: /Classic\s+\d/i });
   await expect(classic).toBeVisible({ timeout: 15_000 });
   await classic.dispatchEvent('click');
 

@@ -63,7 +63,9 @@ async function armWorld(page: Page, sceneId: string) {
 
 async function startSoloClassic(page: Page, sceneId: string) {
     await armWorld(page, sceneId);
-    const classic = page.getByRole('button', { name: /Classic/i });
+    // Cycle 59: match the Classic rung by "Classic <count>" so the mode-family
+    // chip (Solo / Counting Sheep) never collides with this difficulty selector.
+    const classic = page.getByRole('button', { name: /Classic\s+\d/i });
     await expect(classic).toBeVisible({ timeout: 30_000 });
     await classic.dispatchEvent('click');
     const play = page.getByRole('button', { name: 'Play', exact: true });

@@ -13,9 +13,9 @@ import { familiesForWorld, modesForWorld } from '../js/components/entrance/world
 import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
 
 describe('familiesForWorld (Cycle 59 P7)', () => {
-    it('Home Field offers Classic (solo) then Counting Sheep (counting)', () => {
+    it('Home Field offers Solo then Counting Sheep (counting)', () => {
         const fams = familiesForWorld('field');
-        expect(fams.map((f) => f.id)).toEqual(['classic', COUNTING_GAME_MODE]);
+        expect(fams.map((f) => f.id)).toEqual(['solo', COUNTING_GAME_MODE]);
         expect(fams[0].gameMode).toBe('solo');
         expect(fams[1].gameMode).toBe(COUNTING_GAME_MODE);
         // Classic rungs are the scene's solo ladder.
@@ -24,9 +24,9 @@ describe('familiesForWorld (Cycle 59 P7)', () => {
         expect(fams[1].rungs.map((r) => r.id)).toEqual(['incremental', 'exponential']);
     });
 
-    it('Rolling Hills also offers Classic + Counting Sheep', () => {
+    it('Rolling Hills also offers Solo + Counting Sheep', () => {
         const fams = familiesForWorld('rolling-hills');
-        expect(fams.map((f) => f.id)).toEqual(['classic', COUNTING_GAME_MODE]);
+        expect(fams.map((f) => f.id)).toEqual(['solo', COUNTING_GAME_MODE]);
         expect(fams[1].rungs.map((r) => r.id)).toEqual(['incremental', 'exponential']);
     });
 

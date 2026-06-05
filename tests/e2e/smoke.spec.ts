@@ -95,7 +95,9 @@ test.describe('SDS smoke', () => {
     // Cycle 51 world-first entrance: pick the Classic difficulty chip on the
     // armed-world panel, then Play. dispatchEvent('click') fires React onClick
     // synchronously without depending on Playwright's hover/stability heuristic.
-    const classic = page.getByRole('button', { name: /Classic/i });
+    // Cycle 59: match the rung by "Classic <count>" so the bare "Solo"/family
+    // chip (added with the mode-family selector) is never ambiguous here.
+    const classic = page.getByRole('button', { name: /Classic\s+\d/i });
     await expect(classic).toBeVisible({ timeout: 30_000 });
     await classic.dispatchEvent('click');
 
