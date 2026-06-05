@@ -4,6 +4,30 @@
 
 ## Recently Completed
 
+### Cycle 60 - `playtest-and-controller` (closed 2026-06-05)
+
+Plan archived at [`docs/archive/cycles/cycle-60-plan.md`](archive/cycles/cycle-60-plan.md). A playtest-readiness cycle: made the whole loop drivable from a controller and stood up a tablet testing baseline so Matt can play and take notes on real hardware. The reframe that shaped it: gamepad GAMEPLAY already existed ([`js/GamepadManager.js`](../js/GamepadManager.js) drives the dog, sprint, camera, and Start-pause); the gap was that the React menus had no focus model at all. Everything shipped is additive - existing mouse and touch paths are untouched. Client-only: no `shared/`, Worker, D1, `SceneDef`, or wire change. Built end-to-end and deployed mid-cycle so Matt could playtest on prod (commit `aaee108`).
+
+**Closeout outcomes (8/8 phases shipped + deployed + playtested):**
+
+- **P1 - tablet baseline.** A dependency-free `?stats=1` on-screen perf chip ([`js/perf/StatsChip.js`](../js/perf/StatsChip.js), lazy), a service-worker private-LAN fix ([`index.html`](../index.html)) so a tablet never serves a stale build mid-iteration, and [`docs/playtest-tablet.md`](playtest-tablet.md). Verified on the real device (SM-X518U, Galaxy Tab S9 FE) over USB via `adb reverse` + `localhost`.
+- **P2 - menu focus core.** One additive primitive: [`js/components/hooks/useMenuNavigation.ts`](../js/components/hooks/useMenuNavigation.ts) over a pure [`js/input/menuNav.js`](../js/input/menuNav.js) (unit-tested in `tests/menu-nav.spec.js`) and an rAF [`js/input/menuGamepad.js`](../js/input/menuGamepad.js) poll, plus a `[data-navfocus]` amber ring in `css/main.css`. Roves native focus with the d-pad / left stick / arrow keys; A or Enter activates, B / Escape backs out. The ring only appears on the first directional input (mouse/touch never see it), and the menu poll is a separate rAF loop from the gameplay poll so there is no double-input.
+- **P3 - entrance.** `useMenuNavigation` on the entrance root: world, family, difficulty, dog, Play, corner nav, and ways-to-play are all controller-reachable.
+- **P4 - pause / completion / HUD.** The hook roves the pause and completion panels; a new `GamepadManager.wasJustPressed` drives in-game buttons - Y cycles the camera (parity with C), X banks a Counting run, Select opens the note box. Gameplay zoom/move stays gated behind `!isPaused`, so no double-action while paused.
+- **P5 - parity audit.** [`docs/cycle-60-controller-parity.md`](cycle-60-controller-parity.md): the core loop (entrance, pause, completion, in-game) is WIRED; settings, leaderboard, editors, and MP are explicitly DEFERRED to mouse/touch.
+- **P6 - playtest notes.** Opt-in (`?notes=1` / `?stats=1`): [`js/playtest/noteLog.js`](../js/playtest/noteLog.js) + [`PlaytestNote.tsx`](../js/components/GameHUD/PlaytestNote.tsx), opened by the N key, gamepad Select, or a right-edge tab; saves the note with session context (scene, mode, round, counted, fps, build) to localStorage and exports all notes as JSON.
+- **P7 - reserved finalize (paired).** Shipped with the prose-clean strawman naming (Solo / Counting Sheep / Objective, Incremental / Exponential, "Bank and finish"); curve constants unchanged. The live Incremental-on-Home-Field leaderboard write was confirmed in Matt's prod playtest.
+- **P8 - validation, docs, close.** Full suite + build green; new files type-clean; docs aligned (DECISIONS, the parity audit, NEXT_SESSION); the bundle ratchet moved main 554 -> 555 KiB for the inline stats + gamepad gates (the focus and note modules are lazy chunks).
+
+**Validation gates (2026-06-05):** `npm test` 983 passed / 7 skipped / 0 failed; `npm run build` clean (main 555 KiB, three.js + every golden unchanged, StatsChip 1.36 kB + PlaytestNote 4.58 kB as lazy chunks); CI Deploy run `27032616554` green (Test + Deploy Worker + Deploy Pages + E2E). **Real-device confirmation:** the prod build verified live on the Tab S9 FE (`sheepdogsim.com/?stats=1`, the perf chip rendering); the first in-game baseline (Rolling Hills / Hard / 200 sheep, low tier) was 37 fps / 27.1 ms / peak 53 ms / ~20k draw calls / 774k tris, so the tablet is draw-call-bound on the hero scene. Matt confirmed the controller end-to-end loop, the live note capture, and the live leaderboard write in a prod playtest.
+
+**Carryover (deferred):**
+
+- **Counting naming + curve-feel** remain a tunable strawman (the family/curve names and the constants in `js/gamestate/countingMode.js`); Matt's standing taste call, not a blocker.
+- **Tablet draw-call perf.** The ~20k draw-call, draw-call-bound hero scene the baseline surfaced is a candidate for a dedicated perf pass (a natural fit for the queued `tablet-perf-pass` idea).
+- **Controller nav for the deferred surfaces** (settings, leaderboard, sandbox/fence/shape editors, MP lobby/rooms) and a 2D row-aware entrance focus order, both per the parity audit.
+- All prior open carryover (the second mode edition, sheep-to-sheep collision, the Cycle 56/55 in-browser feel items, the `/api/rename` no-body 500, the `upload-artifact@v5` Node 20 deprecation) is unchanged and still deferred.
+
 ### Cycle 59 - `counting-sheep` (closed 2026-06-05)
 
 Plan archived at [`docs/archive/cycles/cycle-59-plan.md`](archive/cycles/cycle-59-plan.md). Shipped the first new edition beside the solo path: **Counting Sheep**, a round-based solo mode where the flock grows each round and the running tally is the score (the bedtime pun is the point). Two ranked curves (Incremental = +1 each round, Exponential = doubles each round, both clamped to the proven 5000 ceiling) ship on the two objective-free biomes (Home Field and Rolling Hills); Open Country is excluded because it is a two-stage gather-and-portal objective. It reuses the entire herding loop and changes only when sheep appear and what ends the run. Cashed in the Cycle 58 count-as-identity partition: no D1 migration, no wire change, no version bump. Built end-to-end with all commits held until close (Matt's cadence).
