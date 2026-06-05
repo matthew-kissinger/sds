@@ -1,8 +1,8 @@
-# Next Session - Post-Cycle-56 intake
+# Next Session - Cycle 57 `playthrough-repair` IN PROGRESS
 
 > **Updated:** 2026-06-04
-> **For:** Post-Cycle-56 pickup. No active numbered cycle is open.
-> **Pickup priority:** Confirm the Cycle 57 focus (steam store-prep, sheep-to-sheep collision, or a feel-review follow-up), author [`docs/cycle-57-plan.md`](docs/cycle-57-plan.md) from the template, then `/cycle-start`.
+> **For:** Cycle 57 `playthrough-repair` (OPEN, in progress). Plan: [`docs/cycle-57-plan.md`](docs/cycle-57-plan.md).
+> **Pickup priority:** Continue the Cycle 57 phases (start Phase 1 - leaderboard skew fix). Repairs the end-of-run loop: paused-run leaderboard hiding, menu-return overlay/freeze, username set/view, submit feedback. Single deploy at close.
 
 ## Cold-Start Orientation
 
