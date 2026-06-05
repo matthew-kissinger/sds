@@ -307,7 +307,14 @@ export class GameState {
                             triggered = sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior(), this.getPastureForSheepBehavior());
                         }
                         if (triggered) {
-                            this.sheepRetired++;
+                            // Cycle 58 P1: do NOT count the sheep here. The
+                            // "count all passed/retiring" pass below is the single
+                            // authoritative tally. Incrementing here too counted a
+                            // freshly-retired sheep twice on its retire frame, so
+                            // sheepRetired reached the flock size one tail-sheep
+                            // early and isSoloComplete fired with a sheep still in
+                            // the field (the "199 of 200" completion). Keep only
+                            // the one-shot side effects (chime + corral zap).
                             if (this.audioManager) {
                                 this.audioManager.playRewardingChime();
                             }

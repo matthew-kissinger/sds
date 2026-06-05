@@ -212,6 +212,10 @@ Durable stops apply ([`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md)). Cycle-specific
 - [ ] When a player is auto-named and saves a score, the completion screen shall offer a non-blocking name field (Phase 8).
 - [ ] When the entrance is shown, the player shall be able to set a name without being required to (Phase 8).
 
+## Progress
+
+- **Phase 1 — completion-count fix: shipped (local).** Dropped the redundant `sheepRetired++` in the `triggered` branch of [`js/GameState.js`](../js/GameState.js); the count-all-retired pass is now the single tally. New regression spec [`tests/completion-count.spec.js`](../tests/completion-count.spec.js) (4 cases) reproduces the "2 of 3" symptom and asserts a run does not complete with a sheep still out, plus the no-double-count and exact-completion invariants. `npm test` 910 pass / 0 fail (+4); gamestate refactor-baseline fixtures unchanged. Client/solo-only; worker MP path (shared strict `checkGameCompletion`) untouched.
+
 ## References
 
 - [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) — this template
