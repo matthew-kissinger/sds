@@ -5,22 +5,36 @@
  * Cycle 9 Phase 3 — real macOS Safari smoke runner.
  *
  * Drives Safari via safaridriver (no Playwright; Playwright's bundled WebKit
- * is not real Safari). For each scene, we:
- *   1. navigate to ?scene=<id>&debug=gl with a seeded player identity in
- *      localStorage so the start-screen welcome modal is skipped
- *   2. capture the start-screen render + diag once shaders/atmosphere have
- *      had time to bind (`startScreen.png`, sample label='startScreen')
- *   3. click Solo Play -> Confirm Selection -> Classic Mode to enter
- *      gameplay, wait for the in-game canvas to settle, capture the
- *      in-game render + diag again (`inGame.png`, sample label='inGame')
+ * is not real Safari). This catches the class of rendering bugs that
+ * ANGLE-on-Metal exposes (terrain shader FBM precision, water render-target
+ * alloc, sky shader) which the bundled WebKit does not, since it doesn't use
+ * Metal.
  *
- * The first run on real Safari (artifact 25023642777) confirmed the
- * `white ground / no sun / no water` bug does NOT manifest at boot — the
- * start-screen background renders correctly. The bug is gated on the
- * gameplay transition, which is what this runner now exercises.
+ * Flow (Cycle 58 update — was stale since the Cycle 51 entrance rework):
+ *   1. Boot ONCE through the world-first entrance. Identity is deferred (no
+ *      name gate), so the armed-world panel is the first interactive surface;
+ *      its `Play` button commits and builds the default world (Rolling Hills,
+ *      Classic). We seed a player identity defensively so no identity surface
+ *      can intercept. `?debug=gl` installs window.__sdsDiag + the sampler.
+ *   2. For each requested scene, swap to it IN-ENGINE via window.__sdsSwapTo
+ *      (always installed on the first scene build, js/boot/debugProbes.js).
+ *      Each swap runs disposeScene + rebuildScene + _buildSceneBody, so it
+ *      fully re-exercises that biome's terrain / water / sky / grass render
+ *      path — exactly what this smoke exists to verify on real Metal.
+ *   3. After each swap, assert window.__sdsSwapProbe().scene landed, let the
+ *      shaders/atmosphere/water settle, trigger the framebuffer sample, and
+ *      capture the in-game render + diag (`<scene>-inGame.png`).
  *
- * Runs only on macOS. On other platforms it exits 0 with a skip message
- * so it can be invoked locally without errors.
+ * Why no `?scene=` deep-link and no "Solo Play -> Confirm -> Classic Mode"
+ * click chain any more: the Cycle 51 world-first entrance removed those
+ * buttons and always lands on Rolling Hills regardless of the URL. Driving the
+ * in-engine swap harness is both robust (no per-biome label differences, no
+ * next-world click counting) and a stronger render exercise than the old
+ * start-screen sample, since the entrance is now a static image, not a live
+ * 3D scene.
+ *
+ * Runs only on macOS. On other platforms it exits 0 with a skip message so it
+ * can be invoked locally without errors.
  */
 
 import { promises as fs } from 'node:fs';
@@ -55,6 +69,13 @@ const driver = await new Builder()
   .setSafariOptions(new safari.Options())
   .build();
 
+// __sdsSwapTo awaits a full scene rebuild; give the async script room on a
+// cold Metal context before selenium's default 30s script timeout trips.
+await driver.manage().setTimeouts({ script: 60_000 });
+
+// Identity is deferred in the Cycle 51 entrance (no name gate), so this is
+// belt-and-suspenders: it guarantees no first-run identity surface can sit in
+// front of the armed-world panel.
 const SEED_IDENTITY_SCRIPT = `
   const identity = {
     persistentId: 'player_safari_smoke_' + Date.now(),
@@ -101,89 +122,119 @@ async function pullRendererInfo() {
   `);
 }
 
+/** Poll a JS truthiness expression until it holds or the timeout elapses. */
+async function waitForJs(expr, timeoutMs, label) {
+  const start = Date.now();
+  let lastErr = null;
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const ok = await driver.executeScript(`return !!(${expr});`);
+      if (ok) return true;
+    } catch (e) {
+      lastErr = e;
+    }
+    await driver.sleep(500);
+  }
+  throw new Error(`timeout (${timeoutMs}ms) waiting for ${label || expr}` + (lastErr ? ` (last: ${lastErr.message})` : ''));
+}
+
 /**
- * Click a button by its visible text. Uses XPath because Safari's
- * WebDriver doesn't support :has-text() pseudo-selector and React-rendered
- * buttons here have no test IDs.
+ * Swap to a scene in-engine and return the scene the probe reports landing on
+ * (or an 'ERROR:<msg>' string). Uses executeAsyncScript because the swap is a
+ * promise (full dispose + rebuild).
  */
-async function clickByText(text, timeoutMs = 15_000) {
-  const xpath = `//button[contains(., ${JSON.stringify(text)})]`;
+async function swapTo(sceneId) {
+  return driver.executeAsyncScript(function () {
+    var id = arguments[0];
+    var done = arguments[arguments.length - 1];
+    if (typeof window.__sdsSwapTo !== 'function') { done('ERROR:no-swap-harness'); return; }
+    Promise.resolve(window.__sdsSwapTo(id)).then(function () {
+      var probe = window.__sdsSwapProbe ? window.__sdsSwapProbe() : null;
+      done(probe ? probe.scene : id);
+    }).catch(function (e) {
+      done('ERROR:' + (e && e.message ? e.message : String(e)));
+    });
+  }, sceneId);
+}
+
+async function pullSwapProbe() {
+  const json = await driver.executeScript(
+    'return JSON.stringify(window.__sdsSwapProbe ? window.__sdsSwapProbe() : null);'
+  );
+  return JSON.parse(json);
+}
+
+/**
+ * Click the entrance Play button. The button is `<Icon/> Play`; the Icon svg
+ * is aria-hidden with no text node, so the button's text value is exactly
+ * "Play". An exact match avoids "Just Play" (a difficulty chip), "Play online"
+ * (a secondary way), and "Playing as ..." (the name affordance).
+ */
+async function clickPlay(timeoutMs = 30_000) {
+  const xpath = '//button[normalize-space(.)="Play"]';
   const el = await driver.wait(until.elementLocated(By.xpath(xpath)), timeoutMs);
   await driver.wait(until.elementIsVisible(el), timeoutMs);
   await el.click();
 }
 
 try {
-  for (const sceneId of scenes) {
-    const url = sceneId === 'field'
-      ? `${baseUrl}/?debug=gl`
-      : `${baseUrl}/?scene=${encodeURIComponent(sceneId)}&debug=gl`;
-    console.log(`\n[safari-smoke] ${sceneId} -> ${url}`);
+  // ---- Boot once through the entrance into gameplay. ----
+  const bootUrl = `${baseUrl}/?debug=gl`;
+  console.log(`[safari-smoke] boot -> ${bootUrl}`);
+  // Seed identity BEFORE the real navigation so no identity surface renders.
+  // localStorage needs an established origin first, hence the priming get().
+  await driver.get(baseUrl);
+  await driver.executeScript(SEED_IDENTITY_SCRIPT);
+  await driver.get(bootUrl);
 
-    const sceneOut = { url, status: 'pending', stages: {} };
+  // Commit the default armed world (Rolling Hills / Classic). This builds the
+  // first scene, which is where __sdsSwapTo + the GL canvas come up.
+  await clickPlay();
+
+  await driver.wait(until.elementLocated(By.css('#canvas-container canvas')), 60_000);
+  await waitForJs("typeof window.__sdsSwapTo === 'function'", 120_000, 'swap harness install');
+  await waitForJs("window.__sdsSwapProbe && window.__sdsSwapProbe().sheep && window.__sdsSwapProbe().sheep.count > 0", 30_000, 'flock populate');
+
+  // ---- Per-scene: swap in-engine, settle, capture. ----
+  for (const sceneId of scenes) {
+    console.log(`\n[safari-smoke] ${sceneId}: swap + capture`);
+    const sceneOut = { status: 'pending', stages: {} };
 
     try {
-      // Seed identity BEFORE navigation so React's identity-setup branch
-      // doesn't render. We have to navigate first to satisfy localStorage's
-      // same-origin policy, then refresh.
-      await driver.get(baseUrl);
-      await driver.executeScript(SEED_IDENTITY_SCRIPT);
-      await driver.get(url);
-
-      await driver.wait(until.elementLocated(By.css('canvas')), 30_000);
-      // Wait for shaders/atmosphere/heightfield to bind. RH and OC's
-      // heightfield + water init takes longer than Field's flat
-      // setup; 8s is enough for both. (The first run showed OC's
-      // terrain.created firing after the auto-sample at frame 240, which
-      // means the auto-sample read sky pixels instead of ground.)
-      await driver.sleep(8_000);
-
-      // Trigger the startScreen sample explicitly so we don't depend on
-      // the 240-frame auto-sample's timing (rAF is throttled to ~30fps
-      // under safaridriver, so frame counts drift).
-      await driver.executeScript("window.__sdsCaptureSample && window.__sdsCaptureSample('startScreen');");
-
-      sceneOut.stages.startScreen = {
-        screenshot: await takeScreenshotTo(`${sceneId}-startScreen.png`),
-        renderer: await pullRendererInfo(),
-      };
-
-      // Click through to gameplay: Solo Play -> Confirm Selection -> Classic Mode.
-      // ScenePicker may need to re-pick the scene; ?scene= URL is honored
-      // pre-React-mount, so it's already loaded the right scene.
-      try {
-        await clickByText('Solo Play');
-        await clickByText('Confirm Selection');
-        await clickByText('Classic Mode');
-      } catch (err) {
-        sceneOut.stages.startScreen.clickError = String(err?.message || err);
-        // Try a fallback path: maybe the ScenePicker is in front of the
-        // mode selection on this layout.
-        console.warn(`[safari-smoke] ${sceneId}: click chain failed at`, err?.message);
-        throw err;
+      const landed = await swapTo(sceneId);
+      if (typeof landed === 'string' && landed.startsWith('ERROR:')) {
+        throw new Error(`__sdsSwapTo failed: ${landed.slice(6)}`);
+      }
+      if (landed !== sceneId) {
+        throw new Error(`swap landed on '${landed}', expected '${sceneId}'`);
       }
 
-      // Wait for the game canvas to settle (sheep spawn, terrain bake,
-      // grass culling, water shader bind), then explicitly trigger the
-      // inGame sample. Same reason as startScreen — the 240-frame
-      // auto-sample timing isn't reliable under safaridriver.
+      // Let shaders/atmosphere/water bind on the freshly built scene. RH and
+      // OC's heightfield + water init takes longer than Field's flat setup; 8s
+      // covers both. rAF is throttled to ~30fps under safaridriver, so we wait
+      // on wall time rather than frame counts.
       await driver.sleep(8_000);
-      await driver.executeScript("window.__sdsCaptureSample && window.__sdsCaptureSample('inGame');");
+
+      // Trigger the framebuffer sample explicitly (the 240-frame auto-sample
+      // timing is unreliable under safaridriver's throttled rAF).
+      await driver.executeScript(
+        "window.__sdsCaptureSample && window.__sdsCaptureSample(arguments[0]);",
+        sceneId,
+      );
 
       sceneOut.stages.inGame = {
         screenshot: await takeScreenshotTo(`${sceneId}-inGame.png`),
+        renderer: await pullRendererInfo(),
+        probe: await pullSwapProbe(),
       };
-
-      // Pull the FINAL diag (now includes both startScreen and inGame
-      // framebuffer samples + any GL errors that fired in-game).
       sceneOut.diag = await pullDiag();
       sceneOut.status = 'ok';
     } catch (err) {
       sceneOut.status = 'error';
       sceneOut.error = String(err?.stack || err);
-      // Try to pull whatever diag was captured before the error so we
-      // still get partial telemetry.
+      // Pull whatever diag/probe exists for partial telemetry.
       try { sceneOut.diag = await pullDiag(); } catch {}
+      try { sceneOut.probe = await pullSwapProbe(); } catch {}
       try {
         sceneOut.stages.errorScreenshot = await takeScreenshotTo(`${sceneId}-error.png`);
       } catch {}
@@ -191,6 +242,19 @@ try {
     }
 
     summary.scenes[sceneId] = sceneOut;
+  }
+} catch (bootErr) {
+  // A boot failure (entrance never came up, Play never resolved, harness never
+  // installed) marks every requested scene as failed so the job goes red.
+  console.error('[safari-smoke] boot failed:', bootErr);
+  summary.bootError = String(bootErr?.stack || bootErr);
+  try {
+    summary.bootScreenshot = await takeScreenshotTo('boot-error.png');
+  } catch {}
+  for (const sceneId of scenes) {
+    if (!summary.scenes[sceneId]) {
+      summary.scenes[sceneId] = { status: 'error', error: 'boot failed before scene swap' };
+    }
   }
 } finally {
   await driver.quit();
@@ -204,4 +268,4 @@ await fs.writeFile(
 
 const failed = Object.values(summary.scenes).filter(s => s.status !== 'ok');
 console.log(`\n[safari-smoke] Done. ok=${scenes.length - failed.length} fail=${failed.length}`);
-if (failed.length > 0) process.exit(1);
+if (failed.length > 0 || summary.bootError) process.exit(1);
