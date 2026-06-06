@@ -191,10 +191,21 @@ export class Wolf {
         this.model.position.set(0, 0, 0);
 
         this.model.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-                if (child.material) child.material.fog = true;
+            if (!child.isMesh) return;
+            child.castShadow = true;
+            child.receiveShadow = true;
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            for (const m of mats) {
+                if (!m) continue;
+                m.fog = true;
+                // The Quaternius export ships metalness 0.4 (an FBX2glTF default).
+                // The game scene has no environment map, so a metallic surface
+                // with nothing to reflect renders flat and ~40% too dark. The dog
+                // rigs are metalness 0; match them so the wolf reads correctly in
+                // real scene lighting (and the harness) without needing IBL. Its
+                // colour is four flat baseColorFactors (textureless), shown
+                // faithfully at metalness 0.
+                m.metalness = 0;
             }
         });
         this.mesh.add(this.model);

@@ -71,7 +71,10 @@ export default defineConfig({
     htmlRuntimeConfigPlugin(),
     viteStaticCopy({
       targets: [
-        { src: 'assets/*', dest: 'assets' },
+        // Exclude assets/_originals (the gitignored pristine GLB bake sources,
+        // ~40 MB locally). It never ships from CI since it isn't committed, but
+        // a local `wrangler deploy dist` would otherwise bundle it. Guard it.
+        { src: ['assets/*', '!assets/_originals'], dest: 'assets' },
         { src: 'node_modules/three/build/three.webgpu.min.js', dest: 'assets/vendor/three' },
         { src: 'node_modules/three/build/three.core.min.js', dest: 'assets/vendor/three' },
         {

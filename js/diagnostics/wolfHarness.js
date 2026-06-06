@@ -96,6 +96,10 @@ export async function mountWolfHarness() {
 
     const scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0x9fb8c8, 18, 60);
+    // No environment map by design: the game scene has no IBL either, so the
+    // harness stays a faithful preview of the in-game look. The wolf reads
+    // correctly here because js/Wolf.js sets its materials to metalness 0 (the
+    // dog-rig treatment); see the material traversal there.
 
     const camera = new THREE.PerspectiveCamera(
         45,
@@ -200,6 +204,23 @@ export async function mountWolfHarness() {
     };
     window.addEventListener('resize', onResize);
 
+    // Manual one-shot triggers so a human can fire the predator beats on demand.
+    // The scripted timeline fires them too, but waiting ~20s to see Attack is
+    // tedious when inspecting the asset. A = Attack (auto-returns to the gait);
+    // K = Death (the existing revive loop brings the wolf back ~3s later, once
+    // the death bookkeeping below is armed).
+    const onKeyDown = (e) => {
+        const k = e.key.toLowerCase();
+        if (k === 'a') {
+            wolf.triggerAttack();
+        } else if (k === 'k') {
+            wolf.triggerDeath();
+            surface.diedAt = surface.elapsed; // arm the revive
+            deathFired = true;
+        }
+    };
+    window.addEventListener('keydown', onKeyDown);
+
     const tick = () => {
         if (!running) return;
         rafId = requestAnimationFrame(tick);
@@ -250,13 +271,15 @@ export async function mountWolfHarness() {
             `Wolf harness (?wolf=1) - ASSET-ONLY, not a game mode\n` +
             `state: ${wolf.currentState}   clip: ${surface.clip() ?? '-'}\n` +
             `speed: ${wolf.speed.toFixed(1)} u/s   frames: ${surface.frames}` +
-            (wolf.isDead ? '   [DEAD - reviving]' : '');
+            (wolf.isDead ? '   [DEAD - reviving]' : '') +
+            `\nkeys: A = attack   K = death`;
     };
 
     surface.dispose = () => {
         running = false;
         cancelAnimationFrame(rafId);
         window.removeEventListener('resize', onResize);
+        window.removeEventListener('keydown', onKeyDown);
         wolf?.dispose?.();
         renderer.dispose();
         renderer.domElement.remove();
