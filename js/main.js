@@ -25,6 +25,7 @@ import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
 import { Heightfield } from '../shared/terrain/Heightfield.js';
 import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
+import { applyBarkImpulse, DEFAULT_BARK_CONFIG } from '../shared/BarkImpulse.js';
 import { Atmosphere } from './atmosphere/index.js';
 import { updateSceneMetadata } from './utils/seo.js';
 // Cycle 17 Phase 7: local-multiplayer modules dynamic-imported in
@@ -2167,7 +2168,22 @@ class SheepDogSimulation {
             let movementDirection = this.inputHandler.getMovementDirection();
             let wantsSprint = this.inputHandler.isSprinting();
             const sheepdog = this.gameState.getSheepdog();
-            
+
+            // Cycle 61 P3/P4: player bark command. Space + the mobile button feed
+            // consumeBark(); gamepad RB is edge-polled like the Cycle 60 buttons.
+            // triggerPlayerBark() is cooldown-gated (the single bark gate) and
+            // returns true only when it actually fires. On a fired bark we drive
+            // the deterministic sheep impulse locally for solo; multiplayer sends
+            // the bark edge to the authoritative DO instead (P5 reads
+            // _barkFiredThisFrame into the next playerInput payload).
+            const barkPressed = this.inputHandler.consumeBark() || gamepad.wasJustPressed('RB');
+            const barkFired = barkPressed && !!sheepdog && sheepdog.triggerPlayerBark();
+            if (barkFired && !(this.isMultiplayer && this.networkManager)) {
+                applyBarkImpulse(this.gameState.getSheep(), sheepdog.position,
+                    sheepdog.getBarkForward(), DEFAULT_BARK_CONFIG);
+            }
+            this._barkFiredThisFrame = barkFired;
+
             // Store original direction for debugging (reused object — only read
             // synchronously by the competitive-mode log below).
             const originalDirection = this._dbgOriginalDir;
@@ -2213,12 +2229,16 @@ class SheepDogSimulation {
                 // (msgpack-encodes before returning), so mutating it next frame
                 // can't alter an already-sent value. Same shape/values as before:
                 // clientPosition is the position object only when stopping, else null.
-                if (isMovingNow || this.playerWasMoving) {
+                if (isMovingNow || this.playerWasMoving || this._barkFiredThisFrame) {
                     const payload = this._mpInputPayload;
                     payload.direction.x = movementDirection.x;
                     payload.direction.z = movementDirection.z;
                     payload.sprint = wantsSprint;
                     payload.timestamp = performance.now();
+                    // Cycle 61 P5: carry the one-shot bark edge to the authoritative
+                    // DO, which applies the impulse + broadcasts. A standing bark
+                    // forces this send even when the dog is not moving.
+                    payload.bark = this._barkFiredThisFrame;
                     // Send client position when stopping for server reconciliation
                     if (!isMovingNow && this.playerWasMoving) {
                         const cp = this._mpClientPos;
@@ -3162,6 +3182,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         import('./diagnostics/webgpuDiagnostic.js')
             .then((m) => m.boot())
             .catch((err) => window.__sdsG.error = err?.message || err);
+        return;
+    }
+
+    // Cycle 61 Phase 6: `?wolf=1` mounts the standalone wolf verification
+    // harness (js/Wolf.js loader + animation state machine) and short-circuits
+    // the normal game boot. The wolf is ASSET-ONLY this cycle. It is wired into
+    // no game mode; this isolated harness is the only place it renders. Lazily
+    // imported so it ships nothing to normal players. See docs/wolf-asset.md.
+    if (new URLSearchParams(location.search).get('wolf') === '1') {
+        import('./diagnostics/wolfHarness.js')
+            .then((m) => m.mountWolfHarness())
+            .catch((err) => console.error('[WOLF-HARNESS] mount failed:', err));
         return;
     }
 

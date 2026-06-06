@@ -41,7 +41,7 @@ import {
     round4
 } from './harness.js';
 // @ts-expect-error - shared module, no types
-import { loadScene, createObjective, tickObjective, isCorralOpen } from '../../shared/index.js';
+import { loadScene, createObjective, tickObjective, isCorralOpen, applyBarkImpulse, DEFAULT_BARK_CONFIG } from '../../shared/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = resolve(__dirname, '__fixtures__');
@@ -497,6 +497,55 @@ describe('60Hz simulation baseline', () => {
         const meanXStart = trace[0].sheep.reduce((a, s) => a + s.x, 0) / 50;
         const meanXEnd = trace[60].sheep.reduce((a, s) => a + s.x, 0) / 50;
         expect(meanXEnd).toBeLessThan(meanXStart);
+
+        expect(trace).toEqual(expected);
+    });
+
+    // Cycle 61 Phase 4: deterministic bark impulse trace. New fixture
+    // (bark-impulse-60hz.json), recorded here as intended NEW behavior. The
+    // no-bark fixtures above are untouched - applyBarkImpulse is only ever
+    // called on a fired bark, so they regenerate byte-identical. This trace
+    // pins the bark cone/range/falloff math and its interaction with the
+    // flee/flock integration over 15 ticks.
+    it('bark impulse: a fired bark drives the in-cone flock forward', () => {
+        // Dog at origin facing +z. A 5x5 cluster centered ahead at (0, 5): near
+        // rows sit inside the 12m range and the 50-degree forward cone, the wide
+        // corners fall outside the cone. Bark fires once at tick 5.
+        const sheep = makeDeterministicFlock(25, 0, 5, 1.5);
+        const dog = makeSheepdog('p1', 0, 0);
+        const state = makeCoopGameState();
+        const forward = { x: 0, z: 1 };
+        const BARK_TICK = 5;
+
+        const snapshot = () => sheep.map(s => ({
+            id: s.id,
+            x: round4(s.position.x),
+            z: round4(s.position.z),
+            vx: round4(s.velocity.x),
+            vz: round4(s.velocity.z)
+        }));
+
+        const trace: Array<{ tick: number; pushed: number; sheep: ReturnType<typeof snapshot> }> = [
+            { tick: 0, pushed: 0, sheep: snapshot() }
+        ];
+
+        for (let t = 1; t <= 15; t++) {
+            let pushed = 0;
+            if (t === BARK_TICK) {
+                pushed = applyBarkImpulse(sheep, dog.position, forward, DEFAULT_BARK_CONFIG);
+            }
+            tickSheepCoop(sheep, [dog], state, DT);
+            trace.push({ tick: t, pushed, sheep: snapshot() });
+        }
+
+        const expected = loadOrWriteFixture('bark-impulse-60hz.json', trace) as typeof trace;
+
+        expect(trace).toHaveLength(16);
+        // Sanity: the bark reached part of the flock but not all of it (the wide
+        // corners are outside the cone).
+        const barkRow = trace[BARK_TICK];
+        expect(barkRow.pushed).toBeGreaterThan(0);
+        expect(barkRow.pushed).toBeLessThan(25);
 
         expect(trace).toEqual(expected);
     });

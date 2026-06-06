@@ -6,6 +6,7 @@ import { Vector2D } from './Vector2D.js';
 import { getTerrainBuilder, getSceneManager, getGameState } from './GameBridge.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
+import { DEFAULT_BARK_CONFIG } from '../shared/BarkImpulse.js';
 
 // Cycle 6 Phase 2 — dog obstacle hard push-out (treat trunks like fences).
 // Cycle 7 Phase 1b — force-based pre-contact avoidance gentler than sheep
@@ -110,6 +111,11 @@ export class Sheepdog {
         this.position = new Vector2D(x, z);
         this.velocity = new Vector2D(0, 0);
         this.targetVelocity = new Vector2D(0, 0);
+
+        // Cycle 61 P4: latched facing unit vector for the bark impulse. Updated
+        // from velocity while moving (sqrt-normalize, no trig) and held when the
+        // dog stops, so a standing bark still drives sheep where the dog points.
+        this._barkForward = { x: 0, z: 1 };
         // Per-frame scratch reused inside move() to compute the velocity
         // delta in place (targetVelocity - velocity) * (accel * dt). Avoids
         // two Vector2D allocations per frame. Math is identical: same
@@ -168,6 +174,12 @@ export class Sheepdog {
         this.lastBarkTime = 0;
         this.barkCooldown = 3000;
         this.nearSheep = false;
+
+        // Cycle 61 P3: player-triggered bark command. Separate cooldown from the
+        // passive near-sheep audio above; this gate is the single bark limiter
+        // (Q2) and also fronts the deterministic sheep impulse added in P4.
+        this.lastPlayerBarkTime = 0;
+        this.playerBarkCooldown = DEFAULT_BARK_CONFIG.cooldownMs;
         
         // Performance tracking
         this._lastLogTime = 0;
@@ -599,6 +611,39 @@ export class Sheepdog {
             this.animationSystem.barkTimer = ANIMATION_STATES.BARKING.duration * 1000;
             this.transitionToState('BARKING');
         }
+    }
+
+    /**
+     * Cycle 61 P3: player bark command. Plays the bark animation + sound on
+     * demand, gated by playerBarkCooldown so it cannot be spammed. Returns true
+     * only when it actually fired (cooldown elapsed) so the caller can apply the
+     * deterministic sheep impulse (P4) and send the MP bark edge (P5); false
+     * while still cooling down.
+     */
+    triggerPlayerBark() {
+        const now = Date.now();
+        if (now - this.lastPlayerBarkTime < this.playerBarkCooldown) return false;
+        this.lastPlayerBarkTime = now;
+        this.triggerBark();
+        if (this.audioManager) this.audioManager.playSheepdogBark(this.dogType);
+        return true;
+    }
+
+    /**
+     * Cycle 61 P4: unit vector of the dog's facing for the bark impulse. Tracks
+     * the live velocity direction while moving and latches the last facing when
+     * stopped. Pure sqrt-normalize (no trig), matching the deterministic bark
+     * module's contract. Returns a reused object - do not retain it.
+     */
+    getBarkForward() {
+        const vx = this.velocity.x;
+        const vz = this.velocity.z;
+        const sp = Math.sqrt(vx * vx + vz * vz);
+        if (sp > 0.01) {
+            this._barkForward.x = vx / sp;
+            this._barkForward.z = vz / sp;
+        }
+        return this._barkForward;
     }
     
     /**

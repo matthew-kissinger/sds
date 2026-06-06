@@ -127,7 +127,7 @@ Add the directional push on sheep. A new module `shared/BarkImpulse.js` exports 
 
 - When bark fires, then sheep inside the forward cone shall receive a forward impulse scaled by distance, and sheep outside the cone/range shall be unaffected.
 - When the no-bark sim-baseline fixtures regenerate, they shall be byte-identical to the committed traces.
-- When a new `tests/sim-baseline/__fixtures__/bark-*.json` is added, this plan's Acceptance shall record it as intended new behavior.
+- When a new `tests/sim-baseline/__fixtures__/bark-*.json` is added, this plan's Acceptance shall record it as intended new behavior. SHIPPED: `bark-impulse-60hz.json` (a 15-tick trace of a bark driving a 25-sheep cluster forward) is added as intended new behavior. The 8 pre-existing no-bark fixtures regenerate byte-identical, proven by running `UPDATE_FIXTURES=true` over all fixtures and confirming `git status` shows only the new bark fixture.
 - When `npm test` runs, the bark-scenario spec shall pass and assert the cone/falloff shape.
 
 ## Phase 5 - Bark over the wire (MP authority) (~3hr)

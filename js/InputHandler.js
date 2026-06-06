@@ -10,7 +10,8 @@ const DEFAULT_BINDINGS = {
     moveLeft: 'KeyA',
     moveRight: 'KeyD',
     sprint: 'ShiftLeft',
-    pause: 'Escape'
+    pause: 'Escape',
+    bark: 'Space'
 };
 
 /**
@@ -42,6 +43,12 @@ export class InputHandler {
         // (cycle modes) and right-mouse-drag yaw input in Free mode.
         this.cameraController = null;
         this.rightMouseDown = false;
+
+        // Cycle 61 P3: one-shot bark command edge. Keyboard Space and the mobile
+        // 'sds-bark' event queue it here; consumeBark() drains it once per frame
+        // (gamepad RB is polled separately in the main loop).
+        this.barkRequested = false;
+        this._barkKeyHeld = false;
 
         // Load saved bindings
         this.loadKeyBindings();
@@ -93,6 +100,9 @@ export class InputHandler {
             this.updateKeyBindings(event.detail);
         });
 
+        // Cycle 61 P3: the mobile bark button dispatches this; queue a one-shot bark.
+        window.addEventListener('sds-bark', () => { this.barkRequested = true; });
+
         // Keydown event
         window.addEventListener('keydown', (event) => {
             const code = event.code;
@@ -120,6 +130,24 @@ export class InputHandler {
             if (action && action in this.actions) {
                 this.actions[action] = true;
                 event.preventDefault();
+            }
+
+            // Cycle 61 P3: bark is a one-shot command, not a held action. Edge-
+            // detect with _barkKeyHeld so key-repeat can't machine-gun it. Skip
+            // when a menu/interactive element is focused so Space still activates
+            // it (the entrance/pause use native focus from Cycle 60).
+            if (code === this.keyBindings.bark) {
+                const ae = document.activeElement;
+                const interactive = !!ae && (ae.tagName === 'BUTTON' || ae.tagName === 'A' ||
+                    ae.tagName === 'INPUT' || ae.tagName === 'SELECT' || ae.tagName === 'TEXTAREA' ||
+                    ae.isContentEditable);
+                if (!interactive) {
+                    if (!this._barkKeyHeld) {
+                        this.barkRequested = true;
+                        this._barkKeyHeld = true;
+                    }
+                    event.preventDefault();
+                }
             }
 
             // Also handle Shift variants (left/right)
@@ -156,6 +184,11 @@ export class InputHandler {
                 event.preventDefault();
             }
 
+            // Cycle 61 P3: release the bark edge so the next press re-arms it.
+            if (code === this.keyBindings.bark) {
+                this._barkKeyHeld = false;
+            }
+
             // Also handle Shift variants
             if (code === 'ShiftLeft' || code === 'ShiftRight') {
                 if (this.keyBindings.sprint === 'ShiftLeft' || this.keyBindings.sprint === 'ShiftRight') {
@@ -171,6 +204,9 @@ export class InputHandler {
                 this.actions[action] = false;
             }
             this.rightMouseDown = false;
+            // Cycle 61 P3: clear any half-held bark edge on focus loss.
+            this.barkRequested = false;
+            this._barkKeyHeld = false;
         });
 
         this.setupMouseCameraControls();
@@ -332,6 +368,17 @@ export class InputHandler {
                                this.mobileControls.getIsSprinting();
 
         return keyboardSprinting || mobileSprinting;
+    }
+
+    /**
+     * Cycle 61 P3: consume a queued one-shot bark command. Returns true at most
+     * once per physical press (keyboard Space or the mobile 'sds-bark' event);
+     * gamepad RB is edge-polled separately in the main loop. Drained per frame.
+     */
+    consumeBark() {
+        if (!this.barkRequested) return false;
+        this.barkRequested = false;
+        return true;
     }
 
     // Check if game is paused

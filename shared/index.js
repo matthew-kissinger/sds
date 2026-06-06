@@ -74,6 +74,12 @@ export {
     MAX_DOG_SHEEP_PUSH_PER_TICK
 } from './EntityCollision.js';
 
+// Cycle 61 Phase 4: deterministic bark impulse. The dog's bark drives sheep in
+// the dog's facing direction; called from the Worker authoritative tick, the
+// client predictor/solo path, and the sim-baseline harness so solo and MP agree.
+// Additive - with no bark fired on a tick the sim is byte-identical to pre-bark.
+export { applyBarkImpulse, DEFAULT_BARK_CONFIG } from './BarkImpulse.js';
+
 // Game state validation and management
 export {
     updateSheepRetirements,

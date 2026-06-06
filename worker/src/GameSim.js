@@ -37,7 +37,9 @@ import {
     createObjective,
     tickObjective,
     isCorralOpen,
-    resolveDogSheepCollisions
+    resolveDogSheepCollisions,
+    applyBarkImpulse,
+    DEFAULT_BARK_CONFIG
 } from '../../shared/index.js';
 import { mulberry32 } from '../../shared/Random.js';
 
@@ -298,7 +300,14 @@ export class GameSimulation {
                 // Player input tracking
                 inputSequence: 0,
                 lastInputTime: 0,
-                pendingInputs: []
+                pendingInputs: [],
+
+                // Cycle 61 P5: bark state. barkForward latches the facing unit
+                // vector (velocity-normalized, no trig) for the deterministic
+                // impulse; lastBarkTime gates the server-side bark cooldown
+                // (anti-spam trust boundary, authoritative over the client).
+                barkForward: { x: 0, z: 1 },
+                lastBarkTime: 0
             };
 
             this.sheepdogs.set(playerId, sheepdog);
@@ -494,6 +503,29 @@ export class GameSimulation {
         
         sheepdog.stamina = staminaResult.current;
         sheepdog.isSprinting = staminaResult.isConsuming;
+
+        // Cycle 61 P5: server-authoritative bark. The optional `bark` edge drives
+        // the deterministic forward impulse on the flock, cooldown-gated
+        // server-side (anti-spam; authoritative over the client's own predicted
+        // cooldown). Forward is derived trig-free: the live velocity direction
+        // when moving, else the freshly-sent input direction, else the latched
+        // facing - matching the shared bark module's determinism contract.
+        if (input.bark === true) {
+            const nowMs = Date.now();
+            if (nowMs - sheepdog.lastBarkTime >= DEFAULT_BARK_CONFIG.cooldownMs) {
+                sheepdog.lastBarkTime = nowMs;
+                const sp = sheepdog.velocity.magnitude();
+                if (sp > 0.01) {
+                    sheepdog.barkForward.x = sheepdog.velocity.x / sp;
+                    sheepdog.barkForward.z = sheepdog.velocity.z / sp;
+                } else if (targetVelocity.magnitude() > 0) {
+                    const t = targetVelocity.magnitude();
+                    sheepdog.barkForward.x = targetVelocity.x / t;
+                    sheepdog.barkForward.z = targetVelocity.z / t;
+                }
+                applyBarkImpulse(this.gameState.sheep, sheepdog.position, sheepdog.barkForward, DEFAULT_BARK_CONFIG);
+            }
+        }
     }
 
     updateSheepdogs() {

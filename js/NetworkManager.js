@@ -549,6 +549,7 @@ export class NetworkManager {
             inputSequence: seq, // server GameSim reads inputSequence
             timestamp: performance.now(),
             clientPosition: input.clientPosition ?? null,
+            bark: !!input.bark, // Cycle 61 P5: optional one-shot bark edge
         };
         this.inputBuffer.push(payload);
         if (this.inputBuffer.length > 60) this.inputBuffer.shift();

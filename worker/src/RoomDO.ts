@@ -716,6 +716,7 @@ export class RoomDO {
             inputSequence: seq,
             timestamp: msg.timestamp ?? Date.now(),
             clientPosition: msg.clientPosition ?? null,
+            bark: msg.bark === true, // Cycle 61 P5: optional bark edge (strict bool)
           });
         }
         break;

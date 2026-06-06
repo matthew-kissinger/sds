@@ -287,6 +287,31 @@ export function MobileControls() {
                 <Icon name="sprint" size={iconSize} color={isSprinting ? pastoral.accentMeadow : alpha(pastoral.cream, 90)} />
             </button>
 
+            {/* Cycle 61 P3: bark button - one-shot. Left of sprint so the right
+                thumb reaches both. Dispatches 'sds-bark'; InputHandler queues it. */}
+            <button
+                className="mobile-control fixed pointer-events-auto"
+                style={{
+                    width: `${sprintSize}px`,
+                    height: `${sprintSize}px`,
+                    bottom: `calc(env(safe-area-inset-bottom, 0px) + ${isLandscapeMobile ? '8px' : '2rem'})`,
+                    right: `calc(env(safe-area-inset-right, 0px) + ${isLandscapeMobile ? '1rem' : '1.5rem'} + ${sprintSize}px + ${isLandscapeMobile ? '0.75rem' : '1rem'})`,
+                    background: alpha(pastoral.cream, 8),
+                    border: `1px solid ${pastoral.glassWarmBorder}`,
+                    boxShadow: '0 4px 16px rgba(43,38,32,0.14)',
+                    transition: 'all 0.15s ease-out',
+                }}
+                onPointerDown={() => window.dispatchEvent(new CustomEvent('sds-bark'))}
+                aria-label="Bark"
+            >
+                <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none"
+                     stroke={alpha(pastoral.cream, 90)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 9v6h4l5 4V5L8 9H4z" />
+                    <path d="M16.5 8.5a5 5 0 0 1 0 7" />
+                    <path d="M19.5 5.5a9 9 0 0 1 0 13" />
+                </svg>
+            </button>
+
             {/* Zoom controls - always vertical */}
             <div
                 className="fixed pointer-events-auto"
