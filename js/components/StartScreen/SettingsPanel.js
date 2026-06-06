@@ -53,8 +53,8 @@ function DisplayNameField() {
     return createElement(NameField, { showLabel: true, showCurrent: true });
 }
 
-// Toggle switch component
-function Toggle({ value, onChange, disabled = false, color = '#3b82f6' }) {
+// Toggle switch component. Cycle 61 P2: pastoral meadow default + cream knob.
+function Toggle({ value, onChange, disabled = false, color = '#5e9e6e' }) {
     return createElement('button', {
         onClick: disabled ? undefined : () => onChange(!value),
         disabled,
@@ -76,7 +76,7 @@ function Toggle({ value, onChange, disabled = false, color = '#3b82f6' }) {
                 width: '20px',
                 height: '20px',
                 borderRadius: '50%',
-                background: 'white',
+                background: '#f7f1e6',
                 position: 'absolute',
                 top: '2px',
                 left: value ? '22px' : '2px',
@@ -87,8 +87,8 @@ function Toggle({ value, onChange, disabled = false, color = '#3b82f6' }) {
     );
 }
 
-// Slider component
-function Slider({ value, min, max, step = 1, onChange, formatValue, color = '#3b82f6' }) {
+// Slider component. Cycle 61 P2: pastoral meadow fill default.
+function Slider({ value, min, max, step = 1, onChange, formatValue, color = '#5e9e6e' }) {
     const percentage = ((value - min) / (max - min)) * 100;
 
     return createElement('div', {
@@ -115,7 +115,7 @@ function Slider({ value, min, max, step = 1, onChange, formatValue, color = '#3b
             style: {
                 minWidth: '3rem',
                 textAlign: 'right',
-                color: 'white',
+                color: '#f7f1e6',
                 fontSize: '0.875rem',
                 fontWeight: 500
             }
@@ -131,14 +131,14 @@ function SettingRow({ label, description, children, isCompact }) {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: isCompact ? '0.5rem 0' : '0.75rem 0',
-            borderBottom: '1px solid rgba(255,255,255,0.06)'
+            borderBottom: '1px solid rgba(247,241,230,0.08)'
         }
     }, [
         createElement('div', { key: 'label', style: { flex: 1, marginRight: '1rem' } }, [
             createElement('div', {
                 key: 'title',
                 style: {
-                    color: 'white',
+                    color: '#f7f1e6',
                     fontSize: isCompact ? '0.85rem' : '0.9rem',
                     fontWeight: 500
                 }
@@ -146,7 +146,7 @@ function SettingRow({ label, description, children, isCompact }) {
             description && createElement('div', {
                 key: 'desc',
                 style: {
-                    color: 'rgba(255,255,255,0.5)',
+                    color: 'rgba(247,241,230,0.55)',
                     fontSize: '0.75rem',
                     marginTop: '2px'
                 }
@@ -168,10 +168,10 @@ function KeyBindButton({ action, keyCode, onRebind, isListening, t }) {
         style: {
             minWidth: '80px',
             padding: '0.5rem 0.75rem',
-            background: isListening ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.1)',
-            border: isListening ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
+            background: isListening ? 'rgba(94, 158, 110, 0.3)' : 'rgba(247,241,230,0.1)',
+            border: isListening ? '2px solid #5e9e6e' : '1px solid rgba(247,241,230,0.2)',
             borderRadius: '0.5rem',
-            color: isListening ? '#93c5fd' : 'white',
+            color: isListening ? '#7dbf8e' : '#f7f1e6',
             fontSize: '0.875rem',
             fontWeight: 600,
             cursor: 'pointer',
@@ -188,10 +188,10 @@ function TabButton({ id, label, icon, isActive, onClick, isCompact }) {
         style: {
             flex: 1,
             padding: isCompact ? '0.5rem' : '0.75rem 1rem',
-            background: isActive ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+            background: isActive ? 'rgba(94, 158, 110, 0.2)' : 'transparent',
             border: 'none',
-            borderBottom: isActive ? '2px solid #3b82f6' : '2px solid transparent',
-            color: isActive ? 'white' : 'rgba(255,255,255,0.6)',
+            borderBottom: isActive ? '2px solid #5e9e6e' : '2px solid transparent',
+            color: isActive ? '#f7f1e6' : 'rgba(247,241,230,0.6)',
             fontSize: isCompact ? '0.8rem' : '0.875rem',
             fontWeight: isActive ? 600 : 400,
             cursor: 'pointer',
@@ -214,10 +214,10 @@ function PresetButton({ id, label, isActive, onClick, color }) {
         style: {
             flex: 1,
             padding: '0.75rem',
-            background: isActive ? `${color}22` : 'rgba(255,255,255,0.05)',
-            border: isActive ? `2px solid ${color}` : '1px solid rgba(255,255,255,0.1)',
+            background: isActive ? `${color}22` : 'rgba(247,241,230,0.05)',
+            border: isActive ? `2px solid ${color}` : '1px solid rgba(247,241,230,0.1)',
             borderRadius: '0.75rem',
-            color: isActive ? color : 'rgba(255,255,255,0.8)',
+            color: isActive ? color : 'rgba(247,241,230,0.8)',
             fontSize: '0.8rem',
             fontWeight: 600,
             cursor: 'pointer',
@@ -241,7 +241,7 @@ function CameraModePicker({ mode, onChange }) {
         createElement('div', {
             key: 'label',
             style: {
-                color: 'rgba(255,255,255,0.7)',
+                color: 'rgba(247,241,230,0.7)',
                 fontSize: '0.75rem',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
@@ -259,10 +259,10 @@ function CameraModePicker({ mode, onChange }) {
                 style: {
                     flex: 1,
                     padding: '0.6rem 0.5rem',
-                    background: mode === opt.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
-                    border: mode === opt.id ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
+                    background: mode === opt.id ? 'rgba(94, 158, 110, 0.2)' : 'rgba(247,241,230,0.05)',
+                    border: mode === opt.id ? '2px solid #5e9e6e' : '1px solid rgba(247,241,230,0.1)',
                     borderRadius: '0.5rem',
-                    color: mode === opt.id ? '#93c5fd' : 'rgba(255,255,255,0.8)',
+                    color: mode === opt.id ? '#7dbf8e' : 'rgba(247,241,230,0.8)',
                     fontSize: '0.85rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -385,7 +385,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             createElement('div', {
                 key: 'label',
                 style: {
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(247,241,230,0.7)',
                     fontSize: '0.75rem',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
@@ -410,7 +410,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                     label: t('settings.balancedOption'),
                     isActive: settings.performanceMode === 'balanced',
                     onClick: handlePresetChange,
-                    color: '#3b82f6'
+                    color: '#5e9e6e'
                 }),
                 createElement(PresetButton, {
                     key: 'qual',
@@ -432,7 +432,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
         }, createElement(Toggle, {
             value: settings.experimentalWebGpu !== false,
             onChange: (v) => handleSettingChange('experimentalWebGpu', v),
-            color: '#0ea5e9'
+            color: '#5e9e6e'
         })),
 
         !isMobile && createElement(SettingRow, {
@@ -453,11 +453,11 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             value: settings.shadowQuality,
             onChange: (e) => handleSettingChange('shadowQuality', e.target.value),
             style: {
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(247,241,230,0.1)',
+                border: '1px solid rgba(247,241,230,0.2)',
                 borderRadius: '0.5rem',
                 padding: '0.5rem 0.75rem',
-                color: 'white',
+                color: '#f7f1e6',
                 fontSize: '0.875rem',
                 cursor: 'pointer'
             }
@@ -513,7 +513,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             createElement('div', {
                 key: 'label',
                 style: {
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(247,241,230,0.7)',
                     fontSize: '0.75rem',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
@@ -534,7 +534,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             createElement('div', {
                 key: 'label',
                 style: {
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(247,241,230,0.7)',
                     fontSize: '0.75rem',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
@@ -577,7 +577,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             createElement('span', {
                 key: 'title',
                 style: {
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(247,241,230,0.7)',
                     fontSize: '0.75rem',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
@@ -595,12 +595,12 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
         keyConflict && createElement('div', {
             key: 'conflict',
             style: {
-                background: 'rgba(239, 68, 68, 0.2)',
-                border: '1px solid rgba(239, 68, 68, 0.5)',
+                background: 'rgba(217, 154, 143, 0.2)',
+                border: '1px solid rgba(217, 154, 143, 0.5)',
                 borderRadius: '0.5rem',
                 padding: '0.5rem 0.75rem',
                 marginBottom: '0.5rem',
-                color: '#fca5a5',
+                color: '#e8b4ab',
                 fontSize: '0.8rem'
             }
         }, t('settings.keyConflict', { action: t(`settings.actions.${keyConflict.action}`) })),
@@ -626,18 +626,18 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             style: {
                 marginTop: '1rem',
                 padding: '0.75rem',
-                background: 'rgba(59, 130, 246, 0.1)',
+                background: 'rgba(94, 158, 110, 0.1)',
                 borderRadius: '0.5rem',
-                border: '1px solid rgba(59, 130, 246, 0.2)'
+                border: '1px solid rgba(94, 158, 110, 0.2)'
             }
         }, [
             createElement('div', {
                 key: 'title',
-                style: { color: '#93c5fd', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }
+                style: { color: '#7dbf8e', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }
             }, t('settings.gamepadSupport')),
             createElement('div', {
                 key: 'desc',
-                style: { color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }
+                style: { color: 'rgba(247,241,230,0.6)', fontSize: '0.75rem' }
             }, t('settings.gamepadDesc'))
         ])
     ]);
@@ -689,7 +689,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                 key: 'tabs',
                 style: {
                     display: 'flex',
-                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    borderBottom: '1px solid rgba(247,241,230,0.1)',
                     marginBottom: '1rem',
                     flexShrink: 0
                 }
@@ -725,7 +725,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                 style: {
                     marginTop: '1rem',
                     paddingTop: '1rem',
-                    borderTop: '1px solid rgba(255,255,255,0.1)',
+                    borderTop: '1px solid rgba(247,241,230,0.1)',
                     flexShrink: 0
                 }
             }, [
@@ -744,7 +744,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                         display: 'block',
                         textAlign: 'center',
                         marginTop: '0.75rem',
-                        color: 'rgba(255,255,255,0.4)',
+                        color: 'rgba(247,241,230,0.4)',
                         fontSize: '0.75rem',
                         textDecoration: 'none'
                     }

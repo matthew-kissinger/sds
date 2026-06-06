@@ -10,42 +10,44 @@ import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { PanelTitle } from '../ui/Panel.js';
 
-// Local game modes with translation keys
+// Local game modes with translation keys. Cycle 61 P2: warm pastoral mode hues
+// (were the emerald/red/amber tech palette).
 const LOCAL_MODES = [
     {
         id: 'coop',
         nameKey: 'localMode.coop',
         descKey: 'localMode.coopDesc',
-        color: '#10b981', // Green
+        color: '#5e9e6e', // Meadow green
         icon: 'handshake'
     },
     {
         id: 'versus',
         nameKey: 'localMode.versus',
         descKey: 'localMode.versusDesc',
-        color: '#ef4444', // Red
+        color: '#e0a458', // Low-sun gold
         icon: 'trophy'
     },
     {
         id: 'timed',
         nameKey: 'localMode.timed',
         descKey: 'localMode.timedDesc',
-        color: '#f59e0b', // Amber
+        color: '#d99a8f', // Dusty rose
         icon: 'clock'
     }
 ];
 
-// Dog data with translation keys
+// Dog data with translation keys. Cycle 61 P2: warm pastoral per-dog hues, a
+// distinguishable golden-hour set (were the cool brand tech palette).
 const DOGS = [
-    { id: 'jep', translationKey: 'jep', color: '#3b82f6' },
-    { id: 'pip', translationKey: 'pip', color: '#f59e0b' },
-    { id: 'sally', translationKey: 'sally', color: '#ec4899' },
-    { id: 'shiloh', translationKey: 'shiloh', color: '#10b981' },
-    { id: 'george_washington', translationKey: 'georgeWashington', color: '#8b5cf6' }
+    { id: 'jep', translationKey: 'jep', color: '#5e9e6e' },
+    { id: 'pip', translationKey: 'pip', color: '#e0a458' },
+    { id: 'sally', translationKey: 'sally', color: '#d99a8f' },
+    { id: 'shiloh', translationKey: 'shiloh', color: '#8aa66a' },
+    { id: 'george_washington', translationKey: 'georgeWashington', color: '#b9a6c4' }
 ];
 
 // Dog avatar icon
-const DogAvatar = ({ color = '#3b82f6', size = 32 }) => createElement('div', {
+const DogAvatar = ({ color = '#5e9e6e', size = 32 }) => createElement('div', {
     style: {
         width: size,
         height: size,
@@ -110,7 +112,7 @@ function PlayerDogSelector({ player, playerNumber, selectedDog, onSelect, player
     return createElement('div', {
         className: `p-3 rounded-xl backdrop-blur-xl`,
         style: {
-            background: 'rgba(255, 255, 255, 0.08)',
+            background: 'rgba(247, 241, 230, 0.08)',
             border: `2px solid ${playerColor}44`
         }
     }, [
@@ -121,16 +123,16 @@ function PlayerDogSelector({ player, playerNumber, selectedDog, onSelect, player
         }, [
             createElement('div', {
                 key: 'badge',
-                className: 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white',
+                className: 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-[#f7f1e6]',
                 style: { background: playerColor }
             }, playerNumber),
             createElement('span', {
                 key: 'label',
-                className: 'text-white font-semibold text-sm'
+                className: 'text-[#f7f1e6] font-semibold text-sm'
             }, `${t('localMode.player')} ${playerNumber}`),
             createElement('span', {
                 key: 'controls',
-                className: 'text-white/50 text-xs ml-auto'
+                className: 'text-[#f7f1e6]/50 text-xs ml-auto'
             }, playerNumber === 1 ? t('localMode.controls1') : t('localMode.controls2'))
         ]),
 
@@ -145,15 +147,15 @@ function PlayerDogSelector({ player, playerNumber, selectedDog, onSelect, player
                 onClick: () => onSelect(dog.id),
                 className: `p-1.5 rounded-lg transition-all duration-200 flex flex-col items-center`,
                 style: {
-                    background: isSelected ? `${dog.color}33` : 'rgba(255,255,255,0.05)',
-                    border: isSelected ? `2px solid ${dog.color}` : '1px solid rgba(255,255,255,0.1)',
+                    background: isSelected ? `${dog.color}33` : 'rgba(247,241,230,0.05)',
+                    border: isSelected ? `2px solid ${dog.color}` : '1px solid rgba(247,241,230,0.1)',
                     transform: isSelected ? 'scale(1.05)' : 'scale(1)'
                 }
             }, [
                 createElement(DogAvatar, { key: 'avatar', color: dog.color, size: isCompact ? 28 : 32 }),
                 createElement('span', {
                     key: 'name',
-                    className: 'text-xs text-white/80 mt-1 truncate w-full text-center',
+                    className: 'text-xs text-[#f7f1e6]/80 mt-1 truncate w-full text-center',
                     style: { color: isSelected ? dog.color : undefined }
                 }, t(`dogs.${dog.translationKey}.name`))
             ]);
@@ -201,13 +203,13 @@ export function LocalModeSetup({ onStart, onBack }) {
             createElement('button', {
                 key: 'back',
                 onClick: onBack,
-                className: 'p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors'
+                className: 'p-2 rounded-lg bg-[#f7f1e6]/10 hover:bg-[#f7f1e6]/20 transition-colors'
             }, createElement('svg', {
                 width: 20,
                 height: 20,
                 viewBox: '0 0 24 24',
                 fill: 'none',
-                stroke: 'white',
+                stroke: '#f7f1e6',
                 strokeWidth: 2
             }, createElement('path', { d: 'M19 12H5m0 0l7 7m-7-7l7-7' }))),
             createElement(PanelTitle, { key: 'title' }, t('localMode.title'))
@@ -224,8 +226,8 @@ export function LocalModeSetup({ onStart, onBack }) {
                 onClick: () => setSelectedMode(mode.id),
                 className: `p-3 rounded-xl text-center transition-all duration-200`,
                 style: {
-                    background: isSelected ? `${mode.color}22` : 'rgba(255,255,255,0.08)',
-                    border: isSelected ? `2px solid ${mode.color}` : '1px solid rgba(255,255,255,0.12)',
+                    background: isSelected ? `${mode.color}22` : 'rgba(247,241,230,0.08)',
+                    border: isSelected ? `2px solid ${mode.color}` : '1px solid rgba(247,241,230,0.12)',
                     transform: isSelected ? 'scale(1.02)' : 'scale(1)'
                 }
             }, [
@@ -242,11 +244,11 @@ export function LocalModeSetup({ onStart, onBack }) {
                 createElement('h3', {
                     key: 'name',
                     className: `font-bold text-sm mb-1`,
-                    style: { color: isSelected ? mode.color : '#fff' }
+                    style: { color: isSelected ? mode.color : '#f7f1e6' }
                 }, t(mode.nameKey)),
                 !isCompact && createElement('p', {
                     key: 'desc',
-                    className: 'text-white/60 text-xs'
+                    className: 'text-[#f7f1e6]/60 text-xs'
                 }, t(mode.descKey))
             ]);
         })),
@@ -262,7 +264,7 @@ export function LocalModeSetup({ onStart, onBack }) {
                 playerNumber: 1,
                 selectedDog: player1Dog,
                 onSelect: setPlayer1Dog,
-                playerColor: '#FF4444',
+                playerColor: '#e0a458',
                 t
             }),
             createElement(PlayerDogSelector, {
@@ -271,7 +273,7 @@ export function LocalModeSetup({ onStart, onBack }) {
                 playerNumber: 2,
                 selectedDog: player2Dog,
                 onSelect: setPlayer2Dog,
-                playerColor: '#4444FF',
+                playerColor: '#d99a8f',
                 t
             })
         ]),
@@ -280,17 +282,17 @@ export function LocalModeSetup({ onStart, onBack }) {
         createElement('button', {
             key: 'start',
             onClick: handleStart,
-            className: `w-full py-3 rounded-xl font-bold text-white text-lg transition-all duration-200 hover:scale-[1.02]`,
+            className: `w-full py-3 rounded-xl font-bold text-[#f7f1e6] text-lg transition-all duration-200 hover:scale-[1.02]`,
             style: {
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)'
+                background: 'linear-gradient(135deg, #5e9e6e, #4d8159)',
+                boxShadow: '0 4px 20px rgba(94, 158, 110, 0.4)'
             }
         }, t('localMode.startGame')),
 
         // Info note
         createElement('p', {
             key: 'note',
-            className: 'text-center text-white/40 text-xs mt-3'
+            className: 'text-center text-[#f7f1e6]/40 text-xs mt-3'
         }, t('localMode.noLeaderboards'))
     ]));
 }

@@ -106,13 +106,14 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
 
-        // Background
+        // Background. Cycle 61 P2: warm dark editor surface (was the cold indigo
+        // #1e1b4b -> #0f0a1f) to match the pastoral chrome.
         const gradient = ctx.createRadialGradient(
             canvasSize.width / 2, canvasSize.height / 2, 0,
             canvasSize.width / 2, canvasSize.height / 2, canvasSize.width
         );
-        gradient.addColorStop(0, '#1e1b4b');
-        gradient.addColorStop(1, '#0f0a1f');
+        gradient.addColorStop(0, '#3a3228');
+        gradient.addColorStop(1, '#221d18');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
@@ -120,7 +121,7 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
 
         // Draw grid
         const gridSize = 20;
-        ctx.strokeStyle = 'rgba(139, 92, 246, 0.1)';
+        ctx.strokeStyle = 'rgba(224, 164, 88, 0.1)';
         ctx.lineWidth = 1;
 
         for (let x = bounds.minX; x <= bounds.maxX; x += gridSize) {
@@ -138,8 +139,9 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
             ctx.stroke();
         }
 
-        // Draw bounds rectangle (reference area)
-        ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)';
+        // Draw bounds rectangle (reference area). Cycle 61 P2: warm gold (was
+        // purple) reference outline.
+        ctx.strokeStyle = 'rgba(224, 164, 88, 0.3)';
         ctx.lineWidth = 2;
         ctx.setLineDash([8, 4]);
         const topLeft = worldToCanvas(bounds.minX, bounds.maxZ);
@@ -154,7 +156,7 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
 
         // Draw center crosshair
         const center = worldToCanvas(0, 0);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.strokeStyle = 'rgba(247, 241, 230, 0.2)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(center.x - 10, center.y);
@@ -181,7 +183,9 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
                 ctx.fill();
             }
 
-            ctx.strokeStyle = shapePoints.length >= 3 ? '#22c55e' : '#a855f7';
+            // Cycle 61 P2: warm gold for the in-progress (under-3-point) shape,
+            // meadow-adjacent green once it is a valid closed shape.
+            ctx.strokeStyle = shapePoints.length >= 3 ? '#22c55e' : '#e0a458';
             ctx.lineWidth = 3;
             ctx.stroke();
 
@@ -200,16 +204,16 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
                 } else if (isHovered) {
                     ctx.fillStyle = '#f97316';
                 } else {
-                    ctx.fillStyle = '#a855f7';
+                    ctx.fillStyle = '#e0a458';
                 }
                 ctx.fill();
 
-                ctx.strokeStyle = '#fff';
+                ctx.strokeStyle = '#f7f1e6';
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
                 // Point number
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = '#f7f1e6';
                 ctx.font = 'bold 10px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -217,7 +221,7 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
 
                 // Coordinates label for first point
                 if (isFirst) {
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                    ctx.fillStyle = 'rgba(247, 241, 230, 0.7)';
                     ctx.font = '10px sans-serif';
                     ctx.fillText(`(${pt.x}, ${pt.z})`, canvasPt.x, canvasPt.y + 22);
                 }
@@ -317,12 +321,12 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
                 ctx.arc(gateCanvas.x, gateCanvas.y, 8, 0, Math.PI * 2);
                 ctx.fillStyle = '#fbbf24';
                 ctx.fill();
-                ctx.strokeStyle = '#fff';
+                ctx.strokeStyle = '#f7f1e6';
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
                 // Label
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = '#f7f1e6';
                 ctx.font = 'bold 10px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText('GATE', gateCanvas.x, gateCanvas.y + 22);
@@ -330,7 +334,7 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
         }
 
         // Instructions
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillStyle = 'rgba(247, 241, 230, 0.6)';
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'center';
 
@@ -773,8 +777,8 @@ export function ShapeEditor({ config, onConfigChange, onDone, onBack }) {
                     key: 'status',
                     className: `px-2 py-0.5 text-xs rounded-full ${
                         step === 'draw'
-                            ? (validation.valid ? 'bg-green-500/20 text-green-300' : 'bg-orange-500/20 text-orange-300')
-                            : (gatePosition ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300')
+                            ? (validation.valid ? 'bg-[#5e9e6e]/20 text-[#7dbf8e]' : 'bg-[#e0a458]/20 text-[#e0a458]')
+                            : (gatePosition ? 'bg-[#5e9e6e]/20 text-[#7dbf8e]' : 'bg-[#e0a458]/20 text-[#e0a458]')
                     }`
                 }, step === 'draw'
                     ? (validation.valid ? `${shapePoints.length} points` : validation.error || `${shapePoints.length} points`)
@@ -788,8 +792,8 @@ export function ShapeEditor({ config, onConfigChange, onDone, onBack }) {
                         disabled: shapePoints.length === 0,
                         className: `px-3 py-1.5 rounded-lg text-xs transition-all ${
                             shapePoints.length > 0
-                                ? 'bg-white/10 text-white hover:bg-white/20'
-                                : 'bg-white/5 text-white/30 cursor-not-allowed'
+                                ? 'bg-[#f7f1e6]/10 text-[#f7f1e6] hover:bg-[#f7f1e6]/20'
+                                : 'bg-[#f7f1e6]/5 text-[#f7f1e6]/30 cursor-not-allowed'
                         }`
                     }, 'Undo'),
                     createElement('button', {
@@ -798,15 +802,15 @@ export function ShapeEditor({ config, onConfigChange, onDone, onBack }) {
                         disabled: shapePoints.length === 0,
                         className: `px-3 py-1.5 rounded-lg text-xs transition-all ${
                             shapePoints.length > 0
-                                ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-                                : 'bg-white/5 text-white/30 cursor-not-allowed'
+                                ? 'bg-[#d99a8f]/20 text-[#e8b4ab] hover:bg-[#d99a8f]/30'
+                                : 'bg-[#f7f1e6]/5 text-[#f7f1e6]/30 cursor-not-allowed'
                         }`
                     }, 'Clear')
                 ] : [
                     createElement('button', {
                         key: 'back-to-shape',
                         onClick: handleBackToShape,
-                        className: 'px-3 py-1.5 rounded-lg text-xs bg-white/10 text-white hover:bg-white/20 transition-all'
+                        className: 'px-3 py-1.5 rounded-lg text-xs bg-[#f7f1e6]/10 text-[#f7f1e6] hover:bg-[#f7f1e6]/20 transition-all'
                     }, 'Edit Shape')
                 ]
             )
@@ -815,7 +819,7 @@ export function ShapeEditor({ config, onConfigChange, onDone, onBack }) {
         // Instructions
         createElement('div', {
             key: 'instructions',
-            className: 'text-xs text-white/60 mb-3 p-2 bg-white/5 rounded-lg'
+            className: 'text-xs text-[#f7f1e6]/60 mb-3 p-2 bg-[#f7f1e6]/5 rounded-lg'
         }, step === 'draw' ? [
             createElement('p', { key: 'p1' }, '• Click to place points around the field boundary'),
             createElement('p', { key: 'p2' }, '• Points snap to a 10-unit grid'),
@@ -832,7 +836,7 @@ export function ShapeEditor({ config, onConfigChange, onDone, onBack }) {
         createElement('div', {
             key: 'canvas-wrapper',
             ref: containerRef,
-            className: 'flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-slate-900/80 rounded-xl p-3 min-h-[350px] border border-purple-500/20'
+            className: 'flex items-center justify-center bg-gradient-to-br from-[#3a3228]/40 to-[#221d18]/90 rounded-xl p-3 min-h-[350px] border border-[#e0a458]/20'
         }, createElement(ShapeCanvas, {
             bounds,
             shapePoints,
@@ -847,13 +851,13 @@ export function ShapeEditor({ config, onConfigChange, onDone, onBack }) {
         // Validation info
         validation.valid && createElement('div', {
             key: 'area-info',
-            className: 'text-xs text-green-300/70 text-center mt-2'
+            className: 'text-xs text-[#7dbf8e]/80 text-center mt-2'
         }, `Shape area: ${Math.round(validation.area).toLocaleString()} sq units`),
 
         // Footer
         createElement('div', {
             key: 'footer',
-            className: 'flex gap-3 mt-4 pt-4 border-t border-white/10'
+            className: 'flex gap-3 mt-4 pt-4 border-t border-[#f7f1e6]/10'
         }, step === 'draw' ? [
             createElement(BackButton, {
                 key: 'back',

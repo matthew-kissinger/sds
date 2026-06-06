@@ -8,9 +8,31 @@
  * `CompletionScreen` if present, falls back to a plain HTML overlay.
  * `showLocalCompletionOverlay` is the 2-player split-screen variant.
  *
- * Behaviors are unchanged from the original inline methods — same
- * cssText, same React render, same fallback markup.
+ * Cycle 61 P2: the two inline (non-React) overlays were restyled onto the
+ * pastoral design language (was the emerald/amber/red/blue tech palette).
+ * Literal pastoral hex is used because the inline cssText/innerHTML strings
+ * read more reliably than var(--token) here, mirroring the literal-hex
+ * MEDAL_COLORS precedent in CompletionScreen.tsx. The pastoral values match the
+ * tokens: cream #f7f1e6, ink-soft #6b5f4f, meadow #5e9e6e, gold #e0a458, warm
+ * scrim rgba(40,28,18,*), warm glass border rgba(255,244,224,0.22). Behavior is
+ * unchanged: same buttons, handlers, scores, and result text strings.
  */
+
+// Cycle 61 P2: pastoral palette literals for the inline overlays (mirror of the
+// `pastoral` tokens; inline cssText can't share the var()-driven tokens.ts).
+const PASTORAL_SCRIM = 'rgba(40, 28, 18, 0.72)'; // warm scrim, full-screen cover
+const PASTORAL_CREAM = '#f7f1e6'; // warm off-white text on the dark scrim
+const PASTORAL_CREAM_SOFT = 'rgba(247, 241, 230, 0.55)'; // muted secondary text
+const PASTORAL_GLASS_BORDER = 'rgba(255, 244, 224, 0.22)'; // warm hairline
+const PASTORAL_MEADOW = '#5e9e6e'; // warmed meadow green, primary action
+const PASTORAL_GOLD = '#e0a458'; // low-sun gold, runner-up / tie
+const PASTORAL_DUSK = '#d99a8f'; // dusty rose, the second-player accent
+// Warm cream card backgrounds, low-opacity over the scrim (replaces the
+// emerald/amber/red/blue 0.2-alpha tech tints).
+const PASTORAL_WIN_BG = 'linear-gradient(135deg, rgba(94, 158, 110, 0.20), rgba(224, 164, 88, 0.10))';
+const PASTORAL_GOLD_BG = 'linear-gradient(135deg, rgba(224, 164, 88, 0.20), rgba(217, 154, 143, 0.10))';
+// Primary "Play Again" button: warm meadow gradient (was solid #10b981).
+const PASTORAL_BTN = 'linear-gradient(135deg, #5e9e6e, #4d8159)';
 
 /**
  * The completion overlay mounts in its OWN React root appended to <body>,
@@ -133,22 +155,22 @@ export async function showCompletionOverlay(game, mode, data = {}) {
         overlay.style.cssText = `
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.9);
+            background: ${PASTORAL_SCRIM};
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 99999;
             font-family: system-ui, sans-serif;
-            color: white;
+            color: ${PASTORAL_CREAM};
             text-align: center;
         `;
 
         const timeStr = data.finalTime ? game.formatTime(data.finalTime) : 'Unknown';
         overlay.innerHTML = `
-            <div style="padding: 40px; background: rgba(16, 185, 129, 0.2); border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.4);">
+            <div style="padding: 40px; background: ${PASTORAL_WIN_BG}; border-radius: 20px; border: 1px solid ${PASTORAL_GLASS_BORDER};">
                 <h1 style="font-size: 36px; margin: 0 0 20px 0;">Victory!</h1>
                 <p style="font-size: 18px; margin: 0 0 30px 0;">Time: ${timeStr}</p>
-                <button onclick="window.gameInstance?.restartSameMode()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
+                <button onclick="window.gameInstance?.restartSameMode()" style="padding: 14px 28px; font-size: 16px; background: ${PASTORAL_BTN}; color: ${PASTORAL_CREAM}; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
                     Play Again
                 </button>
             </div>
@@ -173,51 +195,51 @@ export function showLocalCompletionOverlay(game, result) {
     overlay.style.cssText = `
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.9);
+        background: ${PASTORAL_SCRIM};
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 99999;
         font-family: system-ui, sans-serif;
-        color: white;
+        color: ${PASTORAL_CREAM};
         text-align: center;
     `;
 
+    // Cycle 61 P2: pastoral result tints (was emerald/amber/red/blue). Co-op win
+    // reads warm meadow; tie + either-player win read warm gold. The two players
+    // keep a distinguishable warm pair (gold / dusty rose) for their score
+    // labels (were #ff4444 / #4444ff). Text strings + winner branches unchanged.
     let winnerText = '';
-    let bgColor = 'rgba(16, 185, 129, 0.2)';
-    let borderColor = 'rgba(16, 185, 129, 0.4)';
+    let bgColor = PASTORAL_WIN_BG;
 
     if (result.winner === 'coop') {
         winnerText = 'Victory! You herded all sheep together!';
     } else if (result.winner === 'tie') {
         winnerText = "It's a Tie!";
-        bgColor = 'rgba(251, 191, 36, 0.2)';
-        borderColor = 'rgba(251, 191, 36, 0.4)';
+        bgColor = PASTORAL_GOLD_BG;
     } else if (result.winner === 'player1') {
         winnerText = 'Player 1 Wins!';
-        bgColor = 'rgba(255, 68, 68, 0.2)';
-        borderColor = 'rgba(255, 68, 68, 0.4)';
+        bgColor = PASTORAL_GOLD_BG;
     } else if (result.winner === 'player2') {
         winnerText = 'Player 2 Wins!';
-        bgColor = 'rgba(68, 68, 255, 0.2)';
-        borderColor = 'rgba(68, 68, 255, 0.4)';
+        bgColor = PASTORAL_GOLD_BG;
     }
 
     overlay.innerHTML = `
-        <div style="padding: 40px; background: ${bgColor}; border-radius: 20px; border: 1px solid ${borderColor}; min-width: 300px;">
+        <div style="padding: 40px; background: ${bgColor}; border-radius: 20px; border: 1px solid ${PASTORAL_GLASS_BORDER}; min-width: 300px;">
             <h1 style="font-size: 32px; margin: 0 0 20px 0;">${winnerText}</h1>
             <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 30px;">
                 <div>
-                    <div style="font-size: 14px; color: #ff4444; margin-bottom: 5px;">Player 1</div>
+                    <div style="font-size: 14px; color: ${PASTORAL_GOLD}; margin-bottom: 5px;">Player 1</div>
                     <div style="font-size: 36px; font-weight: bold;">${result.player1Score}</div>
                 </div>
                 <div>
-                    <div style="font-size: 14px; color: #4444ff; margin-bottom: 5px;">Player 2</div>
+                    <div style="font-size: 14px; color: ${PASTORAL_DUSK}; margin-bottom: 5px;">Player 2</div>
                     <div style="font-size: 36px; font-weight: bold;">${result.player2Score}</div>
                 </div>
             </div>
-            <p style="color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 20px;">Local mode - scores not submitted to leaderboard</p>
-            <button onclick="window.gameInstance?.restartToMenu()" style="padding: 14px 28px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
+            <p style="color: ${PASTORAL_CREAM_SOFT}; font-size: 12px; margin-bottom: 20px;">Local mode - scores not submitted to leaderboard</p>
+            <button onclick="window.gameInstance?.restartToMenu()" style="padding: 14px 28px; font-size: 16px; background: ${PASTORAL_BTN}; color: ${PASTORAL_CREAM}; border: none; border-radius: 12px; cursor: pointer; font-weight: 600;">
                 Play Again
             </button>
         </div>

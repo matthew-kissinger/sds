@@ -73,11 +73,11 @@ function Slider({ label, value, min, max, step = 1, onChange, formatValue }) {
         }, [
             createElement('span', {
                 key: 'text',
-                className: 'text-white/80 text-sm font-medium'
+                className: 'text-[#f7f1e6]/80 text-sm font-medium'
             }, label),
             createElement('span', {
                 key: 'value',
-                className: 'text-white font-bold text-sm bg-white/10 px-2 py-0.5 rounded'
+                className: 'text-[#f7f1e6] font-bold text-sm bg-[#f7f1e6]/10 px-2 py-0.5 rounded'
             }, displayValue)
         ]),
         createElement('input', {
@@ -88,29 +88,29 @@ function Slider({ label, value, min, max, step = 1, onChange, formatValue }) {
             step,
             value,
             onChange: (e) => onChange(parseFloat(e.target.value)),
-            className: 'w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-emerald-500'
+            className: 'w-full h-2 bg-[#f7f1e6]/20 rounded-lg appearance-none cursor-pointer accent-[#5e9e6e]'
         })
     ]);
 }
 
-// Option button for selections
-function OptionButton({ label, description, selected, onClick, accentColor = '#10b981' }) {
+// Option button for selections. Cycle 61 P2: pastoral meadow accent default.
+function OptionButton({ label, description, selected, onClick, accentColor = '#5e9e6e' }) {
     return createElement('button', {
         onClick,
         className: `w-full p-3 rounded-xl border-2 text-left transition-all duration-200 ${
             selected
-                ? 'bg-white/15 border-current'
-                : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                ? 'bg-[#f7f1e6]/15 border-current'
+                : 'bg-[#f7f1e6]/5 border-[#f7f1e6]/10 hover:bg-[#f7f1e6]/10 hover:border-[#f7f1e6]/20'
         }`,
         style: selected ? { borderColor: accentColor, color: accentColor } : {}
     }, [
         createElement('div', {
             key: 'label',
-            className: `font-semibold text-sm ${selected ? '' : 'text-white'}`
+            className: `font-semibold text-sm ${selected ? '' : 'text-[#f7f1e6]'}`
         }, label),
         description && createElement('div', {
             key: 'desc',
-            className: 'text-xs text-white/60 mt-0.5'
+            className: 'text-xs text-[#f7f1e6]/60 mt-0.5'
         }, description)
     ]);
 }
@@ -118,7 +118,7 @@ function OptionButton({ label, description, selected, onClick, accentColor = '#1
 // Section header
 function SectionHeader({ children }) {
     return createElement('h3', {
-        className: 'text-white/90 font-semibold text-sm uppercase tracking-wide mb-3 mt-5 first:mt-0'
+        className: 'text-[#f7f1e6]/90 font-semibold text-sm uppercase tracking-wide mb-3 mt-5 first:mt-0'
     }, children);
 }
 
@@ -210,8 +210,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                                 onClick: () => updateConfig('sheep.count', count),
                                 className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                     config.sheep?.count === count
-                                        ? 'bg-emerald-500 text-white'
-                                        : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                        ? 'bg-[#5e9e6e] text-[#f7f1e6]'
+                                        : 'bg-[#f7f1e6]/10 text-[#f7f1e6]/70 hover:bg-[#f7f1e6]/20'
                                 }`
                             }, count)
                         )
@@ -263,8 +263,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                             onClick: () => updateConfig('sceneId', scene.id),
                             className: `px-2 py-3 rounded-lg transition-all flex items-center justify-center text-center ${
                                 (config.sceneId || 'field') === scene.id
-                                    ? 'bg-emerald-500 text-white ring-2 ring-emerald-400'
-                                    : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                                    ? 'bg-[#5e9e6e] text-[#f7f1e6] ring-2 ring-[#5e9e6e]'
+                                    : 'bg-[#f7f1e6]/10 text-[#f7f1e6]/70 hover:bg-[#f7f1e6]/20 hover:text-[#f7f1e6]'
                             }`,
                             title: scene.description
                         }, createElement('span', {
@@ -273,7 +273,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                     )),
                     isIslandScene && createElement('div', {
                         key: 'island-notice',
-                        className: 'text-[11px] text-white/55 mb-3 px-2 py-2 bg-white/5 rounded-lg'
+                        className: 'text-[11px] text-[#f7f1e6]/55 mb-3 px-2 py-2 bg-[#f7f1e6]/5 rounded-lg'
                     }, 'Island scene selected. Field size, shape, and custom fences are disabled - the scene\'s heightfield is the boundary.'),
                     !isIslandScene && createElement(SectionHeader, { key: 'h1' }, t('sandbox.fieldSize')),
                     !isIslandScene && createElement('div', {
@@ -306,8 +306,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                             },
                             className: `p-2 rounded-lg transition-all flex flex-col items-center justify-center ${
                                 config.field?.shape === shape.id
-                                    ? 'bg-emerald-500 text-white ring-2 ring-emerald-400'
-                                    : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                                    ? 'bg-[#5e9e6e] text-[#f7f1e6] ring-2 ring-[#5e9e6e]'
+                                    : 'bg-[#f7f1e6]/10 text-[#f7f1e6]/70 hover:bg-[#f7f1e6]/20 hover:text-[#f7f1e6]'
                             }`,
                             title: shape.description
                         }, [
@@ -321,7 +321,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                         variant: 'secondary',
                         onClick: () => onEditFences && onEditFences({ mode: 'shape' }),
                         className: 'w-full mt-2 mb-2',
-                        style: { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderColor: 'rgba(139, 92, 246, 0.5)' }
+                        style: { backgroundColor: 'rgba(224, 164, 88, 0.2)', borderColor: 'rgba(224, 164, 88, 0.5)' }
                     }, config.field?.customBorderPoints?.length >= 3
                         ? t('sandbox.editCustomShape')
                         : t('sandbox.drawCustomShape')),
@@ -342,7 +342,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                                     onEditFences();
                                 }
                             },
-                            accentColor: preset.id === 'custom' ? '#f59e0b' : '#10b981'
+                            accentColor: preset.id === 'custom' ? '#e0a458' : '#5e9e6e'
                         })
                     )),
 
@@ -359,17 +359,17 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                     createElement(SectionHeader, { key: 'h1' }, t('sandbox.timer')),
                     createElement('div', {
                         key: 'timer-toggle',
-                        className: 'flex items-center justify-between p-3 bg-white/5 rounded-xl mb-3'
+                        className: 'flex items-center justify-between p-3 bg-[#f7f1e6]/5 rounded-xl mb-3'
                     }, [
-                        createElement('span', { key: 'label', className: 'text-white/80' }, t('sandbox.enableTimer')),
+                        createElement('span', { key: 'label', className: 'text-[#f7f1e6]/80' }, t('sandbox.enableTimer')),
                         createElement('button', {
                             key: 'toggle',
                             onClick: () => updateConfig('rules.timerEnabled', !config.rules?.timerEnabled),
                             className: `w-12 h-6 rounded-full transition-colors ${
-                                config.rules?.timerEnabled ? 'bg-emerald-500' : 'bg-white/20'
+                                config.rules?.timerEnabled ? 'bg-[#5e9e6e]' : 'bg-[#f7f1e6]/20'
                             }`
                         }, createElement('div', {
-                            className: `w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${
+                            className: `w-5 h-5 rounded-full bg-[#f7f1e6] shadow-md transform transition-transform ${
                                 config.rules?.timerEnabled ? 'translate-x-6' : 'translate-x-0.5'
                             }`
                         }))
@@ -393,7 +393,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                                 description: t('sandbox.countdownDesc'),
                                 selected: config.rules?.timerMode === 'countdown',
                                 onClick: () => updateConfig('rules.timerMode', 'countdown'),
-                                accentColor: '#ef4444'
+                                accentColor: '#e0a458'
                             })
                         ]),
 
@@ -427,7 +427,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                             description: t('sandbox.percentageGoalDesc'),
                             selected: config.rules?.winCondition === 'percentage',
                             onClick: () => updateConfig('rules.winCondition', 'percentage'),
-                            accentColor: '#3b82f6'
+                            accentColor: '#5e9e6e'
                         }),
                         config.rules?.winCondition === 'percentage' && createElement(Slider, {
                             key: 'percentage-slider',
@@ -445,7 +445,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                             description: t('sandbox.freePlayDesc'),
                             selected: config.rules?.winCondition === 'none',
                             onClick: () => updateConfig('rules.winCondition', 'none'),
-                            accentColor: '#8b5cf6'
+                            accentColor: '#d99a8f'
                         })
                     ]),
 
@@ -453,22 +453,22 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                     createElement(SectionHeader, { key: 'h3' }, t('sandbox.performance', 'Performance')),
                     createElement('div', {
                         key: 'extreme-boids-toggle',
-                        className: 'flex items-center justify-between p-3 bg-white/5 rounded-xl mb-3'
+                        className: 'flex items-center justify-between p-3 bg-[#f7f1e6]/5 rounded-xl mb-3'
                     }, [
                         createElement('div', { key: 'label-container' }, [
-                            createElement('span', { key: 'label', className: 'text-white/80 block' },
+                            createElement('span', { key: 'label', className: 'text-[#f7f1e6]/80 block' },
                                 t('sandbox.optimizedFlocking', 'Optimized Flocking')),
-                            createElement('span', { key: 'desc', className: 'text-white/50 text-xs block mt-0.5' },
+                            createElement('span', { key: 'desc', className: 'text-[#f7f1e6]/50 text-xs block mt-0.5' },
                                 t('sandbox.optimizedFlockingDesc', 'Better performance with many sheep'))
                         ]),
                         createElement('button', {
                             key: 'toggle',
                             onClick: () => updateConfig('useExtremeBoids', !config.useExtremeBoids),
                             className: `w-12 h-6 rounded-full transition-colors ${
-                                config.useExtremeBoids ? 'bg-emerald-500' : 'bg-white/20'
+                                config.useExtremeBoids ? 'bg-[#5e9e6e]' : 'bg-[#f7f1e6]/20'
                             }`
                         }, createElement('div', {
-                            className: `w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${
+                            className: `w-5 h-5 rounded-full bg-[#f7f1e6] shadow-md transform transition-transform ${
                                 config.useExtremeBoids ? 'translate-x-6' : 'translate-x-0.5'
                             }`
                         }))
@@ -507,7 +507,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
             createElement(PanelTitle, { key: 'title' }, t('sandbox.title')),
             createElement('div', {
                 key: 'summary',
-                className: 'text-xs text-white/60 text-right'
+                className: 'text-xs text-[#f7f1e6]/60 text-right'
             }, [
                 createElement('div', { key: 's1' }, `${sheepCount} ${t('sandbox.tabs.sheep').toLowerCase()}`),
                 createElement('div', { key: 's2' }, `${fieldSize}`)
@@ -517,15 +517,15 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
         // Tab navigation
         createElement('div', {
             key: 'tabs',
-            className: 'flex gap-1 p-1 bg-white/5 rounded-xl mb-4'
+            className: 'flex gap-1 p-1 bg-[#f7f1e6]/5 rounded-xl mb-4'
         }, tabs.map(tab =>
             createElement('button', {
                 key: tab.id,
                 onClick: () => setActiveTab(tab.id),
                 className: `flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                     activeTab === tab.id
-                        ? 'bg-emerald-500 text-white'
-                        : 'text-white/60 hover:text-white hover:bg-white/10'
+                        ? 'bg-[#5e9e6e] text-[#f7f1e6]'
+                        : 'text-[#f7f1e6]/60 hover:text-[#f7f1e6] hover:bg-[#f7f1e6]/10'
                 }`
             }, t(tab.labelKey))
         )),
@@ -536,7 +536,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
             className: 'min-h-[280px] max-h-[350px] overflow-y-auto pr-1',
             style: {
                 scrollbarWidth: 'thin',
-                scrollbarColor: 'rgba(255,255,255,0.2) transparent',
+                scrollbarColor: 'rgba(247,241,230,0.2) transparent',
                 WebkitOverflowScrolling: 'touch'
             }
         }, renderTabContent()),
@@ -549,8 +549,8 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
                 bottom: '80px',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                background: 'rgba(0,0,0,0.85)',
-                color: '#fff',
+                background: 'rgba(40, 28, 18, 0.85)',
+                color: '#f7f1e6',
                 padding: '6px 16px',
                 borderRadius: '8px',
                 fontSize: '13px',
@@ -562,7 +562,7 @@ export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences
         // Footer actions
         createElement('div', {
             key: 'footer',
-            className: 'flex gap-3 mt-5 pt-4 border-t border-white/10'
+            className: 'flex gap-3 mt-5 pt-4 border-t border-[#f7f1e6]/10'
         }, [
             createElement(Button, {
                 key: 'back',

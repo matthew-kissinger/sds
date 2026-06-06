@@ -6,17 +6,21 @@
  * half-built scene.
  *
  * Cycle 48 P4: converted from the element-factory .js to token-driven .tsx.
- * The shimmer-skeleton CSS and the spin keyframe moved out of the render-time
- * injected <style> (was dangerouslySetInnerHTML) into the shared css/main.css
- * sheet, matching the Cycle 47 scene-picker and Cycle 48 P2 pointer-tour
- * precedents; the trailing spinner's ring color is the new swap-spinner token
- * (the one deepskyblue value that lacked a token). The Cycle 46 crossfade-skip
- * contract (window.__sdsAttractCrossfadeActive) and the full state machine are
- * unchanged. Behavior is identical to the previous SceneSwapOverlay.js.
+ *
+ * Cycle 61 P1: retired the Cycle 25 dark shimmer-skeleton. The boot path and
+ * the attract crossfade already skip this cover (the pastoral LoadingScreen
+ * owns those), but every other in-session swap (biome change, scene picker,
+ * some Play Again paths) fell through to the old dark shimmer. This cover now
+ * wears the same pastoral glass as js/components/entrance/LoadingScreen.tsx: a
+ * warm scrim, a cream glass card, and a meadow-accent spinner. The Cycle 46
+ * crossfade-skip contract (window.__sdsAttractCrossfadeActive), the Cycle 51 P6
+ * boot-skip (window.__sdsBootLoading), the full state machine, and the loading
+ * / error copy are unchanged. Behavior is identical to before; only the chrome
+ * is pastoral.
  */
 import { useEffect, useState, useRef, type CSSProperties } from 'react';
 import { subscribeGameEvent } from '../../GameBridge.js';
-import { color } from './tokens';
+import { pastoral, alpha } from './tokens';
 
 const FADE_MS = 200;
 const MIN_VISIBLE_MS = 200;
@@ -103,7 +107,7 @@ export function SceneSwapOverlay() {
         position: 'fixed',
         inset: 0,
         zIndex: 10000,
-        background: 'rgba(8, 14, 24, 0.92)',
+        background: alpha(pastoral.ink, 55),
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         opacity,
@@ -111,48 +115,42 @@ export function SceneSwapOverlay() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: 'white',
+        color: pastoral.ink,
         fontFamily: 'system-ui, -apple-system, sans-serif',
         pointerEvents: 'auto',
     };
 
+    // Cycle 61 P1: the pastoral glass card (matches LoadingScreen.tsx's `glass`):
+    // a warm cream panel with a warm hairline, espresso ink text, and a calm
+    // meadow-accent spinner. Replaces the Cycle 25 dark shimmer skeleton.
+    const cardStyle: CSSProperties = {
+        background: alpha(pastoral.cream, 82),
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: `1px solid ${pastoral.glassWarmBorder}`,
+        borderRadius: 22,
+        boxShadow: '0 10px 34px rgba(43, 38, 32, 0.22)',
+        color: pastoral.ink,
+        textAlign: 'center',
+        padding: '30px 28px',
+        width: 'min(440px, 92%)',
+    };
+
     return (
         <div style={overlayStyle}>
-            <div style={{ textAlign: 'center', maxWidth: '420px', padding: '0 1.5rem', width: '100%' }}>
-                {/* Cycle 25 Phase F (additive): shimmer skeleton card replaces the
-                    single-spinner pattern. Reads as a designed loading state — a
-                    tall hero panel + three thinner content rows shimmering on a
-                    diagonal sweep — instead of "the scene is broken, here's a
-                    spinner." Spinner kept as the trailing element for users who
-                    prefer the affordance. The .sds-skel chrome lives in main.css. */}
-                <div
-                    className="sds-skel sds-skel-hero"
-                    style={{ width: '100%', height: '160px', borderRadius: '12px', marginBottom: '1rem' }}
-                />
-                <div
-                    className="sds-skel sds-skel-row"
-                    style={{ width: '78%', height: '14px', borderRadius: '6px', margin: '0 auto 0.6rem' }}
-                />
-                <div
-                    className="sds-skel sds-skel-row"
-                    style={{ width: '60%', height: '14px', borderRadius: '6px', margin: '0 auto 0.6rem' }}
-                />
-                <div
-                    className="sds-skel sds-skel-row"
-                    style={{ width: '70%', height: '14px', borderRadius: '6px', margin: '0 auto 1.4rem' }}
-                />
+            <div style={cardStyle}>
                 <div
                     style={{
-                        width: '24px',
-                        height: '24px',
-                        margin: '0 auto 0.6rem',
-                        border: '2px solid rgba(255, 255, 255, 0.15)',
-                        borderTopColor: color.swapSpinner,
+                        width: '28px',
+                        height: '28px',
+                        margin: '0 auto 16px',
+                        border: `2px solid ${pastoral.glassWarmBorder}`,
+                        borderTopColor: pastoral.accentMeadow,
                         borderRadius: '50%',
                         animation: 'sds-swap-spin 0.9s linear infinite',
                     }}
                 />
-                <div style={{ fontSize: '0.85rem', opacity: 0.7, letterSpacing: '0.02em' }}>
+                <div style={{ fontSize: 14, letterSpacing: '0.02em', color: pastoral.inkSoft }}>
                     {error ? 'Reloading…' : 'Loading scene…'}
                 </div>
             </div>

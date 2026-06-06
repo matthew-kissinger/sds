@@ -28,8 +28,8 @@ function ToolButton({ tool, currentTool, onClick, icon, label }) {
         onClick: () => onClick(tool),
         className: `flex flex-col items-center justify-center p-2 rounded-lg transition-all ${
             isActive
-                ? 'bg-emerald-500 text-white'
-                : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                ? 'bg-[#5e9e6e] text-[#f7f1e6]'
+                : 'bg-[#f7f1e6]/10 text-[#f7f1e6]/70 hover:bg-[#f7f1e6]/20 hover:text-[#f7f1e6]'
         }`,
         title: label
     }, [
@@ -120,14 +120,15 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
 
-        // Background
-        ctx.fillStyle = '#1a1a2e';
+        // Background. Cycle 61 P2: warm dark editor surface (was cold slate
+        // #1a1a2e) to match the pastoral chrome.
+        ctx.fillStyle = '#2b2620';
         ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
         // Draw grid
         const scale = Math.min(canvasSize.width, canvasSize.height) / Math.max(fieldWidth, fieldHeight) * zoom;
         const gridSize = 20;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.strokeStyle = 'rgba(247, 241, 230, 0.05)';
         ctx.lineWidth = 1;
 
         for (let x = bounds.minX; x <= bounds.maxX; x += gridSize) {
@@ -145,8 +146,9 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
             ctx.stroke();
         }
 
-        // Draw field boundary - polygon if available, otherwise rectangle
-        ctx.strokeStyle = '#4ade80';
+        // Draw field boundary - polygon if available, otherwise rectangle.
+        // Cycle 61 P2: warm meadow boundary (was #4ade80).
+        ctx.strokeStyle = '#5e9e6e';
         ctx.lineWidth = 3;
 
         if (borderPoints && borderPoints.length >= 3) {
@@ -251,8 +253,10 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
             const start = worldToCanvas(fence.start.x, fence.start.z);
             const end = worldToCanvas(fence.end.x, fence.end.z);
 
+            // Cycle 61 P2: warm fence colors (were blue/purple tech palette). A
+            // selected fence reads bright cream-gold; an idle fence reads gold.
             const isSelected = selectedFence === fence.id;
-            ctx.strokeStyle = isSelected ? '#60a5fa' : '#a78bfa';
+            ctx.strokeStyle = isSelected ? '#f5c87f' : '#e0a458';
             ctx.lineWidth = isSelected ? 4 : 3;
             ctx.lineCap = 'round';
 
@@ -262,7 +266,7 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
             ctx.stroke();
 
             // Draw endpoints
-            ctx.fillStyle = isSelected ? '#60a5fa' : '#a78bfa';
+            ctx.fillStyle = isSelected ? '#f5c87f' : '#e0a458';
             ctx.beginPath();
             ctx.arc(start.x, start.y, 4, 0, Math.PI * 2);
             ctx.arc(end.x, end.y, 4, 0, Math.PI * 2);
@@ -274,7 +278,7 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
             const start = worldToCanvas(dragStart.x, dragStart.z);
             const end = worldToCanvas(dragEnd.x, dragEnd.z);
 
-            ctx.strokeStyle = tool === TOOLS.GATE ? 'rgba(251, 191, 36, 0.7)' : 'rgba(167, 139, 250, 0.7)';
+            ctx.strokeStyle = tool === TOOLS.GATE ? 'rgba(251, 191, 36, 0.7)' : 'rgba(224, 164, 88, 0.7)';
             ctx.lineWidth = 3;
             ctx.setLineDash([8, 4]);
             ctx.beginPath();
@@ -290,20 +294,21 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
             );
             const midX = (start.x + end.x) / 2;
             const midY = (start.y + end.y) / 2;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillStyle = 'rgba(247, 241, 230, 0.85)';
             ctx.font = '12px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(`${Math.round(length)}m`, midX, midY - 8);
         }
 
-        // Draw dog start position
+        // Draw dog start position. Cycle 61 P2: warm dusty-rose marker (was the
+        // tech-palette red #f87171); cream label (was #fff).
         const dogStart = config.dog?.startPosition || { x: 0, z: -30 };
         const dogPos = worldToCanvas(dogStart.x, dogStart.z);
-        ctx.fillStyle = '#f87171';
+        ctx.fillStyle = '#d99a8f';
         ctx.beginPath();
         ctx.arc(dogPos.x, dogPos.y, 8, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = '#f7f1e6';
         ctx.font = 'bold 8px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -311,14 +316,14 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
 
         // Draw sheep spawn area indicator
         const spawnCenter = worldToCanvas(0, 0);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.strokeStyle = 'rgba(247, 241, 230, 0.3)';
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
         ctx.arc(spawnCenter.x, spawnCenter.y, 50 * scale, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.fillStyle = 'rgba(247, 241, 230, 0.4)';
         ctx.font = '10px sans-serif';
         ctx.fillText(t('fenceEditor.sheepSpawn'), spawnCenter.x, spawnCenter.y);
 
@@ -597,12 +602,14 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
 
 // Preset card with visual mini-preview
 function PresetCard({ preset, isSelected, onClick, t }) {
+    // Cycle 61 P2: warm pastoral per-preset accent hues (were the cool brand
+    // tech palette). Used only for the selected-card glow.
     const presetInfo = {
-        open: { icon: '🌾', color: '#10b981', descKey: 'fenceEditor.presets.open' },
-        corridor: { icon: '🚧', color: '#3b82f6', descKey: 'fenceEditor.presets.corridor' },
-        funnel: { icon: '📐', color: '#8b5cf6', descKey: 'fenceEditor.presets.funnel' },
-        maze: { icon: '🧩', color: '#f59e0b', descKey: 'fenceEditor.presets.maze' },
-        obstacles: { icon: '🪨', color: '#ef4444', descKey: 'fenceEditor.presets.obstacles' }
+        open: { icon: '🌾', color: '#5e9e6e', descKey: 'fenceEditor.presets.open' },
+        corridor: { icon: '🚧', color: '#e0a458', descKey: 'fenceEditor.presets.corridor' },
+        funnel: { icon: '📐', color: '#b9a6c4', descKey: 'fenceEditor.presets.funnel' },
+        maze: { icon: '🧩', color: '#d99a8f', descKey: 'fenceEditor.presets.maze' },
+        obstacles: { icon: '🪨', color: '#8aa66a', descKey: 'fenceEditor.presets.obstacles' }
     };
 
     const info = presetInfo[preset] || { icon: '?', color: '#666', descKey: '' };
@@ -611,8 +618,8 @@ function PresetCard({ preset, isSelected, onClick, t }) {
         onClick,
         className: `p-3 rounded-xl transition-all flex flex-col items-center gap-1 ${
             isSelected
-                ? 'bg-gradient-to-br from-emerald-500/30 to-emerald-600/20 ring-2 ring-emerald-400 text-white'
-                : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+                ? 'bg-gradient-to-br from-[#5e9e6e]/30 to-[#4d8159]/20 ring-2 ring-[#5e9e6e] text-[#f7f1e6]'
+                : 'bg-[#f7f1e6]/5 hover:bg-[#f7f1e6]/10 text-[#f7f1e6]/70 hover:text-[#f7f1e6]'
         }`,
         style: isSelected ? { boxShadow: `0 0 20px ${info.color}40` } : {}
     }, [
@@ -623,7 +630,7 @@ function PresetCard({ preset, isSelected, onClick, t }) {
         }, t(`sandbox.fencePresets.${preset}`)),
         createElement('span', {
             key: 'desc',
-            className: 'text-[10px] text-white/50'
+            className: 'text-[10px] text-[#f7f1e6]/50'
         }, t(info.descKey))
     ]);
 }
@@ -788,11 +795,11 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                 createElement(PanelTitle, { key: 'title' }, t('fenceEditor.title')),
                 createElement('span', {
                     key: 'count',
-                    className: 'px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-xs rounded-full'
+                    className: 'px-2 py-0.5 bg-[#5e9e6e]/20 text-[#7dbf8e] text-xs rounded-full'
                 }, fenceCount === 1 ? t('fenceEditor.fenceCount', { count: fenceCount }) : t('fenceEditor.fenceCountPlural', { count: fenceCount })),
                 createElement('span', {
                     key: 'shape',
-                    className: 'px-2 py-0.5 bg-purple-500/20 text-purple-300 text-xs rounded-full flex items-center gap-1'
+                    className: 'px-2 py-0.5 bg-[#e0a458]/20 text-[#e0a458] text-xs rounded-full flex items-center gap-1'
                 }, [
                     createElement('span', { key: 'icon' }, currentShape?.icon || '⬜'),
                     createElement('span', { key: 'label' }, `${t(`sandbox.shapes.${currentShape?.id || 'square'}`)} (${t(`sandbox.sizes.${currentSize}`)})`)
@@ -806,8 +813,8 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                     disabled: !canUndo,
                     className: `p-2 rounded-lg transition-all ${
                         canUndo
-                            ? 'bg-white/10 text-white hover:bg-white/20'
-                            : 'bg-white/5 text-white/30 cursor-not-allowed'
+                            ? 'bg-[#f7f1e6]/10 text-[#f7f1e6] hover:bg-[#f7f1e6]/20'
+                            : 'bg-[#f7f1e6]/5 text-[#f7f1e6]/30 cursor-not-allowed'
                     }`,
                     title: 'Undo'
                 }, '↩'),
@@ -817,8 +824,8 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                     disabled: !canRedo,
                     className: `p-2 rounded-lg transition-all ${
                         canRedo
-                            ? 'bg-white/10 text-white hover:bg-white/20'
-                            : 'bg-white/5 text-white/30 cursor-not-allowed'
+                            ? 'bg-[#f7f1e6]/10 text-[#f7f1e6] hover:bg-[#f7f1e6]/20'
+                            : 'bg-[#f7f1e6]/5 text-[#f7f1e6]/30 cursor-not-allowed'
                     }`,
                     title: 'Redo'
                 }, '↪')
@@ -832,7 +839,7 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
         }, [
             createElement('div', {
                 key: 'label',
-                className: 'text-xs text-white/50 mb-2 uppercase tracking-wide'
+                className: 'text-xs text-[#f7f1e6]/50 mb-2 uppercase tracking-wide'
             }, t('fenceEditor.quickLayouts')),
             createElement('div', {
                 key: 'cards',
@@ -855,7 +862,7 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
         }, [
             createElement('div', {
                 key: 'label',
-                className: 'text-xs text-white/50 mb-2 uppercase tracking-wide'
+                className: 'text-xs text-[#f7f1e6]/50 mb-2 uppercase tracking-wide'
             }, 'Your saved layouts'),
             createElement('div', {
                 key: 'list',
@@ -863,17 +870,17 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
             }, userPresets.map(preset =>
                 createElement('div', {
                     key: preset.name,
-                    className: 'flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1'
+                    className: 'flex items-center gap-1 bg-[#f7f1e6]/10 rounded-lg px-2 py-1'
                 }, [
                     createElement('button', {
                         key: 'load',
                         onClick: () => handleLoadUserPreset(preset),
-                        className: 'text-xs text-white hover:text-emerald-300 transition-colors'
+                        className: 'text-xs text-[#f7f1e6] hover:text-[#7dbf8e] transition-colors'
                     }, preset.name),
                     createElement('button', {
                         key: 'del',
                         onClick: () => handleDeleteUserPreset(preset.name),
-                        className: 'text-xs text-white/40 hover:text-red-400 transition-colors ml-1'
+                        className: 'text-xs text-[#f7f1e6]/40 hover:text-[#d99a8f] transition-colors ml-1'
                     }, 'x')
                 ])
             ))
@@ -892,7 +899,7 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                 createElement('div', {
                     key: 'canvas-wrapper',
                     ref: containerRef,
-                    className: 'flex items-center justify-center bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-xl p-3 min-h-[320px] border border-white/10'
+                    className: 'flex items-center justify-center bg-gradient-to-br from-[#2b2620]/90 to-[#3a3228]/90 rounded-xl p-3 min-h-[320px] border border-[#f7f1e6]/10'
                 }, createElement(EditorCanvas, {
                     config,
                     onConfigChange: handleConfigChangeWithHistory,
@@ -909,7 +916,7 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
             }, [
                 createElement('div', {
                     key: 'tools-label',
-                    className: 'text-xs text-white/50 uppercase tracking-wide'
+                    className: 'text-xs text-[#f7f1e6]/50 uppercase tracking-wide'
                 }, t('fenceEditor.tools')),
                 createElement('div', {
                     key: 'tools',
@@ -924,7 +931,7 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
                 createElement('button', {
                     key: 'clear',
                     onClick: handleClearAll,
-                    className: 'p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-all text-xs text-center'
+                    className: 'p-2 rounded-lg bg-[#d99a8f]/20 text-[#e8b4ab] hover:bg-[#d99a8f]/30 transition-all text-xs text-center'
                 }, t('fenceEditor.clearAll'))
             ])
         ]),
@@ -932,7 +939,7 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
         // Help text
         createElement('div', {
             key: 'help',
-            className: 'text-xs text-white/40 text-center mt-3 bg-white/5 rounded-lg p-2'
+            className: 'text-xs text-[#f7f1e6]/40 text-center mt-3 bg-[#f7f1e6]/5 rounded-lg p-2'
         }, tool === TOOLS.FENCE
             ? t('fenceEditor.helpDraw')
             : tool === TOOLS.ERASE
@@ -944,7 +951,7 @@ export function FenceEditor({ config, onConfigChange, onDone, onBack }) {
         // Footer
         createElement('div', {
             key: 'footer',
-            className: 'flex gap-3 mt-4 pt-4 border-t border-white/10'
+            className: 'flex gap-3 mt-4 pt-4 border-t border-[#f7f1e6]/10'
         }, [
             createElement(BackButton, {
                 key: 'back',
