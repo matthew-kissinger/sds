@@ -29,6 +29,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.1] - 2026-06-06 (Cycle 62 - Sheep collision feel)
+
+### Changed
+
+- Sheep now separate from nearby active sheep through a deterministic
+  spatial-hash hard-body pass shared by solo/client prediction, the
+  authoritative Worker sim, and the sim-baseline harness.
+- Dog-to-sheep body contact now uses collision constants sized closer to the
+  visible sheep mesh, reducing heads/backs sliding through the dog during
+  close contact.
+- Collision-corrected sheep render positions now snap before instance-matrix
+  rewrite so visual contact follows resolved physics instead of trailing
+  through another body.
+
+### Validation
+
+- `npm test -- tests/entity-collision.spec.js` passed.
+- `npm test -- tests/sim-baseline/harness-parity.spec.ts` passed.
+- `npm test -- tests/sim-baseline/baseline.spec.ts` passed after intentional
+  fixture regeneration.
+- `npm run lint`, full `npm test`, and `npm run build` passed.
+- Main bundle characterization ratchet accepted at `561 KiB` for the client
+  collision resolver.
+- `npx playwright test --project=chromium --grep-invert='@local-only'` passed.
+- A targeted `?cinematic=1` browser proof confirmed overlapping sheep/dog
+  setups resolve outside physics and rendered collision thresholds with no
+  console errors.
+
 ## [2.2.0] - 2026-06-03 (Forward license transition)
 
 ### Added

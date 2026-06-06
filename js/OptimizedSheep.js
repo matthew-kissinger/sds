@@ -12,7 +12,11 @@ import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { createKonveyorSheepMaterial } from './konveyorSheepMaterialAdapter.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
-import { resolveDogSheepCollision } from '../shared/EntityCollision.js';
+import {
+    createSheepCollisionScratch,
+    resolveDogSheepCollision,
+    resolveSheepSheepCollisions
+} from '../shared/EntityCollision.js';
 import { pointToSegmentDistance, isPointInPolygon } from './gamestate/polygonSpawn.js';
 import { isHighDifficultyCount } from './gamestate/modes.js';
 
@@ -118,6 +122,7 @@ export class OptimizedSheepSystem {
         // sheep per frame. This matches the deterministic sim-baseline harness,
         // which likewise filters the active list once per frame before the loop.
         this._activeSheepScratch = [];
+        this._sheepCollisionScratch = createSheepCollisionScratch();
 
         // Extreme boids optimization flag
         this.useExtremeBoids = useExtremeBoids;
@@ -756,8 +761,10 @@ export class OptimizedSheepSystem {
             // flock; the Worker runs the identical pass and stays authoritative
             // in multiplayer, so any prediction drift self-corrects on reconcile.
             if (sheep.state === 0 && !sheep.isAscending && sheep.position) {
-                if (sheepdog) resolveDogSheepCollision(sheep, sheepdog.position);
-                if (sheepdog2) resolveDogSheepCollision(sheep, sheepdog2.position);
+                let corrected = false;
+                if (sheepdog) corrected = resolveDogSheepCollision(sheep, sheepdog.position) || corrected;
+                if (sheepdog2) corrected = resolveDogSheepCollision(sheep, sheepdog2.position) || corrected;
+                if (corrected) this.syncCollisionRenderPosition(sheep);
             }
 
             // Cycle 5+ corral ascend: float upward along the lightning bolt,
@@ -838,6 +845,24 @@ export class OptimizedSheepSystem {
                 this.updateInstanceAttributes(i, sheep);
             }
         }
+
+        const sheepCollision = resolveSheepSheepCollisions(this.sheep, {
+            count: this.activeCount,
+            scratch: this._sheepCollisionScratch
+        });
+        if (sheepCollision.moved > 0) {
+            for (const index of this._sheepCollisionScratch.movedIndices) {
+                const sheep = this.sheep[index];
+                if (!sheep || sheep.isAscending || sheep.state !== 0) continue;
+
+                if (sheepdog) resolveDogSheepCollision(sheep, sheepdog.position);
+                if (sheepdog2) resolveDogSheepCollision(sheep, sheepdog2.position);
+
+                this.syncCollisionRenderPosition(sheep);
+                this.writeActiveSheepMatrix(index, sheep, dummy, animationUpdateStride, animationFrame);
+            }
+        }
+
         this._animationUpdateFrame = (animationFrame + 1) % animationUpdateStride;
         
         // Play group bleat if multiple sheep started being chased this frame
@@ -850,6 +875,27 @@ export class OptimizedSheepSystem {
         }
         
         this.instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    syncCollisionRenderPosition(sheep) {
+        if (!sheep.renderPosition) return;
+        sheep.renderPosition.x = sheep.position.x;
+        sheep.renderPosition.z = sheep.position.z;
+        sheep.renderFacingDirection = sheep.facingDirection;
+    }
+
+    writeActiveSheepMatrix(index, sheep, dummy, animationUpdateStride, animationFrame) {
+        const sheepY = this._surfaceY(sheep.renderPosition.x, sheep.renderPosition.z);
+        dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);
+        const sheepYaw = -sheep.renderFacingDirection + Math.PI / 2;
+        dummy.rotation.y = sheepYaw;
+        this._applyTerrainTilt(dummy, sheep.renderPosition.x, sheep.renderPosition.z, sheepYaw);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        this.instancedMesh.setMatrixAt(index, dummy.matrix);
+        if (animationUpdateStride === 1 || ((index + animationFrame) % animationUpdateStride) === 0) {
+            this.updateInstanceAttributes(index, sheep);
+        }
     }
     
     /**

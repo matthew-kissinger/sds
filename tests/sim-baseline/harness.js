@@ -40,8 +40,13 @@ import {
     createObjective,
     tickObjective,
     isCorralOpen,
-    resolveDogSheepCollisions
+    resolveDogSheepCollisions,
+    createSheepCollisionScratch,
+    resolveSheepSheepCollisions
 } from '../../shared/index.js';
+
+const islandCollisionScratch = createSheepCollisionScratch();
+const coopCollisionScratch = createSheepCollisionScratch();
 
 /**
  * Small, fast, reproducible PRNG (Mulberry32). We need this because
@@ -185,6 +190,54 @@ export function makeIslandSheepConfig(sceneId) {
     });
 }
 
+function applyIslandCollisionPass(sheepArray, sheepdogs, gameState) {
+    const sheepCollision = resolveSheepSheepCollisions(sheepArray, {
+        scratch: islandCollisionScratch
+    });
+    if (sheepCollision.moved === 0) return;
+
+    for (const index of islandCollisionScratch.movedIndices) {
+        const sheep = sheepArray[index];
+        resolveDogSheepCollisions(sheep, sheepdogs);
+        if (!sheep.hasPassedGate && !sheep.isRetiring) {
+            sheep.position = applyHardBoundaryConstraints(
+                sheep,
+                gameState.boundary || gameState.bounds,
+                null,
+                { margin: 0.5 }
+            );
+        }
+        if (sheep.velocity.magnitude() > 0.001) {
+            sheep.facingDirection = sheep.velocity.angle();
+        }
+        validateEntityState(sheep, new Vector2D(0, 0));
+    }
+}
+
+function applyCoopCollisionPass(sheepArray, sheepdogs, gameState) {
+    const sheepCollision = resolveSheepSheepCollisions(sheepArray, {
+        scratch: coopCollisionScratch
+    });
+    if (sheepCollision.moved === 0) return;
+
+    for (const index of coopCollisionScratch.movedIndices) {
+        const sheep = sheepArray[index];
+        resolveDogSheepCollisions(sheep, sheepdogs);
+        if (!sheep.hasPassedGate && !sheep.isRetiring) {
+            sheep.position = applyHardBoundaryConstraints(
+                sheep,
+                gameState.bounds,
+                gameState.gate,
+                { margin: 0.5, allowGatePassage: true }
+            );
+        }
+        if (sheep.velocity.magnitude() > 0.001) {
+            sheep.facingDirection = sheep.velocity.angle();
+        }
+        validateEntityState(sheep, new Vector2D(-20, -20));
+    }
+}
+
 /**
  * Cycle 34 Phase 1: one tick of sheep update for an island/corral scene.
  * Mirrors `GameSimulation.updateSheep` for the corral-retirement path
@@ -272,6 +325,8 @@ export function tickSheepIslandCoop(sheepArray, sheepdogs, gameState, deltaTime,
 
         validateEntityState(sheep, new Vector2D(0, 0));
     }
+
+    applyIslandCollisionPass(sheepArray, sheepdogs, gameState);
 
     // Corral retirement (RH, OC). updateSheepCorralRetirements flips
     // hasPassedGate + isRetiring inline; the trace records the resulting
@@ -392,6 +447,8 @@ export function tickSheepCoop(sheepArray, sheepdogs, gameState, deltaTime) {
 
         validateEntityState(sheep, new Vector2D(-20, -20));
     }
+
+    applyCoopCollisionPass(sheepArray, sheepdogs, gameState);
 }
 
 /**

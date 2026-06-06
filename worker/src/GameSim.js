@@ -38,6 +38,8 @@ import {
     tickObjective,
     isCorralOpen,
     resolveDogSheepCollisions,
+    createSheepCollisionScratch,
+    resolveSheepSheepCollisions,
     applyBarkImpulse,
     DEFAULT_BARK_CONFIG
 } from '../../shared/index.js';
@@ -140,6 +142,7 @@ export class GameSimulation {
         // threaded DO tick order makes the draw sequence deterministic given
         // the seed; passed into every spawn/retirement call in shared/.
         this.rng = mulberry32(this.seed);
+        this.sheepCollisionScratch = createSheepCollisionScratch();
 
         // Timed mode specific properties
         if (this.isTimedMode) {
@@ -742,38 +745,7 @@ export class GameSimulation {
             // dog is authoritative; sheep never shove the player-controlled dog.
             resolveDogSheepCollisions(sheep, this.sheepdogs.values());
 
-            // Apply hard boundary constraints (except for retiring sheep)
-            if (!sheep.hasPassedGate && !sheep.isRetiring) {
-                let constrainedPosition;
-                if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates) {
-                    // Use multiple gates boundary constraints for competitive/timed mode
-                    constrainedPosition = applyHardBoundaryConstraintsWithMultipleGates(
-                        sheep,
-                        this.gameState.bounds,
-                        this.gameState.competitiveGates,
-                        { margin: 0.5, allowGatePassage: true }
-                    );
-                } else {
-                    // Use single gate boundary constraints for cooperative mode
-                    constrainedPosition = applyHardBoundaryConstraints(
-                        sheep,
-                        this.gameState.boundary || this.gameState.bounds,
-                        this.gameState.gate,
-                        { margin: 0.5, allowGatePassage: true }
-                    );
-                }
-                sheep.position = constrainedPosition;
-            } else if (sheep.isRetiring && sheep.retirementTarget) {
-                // For retiring sheep, only apply loose constraints to keep them in extended bounds
-                const extendedBounds = {
-                    minX: this.gameState.bounds.minX - 35,
-                    maxX: this.gameState.bounds.maxX + 35,
-                    minZ: this.gameState.bounds.minZ - 35,
-                    maxZ: this.gameState.bounds.maxZ + 35
-                };
-                sheep.position.x = Math.max(extendedBounds.minX, Math.min(extendedBounds.maxX, sheep.position.x));
-                sheep.position.z = Math.max(extendedBounds.minZ, Math.min(extendedBounds.maxZ, sheep.position.z));
-            }
+            this.applySheepBoundaryConstraint(sheep);
 
             // Update facing direction for animation
             if (sheep.velocity.magnitude() > 0.001) {
@@ -783,6 +755,21 @@ export class GameSimulation {
             // Validate entity state. P-PERF-2: shared frozen fallback constant
             // (cloned on use inside validateEntityState, never aliased).
             validateEntityState(sheep, SHEEP_VALIDATE_FALLBACK);
+        }
+
+        const sheepCollision = resolveSheepSheepCollisions(this.gameState.sheep, {
+            scratch: this.sheepCollisionScratch
+        });
+        if (sheepCollision.moved > 0) {
+            for (const index of this.sheepCollisionScratch.movedIndices) {
+                const sheep = this.gameState.sheep[index];
+                resolveDogSheepCollisions(sheep, this.sheepdogs.values());
+                this.applySheepBoundaryConstraint(sheep);
+                if (sheep.velocity.magnitude() > 0.001) {
+                    sheep.facingDirection = sheep.velocity.angle();
+                }
+                validateEntityState(sheep, SHEEP_VALIDATE_FALLBACK);
+            }
         }
 
         // Check for sheep retirement
@@ -834,6 +821,37 @@ export class GameSimulation {
             );
 
             this.gameState.sheepRetired = retirementResult.totalRetired;
+        }
+    }
+
+    applySheepBoundaryConstraint(sheep) {
+        if (!sheep.hasPassedGate && !sheep.isRetiring) {
+            let constrainedPosition;
+            if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates) {
+                constrainedPosition = applyHardBoundaryConstraintsWithMultipleGates(
+                    sheep,
+                    this.gameState.bounds,
+                    this.gameState.competitiveGates,
+                    { margin: 0.5, allowGatePassage: true }
+                );
+            } else {
+                constrainedPosition = applyHardBoundaryConstraints(
+                    sheep,
+                    this.gameState.boundary || this.gameState.bounds,
+                    this.gameState.gate,
+                    { margin: 0.5, allowGatePassage: true }
+                );
+            }
+            sheep.position = constrainedPosition;
+        } else if (sheep.isRetiring && sheep.retirementTarget) {
+            const extendedBounds = {
+                minX: this.gameState.bounds.minX - 35,
+                maxX: this.gameState.bounds.maxX + 35,
+                minZ: this.gameState.bounds.minZ - 35,
+                maxZ: this.gameState.bounds.maxZ + 35
+            };
+            sheep.position.x = Math.max(extendedBounds.minX, Math.min(extendedBounds.maxX, sheep.position.x));
+            sheep.position.z = Math.max(extendedBounds.minZ, Math.min(extendedBounds.maxZ, sheep.position.z));
         }
     }
 

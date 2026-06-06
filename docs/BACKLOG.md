@@ -4,6 +4,25 @@
 
 ## Recently Completed
 
+### Cycle 62 - `sheep-hard-body-collision` (closed 2026-06-06, v2.2.1)
+
+Plan archived at [`docs/archive/cycles/cycle-62-plan.md`](archive/cycles/cycle-62-plan.md). Cycle 62 was originally a wolf-predator scaffold, then Matt redirected it to the remaining physical-collision issue from Cycle 56: sheep still packed through each other, and sheep heads/backs could visually slide through the dog. The cycle shipped deterministic flock hard bodies, widened dog/sheep body contact to match the visible mesh better, and kept the Worker, client, and sim-baseline harness on one shared resolver. No wire-format change and no D1 migration.
+
+**Closeout outcomes (4/4 phases shipped):**
+
+- **P1 - shared collision core.** [`shared/EntityCollision.js`](../shared/EntityCollision.js) now contains `resolveSheepSheepCollisions`, a pure deterministic spatial-hash pass over active sheep. It uses stable input order, fixed-cell neighbor checks, capped per-tick position correction, inward-relative-velocity cleanup, and deterministic fallback normals for exact co-location. Dog/sheep constants were tuned from the conservative Cycle 56 values to better cover the visible sheep mesh.
+- **P2 - Worker, client, and harness wiring.** [`worker/src/GameSim.js`](../worker/src/GameSim.js) applies the sheep-to-sheep pass after sheep integration, then reruns dog collision, boundary constraints, facing, and validation for moved sheep. [`js/OptimizedSheep.js`](../js/OptimizedSheep.js) applies the same shared pass for solo/prediction and rewrites corrected instance matrices. [`tests/sim-baseline/harness.js`](../tests/sim-baseline/harness.js) mirrors the Worker order so parity remains meaningful.
+- **P3 - tests and baselines.** [`tests/entity-collision.spec.js`](../tests/entity-collision.spec.js) now covers dog constants, sheep separation, deep-overlap caps, inward-velocity cleanup, exact-overlap determinism, scratch reuse, and a 5,000-sheep grid check that guards against O(n^2). Sim-baseline fixtures changed only where dense active sheep now separate: `sheep-60hz-20s.json`, `island-boundary-rh-60hz.json`, `island-boundary-oc-60hz.json`, `corral-retirement-rh-60hz.json`, and `bark-impulse-60hz.json`.
+- **P4 - docs and release.** [`NEXT_SESSION.md`](../NEXT_SESSION.md) now points at Cycle 63, [`CHANGELOG.md`](../CHANGELOG.md) records `v2.2.1`, and Cycle 63 restores the wolf-predator scaffold as the next candidate after prod collision playtest.
+
+**Validation gates (2026-06-06):** `npm test -- tests/entity-collision.spec.js` passed; `npm test -- tests/sim-baseline/harness-parity.spec.ts` passed; `npm test -- tests/sim-baseline/baseline.spec.ts` passed after intentional fixture regeneration; `npm run lint` passed; full `npm test` passed; `npm run build` passed; the main-bundle ratchet was accepted from `558 KiB` to `561 KiB` for the client collision resolver; `npx playwright test --project=chromium --grep-invert='@local-only'` passed (the same Chromium lane used by Deploy CI); `git diff --check` passed. **Browser proof:** a targeted `?cinematic=1` local probe placed overlapping sheep/dog bodies and confirmed physics and rendered distances stayed outside the collision thresholds with no console errors.
+
+**Carryover (deferred):**
+
+- **Prod feel review for collision constants.** Matt asked to test in prod after deploy. If contact feels too wide, soft, or jittery, tune only the constants in [`shared/EntityCollision.js`](../shared/EntityCollision.js), rerun sim-baselines, and record any changed fixtures.
+- **Wolf predator mode.** The Cycle 61 wolf asset and deterministic bark event remain the teed-up next direction; Cycle 63 is scaffolded for it.
+- All prior open carryover (bark feel finalize, the second mode edition, tablet draw-call perf, controller nav for deferred surfaces, counting naming/curve-feel, `/api/rename` no-body 500, and `upload-artifact@v5` Node 20 deprecation) remains deferred.
+
 ### Cycle 61 - `pastoral-finish-and-bark-wolf` (closed 2026-06-05)
 
 Plan archived at [`docs/archive/cycles/cycle-61-plan.md`](archive/cycles/cycle-61-plan.md). Three of Matt's notes folded into one cycle: finish the Pastoral UI program, give the dog a real bark verb, and add the wolf as a ready asset. Built and validated end-to-end across three parallel tracks (a UI track and a wolf track as background agents, the fence-touching bark spine in the main session), committed in three feature commits, and deployed. 7 phases.

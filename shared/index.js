@@ -68,10 +68,14 @@ export {
 export {
     resolveDogSheepCollision,
     resolveDogSheepCollisions,
+    createSheepCollisionScratch,
+    resolveSheepSheepCollisions,
     DOG_BODY_RADIUS,
     SHEEP_BODY_RADIUS,
     DOG_SHEEP_MIN_DISTANCE,
-    MAX_DOG_SHEEP_PUSH_PER_TICK
+    SHEEP_SHEEP_MIN_DISTANCE,
+    MAX_DOG_SHEEP_PUSH_PER_TICK,
+    MAX_SHEEP_SHEEP_PUSH_PER_TICK
 } from './EntityCollision.js';
 
 // Cycle 61 Phase 4: deterministic bark impulse. The dog's bark drives sheep in
