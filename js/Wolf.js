@@ -169,7 +169,21 @@ export class Wolf {
             this.model.scale.setScalar(opts.scale);
         } else {
             const targetHeight = opts.targetHeight ?? 1.1;
-            const box = new THREE.Box3().setFromObject(this.model);
+            // Fit to the posed SKELETON extent, NOT Box3.setFromObject. The
+            // FBX2glTF export gives the skinned-mesh geometry a ~500-unit bind
+            // box (a unit-conversion artifact), while the bones that actually
+            // drive the rendered wolf sit at ~6 native units. A geometry-box fit
+            // therefore divides by ~500 and collapses the visible wolf to ~1cm.
+            // Bone world positions carry every nested node scale, so their extent
+            // is the true rendered size (here ~6 units -> scale ~0.18 -> ~1.1m).
+            this.model.updateWorldMatrix(true, true);
+            const box = new THREE.Box3();
+            const p = new THREE.Vector3();
+            let anyBone = false;
+            this.model.traverse((child) => {
+                if (child.isBone) { child.getWorldPosition(p); box.expandByPoint(p); anyBone = true; }
+            });
+            if (!anyBone) box.setFromObject(this.model); // boneless fallback
             const size = box.getSize(new THREE.Vector3());
             const largest = Math.max(size.x, size.y, size.z, 1e-6);
             this.model.scale.setScalar(targetHeight / largest);

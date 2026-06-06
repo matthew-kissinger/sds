@@ -163,6 +163,19 @@ export async function mountWolfHarness() {
     wolf.setPosition(0, 0, 0);
     wolf.transitionToState('IDLE');
 
+    // Camera framing for the bone-fit wolf (~1.1m in its longest dim, the body
+    // length; ~0.45m at the shoulder). A 3/4 view at ~3.2m reads the whole wolf
+    // plus its shadow. The wolf turntables in place at the origin.
+    camera.position.set(1.8, 1.2, 2.4);
+    camera.lookAt(0, 0.45, 0);
+    camera.updateProjectionMatrix();
+
+    // Expose the renderer refs so a probe / human can live-tune the view and
+    // inspect the wolf without re-instrumenting THREE.
+    surface.camera = camera;
+    surface.scene = scene;
+    surface.getWolf = () => wolf;
+
     surface.state = () => wolf.currentState;
     surface.clip = () => wolf.currentAction?.getClip?.()?.name ?? null;
     surface.speed = () => wolf.speed;
