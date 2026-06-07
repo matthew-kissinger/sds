@@ -2365,7 +2365,9 @@ class SheepDogSimulation {
 
             // Cycle 65: drive the homestead day loop from the day/night clock
             // (gate open/close by phase + HUD). No-op on non-day-loop scenes.
-            this._tickDayLoop?.(deltaTime);
+            // Cycle 67 P6: solo only - in co-op the DO owns the day clock + run and
+            // the client drives the HUD from the broadcast (initNetwork).
+            if (!this.isMultiplayer) this._tickDayLoop?.(deltaTime);
         }
 
         // Update other players with interpolation for smooth movement
@@ -2430,7 +2432,9 @@ class SheepDogSimulation {
             // Runs after the shared sheep sim has moved the flock (and after the
             // dog moved earlier this frame), before render. Day-loop scenes only;
             // a no-op everywhere else.
-            if (this._penContainment) {
+            // Cycle 67 P6: solo only. In co-op the DO runs the pen authoritatively
+            // and the client renders the corrected sheep from the broadcast.
+            if (!this.isMultiplayer && this._penContainment) {
                 // Always pass the dog: it collides with the fence whether or not
                 // the round is "active" (the fence is a physical barrier).
                 this._penContainment.update(
@@ -2444,7 +2448,9 @@ class SheepDogSimulation {
             // containment so they read final sheep positions and pen membership
             // (a wolf never kills a sheep the same frame it crossed the gate to
             // safety). Survival scenes only; a no-op everywhere else.
-            if (this._wolfPack) {
+            // Cycle 67 P6: solo only. In co-op the DO runs the wolves and the
+            // client renders them from the broadcast (initNetwork WolfRenderer).
+            if (!this.isMultiplayer && this._wolfPack) {
                 this._wolfPack.update(deltaTime, this.gameState.sheep, this.sheepdog ?? null);
             }
         }

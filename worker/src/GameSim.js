@@ -1414,6 +1414,7 @@ export class GameSimulation {
                 t: Math.round(s.t * 1000) / 1000,
                 gateOpen: s.gateOpen,
                 alive: s.run.isAlive(),
+                pennedCount: s.pen?.pennedCount ?? 0,
             };
             snapshot.wolves = s.wolves.wolves.map(w => ({
                 id: w.id,

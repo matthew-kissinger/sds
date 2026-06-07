@@ -66,8 +66,24 @@ export function installMpEventHandlers(game) {
             console.log('Current gameState.sheepRetired:', game.gameState.sheepRetired);
             console.log('Current gameState.gameCompleted:', game.gameState.gameCompleted);
 
+            // Cycle 67 P6: co-op survival completion - the shared run ended on a
+            // 33%+ night loss. Show the peak-flock summary (the same surface as
+            // solo); the leaderboard inside it reads the party-size board (P7).
+            if (update.data.isSurvival && update.data.survival) {
+                game.gameState.gameCompleted = true;
+                try { game.gameTimer.stop(); } catch { /* noop */ }
+                game.audioManager?.playLossSound?.();
+                if (game._showSurvivalSummary) {
+                    game._showSurvivalSummary({
+                        day: update.data.survival.day,
+                        score: update.data.survival.score,
+                        sceneId: game.currentScene?.id || 'newsheepdogland',
+                        onRestart: () => { try { location.reload(); } catch { /* noop */ } },
+                    });
+                }
+                game.mobileControls?.disable?.();
             // Handle racing/timed vs cooperative completion
-            if ((update.data.isCompetitive || update.data.isTimedMode) && update.data.competitive) {
+            } else if ((update.data.isCompetitive || update.data.isTimedMode) && update.data.competitive) {
                 // Racing/timed mode completion
                 const modeName = update.data.isTimedMode ? 'timed' : 'racing';
                 console.log(`Triggering ${modeName} completion UI...`);
@@ -198,6 +214,11 @@ export function handleMultiplayerGameState(game, serverState) {
                 if (serverSheepData.state !== undefined) {
                     clientSheepEntity.state = serverSheepData.state;
                 }
+
+                // Cycle 67 P6: co-op survival flags wolf-killed AND dormant sheep
+                // `killed`; the OptimizedSheep render path hides them (and the
+                // minimap skips them). Absent on non-survival frames => false.
+                clientSheepEntity.killed = !!serverSheepData.killed;
 
                 if (serverSheepData.hasPassedGate !== undefined) {
                     clientSheepEntity.hasPassedGate = serverSheepData.hasPassedGate;
@@ -408,5 +429,78 @@ export function handleMultiplayerGameState(game, serverState) {
         // Field/RH room. Solo runs preserve their own _objectiveDef so
         // their `gameState.objective` stays untouched here.
         game.gameState.objective = null;
+    }
+
+    // Cycle 67 P6: co-op survival - render the DO's wolves + drive the survival
+    // HUD + minimap from the broadcast. No local survival sim runs in MP.
+    if (serverState.survival) {
+        driveCoopSurvival(game, serverState);
+    }
+}
+
+/**
+ * Cycle 67 P6: drive the co-op survival client surfaces from a broadcast frame.
+ * The DO is authoritative for the run + wolves + pen; the client renders them.
+ *   - the wolves via a lazily-mounted WolfRenderer (render-from-snapshot);
+ *   - the day/night HUD chip from the survival block;
+ *   - the minimap from the local sheep + all players' dogs + the wolves.
+ * @param {object} game
+ * @param {object} serverState  decoded broadcast with a `survival` block.
+ */
+function driveCoopSurvival(game, serverState) {
+    const surv = serverState.survival;
+    if (!surv) return;
+
+    // dt since the last survival frame (renderer gait + minimap throttle).
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const dt = game._coopSurvivalTs
+        ? Math.min(0.1, Math.max(0.001, (now - game._coopSurvivalTs) / 1000))
+        : 0.05;
+    game._coopSurvivalTs = now;
+
+    // Wolves: lazily mount a WolfRenderer (loads the glTF once) and reconcile it
+    // to the broadcast wolf array each frame. No local wolf AI in co-op.
+    if (!game._coopWolfRenderer && !game._coopWolfRendererPending) {
+        game._coopWolfRendererPending = true;
+        import('../gamestate/wolfRenderer.js')
+            .then(({ WolfRenderer }) => {
+                const r = new WolfRenderer({
+                    scene: game.sceneManager.getScene(),
+                    groundY: (x, z) => (game.terrainBuilder?._groundY ? game.terrainBuilder._groundY(x, z) : 0),
+                });
+                game._coopWolfRenderer = r;
+                return r.init();
+            })
+            .catch((err) => console.warn('[COOP] wolf renderer init failed:', err?.message || err));
+    }
+    if (game._coopWolfRenderer) {
+        game._coopWolfRenderer.sync(serverState.wolves || [], dt);
+    }
+
+    // HUD chip from the broadcast run state (flock => survival styling).
+    if (game._updateDayNightChip) {
+        game._updateDayNightChip({
+            phase: surv.phase,
+            t: surv.t,
+            day: surv.day,
+            flock: surv.flock,
+            gateOpen: surv.gateOpen,
+            duskWarning: surv.phase === 'dusk',
+            sheepHome: surv.pennedCount | 0,
+        });
+    }
+
+    // Minimap: local sheep + all players' dogs + the broadcast wolves.
+    if (game._updateMinimap) {
+        const myId = game.networkManager?.getPlayerId?.();
+        const dogs = Array.isArray(serverState.sheepdogs)
+            ? serverState.sheepdogs.map((d) => ({ x: d.x, z: d.z, self: d.playerId === myId }))
+            : undefined;
+        game._updateMinimap({
+            dt,
+            dogs,
+            sheep: game.gameState?.sheep,
+            wolves: serverState.wolves,
+        });
     }
 }

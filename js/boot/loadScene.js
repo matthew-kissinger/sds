@@ -38,6 +38,11 @@ export async function disposeScene(game) {
     game._wolfPack = null;
     game._survivalRun = null;
     game._penContainment = null;
+    // Cycle 67 P6: tear down the co-op survival renderer (DO-driven wolves).
+    try { game._coopWolfRenderer?.dispose?.(); } catch (err) { console.warn('[SWAP] coop wolf renderer dispose:', err); }
+    game._coopWolfRenderer = null;
+    game._coopWolfRendererPending = false;
+    game._coopSurvivalTs = 0;
     try { game._unmountMinimap?.(); } catch (err) { console.warn('[SWAP] minimap unmount:', err); }
     game._unmountMinimap = null;
 

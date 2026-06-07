@@ -231,7 +231,7 @@ describe('P-PERF-2: createGameStateSnapshot wire shape', () => {
       const snap = sim.createGameStateSnapshot();
       expect(snap.v).toBe(PROTOCOL_VERSION);
       expect(new Set(Object.keys(snap.survival))).toEqual(
-        new Set(['day', 'phase', 'flock', 'peak', 't', 'gateOpen', 'alive']),
+        new Set(['day', 'phase', 'flock', 'peak', 't', 'gateOpen', 'alive', 'pennedCount']),
       );
       expect(Array.isArray(snap.wolves)).toBe(true);
       expect(snap.wolves.length).toBeGreaterThan(0);

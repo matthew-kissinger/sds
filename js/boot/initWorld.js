@@ -206,7 +206,11 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             // entry, sealed at night, dog + sheep collide) and retires sheep that
             // pass through the gate (calm settle, no zap, no teleport). main.js
             // ticks it after the shared sheep sim each frame.
-            if (pen?.center) {
+            // Cycle 67 P6: the client-side pen + survival sim run for SOLO only. In
+            // co-op the DO is authoritative (run + wolves + pen) and the client
+            // renders from the broadcast (see initNetwork.driveCoopSurvival), so
+            // skip the local sim entirely in MP.
+            if (pen?.center && !game.isMultiplayer) {
                 const { PenContainment } = await import('../gamestate/penContainment.js');
                 game._penContainment = new PenContainment(pen, {
                     x: gd.position.x, z: gd.position.z, width: gd.width,
@@ -219,7 +223,7 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             // death on a 33%+ night loss, score = peak flock). Client-side; it
             // drives off the day-loop phase. Newsheepdogland declares `survival`;
             // other day-loop scenes run the soft Cycle 65 loop unchanged.
-            if (game.currentScene.survival) {
+            if (game.currentScene.survival && !game.isMultiplayer) {
                 const { SurvivalRun } = await import('../gamestate/survivalRun.js');
                 game._survivalRun = new SurvivalRun(game.currentScene.survival);
 
@@ -246,6 +250,11 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
 
             chip.mountDayNightChip();
             game._unmountDayNightChip = chip.unmountDayNightChip;
+            // Cycle 67 P6: expose the chip update + summary so co-op survival can
+            // drive the HUD from the DO broadcast (initNetwork), since the local
+            // _tickDayLoop does not run in MP.
+            game._updateDayNightChip = chip.updateDayNightChip;
+            game._showSurvivalSummary = chip.showSurvivalSummary;
 
             // Cycle 66 P7: the survival minimap (island layout from the coastline
             // polygon + live dog / flock / wolf markers). Survival scenes with a

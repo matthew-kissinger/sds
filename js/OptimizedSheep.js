@@ -1008,6 +1008,20 @@ export class OptimizedSheepSystem {
         for (let i = 0; i < this.activeCount; i++) {
             const sheep = this.sheep[i];
 
+            // Cycle 67 P6: co-op survival broadcasts a `killed` flag for wolf-killed
+            // AND dormant (not-yet-activated) sheep. Hide them (scale 0), mirroring
+            // the solo killed-guard; without this the MP path renders the whole
+            // dormant pool as live sheep.
+            if (sheep.killed) {
+                const ky = this._surfaceY(sheep.position.x, sheep.position.z);
+                dummy.position.set(sheep.position.x, ky, sheep.position.z);
+                dummy.rotation.set(0, 0, 0);
+                dummy.scale.set(0, 0, 0);
+                dummy.updateMatrix();
+                this.instancedMesh.setMatrixAt(i, dummy.matrix);
+                continue;
+            }
+
             // Force render position to match physics position immediately (MP).
             sheep.renderPosition.x = sheep.position.x;
             sheep.renderPosition.z = sheep.position.z;

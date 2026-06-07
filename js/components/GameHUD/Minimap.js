@@ -124,7 +124,7 @@ function _drawStatic() {
 /**
  * Redraw the live layer (island + pen + markers). Throttled to ~20 Hz off the
  * caller's dt so it costs almost nothing even with a few hundred sheep.
- * @param {{dt?:number, dog?:{x:number,z:number}|null, sheep?:Array, wolves?:Array, force?:boolean}} s
+ * @param {{dt?:number, dog?:{x:number,z:number}|null, dogs?:Array<{x:number,z:number,self?:boolean}>, sheep?:Array, wolves?:Array, force?:boolean}} s
  */
 export function updateMinimap(s = {}) {
     if (!_ctx || !_xf) return;
@@ -171,15 +171,21 @@ export function updateMinimap(s = {}) {
         }
     }
 
-    // Dog (player): a bright ringed dot so it reads above the flock.
-    if (s.dog) {
-        const dx = _xf.toX(s.dog.x), dy = _xf.toY(s.dog.z);
+    // Dogs: a bright ringed dot per player. Co-op passes `dogs` (all players,
+    // the local one flagged `self`); solo passes a single `dog`. The local dog
+    // gets a brighter ring so it reads above teammates and the flock.
+    const dogs = Array.isArray(s.dogs)
+        ? s.dogs
+        : (s.dog ? [{ x: s.dog.x, z: s.dog.z, self: true }] : []);
+    for (const d of dogs) {
+        if (!d) continue;
+        const dx = _xf.toX(d.x), dy = _xf.toY(d.z);
         _ctx.beginPath();
         _ctx.arc(dx, dy, 3, 0, Math.PI * 2);
         _ctx.fillStyle = C.dog;
         _ctx.fill();
         _ctx.lineWidth = 1.25;
-        _ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        _ctx.strokeStyle = d.self ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.45)';
         _ctx.stroke();
     }
 }
