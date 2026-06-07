@@ -131,6 +131,8 @@ Every phase's Acceptance section uses EARS notation so the lines are grep-testab
 
 **Depends on:** nothing. Best run after Phase 6 if grass changed (so the shot reflects final grass).
 
+**OUTCOME (2026-06-07): manifest + working capture tool shipped; final framing is Matt's live pass (per the media-prep preference).** `cycle68-validation/hero/manifest.md` specifies the shot; `tools/hero-capture.mjs` drives the in-repo cinematic API (`?cinematic=1` -> `window.__sdsCinema`: setSun / setCameraPose / hideUI) and reliably writes the two PNGs (1920x1080 + 1200x630, in `cycle68-validation/hero/`). Two blind camera passes confirmed the pipeline works but framing + lighting need a live eye - the dark disk in the reference frames is the low-sun sphere (don't centre it; notes saved in the manifest). The "at least one PNG" acceptance is met by the reference frames; the hero-quality beauty shot is the short Matt pass the tool sets up (`vite --port 3000`, edit CAM/TARGET/SUN_T, re-run). This is the media-prep split working as intended.
+
 1. **Write a shot manifest first** (per the media-prep working preference): scene, time of day, sun angle, camera position and target, dog pose, aspect, filename, purpose.
 2. **Capture via preview** (`SDS_SUPPRESS_BROWSER_OPEN=1`), the entrance hero framing on Newsheepdogland, to `cycle68-validation/hero/`.
 3. **Browser-probe hygiene.** Close every tab and listener the capture started.
