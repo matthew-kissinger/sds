@@ -1,8 +1,8 @@
-# Next Session - Cycle 67 coop-survival (scaffolded stub)
+# Next Session - Cycle 67 coop-survival (authored, ready to run)
 
 > **Updated:** 2026-06-07
 > **For:** Cycle 67 `coop-survival`. Plan: [`docs/cycle-67-plan.md`](docs/cycle-67-plan.md).
-> **Pickup priority:** Cycle 66 (solo survival on Newsheepdogland) is CLOSED + shipped. Cycle 67 is a STUB - fill in the Goal + Phases (the big deferred item is co-op: promoting the survival run + wolves + pen containment into the deterministic `shared/` sim), then run `/cycle-start`.
+> **Pickup priority:** Cycle 66 (solo survival on Newsheepdogland) is CLOSED + shipped. Cycle 67 is **fully authored** - an 8-phase plan to promote the survival run + wolves + pen into the deterministic `shared/` sim and run co-op survival rooms (DO-authoritative, clients render-from-snapshot). Read the plan top-to-bottom + [`shared-sim.md`](.claude/rules/shared-sim.md) + [`multiplayer.md`](.claude/rules/multiplayer.md), then run `/cycle-start` and begin **P1** (promote the deterministic cores to `shared/survival/`).
 
 ## Cold-Start Orientation
 
@@ -24,7 +24,13 @@ Solo + client-side throughout; sim-baseline byte-identical. Validation: 1078 tes
 
 ## What To Pick Up Next
 
-Cycle 67 (`coop-survival`) is a scaffolded stub. The dominant carryover is **co-op**: promote `survivalRun.js` + `wolfPack.js`/`wolfBehavior.js` + `penContainment.js` from client-only into deterministic `shared/` modules so survival runs in Worker-authoritative co-op rooms. This is a real deterministic-sim + wire-protocol cycle - respect [`shared-sim.md`](.claude/rules/shared-sim.md) + [`multiplayer.md`](.claude/rules/multiplayer.md) (sim-baseline regen with explicit acceptance, a wire-format migration story, append-only D1). Fill in the plan's Goal + Phases, then run `/cycle-start`.
+Cycle 67 (`coop-survival`) is **fully authored** in [`docs/cycle-67-plan.md`](docs/cycle-67-plan.md) - 8 phases, EARS acceptance, the grounding map verified against the current worker/wire/client code. Run `/cycle-start`, then begin at **P1**.
+
+The spine: promote `survivalRun.js` + `wolfBehavior.js` + the wolf AI + the pen math from client-only `js/gamestate/` into pure `shared/survival/*` modules (so the DO can run them - it can't import `js/`), then make the DO authoritative for the run + wolves + pen and broadcast them; clients render-from-snapshot (no client prediction of wolves - this sidesteps cross-engine trig determinism). The plan's "authority model" section is the load-bearing decision; the bark-edge in `shared/BarkImpulse.js` is the dual-call-site template.
+
+Determinism audit already done (in the plan): `survivalRun.js` + `wolfBehavior.js` are clean to move; `penContainment.js` has one `Math.random()` in `_settleSpot()` to seed; `wolfPack.js` is Three.js-coupled and needs a pure-core/renderer split. Hard stops: the 9 sheep sim-baselines stay byte-identical (survival is additive), the wire change needs the four-piece migration story (no version tag exists today - P5 adds one), D1 append-only.
+
+Phase order: P1 (shared cores) -> P2 (wolf AI + renderer) -> P3 (DO tick) -> P4 (room mode) + P5 (wire) -> P6 (client render/HUD) -> P7 (leaderboard) -> P8 (validate + ship).
 
 ## Open Carryover (deferred)
 
