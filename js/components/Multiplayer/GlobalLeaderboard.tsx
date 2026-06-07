@@ -37,11 +37,16 @@ import {
     isCountingLeaderboardMode,
     sceneOffersCounting,
 } from '../../../shared/countingModes.js';
+import {
+    SURVIVAL_LEADERBOARD_MODE,
+    isSurvivalLeaderboardMode,
+    sceneOffersSurvival,
+} from '../../../shared/survivalModes.js';
 import { color } from '../ui/tokens';
 
 // Cycle 35 Phase 5: three concrete scenes. The 'any' option is gone with
 // the cross-scene mash-up.
-const SCENE_ORDER = ['field', 'rolling-hills', 'open-country'];
+const SCENE_ORDER = ['field', 'rolling-hills', 'open-country', 'newsheepdogland'];
 const LAST_SCENE_KEY = 'sds:leaderboardLastScene';
 const FALLBACK_SCENE = 'field';
 
@@ -84,7 +89,8 @@ const SHEEP_FILTER_OPTIONS = [
  * score), so a dropdown would be meaningless there.
  */
 const isFixedCountTabKey = (tab: string): boolean =>
-    tab.startsWith(SOLO_TAB_PREFIX) || tab === 'timed' || isCountingLeaderboardMode(tab);
+    tab.startsWith(SOLO_TAB_PREFIX) || tab === 'timed'
+    || isCountingLeaderboardMode(tab) || isSurvivalLeaderboardMode(tab);
 
 interface LeaderEntry {
     rank: number;
@@ -116,6 +122,11 @@ export function leaderboardModesForScene(sceneId: string): string[] {
     // modes. Open Country offers no counting, so it shows none.
     const counting = sceneOffersCounting(sceneId) ? [...COUNTING_LEADERBOARD_MODES] : [];
     const mp = Array.isArray(scene.allowedModes) ? scene.allowedModes : [];
+    // Cycle 66: a survival scene (Newsheepdogland) leads with its survival board -
+    // it is THE mode there - then the solo rungs / MP boards follow.
+    if (sceneOffersSurvival(sceneId)) {
+        return [SURVIVAL_LEADERBOARD_MODE, ...solo, ...counting, ...mp];
+    }
     return [...solo, ...counting, ...mp];
 }
 
@@ -126,6 +137,10 @@ export function leaderboardModesForScene(sceneId: string): string[] {
 function defaultTabForScene(sceneId: string): string {
     const scene = getSceneById(sceneId);
     const tabs = leaderboardModesForScene(sceneId);
+    // Cycle 66: survival scenes land on the survival board by default.
+    if (sceneOffersSurvival(sceneId) && tabs.includes(SURVIVAL_LEADERBOARD_MODE)) {
+        return SURVIVAL_LEADERBOARD_MODE;
+    }
     if (scene) {
         const classic = getLadderEntry(scene, 'classic');
         if (classic && classic.ranked) {
@@ -371,6 +386,8 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
             // Cycle 59 (Counting Sheep): per-curve board tabs.
             'counting-incremental': 'leaderboard.countingIncremental',
             'counting-exponential': 'leaderboard.countingExponential',
+            // Cycle 66: the survival board.
+            survival: 'leaderboard.survival',
         };
         return known[mode] || `leaderboard.${mode}`;
     };

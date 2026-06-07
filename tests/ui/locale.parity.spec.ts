@@ -64,6 +64,8 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'hud.counting.round',
     'leaderboard.countingExponential',
     'leaderboard.countingIncremental',
+    // Cycle 66 - survival board; English-only this cycle, translate later.
+    'leaderboard.survival',
     'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
@@ -111,6 +113,8 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'hud.counting.round',
     'leaderboard.countingExponential',
     'leaderboard.countingIncremental',
+    // Cycle 66 - survival board; English-only this cycle, translate later.
+    'leaderboard.survival',
     'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
@@ -158,6 +162,8 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'hud.counting.round',
     'leaderboard.countingExponential',
     'leaderboard.countingIncremental',
+    // Cycle 66 - survival board; English-only this cycle, translate later.
+    'leaderboard.survival',
     'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
@@ -223,6 +229,8 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'hud.counting.round',
     'leaderboard.countingExponential',
     'leaderboard.countingIncremental',
+    // Cycle 66 - survival board; English-only this cycle, translate later.
+    'leaderboard.survival',
     'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',

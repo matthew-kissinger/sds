@@ -222,12 +222,46 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             if (game.currentScene.survival) {
                 const { SurvivalRun } = await import('../gamestate/survivalRun.js');
                 game._survivalRun = new SurvivalRun(game.currentScene.survival);
+
+                // Cycle 66 P4: the night wolves. A client-only predator layer that
+                // hunts sheep left outside the pen at night and feeds kills into
+                // the survival economy. Spawn/despawn ride the day-loop nightfall /
+                // dawn transitions below; movement + kills tick from main.js after
+                // the sheep sim + pen containment. The glTF loads in the background
+                // (fire-and-forget) so it never delays the scene paint - spawnNight
+                // no-ops until it is ready, well before the first ~10-minute night.
+                const { WolfPack } = await import('../gamestate/wolfPack.js');
+                game._wolfPack = new WolfPack({
+                    scene: game.sceneManager.getScene(),
+                    groundY: (x, z) => (game.terrainBuilder?._groundY ? game.terrainBuilder._groundY(x, z) : 0),
+                    pen: game._penContainment,
+                    onKill: () => game._survivalRun?.recordKill(),
+                    seed: (game.currentScene.terrain?.seed ?? 7) >>> 0,
+                });
+                game._wolfPack.init();
             } else {
                 game._survivalRun = null;
+                game._wolfPack = null;
             }
 
             chip.mountDayNightChip();
             game._unmountDayNightChip = chip.unmountDayNightChip;
+
+            // Cycle 66 P7: the survival minimap (island layout from the coastline
+            // polygon + live dog / flock / wolf markers). Survival scenes with a
+            // coastline boundary only; updated each frame from _tickDayLoop below.
+            if (game.currentScene.survival && Array.isArray(game.currentScene.boundary?.points)) {
+                const mm = await import('../components/GameHUD/Minimap.js');
+                mm.mountMinimap({
+                    points: game.currentScene.boundary.points,
+                    pen: game.currentScene.pen || null,
+                });
+                game._updateMinimap = mm.updateMinimap;
+                game._unmountMinimap = mm.unmountMinimap;
+            } else {
+                game._updateMinimap = null;
+                game._unmountMinimap = null;
+            }
 
             // Cycle 65 P7: the skip-to-dusk cutscene (on-screen button + F key).
             const { createSkipToDusk } = await import('../effects/skipToDusk.js');
@@ -275,15 +309,34 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 const run = game._survivalRun;
                 if (run) {
                     const ev = run.onPhase(state.phase);
-                    if (ev?.type === 'survived') {
-                        // Dawn: release the penned flock to graze, then grow +N.
+                    if (ev?.type === 'nightfall') {
+                        // Dusk -> night: the wolves come out. Pack escalates per day.
+                        game._wolfPack?.spawnNight(run.day, game.gameState?.sheep);
+                    } else if (ev?.type === 'survived') {
+                        // Dawn: wolves retreat; release the penned flock to graze,
+                        // then grow +N for surviving the night.
+                        game._wolfPack?.retreatAll();
                         game._penContainment?.releaseAll?.(game.gameState?.sheep);
                         game.gameState?.growSurvivalFlock?.(run.growth);
                     } else if (ev?.type === 'death') {
+                        game._wolfPack?.retreatAll();
                         if (game.gameState) game.gameState.gameActive = false;
+                        // Cycle 66 P6: post the peak-flock score to the survival
+                        // leaderboard (newsheepdogland / survival partition).
+                        try {
+                            if (typeof window !== 'undefined' && window.submitGameScore) {
+                                window.submitGameScore('survival', ev.score, {
+                                    gameMode: 'survival',
+                                    sceneId: game.currentScene?.id || 'newsheepdogland',
+                                    sheepCount: ev.score,
+                                    day: ev.day,
+                                });
+                            }
+                        } catch (err) { console.warn('[SURVIVAL] score submit failed:', err); }
                         chip.showSurvivalSummary({
                             day: ev.day,
                             score: ev.score,
+                            sceneId: game.currentScene?.id || 'newsheepdogland',
                             onRestart: () => { try { location.reload(); } catch { /* noop */ } },
                         });
                         if (typeof window !== 'undefined') {
@@ -295,6 +348,17 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                     chip.updateDayNightChip({ ...state, t, day: run.day, flock: run.flock });
                 } else {
                     chip.updateDayNightChip({ ...state, t });
+                }
+
+                // Cycle 66 P7: feed the minimap live positions (it self-throttles).
+                if (game._updateMinimap) {
+                    const dp = game.sheepdog?.position;
+                    game._updateMinimap({
+                        dt,
+                        dog: dp ? { x: dp.x, z: dp.z } : null,
+                        sheep: game.gameState?.sheep,
+                        wolves: game._wolfPack?.wolves,
+                    });
                 }
                 game._skipToDusk?.tick(dt);
             };

@@ -824,6 +824,20 @@ export class OptimizedSheepSystem {
                 continue;
             }
 
+            // Cycle 66 P4: a wolf-killed sheep is removed from the field - render
+            // it as a degenerate (zero-scale) instance so it vanishes without
+            // shrinking activeCount (the survival economy tracks the live flock as
+            // a number; the killed instance stays a cheap invisible ghost). Mirrors
+            // the isAscending special-case above. Client-only; never in the sim.
+            if (sheep.killed) {
+                dummy.scale.set(0, 0, 0);
+                dummy.position.set(sheep.renderPosition.x, this._surfaceY(sheep.renderPosition.x, sheep.renderPosition.z), sheep.renderPosition.z);
+                dummy.rotation.set(0, 0, 0);
+                dummy.updateMatrix();
+                this.instancedMesh.setMatrixAt(i, dummy.matrix);
+                continue;
+            }
+
             // Update transform matrix using interpolated render position for smooth movement
             const sheepY = this._surfaceY(sheep.renderPosition.x, sheep.renderPosition.z);
             dummy.position.set(sheep.renderPosition.x, sheepY, sheep.renderPosition.z);

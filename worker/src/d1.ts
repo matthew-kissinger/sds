@@ -18,6 +18,15 @@ import {
   isCountingLeaderboardMode,
   COUNTING_HARD_CEILING,
 } from '../../shared/countingModes.js';
+// Cycle 66 P6: the Newsheepdogland survival board. A live-read mode partitioned
+// by (game_mode='survival', scene_id), ranked by peak flock size DESC. No
+// materialized players-row column (reads straight from score_submissions like
+// counting). Shared with the client so the board key + bound cannot drift.
+import {
+  SURVIVAL_LEADERBOARD_MODE,
+  isSurvivalLeaderboardMode,
+  SURVIVAL_MAX_SCORE,
+} from '../../shared/survivalModes.js';
 
 export interface PlayerRow {
   persistent_id: string;
@@ -129,6 +138,9 @@ export type GameMode =
   // (they read live from score_submissions, like the daily partition).
   | 'counting-incremental'
   | 'counting-exponential'
+  // Cycle 66 P6: the survival board. Live-read, partitioned by (game_mode,
+  // scene_id), ranked by peak flock size DESC. No materialized players column.
+  | 'survival'
   // Cycle 27 Phase D: per-day challenge partition. The literal here is the
   // template; the actual stored value is `daily-${YYYY-MM-DD}`. Validation
   // accepts the templated form via isDailyMode + isValidGameMode below.
@@ -161,7 +173,8 @@ export function isDailyMode(mode: unknown): mode is `daily-${string}` {
 
 export function isValidGameMode(mode: unknown): mode is GameMode {
   return typeof mode === 'string'
-    && (ALL_GAME_MODES_SET.has(mode) || isDailyMode(mode) || isCountingLeaderboardMode(mode));
+    && (ALL_GAME_MODES_SET.has(mode) || isDailyMode(mode)
+      || isCountingLeaderboardMode(mode) || isSurvivalLeaderboardMode(mode));
 }
 
 // ---------------------------------------------------------------------------
@@ -575,6 +588,12 @@ export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean 
   if (isCountingLeaderboardMode(mode)) {
     return Number.isInteger(score) && score >= 0 && score <= COUNTING_HARD_CEILING;
   }
+  // Cycle 66 P6: survival score is the peak flock size - a non-negative integer
+  // bounded generously (the real ceiling is the scene's maxFlock; a loose bound
+  // here means a feel-pass retune needs no Worker change).
+  if (isSurvivalLeaderboardMode(mode)) {
+    return Number.isInteger(score) && score >= 0 && score <= SURVIVAL_MAX_SCORE;
+  }
   // Cycle 58: the lower bound on time-mode scores drops 30 -> 10. The real
   // per-(scene, count) plausibility floor is now `plausibleScoreForCount`
   // (graduated 12-26s for the islands' small solo tiers, unchanged 30s+ for the
@@ -599,7 +618,7 @@ export function submissionScoreBoundsOk(mode: GameMode, score: number): boolean 
 // ranked ladder (see modeSheepCountOk), not this fixed per-slug table. timed /
 // competitive / cooperative still use it.
 const ALLOWED_MODE_SHEEPCOUNT: Record<
-  Exclude<GameMode, `daily-${string}` | 'counting-incremental' | 'counting-exponential'>,
+  Exclude<GameMode, `daily-${string}` | 'counting-incremental' | 'counting-exponential' | 'survival'>,
   number[] | 'any'
 > = {
   soloClassic: [200],
@@ -629,6 +648,9 @@ export function modeSheepCountOk(mode: GameMode, sheepCount: number, sceneId?: s
   // identity (the count is the score, not a fixed tier), so any submitted value
   // is accepted - the column is simply unused for these rows.
   if (isCountingLeaderboardMode(mode)) return true;
+  // Cycle 66 P6: survival's identity is (scene, mode); the score IS the flock
+  // size, so the submitted sheep_count is unused for these rows.
+  if (isSurvivalLeaderboardMode(mode)) return true;
   if (isDailyMode(mode)) {
     return sheepCount >= DAILY_SHEEP_MIN && sheepCount <= DAILY_SHEEP_MAX;
   }
@@ -1047,6 +1069,10 @@ export function formatScore(mode: GameMode | 'solo', score: number | null): stri
   if (isCountingLeaderboardMode(mode)) {
     return `${score} sheep`;
   }
+  // Cycle 66 P6: survival score is the peak flock size, read as a sheep tally.
+  if (isSurvivalLeaderboardMode(mode)) {
+    return `${score} sheep`;
+  }
   switch (mode) {
     case 'timed':
       return `${score} sheep`;
@@ -1140,7 +1166,10 @@ export async function getLeaderboard(
   // Cycle 59 (Counting Sheep): counting partitions by (game_mode, scene_id) and
   // ignores sheep_count entirely, so never narrow a counting board by it even if
   // a caller passes a count (defensive; getAllLeaderboards already omits it).
-  if (!isCountingLeaderboardMode(mode) && typeof filters.sheepCount === 'number' && filters.sheepCount > 0) {
+  // Cycle 66 P6: survival, like counting, partitions by (game_mode, scene_id)
+  // and ignores sheep_count, so never narrow a survival board by it.
+  if (!isCountingLeaderboardMode(mode) && !isSurvivalLeaderboardMode(mode)
+      && typeof filters.sheepCount === 'number' && filters.sheepCount > 0) {
     where.push('s.sheep_count = ?');
     binds.push(filters.sheepCount);
   }
@@ -1235,6 +1264,14 @@ export async function getAllLeaderboards(
     })),
   );
   COUNTING_LEADERBOARD_MODES.forEach((m, i) => { out[m] = countingResults[i]; });
+
+  // Cycle 66 P6: the survival board (one key), partitioned by (game_mode, scene_id)
+  // and ranked by peak flock DESC. Additive; empty for non-survival scenes, so the
+  // client decides whether to surface the tab from the scene family.
+  out[SURVIVAL_LEADERBOARD_MODE] = await getLeaderboard(db, SURVIVAL_LEADERBOARD_MODE as GameMode, limit, {
+    sceneId: filters.sceneId,
+    includeFlagged: filters.includeFlagged,
+  });
 
   return out;
 }

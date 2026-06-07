@@ -2251,6 +2251,14 @@ class SheepDogSimulation {
                 applyBarkImpulse(this.gameState.getSheep(), sheepdog.position,
                     sheepdog.getBarkForward(), DEFAULT_BARK_CONFIG);
             }
+            // Cycle 66 P5: the bark also scares wolves - a radial repel with a
+            // longer reach than the forward sheep cone, breaking their pursuit.
+            // Client-only (survival is solo); it never touches the deterministic
+            // sheep-cone math in shared/BarkImpulse.js, so sim-baselines stay
+            // byte-identical.
+            if (barkFired && this._wolfPack) {
+                this._wolfPack.repel(sheepdog.position.x, sheepdog.position.z);
+            }
             this._barkFiredThisFrame = barkFired;
 
             // Store original direction for debugging (reused object — only read
@@ -2431,6 +2439,13 @@ class SheepDogSimulation {
                     this.dayLoop?.gateOpen ?? true,
                     deltaTime
                 );
+            }
+            // Cycle 66 P4: tick the night wolves AFTER the sheep sim + pen
+            // containment so they read final sheep positions and pen membership
+            // (a wolf never kills a sheep the same frame it crossed the gate to
+            // safety). Survival scenes only; a no-op everywhere else.
+            if (this._wolfPack) {
+                this._wolfPack.update(deltaTime, this.gameState.sheep, this.sheepdog ?? null);
             }
         }
 

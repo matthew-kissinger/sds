@@ -91,13 +91,15 @@ export const newsheepdogland = {
         clumpsPerChunk: { desktop: 950, mobile: 400 },
         // Cooler coastal greens than the golden Rolling Hills.
         colors: { base: '#5a6a3a', mid: '#83904f', tip: '#c8cf86' },
-        // Newsheepdogland is ~3.2 km^2; grassing the whole island would be
-        // thousands of chunks / draw calls. The play loop lives in the foot, so
-        // the grass grid centres there and spans only it (the mountain/leg are
-        // forest + alpine, not meadow). Density + waterline cull follow the SDF.
-        // (Cycle 66 P7 rearchitects this to whole-island coverage.)
-        grassCenter: { x: 350, z: -1050 },
-        grassRadius: 650,
+        // Newsheepdogland is ~3.2 km^2; grassing the literal whole island (incl.
+        // the alpine mountain/leg) is thousands of chunks - a density/LOD rearch
+        // gated on a perf spike (deferred, see docs/BACKLOG.md). Cycle 66 P7
+        // widens coverage to blanket the entire survival play surface: the foot
+        // lowland, the homestead + pen surrounds, and the treeline approaches the
+        // dog actually traverses. Centred on the play area; the stochastic density
+        // LOD + the coastline SDF cull keep the widened perimeter cheap.
+        grassCenter: { x: 250, z: -1080 },
+        grassRadius: 760,
         // The tall-grass shore band across the foot, just inside the sole.
         tallZones: [
             { minX: -250, maxX: 750, minZ: -1380, maxZ: -1050, heightMul: 1.8 },
@@ -165,7 +167,7 @@ export const newsheepdogland = {
     // selection); each surviving day the flock grows +5; a night that loses a
     // third or more of the flock ends the run; the score is the peak flock size.
     // Client-side economy (js/gamestate/survivalRun.js). Matt's named numbers.
-    survival: { startFlock: 10, growth: 5, lossThreshold: 1 / 3, maxFlock: 80 },
+    survival: { startFlock: 10, growth: 5, lossThreshold: 1 / 3, maxFlock: 200 },
 
     // Cycle 64: a tunable strawman ladder (reserved for Matt's feel pass). The
     // island is large, so it runs a broad span from a 3-sheep Just Play up to

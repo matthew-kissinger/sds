@@ -134,6 +134,22 @@ function getWolfDracoLoader() {
 }
 
 /**
+ * Load the wolf glTF once and return the raw `{ scene, animations }`. Cycle 66
+ * P4 (the night-wolf pack) loads ONE glTF this way and constructs many Wolf
+ * instances from it (the Wolf constructor SkeletonUtils-clones per instance), so
+ * a pack of N wolves costs one network fetch + decode, not N. The harness's
+ * Wolf.load() now routes through here too.
+ * @param {string} [url=WOLF_MODEL_PATH]
+ * @returns {Promise<{ scene: THREE.Object3D, animations: THREE.AnimationClip[] }>}
+ */
+export async function loadWolfGLTF(url = WOLF_MODEL_PATH) {
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(getWolfDracoLoader());
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    return loader.loadAsync(url);
+}
+
+/**
  * Wolf - render-only animated entity. Construct with a pre-loaded glTF
  * (`{ scene, animations }`) returned by GLTFLoader; call update(dt) each frame
  * and drive it with setSpeed() (for the gait blend) or the one-shot triggers.
@@ -240,10 +256,7 @@ export class Wolf {
      * @returns {Promise<Wolf>}
      */
     static async load(url = WOLF_MODEL_PATH, opts = {}) {
-        const loader = new GLTFLoader();
-        loader.setDRACOLoader(getWolfDracoLoader());
-        loader.setMeshoptDecoder(MeshoptDecoder);
-        const gltf = await loader.loadAsync(url);
+        const gltf = await loadWolfGLTF(url);
         return new Wolf(gltf, opts);
     }
 

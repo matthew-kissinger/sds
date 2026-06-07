@@ -31,6 +31,16 @@ export async function disposeScene(game) {
     try { game._unmountDayNightChip?.(); } catch (err) { console.warn('[SWAP] dayNightChip unmount:', err); }
     game._unmountDayNightChip = null;
 
+    // Cycle 66: tear down the survival predator layer + minimap and clear the
+    // pen/run refs so the main loop never touches a half-disposed scene's flock.
+    // No-op on non-survival scenes (these are null there).
+    try { game._wolfPack?.dispose?.(); } catch (err) { console.warn('[SWAP] wolfPack dispose:', err); }
+    game._wolfPack = null;
+    game._survivalRun = null;
+    game._penContainment = null;
+    try { game._unmountMinimap?.(); } catch (err) { console.warn('[SWAP] minimap unmount:', err); }
+    game._unmountMinimap = null;
+
     // Cycle 46 / Cycle 52 P1: tear down an in-engine reveal layer if present.
     // Only set while a reveal is armed; a no-op on every normal scene-to-scene
     // swap.

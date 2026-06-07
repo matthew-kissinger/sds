@@ -311,6 +311,8 @@ export default {
         // Cycle 59 (Counting Sheep): per-curve board tabs.
         countingIncremental: 'Counting Incremental',
         countingExponential: 'Counting Exponential',
+        // Cycle 66: the Newsheepdogland survival board (peak flock size).
+        survival: 'Survival',
         updated: 'Updated {{time}}',
         loading: 'Loading leaderboards...',
         noScores: 'No scores recorded yet. Be the first!',

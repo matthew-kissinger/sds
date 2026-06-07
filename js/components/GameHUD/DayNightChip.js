@@ -13,6 +13,8 @@
  * No emoji per the prose-and-voice rule; ALL-CAPS labels in Matt's voice.
  */
 
+import { getApiBase } from '../../runtimeConfig.js';
+
 let _el = null;
 let _phaseEl = null;
 let _markerEl = null;
@@ -129,13 +131,52 @@ export function updateDayNightChip(s) {
     }
 }
 
+/** Minimal HTML-escape for server-sanitized display names before innerHTML. */
+function _esc(s) {
+    return String(s).replace(/[&<>"]/g, (c) => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+    ));
+}
+
+/**
+ * Cycle 66 P6: fill the run-summary leaderboard with the top survival peak-flock
+ * scores for this island. Defensive: a missing or offline worker (e.g. a local
+ * preview with no worker) just clears the section so the player's score stands
+ * alone. Never throws into the caller.
+ * @param {HTMLElement} container
+ * @param {string} sceneId
+ */
+async function _populateSurvivalBoard(container, sceneId) {
+    try {
+        const url = `${getApiBase()}/api/leaderboard?mode=survival&scene=${encodeURIComponent(sceneId)}&limit=5`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('board ' + res.status);
+        const data = await res.json();
+        const entries = Array.isArray(data?.entries) ? data.entries : [];
+        if (!container.isConnected) return;
+        const head = '<div style="opacity:0.6;letter-spacing:1px;font-size:10px;text-align:center;margin-bottom:6px">LEADERBOARD</div>';
+        if (entries.length === 0) {
+            container.innerHTML = head + '<div style="opacity:0.6;text-align:center">No runs yet</div>';
+            return;
+        }
+        const rows = entries.map((e, i) => {
+            const name = _esc((e.displayName || e.fullName || 'Player').slice(0, 18));
+            const sc = _esc(e.formattedScore || String(e.score ?? ''));
+            return `<div style="display:flex;justify-content:space-between;gap:12px"><span style="opacity:0.85">${i + 1}. ${name}</span><span style="font-weight:700">${sc}</span></div>`;
+        }).join('');
+        container.innerHTML = head + rows;
+    } catch {
+        if (container.isConnected) container.innerHTML = '';
+    }
+}
+
 /**
  * Cycle 66 P3: the survival run-summary overlay shown when the flock is lost.
  * A centered modal with the peak-flock score and a restart. Per prose-and-voice:
  * no exclamation marks, no emoji, numbers carry the weight.
- * @param {{day:number, score:number, onRestart?:Function}} info
+ * @param {{day:number, score:number, onRestart?:Function, sceneId?:string}} info
  */
-export function showSurvivalSummary({ day = 1, score = 0, onRestart } = {}) {
+export function showSurvivalSummary({ day = 1, score = 0, onRestart, sceneId = 'newsheepdogland' } = {}) {
     if (_summaryEl) return;
     const el = document.createElement('div');
     el.id = 'sds-survival-summary';
@@ -158,6 +199,16 @@ export function showSurvivalSummary({ day = 1, score = 0, onRestart } = {}) {
         `<div style="margin:12px 0 10px;opacity:0.85">Reached day ${day}.</div>` +
         `<div style="font-size:32px;font-weight:800;margin:6px 0 0">${score}</div>` +
         `<div style="opacity:0.7;letter-spacing:1px;font-size:11px">PEAK FLOCK</div>`;
+
+    // Cycle 66 P6: the survival leaderboard, read on the run-summary. Loads the
+    // top peak-flock scores for this island; defensive (a missing/offline worker
+    // just leaves the score standing on its own). Pure DOM, WebGPU-safe.
+    const board = document.createElement('div');
+    board.style.cssText = 'margin:18px 0 2px;text-align:left;font-size:12px;line-height:1.7;opacity:0.92;min-height:18px;';
+    board.innerHTML = `<div style="opacity:0.6;letter-spacing:1px;font-size:10px;text-align:center;margin-bottom:6px">LEADERBOARD</div><div style="opacity:0.6;text-align:center">Loading...</div>`;
+    panel.appendChild(board);
+    _populateSurvivalBoard(board, sceneId);
+
     const btn = document.createElement('button');
     btn.textContent = 'TRY AGAIN';
     btn.style.cssText = [

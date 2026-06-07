@@ -88,4 +88,14 @@ describe('SurvivalRun (Cycle 66 P3)', () => {
         expect(ev.type).toBe('survived');
         expect(run.flock).toBe(15);
     });
+
+    it('caps the flock (and the score) at maxFlock so it never exceeds the rendered ceiling', () => {
+        const run = new SurvivalRun({ startFlock: 10, growth: 5, maxFlock: 18 });
+        runNight(run, 0); // 10 -> 15
+        runNight(run, 0); // 15 + 5 = 20, capped to 18
+        expect(run.flock).toBe(18);
+        expect(run.peak).toBe(18);
+        runNight(run, 0); // already at cap, stays 18
+        expect(run.flock).toBe(18);
+    });
 });

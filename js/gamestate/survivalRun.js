@@ -27,11 +27,14 @@ export class SurvivalRun {
      * @param {number} [opts.startFlock=10]
      * @param {number} [opts.growth=5]
      * @param {number} [opts.lossThreshold=1/3]  Die when the night's loss ratio reaches this.
+     * @param {number} [opts.maxFlock=Infinity]  Cap on the flock (matches the rendered
+     *        OptimizedSheep ceiling) so the score never drifts above the visible sheep.
      */
-    constructor({ startFlock = 10, growth = 5, lossThreshold = 1 / 3 } = {}) {
+    constructor({ startFlock = 10, growth = 5, lossThreshold = 1 / 3, maxFlock = Infinity } = {}) {
         this.startFlock = startFlock;
         this.growth = growth;
         this.lossThreshold = lossThreshold;
+        this.maxFlock = maxFlock > 0 ? maxFlock : Infinity;
 
         this.day = 1;
         this.flock = startFlock;
@@ -92,7 +95,9 @@ export class SurvivalRun {
             return { type: 'death', score: this.peak, day: this.day, lost };
         }
 
-        this.flock += this.growth;
+        // Grow the flock, capped at maxFlock so the score tracks the rendered
+        // sheep (the OptimizedSheep InstancedMesh is sized to the same ceiling).
+        this.flock = Math.min(this.maxFlock, this.flock + this.growth);
         this.peak = Math.max(this.peak, this.flock);
         const completedDay = this.day;
         this.day += 1;
