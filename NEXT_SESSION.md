@@ -1,54 +1,54 @@
-# Next Session - Cycle 70 survival-feel-and-media (stub - needs authoring)
+# Next Session - Cycle 71 feel-and-media-live (stub - needs authoring)
 
 > **Updated:** 2026-06-07
-> **For:** Cycle 70 `survival-feel-and-media`. Plan: [`docs/cycle-70-plan.md`](docs/cycle-70-plan.md) (a STUB - Goal + Phases not yet filled in).
-> **Pickup priority:** Cycle 69 (grass-far-ring-and-api-hardening) is CLOSED + shipped + live. Cycle 70 is the Matt's-hands / paired track that Cycles 67-69 kept deferring: the survival feel pass, the two-client co-op fun playtest, the entrance hero FINAL shot, the grass far-ring Option A (visual, bundle with the media pass), and the guardrail-blocked `multiplayer.md` doc fix. Author it with Matt, then `/cycle-start`.
+> **For:** Cycle 71 `feel-and-media-live`. Plan: [`docs/cycle-71-plan.md`](docs/cycle-71-plan.md) (a STUB - Goal + Phases not yet filled in).
+> **Pickup priority:** Cycle 70 (survival-feel-and-media) is CLOSED + shipped + live. The autonomous prep is done; Cycle 71 is the LIVE paired track that needs Matt at the keyboard: the survival feel live-tuning pass (off the Cycle 70 audit), the two-client co-op fun playtest, the entrance hero FINAL beauty shot, and the guardrail-blocked `multiplayer.md` doc fix. Author it with Matt, then `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-70-plan.md`](docs/cycle-70-plan.md) -> the touched module source. Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-71-plan.md`](docs/cycle-71-plan.md) -> the touched module source. Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Where It Stands
 
-**Cycle 69 (`grass-far-ring-and-api-hardening`) is CLOSED + deployed (2026-06-07).** A folded autonomous cycle (Matt: "author cycle 69 the complete and push and deploy") that closed two autonomous-able Cycle 67/68 loose ends. 3/4 phases shipped, 1 evidence-deferred (full closeout in [`docs/BACKLOG.md`](docs/BACKLOG.md)):
+**Cycle 70 (`survival-feel-and-media`) is CLOSED + deployed (2026-06-07).** An autonomous cycle (Matt: "author entire cycle the implement and complete and close and commit and deploy") that turned the Cycle 69 carryover into shipped work where it could ship autonomously and into evidence where it could not. 3 shipped, 2 evidence-deferred, 1 still-blocked (full closeout in [`docs/BACKLOG.md`](docs/BACKLOG.md)):
 
-- **P1** the `/api/rename` prod-500 is fixed: a shared `readJsonObject()` makes every body-parsing POST route return a clean `400`/`401` on a missing or malformed body instead of a server `500`. Route-level test `tests/worker/rename-route.spec.ts`.
-- **P2** coastline grass far-ring spike (`tools/grass-far-ring-spike.mjs`): baseline 829 draw calls / 7.31M tris. Option A (40m meadow far chunks) = 0 draw-call change, 37.6% triangle cut, coast/relief-safe. Option B (merged tiles) = up to 34% fewer draw calls but coarsens the coast for no perf need (829 < 1500).
-- **P3** far-ring implementation **DEFERRED with evidence** (the P5 -> P6 pattern): Option B NO-GO; Option A viable but a visual change to Matt's pending hero-capture scene, so it bundles with the media pass. `GrassSystem.js` + `types.js` left byte-unchanged.
+- **P1** grass far-ring Option A is LIVE on Newsheepdogland: new `GrassDef.farRing` (additive, render-only) makes coastline far chunks beyond `meadowFrom` (600m) from `grassCenter` render as meadow quads instead of clump blades. 37.6% grass-triangle cut, zero draw-call change, coast/relief-safe, desktop-tier only. Every scene without `farRing` is byte-identical.
+- **P2** survival feel-pass readiness audit (`cycle70-validation/survival-feel/audit.md`): wolf-vs-dog speed confirms no playability bug (dog strictly faster on every dog); day-1 lethality + growth math; recommended live-tuning lever order. No spec value changed (Matt's paired track).
+- **P3** entrance hero capture refreshed against the far-ring scene (`cycle70-validation/hero/`): far-ring reads clean in the hero framing (no water tiling, no flat planes). FINAL beauty shot deferred to Matt's browser pass.
 
-Validation: `npm test` 1135 pass / 0 fail, eslint + worker tsc + build clean (main 584.8 KiB, within the 585 KiB ratchet), sim-baselines untouched (no `shared/` change). Deploy green including the `Migrate D1 (remote)` job. Prod verified.
+Validation: `npm test` 1135 pass / 0 fail, eslint `shared/` + worker tsc + build clean (main 584.81 KiB, within the 585 KiB ratchet), sim-baselines + scatter/terrain baselines untouched (render-only change). Deploy green including the `Migrate D1 (remote)` job. Prod verified.
 
 ## What To Pick Up Next
 
-Cycle 70 is a **stub**. Author its Goal + Phases from the Cycle 69 carryover (in [`docs/BACKLOG.md`](docs/BACKLOG.md)). This is the **paired / Matt's-hands track**:
+Cycle 71 is a **stub**. Author its Goal + Phases from the Cycle 70 carryover (in [`docs/BACKLOG.md`](docs/BACKLOG.md)). This is the **LIVE paired / Matt's-hands track**:
 
-1. **Survival feel pass (paired taste track).** Live-tune `shared/survival/tuning.js` (wolf counts/speeds, kill radius, bark range, +5 growth, 33% loss) across a real wolf night; the two-client co-op fun playtest. Any value change keeps the 9 sheep sim-baselines byte-identical; no wire change.
-2. **Entrance hero FINAL shot (media pass).** Dial `tools/hero-capture.mjs` (CAM/TARGET/SUN_T) live to the `cycle68-validation/hero/manifest.md` framing.
-3. **Grass far-ring Option A (visual, bundle with the media pass).** Enable the existing meadow-quad LOD for coastline far chunks behind a SceneDef opt-in (37.6% grass-triangle cut, coast/relief-safe). Recipe in `cycle69-validation/grass/far-ring-spike.json`. Judge it with Matt's eye since it changes the hero scene.
+1. **Survival feel LIVE tuning (paired taste).** Start from the Cycle 70 P2 audit (`cycle70-validation/survival-feel/audit.md`); live-tune `shared/survival/tuning.js` across a real wolf night, lever order in the audit. Any value change keeps the 10 sim-baselines byte-identical; no wire change.
+2. **Two-client co-op fun playtest (paired).** The wire path is proven (Cycle 68 P3); the "is it fun" judgment is Matt's.
+3. **Entrance hero FINAL beauty shot (media).** Dial `tools/hero-capture.mjs` live in a real browser to the `cycle68-validation/hero/manifest.md` framing. Cycle 70 P3 left a current candidate with the far-ring active; a real browser clears the headless sun-dome artifact.
 4. **`multiplayer.md` doc correction (BLOCKED - needs Matt's OK).** The Cycle 68 P1 remote-migration lines are wrong; the guardrail blocks an autonomous `.claude/rules/*.md` edit. Matt applies the staged text or grants the edit.
 
 ## Open Carryover (deferred)
 
 - The four candidates above.
-- Prior open carryover: tablet draw-call perf, counting naming/curve-feel. (`/api/rename` no-body 500 is FIXED in Cycle 69 P1; `upload-artifact@v5` is verified already-resolved.)
+- Prior open carryover: tablet draw-call perf (could be its own autonomous spike+cycle if Matt wants a non-paired one), counting naming/curve-feel.
 
 ## Working Contract
 
-- Co-op survival is live: any `shared/survival/*` change must keep the 9 sheep sim-baselines byte-identical; any wire change carries the four-piece migration story + a `PROTOCOL_VERSION` bump. Any new D1 migration is append-only AND is applied to remote automatically on deploy (the `migrate` job); register schema migrations in `tests/worker/helpers/d1-sqlite.ts`.
-- Don't decompose `GrassSystem` / `OptimizedSheep`. The grass far-ring Option A is an additive gated path, not a decomposition. No version bump without Matt's call.
+- Co-op survival is live: any `shared/survival/*` change must keep the 10 sim-baselines byte-identical; any wire change carries the four-piece migration story + a `PROTOCOL_VERSION` bump. Any new D1 migration is append-only AND applied to remote automatically on deploy (the `migrate` job); register schema migrations in `tests/worker/helpers/d1-sqlite.ts`.
+- Don't decompose `GrassSystem` / `OptimizedSheep`. The grass far-ring is an additive gated path (shipped Cycle 70), not a decomposition. No version bump without Matt's call.
 - Run `/validate` before any cycle close. Close via `/cycle-close`.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan (stub) | [`docs/cycle-70-plan.md`](docs/cycle-70-plan.md) |
-| Survival feel tuning | [`shared/survival/tuning.js`](shared/survival/tuning.js) |
-| Grass far-ring recipe | [`tools/grass-far-ring-spike.mjs`](tools/grass-far-ring-spike.mjs) + `cycle69-validation/grass/far-ring-spike.json` |
-| Hero capture | [`tools/hero-capture.mjs`](tools/hero-capture.mjs) + `cycle68-validation/hero/manifest.md` |
-| Worker HTTP router | [`worker/src/index.ts`](worker/src/index.ts) (`readJsonObject`) |
+| Active cycle plan (stub) | [`docs/cycle-71-plan.md`](docs/cycle-71-plan.md) |
+| Survival feel tuning + audit | [`shared/survival/tuning.js`](shared/survival/tuning.js) + `cycle70-validation/survival-feel/audit.md` |
+| Grass far-ring (shipped) | [`js/GrassSystem.js`](js/GrassSystem.js) (`_farRing`) + [`shared/scenes/types.js`](shared/scenes/types.js) `GrassFarRingDef` |
+| Hero capture | [`tools/hero-capture.mjs`](tools/hero-capture.mjs) + `cycle68-validation/hero/manifest.md` + `cycle70-validation/hero/` |
 | Shared survival cores | [`shared/survival/`](shared/survival/) (run, wolves, wolfBehavior, pen, dayClock, tuning) |
+| Worker HTTP router | [`worker/src/index.ts`](worker/src/index.ts) (`readJsonObject`) |
 | Deploy remote migrations | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) `migrate` job + [`scripts/d1-local-setup.mjs`](scripts/d1-local-setup.mjs) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-69-plan.md`](docs/archive/cycles/cycle-69-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-70-plan.md`](docs/archive/cycles/cycle-70-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |

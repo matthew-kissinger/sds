@@ -4,6 +4,30 @@
 
 ## Recently Completed
 
+### Cycle 70 - `survival-feel-and-media` (closed 2026-06-07)
+
+Plan archived at [`docs/archive/cycles/cycle-70-plan.md`](archive/cycles/cycle-70-plan.md). An autonomous cycle (Matt: "author entire cycle the implement and complete and close and commit and deploy") that converted the Cycle 69 carryover into shipped work where it could ship autonomously, and into evidence where it could not. This was the Matt's-hands / paired track, so the deferrals (final hero blessing, fun playtest, multiplayer.md edit) are first-class outcomes, not gaps. No `shared/` sim change, so the 10 sim-baselines are untouched by construction; `GrassSystem` got an additive gated path, not a decomposition.
+
+**Closeout outcomes (3 shipped, 2 evidence-deferred, 1 still-blocked):**
+
+- **P1 grass far-ring Option A - SHIPPED (the Cycle 69 P2 viable-but-deferred win, flipped to implement on Matt's "implement and complete").** New `GrassDef.farRing` (additive, render-only fence case on `shared/scenes/types.js`). On a coastline scene, far chunks beyond `farRing.meadowFrom` from `grassCenter` (on land per the SDF cull) render as one terrain-following meadow quad instead of clump blades - the RH/OC desktop LOD, extended to the boot grid. Measured from `grassCenter` (not the world origin) so near play-area chunks keep full blades. Mutually exclusive with the non-coastline meadow path; every scene without `farRing` is byte-identical. Enabled on Newsheepdogland at `meadowFrom 600` (37.6% grass-triangle cut, 7.31M -> 4.56M, zero draw-call change, coast/relief-safe). Desktop-tier only. (`ef4ed1d`)
+- **P2 survival feel-pass readiness audit - SHIPPED (no spec change).** `cycle70-validation/survival-feel/audit.md` cross-checks the three FEEL PASS NOTES against the real constants: (1) wolf huntSpeed 11.5 / fleeSpeed 13 vs uniform dog speed 15 walk / 25 sprint single (30 / 50 co-op) - the dog is strictly faster on every dog in every mode, so the shoulder-off mechanic is viable and there is NO playability bug (the one objective concern, which did not fire); (2) day-1 lethality math (2 wolves, ~1.67 kills/s, run ends at 4 losses, ~8-18s spawn-ring grace); (3) growth 5 vs maxFlock 200 (~38 days to cap). The per-dog Speed/Stamina/Control are confirmed cosmetic (locale copy, not wired to gameplay). Recommended a live-tuning lever order. The spec values stand as Matt's paired track; nothing in `tuning.js` changed.
+- **P3 entrance hero capture refresh - SHIPPED candidate, FINAL deferred.** Re-ran `tools/hero-capture.mjs` against the far-ring-enabled scene (`cycle70-validation/hero/`). Visual check vs the pre-far-ring Cycle 68 before-shot: the dense far-grass band is reduced (far chunks are now meadow quads) with a clean land/water boundary, no quads tiling water, no flat-plane reads - hard-stop #2 passes. The dark horizon dome is a pre-existing headless-WebGL sun artifact (identical in the before-shot), not from the far-ring. The FINAL beauty pass (live browser, manifest dial-in) stays Matt's per the media-prep split.
+- **P4 validate + close.** Below.
+
+**Deferred (carried to Cycle 71):**
+
+- **Survival feel LIVE tuning** - the P2 audit is the numbers-backed starting point; the live wolf-night taste pass is Matt's.
+- **Two-client co-op fun playtest** - Matt's.
+- **Entrance hero FINAL beauty shot** - Matt drives the browser (P3 shipped the current candidate).
+- **`multiplayer.md` doc correction - STILL BLOCKED.** The agent-config guardrail blocks Claude editing a `.claude/rules/*.md` file autonomously; "do the whole cycle" is the same phrasing that did not authorize it in Cycle 69, held consistent. Matt applies the staged text or grants the edit.
+
+**Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail (no test change - P1 render-only, P2/P3 are artifacts); eslint `shared/` clean; worker `tsc` clean; `npm run build` clean (main bundle 598.85 kB = 584.81 KiB, within the 585 KiB ratchet, +~20 bytes from the gating logic); the 10 sim-baselines + scatter/terrain refactor-baselines byte-identical (render-only change).
+
+**Release proof.** Commits `ca2e72b` (plan) -> `ef4ed1d` (P1) pushed to `main`; the GH Actions deploy (run `27106398986`) ran green including the `Migrate D1 (remote)` job (no-op, no new migration). The docs-only close commit does not trigger a deploy (paths-ignore). Prod verified post-deploy.
+
+**Carryover:** the four Cycle 71 items above. Prior open carryover (tablet draw-call perf, counting naming/curve-feel) remains deferred.
+
 ### Cycle 69 - `grass-far-ring-and-api-hardening` (closed 2026-06-07)
 
 Plan archived at [`docs/archive/cycles/cycle-69-plan.md`](archive/cycles/cycle-69-plan.md). A folded autonomous cycle (Matt: "author cycle 69 the complete and push and deploy") that closed the two autonomous-able Cycle 67/68 loose ends and reframed the scaffolded `survival-feel-and-media` stub (those Matt's-hands tracks moved to Cycle 70). The riskiest item (grass) was again gated behind a measure-first spike, so the cohesion-frozen `GrassSystem` was never touched on a guess. No `shared/` change this cycle, so the sheep sim-baselines are untouched by construction.
