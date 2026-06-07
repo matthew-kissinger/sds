@@ -244,4 +244,25 @@ export class PenContainment {
         this.pennedCount = penned;
         return penned;
     }
+
+    /**
+     * Co-op multi-dog fence collision (Cycle 67 P3). The single-dog branch in
+     * update() tracks one inside-flag (`this._dogInside`); on the DO each player
+     * dog needs its own. Pass a per-dog memory object `{ inside }` (created once
+     * per player) plus the dog position; this clamps the position at the fence
+     * (gate-only crossing) and updates the memory. Mirrors update()'s dog logic.
+     * @param {{x:number,z:number}} p   dog position (mutated in place)
+     * @param {boolean} gateOpen
+     * @param {{inside:boolean}} mem    per-dog inside memory
+     */
+    containDog(p, gateOpen, mem) {
+        if (!p || !mem) return;
+        if (this._inGateGap(p.x, p.z, this.dogBody, gateOpen)) {
+            mem.inside = this._isInside(p.x, p.z);
+        } else if (mem.inside) {
+            this._keepIn(p, this.dogBody);
+        } else {
+            this._keepOut(p, this.dogBody);
+        }
+    }
 }

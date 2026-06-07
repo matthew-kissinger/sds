@@ -44,6 +44,13 @@ import {
     DEFAULT_BARK_CONFIG
 } from '../../shared/index.js';
 import { mulberry32 } from '../../shared/Random.js';
+// Cycle 67 P3: the promoted survival cores. These run authoritatively on the DO
+// for co-op survival rooms (the client cannot run the Worker; these run here and
+// broadcast). All four are pure shared/ modules (no Three/DOM).
+import { SurvivalRun } from '../../shared/survival/run.js';
+import { WolfSim } from '../../shared/survival/wolves.js';
+import { PenContainment } from '../../shared/survival/pen.js';
+import { secondsToT, phaseForT, gateOpenForPhase } from '../../shared/survival/dayClock.js';
 
 // P-SEC-3: server input trust boundary. The DO is authoritative, but a client
 // can send any MessagePack payload it likes over the playerInput channel. Two
@@ -121,6 +128,10 @@ export class GameSimulation {
         // Determine game mode
         this.isCompetitive = room.gameMode === 'competitive';
         this.isTimedMode = room.gameMode === 'timed';
+        // Cycle 67: co-op survival. Authoritative survival run + wolves + pen on
+        // the DO (shared/survival/*), broadcast for clients to render. Only valid
+        // on a scene that declares `survival` (gated again in _initSurvival).
+        this.isSurvival = room.gameMode === 'survival';
         const playerIds = Array.from(room.players.keys());
 
         // Load scene (biome data). Room can override via `room.sceneId`; falls back to default.
@@ -159,9 +170,18 @@ export class GameSimulation {
         
         // Cycle 8 Phase 5: room-level sheep count overrides the scene default.
         // Falls back to scene default if room hasn't been migrated yet.
-        const roomSheepCount = (typeof room.sheepCount === 'number' && room.sheepCount > 0)
+        let roomSheepCount = (typeof room.sheepCount === 'number' && room.sheepCount > 0)
             ? room.sheepCount
             : this.scene.sheepSpawn.count;
+
+        // Cycle 67 P3: a survival room's sheep array is the FULL pool sized to
+        // maxFlock. Only `startFlock` are active at first; the rest are dormant
+        // and get activated as the run grows the flock each surviving dawn
+        // (_growSurvivalFlock). The pool is authoritative regardless of the
+        // room's sheepCount (survival has no count selector).
+        if (this.isSurvival && this.scene.survival) {
+            roomSheepCount = this.scene.survival.maxFlock ?? roomSheepCount;
+        }
 
         // Initialize game state based on mode
         if (this.isCompetitive || this.isTimedMode) {
@@ -325,6 +345,13 @@ export class GameSimulation {
 
         // Set game as active
         this.gameState.gameActive = true;
+
+        // Cycle 67 P3: stand up the authoritative survival subsystem (run economy,
+        // wolves, pen barrier, day clock) once the flock + dogs exist.
+        if (this.isSurvival && this.scene.survival) {
+            this._initSurvival();
+        }
+
         console.log(`🐑 Initialized ${this.gameState.totalSheep} sheep and ${this.sheepdogs.size} sheepdogs`);
     }
 
@@ -389,6 +416,13 @@ export class GameSimulation {
             // post-tick state for the optional `objective` wire field.
             if (this.objective) {
                 tickObjective(this.objective, this.gameState.sheep, this.deltaTime, null);
+            }
+
+            // Cycle 67 P3: advance the authoritative survival subsystem (day
+            // clock, run economy, wolves, pen). Runs AFTER updateSheep so the pen
+            // corrects final sheep positions and the wolves see the settled flock.
+            if (this.isSurvival && this._survival) {
+                this._tickSurvival(this.deltaTime);
             }
 
             // Update timed mode specific logic
@@ -527,6 +561,12 @@ export class GameSimulation {
                     sheepdog.barkForward.z = targetVelocity.z / t;
                 }
                 applyBarkImpulse(this.gameState.sheep, sheepdog.position, sheepdog.barkForward, DEFAULT_BARK_CONFIG);
+                // Cycle 67 P3: in survival, the same bark edge scares wolves at a
+                // longer radial range (breaks pursuit), authoritative + reflected
+                // to all clients via the broadcast. Mirrors the solo main.js path.
+                if (this.isSurvival && this._survival) {
+                    this._survival.wolves.repel(sheepdog.position.x, sheepdog.position.z);
+                }
             }
         }
     }
@@ -678,8 +718,10 @@ export class GameSimulation {
                 }
             }
 
-            // Gate attraction logic (if sheep is being herded toward gate)
-            if (this.shouldSeekGate(sheep)) {
+            // Gate attraction logic (if sheep is being herded toward gate).
+            // Skip for survival: the gate is the pen gate, handled by the pen
+            // containment, not the boundary-gate retirement attraction.
+            if (!this.isSurvival && this.shouldSeekGate(sheep)) {
                 const gateForce = this.calculateGateAttraction(sheep);
                 sheep.acceleration.add(gateForce);
             }
@@ -697,9 +739,9 @@ export class GameSimulation {
                         break;
                     }
                 }
-            } else if (this.gameState.gate && this.gameState.gate.passageZone) {
+            } else if (!this.isSurvival && this.gameState.gate && this.gameState.gate.passageZone) {
                 const zone = this.gameState.gate.passageZone;
-                inGatePassageZone = sheep.position.x >= zone.minX && 
+                inGatePassageZone = sheep.position.x >= zone.minX &&
                                   sheep.position.x <= zone.maxX &&
                                   sheep.position.z >= zone.minZ && 
                                   sheep.position.z <= zone.maxZ;
@@ -721,11 +763,13 @@ export class GameSimulation {
                         }
                     );
                 } else {
-                    // Use single gate boundary avoidance for cooperative mode
+                    // Use single gate boundary avoidance for cooperative mode.
+                    // Survival passes a null gate: the pen gate is inland (handled
+                    // by the pen barrier), so the coastline has no boundary gap.
                     boundaryForce = calculateBoundaryAvoidanceWithGate(
                         sheep,
                         this.gameState.boundary || this.gameState.bounds,
-                        this.gameState.gate,
+                        this.isSurvival ? null : this.gameState.gate,
                         {
                             margin: 4,
                             maxSpeed: this.sheepConfig.maxSpeed,
@@ -774,7 +818,11 @@ export class GameSimulation {
         }
 
         // Check for sheep retirement
-        if (this.isCompetitive || this.isTimedMode) {
+        if (this.isSurvival) {
+            // Cycle 67 P3: survival has no gate/corral retirement - the pen
+            // containment (_tickSurvival) retires sheep herded into the pen and
+            // tracks membership. Skip the gate/pasture/corral retirement paths.
+        } else if (this.isCompetitive || this.isTimedMode) {
             // Use competitive retirement logic (also for timed mode)
             const retirementResult = this.isTimedMode ? 
                 this.updateTimedSheepRetirements(
@@ -839,7 +887,7 @@ export class GameSimulation {
                 constrainedPosition = applyHardBoundaryConstraints(
                     sheep,
                     this.gameState.boundary || this.gameState.bounds,
-                    this.gameState.gate,
+                    this.isSurvival ? null : this.gameState.gate,
                     { margin: 0.5, allowGatePassage: true }
                 );
             }
@@ -1050,7 +1098,12 @@ export class GameSimulation {
 
     checkGameCompletion() {
         if (this.gameState.gameCompleted) return;
-        
+
+        // Cycle 67 P3: survival completes only when the run ends (a 33%+ night
+        // loss), driven by _endSurvivalRun. The sheep-retired completion checks
+        // below do not apply (penned sheep are "home", not "won").
+        if (this.isSurvival) return;
+
         let completionResult;
         
         if (this.isCompetitive || this.isTimedMode) {
@@ -1142,7 +1195,9 @@ export class GameSimulation {
                     `${this.completionData.sheepRetired}/${this.completionData.totalSheep} sheep retired`);
         
         // Submit scores to leaderboard for multiplayer games. Delegated to the DO.
-        if ((this.isCompetitive || this.isTimedMode) && this.room.onSubmitScores) {
+        // Cycle 67 P3/P7: survival posts each player's peak flock (the DO's
+        // onSubmitScores routes survival to the party-size-partitioned board).
+        if ((this.isCompetitive || this.isTimedMode || this.isSurvival) && this.room.onSubmitScores) {
             try { this.room.onSubmitScores(this.gameState.playerScores, this.completionData); }
             catch (e) { console.error('score submission error:', e); }
         }
@@ -1156,7 +1211,9 @@ export class GameSimulation {
             if (this.room.finishGame) this.room.finishGame();
 
             if (this.room.isPublic && this.room.broadcastToRoom) {
-                if (!this.room.modeLocked) {
+                // Survival public rooms stay survival (don't cycle into the
+                // coop/competitive/timed rotation).
+                if (!this.room.modeLocked && !this.isSurvival) {
                     const modeCycle = { cooperative: 'competitive', competitive: 'timed', timed: 'cooperative' };
                     this.room.gameMode = modeCycle[this.room.gameMode] || 'cooperative';
                 }
@@ -1256,6 +1313,11 @@ export class GameSimulation {
                 facing: Math.round(sheep.facingDirection * 100) / 100,
                 hasPassedGate: sheep.hasPassedGate,
                 isRetiring: sheep.isRetiring,
+                // Cycle 67 P3: survival sends `killed` for wolf-killed AND dormant
+                // (not-yet-activated) sheep so the co-op client hides them (the
+                // Cycle 66 OptimizedSheep killed-guard + the minimap skip). Absent
+                // for every non-survival sheep, so non-survival frames are unchanged.
+                ...((sheep.killed || sheep.dormant) && { killed: true }),
                 ...(sheep.assignedGate !== null && { assignedGate: sheep.assignedGate }), // Include assigned gate for competitive
                 // Only send retirement target if it exists (to save bandwidth)
                 ...(sheep.retirementTarget && {
@@ -1332,6 +1394,28 @@ export class GameSimulation {
                 holdTimer: Math.round(this.objective.holdTimer * 100) / 100,
                 holdRequired: this.objective.holdRequired
             };
+        }
+
+        // Cycle 67 P3: optional survival + wolves blocks, present ONLY on a
+        // survival room so non-survival frames stay byte-compatible (the
+        // multiplayer.md wire contract). P5 stamps the protocol version tag.
+        if (this.isSurvival && this._survival) {
+            const s = this._survival;
+            snapshot.survival = {
+                day: s.run.day,
+                phase: s.phase,
+                flock: s.run.flock,
+                peak: s.run.peak,
+                t: Math.round(s.t * 1000) / 1000,
+                gateOpen: s.gateOpen,
+                alive: s.run.isAlive(),
+            };
+            snapshot.wolves = s.wolves.wolves.map(w => ({
+                id: w.id,
+                x: Math.round(w.x * 100) / 100,
+                z: Math.round(w.z * 100) / 100,
+                state: w.state,
+            }));
         }
 
         return snapshot;
@@ -1549,5 +1633,189 @@ export class GameSimulation {
                 console.log(`🔄 Respawned sheep ${removedSheep.id} at (${removedSheep.position.x.toFixed(1)}, ${removedSheep.position.z.toFixed(1)})`);
             }
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // Cycle 67 P3: authoritative co-op survival subsystem.
+    // ---------------------------------------------------------------------
+
+    /**
+     * Stand up the survival run economy, wolves, pen barrier, and day clock from
+     * the scene config. Marks sheep beyond startFlock dormant (the dormant pool
+     * the run draws from as it grows). Seeded from the per-game seed so the run
+     * is reproducible.
+     */
+    _initSurvival() {
+        const cfg = this.scene.survival;
+        const startFlock = Math.max(0, cfg.startFlock ?? 10);
+
+        // Sheep beyond startFlock start dormant: parked, not active, not
+        // huntable, hidden on the wire (killed flag), activated as the run grows.
+        for (let i = 0; i < this.gameState.sheep.length; i++) {
+            const s = this.gameState.sheep[i];
+            if (i >= startFlock) {
+                s.dormant = true;
+                s.state = 2;
+                s.velocity.set(0, 0);
+            }
+        }
+
+        // Pen barrier (same geometry the client builds: scene.pen + scene.gate).
+        const pen = this.scene.pen;
+        const gate = this.scene.gate;
+        const penContainment = (pen?.center && gate?.position)
+            ? new PenContainment(
+                pen,
+                { x: gate.position.x, z: gate.position.z, width: gate.width },
+                { settleSeed: this.seed },
+            )
+            : null;
+
+        const run = new SurvivalRun(cfg);
+        const wolves = new WolfSim({
+            pen: penContainment,
+            onKill: () => run.recordKill(),
+            seed: this.seed,
+        });
+
+        const secondsPerDay = this.scene.dayNight?.secondsPerDay;
+        const initialT = this.scene.dayNight?.initialT ?? 0.28;
+        const t0 = secondsToT(0, secondsPerDay, initialT);
+        const phase0 = phaseForT(t0);
+
+        this._survival = {
+            run,
+            wolves,
+            pen: penContainment,
+            elapsed: 0,
+            t: t0,
+            phase: phase0,
+            gateOpen: gateOpenForPhase(phase0),
+            dogMem: new Map(),
+            ended: false,
+        };
+        // Establish the run's prev-phase baseline (no event on the first observe).
+        run.onPhase(phase0);
+        console.log(`🐺 Survival initialized for room ${this.room.roomCode}: startFlock ${startFlock}, pool ${this.gameState.sheep.length}`);
+    }
+
+    /**
+     * Advance the survival subsystem one tick: the day clock, the pen correction
+     * + membership, the run economy off phase transitions, and the wolves. Called
+     * from tick() AFTER updateSheep so the pen sees final sheep positions.
+     */
+    _tickSurvival(dt) {
+        const s = this._survival;
+        if (!s || s.ended) return;
+        const step = Number.isFinite(dt) ? dt : this.deltaTime;
+
+        // Server-owned day clock.
+        s.elapsed += step;
+        s.t = secondsToT(s.elapsed, this.scene.dayNight?.secondsPerDay, this.scene.dayNight?.initialT ?? 0.28);
+        const phase = phaseForT(s.t);
+        s.phase = phase;
+        s.gateOpen = gateOpenForPhase(phase);
+
+        // Pen: retire sheep herded in, keep others out, collide each player dog.
+        if (s.pen) {
+            s.pen.update(this.gameState.sheep, null, s.gateOpen, step);
+            for (const [pid, dog] of this.sheepdogs) {
+                let mem = s.dogMem.get(pid);
+                if (!mem) { mem = { inside: false }; s.dogMem.set(pid, mem); }
+                s.pen.containDog(dog.position, s.gateOpen, mem);
+            }
+        }
+
+        // Run economy off the phase transitions.
+        const ev = s.run.onPhase(phase);
+        if (ev) {
+            if (ev.type === 'nightfall') {
+                s.wolves.spawnNight(s.run.day, this.gameState.sheep);
+            } else if (ev.type === 'survived') {
+                s.wolves.retreatAll();
+                if (s.pen) s.pen.releaseAll(this.gameState.sheep);
+                this._syncActiveToFlock();
+            } else if (ev.type === 'death') {
+                s.wolves.retreatAll();
+                this._endSurvivalRun(ev);
+                return;
+            }
+        }
+
+        // Wolves last, so they see settled sheep + pen membership this frame.
+        s.wolves.update(step, this.gameState.sheep, null);
+    }
+
+    /** Count sheep currently in the run (active, not killed, not dormant). */
+    _countActiveSurvivalSheep() {
+        let n = 0;
+        for (const s of this.gameState.sheep) {
+            if (s.state === 0 && !s.killed && !s.dormant) n++;
+        }
+        return n;
+    }
+
+    /**
+     * Activate dormant sheep until the rendered active count matches the run's
+     * flock (which already grew + capped at maxFlock in SurvivalRun). Cap-correct:
+     * if run.flock hit maxFlock, only the difference is activated.
+     */
+    _syncActiveToFlock() {
+        const target = this._survival.run.flock;
+        const active = this._countActiveSurvivalSheep();
+        if (active < target) this._activateDormant(target - active);
+    }
+
+    /** Flip up to n dormant sheep to active at the spawn cluster (seeded jitter). */
+    _activateDormant(n) {
+        if (n <= 0) return 0;
+        const cfg = this.scene.sheepSpawn || {};
+        const cx = cfg.centerX ?? 0, cz = cfg.centerZ ?? 0;
+        const spread = cfg.spreadRadius ?? 60;
+        let activated = 0;
+        for (let i = 0; i < this.gameState.sheep.length && activated < n; i++) {
+            const s = this.gameState.sheep[i];
+            if (!s.dormant) continue;
+            s.dormant = false;
+            s.killed = false;
+            s.penned = false;
+            s.hasPassedGate = false;
+            s.isRetiring = false;
+            s.state = 0;
+            s._penSettling = false;
+            s.settleTarget = null;
+            const jx = (this.rng() - 0.5) * spread;
+            const jz = (this.rng() - 0.5) * spread;
+            s.position.set(cx + jx, cz + jz);
+            s.velocity.set(0, 0);
+            s.acceleration.set(0, 0);
+            activated++;
+        }
+        return activated;
+    }
+
+    /** End the shared run: mark complete + post each player's peak flock. */
+    _endSurvivalRun(ev) {
+        const s = this._survival;
+        if (!s || s.ended) { /* already ended */ }
+        if (s) s.ended = true;
+        this.gameState.gameActive = false;
+        this.gameState.gameCompleted = true;
+        // One shared run: every connected player posts the run's peak flock to
+        // the party-size-partitioned survival board (P7 routes it in the DO).
+        const scores = {};
+        for (const pid of this.sheepdogs.keys()) scores[pid] = ev.score;
+        this.gameState.playerScores = scores;
+        this.completionData = {
+            completedAt: Date.now(),
+            isSurvival: true,
+            isCompetitive: false,
+            survival: { score: ev.score, day: ev.day, partySize: this.sheepdogs.size },
+            partySize: this.sheepdogs.size,
+            totalSheep: this.gameState.totalSheep,
+            gameCompleted: true,
+        };
+        console.log(`🐺 Survival run ended for room ${this.room.roomCode}: peak ${ev.score} on day ${ev.day}`);
+        this.broadcastGameCompletion();
     }
 }

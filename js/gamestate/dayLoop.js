@@ -20,50 +20,13 @@
  * wolves in a later cycle.
  */
 
-/** @enum {string} */
-export const DayPhase = {
-    MORNING: 'morning',
-    DAY: 'day',
-    DUSK: 'dusk',
-    NIGHT: 'night',
-};
+// Cycle 67 P3: the pure phase math moved to shared/survival/dayClock.js so the
+// Worker can run the same clock for co-op survival. The DayLoop class below stays
+// client-only (it drives the HUD); it imports the shared phase fns and this file
+// re-exports them so existing importers keep working.
+import { DayPhase, wrap01, phaseForT, gateOpenForPhase } from '../../shared/survival/dayClock.js';
 
-// Phase boundaries in normalized time-of-day. Sunrise ~0.25, noon 0.5, sunset
-// ~0.75 (the DayNightCycle keyframes). The gate opens at dawn and closes at
-// night; dusk is the warning window before the gate shuts.
-const DAWN_T = 0.25;       // night -> morning (gate opens)
-const MORNING_END_T = 0.36;
-const DUSK_START_T = 0.66; // day -> dusk (herd-back warning)
-const NIGHT_T = 0.80;      // dusk -> night (gate closes)
-
-/** Wrap any number into [0,1). */
-function wrap01(t) {
-    if (!Number.isFinite(t)) return 0;
-    const v = t % 1;
-    return v < 0 ? v + 1 : v;
-}
-
-/**
- * Map a normalized time-of-day to a day phase.
- * @param {number} t
- * @returns {DayPhase}
- */
-export function phaseForT(t) {
-    const tn = wrap01(t);
-    if (tn < DAWN_T || tn >= NIGHT_T) return DayPhase.NIGHT;
-    if (tn < MORNING_END_T) return DayPhase.MORNING;
-    if (tn < DUSK_START_T) return DayPhase.DAY;
-    return DayPhase.DUSK;
-}
-
-/**
- * The gate is open from dawn through dusk and closed at night.
- * @param {DayPhase} phase
- * @returns {boolean}
- */
-export function gateOpenForPhase(phase) {
-    return phase !== DayPhase.NIGHT;
-}
+export { DayPhase, phaseForT, gateOpenForPhase };
 
 export class DayLoop {
     /**
