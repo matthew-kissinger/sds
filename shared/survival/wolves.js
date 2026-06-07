@@ -26,6 +26,7 @@
  */
 
 import { mulberry32 } from '../Random.js';
+import { WOLF_TUNING } from './tuning.js';
 import {
     spawnCountForDay,
     nearestHuntableIndex,
@@ -36,22 +37,12 @@ import {
 /** @enum {string} */
 export const WolfState = { HUNT: 'hunt', FLEE: 'flee', RETREAT: 'retreat' };
 
-/** Default feel knobs (metres / m/s / seconds). Matt's spec; tunable. */
-export const DEFAULT_WOLF_TUNING = {
-    base: 2,            // wolves on night one
-    perDay: 1,          // + per day
-    max: 8,             // pack ceiling
-    huntSpeed: 11.5,
-    fleeSpeed: 13,
-    retreatSpeed: 12,
-    killRadius: 1.7,
-    killCooldown: 1.2,  // s between a wolf's kills
-    spawnRadius: 150,   // ring radius around the flock
-    spawnJitter: 60,
-    body: 1.0,          // fence standoff radius
-    retreatDist: 260,   // despawn once this far out
-    fleeRepelRadius: 22,
-};
+/**
+ * Default feel knobs. Cycle 68 P2: the values now live in the centralized
+ * shared/survival/tuning.js (one feel-pass file); this re-export keeps the
+ * DEFAULT_WOLF_TUNING name every existing importer + test already uses.
+ */
+export const DEFAULT_WOLF_TUNING = WOLF_TUNING;
 
 /**
  * @typedef {Object} WolfRecord
@@ -274,7 +265,7 @@ export class WolfSim {
      * `secs`, breaking pursuit. Longer range than the sheep cone. Returns the
      * count repelled (telemetry / tests).
      */
-    repel(x, z, radius = this.t.fleeRepelRadius, secs = 1.6) {
+    repel(x, z, radius = this.t.fleeRepelRadius, secs = this.t.barkRepelSecs) {
         let n = 0;
         const r2 = radius * radius;
         for (const e of this.wolves) {

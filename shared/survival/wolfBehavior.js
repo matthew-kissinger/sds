@@ -13,6 +13,8 @@
  * randomness is needed. `Math.hypot` is sqrt-based (IEEE-754 pinned) and fine.
  */
 
+import { WOLF_TUNING } from './tuning.js';
+
 /**
  * How many wolves spawn on a given survival night. Escalates per day from a
  * small starter pack to a hard ceiling (2 on night one, +1/day, cap 8). Exposed
@@ -25,9 +27,9 @@
  * @returns {number}
  */
 export function spawnCountForDay(day, opts = {}) {
-    const base = opts.base ?? 2;
-    const perDay = opts.perDay ?? 1;
-    const max = opts.max ?? 8;
+    const base = opts.base ?? WOLF_TUNING.base;
+    const perDay = opts.perDay ?? WOLF_TUNING.perDay;
+    const max = opts.max ?? WOLF_TUNING.max;
     const d = Math.max(1, Math.floor(day) || 1);
     return Math.max(0, Math.min(max, base + (d - 1) * perDay));
 }

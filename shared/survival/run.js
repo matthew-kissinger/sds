@@ -25,6 +25,8 @@
  * as constructor opts for his feel pass.
  */
 
+import { SURVIVAL_RUN_DEFAULTS } from './tuning.js';
+
 /** @enum {string} */
 export const SurvivalState = { ALIVE: 'alive', DEAD: 'dead' };
 
@@ -37,7 +39,12 @@ export class SurvivalRun {
      * @param {number} [opts.maxFlock=Infinity]  Cap on the flock (matches the rendered
      *        OptimizedSheep ceiling) so the score never drifts above the visible sheep.
      */
-    constructor({ startFlock = 10, growth = 5, lossThreshold = 1 / 3, maxFlock = Infinity } = {}) {
+    constructor({
+        startFlock = SURVIVAL_RUN_DEFAULTS.startFlock,
+        growth = SURVIVAL_RUN_DEFAULTS.growth,
+        lossThreshold = SURVIVAL_RUN_DEFAULTS.lossThreshold,
+        maxFlock = Infinity,
+    } = {}) {
         this.startFlock = startFlock;
         this.growth = growth;
         this.lossThreshold = lossThreshold;

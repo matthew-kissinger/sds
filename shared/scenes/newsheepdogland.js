@@ -19,6 +19,7 @@
  * @type {import('./types.js').SceneDef}
  */
 import { NEWSHEEPDOGLAND_POINTS } from './newsheepdogland.coast.js';
+import { SURVIVAL_RUN_DEFAULTS } from '../survival/tuning.js';
 
 export const newsheepdogland = {
     id: 'newsheepdogland',
@@ -163,11 +164,12 @@ export const newsheepdogland = {
     // there is time to herd before the wolves. Tunable for Matt's feel pass.
     dayNight: { enabled: true, secondsPerDay: 600, initialT: 0.28, dayLoop: true },
 
-    // Cycle 66 P3: this scene is the survival run. Start with 10 sheep (no count
-    // selection); each surviving day the flock grows +5; a night that loses a
-    // third or more of the flock ends the run; the score is the peak flock size.
-    // Client-side economy (js/gamestate/survivalRun.js). Matt's named numbers.
-    survival: { startFlock: 10, growth: 5, lossThreshold: 1 / 3, maxFlock: 200 },
+    // Cycle 66 P3: this scene is the survival run. Start with startFlock sheep (no
+    // count selection); each surviving day the flock grows by `growth`; a night
+    // that loses `lossThreshold` or more of the flock ends the run; the score is
+    // the peak flock size. The run-economy feel defaults are centralized in
+    // shared/survival/tuning.js (Cycle 68 P2); maxFlock is this scene's capacity.
+    survival: { ...SURVIVAL_RUN_DEFAULTS, maxFlock: 200 },
 
     // Cycle 64: a tunable strawman ladder (reserved for Matt's feel pass). The
     // island is large, so it runs a broad span from a 3-sheep Just Play up to
