@@ -35,16 +35,11 @@ export const newsheepdogland = {
         cellSize: 12,
     },
 
-    // Herding destination this cycle: a fold at the toe (the far-east foot).
-    corral: {
-        center: { x: 895, z: -982 },
-        radius: 34,
-        effect: 'zap',
-    },
-
-    // Cycle 65: the homestead pen - the herd-back home zone for the day loop,
-    // beside the farmhouse. Sheep counted within this radius by dusk are "home".
-    // Separate from the toe `corral`, which stays the wired Solo objective.
+    // Cycle 66 P2: the pen IS the objective. No toe corral, no zap. The fence is
+    // a real barrier (js/gamestate/penContainment.js): the dog + sheep collide
+    // with it and the only way in is the gate, open by day, sealed at night.
+    // Sheep herded through the gate settle and retire inside (the pasture) until
+    // morning - the half-side of the square fence ring around `center`.
     pen: {
         center: { x: 640, z: -1000 },
         radius: 30,

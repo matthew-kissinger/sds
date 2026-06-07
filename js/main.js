@@ -2418,6 +2418,18 @@ class SheepDogSimulation {
             // bring the next batch online. Self-guards to a no-op for every
             // non-counting mode, so standard runs are untouched.
             this.gameState.advanceCountingRound();
+            // Cycle 66 P2: client-side pen containment + pen-entry retirement.
+            // Runs after the shared sheep sim has moved the flock (and after the
+            // dog moved earlier this frame), before render. Day-loop scenes only;
+            // a no-op everywhere else.
+            if (this._penContainment) {
+                this._penContainment.update(
+                    this.gameState.sheep,
+                    this.gameActive ? this.sheepdog : null,
+                    this.dayLoop?.gateOpen ?? true,
+                    deltaTime
+                );
+            }
         }
 
         // Sheep velocity-based extrapolation (multiplayer only). After behaviors

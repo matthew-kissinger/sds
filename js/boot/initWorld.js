@@ -200,6 +200,21 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             const pen = game.currentScene.pen || null;
             const dayLoop = new DayLoop({ initialT: game.currentScene.dayNight.initialT });
             game.dayLoop = dayLoop;
+
+            // Cycle 66 P2: the pen is a real barrier + the objective. A
+            // client-side per-frame containment makes the fence solid (gate-only
+            // entry, sealed at night, dog + sheep collide) and retires sheep that
+            // pass through the gate (calm settle, no zap, no teleport). main.js
+            // ticks it after the shared sheep sim each frame.
+            if (pen?.center) {
+                const { PenContainment } = await import('../gamestate/penContainment.js');
+                game._penContainment = new PenContainment(pen, {
+                    x: gd.position.x, z: gd.position.z, width: gd.width,
+                });
+            } else {
+                game._penContainment = null;
+            }
+
             chip.mountDayNightChip();
             game._unmountDayNightChip = chip.unmountDayNightChip;
 
@@ -214,20 +229,28 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 const dn = game.atmosphere?.dayNight;
                 if (!dn) return;
                 const t = dn.getT();
-                acc += Number.isFinite(dt) ? dt : 0.016;
-                // Throttle the pen membership scan to ~4Hz; it is O(activeSheep).
-                if (first || acc >= 0.25) {
-                    first = false;
-                    acc = 0;
-                    home = 0;
-                    const sheep = game.gameState?.sheep;
-                    if (pen && sheep) {
-                        const cx = pen.center.x, cz = pen.center.z, r2 = pen.radius * pen.radius;
-                        for (let i = 0; i < sheep.length; i++) {
-                            const p = sheep[i]?.position;
-                            if (!p) continue;
-                            const dx = p.x - cx, dz = p.z - cz;
-                            if (dx * dx + dz * dz <= r2) home++;
+                // Cycle 66 P2: the pen containment authoritatively tracks who has
+                // been herded through the gate and retired inside; prefer its
+                // count. Fall back to a throttled radius scan only when there is
+                // no containment (e.g. a day-loop scene without a pen).
+                if (game._penContainment) {
+                    home = game._penContainment.pennedCount;
+                } else {
+                    acc += Number.isFinite(dt) ? dt : 0.016;
+                    // Throttle the pen membership scan to ~4Hz; it is O(activeSheep).
+                    if (first || acc >= 0.25) {
+                        first = false;
+                        acc = 0;
+                        home = 0;
+                        const sheep = game.gameState?.sheep;
+                        if (pen && sheep) {
+                            const cx = pen.center.x, cz = pen.center.z, r2 = pen.radius * pen.radius;
+                            for (let i = 0; i < sheep.length; i++) {
+                                const p = sheep[i]?.position;
+                                if (!p) continue;
+                                const dx = p.x - cx, dz = p.z - cz;
+                                if (dx * dx + dz * dz <= r2) home++;
+                            }
                         }
                     }
                 }

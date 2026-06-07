@@ -51,7 +51,6 @@ describe('Newsheepdogland SceneDef (Cycle 64)', () => {
         const P = NEWSHEEPDOGLAND_POINTS;
         const landmarks = {
             dogSpawn: scene.dogSpawn,
-            corral: scene.corral.center,
             pen: scene.pen.center,
             gate: scene.gate.position,
             sheepSpawn: { x: scene.sheepSpawn.centerX, z: scene.sheepSpawn.centerZ },
@@ -64,10 +63,10 @@ describe('Newsheepdogland SceneDef (Cycle 64)', () => {
         }
     });
 
-    it('separates the homestead pen from the toe corral (Cycle 65)', () => {
-        // Cycle 65 relocated the pen to the homestead day-loop zone; the toe
-        // corral stays the wired Solo objective. They are now distinct places.
-        expect(scene.pen.center).not.toEqual(scene.corral.center);
+    it('makes the pen the objective with no toe corral or zap (Cycle 66 P2)', () => {
+        // Cycle 66 P2 removed the toe corral + zap: the pen is the only objective,
+        // a real fence barrier with gate-only entry (js/gamestate/penContainment.js).
+        expect(scene.corral).toBeUndefined();
         // The homestead gate sits on the pen edge.
         expect(scene.gate).toBeTruthy();
         const gd = Math.hypot(scene.gate.position.x - scene.pen.center.x, scene.gate.position.z - scene.pen.center.z);
