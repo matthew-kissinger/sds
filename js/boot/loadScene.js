@@ -20,6 +20,14 @@ export async function disposeScene(game) {
     console.log('[SWAP] disposeScene() — full teardown');
     game._sceneRebuilding = true;
 
+    // Cycle 65: tear down the homestead day loop + its HUD chip (no-op on
+    // non-day-loop scenes). Cleared before the rest so the main loop's
+    // _tickDayLoop stops touching a half-disposed scene mid-teardown.
+    game._tickDayLoop = null;
+    game.dayLoop = null;
+    try { game._unmountDayNightChip?.(); } catch (err) { console.warn('[SWAP] dayNightChip unmount:', err); }
+    game._unmountDayNightChip = null;
+
     // Cycle 46 / Cycle 52 P1: tear down an in-engine reveal layer if present.
     // Only set while a reveal is armed; a no-op on every normal scene-to-scene
     // swap.

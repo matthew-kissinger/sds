@@ -95,6 +95,7 @@
  * @typedef {Object} GateDef
  * @property {{x: number, z: number}} position
  * @property {number} width
+ * @property {number} [facingDeg]   Cycle 65 — Y rotation (deg) of the gate opening. Used by the homestead day-loop gate; absent for legacy perimeter gates.
  */
 
 /**

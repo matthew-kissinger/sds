@@ -46,16 +46,27 @@ export const wolfCoast = {
         effect: 'zap',
     },
 
-    // Cycle 64 inert: the survival pen, same place as the corral. Nothing reads
-    // it for gameplay yet (Cycle 65 wires the safe-zone semantics).
+    // Cycle 65: the homestead pen - the herd-back home zone for the day loop,
+    // beside the farmhouse. Sheep counted within this radius by dusk are "home".
+    // Separate from the toe `corral`, which stays the wired Solo objective.
     pen: {
-        center: { x: 895, z: -982 },
-        radius: 34,
+        center: { x: 640, z: -1000 },
+        radius: 30,
     },
 
-    // The world origin is the instep bay (water on a boot), so the dog spawns in
-    // the foot lowland instead of the default (0, -30).
-    dogSpawn: { x: -100, z: -1050 },
+    // Cycle 65: the homestead gate on the west edge of the pen, facing the
+    // grazing lowland. The day loop swings it open at dawn, closed at night.
+    // facingDeg 90 turns the opening to span the north-south pen edge.
+    gate: {
+        position: { x: 610, z: -1000 },
+        width: 12,
+        facingDeg: 90,
+    },
+
+    // Cycle 65: the dog wakes at the homestead, just outside the gate, ready to
+    // herd the flock grazing west across the foot. (Was the lone foot drop in
+    // Cycle 64; now it is the homestead doorstep.)
+    dogSpawn: { x: 585, z: -1000 },
 
     sheepSpawn: {
         pattern: 'scattered',

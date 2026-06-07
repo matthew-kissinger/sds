@@ -295,6 +295,126 @@ export class StructureBuilder {
     }
 
     /**
+     * Cycle 65: the homestead gate - a wooden swing gate (posts + arch from the
+     * fence kit + a hinged door panel) flanked by short fence wings, placed at
+     * the homestead so the dog wakes beside it. The day loop drives the door
+     * open at dawn and closed at night via `setHomesteadGateOpen`. Built only on
+     * scenes that opt into the day loop; returns the gate group.
+     *
+     * @param {{ gate: {x:number, z:number, width?:number, facingDeg?:number}, wing?:number }} homestead
+     * @returns {THREE.Group}
+     */
+    buildHomesteadGate(homestead) {
+        const g = homestead?.gate;
+        if (!g) return null;
+        const width = g.width ?? 10;
+        const wing = homestead.wing ?? 12;
+
+        const group = new THREE.Group();
+        group.name = 'HomesteadGate';
+
+        // Posts + arch from the shared fence kit so it matches the world.
+        const gateStruct = this.fencePresets.createGateStructure(width, 'horizontal');
+        group.add(gateStruct);
+
+        // The swinging door: hinged at the left post (local x = -width/2),
+        // spanning the opening when closed. The day loop swings it about Y.
+        const door = this._buildGateDoor(width);
+        door.position.set(-width / 2, 0, 0);
+        group.add(door);
+        this._homesteadDoor = door;
+        this._homesteadGateOpen = true;
+        this._homesteadDoorOpenAngle = -Math.PI * 0.58;
+        door.rotation.y = this._homesteadDoorOpenAngle; // start open at dawn
+        // Snap rather than tween when the user prefers reduced motion.
+        this._reducedMotion = typeof window !== 'undefined'
+            && window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // Short fence wings extending from each post for context.
+        if (wing > 1) {
+            const leftWing = this.fencePresets.createBorderSegment(wing, 'horizontal');
+            leftWing.position.set(-width / 2 - wing / 2, 0, 0);
+            group.add(leftWing);
+            const rightWing = this.fencePresets.createBorderSegment(wing, 'horizontal');
+            rightWing.position.set(width / 2 + wing / 2, 0, 0);
+            group.add(rightWing);
+        }
+
+        // Place + face the gate, then ride the whole thing onto the terrain as
+        // one unit so the posts, door, and wings stay coplanar on a slope.
+        group.position.set(g.x, 0, g.z);
+        group.rotation.y = ((g.facingDeg ?? 0) * Math.PI) / 180;
+        group.userData.surfaceToTerrain = true;
+
+        this.scene.add(group);
+        this.structures.gates.push(group);
+        this._surfaceToTerrain(group);
+        this._homesteadGate = group;
+        console.log(`[BUILD] Homestead gate at (${g.x.toFixed(0)}, ${g.z.toFixed(0)}), width ${width}`);
+        return group;
+    }
+
+    /**
+     * A simple wooden gate door: three horizontal rails + a hinge stile + a far
+     * stile, all in the door's local frame with the hinge at local x = 0 so the
+     * group swings about Y. Rails span local x in [0, width].
+     * @param {number} width
+     * @returns {THREE.Group}
+     * @private
+     */
+    _buildGateDoor(width) {
+        const door = new THREE.Group();
+        door.name = 'HomesteadGateDoor';
+        const mat = new THREE.MeshLambertMaterial({ color: 0x6b4a30 });
+        const len = Math.max(1, width - 0.4);
+        for (const h of [0.7, 1.5, 2.3]) {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.13, 0.1), mat);
+            rail.position.set(0.2 + len / 2, h, 0);
+            rail.castShadow = true;
+            door.add(rail);
+        }
+        const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.8, 0.16), mat);
+        hinge.position.set(0.2, 1.4, 0);
+        hinge.castShadow = true;
+        door.add(hinge);
+        const farStile = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.5, 0.14), mat);
+        farStile.position.set(width - 0.2, 1.3, 0);
+        farStile.castShadow = true;
+        door.add(farStile);
+        return door;
+    }
+
+    /**
+     * Cycle 65: command the homestead gate open or closed. The actual swing is
+     * tweened in `update`; if the door is missing (non-day-loop scene) this is a
+     * no-op. Idempotent.
+     * @param {boolean} open
+     */
+    setHomesteadGateOpen(open) {
+        if (!this._homesteadDoor) return;
+        this._homesteadGateOpen = !!open;
+        if (this._reducedMotion) {
+            this._homesteadDoor.rotation.y = open ? this._homesteadDoorOpenAngle : 0;
+        }
+    }
+
+    /**
+     * Cycle 65: tween the homestead gate door toward its target each frame.
+     * Driven by the day loop's per-frame runner because StructureBuilder.update
+     * is not on the main loop. No-op without a door or under reduced motion.
+     * @param {number} deltaTime
+     */
+    updateGate(deltaTime) {
+        if (!this._homesteadDoor || this._reducedMotion) return;
+        const target = this._homesteadGateOpen ? this._homesteadDoorOpenAngle : 0;
+        const cur = this._homesteadDoor.rotation.y;
+        if (Math.abs(target - cur) <= 1e-4) return;
+        const k = Math.min(1, (Number.isFinite(deltaTime) ? deltaTime : 0.016) * 3);
+        this._homesteadDoor.rotation.y = cur + (target - cur) * k;
+    }
+
+    /**
      * Build structures for sandbox mode with custom fences
      * @param {Object} bounds - Field boundaries
      * @param {Object} gate - Gate configuration

@@ -185,6 +185,59 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             }
         );
 
+        // Cycle 65: the homestead gate + day loop. Only on scenes that opt into
+        // the day loop (Wolf Coast). The gate is grounded via the heightfield set
+        // above; the DayLoop + the day/night HUD chip are created here, and a
+        // per-frame runner is stashed on the game for the main loop to call.
+        if (game.currentScene.dayNight?.dayLoop && game.currentScene.gate) {
+            const gd = game.currentScene.gate;
+            game.structureBuilder.buildHomesteadGate({
+                gate: { x: gd.position.x, z: gd.position.z, width: gd.width, facingDeg: gd.facingDeg },
+            });
+            const { DayLoop } = await import('../gamestate/dayLoop.js');
+            const chip = await import('../components/GameHUD/DayNightChip.js');
+            const pen = game.currentScene.pen || null;
+            const dayLoop = new DayLoop({ initialT: game.currentScene.dayNight.initialT });
+            game.dayLoop = dayLoop;
+            chip.mountDayNightChip();
+            game._unmountDayNightChip = chip.unmountDayNightChip;
+
+            let acc = 0;
+            let home = 0;
+            let first = true;
+            game._tickDayLoop = (dt) => {
+                const dn = game.atmosphere?.dayNight;
+                if (!dn) return;
+                const t = dn.getT();
+                acc += Number.isFinite(dt) ? dt : 0.016;
+                // Throttle the pen membership scan to ~4Hz; it is O(activeSheep).
+                if (first || acc >= 0.25) {
+                    first = false;
+                    acc = 0;
+                    home = 0;
+                    const sheep = game.gameState?.sheep;
+                    if (pen && sheep) {
+                        const cx = pen.center.x, cz = pen.center.z, r2 = pen.radius * pen.radius;
+                        for (let i = 0; i < sheep.length; i++) {
+                            const p = sheep[i]?.position;
+                            if (!p) continue;
+                            const dx = p.x - cx, dz = p.z - cz;
+                            if (dx * dx + dz * dz <= r2) home++;
+                        }
+                    }
+                }
+                const total = game.gameState?.optimizedSheepSystem?.activeCount
+                    ?? (game.gameState?.sheep?.length ?? 0);
+                const state = dayLoop.update(t, home, total);
+                game.structureBuilder?.setHomesteadGateOpen?.(state.gateOpen);
+                game.structureBuilder?.updateGate?.(dt);
+                chip.updateDayNightChip(state);
+            };
+        } else {
+            game.dayLoop = null;
+            game._tickDayLoop = null;
+        }
+
         // Cycle 5+: corral retirement effect. Listens for 'corral-retired'
         // events dispatched by GameState's retirement loop. Cycle 6 Phase 4
         // adds the persistent 'portal' variant for Open Country.

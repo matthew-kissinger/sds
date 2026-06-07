@@ -53,6 +53,7 @@ describe('Wolf Coast SceneDef (Cycle 64)', () => {
             dogSpawn: scene.dogSpawn,
             corral: scene.corral.center,
             pen: scene.pen.center,
+            gate: scene.gate.position,
             sheepSpawn: { x: scene.sheepSpawn.centerX, z: scene.sheepSpawn.centerZ },
             farmHouse: scene.farmHouse.position,
             mountainSummit: { x: -616, z: 1110 },
@@ -63,8 +64,25 @@ describe('Wolf Coast SceneDef (Cycle 64)', () => {
         }
     });
 
-    it('pen and corral coexist at the same toe enclosure', () => {
-        expect(scene.pen.center).toEqual(scene.corral.center);
+    it('separates the homestead pen from the toe corral (Cycle 65)', () => {
+        // Cycle 65 relocated the pen to the homestead day-loop zone; the toe
+        // corral stays the wired Solo objective. They are now distinct places.
+        expect(scene.pen.center).not.toEqual(scene.corral.center);
+        // The homestead gate sits on the pen edge.
+        expect(scene.gate).toBeTruthy();
+        const gd = Math.hypot(scene.gate.position.x - scene.pen.center.x, scene.gate.position.z - scene.pen.center.z);
+        expect(gd).toBeLessThanOrEqual(scene.pen.radius + 2);
+        // The dog wakes at the homestead, just outside the gate.
+        const dd = Math.hypot(scene.dogSpawn.x - scene.gate.position.x, scene.dogSpawn.z - scene.gate.position.z);
+        expect(dd).toBeLessThan(40);
+    });
+
+    it('opts into the day/night day loop (Cycle 65)', () => {
+        expect(scene.dayNight).toBeTruthy();
+        expect(scene.dayNight.enabled).toBe(true);
+        expect(scene.dayNight.dayLoop).toBe(true);
+        expect(scene.dayNight.initialT).toBeGreaterThan(0);
+        expect(scene.dayNight.initialT).toBeLessThan(1);
     });
 
     it('ships no survival modes this cycle', () => {

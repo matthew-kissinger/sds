@@ -2351,8 +2351,12 @@ class SheepDogSimulation {
                 this.atmosphere.syncCamera(this.sceneManager.getCamera().position);
                 this.atmosphere.update(deltaTime);
             }
+
+            // Cycle 65: drive the homestead day loop from the day/night clock
+            // (gate open/close by phase + HUD). No-op on non-day-loop scenes.
+            this._tickDayLoop?.(deltaTime);
         }
-        
+
         // Update other players with interpolation for smooth movement
         if (this.isMultiplayer && !isPaused) {
             for (const remoteDog of this.otherPlayers.values()) {
