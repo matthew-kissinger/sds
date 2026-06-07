@@ -106,6 +106,9 @@ export class GrassSystem {
         // Cycle 64: grid centre (origin unless a scene moves its grass onto an
         // off-origin play area, e.g. Newsheepdogland's foot).
         this._grassCenter = sceneGrass?.grassCenter ?? { x: 0, z: 0 };
+        // Cycle 70: optional coastline meadow-quad far-ring LOD opt-in. Absent on
+        // every pre-70 scene (a coastline keeps full clump blades to the shore).
+        this._farRing = sceneGrass?.farRing ?? null;
         this.konveyorGrassSearch = opts.search;
         this.konveyorGrassFactories = opts.konveyorGrassFactories;
         this.konveyorMeadowQuadMaterialSummary = null;
@@ -1133,6 +1136,30 @@ export class GrassSystem {
                     if (sd < -chunkSize) continue; // chunk fully outside the shore
                 } else if (distFromCenter > cullDistance) {
                     continue;
+                }
+
+                // Cycle 70: coastline far-ring meadow-quad LOD (opt-in via
+                // grass.farRing). After the SDF cull above, a coastline far chunk
+                // (beyond meadowFrom metres from grassCenter, on land) becomes one
+                // terrain-following quad instead of clump blades - the same desktop
+                // LOD RH/OC use, extended to the boot. Measured from grassCenter
+                // (the play-area grid centre), NOT the world origin, so near
+                // play-area chunks keep full blades. createMeadowQuadChunk still
+                // self-trims below-shoreline quads, so the ring never tiles water.
+                // Mutually exclusive with the non-coastline branch below.
+                if (meadowQuadEnabled && this._isCoastline && this._farRing) {
+                    const dgx = chunkCenterX - gridOriginX;
+                    const dgz = chunkCenterZ - gridOriginZ;
+                    const meadowFrom = this._farRing.meadowFrom;
+                    if (dgx * dgx + dgz * dgz > meadowFrom * meadowFrom) {
+                        const quadChunk = this.createMeadowQuadChunk(
+                            cx, cz, chunkMinX, chunkMinZ, chunkMaxX, chunkMaxZ
+                        );
+                        if (quadChunk) {
+                            this.chunks.set(`${cx}_${cz}`, quadChunk);
+                        }
+                        continue;
+                    }
                 }
 
                 // Cycle 23 Phase D2: far-ring meadow-quad path. Chunks within
