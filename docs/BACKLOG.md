@@ -4,6 +4,28 @@
 
 ## Recently Completed
 
+### Cycle 69 - `grass-far-ring-and-api-hardening` (closed 2026-06-07)
+
+Plan archived at [`docs/archive/cycles/cycle-69-plan.md`](archive/cycles/cycle-69-plan.md). A folded autonomous cycle (Matt: "author cycle 69 the complete and push and deploy") that closed the two autonomous-able Cycle 67/68 loose ends and reframed the scaffolded `survival-feel-and-media` stub (those Matt's-hands tracks moved to Cycle 70). The riskiest item (grass) was again gated behind a measure-first spike, so the cohesion-frozen `GrassSystem` was never touched on a guess. No `shared/` change this cycle, so the sheep sim-baselines are untouched by construction.
+
+**Closeout outcomes (3/4 phases shipped, 1 evidence-deferred):**
+
+- **P1 API body-parse hardening (the documented `/api/rename` prod-500).** A bare `await request.json()` on the body-parsing POST routes threw on an absent, empty, or malformed body and fell through to the outer catch as a server `500` - a server fault for a client mistake. New `readJsonObject(request)` returns `{}` instead of throwing; routed `/api/register`, `/api/rename`, `/api/rooms`, room-join, quick-match, `/api/score`, and `/api/event` through it (one shared helper, no patchwork). Each route's existing field guards then produce the correct `401` (no token) or `400` (bad field). New route-level `tests/worker/rename-route.spec.ts` drives the exported `fetch` handler: no body -> `400`, malformed JSON -> `400`, no token -> `401` (was `500`). (`51185ea`)
+- **P2 coastline grass far-ring spike (measure-first).** `tools/grass-far-ring-spike.mjs` imports the real scene + the pure CoastlineField SDF and replays GrassSystem's chunk-cull + clumpScale + meadow-geometry math (no Three, no frozen sim core). Result (`cycle69-validation/grass/far-ring-spike.json`): baseline 829 draw calls / 7.31M tris. Option A (40m meadow quads on far chunks) = zero draw-call change, 37.6% triangle cut at the play-area-safe `meadowFrom` 600m, coast- and relief-safe. Option B (merged tiles, the only draw-call cut) = up to 34% fewer draw calls but over-tiles ~151 shore sub-cells (coast coarsening) and floats on leg relief, for no perf need (829 < 1500 budget). (`37cf232`)
+- **P3 far-ring implementation - DEFERRED with evidence (the P5 -> P6 pattern).** Option B is NO-GO (coarsens the coast, solves a non-problem). Option A is a viable, contained, one-flag triangle win (parity with the RH/OC desktop meadow-quad LOD) but a VISUAL change to the exact scene Matt has a pending hero-capture + feel pass on, so per the media-prep split it bundles with his visual pass rather than shipping autonomously ahead of it. `js/GrassSystem.js` + `shared/scenes/types.js` left byte-unchanged (no fence touch this cycle). The Option-A recipe is captured in the spike report for Cycle 70.
+- **P4 validate + ship + close.** Below.
+
+**Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail (the new rename-route spec adds 7); eslint `shared/` clean; worker `tsc` clean; `npm run build` clean (main bundle 598.83 kB = 584.8 KiB, within the 585 KiB ratchet - no client-code change this cycle); sim-baselines untouched (no `shared/` edit). The `upload-artifact@v5` carryover is verified already-resolved (all four workflows are on v5).
+
+**Release proof.** Commits `8a6fdcc` (plan) -> `37cf232` (P2) pushed to `main`; the GH Actions deploy ran green including the `Migrate D1 (remote)` job (no-op this cycle, no new migration). Prod verified post-deploy.
+
+**Carryover (to Cycle 70 `survival-feel-and-media`, the Matt's-hands track):**
+
+- **Grass far-ring Option A** (the P2 viable-but-deferred win): enable the existing meadow-quad LOD for coastline far chunks behind a SceneDef opt-in (37.6% grass-triangle cut, coast/relief-safe). Bundle with Matt's visual pass since it changes the hero-capture scene. Recipe in `cycle69-validation/grass/far-ring-spike.json`.
+- **`multiplayer.md` doc correction is STILL BLOCKED + needs Matt's explicit OK.** The Cycle 68 P1 remote-migration lines are still wrong; the agent-config guardrail blocks Claude editing a `.claude/rules/*.md` file autonomously. Staged text in the archived cycle-68 plan.
+- **Survival feel-pass tunables** (`shared/survival/tuning.js`), **two-client live co-op fun playtest**, and **the entrance hero FINAL shot** (dial `tools/hero-capture.mjs` to the manifest) - all Matt's taste/media track.
+- Prior open carryover (tablet draw-call perf, counting naming/curve-feel) remains deferred. `/api/rename` no-body 500 is now FIXED (P1); `upload-artifact@v5` is verified resolved.
+
 ### Cycle 68 - `survival-polish` (closed 2026-06-07)
 
 Plan archived at [`docs/archive/cycles/cycle-68-plan.md`](archive/cycles/cycle-68-plan.md). A folded autonomous cycle (Matt: "add all to cycle - author and align it - then autonomously complete it") that hardened + polished the Cycle 67 co-op survival mode. All four Cycle 67 carryover candidates were folded in; the riskiest (grass) was gated behind a measure-first spike so the cohesion-frozen `GrassSystem` was never touched on a guess. The 9 sheep sim-baselines stayed byte-identical (every survival change is gated behind `isSurvival`).
