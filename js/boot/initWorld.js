@@ -202,6 +202,10 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             chip.mountDayNightChip();
             game._unmountDayNightChip = chip.unmountDayNightChip;
 
+            // Cycle 65 P7: the skip-to-dusk cutscene (on-screen button + F key).
+            const { createSkipToDusk } = await import('../effects/skipToDusk.js');
+            game._skipToDusk = createSkipToDusk(game);
+
             let acc = 0;
             let home = 0;
             let first = true;
@@ -232,10 +236,12 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 game.structureBuilder?.setHomesteadGateOpen?.(state.gateOpen);
                 game.structureBuilder?.updateGate?.(dt);
                 chip.updateDayNightChip(state);
+                game._skipToDusk?.tick(dt);
             };
         } else {
             game.dayLoop = null;
             game._tickDayLoop = null;
+            game._skipToDusk = null;
         }
 
         // Cycle 5+: corral retirement effect. Listens for 'corral-retired'

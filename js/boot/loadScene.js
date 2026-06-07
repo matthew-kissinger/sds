@@ -25,6 +25,9 @@ export async function disposeScene(game) {
     // _tickDayLoop stops touching a half-disposed scene mid-teardown.
     game._tickDayLoop = null;
     game.dayLoop = null;
+    game._cutsceneActive = false;
+    try { game._skipToDusk?.dispose?.(); } catch (err) { console.warn('[SWAP] skipToDusk dispose:', err); }
+    game._skipToDusk = null;
     try { game._unmountDayNightChip?.(); } catch (err) { console.warn('[SWAP] dayNightChip unmount:', err); }
     game._unmountDayNightChip = null;
 

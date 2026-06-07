@@ -2341,8 +2341,11 @@ class SheepDogSimulation {
             }
             
             // Update camera to follow sheepdog (pass render deltaTime for
-            // frame-rate-independent smoothing - see SceneManager.updateCamera)
-            this.sceneManager.updateCamera(sheepdog, deltaTime);
+            // frame-rate-independent smoothing - see SceneManager.updateCamera).
+            // Cycle 65: suspended while the skip-to-dusk cutscene re-aims it.
+            if (!this._cutsceneActive) {
+                this.sceneManager.updateCamera(sheepdog, deltaTime);
+            }
 
             // Drive atmosphere (sky + clouds + day/night, when enabled).
             // Camera position is synced AFTER the camera update so the sky
