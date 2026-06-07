@@ -343,6 +343,16 @@ export async function placeTrees(builder, competitivePastures = null) {
         });
     }
 
+    // Cycle 65: no trees in the water. The Poisson scatter fills woodsZones that
+    // can spill past the shoreline on water-aware scenes (coastline/island), and
+    // trees (unlike grass) had no waterline cull. Drop any tree whose grounded Y
+    // sits at/below the waterline, mirroring the grass SHORELINE_Y_MIN cull.
+    // Gated to water-aware boundaries so flat Field (Y~0, no water) keeps its trees.
+    const _boundaryKind = builder.sceneDef?.boundary?.kind;
+    if (_boundaryKind === 'coastline' || _boundaryKind === 'island') {
+        flatTrees = flatTrees.filter((t) => builder._groundY(t.x, t.z) >= 0.6);
+    }
+
     builder.treeInstances = flatTrees;
 
     const treeInstances = {

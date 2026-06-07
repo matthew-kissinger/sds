@@ -149,7 +149,9 @@ export const wolfCoast = {
     // and the grazing field beyond. rotationDeg overrides the Field default.
     farmHouse: {
         position: { x: 640, z: -956 },
-        rotationDeg: 200,
+        // Porch + front door face west, the same way the gate opening faces out
+        // over the grazing field (verified in-browser: 270deg turns the door west).
+        rotationDeg: 270,
         exclusionArea: { minX: 620, maxX: 660, minZ: -976, maxZ: -936 },
     },
 

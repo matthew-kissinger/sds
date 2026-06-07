@@ -32,15 +32,18 @@ export function mountDayNightChip() {
     if (_el) return;
     const el = document.createElement('div');
     el.id = 'sds-daynight-chip';
+    // Cycle 65: top-LEFT, tucked under the score block (was top-center, which
+    // overlapped the existing HUD). Minimal: a compact left-aligned pill grouped
+    // with the score rather than a banner across the middle.
     el.style.cssText = [
-        'position:fixed', 'top:12px', 'left:50%', 'transform:translateX(-50%)',
+        'position:fixed', 'top:92px', 'left:14px',
         'z-index:1200', 'pointer-events:none',
-        'font:600 12px/1.3 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif',
-        'color:' + CREAM, 'background:rgba(38,30,22,0.58)',
-        'padding:8px 14px 9px', 'border:1px solid rgba(243,234,211,0.22)',
-        'border-radius:12px', 'backdrop-filter:blur(6px)', '-webkit-backdrop-filter:blur(6px)',
-        'box-shadow:0 4px 16px rgba(0,0,0,0.28)', 'text-align:center',
-        'letter-spacing:0.6px', 'min-width:184px', 'user-select:none',
+        'font:600 11px/1.3 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif',
+        'color:' + CREAM, 'background:rgba(38,30,22,0.5)',
+        'padding:6px 10px 7px', 'border:1px solid rgba(243,234,211,0.18)',
+        'border-radius:10px', 'backdrop-filter:blur(6px)', '-webkit-backdrop-filter:blur(6px)',
+        'box-shadow:0 3px 12px rgba(0,0,0,0.24)', 'text-align:left',
+        'letter-spacing:0.5px', 'min-width:150px', 'user-select:none',
     ].join(';');
 
     const phase = document.createElement('div');
