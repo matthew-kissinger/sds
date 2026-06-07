@@ -170,6 +170,22 @@ function err(message: string, status = 400, extra: Record<string, string> = {}):
   return json({ error: message }, status, extra);
 }
 
+// Cycle 69 P1: defensive request-body reader. A bare `await request.json()`
+// THROWS on an absent body, empty body, or malformed JSON; before this, that
+// throw fell through to the outer catch and returned a server `500` for what is
+// really a client error (the documented /api/rename no-body 500). Returning `{}`
+// instead lets each route's normal field guards (`?.` / `?? default`) produce the
+// correct `400` (missing field) or `401` (missing token) downstream. Mirrors the
+// pattern /api/event already used inline; centralized here so every POST route
+// shares it (memory: no patchwork). Never throws.
+export async function readJsonObject(request: Request): Promise<any> {
+  try {
+    return (await request.json()) ?? {};
+  } catch {
+    return {};
+  }
+}
+
 function lobbyStub(env: Env): DurableObjectStub {
   const id = env.LOBBY_DO.idFromName('global');
   return env.LOBBY_DO.get(id);
@@ -283,7 +299,7 @@ export default {
     // --- HTTP API ---
     try {
       if (path === '/api/register' && method === 'POST') {
-        const body = await request.json<any>();
+        const body = await readJsonObject(request);
         const { persistent_id, persistentId, display_name, displayName, name_type, nameType, auth_secret, authSecret } = body || {};
         const name = display_name ?? displayName ?? 'Player';
         const nt = (name_type ?? nameType ?? 'custom') as 'custom' | 'random' | 'anonymous';
@@ -332,7 +348,7 @@ export default {
       // rename another player. Name is validated server-side (the client gate
       // was removed in Cycle 51). 400 with a machine code on a bad name.
       if (path === '/api/rename' && method === 'POST') {
-        const body = await request.json<any>();
+        const body = await readJsonObject(request);
         const payload = await extractToken(request, env, body);
         if (!payload) return err('missing or invalid token', 401, cors);
         const pid = payload.persistent_id;
@@ -367,7 +383,7 @@ export default {
       }
 
       if (path === '/api/rooms' && method === 'POST') {
-        const body = await request.json<any>();
+        const body = await readJsonObject(request);
         const payload = await extractToken(request, env, body);
         if (!payload) return err('missing or invalid token', 401, cors);
         const pid = payload.persistent_id;
@@ -456,7 +472,7 @@ export default {
       const joinMatch = path.match(/^\/api\/rooms\/([A-Z0-9]{3,8})\/join$/i);
       if (joinMatch && method === 'POST') {
         const code = joinMatch[1].toUpperCase();
-        const body = await request.json<any>();
+        const body = await readJsonObject(request);
         const payload = await extractToken(request, env, body);
         if (!payload) return err('missing or invalid token', 401, cors);
         const pid = payload.persistent_id;
@@ -511,7 +527,7 @@ export default {
       }
 
       if (path === '/api/rooms/quick-match' && method === 'POST') {
-        const body = await request.json<any>();
+        const body = await readJsonObject(request);
         const payload = await extractToken(request, env, body);
         if (!payload) return err('missing or invalid token', 401, cors);
         const pid = payload.persistent_id;
@@ -627,7 +643,7 @@ export default {
       }
 
       if (path === '/api/score' && method === 'POST') {
-        const body = await request.json<any>();
+        const body = await readJsonObject(request);
         const payload = await extractToken(request, env, body);
         if (!payload) return err('missing or invalid token', 401, cors);
         const pid = payload.persistent_id;
@@ -745,8 +761,7 @@ export default {
       // gating the route on auth. Body is best-effort — failures are
       // swallowed client-side so analytics never affects gameplay UX.
       if (path === '/api/event' && method === 'POST') {
-        let body: any = {};
-        try { body = await request.json(); } catch {}
+        const body = await readJsonObject(request);
         const name = String(body?.name ?? '').slice(0, 64);
         if (!name) return err('event name required', 400, cors);
         const propsRaw = body?.props && typeof body.props === 'object' ? body.props : {};
