@@ -184,4 +184,34 @@ describe('shared/EntityCollision — sheep<->sheep hard separation', () => {
         expect(result.pairChecks).toBeLessThan(allPairs / 100);
         expect(result.moved).toBe(0);
     });
+
+    it('matches sparse spatial hash output when scene bounds enable the dense grid', () => {
+        const makeFlock = () => {
+            const sheep = [];
+            for (let i = 0; i < 80; i++) {
+                const angle = i * 2.399963229728653;
+                const radius = 3.5 * Math.sqrt((i + 0.5) / 80);
+                const s = sheepAt(Math.cos(angle) * radius, Math.sin(angle) * radius, i % 3 - 1, (i % 5 - 2) * 0.1);
+                s.id = i;
+                sheep.push(s);
+            }
+            return sheep;
+        };
+        const sparse = makeFlock();
+        const dense = makeFlock();
+        const sparseResult = resolveSheepSheepCollisions(sparse);
+        const denseResult = resolveSheepSheepCollisions(dense, {
+            bounds: { minX: -20, maxX: 20, minZ: -20, maxZ: 20 }
+        });
+
+        expect(denseResult.pairs).toBe(sparseResult.pairs);
+        expect(denseResult.moved).toBe(sparseResult.moved);
+        expect(denseResult.pairChecks).toBe(sparseResult.pairChecks);
+        for (let i = 0; i < sparse.length; i++) {
+            expect(dense[i].position.x).toBeCloseTo(sparse[i].position.x, 12);
+            expect(dense[i].position.z).toBeCloseTo(sparse[i].position.z, 12);
+            expect(dense[i].velocity.x).toBeCloseTo(sparse[i].velocity.x, 12);
+            expect(dense[i].velocity.z).toBeCloseTo(sparse[i].velocity.z, 12);
+        }
+    });
 });

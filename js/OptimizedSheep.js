@@ -123,6 +123,9 @@ export class OptimizedSheepSystem {
         // which likewise filters the active list once per frame before the loop.
         this._activeSheepScratch = [];
         this._sheepCollisionScratch = createSheepCollisionScratch();
+        this._profileCollisions = typeof window !== 'undefined' &&
+            new URLSearchParams(window.location.search).get('collisionProbe') === '1';
+        this._lastCollisionProfile = null;
 
         // Extreme boids optimization flag
         this.useExtremeBoids = useExtremeBoids;
@@ -612,6 +615,10 @@ export class OptimizedSheepSystem {
      */
     update(deltaTime, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null) {
         const dummy = this._dummy;
+        const profileCollisions = this._profileCollisions === true;
+        const updateStarted = profileCollisions ? performance.now() : 0;
+        let dogCollisionMs = 0;
+        let dogCorrections = 0;
 
         const sceneFog = this.scene && this.scene.fog;
         if (this.konveyorSheepMaterialControls?.update) {
@@ -761,9 +768,14 @@ export class OptimizedSheepSystem {
             // flock; the Worker runs the identical pass and stays authoritative
             // in multiplayer, so any prediction drift self-corrects on reconcile.
             if (sheep.state === 0 && !sheep.isAscending && sheep.position) {
+                const dogStarted = profileCollisions ? performance.now() : 0;
                 let corrected = false;
                 if (sheepdog) corrected = resolveDogSheepCollision(sheep, sheepdog.position) || corrected;
                 if (sheepdog2) corrected = resolveDogSheepCollision(sheep, sheepdog2.position) || corrected;
+                if (profileCollisions) {
+                    dogCollisionMs += performance.now() - dogStarted;
+                    if (corrected) dogCorrections++;
+                }
                 if (corrected) this.syncCollisionRenderPosition(sheep);
             }
 
@@ -846,21 +858,46 @@ export class OptimizedSheepSystem {
             }
         }
 
+        const sheepCollisionStarted = profileCollisions ? performance.now() : 0;
         const sheepCollision = resolveSheepSheepCollisions(this.sheep, {
             count: this.activeCount,
-            scratch: this._sheepCollisionScratch
+            scratch: this._sheepCollisionScratch,
+            profile: profileCollisions,
+            bounds
         });
+        const sheepCollisionMs = profileCollisions ? performance.now() - sheepCollisionStarted : 0;
+        const rewriteStarted = profileCollisions ? performance.now() : 0;
+        let dogRepushCorrections = 0;
         if (sheepCollision.moved > 0) {
             for (const index of this._sheepCollisionScratch.movedIndices) {
                 const sheep = this.sheep[index];
                 if (!sheep || sheep.isAscending || sheep.state !== 0) continue;
 
-                if (sheepdog) resolveDogSheepCollision(sheep, sheepdog.position);
-                if (sheepdog2) resolveDogSheepCollision(sheep, sheepdog2.position);
+                let dogRepushed = false;
+                if (sheepdog) dogRepushed = resolveDogSheepCollision(sheep, sheepdog.position) || dogRepushed;
+                if (sheepdog2) dogRepushed = resolveDogSheepCollision(sheep, sheepdog2.position) || dogRepushed;
+                if (dogRepushed) dogRepushCorrections++;
 
                 this.syncCollisionRenderPosition(sheep);
                 this.writeActiveSheepMatrix(index, sheep, dummy, animationUpdateStride, animationFrame);
             }
+        }
+        if (profileCollisions) {
+            const rewriteMs = performance.now() - rewriteStarted;
+            this._lastCollisionProfile = {
+                active: sheepCollision.active,
+                occupiedCells: sheepCollision.occupiedCells,
+                maxCellOccupancy: sheepCollision.maxCellOccupancy,
+                pairs: sheepCollision.pairs,
+                pairChecks: sheepCollision.pairChecks,
+                moved: sheepCollision.moved,
+                dogCorrections,
+                dogRepushCorrections,
+                dogCollisionMs,
+                sheepCollisionMs,
+                rewriteMs,
+                totalUpdateMs: performance.now() - updateStarted
+            };
         }
 
         this._animationUpdateFrame = (animationFrame + 1) % animationUpdateStride;
@@ -896,6 +933,53 @@ export class OptimizedSheepSystem {
         if (animationUpdateStride === 1 || ((index + animationFrame) % animationUpdateStride) === 0) {
             this.updateInstanceAttributes(index, sheep);
         }
+    }
+
+    setCollisionProbeEnabled(enabled) {
+        this._profileCollisions = enabled === true;
+        return this._profileCollisions;
+    }
+
+    getCollisionProfile() {
+        return this._lastCollisionProfile;
+    }
+
+    placeCollisionProbeCluster(options = {}) {
+        const count = Math.min(this.activeCount, Math.max(0, Math.floor(options.count ?? this.activeCount)));
+        const centerX = Number.isFinite(options.centerX) ? options.centerX : 0;
+        const centerZ = Number.isFinite(options.centerZ) ? options.centerZ : 0;
+        const radius = Math.max(0.1, Number.isFinite(options.radius) ? options.radius : 5);
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+        const dummy = this._dummy;
+        const stride = Math.max(1, Math.round(1 / this.animationUpdateRate));
+        const frame = this._animationUpdateFrame;
+
+        for (let i = 0; i < count; i++) {
+            const sheep = this.sheep[i];
+            if (!sheep) continue;
+            const t = (i + 0.5) / Math.max(1, count);
+            const r = radius * Math.sqrt(t);
+            const angle = i * goldenAngle;
+            const x = centerX + Math.cos(angle) * r;
+            const z = centerZ + Math.sin(angle) * r;
+            sheep.position.x = x;
+            sheep.position.z = z;
+            sheep.velocity?.set?.(0, 0);
+            sheep.acceleration?.set?.(0, 0);
+            sheep.state = 0;
+            sheep.isRetiring = false;
+            sheep.isAscending = false;
+            sheep.hasPassedGate = false;
+            if (sheep.renderPosition) {
+                sheep.renderPosition.x = x;
+                sheep.renderPosition.z = z;
+            }
+            sheep.facingDirection = angle;
+            sheep.renderFacingDirection = angle;
+            this.writeActiveSheepMatrix(i, sheep, dummy, stride, frame);
+        }
+        this.instancedMesh.instanceMatrix.needsUpdate = true;
+        return { count, centerX, centerZ, radius };
     }
     
     /**

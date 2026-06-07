@@ -1,6 +1,6 @@
 {
   "name": "sheep-dog-sim",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "An interactive herding game where players control a sheepdog to guide sheep into a pen using boid flocking algorithms",
   "type": "module",
   "main": "index.html",
@@ -38,6 +38,7 @@
     "gen:integrate": "node tools/asset-gen/integrate.mjs",
     "perf:baseline": "node tools/perf-harness.mjs --baseline",
     "perf:check": "node tools/perf-harness.mjs --check",
+    "perf:collision": "node tools/collision-stutter-probe.mjs",
     "perf:android-webgpu": "node tools/android-webgpu-perf.mjs",
     "perf:cycle38-desktop": "node tools/perf-harness.mjs --capture --renderer=webgpu --configs=field-classic,rolling-hills-classic,open-country-classic --poses=all --systems=full --warmup=2 --measure=5 --budget=high --screenshots --out=cycle38-validation/runtime/desktop-webgpu-cycle38-poses.json --screenshotDir=cycle38-validation/screenshots/desktop-webgpu-cycle38-poses",
     "perf:cycle38-desktop-systems": "node tools/perf-harness.mjs --capture --renderer=webgpu --configs=rolling-hills-classic --poses=follow-close --systems=all --warmup=2 --measure=5 --budget=high --screenshots --out=cycle38-validation/runtime/desktop-webgpu-cycle38-systems.json --screenshotDir=cycle38-validation/screenshots/desktop-webgpu-cycle38-systems",

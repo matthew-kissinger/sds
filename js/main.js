@@ -345,6 +345,19 @@ class SheepDogSimulation {
                 getVisualProbe() {
                     return gameInstanceRef.getCycle38VisualProbe?.() ?? null;
                 },
+                setCollisionProbeEnabled(enabled = true) {
+                    return gameInstanceRef.gameState?.optimizedSheepSystem
+                        ?.setCollisionProbeEnabled?.(enabled === true) ?? false;
+                },
+                placeCollisionProbeCluster(options = {}) {
+                    return gameInstanceRef.gameState?.optimizedSheepSystem
+                        ?.placeCollisionProbeCluster?.(options) ?? null;
+                },
+                getCollisionProfile() {
+                    const profile = gameInstanceRef.gameState?.optimizedSheepSystem
+                        ?.getCollisionProfile?.() ?? null;
+                    return profile ? { ...profile } : null;
+                },
                 setSun(t = 0.5) {
                     const value = Number(t);
                     if (!Number.isFinite(value) || !gameInstanceRef.atmosphere?.setSun) return null;
@@ -415,6 +428,7 @@ class SheepDogSimulation {
                             triangles: perfMon.metrics.triangles,
                             estimatedTriangles: perfMon.metrics.estimatedTriangles,
                             activeSheep: perfMon.metrics.activeSheepCount,
+                            collision: this.getCollisionProfile(),
                         });
                         requestAnimationFrame(tick);
                     };
@@ -437,9 +451,48 @@ class SheepDogSimulation {
                         avgTriangles: samples.reduce((a, s) => a + s.triangles, 0) / samples.length,
                         avgEstimatedTriangles: samples.reduce((a, s) => a + s.estimatedTriangles, 0) / samples.length,
                         avgActiveSheep: samples.reduce((a, s) => a + s.activeSheep, 0) / samples.length,
+                        collision: this._summarizeCollision(samples),
                         costReport: this.getCostReport(frameTimes),
                         cameraPose: this._cameraPose ?? 'default',
                         systemIsolation: this._systemIsolation ?? 'full',
+                    };
+                },
+                _summarizeCollision(samples) {
+                    const collisionSamples = samples.map(s => s.collision).filter(Boolean);
+                    if (collisionSamples.length === 0) return null;
+                    const avg = (key) => collisionSamples.reduce((sum, s) => sum + (s[key] || 0), 0) / collisionSamples.length;
+                    const max = (key) => collisionSamples.reduce((value, s) => Math.max(value, s[key] || 0), 0);
+                    const sorted = (key) => collisionSamples
+                        .map(s => s[key] || 0)
+                        .sort((a, b) => a - b);
+                    const pct = (values, p) => values[Math.min(values.length - 1, Math.floor((p / 100) * values.length))] || 0;
+                    const sheepMs = sorted('sheepCollisionMs');
+                    const dogMs = sorted('dogCollisionMs');
+                    const rewriteMs = sorted('rewriteMs');
+                    const updateMs = sorted('totalUpdateMs');
+                    return {
+                        sampleCount: collisionSamples.length,
+                        avgSheepCollisionMs: avg('sheepCollisionMs'),
+                        p95SheepCollisionMs: pct(sheepMs, 95),
+                        maxSheepCollisionMs: max('sheepCollisionMs'),
+                        avgDogCollisionMs: avg('dogCollisionMs'),
+                        p95DogCollisionMs: pct(dogMs, 95),
+                        maxDogCollisionMs: max('dogCollisionMs'),
+                        avgRewriteMs: avg('rewriteMs'),
+                        p95RewriteMs: pct(rewriteMs, 95),
+                        maxRewriteMs: max('rewriteMs'),
+                        avgTotalUpdateMs: avg('totalUpdateMs'),
+                        p95TotalUpdateMs: pct(updateMs, 95),
+                        maxTotalUpdateMs: max('totalUpdateMs'),
+                        avgPairChecks: avg('pairChecks'),
+                        maxPairChecks: max('pairChecks'),
+                        avgPairs: avg('pairs'),
+                        maxPairs: max('pairs'),
+                        avgMoved: avg('moved'),
+                        maxMoved: max('moved'),
+                        maxCellOccupancy: max('maxCellOccupancy'),
+                        maxDogCorrections: max('dogCorrections'),
+                        maxDogRepushCorrections: max('dogRepushCorrections'),
                     };
                 },
             };

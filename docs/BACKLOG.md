@@ -4,6 +4,27 @@
 
 ## Recently Completed
 
+### Cycle 63 - `collision-stutter-profile` (closed 2026-06-06, v2.2.2)
+
+Plan archived at [`docs/archive/cycles/cycle-63-plan.md`](archive/cycles/cycle-63-plan.md). Cycle 63 followed Matt's prod playtest report that colliding with a group of sheep might stutter on PC and likely mobile. The cycle spiked the issue with delegated research, browser automation, and a conservative deterministic broadphase optimization rather than swapping in a new spatial-index library.
+
+**Closeout outcomes (4/4 phases shipped):**
+
+- **P1 - research and profile surface.** The research recommendation was to keep SDS on a uniform grid for moving same-radius sheep. KDBush and Flatbush are static indexes; RBush is a general rectangle tree; sweep-and-prune is benchmarkable but not the first SDS move. New [`tools/collision-stutter-probe.mjs`](../tools/collision-stutter-probe.mjs) plus `npm run perf:collision` can place deterministic dog-vs-flock collision storms in production preview and write JSON artifacts under `cycle63-validation/collision-stutter/`.
+- **P2 - browser evidence.** The 200-sheep classic storm did not reproduce PC frame stutter as collision CPU cost: frame p99 stayed around `16.8 ms`. Dense contact at 1000 and 5000 sheep did show the resolver slice was worth tightening. A 4x CPU-throttled 200-sheep pass showed mobile-like pressure is broader sheep update/render work, not just the collision resolver.
+- **P3 - deterministic dense grid.** [`shared/EntityCollision.js`](../shared/EntityCollision.js) now uses a bounded dense typed-array cell-head grid when scene bounds are available, with sparse fallback for out-of-range or oversized grids. [`worker/src/GameSim.js`](../worker/src/GameSim.js), [`js/OptimizedSheep.js`](../js/OptimizedSheep.js), and [`tests/sim-baseline/harness.js`](../tests/sim-baseline/harness.js) pass scene bounds into the byte-identical shared resolver.
+- **P4 - docs and release.** [`CHANGELOG.md`](../CHANGELOG.md) records `v2.2.2`; [`NEXT_SESSION.md`](../NEXT_SESSION.md) is reset for the post-deploy prod playtest; the main-bundle ratchet is accepted at `566 KiB` for the bounded dense-grid resolver and gated profiling surface.
+
+**Validation gates (2026-06-06):** `npm test -- tests/entity-collision.spec.js` passed; `npm test -- tests/sim-baseline/harness-parity.spec.ts` passed; `npm test -- tests/sim-baseline/baseline.spec.ts` passed; `npm run lint` passed; full `npm test` passed; `npm run build` passed; `npx playwright test --project=chromium --grep-invert='@local-only'` passed; `git diff --check` passed with only CRLF warnings. Production-preview probes wrote JSON under the gitignored `cycle63-validation/collision-stutter/` directory.
+
+**Carryover (deferred):**
+
+- **Prod feel review for collision stutter.** Matt should test `v2.2.2` in prod. If a normal 200-sheep run still stutters, capture exact scene/mode/device plus whether the symptom is frame-time loss or visual popping.
+- **Real mobile pass.** CPU throttle is only a proxy; do not claim mobile acceptance until a real device verifies the fix.
+- **High-count flock pressure.** At 5000 sheep, dense-grid collision improves the resolver slice, but the broader update/render path still dominates frame time.
+- **Wolf predator mode.** Deferred again until collision perf/feel is settled.
+- All prior open carryover (bark feel finalize, the second mode edition, tablet draw-call perf, controller nav for deferred surfaces, counting naming/curve-feel, `/api/rename` no-body 500, and `upload-artifact@v5` Node 20 deprecation) remains deferred.
+
 ### Cycle 62 - `sheep-hard-body-collision` (closed 2026-06-06, v2.2.1)
 
 Plan archived at [`docs/archive/cycles/cycle-62-plan.md`](archive/cycles/cycle-62-plan.md). Cycle 62 was originally a wolf-predator scaffold, then Matt redirected it to the remaining physical-collision issue from Cycle 56: sheep still packed through each other, and sheep heads/backs could visually slide through the dog. The cycle shipped deterministic flock hard bodies, widened dog/sheep body contact to match the visible mesh better, and kept the Worker, client, and sim-baseline harness on one shared resolver. No wire-format change and no D1 migration.

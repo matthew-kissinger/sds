@@ -758,7 +758,8 @@ export class GameSimulation {
         }
 
         const sheepCollision = resolveSheepSheepCollisions(this.gameState.sheep, {
-            scratch: this.sheepCollisionScratch
+            scratch: this.sheepCollisionScratch,
+            bounds: this.gameState.boundary || this.gameState.bounds
         });
         if (sheepCollision.moved > 0) {
             for (const index of this.sheepCollisionScratch.movedIndices) {

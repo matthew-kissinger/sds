@@ -36,6 +36,7 @@ export const MAX_SHEEP_SHEEP_PUSH_PER_TICK = 0.14;
 
 const COLLISION_EPSILON = 1e-6;
 const INV_SQRT2 = 0.7071067811865476;
+const MAX_DENSE_GRID_CELLS = 262144;
 const FALLBACK_NORMALS = [
     [1, 0],
     [INV_SQRT2, INV_SQRT2],
@@ -67,6 +68,90 @@ function cellKey(cx, cz) {
     return (sum * (sum + 1)) / 2 + z;
 }
 
+function finiteCollisionBounds(bounds, padding) {
+    if (!bounds) return null;
+    if (bounds.kind === 'island' && bounds.center) {
+        const radius = Math.max(0, Number(bounds.radius) || 0) + Math.max(0, Number(bounds.falloff) || 0) + padding;
+        return {
+            minX: bounds.center.x - radius,
+            maxX: bounds.center.x + radius,
+            minZ: bounds.center.z - radius,
+            maxZ: bounds.center.z + radius
+        };
+    }
+    const minX = Number(bounds.minX);
+    const maxX = Number(bounds.maxX);
+    const minZ = Number(bounds.minZ);
+    const maxZ = Number(bounds.maxZ);
+    if (!Number.isFinite(minX) || !Number.isFinite(maxX) ||
+        !Number.isFinite(minZ) || !Number.isFinite(maxZ)) {
+        return null;
+    }
+    return {
+        minX: minX - padding,
+        maxX: maxX + padding,
+        minZ: minZ - padding,
+        maxZ: maxZ + padding
+    };
+}
+
+function prepareDenseGrid(scratch, bounds, cellSize) {
+    const rect = finiteCollisionBounds(bounds, cellSize * 4);
+    if (!rect) return false;
+
+    const minCellX = Math.floor(rect.minX / cellSize);
+    const maxCellX = Math.floor(rect.maxX / cellSize);
+    const minCellZ = Math.floor(rect.minZ / cellSize);
+    const maxCellZ = Math.floor(rect.maxZ / cellSize);
+    const width = maxCellX - minCellX + 1;
+    const height = maxCellZ - minCellZ + 1;
+    const totalCells = width * height;
+
+    if (width <= 0 || height <= 0 || totalCells > MAX_DENSE_GRID_CELLS) {
+        return false;
+    }
+
+    if (!scratch.denseHeads || scratch.denseHeads.length < totalCells) {
+        scratch.denseHeads = new Int32Array(totalCells);
+    }
+    scratch.denseHeads.fill(-1, 0, totalCells);
+    scratch.denseMinX = minCellX;
+    scratch.denseMinZ = minCellZ;
+    scratch.denseWidth = width;
+    scratch.denseHeight = height;
+    scratch.denseCells = totalCells;
+    return true;
+}
+
+function denseCellIndex(scratch, cx, cz) {
+    const x = cx - scratch.denseMinX;
+    const z = cz - scratch.denseMinZ;
+    if (x < 0 || z < 0 || x >= scratch.denseWidth || z >= scratch.denseHeight) {
+        return -1;
+    }
+    return z * scratch.denseWidth + x;
+}
+
+function getCellHead(scratch, cx, cz, useDenseGrid) {
+    if (useDenseGrid) {
+        const index = denseCellIndex(scratch, cx, cz);
+        if (index !== -1) return scratch.denseHeads[index];
+    }
+    const sparseHead = scratch.heads.get(cellKey(cx, cz));
+    return sparseHead === undefined ? -1 : sparseHead;
+}
+
+function setCellHead(scratch, cx, cz, head, useDenseGrid) {
+    if (useDenseGrid) {
+        const index = denseCellIndex(scratch, cx, cz);
+        if (index !== -1) {
+            scratch.denseHeads[index] = head;
+            return;
+        }
+    }
+    scratch.heads.set(cellKey(cx, cz), head);
+}
+
 function isCollidableSheep(sheep) {
     return !!sheep &&
         sheep.state === 0 &&
@@ -77,11 +162,15 @@ function isCollidableSheep(sheep) {
 
 function resetScratch(scratch, count) {
     scratch.heads.clear();
+    scratch.cellOccupancy.clear();
     scratch.activeIndices.length = 0;
     scratch.movedIndices.length = 0;
     scratch.result.pairs = 0;
     scratch.result.moved = 0;
     scratch.result.pairChecks = 0;
+    scratch.result.active = 0;
+    scratch.result.occupiedCells = 0;
+    scratch.result.maxCellOccupancy = 0;
 
     for (let i = 0; i < count; i++) {
         scratch.next[i] = -1;
@@ -180,6 +269,13 @@ export function resolveDogSheepCollisions(sheep, dogs) {
 export function createSheepCollisionScratch() {
     return {
         heads: new Map(),
+        cellOccupancy: new Map(),
+        denseHeads: null,
+        denseMinX: 0,
+        denseMinZ: 0,
+        denseWidth: 0,
+        denseHeight: 0,
+        denseCells: 0,
         next: [],
         cellX: [],
         cellZ: [],
@@ -189,7 +285,7 @@ export function createSheepCollisionScratch() {
         velZ: [],
         activeIndices: [],
         movedIndices: [],
-        result: { pairs: 0, moved: 0, pairChecks: 0 }
+        result: { pairs: 0, moved: 0, pairChecks: 0, active: 0, occupiedCells: 0, maxCellOccupancy: 0 }
     };
 }
 
@@ -203,7 +299,9 @@ export function createSheepCollisionScratch() {
  * @param {Object} [options.scratch]
  * @param {number} [options.minDistance=SHEEP_SHEEP_MIN_DISTANCE]
  * @param {number} [options.maxPush=MAX_SHEEP_SHEEP_PUSH_PER_TICK]
- * @returns {{pairs:number,moved:number,pairChecks:number}}
+ * @param {boolean} [options.profile=false]
+ * @param {Object} [options.bounds]
+ * @returns {{pairs:number,moved:number,pairChecks:number,active:number,occupiedCells:number,maxCellOccupancy:number}}
  */
 export function resolveSheepSheepCollisions(sheepArray, options = {}) {
     if (!Array.isArray(sheepArray) || sheepArray.length === 0) {
@@ -211,6 +309,9 @@ export function resolveSheepSheepCollisions(sheepArray, options = {}) {
         scratch.result.pairs = 0;
         scratch.result.moved = 0;
         scratch.result.pairChecks = 0;
+        scratch.result.active = 0;
+        scratch.result.occupiedCells = 0;
+        scratch.result.maxCellOccupancy = 0;
         scratch.movedIndices.length = 0;
         return scratch.result;
     }
@@ -220,10 +321,12 @@ export function resolveSheepSheepCollisions(sheepArray, options = {}) {
     const maxPush = options.maxPush ?? MAX_SHEEP_SHEEP_PUSH_PER_TICK;
     const maxVelocityCorrection = options.maxVelocityCorrection ?? maxPush;
     const scratch = options.scratch || createSheepCollisionScratch();
+    const profile = options.profile === true;
     const minDistanceSq = minDistance * minDistance;
     const cellSize = minDistance;
 
     resetScratch(scratch, count);
+    const useDenseGrid = prepareDenseGrid(scratch, options.bounds, cellSize);
 
     for (let i = 0; i < count; i++) {
         const sheep = sheepArray[i];
@@ -231,14 +334,24 @@ export function resolveSheepSheepCollisions(sheepArray, options = {}) {
 
         const cx = Math.floor(sheep.position.x / cellSize);
         const cz = Math.floor(sheep.position.z / cellSize);
-        const key = cellKey(cx, cz);
-        const head = scratch.heads.has(key) ? scratch.heads.get(key) : -1;
+        const head = getCellHead(scratch, cx, cz, useDenseGrid);
 
         scratch.cellX[i] = cx;
         scratch.cellZ[i] = cz;
         scratch.next[i] = head;
-        scratch.heads.set(key, i);
+        setCellHead(scratch, cx, cz, i, useDenseGrid);
         scratch.activeIndices.push(i);
+        scratch.result.active++;
+        if (head === -1) scratch.result.occupiedCells++;
+
+        if (profile) {
+            const key = cellKey(cx, cz);
+            const occupancy = (scratch.cellOccupancy.get(key) || 0) + 1;
+            scratch.cellOccupancy.set(key, occupancy);
+            if (occupancy > scratch.result.maxCellOccupancy) {
+                scratch.result.maxCellOccupancy = occupancy;
+            }
+        }
     }
 
     for (const ai of scratch.activeIndices) {
@@ -248,8 +361,8 @@ export function resolveSheepSheepCollisions(sheepArray, options = {}) {
 
         for (let oz = -1; oz <= 1; oz++) {
             for (let ox = -1; ox <= 1; ox++) {
-                let bi = scratch.heads.get(cellKey(cx + ox, cz + oz));
-                while (bi !== undefined && bi !== -1) {
+                let bi = getCellHead(scratch, cx + ox, cz + oz, useDenseGrid);
+                while (bi !== -1) {
                     if (bi > ai) {
                         scratch.result.pairChecks++;
                         const b = sheepArray[bi];

@@ -192,7 +192,8 @@ export function makeIslandSheepConfig(sceneId) {
 
 function applyIslandCollisionPass(sheepArray, sheepdogs, gameState) {
     const sheepCollision = resolveSheepSheepCollisions(sheepArray, {
-        scratch: islandCollisionScratch
+        scratch: islandCollisionScratch,
+        bounds: gameState.boundary || gameState.bounds
     });
     if (sheepCollision.moved === 0) return;
 
@@ -216,7 +217,8 @@ function applyIslandCollisionPass(sheepArray, sheepdogs, gameState) {
 
 function applyCoopCollisionPass(sheepArray, sheepdogs, gameState) {
     const sheepCollision = resolveSheepSheepCollisions(sheepArray, {
-        scratch: coopCollisionScratch
+        scratch: coopCollisionScratch,
+        bounds: gameState.bounds
     });
     if (sheepCollision.moved === 0) return;
 

@@ -1,47 +1,62 @@
-# Next Session - Cycle 63 `wolf-predator-mode` (scaffold)
+# Next Session - Post-Cycle 63 Prod Playtest
 
 > **Updated:** 2026-06-06
-> **For:** Cycle 63 `wolf-predator-mode`. Plan: [`docs/cycle-63-plan.md`](docs/cycle-63-plan.md) (SCAFFOLD - direction and open questions only).
-> **Pickup priority:** Confirm whether Matt wants wolf predator mode next, or whether prod playtest feedback from Cycle 62 collision should become a small tuning follow-up first.
+> **For:** `v2.2.2` / Cycle 63 `collision-stutter-profile`. Plan archived at [`docs/archive/cycles/cycle-63-plan.md`](docs/archive/cycles/cycle-63-plan.md); closeout is in [`docs/BACKLOG.md`](docs/BACKLOG.md).
+> **Pickup priority:** Prod-test the dense-grid collision optimization. If stutter remains at normal flock counts, capture exact scene, mode, device, renderer, and whether the symptom is frame-time loss or visual popping.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-63-plan.md`](docs/cycle-63-plan.md) -> the touched module's source once the plan names it.
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/BACKLOG.md`](docs/BACKLOG.md) -> [`docs/archive/cycles/cycle-63-plan.md`](docs/archive/cycles/cycle-63-plan.md) -> the touched module source.
 
 ## Where It Stands
 
-**Cycle 62 `sheep-hard-body-collision` closed 2026-06-06 and ships as `v2.2.1`.** Plan archived at [`docs/archive/cycles/cycle-62-plan.md`](docs/archive/cycles/cycle-62-plan.md); closeout is in [`docs/BACKLOG.md`](docs/BACKLOG.md). Matt redirected the wolf scaffold to collision feel, then approved committing/deploying so he can test in prod.
+**Cycle 63 `collision-stutter-profile` is closed as `v2.2.2`.** Matt reported a prod playtest concern that colliding with a group of sheep may stutter on PC and likely mobile. The cycle shipped a profiling harness and a conservative deterministic collision broadphase optimization.
 
 What shipped:
 
-- **Deterministic flock hard bodies:** [`shared/EntityCollision.js`](shared/EntityCollision.js) now resolves active sheep against nearby active sheep using a fixed-cell spatial hash, capped position correction, inward-velocity cleanup, and deterministic fallback normals for exact overlaps.
-- **Better dog contact:** dog/sheep body radii and dog push cap were tuned to match the visible sheep mesh better, so heads/backs no longer read through the dog as easily.
-- **Same resolver everywhere:** Worker authority, client prediction/solo, and sim-baseline harness all call the same shared resolver.
-- **Client render sync:** [`js/OptimizedSheep.js`](js/OptimizedSheep.js) snaps collision-corrected render positions before rewriting instance matrices, so visual sheep contact follows the resolved physics instead of trailing through a body.
-- **Intentional goldens:** only the collision-affected sim-baseline fixtures changed: `sheep-60hz-20s.json`, `island-boundary-rh-60hz.json`, `island-boundary-oc-60hz.json`, `corral-retirement-rh-60hz.json`, and `bark-impulse-60hz.json`.
+- **Research pass complete:** recommendation is to keep a uniform grid for active moving sheep disks. KDBush/Flatbush are static indexes and RBush is a general dynamic rectangle tree; none beat the grid as the first SDS move.
+- **Browser probe added:** [`tools/collision-stutter-probe.mjs`](tools/collision-stutter-probe.mjs) plus `npm run perf:collision` profiles a deterministic dog-vs-flock storm in production preview and writes JSON under `cycle63-validation/collision-stutter/` (gitignored).
+- **Client probe surface:** `?collisionProbe=1` extends `window.__perfHarness` with collision timing, sheep cluster placement, and CPU-throttle-compatible sampling.
+- **Dense-grid resolver:** [`shared/EntityCollision.js`](shared/EntityCollision.js) now uses a typed-array cell-head grid when bounds are supplied, with sparse fallback. The Worker, client, and sim-baseline harness pass scene bounds into the same shared resolver.
+- **No behavior drift:** dense and sparse outputs match in unit tests; sim-baseline parity and fixtures stayed clean.
 
-Validation before close:
+## Current Evidence
+
+Production-preview profile (`http://127.0.0.1:4173`, built bundle `assets/main-CCxUjbKL.js` during the spike; final validation build emitted `assets/main-dIepcf9u.js`):
+
+- 200 classic dense storm: p99 frame stayed `16.8 ms`; sheep collision avg/p95 improved from `0.107/0.200 ms` to `0.069/0.200 ms`; total sheep update p95 improved from `1.9 ms` to `1.4 ms`.
+- 1000 extreme dense storm: sheep collision avg/p95 improved from `0.428/0.700 ms` to `0.259/0.500 ms`; one 33 ms burst frame still appears.
+- 5000 chaos dense storm: sheep collision avg/p95 improved from `2.603/4.200 ms` to `1.724/3.000 ms`; frame p95 improved from `50.0 ms` to `33.4 ms`, but p99 remains `50.0 ms`.
+- CPU-throttled 200 classic control shows the broader loop dominates mobile-like pressure: dense collision frame p95 `66.6 ms`, wide control p95 `66.7 ms`, with collision under `1 ms` p95 in both.
+
+Interpretation:
+
+- The 200-sheep PC stutter did not reproduce as collision CPU cost in automation.
+- The dense-grid optimization is still worth keeping because it reduces the shared resolver slice, especially at 1000/5000 sheep.
+- If stutter persists at normal counts, next step is a specific scene/mode/device repro and a visual-popping check, not a broadphase rewrite.
+
+## Validation
 
 - `npm test -- tests/entity-collision.spec.js` passed.
 - `npm test -- tests/sim-baseline/harness-parity.spec.ts` passed.
-- `npm test -- tests/sim-baseline/baseline.spec.ts` passed after intentional fixture regeneration.
-- `npm run lint`, full `npm test`, and `npm run build` passed.
+- `npm test -- tests/sim-baseline/baseline.spec.ts` passed.
+- `npm run lint` passed.
+- `npm test` passed.
+- `npm run build` passed; final validation build emitted `assets/main-dIepcf9u.js`.
 - `npx playwright test --project=chromium --grep-invert='@local-only'` passed.
-- Targeted `?cinematic=1` browser proof confirmed overlapping sheep/dog setups resolve outside physics and rendered collision thresholds with no console errors.
+- Bundle ratchet accepted at `566 KiB` (`561 KiB` -> `566 KiB`) for the bounded dense-grid resolver and gated collision probe.
+- Browser probes wrote JSON under `cycle63-validation/collision-stutter/`.
 
-## What to pick up next
+## What To Pick Up Next
 
-**Cycle 63 is a scaffold.** The seeded direction is the **wolf predator mode**: turn the Cycle 61 wolf asset into a playable antagonist, probably by adding deterministic `shared/WolfAI.js`, using bark as the counter, and carrying an additive wolf field through multiplayer snapshots. The open questions are in [`docs/cycle-63-plan.md`](docs/cycle-63-plan.md).
-
-If Matt reports collision feel issues from prod, handle that first as a narrow Cycle 62 follow-up:
-
-- Too wide: tune `DOG_BODY_RADIUS`, `SHEEP_BODY_RADIUS`, or `SHEEP_SHEEP_MIN_DISTANCE`.
-- Too soft: tune `MAX_DOG_SHEEP_PUSH_PER_TICK` or `MAX_SHEEP_SHEEP_PUSH_PER_TICK`.
-- Jitter: inspect the sim-baseline diff before changing caps; do not regenerate goldens casually.
+1. Prod-test `v2.2.2` collision feel on sheepdogsim.com.
+2. If normal-count stutter remains, capture scene/mode/device/renderer and whether the issue is frame-time loss or visual popping.
+3. If mobile still stutters, profile the full sheep update/render path on a real device. CPU-throttled automation suggests the broader loop dominates.
+4. Once collision feel is settled, pick the next cycle: wolf predator mode, bark feel finalize, second mode edition, or tablet draw-call perf.
 
 ## Open Carryover
 
-- **Wolf predator mode** - teed up by the Cycle 61 wolf asset and bark event.
+- **Wolf predator mode** - deferred from the original Cycle 63 scaffold until collision perf/feel is settled.
 - **Bark feel finalize** (Matt's taste on the bark constants) + optional radial-startle.
 - **The second mode edition** - still deferred.
 - **Tablet draw-call perf** - the Tab S9 FE is draw-call-bound on Rolling Hills (~20k draws, 37 fps at 200 sheep).
@@ -52,6 +67,7 @@ If Matt reports collision feel issues from prod, handle that first as a narrow C
 ## Working Contract
 
 - Deterministic-sim work must name shared files, update all consumers in the same commit, and regenerate sim-baselines only with recorded acceptance.
+- Do not claim mobile acceptance from CPU throttle alone.
 - Do not auto-bump the version outside an explicit player-visible release.
 - Run `/validate` before any cycle close. Close via `/cycle-close`.
 
@@ -59,12 +75,12 @@ If Matt reports collision feel issues from prod, handle that first as a narrow C
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-63-plan.md`](docs/cycle-63-plan.md) (`wolf-predator-mode`, scaffold) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-62-plan.md`](docs/archive/cycles/cycle-62-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-63-plan.md`](docs/archive/cycles/cycle-63-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Collision core | [`shared/EntityCollision.js`](shared/EntityCollision.js) |
 | Worker authority | [`worker/src/GameSim.js`](worker/src/GameSim.js) |
 | Client prediction/render sync | [`js/OptimizedSheep.js`](js/OptimizedSheep.js) |
+| Collision browser probe | [`tools/collision-stutter-probe.mjs`](tools/collision-stutter-probe.mjs) |
 | Wolf asset + predator design intent | [`docs/wolf-asset.md`](docs/wolf-asset.md) |
 | Deterministic-sim rules | [`.claude/rules/shared-sim.md`](.claude/rules/shared-sim.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |

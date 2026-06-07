@@ -29,6 +29,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.2] - 2026-06-06 (Cycle 63 - Collision stutter profile)
+
+### Added
+
+- Repeatable collision-storm profiling via `npm run perf:collision`, gated by
+  `?collisionProbe=1`, with frame timing, collision sub-timing, pair counts,
+  cell occupancy, and CPU-throttle support for mobile-class probes.
+
+### Changed
+
+- Sheep-to-sheep hard-body resolution now uses a bounded dense typed-array grid
+  when scene bounds are available, preserving the deterministic sparse-grid
+  output while reducing collision resolver cost in dense flock contact.
+- Worker authority, client prediction, and the sim-baseline harness now pass the
+  same scene bounds into the shared resolver.
+
+### Validation
+
+- `npm test`, `npm run lint`, `npm run build`, and release-safe Chromium
+  Playwright passed.
+- Dense-vs-sparse unit coverage proves pair counts, moved sheep, positions, and
+  velocities stay equivalent.
+- Production-preview probes did not reproduce 200-sheep PC stutter as collision
+  CPU cost, but did reduce resolver time at 1000/5000 sheep.
+
 ## [2.2.1] - 2026-06-06 (Cycle 62 - Sheep collision feel)
 
 ### Changed
