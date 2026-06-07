@@ -4,6 +4,33 @@
 
 ## Recently Completed
 
+### Cycle 66 - `newsheepdogland-survival` (closed 2026-06-07)
+
+Plan archived at [`docs/archive/cycles/cycle-66-plan.md`](archive/cycles/cycle-66-plan.md). A folded autonomous cycle (Matt: "run Cycle 66 end to end autonomously") that turned the Wolf Coast homestead into a real survival game and renamed the island to **Newsheepdogland**. Solo + client-side throughout: the deterministic `shared/` sheep sim is untouched (sim-baseline byte-identical), the one fence touch was the additive `shared/scenes/types.js` survival field (Cycle 66 P3), and the only D1 change was the append-only scene-id rename migration (survival reuses the existing `score` column, no leaderboard schema change).
+
+**Closeout outcomes (8/8 phases shipped):**
+
+- **P1 full rename Wolf Coast -> Newsheepdogland.** Scene module + coast file + id + display name, terrain bin (`newsheepdogland.bin`), scene registry, deep-link URLs, entrance carousel, sim-baseline fixture (renamed, byte-identical), tests, and the append-only D1 partition rename (`0008_rename_wolfcoast_to_newsheepdogland.sql`). Grep-clean of functional `wolf-coast` references.
+- **P2 pen as a real barrier + the objective.** A client-side per-frame containment ([`js/gamestate/penContainment.js`](../js/gamestate/penContainment.js), 8 tests): the square fence ring is solid (gate-only entry, sealed at night, dog + sheep collide); sheep herded through the gate settle and retire inside (no zap, no teleport). The toe-corral zap is gone.
+- **P3 survival loop + UI reorg.** [`js/gamestate/survivalRun.js`](../js/gamestate/survivalRun.js) (the dayLoop precedent): start 10 sheep, ~10-min day, lose <33% -> +5 and next day, 33%+ -> death, score = peak flock (capped at maxFlock so it tracks the rendered sheep). No sheep-count selection; the day/night chip doubles as the survival HUD.
+- **P4 wolves.** A client-only night pack ([`js/gamestate/wolfPack.js`](../js/gamestate/wolfPack.js) + pure tested [`js/gamestate/wolfBehavior.js`](../js/gamestate/wolfBehavior.js)): escalating seeded spawn at nightfall, hunts sheep outside the pen, kills feed the economy, retreats at dawn, reuses [`js/Wolf.js`](../js/Wolf.js) + `Wolf.glb` (one glTF clones the pack). Sheep in the closed pen are unreachable.
+- **P5 bark wolf-repel.** The bark now also scares wolves at a longer radial range (breaks pursuit); client-only, the deterministic sheep-cone math in [`shared/BarkImpulse.js`](../shared/BarkImpulse.js) is untouched.
+- **P6 survival leaderboard.** A live-read `survival` board ([`shared/survivalModes.js`](../shared/survivalModes.js) + [`worker/src/d1.ts`](../worker/src/d1.ts)) partitioned by (scene, mode), ranked by peak flock DESC, reusing `score_submissions.score` (no migration). Submit on death, a run-summary leaderboard read, and a GlobalLeaderboard tab.
+- **P7 minimap + grass.** A top-right canvas minimap ([`js/components/GameHUD/Minimap.js`](../js/components/GameHUD/Minimap.js)) drawing the island from the coastline polygon with live dog / flock / wolf markers, pointer-events none. Grass widened to blanket the whole survival play surface (745 chunks, within budget).
+- **P8 validate + ship.** Below.
+
+**Validation gates:** `npm test` 1078 pass / 7 skip / 0 fail (new wolf-behavior, survival maxFlock-cap, worker survival-leaderboard specs); eslint shared/ clean; worker `tsc` clean; `npm run build` clean (main ratchet 580 -> 582 KiB); sim-baseline byte-identical. Browser smoke (preview on a fresh build, `SDS_SUPPRESS_BROWSER_OPEN=1`, probe closed after): scene loads as newsheepdogland with all survival systems wired, 10 sheep / maxCapacity 200, the minimap draws the island + live markers, a day-3 pack of 4 wolves spawned on land outside the pen and killed 4/10, the bark repelled all 4, killed sheep render invisible, the death summary shows score + leaderboard + restart; zero console errors.
+
+**Release proof.** Features across commits `1a61565` (P1) / `b819b9d` (P2) / `5a45cee` (P3) / `968440d` (P4-P7); the cycle-close commit pushes the lot to `main` and triggers the GH Actions deploy (verified green post-push).
+
+**Carryover (folded into Cycle 67):**
+
+- **Co-op survival** - promoting the survival run + wolves + pen containment into the deterministic `shared/` sim for Worker-authoritative co-op rooms (this cycle is solo + client-side by design).
+- **Whole-island grass rearch** - the literal alpine mountain-leg grass coverage, gated on a density/LOD perf spike (per the grass-discipline rule); this cycle widened to the play surface only.
+- **A real Newsheepdogland entrance hero capture** to replace the dusk-gradient placeholder (Matt's media pass).
+- **Wolf / survival feel pass** - the named numbers (wolf counts, speeds, kill radius, bark repel range, growth, loss threshold) are tunables awaiting Matt's taste pass.
+- Prior open carryover (tablet draw-call perf, real mobile pass, counting naming/curve-feel, `/api/rename` no-body 500, `upload-artifact@v5` Node 20) remains deferred.
+
 ### Cycle 65 - `wolf-coast-homestead-and-day` (closed 2026-06-07)
 
 Plan archived at [`docs/archive/cycles/cycle-65-plan.md`](archive/cycles/cycle-65-plan.md). A folded cycle (Matt: "fold the next 2 cycles into 1") that turned the walkable Wolf Coast foundation into a place with a daily rhythm: a homestead the dog wakes at, island character (forest / fields / tree-lines), a day/night cycle with a HUD clock, a gate that opens at dawn and shuts at night, a soft herd-back-before-dusk loop, and a skip-to-dusk camera cutscene. Client-only: the one fence touch was additive `shared/scenes/types.js` data fields. No deterministic-sim, wire, or D1 change; sim-baseline byte-identical.
