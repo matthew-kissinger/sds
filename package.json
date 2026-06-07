@@ -12,7 +12,7 @@
     "dev:client": "vite --port 3000",
     "dev:worker": "cd worker && npx wrangler dev",
     "dev:lan": "concurrently -n client,worker -c cyan,magenta \"vite --port 3000 --host\" \"npm:dev:worker\"",
-    "dev:setup": "cd worker && npx wrangler d1 execute sds-db --local --file=migrations/0001_init.sql && npx wrangler d1 execute sds-db --local --file=migrations/0002_mode_matrix.sql && npx wrangler d1 execute sds-db --local --file=migrations/0007_player_auth_secret.sql",
+    "dev:setup": "node scripts/d1-local-setup.mjs",
     "build": "vite build",
     "build:itchio": "cross-env BUILD_TARGET=itchio vite build",
     "build:native": "cross-env BUILD_TARGET=native vite build",

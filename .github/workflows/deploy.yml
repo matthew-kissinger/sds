@@ -65,9 +65,61 @@ jobs:
             test-results/
           retention-days: 7
 
+  # Apply any D1 migration newly ADDED in this push to the remote DB BEFORE the
+  # worker/pages deploys, so code never ships ahead of its schema. This closes the
+  # Cycle 67 gap where 0009 had to be applied to remote by hand (the survival
+  # board 500'd until it was). It applies only files added in this push's commit
+  # range (git diff --diff-filter=A), so already-applied migrations are never
+  # re-run. The d1_migrations tracking table is historical/out-of-sync, so we do
+  # NOT use `wrangler d1 migrations apply` (it would try to re-run 0007-0009).
+  migrate:
+    name: Migrate D1 (remote)
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+        working-directory: worker
+      - name: Apply newly-added D1 migrations to remote sds-db
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ZERO="0000000000000000000000000000000000000000"
+          if [ -z "${BEFORE}" ] || [ "${BEFORE}" = "${ZERO}" ]; then
+            BASE="${AFTER}~1"
+          else
+            BASE="${BEFORE}"
+          fi
+          echo "Scanning ${BASE}..${AFTER} for newly added worker/migrations/*.sql"
+          mapfile -t NEW < <(git diff --name-only --diff-filter=A "${BASE}" "${AFTER}" -- 'worker/migrations/*.sql' | sort)
+          if [ "${#NEW[@]}" -eq 0 ]; then
+            echo "No new D1 migrations in this push; nothing to apply."
+            exit 0
+          fi
+          printf 'New migration: %s\n' "${NEW[@]}"
+          cd worker
+          for f in "${NEW[@]}"; do
+            rel="${f#worker/}"
+            echo ">> Applying ${rel} to remote sds-db"
+            npx wrangler d1 execute sds-db --remote --file="${rel}" --yes
+          done
+
   pages:
     name: Deploy Pages
-    needs: test
+    needs: [test, migrate]
+    if: ${{ always() && needs.test.result == 'success' && needs.migrate.result != 'failure' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -89,7 +141,8 @@ jobs:
 
   worker:
     name: Deploy Worker
-    needs: test
+    needs: [test, migrate]
+    if: ${{ always() && needs.test.result == 'success' && needs.migrate.result != 'failure' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -143,15 +196,8 @@ jobs:
         working-directory: worker
       - run: cp worker/.dev.vars.example worker/.dev.vars
       - run: npx playwright install --with-deps chromium
-      # The root `dev:setup` + `dev:worker` npm scripts do `cd worker &&
-      # wrangler ...` which loses npm's bin-PATH injection in CI (wrangler
-      # lives in worker/node_modules/.bin). Run via `npx wrangler` directly
-      # so CI doesn't need wrangler globally.
-      - name: Run D1 migrations (dev:setup equivalent)
-        working-directory: worker
-        run: |
-          npx wrangler d1 execute sds-db --local --file=migrations/0001_init.sql
-          npx wrangler d1 execute sds-db --local --file=migrations/0002_mode_matrix.sql
+      - name: Run D1 migrations (local, full set via scripts/d1-local-setup.mjs)
+        run: node scripts/d1-local-setup.mjs
       - name: Start dev server (vite + wrangler) in background
         run: |
           npx vite --port 3000 > /tmp/vite.log 2>&1 &
@@ -216,14 +262,9 @@ jobs:
         run: cp worker/.dev.vars.example worker/.dev.vars
       - if: steps.gate.outputs.skip != 'true'
         run: npx playwright install --with-deps chromium
-      # See perf-baseline-capture comment above for why we bypass the root
-      # dev:setup / dev:worker scripts in CI.
       - if: steps.gate.outputs.skip != 'true'
-        name: Run D1 migrations (dev:setup equivalent)
-        working-directory: worker
-        run: |
-          npx wrangler d1 execute sds-db --local --file=migrations/0001_init.sql
-          npx wrangler d1 execute sds-db --local --file=migrations/0002_mode_matrix.sql
+        name: Run D1 migrations (local, full set via scripts/d1-local-setup.mjs)
+        run: node scripts/d1-local-setup.mjs
       - if: steps.gate.outputs.skip != 'true'
         name: Start dev server (vite + wrangler) in background
         run: |

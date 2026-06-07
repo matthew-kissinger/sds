@@ -47,7 +47,7 @@ Every phase's Acceptance section uses EARS notation so the lines are grep-testab
 - When `grep -c "migrations apply" .github/workflows/deploy.yml` runs, then it shall return a count of at least 2 (one `--remote`, one `--local`).
 - When `grep "d1 migrations apply sds-db --remote" .github/workflows/deploy.yml` runs, then it shall return at least one match.
 - While the `migrate` job fails, the `worker` deploy job shall not run (enforced by `needs:`).
-- When [`.claude/rules/multiplayer.md`](../.claude/rules/multiplayer.md) is read, then its append-only-migrations section shall describe the automated remote-apply step accurately (no false "manual only" claim, no stale claim that is untrue).
+- When [`.claude/rules/multiplayer.md`](../.claude/rules/multiplayer.md) is read, then its append-only-migrations section shall describe the automated remote-apply step accurately (no false "manual only" claim, no stale claim that is untrue). **DEFERRED** - blocked by the agent-config edit guardrail; needs explicit user OK (see Frozen files).
 
 ## Phase 2 - Survival feel-pass tunables (~2hr)
 
@@ -168,10 +168,15 @@ Execution order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 (serial, one local commit 
 
 ## Frozen files (cycle-specific additions)
 
-No frozen-file edits are planned. Notes:
+One authorized frozen-file edit:
+
+- **[`.claude/rules/multiplayer.md`](../.claude/rules/multiplayer.md)** (Phase 1). Why: P1 changes the remote-migration deploy contract (CI now applies newly-added migrations on deploy), so the doc's "Apply to remote with the standard wrangler CLI; CI does this on deploy" and "dev:setup runs the wrangler migration apply" lines are now factually wrong and actively misled this project last cycle (the prod break). The rule itself is changing, which is the authorized case for a `.claude/rules/*.md` edit. Alternative considered: leave it stale (rejected - it is the doc that caused the confusion). Consumers: none (doc only); no code depends on it.
+  - **DEFERRED.** The automated agent-config guardrail blocked this edit under the general autonomous directive (editing a `.claude/rules/*.md` file is treated as agent self-modification and needs explicit user approval, which a "complete the cycle" directive against an agent-authored plan does not grant). The functional P1 fix (the `migrate` job in `deploy.yml`) ships without it. The one-line doc correction is carried over for Matt's explicit OK - the exact replacement text is staged in the cycle report.
+
+Notes:
 
 - **[`js/GrassSystem.js`](../js/GrassSystem.js)** is cohesion-frozen (do-not-decompose, [`DECISIONS.md`](../DECISIONS.md)). Phase 6 may modify it in place only if the Phase 5 spike justifies it, and only without decomposing it.
-- **No deterministic-sim core, no `shared/scenes/types.js`, no wire protocol, no existing migration** is touched. Phase 4 adds DO-internal persistence with an unchanged snapshot shape. No new migration is required.
+- **No deterministic-sim core, no `shared/scenes/types.js`, no wire protocol, no existing migration `.sql` file** is touched. Phase 4 adds DO-internal persistence with an unchanged snapshot shape. No new migration is required. Phase 1 adds CI plumbing and `worker/wrangler.toml` is not fence-listed.
 
 ## Hard stops
 
