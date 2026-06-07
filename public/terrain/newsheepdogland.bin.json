@@ -4,7 +4,7 @@
   "worldSize": 3300,
   "peakHeight": 1,
   "version": 1,
-  "scene": "wolf-coast",
+  "scene": "newsheepdogland",
   "seed": 7,
   "boundary": {
     "kind": "coastline",

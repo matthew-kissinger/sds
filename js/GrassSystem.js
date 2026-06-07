@@ -94,7 +94,7 @@ export class GrassSystem {
         // Cycle 64: for a coastline scene, grass density + chunk extent follow
         // the signed-distance field (dense inside, fading at the shore) instead
         // of the origin-radial falloff, which would starve a play area that
-        // sits far from the world origin (Wolf Coast's foot). Built once here.
+        // sits far from the world origin (Newsheepdogland's foot). Built once here.
         this._isCoastline = this.boundary?.kind === 'coastline';
         this._coastField = this._isCoastline ? getCoastlineField(this.boundary) : null;
         // Grass thins to zero over the last `_coastShoreFade` metres before the
@@ -104,7 +104,7 @@ export class GrassSystem {
         // height multiplier). Absent on every pre-64 scene.
         this._tallZones = Array.isArray(sceneGrass?.tallZones) ? sceneGrass.tallZones : null;
         // Cycle 64: grid centre (origin unless a scene moves its grass onto an
-        // off-origin play area, e.g. Wolf Coast's foot).
+        // off-origin play area, e.g. Newsheepdogland's foot).
         this._grassCenter = sceneGrass?.grassCenter ?? { x: 0, z: 0 };
         this.konveyorGrassSearch = opts.search;
         this.konveyorGrassFactories = opts.konveyorGrassFactories;

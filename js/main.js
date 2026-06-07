@@ -1674,7 +1674,7 @@ class SheepDogSimulation {
         }
 
         // Create new sheepdog with selected type. Cycle 64: scenes may override
-        // the spawn (Wolf Coast's origin is water); pre-64 scenes omit it.
+        // the spawn (Newsheepdogland's origin is water); pre-64 scenes omit it.
         const soloDogSpawn = this.currentScene?.dogSpawn ?? { x: 0, z: -30 };
         const sheepdog = new Sheepdog(soloDogSpawn.x, soloDogSpawn.z, selectedDogType, this.heightfield);
         this.sheepdog = sheepdog;

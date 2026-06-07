@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Cycle 64 Phase 4: the Wolf Coast SceneDef. Proves the scene loads on the new
+ * Cycle 64 Phase 4: the Newsheepdogland SceneDef. Proves the scene loads on the new
  * coastline boundary, measures in the 3.0-3.6 km^2 window, keeps every gameplay
  * landmark inside the land polygon, and ships none of the (later-cycle) survival
  * modes.
  */
 import { describe, it, expect } from 'vitest';
 import { loadScene } from '../shared/scenes/index.js';
-import { WOLF_COAST_POINTS } from '../shared/scenes/wolf-coast.coast.js';
+import { NEWSHEEPDOGLAND_POINTS } from '../shared/scenes/newsheepdogland.coast.js';
 import { boundaryToBounds } from '../shared/index.js';
 
 function shoelaceArea(pts) {
@@ -29,26 +29,26 @@ function inPoly(x, z, pts) {
     return inside;
 }
 
-describe('Wolf Coast SceneDef (Cycle 64)', () => {
-    const scene = loadScene('wolf-coast');
+describe('Newsheepdogland SceneDef (Cycle 64)', () => {
+    const scene = loadScene('newsheepdogland');
 
     it('loads with a coastline boundary and does not throw', () => {
-        expect(scene.id).toBe('wolf-coast');
+        expect(scene.id).toBe('newsheepdogland');
         expect(scene.boundary.kind).toBe('coastline');
-        expect(scene.boundary.points).toBe(WOLF_COAST_POINTS);
+        expect(scene.boundary.points).toBe(NEWSHEEPDOGLAND_POINTS);
         expect(scene.boundary.cellSize).toBe(12);
         expect(scene.boundary.falloff).toBeGreaterThan(0);
     });
 
     it('measures 3.0-3.6 km^2 by shoelace', () => {
-        const km2 = shoelaceArea(WOLF_COAST_POINTS) / 1e6;
+        const km2 = shoelaceArea(NEWSHEEPDOGLAND_POINTS) / 1e6;
         // Report the measured value for the record.
         expect(km2).toBeGreaterThanOrEqual(3.0);
         expect(km2).toBeLessThanOrEqual(3.6);
     });
 
     it('keeps every gameplay landmark inside the land polygon', () => {
-        const P = WOLF_COAST_POINTS;
+        const P = NEWSHEEPDOGLAND_POINTS;
         const landmarks = {
             dogSpawn: scene.dogSpawn,
             corral: scene.corral.center,

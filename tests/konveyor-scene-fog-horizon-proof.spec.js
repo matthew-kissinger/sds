@@ -17,7 +17,7 @@ describe('konveyor scene fog horizon proof', () => {
       'field',
       'rolling-hills',
       'open-country',
-      'wolf-coast',
+      'newsheepdogland',
     ]);
 
     for (const scene of proof.scenes) {

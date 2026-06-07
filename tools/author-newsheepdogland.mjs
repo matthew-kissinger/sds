@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Cycle 64 provenance: how shared/scenes/wolf-coast.coast.js was generated.
+ * Cycle 64 provenance: how shared/scenes/newsheepdogland.coast.js was generated.
  *
- * Authors the Wolf Coast boot silhouette at a clean scale, densifies the long
+ * Authors the Newsheepdogland boot silhouette at a clean scale, densifies the long
  * edges into believable banking curves (Q4: 60-80 points), then uniformly
  * scales the whole polygon about its centroid so the shoelace area lands in the
  * 3.0-3.6 km^2 acceptance window (Q-area). Uniform scale preserves the boot
  * shape + the instep concavity exactly. Prints the final integer-rounded points
  * array, the measured area, the bbox, and landmark containment.
  *
- * Run:  node tools/author-wolf-coast.mjs
- * Then paste the printed POINTS array into shared/scenes/wolf-coast.coast.js.
+ * Run:  node tools/author-newsheepdogland.mjs
+ * Then paste the printed POINTS array into shared/scenes/newsheepdogland.coast.js.
  * This is a one-shot generator, not part of the build.
  */
 

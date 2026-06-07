@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Coastline boundary primitive — Cycle 64 (Survival / Wolf Coast campaign).
+ * Coastline boundary primitive. Cycle 64 (Survival / Newsheepdogland campaign).
  *
  * A `coastline` boundary expresses an arbitrary concave shoreline (a boot, a
  * peninsula, a bay) that the radial `island` kind cannot. The representation is

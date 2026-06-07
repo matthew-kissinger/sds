@@ -112,11 +112,11 @@ export const WORLDS: World[] = [
     gradient: 'linear-gradient(180deg, #bcd6e8 0%, #9fc1b0 55%, #6c8f74 100%)',
   },
   {
-    id: 'wolf-coast',
-    name: 'Wolf Coast',
-    tagline: 'A boot-shaped island under a dusk sky. A mountain, a foot lowland, a fold at the toe.',
-    render: '/assets/scenes/entrance/wolf-coast.webp',
-    accent: color.sceneWolfCoast,
+    id: 'newsheepdogland',
+    name: 'Newsheepdogland',
+    tagline: 'A boot-shaped survival island under a dusk sky. Herd the flock home before the wolves come out.',
+    render: '/assets/scenes/entrance/newsheepdogland.webp',
+    accent: color.sceneNewsheepdogland,
     gradient: 'linear-gradient(180deg, #b9a98c 0%, #8f8a86 45%, #6a6f8c 78%, #3f4a63 100%)',
   },
 ];

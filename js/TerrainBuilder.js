@@ -1613,7 +1613,7 @@ export class TerrainBuilder {
         // Field default; some boot paths set this.sceneDef only after the cache
         // is seeded (and during the await above), so the sceneDef is the source
         // of truth, not the cache. Reading before the await placed the Home
-        // Field house at the Wolf Coast homestead's expense.
+        // Field house at the Newsheepdogland homestead's expense.
         if (this.sceneDef?.farmHouse?.position) {
             this.farmHousePosition = this.sceneDef.farmHouse.position;
         }
@@ -1637,7 +1637,7 @@ export class TerrainBuilder {
         );
         
         // Rotate to face the pen area. Scenes may override the default Field
-        // southeast facing (Cycle 65: Wolf Coast turns the porch toward its
+        // southeast facing (Cycle 65: Newsheepdogland turns the porch toward its
         // homestead pen). Default stays 225 degrees.
         const rotDeg = this.sceneDef?.farmHouse?.rotationDeg;
         farmHouse.rotation.y = (rotDeg != null) ? (rotDeg * Math.PI) / 180 : Math.PI * 1.25;

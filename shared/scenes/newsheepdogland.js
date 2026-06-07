@@ -1,32 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Wolf Coast - Cycle 64. A boot-shaped island roughly 3.2 km^2 with a 120 m
- * mountain in the north leg, banking curved coastlines, and forest / tall-grass
- * / light-tree biome bands. The first scene on the new `coastline` boundary
- * kind (an arbitrary concave shoreline the radial `island` kind cannot express).
- *
- * Playable in the existing modes this cycle (Just Play, Solo). Survival mode,
- * wolves, the day/night loop, co-op, and the survival leaderboard are Cycles
- * 65-68. The `pen` field ships here as inert data for survival to consume later;
- * the wired herding destination this cycle is the `corral` at the toe.
+ * Newsheepdogland - the survival island (renamed from Wolf Coast in Cycle 66).
+ * A boot-shaped island roughly 3.2 km^2 with a 120 m mountain in the north leg,
+ * banking curved coastlines, and forest / tall-grass / light-tree biome bands.
+ * The first scene on the `coastline` boundary kind (an arbitrary concave
+ * shoreline the radial `island` kind cannot express).
  *
  * The coastline polygon, the heightmap mask, and the sim SDF all come from the
- * same WOLF_COAST_POINTS array (shared/scenes/wolf-coast.coast.js) so the
- * rendered coast cannot drift from the sim boundary. Heightmap baked by:
- *   node scripts/bake-heightmap.mjs --scene wolf-coast --boundary coastline \
- *     --points shared/scenes/wolf-coast.coast.js --size 1024 --worldSize 3300 \
+ * same NEWSHEEPDOGLAND_POINTS array (shared/scenes/newsheepdogland.coast.js) so
+ * the rendered coast cannot drift from the sim boundary. Heightmap baked by:
+ *   node scripts/bake-heightmap.mjs --scene newsheepdogland --boundary coastline \
+ *     --points shared/scenes/newsheepdogland.coast.js --size 1024 --worldSize 3300 \
  *     --peakHeight 12 --mountainHeight 120 --peakX -616 --peakZ 1110 \
  *     --peakRadius 520 --seaLevel -3 --coastFalloff 50 --seed 7 \
- *     --out public/terrain/wolf-coast.bin
+ *     --out public/terrain/newsheepdogland.bin
  *
  * @type {import('./types.js').SceneDef}
  */
-import { WOLF_COAST_POINTS } from './wolf-coast.coast.js';
+import { NEWSHEEPDOGLAND_POINTS } from './newsheepdogland.coast.js';
 
-export const wolfCoast = {
-    id: 'wolf-coast',
-    name: 'Wolf Coast',
+export const newsheepdogland = {
+    id: 'newsheepdogland',
+    name: 'Newsheepdogland',
     description: 'A boot-shaped island under a low dusk sky. A mountain in the north, a wide foot lowland, and a stone fold at the toe to drive the flock into.',
 
     // Cycle 64: the coastline boundary. cellSize 12 (the spiked resolution) MUST
@@ -34,7 +30,7 @@ export const wolfCoast = {
     // rides here, not on either consumer. falloff 30m beach band.
     boundary: {
         kind: 'coastline',
-        points: WOLF_COAST_POINTS,
+        points: NEWSHEEPDOGLAND_POINTS,
         falloff: 30,
         cellSize: 12,
     },
@@ -85,7 +81,7 @@ export const wolfCoast = {
         // Heights are stored as absolute metres in the bake; manifest
         // peakHeight=1, so the displaced mesh reads metres directly.
         heightScale: 1,
-        heightmapUrl: '/terrain/wolf-coast.bin',
+        heightmapUrl: '/terrain/newsheepdogland.bin',
         version: 1,
         zones: {
             playArea: { minX: -300, maxX: 700, minZ: -1450, maxZ: -800 },
@@ -100,10 +96,11 @@ export const wolfCoast = {
         clumpsPerChunk: { desktop: 950, mobile: 400 },
         // Cooler coastal greens than the golden Rolling Hills.
         colors: { base: '#5a6a3a', mid: '#83904f', tip: '#c8cf86' },
-        // Wolf Coast is ~3.2 km^2; grassing the whole island would be thousands
-        // of chunks / draw calls. The play loop lives in the foot, so the grass
-        // grid centres there and spans only it (the mountain/leg are forest +
-        // alpine, not meadow). Density + waterline cull still follow the SDF.
+        // Newsheepdogland is ~3.2 km^2; grassing the whole island would be
+        // thousands of chunks / draw calls. The play loop lives in the foot, so
+        // the grass grid centres there and spans only it (the mountain/leg are
+        // forest + alpine, not meadow). Density + waterline cull follow the SDF.
+        // (Cycle 66 P7 rearchitects this to whole-island coverage.)
         grassCenter: { x: 350, z: -1050 },
         grassRadius: 650,
         // The tall-grass shore band across the foot, just inside the sole.

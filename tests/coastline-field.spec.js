@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 64 Phase 1: the coastline SDF primitive. Proves the four properties the
- * Wolf Coast boundary rides on:
+ * Newsheepdogland boundary rides on:
  *   1. containment from the field matches an even-odd ray cast ground truth,
  *   2. the build is deterministic (byte-identical Float32Array across runs),
  *   3. the avoidance force matches an analytic circle within the falloff band,
@@ -72,7 +72,7 @@ function mulberry32(seed) {
     };
 }
 
-// A coarse concave boot, the Wolf Coast silhouette shape (same as the spike).
+// A coarse concave boot, the Newsheepdogland silhouette shape (same as the spike).
 const BOOT = [
     { x: -380, z: 1100 }, { x: -430, z: 920 }, { x: -410, z: 720 },
     { x: -440, z: 520 }, { x: -415, z: 320 }, { x: -445, z: 120 },

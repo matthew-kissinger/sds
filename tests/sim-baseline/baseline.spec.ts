@@ -502,21 +502,21 @@ describe('60Hz simulation baseline', () => {
     });
 
     // Cycle 64: coastline boundary trace. NEW fixture
-    // (coastline-wolf-coast-60hz.json), net-additive - the 9 pre-existing
+    // (coastline-newsheepdogland-60hz.json), net-additive - the 9 pre-existing
     // fixtures above are untouched (no scene used `coastline` before this), which
     // proves the rect/island dispatch stayed byte-identical. Pins the SDF-driven
-    // shore avoidance + hard clamp on the Wolf Coast boot at 60Hz; the Worker
+    // shore avoidance + hard clamp on the Newsheepdogland boot at 60Hz; the Worker
     // builds the same field from the same polygon, so this is the co-op parity
     // anchor for Cycle 67.
-    it('coastline boundary Wolf Coast: 40 sheep in the foot shore band drift inland', () => {
-        // Wolf Coast foot sole shore is near z=-1490. A cluster at (250, -1460)
+    it('coastline boundary Newsheepdogland: 40 sheep in the foot shore band drift inland', () => {
+        // Newsheepdogland foot sole shore is near z=-1490. A cluster at (250, -1460)
         // sits ~25m inside the shore - within the 30m falloff band - so every
         // sheep feels an inward (+z) steer from the SDF gradient. Dog parked in
         // the foot far from the cluster (beyond the 8m fleeRadius).
         const sheep = makeDeterministicFlock(40, 250, -1460, 1.2);
         const dog = makeSheepdog('p1', -100, -1050);
-        const state = makeIslandGameState('wolf-coast', 40);
-        const config = makeIslandSheepConfig('wolf-coast');
+        const state = makeIslandGameState('newsheepdogland', 40);
+        const config = makeIslandSheepConfig('newsheepdogland');
 
         // Sanity: the scene really is on the new boundary kind.
         expect(state.boundary.kind).toBe('coastline');
@@ -539,7 +539,7 @@ describe('60Hz simulation baseline', () => {
             });
         }
 
-        const expected = loadOrWriteFixture('coastline-wolf-coast-60hz.json', trace) as typeof trace;
+        const expected = loadOrWriteFixture('coastline-newsheepdogland-60hz.json', trace) as typeof trace;
 
         expect(trace).toHaveLength(61);
         expect(trace[0].sheep).toHaveLength(40);

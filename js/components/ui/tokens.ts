@@ -21,7 +21,7 @@ export const color = {
   sceneRollingHills: 'var(--color-scene-rolling-hills)',
   sceneOpenCountry: 'var(--color-scene-open-country)',
   sceneField: 'var(--color-scene-field)',
-  sceneWolfCoast: 'var(--color-scene-wolf-coast)',
+  sceneNewsheepdogland: 'var(--color-scene-newsheepdogland)',
 
   danger: 'var(--color-danger)',
   dangerSoft: 'var(--color-danger-soft)',
@@ -162,7 +162,7 @@ export const sceneAccent: Record<string, string> = {
   'rolling-hills': color.sceneRollingHills,
   'open-country': color.sceneOpenCountry,
   field: color.sceneField,
-  'wolf-coast': color.sceneWolfCoast,
+  'newsheepdogland': color.sceneNewsheepdogland,
 };
 
 export const tokens = {

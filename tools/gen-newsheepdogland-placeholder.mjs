@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Cycle 64 stopgap: a dusk-gradient placeholder for the Wolf Coast entrance
+ * Cycle 64 stopgap: a dusk-gradient placeholder for the Newsheepdogland entrance
  * card, so the carousel's idle-prefetch does not 404 before a real hero capture
  * exists. Matches the WORLDS gradient in js/components/entrance/worlds.ts. A
  * proper close-eye scene capture (Matt's media pass) should replace this.
  *
- * Run: node tools/gen-wolf-coast-placeholder.mjs
+ * Run: node tools/gen-newsheepdogland-placeholder.mjs
  */
 import sharp from 'sharp';
 
@@ -25,6 +25,6 @@ const svg = `<svg width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
 
 await sharp(Buffer.from(svg))
   .webp({ quality: 82 })
-  .toFile('assets/scenes/entrance/wolf-coast.webp');
+  .toFile('assets/scenes/entrance/newsheepdogland.webp');
 
-console.log('Wrote assets/scenes/entrance/wolf-coast.webp (1920x1080 dusk gradient placeholder)');
+console.log('Wrote assets/scenes/entrance/newsheepdogland.webp (1920x1080 dusk gradient placeholder)');

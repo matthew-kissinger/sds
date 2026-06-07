@@ -186,7 +186,7 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         );
 
         // Cycle 65: the homestead gate + day loop. Only on scenes that opt into
-        // the day loop (Wolf Coast). The gate is grounded via the heightfield set
+        // the day loop (Newsheepdogland). The gate is grounded via the heightfield set
         // above; the DayLoop + the day/night HUD chip are created here, and a
         // per-frame runner is stashed on the game for the main loop to call.
         if (game.currentScene.dayNight?.dayLoop && game.currentScene.gate) {
@@ -360,7 +360,7 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         }
 
         // Cycle 5+: anime water for island scenes. Cycle 64: coastline scenes
-        // (Wolf Coast) get water too - the boot sits in the sea.
+        // (Newsheepdogland) get water too - the boot sits in the sea.
         // Built after structures and hidden in flat/rect scenes.
         const _waterKind = game.currentScene.boundary?.kind;
         if (_waterKind === 'island' || _waterKind === 'coastline') {
@@ -406,7 +406,7 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         }
 
         // Create sheepdog (but don't add to scene yet in pre-game state)
-        // Cycle 64: scenes may override the spawn (Wolf Coast's origin is the
+        // Cycle 64: scenes may override the spawn (Newsheepdogland's origin is the
         // instep bay = water); existing scenes omit dogSpawn -> (0, -30).
         logStep('Creating sheepdog');
         const preDogSpawn = game.currentScene?.dogSpawn ?? { x: 0, z: -30 };

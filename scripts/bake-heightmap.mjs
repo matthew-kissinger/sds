@@ -24,7 +24,7 @@
  *   --centerX <m>         Island centre X (default 0)
  *   --centerZ <m>         Island centre Z (default 0)
  *   --points <path>       coastline only: path to a module exporting
- *                         WOLF_COAST_POINTS (or a default array) or a .json
+ *                         NEWSHEEPDOGLAND_POINTS (or a default array) or a .json
  *                         array of {x,z}. The polygon, in world metres.
  *   --coastFalloff <m>    coastline only: beach band width the terrain blends to
  *                         seaLevel across (default 50).
@@ -131,7 +131,7 @@ const peakZ = Number(args.peakZ ?? 0);
 const peakRadius = Number(args.peakRadius ?? 500);
 const mountainHeight = Number(args.mountainHeight ?? 0);
 
-/** Load the coastline polygon from a .js module (WOLF_COAST_POINTS / default) or a .json array. */
+/** Load the coastline polygon from a .js module (NEWSHEEPDOGLAND_POINTS / default) or a .json array. */
 async function loadCoastPoints(pathArg) {
   if (!pathArg || pathArg === true) {
     throw new Error('--boundary coastline requires --points <module-or-json>');
@@ -141,9 +141,9 @@ async function loadCoastPoints(pathArg) {
     return JSON.parse(await readFile(abs, 'utf8'));
   }
   const mod = await import(pathToFileURL(abs).href);
-  const pts = mod.WOLF_COAST_POINTS ?? mod.points ?? mod.default;
+  const pts = mod.NEWSHEEPDOGLAND_POINTS ?? mod.points ?? mod.default;
   if (!Array.isArray(pts)) {
-    throw new Error(`--points module ${pathArg} must export WOLF_COAST_POINTS, points, or a default array`);
+    throw new Error(`--points module ${pathArg} must export NEWSHEEPDOGLAND_POINTS, points, or a default array`);
   }
   return pts;
 }
