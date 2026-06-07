@@ -1678,6 +1678,21 @@ export class GameSimulation {
             : null;
 
         const run = new SurvivalRun(cfg);
+        // Cycle 68 P4: resume a multi-day run that survived a worker redeploy /
+        // DO eviction. The persisted progress is day-granularity - the in-flight
+        // night (wolf positions, within-day clock) is ephemeral and lost on
+        // eviction by design (the room snaps to 'waiting' on wake), so we restore
+        // the run to the START of the saved day with the saved flock. The player
+        // keeps the days they survived instead of resetting to day 1.
+        const resume = this.room?.survivalResume;
+        const resuming = !!(resume && Number.isFinite(resume.day) && resume.day >= 1
+            && Number.isFinite(resume.flock) && resume.flock > 0 && !resume.dead);
+        if (resuming) {
+            run.day = Math.floor(resume.day);
+            run.flock = Math.min(run.maxFlock, Math.max(1, Math.floor(resume.flock)));
+            run.peak = Math.max(Math.floor(resume.peak ?? resume.flock), run.flock);
+            run.nightStartFlock = run.flock;
+        }
         const wolves = new WolfSim({
             pen: penContainment,
             onKill: () => run.recordKill(),
@@ -1702,7 +1717,10 @@ export class GameSimulation {
         };
         // Establish the run's prev-phase baseline (no event on the first observe).
         run.onPhase(phase0);
-        console.log(`🐺 Survival initialized for room ${this.room.roomCode}: startFlock ${startFlock}, pool ${this.gameState.sheep.length}`);
+        // Resumed run: activate dormant sheep so the rendered flock matches the
+        // restored day's flock (a fresh run starts at startFlock and grows in).
+        if (resuming && run.flock > startFlock) this._syncActiveToFlock();
+        console.log(`🐺 Survival initialized for room ${this.room.roomCode}: startFlock ${startFlock}, pool ${this.gameState.sheep.length}${resuming ? `, RESUMED day ${run.day} flock ${run.flock}` : ''}`);
     }
 
     /**
@@ -1741,8 +1759,12 @@ export class GameSimulation {
                 s.wolves.retreatAll();
                 if (s.pen) s.pen.releaseAll(this.gameState.sheep);
                 this._syncActiveToFlock();
+                // P4: checkpoint the new day so a redeploy resumes here, not day 1.
+                this.room?.onSurvivalProgress?.(this.serializeSurvival());
             } else if (ev.type === 'death') {
                 s.wolves.retreatAll();
+                // P4: run over - clear any persisted progress (dead:true).
+                this.room?.onSurvivalProgress?.(this.serializeSurvival());
                 this._endSurvivalRun(ev);
                 return;
             }
@@ -1764,6 +1786,21 @@ export class GameSimulation {
         const s = Number(seconds);
         if (!Number.isFinite(s) || s <= 0) return;
         this._survival.elapsed += s;
+    }
+
+    /**
+     * Cycle 68 P4: a day-granularity snapshot of the survival run's progress for
+     * DO storage, so a worker redeploy / DO eviction mid-run does not reset the
+     * multi-day run to day 1. Returns null outside an active survival run. The
+     * in-flight night (wolf positions, within-day clock) is intentionally NOT
+     * captured - it is ephemeral (render-from-snapshot) and the room snaps to
+     * 'waiting' on wake; the run resumes at the start of the saved day.
+     * @returns {{day:number, flock:number, peak:number, dead:boolean}|null}
+     */
+    serializeSurvival() {
+        if (!this.isSurvival || !this._survival) return null;
+        const r = this._survival.run;
+        return { day: r.day, flock: r.flock, peak: r.peak, dead: !r.isAlive() };
     }
 
     /** Count sheep currently in the run (active, not killed, not dormant). */

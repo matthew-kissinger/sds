@@ -181,6 +181,10 @@ export class RoomDO {
   // Sim
   private simulation: GameSimulation | null = null;
   private broadcastInterval: ReturnType<typeof setInterval> | null = null;
+  // Cycle 68 P4: day-granularity survival run progress, persisted to DO storage
+  // so a worker redeploy / DO eviction mid-run resumes the multi-day run instead
+  // of resetting to day 1. Null when no run is in progress.
+  private survivalProgress: { day: number; flock: number; peak: number; dead?: boolean } | null = null;
   private cleanupTimeout: ReturnType<typeof setTimeout> | null = null;
   private restored = false;
 
@@ -235,6 +239,10 @@ export class RoomDO {
         // If a sim was running, it's lost; snap back to 'waiting'.
         if (this.meta.state === 'in-game') this.meta.state = 'waiting';
       }
+      // Cycle 68 P4: restore an in-progress survival run so the next start in this
+      // room resumes the multi-day run instead of resetting to day 1.
+      const storedSurvival = await this.state.storage.get<{ day: number; flock: number; peak: number; dead?: boolean }>('survivalProgress');
+      if (storedSurvival && !storedSurvival.dead) this.survivalProgress = storedSurvival;
       this.restored = true;
     });
   }
@@ -248,6 +256,20 @@ export class RoomDO {
       meta: this.meta,
       players: Array.from(this.players.entries()),
     });
+  }
+
+  // Cycle 68 P4: persist (or clear) the survival run's day-granularity progress.
+  // Called by GameSim on a surviving dawn (checkpoint the new day) and on death
+  // (clear, dead:true). Best-effort + try/caught so a node test runtime without
+  // a real storage binding doesn't throw.
+  private onSurvivalProgress(progress: { day: number; flock: number; peak: number; dead?: boolean } | null): void {
+    if (!progress || progress.dead) {
+      this.survivalProgress = null;
+      try { void this.state.storage.delete('survivalProgress'); } catch { /* no storage in test runtime */ }
+      return;
+    }
+    this.survivalProgress = progress;
+    try { void this.state.storage.put('survivalProgress', progress); } catch { /* no storage in test runtime */ }
   }
 
   // P-SEC-4 (e): schedule the idle-room cleanup alarm. Guarded + try/caught so
@@ -848,6 +870,10 @@ export class RoomDO {
         if (!p) return null;
         return p.displayName || p.name || null;
       },
+      // Cycle 68 P4: resume a persisted multi-day run (null = fresh day-1 run);
+      // GameSim checkpoints the new day back here on each surviving dawn.
+      survivalResume: this.survivalProgress,
+      onSurvivalProgress: (progress: any) => self.onSurvivalProgress(progress),
       onSubmitScores: async (playerScores: Record<string, number>, completionData: any) => {
         try {
           // Cycle 67 P7: survival posts each player's peak flock to the party-size
@@ -976,6 +1002,11 @@ export class RoomDO {
         this.simulation = null;
       }
       this.stopBroadcastLoop();
+      // P4: an abandoned room drops its survival run progress. Eviction (worker
+      // redeploy) is different - it keeps the persisted progress so the run can
+      // resume; only an explicitly emptied room discards it.
+      this.survivalProgress = null;
+      try { void this.state.storage.delete('survivalProgress'); } catch { /* no storage in test runtime */ }
       const emptiedRoomCode = this.meta.roomCode;
       this.meta = null;
       this.persist();
