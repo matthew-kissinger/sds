@@ -11,7 +11,7 @@ import {
     nearestHuntableIndex,
     stepToward,
     stepAway,
-} from '../js/gamestate/wolfBehavior.js';
+} from '../shared/survival/wolfBehavior.js';
 
 describe('spawnCountForDay (Q3 escalation)', () => {
     it('starts the pack small on night one', () => {

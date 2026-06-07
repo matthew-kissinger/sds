@@ -6,7 +6,7 @@
  * Score is the peak flock size.
  */
 import { describe, it, expect } from 'vitest';
-import { SurvivalRun, SurvivalState } from '../js/gamestate/survivalRun.js';
+import { SurvivalRun, SurvivalState } from '../shared/survival/run.js';
 
 /** Drive a full day -> night -> dawn cycle, returning the dawn event. */
 function runNight(run, kills = 0) {

@@ -11,7 +11,7 @@
  *   5. pennedCount tracks retired sheep.
  */
 import { describe, it, expect } from 'vitest';
-import { PenContainment } from '../js/gamestate/penContainment.js';
+import { PenContainment } from '../shared/survival/pen.js';
 
 // Pen box x[-10,10] z[-10,10]; gate gap on the west edge (x=-10), z in [-2,2].
 const PEN = { center: { x: 0, z: 0 }, radius: 10 };
@@ -112,5 +112,24 @@ describe('PenContainment (Cycle 66 P2)', () => {
         expect(s.position.x).toBeLessThan(10);
         expect(s.position.z).toBeGreaterThan(-10);
         expect(s.position.z).toBeLessThan(10);
+    });
+
+    it('produces a byte-identical settle spot for a fixed (settleSeed, sheepId)', () => {
+        // Cycle 67 P1: the Cycle 66 Math.random settle spot is now a seeded draw,
+        // so the Worker authority is deterministic. Same (seed, id) => same spot.
+        const a = new PenContainment(PEN, GATE, { settleSeed: 1234 });
+        const b = new PenContainment(PEN, GATE, { settleSeed: 1234 });
+        const s1 = a._settleSpot(7);
+        const s2 = b._settleSpot(7);
+        expect(s1.x).toBe(s2.x);
+        expect(s1.z).toBe(s2.z);
+        // The spot lands inside the inset box (4m off every fence edge).
+        expect(s1.x).toBeGreaterThanOrEqual(-6);
+        expect(s1.x).toBeLessThanOrEqual(6);
+        expect(s1.z).toBeGreaterThanOrEqual(-6);
+        expect(s1.z).toBeLessThanOrEqual(6);
+        // Different sheep ids draw different spots (no pile-up on one tile).
+        const other = a._settleSpot(8);
+        expect(other.x === s1.x && other.z === s1.z).toBe(false);
     });
 });
