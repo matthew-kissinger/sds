@@ -1,65 +1,62 @@
-# Next Session - Cycle 65 wolf-coast-homestead-and-day (SHIPPED, pending prod playtest + close)
+# Next Session - Cycle 66 newsheepdogland-survival (folded autonomous cycle, ready to run)
 
-> **Updated:** 2026-06-06
-> **For:** Cycle 65 `wolf-coast-homestead-and-day`. Plan: [`docs/cycle-65-plan.md`](docs/cycle-65-plan.md).
-> **Pickup priority:** Matt's prod playtest of the Wolf Coast day loop, then `/cycle-close`. All 8 phases are implemented, validated, and pushed to main. The reserved tunables (day length, first-light start, homestead layout, biome density, the soft-loop framing) are a strawman for Matt's in-browser pass.
+> **Updated:** 2026-06-07
+> **For:** Cycle 66 `newsheepdogland-survival`. Plan: [`docs/cycle-66-plan.md`](docs/cycle-66-plan.md).
+> **Pickup priority:** Run the folded autonomous survival cycle. Start with P1 (the full Wolf Coast -> Newsheepdogland rename) so everything downstream uses the new id, spike the three risky primitives (pen soft-containment, wolf AI, whole-island grass perf) before committing their implementations, then run P2-P8. Matt reviews on completion.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-65-plan.md`](docs/cycle-65-plan.md) -> the touched module source.
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-66-plan.md`](docs/cycle-66-plan.md) -> the touched module source.
 
 ## Where It Stands
 
-**Cycle 64 (`wolf-coast-foundation`) is CLOSED + deployed** (the coastline boundary primitive + the walkable Wolf Coast island; archived [`docs/archive/cycles/cycle-64-plan.md`](docs/archive/cycles/cycle-64-plan.md)).
+**Cycle 65 (`wolf-coast-homestead-and-day`) is CLOSED + deployed** (archived [`docs/archive/cycles/cycle-65-plan.md`](docs/archive/cycles/cycle-65-plan.md)). It turned the Wolf Coast foundation into a place with a daily rhythm: a homestead the dog wakes at, island character, a day/night cycle + HUD, a gate by phase, a soft herd-back loop, and a skip-to-dusk cutscene. After Matt's prod playtest, a post-close fix pass attached the Home Field farmhouse to the pen (it was rendering ~1.2 km off at the Field default), built a full grounded fence ring (was a floating gate + 2 wings), culled trees out of the water, moved the day/night HUD off the overlapping center, and turned the house door to face the gate. All live on prod.
 
-**Cycle 65 (`wolf-coast-homestead-and-day`) is IMPLEMENTED + VALIDATED.** Matt called the shipped Wolf Coast "massive and featureless" and folded the originally-proposed two cycles into one larger autonomous cycle. It turns Wolf Coast into a place with a daily rhythm. Client-only: the one fence touch is additive `shared/scenes/types.js` data fields (`dayNight`, `GateDef.facingDeg`); no deterministic-sim change, no wire change, no D1, sim-baseline byte-identical. No wolves / survival economy / co-op / leaderboard (those are Cycles 66-68).
+**Cycle 66 (`newsheepdogland-survival`) is the folded autonomous survival cycle.** Matt reviewed the homestead and chose (2026-06-07) to fold the whole survival vision into one larger autonomous cycle and to rename the island. It is authored and ready to run end to end.
 
-### What shipped (all 8 phases)
+### What Cycle 66 ships (8 phases)
 
-- **P3 - biome character.** [`shared/scenes/wolf-coast.js`](shared/scenes/wolf-coast.js) woods re-authored into dense conifer pockets on the leg, a north-foot tree-line windbreak, and a deliberately open foot pasture. Pure scene data; the coastline SDF culls trees at the shore.
-- **P4 - day/night.** Additive optional `dayNight` SceneDef field turns on the existing [`js/atmosphere/DayNightCycle.js`](js/atmosphere/DayNightCycle.js); both `main.js` Atmosphere sites honor it. Wolf Coast starts just after sunrise (`initialT 0.28`) and arcs over a 240s day. Verified: the sun rose 8deg -> 51deg, presets blended dusk -> noon.
-- **P1 - homestead.** The pen relocated beside the farmhouse (the herd-back home zone); a wooden swing gate ([`js/StructureBuilder.js`](js/StructureBuilder.js) `buildHomesteadGate`) flanked by fence wings, grounded flush on the terrain (delta 0); `dogSpawn` moved to the gate (on land, ground 3.4m). The toe corral stays the Solo objective.
-- **P2 - animated gate.** A hinged door panel + `updateGate` tween, driven each frame by the day-loop runner (StructureBuilder.update is not on the main loop, so the tween runs via the runner).
-- **P5 - day/night HUD.** A dependency-free chip ([`js/components/GameHUD/DayNightChip.js`](js/components/GameHUD/DayNightChip.js), the StatsChip precedent): day number, phase, a sun-progress track, the home count, and an amber dusk "herd them in" warning.
-- **P6 - the day loop.** A pure client-only controller ([`js/gamestate/dayLoop.js`](js/gamestate/dayLoop.js), the counting-mode precedent, 9 unit tests): tracks day, phase, gate state, dusk warning, and a nightly home tally. The gate opens at dawn and swings shut at night; soft outcome (no fail-death). Wired in [`js/boot/initWorld.js`](js/boot/initWorld.js) (the per-frame runner) + [`js/main.js`](js/main.js) (the call).
-- **P7 - skip-to-dusk cutscene.** [`js/effects/skipToDusk.js`](js/effects/skipToDusk.js): an on-screen button (tappable on mobile, F-key hint on desktop) + the F key, shown only during grazing. Fast-forwards the clock to dusk while the camera pans up to the sun and back; reduced-motion gets an instant jump. The main loop suspends the follow-camera (`_cutsceneActive`) during the takeover.
-- **P8 - validation.** npm test 1042 pass / 7 skip, lint clean, worker tsc clean, build clean (main ratchet 573 -> 577 KiB), sim-baseline byte-identical.
-
-### Browser smoke (preview, SDS_SUPPRESS_BROWSER_OPEN=1) - PASSED
-
-Autostart play on Wolf Coast: clean boot (no console errors), bright midday sky over a green foot pasture with scattered trees + the distant mountain, the dog wakes at the homestead gate (open at dawn), the day/night clock advances in play, the gate swings shut at night (door -104deg -> 0) and the day rolls to Day 2 past midnight, the HUD chip is live, and the skip cutscene drives the clock morning -> dusk with the camera pitch rising from -0.33 (on the dog) to +0.85 (up at the sun) then returning.
+- **P1 - Full rename Wolf Coast -> Newsheepdogland** (scene id, display name, terrain bin, coast file, sim-baseline fixture rename, deep-link URLs, tests, D1 leaderboard partition). Do first.
+- **P2 - Pen as a real barrier + the objective.** Herd sheep through the gate; they retire inside the pen (no zap, no teleport); dog + sheep collide with the fence; gate-only entry. Remove the toe-corral zap.
+- **P3 - Survival loop + UI reorg.** Start 10 sheep, ~10-minute day to dusk/night; lose <33% -> +5 -> next day; 33%+ loss -> death; score = flock size. No sheep-count selection; a survival HUD.
+- **P4 - Wolves.** Night spawn, hunt sheep outside the pen, retreat at dawn (reuse [`js/Wolf.js`](js/Wolf.js) + `Wolf.glb`). Sheep in the closed pen are safe.
+- **P5 - Bark redesign.** Keep the sheep forward cone byte-identical; add a longer-range radial wolf-repel.
+- **P6 - Survival leaderboard.** Append-only D1; score = flock size on death.
+- **P7 - Whole-island grass + minimap.** Grass across the island (density/LOD rearch, within budget); a polished top-right minimap.
+- **P8 - Validate + browser smoke + ship.**
 
 ## What To Pick Up Next
 
-1. **Matt's prod playtest** of the Wolf Coast day loop on sheepdogsim.com (entrance -> Wolf Coast -> a Solo run; wake at the homestead, watch the gate, herd back before dusk, try the skip).
-2. **Reserved tunables (paired, not a phase)** - a strawman for Matt's taste pass: the day length (`secondsPerDay 240`), the first-light start (`initialT 0.28`), the homestead layout (pen (640,-1000) r30, gate (610,-1000) facing 90, dogSpawn (585,-1000)), the biome density, the soft-loop framing, and the dusk-crunch target (`DUSK_T 0.70` in skipToDusk).
-3. **A real Wolf Coast entrance hero capture** to replace the dusk-gradient placeholder (Matt's media pass).
-4. **`/cycle-close`** once the playtest confirms - archive the plan, append BACKLOG, scaffold Cycle 66.
+1. **P1 rename** - mechanical but wide; land it first so the rest builds on `newsheepdogland`.
+2. **Spike the risky primitives** (per the spike-risky-primitives memory): pen soft-containment (Q4), wolf AI feel (Q3), whole-island grass perf budget. Measure in `tools/` + `cycle66-validation/` before committing.
+3. **Run P2-P8** end to end, browser-verifying each (preview, `SDS_SUPPRESS_BROWSER_OPEN=1`, close tabs/listeners after).
+4. **Confirm the open questions** (Q1 D1 rename, Q2 score definition, Q3 wolf escalation, Q4 containment, Q5 minimap, Q6 death accounting) - strawman answers are in the plan; treat the named numbers as Matt's spec.
 
 ## Open Carryover
 
-- **Wolf predator mode** - Cycle 66 (the Cycle 61 wolf asset + the bark verb were built for it; resolve the bark-verb conflict there - the survival brief wants a radial repel, [`shared/BarkImpulse.js`](shared/BarkImpulse.js) is a forward cone).
-- **Survival campaign sequencing** - 66 wolves + bark -> 67 co-op (promote the day loop to deterministic `shared/`) -> 68 survival leaderboard (a new D1 migration).
-- **Tablet draw-call perf** - Wolf Coast's foot grass is ~584 chunks; watch it on the Tab S9 FE.
+- **Co-op** - promoting the survival sim + wolves to deterministic `shared/` is a later cycle (this cycle is solo + client-side).
+- **A real Newsheepdogland entrance hero capture** to replace the dusk-gradient placeholder (Matt's media pass).
 - **No version bump** - a player-visible release is Matt's explicit call.
-- Prior open carryover (collision prod feel, real mobile pass, counting naming/curve-feel, `/api/rename` no-body 500, `upload-artifact@v5` Node 20) remains deferred.
+- Prior open carryover (tablet draw-call perf, real mobile pass, counting naming/curve-feel, `/api/rename` no-body 500, `upload-artifact@v5` Node 20) remains deferred.
 
 ## Working Contract
 
-- This cycle was client-only. Cycle 67 co-op is where the day clock gets promoted to deterministic `shared/`; until then it stays a client controller (the counting-mode precedent).
-- Keep SceneDef additions optional with defaults; existing scenes stay byte-identical in behavior.
+- **Keep the survival sim solo + client-side** (the day-loop precedent). No deterministic-sim/wire/co-op change this cycle. The sim-baseline stays byte-identical (the renamed fixture is the only allowed change).
+- **D1 migrations are append-only.** New sequence-numbered files for the survival partition + the scene-id rename.
+- **Don't decompose `GrassSystem` / `OptimizedSheep`.** Whole-island grass is a density/LOD rearch inside the system.
 - Run `/validate` before any cycle close. Close via `/cycle-close`.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan | [`docs/cycle-65-plan.md`](docs/cycle-65-plan.md) |
-| Day loop controller | [`js/gamestate/dayLoop.js`](js/gamestate/dayLoop.js) |
-| Homestead gate | [`js/StructureBuilder.js`](js/StructureBuilder.js) (`buildHomesteadGate`) |
-| Day/night HUD chip | [`js/components/GameHUD/DayNightChip.js`](js/components/GameHUD/DayNightChip.js) |
-| Skip cutscene | [`js/effects/skipToDusk.js`](js/effects/skipToDusk.js) |
-| Day-loop wiring | [`js/boot/initWorld.js`](js/boot/initWorld.js) + [`js/main.js`](js/main.js) |
-| Wolf Coast scene | [`shared/scenes/wolf-coast.js`](shared/scenes/wolf-coast.js) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-64-plan.md`](docs/archive/cycles/cycle-64-plan.md) |
+| Active cycle plan | [`docs/cycle-66-plan.md`](docs/cycle-66-plan.md) |
+| Day loop (extend into survival) | [`js/gamestate/dayLoop.js`](js/gamestate/dayLoop.js) |
+| Wolf asset | [`js/Wolf.js`](js/Wolf.js) + `assets/models/Wolf.glb` |
+| Bark (keep cone, add wolf-repel) | [`shared/BarkImpulse.js`](shared/BarkImpulse.js) |
+| Pen ring + gate (make a real barrier) | [`js/StructureBuilder.js`](js/StructureBuilder.js) |
+| Grass (rearch for whole island) | [`js/GrassSystem.js`](js/GrassSystem.js) |
+| Scene (rename + survival data) | [`shared/scenes/wolf-coast.js`](shared/scenes/wolf-coast.js) -> `newsheepdogland.js` |
+| D1 migrations | [`worker/migrations/`](worker/migrations/) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-65-plan.md`](docs/archive/cycles/cycle-65-plan.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |

@@ -4,6 +4,37 @@
 
 ## Recently Completed
 
+### Cycle 65 - `wolf-coast-homestead-and-day` (closed 2026-06-07)
+
+Plan archived at [`docs/archive/cycles/cycle-65-plan.md`](archive/cycles/cycle-65-plan.md). A folded cycle (Matt: "fold the next 2 cycles into 1") that turned the walkable Wolf Coast foundation into a place with a daily rhythm: a homestead the dog wakes at, island character (forest / fields / tree-lines), a day/night cycle with a HUD clock, a gate that opens at dawn and shuts at night, a soft herd-back-before-dusk loop, and a skip-to-dusk camera cutscene. Client-only: the one fence touch was additive `shared/scenes/types.js` data fields. No deterministic-sim, wire, or D1 change; sim-baseline byte-identical.
+
+**Closeout outcomes (8/8 phases shipped):**
+
+- **P1 homestead layout + P2 animated gate.** Co-located the farmhouse, a fenced pen, a swing gate, and the dog spawn into one homestead in the foot. The gate door tweens open at dawn / shut at night via the day-loop runner ([`js/StructureBuilder.js`](../js/StructureBuilder.js) `buildHomesteadGate` + `updateGate`).
+- **P3 biome character.** [`shared/scenes/wolf-coast.js`](../shared/scenes/wolf-coast.js) woods re-authored into dense conifer pockets, a north-foot tree-line windbreak, and a deliberately open foot pasture.
+- **P4 day/night + P5 HUD.** An additive `dayNight` SceneDef field turns on the existing [`js/atmosphere/DayNightCycle.js`](../js/atmosphere/DayNightCycle.js); a dependency-free [`DayNightChip`](../js/components/GameHUD/DayNightChip.js) shows day, phase, a sun-progress track, and the home count.
+- **P6 day loop.** A client-only controller ([`js/gamestate/dayLoop.js`](../js/gamestate/dayLoop.js), the counting-mode precedent, 9 unit tests): day / phase / gate / dusk-warning + a nightly home tally. Soft outcome (no fail-death).
+- **P7 skip-to-dusk.** [`js/effects/skipToDusk.js`](../js/effects/skipToDusk.js): an on-screen button + F key that pans the camera up to the sun while fast-forwarding the clock to dusk.
+- **Post-close homestead fixes (2026-06-07, after Matt's prod playtest).** The farmhouse was rendering ~1.2 km off at the Home Field default (a stale `farmHousePosition` cache read before the scene def was set on the autostart boot, and during the models await); now read from the live scene def at placement, attached to the pen's north side, porch facing west like the gate opening. The pen gained a full grounded fence ring (was a gate plus two floating wings: a double-lift `_surfaceToTerrain` bug). Trees gained a waterline cull (none in the water). The day/night chip moved top-left under the score (was overlapping top-center). Added optional `farmHouse.rotationDeg` to the SceneDef.
+
+**Validation gates:** `npm test` 1042 pass / 7 skip / 0 fail; eslint shared/ clean; worker `tsc` clean; `npm run build` clean (main ratchet 573 -> 578 KiB); sim-baseline byte-identical. Browser smoke (preview, `SDS_SUPPRESS_BROWSER_OPEN=1`): homestead start, day arc, gate by phase, herd-back, skip cutscene, house attached + grounded fence ring + no trees in water all verified.
+
+**Release proof.** Shipped across commits `ac76760` / `c7e4ef4` / `f03f196` (cycle) plus `23f811a` / `b97daf6` (post-playtest fixes); deploy runs green; prod homepage 200, Wolf Coast live with the day loop.
+
+**Carryover (all folded into Cycle 66 `newsheepdogland-survival`, the folded autonomous survival cycle):**
+
+- **The survival loop** (Matt's spec): start with 10 sheep, ~10-minute day, dusk herd-back, night wolves; lose under 33% -> gain +5 -> next day; flock size is the score, recorded to the leaderboard at death.
+- **Pen as the objective + a real barrier**: herd sheep through the gate; they retire naturally inside the pen (no zap, no teleport); dog + sheep collide with the fence; sheep enter only through the gate area; remove the toe-corral zap.
+- **Wolves** (night spawn, hunt sheep outside the pen; reuse [`js/Wolf.js`](../js/Wolf.js) + `Wolf.glb`).
+- **Bark redesign**: keep the forward cone for sheep; add a longer-range radial wolf-repel (today's [`shared/BarkImpulse.js`](../shared/BarkImpulse.js) is a 12 m sheep-only cone).
+- **Full rename Wolf Coast -> Newsheepdogland** (scene id, deep-link URLs, terrain bin filename, D1 leaderboard partition, tests).
+- **Grass across the whole island** (optimal LOD/density rearch; foot-only today for draw-call cost).
+- **Minimap** top-right, polished, to orient the player on the island.
+- **Survival UI reorg** (no sheep-count selection; a survival-specific HUD).
+- **Survival leaderboard** (a new append-only D1 migration).
+- A real entrance hero capture to replace the dusk-gradient placeholder (Matt's media pass).
+- Prior open carryover (tablet draw-call perf, real mobile pass, counting naming/curve-feel, `/api/rename` no-body 500, `upload-artifact@v5` Node 20) remains deferred.
+
 ### Cycle 64 - `wolf-coast-foundation` (closed 2026-06-06)
 
 Plan archived at [`docs/archive/cycles/cycle-64-plan.md`](archive/cycles/cycle-64-plan.md). Cycle 64 opened the Survival / Wolf Coast campaign and shipped the foundation only: a new `coastline` boundary kind (an arbitrary concave shoreline the radial `island` kind cannot express) plus the walkable Wolf Coast island, playable in the existing Just Play / Solo modes. Survival mode, wolves, the day/night loop, co-op, and the survival leaderboard stay later cycles. The highest-risk engineering item of the whole campaign (the boundary primitive) was R&D-spiked first, then landed behind a real test vehicle.
