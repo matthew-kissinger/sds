@@ -17,6 +17,8 @@ Plan archived at [`docs/archive/cycles/cycle-63-plan.md`](archive/cycles/cycle-6
 
 **Validation gates (2026-06-06):** `npm test -- tests/entity-collision.spec.js` passed; `npm test -- tests/sim-baseline/harness-parity.spec.ts` passed; `npm test -- tests/sim-baseline/baseline.spec.ts` passed; `npm run lint` passed; full `npm test` passed; `npm run build` passed; `npx playwright test --project=chromium --grep-invert='@local-only'` passed; `git diff --check` passed with only CRLF warnings. Production-preview probes wrote JSON under the gitignored `cycle63-validation/collision-stutter/` directory.
 
+**Release proof.** Shipped as commit `360f054`, tag `v2.2.2`, deploy run `27077642978`. GitHub Actions passed Test, Deploy Worker, Deploy Pages, and Chromium E2E. Live HTML at sheepdogsim.com returned HTTP 200 and served `assets/main-C0FgLyTC.js`; the direct asset returned HTTP 200 and contains the new `collisionProbe`, `getCollisionProfile`, and dense-grid cap markers. Worker health returned `{"ok":true,"worker":"sds-worker"}` from `https://sds-worker.matt-m-kissinger.workers.dev/healthz`.
+
 **Carryover (deferred):**
 
 - **Prod feel review for collision stutter.** Matt should test `v2.2.2` in prod. If a normal 200-sheep run still stutters, capture exact scene/mode/device plus whether the symptom is frame-time loss or visual popping.

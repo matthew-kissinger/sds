@@ -46,6 +46,7 @@ Interpretation:
 - `npx playwright test --project=chromium --grep-invert='@local-only'` passed.
 - Bundle ratchet accepted at `566 KiB` (`561 KiB` -> `566 KiB`) for the bounded dense-grid resolver and gated collision probe.
 - Browser probes wrote JSON under `cycle63-validation/collision-stutter/`.
+- Release commit `360f054`, tag `v2.2.2`, and deploy run `27077642978` are live. sheepdogsim.com serves `assets/main-C0FgLyTC.js`, and the Worker health endpoint returns `{"ok":true,"worker":"sds-worker"}`.
 
 ## What To Pick Up Next
 

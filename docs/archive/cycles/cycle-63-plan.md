@@ -110,6 +110,7 @@ Completed 2026-06-06:
 - `npx playwright test --project=chromium --grep-invert='@local-only'` passed.
 - Production-preview probes wrote JSON under `cycle63-validation/collision-stutter/` (gitignored).
 - `CHANGELOG.md`, `NEXT_SESSION.md`, and `docs/BACKLOG.md` were updated for the `v2.2.2` release.
+- Deploy run `27077642978` passed Test, Deploy Worker, Deploy Pages, and Chromium E2E. Live HTML served `assets/main-C0FgLyTC.js`, and direct Worker health returned `{"ok":true,"worker":"sds-worker"}`.
 
 ## Hard stops
 
