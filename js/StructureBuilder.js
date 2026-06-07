@@ -295,63 +295,95 @@ export class StructureBuilder {
     }
 
     /**
-     * Cycle 65: the homestead gate - a wooden swing gate (posts + arch from the
-     * fence kit + a hinged door panel) flanked by short fence wings, placed at
-     * the homestead so the dog wakes beside it. The day loop drives the door
-     * open at dawn and closed at night via `setHomesteadGateOpen`. Built only on
-     * scenes that opt into the day loop; returns the gate group.
+     * Cycle 65 (rebuilt): the homestead enclosure - a full square pen fence
+     * ringing `pen.center` at `pen.radius`, with one swing gate (posts + arch
+     * from the fence kit + a hinged door) as the only opening, on the
+     * field-facing edge. The day loop swings the door open at dawn and shut at
+     * night via `setHomesteadGateOpen` + `updateGate`.
      *
-     * @param {{ gate: {x:number, z:number, width?:number, facingDeg?:number}, wing?:number }} homestead
+     * Grounding: the outer group is deliberately NOT tagged surfaceToTerrain.
+     * Every fence post + rail self-grounds per-piece (createBorderSegment tags
+     * its own children) and the gate sub-assembly is tagged as one coplanar
+     * unit. Tagging both a group AND its already-tagged children double-lifts
+     * the children to ~2x terrain height - that was the old "floating wings"
+     * bug (locked as known behavior in structure-builder.spec.js).
+     *
+     * @param {{ gate: {x:number, z:number, width?:number, facingDeg?:number}, pen?: {center:{x:number, z:number}, radius:number} }} homestead
      * @returns {THREE.Group}
      */
     buildHomesteadGate(homestead) {
         const g = homestead?.gate;
         if (!g) return null;
         const width = g.width ?? 10;
-        const wing = homestead.wing ?? 12;
+        const pen = homestead?.pen;
 
         const group = new THREE.Group();
         group.name = 'HomesteadGate';
 
-        // Posts + arch from the shared fence kit so it matches the world.
-        const gateStruct = this.fencePresets.createGateStructure(width, 'horizontal');
-        group.add(gateStruct);
-
-        // The swinging door: hinged at the left post (local x = -width/2),
-        // spanning the opening when closed. The day loop swings it about Y.
-        const door = this._buildGateDoor(width);
-        door.position.set(-width / 2, 0, 0);
-        group.add(door);
-        this._homesteadDoor = door;
-        this._homesteadGateOpen = true;
-        this._homesteadDoorOpenAngle = -Math.PI * 0.58;
-        door.rotation.y = this._homesteadDoorOpenAngle; // start open at dawn
         // Snap rather than tween when the user prefers reduced motion.
         this._reducedMotion = typeof window !== 'undefined'
             && window.matchMedia
             && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        // Short fence wings extending from each post for context.
-        if (wing > 1) {
-            const leftWing = this.fencePresets.createBorderSegment(wing, 'horizontal');
-            leftWing.position.set(-width / 2 - wing / 2, 0, 0);
-            group.add(leftWing);
-            const rightWing = this.fencePresets.createBorderSegment(wing, 'horizontal');
-            rightWing.position.set(width / 2 + wing / 2, 0, 0);
-            group.add(rightWing);
+        // Which pen edge holds the gate? east/west edges run along z (vertical);
+        // north/south edges run along x. Drives both the gate rotation and which
+        // edge gets split into flanks.
+        let onVertical = true;
+        if (pen?.center) {
+            const dx = g.x - pen.center.x, dz = g.z - pen.center.z;
+            onVertical = Math.abs(dx) >= Math.abs(dz);
         }
+        const facingDeg = g.facingDeg ?? (onVertical ? 90 : 0);
 
-        // Place + face the gate, then ride the whole thing onto the terrain as
-        // one unit so the posts, door, and wings stay coplanar on a slope.
-        group.position.set(g.x, 0, g.z);
-        group.rotation.y = ((g.facingDeg ?? 0) * Math.PI) / 180;
-        group.userData.surfaceToTerrain = true;
+        // --- The swing-gate assembly, grounded as ONE unit so the posts, arch,
+        //     and hinged door stay coplanar on a slope. ---
+        const gate = new THREE.Group();
+        gate.name = 'HomesteadGateAssembly';
+        gate.add(this.fencePresets.createGateStructure(width, 'horizontal'));
+        const door = this._buildGateDoor(width);
+        door.position.set(-width / 2, 0, 0);
+        gate.add(door);
+        this._homesteadDoor = door;
+        this._homesteadGateOpen = true;
+        this._homesteadDoorOpenAngle = -Math.PI * 0.58;
+        door.rotation.y = this._homesteadDoorOpenAngle; // start open at dawn
+        gate.position.set(g.x, 0, g.z);
+        gate.rotation.y = (facingDeg * Math.PI) / 180;
+        gate.userData.surfaceToTerrain = true; // single lift for the whole gate
+        group.add(gate);
+
+        // --- The pen enclosure: a full square ring around pen.center; the gate
+        //     edge is split into two flanks that meet the opening. Each segment
+        //     self-grounds per-piece (no group-level tag, so no double-lift). ---
+        if (pen?.center && pen.radius > 1) {
+            const cx = pen.center.x, cz = pen.center.z, R = pen.radius;
+            const half = width / 2;
+            const seg = (a, b) => { const f = this.buildFenceSegment(a, b); if (f) group.add(f); };
+
+            if (onVertical) {
+                const gx = (g.x < cx) ? cx - R : cx + R;   // x of the gate edge
+                const fx = (g.x < cx) ? cx + R : cx - R;   // x of the far edge
+                seg({ x: cx - R, z: cz + R }, { x: cx + R, z: cz + R });  // north
+                seg({ x: cx - R, z: cz - R }, { x: cx + R, z: cz - R });  // south
+                seg({ x: fx, z: cz + R }, { x: fx, z: cz - R });          // far edge
+                seg({ x: gx, z: cz + R }, { x: gx, z: g.z + half });      // gate flank
+                seg({ x: gx, z: g.z - half }, { x: gx, z: cz - R });      // gate flank
+            } else {
+                const gz = (g.z < cz) ? cz - R : cz + R;   // z of the gate edge
+                const fz = (g.z < cz) ? cz + R : cz - R;   // z of the far edge
+                seg({ x: cx - R, z: cz + R }, { x: cx - R, z: cz - R });  // west
+                seg({ x: cx + R, z: cz + R }, { x: cx + R, z: cz - R });  // east
+                seg({ x: cx - R, z: fz }, { x: cx + R, z: fz });          // far edge
+                seg({ x: cx - R, z: gz }, { x: g.x - half, z: gz });      // gate flank
+                seg({ x: g.x + half, z: gz }, { x: cx + R, z: gz });      // gate flank
+            }
+        }
 
         this.scene.add(group);
         this.structures.gates.push(group);
         this._surfaceToTerrain(group);
         this._homesteadGate = group;
-        console.log(`[BUILD] Homestead gate at (${g.x.toFixed(0)}, ${g.z.toFixed(0)}), width ${width}`);
+        console.log(`[BUILD] Homestead enclosure at pen (${(pen?.center?.x ?? g.x).toFixed(0)}, ${(pen?.center?.z ?? g.z).toFixed(0)}) r${pen?.radius ?? 0}, gate w${width}`);
         return group;
     }
 

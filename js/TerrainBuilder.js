@@ -1606,9 +1606,22 @@ export class TerrainBuilder {
         
         // Clone the farm house model
         const farmHouse = farmHouseModel.clone();
-        
-        // Position the farm house in the northwest corner
-        // Behind the pen (positive Z relative to gate) and to the left (negative X)
+
+        // Cycle 65: trust the live sceneDef for placement, read HERE (after the
+        // models await) so it uses the same sceneDef as the rotation below.
+        // `farmHousePosition` is a cache seeded at construction with the Home
+        // Field default; some boot paths set this.sceneDef only after the cache
+        // is seeded (and during the await above), so the sceneDef is the source
+        // of truth, not the cache. Reading before the await placed the Home
+        // Field house at the Wolf Coast homestead's expense.
+        if (this.sceneDef?.farmHouse?.position) {
+            this.farmHousePosition = this.sceneDef.farmHouse.position;
+        }
+        if (this.sceneDef?.farmHouse?.exclusionArea) {
+            this.farmHouseExclusionArea = this.sceneDef.farmHouse.exclusionArea;
+        }
+
+        // Position the farm house at the scene's homestead location.
         const farmY = this._groundY(this.farmHousePosition.x, this.farmHousePosition.z);
 
         // Scale the farm house appropriately - smaller and more realistic
@@ -1623,8 +1636,11 @@ export class TerrainBuilder {
             this.farmHousePosition.z
         );
         
-        // Rotate to face the pen area - facing southeast toward the pen
-        farmHouse.rotation.y = Math.PI * 1.25; // 225-degree rotation to face southeast
+        // Rotate to face the pen area. Scenes may override the default Field
+        // southeast facing (Cycle 65: Wolf Coast turns the porch toward its
+        // homestead pen). Default stays 225 degrees.
+        const rotDeg = this.sceneDef?.farmHouse?.rotationDeg;
+        farmHouse.rotation.y = (rotDeg != null) ? (rotDeg * Math.PI) / 180 : Math.PI * 1.25;
         
         // Configure shadows and materials
         farmHouse.traverse(child => {

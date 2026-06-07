@@ -142,9 +142,15 @@ export const wolfCoast = {
     treeProfile: { tree1: 0.7, tree2: 0.3 },
     treeScaleJitter: { min: 0.92, max: 1.3 },
 
+    // Cycle 65 fix: the Home Field farmhouse model, attached to the north side
+    // of the pasture pen so the homestead reads as one place (it sat off at the
+    // Field default before and read as "no house"). The pen spans z[-1030,-970];
+    // the house sits flush against the north fence, porch turned toward the pen
+    // and the grazing field beyond. rotationDeg overrides the Field default.
     farmHouse: {
-        position: { x: 650, z: -1080 },
-        exclusionArea: { minX: 600, maxX: 700, minZ: -1130, maxZ: -1030 },
+        position: { x: 640, z: -956 },
+        rotationDeg: 200,
+        exclusionArea: { minX: 620, maxX: 660, minZ: -976, maxZ: -936 },
     },
 
     sky: { preset: 'dusk' },

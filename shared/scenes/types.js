@@ -205,6 +205,7 @@
  * @typedef {Object} FarmHouseDef
  * @property {{x: number, z: number}} position
  * @property {Bounds} exclusionArea
+ * @property {number} [rotationDeg]   Cycle 65 — Y rotation (deg) of the house. Overrides the default 225deg Field facing so the porch can turn toward a homestead pen. Additive optional.
  */
 
 /**

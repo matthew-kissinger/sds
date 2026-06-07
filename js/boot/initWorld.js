@@ -193,6 +193,7 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             const gd = game.currentScene.gate;
             game.structureBuilder.buildHomesteadGate({
                 gate: { x: gd.position.x, z: gd.position.z, width: gd.width, facingDeg: gd.facingDeg },
+                pen: game.currentScene.pen || null,
             });
             const { DayLoop } = await import('../gamestate/dayLoop.js');
             const chip = await import('../components/GameHUD/DayNightChip.js');
