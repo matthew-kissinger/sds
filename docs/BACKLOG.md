@@ -4,6 +4,35 @@
 
 ## Recently Completed
 
+### Cycle 67 - `coop-survival` (closed 2026-06-07)
+
+Plan archived at [`docs/archive/cycles/cycle-67-plan.md`](archive/cycles/cycle-67-plan.md). A folded autonomous cycle (Matt: "complete all autonomously") that promoted the Cycle 66 solo survival layer into the deterministic `shared/` sim and made survival a 2-4 player co-op mode. The Cloudflare Worker Durable Object is now authoritative for the run + wolves + pen, and clients render the broadcast (no client prediction of wolves - the load-bearing decision, which sidesteps cross-engine trig determinism). The 9 sheep sim-baselines stayed byte-identical (survival is purely additive + gated behind `isSurvival`).
+
+**Closeout outcomes (8/8 phases shipped):**
+
+- **P1 promote the deterministic cores.** `survivalRun.js` -> `shared/survival/run.js`, `wolfBehavior.js` -> `shared/survival/wolfBehavior.js`, `penContainment.js` -> `shared/survival/pen.js` (the one Cycle 66 `Math.random` settle spot is now a seeded `mulberry32` draw keyed by `(settleSeed, sheepId)`). `js/gamestate/*` became one-line re-export shims; the eslint `shared/**` guard already covers the new modules. (`1e8f966`)
+- **P2 extract the wolf AI + split the renderer.** `shared/survival/wolves.js` is the pure `WolfSim` (spawn/hunt/kill/flee/retreat, seeded, no Three); `js/gamestate/wolfRenderer.js` is a Three-only `WolfRenderer` reconciling rig instances by id (reused in co-op from the broadcast); `js/gamestate/wolfPack.js` is now a thin solo orchestrator with an identical public API. (`acf018f`)
+- **P3 DO-authoritative survival tick.** `GameSim._tickSurvival` runs a server-owned day clock (`shared/survival/dayClock.js`, promoted from `dayLoop.js`), the run economy, the seeded wolves, and the pen each tick - all gated behind `isSurvival`. The flock is a maxFlock pool (startFlock active, the rest dormant, activated on a surviving dawn). DO-side bark wolf-repel. (`74cf4bc`)
+- **P4 `survival` co-op room mode.** RoomDO accepts `gameMode 'survival'` (gated by `scene.allowedModes`; a clean 400 elsewhere) and forces the sheepCount to the scene maxFlock pool; `newsheepdogland.allowedModes` gains survival; RoomCreation surfaces Newsheepdogland + the Survival mode. (`dd387b2`)
+- **P5 additive wire frame + protocol version tag.** `shared/protocol.js` adds `PROTOCOL_VERSION` (2; pre-cycle was an implicit v1) + `SURVIVAL_MIN_PROTOCOL_VERSION`; the snapshot gains `v` + the optional survival/wolves blocks + a `killed` sheep flag (all absent on non-survival frames); the DO version-refuses a too-old client from a survival room. The four-piece migration story is in the archived plan. (`5c64607`)
+- **P6 client renders co-op from the broadcast.** `initNetwork.driveCoopSurvival` mounts a `WolfRenderer` fed from the broadcast, drives the HUD chip + minimap (now drawing all players' dogs) from the survival block, and applies the `killed` flag (OptimizedSheep's MP path gained a killed-guard). The solo sim is gated to `!isMultiplayer`. (`d0ec10f`)
+- **P7 party-size co-op leaderboard + submit-from-DO.** Append-only migration `0009` adds `score_submissions.party_size` (DEFAULT 1, so legacy rows = solo and the Cycle 66 board is byte-identical); survival boards partition by `(scene, party_size)` - `survival` (solo) + `survival:2/3/4` (co-op); the DO's `onSubmitScores` posts each player's peak flock with the room's party size. (`f6af85c`)
+- **P8 validate + ship.** Below.
+
+**Validation gates:** `npm test` 1114 pass / 7 skip / 0 fail (new wolf-sim, survival-tick, survival-room, survival-shims, party-size leaderboard specs); eslint shared/ clean; worker `tsc` clean; `npm run build` clean (main ratchet 582 -> 585 KiB, the always-loaded co-op wiring; the WolfRenderer/HUD/minimap stay lazy chunks); the 9 sheep sim-baselines byte-identical. Browser smoke (solo survival regression, preview on a fresh build, probe closed after): Newsheepdogland builds in solo with the promoted run/pen/wolves wired, the WolfRenderer spawns + renders a hunting pack (meshes in the scene), the bark repels both wolves, the minimap + HUD draw, zero console errors. Proof in `cycle67-validation/p8-smoke.md`.
+
+**Release proof.** Commits `1e8f966` (P1) -> `f6af85c` (P7) pushed to `main`; the GH Actions deploy ran green (worker + Pages). **Migration 0009 was applied to remote D1 by hand** (`wrangler d1 execute sds-db --remote`) because the deploy workflow applies migrations only to LOCAL D1 for the test job - see the carryover. Prod verified: the four survival boards (`survival`, `survival:2/3/4`) return 200; the frontend + terrain are 200.
+
+**The two-client live co-op smoke is deferred to Matt's playtest** (a full ~10-minute-day run with wrangler dev + local D1 + two WS sessions is impractical to automate). The DO co-op behavior - authoritative tick, wire frame, version gate, room mode, party-size leaderboard - is covered by 40+ worker specs; the solo smoke proves the same `shared/survival/*` code renders correctly.
+
+**Carryover (to a future cycle):**
+
+- **Deploy does not apply remote D1 migrations.** `deploy.yml` runs `wrangler d1 execute --local` only (for the test job); remote migrations are manual (`wrangler d1 execute <db> --remote --file=...`). Either add a gated remote-migration step to the deploy or fold the manual step into the cycle-close checklist, so a future migration cycle does not ship a code-vs-schema break. This cycle hit it (the survival board 500'd in prod until 0009 was applied by hand); the `multiplayer.md` line "CI does this on deploy" is now inaccurate and should be corrected.
+- **Two-client live co-op playtest** (the deferred smoke above) + the **wolf / survival feel pass** (the named tunables: wolf counts/speeds, kill radius, bark range, +5 growth, 33% loss, maxFlock 200) - Matt's paired-track taste pass.
+- **Reconnect persistence of the multi-day run** - the run lives in GameSim memory (lost on a worker redeploy, like all co-op state); full DO-storage persistence was deliberately deferred (Q5).
+- **Whole-island grass rearch** (alpine mountain-leg coverage, gated on a density/LOD perf spike) + a **real Newsheepdogland entrance hero capture** remain deferred.
+- Prior open carryover (tablet draw-call perf, counting naming/curve-feel, `/api/rename` no-body 500, `upload-artifact@v5` Node 20) remains deferred.
+
 ### Cycle 66 - `newsheepdogland-survival` (closed 2026-06-07)
 
 Plan archived at [`docs/archive/cycles/cycle-66-plan.md`](archive/cycles/cycle-66-plan.md). A folded autonomous cycle (Matt: "run Cycle 66 end to end autonomously") that turned the Wolf Coast homestead into a real survival game and renamed the island to **Newsheepdogland**. Solo + client-side throughout: the deterministic `shared/` sheep sim is untouched (sim-baseline byte-identical), the one fence touch was the additive `shared/scenes/types.js` survival field (Cycle 66 P3), and the only D1 change was the append-only scene-id rename migration (survival reuses the existing `score` column, no leaderboard schema change).
