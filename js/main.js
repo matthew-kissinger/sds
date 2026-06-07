@@ -1659,8 +1659,10 @@ class SheepDogSimulation {
             this.sceneManager.remove(this.sheepdogMesh);
         }
 
-        // Create new sheepdog with selected type
-        const sheepdog = new Sheepdog(0, -30, selectedDogType, this.heightfield);
+        // Create new sheepdog with selected type. Cycle 64: scenes may override
+        // the spawn (Wolf Coast's origin is water); pre-64 scenes omit it.
+        const soloDogSpawn = this.currentScene?.dogSpawn ?? { x: 0, z: -30 };
+        const sheepdog = new Sheepdog(soloDogSpawn.x, soloDogSpawn.z, selectedDogType, this.heightfield);
         this.sheepdog = sheepdog;
         this.sheepdogMesh = sheepdog.createMesh();
         this.gameState.setSheepdog(sheepdog);

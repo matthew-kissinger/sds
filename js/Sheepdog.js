@@ -7,6 +7,10 @@ import { getTerrainBuilder, getSceneManager, getGameState } from './GameBridge.j
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
 import { DEFAULT_BARK_CONFIG } from '../shared/BarkImpulse.js';
+import { getCoastlineField, sampleSignedDistance, coastlineInwardDir, isOutsideGrid } from '../shared/CoastlineField.js';
+
+// Reused inward-direction scratch for the coastline dog clamp (no per-call alloc).
+const _dogInward = { x: 0, z: 0 };
 
 // Cycle 6 Phase 2 — dog obstacle hard push-out (treat trunks like fences).
 // Cycle 7 Phase 1b — force-based pre-contact avoidance gentler than sheep
@@ -914,6 +918,43 @@ export class Sheepdog {
      */
     applyBoundaryConstraints(boundsOrBoundary) {
         let hitBoundary = false;
+
+        // Coastline branch (Cycle 64) — clamp inside the shore along the SDF
+        // gradient + zero the outward velocity component, mirroring the island
+        // clamp. Uses the same field the sim steers on.
+        if (boundsOrBoundary && boundsOrBoundary.kind === 'coastline') {
+            const field = getCoastlineField(boundsOrBoundary);
+            const margin = 0.2;
+            const sd = sampleSignedDistance(field, this.position.x, this.position.z);
+            if (sd < margin) {
+                let nx;
+                let nz;
+                if (isOutsideGrid(field, this.position.x, this.position.z)) {
+                    // Past the padded grid: aim at the polygon's deepest-interior
+                    // point (inside even on a concave shape, unlike the bbox centre).
+                    nx = field.interiorX - this.position.x;
+                    nz = field.interiorZ - this.position.z;
+                    const m = Math.sqrt(nx * nx + nz * nz);
+                    if (m > 1e-9) { nx /= m; nz /= m; } else { nx = 0; nz = 0; }
+                } else {
+                    coastlineInwardDir(field, this.position.x, this.position.z, _dogInward);
+                    nx = _dogInward.x;
+                    nz = _dogInward.z;
+                }
+                if (nx !== 0 || nz !== 0) {
+                    this.position.x += nx * (margin - sd);
+                    this.position.z += nz * (margin - sd);
+                    // Project velocity onto the inward half-space (drop outward component).
+                    const vDotIn = this.velocity.x * nx + this.velocity.z * nz;
+                    if (vDotIn < 0) {
+                        this.velocity.x -= vDotIn * nx;
+                        this.velocity.z -= vDotIn * nz;
+                    }
+                    hitBoundary = true;
+                }
+            }
+            return;
+        }
 
         // Island branch — radial clamp + zero-out outward velocity component
         if (boundsOrBoundary && boundsOrBoundary.kind === 'island') {

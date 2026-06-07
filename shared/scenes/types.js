@@ -23,9 +23,17 @@
  * legacy `rect`. createGameState synthesises `{ kind: 'rect', ...bounds }`
  * for scenes that ship only the legacy `bounds` field.
  *
+ * Cycle 64 adds `coastline` for an arbitrary concave shoreline (a boot, a bay)
+ * that the radial `island` kind cannot express. Its `points` polygon is the
+ * single prebaked artifact — both the Worker sim and the client predictor build
+ * an identical signed-distance field from it at load (shared/CoastlineField.js).
+ * `cellSize` (SDF grid resolution, m) MUST match across client and Worker for
+ * determinism, so it rides on the boundary def, not on either consumer.
+ *
  * @typedef {{kind: 'rect', minX: number, maxX: number, minZ: number, maxZ: number}} RectBoundary
  * @typedef {{kind: 'island', center: {x: number, z: number}, radius: number, falloff: number}} IslandBoundary
- * @typedef {RectBoundary | IslandBoundary} Boundary
+ * @typedef {{kind: 'coastline', points: Array<{x: number, z: number}>, falloff: number, cellSize?: number}} CoastlineBoundary
+ * @typedef {RectBoundary | IslandBoundary | CoastlineBoundary} Boundary
  */
 
 /**
@@ -35,6 +43,18 @@
  * @property {'zap'|'portal'} [effect]   Cycle 6 Phase 4 — retirement visual.
  *                                       'zap' (default): lightning bolt + flag pillar (Rolling Hills).
  *                                       'portal': swirling vortex + ring shader (Open Country).
+ */
+
+/**
+ * Cycle 64: a sheep pen — a safe enclosure the flock is driven into. This cycle
+ * ships it as INERT data + visual only (it coexists with the scene's `corral`,
+ * which is the wired herding destination). The survival safe-zone semantics
+ * (overnight protection, bankruptcy accounting) arrive in Cycle 65; nothing
+ * reads `pen` for gameplay yet, so it is the cheap additive fence case.
+ *
+ * @typedef {Object} PenDef
+ * @property {{x: number, z: number}} center
+ * @property {number} radius
  */
 
 /**
@@ -120,10 +140,30 @@
  */
 
 /**
+ * Cycle 64: `tallZones` scales grass blade height inside axis-aligned rects, so
+ * a scene can grow a tall-grass band (the Wolf Coast shore band) without a new
+ * grass system. Absent => grass height is unchanged (byte-identical for every
+ * existing scene). Render-only; the sim never reads it.
+ *
+ * @typedef {Object} GrassTallZone
+ * @property {number} minX
+ * @property {number} maxX
+ * @property {number} minZ
+ * @property {number} maxZ
+ * @property {number} heightMul   Blade-height multiplier vs the scene base.
+ *
+ * Cycle 64: `grassCenter` recentres the grass chunk grid off the world origin.
+ * The grid spans `grassRadius` around this point, not (0,0). Needed for a large
+ * island whose play area sits far from the origin (Wolf Coast's foot): without
+ * it the grid would have to span the whole island (thousands of chunks / draw
+ * calls). Absent => the grid centres on the origin (every pre-64 scene).
+ *
  * @typedef {Object} GrassDef
  * @property {{desktop: number, mobile: number}} clumpsPerChunk
  * @property {GrassColors} [colors]
  * @property {{strength: number, frequency: number}} [wind]
+ * @property {GrassTallZone[]} [tallZones]
+ * @property {{x: number, z: number}} [grassCenter]
  * @property {number} [cutoffDistance]
  * @property {number} [densityRange] Multiplier on `worldSize` for the radial
  *   density-falloff zero point. Default 0.6 — grass density drops to zero at
@@ -217,6 +257,8 @@
  * @property {GateDef} [gate]                   Optional for `island` scenes that use a `corral` instead
  * @property {PastureDef} [pasture]             Optional for `island` scenes that use a `corral` instead
  * @property {CorralDef} [corral]               Cycle 5+ — circular destination zone (Rolling Hills); replaces gate+pasture when present
+ * @property {PenDef} [pen]                      Cycle 64 — inert safe-enclosure data/visual (survival reads it in Cycle 65); coexists with `corral`
+ * @property {{x: number, z: number}} [dogSpawn] Cycle 64 — initial dog position; defaults to (0, -30) when absent (every pre-64 scene). Must be on land.
  * @property {ObjectiveDef} [objective]         Cycle 7+ — multi-stage objective (round-up → drive). When absent, scene retires sheep on corral entry directly.
  * @property {SheepSpawnDef} sheepSpawn
  * @property {WoodsZoneDef[]} [woodsZones]      Cycle 5+ — biased tree placement clusters (Open Country)

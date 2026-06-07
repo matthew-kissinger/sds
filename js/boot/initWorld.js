@@ -299,9 +299,11 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             }
         }
 
-        // Cycle 5+: anime water for island scenes.
-        // Built after structures and hidden in non-island scenes.
-        if (game.currentScene.boundary?.kind === 'island') {
+        // Cycle 5+: anime water for island scenes. Cycle 64: coastline scenes
+        // (Wolf Coast) get water too - the boot sits in the sea.
+        // Built after structures and hidden in flat/rect scenes.
+        const _waterKind = game.currentScene.boundary?.kind;
+        if (_waterKind === 'island' || _waterKind === 'coastline') {
             logStep('Building anime water');
             try {
                 const { createAnimeWater } = await import('../water/AnimeWater.js');
@@ -327,6 +329,8 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 probeLog('water.created', {
                     size: game.sceneManager.isMobile ? 3200 : 4000,
                     segments: game.sceneManager.isMobile ? 32 : 64,
+                    boundaryKind: _waterKind,
+                    // radius/falloff exist on island only; coastline reports undefined.
                     boundaryRadius: game.currentScene.boundary.radius,
                     boundaryFalloff: game.currentScene.boundary.falloff,
                 });
@@ -342,8 +346,11 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         }
 
         // Create sheepdog (but don't add to scene yet in pre-game state)
+        // Cycle 64: scenes may override the spawn (Wolf Coast's origin is the
+        // instep bay = water); existing scenes omit dogSpawn -> (0, -30).
         logStep('Creating sheepdog');
-        const sheepdog = new Sheepdog(0, -30, 'jep', game.heightfield);
+        const preDogSpawn = game.currentScene?.dogSpawn ?? { x: 0, z: -30 };
+        const sheepdog = new Sheepdog(preDogSpawn.x, preDogSpawn.z, 'jep', game.heightfield);
         game.sheepdog = sheepdog;
         game.sheepdogMesh = sheepdog.createMesh();
         game.gameState.setSheepdog(sheepdog);

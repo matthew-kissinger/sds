@@ -19,6 +19,7 @@ import {
 } from '../shared/EntityCollision.js';
 import { pointToSegmentDistance, isPointInPolygon } from './gamestate/polygonSpawn.js';
 import { isHighDifficultyCount } from './gamestate/modes.js';
+import { coastlineAvoidance, applyHardCoastlineConstraint } from '../shared/CoastlineField.js';
 
 // Cycle 6 Phase 2 — sheep obstacle avoidance.
 //   - 30m query radius matches the cycle-6 plan budget (kdbush O(log N + k)).
@@ -1959,7 +1960,12 @@ export class OptimizedSheepInstance extends Boid {
 
                 // Apply hard constraints unless in gate area
                 if (!inAnyGateArea) {
-                    if (this.boundary && this.boundary.kind === 'island') {
+                    if (this.boundary && this.boundary.kind === 'coastline') {
+                        // Cycle 64: push back inside the shore along the SDF gradient.
+                        const clamped = applyHardCoastlineConstraint(this, this.boundary, { margin });
+                        this.position.x = clamped.x;
+                        this.position.z = clamped.z;
+                    } else if (this.boundary && this.boundary.kind === 'island') {
                         // Radial clamp at island radius (with margin)
                         const cx = this.boundary.center.x;
                         const cz = this.boundary.center.z;
@@ -2127,6 +2133,17 @@ export class OptimizedSheepInstance extends Boid {
         const margin = 3;
         const steer = new Vector2D(0, 0);
         const position = this.position;
+
+        // Coastline branch (Cycle 64) — shore avoidance from the shared SDF; same
+        // smoothstep force the island uses, no gate carve-out. Returns the full
+        // Reynolds force, matching the shared/Worker sim.
+        if (boundsOrBoundary && boundsOrBoundary.kind === 'coastline') {
+            return coastlineAvoidance(this, boundsOrBoundary, {
+                maxSpeed: this.maxSpeed,
+                maxForce: this.maxForce,
+                forceMultiplier: 1.5,
+            });
+        }
 
         // Island branch — radial smoothstep inward force; gates aren't carved (islands have no perimeter gates)
         if (boundsOrBoundary && boundsOrBoundary.kind === 'island') {

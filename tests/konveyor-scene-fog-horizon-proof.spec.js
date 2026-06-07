@@ -10,13 +10,14 @@ describe('konveyor scene fog horizon proof', () => {
 
     expect(proof).toMatchObject({
       source: 'Atmosphere scene fog/horizon proof',
-      sceneCount: 3,
+      sceneCount: 4,
       ok: true,
     });
     expect(proof.scenes.map((scene) => scene.sceneId)).toEqual([
       'field',
       'rolling-hills',
       'open-country',
+      'wolf-coast',
     ]);
 
     for (const scene of proof.scenes) {

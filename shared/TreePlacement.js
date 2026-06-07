@@ -25,6 +25,7 @@
  */
 
 import { canonicalSort } from './SceneObstacles.js';
+import { getCoastlineField, sampleSignedDistance } from './CoastlineField.js';
 
 const TRUNK_RADIUS_XZ = 1.8;
 const TREE_CANOPY_RADIUS_BY_TYPE = Object.freeze({
@@ -166,6 +167,9 @@ export function generateTrees(scene, rng, opts = {}) {
     if (!zones) return [];
 
     const islandBoundary = scene?.boundary?.kind === 'island' ? scene.boundary : null;
+    // Cycle 64: coastline scenes keep trees inside the shore via the shared SDF.
+    const coastlineBoundary = scene?.boundary?.kind === 'coastline' ? scene.boundary : null;
+    const coastField = coastlineBoundary ? getCoastlineField(coastlineBoundary) : null;
     const corral = scene?.corral || null;
     const islandSafeRadius = islandBoundary
         ? islandBoundary.radius - islandBoundary.falloff - 4
@@ -232,6 +236,15 @@ export function generateTrees(scene, rng, opts = {}) {
                 const dx = x - islandBoundary.center.x;
                 const dz = z - islandBoundary.center.z;
                 if (dx * dx + dz * dz > islandSafeRadius * islandSafeRadius) return false;
+                if (corral) {
+                    const cdx = x - corral.center.x;
+                    const cdz = z - corral.center.z;
+                    const cr = corral.radius + 5;
+                    if (cdx * cdx + cdz * cdz < cr * cr) return false;
+                }
+            } else if (coastlineBoundary) {
+                // Keep trees a few metres inside the shore (no trees in the surf).
+                if (sampleSignedDistance(coastField, x, z) < 6) return false;
                 if (corral) {
                     const cdx = x - corral.center.x;
                     const cdz = z - corral.center.z;

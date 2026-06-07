@@ -501,6 +501,57 @@ describe('60Hz simulation baseline', () => {
         expect(trace).toEqual(expected);
     });
 
+    // Cycle 64: coastline boundary trace. NEW fixture
+    // (coastline-wolf-coast-60hz.json), net-additive - the 9 pre-existing
+    // fixtures above are untouched (no scene used `coastline` before this), which
+    // proves the rect/island dispatch stayed byte-identical. Pins the SDF-driven
+    // shore avoidance + hard clamp on the Wolf Coast boot at 60Hz; the Worker
+    // builds the same field from the same polygon, so this is the co-op parity
+    // anchor for Cycle 67.
+    it('coastline boundary Wolf Coast: 40 sheep in the foot shore band drift inland', () => {
+        // Wolf Coast foot sole shore is near z=-1490. A cluster at (250, -1460)
+        // sits ~25m inside the shore - within the 30m falloff band - so every
+        // sheep feels an inward (+z) steer from the SDF gradient. Dog parked in
+        // the foot far from the cluster (beyond the 8m fleeRadius).
+        const sheep = makeDeterministicFlock(40, 250, -1460, 1.2);
+        const dog = makeSheepdog('p1', -100, -1050);
+        const state = makeIslandGameState('wolf-coast', 40);
+        const config = makeIslandSheepConfig('wolf-coast');
+
+        // Sanity: the scene really is on the new boundary kind.
+        expect(state.boundary.kind).toBe('coastline');
+
+        const trace: Array<{
+            tick: number;
+            sheep: Array<{ id: number; x: number; z: number; state: number }>;
+        }> = [];
+
+        trace.push({
+            tick: 0,
+            sheep: sheep.map(s => ({ id: s.id, x: round4(s.position.x), z: round4(s.position.z), state: s.state }))
+        });
+
+        for (let t = 1; t <= 60; t++) {
+            tickSheepIslandCoop(sheep, [dog], state, DT, config);
+            trace.push({
+                tick: t,
+                sheep: sheep.map(s => ({ id: s.id, x: round4(s.position.x), z: round4(s.position.z), state: s.state }))
+            });
+        }
+
+        const expected = loadOrWriteFixture('coastline-wolf-coast-60hz.json', trace) as typeof trace;
+
+        expect(trace).toHaveLength(61);
+        expect(trace[0].sheep).toHaveLength(40);
+        // Sanity: the cluster mean-z must drift inland (more positive z, away
+        // from the southern sole shore) over 60 ticks.
+        const meanZStart = trace[0].sheep.reduce((a, s) => a + s.z, 0) / 40;
+        const meanZEnd = trace[60].sheep.reduce((a, s) => a + s.z, 0) / 40;
+        expect(meanZEnd).toBeGreaterThan(meanZStart);
+
+        expect(trace).toEqual(expected);
+    });
+
     // Cycle 61 Phase 4: deterministic bark impulse trace. New fixture
     // (bark-impulse-60hz.json), recorded here as intended NEW behavior. The
     // no-bark fixtures above are untouched - applyBarkImpulse is only ever

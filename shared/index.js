@@ -11,6 +11,7 @@
 // Import Vector2D for use in utility functions
 import { Vector2D } from './Vector2D.js';
 import { loadScene, DEFAULT_SCENE_ID } from './scenes/index.js';
+import { coastlineBounds } from './CoastlineField.js';
 
 // Core data structures
 export { Vector2D } from './Vector2D.js';
@@ -83,6 +84,23 @@ export {
 // client predictor/solo path, and the sim-baseline harness so solo and MP agree.
 // Additive - with no bark fired on a tick the sim is byte-identical to pre-bark.
 export { applyBarkImpulse, DEFAULT_BARK_CONFIG } from './BarkImpulse.js';
+
+// Cycle 64: coastline boundary primitive (an arbitrary concave shoreline). The
+// Worker authoritative sim and the client predictor both build an identical SDF
+// from the inline polygon at load and steer entities off the shore with the same
+// smoothstep force the island radius used. Additive - a new boundary kind, no
+// existing scene uses it, so existing sim-baselines stay byte-identical.
+export {
+    buildCoastlineField,
+    getCoastlineField,
+    sampleSignedDistance,
+    coastlineInwardDir,
+    coastlineAvoidance,
+    applyHardCoastlineConstraint,
+    coastlineBounds,
+    pointsBounds,
+    DEFAULT_COASTLINE_CELL_SIZE
+} from './CoastlineField.js';
 
 // Game state validation and management
 export {
@@ -196,6 +214,9 @@ export function boundaryToBounds(boundary) {
     if (boundary.kind === 'island') {
         const r = boundary.radius;
         return { minX: boundary.center.x - r, maxX: boundary.center.x + r, minZ: boundary.center.z - r, maxZ: boundary.center.z + r };
+    }
+    if (boundary.kind === 'coastline') {
+        return coastlineBounds(boundary);
     }
     throw new Error(`Unknown boundary.kind: ${boundary.kind}`);
 }

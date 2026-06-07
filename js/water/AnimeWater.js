@@ -205,6 +205,24 @@ const FRAG = /* glsl */ `
 `;
 
 function getBoundaryUniforms(boundary) {
+    // Cycle 64: coastline has no radius/center. Derive a bbox-centred disc for
+    // the two-band deep/shallow colour gradient; the sharp shoreline foam is
+    // heightfield-driven (uHasHeight) so it tracks the real boot coast anyway.
+    if (boundary.kind === 'coastline' && Array.isArray(boundary.points)) {
+        let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+        for (const p of boundary.points) {
+            if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+            if (p.z < minZ) minZ = p.z; if (p.z > maxZ) maxZ = p.z;
+        }
+        const cx = (minX + maxX) / 2;
+        const cz = (minZ + maxZ) / 2;
+        const radius = Math.max(maxX - minX, maxZ - minZ) / 2;
+        return {
+            center: new THREE.Vector2(cx, cz),
+            radius,
+            falloff: boundary.falloff ?? 40,
+        };
+    }
     return {
         center: new THREE.Vector2(boundary.center?.x ?? 0, boundary.center?.z ?? 0),
         radius: boundary.radius,

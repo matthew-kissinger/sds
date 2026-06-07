@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
+import { getCoastlineField, sampleSignedDistance } from '../../shared/CoastlineField.js';
+
 export const ROCK_Y_SCALE = 0.7;
 export const ROCK_Z_SCALE = 1.2;
 
@@ -56,8 +58,11 @@ export function createRockFormation(centerX, centerZ, formationType, rng) {
 }
 
 export function createRockPlacementZones(zones, sceneDef) {
-    const islandBoundary = sceneDef?.boundary?.kind === 'island' ? sceneDef.boundary : null;
-    if (islandBoundary) {
+    // Cycle 64: coastline scenes use the same sparse inner zone set as islands
+    // (rocks scatter the near/mid land, not the whole bounding box).
+    const kind = sceneDef?.boundary?.kind;
+    const waterAware = kind === 'island' || kind === 'coastline';
+    if (waterAware) {
         return [
             { zone: zones.nearField, formations: 1, types: ['cluster'], scaleRange: { min: 4, max: 7 } },
             { zone: zones.midField, formations: 2, types: ['cluster'], scaleRange: { min: 5, max: 9 } },
@@ -95,6 +100,10 @@ export function generateRockPlacementPlan({
     const rockPositions = [];
     const placements = [];
     const islandBoundary = sceneDef?.boundary?.kind === 'island' ? sceneDef.boundary : null;
+    // Cycle 64: coastline scenes are water-aware too (water = outside the polygon).
+    const coastlineBoundary = sceneDef?.boundary?.kind === 'coastline' ? sceneDef.boundary : null;
+    const coastField = coastlineBoundary ? getCoastlineField(coastlineBoundary) : null;
+    const waterAware = !!(islandBoundary || coastlineBoundary);
     const playArea = zones.playArea;
     const corral = sceneDef?.corral || null;
     const islandSafeRadius = islandBoundary
@@ -102,10 +111,16 @@ export function generateRockPlacementPlan({
         : 0;
 
     const isInWater = (x, z) => {
-        if (!islandBoundary) return false;
-        const dx = x - islandBoundary.center.x;
-        const dz = z - islandBoundary.center.z;
-        return (dx * dx + dz * dz) > islandSafeRadius * islandSafeRadius;
+        if (islandBoundary) {
+            const dx = x - islandBoundary.center.x;
+            const dz = z - islandBoundary.center.z;
+            return (dx * dx + dz * dz) > islandSafeRadius * islandSafeRadius;
+        }
+        if (coastField) {
+            // Keep rocks a few metres inside the shore so none sit in the surf.
+            return sampleSignedDistance(coastField, x, z) < 4;
+        }
+        return false;
     };
     const isInCorralKeepout = (x, z) => {
         if (!corral) return false;
@@ -120,7 +135,7 @@ export function generateRockPlacementPlan({
             const centerX = zone.minX + rng() * (zone.maxX - zone.minX);
             const centerZ = zone.minZ + rng() * (zone.maxZ - zone.minZ);
 
-            if (islandBoundary) {
+            if (waterAware) {
                 if (isInWater(centerX, centerZ)) continue;
                 if (isInCorralKeepout(centerX, centerZ)) continue;
             } else if (isInRect({ x: centerX, z: centerZ }, playArea, 50)) {
@@ -133,7 +148,7 @@ export function generateRockPlacementPlan({
             const formation = createRockFormation(centerX, centerZ, formationType, rng);
 
             for (const rock of formation) {
-                if (islandBoundary) {
+                if (waterAware) {
                     if (isInWater(rock.x, rock.z)) continue;
                     if (isInCorralKeepout(rock.x, rock.z)) continue;
                 } else if (isInRect(rock, playArea, 40)) {
@@ -143,7 +158,7 @@ export function generateRockPlacementPlan({
                 if (isInFarmHouseArea(rock.x, rock.z)) continue;
 
                 const size = rng();
-                const rockType = islandBoundary
+                const rockType = waterAware
                     ? (size < 0.75 ? 'rock1' : 'rock2')
                     : (size < 0.5 ? 'rock1' : size < 0.8 ? 'rock2' : 'rock3');
                 const baseScale = scaleRange.min + rng() * (scaleRange.max - scaleRange.min);

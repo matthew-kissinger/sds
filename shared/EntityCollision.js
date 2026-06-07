@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
+import { coastlineBounds } from './CoastlineField.js';
+
 /**
  * Deterministic hard-body separation between flock bodies.
  *
@@ -77,6 +79,16 @@ function finiteCollisionBounds(bounds, padding) {
             maxX: bounds.center.x + radius,
             minZ: bounds.center.z - radius,
             maxZ: bounds.center.z + radius
+        };
+    }
+    if (bounds.kind === 'coastline' && Array.isArray(bounds.points)) {
+        const bb = coastlineBounds(bounds);
+        const pad = Math.max(0, Number(bounds.falloff) || 0) + padding;
+        return {
+            minX: bb.minX - pad,
+            maxX: bb.maxX + pad,
+            minZ: bb.minZ - pad,
+            maxZ: bb.maxZ + pad
         };
     }
     const minX = Number(bounds.minX);

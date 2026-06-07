@@ -10,13 +10,35 @@
  *   --worldSize <m>       World extent the heightmap covers in metres (default 400)
  *   --peakHeight <m>      Maximum vertical amplitude in metres (default 6)
  *   --seed <int>          Integer seed (default 1)
- *   --boundary <kind>     'rect' (default) or 'island' — island applies a radial
- *                         smoothstep falloff outside `radius - falloff` toward `seaLevel`.
+ *   --boundary <kind>     'rect' (default), 'island', or 'coastline'.
+ *                         island applies a radial smoothstep falloff outside
+ *                         `radius - falloff` toward `seaLevel`. coastline (Cycle
+ *                         64) masks an arbitrary concave polygon: terrain blends
+ *                         to `seaLevel` across `--coastFalloff` of the shore and
+ *                         is `seaLevel` outside, using the SAME signed-distance
+ *                         field shared/CoastlineField.js builds for the sim, so
+ *                         the rendered coast cannot drift from the sim boundary.
  *   --radius <m>          Island radius in metres (only used when --boundary island, default 90)
  *   --falloff <m>         Island falloff width in metres (default 15)
  *   --seaLevel <m>        Height outside the falloff zone (default -2)
  *   --centerX <m>         Island centre X (default 0)
  *   --centerZ <m>         Island centre Z (default 0)
+ *   --points <path>       coastline only: path to a module exporting
+ *                         WOLF_COAST_POINTS (or a default array) or a .json
+ *                         array of {x,z}. The polygon, in world metres.
+ *   --coastFalloff <m>    coastline only: beach band width the terrain blends to
+ *                         seaLevel across (default 50).
+ *   --peakX/--peakZ <m>   coastline only: procedural mountain centre.
+ *   --peakRadius <m>      coastline only: mountain base radius (default 500).
+ *   --mountainHeight <m>  coastline only: mountain summit height in metres
+ *                         (default 0 = no mountain).
+ *
+ * Height convention: the island/rect path stores normalized data and the
+ * manifest carries the bake `peakHeight` (sample() multiplies). The coastline
+ * path stores ABSOLUTE METRES (hills + mountain, masked) and writes manifest
+ * peakHeight=1, so Heightfield.sample() returns metres directly — predictable
+ * for a 120 m mountain. `--peakHeight` is the rolling-hill amplitude (metres)
+ * on the coastline path.
  *   --out <path>          Output binary path (required, conventionally `.bin`).
  *                         Format is still raw R32F floats; the `.bin` extension
  *                         is used so itch.io's CDN doesn't 403 on unrecognised
@@ -37,9 +59,11 @@
  *   - Float32Array bytes are written raw, little-endian (Node default). Consumers
  *     should read with `new Float32Array(buf.buffer)`.
  */
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { createNoise2D } from 'simplex-noise';
+import { buildCoastlineField, sampleSignedDistance } from '../shared/CoastlineField.js';
 
 /** Tiny mulberry32 PRNG so a given seed deterministically drives simplex-noise. */
 function mulberry32(seed) {
@@ -91,14 +115,53 @@ const peakHeight = Number(args.peakHeight ?? 6);
 const seed = Number(args.seed ?? 1);
 
 const boundaryKind = (args.boundary ?? 'rect').toString();
-if (boundaryKind !== 'rect' && boundaryKind !== 'island') {
-  throw new Error(`Invalid --boundary ${args.boundary} (must be 'rect' or 'island')`);
+if (boundaryKind !== 'rect' && boundaryKind !== 'island' && boundaryKind !== 'coastline') {
+  throw new Error(`Invalid --boundary ${args.boundary} (must be 'rect', 'island', or 'coastline')`);
 }
 const islandRadius = Number(args.radius ?? 90);
 const islandFalloff = Number(args.falloff ?? 15);
 const seaLevel = Number(args.seaLevel ?? -2);
 const islandCenterX = Number(args.centerX ?? 0);
 const islandCenterZ = Number(args.centerZ ?? 0);
+
+// Coastline (Cycle 64) params.
+const coastFalloff = Number(args.coastFalloff ?? 50);
+const peakX = Number(args.peakX ?? 0);
+const peakZ = Number(args.peakZ ?? 0);
+const peakRadius = Number(args.peakRadius ?? 500);
+const mountainHeight = Number(args.mountainHeight ?? 0);
+
+/** Load the coastline polygon from a .js module (WOLF_COAST_POINTS / default) or a .json array. */
+async function loadCoastPoints(pathArg) {
+  if (!pathArg || pathArg === true) {
+    throw new Error('--boundary coastline requires --points <module-or-json>');
+  }
+  const abs = resolve(pathArg.toString());
+  if (abs.endsWith('.json')) {
+    return JSON.parse(await readFile(abs, 'utf8'));
+  }
+  const mod = await import(pathToFileURL(abs).href);
+  const pts = mod.WOLF_COAST_POINTS ?? mod.points ?? mod.default;
+  if (!Array.isArray(pts)) {
+    throw new Error(`--points module ${pathArg} must export WOLF_COAST_POINTS, points, or a default array`);
+  }
+  return pts;
+}
+
+let coastPoints = null;
+let coastField = null;
+if (boundaryKind === 'coastline') {
+  coastPoints = await loadCoastPoints(args.points);
+  if (coastPoints.length < 3) throw new Error('coastline polygon needs >= 3 points');
+  if (!Number.isFinite(coastFalloff) || coastFalloff <= 0) throw new Error(`Invalid --coastFalloff ${args.coastFalloff}`);
+  if (!Number.isFinite(mountainHeight)) throw new Error(`Invalid --mountainHeight ${args.mountainHeight}`);
+  if (mountainHeight !== 0 && (!Number.isFinite(peakRadius) || peakRadius <= 0)) {
+    throw new Error(`Invalid --peakRadius ${args.peakRadius}`);
+  }
+  // Build the SAME SDF the sim uses (fine cell for a smooth beach), so the
+  // baked shoreline matches the boundary the sheep are steered off.
+  coastField = buildCoastlineField(coastPoints, { cellSize: 8, falloff: coastFalloff });
+}
 
 if (!Number.isFinite(size) || size <= 0) throw new Error(`Invalid --size ${args.size}`);
 if (!Number.isFinite(worldSize) || worldSize <= 0) throw new Error(`Invalid --worldSize ${args.worldSize}`);
@@ -168,6 +231,28 @@ for (let z = 0; z < size; z++) {
       }
     }
 
+    // Coastline (Cycle 64): add the procedural mountain, then mask the polygon
+    // via the shared SDF. h is stored as ABSOLUTE METRES (manifest peakHeight=1).
+    if (boundaryKind === 'coastline') {
+      if (mountainHeight !== 0) {
+        const dx = wx - peakX;
+        const dz = wz - peakZ;
+        const dm = Math.sqrt(dx * dx + dz * dz);
+        let t = dm / peakRadius;
+        if (t < 0) t = 0; else if (t > 1) t = 1;
+        const dome = 1 - t * t * (3 - 2 * t); // 1 at summit, 0 at base radius
+        h += mountainHeight * dome;
+      }
+      const sd = sampleSignedDistance(coastField, wx, wz); // + inside, - outside
+      if (sd <= 0) {
+        h = seaLevel;
+      } else if (sd < coastFalloff) {
+        const t = sd / coastFalloff; // 0 at shore -> 1 at band inner edge
+        const ts = t * t * (3 - 2 * t);
+        h = seaLevel * (1 - ts) + h * ts;
+      }
+    }
+
     heights[z * size + x] = h;
   }
 }
@@ -176,11 +261,14 @@ const outAbs = resolve(out);
 await mkdir(dirname(outAbs), { recursive: true });
 await writeFile(outAbs, Buffer.from(heights.buffer));
 
+// Coastline stores absolute metres, so sample() must NOT re-scale: peakHeight=1.
+const manifestPeakHeight = boundaryKind === 'coastline' ? 1 : peakHeight;
+
 const manifest = {
   width: size,
   height: size,
   worldSize,
-  peakHeight,
+  peakHeight: manifestPeakHeight,
   version: 1,
   scene,
   seed,
@@ -194,10 +282,26 @@ if (boundaryKind === 'island') {
     seaLevel,
   };
 }
+if (boundaryKind === 'coastline') {
+  manifest.boundary = {
+    kind: 'coastline',
+    vertices: coastPoints.length,
+    coastFalloff,
+    seaLevel,
+    mountain: mountainHeight !== 0
+      ? { x: peakX, z: peakZ, radius: peakRadius, height: mountainHeight }
+      : null,
+  };
+  manifest.hillAmplitude = peakHeight;
+}
 await writeFile(`${outAbs}.json`, JSON.stringify(manifest, null, 2) + '\n');
 
 const expectedBytes = size * size * 4;
-const islandSummary = boundaryKind === 'island'
-  ? ` island(r=${islandRadius}, falloff=${islandFalloff}, sea=${seaLevel})`
-  : '';
-console.log(`Baked ${outAbs}: ${size}x${size} float32 (${expectedBytes} bytes), peakHeight=${peakHeight}, seed=${seed}${islandSummary}`);
+let kindSummary = '';
+if (boundaryKind === 'island') {
+  kindSummary = ` island(r=${islandRadius}, falloff=${islandFalloff}, sea=${seaLevel})`;
+} else if (boundaryKind === 'coastline') {
+  const mtn = mountainHeight !== 0 ? `, mountain(${mountainHeight}m @ (${peakX},${peakZ}) r=${peakRadius})` : '';
+  kindSummary = ` coastline(${coastPoints.length} pts, coastFalloff=${coastFalloff}, sea=${seaLevel}, hills=${peakHeight}m${mtn})`;
+}
+console.log(`Baked ${outAbs}: ${size}x${size} float32 (${expectedBytes} bytes), manifestPeakHeight=${manifestPeakHeight}, seed=${seed}${kindSummary}`);

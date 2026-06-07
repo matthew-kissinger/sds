@@ -11,12 +11,14 @@
 import { field } from './field.js';
 import { rollingHills } from './rolling-hills.js';
 import { openCountry } from './open-country.js';
+import { wolfCoast } from './wolf-coast.js';
 
 /** @type {Record<string, import('./types.js').SceneDef>} */
 const SCENES = {
     field,
     'rolling-hills': rollingHills,
-    'open-country': openCountry
+    'open-country': openCountry,
+    'wolf-coast': wolfCoast
 };
 
 // Cycle 25 Phase F (2026-05-06 follow-up): default scene shifted from

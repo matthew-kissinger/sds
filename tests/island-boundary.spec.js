@@ -7,6 +7,7 @@ import {
     calculateBoundaryAvoidanceWithGate,
     applyHardBoundaryConstraints,
 } from '../shared/BoundaryCollision.js';
+import { boundaryToBounds } from '../shared/index.js';
 
 /**
  * Island boundary contract tests (Cycle 5 Phase 1).
@@ -133,6 +134,78 @@ describe('Island hard clamp — applyHardBoundaryConstraints', () => {
         expect(outFar.x).toBeCloseTo(outFar.z, 6);
         const rFar = Math.sqrt(outFar.x * outFar.x + outFar.z * outFar.z);
         expect(rFar).toBeCloseTo(90, 6);
+    });
+});
+
+// Cycle 64: the coastline kind is a new dispatch branch. A square polygon makes
+// the inward direction trivially predictable (near +x edge, inward is -x). Deep
+// behaviour + analytic-circle parity live in tests/coastline-field.spec.js;
+// these specs prove the three dispatchers route coastline at all.
+const COASTLINE_SQUARE = {
+    kind: 'coastline',
+    points: [
+        { x: -100, z: -100 }, { x: 100, z: -100 },
+        { x: 100, z: 100 }, { x: -100, z: 100 },
+    ],
+    falloff: 20,
+    cellSize: 5,
+};
+
+describe('Coastline dispatch — calculateBoundaryAvoidance', () => {
+    it('entity well inside the safe zone gets zero force', () => {
+        const e = makeEntity(0, 0);
+        const force = calculateBoundaryAvoidance(e, COASTLINE_SQUARE);
+        expect(force.x).toBe(0);
+        expect(force.z).toBe(0);
+    });
+
+    it('entity inside the falloff band near +x edge gets inward (-x) force', () => {
+        const e = makeEntity(90, 0); // 10m inside the +x shore, within 20m falloff
+        const force = calculateBoundaryAvoidance(e, COASTLINE_SQUARE);
+        expect(force.x).toBeLessThan(0);
+        expect(Math.abs(force.z)).toBeLessThan(Math.abs(force.x));
+    });
+
+    it('with-gate dispatcher also routes coastline (no gate carve-out)', () => {
+        const e = makeEntity(90, 0);
+        const force = calculateBoundaryAvoidanceWithGate(e, COASTLINE_SQUARE, null);
+        expect(Math.abs(force.x) + Math.abs(force.z)).toBeGreaterThan(0);
+    });
+});
+
+describe('Coastline hard clamp — applyHardBoundaryConstraints', () => {
+    it('pushes a realistic overshoot back inside in one clamp', () => {
+        const e = makeEntity(120, 0); // 20m past the +x shore, within the padded grid
+        const out = applyHardBoundaryConstraints(e, COASTLINE_SQUARE, null, { margin: 0.2 });
+        expect(out.x).toBeLessThanOrEqual(100);
+        expect(out.x).toBeGreaterThan(0);
+    });
+
+    it('reels a far-flung entity back inside over a few ticks (centroid fallback)', () => {
+        const e = makeEntity(400, 400); // way past the padded grid in both axes
+        for (let i = 0; i < 12; i++) {
+            const out = applyHardBoundaryConstraints(e, COASTLINE_SQUARE, null, { margin: 0.2 });
+            e.position.x = out.x;
+            e.position.z = out.z;
+        }
+        expect(e.position.x).toBeLessThanOrEqual(100);
+        expect(e.position.z).toBeLessThanOrEqual(100);
+        expect(e.position.x).toBeGreaterThan(-100);
+        expect(e.position.z).toBeGreaterThan(-100);
+    });
+
+    it('leaves a deep-interior point unchanged', () => {
+        const e = makeEntity(0, 0);
+        const out = applyHardBoundaryConstraints(e, COASTLINE_SQUARE);
+        expect(out.x).toBeCloseTo(0, 6);
+        expect(out.z).toBeCloseTo(0, 6);
+    });
+});
+
+describe('Coastline boundaryToBounds — returns bbox instead of throwing', () => {
+    it('returns the polygon bounding box', () => {
+        const bb = boundaryToBounds(COASTLINE_SQUARE);
+        expect(bb).toEqual({ minX: -100, maxX: 100, minZ: -100, maxZ: 100 });
     });
 });
 

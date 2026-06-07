@@ -6,6 +6,7 @@ import { FieldConfig } from './FieldConfig.js';
 import { resetFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { resetExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { emptyObstacles } from '../shared/SceneObstacles.js';
+import { coastlineBounds } from '../shared/CoastlineField.js';
 import { getCurrentRoom } from './GameBridge.js';
 import {
     isExtremeBoidCount,
@@ -136,6 +137,11 @@ export class GameState {
         if (this.boundary?.kind === 'island') {
             const safe = this.boundary.radius - (this.boundary.falloff || 0) - 4;
             maxRadius = Math.max(safe, 30);
+        } else if (this.boundary?.kind === 'coastline') {
+            // Cycle 64: cap density-driven spawn expansion at 40% of the smaller
+            // bbox dimension; the scene's sceneSpawnDef owns the actual centre.
+            const bb = coastlineBounds(this.boundary);
+            maxRadius = Math.max(Math.min(bb.maxX - bb.minX, bb.maxZ - bb.minZ) * 0.4, 30);
         } else if (this.bounds) {
             const w = this.bounds.maxX - this.bounds.minX;
             const h = this.bounds.maxZ - this.bounds.minZ;

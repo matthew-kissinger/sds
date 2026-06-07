@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2D } from './Vector2D.js';
+import { coastlineAvoidance, applyHardCoastlineConstraint, coastlineBounds } from './CoastlineField.js';
 
 /**
  * Pure boundary and collision detection functions.
@@ -11,6 +12,11 @@ import { Vector2D } from './Vector2D.js';
  * OR a `Boundary` `{kind, ...}` and route internally on `kind`. Existing
  * call sites passing legacy `bounds` keep working unchanged — the rect path
  * is byte-identical to pre-Cycle-5 behaviour, which protects sim baselines.
+ *
+ * Cycle 64 added `coastline` (an arbitrary concave shoreline). It is a NEW
+ * dispatch branch everywhere — the rect and island math is untouched, so all
+ * existing sim-baseline fixtures stay byte-identical. The coastline geometry
+ * (signed distance + inward direction) lives in shared/CoastlineField.js.
  *
  * @typedef {import('./scenes/types.js').Boundary} Boundary
  */
@@ -44,6 +50,9 @@ function boundaryAsRect(boundary) {
     if (boundary.kind === 'rect') {
         return boundary;
     }
+    if (boundary.kind === 'coastline') {
+        return coastlineBounds(boundary);
+    }
     const r = boundary.radius;
     return {
         minX: boundary.center.x - r,
@@ -63,6 +72,9 @@ function boundaryAsRect(boundary) {
  */
 export function calculateBoundaryAvoidance(entity, boundsOrBoundary, config = {}) {
     const boundary = asBoundary(boundsOrBoundary);
+    if (boundary.kind === 'coastline') {
+        return coastlineAvoidance(entity, boundary, config);
+    }
     if (boundary.kind === 'island') {
         return calculateIslandAvoidance(entity, boundary, config);
     }
@@ -181,6 +193,15 @@ function calculateIslandAvoidance(entity, boundary, config = {}) {
  */
 export function calculateBoundaryAvoidanceWithGate(entity, boundsOrBoundary, gate, config = {}) {
     const boundary = asBoundary(boundsOrBoundary);
+    if (boundary.kind === 'coastline') {
+        // Coastline: same shore avoidance, no gate carve-out (shorelines have
+        // no perimeter gates — like islands).
+        return coastlineAvoidance(entity, boundary, {
+            maxSpeed: config.maxSpeed ?? 0.1,
+            maxForce: config.maxForce ?? 0.02,
+            forceMultiplier: 1.5
+        });
+    }
     if (boundary.kind === 'island') {
         // Island: same radial avoidance, no gate carve-out
         return calculateIslandAvoidance(entity, boundary, {
@@ -355,6 +376,9 @@ export function calculateBoundaryAvoidanceWithMultipleGates(entity, bounds, comp
  */
 export function applyHardBoundaryConstraints(entity, boundsOrBoundary, gate = null, config = {}) {
     const boundary = asBoundary(boundsOrBoundary);
+    if (boundary.kind === 'coastline') {
+        return applyHardCoastlineConstraint(entity, boundary, config);
+    }
     if (boundary.kind === 'island') {
         return applyHardBoundaryConstraintsIsland(entity, boundary, config);
     }

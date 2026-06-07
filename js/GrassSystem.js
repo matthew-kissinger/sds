@@ -6,6 +6,7 @@ import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { TIER_PRESETS } from './HardwareTier.js';
 import { createKonveyorGrassMaterial } from './world/konveyorGrassMaterialAdapter.js';
 import { mulberry32 } from '../shared/Random.js';
+import { getCoastlineField, sampleSignedDistance } from '../shared/CoastlineField.js';
 
 // Shader cache for sync access after async load
 let grassDesktopVertexShader = null;
@@ -90,6 +91,21 @@ export class GrassSystem {
         this.sceneGrass = sceneGrass;
         this.heightfield = heightfield;
         this.boundary = boundary || null;
+        // Cycle 64: for a coastline scene, grass density + chunk extent follow
+        // the signed-distance field (dense inside, fading at the shore) instead
+        // of the origin-radial falloff, which would starve a play area that
+        // sits far from the world origin (Wolf Coast's foot). Built once here.
+        this._isCoastline = this.boundary?.kind === 'coastline';
+        this._coastField = this._isCoastline ? getCoastlineField(this.boundary) : null;
+        // Grass thins to zero over the last `_coastShoreFade` metres before the
+        // shore. The shoreline-Y cull still owns the exact waterline.
+        this._coastShoreFade = 28;
+        // Cycle 64: optional tall-grass bands (axis-aligned rects with a blade-
+        // height multiplier). Absent on every pre-64 scene.
+        this._tallZones = Array.isArray(sceneGrass?.tallZones) ? sceneGrass.tallZones : null;
+        // Cycle 64: grid centre (origin unless a scene moves its grass onto an
+        // off-origin play area, e.g. Wolf Coast's foot).
+        this._grassCenter = sceneGrass?.grassCenter ?? { x: 0, z: 0 };
         this.konveyorGrassSearch = opts.search;
         this.konveyorGrassFactories = opts.konveyorGrassFactories;
         this.konveyorMeadowQuadMaterialSummary = null;
@@ -1093,23 +1109,38 @@ export class GrassSystem {
         const meadowQuadEnabled = this._tierPreset.meadowQuadEnabled === true;
         const MEADOW_QUAD_RADIUS_M = 260;
 
+        // Cycle 64: the grid centres on grassCenter (origin for every pre-64
+        // scene) so a large island can place its grass over the play area
+        // instead of spanning the whole island from the world origin.
+        const gridOriginX = this._grassCenter.x;
+        const gridOriginZ = this._grassCenter.z;
         for (let cx = 0; cx < chunksPerSide; cx++) {
             for (let cz = 0; cz < chunksPerSide; cz++) {
-                const chunkMinX = -halfWorld + cx * chunkSize;
-                const chunkMinZ = -halfWorld + cz * chunkSize;
+                const chunkMinX = gridOriginX - halfWorld + cx * chunkSize;
+                const chunkMinZ = gridOriginZ - halfWorld + cz * chunkSize;
                 const chunkMaxX = chunkMinX + chunkSize;
                 const chunkMaxZ = chunkMinZ + chunkSize;
                 const chunkCenterX = (chunkMinX + chunkMaxX) / 2;
                 const chunkCenterZ = (chunkMinZ + chunkMaxZ) / 2;
 
-                // Skip chunks that are too far from center (create circular field)
+                // Skip chunks that are too far from center (create circular field).
+                // Cycle 64: coastline scenes cull by the signed-distance field so
+                // the grass spans the whole island polygon, not a disc round the
+                // world origin (the boot's foot is ~1.1km from origin).
                 const distFromCenter = Math.sqrt(chunkCenterX * chunkCenterX + chunkCenterZ * chunkCenterZ);
-                if (distFromCenter > cullDistance) continue;
+                if (this._isCoastline) {
+                    const sd = sampleSignedDistance(this._coastField, chunkCenterX, chunkCenterZ);
+                    if (sd < -chunkSize) continue; // chunk fully outside the shore
+                } else if (distFromCenter > cullDistance) {
+                    continue;
+                }
 
                 // Cycle 23 Phase D2: far-ring meadow-quad path. Chunks within
                 // [MEADOW_QUAD_RADIUS_M, cullDistance] become single textured
-                // planes; near chunks keep clump instancing.
-                if (meadowQuadEnabled && distFromCenter > MEADOW_QUAD_RADIUS_M) {
+                // planes; near chunks keep clump instancing. Disabled for
+                // coastline (the origin-radial ring would tile water over the
+                // boot's bays); coastline relies on per-blade dither LOD instead.
+                if (meadowQuadEnabled && !this._isCoastline && distFromCenter > MEADOW_QUAD_RADIUS_M) {
                     const quadChunk = this.createMeadowQuadChunk(
                         cx, cz, chunkMinX, chunkMinZ, chunkMaxX, chunkMaxZ
                     );
@@ -1158,8 +1189,18 @@ export class GrassSystem {
             // floor keeps a sparse outer ring up to the chunk-cull distance,
             // which lets the boundary cull (island scenes) draw the actual
             // shoreline rather than the density curve.
-            const distFromCenter = Math.sqrt(x * x + z * z);
-            const densityFactor = Math.max(0, 1 - distFromCenter / this.config.grassRadius);
+            // Cycle 64: coastline density follows the signed-distance field
+            // (full inside, fading to zero across the last `_coastShoreFade` m
+            // before the shore) so the whole boot is grassed, not a disc round
+            // the origin. Other scenes keep the origin-radial falloff.
+            let densityFactor;
+            if (this._isCoastline) {
+                const sd = sampleSignedDistance(this._coastField, x, z);
+                densityFactor = Math.max(0, Math.min(1, sd / this._coastShoreFade));
+            } else {
+                const distFromCenter = Math.sqrt(x * x + z * z);
+                densityFactor = Math.max(0, 1 - distFromCenter / this.config.grassRadius);
+            }
             if (this.random() > densityFactor * 0.8 + 0.2) continue;
 
             validPositions.push({ x, z });
@@ -1220,7 +1261,15 @@ export class GrassSystem {
             const distFromCenter = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
             const distanceScale = Math.max(0.5, 1 - distFromCenter / (this.config.worldSize * 0.8));
             const scale = (0.7 + this.random() * 0.6) * distanceScale;
-            dummy.scale.setScalar(scale);
+            // Cycle 64: a tall-grass band scales blade HEIGHT (Y) only, leaving
+            // the footprint unchanged so it reads as taller grass, not bigger
+            // clumps. heightMul = 1 everywhere outside a declared tallZone.
+            const heightMul = this._tallHeightMul(pos.x, pos.z);
+            if (heightMul !== 1) {
+                dummy.scale.set(scale, scale * heightMul, scale);
+            } else {
+                dummy.scale.setScalar(scale);
+            }
 
             dummy.updateMatrix();
             instancedMesh.setMatrixAt(i, dummy.matrix);
@@ -1415,6 +1464,23 @@ export class GrassSystem {
         });
         this.konveyorMeadowQuadMaterialSummary = materialResult.summary;
         return materialResult.material;
+    }
+
+    /**
+     * Cycle 64: blade-height multiplier at (x, z) from the scene's tallZones.
+     * Returns 1 when no zone is declared or the point is outside every zone.
+     * @param {number} x
+     * @param {number} z
+     * @returns {number}
+     */
+    _tallHeightMul(x, z) {
+        if (!this._tallZones) return 1;
+        for (const zone of this._tallZones) {
+            if (x >= zone.minX && x <= zone.maxX && z >= zone.minZ && z <= zone.maxZ) {
+                return zone.heightMul ?? 1;
+            }
+        }
+        return 1;
     }
 
     /**
