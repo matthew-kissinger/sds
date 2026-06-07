@@ -101,12 +101,32 @@ export const wolfCoast = {
         ],
     },
 
-    // Conifer-leaning woods: a dense forest band on the leg, a light scatter in
-    // the foot. Kept well inside the land so the scatter stays off the water.
+    // Cycle 65 biome character: dense forest pockets, a tree-line windbreak, and
+    // a deliberately open grazing pasture so the foot reads as fields-and-woods
+    // rather than one mountain on empty ground. Densities: >1 dense, <1 sparse.
+    // The central-east foot (the grazing field) is left open on purpose; the
+    // west foot (the future homestead) stays light so the dog start is clear.
+    // Trees in water are culled by the Cycle 64 coastline SDF, so coastal stands
+    // self-trim at the shore.
     woodsZones: [
-        { center: { x: -616, z: 560 }, radius: 320, density: 2.5 },
-        { center: { x: -520, z: -250 }, radius: 240, density: 1.2 },
-        { center: { x: 300, z: -1120 }, radius: 280, density: 0.5 },
+        // Dense conifer forest cloaking the mountain skirt on the leg.
+        { center: { x: -616, z: 560 }, radius: 300, density: 3.0 },
+        // A second dense stand lower on the leg.
+        { center: { x: -430, z: 120 }, radius: 190, density: 2.4 },
+        // Thinning treeline where the leg meets the foot.
+        { center: { x: -520, z: -260 }, radius: 210, density: 1.1 },
+        // North-foot windbreak: a row of tight stands reads as a tree line
+        // dividing the open foot pasture from the wooded leg.
+        { center: { x: -150, z: -880 }, radius: 55, density: 2.2 },
+        { center: { x: 20, z: -870 }, radius: 55, density: 2.2 },
+        { center: { x: 190, z: -875 }, radius: 55, density: 2.2 },
+        { center: { x: 360, z: -880 }, radius: 55, density: 2.2 },
+        { center: { x: 520, z: -885 }, radius: 55, density: 2.2 },
+        // A lone copse on the east foot near the toe, for depth.
+        { center: { x: 700, z: -1180 }, radius: 130, density: 0.9 },
+        // A light grove southwest of the homestead so the west foot has shape
+        // without crowding the dog start.
+        { center: { x: -280, z: -1180 }, radius: 110, density: 1.0 },
     ],
     treeProfile: { tree1: 0.7, tree2: 0.3 },
     treeScaleJitter: { min: 0.92, max: 1.3 },
@@ -118,8 +138,16 @@ export const wolfCoast = {
 
     sky: { preset: 'dusk' },
     // Dusk-tinted fog lifted well past the far shore (the island spans ~3 km) so
-    // the horizon reads as soft haze rather than a fog wall over the water.
+    // the horizon reads as soft haze rather than a fog wall over the water. The
+    // day/night cycle drives the fog COLOR from the horizon each frame; these
+    // near/far distances stay fixed so the huge island never hits a fog wall.
     fog: { color: '#b9a98c', near: 600, far: 2600 },
+
+    // Cycle 65: the day/night cycle + the homestead herd-back day loop. You wake
+    // at the homestead just after sunrise on day one; the sun arcs over
+    // secondsPerDay; dayLoop opts in the gate-by-phase + herd-back-before-dusk
+    // controller. A tunable strawman (day length / start time) for Matt's pass.
+    dayNight: { enabled: true, secondsPerDay: 240, initialT: 0.28, dayLoop: true },
 
     // Cycle 64: a tunable strawman ladder (reserved for Matt's feel pass). The
     // island is large, so it runs a broad span from a 3-sheep Just Play up to

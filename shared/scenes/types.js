@@ -246,6 +246,22 @@
  */
 
 /**
+ * Cycle 65: opt-in day/night cycle + the homestead day loop for a scene. When
+ * `enabled`, the renderer turns on the existing DayNightCycle (js/atmosphere/
+ * DayNightCycle.js): the sun starts at `initialT` and arcs over `secondsPerDay`.
+ * `dayLoop` opts the scene into the client-side herd-back day loop (gate opens at
+ * dawn, closes at night, count the flock home by dusk). Render/client-only - the
+ * Worker sim never reads it, so it is the cheap additive fence case. Absent =>
+ * the scene keeps its static `sky.preset` (every pre-65 scene), byte-identical.
+ *
+ * @typedef {Object} DayNightDef
+ * @property {boolean} enabled            Turn on the day/night sun arc.
+ * @property {number} [secondsPerDay]     Real seconds for a full day (default 600).
+ * @property {number} [initialT]          Start time-of-day in [0,1) (default 0.5 noon; 0.25 sunrise, 0.75 sunset).
+ * @property {boolean} [dayLoop]          Opt into the homestead herd-back day loop.
+ */
+
+/**
  * @typedef {Object} SceneDef
  * @property {string} id                       Registry key (e.g. "field")
  * @property {string} name                     Display name (plain or i18n key)
@@ -283,6 +299,7 @@
  *   chaos 5000`) via `shared/difficulty.js`, so this is the cheap additive fence
  *   case. Consumed by `getSoloCount` (totalSheep), `getRankedCounts` (Worker
  *   submit allow-list + leaderboard count tabs), and the entrance.
+ * @property {DayNightDef} [dayNight]   Cycle 65 — opt-in day/night sun arc + the homestead day loop. Render/client-only; the Worker ignores it. Absent => static sky.preset.
  * @property {GameMode[]} allowedModes
  * @property {GameMode} defaultMode
  * @property {'classic'|'follow'|'free'} [defaultCamera]   Cycle 5+ — initial camera mode if user has no localStorage preference

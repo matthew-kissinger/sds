@@ -195,13 +195,20 @@ class SheepDogSimulation {
         this.atmosphere = new Atmosphere(this.sceneManager.getScene(), {
             initialPreset,
             enableClouds: true,
-            enableDayNight: false,
+            enableDayNight: !!this.currentScene.dayNight?.enabled,
             // Cycle 23 Phase A1: scene-level fog override (linear THREE.Fog).
             // Field/RH/OC each ship explicit `fog: { color, near, far }`. Falls
             // back to FogExp2 default when sceneDef omits.
             sceneFog: this.currentScene.fog ?? null,
         });
         this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
+        // Cycle 65: opt-in day/night sun arc when the scene declares it.
+        if (this.currentScene.dayNight?.enabled) {
+            this.atmosphere.startDayNightCycle({
+                secondsPerDay: this.currentScene.dayNight.secondsPerDay,
+                initialT: this.currentScene.dayNight.initialT,
+            });
+        }
 
         this._sunBillboard = null;
 
@@ -1074,10 +1081,17 @@ class SheepDogSimulation {
         this.atmosphere = new Atmosphere(this.sceneManager.getScene(), {
             initialPreset,
             enableClouds: true,
-            enableDayNight: false,
+            enableDayNight: !!sceneDef.dayNight?.enabled,
             sceneFog: sceneDef.fog ?? null,
         });
         this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
+        // Cycle 65: opt-in day/night sun arc when the scene declares it.
+        if (sceneDef.dayNight?.enabled) {
+            this.atmosphere.startDayNightCycle({
+                secondsPerDay: sceneDef.dayNight.secondsPerDay,
+                initialT: sceneDef.dayNight.initialT,
+            });
+        }
 
         await this.createSunBillboard(initialPreset);
 
