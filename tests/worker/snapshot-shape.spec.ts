@@ -23,6 +23,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { GameSimulation } from '../../worker/src/GameSim.js';
+import { PROTOCOL_VERSION } from '../../shared/protocol.js';
 
 // Minimal RoomDO-shaped adapter — same surface the existing
 // worker-objective-snapshot.spec.js drives the sim with.
@@ -199,6 +200,50 @@ describe('P-PERF-2: createGameStateSnapshot wire shape', () => {
       expect(new Set(Object.keys(entry))).toEqual(
         new Set(['id', 'x', 'z', 'vx', 'vz', 'state', 'facing', 'hasPassedGate', 'isRetiring']),
       );
+    } finally {
+      sim.cleanup?.();
+    }
+  });
+
+  // Cycle 67 P5: the protocol version tag + the additive survival/wolves blocks.
+  it('stamps the protocol version and omits survival/wolves on a non-survival frame', () => {
+    const sim = new GameSimulation(makeRoomAdapter('field', 'cooperative', 30) as any);
+    try {
+      const snap = sim.createGameStateSnapshot();
+      expect(snap.v).toBe(PROTOCOL_VERSION);
+      expect(snap.survival).toBeUndefined();
+      expect(snap.wolves).toBeUndefined();
+      // A non-survival sheep carries no killed flag (byte-compatible entry).
+      expect(snap.sheep[0]).not.toHaveProperty('killed');
+    } finally {
+      sim.cleanup?.();
+    }
+  });
+
+  it('locks the survival + wolves block shape (quantized, keyed) on a survival frame', () => {
+    const sim = new GameSimulation(makeRoomAdapter('newsheepdogland', 'survival', 200) as any);
+    try {
+      // Put wolves on the wire without driving the whole clock.
+      sim._survival.wolves.spawnNight(1, sim.gameState.sheep);
+      sim._survival.wolves.wolves[0].x = 12.34567; // exercise rounding
+      sim._survival.wolves.wolves[0].z = -8.99899;
+
+      const snap = sim.createGameStateSnapshot();
+      expect(snap.v).toBe(PROTOCOL_VERSION);
+      expect(new Set(Object.keys(snap.survival))).toEqual(
+        new Set(['day', 'phase', 'flock', 'peak', 't', 'gateOpen', 'alive']),
+      );
+      expect(Array.isArray(snap.wolves)).toBe(true);
+      expect(snap.wolves.length).toBeGreaterThan(0);
+      for (const w of snap.wolves) {
+        expect(new Set(Object.keys(w))).toEqual(new Set(['id', 'x', 'z', 'state']));
+        expect(isQuantized2dp(w.x)).toBe(true);
+        expect(isQuantized2dp(w.z)).toBe(true);
+      }
+      expect(snap.wolves[0].x).toBe(12.35);
+      expect(snap.wolves[0].z).toBe(-9);
+      // Dormant pool sheep carry the killed flag so the client hides them.
+      expect(snap.sheep.some((s: any) => s.killed === true)).toBe(true);
     } finally {
       sim.cleanup?.();
     }

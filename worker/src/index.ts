@@ -474,6 +474,9 @@ export default {
               dogType: body.dogType || 'jep',
               persistentId: pid,
               displayName: profile.display_name,
+              // Cycle 67 P5: forward the client protocol version so the DO can
+              // refuse a too-old client from a survival room.
+              protocolVersion: body.protocolVersion,
             }),
           }),
         );

@@ -7,6 +7,7 @@
 
 import { encode as msgpackEncode, decode as msgpackDecode } from '@msgpack/msgpack';
 import { getApiBase, getWsBase, isLocalRuntime } from './runtimeConfig.js';
+import { PROTOCOL_VERSION } from '../shared/protocol.js';
 
 export class NetworkManager {
     constructor() {
@@ -409,6 +410,8 @@ export class NetworkManager {
             token: this.token,
             playerName,
             dogType,
+            // Cycle 67 P5: protocol version so the DO can gate survival rooms.
+            protocolVersion: PROTOCOL_VERSION,
             roomSettings: {
                 maxPlayers: roomSettings.maxPlayers || 4,
                 isPublic: roomSettings.isPublic !== false,
@@ -444,6 +447,9 @@ export class NetworkManager {
             token: this.token,
             playerName,
             dogType,
+            // Cycle 67 P5: protocol version so the DO can refuse a too-old client
+            // from a survival room (clean error before the WS upgrade).
+            protocolVersion: PROTOCOL_VERSION,
         });
         this.currentRoom = data.room;
         this.playerId = data.playerId;

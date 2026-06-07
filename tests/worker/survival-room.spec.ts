@@ -50,6 +50,20 @@ async function initRoom(room: any, roomSettings: Record<string, unknown>) {
   }));
 }
 
+async function joinRoom(room: any, opts: { protocolVersion?: number; playerId?: string } = {}) {
+  const body: Record<string, unknown> = {
+    playerId: opts.playerId ?? 'guest-sess',
+    playerName: 'Bob',
+    dogType: 'jep',
+    persistentId: 'pid-guest',
+    displayName: 'Bob',
+  };
+  if (opts.protocolVersion !== undefined) body.protocolVersion = opts.protocolVersion;
+  return room.fetch(new Request('http://room/join', {
+    method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' },
+  }));
+}
+
 describe('survival co-op room mode (Cycle 67 P4)', () => {
   it('accepts a survival room on Newsheepdogland and forces sheepCount to maxFlock', async () => {
     const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
@@ -85,5 +99,37 @@ describe('survival co-op room mode (Cycle 67 P4)', () => {
     expect(res.status).toBe(200);
     expect(room.meta.gameMode).toBe('cooperative');
     expect(room.meta.sheepCount).toBe(200);
+  });
+
+  // Cycle 67 P5: the version-gated survival join.
+  it('refuses a too-old client from a survival room with a clean version error', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    await initRoom(room, { isPublic: true, gameMode: 'survival', sceneId: 'newsheepdogland' });
+    const res = await joinRoom(room, { protocolVersion: 1 }); // legacy client
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe('protocol_too_old');
+    expect(body.required).toBe(2);
+  });
+
+  it('treats a missing protocolVersion as legacy and refuses it from a survival room', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    await initRoom(room, { isPublic: true, gameMode: 'survival', sceneId: 'newsheepdogland' });
+    const res = await joinRoom(room, {}); // no version => v1
+    expect(res.status).toBe(400);
+  });
+
+  it('admits a survival-capable client to a survival room', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    await initRoom(room, { isPublic: true, gameMode: 'survival', sceneId: 'newsheepdogland' });
+    const res = await joinRoom(room, { protocolVersion: 2 });
+    expect(res.status).toBe(200);
+  });
+
+  it('does not version-gate a cooperative room (old clients still join)', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    await initRoom(room, { isPublic: true, gameMode: 'cooperative', sceneId: 'newsheepdogland' });
+    const res = await joinRoom(room, { protocolVersion: 1 });
+    expect(res.status).toBe(200);
   });
 });

@@ -51,6 +51,7 @@ import { SurvivalRun } from '../../shared/survival/run.js';
 import { WolfSim } from '../../shared/survival/wolves.js';
 import { PenContainment } from '../../shared/survival/pen.js';
 import { secondsToT, phaseForT, gateOpenForPhase } from '../../shared/survival/dayClock.js';
+import { PROTOCOL_VERSION } from '../../shared/protocol.js';
 
 // P-SEC-3: server input trust boundary. The DO is authoritative, but a client
 // can send any MessagePack payload it likes over the playerInput channel. Two
@@ -1295,6 +1296,10 @@ export class GameSimulation {
         //
         // Create a lightweight state snapshot for network transmission
         const snapshot = {
+            // Cycle 67 P5: the protocol version tag. Always present; pre-Cycle-67
+            // clients ignore the unknown field, so non-survival frames stay
+            // backward-compatible.
+            v: PROTOCOL_VERSION,
             timestamp: Date.now(),
             sheepRetired: this.gameState.sheepRetired,
             totalSheep: this.gameState.totalSheep,

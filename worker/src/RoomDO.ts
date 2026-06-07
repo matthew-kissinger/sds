@@ -8,6 +8,7 @@ import { GameSimulation, isValidInputDirection, coerceInputSequence } from './Ga
 import { encode, Decoder } from '@msgpack/msgpack';
 import { submitScore as d1SubmitScore } from './d1.js';
 import { listScenes, DEFAULT_SCENE_ID } from '../../shared/scenes/index.js';
+import { SURVIVAL_MIN_PROTOCOL_VERSION } from '../../shared/protocol.js';
 
 // P-SEC-4 (a): DoS-hardened inbound decode. A client controls the raw bytes on
 // the WS message channel, so an unbounded decode is an amplification lever: a
@@ -449,12 +450,25 @@ export class RoomDO {
     dogType: string;
     persistentId?: string;
     displayName?: string;
+    protocolVersion?: number;
   }): Response {
     if (!this.meta) {
       return new Response(JSON.stringify({ error: 'Room not found' }), { status: 404 });
     }
     if (this.meta.state !== 'waiting') {
       return new Response(JSON.stringify({ error: 'Room is not accepting new players' }), { status: 409 });
+    }
+    // Cycle 67 P5: survival frames carry additive blocks (survival/wolves/killed)
+    // a pre-survival client would mis-render. Refuse a too-old client with a
+    // clean version error (absent protocolVersion => legacy v1).
+    if (this.meta.gameMode === 'survival') {
+      const clientVersion = (typeof body.protocolVersion === 'number') ? body.protocolVersion : 1;
+      if (clientVersion < SURVIVAL_MIN_PROTOCOL_VERSION) {
+        return new Response(
+          JSON.stringify({ error: 'protocol_too_old', required: SURVIVAL_MIN_PROTOCOL_VERSION, yours: clientVersion }),
+          { status: 400, headers: { 'content-type': 'application/json' } },
+        );
+      }
     }
     if (this.players.size >= this.meta.maxPlayers) {
       return new Response(JSON.stringify({ error: 'Room is full' }), { status: 409 });
