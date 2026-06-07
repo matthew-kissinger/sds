@@ -115,6 +115,8 @@ Every phase's Acceptance section uses EARS notation so the lines are grep-testab
 
 **Depends on:** Phase 5. Conditional.
 
+**OUTCOME (2026-06-07): DEFERRED with evidence (the spike did its job).** The Phase 5 spike returned NO-GO: whole-island grass is 2.71x the draw calls (829 -> 2,243 chunks) and 1.37x the blades of the shipped 760m play-area disc, for ground the dog never traverses, and coastline has no meadow-quad LOD so every far chunk would be full clump instancing. [`js/GrassSystem.js`](../js/GrassSystem.js) is left unmodified (do-not-decompose upheld). The evidence-backed follow-up (carried to BACKLOG at close): a targeted far-ring meadow-quad for coastline scenes - NOT a GrassSystem decomposition - as its own spike + cycle; it would also trim the current 829 draw calls. Numbers in `cycle68-validation/grass/grass-spike.json`.
+
 1. **If the spike clears its gate,** apply the winning density/LOD approach to [`js/GrassSystem.js`](../js/GrassSystem.js), preserving the stochastic per-blade dither and the three-octave wind (do not decompose the system).
 2. **Re-validate.** Perf delta against the spike numbers; visual parity by eye on a preview; if scatter or mesh output changes, re-validate refactor-baseline goldens (regenerate only with recorded acceptance).
 3. **If the spike does not clear the gate,** defer the implementation to BACKLOG with the spike numbers and note the deferral. This still counts as the phase shipping (an evidence-backed deferral, not a skip).
