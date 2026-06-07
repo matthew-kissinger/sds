@@ -1,62 +1,63 @@
-# Next Session - Cycle 64 Wolf Coast foundation (SHIPPED, pending prod playtest + close)
+# Next Session - Cycle 65 wolf-coast-homestead-and-day (AUTHORED, autonomous execution in progress)
 
 > **Updated:** 2026-06-06
-> **For:** Cycle 64 `wolf-coast-foundation`. Plan: [`docs/cycle-64-plan.md`](docs/cycle-64-plan.md).
-> **Pickup priority:** Matt's prod playtest of Wolf Coast, then `/cycle-close`. All 7 phases are implemented, validated, and deployed to prod. The reserved tunables (ladder counts, mountain feel, grass density, sky) are a strawman for Matt's in-browser pass; nothing else is open.
+> **For:** Cycle 65 `wolf-coast-homestead-and-day`. Plan: [`docs/cycle-65-plan.md`](docs/cycle-65-plan.md).
+> **Pickup priority:** Cycle 65 is authored and being executed autonomously this session (Matt's call: "fold the next 2 cycles into 1 larger autonomous cycle"). If picking up cold, check `git log` for shipped phases, then continue the next unshipped phase from the plan. After all 8 ship + deploy, the pickup becomes Matt's prod playtest then `/cycle-close`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-64-plan.md`](docs/cycle-64-plan.md) -> the touched module source.
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-65-plan.md`](docs/cycle-65-plan.md) -> the touched module source.
 
 ## Where It Stands
 
-**Cycle 64 is implemented and deployed.** It shipped the foundation only: a new `coastline` boundary kind (an arbitrary concave shoreline) plus the walkable **Wolf Coast** island (boot-shaped, 3.20 km^2 measured, 120 m mountain, foot lowland, tall-grass shore band, conifer woods), playable in the existing Just Play / Solo modes. Survival mode, wolves, day/night, co-op, and the survival leaderboard remain Cycles 65-68 and were not pulled forward.
+**Cycle 64 (`wolf-coast-foundation`) is CLOSED + deployed** (commit `907d6f8`, deploy run `27080491391` green; plan archived [`docs/archive/cycles/cycle-64-plan.md`](docs/archive/cycles/cycle-64-plan.md); full closeout in [`docs/BACKLOG.md`](docs/BACKLOG.md)). It shipped the `coastline` boundary primitive + the walkable Wolf Coast island, playable in Just Play / Solo.
 
-### What shipped (all 7 phases)
+**Cycle 65 (`wolf-coast-homestead-and-day`) is authored and executing.** Matt looked at the shipped Wolf Coast, called it "massive and featureless," and handed over the vision: start at a homestead (house + fenced pen + a gate that opens/closes by the day phase), give the island character (dense forest, open fields, tree lines, not one mountain), run a day/night cycle starting at first light with a HUD clock, herd the flock back into the pen before the sun sets, and add a skip affordance (mobile button + PC key) that cuts to a camera pan up to the sun arcing to dusk. He folded the originally-proposed two cycles ("the place" + "the day") into one larger autonomous cycle. It is **client-only** (one additive `shared/scenes/types.js` data field); no deterministic-sim change, no wire change, no D1, no sim-baseline regen. No wolves / survival economy / co-op / leaderboard - those are Cycles 66-68.
 
-- **P1 - the primitive.** [`shared/CoastlineField.js`](shared/CoastlineField.js): an SDF built once from the inline polygon (even-odd ray cast + min-segment distance, Float32, byte-identical builds), bilinear sample + 4-tap gradient steering, hard clamp with a deepest-interior-point fallback for far-offshore recovery. Tests in [`tests/coastline-field.spec.js`](tests/coastline-field.spec.js) (containment, determinism, <1 deg parity vs a circle, zero-escape storm, concave far-point convergence).
-- **P2 - fence wiring.** `coastline` is a new dispatch branch in [`shared/BoundaryCollision.js`](shared/BoundaryCollision.js), [`shared/index.js`](shared/index.js) `boundaryToBounds`, and [`shared/EntityCollision.js`](shared/EntityCollision.js) `finiteCollisionBounds`. Rect/island math untouched -> all 9 existing sim-baselines byte-identical.
-- **P3 - the bake.** [`scripts/bake-heightmap.mjs`](scripts/bake-heightmap.mjs) gained `--boundary coastline --points` (masks terrain to sea outside the polygon via the SAME SDF) + a procedural mountain. Polygon authored in [`shared/scenes/wolf-coast.coast.js`](shared/scenes/wolf-coast.coast.js) (provenance: [`tools/author-wolf-coast.mjs`](tools/author-wolf-coast.mjs)). `public/terrain/wolf-coast.bin` = 4.0 MiB (1024 px). Coastline stores absolute metres, manifest `peakHeight: 1`.
-- **P4 - the scene.** [`shared/scenes/wolf-coast.js`](shared/scenes/wolf-coast.js) + registration. Inert `pen` coexists with the wired toe `corral`. New additive SceneDef fields: `CoastlineBoundary`, `PenDef`/`pen`, `dogSpawn`, `grass.tallZones`, `grass.grassCenter`.
-- **P5 - tall grass + coastline grass.** [`js/GrassSystem.js`](js/GrassSystem.js): SDF-driven density/cull for coastline, a `grassCenter` so the grid sits on the foot play area (584 chunks, not 2017), and a `tallZones` blade-height band.
-- **P6 - client + render consumers + browser smoke.** Client clamps/forces ([`js/OptimizedSheep.js`](js/OptimizedSheep.js), [`js/Sheepdog.js`](js/Sheepdog.js)), spawn ([`js/GameState.js`](js/GameState.js)), water ([`js/water/AnimeWater.js`](js/water/AnimeWater.js)), water-aware rocks + trees ([`js/world/rockPlacementPlan.js`](js/world/rockPlacementPlan.js), [`shared/TreePlacement.js`](shared/TreePlacement.js)), boot guard ([`js/boot/initWorld.js`](js/boot/initWorld.js)), entrance carousel ([`js/components/entrance/worlds.ts`](js/components/entrance/worlds.ts) + accent token + dusk-gradient placeholder webp).
-- **P7 - sim-baseline + validation.** New `tests/sim-baseline/__fixtures__/coastline-wolf-coast-60hz.json`; the 9 existing fixtures byte-identical. npm test 1032 pass / 0 fail / 7 skip, lint clean, worker tsc clean, build clean (main ratchet 566 -> 573 KiB for the new module + scene, recorded in `bundle-sizes.json`).
+## The 8 Phases (see the plan for EARS acceptance)
 
-### Browser smoke (preview, SDS_SUPPRESS_BROWSER_OPEN=1) - PASSED
-
-Wolf Coast loads in Just Play with zero console errors, renders (dusk sky, foot grassland with tall-grass tufts, conifer woods on land, water at the shore), dog spawns on land and is controllable (drove 172 m on `w`), grass is performant (584 chunks / 202k clumps, vs an initial 708k before the foot-centred grid), and containment is bulletproof: 4 sheep teleported far offshore (including the concave instep side, past the SDF grid) all reeled back inside, zero escapes.
+1. **Homestead layout + alignment** - co-locate house + fenced pen + gate + dog spawn into one homestead in the foot; keep the toe corral for Solo.
+2. **Animated gate** - open/close tween + `setGateState` API on the existing gate group.
+3. **Biome character** - dense conifer pockets / open fields / tree-lines; ungrass forest floors.
+4. **Day/night enabled + scheduled** - turn on the existing `DayNightCycle` for Wolf Coast, start at first light (additive `dayNight` SceneDef field).
+5. **Day/night HUD** - a clock/phase chip + day counter + dusk warning, in the `HudLayout` + `useGameState` idiom.
+6. **Gate-by-phase + herd-back dry loop** - gate opens at dawn / closes at night; count sheep home by dusk; soft outcome, no fail-death.
+7. **Skip-to-dusk cutscene** - on-screen mobile button + PC F-key; `makeCameraPath` pan to the sun + fast-forward the clock to dusk.
+8. **Polish + validation + browser smoke + ship** - npm test/lint/build, sim-baseline byte-identical, desktop+mobile smoke, deploy.
 
 ## What To Pick Up Next
 
-1. **Matt's prod playtest** of Wolf Coast on sheepdogsim.com (entrance carousel -> Wolf Coast -> a Solo run). Confirm the feel.
-2. **Reserved tunables (paired, not a phase)** - a strawman for Matt's taste pass: the solo ladder counts (3/25/100/300/1000/5000), the 120 m mountain height + radius, the foot grass density (`grassCenter` (350,-1050) / `grassRadius` 650 / `clumpsPerChunk` 950), the `dusk` sky, the tall-grass `heightMul` 1.8, and the coastline polygon silhouette.
-3. **A real Wolf Coast entrance hero capture** to replace the dusk-gradient placeholder at `assets/scenes/entrance/wolf-coast.webp` (Matt's media pass per the media-prep convention).
-4. **`/cycle-close`** once the playtest confirms - archive the plan, append BACKLOG, scaffold Cycle 65.
+1. **Continue the autonomous execution** - ship the remaining phases, validate, commit, push, deploy.
+2. **Then Matt's prod playtest** of the Wolf Coast day loop, then `/cycle-close`.
+3. **Reserved tunables (paired, not a phase)** - the day length (~240 s), first-light start (`initialT ~0.28`), skip key (F), homestead coords, biome density, and the soft-loop framing are a strawman for Matt's taste pass.
 
 ## Open Carryover
 
-- **Cycle 63 prod-test** - playtest `v2.2.2` collision feel on sheepdogsim.com (independent of Cycle 64).
-- **Survival campaign sequencing** - Cycle 65 day/night + dry loop -> 66 wolves + bark verb -> 67 co-op -> 68 leaderboard. See the campaign-context section in [`docs/cycle-64-plan.md`](docs/cycle-64-plan.md).
-- **Bark verb conflict** - the survival brief assumes a radial repel bark, but [`shared/BarkImpulse.js`](shared/BarkImpulse.js) is a forward cone. Resolve in Cycle 66.
-- **Tablet draw-call perf** - Wolf Coast's foot grass is 584 chunks (584 grass draw calls), more than Rolling Hills (~88) or Open Country (~333). Acceptable on desktop; watch it on the Tab S9 FE during the playtest. The mountain/leg are deliberately ungrassed (forest + alpine) to keep the count down.
-- **No version bump** - the deploy makes Wolf Coast testable on prod at `v2.2.2`. A player-visible release bump + announcement is Matt's explicit call.
+- **Wolf predator mode** - now Cycle 66 (the Cycle 61 wolf asset + the bark verb were built for it; resolve the bark-verb conflict there - the survival brief wants a radial repel, [`shared/BarkImpulse.js`](shared/BarkImpulse.js) is a forward cone).
+- **Survival campaign sequencing** - 66 wolves + bark -> 67 co-op (promote the day loop to deterministic `shared/`) -> 68 survival leaderboard (a new D1 migration).
+- **Real Wolf Coast entrance hero capture** to replace the dusk-gradient placeholder at `assets/scenes/entrance/wolf-coast.webp` (Matt's media pass).
+- **Tablet draw-call perf** - Wolf Coast's foot grass is ~584 chunks; watch it on the Tab S9 FE.
+- **No version bump** - a player-visible release is Matt's explicit call.
+- Prior open carryover (collision prod feel, real mobile pass, counting naming/curve-feel, `/api/rename` no-body 500, `upload-artifact@v5` Node 20) remains deferred.
 
 ## Working Contract
 
-- Deterministic-sim work names shared files, updates all consumers in the same commit, and regenerates sim-baselines only with recorded acceptance. Cycle 64 held the 9 existing fixtures byte-identical and added one coastline fixture.
-- The client and Worker must build the coastline field from the same points + `cellSize` (12 m, fixed on the boundary def). A mismatch desyncs co-op (Cycle 67 depends on it).
+- This cycle is client-only. If a phase starts needing a `shared/` sim change or a wire change, stop and surface - that is Cycle 67 scope, not this one.
+- Keep all SceneDef additions optional with defaults; existing scenes stay byte-identical in behavior.
+- Verify in the browser (preview, `SDS_SUPPRESS_BROWSER_OPEN=1`, close tabs/listeners after) before marking a phase done.
 - Run `/validate` before any cycle close. Close via `/cycle-close`.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan | [`docs/cycle-64-plan.md`](docs/cycle-64-plan.md) |
-| Coastline primitive | [`shared/CoastlineField.js`](shared/CoastlineField.js) |
-| Coastline polygon | [`shared/scenes/wolf-coast.coast.js`](shared/scenes/wolf-coast.coast.js) |
+| Active cycle plan | [`docs/cycle-65-plan.md`](docs/cycle-65-plan.md) |
+| Day/night controller | [`js/atmosphere/DayNightCycle.js`](js/atmosphere/DayNightCycle.js) |
+| Skip cutscene tooling | [`js/cinematic.js`](js/cinematic.js) |
+| HUD idiom | [`js/components/GameHUD/HudLayout.tsx`](js/components/GameHUD/HudLayout.tsx) + [`js/components/hooks/useGameState.js`](js/components/hooks/useGameState.js) |
+| Day-loop precedent | [`js/gamestate/countingMode.js`](js/gamestate/countingMode.js) |
+| Fence + gate builders | [`js/FencePresets.js`](js/FencePresets.js) + [`js/StructureBuilder.js`](js/StructureBuilder.js) |
 | Wolf Coast scene | [`shared/scenes/wolf-coast.js`](shared/scenes/wolf-coast.js) |
-| Coastline R&D spike | [`tools/coastline-boundary-spike.mjs`](tools/coastline-boundary-spike.mjs) + `cycle64-validation/coastline/spike-report.json` |
-| Latest closed cycle | [`docs/archive/cycles/cycle-63-plan.md`](docs/archive/cycles/cycle-63-plan.md) |
-| Heightmap baker | [`scripts/bake-heightmap.mjs`](scripts/bake-heightmap.mjs) |
-| Deterministic-sim rules | [`.claude/rules/shared-sim.md`](.claude/rules/shared-sim.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-64-plan.md`](docs/archive/cycles/cycle-64-plan.md) |
+| Scene/render rules | [`.claude/rules/scene-and-render.md`](.claude/rules/scene-and-render.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |

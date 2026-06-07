@@ -4,6 +4,31 @@
 
 ## Recently Completed
 
+### Cycle 64 - `wolf-coast-foundation` (closed 2026-06-06)
+
+Plan archived at [`docs/archive/cycles/cycle-64-plan.md`](archive/cycles/cycle-64-plan.md). Cycle 64 opened the Survival / Wolf Coast campaign and shipped the foundation only: a new `coastline` boundary kind (an arbitrary concave shoreline the radial `island` kind cannot express) plus the walkable Wolf Coast island, playable in the existing Just Play / Solo modes. Survival mode, wolves, the day/night loop, co-op, and the survival leaderboard stay later cycles. The highest-risk engineering item of the whole campaign (the boundary primitive) was R&D-spiked first, then landed behind a real test vehicle.
+
+**Closeout outcomes (7/7 phases shipped):**
+
+- **P1 - coastline SDF primitive.** New pure [`shared/CoastlineField.js`](../shared/CoastlineField.js): a signed-distance field built once from an inline polygon (even-odd ray cast + min-segment distance, Float32, byte-identical builds), bilinear sample + 4-tap gradient steering, and a hard clamp with a deepest-interior-point fallback for far-offshore / concave recovery. Tests in [`tests/coastline-field.spec.js`](../tests/coastline-field.spec.js) (containment vs ground truth, determinism, <1 deg parity vs a circle, 600-tick no-escape storm, concave far-point convergence).
+- **P2 - fence wiring (additive).** `coastline` is a new dispatch branch in [`shared/BoundaryCollision.js`](../shared/BoundaryCollision.js), [`shared/index.js`](../shared/index.js) `boundaryToBounds`, and [`shared/EntityCollision.js`](../shared/EntityCollision.js) `finiteCollisionBounds`, plus the `CoastlineBoundary` typedef on the frozen `shared/scenes/types.js`. Rect/island math untouched, so the 9 existing sim-baseline fixtures stayed byte-identical.
+- **P3 - boot heightmap bake.** [`scripts/bake-heightmap.mjs`](../scripts/bake-heightmap.mjs) gained `--boundary coastline --points` (masks terrain to sea outside the polygon via the same SDF) + a procedural mountain. The 75-vertex polygon lives in [`shared/scenes/wolf-coast.coast.js`](../shared/scenes/wolf-coast.coast.js) (provenance [`tools/author-wolf-coast.mjs`](../tools/author-wolf-coast.mjs)); one array drives the bake, the SDF, and the render so the coast cannot drift. `public/terrain/wolf-coast.bin` = 4.0 MiB (1024 px); coastline stores absolute metres, manifest `peakHeight 1`.
+- **P4 - the scene.** [`shared/scenes/wolf-coast.js`](../shared/scenes/wolf-coast.js) + registration: boot-shaped, 3.20 km^2 measured, 120 m mountain, foot lowland, conifer woods, a toe corral plus an inert `pen`. New additive SceneDef fields: `CoastlineBoundary`, `PenDef`/`pen`, `dogSpawn`, `grass.tallZones`, `grass.grassCenter`.
+- **P5 - tall grass + coastline grass.** [`js/GrassSystem.js`](../js/GrassSystem.js) SDF-driven density + waterline cull for coastline, a `grassCenter` so the grid sits on the foot play area (584 chunks, not 2017), and a `tallZones` blade-height band.
+- **P6 - client + render consumers + browser smoke.** Coastline clamps/forces in [`js/OptimizedSheep.js`](../js/OptimizedSheep.js) + [`js/Sheepdog.js`](../js/Sheepdog.js), spawn in [`js/GameState.js`](../js/GameState.js), water in [`js/water/AnimeWater.js`](../js/water/AnimeWater.js), water-aware rocks + trees, the boot guard in [`js/boot/initWorld.js`](../js/boot/initWorld.js), and the entrance carousel entry + accent token (a dusk-gradient placeholder webp). Preview smoke: clean boot, dog drove 172 m, zero escapes after teleporting sheep far offshore.
+- **P7 - sim-baseline + validation.** New `tests/sim-baseline/__fixtures__/coastline-wolf-coast-60hz.json`; the 9 existing fixtures byte-identical. Bundle ratchet main 566 -> 573 KiB recorded.
+
+**Validation gates (2026-06-06):** `npm test` 1032 pass / 7 skip / 0 fail; `eslint shared/` clean; worker `tsc` clean; `npm run build` clean (main 573 KiB, three 604 KiB); sim-baseline 9 fixtures byte-identical + 1 new coastline fixture.
+
+**Release proof.** Shipped as commit `907d6f8`; deploy run `27080491391` green (Test, E2E Chromium, Deploy Pages, Deploy Worker). Prod live: `terrain/wolf-coast.bin` (HTTP 200, 4.0 MiB), manifest correct (coastline boundary, 120 m mountain), entrance webp (200), worker health `{"ok":true}`.
+
+**Carryover (folded into Cycle 65):**
+
+- The reserved Wolf Coast tunables (ladder counts, mountain height/radius, foot grass density, dusk sky, coastline silhouette) fold into Cycle 65's homestead + character work.
+- A real Wolf Coast entrance hero capture to replace the dusk-gradient placeholder (Matt's media pass).
+- The desktop+mobile browser-smoke screenshots were not persisted to the gitignored `cycle64-validation/`; the substance is proven by the passing scene + field tests, the live smoke, and green CI E2E.
+- The wolf predator mode moves to Cycle 66 (after the homestead + day cycle). All prior open carryover (collision prod feel, real mobile pass, high-count flock pressure, bark feel finalize, the second mode edition, tablet draw-call perf, controller nav for deferred surfaces, counting naming/curve-feel, `/api/rename` no-body 500, `upload-artifact@v5` Node 20) remains deferred.
+
 ### Cycle 63 - `collision-stutter-profile` (closed 2026-06-06, v2.2.2)
 
 Plan archived at [`docs/archive/cycles/cycle-63-plan.md`](archive/cycles/cycle-63-plan.md). Cycle 63 followed Matt's prod playtest report that colliding with a group of sheep might stutter on PC and likely mobile. The cycle spiked the issue with delegated research, browser automation, and a conservative deterministic broadphase optimization rather than swapping in a new spatial-index library.
