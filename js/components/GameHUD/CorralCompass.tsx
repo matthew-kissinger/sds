@@ -15,6 +15,7 @@
  */
 import * as THREE from 'three';
 import { getSceneManager, getGameState } from '../../GameBridge.js';
+import { getSceneById } from '../../../shared/scenes/index.js';
 import { pastoral, alpha } from '../ui/tokens';
 
 const _projectVec = new THREE.Vector3();
@@ -64,6 +65,15 @@ function computeCompassView(): CompassView | null {
         target = { x: objective.roundupZone.x, z: objective.roundupZone.z };
     } else if (gameState.corral) {
         target = { x: gameState.corral.center.x, z: gameState.corral.center.z };
+    } else {
+        // Cycle 66: homestead/survival scenes (no corral) herd into the pen
+        // through the gate - point the compass at the gate (the entry).
+        const scene = getSceneById(gameState.sceneId);
+        if (scene?.gate?.position) {
+            target = { x: scene.gate.position.x, z: scene.gate.position.z };
+        } else if (scene?.pen?.center) {
+            target = { x: scene.pen.center.x, z: scene.pen.center.z };
+        }
     }
     if (!target) return null;
 

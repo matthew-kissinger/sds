@@ -162,6 +162,15 @@ export function familiesForWorld(worldId: string): ModeFamily[] {
   if (worldId === 'open-country') {
     return [{ id: 'objective', name: 'Objective', gameMode: 'solo', rungs: solo }];
   }
+  // Cycle 66: Newsheepdogland is a survival run - one family, one rung, no
+  // sheep-count selection. The run always starts at 10 (scene.survival forces
+  // the count); it rides the 'solo' gameMode under the hood.
+  if (worldId === 'newsheepdogland') {
+    return [{
+      id: 'survival', name: 'Survival', gameMode: 'solo',
+      rungs: [{ id: 'survival', name: 'Survival', sheep: 10, blurb: 'Herd them home before the wolves.', ranked: true }],
+    }];
+  }
   // Named "Solo" (not "Classic") so the family chip does not duplicate the
   // "Classic" difficulty rung inside it - clearer for the player, and it keeps
   // the entrance's difficulty selectors unambiguous.

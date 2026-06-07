@@ -122,6 +122,26 @@ export class PenContainment {
     }
 
     /**
+     * Cycle 66 P3: release every retired sheep back to active grazing - called at
+     * dawn so the flock leaves the pen and can be re-herded for the new day. The
+     * gate is open by morning, so they wander back out through it.
+     * @param {Array} sheep
+     */
+    releaseAll(sheep) {
+        if (!Array.isArray(sheep)) return;
+        for (let i = 0; i < sheep.length; i++) {
+            const s = sheep[i];
+            if (!s || !s.penned) continue;
+            s.penned = false;
+            s._penSettling = false;
+            s.settleTarget = null;
+            s.hasPassedGate = false;
+            if (s.state === 2) s.state = 0;
+        }
+        this.pennedCount = 0;
+    }
+
+    /**
      * Per-frame containment + retirement.
      * @param {Array} sheep        OptimizedSheepInstance[] (gameState.sheep).
      * @param {{position:{x:number,z:number}}|null} dog  The player sheepdog.

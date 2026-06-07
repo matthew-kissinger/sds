@@ -2423,9 +2423,11 @@ class SheepDogSimulation {
             // dog moved earlier this frame), before render. Day-loop scenes only;
             // a no-op everywhere else.
             if (this._penContainment) {
+                // Always pass the dog: it collides with the fence whether or not
+                // the round is "active" (the fence is a physical barrier).
                 this._penContainment.update(
                     this.gameState.sheep,
-                    this.gameActive ? this.sheepdog : null,
+                    this.sheepdog ?? null,
                     this.dayLoop?.gateOpen ?? true,
                     deltaTime
                 );

@@ -353,6 +353,17 @@ export async function placeTrees(builder, competitivePastures = null) {
         flatTrees = flatTrees.filter((t) => builder._groundY(t.x, t.z) >= 0.6);
     }
 
+    // Cycle 66 P2/P3: no trees inside the homestead pen (the fenced objective).
+    // The Poisson scatter + woodsZones can drop trees in the pen footprint; cull
+    // any within the pen box plus a small margin so none poke through the fence.
+    const _pen = builder.sceneDef?.pen;
+    if (_pen?.center && _pen.radius > 0) {
+        const m = 4;
+        const pMinX = _pen.center.x - _pen.radius - m, pMaxX = _pen.center.x + _pen.radius + m;
+        const pMinZ = _pen.center.z - _pen.radius - m, pMaxZ = _pen.center.z + _pen.radius + m;
+        flatTrees = flatTrees.filter((t) => !(t.x >= pMinX && t.x <= pMaxX && t.z >= pMinZ && t.z <= pMaxZ));
+    }
+
     builder.treeInstances = flatTrees;
 
     const treeInstances = {

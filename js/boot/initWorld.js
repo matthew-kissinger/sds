@@ -165,7 +165,7 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
 
         // Add farm house
         logStep('Adding farm house');
-        await game.terrainBuilder.addFarmHouse();
+        await game.terrainBuilder.addFarmHouse(game.currentScene);
 
         // Load fence GLB models before building structures
         logStep('Loading fence models');
@@ -215,6 +215,17 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 game._penContainment = null;
             }
 
+            // Cycle 66 P3: the survival run economy (start flock, +growth/day,
+            // death on a 33%+ night loss, score = peak flock). Client-side; it
+            // drives off the day-loop phase. Newsheepdogland declares `survival`;
+            // other day-loop scenes run the soft Cycle 65 loop unchanged.
+            if (game.currentScene.survival) {
+                const { SurvivalRun } = await import('../gamestate/survivalRun.js');
+                game._survivalRun = new SurvivalRun(game.currentScene.survival);
+            } else {
+                game._survivalRun = null;
+            }
+
             chip.mountDayNightChip();
             game._unmountDayNightChip = chip.unmountDayNightChip;
 
@@ -259,7 +270,32 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 const state = dayLoop.update(t, home, total);
                 game.structureBuilder?.setHomesteadGateOpen?.(state.gateOpen);
                 game.structureBuilder?.updateGate?.(dt);
-                chip.updateDayNightChip(state);
+
+                // Cycle 66 P3: drive the survival economy off the day phase.
+                const run = game._survivalRun;
+                if (run) {
+                    const ev = run.onPhase(state.phase);
+                    if (ev?.type === 'survived') {
+                        // Dawn: release the penned flock to graze, then grow +N.
+                        game._penContainment?.releaseAll?.(game.gameState?.sheep);
+                        game.gameState?.growSurvivalFlock?.(run.growth);
+                    } else if (ev?.type === 'death') {
+                        if (game.gameState) game.gameState.gameActive = false;
+                        chip.showSurvivalSummary({
+                            day: ev.day,
+                            score: ev.score,
+                            onRestart: () => { try { location.reload(); } catch { /* noop */ } },
+                        });
+                        if (typeof window !== 'undefined') {
+                            window.dispatchEvent(new CustomEvent('survival-run-ended', {
+                                detail: { score: ev.score, day: ev.day },
+                            }));
+                        }
+                    }
+                    chip.updateDayNightChip({ ...state, t, day: run.day, flock: run.flock });
+                } else {
+                    chip.updateDayNightChip({ ...state, t });
+                }
                 game._skipToDusk?.tick(dt);
             };
         } else {

@@ -12,6 +12,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["cross-env", "SDS_SUPPRESS_BROWSER_OPEN=1", "vite", "--port", "3000"],
       "port": 3000
+    },
+    {
+      "name": "vite-preview-probe",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "preview", "--port", "4399", "--strictPort"],
+      "port": 4399
     }
   ]
 }

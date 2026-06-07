@@ -211,9 +211,18 @@ export class GameState {
         // Standard modes pass no maxCapacity, so the system sizes to exactly
         // totalSheep and spawns one-shot, byte-identical to before.
         const isCounting = this.gameMode === COUNTING_GAME_MODE;
+        // Cycle 66 P3: a survival scene (Newsheepdogland) starts with a fixed
+        // small flock and grows it at runtime via activateSheepBatch, so it
+        // pre-sizes the InstancedMesh to a survival ceiling (like counting does).
+        const sceneDef = getSceneById(this.sceneId);
+        const survival = sceneDef?.survival || null;
+        this.survival = survival;
+        if (survival) this.totalSheep = survival.startFlock ?? 10;
         const initialActive = isCounting ? 1 : this.totalSheep;
-        const maxCapacity = isCounting ? COUNTING_HARD_CEILING : this.totalSheep;
-        console.log(`Creating sheep flock: ${initialActive} active / capacity ${maxCapacity} (mode=${this.gameMode})`);
+        const maxCapacity = isCounting
+            ? COUNTING_HARD_CEILING
+            : (survival ? (survival.maxFlock ?? 80) : this.totalSheep);
+        console.log(`Creating sheep flock: ${initialActive} active / capacity ${maxCapacity} (mode=${this.gameMode}${survival ? ', survival' : ''})`);
 
         const spawnConfig = this.getSheepSpawnConfig();
 
@@ -226,7 +235,7 @@ export class GameState {
 
         this.optimizedSheepSystem = new OptimizedSheepSystem(scene, initialActive, spawnConfig, useExtremeBoids, {
             heightfield: this.heightfield,
-            ...(isCounting ? { maxCapacity } : {}),
+            ...((isCounting || survival) ? { maxCapacity } : {}),
         });
         if (this.heightfield) {
             this.optimizedSheepSystem.heightfield = this.heightfield;
@@ -427,6 +436,25 @@ export class GameState {
         window.dispatchEvent(new CustomEvent('counting-round-advanced', {
             detail: { round: this.countingState.round, counted: this.sheepRetired, activated },
         }));
+        return activated;
+    }
+
+    /**
+     * Cycle 66 P3: grow the survival flock at runtime (the +N/day lambs). Brings
+     * `count` more sheep online via the same batch-activation path counting uses;
+     * they spawn in the grazing field (boundary-aware) for the player to herd in.
+     * @param {number} count
+     * @returns {number} number actually activated (0 at the survival ceiling)
+     */
+    growSurvivalFlock(count) {
+        if (!this.optimizedSheepSystem || count <= 0) return 0;
+        const activated = this.optimizedSheepSystem.activateSheepBatch(count, (sheep) => {
+            sheep.setBounds(this.bounds);
+            if (this.boundary) sheep.setBoundary(this.boundary);
+            if (this.borderPoints && this.borderPoints.length >= 3) sheep.setBorderPoints(this.borderPoints);
+        });
+        this.sheep = this.optimizedSheepSystem.getSheep();
+        this.totalSheep += activated;
         return activated;
     }
 
@@ -642,8 +670,16 @@ export class GameState {
             // islands run smaller, faster tiers than Home Field; an unknown
             // scene falls back to the legacy default counts.
             const scene = getSceneById(this.sceneId);
-            this.totalSheep = getSoloCount(scene, singlePlayerMode);
-            console.log(`Game started in ${singlePlayerMode} mode on ${this.sceneId} with ${this.totalSheep} sheep`);
+            if (scene?.survival) {
+                // Cycle 66 P3: survival scenes ignore the difficulty ladder; the
+                // run always starts at survival.startFlock (no count selection).
+                this.survival = scene.survival;
+                this.totalSheep = scene.survival.startFlock ?? 10;
+                console.log(`Survival run started on ${this.sceneId} with ${this.totalSheep} sheep`);
+            } else {
+                this.totalSheep = getSoloCount(scene, singlePlayerMode);
+                console.log(`Game started in ${singlePlayerMode} mode on ${this.sceneId} with ${this.totalSheep} sheep`);
+            }
             // Cycle 26 v2.1.0: first-visit flag drives the pulsing-glow
             // hint on the Practice tile in SinglePlayerModes. Set on any
             // solo start (not just practice) so the hint stops pulsing

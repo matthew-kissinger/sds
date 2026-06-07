@@ -154,11 +154,18 @@ export const newsheepdogland = {
     // near/far distances stay fixed so the huge island never hits a fog wall.
     fog: { color: '#b9a98c', near: 600, far: 2600 },
 
-    // Cycle 65: the day/night cycle + the homestead herd-back day loop. You wake
-    // at the homestead just after sunrise on day one; the sun arcs over
+    // Cycle 65/66: the day/night cycle + the homestead herd-back day loop. You
+    // wake at the homestead just after sunrise on day one; the sun arcs over
     // secondsPerDay; dayLoop opts in the gate-by-phase + herd-back-before-dusk
-    // controller. A tunable strawman (day length / start time) for Matt's pass.
-    dayNight: { enabled: true, secondsPerDay: 240, initialT: 0.28, dayLoop: true },
+    // controller. Cycle 66 lengthens the day to ~10 minutes (Matt's spec) so
+    // there is time to herd before the wolves. Tunable for Matt's feel pass.
+    dayNight: { enabled: true, secondsPerDay: 600, initialT: 0.28, dayLoop: true },
+
+    // Cycle 66 P3: this scene is the survival run. Start with 10 sheep (no count
+    // selection); each surviving day the flock grows +5; a night that loses a
+    // third or more of the flock ends the run; the score is the peak flock size.
+    // Client-side economy (js/gamestate/survivalRun.js). Matt's named numbers.
+    survival: { startFlock: 10, growth: 5, lossThreshold: 1 / 3, maxFlock: 80 },
 
     // Cycle 64: a tunable strawman ladder (reserved for Matt's feel pass). The
     // island is large, so it runs a broad span from a 3-sheep Just Play up to

@@ -1585,10 +1585,14 @@ export class TerrainBuilder {
     /**
      * Add farm house to the scene in the northwest corner
      */
-    async addFarmHouse() {
+    async addFarmHouse(sceneDef = this.sceneDef) {
         // Cycle 5+: scenes with farmHouse: null (or island scenes that
         // didn't relocate the farmhouse onto the island) skip this entirely.
-        if (this.sceneDef && (this.sceneDef.farmHouse === null || this.sceneDef.farmHouse === undefined)) {
+        // Cycle 66: take the sceneDef as a param. The autostart boot calls this
+        // before setSceneDef runs, so this.sceneDef can be null here - which
+        // placed the Home Field default house (180,160) out in the sea instead of
+        // at the homestead pen. initWorld now passes game.currentScene.
+        if (sceneDef && (sceneDef.farmHouse === null || sceneDef.farmHouse === undefined)) {
             console.log('[TERRAIN] Scene has no farmhouse — skipping');
             return null;
         }
@@ -1607,18 +1611,16 @@ export class TerrainBuilder {
         // Clone the farm house model
         const farmHouse = farmHouseModel.clone();
 
-        // Cycle 65: trust the live sceneDef for placement, read HERE (after the
-        // models await) so it uses the same sceneDef as the rotation below.
-        // `farmHousePosition` is a cache seeded at construction with the Home
-        // Field default; some boot paths set this.sceneDef only after the cache
-        // is seeded (and during the await above), so the sceneDef is the source
-        // of truth, not the cache. Reading before the await placed the Home
-        // Field house at the Newsheepdogland homestead's expense.
-        if (this.sceneDef?.farmHouse?.position) {
-            this.farmHousePosition = this.sceneDef.farmHouse.position;
+        // Cycle 65/66: trust the passed sceneDef for placement (the active scene
+        // from initWorld). `farmHousePosition` is a cache seeded at construction
+        // with the Home Field default; the autostart boot runs this before
+        // setSceneDef, so reading this.sceneDef alone left the Home Field house at
+        // (180,160) out in the sea. The param is the source of truth.
+        if (sceneDef?.farmHouse?.position) {
+            this.farmHousePosition = sceneDef.farmHouse.position;
         }
-        if (this.sceneDef?.farmHouse?.exclusionArea) {
-            this.farmHouseExclusionArea = this.sceneDef.farmHouse.exclusionArea;
+        if (sceneDef?.farmHouse?.exclusionArea) {
+            this.farmHouseExclusionArea = sceneDef.farmHouse.exclusionArea;
         }
 
         // Position the farm house at the scene's homestead location.
@@ -1639,7 +1641,7 @@ export class TerrainBuilder {
         // Rotate to face the pen area. Scenes may override the default Field
         // southeast facing (Cycle 65: Newsheepdogland turns the porch toward its
         // homestead pen). Default stays 225 degrees.
-        const rotDeg = this.sceneDef?.farmHouse?.rotationDeg;
+        const rotDeg = sceneDef?.farmHouse?.rotationDeg;
         farmHouse.rotation.y = (rotDeg != null) ? (rotDeg * Math.PI) / 180 : Math.PI * 1.25;
         
         // Configure shadows and materials

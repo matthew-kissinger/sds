@@ -264,6 +264,21 @@
  */
 
 /**
+ * Cycle 66 - the survival run config. When present (Newsheepdogland), the scene
+ * is a survival run: it starts with `startFlock` sheep (no count selection), and
+ * the client-side run economy (js/gamestate/survivalRun.js) grows the flock by
+ * `growth` each surviving day and ends the run when a night loses `lossThreshold`
+ * or more of the flock. Solo + client-only; the Worker sim never reads it, so it
+ * is the cheap additive fence case (absent => not a survival scene).
+ *
+ * @typedef {Object} SurvivalDef
+ * @property {number} startFlock          Flock size at the start of the run (Matt's spec: 10).
+ * @property {number} [growth]            Sheep added per surviving day (default 5).
+ * @property {number} [lossThreshold]     Loss ratio in a night that ends the run (default 1/3).
+ * @property {number} [maxFlock]          InstancedMesh capacity ceiling for growth (default 80).
+ */
+
+/**
  * @typedef {Object} SceneDef
  * @property {string} id                       Registry key (e.g. "field")
  * @property {string} name                     Display name (plain or i18n key)
@@ -302,6 +317,7 @@
  *   case. Consumed by `getSoloCount` (totalSheep), `getRankedCounts` (Worker
  *   submit allow-list + leaderboard count tabs), and the entrance.
  * @property {DayNightDef} [dayNight]   Cycle 65 — opt-in day/night sun arc + the homestead day loop. Render/client-only; the Worker ignores it. Absent => static sky.preset.
+ * @property {SurvivalDef} [survival]   Cycle 66 — opt-in survival run (start flock, +growth/day, loss threshold). Client-only; the Worker ignores it. Absent => not a survival scene.
  * @property {GameMode[]} allowedModes
  * @property {GameMode} defaultMode
  * @property {'classic'|'follow'|'free'} [defaultCamera]   Cycle 5+ — initial camera mode if user has no localStorage preference
