@@ -1752,6 +1752,20 @@ export class GameSimulation {
         s.wolves.update(step, this.gameState.sheep, null);
     }
 
+    /**
+     * Test-only: jump the survival day clock forward by `seconds` so a harness
+     * can drive a room to nightfall in one step instead of waiting out a real
+     * ~10-minute day. Gated behind env.INTEGRATION_TEST in RoomDO so it can never
+     * be reached in production. No-op outside an active survival run.
+     * @param {number} seconds
+     */
+    _testAdvanceSurvival(seconds) {
+        if (!this._survival || this._survival.ended) return;
+        const s = Number(seconds);
+        if (!Number.isFinite(s) || s <= 0) return;
+        this._survival.elapsed += s;
+    }
+
     /** Count sheep currently in the run (active, not killed, not dormant). */
     _countActiveSurvivalSheep() {
         let n = 0;

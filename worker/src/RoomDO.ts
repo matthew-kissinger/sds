@@ -773,6 +773,15 @@ export class RoomDO {
       case 'ping':
         this.send(this.sessions.get(playerId)!, 'pong', { id: msg.id, timestamp: Date.now() });
         break;
+      case '__testAdvanceSurvival':
+        // Test-only: jump the survival day clock so an integration harness can
+        // reach nightfall without waiting out a real ~10-minute day. Gated behind
+        // the INTEGRATION_TEST var, which is set only by the local test harness's
+        // `wrangler dev` and is never present in production.
+        if ((this.env as any)?.INTEGRATION_TEST === '1' && this.simulation) {
+          (this.simulation as any)._testAdvanceSurvival?.(Number(msg.seconds) || 0);
+        }
+        break;
       default:
         // Unknown type; ignore per v2 spec (no default:break bug).
         break;
