@@ -78,6 +78,7 @@ export function installMpEventHandlers(game) {
                         day: update.data.survival.day,
                         score: update.data.survival.score,
                         sceneId: game.currentScene?.id || 'newsheepdogland',
+                        partySize: update.data.survival.partySize || 1,
                         onRestart: () => { try { location.reload(); } catch { /* noop */ } },
                     });
                 }

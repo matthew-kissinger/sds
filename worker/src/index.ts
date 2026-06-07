@@ -698,9 +698,13 @@ export default {
         if (!getSceneById(sceneId)) return err('unknown_scene', 400, cors);
         const sheepCountRaw = url.searchParams.get('sheepCount');
         const sheepCount = sheepCountRaw ? Number(sheepCountRaw) : undefined;
+        // Cycle 67 P7: survival co-op boards partition by party_size.
+        const partySizeRaw = url.searchParams.get('partySize');
+        const partySize = partySizeRaw ? Number(partySizeRaw) : undefined;
         const entries = await getLeaderboard(env.DB, mode, limit, {
           sceneId,
           sheepCount: Number.isFinite(sheepCount) && (sheepCount as number) > 0 ? sheepCount : undefined,
+          partySize: Number.isFinite(partySize) && (partySize as number) > 0 ? partySize : undefined,
         });
         return json({ entries }, 200, cors);
       }

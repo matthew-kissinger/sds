@@ -26,6 +26,7 @@ import {
   SURVIVAL_LEADERBOARD_MODE,
   isSurvivalLeaderboardMode,
   SURVIVAL_MAX_SCORE,
+  SURVIVAL_COOP_PARTY_SIZES,
 } from '../../shared/survivalModes.js';
 
 export interface PlayerRow {
@@ -898,6 +899,11 @@ async function submitScoreInner(
   const sheepCount = Number.isInteger(additionalData.sheepCount as number)
     ? (additionalData.sheepCount as number)
     : (gameMode === 'soloExtreme' ? 1000 : 200);
+  // Cycle 67 P7: party size partitions survival boards (solo=1, co-op=2..4).
+  // Absent (solo client submit + every non-survival mode) defaults to 1.
+  const partySize = (Number.isInteger(additionalData.partySize as number) && (additionalData.partySize as number) >= 1)
+    ? (additionalData.partySize as number)
+    : 1;
 
   // Cycle 10 Phase 6 + Cycle 58: cross-field plausibility — hard rejects. Solo
   // modes validate the count against the submitted scene's ranked ladder.
@@ -948,11 +954,11 @@ async function submitScoreInner(
   const stmts: D1PreparedStatement[] = [];
   stmts.push(
     db.prepare(
-      'INSERT INTO score_submissions (persistent_id, game_mode, score, submitted_at, room_code, additional_data, sheep_count, scene_id, score_anomalies) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO score_submissions (persistent_id, game_mode, score, submitted_at, room_code, additional_data, sheep_count, scene_id, score_anomalies, party_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       persistentId, gameMode, score, now, roomCode,
       JSON.stringify(additionalData || {}),
-      sheepCount, sceneId, anomaliesJson,
+      sheepCount, sceneId, anomaliesJson, partySize,
     ),
   );
 
@@ -1095,6 +1101,9 @@ export interface LeaderboardEntry {
 export interface LeaderboardFilters {
   sceneId?: string;
   sheepCount?: number;
+  // Cycle 67 P7: survival boards partition by party_size (solo=1, co-op=2..4).
+  // Ignored by every non-survival board.
+  partySize?: number;
   // P-SEC-5: the public READ path leaves this unset so anomaly-flagged rows
   // (score_anomalies IS NOT NULL — see detectScoreAnomalies + migration 0003)
   // are hidden from the board. Only a trusted/admin caller passes `true` to
@@ -1172,6 +1181,12 @@ export async function getLeaderboard(
       && typeof filters.sheepCount === 'number' && filters.sheepCount > 0) {
     where.push('s.sheep_count = ?');
     binds.push(filters.sheepCount);
+  }
+  // Cycle 67 P7: survival additionally partitions by party_size (solo vs co-op),
+  // so solo (party 1) and co-op (2..4) runs rank on separate boards.
+  if (isSurvivalLeaderboardMode(mode) && typeof filters.partySize === 'number' && filters.partySize > 0) {
+    where.push('s.party_size = ?');
+    binds.push(filters.partySize);
   }
   binds.push(limit);
 
@@ -1265,13 +1280,23 @@ export async function getAllLeaderboards(
   );
   COUNTING_LEADERBOARD_MODES.forEach((m, i) => { out[m] = countingResults[i]; });
 
-  // Cycle 66 P6: the survival board (one key), partitioned by (game_mode, scene_id)
-  // and ranked by peak flock DESC. Additive; empty for non-survival scenes, so the
-  // client decides whether to surface the tab from the scene family.
+  // Cycle 66 P6 / Cycle 67 P7: survival boards partition by (scene, party_size).
+  // Solo keeps the bare `survival` key (party 1 - byte-identical to Cycle 66, all
+  // legacy rows are party 1); co-op rooms get `survival:<n>` for 2-4 dogs. Additive;
+  // empty for non-survival scenes, so the client surfaces the tabs by scene family.
   out[SURVIVAL_LEADERBOARD_MODE] = await getLeaderboard(db, SURVIVAL_LEADERBOARD_MODE as GameMode, limit, {
     sceneId: filters.sceneId,
     includeFlagged: filters.includeFlagged,
+    partySize: 1,
   });
+  const coopBoards = await Promise.all(
+    SURVIVAL_COOP_PARTY_SIZES.map(n => getLeaderboard(db, SURVIVAL_LEADERBOARD_MODE as GameMode, limit, {
+      sceneId: filters.sceneId,
+      includeFlagged: filters.includeFlagged,
+      partySize: n,
+    })),
+  );
+  SURVIVAL_COOP_PARTY_SIZES.forEach((n, i) => { out[`${SURVIVAL_LEADERBOARD_MODE}:${n}`] = coopBoards[i]; });
 
   return out;
 }

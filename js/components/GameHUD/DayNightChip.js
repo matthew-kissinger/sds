@@ -145,10 +145,12 @@ function _esc(s) {
  * alone. Never throws into the caller.
  * @param {HTMLElement} container
  * @param {string} sceneId
+ * @param {number} [partySize=1]  Cycle 67 P7: co-op runs read the party-size board.
  */
-async function _populateSurvivalBoard(container, sceneId) {
+async function _populateSurvivalBoard(container, sceneId, partySize = 1) {
     try {
-        const url = `${getApiBase()}/api/leaderboard?mode=survival&scene=${encodeURIComponent(sceneId)}&limit=5`;
+        const ps = (Number.isInteger(partySize) && partySize > 1) ? `&partySize=${partySize}` : '';
+        const url = `${getApiBase()}/api/leaderboard?mode=survival&scene=${encodeURIComponent(sceneId)}&limit=5${ps}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('board ' + res.status);
         const data = await res.json();
@@ -176,7 +178,7 @@ async function _populateSurvivalBoard(container, sceneId) {
  * no exclamation marks, no emoji, numbers carry the weight.
  * @param {{day:number, score:number, onRestart?:Function, sceneId?:string}} info
  */
-export function showSurvivalSummary({ day = 1, score = 0, onRestart, sceneId = 'newsheepdogland' } = {}) {
+export function showSurvivalSummary({ day = 1, score = 0, onRestart, sceneId = 'newsheepdogland', partySize = 1 } = {}) {
     if (_summaryEl) return;
     const el = document.createElement('div');
     el.id = 'sds-survival-summary';

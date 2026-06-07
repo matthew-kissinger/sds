@@ -22,6 +22,20 @@
 export const SURVIVAL_LEADERBOARD_MODE = 'survival';
 
 /**
+ * Cycle 67 P7: co-op party sizes. Survival boards partition by (scene,
+ * party_size): solo is party 1 (the bare `survival` board key, byte-identical to
+ * Cycle 66); co-op rooms of 2-4 dogs get the `survival:<n>` board keys. The
+ * single source so the Worker board emitter and the client tabs agree.
+ */
+export const SURVIVAL_COOP_PARTY_SIZES = Object.freeze([2, 3, 4]);
+
+/** Board key for a survival party size (1 => the bare `survival` solo board). */
+export function survivalBoardKey(partySize) {
+    const n = Math.max(1, Math.floor(partySize) || 1);
+    return n <= 1 ? SURVIVAL_LEADERBOARD_MODE : `${SURVIVAL_LEADERBOARD_MODE}:${n}`;
+}
+
+/**
  * The scenes that run a survival mode. Newsheepdogland is the only one this
  * cycle; the list is the single source so the board surface and the entrance
  * cannot disagree.

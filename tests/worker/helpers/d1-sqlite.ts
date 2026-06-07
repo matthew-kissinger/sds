@@ -54,6 +54,8 @@ const MIGRATIONS = [
   '0003_score_anomalies.sql',
   '0006_score_errors.sql',
   '0007_player_auth_secret.sql',
+  // Cycle 67 P7: adds score_submissions.party_size (survival co-op partition).
+  '0009_survival_party_size.sql',
 ];
 
 /** A bound statement: the SQL plus the positional params from `.bind(...)`. */

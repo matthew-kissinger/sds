@@ -41,6 +41,7 @@ import {
     SURVIVAL_LEADERBOARD_MODE,
     isSurvivalLeaderboardMode,
     sceneOffersSurvival,
+    SURVIVAL_COOP_PARTY_SIZES,
 } from '../../../shared/survivalModes.js';
 import { color } from '../ui/tokens';
 
@@ -125,7 +126,10 @@ export function leaderboardModesForScene(sceneId: string): string[] {
     // Cycle 66: a survival scene (Newsheepdogland) leads with its survival board -
     // it is THE mode there - then the solo rungs / MP boards follow.
     if (sceneOffersSurvival(sceneId)) {
-        return [SURVIVAL_LEADERBOARD_MODE, ...solo, ...counting, ...mp];
+        // Cycle 67 P7: the solo survival board leads, then one co-op board per
+        // party size (2-4 dogs), then the solo rungs / MP boards.
+        const coop = SURVIVAL_COOP_PARTY_SIZES.map((n) => `${SURVIVAL_LEADERBOARD_MODE}:${n}`);
+        return [SURVIVAL_LEADERBOARD_MODE, ...coop, ...solo, ...counting, ...mp];
     }
     return [...solo, ...counting, ...mp];
 }
@@ -505,9 +509,13 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
                     {visibleModes.map((mode) => {
                         // Cycle 58: solo count tabs (`solo:<count>`) label from the
                         // scene ladder; MP tabs keep their i18n labels.
+                        // Cycle 67 P7: co-op survival tabs read "Survival NP".
+                        const isCoopSurvival = mode.startsWith(`${SURVIVAL_LEADERBOARD_MODE}:`);
                         const label = mode.startsWith(SOLO_TAB_PREFIX)
                             ? soloTabLabel(sceneId, Number(mode.slice(SOLO_TAB_PREFIX.length)))
-                            : t(labelKeyForMode(mode));
+                            : isCoopSurvival
+                                ? `${t('leaderboard.survival')} ${mode.slice(SURVIVAL_LEADERBOARD_MODE.length + 1)}P`
+                                : t(labelKeyForMode(mode));
                         return (
                             <button key={mode} style={tabButtonStyle(activeTab === mode)} onClick={() => setActiveTab(mode)}>
                                 {label}

@@ -841,17 +841,25 @@ export class RoomDO {
       },
       onSubmitScores: async (playerScores: Record<string, number>, completionData: any) => {
         try {
-          const gameMode = completionData?.isTimedMode ? 'timed' : 'competitive';
+          // Cycle 67 P7: survival posts each player's peak flock to the party-size
+          // partitioned board (game_mode 'survival'). Otherwise the value is the
+          // timed score or a competitive win flag.
+          const isSurvival = !!completionData?.isSurvival;
+          const gameMode = isSurvival ? 'survival' : (completionData?.isTimedMode ? 'timed' : 'competitive');
           // Cycle 8 Phase 3+5: include sceneId + sheepCount in audit trail
           // so leaderboards can partition by them. Phase 5 will let hosts
           // pick a non-200 sheepCount; until then the meta default is 200.
           const sceneId = self.meta!.sceneId || 'field';
           const sheepCount = (self.meta as any).sheepCount || 200;
+          const partySize = isSurvival
+            ? (completionData?.partySize || Object.keys(playerScores).length || 1)
+            : 1;
           for (const [sessionId, score] of Object.entries(playerScores)) {
             const p = self.players.get(sessionId);
             if (!p?.persistentId) continue;
             let value: number;
-            if (gameMode === 'timed') value = score as number;
+            if (isSurvival) value = score as number;            // peak flock
+            else if (gameMode === 'timed') value = score as number;
             else value = completionData?.competitive?.winner === sessionId ? 1 : 0;
             try {
               await d1SubmitScore(self.env.DB, p.persistentId, gameMode as any, value, {
@@ -860,6 +868,7 @@ export class RoomDO {
                 sheepCount,
                 totalSheep: sheepCount,
                 playerCount: Object.keys(playerScores).length,
+                ...(isSurvival ? { partySize } : {}),
               });
             } catch (err) {
               console.error(`score submit failed for ${p.persistentId}:`, err);

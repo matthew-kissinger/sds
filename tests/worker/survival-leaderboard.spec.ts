@@ -113,4 +113,39 @@ describe.skipIf(!sqliteAvailable)('Survival leaderboard (Cycle 66 P6)', () => {
       expect(all[k].every((e) => e.displayName !== 'Survivor')).toBe(true);
     }
   });
+
+  // Cycle 67 P7: co-op survival partitions by party_size.
+  it('partitions co-op survival (party_size) separately from solo', async () => {
+    const solo = await reg('SoloPlayer', 'pid-solo7');
+    const coop = await reg('CoopPlayer', 'pid-coop7');
+    await submitScore(h.db, solo, 'survival', 30, survivalPayload({ sheepCount: 30 })); // party 1 (default)
+    await submitScore(h.db, coop, 'survival', 80, survivalPayload({ sheepCount: 80, partySize: 2 }));
+    const soloBoard = await getLeaderboard(h.db, 'survival', 10, { sceneId: 'newsheepdogland', partySize: 1 });
+    expect(soloBoard.map((e) => e.displayName)).toEqual(['SoloPlayer']);
+    const coopBoard = await getLeaderboard(h.db, 'survival', 10, { sceneId: 'newsheepdogland', partySize: 2 });
+    expect(coopBoard.map((e) => e.displayName)).toEqual(['CoopPlayer']);
+  });
+
+  it('emits solo + co-op survival board keys from getAllLeaderboards without cross-leak', async () => {
+    const solo = await reg('Solo', 'pid-a7');
+    const coop = await reg('Coop', 'pid-b7');
+    await submitScore(h.db, solo, 'survival', 25, survivalPayload({ sheepCount: 25 }));
+    await submitScore(h.db, coop, 'survival', 75, survivalPayload({ sheepCount: 75, partySize: 3 }));
+    const all = await getAllLeaderboards(h.db, 10, { sceneId: 'newsheepdogland' });
+    expect(Object.keys(all)).toContain('survival');
+    expect(Object.keys(all)).toContain('survival:3');
+    expect(all['survival'].map((e) => e.displayName)).toEqual(['Solo']);
+    expect(all['survival:3'].map((e) => e.displayName)).toEqual(['Coop']);
+    expect(all['survival:2']).toEqual([]); // no party-2 runs
+  });
+
+  it('defaults a survival submission with no partySize to party 1 (the solo board)', async () => {
+    const id = await reg('Defaulter', 'pid-def7');
+    await submitScore(h.db, id, 'survival', 40, survivalPayload({ sheepCount: 40 }));
+    const rows = h.query<{ party_size: number }>(
+      'SELECT party_size FROM score_submissions WHERE persistent_id = ?',
+      id,
+    );
+    expect(rows[0].party_size).toBe(1);
+  });
 });
