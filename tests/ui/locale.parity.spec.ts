@@ -66,6 +66,9 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'leaderboard.countingIncremental',
     // Cycle 66 - survival board; English-only this cycle, translate later.
     'leaderboard.survival',
+    // Cycle 67 - co-op survival room mode label/desc; English-only this cycle.
+    'multiplayer.survival',
+    'multiplayer.survivalDesc',
     'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
@@ -115,6 +118,9 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'leaderboard.countingIncremental',
     // Cycle 66 - survival board; English-only this cycle, translate later.
     'leaderboard.survival',
+    // Cycle 67 - co-op survival room mode label/desc; English-only this cycle.
+    'multiplayer.survival',
+    'multiplayer.survivalDesc',
     'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
@@ -164,6 +170,9 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'leaderboard.countingIncremental',
     // Cycle 66 - survival board; English-only this cycle, translate later.
     'leaderboard.survival',
+    // Cycle 67 - co-op survival room mode label/desc; English-only this cycle.
+    'multiplayer.survival',
+    'multiplayer.survivalDesc',
     'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',
@@ -231,6 +240,9 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'leaderboard.countingIncremental',
     // Cycle 66 - survival board; English-only this cycle, translate later.
     'leaderboard.survival',
+    // Cycle 67 - co-op survival room mode label/desc; English-only this cycle.
+    'multiplayer.survival',
+    'multiplayer.survivalDesc',
     'pause.bankAndFinish',
     'completion.saveClip',
     'leaderboard.soloChaos',

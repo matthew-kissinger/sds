@@ -356,7 +356,9 @@ export class RoomDO {
 
     const s = body.roomSettings || {};
     const gameMode = s.gameMode || 'cooperative';
-    if (!['cooperative', 'competitive', 'timed'].includes(gameMode)) {
+    // Cycle 67 P4: 'survival' is a co-op room mode (allowed only on scenes that
+    // declare `survival`, enforced by the allowedModes cross-check below).
+    if (!['cooperative', 'competitive', 'timed', 'survival'].includes(gameMode)) {
       return new Response(JSON.stringify({ error: 'invalid gameMode' }), { status: 400 });
     }
     const validScenes = listScenes() as Array<{ id: string; allowedModes?: string[] }>;
@@ -381,9 +383,17 @@ export class RoomDO {
     }
     const maxPlayers = Math.min(4, Math.max(2, s.maxPlayers || 4));
     // Cycle 8 Phase 5: validate sheepCount against allow-list.
-    const sheepCount = (typeof s.sheepCount === 'number' && ALLOWED_SHEEP_COUNTS.has(s.sheepCount))
+    let sheepCount = (typeof s.sheepCount === 'number' && ALLOWED_SHEEP_COUNTS.has(s.sheepCount))
       ? s.sheepCount
       : DEFAULT_SHEEP_COUNT;
+    // Cycle 67 P4: survival has no count selector. The flock is a pool sized to
+    // the scene's maxFlock (the run starts at startFlock and grows into it);
+    // force it server-side so the GameSim pool and the client capacity agree
+    // regardless of what the client sent.
+    if (gameMode === 'survival') {
+      const survivalMax = (sceneDef as any)?.survival?.maxFlock;
+      if (typeof survivalMax === 'number' && survivalMax > 0) sheepCount = survivalMax;
+    }
 
     this.meta = {
       roomCode: body.roomCode,

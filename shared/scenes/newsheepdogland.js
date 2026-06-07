@@ -181,7 +181,7 @@ export const newsheepdogland = {
         { id: 'chaos', count: 5000, ranked: true, label: 'Chaos', blurb: 'The flock becomes the antagonist.' },
     ],
 
-    allowedModes: ['cooperative', 'competitive', 'timed'],
+    allowedModes: ['cooperative', 'competitive', 'timed', 'survival'],
     defaultMode: 'cooperative',
     defaultCamera: 'follow',
     difficultyModifier: 1.2,

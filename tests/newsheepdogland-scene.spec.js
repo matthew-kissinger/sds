@@ -84,10 +84,11 @@ describe('Newsheepdogland SceneDef (Cycle 64)', () => {
         expect(scene.dayNight.initialT).toBeLessThan(1);
     });
 
-    it('ships no survival modes this cycle', () => {
-        for (const mode of scene.allowedModes) {
-            expect(mode).not.toBe('survival');
-        }
+    it('offers the survival co-op room mode (Cycle 67 P4)', () => {
+        // Cycle 66 shipped survival as a solo client-only layer (no room mode).
+        // Cycle 67 promotes it to an authoritative co-op room mode, so the scene
+        // now declares `survival` alongside the standard co-op modes.
+        expect(scene.allowedModes).toContain('survival');
         expect(scene.allowedModes).toContain('cooperative');
     });
 

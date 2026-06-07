@@ -14,14 +14,17 @@ import { listScenes, loadScene, DEFAULT_SCENE_ID } from '../../../shared/scenes/
 const gameModeDescriptions = {
     cooperative: 'multiplayer.cooperativeDesc',
     competitive: 'multiplayer.competitiveDesc',
-    timed: 'multiplayer.timedDesc'
+    timed: 'multiplayer.timedDesc',
+    // Cycle 67 P4: co-op survival on Newsheepdogland.
+    survival: 'multiplayer.survivalDesc'
 };
 
 // Cycle 34 Phase 5: scene picker for the host. Mode dropdown filters by
 // the selected scene's `allowedModes` so the host can't trip the worker's
 // 400 mode_not_allowed_on_scene guard from Phase 4. Scene order matches
 // the solo ScenePicker (RH first, OC second, Field last).
-const SCENE_ORDER = ['rolling-hills', 'open-country', 'field'];
+// Cycle 67 P4: Newsheepdogland leads the list (the co-op survival scene).
+const SCENE_ORDER = ['newsheepdogland', 'rolling-hills', 'open-country', 'field'];
 const ALL_MODES = ['cooperative', 'competitive', 'timed'];
 
 // Cycle 8 Phase 5: room-level sheep count picker.
@@ -169,8 +172,10 @@ export function RoomCreation({ onBack, onCreate }) {
                     ))
                 ]),
 
-                // Sheep count (Cycle 8 Phase 5; Cycle 23 Phase E added Insane/Chaos)
-                createElement('div', { key: 'sheep-count' }, [
+                // Sheep count (Cycle 8 Phase 5; Cycle 23 Phase E added Insane/Chaos).
+                // Cycle 67 P4: hidden for survival - it has no count selector (the
+                // run is a fixed pool sized to the scene's maxFlock).
+                settings.gameMode !== 'survival' && createElement('div', { key: 'sheep-count' }, [
                     createElement('label', { key: 'label', style: labelStyle }, 'Sheep count'),
                     createElement('select', {
                         key: 'select',

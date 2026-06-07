@@ -283,6 +283,8 @@ export default {
         competitiveDesc: 'Race to collect the most sheep before opponents',
         timed: 'Timed (3 min)',
         timedDesc: 'Score as many points as possible in 3 minutes',
+        survival: 'Survival (co-op)',
+        survivalDesc: 'Herd the flock home before dusk, then survive the wolf night together. Lose a third of the flock and the run ends.',
         roomCode: 'Room Code',
         enterRoomCode: 'Enter room code',
         leaveRoom: 'Leave Room',
