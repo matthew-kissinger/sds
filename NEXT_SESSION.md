@@ -1,54 +1,54 @@
-# Next Session - Cycle 71 feel-and-media-live (stub - needs authoring)
+# Next Session - Cycle 72 webgpu-first (stub - needs authoring)
 
-> **Updated:** 2026-06-07
-> **For:** Cycle 71 `feel-and-media-live`. Plan: [`docs/cycle-71-plan.md`](docs/cycle-71-plan.md) (a STUB - Goal + Phases not yet filled in).
-> **Pickup priority:** Cycle 70 (survival-feel-and-media) is CLOSED + shipped + live. The autonomous prep is done; Cycle 71 is the LIVE paired track that needs Matt at the keyboard: the survival feel live-tuning pass (off the Cycle 70 audit), the two-client co-op fun playtest, the entrance hero FINAL beauty shot, and the guardrail-blocked `multiplayer.md` doc fix. Author it with Matt, then `/cycle-start`.
+> **Updated:** 2026-06-08
+> **For:** Cycle 72 `webgpu-first`. Plan: [`docs/cycle-72-plan.md`](docs/cycle-72-plan.md) (a STUB - Goal sketched from Matt's direction; finalize Phases).
+> **Pickup priority:** Cycle 71 (the newsheepdogland load-crash fix + real hero) is CLOSED + deployed + LIVE. Cycle 72 is **WebGPU-first**: make the heaviest scene actually viable on WebGPU so the Cycle 71 WebGL pin comes off and every scene defaults to WebGPU when available, and retract the inert grass far-ring. Polish toward packaging/marketing. Finalize the plan, then `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-71-plan.md`](docs/cycle-71-plan.md) -> the touched module source. Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-72-plan.md`](docs/cycle-72-plan.md) -> the touched module source. Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Where It Stands
 
-**Cycle 70 (`survival-feel-and-media`) is CLOSED + deployed (2026-06-07).** An autonomous cycle (Matt: "author entire cycle the implement and complete and close and commit and deploy") that turned the Cycle 69 carryover into shipped work where it could ship autonomously and into evidence where it could not. 3 shipped, 2 evidence-deferred, 1 still-blocked (full closeout in [`docs/BACKLOG.md`](docs/BACKLOG.md)):
+**Cycle 71 (`newsheepdogland-load-fix-and-hero`) is CLOSED + deployed (2026-06-08).** The flagship survival scene crashed on load in the browser. Root cause (measured on the RTX 3070, `cycle71-validation/webgpu-crash/findings.md`, gitignored): cold WebGPU pipeline compilation - on the default WebGPU renderer the heaviest scene's first cold load compiles its node-material pipelines (D3D12 WGSL->DXIL) synchronously on the main thread ~43s, tripping Windows GPU TDR and wedging the tab. WebGL cold-loads it in 2.2s with correct lighting.
 
-- **P1** grass far-ring Option A is LIVE on Newsheepdogland: new `GrassDef.farRing` (additive, render-only) makes coastline far chunks beyond `meadowFrom` (600m) from `grassCenter` render as meadow quads instead of clump blades. 37.6% grass-triangle cut, zero draw-call change, coast/relief-safe, desktop-tier only. Every scene without `farRing` is byte-identical.
-- **P2** survival feel-pass readiness audit (`cycle70-validation/survival-feel/audit.md`): wolf-vs-dog speed confirms no playability bug (dog strictly faster on every dog); day-1 lethality + growth math; recommended live-tuning lever order. No spec value changed (Matt's paired track).
-- **P3** entrance hero capture refreshed against the far-ring scene (`cycle70-validation/hero/`): far-ring reads clean in the hero framing (no water tiling, no flat planes). FINAL beauty shot deferred to Matt's browser pass.
+Shipped (commit `3b91f5b`, deploy run `27108889618` green):
 
-Validation: `npm test` 1135 pass / 0 fail, eslint `shared/` + worker tsc + build clean (main 584.81 KiB, within the 585 KiB ratchet), sim-baselines + scatter/terrain baselines untouched (render-only change). Deploy green including the `Migrate D1 (remote)` job. Prod verified.
+- **The fix:** new optional `SceneDef.renderer:'webgl'` + a boot guard and a `swapScene` guard in [`js/main.js`](js/main.js) that route newsheepdogland to WebGL before any WebGPU cold compile. Verified on the 3070; `field` and every other scene keep WebGPU. Render-only, sim-baselines byte-identical.
+- **Real hero:** [`assets/scenes/entrance/newsheepdogland.webp`](assets/scenes/entrance/newsheepdogland.webp) is now a real 1920x1080 dusk capture (214 KB), replacing the 7.5 KB gradient.
+
+Validation: `npm test` 1135 pass; `npm run lint` clean; `npm run build` clean (main 585.6 KiB).
 
 ## What To Pick Up Next
 
-Cycle 71 is a **stub**. Author its Goal + Phases from the Cycle 70 carryover (in [`docs/BACKLOG.md`](docs/BACKLOG.md)). This is the **LIVE paired / Matt's-hands track**:
+Cycle 72 is **WebGPU-first** (Matt's direction: "I would like to be WebGPU first... make it so all scenes default to webgpu if available. also look into retracting the inert grass far ring... polish, closer to packaging and official marketing"). Finalize [`docs/cycle-72-plan.md`](docs/cycle-72-plan.md), then `/cycle-start`. Candidate scope (measure-first):
 
-1. **Survival feel LIVE tuning (paired taste).** Start from the Cycle 70 P2 audit (`cycle70-validation/survival-feel/audit.md`); live-tune `shared/survival/tuning.js` across a real wolf night, lever order in the audit. Any value change keeps the 10 sim-baselines byte-identical; no wire change.
-2. **Two-client co-op fun playtest (paired).** The wire path is proven (Cycle 68 P3); the "is it fun" judgment is Matt's.
-3. **Entrance hero FINAL beauty shot (media).** Dial `tools/hero-capture.mjs` live in a real browser to the `cycle68-validation/hero/manifest.md` framing. Cycle 70 P3 left a current candidate with the far-ring active; a real browser clears the headless sun-dome artifact.
-4. **`multiplayer.md` doc correction (BLOCKED - needs Matt's OK).** The Cycle 68 P1 remote-migration lines are wrong; the guardrail blocks an autonomous `.claude/rules/*.md` edit. Matt applies the staged text or grants the edit.
+1. **Kill the WebGPU cold-compile freeze.** Spike where the ~43s cold block lands on the RTX 3070 and whether `renderer.compileAsync` moves it off the main thread (pre-compile during the load screen). Risky-primitive spike before touching the konveyor path.
+2. **Fix the WebGPU node-lighting on newsheepdogland** ("Light node not found" every frame).
+3. **Remove the WebGL pin -> WebGPU-first everywhere.** Once 1+2 verify the heavy scene on WebGPU within budget, drop `renderer:'webgl'` from `newsheepdogland.js` (keep the `SceneDef.renderer` mechanism as a fallback).
+4. **Retract the inert far-ring** (Matt's lean). `grass.farRing` is gated behind `meadowQuadEnabled` = false on every tier, so the Cycle 70 "37.6% cut, LIVE" never ran. Remove the dead config + `GrassSystem` branch + `GrassFarRingDef` schema field, correct the record. Render-only.
 
 ## Open Carryover (deferred)
 
-- The four candidates above.
-- Prior open carryover: tablet draw-call perf (could be its own autonomous spike+cycle if Matt wants a non-paired one), counting naming/curve-feel.
+- The four Cycle 72 candidates above.
+- **`feel-and-media-live` paired track** (bumped again by the WebGPU-first reframe): survival feel LIVE tuning, two-client co-op fun playtest, entrance hero FINAL beauty-shot dial-in, the `multiplayer.md` doc correction (still needs Matt's OK).
+- Prior open carryover: tablet draw-call perf.
 
 ## Working Contract
 
-- Co-op survival is live: any `shared/survival/*` change must keep the 10 sim-baselines byte-identical; any wire change carries the four-piece migration story + a `PROTOCOL_VERSION` bump. Any new D1 migration is append-only AND applied to remote automatically on deploy (the `migrate` job); register schema migrations in `tests/worker/helpers/d1-sqlite.ts`.
-- Don't decompose `GrassSystem` / `OptimizedSheep`. The grass far-ring is an additive gated path (shipped Cycle 70), not a decomposition. No version bump without Matt's call.
+- Cycle 72 is render/renderer-only: no `shared/` sim change; the 10 survival sim-baselines + every sim-baseline stay byte-identical. Don't ship the pin removal (P4) before the cold-compile fix (P2) is verified on the real GPU - that regression is the live crash again.
+- Don't decompose `GrassSystem` / `OptimizedSheep`. The far-ring retraction removes an additive gated path, not a decomposition. No version bump without Matt's call.
 - Run `/validate` before any cycle close. Close via `/cycle-close`.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan (stub) | [`docs/cycle-71-plan.md`](docs/cycle-71-plan.md) |
-| Survival feel tuning + audit | [`shared/survival/tuning.js`](shared/survival/tuning.js) + `cycle70-validation/survival-feel/audit.md` |
-| Grass far-ring (shipped) | [`js/GrassSystem.js`](js/GrassSystem.js) (`_farRing`) + [`shared/scenes/types.js`](shared/scenes/types.js) `GrassFarRingDef` |
-| Hero capture | [`tools/hero-capture.mjs`](tools/hero-capture.mjs) + `cycle68-validation/hero/manifest.md` + `cycle70-validation/hero/` |
-| Shared survival cores | [`shared/survival/`](shared/survival/) (run, wolves, wolfBehavior, pen, dayClock, tuning) |
-| Worker HTTP router | [`worker/src/index.ts`](worker/src/index.ts) (`readJsonObject`) |
-| Deploy remote migrations | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) `migrate` job + [`scripts/d1-local-setup.mjs`](scripts/d1-local-setup.mjs) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-70-plan.md`](docs/archive/cycles/cycle-70-plan.md) |
+| Active cycle plan (stub) | [`docs/cycle-72-plan.md`](docs/cycle-72-plan.md) |
+| Cold-compile root-cause evidence | `cycle71-validation/webgpu-crash/findings.md` (gitignored) |
+| The WebGL pin to remove | [`shared/scenes/newsheepdogland.js`](shared/scenes/newsheepdogland.js) (`renderer:'webgl'`) + [`js/main.js`](js/main.js) guards |
+| WebGPU production boot | [`js/rendering/konveyorProductionWebGpuBoot.js`](js/rendering/konveyorProductionWebGpuBoot.js) |
+| Inert far-ring | [`js/GrassSystem.js`](js/GrassSystem.js) (`_farRing`) + [`shared/scenes/types.js`](shared/scenes/types.js) (`GrassFarRingDef`) + [`js/HardwareTier.js`](js/HardwareTier.js) (`meadowQuadEnabled`) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-71-plan.md`](docs/archive/cycles/cycle-71-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |

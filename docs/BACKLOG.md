@@ -4,6 +4,31 @@
 
 ## Recently Completed
 
+### Cycle 71 - `newsheepdogland-load-fix-and-hero` (closed 2026-06-08)
+
+Plan archived at [`docs/archive/cycles/cycle-71-plan.md`](archive/cycles/cycle-71-plan.md). Reframed from the `feel-and-media-live` stub when the flagship survival scene started crashing on load in the browser. Matt set the fix as a `/goal` ("Stop the newsheepdogland WebGPU load crash and make the flagship survival scene render within budget on WebGPU, then replace the placeholder hero with a real capture") and said implement; shipped end-to-end (measure -> fix -> verify -> commit -> deploy -> close). Render-only: no `shared/` sim change, so every sim-baseline is byte-identical by construction.
+
+**Root cause (measured on the RTX 3070, `cycle71-validation/webgpu-crash/findings.md`, gitignored):** cold WebGPU pipeline compilation, not grass and not the Cycle 70 far-ring. On the default WebGPU renderer the heaviest scene's first cold load compiles its node-material pipelines (D3D12 WGSL -> DXIL) synchronously on the main thread for ~43s, tripping the Windows GPU TDR watchdog and wedging the tab. Warm reload ~4.3s; WebGL cold-loads the same scene in 2.2s with correct lighting. newsheepdogland is the only scene heavy enough (~400 tree InstancedMeshes + 744 grass chunks + water + structures) to blow the ~2s TDR window; lighter scenes compile fast enough, which is why only this scene crashed.
+
+**Closeout outcomes (3 phases shipped):**
+
+- **P1 root-cause the crash (measure-first) - SHIPPED.** Bisected WebGL vs WebGPU, cold vs warm, per load stage on the real GPU. Ruled out grass (266-413ms every path) and the far-ring (see below); identified cold pipeline compile as the ~43s main-thread block. Evidence in `cycle71-validation/webgpu-crash/findings.md`.
+- **P2 pin newsheepdogland to WebGL (the fix) - SHIPPED.** New optional `SceneDef.renderer:'webgl'` (additive fence field on `shared/scenes/types.js`); `newsheepdogland.js` sets it. Two guards in `js/main.js`: a boot guard (deep-link/fresh load) skips the WebGPU boot for a pinned scene with no reload; a `swapScene` guard hard-reloads an in-app swap onto `?renderer=webgl`. Verified on the 3070: `?renderer=webgpu&scene=newsheepdogland` -> `effective: webgl`, no freeze; an in-app swap from a WebGPU `field` session hard-reloads to WebGL; `field` stays `webgpu-production` (pin scoped to just this scene). (`3b91f5b`)
+- **P3 real hero capture - SHIPPED.** `assets/scenes/entrance/newsheepdogland.webp` is now a real dusk sunset-over-water capture (1920x1080, 214 KB), replacing the 7.5 KB flat gradient. Captured headed on the real GPU (the headless tool and the cinematic FREE camera both render the sun billboard as a black dome; the natural gameplay camera renders it correctly). FINAL beauty-shot dialing stays Matt's per the media-prep split. (`3b91f5b`)
+
+**Corrections / findings:**
+
+- **The Cycle 70 P1 far-ring is inert in production.** `grass.farRing` is gated behind `tierPreset.meadowQuadEnabled`, which is `false` on low, med, AND high tiers (`HardwareTier.js`; Cycle 51 disabled it for med/high). So the far-ring branch never runs on any hardware - the live scene has 744 blade chunks and 0 meadow quads, and the "37.6% cut, LIVE" never actually shipped. Spawned a background task to re-gate it on its own flag (and re-validate the seam) or retract the claim. (Prior BACKLOG entries are append-only and left as written.)
+- **WebGPU node-lighting bug on this scene** ("Light node not found for AmbientLight/DirectionalLight" every frame) - another reason WebGL is the correct route for it.
+
+**Deferred (the literal "render within budget ON WebGPU"):** the WebGL pin sidesteps the cold compile. Genuinely making the heaviest scene's WebGPU cold compile non-blocking/cheaper is konveyor-subsystem-deep, and the WebGPU node-lighting is broken on it, so that is its own cycle.
+
+**Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail (no test change - render-only); `npm run lint` (`eslint shared/`) clean; `npm run build` clean (main bundle 585.6 KiB; +~0.6 KiB of necessary guard logic over the 584.81 KiB Cycle 70 baseline - the tracked ~585 KiB target moves to ~586 KiB, not an enforced gate); sim-baselines byte-identical.
+
+**Release proof.** Commit `3b91f5b` pushed to `main`; GH Actions deploy run `27108889618`. The docs-only close commit does not deploy (paths-ignore).
+
+**Carryover (to Cycle 72 `webgpu-first`):** Matt redirected the next cycle to **WebGPU-first** - make the heaviest scene viable on WebGPU (kill the cold-compile freeze + fix the node-lighting), then remove this cycle's WebGL pin so every scene defaults to WebGPU when available, and **retract** the inert far-ring (Matt's lean), as polish toward packaging/marketing. The `feel-and-media-live` paired track (survival feel LIVE tuning, two-client co-op fun playtest, entrance hero FINAL beauty shot, the `multiplayer.md` doc correction - still needs Matt's OK) is bumped to a later cycle. Prior open carryover (tablet draw-call perf) remains.
+
 ### Cycle 70 - `survival-feel-and-media` (closed 2026-06-07)
 
 Plan archived at [`docs/archive/cycles/cycle-70-plan.md`](archive/cycles/cycle-70-plan.md). An autonomous cycle (Matt: "author entire cycle the implement and complete and close and commit and deploy") that converted the Cycle 69 carryover into shipped work where it could ship autonomously, and into evidence where it could not. This was the Matt's-hands / paired track, so the deferrals (final hero blessing, fun playtest, multiplayer.md edit) are first-class outcomes, not gaps. No `shared/` sim change, so the 10 sim-baselines are untouched by construction; `GrassSystem` got an additive gated path, not a decomposition.
