@@ -1249,3 +1249,18 @@ constants, the live leaderboard smoke) ship with the prose-clean strawman and
 are finalized in Matt's post-deploy playtest. The bundle ratchet moved main
 554 -> 555 KiB for the inline stats + gamepad gates; the focus and note modules
 are lazy chunks.
+
+---
+
+## Cycle 72 — WebGPU-first, and the one scene that stays pinned (2026-06-08)
+
+Cycle 71 pinned the heaviest scene (newsheepdogland, a 3.2 km^2 island) to WebGL to stop a cold-compile crash. Cycle 72 set out to make it WebGPU-first like every other scene and remove the pin. A measured P1 spike (RTX 3070, system Chrome, `cycle72-validation/webgpu-cold-compile/`) settled it the other way.
+
+- **A render-loop-gated `renderer.compileAsync` pre-warm stops the crash.** With the compile moved to Dawn's off-main-thread async path, the tab survives (no freeze, no TDR) and reaches a live render loop. The Cycle 71 crash mechanism is understood and beatable.
+- **But the cold compile is ~83-95s, and it is intrinsic.** Only 28 unique materials across 1,617 meshes, so it is not per-mesh-pipeline bloat. Warm reload is ~4s with the same scene, so the ~90s is genuine cold D3D12 WGSL->DXIL driver compilation, disk-cached after first run. Material/object dedup cannot touch it.
+
+**Decision: the WebGL pin on newsheepdogland stays.** A ~90s first-load is worse UX than the fast ~2s WebGL load, and hiding the compile would need speculatively building a 3.2 km^2 island during the menu. Every other scene already defaults to WebGPU when supported; the `SceneDef.renderer` mechanism stays as the per-scene fallback. Cutting the ~90s (simplify the heavy grass/terrain/water shaders, or warm the Dawn pipeline cache at build time for the native build) is the only path to lifting the last pin, and it is deferred to a future cycle as its own measured spike.
+
+**The WebGPU node-lighting warning is fixed.** SceneManager imports the WebGL `three`; the WebGPU renderer is `three.webgpu` (a different instance). The 1 ambient + 2 directional lights SceneManager creates cannot bind into the WebGPU node-material lighting graph - they logged `LightsNode.setupNodeLights: Light node not found` every frame and contributed nothing (the konveyor boot installs its own webgpu-three lighting bridge for standard materials; the node materials are self-lit from atmosphere uniforms). On the WebGPU path SceneManager now creates the ambient light (Atmosphere still binds to it) but does not add the WebGL-three rig to the scene. Zero render change (verified on rolling-hills: 0 warnings, scene renders lit); WebGL keeps the full 3-light rig.
+
+**The Cycle 70 grass far-ring is retracted.** Cycle 70 P1 added `grass.farRing` (a coastline meadow-quad far-LOD opt-in) and recorded a "37.6% triangle cut, LIVE" on newsheepdogland. It never ran: the branch is gated behind `tierPreset.meadowQuadEnabled`, which Cycle 51 set false on every desktop tier. The dead `grass.farRing` config, the `GrassSystem` coastline branch, and the `GrassFarRingDef` schema field are removed. The older Cycle 23 non-coastline meadow-quad LOD (RH/OC) and the `meadowQuadEnabled` flag stay - a separate mechanism, currently disabled but architecturally intact. Render-only; sim-baselines byte-identical.

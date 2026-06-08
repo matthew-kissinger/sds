@@ -4,6 +4,36 @@
 
 ## Recently Completed
 
+### Cycle 72 - `webgpu-first` (closed 2026-06-08)
+
+Plan archived at [`docs/archive/cycles/cycle-72-plan.md`](archive/cycles/cycle-72-plan.md). Started as "make every scene WebGPU-first and remove the Cycle 71 WebGL pin"; a measure-first P1 spike re-scoped it, and Matt confirmed the new direction ("implement your recommendation and complete the cycle"). Render-only: no `shared/` sim change, so every sim-baseline is byte-identical by construction.
+
+**The P1 measurement that re-scoped the cycle (RTX 3070, system Chrome, `cycle72-validation/webgpu-cold-compile/`, gitignored):**
+
+- A render-loop-gated `renderer.compileAsync` pre-warm STOPS the crash: with the compile moved to Dawn's off-main-thread async path, the heaviest scene survives on WebGPU (no freeze, no TDR, live render loop). The Cycle 71 crash mechanism is beatable.
+- But the cold compile is ~83-95s, and it is intrinsic. Only 28 unique materials across 1,617 meshes (not per-mesh-pipeline bloat); warm reload ~4s on the same scene, so the ~90s is genuine cold D3D12 WGSL -> DXIL driver compilation, disk-cached after first run. Material/object dedup cannot touch it. `compileAsync` alone converts a crash into a ~90s load, which is not "within budget"; hiding it would need speculatively building a 3.2 km^2 island during the menu.
+
+**Closeout outcomes:**
+
+- **P1 measure the WebGPU cold-compile (spike) - DONE.** Findings above. The instrumentation was throwaway (gated under `?prewarm=1`), reverted after measuring.
+- **P2 decision D: keep the WebGL pin - DONE.** Did not ship an in-session prewarm (a 90s load is worse than the fast 2s WebGL load). newsheepdogland keeps `renderer:'webgl'`. Recorded in [`DECISIONS.md`](../DECISIONS.md).
+- **P3 fix the WebGPU node-lighting warning - SHIPPED.** Root cause: SceneManager imports the WebGL `three`, the renderer is `three.webgpu` (a different instance), so the 1 ambient + 2 directional lights SceneManager creates cannot bind into the WebGPU node-material graph - they logged "LightsNode.setupNodeLights: Light node not found" every frame and contributed nothing (the konveyor boot installs its own webgpu-three lighting bridge; node materials are self-lit from atmosphere uniforms). On the WebGPU path SceneManager now creates the ambient light (Atmosphere still binds) but does not add the WebGL-three rig to the scene. Verified on rolling-hills via a real-GPU browser: 0 warnings, scene renders lit. Zero render change (the foreign lights never bound); WebGL keeps the full 3-light rig.
+- **P4 confirm WebGPU-first for every other scene - DONE.** No pin removal (superseded by P1). field / rolling-hills / open-country already default to WebGPU when supported (rolling-hills booted `webgpu-production` in the P3 verification); the `SceneDef.renderer` mechanism stays as the per-scene fallback.
+- **P5 retract the inert far-ring - SHIPPED.** Removed the dead `grass.farRing` config (`newsheepdogland.js`), the `GrassSystem` coastline far-ring branch, and the `GrassFarRingDef` schema field (`shared/scenes/types.js`). The older Cycle 23 non-coastline meadow-quad LOD (RH/OC) and the `meadowQuadEnabled` flag stay - a separate mechanism, currently disabled but architecturally intact. Since `meadowQuadEnabled` is false on every tier the removed branch was dead, so the runtime is byte-identical.
+- **P6 packaging-polish - skipped (optional).**
+
+**Correction of record:** the Cycle 70 "37.6% triangle cut, LIVE" far-ring claim is retracted. It never ran (gated behind `meadowQuadEnabled` = false on every tier; first flagged in the Cycle 71 entry below). The Cycle 70 feature is now removed from the code. Prior BACKLOG entries are append-only and left as written.
+
+**Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail; `npm run lint` (`eslint shared/`) clean; `npm run build` clean. The refactor-baseline bundle ratchet `bundle-sizes.json` mainKB 585 -> 586: a `git stash` build proved this is NOT a Cycle 72 regression - baseline at the Cycle 71 close commit already builds main at 599.66 kB = 585.6 KiB (rounds to 586), over the stale 585 fixture; Cycle 72 adds 50 bytes (the small lighting guard slightly outweighs the far-ring removal). The fixture sat 1 KiB below the real Cycle 71 size; the bump reflects reality, not a regression. `threeKB` unchanged (604). Sim-baselines + terrain/scatter refactor-baselines byte-identical (render-only).
+
+**Release proof.** Code commit `f143905` (P3 + P5 + bundle fixture) pushed to `main`; GH Actions deploy run `27110810859`. The docs-only close commit does not deploy (paths-ignore).
+
+**Carryover (to Cycle 73 `feel-and-media-live`):**
+
+- **Compile reduction (the WebGPU-first follow-up).** The only path to lifting the last WebGL pin on newsheepdogland: cut the ~90s cold compile (simplify the heavy grass/terrain/water shaders, or warm the Dawn pipeline cache at build time for the native build). High effort, uncertain payoff, risks visual regression. Its own measured spike.
+- **The `feel-and-media-live` paired track** (bumped again): survival feel LIVE tuning, two-client co-op fun playtest, entrance hero FINAL beauty shot, the `multiplayer.md` doc correction (still needs Matt's OK).
+- Prior open carryover (tablet draw-call perf) remains.
+
 ### Cycle 71 - `newsheepdogland-load-fix-and-hero` (closed 2026-06-08)
 
 Plan archived at [`docs/archive/cycles/cycle-71-plan.md`](archive/cycles/cycle-71-plan.md). Reframed from the `feel-and-media-live` stub when the flagship survival scene started crashing on load in the browser. Matt set the fix as a `/goal` ("Stop the newsheepdogland WebGPU load crash and make the flagship survival scene render within budget on WebGPU, then replace the placeholder hero with a real capture") and said implement; shipped end-to-end (measure -> fix -> verify -> commit -> deploy -> close). Render-only: no `shared/` sim change, so every sim-baseline is byte-identical by construction.
