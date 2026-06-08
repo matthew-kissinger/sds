@@ -18,7 +18,7 @@ Plan archived at [`docs/archive/cycles/cycle-75-plan.md`](archive/cycles/cycle-7
 
 **Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail; `npm run lint` (`eslint shared/`) clean; `npm run build` clean. Bundle ratchet 586 KiB main / 604 KiB three == baseline. The scene files were temporarily edited for the measurement (pin lifted, default-scene prewarm flag) and restored byte-identical; no `js/` or `shared/` change ships.
 
-**No player-visible change this cycle** (newsheepdogland stays on WebGL; no prewarm). Release proof: commit `__PENDING__` on `main`; GH Actions run `__PENDING__`. The committed change is docs + three probe tools only (not bundled into the app), so the built app is byte-identical to the Cycle 74 baseline.
+**No player-visible change this cycle** (newsheepdogland stays on WebGL; no prewarm). Release proof: commit `653f726` on `main`; GH Actions run `27125634968` GREEN (Deploy Pages 53s + Deploy Worker 28s + the Perf-check + Migrate jobs no-ops). The committed change is docs + three probe tools only (not bundled into the app), so the built app is byte-identical to the Cycle 74 baseline.
 
 **Carryover (to Cycle 76 `webgpu-tree-build-cost`):**
 
