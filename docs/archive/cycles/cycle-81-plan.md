@@ -2,6 +2,18 @@
 
 > Drafted 2026-06-08 after Cycle 80 closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom, then `cycle80-validation/README.md` (the proof this cycle ships) and `docs/archive/cycles/cycle-80-plan.md`. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
 
+## Outcome (shipped 2026-06-08)
+
+**SHIPPED. The flagship WebGL pin is lifted on desktop WebGPU; mobile keeps it.** Autonomous (Matt: "complete autonomously, device is connected (tablet - lower end)"). Commit `7c8e74c` + the close. All six phases done:
+
+- **P1-P2** - the Cycle 80 compute-cull rebuilt as clean production code (grass index-remap to 1 mesh pixel-identical, trees data-compaction to 4 meshes material-agnostic, 8 total; disposal-safe instance-owned controllers on TerrainBuilder), tier-gated by a shared `isMobileClient()` at the boot + swap guards. Build clean, 1135 tests pass, bundle baseline 586 -> 591 KB.
+- **P3 (hard stop 1) - PASSED** on the production boot path (RTX 3070, 6 runs incl. a driver-cache-cleared cold run): worst main-thread long-task 506 ms cold (512-721 ms warm), at or under WebGL's 548 ms, 0 bufferDestroyed / 0 NodeBuilder / 0 crashes, 144 fps, 8 meshes, 27 render + 10 compute pipelines.
+- **P4** - the WebGPU-only Hosek sky + water confirmed rendering on the lifted flagship; clean hero captured.
+- **P5** - the connected Galaxy Tab S9 FE (Mali-G68) exposes no `navigator.gpu` in Chrome or Brave, so mobile loads WebGL regardless; keep-the-pin decision recorded in `DECISIONS.md`.
+- **P6** - the gate probe doubles as the recorded regression guard (`GUARD=1`: <= 30 render pipelines, <= 12 InstancedMeshes).
+
+No `shared/` sim change (a comment-only correction to the newsheepdogland renderer note; sim-baselines byte-identical). Full evidence + the exact edits: `cycle81-validation/README.md`.
+
 ## Goal
 
 Ship what Cycle 80 proved. Cycle 80 demonstrated that GPU compute-driven per-instance culling cold-loads newsheepdogland on WebGPU in 581 ms (driver-cache-cleared, at WebGL's 548 ms bar) at full quality - 8 InstancedMeshes, 144 fps, 0 errors - solving the 7-cycle pin blocker. This cycle turns that proof into the live flagship: rebuild the compute-cull as clean un-flag-gated production code, tier-gate the WebGL pin so desktop loads WebGPU (with the Hosek-Wilkie sky + water + reflections that are dark on the WebGL fallback) and mobile keeps WebGL byte-identical, then validate mobile WebGPU on a real device before deciding the mobile default. User-visible difference: on desktop, the flagship survival island renders on WebGPU with the full sky + water for the first time.

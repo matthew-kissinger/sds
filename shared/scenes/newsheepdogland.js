@@ -188,28 +188,24 @@ export const newsheepdogland = {
     defaultCamera: 'follow',
     difficultyModifier: 1.2,
 
-    // Cycle 71: pin this scene to WebGL. It is by far the heaviest scene (a
-    // 3.2 km^2 island: ~400 native tree InstancedMeshes + 744 grass chunks +
-    // water + structures), so its cold WebGPU pipeline compile (D3D12 WGSL->DXIL,
-    // cached only after the first run) blocks the main thread ~43s on a fresh
-    // load and trips the Windows GPU TDR watchdog - the tab freezes on the
-    // loading screen and crashes. WebGL builds the same scene in ~2.2s and renders
-    // it correctly (the WebGPU node-lighting also fails to bind on this scene).
-    // The boot + swapScene guards in js/main.js honour this pin. Other scenes
-    // keep WebGPU. Measured: cycle71-validation/webgpu-crash/findings.md.
+    // Cycle 71 + Cycle 81: keep `renderer: 'webgl'` as the MOBILE pin. This is by far
+    // the heaviest scene (a 3.2 km^2 island: native trees + grass + water +
+    // structures); its cold WebGPU pipeline compile historically blocked the main
+    // thread ~43s on a fresh load and tripped the Windows GPU TDR watchdog (the tab
+    // froze on the loading screen and crashed). Cycle 80 solved that with GPU
+    // compute-driven per-instance culling (grass + trees collapse to ~8 indirect-
+    // drawn InstancedMeshes; cold ~506ms, under WebGL's 548ms), so DESKTOP now lifts
+    // onto WebGPU for the Hosek sky + water. The boot + swapScene guards in js/main.js
+    // honour this pin on MOBILE only (mobile WebGPU is unvalidated, and many mobile
+    // GPUs expose no navigator.gpu and load WebGL regardless). Keep the field - the
+    // tier-gate lives in the guards, not here. Measured: cycle71-validation/ +
+    // cycle80/81-validation/.
     renderer: 'webgl',
 
-    // Cycle 74 P1: opt into the build-tail compileAsync prewarm. DORMANT while
-    // the WebGL pin above is in force (the prewarm is WebGPU-only), so this is
-    // latent infrastructure in prod today. Cycle 74 P2 measured the WebGPU cold
-    // compile at ~38s as the FIRST heavy scene of a session (down from Cycle 72's
-    // ~83-95s after the node-lighting fix), crash-free under this prewarm but not
-    // within budget, and Dawn's disk cache does not persist it across browser
-    // launches - so the pin stays. An in-session swap to this scene after any
-    // other WebGPU scene compiles in ~0.4s (the shared konveyor pipelines are
-    // warm on the device), which is the basis for the deferred background-prewarm-
-    // during-attract follow-up that would let the pin come off. The flag is left
-    // set so that follow-up only has to lift the pin. See docs/cycle-74-plan.md +
-    // cycle74-validation/.
+    // Cycle 74 P1: opt into the build-tail compileAsync prewarm. Live on the desktop
+    // WebGPU path now that Cycle 81 lifted the pin there. The Cycle 80 compute-cull
+    // collapse - not this prewarm - is what brought the cold load within budget
+    // (~506ms in the Cycle 81 production gate, prewarm included); inert on the mobile
+    // WebGL path. Original prewarm measurement: docs/cycle-74-plan.md + cycle74-validation/.
     prewarmShaders: true,
 };
