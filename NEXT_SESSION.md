@@ -1,42 +1,42 @@
-# Next Session - Cycle 76 webgpu-tree-build-cost (stub - needs authoring)
+# Next Session - Cycle 77 webgpu-nsl-pin-lift (stub - needs authoring)
 
 > **Updated:** 2026-06-08
-> **For:** Cycle 76 `webgpu-tree-build-cost`. Plan: [`docs/cycle-76-plan.md`](docs/cycle-76-plan.md) (a STUB - pick the cycle focus and mode, then fill Goal + Phases).
-> **Pickup priority:** Cycle 75 (`webgpu-attract-prewarm`) is CLOSED. Its measurement REFUTED the attract-prewarm thesis: a first newsheepdogland WebGPU load is dominated by a ~76s "Creating trees" build step that is per-build and does NOT cache, so no prewarm can pre-pay it (this also corrects Cycle 74's "warmable to 0.4s" conclusion, which measured the compile tail and missed the tree-build wall). The real blocker - and the only thing that lifts the pin - is cutting the WebGPU tree-build cost. That is Cycle 76, likely PAIRED (it touches the flagship's trees). Decide focus + mode with Matt, then `/cycle-start`.
+> **For:** Cycle 77 `webgpu-nsl-pin-lift`. Plan: [`docs/cycle-77-plan.md`](docs/cycle-77-plan.md) (a STUB - pick the cycle focus and mode, then fill Goal + Phases).
+> **Pickup priority:** Cycle 76 found the EXACT root cause of the ~76-84s newsheepdogland cold WebGPU load (stock Three r184 per-chunk uniform-array instancing, GRASS-dominant) and VALIDATED a one-line storage-instancing fix that cuts it to ~16s. The pin stayed only because of two remaining blockers (a pre-existing swap-disposal race + an intermittent NodeBuilder error). Cycle 77 resolves those two, re-applies the fix, verifies a crash-clean cold load on the 3070, and lifts the pin - which unblocks the flagship's WebGPU sky + water. Likely PAIRED. Decide focus + mode with Matt, then `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-76-plan.md`](docs/cycle-76-plan.md) -> the touched module source. Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-77-plan.md`](docs/cycle-77-plan.md) -> the touched module source. Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Where It Stands
 
-**Cycle 75 (`webgpu-attract-prewarm`) is CLOSED (2026-06-08).** Run autonomously (Matt: "complete autonomously and commit and deploy at end - i can review all changes by playtesting prod when you are done"). The thread was forced (the other carried-in thread, `feel-and-media-live` LIVE, is paired). P1's measurement refuted the premise, so the cycle re-scoped to its honest outcome (the Cycle 72 spike-re-scope pattern). No `shared/` sim change; sim-baselines + refactor-baselines byte-identical.
+**Cycle 76 (`webgpu-tree-build-cost`) is CLOSED (2026-06-08).** Run autonomously (Matt: "for webgpu tree build cost and complete and deploy after completing cycle 76"). Measure-first; the spike re-scoped to its honest outcome with the deepest finding of the 5-cycle WebGPU arc. No `shared/` sim change; sim-baselines byte-identical.
 
-- **The thesis is refuted.** A newsheepdogland WebGPU swap spends ~76s in "Creating trees" (building ~400 native tree node-material InstancedMeshes, `js/world/TreePlacement.js#placeTrees`); every other build step is under 1s and the `compileAsync` tail is 95ms. WebGL builds the whole scene in ~2.2s. Building newsheepdogland twice in one session measured 76.4s then 75.4s - the tree cost is per-build and does not cache on Dawn. So no attract prewarm can make a first pick within budget.
-- **Cycle 74's conclusion is corrected.** Its "warmable to ~0.4s" measured the `compileAsync` tail only; the real ~76s wall was hiding in the swap's WALL time. The pin's true justification is the tree-build cost, not a warmable shared-pipeline compile.
-- **Pin STAYS; no prewarm built; nothing player-visible ships.** The scene files were temp-edited for the measurement (pin lifted, default-scene prewarm flag) and restored byte-identical. Committed change is docs + three probe tools (`tools/webgpu-*-cycle75.mjs`), not bundled into the app, so the built app is byte-identical to the Cycle 74 baseline. Recorded in [`DECISIONS.md`](DECISIONS.md) + `cycle75-validation/README.md`.
+- **The real root cause (corrects Cycle 74 AND 75).** A first newsheepdogland WebGPU load compiles ~950 DISTINCT DXIL shaders (~85ms each, ~76-84s). Stock Three r184 `InstanceNode` bakes a small `THREE.InstancedMesh`'s instance count into a `var<uniform> array<mat4x4,N>` shader (when `count*64 <= maxUniformBufferBindingSize`, count <= 1024). The scene builds hundreds of small per-chunk InstancedMeshes - ~745 GRASS chunks (dominant) + ~205 tree chunks - each baking its own count -> a unique shader per chunk. Cycle 75 mis-blamed "Creating trees" (grass pipelines compile lazily during the tree-build window); Cycle 74's "shared compile" was wrong (there are ~950 distinct ones).
+- **The validated fix.** `instanceMatrix.isStorageInstancedBufferAttribute = true` (gated to node materials) routes Three to a runtime-sized `var<storage> array<mat4x4>` (no baked count, device-independent), cutting the cold load 84s -> 16s at 80-89fps, visuals + per-chunk culling unchanged.
+- **Pin STAYS; nothing shipped to `js/`; prod byte-identical.** Two blockers keep the pin: (1) a PRE-EXISTING swap-disposal race (`Buffer used in submit while destroyed`, 5x on the UNMODIFIED path - not caused by the fix), and (2) an intermittent `NodeBuilder: ShaderMaterial not compatible` with the fix. Racy errors on a scene every player loads disqualify an autonomous lift. The flag could not ship even dormant (it would be active on the small non-pinned WebGPU scenes that do not need it). Recorded in [`DECISIONS.md`](DECISIONS.md) + `cycle76-validation/README.md`. Three probes committed (`tools/webgpu-*-cycle76.mjs`).
 
-Validation: `npm test` 1135 pass / 8 skip; `npm run lint` clean; `npm run build` clean. Bundle ratchet 586/604 KiB == baseline.
+Validation: `npm test` 1135 pass / 8 skip; `npm run lint` clean; `npm run build` clean. Bundle ratchet 600.54 / 618.78 kB == Cycle 75 baseline.
 
 ## What To Pick Up Next
 
-Cycle 76 is a STUB. Decide focus + mode with Matt (do not do both), then `/cycle-start`:
+Cycle 77 is a STUB. Decide focus + mode with Matt (do not do both), then `/cycle-start`:
 
-1. **webgpu-tree-build-cost (likely PAIRED, the path to lifting the pin):** cut the ~76s WebGPU tree node-material build so newsheepdogland loads within budget on WebGPU, which lifts the pin and unblocks the flagship's WebGPU Hosek sky + water. Start with a measure-first spike (distinct-pipeline count; why pipelines do not cache across builds on Dawn - shader-module identity vs WGSL-content keying). Likely paired: it touches the flagship's trees + deep render internals (konveyor node materials, `placeTrees`). Evidence: `cycle75-validation/README.md`.
+1. **webgpu-nsl-pin-lift (likely PAIRED, the path Cycle 76 validated):** resolve the pre-existing swap-disposal race + the intermittent ShaderMaterial error, re-apply the one-line storage-instancing fix (in `js/world/TreePlacement.js` + `js/GrassSystem.js`), verify a crash-clean within-budget cold load on the RTX 3070, then lift the pin (`shared/scenes/newsheepdogland.js`, remove `renderer: 'webgl'`). This unblocks the flagship's WebGPU Hosek sky + water. Evidence + the exact fix: `cycle76-validation/README.md`.
 2. **feel-and-media-live LIVE items (paired, Matt's hands):** the survival feel LIVE retune, the two-dog co-op fun playtest, and the entrance hero FINAL blessing.
 
 ## Open Carryover (deferred)
 
-- The two Cycle 76 candidate threads above.
+- The two Cycle 77 candidate threads above.
 - Prior open carryover: tablet draw-call perf.
 
 ## Working Contract
 
 - No `shared/` sim change unless the cycle explicitly scopes one with the four-piece migration story; sim-baselines stay byte-identical otherwise.
-- Don't remove the newsheepdogland WebGL pin unless a within-budget WebGPU cold LOAD (build + compile, measured per-step on the RTX 3070) is verified. Cycle 75 showed the BUILD (~76s trees), not the compile, is the wall; the gate is the full first-pick wall time. The Cycle 72/73/74/75 hard stop carries forward.
-- Don't re-attempt the attract prewarm to lift the pin (Cycle 75 refuted it; the cost is per-build, not warmable).
-- Don't degrade the flagship's tree visual quality to cut compile cost without Matt's explicit sign-off.
-- Don't decompose `GrassSystem` / `OptimizedSheep`. No version bump without Matt's call.
+- Don't remove the newsheepdogland WebGL pin unless a within-budget AND crash-clean AND error-free WebGPU cold load is verified on the RTX 3070 (Cycle 76 cut the compile to ~16s; the remaining gate is the swap-disposal race + the ShaderMaterial error). The Cycle 72-76 hard stop carries forward.
+- Use the storage-instancing fix (device-independent), NOT the capacity-pad/attribute path (device-dependent - can re-trip the TDR crash on a device with a larger uniform limit).
+- Don't re-measure the compile cost from scratch (Cycle 76 found it) or re-attempt the attract prewarm (Cycle 75 refuted it).
+- Don't degrade grass/tree visual quality without Matt's sign-off. Don't decompose `GrassSystem` / `OptimizedSheep`. No version bump without Matt's call.
 - Agent-launched Vite must set `SDS_SUPPRESS_BROWSER_OPEN=1`; close every Playwright page/browser and stop the dev server after a probe.
 - Run `/validate` before any cycle close. Close via `/cycle-close`.
 
@@ -44,11 +44,11 @@ Cycle 76 is a STUB. Decide focus + mode with Matt (do not do both), then `/cycle
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan (stub) | [`docs/cycle-76-plan.md`](docs/cycle-76-plan.md) |
-| The ~76s tree-build finding | `cycle75-validation/README.md` + `tools/webgpu-nsl-build-profile-cycle75.mjs` + `tools/webgpu-tree-cache-probe-cycle75.mjs` |
-| The tree build path | [`js/world/TreePlacement.js`](js/world/TreePlacement.js) (`placeTrees`) |
-| The WebGL pin (and why it stays) | [`shared/scenes/newsheepdogland.js`](shared/scenes/newsheepdogland.js) (`renderer:'webgl'`) + [`DECISIONS.md`](DECISIONS.md) Cycle 75 entry |
-| WebGPU prewarm mechanism (shipped Cycle 74, dormant) | `js/main.js` `_prewarmShadersIfOptedIn` + `SceneDef.prewarmShaders` |
-| Latest closed cycle | [`docs/archive/cycles/cycle-75-plan.md`](docs/archive/cycles/cycle-75-plan.md) |
+| Active cycle plan (stub) | [`docs/cycle-77-plan.md`](docs/cycle-77-plan.md) |
+| The root cause + validated storage fix + the two blockers | `cycle76-validation/README.md` + `tools/webgpu-*-cycle76.mjs` |
+| The per-chunk InstancedMesh sites | [`js/world/TreePlacement.js`](js/world/TreePlacement.js) (`createNativeTreeInstancedMeshes`) + [`js/GrassSystem.js`](js/GrassSystem.js) (`createChunk`) |
+| Three's uniform-vs-storage instancing decision | `node_modules/three/src/nodes/accessors/InstanceNode.js` |
+| The WebGL pin (and why it stays) | [`shared/scenes/newsheepdogland.js`](shared/scenes/newsheepdogland.js) (`renderer: 'webgl'`) + [`DECISIONS.md`](DECISIONS.md) Cycle 76 entry |
+| Latest closed cycle | [`docs/archive/cycles/cycle-76-plan.md`](docs/archive/cycles/cycle-76-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
