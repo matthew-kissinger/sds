@@ -174,10 +174,22 @@ export class SceneManager {
     }
     
     setupLighting() {
+        // Cycle 72 P3: the WebGPU renderer (three.webgpu) cannot bind lights
+        // created from the WebGL `three` instance this module imports - they log
+        // "THREE.LightsNode.setupNodeLights: Light node not found" every frame and
+        // contribute nothing to shading. The konveyor production boot installs its
+        // own webgpu-three lighting bridge for standard materials, and the node
+        // materials are self-lit from atmosphere uniforms, so these WebGL-three
+        // lights are pure warning spam on WebGPU. Create the ambient light (so
+        // Atmosphere can still bind to it) but only add the rig on WebGL. Zero
+        // render change on WebGPU (these lights never bound there).
+        const isWebGpu = typeof this.renderer?.renderAsync === 'function';
+
         // Ambient light - adjusted for new lighting model (multiply by PI for similar appearance)
         // Stored on `this` so the Atmosphere module can bind to it and modulate
         // intensity / color from the active sky preset.
         this.ambientLight = new THREE.AmbientLight(0xffffff, 0.7 * Math.PI);
+        if (isWebGpu) return; // WebGL-three lights only warn on the WebGPU path
         this.scene.add(this.ambientLight);
         
         // Directional light (sun) - adjusted for new lighting model

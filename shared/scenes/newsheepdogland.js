@@ -101,12 +101,6 @@ export const newsheepdogland = {
         // LOD + the coastline SDF cull keep the widened perimeter cheap.
         grassCenter: { x: 250, z: -1080 },
         grassRadius: 760,
-        // Cycle 70: coastline meadow-quad far-ring LOD. Far chunks (beyond 600m
-        // from grassCenter, on land per the SDF cull) render as one terrain-
-        // following quad instead of clump blades. Cycle 69 P2 spike: 37.6% grass-
-        // triangle cut (7.31M -> 4.56M), zero draw-call change, zero coast/relief
-        // regression. Desktop-tier only; mobile keeps reduced-density blades.
-        farRing: { meadowFrom: 600 },
         // The tall-grass shore band across the foot, just inside the sole.
         tallZones: [
             { minX: -250, maxX: 750, minZ: -1380, maxZ: -1050, heightMul: 1.8 },

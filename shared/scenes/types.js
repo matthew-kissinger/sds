@@ -159,27 +159,12 @@
  * it the grid would have to span the whole island (thousands of chunks / draw
  * calls). Absent => the grid centres on the origin (every pre-64 scene).
  *
- * Cycle 70: `farRing` opts a coastline scene into the meadow-quad far-ring LOD
- * (the desktop LOD Rolling Hills / Open Country already use, extended to the
- * coastline chunk grid). Coastline far chunks - those beyond `meadowFrom` metres
- * from `grassCenter`, still on land per the SDF cull - render as one terrain-
- * following quad each instead of thousands of clump blades. Render-only; the
- * Worker sim never reads it. Absent => the coastline keeps full clump blades to
- * the shore (every pre-70 scene), byte-identical.
- *
- * @typedef {Object} GrassFarRingDef
- * @property {number} meadowFrom   Distance from `grassCenter` (m) beyond which a
- *   coastline far chunk becomes a single meadow quad. Newsheepdogland: 600 (the
- *   Cycle 69 P2 play-area-safe value - 37.6% triangle cut, no coast/relief
- *   regression). Desktop-tier only (mobile keeps its reduced-density blades).
- *
  * @typedef {Object} GrassDef
  * @property {{desktop: number, mobile: number}} clumpsPerChunk
  * @property {GrassColors} [colors]
  * @property {{strength: number, frequency: number}} [wind]
  * @property {GrassTallZone[]} [tallZones]
  * @property {{x: number, z: number}} [grassCenter]
- * @property {GrassFarRingDef} [farRing] Cycle 70 - opt-in coastline meadow-quad far-ring LOD (see above). Render-only.
  * @property {number} [cutoffDistance]
  * @property {number} [densityRange] Multiplier on `worldSize` for the radial
  *   density-falloff zero point. Default 0.6 — grass density drops to zero at
