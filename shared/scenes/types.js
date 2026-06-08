@@ -336,6 +336,7 @@
  * @property {GameMode[]} allowedModes
  * @property {GameMode} defaultMode
  * @property {'classic'|'follow'|'free'} [defaultCamera]   Cycle 5+ — initial camera mode if user has no localStorage preference
+ * @property {'webgl'} [renderer]   Cycle 71 — pin this scene to the WebGL renderer regardless of the global WebGPU preference. Render-only (the Worker ignores it). Default absent => follow the global renderer choice. Today only newsheepdogland sets it: its cold WebGPU pipeline compile blocks the main thread ~43s and TDR-crashes the tab, and the WebGPU node-lighting is wrong on it; WebGL loads it in ~2s with correct lighting. See cycle71-validation/webgpu-crash/findings.md.
  * @property {boolean} [perimeterFence]                    Render flag — false disables the visual fence ring
  * @property {number} [timeLimit]              Mode-specific override, seconds
  * @property {number} [difficultyModifier]     Flock tightness / dog stamina scale

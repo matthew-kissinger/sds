@@ -923,6 +923,23 @@ class SheepDogSimulation {
             return;
         }
 
+        // Cycle 71: a renderer-pinned scene (the heavy survival island) cannot run
+        // on the WebGPU path — its cold pipeline compile blocks the main thread ~43s
+        // and TDR-crashes the tab. If we are on WebGPU and about to swap to such a
+        // scene, hard-reload onto WebGL via the same URL path the MP fallback uses;
+        // the boot guard then keeps WebGL and builds it. The scene builds at
+        // world-pick (before mode/dog selection), so the player re-picks on WebGL —
+        // no in-flight intent is lost.
+        if (String(window.__sdsRendererMode?.effective ?? '').startsWith('webgpu')
+            && loadScene(toId)?.renderer === 'webgl') {
+            console.log(`[SWAP] swapScene(${toId}) — scene pinned to WebGL; reloading off WebGPU`);
+            const pinnedUrl = new URL(this._buildSwapUrl(toId, opts));
+            pinnedUrl.searchParams.set('renderer', 'webgl');
+            pinnedUrl.searchParams.set('fallbackReason', 'scene-pinned-webgl');
+            location.href = pinnedUrl.href;
+            return new Promise(() => {});
+        }
+
         // Cycle 11 Phase 1 Q1: solo + sandbox + start-screen-pre-game hit
         // the in-process path; multiplayer falls back to hard reload. RoomDO
         // doesn't broadcast scene-specific state mid-game, but rooms lock the
@@ -3314,6 +3331,29 @@ window.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(location.search);
     let rendererOptions = {};
     let recordProductionWebGpuBoot = async () => {};
+    // Cycle 71: route a renderer-pinned scene (the heavy survival island) off the
+    // WebGPU path before the renderer is created. That scene's cold WebGPU pipeline
+    // compile blocks the main thread ~43s and TDR-crashes the tab; WebGL loads it in
+    // ~2s with correct lighting. The deep-link / default scene is known here, so we
+    // pick WebGL up front with no reload. In-app swaps to a pinned scene are handled
+    // in swapScene(). See shared/scenes/newsheepdogland.js + cycle71-validation/.
+    if (window.__sdsG?.productionWebGpu) {
+        try {
+            const reqScene = urlParams.get('scene');
+            const bootSceneId = reqScene && listScenes().some((s) => s.id === reqScene)
+                ? reqScene
+                : DEFAULT_SCENE_ID;
+            if (loadScene(bootSceneId)?.renderer === 'webgl') {
+                console.log(`[RENDERER] scene "${bootSceneId}" pinned to WebGL; skipping WebGPU boot`);
+                window.__sdsG.productionWebGpu = null;
+                if (window.__sdsRendererMode) {
+                    window.__sdsRendererMode.productionWebGpu = false;
+                    window.__sdsRendererMode.effective = 'webgl';
+                    window.__sdsRendererMode.fallbackReason = 'scene-pinned-webgl';
+                }
+            }
+        } catch (_) { /* fall through to the normal renderer path */ }
+    }
     if (window.__sdsG?.productionWebGpu) {
         const productionWebGpu = await import('./rendering/konveyorProductionWebGpuBoot.js');
         try {

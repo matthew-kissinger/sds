@@ -193,4 +193,15 @@ export const newsheepdogland = {
     defaultMode: 'cooperative',
     defaultCamera: 'follow',
     difficultyModifier: 1.2,
+
+    // Cycle 71: pin this scene to WebGL. It is by far the heaviest scene (a
+    // 3.2 km^2 island: ~400 native tree InstancedMeshes + 744 grass chunks +
+    // water + structures), so its cold WebGPU pipeline compile (D3D12 WGSL->DXIL,
+    // cached only after the first run) blocks the main thread ~43s on a fresh
+    // load and trips the Windows GPU TDR watchdog - the tab freezes on the
+    // loading screen and crashes. WebGL builds the same scene in ~2.2s and renders
+    // it correctly (the WebGPU node-lighting also fails to bind on this scene).
+    // The boot + swapScene guards in js/main.js honour this pin. Other scenes
+    // keep WebGPU. Measured: cycle71-validation/webgpu-crash/findings.md.
+    renderer: 'webgl',
 };
