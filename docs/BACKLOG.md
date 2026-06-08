@@ -4,6 +4,28 @@
 
 ## Recently Completed
 
+### Cycle 75 - `webgpu-attract-prewarm` (closed 2026-06-08)
+
+Plan archived at [`docs/archive/cycles/cycle-75-plan.md`](archive/cycles/cycle-75-plan.md). An autonomous cycle (Matt: "complete autonomously and commit and deploy at end - i can review all changes by playtesting prod when you are done"). The thread choice was forced: the other carried-in thread (`feel-and-media-live` LIVE items) is paired, so "autonomously" selected the attract-prewarm. P1's measurement refuted the cycle's premise, so the cycle re-scoped to its honest outcome (the Cycle 72 spike-re-scope pattern, run autonomously). No `shared/` sim change; every sim-baseline is byte-identical by construction.
+
+**P1 measured the real attract-to-pick path on the RTX 3070** (headed Chrome + d3d11 persistent context; three probes: `tools/webgpu-attract-prewarm-probe-cycle75.mjs`, `tools/webgpu-nsl-build-profile-cycle75.mjs`, `tools/webgpu-tree-cache-probe-cycle75.mjs`; `cycle75-validation/`, gitignored). The thesis (Cycle 74's data-founded follow-up: warm the shared pipelines during attract so a first newsheepdogland pick is fast, then lift the pin) does not hold:
+
+- **The cost is "Creating trees", not pipeline compile.** Per-buildSceneBody-step profiling: a newsheepdogland WebGPU swap spends ~76s in "Creating trees" (building ~400 native tree node-material InstancedMeshes, LOD0 + kiln impostor, `js/world/TreePlacement.js#placeTrees`). Every other step is under 1s; the `compileAsync` tail is 95ms. WebGL builds the whole scene in ~2.2s; WebGPU pays ~76s for the trees alone.
+- **The tree cost does not cache across builds.** Building newsheepdogland twice in one session measured 76.4s then 75.4s for "Creating trees" - no device caching. The node-material pipelines are recreated fresh each build (new shader modules), so Dawn cache-misses every time. A cost that does not cache cannot be pre-paid by a prewarm, by definition.
+- **This corrects Cycle 74's conclusion.** Cycle 74 measured the `compileAsync` tail (~0.4s warm) and concluded the cost was a warmable shared-pipeline compile. The tail genuinely drops to ~0.4s once warm, but it was never where the time went - the real ~76s wall was hiding in the swap's WALL time, which Cycle 74 did not break down per step.
+
+**P2 (build the prewarm) NOT PURSUED, P3 pin decision: STAY.** The prewarm cannot make a first newsheepdogland pick within budget (the tree cost is per-build and not warmable), and a default-scene warm during attract measured a ~2.5s menu stall - shipping it would be patchwork for marginal benefit on the already-fast light scenes. So no prewarm is built and the pin stays. The pin is now understood as the correct renderer routing for a scene that builds ~35x slower on WebGPU, not a temporary crash workaround. Recorded in [`DECISIONS.md`](../DECISIONS.md) + `cycle75-validation/README.md`.
+
+**Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail; `npm run lint` (`eslint shared/`) clean; `npm run build` clean. Bundle ratchet 586 KiB main / 604 KiB three == baseline. The scene files were temporarily edited for the measurement (pin lifted, default-scene prewarm flag) and restored byte-identical; no `js/` or `shared/` change ships.
+
+**No player-visible change this cycle** (newsheepdogland stays on WebGL; no prewarm). Release proof: commit `__PENDING__` on `main`; GH Actions run `__PENDING__`. The committed change is docs + three probe tools only (not bundled into the app), so the built app is byte-identical to the Cycle 74 baseline.
+
+**Carryover (to Cycle 76 `webgpu-tree-build-cost`):**
+
+- **Cut the WebGPU tree node-material build cost (the real blocker, now precisely scoped).** A focused, likely-paired cycle to make newsheepdogland buildable on WebGPU within budget, which is the only thing that unblocks the pin and the flagship's WebGPU Hosek sky + water. Directions: investigate why the tree node-material pipelines do not cache across builds on Dawn (shader-module identity vs WGSL-content keying in the Three.js WebGPU backend); reduce the number of distinct tree pipelines (shared materials across InstancedMesh chunks); precompile the tree pipelines at build time; or suppress the per-frame render during `_sceneRebuilding` for heavy WebGPU builds. Deep render-internals work on the flagship's visual centerpiece, hence likely paired. `prewarmShaders` stays set on newsheepdogland as harmless dormant infrastructure.
+- **`feel-and-media-live` LIVE taste items (Matt's hands):** the survival feel LIVE retune, the two-dog co-op fun playtest, and the entrance hero FINAL blessing. Carried forward from Cycle 73, still paired.
+- Prior open carryover (tablet draw-call perf) remains.
+
 ### Cycle 74 - `webgpu-compile-reduction` (closed 2026-06-08)
 
 Plan archived at [`docs/archive/cycles/cycle-74-plan.md`](archive/cycles/cycle-74-plan.md). An autonomous cycle (Matt: "complete autonomously and commit and deploy at end - i can review all changes by playtesting prod when you are done"). Built and measured the WebGPU compile-prewarm; the pin decision came back STAY on the measured numbers. Render-only: no `shared/` sim change, so every sim-baseline is byte-identical by construction.
