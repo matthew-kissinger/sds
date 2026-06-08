@@ -67,6 +67,7 @@ export function createKonveyorGrassNodeMaterialFactories(webGpuModules, options 
       const sheepHalfWidth = interaction.sheepHalfWid ?? context.sheepHalfWidth ?? bladeDefaults.sheepHalfWidth ?? 0.56;
 
       return createKonveyorGrassBladeNodeMaterial(webGpuModules, {
+        computeCull: context.computeCull ?? null, // Cycle 81 Path 1: consolidated compute-cull instance remap
         baseColor: colorValue(colors.baseColor, context.baseColor ?? bladeDefaults.baseColor, DEFAULT_GRASS_COLORS.baseColor),
         midColor: colorValue(colors.midColor, context.midColor ?? bladeDefaults.midColor, DEFAULT_GRASS_COLORS.midColor),
         tipColor: colorValue(colors.tipColor, context.tipColor ?? bladeDefaults.tipColor, DEFAULT_GRASS_COLORS.tipColor),

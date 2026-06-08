@@ -25,6 +25,8 @@ import { generateTrees } from '../../shared/TreePlacement.js';
 import { mulberry32 } from '../../shared/Random.js';
 import { loadKilnImpostor } from '../kiln-impostor-material.js';
 import { getSceneManager } from '../GameBridge.js';
+import { createTreeComputeCull } from './treeComputeCull.js';
+import { getKonveyorWebGpuModules } from './konveyorWebGpuModules.js';
 import { TIER_PRESETS } from '../HardwareTier.js';
 import { shouldUseKonveyorProductionNativeInstancing } from '../rendering/konveyorRuntimeMode.js';
 import { resolveImpostorBase } from './objectImpostorManifest.js';
@@ -87,6 +89,17 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     }
     builder._konveyorTreeImpostorSync = treeImpostorRuntime?.syncKonveyorTreeImpostorMeshes ?? null;
     const chunkSize = useProductionNativeImpostor ? 160 : (builder.isMobile ? 320 : 192);
+
+    // Cycle 81: on the flagship coastline desktop WebGPU path (renderer-pinned scene,
+    // desktop, lod0-only native trees) consolidate the per-chunk tree fan-out into ONE
+    // compute-culled InstancedMesh per child-mesh (data-compaction storage
+    // instanceMatrix + indirect draw). Null on every other path -> per-chunk fan-out.
+    const treeCullModules = (builder.sceneDef?.renderer === 'webgl' && !builder.isMobile && !useProductionNativeImpostor)
+        ? (getKonveyorWebGpuModules() || null)
+        : null;
+    if (treeCullModules?.TSL) {
+        builder._treeCullControllers = []; // fresh per build; prior controllers disposed by clearTrees
+    }
 
     for (const [treeType, instances] of Object.entries(treeInstances)) {
         if (instances.length === 0 || !builder.models.trees[treeType]) continue;
@@ -156,6 +169,66 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
                         ?? 0,
                 });
             });
+        }
+
+        // Cycle 81: consolidated compute-cull path (see treeCullModules above). One
+        // InstancedMesh per meshDef across the whole scene, GPU per-instance culled,
+        // bypassing the per-chunk fan-out (no hybrid impostor LOD on this path to keep).
+        if (treeCullModules?.TSL) {
+            const cullDummy = new THREE.Object3D();
+            for (const meshDef of meshDefs) {
+                const matrices = new Float32Array(instances.length * 16);
+                const offsets = new Float32Array(instances.length * 3);
+                instances.forEach((inst, i) => {
+                    cullDummy.position.copy(inst.position);
+                    if (Number.isFinite(inst.groundY)) {
+                        const scaleScalar = Number.isFinite(inst.scaleScalar)
+                            ? inst.scaleScalar
+                            : (Number.isFinite(inst.scale?.y) ? inst.scale.y : 1);
+                        cullDummy.position.y = inst.groundY + (meshDef.baseOffset ?? 0) * scaleScalar;
+                    }
+                    cullDummy.quaternion.setFromEuler(inst.rotation);
+                    cullDummy.scale.copy(inst.scale);
+                    cullDummy.updateMatrix();
+                    cullDummy.matrix.toArray(matrices, i * 16);
+                    offsets[i * 3] = cullDummy.position.x;
+                    offsets[i * 3 + 1] = cullDummy.position.y;
+                    offsets[i * 3 + 2] = cullDummy.position.z;
+                });
+                const controller = createTreeComputeCull(treeCullModules, {
+                    geometry: meshDef.geometry,
+                    material: meshDef.material,
+                    matrices,
+                    offsets,
+                    count: instances.length,
+                    castShadow: !builder.isMobile,
+                });
+                const im = controller.mesh;
+                // clearTrees removes it from the scene; the controller owns the cloned
+                // geometry disposal and the material is shared -> skip both in clearTrees.
+                im.userData.sharedFromGlbCache = true;
+                im.userData.konveyorNativeInstancing = 'tree';
+                im.userData.konveyorNativeChunkKey = 'consolidated';
+                im.userData.konveyorTreeType = treeType;
+                builder.scene.add(im);
+                instancedMeshes.push(im);
+                builder._treeCullControllers.push(controller);
+                groups.push({
+                    type: treeType,
+                    chunkKey: 'consolidated',
+                    meshName: meshDef.meshName,
+                    instances: instances.length,
+                    isInstancedMesh: im.isInstancedMesh === true,
+                    isInstancedMesh2: im.isInstancedMesh2 === true,
+                    frustumCulled: im.frustumCulled === true,
+                    sourceLod: meshDef.sourceLod,
+                    hybridRole: meshDef.hybridRole ?? null,
+                    baseOffset: meshDef.baseOffset ?? null,
+                    vertexCount: meshDef.geometry.attributes?.position?.count ?? 0,
+                });
+            }
+            console.log(`[TERRAIN] ${treeType}: ${instances.length} instances -> ${meshDefs.length} consolidated compute-cull mesh(es)`);
+            continue;
         }
 
         const chunkedInstances = new Map();

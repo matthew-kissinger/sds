@@ -10,6 +10,7 @@ import {
     createAtmosphereFrame,
 } from '../atmosphere/skyFogSamplePacket.js';
 import { DEFAULT_SCENE_ID, getSceneById } from '../../shared/scenes/index.js';
+import { setKonveyorWebGpuModules } from '../world/konveyorWebGpuModules.js';
 
 let cachedWebGpuModules = null;
 
@@ -120,6 +121,11 @@ function installKonveyorProductionFactoryGlobals(webGpuModules, {
 export async function createKonveyorProductionWebGpuSceneManagerOptions(state = null, options = {}) {
     const webGpuModules = await loadKonveyorWebGpuThree();
     const { WebGPURenderer } = webGpuModules;
+    // Cycle 81: expose the three.webgpu namespace so GrassSystem + TreePlacement can
+    // build the compute-cull render path (TSL compute + indirect draw) without a
+    // static three/tsl import in js/ (the WebGL bundle stays clean). Unconditional on
+    // the WebGPU boot - it only runs when WebGPU is the active renderer anyway.
+    setKonveyorWebGpuModules(webGpuModules);
     if (state) {
         state.moduleLoaded = true;
         state.moduleSource = 'assets/vendor/three/three.webgpu.min.js';

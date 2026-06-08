@@ -6,7 +6,7 @@ export function createKonveyorGrassBladeNodeMaterial(
   { MeshBasicNodeMaterial, MeshStandardNodeMaterial, DoubleSide, Vector2 = ThreeVector2, Vector3 = ThreeVector3, TSL },
   grassBlade
 ) {
-  const { abs, attribute, cameraPosition, clamp, cos, dot, float, fract, length, max, mix, normalize, positionLocal, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
+  const { abs, attribute, cameraPosition, clamp, cos, dot, float, fract, instanceIndex, length, max, mix, normalize, positionLocal, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
   const linearColor = (color) => color;
   const vector2 = (value) => (
     typeof Vector2 === 'function'
@@ -27,7 +27,38 @@ export function createKonveyorGrassBladeNodeMaterial(
   const interactorFacings = Array.from({ length: maxNodeInteractors }, () => uniform(vector2([0, 1])));
   const interactorTypes = Array.from({ length: maxNodeInteractors }, () => uniform(0));
   const interactorCount = uniform(0);
-  const instanceWorldOffset = attribute('instanceWorldOffset', 'vec3');
+  // Cycle 81 Path 1: when the GrassSystem renders the whole field as ONE compute-
+  // culled InstancedMesh (one indirect draw), per-instance data is read through the
+  // GPU compaction remap instead of plain instanced attributes. The GPU
+  // instance_index is the compacted draw slot, so realIndex = visibleIdx[slot], and
+  // the clump transform the per-chunk path applied via instanceMatrix is folded into
+  // positionNode here (T*R*S, byte-identical to the matrix path). Default
+  // (computeCull = null) keeps the exact pre-Cycle-81 instanced-attribute path.
+  const computeCull = grassBlade.computeCull ?? null;
+  let instanceWorldOffset;
+  let foldInstanceTransform = null;
+  if (computeCull) {
+    const realIndex = computeCull.visibleIdx.element(instanceIndex);
+    instanceWorldOffset = computeCull.offsetsBuf.element(realIndex);
+    const tf = computeCull.transformsBuf.element(realIndex); // (yaw, scale, heightMul)
+    const yawCos = cos(tf.x);
+    const yawSin = sin(tf.x);
+    const instScale = tf.y;
+    const instHeightMul = tf.z;
+    // local -> world = offset + Ry(yaw) * (scale * local), matching createChunk's
+    // dummy.matrix = T * Ry(yaw) * S exactly (heightMul scales Y only).
+    foldInstanceTransform = (local) => {
+      const scaled = vec3(local.x.mul(instScale), local.y.mul(instScale).mul(instHeightMul), local.z.mul(instScale));
+      const rotated = vec3(
+        scaled.x.mul(yawCos).add(scaled.z.mul(yawSin)),
+        scaled.y,
+        scaled.z.mul(yawCos).sub(scaled.x.mul(yawSin)),
+      );
+      return instanceWorldOffset.add(rotated);
+    };
+  } else {
+    instanceWorldOffset = attribute('instanceWorldOffset', 'vec3');
+  }
   const bladeWorld = instanceWorldOffset.add(positionLocal);
   const interactionRadius = uniform(grassBlade.interactionRadius ?? 2.2);
   const interactionStrength = uniform(grassBlade.interactionStrength ?? 0.6);
@@ -182,7 +213,10 @@ export function createKonveyorGrassBladeNodeMaterial(
   const totalDisp = windDisp.add(interactionDisp);
   const laydownMask = smoothstep(0.10, 0.78, height01);
   const interactionLaydown = bodyFalloffTotal.mul(-interactionLaydownStrength).mul(laydownMask);
-  material.positionNode = positionLocal.add(vec3(totalDisp.x, interactionLaydown, totalDisp.y));
+  const localDisplaced = positionLocal.add(vec3(totalDisp.x, interactionLaydown, totalDisp.y));
+  // Cycle 81: fold T*R*S into the position when compute-culled (instanceMatrix is
+  // identity on the consolidated mesh); otherwise keep local and let instanceMatrix apply.
+  material.positionNode = foldInstanceTransform ? foldInstanceTransform(localDisplaced) : localDisplaced;
   if (material.isMeshStandardNodeMaterial) {
     material.roughnessNode = float(0.96);
     material.metalnessNode = float(0.0);

@@ -7,6 +7,8 @@ import { TIER_PRESETS } from './HardwareTier.js';
 import { createKonveyorGrassMaterial } from './world/konveyorGrassMaterialAdapter.js';
 import { mulberry32 } from '../shared/Random.js';
 import { getCoastlineField, sampleSignedDistance } from '../shared/CoastlineField.js';
+import { createGrassComputeCull } from './world/grassComputeCull.js';
+import { getKonveyorWebGpuModules } from './world/konveyorWebGpuModules.js';
 
 // Shader cache for sync access after async load
 let grassDesktopVertexShader = null;
@@ -97,6 +99,10 @@ export class GrassSystem {
         // sits far from the world origin (Newsheepdogland's foot). Built once here.
         this._isCoastline = this.boundary?.kind === 'coastline';
         this._coastField = this._isCoastline ? getCoastlineField(this.boundary) : null;
+        // Cycle 81: set when the field renders as one compute-culled InstancedMesh
+        // (flagship coastline desktop WebGPU). Picked up + driven + disposed by
+        // TerrainBuilder; null on every per-chunk path.
+        this._computeCullController = null;
         // Grass thins to zero over the last `_coastShoreFade` metres before the
         // shore. The shoreline-Y cull still owns the exact waterline.
         this._coastShoreFade = 28;
@@ -360,9 +366,17 @@ export class GrassSystem {
             console.log('[GRASS] Creating grass geometry...');
             this.clumpGeometry = this.createClumpGeometry();
 
-            // Generate chunks
+            // Generate chunks. Cycle 81: on the flagship coastline desktop WebGPU
+            // path, build ONE consolidated InstancedMesh driven by a TSL compute
+            // frustum-cull + indirect draw instead of the per-chunk fan-out
+            // (collapses ~740 meshes to 1; pixel-identical). Any failure falls back
+            // to the per-chunk path inside the builder.
             console.log('[GRASS] Generating chunks...');
-            this.generateChunks();
+            if (this._shouldComputeCullGrass()) {
+                this._buildConsolidatedComputeCullGrass();
+            } else {
+                this.generateChunks();
+            }
 
             this.initializationSucceeded = true;
             console.log(`[GRASS] GrassSystem initialized: ${this.stats.totalClumps} clumps in ${this.chunks.size} chunks (${this.isMobile ? 'mobile' : 'desktop'}, maxInteractors=${this.config.maxInteractors})`);
@@ -539,7 +553,7 @@ export class GrassSystem {
      * load path. We pick whichever variant carries the polish varyings — the
      * inline one — to keep the runtime visually consistent with the constants.
      */
-    createGrassMaterial() {
+    createGrassMaterial(computeCull = null) {
         let vertexShader, fragmentShader;
 
         if (this.isMobile) {
@@ -604,6 +618,7 @@ export class GrassSystem {
             search: this.konveyorGrassSearch,
             factories: this.konveyorGrassFactories,
             context: {
+                computeCull, // Cycle 81 Path 1: consolidated compute-cull instance remap (null = per-chunk path)
                 isMobile: this.isMobile,
                 tier: this.tier,
                 vertexShader,
@@ -1164,6 +1179,145 @@ export class GrassSystem {
                     this.chunks.set(key, chunk);
                 }
             }
+        }
+    }
+
+    /**
+     * Cycle 81: the flagship coastline renders its whole grass field as one
+     * compute-culled InstancedMesh on the desktop WebGPU path. Gated to that path:
+     * coastline + desktop + the konveyor (WebGPU) blade material applied + the
+     * three.webgpu namespace available. Mobile and every WebGL scene keep the
+     * per-chunk path byte-identical.
+     */
+    _shouldComputeCullGrass() {
+        return this._isCoastline
+            && !this.isMobile
+            && this.konveyorGrassBladeMaterialSummary?.applied === true
+            && !!getKonveyorWebGpuModules()?.TSL;
+    }
+
+    /**
+     * Cycle 81: build the consolidated compute-cull grass. Gathers every clump's
+     * transform across the field (RNG-order-identical to the per-chunk path), then
+     * drives ONE InstancedMesh via a TSL compute frustum-cull + indirect draw. The
+     * blade material reads per-instance data through the GPU compaction remap and
+     * folds T*R*S into positionNode (pixel-identical). Falls back to the per-chunk
+     * path on any failure.
+     */
+    _buildConsolidatedComputeCullGrass() {
+        const webGpuModules = getKonveyorWebGpuModules();
+        const { offsets, transforms, count } = this._gatherComputeCullClumps();
+        if (count === 0) {
+            console.warn('[GRASS] compute-cull gathered 0 clumps; per-chunk fallback');
+            this.generateChunks();
+            return;
+        }
+        try {
+            const controller = createGrassComputeCull(webGpuModules, {
+                clumpGeometry: this.clumpGeometry,
+                offsets,
+                transforms,
+                count,
+                cullRadius: Math.max(4, this.config.chunkSize * 0.15),
+                // Rebuild the blade material with the compute-cull remap nodes
+                // (pixel-identical) and point the live controls at it. The throwaway
+                // material created during init (to detect konveyor support) is disposed.
+                buildMaterial: (nodes) => {
+                    const prev = this.grassMaterial;
+                    const m = this.createGrassMaterial(nodes);
+                    if (prev && prev !== m) { try { prev.dispose(); } catch { /* ignore */ } }
+                    this.grassMaterial = m;
+                    return m;
+                },
+            });
+            this._computeCullController = controller;
+            this.scene.add(controller.mesh);
+            this.stats.totalClumps = count;
+            this.stats.visibleClumps = count;
+            console.log(`[GRASS] consolidated compute-cull: ${count} clumps -> 1 InstancedMesh (indirect=${controller.diag.indirectAttached})`);
+        } catch (e) {
+            console.error('[GRASS] compute-cull build failed; per-chunk fallback:', e);
+            this._computeCullController = null;
+            this.generateChunks();
+        }
+    }
+
+    /**
+     * Cycle 81: gather every clump's (offset, transform) across the whole field into
+     * flat arrays, mirroring generateChunks' grid iteration + cull exactly so the
+     * random stream advances identically to the per-chunk path.
+     */
+    _gatherComputeCullClumps() {
+        const { worldSize, chunkSize, clumpsPerChunk, grassRadius, hasExplicitGrassRadius } = this.config;
+        const halfWorld = worldSize / 2;
+        const chunksPerSide = Math.ceil(worldSize / chunkSize);
+        const cullDistance = hasExplicitGrassRadius ? grassRadius + chunkSize : halfWorld * 1.2;
+        const defaultRadius = (this.isMobile ? 220 : 420) * 0.6;
+        const clumpScale = hasExplicitGrassRadius ? Math.min(1, defaultRadius / grassRadius) : 1;
+        const adjustedClumpsPerChunk = Math.max(1, Math.round(clumpsPerChunk * clumpScale * this._autoLodFactor));
+        const gridOriginX = this._grassCenter.x;
+        const gridOriginZ = this._grassCenter.z;
+
+        const offsets = [];
+        const transforms = [];
+        for (let cx = 0; cx < chunksPerSide; cx++) {
+            for (let cz = 0; cz < chunksPerSide; cz++) {
+                const chunkMinX = gridOriginX - halfWorld + cx * chunkSize;
+                const chunkMinZ = gridOriginZ - halfWorld + cz * chunkSize;
+                const chunkMaxX = chunkMinX + chunkSize;
+                const chunkMaxZ = chunkMinZ + chunkSize;
+                const chunkCenterX = (chunkMinX + chunkMaxX) / 2;
+                const chunkCenterZ = (chunkMinZ + chunkMaxZ) / 2;
+                const distFromCenter = Math.sqrt(chunkCenterX * chunkCenterX + chunkCenterZ * chunkCenterZ);
+                if (this._isCoastline) {
+                    const sd = sampleSignedDistance(this._coastField, chunkCenterX, chunkCenterZ);
+                    if (sd < -chunkSize) continue;
+                } else if (distFromCenter > cullDistance) {
+                    continue;
+                }
+                this._gatherChunkClumps(chunkMinX, chunkMinZ, chunkMaxX, chunkMaxZ, adjustedClumpsPerChunk, offsets, transforms);
+            }
+        }
+        return {
+            offsets: new Float32Array(offsets),
+            transforms: new Float32Array(transforms),
+            count: offsets.length / 3,
+        };
+    }
+
+    /**
+     * Cycle 81: per-chunk clump gather. Two-phase to mirror createChunk's RNG order
+     * EXACTLY (all x/z/density randoms first, then per-valid yaw/scale), so the
+     * consolidated field layout is byte-identical to the per-chunk path.
+     */
+    _gatherChunkClumps(minX, minZ, maxX, maxZ, clumpCount, offsets, transforms) {
+        const valid = [];
+        for (let i = 0; i < clumpCount * 1.5; i++) {
+            const x = minX + this.random() * (maxX - minX);
+            const z = minZ + this.random() * (maxZ - minZ);
+            if (this.isExcluded(x, z)) continue;
+            let densityFactor;
+            if (this._isCoastline) {
+                const sd = sampleSignedDistance(this._coastField, x, z);
+                densityFactor = Math.max(0, Math.min(1, sd / this._coastShoreFade));
+            } else {
+                const d = Math.sqrt(x * x + z * z);
+                densityFactor = Math.max(0, 1 - d / this.config.grassRadius);
+            }
+            if (this.random() > densityFactor * 0.8 + 0.2) continue;
+            valid.push({ x, z });
+            if (valid.length >= clumpCount) break;
+        }
+        for (const pos of valid) {
+            let baseY = this.heightfield ? this.heightfield.meshSampleY(pos.x, pos.z) : 0;
+            if (!Number.isFinite(baseY) || baseY > 50 || baseY < -10) baseY = 0;
+            const yaw = this.random() * Math.PI * 2;
+            const d = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+            const distanceScale = Math.max(0.5, 1 - d / (this.config.worldSize * 0.8));
+            const scale = (0.7 + this.random() * 0.6) * distanceScale;
+            const heightMul = this._tallHeightMul(pos.x, pos.z);
+            offsets.push(pos.x, baseY, pos.z);
+            transforms.push(yaw, scale, heightMul);
         }
     }
 
@@ -1734,8 +1888,13 @@ export class GrassSystem {
             }
         }
 
-        // Update frustum culling and LOD
-        if (camera) {
+        // Update frustum culling and LOD. Cycle 81: when the field is one compute-
+        // culled InstancedMesh, a GPU compute pass does per-instance frustum culling
+        // (driven from TerrainBuilder.update, which holds the renderer), so the
+        // per-chunk CPU frustum/LOD walkers are bypassed.
+        if (this._computeCullController) {
+            // GPU-driven; nothing to do here.
+        } else if (camera) {
             this.updateFrustumCulling(camera);
 
             // Decimation LOD measures distance from the camera (per spec).
@@ -1935,6 +2094,15 @@ export class GrassSystem {
         }
 
         this.chunks.clear();
+
+        // Cycle 81: the consolidated compute-cull mesh isn't tracked in `this.chunks`;
+        // remove + dispose it explicitly. The controller owns its cloned geometry; the
+        // shared grass material is disposed just below.
+        if (this._computeCullController) {
+            try { this.scene.remove(this._computeCullController.mesh); } catch { /* ignore */ }
+            try { this._computeCullController.dispose(); } catch { /* ignore */ }
+            this._computeCullController = null;
+        }
 
         if (this.grassMaterial) {
             this.konveyorGrassBladeMaterialControls?.dispose?.();

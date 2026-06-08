@@ -193,6 +193,12 @@ export class TerrainBuilder {
         this.terrainSkirtMesh = null;
         this.environmentDetails = [];
         this.trees = []; // Track trees for removal
+        // Cycle 81: GPU compute-cull controllers for the flagship (grass controller
+        // lives on grassSystem; consolidated tree controllers here). Driven once per
+        // frame in updateGrassAnimation, torn down in clearTrees / dispose.
+        this._treeCullControllers = [];
+        this._computeRenderer = null;
+        this._cullReadbackTick = 0;
         this.rocks = []; // Track rocks for removal
         // Per-rock world-space footprint (populated by addEnvironmentDetails).
         // createTrees reads this to skip tree candidates that would spawn
@@ -1180,6 +1186,11 @@ export class TerrainBuilder {
 
             // Update grass system with time, camera, and player position
             this.grassSystem.update(deltaTime || 0.016, camera, playerPosition);
+
+            // Cycle 81: drive the GPU compute-cull passes (grass + consolidated trees)
+            // once per frame. runFrame early-returns during scene rebuild before this
+            // is reached, so it never ticks disposed buffers.
+            this._driveComputeCull(camera);
         } else {
             // Legacy: Only update animation on desktop
             if (!this.isMobile && this.grassMaterial && this.grassMaterial.uniforms.time) {
@@ -1546,6 +1557,44 @@ export class TerrainBuilder {
     }
     
     /**
+     * Cycle 81: drive the GPU compute-cull passes once per frame. The grass
+     * controller lives on the grass system; the consolidated tree controllers live
+     * here. Both reference the live WebGPURenderer (resolved lazily - TerrainBuilder
+     * isn't handed it). Inert when no controllers exist (every non-flagship path).
+     */
+    _driveComputeCull(camera) {
+        if (!camera) return;
+        const grassCtrl = this.grassSystem?._computeCullController ?? null;
+        const treeCtrls = this._treeCullControllers;
+        if (!grassCtrl && (!treeCtrls || treeCtrls.length === 0)) return;
+        const renderer = this._resolveComputeRenderer();
+        if (!renderer) return;
+        if (grassCtrl) {
+            grassCtrl.runCull(camera, renderer);
+            this._cullReadbackTick = (this._cullReadbackTick + 1) | 0;
+            if (this._cullReadbackTick % 20 === 0) {
+                grassCtrl.readbackVisibleAsync(renderer)
+                    .then((v) => { if (this.grassSystem && v >= 0) this.grassSystem.stats.visibleClumps = v; })
+                    .catch(() => { /* ignore */ });
+            }
+        }
+        for (let i = 0; i < treeCtrls.length; i++) treeCtrls[i].runCull(camera, renderer);
+    }
+
+    /**
+     * Cycle 81: lazily resolve + cache the live WebGPURenderer (the one with
+     * `.compute`). TerrainBuilder isn't handed the renderer; the SceneManager owns it.
+     */
+    _resolveComputeRenderer() {
+        if (this._computeRenderer) return this._computeRenderer;
+        try {
+            const r = getSceneManager()?.getRenderer?.();
+            if (r && typeof r.compute === 'function') this._computeRenderer = r;
+        } catch { /* ignore */ }
+        return this._computeRenderer || null;
+    }
+
+    /**
      * Remove all existing trees from the scene
      */
     clearTrees() {
@@ -1580,6 +1629,16 @@ export class TerrainBuilder {
         });
 
         this.trees = []; // Clear the tracking array
+
+        // Cycle 81: dispose + clear the consolidated tree compute-cull controllers
+        // (each owns a cloned geometry; the meshes were removed from the scene in the
+        // loop above via the shared-cache skip). Clearing makes the per-frame driver
+        // inert until the next build re-registers controllers.
+        if (this._treeCullControllers?.length) {
+            for (const c of this._treeCullControllers) { try { c.dispose?.(); } catch { /* ignore */ } }
+        }
+        this._treeCullControllers = [];
+        this._computeRenderer = null;
     }
     
     /**

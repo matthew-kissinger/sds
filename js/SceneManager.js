@@ -5,6 +5,7 @@ import { CameraController } from './CameraController.js';
 import { detectTier } from './HardwareTier.js';
 import { initGlProbe, captureContext, captureFramebufferSample, captureWaterSample } from './diagnostics/glProbe.js';
 import { configureProductionRenderer, createProductionWebGLRenderer } from './rendering/sceneRendererSetup.js';
+import { isMobileClient } from './utils/isMobileClient.js';
 
 /**
  * SceneManager - Three.js scene/lighting/renderer lifecycle plus competitive
@@ -149,12 +150,10 @@ export class SceneManager {
      * @returns {boolean} True if mobile device detected
      */
     detectMobileDevice() {
-        const userAgent = navigator.userAgent;
-        const isMobileUA = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        const isSmallScreen = window.innerWidth <= 768 || window.innerHeight <= 768;
-        
-        return isMobileUA || (hasTouch && isSmallScreen);
+        // Cycle 81: delegated to the shared sync helper so the renderer tier-gate
+        // (boot + swapScene) and this device flag - which becomes GrassSystem /
+        // TreePlacement's `isMobile` - use a byte-identical signal.
+        return isMobileClient();
     }
     
     init() {
