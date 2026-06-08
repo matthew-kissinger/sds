@@ -20,7 +20,7 @@ Plan archived at [`docs/archive/cycles/cycle-73-plan.md`](archive/cycles/cycle-7
 
 **Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail; `npm run lint` (`eslint shared/`) clean; `npm run build` clean. No `js/` or bundle change this cycle (docs + tools + a rule file only), so the bundle ratchet is unchanged (mainKB 586). Sim-baselines + refactor-baselines byte-identical.
 
-**No player-visible change this cycle** (hero webp kept; all changes are docs, capture tools, and a rule file). Release proof: <COMMIT> on `main`; GH Actions run <RUN_ID> (a no-op rebuild triggered by the `tools/*.mjs` files - docs/rule-file changes are paths-ignored).
+**No player-visible change this cycle** (hero webp kept; all changes are docs, capture tools, and a rule file). Release proof: commits `1d55eac` (capture tools) + `02678e6` (docs close) on `main`; GH Actions run `27112497670` GREEN (Deploy Pages 56s + Deploy Worker 24s + the `Migrate D1 (remote)` job a no-op). It is a no-op rebuild - no `js/`/bundle change this cycle; the workflow runs only because `tools/*.mjs` are not paths-ignored, while the docs/rule-file changes are.
 
 **Carryover (to Cycle 74 `webgpu-compile-reduction`):**
 
