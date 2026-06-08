@@ -198,4 +198,18 @@ export const newsheepdogland = {
     // The boot + swapScene guards in js/main.js honour this pin. Other scenes
     // keep WebGPU. Measured: cycle71-validation/webgpu-crash/findings.md.
     renderer: 'webgl',
+
+    // Cycle 74 P1: opt into the build-tail compileAsync prewarm. DORMANT while
+    // the WebGL pin above is in force (the prewarm is WebGPU-only), so this is
+    // latent infrastructure in prod today. Cycle 74 P2 measured the WebGPU cold
+    // compile at ~38s as the FIRST heavy scene of a session (down from Cycle 72's
+    // ~83-95s after the node-lighting fix), crash-free under this prewarm but not
+    // within budget, and Dawn's disk cache does not persist it across browser
+    // launches - so the pin stays. An in-session swap to this scene after any
+    // other WebGPU scene compiles in ~0.4s (the shared konveyor pipelines are
+    // warm on the device), which is the basis for the deferred background-prewarm-
+    // during-attract follow-up that would let the pin come off. The flag is left
+    // set so that follow-up only has to lift the pin. See docs/cycle-74-plan.md +
+    // cycle74-validation/.
+    prewarmShaders: true,
 };

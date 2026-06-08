@@ -1,40 +1,39 @@
-# Next Session - Cycle 74 webgpu-compile-reduction (stub - needs authoring)
+# Next Session - Cycle 75 webgpu-attract-prewarm (stub - needs authoring)
 
 > **Updated:** 2026-06-08
-> **For:** Cycle 74 `webgpu-compile-reduction`. Plan: [`docs/cycle-74-plan.md`](docs/cycle-74-plan.md) (a STUB - pick the cycle focus, then fill Goal + Phases).
-> **Pickup priority:** Cycle 73 (`feel-and-media-live`) is CLOSED. Its big finding: the flagship's beauty media (hero + cinematic) is WebGPU-gated, same as the load-time, so the WebGPU compile-reduction thread now unblocks BOTH. Decide Cycle 74 with Matt (compile-reduction spike, or the remaining LIVE taste items), then `/cycle-start`.
+> **For:** Cycle 75 `webgpu-attract-prewarm`. Plan: [`docs/cycle-75-plan.md`](docs/cycle-75-plan.md) (a STUB - pick the cycle focus, then fill Goal + Phases).
+> **Pickup priority:** Cycle 74 (`webgpu-compile-reduction`) is CLOSED. It shipped the `compileAsync` prewarm mechanism (dormant behind the pin) and measured the real WebGPU path: the ~38s cold compile is SHARED konveyor-pipeline compilation, warmable to ~0.4s in-session. The data-founded follow-up is a background prewarm during attract that warms those pipelines so the first scene pick is fast (letting the pin come off). Decide Cycle 75 with Matt (attract-prewarm, or the remaining LIVE taste items), then `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-74-plan.md`](docs/cycle-74-plan.md) -> the touched module source. Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-75-plan.md`](docs/cycle-75-plan.md) -> the touched module source. Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Where It Stands
 
-**Cycle 73 (`feel-and-media-live`) is CLOSED (2026-06-08).** Run autonomously (Matt: "complete 73 autonomously and take the recordings and shots without me in the loop"). No `shared/` sim change; sim-baselines byte-identical; `tuning.js` untouched.
+**Cycle 74 (`webgpu-compile-reduction`) is CLOSED (2026-06-08).** Run autonomously (Matt: "complete autonomously and commit and deploy at end - i can review all changes by playtesting prod when you are done"). Render-only: no `shared/` sim change; sim-baselines + refactor-baselines byte-identical.
 
-- **The flagship's beauty media is WebGPU-gated.** Captured 24 hero stills + a flythrough in a real GPU browser. Newsheepdogland's `HosekWilkieSkyDome` and water shader are WebGPU-only (konveyor node materials); on the WebGL pin they render as a dark dome + dark-speckled sea. Only tight ground-level pastoral framings read cleanly. So the dramatic hero + cinematic are blocked until the pin lifts. The shipped hero webp is KEPT (no clearly-better WebGL alternative); candidates + recipe in `cycle73-validation/`.
-- **The 5-cycle-blocked `multiplayer.md` correction landed.** Matt's "correcting drift" directive lifted the agent-config guardrail. The migrations section now matches `deploy.yml`'s `migrate` job; the Auth line now matches P-SEC-1 (server-minted id + device `auth_secret` TOFU). Reality-checked against source.
-- **Repo cleaned.** 3 merged local branches + 1 stale remote branch deleted; repo is `main` only, local and remote.
-- **Survival feel reaffirmed, not retuned.** The Cycle 70 lever order still stands against unchanged constants; the LIVE retune stays Matt's (taste, needs a live wolf night).
+- **P1 shipped the crash-fix mechanism, dormant.** An opt-in `SceneDef.prewarmShaders` flag drives a build-tail `renderer.compileAsync(scene, camera)` under an 'Optimizing shaders' load step (WebGPU-only, try/caught, both build paths via `_prewarmShadersIfOptedIn` in `js/main.js`). Set only on newsheepdogland. Dormant in prod (newsheepdogland still WebGL-pinned, no live scene sets the flag), so prod behavior is byte-identical.
+- **P2 measured the real WebGPU ship path (RTX 3070, `cycle74-validation/`).** The prewarm STOPS THE CRASH (every cold load survived, no TDR). Cold compile ~38s (down from Cycle 72's ~83-95s). The decisive reframe: the ~38s is SHARED konveyor-pipeline compile, not a newsheepdogland tax. An in-session swap to newsheepdogland after any other WebGPU scene compiles in ~0.4s. Dawn's disk cache does not persist across browser launches (~37s warm == cold), so returning visitors get no free warm load.
+- **P3 pin decision: STAY.** A ~38s first-pick load fails the within-budget gate; the hard stop is honored. The `renderer: 'webgl'` pin is restored; P1 ships dormant behind it. Recorded in `DECISIONS.md` + `cycle74-validation/README.md`.
 
-Validation: `npm test` 1135 pass; `npm run lint` clean; `npm run build` clean. No `js/`/bundle change (docs + tools + rule file only). No player-visible change shipped this cycle.
+Validation: `npm test` 1135 pass; `npm run lint` clean; `npm run build` clean. Bundle ratchet 586/604 KiB == baseline (no regression). No player-visible change shipped this cycle.
 
 ## What To Pick Up Next
 
-Cycle 74 is a STUB. Decide the focus with Matt (do not do both), then `/cycle-start`:
+Cycle 75 is a STUB. Decide the focus with Matt (do not do both), then `/cycle-start`:
 
-1. **webgpu-compile-reduction (autonomous spike):** cut the ~83-95s cold WebGPU compile on Newsheepdogland so the WebGL pin lifts. Cycle 73 raised the stakes: lifting the pin unblocks the flagship's marketing media too, not just load-time. Approaches: simplify the heavy grass/terrain/water shaders, or warm the Dawn pipeline cache at build time. Evidence base: `cycle72-validation/webgpu-cold-compile/` + `cycle73-validation/README.md`. High effort, uncertain payoff.
+1. **webgpu-attract-prewarm (autonomous, the path to lifting the pin):** build a background prewarm that compiles the shared konveyor pipelines during the attract/menu idle window, so the first real scene pick is fast (including newsheepdogland), letting the WebGL pin come off and unblocking the flagship's WebGPU Hosek sky + water. Data-founded by Cycle 74 (warming shared pipelines -> ~0.4s heavy loads). Risk: attract-mode UX (off-screen build/compile without janking the menu). Evidence: `cycle74-validation/README.md`, `tools/webgpu-prewarm-probe-cycle74.mjs`.
 2. **feel-and-media-live LIVE items (paired, Matt's hands):** the survival feel LIVE retune, the two-dog co-op fun playtest, and the entrance hero FINAL blessing (pick from the Cycle 73 candidate set, or re-shoot once WebGPU lands).
 
 ## Open Carryover (deferred)
 
-- The two Cycle 74 candidate threads above.
+- The two Cycle 75 candidate threads above.
 - Prior open carryover: tablet draw-call perf.
 
 ## Working Contract
 
 - No `shared/` sim change unless the cycle explicitly scopes one with the four-piece migration story; the survival sim-baselines + every sim-baseline stay byte-identical otherwise.
-- Don't remove the Newsheepdogland WebGL pin unless a within-budget WebGPU cold compile is actually verified on the RTX 3070 (the Cycle 72/73 hard stop carries forward; removing it is the live-crash class again).
+- Don't remove the newsheepdogland WebGL pin unless a within-budget WebGPU cold path is actually verified on the RTX 3070 (the Cycle 72/73/74 hard stop carries forward; removing it is the live-crash class again). `SceneDef.prewarmShaders` already exists, so a pin-lift only edits `shared/scenes/newsheepdogland.js`.
 - Don't decompose `GrassSystem` / `OptimizedSheep`. No version bump without Matt's call.
 - Agent-launched Vite must set `SDS_SUPPRESS_BROWSER_OPEN=1`; close every Playwright page/browser and stop the dev server after a probe.
 - Run `/validate` before any cycle close. Close via `/cycle-close`.
@@ -43,11 +42,10 @@ Cycle 74 is a STUB. Decide the focus with Matt (do not do both), then `/cycle-st
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan (stub) | [`docs/cycle-74-plan.md`](docs/cycle-74-plan.md) |
-| Media WebGPU-gating finding | `cycle73-validation/README.md` (gitignored) + capture recipes `tools/hero-capture-cycle73.mjs`, `tools/flythrough-cycle73.mjs` |
-| WebGPU cold-compile evidence | `cycle72-validation/webgpu-cold-compile/` (gitignored) |
-| The WebGL pin (and why it stays) | [`shared/scenes/newsheepdogland.js`](shared/scenes/newsheepdogland.js) (`renderer:'webgl'`) + [`DECISIONS.md`](DECISIONS.md) Cycle 72 entry |
-| Worker/MP contract (corrected) | [`.claude/rules/multiplayer.md`](.claude/rules/multiplayer.md) |
-| Latest closed cycle | [`docs/archive/cycles/cycle-73-plan.md`](docs/archive/cycles/cycle-73-plan.md) |
+| Active cycle plan (stub) | [`docs/cycle-75-plan.md`](docs/cycle-75-plan.md) |
+| WebGPU prewarm mechanism (shipped, dormant) | `js/main.js` `_prewarmShadersIfOptedIn` + `SceneDef.prewarmShaders` |
+| Prewarm measurement + shared-pipeline reframe | `cycle74-validation/README.md` (gitignored) + `tools/webgpu-prewarm-probe-cycle74.mjs` |
+| The WebGL pin (and why it stays) | [`shared/scenes/newsheepdogland.js`](shared/scenes/newsheepdogland.js) (`renderer:'webgl'`) + [`DECISIONS.md`](DECISIONS.md) Cycle 74 entry |
+| Latest closed cycle | [`docs/archive/cycles/cycle-74-plan.md`](docs/archive/cycles/cycle-74-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |

@@ -849,6 +849,10 @@ class SheepDogSimulation {
 
                 // Register per-system triangle estimates for the PERF overlay.
                 this.registerSystemTriangleCounts();
+
+                // Cycle 74 P1: prewarm the heavy WebGPU pipeline compile off the
+                // blocking first render (covers the deep-link / boot-scene path).
+                await this._prewarmShadersIfOptedIn(this.currentScene);
             }
 
             // First-run-only: setup persistent input listeners (mouse wheel).
@@ -1134,6 +1138,10 @@ class SheepDogSimulation {
             await productionWebGpu.recordKonveyorProductionWebGpuBoot(this, window.__sdsG.productionWebGpu);
         }
 
+        // 5b. Cycle 74 P1: prewarm the heavy WebGPU pipeline compile off the
+        //     blocking first render (covers the menu -> Play -> swapScene path).
+        await this._prewarmShadersIfOptedIn(sceneDef);
+
         // 6. Re-apply cinematic sun if requested (lazy getters in __sdsCinema
         //    re-resolve atmosphere automatically; just need to honour ?sun=).
         if (isCinematicMode()) {
@@ -1154,6 +1162,44 @@ class SheepDogSimulation {
         // Cycle 45 Phase 1: hand the per-stage load breakdown back to swapScene
         // so it rides the scene_swapped telemetry payload.
         return sceneBuildResult;
+    }
+
+    /**
+     * Cycle 74 P1: prewarm the heavy WebGPU pipeline compile off the blocking
+     * first render. The Cycle 72 spike proved newsheepdogland's ~83-95s cold
+     * WGSL->DXIL compile TDR-crashes the tab when it lands lazily on the first
+     * renderAsync; routing it through renderer.compileAsync (Dawn's async
+     * pipeline creation) keeps the GPU-process watchdog from firing and surfaces
+     * the cost under the loading bar. Opt-in per scene via SceneDef.prewarmShaders
+     * so the live WebGPU scenes are untouched; WebGPU-only (WebGL compiles are
+     * cheap and lazy is fine there, so the WebGL-pinned path stays byte-identical);
+     * try/caught so a failure falls through to the status-quo lazy compile. Called
+     * from both build paths (init() first build + rebuildScene swap).
+     * See docs/cycle-74-plan.md.
+     */
+    async _prewarmShadersIfOptedIn(sceneDef) {
+        if (!sceneDef?.prewarmShaders) return;
+        const renderer = this.sceneManager?.getRenderer?.();
+        if (!renderer?.isWebGPURenderer || typeof renderer.compileAsync !== 'function') return;
+        await this.sceneManager.whenRendererReady?.();
+        this._reportLoadStep('Optimizing shaders');
+        try {
+            const prewarmStart = performance.now();
+            await renderer.compileAsync(
+                this.sceneManager.getScene(),
+                this.sceneManager.getCamera(),
+            );
+            const compileAsyncMs = Math.round(performance.now() - prewarmStart);
+            console.log(`[PREWARM] compileAsync ${sceneDef.id} ${compileAsyncMs}ms`);
+            if (typeof window !== 'undefined') {
+                window.__sdsPrewarm = { scene: sceneDef.id, compileAsyncMs, ok: true };
+            }
+        } catch (err) {
+            console.warn('[PREWARM] compileAsync failed; lazy compile fallback:', err?.message || err);
+            if (typeof window !== 'undefined') {
+                window.__sdsPrewarm = { scene: sceneDef.id, ok: false, error: String(err?.message || err) };
+            }
+        }
     }
 
     async createSunBillboard(initialPreset) {

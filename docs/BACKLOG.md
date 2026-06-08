@@ -4,6 +4,31 @@
 
 ## Recently Completed
 
+### Cycle 74 - `webgpu-compile-reduction` (closed 2026-06-08)
+
+Plan archived at [`docs/archive/cycles/cycle-74-plan.md`](archive/cycles/cycle-74-plan.md). An autonomous cycle (Matt: "complete autonomously and commit and deploy at end - i can review all changes by playtesting prod when you are done"). Built and measured the WebGPU compile-prewarm; the pin decision came back STAY on the measured numbers. Render-only: no `shared/` sim change, so every sim-baseline is byte-identical by construction.
+
+**P1 shipped the crash-fix mechanism (dormant behind the pin).** An opt-in `SceneDef.prewarmShaders` flag (the cheap additive fence case, authorized in-plan) drives a build-tail `renderer.compileAsync(scene, camera)` under an 'Optimizing shaders' load step, WebGPU-only, try/caught, run from both build paths (init() first-build + rebuildScene swap) via a shared `_prewarmShadersIfOptedIn` in `js/main.js`. Set only on newsheepdogland. Dormant in prod (newsheepdogland still WebGL-pinned; no live scene sets the flag), so prod behavior is byte-identical.
+
+**P2 measured the real WebGPU ship path on the RTX 3070** (headed Chrome + d3d11 persistent context, `tools/webgpu-prewarm-probe-cycle74.mjs`, `cycle74-validation/`, gitignored):
+
+- The prewarm STOPS THE CRASH on the real path: every cold load survived (no TDR), reaching a live async render loop with `lastError:null`. P1's crash-fix is validated.
+- Cold compile is ~38s now (down from Cycle 72's ~83-95s, after the Cycle 72 node-lighting fix + far-ring retraction), as the FIRST heavy WebGPU scene of a session.
+- The ~38s is SHARED konveyor-pipeline cold compile, not a newsheepdogland tax: an in-session swap to newsheepdogland after any other WebGPU scene compiles in ~0.4s (the shared grass/terrain/sky/water/sheep/tree pipelines are already warm on the GPU device). The attract/menu renders only the zen field, which does not touch those pipelines, so a player who picks newsheepdogland first still pays the full ~38s.
+- Dawn's disk cache does NOT persist across browser launches here (~37s warm == cold on a fresh relaunch with the same on-disk profile), so returning visitors get no free warm load. Only the in-session device cache helps.
+
+**P3 pin decision: STAY.** A ~38s first-pick load fails the within-budget gate; the hard stop is honored, the `renderer: 'webgl'` pin is restored, and P1 ships dormant behind it. Recorded in [`DECISIONS.md`](../DECISIONS.md) + `cycle74-validation/README.md`. The reframe (38s shared-pipeline, warmable to ~0.4s in-session) makes the follow-up data-founded rather than a guess.
+
+**Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail; `npm run lint` (`eslint shared/`) clean; `npm run build` clean. Bundle ratchet 586 KiB main / 604 KiB three == baseline (the prewarm method adds +0.8 decimal-kB, below the rounded-KiB threshold; three.js byte-identical). Sim-baselines + refactor-baselines byte-identical.
+
+**No player-visible change this cycle** (newsheepdogland stays on WebGL; the prewarm is dormant infrastructure). Release proof: commits `RELEASE_COMMITS` on `main`; GH Actions run `RELEASE_RUN`.
+
+**Carryover (to Cycle 75 `webgpu-attract-prewarm`):**
+
+- **Background prewarm during attract (the data-founded path to lifting the pin).** P2 proved warming the shared konveyor pipelines (via any WebGPU scene build + compileAsync) drops a subsequent heavy-scene load to ~0.4s. A background prewarm that compiles those pipelines during the attract/menu idle window would make the first real scene pick fast - including newsheepdogland - letting the pin come off and unblock the flagship's WebGPU Hosek sky + water (the Cycle 73 marketing payoff). Deferred because it touches attract-mode UX (building/compiling off-screen without janking the menu) and warrants its own validation, not a rushed autonomous build of an invisible feature. The `prewarmShaders` flag is left set so the follow-up only has to lift the pin.
+- **`feel-and-media-live` LIVE taste items (Matt's hands):** the survival feel LIVE retune (off the reaffirmed Cycle 70/73 lever order), the two-dog co-op fun playtest, and the entrance hero FINAL blessing (pick from the Cycle 73 candidates, or re-shoot once WebGPU lands). Carried forward from Cycle 73, still paired.
+- Prior open carryover (tablet draw-call perf) remains.
+
 ### Cycle 73 - `feel-and-media-live` (closed 2026-06-08)
 
 Plan archived at [`docs/archive/cycles/cycle-73-plan.md`](archive/cycles/cycle-73-plan.md). An autonomous cycle (Matt: "complete 73 autonomously and take the recordings and shots without me in the loop - commit push and deploy after finishing and updating docs and correcting drift and cleaning local and remote repo"). The long-deferred `feel-and-media-live` paired track, completed to the extent it could be without Matt at the keyboard. No `shared/` sim change (`tuning.js` byte-identical), so every sim-baseline is byte-identical by construction.
