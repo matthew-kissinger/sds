@@ -7,7 +7,7 @@ Durable rules for the Cloudflare backend (Worker + DO + D1 + Pages) and the wire
 - **Frontend:** Cloudflare Pages, project `sds-frontend`. Built from this repo's `dist/`.
 - **Backend:** Cloudflare Worker `sds-worker` with Durable Objects for room state and WebSocket termination.
 - **Leaderboard storage:** Cloudflare D1 (`sds-db`). Migrations are **append-only** — see [`worker/migrations/`](../../worker/migrations/).
-- **Auth:** `persistent_id` (localStorage) + Worker-issued short-lived signed token. Signed with the `JWT_SECRET` Workers secret.
+- **Auth:** server-minted `persistent_id` bound to a device-held `auth_secret` (trust-on-first-use; a returning client re-proves with both, a leaked id without the secret is rejected - P-SEC-1, migration `0007_player_auth_secret.sql`). The session token is a Worker-issued signed JWT (24h), signed with the `JWT_SECRET` Workers secret; WS upgrades additionally carry a short-lived admission ticket (P-SEC-2).
 - **Tick rate:** 60Hz server-side inside the DO. Clients run the same shared sim and predict; the DO is authoritative.
 - **Wire protocol:** MessagePack over WebSocket with delta-encoded sheep state. JSON exists only for the REST handshake.
 
@@ -37,8 +37,8 @@ Identity rides the WebSocket URL: `wss://.../room/<code>?playerId=<sessionId>`. 
 
 - New migration = new file with the next sequence number (`0003_*.sql`, `0004_*.sql`).
 - **Never edit** an existing migration once applied. The history is the contract.
-- Apply locally with `npm run dev:setup` (which runs the wrangler migration apply).
-- Apply to remote with the standard wrangler CLI; CI does this on deploy.
+- Apply locally with `npm run dev:setup` (runs `scripts/d1-local-setup.mjs`, which applies the full local migration set).
+- Remote apply is automated by the deploy workflow's `migrate` job ([`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml)): it applies any migration file **newly added** in the push (`git diff --diff-filter=A`) to remote `sds-db` via `wrangler d1 execute --remote`, before the Worker/Pages deploy. It deliberately does **not** use `wrangler d1 migrations apply` - the `d1_migrations` tracking table is out of sync from earlier manual applies, so that would try to re-run `0007`-`0009`.
 
 ## What stays out of the Worker
 

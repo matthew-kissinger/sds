@@ -4,6 +4,30 @@
 
 ## Recently Completed
 
+### Cycle 73 - `feel-and-media-live` (closed 2026-06-08)
+
+Plan archived at [`docs/archive/cycles/cycle-73-plan.md`](archive/cycles/cycle-73-plan.md). An autonomous cycle (Matt: "complete 73 autonomously and take the recordings and shots without me in the loop - commit push and deploy after finishing and updating docs and correcting drift and cleaning local and remote repo"). The long-deferred `feel-and-media-live` paired track, completed to the extent it could be without Matt at the keyboard. No `shared/` sim change (`tuning.js` byte-identical), so every sim-baseline is byte-identical by construction.
+
+**The load-bearing finding: the flagship's beauty media is WebGPU-gated.** Captured 24 hero stills + a flythrough in a real GPU browser (headed Chrome + d3d11, `__sdsCinema`). Two of Newsheepdogland's most photogenic systems are WebGPU-only (konveyor node materials) and render broken on the Cycle 71 WebGL pin: the `HosekWilkieSkyDome` draws as a dark dome on the horizon, and the water shader renders dark with white speckle. The play area is a narrow coastal foot, so any wide/aerial framing catches the dark sea; only tight ground-level pastoral framings (sky dome + sun billboard hidden, sea out of frame) read cleanly. So the dramatic golden-hour hero + a clean cinematic are blocked until the WebGL pin lifts. **This gives the deferred compile-reduction thread a concrete marketing payoff beyond load-time.** Forcing WebGPU just for the capture was rejected (invokes the exact cold-compile TDR-crash class the Cycle 72/73 hard stop guards). Evidence: `cycle73-validation/README.md` (gitignored).
+
+**Closeout outcomes:**
+
+- **P1 entrance hero FINAL - re-scoped to a finding; shipped webp KEPT.** Every WebGL alternative is a lateral mood-vs-legibility trade, not "clearly better," so the Cycle 71 dusk webp stays live (not blind-overwritten on a taste fork). 24 candidates + the WebGPU-gated finding delivered; best game-legible picks named (`w`/`u`/`l`). Recipe: `tools/hero-capture-cycle73.mjs`.
+- **P2 cinematic recordings - DONE (documentary).** A 9s aerial flythrough (`newsheepdogland-flythrough.mp4`, 1280x720, scripted `__sdsCinema` path, no gameplay-AI) conveys the 3.2 km^2 boot island's scale + geography. Pale sky + coastal dark-water are the same WebGL-pin cap; a marketing-grade flythrough is WebGPU-gated. Recipe: `tools/flythrough-cycle73.mjs`.
+- **P3 survival-feel reaffirmed - DONE; LIVE retune stays Matt's.** Confirmed `shared/survival/tuning.js` byte-identical to Cycle 70 (startFlock 10, growth 5, lossThreshold 1/3; wolf base 2/perDay 1/max 8, huntSpeed 11.5, killCooldown 1.2) and the audit's lever order stands. Co-op MP-contract specs green in `npm test`. The audit's own verdict ("pure taste, needs a live wolf night") makes the retune irreducibly paired; no spec value changed. `cycle73-validation/survival-feel/reaffirm.md`.
+- **P4 multiplayer.md correction + doc-drift sweep - SHIPPED.** The 5-cycle-blocked `.claude/rules/multiplayer.md` correction finally landed (Matt's "correcting drift" lifted the agent-config guardrail that deferred it through Cycles 68-72). Two factual fixes, reality-checked against source: the append-only-migrations section now describes the `deploy.yml` `migrate` job accurately (newly-added files only via `wrangler d1 execute --remote`, not `migrations apply`; `dev:setup` = `scripts/d1-local-setup.mjs`), and the Auth line now reflects P-SEC-1 (server-minted `persistent_id` + device `auth_secret` TOFU + 24h JWT + WS admission ticket) instead of the pre-audit client-supplied model. Pre-existing em-dashes in that file (Matt's prose, lines 9/28/51) left per the prose rule. The "37.6% cut LIVE" claim survives only in BACKLOG's append-only history with the recorded correction.
+- **P5 repo hygiene - SHIPPED.** Deleted 3 fully-merged local branches (`cycle-51-mockups`, `codex/relicense-agpl-assets`, `codex/native-desktop-package-1`, all 0 ahead of `main`, no open PRs) + the stale remote `origin/codex/native-desktop-package-1`. Repo is now `main` only, local and remote.
+
+**Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail; `npm run lint` (`eslint shared/`) clean; `npm run build` clean. No `js/` or bundle change this cycle (docs + tools + a rule file only), so the bundle ratchet is unchanged (mainKB 586). Sim-baselines + refactor-baselines byte-identical.
+
+**No player-visible change this cycle** (hero webp kept; all changes are docs, capture tools, and a rule file). Release proof: <COMMIT> on `main`; GH Actions run <RUN_ID> (a no-op rebuild triggered by the `tools/*.mjs` files - docs/rule-file changes are paths-ignored).
+
+**Carryover (to Cycle 74 `webgpu-compile-reduction`):**
+
+- **WebGPU compile-reduction (now the unblocker for both load-time AND flagship media).** Cut the ~83-95s cold WebGPU compile on Newsheepdogland so the WebGL pin lifts; Cycle 73 proved this also unblocks the hero + cinematic (the WebGPU-only sky/water). Autonomous-able measured spike; the no-pin-removal-without-RTX-3070-verification hard stop carries forward.
+- **`feel-and-media-live` LIVE taste items (Matt's hands):** the survival feel LIVE retune (off the reaffirmed lever order), the two-dog co-op fun playtest, and the entrance hero FINAL blessing (pick from the Cycle 73 candidates, or re-shoot once WebGPU lands).
+- Prior open carryover (tablet draw-call perf) remains.
+
 ### Cycle 72 - `webgpu-first` (closed 2026-06-08)
 
 Plan archived at [`docs/archive/cycles/cycle-72-plan.md`](archive/cycles/cycle-72-plan.md). Started as "make every scene WebGPU-first and remove the Cycle 71 WebGL pin"; a measure-first P1 spike re-scoped it, and Matt confirmed the new direction ("implement your recommendation and complete the cycle"). Render-only: no `shared/` sim change, so every sim-baseline is byte-identical by construction.
