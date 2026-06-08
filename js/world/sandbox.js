@@ -27,18 +27,40 @@ export function setDynamicBounds(builder, bounds, pasture) {
         };
         console.log('[TERRAIN] Updated play area bounds:', builder.zones.playArea);
 
-        // Position farmhouse beyond the northeast corner of the field
-        builder.farmHousePosition = {
-            x: bounds.maxX + 80,
-            z: bounds.maxZ + 60
-        };
-
-        builder.farmHouseExclusionArea = {
-            minX: builder.farmHousePosition.x - 40,
-            maxX: builder.farmHousePosition.x + 40,
-            minZ: builder.farmHousePosition.z - 40,
-            maxZ: builder.farmHousePosition.z + 40
-        };
+        // Cycle 82: this is the mode-start "reset to default bounds" path, the
+        // ONLY caller of setDynamicBounds. The genuine sandbox RESIZE goes through
+        // rebuildEnvironment (main.js), which is already skipped for island
+        // scenes. A scene that pins its homestead must keep that position here:
+        // Newsheepdogland's house sits flush against the pen at (640,-956), but
+        // this path used to re-derive the farmhouse from the medium-field default
+        // bounds (±100 → (180,160)) and drop the house into the sea. Home Field
+        // pins the same (180,160) the default bounds derive, so this is a no-op
+        // there; the real Field sandbox resize still tracks bounds via
+        // rebuildEnvironment.
+        const pinnedFarmHouse = builder.sceneDef?.farmHouse?.position;
+        if (pinnedFarmHouse) {
+            builder.farmHousePosition = { x: pinnedFarmHouse.x, z: pinnedFarmHouse.z };
+            builder.farmHouseExclusionArea = builder.sceneDef.farmHouse.exclusionArea
+                ? { ...builder.sceneDef.farmHouse.exclusionArea }
+                : {
+                    minX: pinnedFarmHouse.x - 40,
+                    maxX: pinnedFarmHouse.x + 40,
+                    minZ: pinnedFarmHouse.z - 40,
+                    maxZ: pinnedFarmHouse.z + 40
+                };
+        } else {
+            // Position farmhouse beyond the northeast corner of the field
+            builder.farmHousePosition = {
+                x: bounds.maxX + 80,
+                z: bounds.maxZ + 60
+            };
+            builder.farmHouseExclusionArea = {
+                minX: builder.farmHousePosition.x - 40,
+                maxX: builder.farmHousePosition.x + 40,
+                minZ: builder.farmHousePosition.z - 40,
+                maxZ: builder.farmHousePosition.z + 40
+            };
+        }
         console.log('[TERRAIN] Updated farmhouse position:', builder.farmHousePosition);
 
         // Actually MOVE the existing farmhouse to the new position

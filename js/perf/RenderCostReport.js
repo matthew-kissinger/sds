@@ -21,6 +21,22 @@ export const WEBGPU_MOBILE_BUDGETS = Object.freeze({
     },
 });
 
+// Cycle 82: a desktop discrete-GPU budget, separate from the mobile tiers above.
+// classifyDeviceTier collapses every desktop to tier 'high', so before this the
+// QualityGovernor judged a desktop card at the mobile-high 18.5 ms (~54 fps) bar.
+// On a 144 Hz desktop a single 2-vsync hitch is 20.8 ms, so transient streaming
+// hitches tripped a step-down and (at the floor) the renderer fallback. The
+// flagship runs the survival island at 144 fps on the Cycle 80/81 compute-cull
+// WebGPU path; a discrete GPU must not be throttled at a phone's bar. p95 28 ms
+// (~36 fps) / p99 44 ms still catches a genuinely struggling desktop (a weak
+// integrated GPU classified 'high') sustained over a 7 s window.
+export const WEBGPU_DESKTOP_BUDGET = Object.freeze({
+    frameP95: 28,
+    frameP99: 44,
+    drawCalls: 400,
+    estimatedTriangles: 4_000_000,
+});
+
 export function inferRendererMode(renderer) {
     if (typeof window !== 'undefined' && window.__sdsRendererMode?.effective) {
         return window.__sdsRendererMode.effective;

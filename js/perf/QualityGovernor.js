@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-import { WEBGPU_MOBILE_BUDGETS, percentile } from './RenderCostReport.js';
+import { WEBGPU_MOBILE_BUDGETS, WEBGPU_DESKTOP_BUDGET, percentile } from './RenderCostReport.js';
 
 const QUALITY_STEPS = Object.freeze([
     { renderScale: 1.0, grassDistanceScale: 1.0, treeLodBias: 0, waterSparkleScale: 1.0, sheepAnimationRate: 1.0, terrainSegmentScale: 1.0 },
@@ -39,12 +39,20 @@ export class QualityGovernor {
         tier = null,
         adapterLimits = null,
         sampleWindowMs = 7000,
+        warmupMs = 6000,
+        maxFrameTimeMs = 200,
+        gapResetMs = 1500,
         autoFallback = false,
         onQualityStateChange = null,
     } = {}) {
         this.performanceMonitor = performanceMonitor;
         this.isMobile = isMobile;
         this.sampleWindowMs = sampleWindowMs;
+        this.warmupMs = warmupMs;
+        this.maxFrameTimeMs = maxFrameTimeMs;
+        this.gapResetMs = gapResetMs;
+        this.warmupUntil = null;
+        this.lastSampleAt = null;
         this.autoFallback = autoFallback;
         this.onQualityStateChange = onQualityStateChange;
         this.samples = [];
@@ -68,7 +76,33 @@ export class QualityGovernor {
 
     sample({ frameTime, renderer = null, rendererMode = null, sceneId = null } = {}) {
         if (!Number.isFinite(frameTime) || frameTime <= 0) return this.state;
+        // A backgrounded tab throttles rAF to ~1 fps; those frames are ~100x
+        // steady-state and would instantly (and falsely) trip overBudget. Never
+        // sample while hidden.
+        if (typeof document !== 'undefined' && document.hidden) return this.state;
         const now = performance.now();
+        // Cold-load warmup grace: the first seconds after first-interactive carry
+        // the one-time pipeline-compile + texture-upload spike. Skip them so a
+        // boot cost is never read as a sustained miss that floors quality (and,
+        // at the floor, demotes the renderer).
+        if (this.warmupUntil === null) this.warmupUntil = now + this.warmupMs;
+        if (now < this.warmupUntil) {
+            this.lastSampleAt = now;
+            return this.state;
+        }
+        // Discontinuity guard: a long gap since the previous sample (un-hide, a
+        // modal, a debugger pause) yields one giant catch-up frame. Discard the
+        // stale window instead of folding the spike into the percentile.
+        if (this.lastSampleAt !== null && now - this.lastSampleAt > this.gapResetMs) {
+            this.samples = [];
+            this.windowStartedAt = now;
+            this.lastSampleAt = now;
+            return this.state;
+        }
+        this.lastSampleAt = now;
+        // Drop single-frame outliers (GC pause, a one-off hitch): they do not
+        // represent steady render cost and would dominate p99 in a short window.
+        if (frameTime > this.maxFrameTimeMs) return this.state;
         this.samples.push(frameTime);
         if (this.samples.length > 240) this.samples.shift();
         if (!this.windowStartedAt) this.windowStartedAt = now;
@@ -79,7 +113,7 @@ export class QualityGovernor {
 
         const frameP95 = percentile(this.samples, 95);
         const frameP99 = percentile(this.samples, 99);
-        const budget = WEBGPU_MOBILE_BUDGETS[this.deviceTier] ?? WEBGPU_MOBILE_BUDGETS.mid;
+        const budget = this._budget();
         const overBudget = frameP95 > budget.frameP95 || frameP99 > budget.frameP99;
         const windowSummary = {
             sceneId,
@@ -102,7 +136,7 @@ export class QualityGovernor {
         } else {
             this.recoverWindows += 1;
             this.missWindows = 0;
-            if (this.recoverWindows >= 3 && this.qualityIndex > 0) {
+            if (this.recoverWindows >= 2 && this.qualityIndex > 0) {
                 this.qualityIndex -= 1;
                 this._applyQualityStep(renderer);
                 this.recoverWindows = 0;
@@ -119,6 +153,14 @@ export class QualityGovernor {
 
     getState() {
         return { ...this.state };
+    }
+
+    _budget() {
+        // Desktop is always classified 'high'; give it its own discrete-GPU
+        // budget instead of the mobile-high bar. Mobile keeps the per-tier
+        // thresholds from WEBGPU_MOBILE_BUDGETS.
+        if (!this.isMobile) return WEBGPU_DESKTOP_BUDGET;
+        return WEBGPU_MOBILE_BUDGETS[this.deviceTier] ?? WEBGPU_MOBILE_BUDGETS.mid;
     }
 
     _makeState(lastWindow) {
@@ -139,6 +181,15 @@ export class QualityGovernor {
     _recordFallback(rendererMode) {
         if (this.fallbackReason) return;
         if (!String(rendererMode ?? '').startsWith('webgpu')) return;
+        // Cycle 82: desktop never demotes the renderer on a frame-budget miss.
+        // The lowest QUALITY_STEPS rung is the floor. This is the ONLY writer of
+        // the 24h sticky 'sds-renderer-fallback' flag, and it can only fire on
+        // desktop - mobile is WebGL-pinned on the flagship, so rendererMode is
+        // 'webgl' there and the check above already returned. Writing it from a
+        // transient desktop step-down un-ships the desktop WebGPU flagship and
+        // flips the next load to WebGL for 24h (the "WebGPU/WebGL split"). Mobile
+        // WebGPU, if ever validated, still gets the protective fallback.
+        if (!this.isMobile) return;
         this.fallbackReason = 'webgpu-frame-budget';
         const record = { reason: this.fallbackReason, at: Date.now() };
         try {

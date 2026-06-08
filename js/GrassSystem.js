@@ -322,6 +322,13 @@ export class GrassSystem {
         this._autoLodHi = 18; // ms rolling avg → scale down
         this._autoLodLo = 14; // ms rolling avg → scale up
         this._autoLodFloor = 0.5;
+        // Cycle 82: cold-load warmup grace (seconds of accumulated update time).
+        // The 30-sample ring above only warms over ~0.5 s, far short of the
+        // multi-second pipeline-compile + texture-upload settling on the WebGPU
+        // flagship, so the rolling avg floored _autoLodFactor to 0.5 from the boot
+        // spike and thinned grass on a capable desktop. Hold the factor steady
+        // until the scene has been running this long, then react normally.
+        this._autoLodWarmupS = 6;
 
         // Performance stats
         this.stats = {
@@ -1843,7 +1850,7 @@ export class GrassSystem {
             this._frameTimeIdx = (this._frameTimeIdx + 1) % this._frameTimes.length;
             if (this._frameTimeCount < this._frameTimes.length) this._frameTimeCount++;
         }
-        if (this._frameTimeCount >= 30) {
+        if (this._frameTimeCount >= 30 && this.time > this._autoLodWarmupS) {
             let sum = 0;
             for (let i = 0; i < this._frameTimeCount; i++) sum += this._frameTimes[i];
             const avg = sum / this._frameTimeCount;

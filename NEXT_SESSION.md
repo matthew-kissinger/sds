@@ -1,8 +1,8 @@
-# Next Session - Cycle 82 feel-and-media-live (scaffold - needs Goal + phases)
+# Next Session - Cycle 82 feel-and-media-live (Phase 1 flagship-stability SHIPPED, pending deploy)
 
 > **Updated:** 2026-06-08
-> **For:** Cycle 82 `feel-and-media-live`. Plan: [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) - SCAFFOLD ONLY (Goal + phases not yet filled). Built after Cycle 81 SHIPPED the flagship WebGPU lift.
-> **Pickup priority:** The 7-cycle WebGPU pin saga is DONE - the flagship lifted live on desktop WebGPU (Cycle 81). The next cycle is an open choice; the standing deferred thread is the player-visible `feel-and-media-live` work. Fill in the Goal + phases at `/cycle-start`, or repoint to a different direction.
+> **For:** Cycle 82 `feel-and-media-live`. Plan: [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md). Phase 1 (flagship-stability fixes) is code-complete and verified live on the 3070; Phase 2+ (`feel-and-media-live`) is the open thread.
+> **Pickup priority:** Phase 1 (newsheepdogland house-in-water + QualityGovernor WebGPU/WebGL split + transient quality-floor + grass warmup) is test-green and verified live on desktop WebGPU. Next is the commit/deploy call, then the Phase 3 production steady-state profile and the Phase 2+ feel-and-media-live work.
 
 ## Cold-Start Orientation
 
@@ -20,11 +20,14 @@ Validation: `npm test` 1135 pass / 8 skip; `npm run build` clean; bundle baselin
 
 ## What To Pick Up Next
 
-**Cycle 82 is a SCAFFOLD.** Fill in `docs/cycle-82-plan.md`'s Goal + phases, then `/cycle-start`. The WebGPU-pin epic is closed, so the next direction is a real choice:
+**Cycle 82 Phase 1 (flagship-stability) is SHIPPED + verified live, pending commit/deploy.** Three live newsheepdogland regressions are fixed (house-in-water, the WebGPU/WebGL load split, the transient quality-floor + grass thinning). See [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) Phase 1 for root causes, fixes, and the live proof (house at (640,-956) on land attached to the pen; no sticky fallback flag written even through a 60,008ms backgrounded frame; real frame cost 7.3ms / ~137fps on the 3070). `npm test` 1142 pass / 8 skip; `npm run build` clean at the 591KB baseline.
 
-- The standing deferred `feel-and-media-live` thread: survival-feel retune, two-dog co-op playtest, entrance hero blessing (player-visible, taste/paired).
+Next:
+
+- Commit + deploy the Phase 1 fixes. The verification was on the local dev build; production still runs the old code until deployed.
+- Phase 3 (measure-first): production-build, foreground, >=5-run steady-state p95/p99 on the 3070 to confirm the flagship sustains qualityIndex 0 (resolves Q1).
+- Phase 2 `feel-and-media-live`: survival-feel retune, two-dog co-op playtest, entrance hero blessing (player-visible, taste/paired).
 - OR mobile WebGPU validation if a WebGPU-capable mobile device comes on hand (this cycle's tablet had none).
-- OR a different direction Matt names.
 
 ## Open Carryover (deferred)
 

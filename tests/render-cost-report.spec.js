@@ -81,6 +81,7 @@ describe('WebGPU mobile render cost reporting', () => {
             isMobile: true,
             tier: 'high',
             sampleWindowMs: 1,
+            warmupMs: 0,
             onQualityStateChange: (state) => qualityChanges.push(state),
         });
         governor.windowStartedAt = performance.now() - 2;
@@ -108,6 +109,7 @@ describe('WebGPU mobile render cost reporting', () => {
             isMobile: true,
             tier: 'high',
             sampleWindowMs: 7000,
+            warmupMs: 0,
         });
         const state = governor.sample({ frameTime: 60, renderer, rendererMode: 'webgpu-production', sceneId: 'field' });
         expect(state.qualityIndex).toBe(0);
@@ -121,6 +123,7 @@ describe('WebGPU mobile render cost reporting', () => {
             isMobile: true,
             tier: 'high',
             sampleWindowMs: 1,
+            warmupMs: 0,
         });
         for (let i = 0; i < 2; i++) {
             governor.windowStartedAt = performance.now() - 2;
@@ -147,6 +150,7 @@ describe('WebGPU mobile render cost reporting', () => {
             isMobile: true,
             tier: 'high',
             sampleWindowMs: 1,
+            warmupMs: 0,
         });
         const pushOverBudget = () => {
             governor.windowStartedAt = performance.now() - 2;
@@ -171,6 +175,7 @@ describe('WebGPU mobile render cost reporting', () => {
             isMobile: true,
             tier: 'high',
             sampleWindowMs: 1,
+            warmupMs: 0,
         });
         const pushOverBudget = () => {
             governor.windowStartedAt = performance.now() - 2;
@@ -179,5 +184,67 @@ describe('WebGPU mobile render cost reporting', () => {
         };
         for (let i = 0; i < 12; i++) pushOverBudget();
         expect(governor.getState().fallbackReason).toBeNull();
+    });
+});
+
+describe('Desktop WebGPU quality governance (Cycle 82)', () => {
+    it('does not demote the desktop renderer or set a sticky fallback at the quality floor', () => {
+        // The "WebGPU/WebGL split": _recordFallback is the only writer of the 24h
+        // sds-renderer-fallback flag and (since mobile is WebGL-pinned on the
+        // flagship) can only fire on desktop WebGPU. A desktop pinned at the
+        // quality floor must stay WebGPU - never set fallbackReason.
+        const renderer = { setPixelRatio() {} };
+        try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
+        const governor = new QualityGovernor({
+            isMobile: false,
+            tier: 'high',
+            sampleWindowMs: 1,
+            warmupMs: 0,
+        });
+        const pushOverBudget = () => {
+            governor.windowStartedAt = performance.now() - 2;
+            governor.samples = [30, 31, 32, 33, 34]; // p95 34 > the 28ms desktop budget
+            return governor.sample({ frameTime: 34, renderer, rendererMode: 'webgpu-production', sceneId: 'newsheepdogland' });
+        };
+        for (let i = 0; i < 20; i++) pushOverBudget();
+        const state = governor.getState();
+        expect(state.qualityIndex).toBe(3);       // quality floors as a soft cap
+        expect(state.fallbackReason).toBeNull();  // but the renderer is NOT demoted
+    });
+
+    it('judges desktop at the discrete-GPU budget, not the mobile-high bar', () => {
+        // 22ms p95 (a 2-vsync hitch on a 144Hz panel) is over the mobile-high
+        // 18.5ms budget but under the 28ms desktop budget: desktop must not step.
+        const renderer = { setPixelRatioCalls: [], setPixelRatio(v) { this.setPixelRatioCalls.push(v); } };
+        const governor = new QualityGovernor({ isMobile: false, tier: 'high', sampleWindowMs: 1, warmupMs: 0 });
+        for (let i = 0; i < 6; i++) {
+            governor.windowStartedAt = performance.now() - 2;
+            governor.samples = [18, 19, 20, 21, 22];
+            governor.sample({ frameTime: 22, renderer, rendererMode: 'webgpu-production', sceneId: 'newsheepdogland' });
+        }
+        expect(governor.getState().qualityIndex).toBe(0);
+        expect(renderer.setPixelRatioCalls.length).toBe(0);
+    });
+
+    it('skips frames during the cold-load warmup grace', () => {
+        const renderer = { setPixelRatioCalls: [], setPixelRatio(v) { this.setPixelRatioCalls.push(v); } };
+        const governor = new QualityGovernor({ isMobile: false, tier: 'high', sampleWindowMs: 1, warmupMs: 60_000 });
+        for (let i = 0; i < 10; i++) {
+            governor.windowStartedAt = performance.now() - 2;
+            governor.samples = [40, 41, 42, 43, 44]; // well over budget
+            governor.sample({ frameTime: 44, renderer, rendererMode: 'webgpu-production', sceneId: 'newsheepdogland' });
+        }
+        // Still inside the warmup grace: nothing is sampled, no step-down.
+        expect(governor.getState().qualityIndex).toBe(0);
+        expect(renderer.setPixelRatioCalls.length).toBe(0);
+    });
+
+    it('drops single-frame outliers instead of folding them into the window', () => {
+        const governor = new QualityGovernor({ isMobile: false, tier: 'high', sampleWindowMs: 7000, warmupMs: 0 });
+        governor.sample({ frameTime: 5000, rendererMode: 'webgpu-production', sceneId: 'newsheepdogland' });
+        governor.sample({ frameTime: 4000, rendererMode: 'webgpu-production', sceneId: 'newsheepdogland' });
+        // Outliers (> maxFrameTimeMs) are dropped before reaching the percentile buffer.
+        expect(governor.samples.length).toBe(0);
+        expect(governor.getState().qualityIndex).toBe(0);
     });
 });
