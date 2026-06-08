@@ -21,7 +21,7 @@ Plan archived at [`docs/archive/cycles/cycle-74-plan.md`](archive/cycles/cycle-7
 
 **Validation gates:** `npm test` 1135 pass / 8 skip / 0 fail; `npm run lint` (`eslint shared/`) clean; `npm run build` clean. Bundle ratchet 586 KiB main / 604 KiB three == baseline (the prewarm method adds +0.8 decimal-kB, below the rounded-KiB threshold; three.js byte-identical). Sim-baselines + refactor-baselines byte-identical.
 
-**No player-visible change this cycle** (newsheepdogland stays on WebGL; the prewarm is dormant infrastructure). Release proof: commits `RELEASE_COMMITS` on `main`; GH Actions run `RELEASE_RUN`.
+**No player-visible change this cycle** (newsheepdogland stays on WebGL; the prewarm is dormant infrastructure). Release proof: commit `c6884b9` on `main`; GH Actions run `27122897489` GREEN (Deploy Pages 51s + Deploy Worker + the `Migrate D1 (remote)` job a no-op). The bundle changed (the P1 prewarm method + the probe tool), but prod runtime behavior is byte-identical because the prewarm is dormant behind the pin and no live scene sets the flag. (This release-proof line was filled by a follow-up paths-ignored docs commit after the deploy went green.)
 
 **Carryover (to Cycle 75 `webgpu-attract-prewarm`):**
 
