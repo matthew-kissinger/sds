@@ -1,104 +1,91 @@
-# Next Session - Newsheepdogland first-session readiness
+# Next Session - Cycle 86 v2.3.0 Launch (Cycle 85 open on one item)
 
 > **Updated:** 2026-06-09
-> **For:** Cycle 85 `newsheepdogland-entrance-readiness`.
-> **Pickup priority:** Get one real mobile proof for the live Newsheepdogland
-> first-session loop, then decide whether Cycle 85 can close or needs another
-> state-ownership cleanup pass.
+> **For:** Cycle 86 (`docs/cycle-86-plan.md`, scaffolded, not started).
+> Cycle 85 stays open on exactly one acceptance item (real mobile proof),
+> absorbed as Cycle 86 Phase 3.
+> **Pickup priority:** Run Cycle 86 Phase 1 (paired): walk the hardening
+> fence reviews with Matt. Phase 3 (real-device mobile pass) closes
+> Cycle 85.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this
-file -> [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) ->
-[`docs/hardening/ORCHESTRATION.md`](docs/hardening/ORCHESTRATION.md) if the
-work is hardening-related.
-
-`docs/cycle-85-plan.md` is the active cycle plan. Do not treat older
-Newsheepdogland handoffs as current unless the repo state confirms them.
+Read in order: this file -> [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md)
+-> [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) (still open) ->
+[`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) ->
+[`docs/hardening/ORCHESTRATION.md`](docs/hardening/ORCHESTRATION.md).
 
 ## Where It Stands
 
-**Cycle 85 is open.** The shipped proof below is for `v2.2.12` at commit
-`2ace6f0`, deployed by GitHub Deploy run `27226644818`.
+**The hardening program (docs/hardening/, 42 tasks, 5 phases) is COMPLETE
+and DEPLOYED LIVE** (2026-06-09, merge `ccc0d7b`, Deploy run 27242005458
+all green; live bundle `main-SaSle6SI.js` carries the delta client,
+`/api/rooms` answers 200, migration 0010 applied to remote D1). Highlights:
+delta wire protocol v3 with per-client soft-degrade, first-run tutorial,
+achievements, settings completion (key + gamepad rebinding, colorblind,
+language), share surfaces, crash beacon, structured worker logging,
+lint/typecheck/bundle CI gates, D1 migration-state tracking, entrance
+preload wave (entrance-visible 8.8s to 0.9s at 20 Mbps), listener-leak
+fixes + 50-cycle soak, 100-room load test (0 desyncs / 208k ticks), chaos
+validation (30/30). Tests 1159 -> 1428 passed. Codex's BrowserStack iOS
+first-session spec merged in the same push.
 
-What changed in `v2.2.12`:
+**Cycle 85 (`v2.2.12`, Newsheepdogland entrance readiness) shipped live and
+is validated except one item: the real mobile proof.** Chromium mobile
+emulation passed; no authorized ADB device or BrowserStack credentials were
+available in that run. The v2.2.12 live proof record (stale-cache
+overwrite, Play/pause/menu/Play loop, WebKit Play-path fix) lives in
+[`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) and CHANGELOG. Per Matt's
+contract: do not close Cycle 85 without the real-device pass.
 
-- Newsheepdogland is the default URL-less first-session world.
-- Entrance Play waits for game boot before committing the run.
-- Returning from Newsheepdogland to Main Menu tears down survival-only UI and
-  state before the next Play.
-- The service worker treats mutable un-hashed entrance images and terrain files
-  as network-first, so stale cached Newsheepdogland assets are overwritten on
-  online fetch.
-- Newsheepdogland survival boot loads HUD, containment, minimap, and skip
-  modules in parallel, and lazy-loads the wolf renderer after the scene body is
-  playable.
-- WebKit no longer crashes the Play path when audio or gamepad browser APIs are
-  unavailable.
+**Cycle 86 is scaffolded, not started.** Goal: turn the hardening program
+into a player-visible v2.3.0 release and point traffic at it. Phases:
+paired fence-review debt, worker fixes from chaos findings (full-room
+rehydration 409 lockout, reclaimedByOriginal log bug, crash-stack
+truncation), real-device mobile pass (paired, closes Cycle 85), tutorial
+translations, the v2.3.0 cut, launch content (paired, Matt's voice),
+telemetry confirmation.
 
-Validation already completed for `v2.2.12`:
+## Open Carryover (tracked in the Cycle 86 plan)
 
-- Local `git diff --check`, `npm test`, `npm run lint`, `npm run build`,
-  cross-browser smoke (`chromium`, `firefox`, `webkit`), deploy-equivalent
-  Chromium E2E, and focused Open Country local-only helper all passed.
-- GitHub Deploy run `27226644818` passed Test, remote D1 migration, Chromium
-  E2E, Pages deploy, and Worker deploy.
-- Live `sheepdogsim.com` proof found `assets/main-YccL6roX.js`, service worker
-  `BUILD_ID = '1781029228890'`, direct Worker health
-  `{"ok":true,"worker":"sds-worker"}`, and Newsheepdogland as the default
-  scene after Play.
-- Live stale-cache proof seeded fake cached entries and verified online fetch
-  overwrote them:
-  - `/terrain/newsheepdogland.bin`: `4` bytes stale -> `4,194,304` bytes fresh.
-  - `/assets/scenes/entrance/newsheepdogland.webp`: `11` bytes stale ->
-    `195,732` bytes fresh.
-- Live loop proof passed: `Play -> Pause -> Main Menu -> Play` returned to
-  Newsheepdogland, cleared `dayLoop`, `_survivalRun`, `_wolfPack`, and minimap
-  on menu return, then rebuilt them on the second Play.
-
-## Current Repo Caution
-
-At this handoff, local `main` may contain hardening commits after `v2.2.12`.
-Those commits are not part of the live deploy proof above unless they have since
-been pushed and the deploy proof has been refreshed. Check:
-
-```bash
-git status --short --branch
-git log --oneline --decorate -8
-```
-
-Do not claim live production proof for commits newer than `2ace6f0` until their
-own GitHub Deploy and live Pages/Worker checks pass.
-
-## Open Carryover
-
-- **Real mobile proof remains open.** This run found no authorized ADB device
-  and no BrowserStack/Android/iOS credentials in the environment. Chromium
-  mobile emulation passed, but it is not the required real mobile acceptance.
-- The actual phone proof should cover the live `https://sheepdogsim.com/`
-  default path: first Play, terrain-safe spawn, visible mobile controls/HUD,
-  pause/Main Menu, second Play, and no stale asset/cache behavior.
-- If real mobile is still unavailable, continue simplifying first-session state
-  ownership locally, but do not close Cycle 85 or this goal.
+- Fence reviews owed from the autonomous hardening run (Phase 1; sign-off
+  boxes in `docs/hardening/` are honestly unchecked).
+- Real mobile proof on Matt's actual phone covering the live default path:
+  first Play, terrain-safe spawn, mobile controls/HUD, pause/Main Menu,
+  second Play, no stale-cache behavior (Phase 3; also run Codex's
+  `tests/browserstack/newsheepdogland-first-session.spec.ts`).
+- Staging activation needs three operator steps (preview D1 +
+  `CF_PREVIEW_D1_ID` + `JWT_SECRET --env preview`); workflow ships dormant
+  (plan Q4).
+- Round-start delta egress lever deliberately deferred (plan Q2; analysis
+  in `docs/hardening/delta-protocol-design.md` Deviations).
+- Housekeeping: one empty locked dir husk at `../sds-p2-backpressure/worker`
+  (deletes after a stray process exits or reboot); ~44 untracked gitignored
+  scratch PNGs at repo root, deletable at leisure.
 
 ## Working Contract
 
-- Preserve the Cycle 85 scope in [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md).
-- Do not regenerate sim-baseline goldens for this cycle.
-- Do not edit frozen `shared/` files outside explicit cycle-plan acceptance.
-- Agent-launched Vite/Playwright must set `SDS_SUPPRESS_BROWSER_OPEN=1`; close
-  every page/browser and stop local listeners after probes.
-- When release proof matters, verify Pages (`https://sheepdogsim.com/`) and the
-  direct Worker (`https://sds-worker.matt-m-kissinger.workers.dev/healthz`)
-  separately.
+- No `shared/` edits in Cycle 86; sim-baselines stay byte-identical. Do not
+  regenerate goldens.
+- The Phase 2 RoomDO rejoin fix must not change the wire protocol or
+  room-full semantics for genuinely new joiners.
+- Version bump to 2.3.0 happens only in Phase 5 (the plan is the explicit
+  authorization). No other player-visible version moves.
+- Matt publishes every player-facing artifact; agents draft only.
+- Agent-launched Vite/Playwright sets `SDS_SUPPRESS_BROWSER_OPEN=1`; close
+  every probe page/listener after use.
+- When release proof matters, verify Pages (`https://sheepdogsim.com/`) and
+  the direct Worker health endpoint separately.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle | [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) |
-| Hardening program | [`docs/hardening/ORCHESTRATION.md`](docs/hardening/ORCHESTRATION.md) |
+| Next cycle plan (scaffolded) | [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md) |
+| Open prior cycle (one item) | [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) |
+| Completed hardening program | [`docs/hardening/ORCHESTRATION.md`](docs/hardening/ORCHESTRATION.md) |
+| Delta protocol spec + deviations | [`docs/hardening/delta-protocol-design.md`](docs/hardening/delta-protocol-design.md) |
+| Chaos findings (Phase 2 inputs) | [`docs/hardening/phase-4-polish-launch.md`](docs/hardening/phase-4-polish-launch.md), `tools/loadtest/chaos-results-2026-06-09.json` |
 | Release log | [`CHANGELOG.md`](CHANGELOG.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Service worker cache policy | [`public/sw.js`](public/sw.js) |
-| Entrance world default | [`js/components/entrance/worlds.ts`](js/components/entrance/worlds.ts) |
+| Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
