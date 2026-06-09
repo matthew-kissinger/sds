@@ -24,9 +24,9 @@ export class WolfRenderer {
      * @param {Object} cfg
      * @param {THREE.Scene} cfg.scene  scene to add wolf meshes to.
      * @param {(x:number,z:number)=>number} [cfg.groundY]  terrain height sampler.
-     * @param {number} [cfg.targetHeight=1.15]  rig world height.
+     * @param {number} [cfg.targetHeight=1.35]  rig world height.
      */
-    constructor({ scene, groundY, targetHeight = 1.15 } = {}) {
+    constructor({ scene, groundY, targetHeight = 1.35 } = {}) {
         this.scene = scene;
         this.groundY = typeof groundY === 'function' ? groundY : () => 0;
         this.targetHeight = targetHeight;

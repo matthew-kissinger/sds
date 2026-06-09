@@ -50,8 +50,8 @@ export const WOLF_TUNING = {
     body: 1.0,           // m: fence standoff radius (wolves collide with the pen like the dog)
     retreatDist: 260,    // m: a retreating wolf despawns once this far from the pen
     // Bark wolf-repel (a dog bark scares wolves into a flee; longer range than the sheep cone).
-    fleeRepelRadius: 22, // m
-    barkRepelSecs: 1.6,  // s the scare lasts before the wolf re-acquires
+    fleeRepelRadius: 45, // m
+    barkRepelSecs: 2.0,  // s the scare lasts before the wolf re-acquires
 };
 
 /*
@@ -61,5 +61,6 @@ export const WOLF_TUNING = {
  *     five lost sheep ends the run.
  *   - huntSpeed 11.5 stays below Sally's sprint and below Jep/George sprint,
  *     while still outrunning grazing sheep. Slower dogs rely on bark/range.
+ *   - Bark is a long wolf-control tool: 45m reach, 2.0s flee.
  *   - growth 6 reaches the 200-sheep cap in about 33 clean dawns.
  */

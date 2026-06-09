@@ -74,7 +74,7 @@ export class AudioManager {
             uiClick: 1.0,
             rewardingChime: 1.0,
             sheepBleats: 0.25,       // Reduced from 0.5 to 0.25 (75% quieter)
-            dogBarks: 0.25,          // Reduced from 0.5 to 0.25 (75% quieter)
+            dogBarks: 0.6,
             scoreSound: 0.8,        // Scoring sound
             opponentScoreSound: 0.6, // Opponent scoring (quieter)
             winSound: 1.0,          // Victory sound
@@ -545,14 +545,21 @@ export class AudioManager {
         if (now - this.lastPlayTimes.dogBarks < this.cooldowns.dogBarks) {
             return; // Still in cooldown
         }
-        
-        // Use the specific dog's bark sound
-        const dogBark = this.sounds.dogBarks[dogType] || this.sounds.dogBarks.jep; // Fallback to jep
-        
-        if (dogBark && !dogBark.isPlaying) {
+
+        const playLoadedBark = () => {
+            const dogBark = this.sounds.dogBarks[dogType] || this.sounds.dogBarks.jep;
+            if (!dogBark || dogBark.isPlaying || typeof dogBark.play !== 'function') return;
             dogBark.play();
-            this.lastPlayTimes.dogBarks = now;
+            this.lastPlayTimes.dogBarks = Date.now();
             console.log(`[AUDIO] ${dogType} barked`);
+        };
+
+        if (this.listener?.context?.state === 'suspended') {
+            this.ensureAudioContext().then((ready) => {
+                if (ready) playLoadedBark();
+            });
+        } else {
+            playLoadedBark();
         }
     }
     

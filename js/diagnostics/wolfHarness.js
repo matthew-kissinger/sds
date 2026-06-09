@@ -154,7 +154,7 @@ export async function mountWolfHarness() {
 
     let wolf = null;
     try {
-        wolf = await Wolf.load(WOLF_MODEL_PATH, { targetHeight: 1.1 });
+        wolf = await Wolf.load(WOLF_MODEL_PATH, { targetHeight: 1.35 });
     } catch (err) {
         surface.error = String(err?.message || err);
         label.textContent = `Wolf harness FAILED: ${surface.error}`;
@@ -167,11 +167,9 @@ export async function mountWolfHarness() {
     wolf.setPosition(0, 0, 0);
     wolf.transitionToState('IDLE');
 
-    // Camera framing for the bone-fit wolf (~1.1m in its longest dim, the body
-    // length; ~0.45m at the shoulder). A 3/4 view at ~3.2m reads the whole wolf
-    // plus its shadow. The wolf turntables in place at the origin.
-    camera.position.set(1.8, 1.2, 2.4);
-    camera.lookAt(0, 0.45, 0);
+    // Camera framing for the vertical-fit wolf.
+    camera.position.set(2.3, 1.55, 3.0);
+    camera.lookAt(0, 0.7, 0);
     camera.updateProjectionMatrix();
 
     // Expose the renderer refs so a probe / human can live-tune the view and
@@ -248,7 +246,7 @@ export async function mountWolfHarness() {
         // despawn instead). Rebuild a fresh wolf in place.
         if (deathFired && wolf.isDead && t >= (surface.diedAt + REVIVE_AFTER_DEATH)) {
             wolf.dispose();
-            Wolf.load(WOLF_MODEL_PATH, { targetHeight: 1.1 }).then((w) => {
+            Wolf.load(WOLF_MODEL_PATH, { targetHeight: 1.35 }).then((w) => {
                 wolf = w;
                 scene.add(wolf.getObject3D());
                 surface.state = () => wolf.currentState;

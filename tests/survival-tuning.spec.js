@@ -30,6 +30,8 @@ describe('survival tuning is single-source (Cycle 68 P2)', () => {
         ]) {
             expect(typeof WOLF_TUNING[key]).toBe('number');
         }
+        expect(WOLF_TUNING.fleeRepelRadius).toBe(45);
+        expect(WOLF_TUNING.barkRepelSecs).toBe(2.0);
     });
 
     it('wolves.js consumes WOLF_TUNING (DEFAULT_WOLF_TUNING is the same object)', () => {
@@ -41,6 +43,7 @@ describe('survival tuning is single-source (Cycle 68 P2)', () => {
         const sim = new WolfSim();
         expect(sim.t.huntSpeed).toBe(WOLF_TUNING.huntSpeed);
         expect(sim.t.killRadius).toBe(WOLF_TUNING.killRadius);
+        expect(sim.t.fleeRepelRadius).toBe(WOLF_TUNING.fleeRepelRadius);
         expect(sim.t.barkRepelSecs).toBe(WOLF_TUNING.barkRepelSecs);
         expect(sim.t.killCooldown).toBe(1.6);
     });
