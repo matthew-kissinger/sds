@@ -6,14 +6,14 @@
 
 ### Cycle 83 - `wolves-bark-night-polish` (closed 2026-06-09)
 
-Plan archived at [`docs/archive/cycles/cycle-83-plan.md`](archive/cycles/cycle-83-plan.md). Started as two draft PRs, then merged together for the `v2.2.4` release closeout. **SHIPPED: wolves are threat-readable, bark works at the intended medium/long ranges, and Newsheepdogland night finally reads as night.**
+Plan archived at [`docs/archive/cycles/cycle-83-plan.md`](archive/cycles/cycle-83-plan.md). Started as two draft PRs, then merged together for the `v2.2.4` release closeout. **SHIPPED: wolves are threat-readable, bark works at the intended medium/long ranges, and Newsheepdogland night finally reads as night.** Release tag `v2.2.4` points at `936531f`; Deploy run `27206254394` green.
 
 - **Wolf readability.** Kept the CC0 Quaternius animated wolf after re-checking that the official pack is CC0 and untextured, documented the source in [`docs/wolf-asset.md`](wolf-asset.md), scaled wolves to a 1.35 m target height, and applied a grey-wolf material palette so the model reads larger and less toy-like in survival and `?wolf=1`.
 - **Bark wiring and reach.** The bark command now resumes/unlocks Web Audio from the bark gesture, plays a louder sheepdog bark through the existing audio pipeline, pushes sheep in the existing forward cone out to 24 m, and repels wolves out to 45 m for 2.0 s.
 - **Night and sun arc.** Added an internal `night` atmosphere preset without expanding the public scene preset enum, keyed visual night to the existing `NIGHT_T = 0.80`, darkened exposure/ambient/fog, zeroed the sun billboard below the horizon, eased the day/night keyframe interpolation, and smoothed co-op survival visuals toward Worker `survival.t`.
 - **Proof.** Browser proof showed `?wolf=1` at a 1.35 m wolf height, Newsheepdogland survival bark moving a 20 m sheep and repelling a 40 m wolf, bark audio context `running`, and morning/day/dusk/night luma with night at `31.81`, `sunY=-0.13917`, and sun billboard intensity `0`.
 
-**Validation gates:** targeted bark/wolf/Worker/survival/atmosphere tests green; full `npm test` green; `npm run lint` green; `npm run build` green; Chromium smoke e2e green after rebase. Full local `npm run test:e2e` did not complete inside a 15-minute command window, and a non-MP cross-browser sweep exposed current-main selector/WebKit issues documented in PR #60.
+**Validation gates:** targeted bark/wolf/Worker/survival/atmosphere tests green; full `npm test` green; `npm run lint` green; `npm run build` green; exact deploy Chromium e2e command green locally and in GH Actions. Live Pages proof: `https://sheepdogsim.com/?proof=936531f` returned 200 with `/assets/main-DVswN68n.js`; live bundle contains `range:24`, wolf repel/bark flee tuning, and the internal night preset; Newsheepdogland hero asset returned 200 `image/webp`, 195,732 bytes; direct Worker `/healthz` returned `{"ok":true,"worker":"sds-worker"}`. Full local `npm run test:e2e` did not complete inside a 15-minute command window, and a non-MP cross-browser sweep exposed current-main selector/WebKit issues documented in PR #60.
 
 - **Carryover:** mobile WebGPU validation remains blocked on a real WebGPU-capable mobile device; prior tablet draw-call perf remains open. Full cross-browser e2e selectors/WebKit smoke need a focused maintenance pass.
 

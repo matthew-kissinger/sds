@@ -1,8 +1,8 @@
-# Next Session - Post v2.2.3 live, no active cycle
+# Next Session - Post v2.2.4 live, no active cycle
 
 > **Updated:** 2026-06-09
-> **For:** Post-Cycle 82 handoff. Latest closed cycle: Cycle 82 `feel-and-media-live`, archived at [`docs/archive/cycles/cycle-82-plan.md`](docs/archive/cycles/cycle-82-plan.md).
-> **Pickup priority:** Start the next cycle from Matt's next target. Production proof for `v2.2.3` is complete.
+> **For:** Post-Cycle 83 handoff. Latest closed cycle: Cycle 83 `wolves-bark-night-polish`, archived at [`docs/archive/cycles/cycle-83-plan.md`](docs/archive/cycles/cycle-83-plan.md).
+> **Pickup priority:** Start the next cycle from Matt's next target. Production proof for `v2.2.4` is complete.
 
 ## Cold-Start Orientation
 
@@ -10,29 +10,34 @@ Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file
 
 ## Where It Stands
 
-**Cycle 82 (`feel-and-media-live`) is CLOSED + SHIPPED LIVE (2026-06-09).** It stabilized the desktop WebGPU Newsheepdogland flagship, then shipped the `v2.2.3` player-visible feel/media release.
+**Cycle 83 (`wolves-bark-night-polish`) is CLOSED + SHIPPED LIVE (2026-06-09).** It merged PR #59 (`codex/cycle83-wolf-bark-feel`) and PR #60 (`codex/cycle83-night-arc`) into `main`, then shipped the player-visible `v2.2.4` release.
 
-- Release tag: `v2.2.3` at commit `dc1855e` (`feat(newsheepdogland): ship survival feel and entrance hero v2.2.3`).
-- Follow-up CI fix: `8b0936e` (`test(e2e): align mobile visibility with flagship entrance`) keeps the mobile asset visibility helper aligned with the new flagship entrance default.
-- Deploy proof: GH Actions Deploy run `27180799572` green on `main` (`Test`, `E2E (Chromium)`, `Migrate D1`, `Deploy Worker`, `Deploy Pages` all succeeded).
-- Live Pages proof: `https://sheepdogsim.com/?proof=8b0936e` returned 200, root metadata includes Newsheepdogland preload/copy and four-biome copy, live main bundle is `/assets/main-CLV5WhDs.js` with Newsheepdogland scene data plus `lossThreshold:.45`, `killCooldown:1.6`, and `secondsPerDay:360`.
-- Live hero asset proof: `https://sheepdogsim.com/assets/scenes/entrance/newsheepdogland.webp` returned 200, `image/webp`, 254,128 bytes, sha256 `2b80c17e0ac95b20554944eb6a9c85c0eb220cd0a7d8a428215fbed857dab5f3`.
+- Release tag: `v2.2.4` at commit `936531f` (`release(cycle83): ship wolf bark night polish v2.2.4`).
+- Merged PRs: #59 wolf/bark feel via merge commit `a10fab2`; #60 night arc via merge commit `5a419d3`.
+- Deploy proof: GH Actions Deploy run `27206254394` green on `main` (`Test`, `E2E (Chromium)`, `Migrate D1`, `Deploy Worker`, `Deploy Pages` all succeeded).
+- Live Pages proof: `https://sheepdogsim.com/?proof=936531f` returned 200, live main bundle is `/assets/main-DVswN68n.js` (607,607 bytes) and contains the Cycle 83 markers for `range:24`, wolf repel/bark flee tuning, and the internal night preset.
+- Live hero asset proof: `https://sheepdogsim.com/assets/scenes/entrance/newsheepdogland.webp` returned 200, `image/webp`, 195,732 bytes.
 - Live Worker proof: `https://sds-worker.matt-m-kissinger.workers.dev/healthz` returned 200 with `{"ok":true,"worker":"sds-worker"}`.
 
 What shipped:
 
-- Phase 1: fixed the Newsheepdogland homestead-in-water regression and stopped transient desktop WebGPU quality misses from writing a sticky WebGL fallback.
-- Phase 2: fixed fully invisible WebGPU grass on far-from-origin scenes by measuring grass fade from `positionView` instead of world-origin distance.
-- Phase 3: retuned survival feel (360 s day, +6 daily growth, 45% loss threshold, 1.6 s wolf kill cooldown), validated two-dog survival co-op, and made Newsheepdogland the entrance default with a fresh WebGPU homestead/pen/grass capture.
-- Phase 4: measured the production build on the RTX 3070 at full quality: 5/5 runs, `webgpu-production`, no fallback, no console/page errors, `qualityIndex 0`, WebGPU grass compute-cull active, worst p95 7.0 ms, worst p99 7.1 ms.
+- Wolves are now threat-readable in survival and `?wolf=1`: 1.35 m target height and grey-wolf material palette on the vetted CC0 Quaternius rig.
+- Bark is audible and wired to the bark command: Web Audio resumes from the bark gesture, dog bark volume is raised, sheep react inside the existing cone out to 24 m, and wolves flee inside 45 m for 2.0 s.
+- Newsheepdogland night is visibly darker: the internal `night` preset keys to the existing `NIGHT_T = 0.80`, the visual sun is below the horizon at night, and the sun billboard intensity is zero below horizon.
+- Day/night visuals ease between keyframes, and co-op survival atmosphere smoothly approaches Worker `survival.t` instead of snapping.
 
 Validation before release:
 
+- `git diff --check` exit 0.
 - `npm test` exit 0.
 - `npm run lint` exit 0.
-- `npm run build` exit 0.
-- `npx playwright test --project=chromium --grep-invert='@local-only' --reporter=line --workers=1` exit 0 locally after the CI helper fix.
-- Production steady-state, entrance hero, grass visibility, and two-client co-op proof artifacts live under gitignored `cycle82-validation/` / `cycle68-validation/` paths.
+- `npm run build` exit 0 (`assets/main-DHXXnjcM.js` locally, 607.61 kB).
+- `npx playwright test --project=chromium --grep-invert='@local-only' --reporter=line --workers=1` exit 0 locally (6 passed).
+- PR browser proof covered `?wolf=1`, survival bark audio/repel at medium and long range, and morning/day/dusk/night luma (`night t=0.80` luma 31.81, `sunY=-0.13917`, billboard intensity 0).
+
+Known validation caveat:
+
+- Full local `npm run test:e2e` still does not complete reliably inside a 15-minute local command window. A broader local cross-browser sweep exposed current-main selector/WebKit issues documented in PR #60. The deploy gate uses the Chromium subset above and is green locally and in CI.
 
 ## Open Carryover
 
@@ -50,7 +55,7 @@ Validation before release:
 
 | Area | Source of truth |
 |---|---|
-| Latest closed cycle | [`docs/archive/cycles/cycle-82-plan.md`](docs/archive/cycles/cycle-82-plan.md) |
+| Latest closed cycle | [`docs/archive/cycles/cycle-83-plan.md`](docs/archive/cycles/cycle-83-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | The Cycle 81 lift decision | [`DECISIONS.md`](DECISIONS.md) Cycle 81 entry |
 | The compute-cull modules | [`js/world/grassComputeCull.js`](js/world/grassComputeCull.js), [`js/world/treeComputeCull.js`](js/world/treeComputeCull.js), [`js/world/konveyorWebGpuModules.js`](js/world/konveyorWebGpuModules.js) |

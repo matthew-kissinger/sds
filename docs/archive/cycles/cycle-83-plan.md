@@ -3,6 +3,11 @@
 > Drafted and closed 2026-06-09. The two feature branches landed as draft PRs
 > first (`#59` wolf/bark feel, `#60` night arc), then merged together to `main`
 > for the player-visible `v2.2.4` release closeout.
+>
+> Release proof: tag `v2.2.4` at `936531f`; Deploy run `27206254394` green;
+> live Pages root 200 with `/assets/main-DVswN68n.js`; live bundle contains
+> `range:24`, wolf repel/bark flee tuning, and the internal night preset;
+> direct Worker `/healthz` 200 with `{"ok":true,"worker":"sds-worker"}`.
 
 ## Status
 
