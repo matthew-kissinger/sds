@@ -10,7 +10,7 @@ Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file
 
 ## Where It Stands
 
-**Cycle 84 (`mobile-webgpu-primary-hotfix`) is CLOSED and prepared as `v2.2.5` (2026-06-09).** It responds to Matt's browser report: on mobile/browser, first Play refreshed into WebGL and the second Play spawned the dog in the water.
+**Cycle 84 (`mobile-webgpu-primary-hotfix`) is CLOSED and shipped as `v2.2.5` (2026-06-09).** It responds to Matt's browser report: on mobile/browser, first Play refreshed into WebGL and the second Play spawned the dog in the water.
 
 What changed:
 
@@ -28,6 +28,9 @@ Validation before release:
 - `npm run build` passed; local `main-*.js` stayed inside the 592 KB bundle ratchet at 606,683 bytes.
 - Mobile-emulated Chrome proof from the normal entrance with one Play click passed: `webgpu-production`, no `renderer=webgl`, no `fallbackReason`, terrain budget `size=3200`, `splitSkirt=false`, grass compute-cull true, 4 tree compute-cull controllers, sheepdog y `3.4006`, and terrain surface y `3.4006`.
 - Chromium Playwright subset passed: `npx playwright test --project=chromium tests/e2e/smoke.spec.ts tests/e2e/mobile-asset-visibility.spec.ts` (5 passed).
+- Release commit `8df0acc` is tagged `v2.2.5`; GitHub Deploy run `27209758357` passed Test, E2E Chromium, D1 migrate, Worker deploy, and Pages deploy.
+- Live proof on `sheepdogsim.com` fetched `assets/main-DA6jksvi.js` and confirmed the mobile WebGL scene pin markers are absent, Worker health is green, and the Newsheepdogland entrance image is live.
+- Live Pixel 7 emulation proof on `sheepdogsim.com` confirmed Newsheepdogland effective renderer `webgpu-production`, no fallback URL params, 3200 m mobile coastline terrain, grass compute-cull true, 4 tree compute-cull controllers, and dog y on the terrain surface.
 
 Known validation caveat:
 
@@ -35,7 +38,7 @@ Known validation caveat:
 
 ## Open Carryover
 
-- Run the mobile WebGPU proof on Matt's actual phone after the live deploy. The local proof used Chrome Pixel 7 emulation on the development machine.
+- Run the mobile WebGPU proof on Matt's actual phone. The shipped proof used Chrome Pixel 7 emulation on the development machine and live `sheepdogsim.com`.
 - Prior tablet draw-call/perf work remains open where real-device measurements show budget pressure.
 - Full cross-browser e2e selectors/WebKit smoke still need the maintenance pass documented during Cycle 83.
 

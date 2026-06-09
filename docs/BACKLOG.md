@@ -6,7 +6,7 @@
 
 ### Cycle 84 - `mobile-webgpu-primary-hotfix` (closed 2026-06-09)
 
-Plan archived at [`docs/archive/cycles/cycle-84-plan.md`](archive/cycles/cycle-84-plan.md). Hotfix from Matt's browser report: first Play click on mobile refreshed into WebGL, and the second click spawned the dog in the water. **SHIPPED: WebGPU-capable mobile browsers now stay on WebGPU for Newsheepdogland, and the homestead spawn sits on terrain instead of the water/skirt edge.** Release tag `v2.2.5`.
+Plan archived at [`docs/archive/cycles/cycle-84-plan.md`](archive/cycles/cycle-84-plan.md). Hotfix from Matt's browser report: first Play click on mobile refreshed into WebGL, and the second click spawned the dog in the water. **SHIPPED: WebGPU-capable mobile browsers now stay on WebGPU for Newsheepdogland, and the homestead spawn sits on terrain instead of the water/skirt edge.** Release tag `v2.2.5` points at `8df0acc`; Deploy run `27209758357` green.
 
 - **Mobile WebGPU stays primary.** Removed the Newsheepdogland `renderer:'webgl'` scene pin and the mobile boot/swap guards that rewrote WebGPU sessions to `?renderer=webgl&fallbackReason=scene-pinned-webgl`. Explicit `?renderer=webgl` remains available as the fallback escape hatch.
 - **Coastline terrain covers the gameplay coordinates.** Mobile coastline scenes now use a 3200 m terrain mesh instead of the 720 m inner-grid + skirt split used by smaller fields. That keeps `Heightfield.surfaceY()` aligned with the visible terrain at Newsheepdogland's off-origin homestead (`x=585,z=-1000`), fixing the y=-3 water-spawn snap.
@@ -15,7 +15,8 @@ Plan archived at [`docs/archive/cycles/cycle-84-plan.md`](archive/cycles/cycle-8
 
 **Validation gates:** targeted Newsheepdogland/WebGPU grass/terrain/render-cost tests green; full `npm test` green; `npm run lint` green; `npm run build` green with `main-*.js` inside the 592 KB bundle ratchet (606,683 bytes); Chromium smoke/mobile-asset subset green (`5 passed`). Full local `npm run test:e2e` was attempted but exceeded a 3-minute command timeout before useful output, so the focused Chromium browser gate was used for this hotfix.
 
-- **Carryover:** real-device mobile WebGPU proof should still be run on Matt's actual phone after the live deploy, because this cycle used Chrome Pixel 7 emulation on the local machine.
+- **Live proof:** `sheepdogsim.com` served `assets/main-DA6jksvi.js` with the mobile WebGL pin markers absent; Worker `/healthz` returned `{"ok":true,"worker":"sds-worker"}`; live Pixel 7 emulation reached Newsheepdogland on `webgpu-production` with no fallback URL params, 3200 m mobile coastline terrain, grass compute-cull true, 4 tree compute-cull controllers, and dog y on the terrain surface.
+- **Carryover:** real-device mobile WebGPU proof should still be run on Matt's actual phone, because this cycle used Chrome Pixel 7 emulation on the development machine and live site.
 
 ### Cycle 83 - `wolves-bark-night-polish` (closed 2026-06-09)
 
