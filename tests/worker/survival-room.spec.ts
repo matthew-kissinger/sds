@@ -16,6 +16,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { RoomDO } from '../../worker/src/RoomDO.ts';
+import { PROTOCOL_VERSION, SURVIVAL_MIN_PROTOCOL_VERSION } from '../../shared/protocol.js';
 
 class FakeStorage {
   map = new Map<string, unknown>();
@@ -124,6 +125,20 @@ describe('survival co-op room mode (Cycle 67 P4)', () => {
     await initRoom(room, { isPublic: true, gameMode: 'survival', sceneId: 'newsheepdogland' });
     const res = await joinRoom(room, { protocolVersion: 2 });
     expect(res.status).toBe(200);
+  });
+
+  // P2-DELTA: the v3 bump must not disturb the survival gate. The delta
+  // protocol soft-degrades per client (bandwidth, not mis-rendering), so the
+  // survival minimum stays 2 and a v3 client satisfies it.
+  it('admits a v3 (delta-capable) client to a survival room - SURVIVAL_MIN stays 2', async () => {
+    expect(PROTOCOL_VERSION).toBe(3);
+    expect(SURVIVAL_MIN_PROTOCOL_VERSION).toBe(2);
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    await initRoom(room, { isPublic: true, gameMode: 'survival', sceneId: 'newsheepdogland' });
+    const res = await joinRoom(room, { protocolVersion: PROTOCOL_VERSION });
+    expect(res.status).toBe(200);
+    // The version is now also STORED for the broadcast cohort split.
+    expect(room.players.get('guest-sess').protocolVersion).toBe(PROTOCOL_VERSION);
   });
 
   it('does not version-gate a cooperative room (old clients still join)', async () => {

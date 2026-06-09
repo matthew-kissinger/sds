@@ -430,6 +430,11 @@ export default {
               hostDogType: dogType,
               hostPersistentId: pid,
               hostDisplayName: profile.display_name,
+              // P2-DELTA: forward the host's protocol version so the DO can
+              // place this session in the right broadcast cohort. The join
+              // handler already forwarded it (Cycle 67 P5); the create path
+              // dropped it until now.
+              hostProtocolVersion: body.protocolVersion,
               roomSettings,
             }),
           }),
@@ -560,6 +565,9 @@ export default {
                 dogType: body.dogType || 'jep',
                 persistentId: pid,
                 displayName: profile.display_name,
+                // P2-DELTA: forward for the broadcast cohort split (absent =>
+                // legacy full frames; today's quick-match client sends none).
+                protocolVersion: body.protocolVersion,
               }),
             }),
           );
@@ -615,6 +623,9 @@ export default {
               hostDogType: body.dogType || 'jep',
               hostPersistentId: pid,
               hostDisplayName: profile.display_name,
+              // P2-DELTA: forward for the broadcast cohort split (absent =>
+              // legacy full frames; today's quick-match client sends none).
+              hostProtocolVersion: body.protocolVersion,
               roomSettings: { maxPlayers: 4, isPublic: true, gameMode, name: 'Quick Match Game' },
             }),
           }),

@@ -309,6 +309,70 @@ describe('P-SEC-4 (d): high-sheep-count solo gate', () => {
   });
 });
 
+// ---- P2-DELTA: requestKeyframe unicast reply + per-client cap ----------------
+// Keyframe-on-demand is a ~20.8 kB egress amplification per request at 200
+// sheep, so it gets its own 2/s per-client cap UNDER the P-SEC-4 inbound rate
+// limit (these requests ride the same bounded-decode message path as
+// everything above).
+
+describe('P2-DELTA: requestKeyframe cap', () => {
+  it('replies to requestKeyframe with a unicast tick-stamped full keyframe', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    const hostWs = await startLiveGame(room);
+    tickN(room, 3); // a snapshot now exists (tick 3)
+
+    await hostWs.fireMessage(encode({ t: 'requestKeyframe' }));
+
+    const frames = hostWs.framesOfType('gameStateUpdate');
+    expect(frames).toHaveLength(1);
+    expect(frames[0].tick).toBe(3);
+    expect(Array.isArray(frames[0].sheep)).toBe(true);
+    expect(frames[0].sheep).toHaveLength(200);
+  });
+
+  it('drops requests past 2 per second per client', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    const hostWs = await startLiveGame(room);
+    tickN(room, 1);
+
+    // 6 rapid requests inside one fixed window: exactly 2 replies.
+    for (let i = 0; i < 6; i++) {
+      await hostWs.fireMessage(encode({ t: 'requestKeyframe' }));
+    }
+    expect(hostWs.framesOfType('gameStateUpdate')).toHaveLength(2);
+  });
+
+  it('grants a fresh budget once the window rolls', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    const hostWs = await startLiveGame(room);
+    tickN(room, 1);
+
+    for (let i = 0; i < 4; i++) {
+      await hostWs.fireMessage(encode({ t: 'requestKeyframe' }));
+    }
+    expect(hostWs.framesOfType('gameStateUpdate')).toHaveLength(2);
+
+    // Age the window past 1s (the same trick checkRateLimit tests would need:
+    // Date.now() is effectively constant across this synchronous test body).
+    const win = room.keyframeRequestWindows.get('host-sess');
+    win.windowStart -= 1001;
+
+    await hostWs.fireMessage(encode({ t: 'requestKeyframe' }));
+    expect(hostWs.framesOfType('gameStateUpdate')).toHaveLength(3);
+  });
+
+  it('ignores requestKeyframe outside a live game (no sim, no reply)', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    await initRoom(room);
+    const ws = new FakeSocket();
+    room.bindSocket('host-sess', ws);
+    ws.sent.length = 0;
+
+    await ws.fireMessage(encode({ t: 'requestKeyframe' }));
+    expect(ws.framesOfType('gameStateUpdate')).toHaveLength(0);
+  });
+});
+
 // ---- (b) GameSim pendingInputs cap + one-per-tick ---------------------------
 
 function makeRoomAdapter() {

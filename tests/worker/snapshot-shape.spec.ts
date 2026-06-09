@@ -220,6 +220,34 @@ describe('P-PERF-2: createGameStateSnapshot wire shape', () => {
     }
   });
 
+  // P2-DELTA: the additive tick stamp + the full-frame top-level key set.
+  // The legacy cohort receives exactly this frame, so the key set IS the
+  // v2-byte-compat contract (v2 keys + the additive `tick`, nothing else).
+  it('stamps the additive sim tick and keeps the full-frame top-level key set v2-compatible', () => {
+    const sim: any = new GameSimulation(makeRoomAdapter('field', 'cooperative', 30) as any);
+    try {
+      const snap0 = sim.createGameStateSnapshot();
+      expect(snap0.tick).toBe(0); // pre-first-tick (the gameStarted frame)
+
+      sim.isRunning = true;
+      sim.tick();
+      sim.tick();
+      sim.isRunning = false;
+      const snap2 = sim.getLatestGameState();
+      expect(snap2.tick).toBe(2);
+      expect(Number.isInteger(snap2.tick)).toBe(true);
+
+      expect(new Set(Object.keys(snap2))).toEqual(
+        new Set([
+          'v', 'tick', 'timestamp', 'sheepRetired', 'totalSheep',
+          'gameCompleted', 'isCompetitive', 'isTimedMode', 'sheep', 'sheepdogs',
+        ]),
+      );
+    } finally {
+      sim.cleanup?.();
+    }
+  });
+
   it('locks the survival + wolves block shape (quantized, keyed) on a survival frame', () => {
     const sim = new GameSimulation(makeRoomAdapter('newsheepdogland', 'survival', 200) as any);
     try {
@@ -244,6 +272,92 @@ describe('P-PERF-2: createGameStateSnapshot wire shape', () => {
       expect(snap.wolves[0].z).toBe(-9);
       // Dormant pool sheep carry the killed flag so the client hides them.
       expect(snap.sheep.some((s: any) => s.killed === true)).toBe(true);
+    } finally {
+      sim.cleanup?.();
+    }
+  });
+
+  // P2-DELTA: the gameStateDelta frame shape lock (design doc section 3.3).
+  it('locks the gameStateDelta key set: changed[j] carries i plus exactly the snapshot record keys', () => {
+    const sim: any = new GameSimulation(makeRoomAdapter('field', 'cooperative', 30) as any);
+    try {
+      // Establish a basis (first delta-path frame is a keyframe), then move
+      // one plain sheep and one with both conditional keys set.
+      sim.tickCount = 1;
+      sim.broadcastGameState();
+      expect(sim.getDeltaPathFrame().kind).toBe('keyframe');
+
+      sim.gameState.sheep[0].position.x += 0.5;
+      sim.gameState.sheep[1].position.x += 0.5;
+      sim.gameState.sheep[1].assignedGate = 1;
+      sim.gameState.sheep[1].retirementTarget = { x: 1.234, z: -5.678 };
+      sim.tickCount = 2;
+      sim.broadcastGameState();
+      const path = sim.getDeltaPathFrame();
+      expect(path.kind).toBe('delta');
+      const frame = path.frame;
+
+      // Top-level delta key set (field coop: no conditional blocks).
+      expect(new Set(Object.keys(frame))).toEqual(
+        new Set([
+          'v', 'tick', 'baseTick', 'timestamp', 'sheepRetired', 'totalSheep',
+          'gameCompleted', 'isCompetitive', 'isTimedMode', 'changed', 'sheepdogs',
+        ]),
+      );
+      expect(frame.v).toBe(PROTOCOL_VERSION);
+      expect(frame.tick).toBe(2);
+      expect(frame.baseTick).toBe(1);
+
+      // A plain changed sheep: `i` plus exactly the always-present record keys.
+      const plain = frame.changed.find((c: any) => c.i === 0);
+      expect(new Set(Object.keys(plain))).toEqual(
+        new Set(['i', 'id', 'x', 'z', 'vx', 'vz', 'state', 'facing', 'hasPassedGate', 'isRetiring']),
+      );
+
+      // Conditional keys ride the record exactly as on a full snapshot,
+      // quantized the same way, only when set.
+      const cond = frame.changed.find((c: any) => c.i === 1);
+      expect(new Set(Object.keys(cond))).toEqual(
+        new Set([
+          'i', 'id', 'x', 'z', 'vx', 'vz', 'state', 'facing', 'hasPassedGate', 'isRetiring',
+          'assignedGate', 'targetX', 'targetZ',
+        ]),
+      );
+      expect(cond.assignedGate).toBe(1);
+      expect(cond.targetX).toBe(1.23);
+      expect(cond.targetZ).toBe(-5.68);
+
+      // Quantization on the changed records matches the snapshot producer.
+      for (const c of frame.changed) {
+        expect(isQuantized2dp(c.x)).toBe(true);
+        expect(isQuantized2dp(c.z)).toBe(true);
+        expect(isQuantized2dp(c.vx)).toBe(true);
+        expect(isQuantized2dp(c.vz)).toBe(true);
+        expect(isQuantized2dp(c.facing)).toBe(true);
+      }
+
+      // The full sheepdogs array rides every delta, snapshot-identical.
+      expect(frame.sheepdogs).toEqual(sim.getLatestGameState().sheepdogs);
+    } finally {
+      sim.cleanup?.();
+    }
+  });
+
+  it('carries the conditional survival + wolves blocks on every survival delta frame', () => {
+    const sim: any = new GameSimulation(makeRoomAdapter('newsheepdogland', 'survival', 200) as any);
+    try {
+      sim._survival.wolves.spawnNight(1, sim.gameState.sheep);
+      sim.tickCount = 1;
+      sim.broadcastGameState();
+      expect(sim.getDeltaPathFrame().kind).toBe('keyframe');
+
+      sim.gameState.sheep[0].position.x += 0.5;
+      sim.tickCount = 2;
+      sim.broadcastGameState();
+      const path = sim.getDeltaPathFrame();
+      expect(path.kind).toBe('delta');
+      expect(path.frame.survival).toEqual(sim.getLatestGameState().survival);
+      expect(path.frame.wolves).toEqual(sim.getLatestGameState().wolves);
     } finally {
       sim.cleanup?.();
     }

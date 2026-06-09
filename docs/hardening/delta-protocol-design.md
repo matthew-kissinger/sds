@@ -548,3 +548,64 @@ P2-DELTA-CLIENT:
    field masks held as the fallback lever if the egress gate fails.
 4. Confirm the 85% degenerate-frame threshold (any value 75-90% is defensible;
    85% keeps bursty herding in delta mode).
+
+## Deviations (P2-DELTA-IMPL, 2026-06-09)
+
+Recorded by the implementing task. The protocol shipped exactly as specified
+in sections 3-6; the deviations below are measured-reality corrections to the
+section 2 projection and the resulting egress-gate evidence.
+
+1. **Factual error in the section 2 changed-set projection.** The projection
+   assumed "grazing flocks are mostly stationary" with an average of ~50 of
+   200 sheep changed per tick. Measured against the real `GameSimulation`
+   (field scene, seed 424242, zero dog input): 199-200 of 200 sheep change
+   EVERY tick, indefinitely. The MP server has no grazing state for
+   cooperative play - every unretired sheep runs the boid pipeline every
+   tick, and the cohesion/separation equilibrium never settles below the
+   0.01 wire quantum (per-tick key-change counts: x ~200/200, z ~190/200,
+   facing ~165/200, vx/vz ~50-90/200). A fully active flock therefore rides
+   the section 3.6 degenerate rule into keyframes every frame.
+2. **Egress gate evidence is round-progress-dependent.** Measured by
+   `tests/worker/delta-egress.spec.ts` (200 sheep / 4 players / 60
+   sim-seconds / scripted gate-herding, both paths encoded with the
+   production msgpack encoder):
+   - Round start, fully active flock: delta path = 100.0% of baseline
+     (75,594,056 B both paths; the degenerate rule held the never-worse
+     bound). The <= 50% gate FAILS for this state.
+   - 120/200 retired: 53.7% of baseline.
+   - 140/200 retired (the asserted scenario): 43.4% of baseline
+     (25,762,858 B vs 59,296,181 B; 429,381 B/s vs 988,270 B/s per client;
+     mean changed per delta 59.5 of 200).
+   The 50% crossover sits near 65% retired. Savings accrue over the back
+   half of a round and are ~0% at round start. The protocol's win comes
+   from retired/killed/dormant sheep exactly as section 3.4 stated; the
+   "mostly stationary grazing" contribution does not exist in this sim.
+   Survival rooms (10-50 active of a 200 pool) sit deep in the winning
+   regime from tick 1.
+3. **What was NOT done about it.** The section 3.3 fallback lever (per-field
+   masks) was not pulled: at 200/200 changed per tick, masked records with
+   float64 values land near the gate line (~46-49% projected), so the lever
+   does not confidently clear the gate either, and pulling it changes the
+   reviewed wire shape mid-implementation. The honest levers, for a future
+   decision: (a) fixed-point integer encoding of quantized floats (x100 as
+   int, ~3-5 B vs 9 B float64), (b) a server-side calm/settle behavior for
+   unpressured sheep (a sim-core change, fence-gated, with its own desync
+   story), (c) accept progress-scaled savings. Surfaced for Matt's review
+   alongside the owed design sign-off.
+4. **`sheepRecordChanged` uses `Object.is`, not `===`.** A sheep stopping
+   leaves `vx = -0`; msgpack encodes `-0` (float64) and `0` (fixint)
+   differently, so a `0 <-> -0` flip must count as a change or the client's
+   reconstructed snapshot diverges byte-wise from the server's. Object.is
+   makes the round-trip exact (locked by the round-trip unit test).
+5. **Test-plan file placement.** The cohort/cadence/bind/rehydration RoomDO
+   coverage lives in a new `tests/worker/delta-broadcast.spec.ts` (reusing
+   the room-do-messages socket-stub harness) rather than appended to
+   `room-do-messages.spec.ts`, which stays P-SEC-2-scoped. The
+   `requestKeyframe` cap cases extended `tests/worker/dos-caps.spec.ts` as
+   planned; the delta shape lock extended `snapshot-shape.spec.ts` as
+   planned; the delta-builder unit coverage is `delta-protocol.spec.ts`.
+6. **Quick-match forwarding included.** Section 5 named only the create
+   handler gap; the quick-match route also creates/joins rooms, so
+   `worker/src/index.ts` forwards `protocolVersion` there too (the current
+   client sends none on quick-match, so those sessions stay legacy until
+   P2-DELTA-CLIENT adds it).

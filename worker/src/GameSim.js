@@ -51,7 +51,7 @@ import { SurvivalRun } from '../../shared/survival/run.js';
 import { WolfSim } from '../../shared/survival/wolves.js';
 import { PenContainment } from '../../shared/survival/pen.js';
 import { secondsToT, phaseForT, gateOpenForPhase } from '../../shared/survival/dayClock.js';
-import { PROTOCOL_VERSION } from '../../shared/protocol.js';
+import { PROTOCOL_VERSION, KEYFRAME_INTERVAL_TICKS } from '../../shared/protocol.js';
 // P0-OBS: structured one-line JSON logging (worker/src/log.ts). Extensionless
 // import so vitest, wrangler/esbuild, and tsc all resolve the .ts source.
 import { log, errStr } from './log';
@@ -99,6 +99,13 @@ export function coerceInputSequence(value) {
 // 60Hz ticks, so this cap is generous: it only bites a flooder.
 export const MAX_PENDING_INPUTS = 8;
 
+// P2-DELTA: degenerate-frame rule (design doc section 3.6). When more than
+// this fraction of the flock changed since the previous broadcast frame, a
+// delta would approach keyframe size anyway - send a keyframe instead, which
+// also rebuilds the diff basis. Bounds the worst case (mass panic, round
+// start) at today's full-snapshot cost.
+const DELTA_DEGENERATE_FRACTION = 0.85;
+
 // P0-OBS: tick-health thresholds. A 60Hz tick has a ~16.7ms budget; a tick
 // that measures past TICK_OVERRUN_THRESHOLD_MS emits a `tick_overrun` event.
 // The emission itself is rate-limited to one line per
@@ -134,6 +141,30 @@ const GATE_STEER_SCRATCH = new Vector2D(0, 0);
 // state (1 = retiring, 2 = grazing).
 function isActiveSheep(s) {
     return s.state === 0;
+}
+
+// P2-DELTA: flat key/value compare of two quantized sheep wire records
+// (design doc 3.4). A sheep is "changed" iff its record differs from the
+// previous broadcast frame's record in any key's PRESENCE or VALUE - the
+// conditional keys (`killed`, `assignedGate`, `targetX`/`targetZ`) appearing
+// or disappearing are differences, so state transitions, retirement, gate
+// passage, survival kills/dormancy, and competitive slot-reuse respawns (the
+// `id` changing in place) all register without special-casing. The records
+// are already quantized to the wire quantum (0.01) by the snapshot, so there
+// is no second epsilon. Records are flat (scalars only), so a per-key
+// Object.is is a complete comparison; equal key counts + every current key
+// matching means the previous record cannot hold extra keys either.
+// Object.is (not ===) so a 0 <-> -0 flip (a sheep stopping leaves vx = -0)
+// counts as a change: msgpack encodes -0 and 0 differently, and the client
+// reconstruction must reproduce the snapshot EXACTLY, not just numerically.
+function sheepRecordChanged(rec, prev) {
+    if (!prev) return true;
+    const keys = Object.keys(rec);
+    if (keys.length !== Object.keys(prev).length) return true;
+    for (const k of keys) {
+        if (!Object.is(rec[k], prev[k])) return true;
+    }
+    return false;
 }
 
 export class GameSimulation {
@@ -248,6 +279,19 @@ export class GameSimulation {
         this.lastGameState = null;
         this.completionData = null;
         this.completionBroadcast = false;
+
+        // P2-DELTA: monotonic sim tick counter, stamped on every wire frame as
+        // the additive `tick` field (keyframes and deltas alike). 0 until the
+        // first tick, so the gameStarted snapshot is tick 0 - the first
+        // keyframe by the tick % KEYFRAME_INTERVAL_TICKS === 0 rule.
+        this.tickCount = 0;
+        // P2-DELTA: the diff basis - the previous broadcast frame's quantized
+        // sheep records + its tick. The snapshot already quantizes to the wire
+        // quantum (0.01) and builds fresh record objects every tick, so the
+        // basis can hold the previous snapshot's array by reference (a 200-
+        // record "lastWire" cache with zero copying). Rebuilt wholesale on
+        // every broadcast frame; null until the first delta-path frame.
+        this._wireBasis = null;
         
         // Initialize simulation state
         this.initializeSimulation();
@@ -286,7 +330,18 @@ export class GameSimulation {
             this.rng
         );
 
-        // Initialize sheep entities
+        // Initialize sheep entities.
+        //
+        // P2-DELTA index-stability invariant: this loop is the ONLY place that
+        // pushes into gameState.sheep. The array never reorders, grows, or
+        // shrinks for the life of a round - competitive/timed "removal" reuses
+        // the slot in place (updateTimedMode resets the object, the id changes
+        // but the index does not) and survival pre-allocates the full maxFlock
+        // pool and toggles a `dormant` flag. The delta wire protocol keys
+        // changed-sheep records by ARRAY INDEX (`changed[j].i`) and the client
+        // maps snapshot records onto its local flock by index, so a splice/
+        // sort/push anywhere else desyncs every v3 client. A unit assertion
+        // (tests/worker/delta-protocol.spec.ts) locks slot identity per mode.
         this.gameState.sheep = [];
         for (let i = 0; i < this.gameState.totalSheep; i++) {
             const position = sheepPositions[i];
@@ -427,6 +482,10 @@ export class GameSimulation {
         // hostile input is dropped long before it reaches here, so this is the
         // backstop, not the primary defence.
         try {
+            // P2-DELTA: advance the wire tick. Incremented before the snapshot
+            // is built so the frame broadcast for this tick carries its number.
+            this.tickCount++;
+
             // Process player inputs
             this.processPlayerInputs();
 
@@ -1363,6 +1422,93 @@ export class GameSimulation {
         return this.lastGameState;
     }
 
+    // -----------------------------------------------------------------------
+    // P2-DELTA: delta wire frames (docs/hardening/delta-protocol-design.md).
+    // Pure transport: everything below serializes the output of
+    // createGameStateSnapshot differently - it reads nothing the snapshot does
+    // not already read and writes nothing into the sim.
+    // -----------------------------------------------------------------------
+
+    /**
+     * The frame the delta-capable (v >= DELTA_MIN_PROTOCOL_VERSION) cohort
+     * should receive this broadcast interval. Called by the RoomDO broadcast
+     * loop EVERY interval (even when the v3 cohort is empty) so the diff basis
+     * always tracks the previous broadcast frame - that is what lets a unicast
+     * keyframe at tick T be followed by the shared broadcast delta for the next
+     * tick with `baseTick === T` (design section 4 consistency note).
+     *
+     * Returns null before the first snapshot, otherwise:
+     *   { kind: 'keyframe', state }  - send the full snapshot as gameStateUpdate
+     *     (tick % KEYFRAME_INTERVAL_TICKS === 0, no basis yet, or the
+     *     degenerate-frame rule fired);
+     *   { kind: 'delta', frame }     - send frame as gameStateDelta.
+     */
+    getDeltaPathFrame() {
+        const state = this.lastGameState;
+        if (!state) return null;
+        const basis = this._wireBasis;
+
+        // Duplicate-tick frame (design 3.7): the 16ms broadcast loop fired
+        // before the sim ticked again. Preserve the cadence with an empty
+        // delta (the client jitter estimator sizes interpolationDelay from
+        // packet intervals); the basis is already this tick's records.
+        if (basis && basis.tick === state.tick) {
+            return { kind: 'delta', frame: this._buildDeltaFrame(state, [], state.tick) };
+        }
+
+        let keyframe = !basis || state.tick % KEYFRAME_INTERVAL_TICKS === 0;
+        let changed = null;
+        if (!keyframe) {
+            changed = [];
+            const sheep = state.sheep;
+            const prev = basis.sheep;
+            for (let i = 0; i < sheep.length; i++) {
+                const rec = sheep[i];
+                if (sheepRecordChanged(rec, prev[i])) changed.push({ i, ...rec });
+            }
+            // Degenerate-frame rule: past 85% changed, a keyframe is barely
+            // bigger and rebuilds the basis for free.
+            if (changed.length > sheep.length * DELTA_DEGENERATE_FRACTION) keyframe = true;
+        }
+
+        const baseTick = basis ? basis.tick : null;
+        // Advance the basis to this frame's quantized records (by reference -
+        // the snapshot builds fresh record objects every tick).
+        this._wireBasis = { tick: state.tick, sheep: state.sheep };
+
+        if (keyframe) return { kind: 'keyframe', state };
+        return { kind: 'delta', frame: this._buildDeltaFrame(state, changed, baseTick) };
+    }
+
+    /**
+     * Assemble a gameStateDelta payload (design section 3.3). Top-level
+     * scalars, the full sheepdogs array, and the conditional blocks ride every
+     * delta with snapshot-identical semantics; only unchanged sheep are
+     * omitted. `changed[j]` is the full quantized sheep record plus its array
+     * index `i`. The RoomDO send path adds `t: 'gameStateDelta'`.
+     */
+    _buildDeltaFrame(state, changed, baseTick) {
+        const frame = {
+            v: state.v,
+            tick: state.tick,
+            baseTick,
+            timestamp: state.timestamp,
+            sheepRetired: state.sheepRetired,
+            totalSheep: state.totalSheep,
+            gameCompleted: state.gameCompleted,
+            isCompetitive: state.isCompetitive,
+            isTimedMode: state.isTimedMode,
+            changed,
+            sheepdogs: state.sheepdogs,
+        };
+        if (state.competitive) frame.competitive = state.competitive;
+        if (state.timedMode) frame.timedMode = state.timedMode;
+        if (state.objective) frame.objective = state.objective;
+        if (state.survival) frame.survival = state.survival;
+        if (state.wolves) frame.wolves = state.wolves;
+        return frame;
+    }
+
     // Get completion data if game is complete
     getCompletionData() {
         return this.completionData;
@@ -1427,6 +1573,10 @@ export class GameSimulation {
             // clients ignore the unknown field, so non-survival frames stay
             // backward-compatible.
             v: PROTOCOL_VERSION,
+            // P2-DELTA: the sim tick this snapshot was built at. Additive (old
+            // clients ignore unknown fields, the Cycle 34/67 precedent); v3
+            // clients use it as the delta base/drift anchor.
+            tick: this.tickCount,
             timestamp: Date.now(),
             sheepRetired: this.gameState.sheepRetired,
             totalSheep: this.gameState.totalSheep,

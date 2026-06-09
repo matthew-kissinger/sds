@@ -46,14 +46,22 @@ Acceptance:
 ## [P2-DELTA-IMPL] Implement delta snapshots in the DO [FENCE]
 
 - **Owner hint:** backend agent
-- **Status:** pending
+- **Status:** done with one measured caveat (2026-06-09, uncommitted working tree). Server side shipped exactly per the design doc; the egress gate holds for mid-round+ flocks but NOT for a fully active flock, because the design's stationary-grazing assumption is factually wrong for the MP sim (see the design doc's Deviations section and the caveat below). Safe either way: the degenerate rule bounds the delta path at exactly today's cost, and v<3 clients are byte-compatible.
 - **Deps:** P2-DELTA-DESIGN
-- **Files:** `worker/src/GameSim.js:1288-1360` (createGameStateSnapshot), `worker/src/RoomDO.ts:934-945`
+- **Files:** `worker/src/GameSim.js` (tick counter, snapshot `tick` stamp, `getDeltaPathFrame()` delta builder + `_wireBasis` lastWire cache, 85% degenerate rule, index-stability comment), `worker/src/RoomDO.ts` (per-session `protocolVersion` storage on create/join + rehydration-as-legacy, broadcast cohort split with lazy per-cohort encode, keyframe-on-bind, `requestKeyframe` handler with 2/s per-client cap + `keyframe_request_capped` log event), `worker/src/index.ts` (create + quick-match forward `protocolVersion`; join already did), `shared/protocol.js` (PROTOCOL_VERSION 3, DELTA_MIN_PROTOCOL_VERSION 3, KEYFRAME_INTERVAL_TICKS 60; SURVIVAL_MIN stays 2). Tests: new `tests/worker/delta-protocol.spec.ts`, `tests/worker/delta-broadcast.spec.ts`, `tests/worker/delta-egress.spec.ts`; extended `snapshot-shape.spec.ts`, `dos-caps.spec.ts`, `survival-room.spec.ts`.
 
 Acceptance:
 
-- [ ] When the sim broadcasts, then unchanged sheep shall be omitted and a keyframe sent every N ticks.
-- [ ] When measured at 200 sheep / 4 players, then per-room egress shall drop >= 50% vs the full-snapshot baseline.
+- [x] When the sim broadcasts, then unchanged sheep shall be omitted and a keyframe sent every N ticks. (Delta frames carry exactly the changed quantized records keyed by array index; keyframes at tick%60==0, game start, socket bind, requestKeyframe; >85% changed flips to a keyframe; v<3 / no-version sessions get full frames every interval, byte-compatible plus the additive `tick`.)
+- [ ] When measured at 200 sheep / 4 players, then per-room egress shall drop >= 50% vs the full-snapshot baseline. **Holds from ~65% round progress onward; does NOT hold at round start.** See evidence.
+
+Evidence (2026-06-09, `tests/worker/delta-egress.spec.ts`, seeded 200 sheep / 4 players / 60 sim-seconds / scripted gate-herding, production msgpack encoder on both paths):
+
+- Round start, fully active flock: delta path 75,594,056 B == full path 75,594,056 B (ratio 100.0%, all 3,600 frames degenerate keyframes). Root cause measured, not assumed: the MP server has no grazing state; 199-200 of 200 active sheep cross the 0.01 wire quantum EVERY tick even with zero dog input, so the design doc section 2's "~50 of 200 changed" projection is wrong for this sim. The degenerate rule held the never-worse bound exactly.
+- 120/200 retired: ratio 53.7%.
+- 140/200 retired (asserted gate scenario): delta 25,762,858 B vs full 59,296,181 B, ratio **43.4%** (429,381 B/s vs 988,270 B/s per client; 61 keyframes + 3,539 deltas; mean changed per delta 59.5 of 200). Gate crossover sits near 65% retired; survival rooms (10-50 active of a 200 pool) are deep in the winning regime from tick 1.
+- Options if the round-start regime must also win (for Matt's decision, not pulled unilaterally): fixed-point int encoding of quantized floats, server-side calm/settle sim behavior (fence-gated sim change), or accept progress-scaled savings. The design doc Deviations section has the analysis.
+- Validation: `npm run lint` clean, `npm test` 1278 passed / 8 skipped (zero sim-baseline or refactor-baseline fixture modifications, `git status` clean on `tests/sim-baseline/`), `npx tsc --noEmit -p worker` clean, `npm run typecheck` clean, `npm run build` green. A v3 client joins survival (SURVIVAL_MIN stays 2, locked by test). LF line endings preserved.
 
 ---
 

@@ -9,7 +9,7 @@ import { encode, Decoder } from '@msgpack/msgpack';
 import { submitScore as d1SubmitScore } from './d1.js';
 import { log, errStr } from './log';
 import { listScenes, DEFAULT_SCENE_ID } from '../../shared/scenes/index.js';
-import { SURVIVAL_MIN_PROTOCOL_VERSION } from '../../shared/protocol.js';
+import { SURVIVAL_MIN_PROTOCOL_VERSION, DELTA_MIN_PROTOCOL_VERSION } from '../../shared/protocol.js';
 
 // P-SEC-4 (a): DoS-hardened inbound decode. A client controls the raw bytes on
 // the WS message channel, so an unbounded decode is an amplification lever: a
@@ -67,6 +67,13 @@ interface PlayerInfo {
   persistentId?: string;
   displayName?: string;
   joinedAt: number;
+  // P2-DELTA: the wire-protocol version this session declared at REST
+  // create/join. Drives the per-client soft-degrade cohort split in the
+  // broadcast loop (>= DELTA_MIN_PROTOCOL_VERSION gets keyframe/delta cadence;
+  // lower or ABSENT means legacy full frames - absent covers pre-delta clients
+  // that sent nothing AND player records persisted before this shipped, which
+  // rehydrate without the field and are conservatively treated as legacy).
+  protocolVersion?: number;
 }
 
 interface RoomMeta {
@@ -139,6 +146,14 @@ const RATE_WINDOW_MS = 1000;
 const MAX_MSGS_PER_WINDOW = 600;
 const RATE_CLOSE_FACTOR = 4; // close at 4x the drop threshold (sustained abuse)
 
+// P2-DELTA: per-client cap on unicast keyframes-on-demand. Each requestKeyframe
+// reply is a full snapshot (~20.8 kB at 200 sheep), so an uncapped handler is a
+// cheap egress-amplification lever even inside the P-SEC-4 inbound rate limit.
+// A legitimate client only requests after a locally dropped frame and holds a
+// 500ms client-side cooldown, so 2/s leaves real headroom.
+const KEYFRAME_REQUEST_WINDOW_MS = 1000;
+const MAX_KEYFRAME_REQUESTS_PER_WINDOW = 2;
+
 // P-SEC-4 (e): idle-room cleanup. A room is created (initRoom) before any socket
 // binds; if nobody ever connects (a create-and-abandon flood) the DO + its
 // persisted row leak. An alarm set at init deletes the room if no WebSocket has
@@ -160,6 +175,12 @@ const DOG_TYPES = new Set(['jep', 'pip', 'sally', 'shiloh', 'george_washington']
 // game. Returns an unsigned 32-bit int (the domain mulberry32 expects).
 function generateSeed(): number {
   return ((Date.now() ^ Math.floor(Math.random() * 0x100000000)) >>> 0);
+}
+
+// P2-DELTA: coerce a wire-supplied protocol version to a finite number or
+// undefined (undefined = legacy cohort). Shared by create and join storage.
+function coerceProtocolVersion(value: unknown): number | undefined {
+  return (typeof value === 'number' && Number.isFinite(value)) ? value : undefined;
 }
 
 function encodeMsg(t: string, data: Record<string, unknown> = {}): ArrayBuffer {
@@ -205,6 +226,12 @@ export class RoomDO {
   // P-SEC-4 (e): set true once any socket binds. The idle-room alarm only tears
   // a room down if this is still false when it fires (create-and-abandon).
   private socketEverBound = false;
+
+  // P2-DELTA: per-player fixed window for keyframe-on-demand replies. Keyed by
+  // playerId (a reconnect keeps the same budget; the cap protects egress, not
+  // the socket). count past the cap is dropped; the drop is logged once per
+  // window so a flood cannot also become a log-spam lever.
+  private keyframeRequestWindows = new Map<string, { windowStart: number; count: number }>();
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -365,6 +392,9 @@ export class RoomDO {
     hostDogType: string;
     hostPersistentId?: string;
     hostDisplayName?: string;
+    // P2-DELTA: the host's wire-protocol version, forwarded by the Worker's
+    // create handler. Absent => legacy cohort (full frames).
+    hostProtocolVersion?: number;
     roomSettings: {
       name?: string;
       maxPlayers?: number;
@@ -451,6 +481,10 @@ export class RoomDO {
       persistentId: body.hostPersistentId,
       displayName: body.hostDisplayName,
       joinedAt: Date.now(),
+      // P2-DELTA: store the session's declared protocol version (the broadcast
+      // cohort split reads it). Non-numeric / non-finite values are dropped so
+      // a hostile body can't smuggle NaN into the >= comparison.
+      protocolVersion: coerceProtocolVersion(body.hostProtocolVersion),
     });
     this.persist();
 
@@ -523,6 +557,10 @@ export class RoomDO {
       persistentId: body.persistentId,
       displayName: body.displayName,
       joinedAt: Date.now(),
+      // P2-DELTA: store the session's declared protocol version for the
+      // broadcast cohort split. The survival gate above already used it;
+      // before this it was checked but never stored.
+      protocolVersion: coerceProtocolVersion(body.protocolVersion),
     });
 
     this.meta.lastActivity = Date.now();
@@ -617,6 +655,30 @@ export class RoomDO {
       log.warn('ws_rate_limit_close', { roomCode: this.meta?.roomCode, playerId, msgsInWindow: win.count });
       try { ws.close(1008, 'rate limit'); } catch {}
       if (this.sessions.get(playerId) === ws) this.sessions.delete(playerId);
+    }
+    return false;
+  }
+
+  // P2-DELTA: fixed-window cap on keyframe-on-demand replies. Returns true if
+  // this request may be answered, false to drop it. The first drop in a window
+  // emits a `keyframe_request_capped` log line (one per window per client) so
+  // a sustained flood is observable without becoming a log-spam lever itself.
+  private allowKeyframeRequest(playerId: string): boolean {
+    const now = Date.now();
+    let win = this.keyframeRequestWindows.get(playerId);
+    if (!win || now - win.windowStart >= KEYFRAME_REQUEST_WINDOW_MS) {
+      win = { windowStart: now, count: 0 };
+      this.keyframeRequestWindows.set(playerId, win);
+    }
+    win.count++;
+    if (win.count <= MAX_KEYFRAME_REQUESTS_PER_WINDOW) return true;
+    if (win.count === MAX_KEYFRAME_REQUESTS_PER_WINDOW + 1) {
+      log.warn('keyframe_request_capped', {
+        roomCode: this.meta?.roomCode,
+        playerId,
+        capPerWindow: MAX_KEYFRAME_REQUESTS_PER_WINDOW,
+        windowMs: KEYFRAME_REQUEST_WINDOW_MS,
+      });
     }
     return false;
   }
@@ -728,6 +790,16 @@ export class RoomDO {
     // happened between the REST join response and the WS binding.
     const room = this.getSerializableState();
     this.send(ws, 'roomUpdated', { room });
+
+    // P2-DELTA: keyframe-on-bind. A socket binding while the game is live
+    // (mid-game reconnect after the grace window) has no delta basis - unicast
+    // a full tick-stamped keyframe immediately so a v3 client can apply the
+    // next broadcast delta without waiting out the keyframe cadence. Sent
+    // regardless of cohort: a legacy client just sees one extra full frame.
+    if (this.meta?.state === 'in-game' && this.simulation) {
+      const state = this.simulation.getLatestGameState();
+      if (state) this.send(ws, 'gameStateUpdate', state);
+    }
   }
 
   // P-SEC-2: a session is the host iff its persistent identity is the pinned
@@ -812,6 +884,19 @@ export class RoomDO {
       case 'ping':
         this.send(this.sessions.get(playerId)!, 'pong', { id: msg.id, timestamp: Date.now() });
         break;
+      case 'requestKeyframe': {
+        // P2-DELTA: keyframe-on-demand. A v3 client that locally dropped a
+        // frame (baseTick mismatch) asks for a full snapshot instead of
+        // waiting out the keyframe cadence. Unicast reply, capped per client
+        // (each reply is a ~20.8 kB egress amplification at 200 sheep); the
+        // P-SEC-4 inbound rate limiter already ran before we got here.
+        if (meta.state !== 'in-game' || !this.simulation) break;
+        if (!this.allowKeyframeRequest(playerId)) break;
+        const state = this.simulation.getLatestGameState();
+        const ws = this.sessions.get(playerId);
+        if (state && ws) this.send(ws, 'gameStateUpdate', state);
+        break;
+      }
       case '__testAdvanceSurvival':
         // Test-only: jump the survival day clock so an integration harness can
         // reach nightfall without waiting out a real ~10-minute day. Gated behind
@@ -962,11 +1047,51 @@ export class RoomDO {
 
   private startBroadcastLoop(): void {
     if (this.broadcastInterval) clearInterval(this.broadcastInterval);
-    this.broadcastInterval = setInterval(() => {
-      if (!this.simulation) return;
-      const state = this.simulation.getLatestGameState();
-      if (state) this.broadcast('gameStateUpdate', state);
-    }, 16);
+    this.broadcastInterval = setInterval(() => this.broadcastGameFrame(), 16);
+  }
+
+  // P2-DELTA: one broadcast interval. Sessions split into two cohorts by their
+  // stored protocolVersion (per-client soft-degrade, design section 5):
+  //   - >= DELTA_MIN_PROTOCOL_VERSION: keyframes (full gameStateUpdate, tick-
+  //     stamped) on the cadence/degenerate rules, gameStateDelta otherwise;
+  //   - lower or absent (absent = legacy, matching the survival-check
+  //     convention; also covers player records persisted before this shipped):
+  //     a full gameStateUpdate every interval, byte-compatible with v2 except
+  //     the additive tick field.
+  // Each cohort's buffer is encoded at most once per interval and only when a
+  // recipient exists (lazy encode below), preserving the single-encode
+  // efficiency of the old broadcast(). When the delta path lands on a keyframe
+  // the two cohorts share one buffer. getDeltaPathFrame() is called every
+  // interval regardless of cohort sizes so the sim's diff basis always tracks
+  // the previous broadcast frame - that keeps a unicast keyframe (bind /
+  // requestKeyframe) coherent with the next shared delta.
+  private broadcastGameFrame(): void {
+    if (!this.simulation) return;
+    const state = this.simulation.getLatestGameState();
+    if (!state) return;
+    const deltaPath = this.simulation.getDeltaPathFrame();
+    let fullBuf: ArrayBuffer | null = null;   // legacy frames + keyframes
+    let deltaBuf: ArrayBuffer | null = null;  // gameStateDelta for the v3 cohort
+    for (const [pid, ws] of this.sessions) {
+      try {
+        if (deltaPath?.kind === 'delta' && this.isDeltaCapable(pid)) {
+          if (!deltaBuf) deltaBuf = encodeMsg('gameStateDelta', deltaPath.frame);
+          ws.send(deltaBuf);
+        } else {
+          if (!fullBuf) fullBuf = encodeMsg('gameStateUpdate', state);
+          ws.send(fullBuf);
+        }
+      } catch (e) {
+        log.error('ws_broadcast_failed', { roomCode: this.meta?.roomCode, msgType: 'gameStateUpdate', playerId: pid, error: errStr(e) });
+      }
+    }
+  }
+
+  // P2-DELTA: a session receives the keyframe/delta cadence iff it declared a
+  // protocol version at or above the delta minimum. Absent => legacy.
+  private isDeltaCapable(playerId: string): boolean {
+    const v = this.players.get(playerId)?.protocolVersion;
+    return typeof v === 'number' && v >= DELTA_MIN_PROTOCOL_VERSION;
   }
 
   private stopBroadcastLoop(): void {
@@ -1013,6 +1138,7 @@ export class RoomDO {
     const leaverWasHost = this.isHostSession(playerId);
 
     this.players.delete(playerId);
+    this.keyframeRequestWindows.delete(playerId); // P2-DELTA: drop the cap window
     this.meta.lastActivity = Date.now();
 
     if (this.simulation && this.simulation.sheepdogs) {
