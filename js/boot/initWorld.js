@@ -63,6 +63,53 @@ function summarizeLoadStages(marks, impostorMs) {
     return stages;
 }
 
+function createLazyWolfPack(config) {
+    let pack = null;
+    let loading = null;
+    let disposed = false;
+
+    const load = () => {
+        if (disposed) return Promise.resolve(null);
+        if (pack) return Promise.resolve(pack);
+        if (!loading) {
+            loading = import('../gamestate/wolfPack.js')
+                .then(async ({ WolfPack }) => {
+                    if (disposed) return null;
+                    const realPack = new WolfPack(config);
+                    pack = realPack;
+                    await realPack.init();
+                    if (disposed) {
+                        realPack.dispose();
+                        pack = null;
+                        return null;
+                    }
+                    return realPack;
+                })
+                .catch((err) => {
+                    console.warn('[WOLF] lazy wolf pack load failed:', err?.message || err);
+                    return null;
+                });
+        }
+        return loading;
+    };
+
+    return {
+        get wolves() { return pack?.wolves ?? []; },
+        get count() { return pack?.count ?? 0; },
+        get night() { return pack?.night ?? false; },
+        init() { return load(); },
+        spawnNight(day, sheep) { void load().then(realPack => realPack?.spawnNight(day, sheep)); },
+        update(dt, sheep, dog) { pack?.update(dt, sheep, dog); },
+        repel(x, z, radius, secs) { return pack?.repel(x, z, radius, secs); },
+        retreatAll() { pack?.retreatAll(); },
+        dispose() {
+            disposed = true;
+            pack?.dispose();
+            pack = null;
+        },
+    };
+}
+
 /**
  * @param {object} game SheepDogSimulation instance.
  * @param {(step: string, detail?: string) => void} [logStep]
@@ -196,13 +243,30 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         // per-frame runner is stashed on the game for the main loop to call.
         if (game.currentScene.dayNight?.dayLoop && game.currentScene.gate) {
             const gd = game.currentScene.gate;
+            const pen = game.currentScene.pen || null;
+            const needsPenContainment = Boolean(pen?.center && !game.isMultiplayer);
+            const needsSurvivalRun = Boolean(game.currentScene.survival && !game.isMultiplayer);
+            const needsMinimap = Boolean(game.currentScene.survival && Array.isArray(game.currentScene.boundary?.points));
+            const [
+                { DayLoop },
+                chip,
+                penContainmentModule,
+                survivalRunModule,
+                minimapModule,
+                { createSkipToDusk },
+            ] = await Promise.all([
+                import('../gamestate/dayLoop.js'),
+                import('../components/GameHUD/DayNightChip.js'),
+                needsPenContainment ? import('../gamestate/penContainment.js') : Promise.resolve(null),
+                needsSurvivalRun ? import('../gamestate/survivalRun.js') : Promise.resolve(null),
+                needsMinimap ? import('../components/GameHUD/Minimap.js') : Promise.resolve(null),
+                import('../effects/skipToDusk.js'),
+            ]);
+
             game.structureBuilder.buildHomesteadGate({
                 gate: { x: gd.position.x, z: gd.position.z, width: gd.width, facingDeg: gd.facingDeg },
-                pen: game.currentScene.pen || null,
+                pen,
             });
-            const { DayLoop } = await import('../gamestate/dayLoop.js');
-            const chip = await import('../components/GameHUD/DayNightChip.js');
-            const pen = game.currentScene.pen || null;
             const dayLoop = new DayLoop({ initialT: game.currentScene.dayNight.initialT });
             game.dayLoop = dayLoop;
 
@@ -215,8 +279,8 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             // co-op the DO is authoritative (run + wolves + pen) and the client
             // renders from the broadcast (see initNetwork.driveCoopSurvival), so
             // skip the local sim entirely in MP.
-            if (pen?.center && !game.isMultiplayer) {
-                const { PenContainment } = await import('../gamestate/penContainment.js');
+            if (needsPenContainment) {
+                const { PenContainment } = penContainmentModule;
                 game._penContainment = new PenContainment(pen, {
                     x: gd.position.x, z: gd.position.z, width: gd.width,
                 });
@@ -228,8 +292,8 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             // death on a 33%+ night loss, score = peak flock). Client-side; it
             // drives off the day-loop phase. Newsheepdogland declares `survival`;
             // other day-loop scenes run the soft Cycle 65 loop unchanged.
-            if (game.currentScene.survival && !game.isMultiplayer) {
-                const { SurvivalRun } = await import('../gamestate/survivalRun.js');
+            if (needsSurvivalRun) {
+                const { SurvivalRun } = survivalRunModule;
                 game._survivalRun = new SurvivalRun(game.currentScene.survival);
 
                 // Cycle 66 P4: the night wolves. A client-only predator layer that
@@ -239,15 +303,13 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 // the sheep sim + pen containment. The glTF loads in the background
                 // (fire-and-forget) so it never delays the scene paint - spawnNight
                 // no-ops until it is ready, well before the first ~10-minute night.
-                const { WolfPack } = await import('../gamestate/wolfPack.js');
-                game._wolfPack = new WolfPack({
+                game._wolfPack = createLazyWolfPack({
                     scene: game.sceneManager.getScene(),
                     groundY: (x, z) => (game.terrainBuilder?._groundY ? game.terrainBuilder._groundY(x, z) : 0),
                     pen: game._penContainment,
                     onKill: () => game._survivalRun?.recordKill(),
                     seed: (game.currentScene.terrain?.seed ?? 7) >>> 0,
                 });
-                game._wolfPack.init();
             } else {
                 game._survivalRun = null;
                 game._wolfPack = null;
@@ -264,21 +326,19 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             // Cycle 66 P7: the survival minimap (island layout from the coastline
             // polygon + live dog / flock / wolf markers). Survival scenes with a
             // coastline boundary only; updated each frame from _tickDayLoop below.
-            if (game.currentScene.survival && Array.isArray(game.currentScene.boundary?.points)) {
-                const mm = await import('../components/GameHUD/Minimap.js');
-                mm.mountMinimap({
+            if (needsMinimap) {
+                minimapModule.mountMinimap({
                     points: game.currentScene.boundary.points,
                     pen: game.currentScene.pen || null,
                 });
-                game._updateMinimap = mm.updateMinimap;
-                game._unmountMinimap = mm.unmountMinimap;
+                game._updateMinimap = minimapModule.updateMinimap;
+                game._unmountMinimap = minimapModule.unmountMinimap;
             } else {
                 game._updateMinimap = null;
                 game._unmountMinimap = null;
             }
 
             // Cycle 65 P7: the skip-to-dusk cutscene (on-screen button + F key).
-            const { createSkipToDusk } = await import('../effects/skipToDusk.js');
             game._skipToDusk = createSkipToDusk(game);
 
             let acc = 0;
@@ -563,6 +623,9 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         game.gameState.createSheepFlock(game.sceneManager.getScene());
 
         logStep('Scene body complete');
+        if (game._wolfPack?.init) {
+            setTimeout(() => { game._wolfPack?.init?.(); }, 1000);
+        }
 
         // Cycle 45 Phase 1: per-stage load breakdown. The dev console summary
         // (sorted heaviest-first) is the human-readable artifact; the returned

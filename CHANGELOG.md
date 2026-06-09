@@ -29,6 +29,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.12] - 2026-06-09
+
+### Fixed
+
+- Newsheepdogland now loads survival HUD, pen containment, minimap, and skip
+  controls in parallel, and defers the heavy wolf renderer import until after
+  the scene body is complete, so the first Play path reaches game activation
+  instead of spending the readiness window in serialized boot wiring.
+
+### Validation
+
+- Pending.
+
 ## [2.2.11] - 2026-06-09
 
 ### Fixed

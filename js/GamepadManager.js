@@ -102,6 +102,10 @@ export class GamepadManager {
      * Update gamepad state - should be called every frame
      */
     update() {
+        if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') {
+            return;
+        }
+
         const now = performance.now();
         
         // Periodically check for gamepad connection changes
@@ -132,6 +136,10 @@ export class GamepadManager {
      * Check for gamepad connection changes
      */
     checkGamepadConnection() {
+        if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') {
+            return;
+        }
+
         const gamepads = navigator.getGamepads();
         let foundGamepad = false;
         

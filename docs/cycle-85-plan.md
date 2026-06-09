@@ -17,6 +17,10 @@ feels immediate enough for playtesting.
   the Service Worker instead of sticking stale cache entries.
 - The default Newsheepdogland render budget may be reduced for first-session
   readiness, provided the change is render-only and sim state remains unchanged.
+- Newsheepdogland day-loop boot wiring may be reordered so client-only HUD,
+  pen, survival, minimap, and skip modules load in parallel. The wolf renderer
+  may be lazy-loaded after scene body completion because wolves are not needed
+  for the first playable morning frame.
 
 ## Acceptance
 

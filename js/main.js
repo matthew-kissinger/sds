@@ -1801,7 +1801,7 @@ class SheepDogSimulation {
         this.endgameMusicPlaying = false;
         
         // Start appropriate gameplay music
-        if (this.audioManager.isMusicReady()) {
+        if (this.audioManager?.isMusicReady?.()) {
             this.audioManager.playGameplayMusic();
         }
 
@@ -1829,7 +1829,7 @@ class SheepDogSimulation {
                 }
                 
                 // Set audio manager to competitive mode (also for timed)
-                this.audioManager.setGameMode('competitive');
+                this.audioManager?.setGameMode?.('competitive');
                 const modeLabel = roomData.gameMode === 'timed' ? '[TIMED]' : '[RACING]';
                 console.log(`${modeLabel} Audio manager set to competitive mode`);
 
@@ -1839,7 +1839,7 @@ class SheepDogSimulation {
                     this.handleMultiplayerGameState(roomData.initialGameState);
                 }
             } else {
-                this.audioManager.setGameMode('multiplayer');
+                this.audioManager?.setGameMode?.('multiplayer');
                 
                 // Reset camera to default position for cooperative multiplayer
                 this.sceneManager.resetCameraToDefault();
@@ -1857,7 +1857,7 @@ class SheepDogSimulation {
             this.setupMultiplayer();
             
             // Set audio to multiplayer mode
-            this.audioManager.setGameMode('multiplayer');
+            this.audioManager?.setGameMode?.('multiplayer');
             
             // Reset camera to default position (cooperative mode assumption)
             this.sceneManager.resetCameraToDefault();
@@ -1870,7 +1870,7 @@ class SheepDogSimulation {
         } else {
             // Hide multiplayer UI for solo mode
             this.multiplayerState.hide();
-            this.audioManager.setGameMode('solo');
+            this.audioManager?.setGameMode?.('solo');
 
             // Reset camera to default position for solo mode
             this.sceneManager.resetCameraToDefault();
@@ -2012,7 +2012,7 @@ class SheepDogSimulation {
 
         // Hide multiplayer UI
         this.multiplayerState.hide();
-        this.audioManager.setGameMode('solo');
+        this.audioManager?.setGameMode?.('solo');
 
         // Reset camera to default position
         this.sceneManager.resetCameraToDefault();
@@ -2025,7 +2025,7 @@ class SheepDogSimulation {
         if (this.audioManager) {
             this.audioManager.fadeOutCurrentMusic(800);
             setTimeout(() => {
-                if (this.audioManager.isMusicReady()) {
+                if (this.audioManager?.isMusicReady?.()) {
                     this.audioManager.playGameplayMusic();
                 }
             }, 900);
@@ -2188,7 +2188,7 @@ class SheepDogSimulation {
 
         // Hide multiplayer UI
         this.multiplayerState.hide();
-        this.audioManager.setGameMode('solo');
+        this.audioManager?.setGameMode?.('solo');
 
         // Mark start screen as inactive
         this.menuController.isActive = false;
@@ -2198,7 +2198,7 @@ class SheepDogSimulation {
         if (this.audioManager) {
             this.audioManager.fadeOutCurrentMusic(800);
             setTimeout(() => {
-                if (this.audioManager.isMusicReady()) {
+                if (this.audioManager?.isMusicReady?.()) {
                     this.audioManager.playGameplayMusic();
                 }
             }, 900);

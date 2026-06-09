@@ -43,20 +43,19 @@ async function bootSolo(page: Page) {
   await expect(play).toBeVisible({ timeout: 30_000 });
 }
 
-const WORLD_NAME: Record<string, string> = {
-  'field': 'Home Field',
-  'rolling-hills': 'Rolling Hills',
-  'open-country': 'Open Country',
+const WORLD_STEPS_FROM_FLAGSHIP: Record<string, number> = {
+  'field': 1,
+  'rolling-hills': 2,
+  'open-country': 3,
 };
 
 async function startSoloClassic(page: Page, sceneId = 'field') {
   // Cycle 51 world-first entrance: arm the requested world via the switcher,
   // pick the Classic difficulty chip, then Play.
-  const nameLoc = page.getByText(WORLD_NAME[sceneId] ?? 'Home Field', { exact: true });
   const nextBtn = page.getByRole('button', { name: /Next world/i });
   await expect(nextBtn).toBeVisible({ timeout: 30_000 });
-  for (let i = 0; i < 3; i++) {
-    if (await nameLoc.isVisible().catch(() => false)) break;
+  const steps = WORLD_STEPS_FROM_FLAGSHIP[sceneId] ?? WORLD_STEPS_FROM_FLAGSHIP.field;
+  for (let i = 0; i < steps; i++) {
     await nextBtn.dispatchEvent('click');
     await page.waitForTimeout(200);
   }

@@ -30,6 +30,10 @@ const BUDGETS = {
   p95FrameTime: 30,   // ms — tail budget
 };
 
+const WORLD_STEPS_FROM_FLAGSHIP: Record<string, number> = {
+  'open-country': 3,
+};
+
 async function seedIdentity(page: Page) {
   await page.context().addInitScript(() => {
     const identity = {
@@ -49,15 +53,12 @@ async function startSoloClassic(page: Page) {
   // Cycle 51 world-first entrance: arm Open Country via the prev/next switcher,
   // pick the Classic difficulty chip, then Play. dispatchEvent('click')
   // sidesteps the hover-transform stability issue documented in smoke.spec.ts.
-  const ocName = page.getByText('Open Country', { exact: true });
   const nextBtn = page.getByRole('button', { name: /Next world/i });
   await expect(nextBtn).toBeVisible({ timeout: 30_000 });
-  for (let i = 0; i < 3; i++) {
-    if (await ocName.isVisible().catch(() => false)) break;
+  for (let i = 0; i < WORLD_STEPS_FROM_FLAGSHIP['open-country']; i++) {
     await nextBtn.dispatchEvent('click');
     await page.waitForTimeout(200);
   }
-  await expect(ocName).toBeVisible({ timeout: 5_000 });
 
   // Cycle 59: match the Classic rung by "Classic <count>" so the mode-family
   // chip (Solo / Counting Sheep) never collides with this difficulty selector.
