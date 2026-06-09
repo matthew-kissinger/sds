@@ -657,9 +657,9 @@ class SheepDogSimulation {
         this.menuController.setGameStartCallback((mode, roomData, singlePlayerMode) => {
             if (mode === 'local') {
                 // roomData is actually localConfig for local mode
-                this.startLocalGame(roomData);
+                return this.startLocalGame(roomData);
             } else {
-                this.startGame(mode, roomData, singlePlayerMode);
+                return this.startGame(mode, roomData, singlePlayerMode);
             }
         });
         

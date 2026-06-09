@@ -81,14 +81,13 @@ export const newsheepdogland = {
         version: 1,
         zones: {
             playArea: { minX: -300, maxX: 700, minZ: -1450, maxZ: -800 },
-            // Keep placement around the foot and lower leg. The coastline and
-            // grass still cover the whole readable island, but the default
-            // first-session build no longer scatters a full forest across the
-            // far horizon before Play can start.
-            nearField: { minX: -300, maxX: 760, minZ: -1320, maxZ: -820 },
-            midField: { minX: -650, maxX: 780, minZ: -1320, maxZ: -760 },
-            farField: { minX: -700, maxX: 780, minZ: -1320, maxZ: 80 },
-            horizon: { minX: -720, maxX: 800, minZ: -1320, maxZ: 100 },
+            // Keep placement on the playable foot/homestead corridor. The
+            // mountain and lower leg need a density/LOD pass before they can
+            // join the default cold path without making Play feel stuck.
+            nearField: { minX: -210, maxX: 600, minZ: -1190, maxZ: -865 },
+            midField: { minX: -240, maxX: 650, minZ: -1210, maxZ: -855 },
+            farField: { minX: -260, maxX: 680, minZ: -1220, maxZ: -845 },
+            horizon: { minX: -280, maxX: 700, minZ: -1230, maxZ: -835 },
         },
     },
 
@@ -119,12 +118,6 @@ export const newsheepdogland = {
     // Trees in water are culled by the Cycle 64 coastline SDF, so coastal stands
     // self-trim at the shore.
     woodsZones: [
-        // Dense conifer forest cloaking the mountain skirt on the leg.
-        { center: { x: -616, z: 560 }, radius: 300, density: 3.0 },
-        // A second dense stand lower on the leg.
-        { center: { x: -430, z: 120 }, radius: 190, density: 2.4 },
-        // Thinning treeline where the leg meets the foot.
-        { center: { x: -520, z: -260 }, radius: 210, density: 1.1 },
         // North-foot windbreak: a row of tight stands reads as a tree line
         // dividing the open foot pasture from the wooded leg.
         { center: { x: -150, z: -880 }, radius: 55, density: 2.2 },

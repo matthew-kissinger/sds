@@ -239,19 +239,6 @@ export async function initReactUI() {
                 // start path. Counting arms a counting run (the rung id is the
                 // curve); everything else arms the solo difficulty.
                 const isCounting = gameMode === COUNTING_GAME_MODE;
-                let started = false;
-                let unsubscribeSceneEnd = null;
-                const startCommittedSolo = () => {
-                    if (started) return;
-                    started = true;
-                    unsubscribeSceneEnd?.();
-                    unsubscribeSceneEnd = null;
-                    if (isCounting) {
-                        game.menuController?.selectCounting?.(chosenDogId, chosenModeId);
-                    } else {
-                        game.menuController?.selectSolo?.(chosenDogId, chosenModeId);
-                    }
-                };
                 try {
                     // Build the armed world's scene on commit (the pastoral
                     // loading bar fills from its per-stage marks). swapScene
@@ -260,15 +247,15 @@ export async function initReactUI() {
                     // Cycle 52 P2: revealBackdrop arms the in-engine dissolve -
                     // the same backdrop webp dissolves into the built scene when
                     // the loading surface hands off (see App's reveal hand-off).
-                    unsubscribeSceneEnd = subscribeGameEvent('scene-swap-end', startCommittedSolo);
                     await game.swapScene(world.id, { noCrossfade: true, revealBackdrop: world.render, f: true });
+                    if (isCounting) {
+                        await game.menuController?.selectCounting?.(chosenDogId, chosenModeId);
+                    } else {
+                        await game.menuController?.selectSolo?.(chosenDogId, chosenModeId);
+                    }
                 } catch (err) {
                     console.error('[UI] scene build for Play failed:', err);
-                } finally {
-                    unsubscribeSceneEnd?.();
-                    unsubscribeSceneEnd = null;
                 }
-                startCommittedSolo();
             }, []);
 
             const bootFlow = useBootFlow({ onPlay: handleEntrancePlay });

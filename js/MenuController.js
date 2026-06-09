@@ -181,7 +181,7 @@ export class MenuController {
         this.singlePlayerMode = singlePlayerMode;
         this.playUIClick();
         console.log('[GAME] MenuController.selectSolo calling startGame()');
-        this.startGame();
+        return this.startGame();
     }
 
     /**
@@ -197,7 +197,7 @@ export class MenuController {
         this.selectedMode = COUNTING_GAME_MODE;
         this.singlePlayerMode = curve;
         this.playUIClick();
-        this.startGame();
+        return this.startGame();
     }
 
     /**
@@ -285,7 +285,7 @@ export class MenuController {
         camera.lookAt(currentLookAt);
     }
     
-    startGame() {
+    async startGame() {
         if (!this.isActive) return;
         
         if (this.audioManager) {
@@ -313,7 +313,7 @@ export class MenuController {
                     player1Dog: this.localConfig?.player1Dog,
                     player2Dog: this.localConfig?.player2Dog
                 });
-                this.onGameStart('local', this.localConfig, null);
+                await this.onGameStart('local', this.localConfig, null);
                 return;
             }
 
@@ -329,7 +329,7 @@ export class MenuController {
                 roomData.initialGameState = this.initialGameState;
             }
 
-            this.onGameStart(this.selectedMode || 'solo', roomData, this.singlePlayerMode);
+            await this.onGameStart(this.selectedMode || 'solo', roomData, this.singlePlayerMode);
         }
     }
     

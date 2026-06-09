@@ -29,6 +29,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.8] - 2026-06-09
+
+### Fixed
+
+- Newsheepdogland's default tree placement now stays on the playable
+  foot/homestead corridor, cutting the hosted Chromium cold-build stall before
+  survival systems mount.
+- Entrance Play now awaits one scene build and one game start instead of racing
+  a `scene-swap-end` listener against a fallback start call.
+
+### Validation
+
+- `git diff --check`, focused tree/cache Vitest, full `npm test`,
+  `npm run lint`, `npm run build`, focused Newsheepdogland Chromium E2E, and
+  the full Chromium Playwright smoke command passed locally.
+
 ## [2.2.7] - 2026-06-09
 
 ### Fixed

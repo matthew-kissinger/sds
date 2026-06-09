@@ -161,8 +161,8 @@ describe('generateTrees — scene counts (sanity)', () => {
 
     it('newsheepdogland keeps the default cold-build tree budget bounded', () => {
         const trees = generateTrees(newsheepdogland, mulberry32(newsheepdogland.terrain.seed));
-        expect(trees.length).toBeGreaterThan(350);
-        expect(trees.length).toBeLessThan(800);
+        expect(trees.length).toBeGreaterThan(120);
+        expect(trees.length).toBeLessThan(260);
     });
 });
 

@@ -1,6 +1,6 @@
 {
   "name": "sheep-dog-sim",
-  "version": "2.2.7",
+  "version": "2.2.8",
   "description": "An interactive herding game where players control a sheepdog to guide sheep into a pen using boid flocking algorithms",
   "type": "module",
   "main": "index.html",
