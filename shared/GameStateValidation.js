@@ -865,7 +865,12 @@ export function checkCompetitiveCompletion(playerScores, playerCount, totalSheep
     if (playerCount === 2) {
         const winThreshold = Math.ceil(totalSheep / 2); // 100 for 200 sheep
         if (maxScore >= winThreshold) {
-            const winner = Object.keys(playerScores).find(playerId => playerScores[playerId] === maxScore);
+            // Tie-break: sort player ids so equal scores resolve to the
+            // lexicographically lowest id. Object key insertion order is not
+            // guaranteed identical between the Worker's live playerScores and
+            // a client's reconstructed copy, so an unsorted find() is
+            // nondeterministic across the sim boundary (P0-DETBUG).
+            const winner = Object.keys(playerScores).sort().find(playerId => playerScores[playerId] === maxScore);
             return {
                 isComplete: true,
                 winner,
@@ -878,7 +883,8 @@ export function checkCompetitiveCompletion(playerScores, playerCount, totalSheep
     // 3-4 players: Highest score when all sheep collected
     if (playerCount >= 3) {
         if (totalRetired >= totalSheep) {
-            const winner = Object.keys(playerScores).find(playerId => playerScores[playerId] === maxScore);
+            // Same sorted-playerId tie-break as the 2-player race above.
+            const winner = Object.keys(playerScores).sort().find(playerId => playerScores[playerId] === maxScore);
             return {
                 isComplete: true,
                 winner,
