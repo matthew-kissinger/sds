@@ -216,10 +216,26 @@ async function waitForGameplayVisible(page: Page) {
   await waitForVisibleButton(page, { aria: 'Pause game' }, 45_000);
   await page.waitForFunction(
     (labels) => {
-      const text = document.body?.innerText ?? '';
-      return !document.querySelector('[data-sds-loading-screen="true"]')
-        && !document.querySelector('#renderer-fallback-toast')
-        && !(labels as string[]).some((label) => text.includes(label));
+      function visible(el: Element | null) {
+        if (!el) return false;
+        const style = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && style.opacity !== '0'
+          && rect.width > 0
+          && rect.height > 0;
+      }
+
+      const visibleLoading = Array.from(document.querySelectorAll('[data-sds-loading-screen="true"]')).some(visible);
+      const visibleFallback = visible(document.querySelector('#renderer-fallback-toast'));
+      const visibleBlockingText = (labels as string[]).some((label) => (
+        Array.from(document.body?.querySelectorAll('*') ?? []).some((el) => (
+          el.children.length === 0 && visible(el) && (el.textContent ?? '').includes(label)
+        ))
+      ));
+
+      return !visibleLoading && !visibleFallback && !visibleBlockingText;
     },
     BLOCKING_GAMEPLAY_COPY,
     { timeout: 45_000 },
