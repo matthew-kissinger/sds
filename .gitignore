@@ -120,6 +120,19 @@ prod-*.png
 verify-*.png
 verify[0-9]*-*.png
 
+# Loose root-level media is always scratch (probe screenshots, captures).
+# Root-anchored on purpose: legit images live in assets/, public/, docs/,
+# tools/validation/golden/, sandbox/, native/ and are unaffected.
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+/*.mp4
+
+# Playwright CLI artifacts
+.playwright-cli/
+
 # GLB compression backups (regenerable from git history if rolled back)
 assets/_originals/
 TODO.local.txt

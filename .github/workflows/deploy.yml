@@ -36,6 +36,11 @@ jobs:
       # job and the deploy jobs (gated on needs.test.result == 'success') never run.
       - run: npm run lint
       - run: npm run typecheck
+      # P4-BUNDLE-GATE: build before test so the per-chunk bundle budgets in
+      # tests/refactor-baseline/baseline.spec.ts read real dist/ output. The
+      # spec self-skips when dist/assets is absent, so without this step the
+      # bundle gate never fires in CI.
+      - run: npm run build
       - run: npm test --if-present
 
   e2e:
