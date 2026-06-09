@@ -29,6 +29,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.4] - 2026-06-09 (Cycle 83 - Wolves, bark, and night polish)
+
+### Changed
+
+- Sheepdog barks now carry farther: sheep react inside the existing forward cone
+  out to 24 m, and wolves flee out to 45 m for 2 seconds.
+- Wolves are larger and more threat-readable in survival and the `?wolf=1`
+  harness, with a grey-wolf material palette applied to the CC0 Quaternius rig.
+- Newsheepdogland night is darker, with the visual sun below the horizon at the
+  existing survival `NIGHT_T = 0.80`.
+- The day/night sun arc now eases between keyframes, and co-op survival visuals
+  smoothly approach the Worker-authoritative survival clock instead of snapping.
+
+### Fixed
+
+- The bark command now resumes/unlocks Web Audio from the bark gesture before
+  playing the sheepdog bark, so the bark sound and gameplay effect are wired
+  together more reliably.
+- The sun billboard fades to zero below the horizon instead of lingering as a
+  visible night sun.
+
+### Validation
+
+- Targeted bark, wolf, Worker survival, atmosphere, sun-disc, day-loop,
+  Newsheepdogland scene, and co-op atmosphere sync tests passed.
+- Full `npm test`, `npm run lint`, and `npm run build` passed locally.
+- Browser proof covered the `?wolf=1` harness, Newsheepdogland survival bark
+  effects at medium/long range, and morning/day/dusk/night luma with
+  `sunY=-0.13917` and billboard intensity `0` at `t=0.80`.
+- Chromium smoke e2e passed locally after the final rebase. The full local
+  cross-browser e2e sweep still has current-main selector/WebKit issues
+  documented in PR #60.
+
 ## [2.2.3] - 2026-06-09 (Cycle 82 - Newsheepdogland feel and hero)
 
 ### Added

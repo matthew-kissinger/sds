@@ -42,7 +42,7 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 | Scene | Shape | Hook |
 |---|---|---|
 | **Home Field** | Flat fenced rect (±100 m) | Single perimeter pen, gate-passage retirement. The starter. |
-| **Newsheepdogland** ⭐ | Boot-shaped survival island | Homestead pen, wolves after dark, shorter day/night pressure, and the current WebGPU hero scene. |
+| **Newsheepdogland** ⭐ | Boot-shaped survival island | Homestead pen, wolves after dark, longer-reach sheepdog bark, darker nights, and the current WebGPU hero scene. |
 | **Rolling Hills** | 180 m island with rolling heightfield | Lightning-zap corral, water + Mediterranean tree mix, golden-hour mood. |
 | **Open Country** | 380 m island (~4.2× area) | Multi-stage objective: gather **40 sheep into the round-up zone for 2 sec**, then drive them through a magical portal at the north shore. |
 
@@ -52,7 +52,7 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - **Solo Extreme** (1,000 sheep)
 - **Solo Insane** (3,000 sheep)
 - **Solo Chaos** (5,000 sheep — the flock is the antagonist)
-- **Survival** (Newsheepdogland — start with 10 sheep, bring them home before wolves thin the flock after dark)
+- **Survival** (Newsheepdogland — start with 10 sheep, bark to push sheep and repel wolves, bring them home before the flock thins after dark)
 - **Multiplayer:** 2–4 player real-time co-op + competitive rooms + 3-minute timed mode + 2-player local split-screen + sandbox editor with shareable URLs
 
 ### ⚡ Authoritative 60 Hz multiplayer on Cloudflare's edge
@@ -126,6 +126,7 @@ URL params for fast scene picking + shoot setup:
 |---|---|---|
 | Move | W A S D / Arrows | Virtual joystick (bottom-left) |
 | Sprint | Shift (drains stamina; locks until released after empty) | Sprint button above joystick |
+| Bark | Space / gamepad RB | Bark button on the HUD |
 | Camera mode | C (cycles Classic / Follow / Free) | Tap the camera-mode chip on the HUD |
 | Zoom | Mouse wheel | Slider (bottom-right) |
 | Pause | Escape | Pause button on the HUD |
@@ -197,6 +198,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANGELOG entry. The last cycles delivered everything you see today; here's where the surface is moving right now:
 
+- **`v2.2.4`** (2026-06-09) - Cycle 83 wolf/bark/night polish: wolves are larger and clearer, bark reaches sheep and wolves at the intended medium/long distances, bark audio unlocks from the bark command, and Newsheepdogland night is darker with the visual sun below the horizon at `NIGHT_T`.
 - **`v2.2.3`** (2026-06-09) - Newsheepdogland feel-and-hero release: desktop WebGPU flagship proof on the 3070, shorter survival pressure, validated two-dog survival co-op, and the Newsheepdogland homestead/pen/grass hero as the entrance default.
 - **Cycle 54 closed** (2026-06-04) - Windows Electron distributor path: installer/portable/unpacked artifacts, app identity, logs/crash paths, signing-ready posture, packaged WebGL/WebGPU proofs, native resize proof, and Steam/store handoff. Local Steam depot dry-run is plausible; public store submission is still gated on signing policy, metadata, install QA, screenshots/capsules, controller/cloud-save policy, and release-channel decisions.
 - **`v2.2.0`** (2026-06-03) - forward-only license transition: current source is AGPL-3.0-or-later, current assets are CC BY-SA 4.0, visible AGPL source notices are in the app, and the first Windows Electron / Capacitor Android native-shell proof is documented.

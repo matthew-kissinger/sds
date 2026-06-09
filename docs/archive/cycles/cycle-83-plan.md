@@ -1,12 +1,15 @@
 # Cycle 83 - Wolves, Bark, and Newsheepdogland Night Polish
 
+> Drafted and closed 2026-06-09. The two feature branches landed as draft PRs
+> first (`#59` wolf/bark feel, `#60` night arc), then merged together to `main`
+> for the player-visible `v2.2.4` release closeout.
+
 ## Status
 
-Active for PR 1: `codex/cycle83-wolf-bark-feel`.
-
-Cycle 82 is closed. This plan authorizes the narrow shared-sim changes in this
-branch only. PR 2 (`codex/cycle83-night-arc`) handles visual day-night polish as
-an independent branch and does not need to touch shared simulation files.
+Closed. Cycle 82 was already closed when this cycle started. This plan
+authorized the narrow shared-sim bark/wolf tuning in PR 1 and the visual-only
+day-night polish in PR 2. The final `main` closeout ships both together as
+`v2.2.4`.
 
 ## Scope
 
@@ -20,6 +23,9 @@ an independent branch and does not need to touch shared simulation files.
   unlocking/resuming Web Audio directly from the bark command.
 - Tune bark feel to Medium/Long: sheep reach is 24 m inside the existing forward
   cone; wolves flee within 45 m for 2.0 s.
+- Darken the Newsheepdogland night read, put the visual sun below the horizon at
+  the existing `NIGHT_T = 0.80`, smooth day/night keyframe interpolation, and
+  make co-op survival visuals smoothly approach Worker `survival.t`.
 
 ## Shared-Sim Authorization
 
@@ -45,11 +51,15 @@ Do not touch `shared/scenes/types.js` in this cycle.
 - Browser proof covers `?wolf=1` and Newsheepdogland survival at night with
   readable wolves, bark audio context/play evidence, sheep at medium range, and
   wolf repel at long range.
+- Atmosphere tests pin the internal `night` preset, the below-horizon sun at
+  `NIGHT_T`, the zero-intensity sun billboard below the horizon, and smooth
+  co-op visual time sync.
+- Browser proof covers morning/day/dusk/night luma and sun direction, with
+  night at `t=0.80` darker than dusk/day and `sunY < 0`.
 
 ## Out Of Scope
 
-- No version bump, release tag, changelog entry, deploy, or live proof in these
-  feature PRs.
+- The feature PRs themselves carried no version bump, release tag, changelog
+  entry, deploy, or live proof; the final `main` closeout handles the release.
 - No replacement wolf from a paid, NC, or unverifiable source.
-- No changes to the day-clock phase timing; PR 2 is visual alignment only unless
-  visual-only fixes prove insufficient.
+- No changes to the day-clock phase timing; PR 2 stayed visual-only.

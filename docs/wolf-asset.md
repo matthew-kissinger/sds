@@ -153,5 +153,6 @@ Newsheepdogland survival now uses this rig as the live night predator:
 - Did not replace the CC0 Quaternius wolf with an unverifiable, paid, or
   non-commercial asset.
 - Did not change `shared/scenes/types.js` or day-clock phase timing.
-- Did not add a version bump, release tag, changelog entry, deploy, or live
-  production proof.
+- The feature PR did not add a version bump, release tag, changelog entry,
+  deploy, or live production proof; those belong to the final `main` release
+  closeout.
