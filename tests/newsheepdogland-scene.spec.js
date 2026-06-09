@@ -11,6 +11,7 @@ import { loadScene } from '../shared/scenes/index.js';
 import { NEWSHEEPDOGLAND_POINTS } from '../shared/scenes/newsheepdogland.coast.js';
 import { boundaryToBounds } from '../shared/index.js';
 import { NIGHT_T } from '../shared/survival/dayClock.js';
+import { getCoastlineField, sampleSignedDistance } from '../shared/CoastlineField.js';
 
 function shoelaceArea(pts) {
     let a = 0;
@@ -28,6 +29,29 @@ function inPoly(x, z, pts) {
         if (((zi > z) !== (zj > z)) && (x < ((xj - xi) * (z - zi)) / (zj - zi) + xi)) inside = !inside;
     }
     return inside;
+}
+
+function estimateDesktopGrassMax(scene) {
+    const grass = scene.grass;
+    const grassRadius = grass.grassRadius;
+    const worldSize = Math.max(420, (grassRadius + 40) * 2);
+    const chunkSize = 40;
+    const chunksPerSide = Math.ceil(worldSize / chunkSize);
+    const halfWorld = worldSize / 2;
+    const clumpScale = Math.min(1, (420 * 0.6) / grassRadius);
+    const adjustedClumpsPerChunk = Math.max(1, Math.round(grass.clumpsPerChunk.desktop * clumpScale));
+    const field = getCoastlineField(scene.boundary);
+    let chunks = 0;
+    for (let cx = 0; cx < chunksPerSide; cx++) {
+        for (let cz = 0; cz < chunksPerSide; cz++) {
+            const minX = grass.grassCenter.x - halfWorld + cx * chunkSize;
+            const minZ = grass.grassCenter.z - halfWorld + cz * chunkSize;
+            const centerX = minX + chunkSize / 2;
+            const centerZ = minZ + chunkSize / 2;
+            if (sampleSignedDistance(field, centerX, centerZ) >= -chunkSize) chunks++;
+        }
+    }
+    return chunks * adjustedClumpsPerChunk;
 }
 
 describe('Newsheepdogland SceneDef (Cycle 64)', () => {
@@ -98,6 +122,10 @@ describe('Newsheepdogland SceneDef (Cycle 64)', () => {
         // now declares `survival` alongside the standard co-op modes.
         expect(scene.allowedModes).toContain('survival');
         expect(scene.allowedModes).toContain('cooperative');
+    });
+
+    it('keeps the default grass budget bounded for entrance Play', () => {
+        expect(estimateDesktopGrassMax(scene)).toBeLessThan(90_000);
     });
 
     it('boundaryToBounds returns the polygon bbox', () => {

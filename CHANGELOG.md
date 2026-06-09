@@ -29,6 +29,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.11] - 2026-06-09
+
+### Fixed
+
+- Newsheepdogland's default grass field now stays on the homestead and grazing
+  corridor with a bounded clump budget, so hosted Chromium can enter the
+  survival run instead of spending the first Play window building scenery.
+
+### Validation
+
+- `git diff --check`, focused cache/tree/scene Vitest, full `npm test`,
+  `npm run lint`, `npm run build`, focused Newsheepdogland Chromium E2E, and
+  the full Chromium Playwright smoke command passed locally.
+
 ## [2.2.10] - 2026-06-09
 
 ### Fixed

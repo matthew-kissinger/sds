@@ -92,18 +92,14 @@ export const newsheepdogland = {
     },
 
     grass: {
-        clumpsPerChunk: { desktop: 950, mobile: 400 },
+        clumpsPerChunk: { desktop: 320, mobile: 180 },
         // Cooler coastal greens than the golden Rolling Hills.
         colors: { base: '#5a6a3a', mid: '#83904f', tip: '#c8cf86' },
-        // Newsheepdogland is ~3.2 km^2; grassing the literal whole island (incl.
-        // the alpine mountain/leg) is thousands of chunks - a density/LOD rearch
-        // gated on a perf spike (deferred, see docs/BACKLOG.md). Cycle 66 P7
-        // widens coverage to blanket the entire survival play surface: the foot
-        // lowland, the homestead + pen surrounds, and the treeline approaches the
-        // dog actually traverses. Centred on the play area; the stochastic density
-        // LOD + the coastline SDF cull keep the widened perimeter cheap.
+        // Newsheepdogland is ~3.2 km^2; the default first-session path only
+        // grasses the homestead, grazing lowland, and pen approach. Wider island
+        // grass belongs behind a measured LOD pass, not the entrance Play click.
         grassCenter: { x: 250, z: -1080 },
-        grassRadius: 760,
+        grassRadius: 560,
         // The tall-grass shore band across the foot, just inside the sole.
         tallZones: [
             { minX: -250, maxX: 750, minZ: -1380, maxZ: -1050, heightMul: 1.8 },
