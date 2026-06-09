@@ -32,6 +32,10 @@ import {
     calculateBoundaryAvoidanceWithGate,
     applyHardBoundaryConstraints,
     updateSheepCorralRetirements,
+    updateCompetitiveSheepRetirements,
+    createCompetitiveGameState,
+    calculateBoundaryAvoidanceWithMultipleGates,
+    applyHardBoundaryConstraintsWithMultipleGates,
     validateEntityState,
     createGameState,
     createBoidConfig,
@@ -47,6 +51,7 @@ import {
 
 const islandCollisionScratch = createSheepCollisionScratch();
 const coopCollisionScratch = createSheepCollisionScratch();
+const competitiveCollisionScratch = createSheepCollisionScratch();
 
 /**
  * Small, fast, reproducible PRNG (Mulberry32). We need this because
@@ -451,6 +456,178 @@ export function tickSheepCoop(sheepArray, sheepdogs, gameState, deltaTime) {
     }
 
     applyCoopCollisionPass(sheepArray, sheepdogs, gameState);
+}
+
+/**
+ * P0-DETTEST: build a competitive game state via the real shared/ factory.
+ * Player order matters: createCompetitiveGameState assigns gate 0 (north,
+ * +Z) to playerIds[0] and gate 1 (south, -Z) to playerIds[1], and inserts
+ * playerScores keys in playerIds order.
+ */
+export function makeCompetitiveGameState(playerIds, totalSheep = 200) {
+    return createCompetitiveGameState({ totalSheep }, playerIds);
+}
+
+/**
+ * Mirror of GameSim.applySheepBoundaryConstraint for the competitive branch:
+ * pre-retirement sheep get the multi-gate hard clamp (gate gaps open), a
+ * retiring sheep with a target gets the extended +-35m clamp so it can walk
+ * into the pasture outside the play bounds.
+ */
+function applyCompetitiveSheepBoundaryConstraint(sheep, gameState) {
+    if (!sheep.hasPassedGate && !sheep.isRetiring) {
+        sheep.position = applyHardBoundaryConstraintsWithMultipleGates(
+            sheep,
+            gameState.bounds,
+            gameState.competitiveGates,
+            { margin: 0.5, allowGatePassage: true }
+        );
+    } else if (sheep.isRetiring && sheep.retirementTarget) {
+        const b = gameState.bounds;
+        sheep.position.x = Math.max(b.minX - 35, Math.min(b.maxX + 35, sheep.position.x));
+        sheep.position.z = Math.max(b.minZ - 35, Math.min(b.maxZ + 35, sheep.position.z));
+    }
+}
+
+function applyCompetitiveCollisionPass(sheepArray, sheepdogs, gameState) {
+    const sheepCollision = resolveSheepSheepCollisions(sheepArray, {
+        scratch: competitiveCollisionScratch,
+        bounds: gameState.bounds
+    });
+    if (sheepCollision.moved === 0) return;
+
+    for (const index of competitiveCollisionScratch.movedIndices) {
+        const sheep = sheepArray[index];
+        resolveDogSheepCollisions(sheep, sheepdogs);
+        applyCompetitiveSheepBoundaryConstraint(sheep, gameState);
+        if (sheep.velocity.magnitude() > 0.001) {
+            sheep.facingDirection = sheep.velocity.angle();
+        }
+        validateEntityState(sheep, new Vector2D(-20, -20));
+    }
+}
+
+/**
+ * P0-DETTEST: one tick of sheep update for COMPETITIVE mode. Mirrors
+ * `worker/src/GameSim.js updateSheep` for the competitive branch at the same
+ * fidelity level as tickSheepCoop (flocking + flee + multi-gate boundary +
+ * client-style integration + dog/sheep separation + multi-gate hard clamp +
+ * competitive retirement and per-gate scoring). Like tickSheepCoop, the
+ * gate-attraction steer (shouldSeekGate) is out of harness scope; the trace
+ * is a self-regression pin for the shared/ competitive primitives, not a
+ * byte-for-byte Worker replica.
+ *
+ * `rng` must be a seeded PRNG (mulberry32) - it feeds the retirement-target
+ * placement inside the winning gate's pasture, exactly like the Worker's
+ * per-game seeded rng.
+ *
+ * Returns the per-tick retirement result ({playerRetirements, totalRetired})
+ * after accumulating it into gameState.playerScores / sheepRetired the same
+ * way GameSim does.
+ */
+export function tickSheepCompetitive(sheepArray, sheepdogs, gameState, deltaTime, rng) {
+    const cfg = SHEEP_CONFIG;
+    const activeSheep = sheepArray.filter(s => s.state === 0);
+
+    for (const sheep of sheepArray) {
+        if (sheep.state === 1 || sheep.state === 2) {
+            sheep.velocity.set(0, 0);
+            sheep.acceleration.set(0, 0);
+            continue;
+        }
+
+        const neighbors = getNeighbors(sheep, activeSheep, cfg.perceptionRadius);
+        const flockingForce = calculateFlockingForce(sheep, neighbors, cfg);
+        sheep.acceleration.add(flockingForce);
+
+        for (const dog of sheepdogs) {
+            const fleeForce = calculateFlee(
+                sheep,
+                dog.position,
+                sheep.fleeRadius,
+                cfg.maxSpeed,
+                cfg.maxForce
+            );
+            if (fleeForce.magnitude() > 0) {
+                fleeForce.multiply(1.2);
+                sheep.acceleration.add(fleeForce);
+            }
+        }
+
+        // Multi-gate passage-zone check: skip boundary force while a sheep
+        // is inside ANY gate's passage zone (mirrors GameSim).
+        let inGatePassageZone = false;
+        for (const gate of gameState.competitiveGates) {
+            if (sheep.position.x >= gate.passageZone.minX &&
+                sheep.position.x <= gate.passageZone.maxX &&
+                sheep.position.z >= gate.passageZone.minZ &&
+                sheep.position.z <= gate.passageZone.maxZ) {
+                inGatePassageZone = true;
+                break;
+            }
+        }
+
+        if (!inGatePassageZone) {
+            const boundaryForce = calculateBoundaryAvoidanceWithMultipleGates(
+                sheep,
+                gameState.bounds,
+                gameState.competitiveGates,
+                { margin: 4, maxSpeed: cfg.maxSpeed, maxForce: cfg.maxForce }
+            );
+            sheep.acceleration.add(boundaryForce);
+        }
+
+        // === updateSheepMovementClientStyle inlined (same as tickSheepCoop) ===
+        const dampingFactor = 0.98;
+        const velocitySmoothing = 0.85;
+        const minMovementThreshold = 0.001;
+
+        const previousVelocity = sheep.velocity.clone();
+
+        sheep.velocity.add(sheep.acceleration);
+        sheep.velocity.limit(cfg.maxSpeed);
+        sheep.velocity.multiply(dampingFactor);
+
+        const smoothedVelocity = previousVelocity
+            .multiply(velocitySmoothing)
+            .add(sheep.velocity.clone().multiply(1 - velocitySmoothing));
+
+        if (smoothedVelocity.magnitude() > minMovementThreshold) {
+            sheep.velocity = smoothedVelocity;
+            sheep.position.add(sheep.velocity.clone().multiply(deltaTime * 60));
+        } else {
+            sheep.velocity.multiply(0);
+        }
+        sheep.acceleration.multiply(0);
+
+        resolveDogSheepCollisions(sheep, sheepdogs);
+
+        applyCompetitiveSheepBoundaryConstraint(sheep, gameState);
+
+        if (sheep.velocity.magnitude() > 0.001) {
+            sheep.facingDirection = sheep.velocity.angle();
+        }
+
+        validateEntityState(sheep, new Vector2D(-20, -20));
+    }
+
+    applyCompetitiveCollisionPass(sheepArray, sheepdogs, gameState);
+
+    // Competitive retirement + per-gate scoring (mirrors GameSim updateSheep
+    // tail: updateCompetitiveSheepRetirements with the seeded rng, then the
+    // per-player score accumulation).
+    const retirementResult = updateCompetitiveSheepRetirements(
+        sheepArray,
+        gameState.competitiveGates,
+        rng
+    );
+    for (const [playerId, newRetirements] of Object.entries(retirementResult.playerRetirements)) {
+        if (Object.prototype.hasOwnProperty.call(gameState.playerScores, playerId)) {
+            gameState.playerScores[playerId] += newRetirements;
+        }
+    }
+    gameState.sheepRetired = retirementResult.totalRetired;
+    return retirementResult;
 }
 
 /**

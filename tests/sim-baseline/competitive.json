@@ -1,0 +1,1297 @@
+[
+  {
+    "tick": 0,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -0.8,
+        "z": 90.7,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0,
+        "z": 91.5,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.4,
+        "z": -91.1,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.4,
+        "z": -91.9,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 1,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -0.9044,
+        "z": 90.6159,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0735,
+        "z": 91.5984,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.5029,
+        "z": -91.0161,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.5018,
+        "z": -92.0267,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 2,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.0137,
+        "z": 90.5536,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0004,
+        "z": 91.5763,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.6099,
+        "z": -90.9547,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.6069,
+        "z": -92.1807,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 3,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.1263,
+        "z": 90.511,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": -0.0301,
+        "z": 91.6228,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.6785,
+        "z": -90.959,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.6718,
+        "z": -92.3211,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 4,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.2337,
+        "z": 90.4953,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": -0.0339,
+        "z": 91.7191,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.6892,
+        "z": -91.0358,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.688,
+        "z": -92.4235,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 5,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.2906,
+        "z": 90.5509,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": -0.0345,
+        "z": 91.8331,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7006,
+        "z": -91.1313,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.7082,
+        "z": -92.5452,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 6,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.3233,
+        "z": 90.6485,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": -0.0244,
+        "z": 91.9689,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7123,
+        "z": -91.2447,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.7318,
+        "z": -92.6833,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 7,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.3468,
+        "z": 90.7754,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": -0.0134,
+        "z": 92.1232,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7239,
+        "z": -91.3752,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.758,
+        "z": -92.8355,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 8,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.3717,
+        "z": 90.9173,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": -0.0024,
+        "z": 92.2896,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7351,
+        "z": -91.5213,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.7864,
+        "z": -92.9996,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 9,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.3976,
+        "z": 91.0728,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.009,
+        "z": 92.4662,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7459,
+        "z": -91.6807,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.8165,
+        "z": -93.1738,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 10,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.4236,
+        "z": 91.2387,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0205,
+        "z": 92.6501,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7559,
+        "z": -91.8514,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.8478,
+        "z": -93.3568,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 11,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.449,
+        "z": 91.4125,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.032,
+        "z": 92.8397,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.765,
+        "z": -92.0307,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.88,
+        "z": -93.5471,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 12,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.4734,
+        "z": 91.5924,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0437,
+        "z": 93.0351,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7732,
+        "z": -92.2167,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.9136,
+        "z": -93.7345,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 13,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.4968,
+        "z": 91.7768,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0556,
+        "z": 93.2356,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7805,
+        "z": -92.4079,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.9486,
+        "z": -93.9195,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 14,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.5189,
+        "z": 91.9648,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0679,
+        "z": 93.4414,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.787,
+        "z": -92.603,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 0.9849,
+        "z": -94.1022,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 15,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.5398,
+        "z": 92.1555,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0802,
+        "z": 93.6516,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7929,
+        "z": -92.8005,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.0223,
+        "z": -94.283,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 16,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.5597,
+        "z": 92.3484,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0935,
+        "z": 93.865,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7983,
+        "z": -92.9995,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.061,
+        "z": -94.4619,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 17,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.5776,
+        "z": 92.5388,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1063,
+        "z": 94.0806,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.8033,
+        "z": -93.1994,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.1006,
+        "z": -94.6392,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 18,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.5935,
+        "z": 92.7242,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1179,
+        "z": 94.2977,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.808,
+        "z": -93.3997,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.1412,
+        "z": -94.8148,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 19,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6087,
+        "z": 92.9094,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1278,
+        "z": 94.5157,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.8123,
+        "z": -93.6002,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.1826,
+        "z": -94.989,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 20,
+    "scores": {
+      "alpha": 0,
+      "bravo": 0
+    },
+    "totalRetired": 0,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6231,
+        "z": 93.0946,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1359,
+        "z": 94.7344,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.8129,
+        "z": -93.7941,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.2246,
+        "z": -95.1617,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 21,
+    "scores": {
+      "alpha": 1,
+      "bravo": 0
+    },
+    "totalRetired": 1,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6367,
+        "z": 93.2798,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1422,
+        "z": 94.9535,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.8106,
+        "z": -93.9826,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.2671,
+        "z": -95.3366,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 22,
+    "scores": {
+      "alpha": 2,
+      "bravo": 0
+    },
+    "totalRetired": 2,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6495,
+        "z": 93.4652,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.147,
+        "z": 95.1728,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.8061,
+        "z": -94.1663,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.3099,
+        "z": -95.5128,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 23,
+    "scores": {
+      "alpha": 2,
+      "bravo": 0
+    },
+    "totalRetired": 2,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6569,
+        "z": 93.6458,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1511,
+        "z": 95.3921,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7988,
+        "z": -94.3451,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.353,
+        "z": -95.6896,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 24,
+    "scores": {
+      "alpha": 2,
+      "bravo": 0
+    },
+    "totalRetired": 2,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6592,
+        "z": 93.8216,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.155,
+        "z": 95.6113,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7891,
+        "z": -94.5193,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.3965,
+        "z": -95.8665,
+        "retired": false
+      }
+    ]
+  },
+  {
+    "tick": 25,
+    "scores": {
+      "alpha": 2,
+      "bravo": 2
+    },
+    "totalRetired": 4,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6572,
+        "z": 93.9929,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1596,
+        "z": 95.8304,
+        "retired": false
+      },
+      {
+        "id": 8,
+        "x": -0.7774,
+        "z": -94.689,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.4402,
+        "z": -96.043,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 26,
+    "scores": {
+      "alpha": 3,
+      "bravo": 2
+    },
+    "totalRetired": 5,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6513,
+        "z": 94.1598,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1653,
+        "z": 96.0492,
+        "retired": true
+      },
+      {
+        "id": 8,
+        "x": -0.764,
+        "z": -94.8545,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.4838,
+        "z": -96.2219,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 27,
+    "scores": {
+      "alpha": 3,
+      "bravo": 2
+    },
+    "totalRetired": 5,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6419,
+        "z": 94.3226,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1723,
+        "z": 96.2678,
+        "retired": true
+      },
+      {
+        "id": 8,
+        "x": -0.7492,
+        "z": -95.0162,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.5272,
+        "z": -96.4021,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 28,
+    "scores": {
+      "alpha": 3,
+      "bravo": 2
+    },
+    "totalRetired": 5,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.6293,
+        "z": 94.4815,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1642,
+        "z": 96.4776,
+        "retired": true
+      },
+      {
+        "id": 8,
+        "x": -0.7334,
+        "z": -95.1744,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.5706,
+        "z": -96.583,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 29,
+    "scores": {
+      "alpha": 4,
+      "bravo": 2
+    },
+    "totalRetired": 6,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.614,
+        "z": 94.6366,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1434,
+        "z": 96.6802,
+        "retired": true
+      },
+      {
+        "id": 8,
+        "x": -0.717,
+        "z": -95.3297,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.614,
+        "z": -96.7639,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 30,
+    "scores": {
+      "alpha": 5,
+      "bravo": 2
+    },
+    "totalRetired": 7,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.5964,
+        "z": 94.7883,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.1118,
+        "z": 96.8771,
+        "retired": true
+      },
+      {
+        "id": 8,
+        "x": -0.7101,
+        "z": -95.482,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.6574,
+        "z": -96.9446,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 31,
+    "scores": {
+      "alpha": 5,
+      "bravo": 2
+    },
+    "totalRetired": 7,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.5767,
+        "z": 94.9366,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0713,
+        "z": 97.0694,
+        "retired": true
+      },
+      {
+        "id": 8,
+        "x": -0.7116,
+        "z": -95.6318,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.7007,
+        "z": -97.1249,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 32,
+    "scores": {
+      "alpha": 5,
+      "bravo": 2
+    },
+    "totalRetired": 7,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.5552,
+        "z": 95.082,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": 0.0228,
+        "z": 97.2577,
+        "retired": true
+      },
+      {
+        "id": 8,
+        "x": -0.7132,
+        "z": -95.7797,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.7441,
+        "z": -97.3047,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 33,
+    "scores": {
+      "alpha": 5,
+      "bravo": 2
+    },
+    "totalRetired": 7,
+    "isComplete": false,
+    "winner": null,
+    "winType": null,
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.532,
+        "z": 95.2246,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": -0.0331,
+        "z": 97.442,
+        "retired": true
+      },
+      {
+        "id": 8,
+        "x": -0.715,
+        "z": -95.9259,
+        "retired": false
+      },
+      {
+        "id": 11,
+        "x": 1.7874,
+        "z": -97.484,
+        "retired": true
+      }
+    ]
+  },
+  {
+    "tick": 34,
+    "scores": {
+      "alpha": 6,
+      "bravo": 4
+    },
+    "totalRetired": 10,
+    "isComplete": true,
+    "winner": "alpha",
+    "winType": "race",
+    "sample": [
+      {
+        "id": 0,
+        "x": -1.5074,
+        "z": 95.3649,
+        "retired": false
+      },
+      {
+        "id": 4,
+        "x": -0.0958,
+        "z": 97.6229,
+        "retired": true
+      },
+      {
+        "id": 8,
+        "x": -0.7168,
+        "z": -96.0707,
+        "retired": true
+      },
+      {
+        "id": 11,
+        "x": 1.8307,
+        "z": -97.6626,
+        "retired": true
+      }
+    ]
+  }
+]
