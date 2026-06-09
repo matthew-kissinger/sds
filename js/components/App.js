@@ -31,7 +31,8 @@ import {
     getSelectedDog,
     startSandboxGame,
     startMultiplayerGame,
-    subscribeGameEvent
+    subscribeGameEvent,
+    waitForGameInstance
 } from '../GameBridge.js';
 import { SceneSwapOverlay } from './ui/SceneSwapOverlay.js';
 import { isHighDifficultyCount } from '../gamestate/modes.js';
@@ -227,19 +228,19 @@ export async function initReactUI() {
             // then start the solo game on it. The armed difficulty maps 1:1 to the
             // canonical solo singlePlayerMode (js/gamestate/modes.js).
             const handleEntrancePlay = useCallback(async (world, dog, mode, gameMode) => {
-                const game = getGameInstance();
-                if (!game) return;
                 try { window.__sdsBootLoading = true; } catch {}
                 setScreen('loading');
                 await new Promise(requestAnimationFrame);
-                selectDog(dog.id);
-                const chosenDogId = getSelectedDog() || dog.id;
-                const chosenModeId = mode.id;
-                // Cycle 59 (Counting Sheep): the family's gameMode selects the
-                // start path. Counting arms a counting run (the rung id is the
-                // curve); everything else arms the solo difficulty.
-                const isCounting = gameMode === COUNTING_GAME_MODE;
                 try {
+                    const game = await waitForGameInstance();
+                    await game.waitForInitialization?.();
+                    selectDog(dog.id);
+                    const chosenDogId = getSelectedDog() || dog.id;
+                    const chosenModeId = mode.id;
+                    // Cycle 59 (Counting Sheep): the family's gameMode selects the
+                    // start path. Counting arms a counting run (the rung id is the
+                    // curve); everything else arms the solo difficulty.
+                    const isCounting = gameMode === COUNTING_GAME_MODE;
                     // Build the armed world's scene on commit (the pastoral
                     // loading bar fills from its per-stage marks). swapScene
                     // early-returns if it's already the live scene; noCrossfade

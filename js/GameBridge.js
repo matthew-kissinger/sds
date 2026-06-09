@@ -26,9 +26,25 @@ export function subscribeGameEvent(name, handler) {
 
 export function setGameInstance(instance) {
     gameInstance = instance;
+    if (instance) gameEvents.dispatchEvent(new Event('game-instance-ready'));
 }
 
 export const getGameInstance = () => gameInstance;
+
+export function waitForGameInstance(timeoutMs = 30000) {
+    if (gameInstance) return Promise.resolve(gameInstance);
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            gameEvents.removeEventListener('game-instance-ready', handleReady);
+            reject(new Error('Game not initialized'));
+        }, timeoutMs);
+        const handleReady = () => {
+            clearTimeout(timeout);
+            resolve(gameInstance);
+        };
+        gameEvents.addEventListener('game-instance-ready', handleReady, { once: true });
+    });
+}
 
 // Subsystem accessors — each returns null when the instance isn't ready.
 export const getNetworkManager     = () => gameInstance?.networkManager     ?? null;
