@@ -34,7 +34,6 @@ import { updateSceneMetadata } from './utils/seo.js';
 import { captureFramebufferSample, isProbeEnabled, log as probeLog, drainGlErrors } from './diagnostics/glProbe.js';
 import { isCinematicMode, isUiHidden, getRequestedSun } from './cinematic-url.js';
 import { resolveAssetUrl } from './utils/assetUrl.js';
-import { isMobileClient } from './utils/isMobileClient.js';
 import { startReplay as runStartReplay, stopReplay as runStopReplay } from './utils/replay.js';
 import { WebVitalsMonitor } from './boot/WebVitalsMonitor.js';
 import { installStressTestHarness, installMpProbe } from './boot/debugProbes.js';
@@ -930,23 +929,6 @@ class SheepDogSimulation {
             return;
         }
 
-        // Cycle 71 + Cycle 81: a renderer-pinned scene (the flagship) is honored as
-        // WebGL only on MOBILE. Cycle 80 cleared the desktop cold-load blocker, so a
-        // desktop client on WebGPU swapping into the flagship STAYS on WebGPU (the
-        // compute-cull path keeps the cold load within budget). A mobile client on
-        // WebGPU hard-reloads onto WebGL via the MP-fallback URL path; the boot guard
-        // then keeps WebGL and builds it (the player re-picks on WebGL, no intent lost).
-        if (String(window.__sdsRendererMode?.effective ?? '').startsWith('webgpu')
-            && loadScene(toId)?.renderer === 'webgl'
-            && isMobileClient()) {
-            console.log(`[SWAP] swapScene(${toId}) — scene pinned to WebGL on mobile; reloading off WebGPU`);
-            const pinnedUrl = new URL(this._buildSwapUrl(toId, opts));
-            pinnedUrl.searchParams.set('renderer', 'webgl');
-            pinnedUrl.searchParams.set('fallbackReason', 'scene-pinned-webgl');
-            location.href = pinnedUrl.href;
-            return new Promise(() => {});
-        }
-
         // Cycle 11 Phase 1 Q1: solo + sandbox + start-screen-pre-game hit
         // the in-process path; multiplayer falls back to hard reload. RoomDO
         // doesn't broadcast scene-specific state mid-game, but rooms lock the
@@ -1175,7 +1157,7 @@ class SheepDogSimulation {
      * pipeline creation) keeps the GPU-process watchdog from firing and surfaces
      * the cost under the loading bar. Opt-in per scene via SceneDef.prewarmShaders
      * so the live WebGPU scenes are untouched; WebGPU-only (WebGL compiles are
-     * cheap and lazy is fine there, so the WebGL-pinned path stays byte-identical);
+     * cheap and lazy is fine there, so the explicit fallback stays byte-identical);
      * try/caught so a failure falls through to the status-quo lazy compile. Called
      * from both build paths (init() first build + rebuildScene swap).
      * See docs/cycle-74-plan.md.
@@ -3393,29 +3375,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(location.search);
     let rendererOptions = {};
     let recordProductionWebGpuBoot = async () => {};
-    // Cycle 71 + Cycle 81: a renderer-pinned scene (the flagship survival island) is
-    // honored as WebGL only on MOBILE. Cycle 80 solved the desktop cold-load blocker
-    // (GPU compute-cull collapses grass+trees to ~8 meshes, ~580ms cold), so desktop
-    // lifts onto WebGPU here for the Hosek sky + water; mobile keeps WebGL byte-
-    // identical (mobile WebGPU is validated separately). In-app swaps are handled in
-    // swapScene(). See shared/scenes/newsheepdogland.js + cycle80/81-validation/.
-    if (window.__sdsG?.productionWebGpu) {
-        try {
-            const reqScene = urlParams.get('scene');
-            const bootSceneId = reqScene && listScenes().some((s) => s.id === reqScene)
-                ? reqScene
-                : DEFAULT_SCENE_ID;
-            if (loadScene(bootSceneId)?.renderer === 'webgl' && isMobileClient()) {
-                console.log(`[RENDERER] scene "${bootSceneId}" pinned to WebGL on mobile; skipping WebGPU boot`);
-                window.__sdsG.productionWebGpu = null;
-                if (window.__sdsRendererMode) {
-                    window.__sdsRendererMode.productionWebGpu = false;
-                    window.__sdsRendererMode.effective = 'webgl';
-                    window.__sdsRendererMode.fallbackReason = 'scene-pinned-webgl';
-                }
-            }
-        } catch (_) { /* fall through to the normal renderer path */ }
-    }
     if (window.__sdsG?.productionWebGpu) {
         const productionWebGpu = await import('./rendering/konveyorProductionWebGpuBoot.js');
         try {

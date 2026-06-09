@@ -189,10 +189,8 @@ describe('WebGPU mobile render cost reporting', () => {
 
 describe('Desktop WebGPU quality governance (Cycle 82)', () => {
     it('does not demote the desktop renderer or set a sticky fallback at the quality floor', () => {
-        // The "WebGPU/WebGL split": _recordFallback is the only writer of the 24h
-        // sds-renderer-fallback flag and (since mobile is WebGL-pinned on the
-        // flagship) can only fire on desktop WebGPU. A desktop pinned at the
-        // quality floor must stay WebGPU - never set fallbackReason.
+        // The "WebGPU/WebGL split": desktop at the quality floor must stay
+        // WebGPU. Mobile WebGPU keeps the protective fallback covered above.
         const renderer = { setPixelRatio() {} };
         try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
         const governor = new QualityGovernor({

@@ -181,14 +181,12 @@ export class QualityGovernor {
     _recordFallback(rendererMode) {
         if (this.fallbackReason) return;
         if (!String(rendererMode ?? '').startsWith('webgpu')) return;
-        // Cycle 82: desktop never demotes the renderer on a frame-budget miss.
+        // Cycle 82/84: desktop never demotes the renderer on a frame-budget miss.
         // The lowest QUALITY_STEPS rung is the floor. This is the ONLY writer of
-        // the 24h sticky 'sds-renderer-fallback' flag, and it can only fire on
-        // desktop - mobile is WebGL-pinned on the flagship, so rendererMode is
-        // 'webgl' there and the check above already returned. Writing it from a
-        // transient desktop step-down un-ships the desktop WebGPU flagship and
-        // flips the next load to WebGL for 24h (the "WebGPU/WebGL split"). Mobile
-        // WebGPU, if ever validated, still gets the protective fallback.
+        // the 24h sticky 'sds-renderer-fallback' flag. Writing it from a transient
+        // desktop step-down un-ships the WebGPU flagship and flips the next load to
+        // WebGL for 24h (the "WebGPU/WebGL split"). Mobile WebGPU still gets this
+        // protective fallback after repeated misses at the floor.
         if (!this.isMobile) return;
         this.fallbackReason = 'webgpu-frame-budget';
         const record = { reason: this.fallbackReason, at: Date.now() };

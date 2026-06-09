@@ -41,6 +41,11 @@ describe('Newsheepdogland SceneDef (Cycle 64)', () => {
         expect(scene.boundary.falloff).toBeGreaterThan(0);
     });
 
+    it('does not pin the flagship scene to WebGL (Cycle 84)', () => {
+        expect(scene.renderer).toBeUndefined();
+        expect(scene.prewarmShaders).toBe(true);
+    });
+
     it('measures 3.0-3.6 km^2 by shoelace', () => {
         const km2 = shoelaceArea(NEWSHEEPDOGLAND_POINTS) / 1e6;
         // Report the measured value for the record.

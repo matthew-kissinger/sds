@@ -188,24 +188,10 @@ export const newsheepdogland = {
     defaultCamera: 'follow',
     difficultyModifier: 1.2,
 
-    // Cycle 71 + Cycle 81: keep `renderer: 'webgl'` as the MOBILE pin. This is by far
-    // the heaviest scene (a 3.2 km^2 island: native trees + grass + water +
-    // structures); its cold WebGPU pipeline compile historically blocked the main
-    // thread ~43s on a fresh load and tripped the Windows GPU TDR watchdog (the tab
-    // froze on the loading screen and crashed). Cycle 80 solved that with GPU
-    // compute-driven per-instance culling (grass + trees collapse to ~8 indirect-
-    // drawn InstancedMeshes; cold ~506ms, under WebGL's 548ms), so DESKTOP now lifts
-    // onto WebGPU for the Hosek sky + water. The boot + swapScene guards in js/main.js
-    // honour this pin on MOBILE only (mobile WebGPU is unvalidated, and many mobile
-    // GPUs expose no navigator.gpu and load WebGL regardless). Keep the field - the
-    // tier-gate lives in the guards, not here. Measured: cycle71-validation/ +
-    // cycle80/81-validation/.
-    renderer: 'webgl',
-
     // Cycle 74 P1: opt into the build-tail compileAsync prewarm. Live on the desktop
-    // WebGPU path now that Cycle 81 lifted the pin there. The Cycle 80 compute-cull
+    // and mobile WebGPU path now that Cycle 84 lifted the scene pin. The Cycle 80 compute-cull
     // collapse - not this prewarm - is what brought the cold load within budget
-    // (~506ms in the Cycle 81 production gate, prewarm included); inert on the mobile
-    // WebGL path. Original prewarm measurement: docs/cycle-74-plan.md + cycle74-validation/.
+    // (~506ms in the Cycle 81 production gate, prewarm included); inert on explicit
+    // WebGL fallback. Original prewarm measurement: docs/cycle-74-plan.md + cycle74-validation/.
     prewarmShaders: true,
 };

@@ -862,15 +862,15 @@ export class TerrainBuilder {
         // The earlier 2400m/1600m sizes left the perpendicular edge only ~40%
         // fogged at FogExp2 density 0.0006 — a faint but visible cutoff line.
         //   Desktop: 4000m / 384 = 10.4m/quad — edge at 2000m is ~76% fogged.
-        //   Mobile now splits this into a dense 720m inner heightfield plus a
-        //   cheap 3200m flat skirt. The old single 3200m mobile mesh spent
-        //   most vertices in fog and left the playable hills at ~8-12m quads,
-        //   which read as visible terrain lines on phone screenshots.
+        //   Mobile fields split this into a dense 720m inner heightfield plus a
+        //   cheap 3200m flat skirt. Coastline scenes keep the full 3200m mesh
+        //   because Newsheepdogland's homestead/play area is far off origin.
         const terrainTier = getSceneManager()?.getTier?.() ?? (this.isMobile ? 'low' : 'med');
-        const terrainSize = this.isMobile ? 720 : 4000;
-        const terrainSkirtSize = this.isMobile ? 3200 : 0;
-        const terrainSkirtSegments = this.isMobile ? 8 : 0;
-        const terrainSkirtTriangles = this.isMobile ? 3072 : 0;
+        const useMobileTerrainSkirt = this.isMobile && this.sceneDef?.boundary?.kind !== 'coastline';
+        const terrainSize = this.isMobile ? (useMobileTerrainSkirt ? 720 : 3200) : 4000;
+        const terrainSkirtSize = useMobileTerrainSkirt ? 3200 : 0;
+        const terrainSkirtSegments = useMobileTerrainSkirt ? 8 : 0;
+        const terrainSkirtTriangles = useMobileTerrainSkirt ? 3072 : 0;
         const terrainSegments = this.isMobile && terrainTier !== 'high' ? 256 : 384;
         const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
         this.konveyorTerrainGeometryBudget = {
@@ -881,7 +881,7 @@ export class TerrainBuilder {
             skirtSize: terrainSkirtSize,
             skirtSegments: terrainSkirtSegments,
             skirtTriangles: terrainSkirtTriangles,
-            splitSkirt: this.isMobile,
+            splitSkirt: useMobileTerrainSkirt,
         };
 
         // Apply heightfield displacement before the mesh is rotated to lie flat.
@@ -902,7 +902,6 @@ export class TerrainBuilder {
             }
             positions.needsUpdate = true;
             terrainGeometry.computeVertexNormals();
-            console.log(`[TERRAIN] Heightfield-displaced terrain (${positions.count} verts, plane=${terrainSize}m)`);
         }
 
         // Custom shader material for varied ground. Uses Three.js's standard
@@ -1079,7 +1078,7 @@ export class TerrainBuilder {
         terrain.rotation.x = -Math.PI / 2;
         terrain.position.y = 0;
         terrain.receiveShadow = true;
-        if (this.isMobile) {
+        if (useMobileTerrainSkirt) {
             const skirtGeometry = createTerrainSkirtGeometry(terrainSkirtSize, terrainSize, this.heightfield);
             this.konveyorTerrainGeometryBudget.skirtTriangles = skirtGeometry.userData.terrainSkirtTriangles;
             const skirt = new THREE.Mesh(skirtGeometry, terrainMaterial);

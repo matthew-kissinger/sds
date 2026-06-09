@@ -139,6 +139,56 @@ describe('konveyor terrain material adapter', () => {
         }
     });
 
+    it('uses the full island terrain mesh for mobile coastline scenes', () => {
+        const contexts = [];
+        const bakeArgs = [];
+        const scene = new THREE.Scene();
+        const builder = new TerrainBuilder(scene, true, {
+            boundary: { kind: 'coastline' },
+        }, {
+            search: '?renderer=webgpu&konveyorTerrain=1',
+            konveyorTerrainFactories: {
+                createTerrainMaterial: (context) => {
+                    contexts.push(context);
+                    return createMaterial('konveyor-terrain-coastline');
+                },
+            },
+        });
+        builder.setHeightfield({
+            width: 17,
+            height: 17,
+            worldSize: 3300,
+            peakHeight: 12,
+            bakeMeshGrid: (args) => {
+                bakeArgs.push(args);
+                return new Float32Array((args.segments + 1) * (args.segments + 1)).fill(3.4);
+            },
+        });
+
+        const terrain = builder.createTerrain();
+        try {
+            expect(terrain.material.name).toBe('konveyor-terrain-coastline');
+            expect(contexts).toHaveLength(1);
+            expect(contexts[0].size).toBe(3200);
+            expect(contexts[0].segments).toBe(256);
+            expect(bakeArgs).toEqual([{ segments: 256, size: 3200 }]);
+            expect(builder.terrainSkirtMesh).toBeNull();
+            expect(builder.konveyorTerrainGeometryBudget).toMatchObject({
+                isMobile: true,
+                size: 3200,
+                segments: 256,
+                skirtSize: 0,
+                skirtSegments: 0,
+                skirtTriangles: 0,
+                splitSkirt: false,
+            });
+            expect(terrain.geometry.parameters.width).toBe(3200);
+            expect(terrain.geometry.parameters.height).toBe(3200);
+        } finally {
+            disposeTerrain(builder);
+        }
+    });
+
     it('can route terrain ground through the reusable WebGPU node material candidate', () => {
         const contexts = [];
         const nodeFactories = createKonveyorTerrainNodeMaterialFactories(
