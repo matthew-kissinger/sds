@@ -29,6 +29,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.9] - 2026-06-09
+
+### Fixed
+
+- Newsheepdogland's default cold-start tree budget is now a true first-session
+  homestead corridor instead of a broader island forest pass, so Play reaches
+  the survival run on slow hosted Chromium without leaving the player stuck on
+  stale loading/game state.
+
+### Validation
+
+- `git diff --check`, focused tree/cache Vitest, full `npm test`,
+  `npm run lint`, `npm run build`, focused Newsheepdogland Chromium E2E, and
+  the full Chromium Playwright smoke command passed locally.
+
 ## [2.2.8] - 2026-06-09
 
 ### Fixed

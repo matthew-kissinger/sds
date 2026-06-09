@@ -84,10 +84,10 @@ export const newsheepdogland = {
             // Keep placement on the playable foot/homestead corridor. The
             // mountain and lower leg need a density/LOD pass before they can
             // join the default cold path without making Play feel stuck.
-            nearField: { minX: -210, maxX: 600, minZ: -1190, maxZ: -865 },
-            midField: { minX: -240, maxX: 650, minZ: -1210, maxZ: -855 },
-            farField: { minX: -260, maxX: 680, minZ: -1220, maxZ: -845 },
-            horizon: { minX: -280, maxX: 700, minZ: -1230, maxZ: -835 },
+            nearField: { minX: 60, maxX: 400, minZ: -1070, maxZ: -905 },
+            midField: { minX: 20, maxX: 440, minZ: -1090, maxZ: -890 },
+            farField: { minX: -10, maxX: 470, minZ: -1110, maxZ: -875 },
+            horizon: { minX: -30, maxX: 500, minZ: -1125, maxZ: -865 },
         },
     },
 
