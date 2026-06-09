@@ -49,3 +49,23 @@ feels immediate enough for playtesting.
   (`chromium`, `firefox`, `webkit`), GitHub Deploy-equivalent Chromium E2E
   (`--grep-invert='@local-only'`), and the focused Open Country local-only
   objective helper passed locally.
+
+## Hosted And Live Validation
+
+- 2026-06-09 v2.2.12 commit `2ace6f0`: GitHub Deploy run `27226644818`
+  passed Test, remote D1 migration, Chromium E2E, Pages deploy, and Worker
+  deploy.
+- Live Pages root served `assets/main-YccL6roX.js`; `sw.js` served
+  `BUILD_ID = '1781029228890'`; direct Worker health returned
+  `{"ok":true,"worker":"sds-worker"}`.
+- Live stale-cache proof seeded fake cache entries and verified network-first
+  replacement:
+  - `/terrain/newsheepdogland.bin`: `4` bytes stale -> `4,194,304` bytes fresh.
+  - `/assets/scenes/entrance/newsheepdogland.webp`: `11` bytes stale ->
+    `195,732` bytes fresh.
+- Live loop proof passed: default `Play` entered Newsheepdogland with
+  `dayLoop`, `_survivalRun`, `_wolfPack`, and minimap active; `Pause -> Main
+  Menu` cleared them; second `Play` rebuilt them.
+- Real mobile remains the only unproven acceptance item. This run found no
+  authorized ADB device and no BrowserStack/Android/iOS credentials in the
+  environment.

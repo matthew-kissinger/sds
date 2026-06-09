@@ -1,60 +1,104 @@
-# Next Session - Post v2.2.5 mobile WebGPU hotfix
+# Next Session - Newsheepdogland first-session readiness
 
 > **Updated:** 2026-06-09
-> **For:** Post-Cycle 84 handoff. Latest closed cycle: Cycle 84 `mobile-webgpu-primary-hotfix`, archived at [`docs/archive/cycles/cycle-84-plan.md`](docs/archive/cycles/cycle-84-plan.md).
-> **Pickup priority:** Verify the live deploy on Matt's actual phone, then start the next cycle from Matt's next target.
+> **For:** Cycle 85 `newsheepdogland-entrance-readiness`.
+> **Pickup priority:** Get one real mobile proof for the live Newsheepdogland
+> first-session loop, then decide whether Cycle 85 can close or needs another
+> state-ownership cleanup pass.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/BACKLOG.md`](docs/BACKLOG.md) -> [`DECISIONS.md`](DECISIONS.md). There is no active cycle plan at this snapshot; create/scaffold the next one only after Matt gives the next direction.
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this
+file -> [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) ->
+[`docs/hardening/ORCHESTRATION.md`](docs/hardening/ORCHESTRATION.md) if the
+work is hardening-related.
+
+`docs/cycle-85-plan.md` is the active cycle plan. Do not treat older
+Newsheepdogland handoffs as current unless the repo state confirms them.
 
 ## Where It Stands
 
-**Cycle 84 (`mobile-webgpu-primary-hotfix`) is CLOSED and shipped as `v2.2.5` (2026-06-09).** It responds to Matt's browser report: on mobile/browser, first Play refreshed into WebGL and the second Play spawned the dog in the water.
+**Cycle 85 is open.** The shipped proof below is for `v2.2.12` at commit
+`2ace6f0`, deployed by GitHub Deploy run `27226644818`.
 
-What changed:
+What changed in `v2.2.12`:
 
-- Newsheepdogland no longer declares `renderer:'webgl'`.
-- The mobile boot/swap guards that rewrote WebGPU sessions to `?renderer=webgl&fallbackReason=scene-pinned-webgl` are removed.
-- Explicit `?renderer=webgl` remains the fallback escape hatch.
-- Mobile coastline terrain now uses a 3200 m mesh instead of the 720 m inner-grid + skirt split, so the Newsheepdogland homestead spawn is inside the visual mesh.
-- Mobile WebGPU Newsheepdogland uses the consolidated grass/tree compute-cull path.
+- Newsheepdogland is the default URL-less first-session world.
+- Entrance Play waits for game boot before committing the run.
+- Returning from Newsheepdogland to Main Menu tears down survival-only UI and
+  state before the next Play.
+- The service worker treats mutable un-hashed entrance images and terrain files
+  as network-first, so stale cached Newsheepdogland assets are overwritten on
+  online fetch.
+- Newsheepdogland survival boot loads HUD, containment, minimap, and skip
+  modules in parallel, and lazy-loads the wolf renderer after the scene body is
+  playable.
+- WebKit no longer crashes the Play path when audio or gamepad browser APIs are
+  unavailable.
 
-Validation before release:
+Validation already completed for `v2.2.12`:
 
-- Targeted WebGPU scene, grass, terrain, and render-cost tests passed.
-- `npm test` passed, including sim-baselines unchanged.
-- `npm run lint` passed.
-- `npm run build` passed; local `main-*.js` stayed inside the 592 KB bundle ratchet at 606,683 bytes.
-- Mobile-emulated Chrome proof from the normal entrance with one Play click passed: `webgpu-production`, no `renderer=webgl`, no `fallbackReason`, terrain budget `size=3200`, `splitSkirt=false`, grass compute-cull true, 4 tree compute-cull controllers, sheepdog y `3.4006`, and terrain surface y `3.4006`.
-- Chromium Playwright subset passed: `npx playwright test --project=chromium tests/e2e/smoke.spec.ts tests/e2e/mobile-asset-visibility.spec.ts` (5 passed).
-- Release commit `8df0acc` is tagged `v2.2.5`; GitHub Deploy run `27209758357` passed Test, E2E Chromium, D1 migrate, Worker deploy, and Pages deploy.
-- Live proof on `sheepdogsim.com` fetched `assets/main-DA6jksvi.js` and confirmed the mobile WebGL scene pin markers are absent, Worker health is green, and the Newsheepdogland entrance image is live.
-- Live Pixel 7 emulation proof on `sheepdogsim.com` confirmed Newsheepdogland effective renderer `webgpu-production`, no fallback URL params, 3200 m mobile coastline terrain, grass compute-cull true, 4 tree compute-cull controllers, and dog y on the terrain surface.
+- Local `git diff --check`, `npm test`, `npm run lint`, `npm run build`,
+  cross-browser smoke (`chromium`, `firefox`, `webkit`), deploy-equivalent
+  Chromium E2E, and focused Open Country local-only helper all passed.
+- GitHub Deploy run `27226644818` passed Test, remote D1 migration, Chromium
+  E2E, Pages deploy, and Worker deploy.
+- Live `sheepdogsim.com` proof found `assets/main-YccL6roX.js`, service worker
+  `BUILD_ID = '1781029228890'`, direct Worker health
+  `{"ok":true,"worker":"sds-worker"}`, and Newsheepdogland as the default
+  scene after Play.
+- Live stale-cache proof seeded fake cached entries and verified online fetch
+  overwrote them:
+  - `/terrain/newsheepdogland.bin`: `4` bytes stale -> `4,194,304` bytes fresh.
+  - `/assets/scenes/entrance/newsheepdogland.webp`: `11` bytes stale ->
+    `195,732` bytes fresh.
+- Live loop proof passed: `Play -> Pause -> Main Menu -> Play` returned to
+  Newsheepdogland, cleared `dayLoop`, `_survivalRun`, `_wolfPack`, and minimap
+  on menu return, then rebuilt them on the second Play.
 
-Known validation caveat:
+## Current Repo Caution
 
-- Full local `npm run test:e2e` was attempted but exceeded a 3-minute command timeout before useful output. The focused Chromium browser gate above was used for this hotfix.
+At this handoff, local `main` may contain hardening commits after `v2.2.12`.
+Those commits are not part of the live deploy proof above unless they have since
+been pushed and the deploy proof has been refreshed. Check:
+
+```bash
+git status --short --branch
+git log --oneline --decorate -8
+```
+
+Do not claim live production proof for commits newer than `2ace6f0` until their
+own GitHub Deploy and live Pages/Worker checks pass.
 
 ## Open Carryover
 
-- Run the mobile WebGPU proof on Matt's actual phone. The shipped proof used Chrome Pixel 7 emulation on the development machine and live `sheepdogsim.com`.
-- Prior tablet draw-call/perf work remains open where real-device measurements show budget pressure.
-- Full cross-browser e2e selectors/WebKit smoke still need the maintenance pass documented during Cycle 83.
+- **Real mobile proof remains open.** This run found no authorized ADB device
+  and no BrowserStack/Android/iOS credentials in the environment. Chromium
+  mobile emulation passed, but it is not the required real mobile acceptance.
+- The actual phone proof should cover the live `https://sheepdogsim.com/`
+  default path: first Play, terrain-safe spawn, visible mobile controls/HUD,
+  pause/Main Menu, second Play, and no stale asset/cache behavior.
+- If real mobile is still unavailable, continue simplifying first-session state
+  ownership locally, but do not close Cycle 85 or this goal.
 
 ## Working Contract
 
-- No `shared/` sim change unless the next active cycle scopes it and records acceptance; sim-baselines stay byte-identical unless a future cycle explicitly accepts a golden change.
-- Do not reintroduce the Newsheepdogland mobile WebGL pin. WebGPU is primary/default on capable browsers; explicit `?renderer=webgl` remains the fallback.
-- Keep the flagship mesh consolidation intact: Newsheepdogland WebGPU should stay at grass compute-cull true and tree compute-cull controllers active on the production path.
-- Agent-launched Vite must set `SDS_SUPPRESS_BROWSER_OPEN=1`; close every Playwright page/browser and stop dev/preview listeners after a probe.
+- Preserve the Cycle 85 scope in [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md).
+- Do not regenerate sim-baseline goldens for this cycle.
+- Do not edit frozen `shared/` files outside explicit cycle-plan acceptance.
+- Agent-launched Vite/Playwright must set `SDS_SUPPRESS_BROWSER_OPEN=1`; close
+  every page/browser and stop local listeners after probes.
+- When release proof matters, verify Pages (`https://sheepdogsim.com/`) and the
+  direct Worker (`https://sds-worker.matt-m-kissinger.workers.dev/healthz`)
+  separately.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Latest closed cycle | [`docs/archive/cycles/cycle-84-plan.md`](docs/archive/cycles/cycle-84-plan.md) |
+| Active cycle | [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) |
+| Hardening program | [`docs/hardening/ORCHESTRATION.md`](docs/hardening/ORCHESTRATION.md) |
+| Release log | [`CHANGELOG.md`](CHANGELOG.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Mobile WebGPU hotfix files | [`js/main.js`](js/main.js), [`js/TerrainBuilder.js`](js/TerrainBuilder.js), [`shared/scenes/newsheepdogland.js`](shared/scenes/newsheepdogland.js) |
-| Compute-cull modules | [`js/world/grassComputeCull.js`](js/world/grassComputeCull.js), [`js/world/treeComputeCull.js`](js/world/treeComputeCull.js), [`js/world/konveyorWebGpuModules.js`](js/world/konveyorWebGpuModules.js) |
-| Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
+| Service worker cache policy | [`public/sw.js`](public/sw.js) |
+| Entrance world default | [`js/components/entrance/worlds.ts`](js/components/entrance/worlds.ts) |
