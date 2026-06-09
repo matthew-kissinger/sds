@@ -28,7 +28,7 @@ const SOURCE_LABEL = 'github.com/matthew-kissinger/sds';
 
 export function LoadingScreen({ flow }: { flow: BootFlow }) {
   return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div data-sds-loading-screen="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ position: 'absolute', inset: 0, filter: 'blur(2px)', transform: 'scale(1.05)' }}>
         <WorldImage world={flow.world} />
       </div>

@@ -37,13 +37,14 @@ export function createSkipToDusk(game) {
     const isTouch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
     const reducedMotion = typeof matchMedia !== 'undefined'
         && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const top = isTouch ? 'calc(env(safe-area-inset-top, 0px) + 106px)' : '58px';
 
     const btn = document.createElement('button');
     btn.id = 'sds-skip-dusk';
     btn.type = 'button';
     btn.textContent = isTouch ? 'SKIP TO DUSK' : 'SKIP TO DUSK  ·  F';
     btn.style.cssText = [
-        'position:fixed', 'top:58px', 'left:50%', 'transform:translateX(-50%)',
+        'position:fixed', 'top:' + top, 'left:50%', 'transform:translateX(-50%)',
         'z-index:1201', 'pointer-events:auto', 'cursor:pointer', 'display:none',
         'font:600 11px/1 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif',
         'letter-spacing:1.2px', 'color:#f3ead3', 'background:rgba(38,30,22,0.62)',

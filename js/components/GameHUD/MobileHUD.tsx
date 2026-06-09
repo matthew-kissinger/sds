@@ -77,7 +77,7 @@ export function MobileHUD({ gameData, stamina, onPause }: MobileHUDProps) {
     };
 
     return (
-        <div style={{ animation: 'slideDown 0.5s ease-out', pointerEvents: 'auto' }}>
+        <div data-sds-mobile-hud="true" style={{ animation: 'slideDown 0.5s ease-out', pointerEvents: 'auto' }}>
             <div style={panelStyle}>
                 <button
                     type="button"

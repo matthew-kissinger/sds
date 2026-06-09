@@ -17,7 +17,7 @@ export class MobileControls {
         this.isSprinting = false; // Bridge for React MobileHUD
         this.onZoomChange = null; // Bridge for React MobileHUD zoom callback
         
-        // UI elements (fullscreen banner only)
+        // UI elements (fullscreen button only)
         this.fullscreenButton = null;
         this.persistentFullscreenButton = null;
         
@@ -271,42 +271,43 @@ export class MobileControls {
         // Only show on mobile devices that support fullscreen (skip iOS entirely)
         if (!this.isTouchDevice || !this.isFullscreenSupported()) return;
 
-        // Create simple, reliable fullscreen banner
-        this.fullscreenButton = document.createElement('div');
-        this.fullscreenButton.id = 'mobile-fullscreen-banner';
+        // Create simple, reliable fullscreen button
+        this.fullscreenButton = document.createElement('button');
+        this.fullscreenButton.type = 'button';
+        this.fullscreenButton.id = 'mobile-fullscreen-button';
+        this.fullscreenButton.setAttribute('aria-label', 'Enter fullscreen');
+        this.fullscreenButton.title = 'Enter fullscreen';
         this.fullscreenButton.innerHTML = `
-            <div class="banner-content">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.9;">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
-                    <path d="M21 8V5a2 2 0 0 0-2-2h-3"></path>
-                    <path d="M3 16v3a2 2 0 0 0 2 2h3"></path>
-                    <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
-                </svg>
-                <span class="banner-text">Tap for fullscreen</span>
-            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.95;">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+                <path d="M21 8V5a2 2 0 0 0-2-2h-3"></path>
+                <path d="M3 16v3a2 2 0 0 0 2 2h3"></path>
+                <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+            </svg>
         `;
         
         // Simple, reliable styling
         this.fullscreenButton.style.cssText = `
             position: fixed;
-            top: calc(env(safe-area-inset-top, 0px) + 4.75rem);
-            left: 50%;
-            transform: translateX(-50%);
+            top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+            left: calc(env(safe-area-inset-left, 0px) + 0.75rem);
             z-index: 1001;
+            width: 44px;
+            height: 44px;
             
-            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(43, 38, 32, 0.58);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 1rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(246, 239, 224, 0.22);
+            border-radius: 12px;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
             
-            padding: 0.75rem 1rem;
+            padding: 0;
             color: white;
             font-family: Arial, sans-serif;
-            font-size: 0.9rem;
-            font-weight: bold;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
             
             cursor: pointer;
             user-select: none;
@@ -314,34 +315,28 @@ export class MobileControls {
             -webkit-tap-highlight-color: transparent;
             
             transition: all 0.3s ease;
-            animation: bannerSlideIn 0.5s ease-out;
+            animation: fullscreenButtonIn 0.35s ease-out;
         `;
         
-        // Add banner animation CSS
+        // Add button animation CSS
         if (!document.getElementById('banner-animations')) {
             const style = document.createElement('style');
             style.id = 'banner-animations';
             style.textContent = `
-                @keyframes bannerSlideIn {
+                @keyframes fullscreenButtonIn {
                     from {
                         opacity: 0;
-                        transform: translateX(-50%) translateY(-20px);
+                        transform: translateY(-8px);
                     }
                     to {
                         opacity: 1;
-                        transform: translateX(-50%) translateY(0);
+                        transform: translateY(0);
                     }
                 }
-                
-                #mobile-fullscreen-banner .banner-content {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                }
 
-                #mobile-fullscreen-banner:active {
-                    transform: translateX(-50%) scale(0.98);
-                    background: rgba(0, 191, 255, 0.2);
+                #mobile-fullscreen-button:active {
+                    transform: scale(0.96);
+                    background: rgba(246, 239, 224, 0.18);
                 }
             `;
             document.head.appendChild(style);
@@ -447,7 +442,7 @@ export class MobileControls {
         if (this.fullscreenButton) {
             // Smooth fade out animation
             this.fullscreenButton.style.opacity = '0';
-            this.fullscreenButton.style.transform = 'translateX(-50%) translateY(-20px)';
+            this.fullscreenButton.style.transform = 'translateY(-8px)';
             this.fullscreenButton.style.pointerEvents = 'none';
             
             setTimeout(() => {

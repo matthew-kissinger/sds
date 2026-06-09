@@ -26,6 +26,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:ios-water": "node tools/browserstack/run-ios-water.mjs",
+    "proof:first-session": "node tools/newsheepdogland-first-session-proof.mjs",
     "cinema": "node tools/cinematic/run.mjs",
     "clean": "rm -rf dist node_modules/.vite",
     "compress-glbs": "node scripts/compress-glbs.mjs",

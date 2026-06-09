@@ -27,7 +27,7 @@
 export const RENDERER_FALLBACK_NOTICE_KEY = 'sds:rendererFallbackNoticed';
 
 /** Toast lifetime before self-dismissal. */
-export const TOAST_DURATION_MS = 9000;
+export const TOAST_DURATION_MS = 3000;
 
 const NO_NOTICE = Object.freeze({ notify: false, reason: null });
 
@@ -119,8 +119,10 @@ export function maybeNotifyRendererFallback({
  * MobilePerfWarning.tsx). Vanilla DOM on purpose: it fires from the main.js
  * boot path before/independent of the lazy React overlay, and App.js is the
  * React mount owner. `pointer-events: none` keeps it strictly non-blocking;
- * `role="status"` keeps it polite for screen readers. Strings ride the shared
- * i18n instance (bundled resources, synchronous `t` after import).
+ * `role="status"` keeps it polite for screen readers. The toast is intentionally
+ * entrance-only so renderer diagnostics never compete with active play.
+ * Strings ride the shared i18n instance (bundled resources, synchronous `t`
+ * after import).
  */
 export function showRendererFallbackToast() {
     if (typeof document === 'undefined') return;
@@ -132,6 +134,8 @@ export function showRendererFallbackToast() {
 }
 
 function mountToast(title, body) {
+    if (window.__sds?.gameInstanceRef?.gameState?.gameActive === true) return;
+
     const root = document.createElement('div');
     root.id = 'renderer-fallback-toast';
     root.setAttribute('role', 'status');
@@ -141,44 +145,56 @@ function mountToast(title, body) {
         top: 'calc(16px + env(safe-area-inset-top, 0px))',
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: '200',
-        maxWidth: 'min(380px, calc(100vw - 32px))',
-        padding: '12px 16px',
-        borderRadius: '16px',
+        zIndex: '18',
+        maxWidth: 'min(280px, calc(100vw - 32px))',
+        padding: '8px 10px',
+        borderRadius: '8px',
         background: 'color-mix(in srgb, var(--color-cream, #f6f1e7) 94%, transparent)',
         border: '1px solid var(--color-glass-warm-border, rgba(43,38,32,0.18))',
-        boxShadow: '0 10px 34px rgba(43,38,32,0.28)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        boxShadow: '0 8px 22px rgba(43,38,32,0.22)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         color: 'var(--color-ink, #2b2620)',
-        textAlign: 'center',
+        textAlign: 'left',
         pointerEvents: 'none',
         opacity: '0',
-        transition: 'opacity var(--duration-calm, 420ms) var(--ease-pastoral, ease-out)',
+        transition: 'opacity 220ms var(--ease-pastoral, ease-out)',
     });
 
     const titleEl = document.createElement('div');
     titleEl.textContent = title;
     Object.assign(titleEl.style, {
         fontFamily: 'var(--font-display)',
-        fontSize: '14px',
+        fontSize: '12px',
         fontWeight: '600',
         lineHeight: '1.25',
     });
     const bodyEl = document.createElement('div');
     bodyEl.textContent = body;
     Object.assign(bodyEl.style, {
-        marginTop: '4px',
-        fontSize: '12.5px',
-        lineHeight: '1.45',
+        marginTop: '2px',
+        fontSize: '11px',
+        lineHeight: '1.3',
         color: 'var(--color-ink-soft, rgba(43,38,32,0.72))',
     });
     root.append(titleEl, bodyEl);
     document.body.appendChild(root);
 
-    requestAnimationFrame(() => { root.style.opacity = '1'; });
-    setTimeout(() => {
+    let removed = false;
+    let activePlayTimer = null;
+    let autoDismissTimer = null;
+    const dismiss = () => {
+        if (removed) return;
+        removed = true;
+        if (activePlayTimer) clearInterval(activePlayTimer);
+        if (autoDismissTimer) clearTimeout(autoDismissTimer);
         root.style.opacity = '0';
-        setTimeout(() => root.remove(), 600);
-    }, TOAST_DURATION_MS);
+        setTimeout(() => root.remove(), 300);
+    };
+    activePlayTimer = setInterval(() => {
+        if (window.__sds?.gameInstanceRef?.gameState?.gameActive === true) dismiss();
+    }, 250);
+    autoDismissTimer = setTimeout(dismiss, TOAST_DURATION_MS);
+
+    requestAnimationFrame(() => { root.style.opacity = '1'; });
 }

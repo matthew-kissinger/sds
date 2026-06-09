@@ -682,7 +682,7 @@ export async function initReactUI() {
         }
 
         // ==================== GAME HUD ====================
-	        function GameHUD({ onReturnToMenu }) {
+	        function GameHUD() {
 	            const gameData = useGameState();
 	            const platform = usePlatform();
 	            const [isPaused, setIsPaused] = useState(false);
@@ -814,36 +814,9 @@ export async function initReactUI() {
             // Return to main menu
             const handleMainMenu = useCallback(() => {
                 console.log('[GameHUD] handleMainMenu called');
-                // Unpause first
                 handleResume();
-
-                // Reset game state
-                const gameInstance = getGameInstance();
-                const gameState = getGameState();
-
-                if (gameState) {
-                    gameState.gameActive = false;
-                    gameState.gameCompleted = false;
-                }
-
-                // Show start screen
-                const menuController =getMenuController();
-                if (menuController) {
-                    menuController.reset();
-                }
-
-                // Trigger return to menu
-                if (onReturnToMenu) {
-                    onReturnToMenu();
-                }
-
-                // Route return-to-menu through restartToMenu, which disposes
-                // and rebuilds in-process against the persistent renderer for
-                // single-player (multiplayer still hard-reloads). The
-                // gameState/menuController resets above remain the UI-side
-                // reset; restartToMenu owns the scene-side teardown.
                 getGameInstance()?.restartToMenu();
-            }, [handleResume, onReturnToMenu]);
+            }, [handleResume]);
 
             // Toggle fullscreen
             const handleToggleFullscreen = useCallback(() => {
@@ -1026,6 +999,7 @@ export async function initReactUI() {
             const reduce = useReducedMotion();
 
             useEffect(() => {
+                if (gameStarted) return undefined;
                 const check = setInterval(() => {
                     if (getGameState()?.isGameActive?.()) {
                         console.log('[UI] Game started');
@@ -1051,15 +1025,21 @@ export async function initReactUI() {
                     }
                 }, 100);
 
+                return () => {
+                    clearInterval(check);
+                };
+            }, [gameStarted]);
+
+            useEffect(() => {
                 // Cycle 11 Phase 1: in-process restartToMenu emits this so we
                 // remount StartScreen immediately (no 100ms polling latency).
                 const unsubRestart = subscribeGameEvent('scene-restart-to-menu', () => {
                     console.log('[UI] scene-restart-to-menu — remounting StartScreen');
+                    setRevealHandoff(false);
                     setGameStarted(false);
                 });
 
                 return () => {
-                    clearInterval(check);
                     unsubRestart();
                 };
             }, []);

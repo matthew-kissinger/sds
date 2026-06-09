@@ -33,8 +33,25 @@ const C = {
     wolf: '#f0613a',
 };
 
-const SIZE_MAX = 158;   // longest minimap edge in CSS px
-const PAD = 6;          // inner padding in CSS px
+const SIZE_MAX = 158;          // longest minimap edge in CSS px
+const MOBILE_SIZE_MAX = 104;   // keep the mobile top HUD readable
+const PAD = 6;                 // inner padding in CSS px
+
+function _isCompactMobile() {
+    if (typeof window === 'undefined') return false;
+    const coarsePointer = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+    return coarsePointer || window.innerWidth <= 480;
+}
+
+function _sizeMax() {
+    if (_isCompactMobile()) return MOBILE_SIZE_MAX;
+    return SIZE_MAX;
+}
+
+function _topOffset() {
+    if (_isCompactMobile()) return 'calc(env(safe-area-inset-top, 0px) + 96px)';
+    return '8px';
+}
 
 /**
  * Build the world->canvas transform + the island Path2D from the coast polygon.
@@ -49,8 +66,9 @@ function _buildTransform(points) {
     }
     const wWorld = Math.max(1, maxX - minX);
     const hWorld = Math.max(1, maxZ - minZ);
-    // Fit the bbox into SIZE_MAX preserving aspect.
-    const scale = (SIZE_MAX - 2 * PAD) / Math.max(wWorld, hWorld);
+    // Fit the bbox into the active size preserving aspect.
+    const sizeMax = _sizeMax();
+    const scale = (sizeMax - 2 * PAD) / Math.max(wWorld, hWorld);
     const wCss = wWorld * scale + 2 * PAD;
     const hCss = hWorld * scale + 2 * PAD;
     return {
@@ -76,7 +94,7 @@ export function mountMinimap({ points, pen } = {}) {
     const wrap = document.createElement('div');
     wrap.id = 'sds-minimap';
     wrap.style.cssText = [
-        'position:fixed', 'top:8px', 'right:8px', 'z-index:1200',
+        'position:fixed', 'top:' + _topOffset(), 'right:8px', 'z-index:1200',
         'pointer-events:none', 'user-select:none',
         `width:${Math.round(_xf.wCss)}px`, `height:${Math.round(_xf.hCss)}px`,
         'background:rgba(38,30,22,0.42)', 'border:1px solid rgba(243,234,211,0.18)',
