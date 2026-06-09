@@ -89,6 +89,14 @@ export default {
         extremeDesc: '将1000只羊赶入牧场 - 性能挑战！'
     },
 
+    // P1-MOBILE-WARN: 移动端开局前的性能提示。
+    mobileWarning: {
+        title: '对这台设备来说羊群太大了',
+        body: '{{sheep}} 只羊对手机或平板来说负担很大，可能会掉帧。你可以继续，也可以返回选一个小一点的羊群。',
+        continue: '仍要继续',
+        goBack: '返回'
+    },
+
     // Settings panel
     settings: {
         title: '设置',
@@ -236,6 +244,8 @@ export default {
         competitiveDesc: '抢在对手之前收集最多的羊',
         timed: '限时赛（3分钟）',
         timedDesc: '在3分钟内尽可能多得分',
+        // P1-MOBILE-WARN: 移动端房主选择超过 1000 只羊时的提示。
+        mobileHostHighSheep: '这台设备是移动端。超过 1,000 只羊的房间只允许桌面端玩家加入，所以你将无法加入自己创建的房间。',
         roomCode: '房间代码',
         enterRoomCode: '输入房间代码',
         leaveRoom: '离开房间',
@@ -248,7 +258,10 @@ export default {
         title: '游戏大厅',
         roomCode: '房间代码',
         playersCount: '玩家（{{current}}/{{max}}）',
-        waitingForMore: '等待更多玩家...'
+        waitingForMore: '等待更多玩家...',
+        // [P1-SHARE] copy-invite-link affordance.
+        copyInviteLink: '复制邀请链接',
+        inviteLinkCopied: '链接已复制'
     },
 
     // Leaderboard
@@ -322,7 +335,19 @@ export default {
             sheepCollected: '收集的羊',
             teamTime: '团队时间'
         },
-        sheepUnit: '{{count}}只羊'
+        sheepUnit: '{{count}}只羊',
+        // [P1-SHARE] completion share button + Web Share / clipboard payload.
+        share: {
+            button: '分享',
+            copied: '已复制',
+            title: 'Sheep Dog Sim',
+            single: '在 Sheep Dog Sim 用 {{time}} 把 {{count}} 只羊赶进了羊圈。',
+            counting: '在 Sheep Dog Sim 数了 {{count}} 只羊，到达第 {{round}} 轮。',
+            mpWin: '在 Sheep Dog Sim 多人对局中以 {{count}} 只羊获胜。',
+            mpScore: '在 Sheep Dog Sim 多人对局中圈了 {{count}} 只羊。',
+            cooperative: '在 Sheep Dog Sim 和队友一起赶了 {{count}} 只羊。',
+            generic: '在 Sheep Dog Sim 玩了一局。'
+        }
     },
 
     // Errors and alerts

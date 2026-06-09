@@ -4,9 +4,10 @@
  * i18n Configuration
  * Internationalization setup using react-i18next.
  *
- * Runtime UI ships in 5 languages. SEO hreflang tags in index.html still cover
- * 18 locales for crawler discovery. Expand runtime locales when a market shows
- * measurable organic traffic. (Cycle 3 trim, 2026-04-24.)
+ * Runtime UI ships in 5 languages, matching the hreflang and JSON-LD
+ * advertisements in index.html (truth-up: P1-L10N, 2026-06-09). Adding a
+ * locale means a real translation in js/locales/, an entry in LANGUAGES
+ * below, and a matching hreflang + schema line in index.html.
  */
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';

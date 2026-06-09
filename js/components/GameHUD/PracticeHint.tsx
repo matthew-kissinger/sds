@@ -14,6 +14,10 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { color } from '../ui/tokens';
+// P1-TUTORIAL: the tutorial runs Just Play under the hood and shows its own
+// move/sprint prompts in the same bottom-center band, so this hint stands down
+// while a tutorial session is live.
+import { isTutorialSessionActive } from '../Tutorial/index.js';
 
 const AUTO_DISMISS_MS = 8000;
 
@@ -24,7 +28,7 @@ export function PracticeHint({ active }: { active: boolean }) {
     const [fadeOut, setFadeOut] = useState(false);
 
     useEffect(() => {
-        if (!active) return;
+        if (!active || isTutorialSessionActive()) return;
         setVisible(true);
         setFadeOut(false);
 

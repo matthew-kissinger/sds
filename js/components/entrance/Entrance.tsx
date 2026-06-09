@@ -21,6 +21,10 @@ import { useViewport } from '../hooks/useViewport';
 import { formatSheep } from './worlds';
 import { COUNTING_GAME_MODE } from '../../../shared/countingModes.js';
 import { useRenameField } from '../shared/useRenameField';
+import { isMobileClient } from '../../utils/isMobileClient.js';
+import { shouldWarnMobileSheep } from '../../utils/mobileSheepWarning.js';
+import { MobilePerfWarning } from './MobilePerfWarning';
+import { TutorialOffer } from '../Tutorial/index.js';
 import type { BootFlow } from './useBootFlow';
 
 export interface EntranceNav {
@@ -176,6 +180,17 @@ function PlayingAsField({ compact }: { compact: boolean }) {
 export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
   const { compact } = useViewport();
   const [dogOpen, setDogOpen] = useState(false);
+  // P1-MOBILE-WARN: a mobile client arming a >1000-sheep solo mode (Insane
+  // 3,000 / Chaos 5,000) gets a performance warning before the round builds.
+  // Continue commits anyway (player choice wins); go back stays here.
+  const [perfWarnOpen, setPerfWarnOpen] = useState(false);
+  const handlePlay = () => {
+    if (shouldWarnMobileSheep({ sheepCount: flow.mode.sheep, gameMode: flow.family.gameMode, isMobile: isMobileClient() })) {
+      setPerfWarnOpen(true);
+      return;
+    }
+    flow.commit();
+  };
   // Cycle 60 P3: controller + keyboard navigation over the entrance controls.
   // Additive - every button keeps its mouse/touch onClick.
   const rootRef = useRef<HTMLDivElement>(null);
@@ -290,7 +305,7 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
                 <div style={{ fontSize: 11, color: pastoral.inkSoft }}>{flow.dog.trait}</div>
               </div>
             </button>
-            <button onClick={flow.commit} style={{
+            <button onClick={handlePlay} style={{
               flex: 1, height: 52, borderRadius: 16, border: 'none', cursor: 'pointer',
               background: pastoral.accentMeadow, color: pastoral.cream, fontSize: 18, fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -329,6 +344,19 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
           </div>
         </div>
       </div>
+
+      {/* P1-TUTORIAL: first-run offer card. Self-gating on sds:tutorialDone;
+          renders nothing for returning players. */}
+      <TutorialOffer dogId={flow.dog.id} />
+
+      {/* P1-MOBILE-WARN: big-flock performance warning for mobile clients. */}
+      {perfWarnOpen && (
+        <MobilePerfWarning
+          sheepCount={flow.mode.sheep}
+          onContinue={() => { setPerfWarnOpen(false); flow.commit(); }}
+          onBack={() => setPerfWarnOpen(false)}
+        />
+      )}
     </div>
   );
 }

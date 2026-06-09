@@ -85,6 +85,26 @@ export default {
         hint: 'WASD or arrow keys to move · Shift to sprint'
     },
 
+    // First-run tutorial (P1-TUTORIAL): offer card + in-run prompts.
+    tutorial: {
+        offerTitle: 'First time herding?',
+        offerBody: 'Take a 60-second guided run on Home Field. Move, sprint, swap the camera, and pen 3 sheep.',
+        offerStart: 'Show me',
+        offerSkip: 'No thanks',
+        skip: 'Skip tutorial',
+        herdProgress: '{{penned}} of {{goal}} penned',
+        step: {
+            move: 'Move your dog with WASD or the arrow keys.',
+            moveTouch: 'Drag the joystick to move your dog.',
+            sprint: 'Hold Shift to sprint. Sprinting drains stamina.',
+            sprintTouch: 'Hold the sprint button for a burst of speed. It drains stamina.',
+            camera: 'Press C to change the camera view.',
+            cameraTouch: 'Tap the camera chip at the top to change the view.',
+            herd: 'Herd 3 sheep through the gate into the pen. Stay behind the flock; sheep run from you.',
+            done: 'Three penned. You know the job now. The rest of the flock is yours.'
+        }
+    },
+
     // Game modes
     modes: {
         title: 'Choose Game Mode',
@@ -98,6 +118,16 @@ export default {
         insaneDesc: 'Herd all 3000 sheep - extreme challenge!',
         chaos: 'Chaos Mode',
         chaosDesc: 'Herd all 5000 sheep - absolute madness!'
+    },
+
+    // P1-MOBILE-WARN: pre-round performance warning for mobile clients arming
+    // a >1000-sheep solo mode (Insane 3000 / Chaos 5000). Two choices, the
+    // player's call - never a permanent block.
+    mobileWarning: {
+        title: 'A big flock for this device',
+        body: '{{sheep}} sheep is a lot for a phone or tablet. Frames may drop. You can keep going, or go back and pick a smaller flock.',
+        continue: 'Continue anyway',
+        goBack: 'Go back'
     },
 
     // Settings panel
@@ -285,6 +315,10 @@ export default {
         timedDesc: 'Score as many points as possible in 3 minutes',
         survival: 'Survival (co-op)',
         survivalDesc: 'Herd the flock home before dusk, then survive the wolf night together. Lose a third of the flock and the run ends.',
+        // P1-MOBILE-WARN: shown to a mobile host picking Insane/Chaos. The
+        // server admits only desktop clients to rooms over 1000 sheep, so the
+        // host's own device cannot join the room it creates.
+        mobileHostHighSheep: 'This device is mobile. Rooms over 1,000 sheep admit desktop players only, so you will not be able to join the room you create.',
         roomCode: 'Room Code',
         enterRoomCode: 'Enter room code',
         leaveRoom: 'Leave Room',
@@ -297,7 +331,10 @@ export default {
         title: 'Game Lobby',
         roomCode: 'Room Code',
         playersCount: 'Players ({{current}}/{{max}})',
-        waitingForMore: 'Waiting for more players...'
+        waitingForMore: 'Waiting for more players...',
+        // [P1-SHARE] copy-invite-link affordance.
+        copyInviteLink: 'Copy invite link',
+        inviteLinkCopied: 'Link copied'
     },
 
     // Leaderboard
@@ -387,6 +424,19 @@ export default {
             teamTime: 'Team Time'
         },
         sheepUnit: '{{count}} sheep',
+        // [P1-SHARE] completion share button + Web Share / clipboard payload.
+        // Concrete numbers, no hype, per the prose-and-voice rule.
+        share: {
+            button: 'Share',
+            copied: 'Copied',
+            title: 'Sheep Dog Sim',
+            single: 'Herded {{count}} sheep into the pen in {{time}} on Sheep Dog Sim.',
+            counting: 'Counted {{count}} sheep and reached round {{round}} on Sheep Dog Sim.',
+            mpWin: 'Won a multiplayer round with {{count}} sheep on Sheep Dog Sim.',
+            mpScore: 'Penned {{count}} sheep in a multiplayer round on Sheep Dog Sim.',
+            cooperative: 'Herded {{count}} sheep with the team on Sheep Dog Sim.',
+            generic: 'Finished a round of Sheep Dog Sim.'
+        },
         // Cycle 59 (Counting Sheep): player-banked summary.
         counting: {
             title: 'Sheep counted',

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
+import { copyTextToClipboard } from '../shared/clipboard.js';
 
 // Dog type to display icon mapping
 const DOG_ICONS = {
@@ -31,17 +32,23 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, gameMode, modeLoc
     const [linkCopied, setLinkCopied] = useState(false);
     const { isCompact } = useResponsive();
 
-    const copyRoomCode = () => {
-        navigator.clipboard.writeText(roomCode);
+    // [P1-SHARE] both copy affordances route through the shared clipboard
+    // helper (async Clipboard API with an execCommand fallback) so they work
+    // in insecure contexts and older WebViews too.
+    const copyRoomCode = async () => {
+        const ok = await copyTextToClipboard(roomCode);
+        if (!ok) return;
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const copyInviteLink = () => {
+    const copyInviteLink = async () => {
         // Use the current origin so links work in local dev (localhost:3001),
         // preview deploys, and production (sheepdogsim.com) without rewriting.
+        // App.js handles the #/r/<code> hash as a room invite on boot.
         const url = `${location.origin}#/r/${roomCode}`;
-        navigator.clipboard.writeText(url);
+        const ok = await copyTextToClipboard(url);
+        if (!ok) return;
         setLinkCopied(true);
         setTimeout(() => setLinkCopied(false), 2000);
     };
@@ -121,7 +128,7 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, gameMode, modeLoc
                         variant: 'secondary',
                         onClick: copyInviteLink,
                         style: { padding: '0.5rem 1rem' }
-                    }, linkCopied ? 'Link copied!' : 'Copy invite link')
+                    }, linkCopied ? t('lobby.inviteLinkCopied') : t('lobby.copyInviteLink'))
                 ]),
 
                 // Game mode badge

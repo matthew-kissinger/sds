@@ -10,6 +10,7 @@ import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
 import { listScenes, loadScene, DEFAULT_SCENE_ID } from '../../../shared/scenes/index.js';
+import { isMobileClient } from '../../utils/isMobileClient.js';
 
 const gameModeDescriptions = {
     cooperative: 'multiplayer.cooperativeDesc',
@@ -56,6 +57,12 @@ export function RoomCreation({ onBack, onCreate }) {
         sceneId: DEFAULT_SCENE_ID
     });
     const { isCompact } = useResponsive();
+    // P1-MOBILE-WARN: a mobile host picking Insane/Chaos needs a sharper
+    // notice than the guest one - the worker rejects EVERY mobile client
+    // (host included) at the WS upgrade on rooms over 1000 sheep
+    // (worker/src/RoomDO.ts MOBILE_GUEST_MAX_SHEEP_COUNT), so the host's own
+    // device cannot join the room it creates.
+    const mobileHost = isMobileClient();
 
     // Resolve the selected scene's display name + allowed modes for the
     // mode dropdown filter. listScenes() is small (3 entries today) and
@@ -187,7 +194,9 @@ export function RoomCreation({ onBack, onCreate }) {
                     )),
                     // Cycle 23 Phase E: warn host that mobile guests will be
                     // rejected when picking Insane/Chaos. Worker also
-                    // enforces this on the WS upgrade.
+                    // enforces this on the WS upgrade. P1-MOBILE-WARN: a
+                    // mobile host gets the sharper first-person version (this
+                    // device itself cannot join the room it creates).
                     settings.sheepCount > DESKTOP_ONLY_THRESHOLD && createElement('p', {
                         key: 'desktop-warning',
                         style: {
@@ -196,7 +205,9 @@ export function RoomCreation({ onBack, onCreate }) {
                             marginTop: '0.4rem',
                             margin: '0.4rem 0 0 0'
                         }
-                    }, 'Mobile players will be unable to join this room. All guests must be on desktop.')
+                    }, mobileHost
+                        ? t('multiplayer.mobileHostHighSheep')
+                        : 'Mobile players will be unable to join this room. All guests must be on desktop.')
                 ]),
 
                 // Mode description

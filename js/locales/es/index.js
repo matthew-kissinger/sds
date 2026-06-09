@@ -89,6 +89,14 @@ export default {
         extremeDesc: '¡Pastorea 1000 ovejas - desafío de rendimiento!'
     },
 
+    // P1-MOBILE-WARN: aviso de rendimiento previo a la partida en móviles.
+    mobileWarning: {
+        title: 'Un rebaño grande para este dispositivo',
+        body: '{{sheep}} ovejas son muchas para un teléfono o una tableta. Pueden perderse fotogramas. Puedes continuar, o volver y elegir un rebaño más pequeño.',
+        continue: 'Continuar igualmente',
+        goBack: 'Volver'
+    },
+
     // Settings panel
     settings: {
         title: 'Ajustes',
@@ -236,6 +244,8 @@ export default {
         competitiveDesc: 'Compite por recoger más ovejas que los oponentes',
         timed: 'Cronometrado (3 min)',
         timedDesc: 'Consigue tantos puntos como sea posible en 3 minutos',
+        // P1-MOBILE-WARN: aviso para un anfitrión móvil que elige más de 1000 ovejas.
+        mobileHostHighSheep: 'Este dispositivo es móvil. Las salas con más de 1000 ovejas solo admiten jugadores de escritorio, así que no podrás unirte a la sala que crees.',
         roomCode: 'Código de Sala',
         enterRoomCode: 'Introducir código de sala',
         leaveRoom: 'Salir de la Sala',
@@ -248,7 +258,10 @@ export default {
         title: 'Sala de Espera',
         roomCode: 'Código de Sala',
         playersCount: 'Jugadores ({{current}}/{{max}})',
-        waitingForMore: 'Esperando más jugadores...'
+        waitingForMore: 'Esperando más jugadores...',
+        // [P1-SHARE] copy-invite-link affordance.
+        copyInviteLink: 'Copiar enlace de invitación',
+        inviteLinkCopied: 'Enlace copiado'
     },
 
     // Leaderboard
@@ -322,7 +335,19 @@ export default {
             sheepCollected: 'Ovejas Recogidas',
             teamTime: 'Tiempo del Equipo'
         },
-        sheepUnit: '{{count}} ovejas'
+        sheepUnit: '{{count}} ovejas',
+        // [P1-SHARE] completion share button + Web Share / clipboard payload.
+        share: {
+            button: 'Compartir',
+            copied: 'Copiado',
+            title: 'Sheep Dog Sim',
+            single: 'Llevé {{count}} ovejas al corral en {{time}} en Sheep Dog Sim.',
+            counting: 'Conté {{count}} ovejas y llegué a la ronda {{round}} en Sheep Dog Sim.',
+            mpWin: 'Gané una partida multijugador con {{count}} ovejas en Sheep Dog Sim.',
+            mpScore: 'Encerré {{count}} ovejas en una partida multijugador en Sheep Dog Sim.',
+            cooperative: 'Llevamos {{count}} ovejas en equipo en Sheep Dog Sim.',
+            generic: 'Terminé una partida de Sheep Dog Sim.'
+        }
     },
 
     // Errors and alerts

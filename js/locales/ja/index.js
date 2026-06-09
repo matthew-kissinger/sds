@@ -89,6 +89,14 @@ export default {
         extremeDesc: '1000匹の羊を牧場へ - パフォーマンスチャレンジ！'
     },
 
+    // P1-MOBILE-WARN: モバイル端末向けのラウンド前パフォーマンス警告。
+    mobileWarning: {
+        title: 'この端末には大きな群れです',
+        body: '{{sheep}}匹の羊はスマートフォンやタブレットには負荷が大きく、フレーム落ちすることがあります。このまま続けるか、戻って小さな群れを選んでください。',
+        continue: 'このまま続ける',
+        goBack: '戻る'
+    },
+
     // Settings panel
     settings: {
         title: '設定',
@@ -236,6 +244,8 @@ export default {
         competitiveDesc: '相手より多くの羊を集めて競争',
         timed: 'タイムアタック（3分）',
         timedDesc: '3分間でできるだけ多くのポイントを獲得',
+        // P1-MOBILE-WARN: 1000匹超を選んだモバイルのホストへの注意書き。
+        mobileHostHighSheep: 'この端末はモバイルです。羊が1,000匹を超えるルームに参加できるのはデスクトップのみのため、作成したルームに自分では参加できません。',
         roomCode: 'ルームコード',
         enterRoomCode: 'ルームコードを入力',
         leaveRoom: 'ルームを退出',
@@ -248,7 +258,10 @@ export default {
         title: 'ゲームロビー',
         roomCode: 'ルームコード',
         playersCount: 'プレイヤー（{{current}}/{{max}}）',
-        waitingForMore: 'プレイヤーを待っています...'
+        waitingForMore: 'プレイヤーを待っています...',
+        // [P1-SHARE] copy-invite-link affordance.
+        copyInviteLink: '招待リンクをコピー',
+        inviteLinkCopied: 'リンクをコピーしました'
     },
 
     // Leaderboard
@@ -322,7 +335,19 @@ export default {
             sheepCollected: '集めた羊',
             teamTime: 'チームタイム'
         },
-        sheepUnit: '{{count}}匹'
+        sheepUnit: '{{count}}匹',
+        // [P1-SHARE] completion share button + Web Share / clipboard payload.
+        share: {
+            button: '共有',
+            copied: 'コピーしました',
+            title: 'Sheep Dog Sim',
+            single: 'Sheep Dog Simで{{count}}匹の羊を{{time}}で柵に追い込みました。',
+            counting: 'Sheep Dog Simで羊を{{count}}匹数えてラウンド{{round}}に到達しました。',
+            mpWin: 'Sheep Dog Simのマルチプレイで{{count}}匹の羊を集めて勝ちました。',
+            mpScore: 'Sheep Dog Simのマルチプレイで{{count}}匹の羊を柵に入れました。',
+            cooperative: 'Sheep Dog Simでチームで{{count}}匹の羊を集めました。',
+            generic: 'Sheep Dog Simで1ラウンド遊びました。'
+        }
     },
 
     // Errors and alerts

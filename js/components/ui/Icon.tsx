@@ -86,6 +86,16 @@ const GLYPHS = {
       <path d="M17.8 7.4a7 7 0 0 1 0 9.2" />
     </>
   ),
+  // [P1-SHARE] three-node share mark for the completion share button.
+  share: (
+    <>
+      <circle cx="6.4" cy="12" r="2.3" />
+      <circle cx="17" cy="6.4" r="2.3" />
+      <circle cx="17" cy="17.6" r="2.3" />
+      <path d="M8.5 10.9l6.4-3.4" />
+      <path d="M8.5 13.1l6.4 3.4" />
+    </>
+  ),
 
   // destinations / modes
   trophy: (

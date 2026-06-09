@@ -89,6 +89,14 @@ export default {
         extremeDesc: 'Pastoreie 1000 ovelhas - desafio de performance!'
     },
 
+    // P1-MOBILE-WARN: aviso de desempenho antes da rodada em dispositivos móveis.
+    mobileWarning: {
+        title: 'Um rebanho grande para este aparelho',
+        body: '{{sheep}} ovelhas é muito para um celular ou tablet. Pode haver queda de quadros. Você pode continuar, ou voltar e escolher um rebanho menor.',
+        continue: 'Continuar mesmo assim',
+        goBack: 'Voltar'
+    },
+
     // Settings panel
     settings: {
         title: 'Configurações',
@@ -218,6 +226,8 @@ export default {
         competitiveDesc: 'Corra para coletar mais ovelhas que os oponentes',
         timed: 'Cronometrado (3 min)',
         timedDesc: 'Consiga o máximo de pontos possível em 3 minutos',
+        // P1-MOBILE-WARN: aviso para um anfitrião móvel que escolhe mais de 1000 ovelhas.
+        mobileHostHighSheep: 'Este aparelho é móvel. Salas com mais de 1000 ovelhas só admitem jogadores de desktop, então você não poderá entrar na sala que criar.',
         roomCode: 'Código da Sala',
         enterRoomCode: 'Inserir código da sala',
         leaveRoom: 'Sair da Sala',
@@ -230,7 +240,10 @@ export default {
         title: 'Sala de Espera',
         roomCode: 'Código da Sala',
         playersCount: 'Jogadores ({{current}}/{{max}})',
-        waitingForMore: 'Aguardando mais jogadores...'
+        waitingForMore: 'Aguardando mais jogadores...',
+        // [P1-SHARE] copy-invite-link affordance.
+        copyInviteLink: 'Copiar link de convite',
+        inviteLinkCopied: 'Link copiado'
     },
 
     // Leaderboard
@@ -304,7 +317,19 @@ export default {
             sheepCollected: 'Ovelhas Coletadas',
             teamTime: 'Tempo da Equipe'
         },
-        sheepUnit: '{{count}} ovelhas'
+        sheepUnit: '{{count}} ovelhas',
+        // [P1-SHARE] completion share button + Web Share / clipboard payload.
+        share: {
+            button: 'Compartilhar',
+            copied: 'Copiado',
+            title: 'Sheep Dog Sim',
+            single: 'Levei {{count}} ovelhas ao cercado em {{time}} no Sheep Dog Sim.',
+            counting: 'Contei {{count}} ovelhas e cheguei à rodada {{round}} no Sheep Dog Sim.',
+            mpWin: 'Venci uma partida multijogador com {{count}} ovelhas no Sheep Dog Sim.',
+            mpScore: 'Cerquei {{count}} ovelhas em uma partida multijogador no Sheep Dog Sim.',
+            cooperative: 'Levamos {{count}} ovelhas em equipe no Sheep Dog Sim.',
+            generic: 'Joguei uma partida de Sheep Dog Sim.'
+        }
     },
 
     // Errors and alerts

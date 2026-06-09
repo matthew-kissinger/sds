@@ -23,6 +23,8 @@ import { useMenuNavigation } from '../hooks/useMenuNavigation';
 import { subscribeGameEvent } from '../../GameBridge.js';
 import { getPlayerIdentity } from '../shared/playerIdentity.js';
 import { NameField } from '../shared/NameField';
+import { copyTextToClipboard } from '../shared/clipboard.js';
+import { buildShareText } from './shareText';
 
 // Decorative celebration glyphs kept inline (no clean shared equivalent): the
 // medal ribbon (gold/silver/bronze ranking) and the rating star.
@@ -316,7 +318,29 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
     // Cycle 58 P8: after a saved run, offer the still-auto-named player a chance
     // to set their own leaderboard name. Non-blocking, dismissed once saved.
     const [nameSaved, setNameSaved] = useState(false);
+    // [P1-SHARE] brief feedback after the clipboard fallback fires (the native
+    // share sheet is its own feedback, so it shows nothing extra).
+    const [shareCopied, setShareCopied] = useState(false);
     const isAutoNamed = (getPlayerIdentity()?.nameType ?? 'auto') === 'auto';
+
+    // [P1-SHARE] Web Share API with a clipboard fallback. Non-blocking: a
+    // dismissed share sheet (AbortError) is a no-op, not a fallback copy.
+    const handleShare = async () => {
+        const payload = buildShareText(mode, data, t);
+        if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+            try {
+                await navigator.share({ title: payload.title, text: payload.text, url: payload.url });
+                return;
+            } catch (err) {
+                if ((err as { name?: string })?.name === 'AbortError') return;
+                // Unsupported payload or share failure: fall through to copy.
+            }
+        }
+        const ok = await copyTextToClipboard(payload.clipboardText);
+        if (!ok) return;
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+    };
 
     useEffect(() => {
         // Trigger entrance animation
@@ -759,6 +783,38 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                             {t('pause.mainMenu')}
                         </button>
                     )}
+
+                    {/* [P1-SHARE] share the run result: native share sheet
+                        where available, clipboard copy otherwise. */}
+                    <button
+                        onClick={handleShare}
+                        aria-label={t('completion.share.button')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '14px 20px',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: pastoral.cream,
+                            background: alpha(pastoral.cream, 10),
+                            border: `1px solid ${alpha(pastoral.cream, 20)}`,
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = alpha(pastoral.cream, 15);
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = alpha(pastoral.cream, 10);
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                    >
+                        <Icon name="share" size={20} color={pastoral.cream} />
+                        {shareCopied ? t('completion.share.copied') : t('completion.share.button')}
+                    </button>
 
                     {/* Explicit local developer capture only. */}
                     {data?.replayBlobUrl && (
