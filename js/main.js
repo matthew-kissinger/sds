@@ -36,6 +36,7 @@ import { WebVitalsMonitor } from './boot/WebVitalsMonitor.js';
 import { installStressTestHarness, installMpProbe } from './boot/debugProbes.js';
 import { BackdropReveal } from './effects/BackdropReveal.js';
 import { installMpEventHandlers, handleMultiplayerGameState as runMpStateHandoff } from './boot/initNetwork.js';
+import { MultiplayerCoordinator } from './multiplayer/MultiplayerCoordinator.js';
 import { buildSceneBody } from './boot/initWorld.js';
 import { disposeScene as runDisposeScene } from './boot/loadScene.js';
 import { shouldBootAttract } from './boot/bootAttract.js';
@@ -745,7 +746,17 @@ class SheepDogSimulation {
         this.serverDogRotation = 0;
         this.lastServerUpdate = 0;
         this.interpolationSpeed = 2.5; // Reduced for smoother movement
-        
+
+        // [P3-MP-COORD] Remote-dog lifecycle + server reconciliation. Bodies
+        // moved verbatim to MultiplayerCoordinator, which reads game members
+        // through this facade per call (sheepdog, serverDogPosition,
+        // terrainBuilder, networkManager are reassigned after this line).
+        // The Sheepdog factory keeps Three.js out of the coordinator module.
+        this.multiplayerCoordinator = new MultiplayerCoordinator(
+            this,
+            (x, z, dogType) => new Sheepdog(x, z, dogType, this.heightfield),
+        );
+
         // Competitive mode audio state
         this.endgameMusicPlaying = false;
 
@@ -2408,7 +2419,7 @@ class SheepDogSimulation {
                 // --- MULTIPLAYER LOGIC WITH CLIENT-SIDE PREDICTION ---
                 
                 // Use server's authoritative sprint state for prediction when available
-                const serverSprintState = this.getServerSprintState();
+                const serverSprintState = this.multiplayerCoordinator.getServerSprintState();
                 const actualSprintState = serverSprintState !== null ? serverSprintState : wantsSprint;
                 
                 // 1. PREDICT: Run local simulation for our dog for instant feedback
@@ -2449,7 +2460,7 @@ class SheepDogSimulation {
 
                 // 3. RECONCILE: Skip reconciliation only when server is interpolating to our position
                 if (!this.serverIsInterpolatingToClient) {
-                    this.reconcileWithServerState(deltaTime);
+                    this.multiplayerCoordinator.reconcileWithServerState(deltaTime);
                 }
                 
                 // In multiplayer, server controls sheep behavior
@@ -2962,189 +2973,15 @@ class SheepDogSimulation {
     
     // Legacy mobile UI organization removed - all mobile UI now handled by React components
     
-    updateOtherPlayer(dogData) {
-        const playerId = dogData.playerId;
-        let remoteDog = this.otherPlayers.get(playerId);
+    // [P3-MP-COORD] Remote-dog lifecycle + server reconciliation bodies live
+    // in js/multiplayer/MultiplayerCoordinator.js. These two shims preserve
+    // the method names boot/initNetwork.js calls against the game instance;
+    // the update loop calls the coordinator's reconcileWithServerState /
+    // getServerSprintState directly.
+    updateOtherPlayer(dogData) { this.multiplayerCoordinator.updateOtherPlayer(dogData); }
 
-        // 1. Create the Sheepdog instance if it's a new player
-        if (!remoteDog) {
-            // Use dog type from server data, or fall back to 'jep'.
-            const dogType = dogData.dogType || 'jep';
+    removeOtherPlayer(playerId) { this.multiplayerCoordinator.removeOtherPlayer(playerId); }
 
-            // Dogs other than jep load on demand (Cycle 45 Phase 3). startGame
-            // warms every rig in the background for multiplayer, but if this
-            // one isn't ready yet, kick a load and skip this update — the dog
-            // constructs on the next server tick once the model arrives. A
-            // per-player guard stops duplicate loads/dogs across the gap. This
-            // is visual-only: the authoritative DO sim and the local predictor
-            // never depend on a remote dog's mesh existing, so a rig arriving a
-            // frame or two late cannot desync anything.
-            if (!this.terrainBuilder.models.animals[dogType]) {
-                if (!this._remoteDogLoading) this._remoteDogLoading = new Set();
-                if (!this._remoteDogLoading.has(playerId)) {
-                    this._remoteDogLoading.add(playerId);
-                    this.terrainBuilder.loadAnimal(dogType).finally(() => {
-                        this._remoteDogLoading.delete(playerId);
-                    });
-                }
-                return;
-            }
-
-            console.log(`[DOG] Creating visualization for new player ${playerId}`);
-            console.log(`Creating remote dog with type: ${dogType} for player ${playerId}`);
-            remoteDog = new Sheepdog(dogData.x, dogData.z, dogType, this.heightfield);
-            
-            // Enable 2x speeds for multiplayer
-            remoteDog.setMultiplayerSpeeds(true);
-            
-            // Create its 3D mesh and add it to the scene
-            const dogMesh = remoteDog.createMesh();
-            this.sceneManager.add(dogMesh);
-            
-                            // Add player icon for racing mode
-                if (this.gameState.gameMode === 'racing' && this.gameState.competitiveGates) {
-                const playerGate = this.gameState.competitiveGates.find(gate => gate.playerId === playerId);
-                if (playerGate) {
-                    remoteDog.setPlayerInfo(playerId, playerGate.color);
-                    console.log(`[GAME] Added player icon for ${playerId} with gate color: 0x${playerGate.color.toString(16).toUpperCase()}`);
-                }
-            }
-            
-            // Add properties for interpolation
-            remoteDog.targetPosition = new Vector2D(dogData.x, dogData.z);
-            remoteDog.targetRotation = dogData.rotation;
-
-            // Store the full Sheepdog object in our map
-            this.otherPlayers.set(playerId, remoteDog);
-        }
-        
-        // 2. Update the target state for interpolation from server data
-        remoteDog.targetPosition.set(dogData.x, dogData.z);
-        remoteDog.targetRotation = dogData.rotation;
-
-        // When the server flags that it is catching up to the remote player's
-        // stopped position, run a fixed 8-frame blend from where this client
-        // currently shows the dog toward the authoritative stop point. If a
-        // blend is already active, keep blending toward the latest target.
-        if (dogData.interpolatingToClient) {
-            const BLEND_FRAMES = 8;
-            if (!remoteDog._blendFramesRemaining || remoteDog._blendFramesRemaining <= 0) {
-                remoteDog._blendStartPos = {
-                    x: remoteDog.position.x,
-                    z: remoteDog.position.z
-                };
-                remoteDog._blendTotalFrames = BLEND_FRAMES;
-                remoteDog._blendFramesRemaining = BLEND_FRAMES;
-            }
-            // Always keep targetPosition current (already updated above); the
-            // per-frame blend pass will lerp toward it.
-        } else if (remoteDog._blendFramesRemaining) {
-            // Server resumed normal updates; drop any lingering blend state.
-            remoteDog._blendFramesRemaining = 0;
-        }
-
-        // 3. Update animation-driving properties directly
-        // This data will be used by remoteDog.animate() in the main loop
-        remoteDog.velocity.set(dogData.vx, dogData.vz);
-        remoteDog.isSprinting = dogData.sprinting;
-        remoteDog.isMoving = remoteDog.velocity.magnitude() > 0.5;
-    }
-    
-    getServerSprintState() {
-        // Get the server's authoritative sprint state for prediction
-        if (this.networkManager?.lastServerState?.sheepdogs) {
-            const mySheepdogData = this.networkManager.lastServerState.sheepdogs.find(
-                dog => dog.playerId === this.networkManager.getPlayerId()
-            );
-            return mySheepdogData?.sprinting ?? null;
-        }
-        return null;
-    }
-    
-    reconcileWithServerState(deltaTime) {
-        if (!this.sheepdog || !this.serverDogPosition) return;
-
-        // Get the authoritative position from the server state
-        const serverPos = this.serverDogPosition;
-        const clientPos = this.sheepdog.position;
-
-        if (serverPos.x === undefined) return;
-
-        // Calculate distance between client prediction and server authority
-        const distance = Math.sqrt(
-            (clientPos.x - serverPos.x) ** 2 + 
-            (clientPos.z - serverPos.z) ** 2
-        );
-
-        // Sprint-aware reconciliation to handle speed mismatches
-        const serverSprintState = this.getServerSprintState();
-        const clientSprintState = this.sheepdog.isSprinting;
-        const sprintMismatch = serverSprintState !== null && serverSprintState !== clientSprintState;
-        
-        // Adjust threshold based on sprint state mismatch
-        const reconciliationThreshold = sprintMismatch ? 0.2 : 0.05; // Higher threshold when sprint states differ
-        
-        if (distance > reconciliationThreshold) {
-            // If the distance is very large (e.g., after major lag), snap to the server position
-            if (distance > 8.0) { // Higher snap threshold to account for sprint speed differences
-                clientPos.x = serverPos.x;
-                clientPos.z = serverPos.z;
-                console.log('[SYNC] Large correction applied - snapping to server position', { distance, sprintMismatch });
-            } else {
-                // Use adaptive interpolation speed based on distance and movement state
-                const isMoving = this.sheepdog.velocity.magnitude() > 0.1;
-                
-                // Faster correction when stopped or when sprint states mismatch
-                let baseInterpolationSpeed = isMoving ? this.interpolationSpeed : this.interpolationSpeed * 3;
-                if (sprintMismatch) {
-                    baseInterpolationSpeed *= 2; // Faster correction for sprint mismatches
-                }
-                
-                // Scale interpolation speed by distance (closer = faster correction)
-                const distanceScale = Math.min(distance / 2.0, 1.0);
-                const adaptiveSpeed = baseInterpolationSpeed * (1 + distanceScale);
-                
-                const interpolationFactor = Math.min(adaptiveSpeed * deltaTime, 0.5); // Increased max factor
-                clientPos.x += (serverPos.x - clientPos.x) * interpolationFactor;
-                clientPos.z += (serverPos.z - clientPos.z) * interpolationFactor;
-            }
-            
-            // Update mesh position to match corrected logical position
-            this.sheepdog.mesh.position.x = clientPos.x;
-            this.sheepdog.mesh.position.z = clientPos.z;
-        }
-
-        // Server is also authoritative on stamina
-        if (this.networkManager.lastServerState?.sheepdogs) {
-            const mySheepdogData = this.networkManager.lastServerState.sheepdogs.find(
-                dog => dog.playerId === this.networkManager.getPlayerId()
-            );
-            if (mySheepdogData?.stamina !== undefined) {
-                // Directly set stamina, as prediction for this is less critical than position
-                this.sheepdog.stamina = mySheepdogData.stamina;
-            }
-            if (mySheepdogData?.sprinting !== undefined) {
-                this.sheepdog.isSprinting = mySheepdogData.sprinting;
-            }
-        }
-    }
-    
-    removeOtherPlayer(playerId) {
-        const remoteDog = this.otherPlayers.get(playerId);
-        if (remoteDog) {
-            // Remove player icon if present
-            remoteDog.removePlayerIcon();
-            
-            // Remove the dog's mesh from the scene
-            if (remoteDog.mesh) {
-                this.sceneManager.remove(remoteDog.mesh);
-            }
-            // Delete the player from our map
-            this.otherPlayers.delete(playerId);
-            console.log(`[DOG] Removed visualization for player ${playerId}`);
-        }
-    }
-    
     checkRacingEndgameMusic(winCondition) {
         if (!winCondition || this.gameMode !== 'racing') return;
         
